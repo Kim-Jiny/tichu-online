@@ -3,14 +3,14 @@
 [ext_resource type="Script" path="res://scripts/lobby/lobby_screen.gd" id="1_lobby"]
 
 [sub_resource type="StyleBoxFlat" id="top_bar_bg"]
-bg_color = Color(0.1, 0.12, 0.18, 1)
+bg_color = Color(0.2, 0.13, 0.1, 1)
 content_margin_left = 20.0
 content_margin_top = 14.0
 content_margin_right = 20.0
 content_margin_bottom = 14.0
 
 [sub_resource type="StyleBoxFlat" id="card_panel"]
-bg_color = Color(0.12, 0.14, 0.2, 1)
+bg_color = Color(0.18, 0.12, 0.09, 1)
 corner_radius_top_left = 16
 corner_radius_top_right = 16
 corner_radius_bottom_right = 16
@@ -21,7 +21,7 @@ content_margin_right = 16.0
 content_margin_bottom = 16.0
 
 [sub_resource type="StyleBoxFlat" id="green_btn"]
-bg_color = Color(0.18, 0.7, 0.4, 1)
+bg_color = Color(0.93, 0.63, 0.22, 1)
 corner_radius_top_left = 14
 corner_radius_top_right = 14
 corner_radius_bottom_right = 14
@@ -32,7 +32,7 @@ content_margin_right = 20.0
 content_margin_bottom = 12.0
 
 [sub_resource type="StyleBoxFlat" id="green_btn_hover"]
-bg_color = Color(0.22, 0.78, 0.48, 1)
+bg_color = Color(0.98, 0.7, 0.3, 1)
 corner_radius_top_left = 14
 corner_radius_top_right = 14
 corner_radius_bottom_right = 14
@@ -43,7 +43,7 @@ content_margin_right = 20.0
 content_margin_bottom = 12.0
 
 [sub_resource type="StyleBoxFlat" id="green_btn_pressed"]
-bg_color = Color(0.14, 0.6, 0.34, 1)
+bg_color = Color(0.86, 0.54, 0.18, 1)
 corner_radius_top_left = 14
 corner_radius_top_right = 14
 corner_radius_bottom_right = 14
@@ -54,12 +54,12 @@ content_margin_right = 20.0
 content_margin_bottom = 12.0
 
 [sub_resource type="StyleBoxFlat" id="room_btn"]
-bg_color = Color(0.16, 0.18, 0.26, 1)
+bg_color = Color(0.2, 0.14, 0.11, 1)
 border_width_left = 1
 border_width_top = 1
 border_width_right = 1
 border_width_bottom = 1
-border_color = Color(0.25, 0.28, 0.38, 1)
+border_color = Color(0.4, 0.28, 0.22, 1)
 corner_radius_top_left = 12
 corner_radius_top_right = 12
 corner_radius_bottom_right = 12
@@ -70,12 +70,12 @@ content_margin_right = 16.0
 content_margin_bottom = 14.0
 
 [sub_resource type="StyleBoxFlat" id="room_btn_hover"]
-bg_color = Color(0.2, 0.22, 0.32, 1)
+bg_color = Color(0.24, 0.17, 0.13, 1)
 border_width_left = 1
 border_width_top = 1
 border_width_right = 1
 border_width_bottom = 1
-border_color = Color(0.3, 0.4, 0.65, 1)
+border_color = Color(0.55, 0.38, 0.28, 1)
 corner_radius_top_left = 12
 corner_radius_top_right = 12
 corner_radius_bottom_right = 12
@@ -86,7 +86,7 @@ content_margin_right = 16.0
 content_margin_bottom = 14.0
 
 [sub_resource type="StyleBoxFlat" id="red_btn"]
-bg_color = Color(0.7, 0.2, 0.2, 1)
+bg_color = Color(0.86, 0.38, 0.28, 1)
 corner_radius_top_left = 14
 corner_radius_top_right = 14
 corner_radius_bottom_right = 14
@@ -97,7 +97,7 @@ content_margin_right = 20.0
 content_margin_bottom = 12.0
 
 [sub_resource type="StyleBoxFlat" id="red_btn_hover"]
-bg_color = Color(0.8, 0.25, 0.25, 1)
+bg_color = Color(0.92, 0.45, 0.32, 1)
 corner_radius_top_left = 14
 corner_radius_top_right = 14
 corner_radius_bottom_right = 14
@@ -108,7 +108,7 @@ content_margin_right = 20.0
 content_margin_bottom = 12.0
 
 [sub_resource type="StyleBoxFlat" id="orange_btn"]
-bg_color = Color(0.95, 0.55, 0.15, 1)
+bg_color = Color(0.94, 0.55, 0.33, 1)
 corner_radius_top_left = 14
 corner_radius_top_right = 14
 corner_radius_bottom_right = 14
@@ -161,7 +161,7 @@ anchor_right = 1.0
 anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
-color = Color(0.07, 0.08, 0.13, 1)
+color = Color(0.12, 0.08, 0.06, 1)
 
 [node name="VBoxMain" type="VBoxContainer" parent="."]
 layout_mode = 1
@@ -182,7 +182,7 @@ layout_mode = 2
 [node name="TitleLabel" type="Label" parent="VBoxMain/TopBar/HBox"]
 layout_mode = 2
 size_flags_horizontal = 3
-theme_override_colors/font_color = Color(1, 1, 1, 1)
+theme_override_colors/font_color = Color(0.98, 0.94, 0.9, 1)
 theme_override_font_sizes/font_size = 24
 text = "로비"
 

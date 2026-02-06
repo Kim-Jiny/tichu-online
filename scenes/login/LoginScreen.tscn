@@ -74,7 +74,8 @@ grow_vertical = 2
 
 [node name="VBox" type="VBoxContainer" parent="CenterContainer"]
 layout_mode = 2
-custom_minimum_size = Vector2(500, 0)
+custom_minimum_size = Vector2(340, 0)
+size_flags_horizontal = 3
 theme_override_constants/separation = 12
 
 [node name="IconLabel" type="Label" parent="CenterContainer/VBox"]

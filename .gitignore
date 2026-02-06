@@ -6,8 +6,12 @@
 # iOS build artifacts
 build/ios/tichu.xcodeproj/xcuserdata/
 build/ios/tichu.xcodeproj/project.xcworkspace/
+build/ios/tichu.xcodeproj/xcshareddata/
 build/ios/DerivedData/
 build/ios/tichu/tichu.pck
+build/ios/*.xcframework/
+build/ios/tichu.pck
+build/ios/PrivacyInfo.xcprivacy
 
 # Node.js
 node_modules/
@@ -15,6 +19,9 @@ server/node_modules/
 
 # OS files
 .DS_Store
+
+# Claude Code
+.claude/
 
 # Logs
 *.log

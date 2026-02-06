@@ -249,6 +249,7 @@ class _SpectatorScreenState extends State<SpectatorScreen> {
     final finishPosition = player['finishPosition'] ?? 0;
     final hasSmallTichu = player['hasSmallTichu'] ?? false;
     final hasLargeTichu = player['hasLargeTichu'] ?? false;
+    final connected = player['connected'] ?? true;
     final vertical = isLeft || isRight;
 
     final isPending = game.pendingCardViewRequests.contains(playerId);
@@ -274,19 +275,25 @@ class _SpectatorScreenState extends State<SpectatorScreen> {
             mainAxisSize: MainAxisSize.min,
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Container(
-                width: 8,
-                height: 8,
-                decoration: BoxDecoration(
-                  color: teamColor,
-                  shape: BoxShape.circle,
+              if (!connected)
+                const Padding(
+                  padding: EdgeInsets.only(right: 4),
+                  child: Icon(Icons.wifi_off, size: 12, color: Colors.red),
+                )
+              else
+                Container(
+                  width: 8,
+                  height: 8,
+                  margin: const EdgeInsets.only(right: 4),
+                  decoration: BoxDecoration(
+                    color: teamColor,
+                    shape: BoxShape.circle,
+                  ),
                 ),
-              ),
-              const SizedBox(width: 4),
               Text(
                 name,
-                style: const TextStyle(
-                  color: Colors.white,
+                style: TextStyle(
+                  color: connected ? Colors.white : Colors.grey,
                   fontWeight: FontWeight.bold,
                   fontSize: 12,
                 ),
@@ -395,80 +402,6 @@ class _SpectatorScreenState extends State<SpectatorScreen> {
     );
   }
 
-  Widget _buildVerticalCardsSpread(List cards) {
-    const cardWidth = 26.0;
-    const cardHeight = 39.0;
-    const spacing = 3.0;
-
-    // 6장 이하면 한 줄
-    if (cards.length <= 6) {
-      return Column(
-        mainAxisSize: MainAxisSize.min,
-        children: cards.map((cardId) {
-          return Padding(
-            padding: const EdgeInsets.only(bottom: spacing),
-            child: SizedBox(
-              width: cardWidth,
-              height: cardHeight,
-              child: PlayingCard(
-                cardId: cardId.toString(),
-                width: cardWidth,
-                height: cardHeight,
-              ),
-            ),
-          );
-        }).toList(),
-      );
-    }
-
-    // 7장 이상이면 두 줄
-    final half = (cards.length / 2).ceil();
-    final leftColumn = cards.sublist(0, half);
-    final rightColumn = cards.sublist(half);
-
-    return Row(
-      mainAxisSize: MainAxisSize.min,
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Column(
-          mainAxisSize: MainAxisSize.min,
-          children: leftColumn.map((cardId) {
-            return Padding(
-              padding: const EdgeInsets.only(bottom: spacing),
-              child: SizedBox(
-                width: cardWidth,
-                height: cardHeight,
-                child: PlayingCard(
-                  cardId: cardId.toString(),
-                  width: cardWidth,
-                  height: cardHeight,
-                ),
-              ),
-            );
-          }).toList(),
-        ),
-        const SizedBox(width: 2),
-        Column(
-          mainAxisSize: MainAxisSize.min,
-          children: rightColumn.map((cardId) {
-            return Padding(
-              padding: const EdgeInsets.only(bottom: spacing),
-              child: SizedBox(
-                width: cardWidth,
-                height: cardHeight,
-                child: PlayingCard(
-                  cardId: cardId.toString(),
-                  width: cardWidth,
-                  height: cardHeight,
-                ),
-              ),
-            );
-          }).toList(),
-        ),
-      ],
-    );
-  }
-
   Widget _buildCardRequestArea(GameService game, String playerId, int cardCount, bool isPending, bool vertical) {
     if (isPending) {
       return Container(
@@ -537,35 +470,6 @@ class _SpectatorScreenState extends State<SpectatorScreen> {
           for (int i = 0; i < cards.length; i++)
             Positioned(
               left: i * overlap,
-              child: SizedBox(
-                width: cardWidth,
-                height: cardHeight,
-                child: PlayingCard(
-                  cardId: cards[i].toString(),
-                  width: cardWidth,
-                  height: cardHeight,
-                ),
-              ),
-            ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildVerticalCards(List cards) {
-    const cardWidth = 28.0;
-    const cardHeight = 42.0;
-    const overlap = 12.0;
-    final totalHeight = cardHeight + (cards.length - 1) * overlap;
-
-    return SizedBox(
-      width: cardWidth,
-      height: totalHeight.clamp(50, 180),
-      child: Stack(
-        children: [
-          for (int i = 0; i < cards.length; i++)
-            Positioned(
-              top: i * overlap,
               child: SizedBox(
                 width: cardWidth,
                 height: cardHeight,

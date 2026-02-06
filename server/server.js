@@ -21,6 +21,21 @@ const lobby = new LobbyManager();
 
 let nextPlayerId = 1;
 
+// Track nickname -> roomId for reconnection during games
+const playerSessions = new Map(); // nickname -> { roomId, disconnectedAt }
+
+// Clean up old sessions every 5 minutes
+setInterval(() => {
+  const now = Date.now();
+  const maxAge = 30 * 60 * 1000; // 30 minutes
+  for (const [nickname, session] of playerSessions) {
+    if (now - session.disconnectedAt > maxAge) {
+      playerSessions.delete(nickname);
+      console.log(`Session expired for ${nickname}`);
+    }
+  }
+}, 5 * 60 * 1000);
+
 server.listen(PORT, () => {
   console.log(`Tichu server running on port ${PORT}`);
 });
@@ -51,7 +66,20 @@ wss.on('connection', (ws) => {
       if (room) {
         if (ws.isSpectator) {
           room.removeSpectator(ws.playerId);
+        } else if (room.game) {
+          // Game in progress - mark as disconnected, don't remove
+          room.markPlayerDisconnected(ws.playerId);
+          // Store session for reconnection
+          if (ws.nickname) {
+            playerSessions.set(ws.nickname, {
+              roomId: ws.roomId,
+              disconnectedAt: Date.now(),
+            });
+          }
+          broadcastRoomState(ws.roomId);
+          sendGameStateToAll(ws.roomId);
         } else {
+          // No game - just remove player
           room.removePlayer(ws.playerId);
           if (room.getPlayerCount() === 0) {
             lobby.removeRoom(ws.roomId);
@@ -91,6 +119,9 @@ function handleMessage(ws, data) {
     case 'leave_room':
       handleLeaveRoom(ws);
       break;
+    case 'leave_game':
+      handleLeaveGame(ws);
+      break;
     case 'spectate_room':
       handleSpectateRoom(ws, data);
       break;
@@ -129,6 +160,41 @@ function handleLogin(ws, data) {
   ws.playerId = `player_${nextPlayerId++}`;
   ws.nickname = data.nickname.trim();
   console.log(`Player logged in: ${ws.nickname} (${ws.playerId})`);
+
+  // Check for reconnection to a game
+  const session = playerSessions.get(ws.nickname);
+  if (session) {
+    const room = lobby.getRoom(session.roomId);
+    if (room && room.game && room.canReconnect(ws.nickname)) {
+      // Reconnect to the game
+      const result = room.reconnectPlayer(ws.nickname, ws.playerId);
+      if (result.success) {
+        ws.roomId = room.id;
+        playerSessions.delete(ws.nickname);
+        console.log(`Player ${ws.nickname} reconnected to room ${room.name}`);
+
+        sendTo(ws, {
+          type: 'login_success',
+          playerId: ws.playerId,
+          nickname: ws.nickname,
+        });
+        sendTo(ws, {
+          type: 'reconnected',
+          roomId: room.id,
+          roomName: room.name,
+        });
+
+        // Send current room and game state
+        broadcastRoomState(room.id);
+        sendGameStateToAll(room.id);
+        broadcastRoomList();
+        return;
+      }
+    }
+    // Session expired or invalid - remove it
+    playerSessions.delete(ws.nickname);
+  }
+
   sendTo(ws, {
     type: 'login_success',
     playerId: ws.playerId,
@@ -209,6 +275,39 @@ function handleLeaveRoom(ws) {
       }
     }
   }
+  sendTo(ws, { type: 'room_left' });
+  broadcastRoomList();
+}
+
+function handleLeaveGame(ws) {
+  if (!ws.roomId) return;
+  const room = lobby.getRoom(ws.roomId);
+  const roomId = ws.roomId;
+
+  if (!room) {
+    ws.roomId = null;
+    sendTo(ws, { type: 'room_left' });
+    return;
+  }
+
+  // Remove from session tracking
+  if (ws.nickname) {
+    playerSessions.delete(ws.nickname);
+  }
+
+  // Remove player from room
+  room.removePlayer(ws.playerId);
+  ws.roomId = null;
+
+  if (room.getPlayerCount() === 0) {
+    lobby.removeRoom(roomId);
+  } else {
+    broadcastRoomState(roomId);
+    if (room.game) {
+      sendGameStateToAll(roomId);
+    }
+  }
+
   sendTo(ws, { type: 'room_left' });
   broadcastRoomList();
 }
@@ -371,11 +470,23 @@ function sendGameStateToAll(roomId) {
   const room = lobby.getRoom(roomId);
   if (!room || !room.game) return;
 
+  // Build connection status map
+  const connectionStatus = {};
+  for (const player of room.players) {
+    connectionStatus[player.id] = player.connected !== false;
+  }
+
   // Send to players
   for (const player of room.players) {
+    if (player.connected === false) continue; // Skip disconnected players
     const ws = findWsByPlayerId(player.id);
     if (ws) {
       const state = room.game.getStateForPlayer(player.id);
+      // Add connection status to each player
+      state.players = state.players.map(p => ({
+        ...p,
+        connected: connectionStatus[p.id] !== false,
+      }));
       console.log(`[DEBUG] Sending game_state to ${player.nickname}: phase=${state.phase}, cards=${state.myCards?.length || 0}`);
       sendTo(ws, { type: 'game_state', state });
     }
@@ -387,6 +498,11 @@ function sendGameStateToAll(roomId) {
     if (ws) {
       const permittedPlayers = room.getPermittedPlayers(spectatorId);
       const spectatorState = room.game.getStateForSpectator(permittedPlayers);
+      // Add connection status to each player
+      spectatorState.players = spectatorState.players.map(p => ({
+        ...p,
+        connected: connectionStatus[p.id] !== false,
+      }));
       sendTo(ws, { type: 'spectator_game_state', state: spectatorState });
     }
   }

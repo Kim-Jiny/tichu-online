@@ -9,7 +9,7 @@ class GameRoom {
     this.password = password;
     this.isPrivate = !!password;
     this.isRanked = !!isRanked;
-    this.players = [{ id: hostId, nickname: hostNickname }];
+    this.players = [{ id: hostId, nickname: hostNickname, connected: true }];
     this.spectators = []; // { id, nickname }
     this.game = null;
     // Spectator card view permissions: { spectatorId: Set of playerId }
@@ -32,7 +32,7 @@ class GameRoom {
     if (this.players.find((p) => p.id === playerId)) {
       return { success: false, message: 'Already in this room' };
     }
-    this.players.push({ id: playerId, nickname: nickname });
+    this.players.push({ id: playerId, nickname: nickname, connected: true });
     console.log(`${nickname} joined room ${this.name}`);
     return { success: true };
   }
@@ -55,6 +55,48 @@ class GameRoom {
     if (this.game && this.players.length < 4) {
       this.game = null;
     }
+  }
+
+  // Mark player as disconnected (during game, don't remove)
+  markPlayerDisconnected(playerId) {
+    const player = this.players.find((p) => p.id === playerId);
+    if (player) {
+      player.connected = false;
+      console.log(`${player.nickname} disconnected in room ${this.name}`);
+      return true;
+    }
+    return false;
+  }
+
+  // Reconnect player with new playerId
+  reconnectPlayer(nickname, newPlayerId) {
+    const player = this.players.find((p) => p.nickname === nickname && !p.connected);
+    if (player) {
+      const oldPlayerId = player.id;
+      player.id = newPlayerId;
+      player.connected = true;
+      // Update game's player ID if game is running
+      if (this.game) {
+        this.game.updatePlayerId(oldPlayerId, newPlayerId);
+      }
+      // Update host if needed
+      if (this.hostId === oldPlayerId) {
+        this.hostId = newPlayerId;
+      }
+      console.log(`${nickname} reconnected in room ${this.name}`);
+      return { success: true, oldPlayerId };
+    }
+    return { success: false };
+  }
+
+  // Get disconnected player nicknames
+  getDisconnectedPlayers() {
+    return this.players.filter(p => !p.connected).map(p => p.nickname);
+  }
+
+  // Check if a nickname can reconnect to this room
+  canReconnect(nickname) {
+    return this.players.some(p => p.nickname === nickname && !p.connected);
   }
 
   addSpectator(odId, nickname) {
@@ -178,6 +220,7 @@ class GameRoom {
         id: p.id,
         name: p.nickname,
         isHost: p.id === this.hostId,
+        connected: p.connected !== false,
       })),
       gameInProgress: !!this.game,
     };

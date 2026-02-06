@@ -77,6 +77,13 @@ class GameService extends ChangeNotifier {
         notifyListeners();
         break;
 
+      case 'reconnected':
+        currentRoomId = data['roomId'] ?? '';
+        currentRoomName = data['roomName'] ?? '';
+        isSpectator = false;
+        notifyListeners();
+        break;
+
       case 'spectate_joined':
         currentRoomId = data['roomId'] ?? '';
         currentRoomName = data['roomName'] ?? '';
@@ -291,6 +298,10 @@ class GameService extends ChangeNotifier {
 
   void leaveRoom() {
     _network.send({'type': 'leave_room'});
+  }
+
+  void leaveGame() {
+    _network.send({'type': 'leave_game'});
   }
 
   void startGame() {

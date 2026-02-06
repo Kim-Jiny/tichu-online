@@ -171,11 +171,86 @@ class _GameScreenState extends State<GameScreen> {
                   // Spectator card view requests
                   if (game.incomingCardViewRequests.isNotEmpty)
                     _buildCardViewRequestPopup(game),
+
+                  // Menu button (top right)
+                  Positioned(
+                    top: 8,
+                    right: 8,
+                    child: _buildMenuButton(game),
+                  ),
                 ],
               );
             },
           ),
         ),
+      ),
+    );
+  }
+
+  Widget _buildMenuButton(GameService game) {
+    return PopupMenuButton<String>(
+      icon: Container(
+        padding: const EdgeInsets.all(8),
+        decoration: BoxDecoration(
+          color: Colors.white.withOpacity(0.8),
+          shape: BoxShape.circle,
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.1),
+              blurRadius: 4,
+            ),
+          ],
+        ),
+        child: const Icon(
+          Icons.menu,
+          color: Color(0xFF5A4038),
+          size: 20,
+        ),
+      ),
+      onSelected: (value) {
+        if (value == 'leave') {
+          _showLeaveGameDialog(game);
+        }
+      },
+      itemBuilder: (context) => [
+        const PopupMenuItem<String>(
+          value: 'leave',
+          child: Row(
+            children: [
+              Icon(Icons.exit_to_app, color: Colors.red, size: 20),
+              SizedBox(width: 8),
+              Text('게임 나가기', style: TextStyle(color: Colors.red)),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
+  void _showLeaveGameDialog(GameService game) {
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('게임 나가기'),
+        content: const Text('정말 게임을 나가시겠습니까?\n게임 중 나가면 팀에 피해가 됩니다.'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('취소'),
+          ),
+          TextButton(
+            onPressed: () {
+              Navigator.pop(ctx);
+              game.leaveGame();
+              Navigator.pushReplacement(
+                context,
+                MaterialPageRoute(builder: (_) => const LobbyScreen()),
+              );
+            },
+            style: TextButton.styleFrom(foregroundColor: Colors.red),
+            child: const Text('나가기'),
+          ),
+        ],
       ),
     );
   }
@@ -315,6 +390,7 @@ class _GameScreenState extends State<GameScreen> {
             name: partner?.name ?? '파트너',
             isTurn: isPartnerTurn,
             badge: _tichuBadgeForPlayer(partner),
+            connected: partner?.connected ?? true,
           ),
           const SizedBox(height: 4),
           Text(
@@ -357,6 +433,7 @@ class _GameScreenState extends State<GameScreen> {
                 isTurn: isLeftTurn,
                 fontSize: 12,
                 badge: _tichuBadgeForPlayer(left),
+                connected: left?.connected ?? true,
               ),
               Text(
                 _getPlayerInfo(left),
@@ -390,6 +467,7 @@ class _GameScreenState extends State<GameScreen> {
                 isTurn: isRightTurn,
                 fontSize: 12,
                 badge: _tichuBadgeForPlayer(right),
+                connected: right?.connected ?? true,
               ),
               Text(
                 _getPlayerInfo(right),
@@ -1255,6 +1333,7 @@ class _GameScreenState extends State<GameScreen> {
     required bool isTurn,
     double fontSize = 14,
     Widget? badge,
+    bool connected = true,
   }) {
     return AnimatedContainer(
       duration: const Duration(milliseconds: 200),
@@ -1269,7 +1348,16 @@ class _GameScreenState extends State<GameScreen> {
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          if (isTurn)
+          if (!connected)
+            Container(
+              margin: const EdgeInsets.only(right: 6),
+              child: const Icon(
+                Icons.wifi_off,
+                size: 14,
+                color: Colors.red,
+              ),
+            )
+          else if (isTurn)
             Container(
               width: 8,
               height: 8,
@@ -1284,7 +1372,7 @@ class _GameScreenState extends State<GameScreen> {
             style: TextStyle(
               fontSize: fontSize,
               fontWeight: FontWeight.bold,
-              color: const Color(0xFF5A4038),
+              color: connected ? const Color(0xFF5A4038) : Colors.grey,
             ),
           ),
           if (badge != null) ...[

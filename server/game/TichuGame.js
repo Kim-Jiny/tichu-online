@@ -849,6 +849,81 @@ class TichuGame {
       dragonDecider: this.dragonDecider ? this.playerNames[this.dragonDecider] : null,
     };
   }
+
+  // Update player ID when reconnecting
+  updatePlayerId(oldPlayerId, newPlayerId) {
+    const idx = this.playerIds.indexOf(oldPlayerId);
+    if (idx === -1) return false;
+
+    // Update playerIds array
+    this.playerIds[idx] = newPlayerId;
+
+    // Update playerNames
+    this.playerNames[newPlayerId] = this.playerNames[oldPlayerId];
+    delete this.playerNames[oldPlayerId];
+
+    // Update teams
+    for (const team of ['teamA', 'teamB']) {
+      const teamIdx = this.teams[team].indexOf(oldPlayerId);
+      if (teamIdx !== -1) {
+        this.teams[team][teamIdx] = newPlayerId;
+      }
+    }
+
+    // Update hands
+    if (this.hands[oldPlayerId]) {
+      this.hands[newPlayerId] = this.hands[oldPlayerId];
+      delete this.hands[oldPlayerId];
+    }
+
+    // Update trickPiles
+    if (this.trickPiles[oldPlayerId]) {
+      this.trickPiles[newPlayerId] = this.trickPiles[oldPlayerId];
+      delete this.trickPiles[oldPlayerId];
+    }
+
+    // Update declarations
+    const largeTichuIdx = this.largeTichuDeclarations.indexOf(oldPlayerId);
+    if (largeTichuIdx !== -1) this.largeTichuDeclarations[largeTichuIdx] = newPlayerId;
+
+    const smallTichuIdx = this.smallTichuDeclarations.indexOf(oldPlayerId);
+    if (smallTichuIdx !== -1) this.smallTichuDeclarations[smallTichuIdx] = newPlayerId;
+
+    // Update responses
+    if (this.largeTichuResponses[oldPlayerId] !== undefined) {
+      this.largeTichuResponses[newPlayerId] = this.largeTichuResponses[oldPlayerId];
+      delete this.largeTichuResponses[oldPlayerId];
+    }
+
+    // Update exchange
+    if (this.exchangeCards[oldPlayerId]) {
+      this.exchangeCards[newPlayerId] = this.exchangeCards[oldPlayerId];
+      delete this.exchangeCards[oldPlayerId];
+    }
+    if (this.exchangeDone[oldPlayerId]) {
+      this.exchangeDone[newPlayerId] = this.exchangeDone[oldPlayerId];
+      delete this.exchangeDone[oldPlayerId];
+    }
+
+    // Update finishOrder
+    const finishIdx = this.finishOrder.indexOf(oldPlayerId);
+    if (finishIdx !== -1) this.finishOrder[finishIdx] = newPlayerId;
+
+    // Update current state
+    if (this.currentPlayer === oldPlayerId) this.currentPlayer = newPlayerId;
+    if (this.lastPlayedBy === oldPlayerId) this.lastPlayedBy = newPlayerId;
+    if (this.trickStarter === oldPlayerId) this.trickStarter = newPlayerId;
+    if (this.needsToCallRank === oldPlayerId) this.needsToCallRank = newPlayerId;
+    if (this.dragonDecider === oldPlayerId) this.dragonDecider = newPlayerId;
+
+    // Update trick plays
+    for (const trick of this.currentTrick) {
+      if (trick.playerId === oldPlayerId) trick.playerId = newPlayerId;
+    }
+
+    console.log(`Updated player ID: ${oldPlayerId} -> ${newPlayerId}`);
+    return true;
+  }
 }
 
 module.exports = TichuGame;

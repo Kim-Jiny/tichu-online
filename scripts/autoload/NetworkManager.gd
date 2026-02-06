@@ -6,7 +6,7 @@ signal message_received(data: Dictionary)
 
 var _socket: WebSocketPeer = WebSocketPeer.new()
 var _connected: bool = false
-var _url: String = "ws://172.30.1.98:8080"
+var _url: String = "wss://tichu-server.onrender.com"
 
 # Auto-reconnect
 var _auto_reconnect: bool = true

@@ -43,6 +43,12 @@ class GameService extends ChangeNotifier {
   // Error message
   String? errorMessage;
 
+  // Auth state
+  String? loginError;
+  String? registerResult;
+  bool? nicknameAvailable;
+  String? nicknameCheckMessage;
+
   // Dog play UI
   bool dogPlayActive = false;
   String dogPlayPlayerName = '';
@@ -59,6 +65,23 @@ class GameService extends ChangeNotifier {
       case 'login_success':
         playerId = data['playerId'] ?? '';
         playerName = data['nickname'] ?? '';
+        loginError = null;
+        notifyListeners();
+        break;
+
+      case 'login_error':
+        loginError = data['message'] ?? '로그인 실패';
+        notifyListeners();
+        break;
+
+      case 'register_result':
+        registerResult = data['message'] ?? '';
+        notifyListeners();
+        break;
+
+      case 'nickname_check_result':
+        nicknameAvailable = data['available'] ?? false;
+        nicknameCheckMessage = data['message'] ?? '';
         notifyListeners();
         break;
 
@@ -252,8 +275,38 @@ class GameService extends ChangeNotifier {
 
   // Actions
   void login(String nickname) {
+    // Guest login (development mode)
     playerName = nickname;
+    loginError = null;
     _network.send({'type': 'login', 'nickname': nickname});
+  }
+
+  void loginWithCredentials(String username, String password) {
+    loginError = null;
+    _network.send({'type': 'login', 'username': username, 'password': password});
+  }
+
+  void register(String username, String password, String nickname) {
+    registerResult = null;
+    _network.send({
+      'type': 'register',
+      'username': username,
+      'password': password,
+      'nickname': nickname,
+    });
+  }
+
+  void checkNickname(String nickname) {
+    nicknameAvailable = null;
+    nicknameCheckMessage = null;
+    _network.send({'type': 'check_nickname', 'nickname': nickname});
+  }
+
+  void clearAuthState() {
+    loginError = null;
+    registerResult = null;
+    nicknameAvailable = null;
+    nicknameCheckMessage = null;
   }
 
   void requestRoomList() {

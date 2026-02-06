@@ -2,6 +2,7 @@ const { WebSocketServer } = require('ws');
 const http = require('http');
 const LobbyManager = require('./lobby/LobbyManager');
 const GameRoom = require('./game/GameRoom');
+const { initDatabase, registerUser, loginUser, checkNickname } = require('./db/database');
 
 const PORT = process.env.PORT || 8080;
 
@@ -36,9 +37,18 @@ setInterval(() => {
   }
 }, 5 * 60 * 1000);
 
-server.listen(PORT, () => {
-  console.log(`Tichu server running on port ${PORT}`);
-});
+// Initialize database and start server
+(async () => {
+  if (process.env.DATABASE_URL) {
+    await initDatabase();
+  } else {
+    console.log('No DATABASE_URL - running without user authentication');
+  }
+
+  server.listen(PORT, () => {
+    console.log(`Tichu server running on port ${PORT}`);
+  });
+})();
 
 wss.on('connection', (ws) => {
   ws.playerId = null;
@@ -101,8 +111,14 @@ wss.on('connection', (ws) => {
 
 function handleMessage(ws, data) {
   switch (data.type) {
+    case 'register':
+      handleRegister(ws, data);
+      break;
     case 'login':
       handleLogin(ws, data);
+      break;
+    case 'check_nickname':
+      handleCheckNickname(ws, data);
       break;
     case 'room_list':
       sendTo(ws, { type: 'room_list', rooms: lobby.getRoomList() });
@@ -152,15 +168,51 @@ function handleMessage(ws, data) {
   }
 }
 
-function handleLogin(ws, data) {
+async function handleRegister(ws, data) {
+  const { username, password, nickname } = data;
+  const result = await registerUser(username, password, nickname);
+  sendTo(ws, { type: 'register_result', ...result });
+}
+
+async function handleCheckNickname(ws, data) {
+  const result = await checkNickname(data.nickname);
+  sendTo(ws, { type: 'nickname_check_result', ...result });
+}
+
+async function handleLogin(ws, data) {
+  // If DATABASE_URL is set, use database authentication
+  if (process.env.DATABASE_URL) {
+    const { username, password } = data;
+    const result = await loginUser(username, password);
+
+    if (!result.success) {
+      sendTo(ws, { type: 'login_error', message: result.message });
+      return;
+    }
+
+    ws.playerId = `player_${nextPlayerId++}`;
+    ws.nickname = result.nickname;
+    ws.userId = result.userId;
+    console.log(`Player logged in: ${ws.nickname} (${ws.playerId})`);
+
+    // Check for reconnection
+    await handleReconnection(ws);
+    return;
+  }
+
+  // Fallback: guest login with just nickname (for development)
   if (!data.nickname || data.nickname.trim().length === 0) {
-    sendTo(ws, { type: 'error', message: 'Nickname is required' });
+    sendTo(ws, { type: 'login_error', message: '닉네임을 입력해주세요' });
     return;
   }
   ws.playerId = `player_${nextPlayerId++}`;
   ws.nickname = data.nickname.trim();
-  console.log(`Player logged in: ${ws.nickname} (${ws.playerId})`);
+  console.log(`Guest logged in: ${ws.nickname} (${ws.playerId})`);
 
+  await handleReconnection(ws);
+}
+
+async function handleReconnection(ws) {
   // Check for reconnection to a game
   const session = playerSessions.get(ws.nickname);
   if (session) {

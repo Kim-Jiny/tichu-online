@@ -63,6 +63,16 @@ func _ready() -> void:
 	dragon_right_button.pressed.connect(_on_dragon_right_pressed)
 	next_round_button.pressed.connect(_on_next_round_pressed)
 
+	_wire_button_fx(play_button)
+	_wire_button_fx(pass_button)
+	_wire_button_fx(tichu_button)
+	_wire_button_fx(declare_large_button)
+	_wire_button_fx(pass_large_button)
+	_wire_button_fx(exchange_button)
+	_wire_button_fx(dragon_left_button)
+	_wire_button_fx(dragon_right_button)
+	_wire_button_fx(next_round_button)
+
 	# Connect hand selection
 	my_hand.cards_selected_changed.connect(_on_cards_selected_changed)
 
@@ -77,6 +87,22 @@ func _ready() -> void:
 	# Initial state
 	if not GameState.game_data.is_empty():
 		_on_game_state_updated(GameState.game_data)
+
+func _wire_button_fx(btn: Button) -> void:
+	btn.mouse_entered.connect(func():
+		_tween_button(btn, Vector2(1.03, 1.03), 0.12))
+	btn.mouse_exited.connect(func():
+		_tween_button(btn, Vector2(1.0, 1.0), 0.12))
+	btn.pressed.connect(func():
+		_tween_button(btn, Vector2(0.97, 0.97), 0.08))
+	btn.button_up.connect(func():
+		_tween_button(btn, Vector2(1.0, 1.0), 0.1))
+
+func _tween_button(btn: Control, scale_to: Vector2, duration: float) -> void:
+	var tween := create_tween()
+	tween.set_ease(Tween.EASE_OUT)
+	tween.set_trans(Tween.TRANS_BACK)
+	tween.tween_property(btn, "scale", scale_to, duration)
 
 func _setup_call_buttons() -> void:
 	var ranks := ["2", "3", "4", "5", "6", "7", "8", "9", "10", "J", "Q", "K", "A"]

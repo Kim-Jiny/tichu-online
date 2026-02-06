@@ -2,23 +2,23 @@ extends Control
 
 # Lobby panel nodes
 @onready var nickname_label: Label = $VBoxMain/TopBar/HBox/NicknameLabel
-@onready var lobby_panel: VBoxContainer = $VBoxMain/Content/LobbyPanel
-@onready var room_list_container: VBoxContainer = $VBoxMain/Content/LobbyPanel/ScrollContainer/RoomList
-@onready var no_rooms_label: Label = $VBoxMain/Content/LobbyPanel/NoRoomsLabel
-@onready var create_room_button: Button = $VBoxMain/Content/LobbyPanel/CreateRoomButton
-@onready var refresh_button: Button = $VBoxMain/Content/LobbyPanel/RoomListHeader/RefreshButton
+@onready var lobby_panel: VBoxContainer = $VBoxMain/Content/ContentCard/CardMargin/LobbyPanel
+@onready var room_list_container: VBoxContainer = $VBoxMain/Content/ContentCard/CardMargin/LobbyPanel/ScrollContainer/RoomList
+@onready var no_rooms_label: Label = $VBoxMain/Content/ContentCard/CardMargin/LobbyPanel/NoRoomsLabel
+@onready var create_room_button: Button = $VBoxMain/Content/ContentCard/CardMargin/LobbyPanel/CreateRoomButton
+@onready var refresh_button: Button = $VBoxMain/Content/ContentCard/CardMargin/LobbyPanel/RoomListHeader/RefreshButton
 
 # Room panel nodes
-@onready var room_panel: VBoxContainer = $VBoxMain/Content/RoomPanel
-@onready var room_name_label: Label = $VBoxMain/Content/RoomPanel/RoomNameLabel
+@onready var room_panel: VBoxContainer = $VBoxMain/Content/ContentCard/CardMargin/RoomPanel
+@onready var room_name_label: Label = $VBoxMain/Content/ContentCard/CardMargin/RoomPanel/RoomNameLabel
 @onready var player_slots: Array = [
-	$VBoxMain/Content/RoomPanel/PlayerSlot1/Label,
-	$VBoxMain/Content/RoomPanel/PlayerSlot2/Label,
-	$VBoxMain/Content/RoomPanel/PlayerSlot3/Label,
-	$VBoxMain/Content/RoomPanel/PlayerSlot4/Label,
+	$VBoxMain/Content/ContentCard/CardMargin/RoomPanel/PlayerSlot1/Label,
+	$VBoxMain/Content/ContentCard/CardMargin/RoomPanel/PlayerSlot2/Label,
+	$VBoxMain/Content/ContentCard/CardMargin/RoomPanel/PlayerSlot3/Label,
+	$VBoxMain/Content/ContentCard/CardMargin/RoomPanel/PlayerSlot4/Label,
 ]
-@onready var leave_button: Button = $VBoxMain/Content/RoomPanel/LeaveButton
-@onready var start_button: Button = $VBoxMain/Content/RoomPanel/StartButton
+@onready var leave_button: Button = $VBoxMain/Content/ContentCard/CardMargin/RoomPanel/LeaveButton
+@onready var start_button: Button = $VBoxMain/Content/ContentCard/CardMargin/RoomPanel/StartButton
 
 @onready var status_label: Label = $VBoxMain/StatusLabel
 @onready var create_room_dialog: AcceptDialog = $CreateRoomDialog
@@ -35,9 +35,9 @@ func _ready() -> void:
 
 	# Create room button styles
 	_room_btn_style = StyleBoxFlat.new()
-	_room_btn_style.bg_color = Color(0.16, 0.18, 0.26, 1)
+	_room_btn_style.bg_color = Color(0.22, 0.15, 0.12, 1)
 	_room_btn_style.set_border_width_all(1)
-	_room_btn_style.border_color = Color(0.25, 0.28, 0.38, 1)
+	_room_btn_style.border_color = Color(0.45, 0.3, 0.22, 1)
 	_room_btn_style.set_corner_radius_all(12)
 	_room_btn_style.content_margin_left = 16
 	_room_btn_style.content_margin_right = 16
@@ -45,9 +45,9 @@ func _ready() -> void:
 	_room_btn_style.content_margin_bottom = 14
 
 	_room_btn_hover_style = StyleBoxFlat.new()
-	_room_btn_hover_style.bg_color = Color(0.2, 0.22, 0.32, 1)
+	_room_btn_hover_style.bg_color = Color(0.28, 0.19, 0.14, 1)
 	_room_btn_hover_style.set_border_width_all(1)
-	_room_btn_hover_style.border_color = Color(0.3, 0.4, 0.65, 1)
+	_room_btn_hover_style.border_color = Color(0.6, 0.4, 0.28, 1)
 	_room_btn_hover_style.set_corner_radius_all(12)
 	_room_btn_hover_style.content_margin_left = 16
 	_room_btn_hover_style.content_margin_right = 16
@@ -59,6 +59,10 @@ func _ready() -> void:
 	leave_button.pressed.connect(_on_leave_pressed)
 	start_button.pressed.connect(_on_start_pressed)
 	create_room_dialog.confirmed.connect(_on_create_room_confirmed)
+	_wire_button_fx(create_room_button)
+	_wire_button_fx(refresh_button)
+	_wire_button_fx(leave_button)
+	_wire_button_fx(start_button)
 
 	GameState.room_list_updated.connect(_on_room_list_updated)
 	GameState.room_joined.connect(_on_room_joined)
@@ -68,6 +72,22 @@ func _ready() -> void:
 
 	_show_lobby()
 	GameState.request_room_list()
+
+func _wire_button_fx(btn: Button) -> void:
+	btn.mouse_entered.connect(func():
+		_tween_button(btn, Vector2(1.03, 1.03), 0.12))
+	btn.mouse_exited.connect(func():
+		_tween_button(btn, Vector2(1.0, 1.0), 0.12))
+	btn.pressed.connect(func():
+		_tween_button(btn, Vector2(0.97, 0.97), 0.08))
+	btn.button_up.connect(func():
+		_tween_button(btn, Vector2(1.0, 1.0), 0.1))
+
+func _tween_button(btn: Control, scale_to: Vector2, duration: float) -> void:
+	var tween := create_tween()
+	tween.set_ease(Tween.EASE_OUT)
+	tween.set_trans(Tween.TRANS_BACK)
+	tween.tween_property(btn, "scale", scale_to, duration)
 
 func _show_lobby() -> void:
 	_in_room = false
@@ -160,7 +180,7 @@ func _on_room_state_updated(state: Dictionary) -> void:
 	else:
 		start_button.text = "게임 시작!"
 
-	status_label.text = "%d/4 플레이어 대기 중" % players.size()
+	status_label.text = "플레이어 %d/4 모였어요" % players.size()
 
 func _on_error(message: String) -> void:
 	status_label.text = "오류: " + message

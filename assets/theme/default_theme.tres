@@ -1,91 +1,103 @@
 [gd_resource type="Theme" format=3]
 
 [sub_resource type="StyleBoxFlat" id="btn_normal"]
-bg_color = Color(0.94, 0.55, 0.33, 1)
+bg_color = Color(0.98, 0.78, 0.72, 1)
+shadow_color = Color(0.8, 0.65, 0.6, 0.35)
+shadow_size = 10
+shadow_offset = Vector2(0, 6)
 border_width_left = 0
 border_width_top = 0
 border_width_right = 0
 border_width_bottom = 0
-corner_radius_top_left = 12
-corner_radius_top_right = 12
-corner_radius_bottom_right = 12
-corner_radius_bottom_left = 12
+corner_radius_top_left = 22
+corner_radius_top_right = 22
+corner_radius_bottom_right = 22
+corner_radius_bottom_left = 22
 content_margin_left = 16.0
 content_margin_top = 10.0
 content_margin_right = 16.0
 content_margin_bottom = 10.0
 
 [sub_resource type="StyleBoxFlat" id="btn_hover"]
-bg_color = Color(0.97, 0.63, 0.42, 1)
-corner_radius_top_left = 12
-corner_radius_top_right = 12
-corner_radius_bottom_right = 12
-corner_radius_bottom_left = 12
+bg_color = Color(0.99, 0.82, 0.76, 1)
+shadow_color = Color(0.85, 0.7, 0.65, 0.35)
+shadow_size = 12
+shadow_offset = Vector2(0, 7)
+corner_radius_top_left = 22
+corner_radius_top_right = 22
+corner_radius_bottom_right = 22
+corner_radius_bottom_left = 22
 content_margin_left = 16.0
 content_margin_top = 10.0
 content_margin_right = 16.0
 content_margin_bottom = 10.0
 
 [sub_resource type="StyleBoxFlat" id="btn_pressed"]
-bg_color = Color(0.88, 0.45, 0.26, 1)
-corner_radius_top_left = 12
-corner_radius_top_right = 12
-corner_radius_bottom_right = 12
-corner_radius_bottom_left = 12
+bg_color = Color(0.95, 0.72, 0.66, 1)
+shadow_color = Color(0.75, 0.6, 0.55, 0.3)
+shadow_size = 8
+shadow_offset = Vector2(0, 4)
+corner_radius_top_left = 22
+corner_radius_top_right = 22
+corner_radius_bottom_right = 22
+corner_radius_bottom_left = 22
 content_margin_left = 16.0
 content_margin_top = 10.0
 content_margin_right = 16.0
 content_margin_bottom = 10.0
 
 [sub_resource type="StyleBoxFlat" id="btn_disabled"]
-bg_color = Color(0.33, 0.23, 0.2, 1)
-corner_radius_top_left = 12
-corner_radius_top_right = 12
-corner_radius_bottom_right = 12
-corner_radius_bottom_left = 12
+bg_color = Color(0.86, 0.82, 0.8, 1)
+corner_radius_top_left = 22
+corner_radius_top_right = 22
+corner_radius_bottom_right = 22
+corner_radius_bottom_left = 22
 content_margin_left = 16.0
 content_margin_top = 10.0
 content_margin_right = 16.0
 content_margin_bottom = 10.0
 
 [sub_resource type="StyleBoxFlat" id="panel_normal"]
-bg_color = Color(0.2, 0.13, 0.1, 1)
-corner_radius_top_left = 16
-corner_radius_top_right = 16
-corner_radius_bottom_right = 16
-corner_radius_bottom_left = 16
+bg_color = Color(0.97, 0.93, 0.92, 1)
+shadow_color = Color(0.85, 0.8, 0.78, 0.6)
+shadow_size = 16
+shadow_offset = Vector2(0, 8)
+corner_radius_top_left = 24
+corner_radius_top_right = 24
+corner_radius_bottom_right = 24
+corner_radius_bottom_left = 24
 content_margin_left = 16.0
 content_margin_top = 16.0
 content_margin_right = 16.0
 content_margin_bottom = 16.0
 
 [sub_resource type="StyleBoxFlat" id="lineedit_normal"]
-bg_color = Color(0.16, 0.11, 0.09, 1)
+bg_color = Color(0.99, 0.97, 0.96, 1)
 border_width_left = 2
 border_width_top = 2
 border_width_right = 2
 border_width_bottom = 2
-border_color = Color(0.45, 0.3, 0.22, 1)
-corner_radius_top_left = 10
-corner_radius_top_right = 10
-corner_radius_bottom_right = 10
-corner_radius_bottom_left = 10
+border_color = Color(0.9, 0.82, 0.8, 1)
+corner_radius_top_left = 20
+corner_radius_top_right = 20
+corner_radius_bottom_right = 20
+corner_radius_bottom_left = 20
 content_margin_left = 14.0
 content_margin_top = 10.0
 content_margin_right = 14.0
 content_margin_bottom = 10.0
 
 [sub_resource type="StyleBoxFlat" id="lineedit_focus"]
-bg_color = Color(0.16, 0.11, 0.09, 1)
+bg_color = Color(0.99, 0.97, 0.96, 1)
 border_width_left = 2
 border_width_top = 2
 border_width_right = 2
 border_width_bottom = 2
-border_color = Color(0.94, 0.55, 0.33, 1)
-corner_radius_top_left = 10
-corner_radius_top_right = 10
-corner_radius_bottom_right = 10
-corner_radius_bottom_left = 10
+border_color = Color(0.98, 0.78, 0.72, 1)
+corner_radius_top_left = 20
+corner_radius_top_right = 20
+corner_radius_bottom_right = 20
+corner_radius_bottom_left = 20
 content_margin_left = 14.0
 content_margin_top = 10.0
 content_margin_right = 14.0
@@ -94,21 +106,21 @@ content_margin_bottom = 10.0
 [resource]
 default_font_size = 22
 
-Button/colors/font_color = Color(0.98, 0.95, 0.92, 1)
-Button/colors/font_hover_color = Color(1, 0.98, 0.95, 1)
-Button/colors/font_pressed_color = Color(0.95, 0.9, 0.86, 1)
-Button/colors/font_disabled_color = Color(0.65, 0.55, 0.5, 1)
+Button/colors/font_color = Color(0.35, 0.25, 0.22, 1)
+Button/colors/font_hover_color = Color(0.32, 0.24, 0.2, 1)
+Button/colors/font_pressed_color = Color(0.3, 0.22, 0.2, 1)
+Button/colors/font_disabled_color = Color(0.6, 0.58, 0.56, 1)
 Button/font_sizes/font_size = 20
 Button/styles/normal = SubResource("btn_normal")
 Button/styles/hover = SubResource("btn_hover")
 Button/styles/pressed = SubResource("btn_pressed")
 Button/styles/disabled = SubResource("btn_disabled")
 
-Label/colors/font_color = Color(0.96, 0.92, 0.88, 1)
+Label/colors/font_color = Color(0.38, 0.3, 0.28, 1)
 Label/font_sizes/font_size = 20
 
-LineEdit/colors/font_color = Color(0.96, 0.92, 0.88, 1)
-LineEdit/colors/font_placeholder_color = Color(0.7, 0.58, 0.52, 1)
+LineEdit/colors/font_color = Color(0.35, 0.25, 0.22, 1)
+LineEdit/colors/font_placeholder_color = Color(0.7, 0.62, 0.6, 1)
 LineEdit/font_sizes/font_size = 20
 LineEdit/styles/normal = SubResource("lineedit_normal")
 LineEdit/styles/focus = SubResource("lineedit_focus")

@@ -1,9 +1,9 @@
 extends Control
 
-@onready var nickname_input: LineEdit = $CenterContainer/VBox/NicknameInput
-@onready var server_input: LineEdit = $CenterContainer/VBox/ServerInput
-@onready var connect_button: Button = $CenterContainer/VBox/ConnectButton
-@onready var status_label: Label = $CenterContainer/VBox/StatusLabel
+@onready var nickname_input: LineEdit = $CenterContainer/LoginCard/CardMargin/VBox/NicknameInput
+@onready var server_input: LineEdit = $CenterContainer/LoginCard/CardMargin/VBox/ServerInput
+@onready var connect_button: Button = $CenterContainer/LoginCard/CardMargin/VBox/ConnectButton
+@onready var status_label: Label = $CenterContainer/LoginCard/CardMargin/VBox/StatusLabel
 
 var _waiting_for_connection: bool = false
 var _timeout_timer: float = 0.0
@@ -16,6 +16,23 @@ func _ready() -> void:
 	NetworkManager.disconnected.connect(_on_disconnected)
 	GameState.login_success.connect(_on_login_success)
 	GameState.error_received.connect(_on_error)
+	_wire_button_fx(connect_button)
+
+func _wire_button_fx(btn: Button) -> void:
+	btn.mouse_entered.connect(func():
+		_tween_button(btn, Vector2(1.03, 1.03), 0.12))
+	btn.mouse_exited.connect(func():
+		_tween_button(btn, Vector2(1.0, 1.0), 0.12))
+	btn.pressed.connect(func():
+		_tween_button(btn, Vector2(0.97, 0.97), 0.08))
+	btn.button_up.connect(func():
+		_tween_button(btn, Vector2(1.0, 1.0), 0.1))
+
+func _tween_button(btn: Control, scale_to: Vector2, duration: float) -> void:
+	var tween := create_tween()
+	tween.set_ease(Tween.EASE_OUT)
+	tween.set_trans(Tween.TRANS_BACK)
+	tween.tween_property(btn, "scale", scale_to, duration)
 
 func _process(delta: float) -> void:
 	if _waiting_for_connection:

@@ -3,6 +3,25 @@
 [ext_resource type="Script" path="res://scripts/game/game_screen.gd" id="1_game"]
 [ext_resource type="PackedScene" uid="uid://cxk3n8wa1dhij" path="res://scenes/game/PlayerHand.tscn" id="2_hand"]
 
+[sub_resource type="StyleBoxFlat" id="bottom_bar"]
+bg_color = Color(0.99, 0.96, 0.96, 0.98)
+corner_radius_top_left = 26
+corner_radius_top_right = 26
+corner_radius_bottom_right = 0
+corner_radius_bottom_left = 0
+shadow_color = Color(0.85, 0.8, 0.78, 0.6)
+shadow_size = 18
+shadow_offset = Vector2(0, -4)
+
+[sub_resource type="Shader" id="dot_shader"]
+code = "shader_type canvas_item;\n\nuniform float density = 120.0;\nuniform float size = 0.25;\nuniform vec4 dot_color : source_color = vec4(1.0, 0.9, 0.8, 0.08);\n\nvoid fragment() {\n\tvec2 uv = FRAGCOORD.xy / density;\n\tvec2 gv = fract(uv) - 0.5;\n\tfloat d = length(gv);\n\tfloat m = smoothstep(size, 0.0, d);\n\tCOLOR = vec4(dot_color.rgb, dot_color.a * m);\n}\n"
+
+[sub_resource type="ShaderMaterial" id="dot_mat"]
+shader = SubResource("dot_shader")
+shader_parameter/density = 160.0
+shader_parameter/size = 0.22
+shader_parameter/dot_color = Color(1, 0.9, 0.8, 0.08)
+
 [node name="GameScreen" type="Control"]
 layout_mode = 3
 anchors_preset = 15
@@ -19,7 +38,36 @@ anchor_right = 1.0
 anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
-color = Color(0.12, 0.08, 0.06, 1)
+color = Color(0.98, 0.96, 0.97, 1)
+
+[node name="WarmGlowTop" type="ColorRect" parent="."]
+layout_mode = 1
+anchors_preset = 10
+anchor_right = 1.0
+offset_bottom = 520.0
+grow_horizontal = 2
+color = Color(0.92, 0.86, 0.96, 0.5)
+
+[node name="WarmGlowBottom" type="ColorRect" parent="."]
+layout_mode = 1
+anchors_preset = 12
+anchor_top = 1.0
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_top = -380.0
+grow_horizontal = 2
+grow_vertical = 0
+color = Color(0.85, 0.93, 0.98, 0.6)
+
+[node name="DotPattern" type="ColorRect" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+color = Color(1, 1, 1, 0)
+material = SubResource("dot_mat")
 
 [node name="GameBoard" type="Control" parent="."]
 layout_mode = 1
@@ -28,6 +76,17 @@ anchor_right = 1.0
 anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
+
+[node name="BottomBar" type="PanelContainer" parent="GameBoard"]
+layout_mode = 1
+anchors_preset = 12
+anchor_top = 1.0
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_top = -360.0
+grow_horizontal = 2
+grow_vertical = 0
+theme_override_styles/panel = SubResource("bottom_bar")
 
 [node name="TopArea" type="VBoxContainer" parent="GameBoard"]
 layout_mode = 1

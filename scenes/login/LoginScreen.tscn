@@ -5,6 +5,16 @@
 [sub_resource type="StyleBoxFlat" id="title_bg"]
 bg_color = Color(0, 0, 0, 0)
 
+[sub_resource type="StyleBoxFlat" id="login_card"]
+bg_color = Color(0.99, 0.96, 0.95, 0.98)
+corner_radius_top_left = 26
+corner_radius_top_right = 26
+corner_radius_bottom_right = 26
+corner_radius_bottom_left = 26
+shadow_color = Color(0.85, 0.8, 0.78, 0.6)
+shadow_size = 20
+shadow_offset = Vector2(0, 10)
+
 [sub_resource type="StyleBoxFlat" id="accent_btn"]
 bg_color = Color(0.95, 0.55, 0.15, 1)
 corner_radius_top_left = 14
@@ -38,6 +48,15 @@ content_margin_top = 14.0
 content_margin_right = 20.0
 content_margin_bottom = 14.0
 
+[sub_resource type="Shader" id="dot_shader"]
+code = "shader_type canvas_item;\n\nuniform float density = 120.0;\nuniform float size = 0.25;\nuniform vec4 dot_color : source_color = vec4(1.0, 0.9, 0.8, 0.08);\n\nvoid fragment() {\n\tvec2 uv = FRAGCOORD.xy / density;\n\tvec2 gv = fract(uv) - 0.5;\n\tfloat d = length(gv);\n\tfloat m = smoothstep(size, 0.0, d);\n\tCOLOR = vec4(dot_color.rgb, dot_color.a * m);\n}\n"
+
+[sub_resource type="ShaderMaterial" id="dot_mat"]
+shader = SubResource("dot_shader")
+shader_parameter/density = 140.0
+shader_parameter/size = 0.23
+shader_parameter/dot_color = Color(1, 0.9, 0.8, 0.1)
+
 [node name="LoginScreen" type="Control"]
 layout_mode = 3
 anchors_preset = 15
@@ -54,7 +73,7 @@ anchor_right = 1.0
 anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
-color = Color(0.12, 0.08, 0.06, 1)
+color = Color(0.98, 0.95, 0.96, 1)
 
 [node name="GradientTop" type="ColorRect" parent="."]
 layout_mode = 1
@@ -62,7 +81,28 @@ anchors_preset = 10
 anchor_right = 1.0
 offset_bottom = 400.0
 grow_horizontal = 2
-color = Color(0.45, 0.26, 0.16, 0.6)
+color = Color(0.9, 0.8, 0.9, 0.5)
+
+[node name="GradientBottom" type="ColorRect" parent="."]
+layout_mode = 1
+anchors_preset = 12
+anchor_top = 1.0
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_top = -420.0
+grow_horizontal = 2
+grow_vertical = 0
+color = Color(0.85, 0.92, 0.96, 0.6)
+
+[node name="DotPattern" type="ColorRect" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+color = Color(1, 1, 1, 0)
+material = SubResource("dot_mat")
 
 [node name="CenterContainer" type="CenterContainer" parent="."]
 layout_mode = 1
@@ -72,37 +112,49 @@ anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
 
-[node name="VBox" type="VBoxContainer" parent="CenterContainer"]
+[node name="LoginCard" type="PanelContainer" parent="CenterContainer"]
 layout_mode = 2
-custom_minimum_size = Vector2(340, 0)
+custom_minimum_size = Vector2(360, 0)
+size_flags_horizontal = 3
+theme_override_styles/panel = SubResource("login_card")
+
+[node name="CardMargin" type="MarginContainer" parent="CenterContainer/LoginCard"]
+layout_mode = 2
+theme_override_constants/margin_left = 22
+theme_override_constants/margin_top = 22
+theme_override_constants/margin_right = 22
+theme_override_constants/margin_bottom = 22
+
+[node name="VBox" type="VBoxContainer" parent="CenterContainer/LoginCard/CardMargin"]
+layout_mode = 2
 size_flags_horizontal = 3
 theme_override_constants/separation = 12
 
-[node name="IconLabel" type="Label" parent="CenterContainer/VBox"]
+[node name="IconLabel" type="Label" parent="CenterContainer/LoginCard/CardMargin/VBox"]
 layout_mode = 2
 theme_override_font_sizes/font_size = 60
-text = "🀄"
+text = "🐥"
 horizontal_alignment = 1
 
-[node name="Title" type="Label" parent="CenterContainer/VBox"]
+[node name="Title" type="Label" parent="CenterContainer/LoginCard/CardMargin/VBox"]
 layout_mode = 2
-theme_override_colors/font_color = Color(1, 1, 1, 1)
+theme_override_colors/font_color = Color(0.35, 0.25, 0.22, 1)
 theme_override_font_sizes/font_size = 38
 text = "TICHU"
 horizontal_alignment = 1
 
-[node name="SubTitle" type="Label" parent="CenterContainer/VBox"]
+[node name="SubTitle" type="Label" parent="CenterContainer/LoginCard/CardMargin/VBox"]
 layout_mode = 2
-theme_override_colors/font_color = Color(0.82, 0.72, 0.64, 1)
+theme_override_colors/font_color = Color(0.55, 0.48, 0.46, 1)
 theme_override_font_sizes/font_size = 18
-text = "온라인 카드 게임"
+text = "귀여운 팀 카드게임"
 horizontal_alignment = 1
 
-[node name="Spacer1" type="Control" parent="CenterContainer/VBox"]
+[node name="Spacer1" type="Control" parent="CenterContainer/LoginCard/CardMargin/VBox"]
 layout_mode = 2
 custom_minimum_size = Vector2(0, 40)
 
-[node name="NicknameInput" type="LineEdit" parent="CenterContainer/VBox"]
+[node name="NicknameInput" type="LineEdit" parent="CenterContainer/LoginCard/CardMargin/VBox"]
 layout_mode = 2
 custom_minimum_size = Vector2(0, 56)
 theme_override_font_sizes/font_size = 22
@@ -110,39 +162,39 @@ placeholder_text = "닉네임을 입력하세요"
 alignment = 1
 max_length = 12
 
-[node name="Spacer2" type="Control" parent="CenterContainer/VBox"]
+[node name="Spacer2" type="Control" parent="CenterContainer/LoginCard/CardMargin/VBox"]
 layout_mode = 2
 custom_minimum_size = Vector2(0, 4)
 
-[node name="ServerInput" type="LineEdit" parent="CenterContainer/VBox"]
+[node name="ServerInput" type="LineEdit" parent="CenterContainer/LoginCard/CardMargin/VBox"]
 layout_mode = 2
 custom_minimum_size = Vector2(0, 56)
-theme_override_colors/font_color = Color(0.82, 0.72, 0.64, 1)
+theme_override_colors/font_color = Color(0.55, 0.48, 0.46, 1)
 theme_override_font_sizes/font_size = 18
 text = "wss://tichu-server.onrender.com"
 placeholder_text = "서버 주소"
 alignment = 1
 
-[node name="Spacer3" type="Control" parent="CenterContainer/VBox"]
+[node name="Spacer3" type="Control" parent="CenterContainer/LoginCard/CardMargin/VBox"]
 layout_mode = 2
 custom_minimum_size = Vector2(0, 12)
 
-[node name="ConnectButton" type="Button" parent="CenterContainer/VBox"]
+[node name="ConnectButton" type="Button" parent="CenterContainer/LoginCard/CardMargin/VBox"]
 layout_mode = 2
 custom_minimum_size = Vector2(0, 60)
 theme_override_font_sizes/font_size = 24
 theme_override_styles/normal = SubResource("accent_btn")
 theme_override_styles/hover = SubResource("accent_btn_hover")
 theme_override_styles/pressed = SubResource("accent_btn_pressed")
-text = "게임 시작"
+text = "귀엽게 접속하기"
 
-[node name="Spacer4" type="Control" parent="CenterContainer/VBox"]
+[node name="Spacer4" type="Control" parent="CenterContainer/LoginCard/CardMargin/VBox"]
 layout_mode = 2
 custom_minimum_size = Vector2(0, 10)
 
-[node name="StatusLabel" type="Label" parent="CenterContainer/VBox"]
+[node name="StatusLabel" type="Label" parent="CenterContainer/LoginCard/CardMargin/VBox"]
 layout_mode = 2
-theme_override_colors/font_color = Color(0.55, 0.58, 0.68, 1)
+theme_override_colors/font_color = Color(0.65, 0.58, 0.56, 1)
 theme_override_font_sizes/font_size = 16
 text = ""
 horizontal_alignment = 1
@@ -160,7 +212,7 @@ offset_top = -40.0
 offset_right = 100.0
 grow_horizontal = 2
 grow_vertical = 0
-theme_override_colors/font_color = Color(0.35, 0.37, 0.43, 1)
+theme_override_colors/font_color = Color(0.7, 0.66, 0.64, 1)
 theme_override_font_sizes/font_size = 14
 text = "v1.0"
 horizontal_alignment = 1

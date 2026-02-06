@@ -33,6 +33,7 @@ class GameStateData {
   final Map<String, int> totalScores;
   final Map<String, int> lastRoundScores;
   final String? callRank;
+  final bool needsToCallRank;
   final bool dragonPending;
   final bool exchangeDone;
   final bool largeTichuResponded;
@@ -48,6 +49,7 @@ class GameStateData {
     this.totalScores = const {'teamA': 0, 'teamB': 0},
     this.lastRoundScores = const {},
     this.callRank,
+    this.needsToCallRank = false,
     this.dragonPending = false,
     this.exchangeDone = false,
     this.largeTichuResponded = false,
@@ -95,6 +97,7 @@ class GameStateData {
       totalScores: scores,
       lastRoundScores: lastScores,
       callRank: json['callRank'],
+      needsToCallRank: json['needsToCallRank'] ?? false,
       dragonPending: json['dragonPending'] ?? false,
       exchangeDone: json['exchangeDone'] ?? false,
       largeTichuResponded: json['largeTichuResponded'] ?? false,

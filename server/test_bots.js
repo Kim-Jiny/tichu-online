@@ -111,6 +111,8 @@ class Bot {
     const phase = state.phase;
     const delay = 300 + Math.random() * 700; // Random delay for realism
 
+    this.log(`[STATE] phase=${phase}, myTurn=${state.isMyTurn}, cards=${this.myCards.length}`);
+
     switch (phase) {
       case 'large_tichu_phase':
         if (!state.largeTichuResponded) {
@@ -124,20 +126,16 @@ class Bot {
       case 'card_exchange':
         if (!state.exchangeDone && this.myCards.length >= 3) {
           setTimeout(() => {
-            // Pick 3 random cards to exchange
-            const shuffled = [...this.myCards].sort(() => Math.random() - 0.5);
-            const cards = {
-              left: shuffled[0],
-              partner: shuffled[1],
-              right: shuffled[2],
-            };
-            this.log(`Exchanging cards: ${shuffled[0]}, ${shuffled[1]}, ${shuffled[2]}`);
-            this.send({ type: 'exchange_cards', cards });
+            const exchangeCards = this.selectExchangeCards(this.myCards);
+            this.log(`Exchanging: L=${exchangeCards.left}, P=${exchangeCards.partner}, R=${exchangeCards.right}`);
+            this.send({ type: 'exchange_cards', cards: exchangeCards });
           }, delay);
         }
         break;
 
       case 'playing':
+        this.log(`[PLAYING] dragonPending=${state.dragonPending}, isMyTurn=${state.isMyTurn}, callRank=${state.callRank}`);
+
         if (state.dragonPending) {
           setTimeout(() => {
             const target = Math.random() > 0.5 ? 'left' : 'right';
@@ -148,6 +146,8 @@ class Bot {
         }
 
         if (state.isMyTurn) {
+          this.log(`[MY TURN] I have ${this.myCards.length} cards, callRank=${state.callRank}`);
+          this.callRank = state.callRank; // Store for autoPlay
           setTimeout(() => this.autoPlay(state), delay);
         }
         break;
@@ -165,8 +165,22 @@ class Bot {
   autoPlay(state) {
     const trick = state.currentTrick || [];
     const cards = this.myCards;
+    const callRank = state.callRank;
 
-    if (cards.length === 0) return;
+    if (cards.length === 0) {
+      this.log('[autoPlay] No cards left');
+      return;
+    }
+
+    const normalCards = cards.filter(c => !c.startsWith('special_'));
+    const combos = this.findCombos(normalCards);
+
+    // Check if we have the called rank
+    const calledValue = this.rankToValue(callRank);
+    const hasCalledRank = callRank && normalCards.some(c => this.getCardValue(c) === calledValue);
+    if (callRank) {
+      this.log(`[CALL] callRank=${callRank}, calledValue=${calledValue}, hasIt=${hasCalledRank}`);
+    }
 
     // If starting new trick (no cards on table)
     if (trick.length === 0) {
@@ -174,7 +188,6 @@ class Bot {
       if (cards.includes('special_bird')) {
         this.log('Playing Bird');
         this.send({ type: 'play_cards', cards: ['special_bird'] });
-        // Call a random rank
         setTimeout(() => {
           const ranks = ['2','3','4','5','6','7','8','9','10','J','Q','K','A'];
           const wish = ranks[Math.floor(Math.random() * ranks.length)];
@@ -184,47 +197,215 @@ class Bot {
         return;
       }
 
-      // Play dog if we have it (gives turn to partner)
+      // Play dog if we have it
       if (cards.includes('special_dog')) {
         this.log('Playing Dog');
         this.send({ type: 'play_cards', cards: ['special_dog'] });
         return;
       }
 
-      // Play lowest single card
+      // Randomly choose to play a combo or single
+      const rand = Math.random();
+
+      // 30% chance to play straight if available
+      if (rand < 0.3 && combos.straights.length > 0) {
+        const straight = combos.straights[0];
+        this.log(`Playing straight: ${straight.join(', ')}`);
+        this.send({ type: 'play_cards', cards: straight });
+        return;
+      }
+
+      // 30% chance to play triple if available
+      if (rand < 0.6 && combos.triples.length > 0) {
+        const triple = combos.triples[0];
+        this.log(`Playing triple: ${triple.join(', ')}`);
+        this.send({ type: 'play_cards', cards: triple });
+        return;
+      }
+
+      // 30% chance to play pair if available
+      if (rand < 0.9 && combos.pairs.length > 0) {
+        const pair = combos.pairs[0];
+        this.log(`Playing pair: ${pair.join(', ')}`);
+        this.send({ type: 'play_cards', cards: pair });
+        return;
+      }
+
+      // Play lowest single
+      if (normalCards.length > 0) {
+        this.log(`Playing: ${normalCards[0]}`);
+        this.send({ type: 'play_cards', cards: [normalCards[0]] });
+        return;
+      }
+
       const playable = cards.filter(c => c !== 'special_dog');
       if (playable.length > 0) {
         this.log(`Playing: ${playable[0]}`);
         this.send({ type: 'play_cards', cards: [playable[0]] });
         return;
       }
+      return;
     }
 
-    // Cards on table: try to beat with a single higher card, or pass
-    if (trick.length > 0) {
-      const lastPlay = trick[trick.length - 1];
-      const lastCombo = lastPlay.combo;
+    // Cards on table: try to beat
+    const lastPlay = trick[trick.length - 1];
+    const lastCombo = lastPlay.combo;
+    const lastCards = lastPlay.cards;
 
-      if (lastCombo === 'single') {
-        // Try to play a higher single card
-        const lastCards = lastPlay.cards;
-        const lastValue = this.getCardValue(lastCards[0]);
+    // Check if partner played the last cards - if so, pass (don't beat teammate)
+    const players = state.players || [];
+    const partner = players.find(p => p.position === 'partner');
 
-        for (const card of cards) {
-          if (card === 'special_dog') continue;
-          const val = this.getCardValue(card);
-          if (val > lastValue) {
-            this.log(`Playing: ${card} (beats ${lastCards[0]})`);
+    // Debug: log team info
+    if (!this._teamLogged) {
+      this.log(`[TEAM] My partner: ${partner ? partner.name : 'NOT FOUND'}`);
+      this.log(`[TEAM] Players: ${players.map(p => `${p.name}(${p.position})`).join(', ')}`);
+      this._teamLogged = true;
+    }
+
+    if (partner && lastPlay.playerId === partner.id) {
+      this.log('Partner played last, passing');
+      this.send({ type: 'pass' });
+      return;
+    }
+
+    // Use combo value from server (handles Phoenix correctly)
+    const lastValue = lastPlay.comboValue || this.getHighestValue(lastCards.filter(c => c !== 'special_phoenix'));
+
+    // Normalize combo type (might be object or string)
+    const comboType = typeof lastCombo === 'object' ? lastCombo.type : lastCombo;
+    this.log(`[Beat] combo=${comboType}, lastValue=${lastValue}, hasCalledRank=${hasCalledRank}`);
+
+    try {
+      if (comboType === 'single') {
+        // If there's a call and we have it, try to play it first
+        if (hasCalledRank) {
+          const calledCards = normalCards.filter(c => this.getCardValue(c) === calledValue);
+          for (const card of calledCards) {
+            if (this.getCardValue(card) > lastValue) {
+              this.log(`Playing called rank: ${card}`);
+              this.send({ type: 'play_cards', cards: [card] });
+              return;
+            }
+          }
+        }
+
+        // No call obligation or can't fulfill, play any higher card
+        for (const card of normalCards) {
+          if (this.getCardValue(card) > lastValue) {
+            this.log(`Playing: ${card}`);
             this.send({ type: 'play_cards', cards: [card] });
+            return;
+          }
+        }
+        if (cards.includes('special_dragon') && lastValue < 15) {
+          this.log('Playing Dragon');
+          this.send({ type: 'play_cards', cards: ['special_dragon'] });
+          return;
+        }
+      }
+
+      if (comboType === 'pair') {
+        // If there's a call, try to play a pair with the called rank
+        if (hasCalledRank) {
+          for (const pair of combos.pairs) {
+            if (this.getCardValue(pair[0]) === calledValue && this.getCardValue(pair[0]) > lastValue) {
+              this.log(`Playing called pair: ${pair.join(', ')}`);
+              this.send({ type: 'play_cards', cards: pair });
+              return;
+            }
+          }
+        }
+
+        for (const pair of combos.pairs) {
+          const pairValue = this.getCardValue(pair[0]);
+          if (pairValue > lastValue) {
+            this.log(`Playing pair: ${pair.join(', ')} (value ${pairValue} > ${lastValue})`);
+            this.send({ type: 'play_cards', cards: pair });
             return;
           }
         }
       }
 
-      // Can't beat it, pass
-      this.log('Passing');
+      if (comboType === 'triple') {
+        for (const triple of combos.triples) {
+          const tripleValue = this.getCardValue(triple[0]);
+          if (tripleValue > lastValue) {
+            this.log(`Playing triple: ${triple.join(', ')}`);
+            this.send({ type: 'play_cards', cards: triple });
+            return;
+          }
+        }
+      }
+
+      if (comboType === 'straight') {
+        const neededLength = lastCards.length;
+        for (const straight of combos.straights) {
+          if (straight.length === neededLength && this.getHighestValue(straight) > lastValue) {
+            this.log(`Playing straight: ${straight.join(', ')}`);
+            this.send({ type: 'play_cards', cards: straight });
+            return;
+          }
+        }
+      }
+
+      // Full house, steps, bombs - just pass for now
+      this.log(`Passing (combo: ${comboType}, value: ${lastValue})`);
+      this.send({ type: 'pass' });
+    } catch (err) {
+      this.log(`[ERROR] ${err.message}`);
       this.send({ type: 'pass' });
     }
+  }
+
+  rankToValue(rank) {
+    if (!rank) return 0;
+    const map = { '2': 2, '3': 3, '4': 4, '5': 5, '6': 6, '7': 7, '8': 8, '9': 9, '10': 10, 'J': 11, 'Q': 12, 'K': 13, 'A': 14 };
+    return map[rank] || parseInt(rank) || 0;
+  }
+
+  findCombos(cards) {
+    const result = { pairs: [], triples: [], straights: [] };
+    const byValue = {};
+
+    for (const card of cards) {
+      const v = this.getCardValue(card);
+      if (!byValue[v]) byValue[v] = [];
+      byValue[v].push(card);
+    }
+
+    // Find pairs and triples
+    for (const v of Object.keys(byValue).sort((a, b) => a - b)) {
+      const group = byValue[v];
+      if (group.length >= 2) {
+        result.pairs.push([group[0], group[1]]);
+      }
+      if (group.length >= 3) {
+        result.triples.push([group[0], group[1], group[2]]);
+      }
+    }
+
+    // Find straights (5+ consecutive)
+    const values = Object.keys(byValue).map(Number).sort((a, b) => a - b);
+    for (let start = 0; start < values.length; start++) {
+      let straight = [byValue[values[start]][0]];
+      for (let i = start + 1; i < values.length; i++) {
+        if (values[i] === values[i - 1] + 1) {
+          straight.push(byValue[values[i]][0]);
+        } else {
+          break;
+        }
+      }
+      if (straight.length >= 5) {
+        result.straights.push(straight);
+      }
+    }
+
+    return result;
+  }
+
+  getHighestValue(cards) {
+    return Math.max(...cards.map(c => this.getCardValue(c)));
   }
 
   getCardValue(cardId) {
@@ -237,6 +418,100 @@ class Bot {
     };
     const rank = cardId.split('_')[1];
     return rankValues[rank] || 0;
+  }
+
+  selectExchangeCards(cards) {
+    // Find cards that are part of a bomb (4 of a kind)
+    const normalCards = cards.filter(c => !c.startsWith('special_'));
+    const byValue = {};
+    for (const card of normalCards) {
+      const v = this.getCardValue(card);
+      if (!byValue[v]) byValue[v] = [];
+      byValue[v].push(card);
+    }
+
+    // Cards in a bomb (4 of same rank)
+    const bombCards = new Set();
+    for (const group of Object.values(byValue)) {
+      if (group.length === 4) {
+        group.forEach(c => bombCards.add(c));
+      }
+    }
+
+    // For exchange sorting: Phoenix is valuable (treat as ~13)
+    const exchangeValue = (c) => {
+      if (c === 'special_phoenix') return 14.5; // Valuable wildcard
+      if (c === 'special_dragon') return 15;
+      if (c === 'special_dog') return 0;
+      if (c === 'special_bird') return 1;
+      return this.getCardValue(c);
+    };
+
+    // All cards sorted by value (highest first), excluding bombs
+    const sortedCards = cards
+      .filter(c => !bombCards.has(c))
+      .sort((a, b) => exchangeValue(b) - exchangeValue(a));
+
+    // Cards to give opponents (dog, bird, or low value cards)
+    const badCards = cards.filter(c =>
+      c === 'special_dog' || c === 'special_bird'
+    );
+    const lowCards = sortedCards.filter(c => !c.startsWith('special_')).reverse();
+
+    const usedCards = new Set();
+
+    // Partner gets highest non-bomb card (can be Dragon, Phoenix, or A/K)
+    let partnerCard = null;
+    for (const c of sortedCards) {
+      if (!usedCards.has(c) && c !== 'special_dog' && c !== 'special_bird') {
+        partnerCard = c;
+        usedCards.add(c);
+        break;
+      }
+    }
+    // Fallback
+    if (!partnerCard) {
+      partnerCard = cards.find(c => !usedCards.has(c)) || cards[0];
+      usedCards.add(partnerCard);
+    }
+
+    const pickForOpponent = () => {
+      // Prefer giving dog or bird to opponents
+      for (const sc of badCards) {
+        if (!usedCards.has(sc)) {
+          usedCards.add(sc);
+          return sc;
+        }
+      }
+      // Otherwise give lowest non-special card
+      for (const lc of lowCards) {
+        if (!usedCards.has(lc)) {
+          usedCards.add(lc);
+          return lc;
+        }
+      }
+      // Fallback: any unused card
+      for (const c of cards) {
+        if (!usedCards.has(c)) {
+          usedCards.add(c);
+          return c;
+        }
+      }
+      return cards[0];
+    };
+
+    const leftCard = pickForOpponent();
+    const rightCard = pickForOpponent();
+
+    this.log(`[Exchange] My cards: ${cards.slice(0, 5).join(', ')}...`);
+    this.log(`[Exchange] Sorted top5: ${sortedCards.slice(0, 5).map(c => `${c}(${exchangeValue(c)})`).join(', ')}`);
+    this.log(`[Exchange] Giving: L=${leftCard}(${exchangeValue(leftCard)}), P=${partnerCard}(${exchangeValue(partnerCard)}), R=${rightCard}(${exchangeValue(rightCard)})`);
+
+    return {
+      left: leftCard,
+      partner: partnerCard,
+      right: rightCard,
+    };
   }
 
   disconnect() {

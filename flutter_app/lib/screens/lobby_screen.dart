@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import '../services/game_service.dart';
 import '../models/room.dart';
 import 'game_screen.dart';
+import 'spectator_screen.dart';
 
 class LobbyScreen extends StatefulWidget {
   const LobbyScreen({super.key});
@@ -13,27 +14,80 @@ class LobbyScreen extends StatefulWidget {
 
 class _LobbyScreenState extends State<LobbyScreen> {
   bool _inRoom = false;
+  bool _navigatingToGame = false;
 
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      context.read<GameService>().requestRoomList();
+      final game = context.read<GameService>();
+      game.requestRoomList();
+      game.requestSpectatableRooms();
     });
   }
 
   void _showCreateRoomDialog() {
     final controller = TextEditingController();
+    final passwordController = TextEditingController();
+    bool isPrivate = false;
+    bool isRanked = false;
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
         title: const Text('방 만들기'),
-        content: TextField(
-          controller: controller,
-          decoration: const InputDecoration(
-            hintText: '방 이름',
-          ),
-          autofocus: true,
+        content: StatefulBuilder(
+          builder: (context, setState) {
+            return Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                TextField(
+                  controller: controller,
+                  decoration: const InputDecoration(
+                    hintText: '방 이름',
+                  ),
+                  autofocus: true,
+                ),
+                const SizedBox(height: 12),
+                Row(
+                  children: [
+                    const Text('비공개'),
+                    const Spacer(),
+                    Switch(
+                      value: isPrivate,
+                      onChanged: isRanked
+                          ? null
+                          : (v) => setState(() => isPrivate = v),
+                    ),
+                  ],
+                ),
+                if (isPrivate)
+                  TextField(
+                    controller: passwordController,
+                    decoration: const InputDecoration(
+                      hintText: '비밀번호 (4자 이상)',
+                    ),
+                    obscureText: true,
+                  ),
+                const SizedBox(height: 8),
+                Row(
+                  children: [
+                    const Text('랭크전'),
+                    const Spacer(),
+                    Switch(
+                      value: isRanked,
+                      onChanged: (v) => setState(() {
+                        isRanked = v;
+                        if (isRanked) {
+                          isPrivate = false;
+                          passwordController.clear();
+                        }
+                      }),
+                    ),
+                  ],
+                ),
+              ],
+            );
+          },
         ),
         actions: [
           TextButton(
@@ -43,8 +97,18 @@ class _LobbyScreenState extends State<LobbyScreen> {
           ElevatedButton(
             onPressed: () {
               final name = controller.text.trim();
+              final password = passwordController.text.trim();
               if (name.isNotEmpty) {
-                context.read<GameService>().createRoom(name);
+                if (isPrivate && password.length < 4) {
+                  return;
+                }
+                context
+                    .read<GameService>()
+                    .createRoom(
+                      name,
+                      password: isPrivate ? password : '',
+                      isRanked: isRanked,
+                    );
                 Navigator.pop(context);
                 setState(() => _inRoom = true);
               }
@@ -74,16 +138,39 @@ class _LobbyScreenState extends State<LobbyScreen> {
         child: SafeArea(
           child: Consumer<GameService>(
             builder: (context, game, _) {
+              // Sync local room flag with server state
+              if (game.currentRoomId.isEmpty && _inRoom) {
+                _inRoom = false;
+              }
+
+              // Check if spectating
+              if (game.isSpectator && game.spectatorGameState != null) {
+                if (!_navigatingToGame) {
+                  _navigatingToGame = true;
+                  WidgetsBinding.instance.addPostFrameCallback((_) {
+                    if (!mounted) return;
+                    Navigator.pushReplacement(
+                      context,
+                      MaterialPageRoute(builder: (_) => const SpectatorScreen()),
+                    );
+                  });
+                }
+              }
+
               // Check if game started
               if (game.gameState != null &&
                   game.gameState!.phase.isNotEmpty &&
                   game.gameState!.phase != 'waiting') {
-                WidgetsBinding.instance.addPostFrameCallback((_) {
-                  Navigator.pushReplacement(
-                    context,
-                    MaterialPageRoute(builder: (_) => const GameScreen()),
-                  );
-                });
+                if (!_navigatingToGame) {
+                  _navigatingToGame = true;
+                  WidgetsBinding.instance.addPostFrameCallback((_) {
+                    if (!mounted) return;
+                    Navigator.pushReplacement(
+                      context,
+                      MaterialPageRoute(builder: (_) => const GameScreen()),
+                    );
+                  });
+                }
               }
 
               // Show room or lobby based on state
@@ -113,7 +200,7 @@ class _LobbyScreenState extends State<LobbyScreen> {
           child: Row(
             children: [
               const Text(
-                '티츄 라운지',
+                '게임 라운지',
                 style: TextStyle(
                   fontSize: 22,
                   fontWeight: FontWeight.bold,
@@ -154,7 +241,7 @@ class _LobbyScreenState extends State<LobbyScreen> {
                 Row(
                   children: [
                     const Text(
-                      '지금 열려있는 방',
+                      '게임 방 리스트',
                       style: TextStyle(
                         fontSize: 16,
                         color: Color(0xFF8A7A72),
@@ -162,7 +249,9 @@ class _LobbyScreenState extends State<LobbyScreen> {
                     ),
                     const Spacer(),
                     IconButton(
-                      onPressed: () => game.requestRoomList(),
+                      onPressed: () {
+                        game.requestRoomList();
+                      },
                       icon: const Icon(Icons.refresh),
                       color: const Color(0xFF8A7A72),
                     ),
@@ -189,7 +278,7 @@ class _LobbyScreenState extends State<LobbyScreen> {
                       elevation: 0,
                     ),
                     child: const Text(
-                      '✨ 새 방 만들기',
+                      '새 방 만들기',
                       style: TextStyle(
                         fontSize: 16,
                         fontWeight: FontWeight.bold,
@@ -205,6 +294,8 @@ class _LobbyScreenState extends State<LobbyScreen> {
       ],
     );
   }
+
+  // removed separate spectate list; in-progress rooms are shown inline
 
   Widget _buildEmptyRoomList() {
     return const Center(
@@ -231,11 +322,20 @@ class _LobbyScreenState extends State<LobbyScreen> {
   }
 
   Widget _buildRoomItem(Room room) {
+    final isInProgress = room.gameInProgress;
     return Material(
-      color: const Color(0xFFFAF6F4),
+      color: isInProgress ? const Color(0xFFE8E0F8) : const Color(0xFFFAF6F4),
       borderRadius: BorderRadius.circular(16),
       child: InkWell(
         onTap: () {
+          if (isInProgress) {
+            context.read<GameService>().spectateRoom(room.id);
+            return;
+          }
+          if (room.isPrivate) {
+            _showJoinPrivateRoomDialog(room);
+            return;
+          }
           context.read<GameService>().joinRoom(room.id);
           setState(() => _inRoom = true);
         },
@@ -245,14 +345,14 @@ class _LobbyScreenState extends State<LobbyScreen> {
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(16),
             border: Border.all(
-              color: const Color(0xFFDDD0CC),
+              color: isInProgress ? const Color(0xFFD0C8E8) : const Color(0xFFDDD0CC),
             ),
           ),
           child: Row(
             children: [
               Expanded(
                 child: Text(
-                  room.name,
+                  '${room.isPrivate ? '🔒 ' : ''}${room.isRanked ? '🏆 ' : ''}${room.name}',
                   style: const TextStyle(
                     fontSize: 16,
                     fontWeight: FontWeight.w500,
@@ -260,13 +360,36 @@ class _LobbyScreenState extends State<LobbyScreen> {
                   ),
                 ),
               ),
+              if (isInProgress)
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                  margin: const EdgeInsets.only(right: 8),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFD8CCF6),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Row(
+                    children: [
+                      const Icon(Icons.visibility, size: 14, color: Color(0xFF4A4080)),
+                      const SizedBox(width: 4),
+                      Text(
+                        '게임중 ${room.spectatorCount}',
+                        style: const TextStyle(
+                          fontSize: 12,
+                          color: Color(0xFF4A4080),
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
               Container(
                 padding: const EdgeInsets.symmetric(
                   horizontal: 12,
                   vertical: 6,
                 ),
                 decoration: BoxDecoration(
-                  color: const Color(0xFFE8E0DC),
+                  color: isInProgress ? const Color(0xFFEDE6FF) : const Color(0xFFE8E0DC),
                   borderRadius: BorderRadius.circular(12),
                 ),
                 child: Text(
@@ -280,6 +403,39 @@ class _LobbyScreenState extends State<LobbyScreen> {
             ],
           ),
         ),
+      ),
+    );
+  }
+
+  void _showJoinPrivateRoomDialog(Room room) {
+    final controller = TextEditingController();
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('비공개 방 입장'),
+        content: TextField(
+          controller: controller,
+          decoration: const InputDecoration(
+            hintText: '비밀번호',
+          ),
+          obscureText: true,
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('취소'),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              final password = controller.text.trim();
+              if (password.isEmpty) return;
+              context.read<GameService>().joinRoom(room.id, password: password);
+              Navigator.pop(context);
+              setState(() => _inRoom = true);
+            },
+            child: const Text('입장'),
+          ),
+        ],
       ),
     );
   }
@@ -339,39 +495,74 @@ class _LobbyScreenState extends State<LobbyScreen> {
             ),
             child: Column(
               children: [
-                const Text(
-                  'TEAM A',
-                  style: TextStyle(
-                    fontSize: 14,
-                    fontWeight: FontWeight.bold,
-                    color: Color(0xFF6A9BD1),
+                if (game.isRankedRoom) ...[
+                  // Ranked room: simple 4-player waiting room
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFFFF3E0),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: const Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text('🏆', style: TextStyle(fontSize: 16)),
+                        SizedBox(width: 6),
+                        Text(
+                          '랭크전 - 팀 랜덤 배정',
+                          style: TextStyle(
+                            fontSize: 14,
+                            fontWeight: FontWeight.bold,
+                            color: Color(0xFFE65100),
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
-                ),
-                const SizedBox(height: 8),
-                _buildPlayerSlot(game.roomPlayers.length > 0
-                    ? game.roomPlayers[0].name
-                    : null),
-                const SizedBox(height: 8),
-                _buildPlayerSlot(game.roomPlayers.length > 2
-                    ? game.roomPlayers[2].name
-                    : null),
-                const SizedBox(height: 24),
-                const Text(
-                  'TEAM B',
-                  style: TextStyle(
-                    fontSize: 14,
-                    fontWeight: FontWeight.bold,
-                    color: Color(0xFFF5B8C0),
+                  const SizedBox(height: 16),
+                  for (int i = 0; i < 4; i++) ...[
+                    _buildPlayerSlot(
+                      game.roomPlayers.length > i ? game.roomPlayers[i].name : null,
+                      index: i + 1,
+                    ),
+                    if (i < 3) const SizedBox(height: 10),
+                  ],
+                ] else ...[
+                  // Normal room: Team A and Team B
+                  const Text(
+                    'TEAM A',
+                    style: TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.bold,
+                      color: Color(0xFF6A9BD1),
+                    ),
                   ),
-                ),
-                const SizedBox(height: 8),
-                _buildPlayerSlot(game.roomPlayers.length > 1
-                    ? game.roomPlayers[1].name
-                    : null),
-                const SizedBox(height: 8),
-                _buildPlayerSlot(game.roomPlayers.length > 3
-                    ? game.roomPlayers[3].name
-                    : null),
+                  const SizedBox(height: 8),
+                  _buildPlayerSlot(game.roomPlayers.length > 0
+                      ? game.roomPlayers[0].name
+                      : null),
+                  const SizedBox(height: 8),
+                  _buildPlayerSlot(game.roomPlayers.length > 2
+                      ? game.roomPlayers[2].name
+                      : null),
+                  const SizedBox(height: 24),
+                  const Text(
+                    'TEAM B',
+                    style: TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.bold,
+                      color: Color(0xFFF5B8C0),
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  _buildPlayerSlot(game.roomPlayers.length > 1
+                      ? game.roomPlayers[1].name
+                      : null),
+                  const SizedBox(height: 8),
+                  _buildPlayerSlot(game.roomPlayers.length > 3
+                      ? game.roomPlayers[3].name
+                      : null),
+                ],
                 const Spacer(),
                 if (game.isHost && game.roomPlayers.length >= 4) ...[
                   SizedBox(
@@ -428,7 +619,7 @@ class _LobbyScreenState extends State<LobbyScreen> {
     );
   }
 
-  Widget _buildPlayerSlot(String? playerName) {
+  Widget _buildPlayerSlot(String? playerName, {int? index}) {
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
@@ -437,15 +628,46 @@ class _LobbyScreenState extends State<LobbyScreen> {
         borderRadius: BorderRadius.circular(16),
         border: Border.all(color: const Color(0xFFDDD0CC)),
       ),
-      child: Text(
-        playerName ?? '[대기 중...]',
-        style: TextStyle(
-          fontSize: 16,
-          color: playerName != null
-              ? const Color(0xFF5A4038)
-              : const Color(0xFFAA9A92),
-        ),
-        textAlign: TextAlign.center,
+      child: Row(
+        children: [
+          if (index != null) ...[
+            Container(
+              width: 24,
+              height: 24,
+              decoration: BoxDecoration(
+                color: playerName != null
+                    ? const Color(0xFFE8E0DC)
+                    : const Color(0xFFF0EAE8),
+                shape: BoxShape.circle,
+              ),
+              child: Center(
+                child: Text(
+                  '$index',
+                  style: TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.bold,
+                    color: playerName != null
+                        ? const Color(0xFF6A5A52)
+                        : const Color(0xFFAA9A92),
+                  ),
+                ),
+              ),
+            ),
+            const SizedBox(width: 12),
+          ],
+          Expanded(
+            child: Text(
+              playerName ?? '[대기 중...]',
+              style: TextStyle(
+                fontSize: 16,
+                color: playerName != null
+                    ? const Color(0xFF5A4038)
+                    : const Color(0xFFAA9A92),
+              ),
+              textAlign: index != null ? TextAlign.left : TextAlign.center,
+            ),
+          ),
+        ],
       ),
     );
   }

@@ -49,14 +49,19 @@ wss.on('connection', (ws) => {
     if (ws.roomId) {
       const room = lobby.getRoom(ws.roomId);
       if (room) {
-        room.removePlayer(ws.playerId);
-        if (room.getPlayerCount() === 0) {
-          lobby.removeRoom(ws.roomId);
+        if (ws.isSpectator) {
+          room.removeSpectator(ws.playerId);
         } else {
-          broadcastRoomState(ws.roomId);
+          room.removePlayer(ws.playerId);
+          if (room.getPlayerCount() === 0) {
+            lobby.removeRoom(ws.roomId);
+          } else {
+            broadcastRoomState(ws.roomId);
+          }
         }
       }
       ws.roomId = null;
+      ws.isSpectator = false;
     }
     broadcastRoomList();
   });
@@ -74,6 +79,9 @@ function handleMessage(ws, data) {
     case 'room_list':
       sendTo(ws, { type: 'room_list', rooms: lobby.getRoomList() });
       break;
+    case 'spectatable_rooms':
+      sendTo(ws, { type: 'spectatable_rooms', rooms: lobby.getSpectatableRooms() });
+      break;
     case 'create_room':
       handleCreateRoom(ws, data);
       break;
@@ -82,6 +90,9 @@ function handleMessage(ws, data) {
       break;
     case 'leave_room':
       handleLeaveRoom(ws);
+      break;
+    case 'spectate_room':
+      handleSpectateRoom(ws, data);
       break;
     case 'start_game':
       handleStartGame(ws);
@@ -97,6 +108,13 @@ function handleMessage(ws, data) {
     case 'dragon_give':
     case 'call_rank':
       handleGameAction(ws, data);
+      break;
+    // Spectator card view requests
+    case 'request_card_view':
+      handleRequestCardView(ws, data);
+      break;
+    case 'respond_card_view':
+      handleRespondCardView(ws, data);
       break;
     default:
       sendTo(ws, { type: 'error', message: `Unknown message type: ${data.type}` });
@@ -129,7 +147,17 @@ function handleCreateRoom(ws, data) {
     return;
   }
   const roomName = (data.roomName || `${ws.nickname}'s Room`).trim();
-  const room = lobby.createRoom(roomName, ws.playerId, ws.nickname);
+  const isRanked = !!data.isRanked;
+  const password = isRanked
+    ? ''
+    : (typeof data.password === 'string' ? data.password.trim() : '');
+  const room = lobby.createRoom(
+    roomName,
+    ws.playerId,
+    ws.nickname,
+    password,
+    isRanked
+  );
   ws.roomId = room.id;
   sendTo(ws, { type: 'room_joined', roomId: room.id, roomName: room.name });
   broadcastRoomState(room.id);
@@ -150,7 +178,8 @@ function handleJoinRoom(ws, data) {
     sendTo(ws, { type: 'error', message: 'Room not found' });
     return;
   }
-  const result = room.addPlayer(ws.playerId, ws.nickname);
+  const password = typeof data.password === 'string' ? data.password.trim() : '';
+  const result = room.addPlayer(ws.playerId, ws.nickname, password);
   if (!result.success) {
     sendTo(ws, { type: 'error', message: result.message });
     return;
@@ -165,17 +194,118 @@ function handleLeaveRoom(ws) {
   if (!ws.roomId) return;
   const room = lobby.getRoom(ws.roomId);
   const roomId = ws.roomId;
+  const wasSpectating = ws.isSpectator;
   ws.roomId = null;
+  ws.isSpectator = false;
   if (room) {
-    room.removePlayer(ws.playerId);
-    if (room.getPlayerCount() === 0) {
-      lobby.removeRoom(roomId);
+    if (wasSpectating) {
+      room.removeSpectator(ws.playerId);
     } else {
-      broadcastRoomState(roomId);
+      room.removePlayer(ws.playerId);
+      if (room.getPlayerCount() === 0) {
+        lobby.removeRoom(roomId);
+      } else {
+        broadcastRoomState(roomId);
+      }
     }
   }
   sendTo(ws, { type: 'room_left' });
   broadcastRoomList();
+}
+
+function handleSpectateRoom(ws, data) {
+  if (!ws.playerId) {
+    sendTo(ws, { type: 'error', message: 'Not logged in' });
+    return;
+  }
+  if (ws.roomId) {
+    sendTo(ws, { type: 'error', message: 'Already in a room' });
+    return;
+  }
+  const room = lobby.getRoom(data.roomId);
+  if (!room) {
+    sendTo(ws, { type: 'error', message: 'Room not found' });
+    return;
+  }
+  const result = room.addSpectator(ws.playerId, ws.nickname);
+  if (!result.success) {
+    sendTo(ws, { type: 'error', message: result.message });
+    return;
+  }
+  ws.roomId = room.id;
+  ws.isSpectator = true;
+  sendTo(ws, { type: 'spectate_joined', roomId: room.id, roomName: room.name });
+
+  // Send current game state if game is in progress (without card permissions initially)
+  if (room.game) {
+    const permittedPlayers = room.getPermittedPlayers(ws.playerId);
+    const state = room.game.getStateForSpectator(permittedPlayers);
+    sendTo(ws, { type: 'spectator_game_state', state });
+  }
+}
+
+function handleRequestCardView(ws, data) {
+  if (!ws.roomId || !ws.isSpectator) {
+    sendTo(ws, { type: 'error', message: 'Not spectating' });
+    return;
+  }
+  const room = lobby.getRoom(ws.roomId);
+  if (!room) return;
+
+  const playerId = data.playerId;
+  const result = room.requestCardView(ws.playerId, ws.nickname, playerId);
+  if (!result.success) {
+    sendTo(ws, { type: 'error', message: result.message });
+    return;
+  }
+
+  // Notify the player about the request
+  const playerWs = findWsByPlayerId(playerId);
+  if (playerWs) {
+    sendTo(playerWs, {
+      type: 'card_view_request',
+      spectatorId: ws.playerId,
+      spectatorNickname: ws.nickname,
+    });
+  }
+
+  sendTo(ws, { type: 'card_view_requested', playerId });
+}
+
+function handleRespondCardView(ws, data) {
+  if (!ws.roomId) {
+    sendTo(ws, { type: 'error', message: 'Not in a room' });
+    return;
+  }
+  const room = lobby.getRoom(ws.roomId);
+  if (!room) return;
+
+  const spectatorId = data.spectatorId;
+  const allow = data.allow === true;
+
+  const result = room.respondCardViewRequest(ws.playerId, spectatorId, allow);
+  if (!result.success) {
+    sendTo(ws, { type: 'error', message: result.message });
+    return;
+  }
+
+  // Notify the spectator
+  const spectatorWs = findWsByPlayerId(spectatorId);
+  if (spectatorWs) {
+    sendTo(spectatorWs, {
+      type: 'card_view_response',
+      playerId: ws.playerId,
+      playerNickname: ws.nickname,
+      allowed: allow,
+    });
+
+    // If allowed, send updated game state with the new permission
+    if (allow && room.game) {
+      const permittedPlayers = room.getPermittedPlayers(spectatorId);
+      const state = room.game.getStateForSpectator(permittedPlayers);
+      sendTo(spectatorWs, { type: 'spectator_game_state', state });
+    }
+  }
 }
 
 function handleStartGame(ws) {
@@ -241,6 +371,7 @@ function sendGameStateToAll(roomId) {
   const room = lobby.getRoom(roomId);
   if (!room || !room.game) return;
 
+  // Send to players
   for (const player of room.players) {
     const ws = findWsByPlayerId(player.id);
     if (ws) {
@@ -249,13 +380,31 @@ function sendGameStateToAll(roomId) {
       sendTo(ws, { type: 'game_state', state });
     }
   }
+
+  // Send to spectators (each with their own permissions)
+  for (const spectatorId of room.getSpectatorIds()) {
+    const ws = findWsByPlayerId(spectatorId);
+    if (ws) {
+      const permittedPlayers = room.getPermittedPlayers(spectatorId);
+      const spectatorState = room.game.getStateForSpectator(permittedPlayers);
+      sendTo(ws, { type: 'spectator_game_state', state: spectatorState });
+    }
+  }
 }
 
 function broadcastGameEvent(roomId, event) {
   const room = lobby.getRoom(roomId);
   if (!room) return;
+  // Send to players
   for (const player of room.players) {
     const ws = findWsByPlayerId(player.id);
+    if (ws) {
+      sendTo(ws, event);
+    }
+  }
+  // Send to spectators
+  for (const spectatorId of room.getSpectatorIds()) {
+    const ws = findWsByPlayerId(spectatorId);
     if (ws) {
       sendTo(ws, event);
     }

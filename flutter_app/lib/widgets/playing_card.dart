@@ -21,31 +21,25 @@ class PlayingCard extends StatelessWidget {
   });
 
   static const Map<String, String> suitSymbols = {
-    'spade': '♠',
-    'heart': '♥',
-    'diamond': '♦',
-    'club': '♣',
+    // Use text presentation (VS15) to avoid emoji-colored suits on Android
+    'spade': '\u2660\uFE0E',
+    'heart': '\u2665\uFE0E',
+    'diamond': '\u2666\uFE0E',
+    'club': '\u2663\uFE0E',
   };
 
   static const Map<String, Color> suitColors = {
-    'spade': Color(0xFF252530),
-    'heart': Color(0xFFD92525),
-    'diamond': Color(0xFFD92525),
-    'club': Color(0xFF252530),
+    'spade': Color(0xFF2B2B2B),  // matte black
+    'heart': Color(0xFFD24B4B),  // matte red
+    'diamond': Color(0xFF6FB6E5), // matte sky
+    'club': Color(0xFF4BAA6A),   // matte green
   };
 
-  static const Map<String, String> specialNames = {
-    'special_bird': '🐦',
-    'special_dog': '🐕',
-    'special_phoenix': '🦅',
-    'special_dragon': '🐉',
-  };
-
-  static const Map<String, Color> specialColors = {
-    'special_bird': Color(0xFF1A8C1A),
-    'special_dog': Color(0xFF5A5A66),
-    'special_phoenix': Color(0xFFD98000),
-    'special_dragon': Color(0xFFC01A1A),
+  static const Map<String, String> specialImages = {
+    'special_bird': 'assets/cards/bird.png',
+    'special_dog': 'assets/cards/dog.png',
+    'special_phoenix': 'assets/cards/phoenix.png',
+    'special_dragon': 'assets/cards/dragon.png',
   };
 
   @override
@@ -54,23 +48,23 @@ class PlayingCard extends StatelessWidget {
       onTap: isInteractive ? onTap : null,
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 150),
-        transform: Matrix4.translationValues(0, isSelected ? -12 : 0, 0),
+        transform: Matrix4.translationValues(0, isSelected ? -8 : 0, 0),
         width: width,
         height: height,
         decoration: BoxDecoration(
-          color: isFaceUp ? Colors.white : const Color(0xFF2A3F6F),
-          borderRadius: BorderRadius.circular(8),
+          color: isFaceUp ? Colors.white : const Color(0xFFFFF1F5),
+          borderRadius: BorderRadius.circular(14),
           border: Border.all(
             color: isSelected
                 ? const Color(0xFF4D99FF)
-                : Colors.grey.withOpacity(0.3),
+                : const Color(0xFFE6DCE8),
             width: isSelected ? 2 : 1,
           ),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withOpacity(0.15),
-              blurRadius: 4,
-              offset: const Offset(1, 2),
+              color: const Color(0xFFE1D7E6).withOpacity(0.4),
+              blurRadius: 6,
+              offset: const Offset(0, 3),
             ),
           ],
         ),
@@ -95,29 +89,30 @@ class PlayingCard extends StatelessWidget {
     final symbol = suitSymbols[suit] ?? '?';
     final color = suitColors[suit] ?? Colors.black;
 
-    return Padding(
-      padding: const EdgeInsets.all(4),
+    // Scale font size based on card width (base: 48)
+    final scale = (width / 48).clamp(0.7, 1.3);
+    final symbolSize = 14 * scale;
+    final rankSize = 22 * scale;
+
+    return Center(
       child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisAlignment: MainAxisAlignment.center,
         children: [
           Text(
             symbol,
             style: TextStyle(
-              fontSize: 12,
+              fontSize: symbolSize,
               color: color,
               fontWeight: FontWeight.bold,
             ),
           ),
-          Expanded(
-            child: Center(
-              child: Text(
-                rank,
-                style: TextStyle(
-                  fontSize: 20,
-                  color: color,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
+          SizedBox(height: 2 * scale),
+          Text(
+            rank,
+            style: TextStyle(
+              fontSize: rankSize,
+              color: color,
+              fontWeight: FontWeight.bold,
             ),
           ),
         ],
@@ -126,26 +121,18 @@ class PlayingCard extends StatelessWidget {
   }
 
   Widget _buildSpecialCard() {
-    final emoji = specialNames[cardId] ?? '?';
-    final color = specialColors[cardId] ?? Colors.black;
+    final imagePath = specialImages[cardId];
+    if (imagePath == null) {
+      return const Center(child: Text('?'));
+    }
 
-    return Container(
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: [
-            color.withOpacity(0.1),
-            color.withOpacity(0.2),
-          ],
-        ),
-        borderRadius: BorderRadius.circular(7),
-      ),
-      child: Center(
-        child: Text(
-          emoji,
-          style: const TextStyle(fontSize: 28),
-        ),
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(7),
+      child: Image.asset(
+        imagePath,
+        fit: BoxFit.cover,
+        width: width,
+        height: height,
       ),
     );
   }
@@ -153,29 +140,43 @@ class PlayingCard extends StatelessWidget {
   Widget _buildBackFace() {
     return Container(
       decoration: BoxDecoration(
-        gradient: const LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: [
-            Color(0xFF2A3F6F),
-            Color(0xFF1A2F5F),
-          ],
-        ),
-        borderRadius: BorderRadius.circular(7),
+        color: const Color(0xFFFFF1F5),
+        borderRadius: BorderRadius.circular(14),
         border: Border.all(
-          color: const Color(0xFF3355AA),
+          color: const Color(0xFFE6DCE8),
           width: 2,
         ),
-      ),
-      child: const Center(
-        child: Text(
-          'T',
-          style: TextStyle(
-            fontSize: 24,
-            color: Color(0xFF6688DD),
-            fontWeight: FontWeight.bold,
+        boxShadow: [
+          BoxShadow(
+            color: const Color(0xFFE1D7E6).withOpacity(0.5),
+            blurRadius: 6,
+            offset: const Offset(0, 3),
           ),
-        ),
+        ],
+      ),
+      child: Stack(
+        children: [
+          Center(
+            child: Container(
+              width: width * 0.6,
+              height: height * 0.6,
+              decoration: BoxDecoration(
+                color: Colors.white.withOpacity(0.9),
+                borderRadius: BorderRadius.circular(18),
+                border: Border.all(
+                  color: const Color(0xFFEDE2EF),
+                  width: 1.5,
+                ),
+              ),
+              child: const Center(
+                child: Text(
+                  '🐥',
+                  style: TextStyle(fontSize: 20),
+                ),
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }

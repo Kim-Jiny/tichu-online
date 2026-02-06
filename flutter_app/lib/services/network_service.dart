@@ -4,27 +4,34 @@ import 'package:flutter/foundation.dart';
 import 'package:web_socket_channel/web_socket_channel.dart';
 
 class NetworkService extends ChangeNotifier {
-  static const String defaultUrl = 'wss://tichu-server.onrender.com';
+  static String get defaultUrl => kDebugMode
+      ? 'ws://172.30.1.98:8080'  // 로컬 테스트용 (IP 변경 시 수정 필요)
+      : 'wss://tichu-server.onrender.com';
 
   WebSocketChannel? _channel;
   bool _isConnected = false;
+  bool _isConnecting = false;
   String _serverUrl = defaultUrl;
 
   final StreamController<Map<String, dynamic>> _messageController =
       StreamController<Map<String, dynamic>>.broadcast();
 
   bool get isConnected => _isConnected;
+  bool get isConnecting => _isConnecting;
   Stream<Map<String, dynamic>> get messageStream => _messageController.stream;
 
   Future<void> connect([String? url]) async {
-    if (_isConnected) return;
+    if (_isConnected || _isConnecting) return;
 
     _serverUrl = url ?? defaultUrl;
+    _isConnecting = true;
+    notifyListeners();
 
     try {
       _channel = WebSocketChannel.connect(Uri.parse(_serverUrl));
       await _channel!.ready;
 
+      _isConnecting = false;
       _isConnected = true;
       notifyListeners();
 
@@ -57,6 +64,7 @@ class NetworkService extends ChangeNotifier {
 
   void _handleDisconnect() {
     _isConnected = false;
+    _isConnecting = false;
     _channel = null;
     notifyListeners();
   }

@@ -49,6 +49,7 @@ class TichuGame {
     this.finishOrder = [];
 
     this.callRank = null;  // rank called by bird player
+    this.needsToCallRank = null; // player who needs to call (just played bird)
     this.dragonPending = false; // waiting for dragon give decision
     this.dragonDecider = null;
 
@@ -89,7 +90,7 @@ class TichuGame {
       case 'exchange_cards':
         return this.handleExchange(playerId, data.cards);
       case 'play_cards':
-        return this.handlePlayCards(playerId, data.cards);
+        return this.handlePlayCards(playerId, data.cards, data.callRank);
       case 'pass':
         return this.handlePass(playerId);
       case 'dragon_give':
@@ -251,7 +252,7 @@ class TichuGame {
     }
   }
 
-  handlePlayCards(playerId, cardIds) {
+  handlePlayCards(playerId, cardIds, callRank = null) {
     if (this.state !== STATE.PLAYING) {
       return { success: false, message: 'Not in playing phase' };
     }
@@ -329,8 +330,18 @@ class TichuGame {
 
     // Check if Bird was played (player must call)
     if (cardIds.includes('special_bird')) {
-      // Call will be sent separately
-      result.broadcast.birdPlayed = true;
+      if (callRank) {
+        // Call provided with Bird play - process immediately
+        const validRanks = ['2', '3', '4', '5', '6', '7', '8', '9', '10', 'J', 'Q', 'K', 'A'];
+        if (validRanks.includes(callRank) || validRanks.includes(callRank.toString())) {
+          this.callRank = callRank.toString();
+          result.broadcast.callRank = this.callRank;
+        }
+      } else {
+        // No call provided - wait for separate call
+        result.broadcast.birdPlayed = true;
+        this.needsToCallRank = playerId;
+      }
     }
 
     // Check if call is fulfilled
@@ -350,6 +361,20 @@ class TichuGame {
       this.finishOrder.push(playerId);
       result.broadcast.playerFinished = true;
       result.broadcast.finishPosition = this.finishOrder.length;
+
+      // Check for 1-2 finish (same team finishes 1st and 2nd)
+      if (this.finishOrder.length === 2) {
+        const first = this.finishOrder[0];
+        const second = this.finishOrder[1];
+        const firstTeam = this.teams.teamA.includes(first) ? 'teamA' : 'teamB';
+        const secondTeam = this.teams.teamA.includes(second) ? 'teamA' : 'teamB';
+        if (firstTeam === secondTeam) {
+          result.broadcast.oneTwoFinish = true;
+          result.broadcast.winningTeam = firstTeam;
+          this.endRound();
+          return result;
+        }
+      }
 
       // Check if round is over (3 players finished)
       if (this.finishOrder.length >= 3) {
@@ -580,6 +605,8 @@ class TichuGame {
     }
 
     this.callRank = rank.toString();
+    this.needsToCallRank = null;
+    console.log(`[DEBUG] call_rank handled: callRank=${this.callRank}, needsToCallRank=${this.needsToCallRank}`);
 
     return {
       success: true,
@@ -763,18 +790,63 @@ class TichuGame {
         playerName: this.playerNames[t.playerId],
         cards: t.cards,
         combo: t.combo.type,
+        comboValue: t.combo.value,
       })),
       teams: this.teams,
       totalScores: this.totalScores,
       lastRoundScores: this.lastRoundScores || null,
       finishOrder: this.finishOrder,
       callRank: this.callRank,
+      needsToCallRank: this.needsToCallRank === playerId,
       dragonPending: this.dragonPending && this.dragonDecider === playerId,
       exchangeDone: !!this.exchangeDone[playerId],
       largeTichuResponded: this.largeTichuResponses[playerId] !== undefined,
       canDeclareSmallTichu: this.hands[playerId].length === 14 &&
         !this.smallTichuDeclarations.includes(playerId) &&
         !this.largeTichuDeclarations.includes(playerId),
+    };
+  }
+
+  getStateForSpectator(permittedPlayerIds = new Set()) {
+    const players = this.playerIds.map((pid, i) => {
+      const canSeeCards = permittedPlayerIds.has(pid);
+      return {
+        id: pid,
+        name: this.playerNames[pid],
+        position: i,
+        cards: canSeeCards
+          ? sortCards(this.hands[pid]).map((c) => typeof c === 'string' ? c : c.id)
+          : [],
+        cardCount: this.hands[pid].length,
+        canSeeCards: canSeeCards,
+        hasFinished: this.finishOrder.includes(pid),
+        finishPosition: this.finishOrder.indexOf(pid) + 1 || 0,
+        hasSmallTichu: this.smallTichuDeclarations.includes(pid),
+        hasLargeTichu: this.largeTichuDeclarations.includes(pid),
+        team: this.teams.teamA.includes(pid) ? 'A' : 'B',
+      };
+    });
+
+    return {
+      phase: this.state,
+      round: this.round,
+      players: players,
+      currentPlayer: this.currentPlayer,
+      currentPlayerName: this.playerNames[this.currentPlayer],
+      currentTrick: this.currentTrick.map((t) => ({
+        playerId: t.playerId,
+        playerName: this.playerNames[t.playerId],
+        cards: t.cards,
+        combo: t.combo.type,
+        comboValue: t.combo.value,
+      })),
+      teams: this.teams,
+      totalScores: this.totalScores,
+      lastRoundScores: this.lastRoundScores || null,
+      finishOrder: this.finishOrder,
+      callRank: this.callRank,
+      dragonPending: this.dragonPending,
+      dragonDecider: this.dragonDecider ? this.playerNames[this.dragonDecider] : null,
     };
   }
 }

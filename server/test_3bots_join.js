@@ -71,6 +71,22 @@ class Bot {
         this.log(`Joined room: ${data.roomName}`);
         break;
 
+      case 'room_state':
+        // Check if I became the host - if so, leave the room
+        if (data.room && data.room.hostId === this.playerId) {
+          this.log('I became host - leaving room');
+          this.send({ type: 'leave_room' });
+          this.roomId = null;
+          this._lastPhase = null;
+          this._actedThisPhase = false;
+        }
+        break;
+
+      case 'room_left':
+        this.log('Left room');
+        this.roomId = null;
+        break;
+
       case 'game_state':
         this.state = data.state;
         this.myCards = data.state.myCards || [];
@@ -309,16 +325,12 @@ async function main() {
     await sleep(300);
   }
 
-  // Poll for rooms
-  const pollInterval = setInterval(() => {
+  // Poll for rooms (continuously - bots may leave if they become host)
+  setInterval(() => {
     for (const bot of bots) {
       if (!bot.roomId) {
         bot.send({ type: 'room_list' });
       }
-    }
-    if (bots.every(b => b.roomId)) {
-      clearInterval(pollInterval);
-      console.log('\n✅ All bots joined the room!\n');
     }
   }, 1000);
 

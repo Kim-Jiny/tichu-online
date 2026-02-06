@@ -9,12 +9,12 @@ const pool = new Pool({
   ssl: process.env.DATABASE_URL ? { rejectUnauthorized: false } : false,
 });
 
-// Initialize database tables
+// Initialize database tables (tc_ prefix for tichu)
 async function initDatabase() {
   const client = await pool.connect();
   try {
     await client.query(`
-      CREATE TABLE IF NOT EXISTS users (
+      CREATE TABLE IF NOT EXISTS tc_users (
         id SERIAL PRIMARY KEY,
         username VARCHAR(50) UNIQUE NOT NULL,
         password_hash VARCHAR(255) NOT NULL,
@@ -23,7 +23,7 @@ async function initDatabase() {
         last_login TIMESTAMP
       )
     `);
-    console.log('Database initialized');
+    console.log('Database initialized (tc_ tables)');
   } catch (err) {
     console.error('Database initialization error:', err);
   } finally {
@@ -55,7 +55,7 @@ async function registerUser(username, password, nickname) {
   try {
     // Check if username exists
     const usernameCheck = await client.query(
-      'SELECT id FROM users WHERE username = $1',
+      'SELECT id FROM tc_users WHERE username = $1',
       [username.toLowerCase()]
     );
     if (usernameCheck.rows.length > 0) {
@@ -64,7 +64,7 @@ async function registerUser(username, password, nickname) {
 
     // Check if nickname exists
     const nicknameCheck = await client.query(
-      'SELECT id FROM users WHERE nickname = $1',
+      'SELECT id FROM tc_users WHERE nickname = $1',
       [nickname.trim()]
     );
     if (nicknameCheck.rows.length > 0) {
@@ -74,7 +74,7 @@ async function registerUser(username, password, nickname) {
     // Hash password and insert
     const passwordHash = await bcrypt.hash(password, SALT_ROUNDS);
     await client.query(
-      'INSERT INTO users (username, password_hash, nickname) VALUES ($1, $2, $3)',
+      'INSERT INTO tc_users (username, password_hash, nickname) VALUES ($1, $2, $3)',
       [username.toLowerCase(), passwordHash, nickname.trim()]
     );
 
@@ -96,7 +96,7 @@ async function loginUser(username, password) {
   const client = await pool.connect();
   try {
     const result = await client.query(
-      'SELECT id, password_hash, nickname FROM users WHERE username = $1',
+      'SELECT id, password_hash, nickname FROM tc_users WHERE username = $1',
       [username.toLowerCase()]
     );
 
@@ -113,7 +113,7 @@ async function loginUser(username, password) {
 
     // Update last login
     await client.query(
-      'UPDATE users SET last_login = CURRENT_TIMESTAMP WHERE id = $1',
+      'UPDATE tc_users SET last_login = CURRENT_TIMESTAMP WHERE id = $1',
       [user.id]
     );
 
@@ -139,7 +139,7 @@ async function checkNickname(nickname) {
   const client = await pool.connect();
   try {
     const result = await client.query(
-      'SELECT id FROM users WHERE nickname = $1',
+      'SELECT id FROM tc_users WHERE nickname = $1',
       [nickname.trim()]
     );
     return {

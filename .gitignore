@@ -1,0 +1,20 @@
+# Godot 4+ specific ignores
+.godot/
+*.import
+/android/
+
+# iOS build artifacts
+build/ios/tichu.xcodeproj/xcuserdata/
+build/ios/tichu.xcodeproj/project.xcworkspace/
+build/ios/DerivedData/
+build/ios/tichu/tichu.pck
+
+# Node.js
+node_modules/
+server/node_modules/
+
+# OS files
+.DS_Store
+
+# Logs
+*.log

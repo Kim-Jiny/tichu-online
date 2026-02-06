@@ -1,0 +1,342 @@
+[gd_scene format=3 uid="uid://dv5s8kynt46xw"]
+
+[ext_resource type="Script" path="res://scripts/game/game_screen.gd" id="1_game"]
+[ext_resource type="PackedScene" uid="uid://cxk3n8wa1dhij" path="res://scenes/game/PlayerHand.tscn" id="2_hand"]
+
+[node name="GameScreen" type="Control"]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+script = ExtResource("1_game")
+
+[node name="Background" type="ColorRect" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+color = Color(0.12, 0.08, 0.06, 1)
+
+[node name="GameBoard" type="Control" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="TopArea" type="VBoxContainer" parent="GameBoard"]
+layout_mode = 1
+anchors_preset = 10
+anchor_right = 1.0
+offset_top = 10.0
+offset_bottom = 180.0
+grow_horizontal = 2
+
+[node name="PartnerNameLabel" type="Label" parent="GameBoard/TopArea"]
+layout_mode = 2
+text = "파트너"
+horizontal_alignment = 1
+
+[node name="PartnerInfo" type="Label" parent="GameBoard/TopArea"]
+layout_mode = 2
+text = "14장"
+horizontal_alignment = 1
+
+[node name="PartnerHand" parent="GameBoard/TopArea" instance=ExtResource("2_hand")]
+layout_mode = 2
+custom_minimum_size = Vector2(0, 60)
+
+[node name="MiddleArea" type="HBoxContainer" parent="GameBoard"]
+layout_mode = 1
+anchors_preset = 0
+offset_left = 0.0
+offset_top = 190.0
+offset_right = 720.0
+offset_bottom = 800.0
+
+[node name="LeftPlayer" type="VBoxContainer" parent="GameBoard/MiddleArea"]
+layout_mode = 2
+custom_minimum_size = Vector2(100, 0)
+
+[node name="LeftNameLabel" type="Label" parent="GameBoard/MiddleArea/LeftPlayer"]
+layout_mode = 2
+text = "좌측"
+horizontal_alignment = 1
+
+[node name="LeftInfo" type="Label" parent="GameBoard/MiddleArea/LeftPlayer"]
+layout_mode = 2
+text = "14장"
+horizontal_alignment = 1
+
+[node name="CenterArea" type="VBoxContainer" parent="GameBoard/MiddleArea"]
+layout_mode = 2
+size_flags_horizontal = 3
+
+[node name="PhaseLabel" type="Label" parent="GameBoard/MiddleArea/CenterArea"]
+layout_mode = 2
+text = "게임 진행 중"
+horizontal_alignment = 1
+
+[node name="TurnLabel" type="Label" parent="GameBoard/MiddleArea/CenterArea"]
+layout_mode = 2
+text = ""
+horizontal_alignment = 1
+
+[node name="WishLabel" type="Label" parent="GameBoard/MiddleArea/CenterArea"]
+layout_mode = 2
+text = ""
+horizontal_alignment = 1
+
+[node name="TrickArea" type="VBoxContainer" parent="GameBoard/MiddleArea/CenterArea"]
+layout_mode = 2
+size_flags_vertical = 3
+theme_override_constants/separation = 5
+
+[node name="ScoreLabel" type="Label" parent="GameBoard/MiddleArea/CenterArea"]
+layout_mode = 2
+text = "팀A: 0 | 팀B: 0"
+horizontal_alignment = 1
+
+[node name="RightPlayer" type="VBoxContainer" parent="GameBoard/MiddleArea"]
+layout_mode = 2
+custom_minimum_size = Vector2(100, 0)
+
+[node name="RightNameLabel" type="Label" parent="GameBoard/MiddleArea/RightPlayer"]
+layout_mode = 2
+text = "우측"
+horizontal_alignment = 1
+
+[node name="RightInfo" type="Label" parent="GameBoard/MiddleArea/RightPlayer"]
+layout_mode = 2
+text = "14장"
+horizontal_alignment = 1
+
+[node name="BottomArea" type="VBoxContainer" parent="GameBoard"]
+layout_mode = 1
+anchors_preset = 12
+anchor_top = 1.0
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_top = -350.0
+grow_horizontal = 2
+grow_vertical = 0
+
+[node name="MyNameLabel" type="Label" parent="GameBoard/BottomArea"]
+layout_mode = 2
+text = "나"
+horizontal_alignment = 1
+
+[node name="MyHand" parent="GameBoard/BottomArea" instance=ExtResource("2_hand")]
+layout_mode = 2
+custom_minimum_size = Vector2(0, 130)
+size_flags_vertical = 3
+
+[node name="ActionButtons" type="HBoxContainer" parent="GameBoard/BottomArea"]
+layout_mode = 2
+theme_override_constants/separation = 10
+alignment = 1
+
+[node name="PlayButton" type="Button" parent="GameBoard/BottomArea/ActionButtons"]
+layout_mode = 2
+custom_minimum_size = Vector2(120, 50)
+text = "내기"
+
+[node name="PassButton" type="Button" parent="GameBoard/BottomArea/ActionButtons"]
+layout_mode = 2
+custom_minimum_size = Vector2(120, 50)
+text = "패스"
+
+[node name="SmallTichuButton" type="Button" parent="GameBoard/BottomArea/ActionButtons"]
+layout_mode = 2
+custom_minimum_size = Vector2(120, 50)
+text = "스몰티츄"
+
+[node name="LargeTichuPanel" type="PanelContainer" parent="."]
+visible = false
+layout_mode = 1
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -180.0
+offset_top = -80.0
+offset_right = 180.0
+offset_bottom = 80.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="VBox" type="VBoxContainer" parent="LargeTichuPanel"]
+layout_mode = 2
+theme_override_constants/separation = 15
+
+[node name="Label" type="Label" parent="LargeTichuPanel/VBox"]
+layout_mode = 2
+text = "라지티츄를 선언하시겠습니까?"
+horizontal_alignment = 1
+autowrap_mode = 2
+
+[node name="HBox" type="HBoxContainer" parent="LargeTichuPanel/VBox"]
+layout_mode = 2
+alignment = 1
+theme_override_constants/separation = 20
+
+[node name="DeclareLargeButton" type="Button" parent="LargeTichuPanel/VBox/HBox"]
+layout_mode = 2
+custom_minimum_size = Vector2(120, 45)
+text = "선언!"
+
+[node name="PassLargeButton" type="Button" parent="LargeTichuPanel/VBox/HBox"]
+layout_mode = 2
+custom_minimum_size = Vector2(120, 45)
+text = "패스"
+
+[node name="ExchangePanel" type="PanelContainer" parent="."]
+visible = false
+layout_mode = 1
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -200.0
+offset_top = -100.0
+offset_right = 200.0
+offset_bottom = 100.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="VBox" type="VBoxContainer" parent="ExchangePanel"]
+layout_mode = 2
+theme_override_constants/separation = 10
+
+[node name="ExchangeLabel" type="Label" parent="ExchangePanel/VBox"]
+layout_mode = 2
+text = "3장의 카드를 선택하여 교환하세요
+(좌측, 파트너, 우측 순서)"
+horizontal_alignment = 1
+autowrap_mode = 2
+
+[node name="ExchangeInfo" type="Label" parent="ExchangePanel/VBox"]
+layout_mode = 2
+text = "선택: 0/3"
+horizontal_alignment = 1
+
+[node name="ExchangeButton" type="Button" parent="ExchangePanel/VBox"]
+layout_mode = 2
+custom_minimum_size = Vector2(0, 45)
+disabled = true
+text = "카드 교환"
+
+[node name="DragonPanel" type="PanelContainer" parent="."]
+visible = false
+layout_mode = 1
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -180.0
+offset_top = -60.0
+offset_right = 180.0
+offset_bottom = 60.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="VBox" type="VBoxContainer" parent="DragonPanel"]
+layout_mode = 2
+theme_override_constants/separation = 10
+
+[node name="DragonLabel" type="Label" parent="DragonPanel/VBox"]
+layout_mode = 2
+text = "용 트릭을 누구에게 주시겠습니까?"
+horizontal_alignment = 1
+autowrap_mode = 2
+
+[node name="HBox" type="HBoxContainer" parent="DragonPanel/VBox"]
+layout_mode = 2
+alignment = 1
+theme_override_constants/separation = 20
+
+[node name="DragonLeftButton" type="Button" parent="DragonPanel/VBox/HBox"]
+layout_mode = 2
+custom_minimum_size = Vector2(120, 45)
+text = "좌측 상대"
+
+[node name="DragonRightButton" type="Button" parent="DragonPanel/VBox/HBox"]
+layout_mode = 2
+custom_minimum_size = Vector2(120, 45)
+text = "우측 상대"
+
+[node name="CallPanel" type="PanelContainer" parent="."]
+visible = false
+layout_mode = 1
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -200.0
+offset_top = -80.0
+offset_right = 200.0
+offset_bottom = 80.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="VBox" type="VBoxContainer" parent="CallPanel"]
+layout_mode = 2
+theme_override_constants/separation = 10
+
+[node name="CallLabel" type="Label" parent="CallPanel/VBox"]
+layout_mode = 2
+text = "콜할 카드 숫자를 선택하세요"
+horizontal_alignment = 1
+
+[node name="CallGrid" type="GridContainer" parent="CallPanel/VBox"]
+layout_mode = 2
+columns = 7
+
+[node name="RoundEndPanel" type="PanelContainer" parent="."]
+visible = false
+layout_mode = 1
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -200.0
+offset_top = -120.0
+offset_right = 200.0
+offset_bottom = 120.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="VBox" type="VBoxContainer" parent="RoundEndPanel"]
+layout_mode = 2
+theme_override_constants/separation = 10
+
+[node name="RoundEndTitle" type="Label" parent="RoundEndPanel/VBox"]
+layout_mode = 2
+text = "라운드 종료!"
+horizontal_alignment = 1
+
+[node name="RoundScoreLabel" type="Label" parent="RoundEndPanel/VBox"]
+layout_mode = 2
+text = ""
+horizontal_alignment = 1
+autowrap_mode = 2
+
+[node name="TotalScoreLabel" type="Label" parent="RoundEndPanel/VBox"]
+layout_mode = 2
+text = ""
+horizontal_alignment = 1
+
+[node name="NextRoundButton" type="Button" parent="RoundEndPanel/VBox"]
+layout_mode = 2
+custom_minimum_size = Vector2(0, 45)
+text = "다음 라운드"

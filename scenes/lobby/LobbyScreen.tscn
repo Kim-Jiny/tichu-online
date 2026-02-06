@@ -1,0 +1,363 @@
+[gd_scene format=3 uid="uid://dp1rk6w8n52gq"]
+
+[ext_resource type="Script" path="res://scripts/lobby/lobby_screen.gd" id="1_lobby"]
+
+[sub_resource type="StyleBoxFlat" id="top_bar_bg"]
+bg_color = Color(0.1, 0.12, 0.18, 1)
+content_margin_left = 20.0
+content_margin_top = 14.0
+content_margin_right = 20.0
+content_margin_bottom = 14.0
+
+[sub_resource type="StyleBoxFlat" id="card_panel"]
+bg_color = Color(0.12, 0.14, 0.2, 1)
+corner_radius_top_left = 16
+corner_radius_top_right = 16
+corner_radius_bottom_right = 16
+corner_radius_bottom_left = 16
+content_margin_left = 16.0
+content_margin_top = 16.0
+content_margin_right = 16.0
+content_margin_bottom = 16.0
+
+[sub_resource type="StyleBoxFlat" id="green_btn"]
+bg_color = Color(0.18, 0.7, 0.4, 1)
+corner_radius_top_left = 14
+corner_radius_top_right = 14
+corner_radius_bottom_right = 14
+corner_radius_bottom_left = 14
+content_margin_left = 20.0
+content_margin_top = 12.0
+content_margin_right = 20.0
+content_margin_bottom = 12.0
+
+[sub_resource type="StyleBoxFlat" id="green_btn_hover"]
+bg_color = Color(0.22, 0.78, 0.48, 1)
+corner_radius_top_left = 14
+corner_radius_top_right = 14
+corner_radius_bottom_right = 14
+corner_radius_bottom_left = 14
+content_margin_left = 20.0
+content_margin_top = 12.0
+content_margin_right = 20.0
+content_margin_bottom = 12.0
+
+[sub_resource type="StyleBoxFlat" id="green_btn_pressed"]
+bg_color = Color(0.14, 0.6, 0.34, 1)
+corner_radius_top_left = 14
+corner_radius_top_right = 14
+corner_radius_bottom_right = 14
+corner_radius_bottom_left = 14
+content_margin_left = 20.0
+content_margin_top = 12.0
+content_margin_right = 20.0
+content_margin_bottom = 12.0
+
+[sub_resource type="StyleBoxFlat" id="room_btn"]
+bg_color = Color(0.16, 0.18, 0.26, 1)
+border_width_left = 1
+border_width_top = 1
+border_width_right = 1
+border_width_bottom = 1
+border_color = Color(0.25, 0.28, 0.38, 1)
+corner_radius_top_left = 12
+corner_radius_top_right = 12
+corner_radius_bottom_right = 12
+corner_radius_bottom_left = 12
+content_margin_left = 16.0
+content_margin_top = 14.0
+content_margin_right = 16.0
+content_margin_bottom = 14.0
+
+[sub_resource type="StyleBoxFlat" id="room_btn_hover"]
+bg_color = Color(0.2, 0.22, 0.32, 1)
+border_width_left = 1
+border_width_top = 1
+border_width_right = 1
+border_width_bottom = 1
+border_color = Color(0.3, 0.4, 0.65, 1)
+corner_radius_top_left = 12
+corner_radius_top_right = 12
+corner_radius_bottom_right = 12
+corner_radius_bottom_left = 12
+content_margin_left = 16.0
+content_margin_top = 14.0
+content_margin_right = 16.0
+content_margin_bottom = 14.0
+
+[sub_resource type="StyleBoxFlat" id="red_btn"]
+bg_color = Color(0.7, 0.2, 0.2, 1)
+corner_radius_top_left = 14
+corner_radius_top_right = 14
+corner_radius_bottom_right = 14
+corner_radius_bottom_left = 14
+content_margin_left = 20.0
+content_margin_top = 12.0
+content_margin_right = 20.0
+content_margin_bottom = 12.0
+
+[sub_resource type="StyleBoxFlat" id="red_btn_hover"]
+bg_color = Color(0.8, 0.25, 0.25, 1)
+corner_radius_top_left = 14
+corner_radius_top_right = 14
+corner_radius_bottom_right = 14
+corner_radius_bottom_left = 14
+content_margin_left = 20.0
+content_margin_top = 12.0
+content_margin_right = 20.0
+content_margin_bottom = 12.0
+
+[sub_resource type="StyleBoxFlat" id="orange_btn"]
+bg_color = Color(0.95, 0.55, 0.15, 1)
+corner_radius_top_left = 14
+corner_radius_top_right = 14
+corner_radius_bottom_right = 14
+corner_radius_bottom_left = 14
+content_margin_left = 20.0
+content_margin_top = 12.0
+content_margin_right = 20.0
+content_margin_bottom = 12.0
+
+[sub_resource type="StyleBoxFlat" id="orange_btn_hover"]
+bg_color = Color(1.0, 0.62, 0.22, 1)
+corner_radius_top_left = 14
+corner_radius_top_right = 14
+corner_radius_bottom_right = 14
+corner_radius_bottom_left = 14
+content_margin_left = 20.0
+content_margin_top = 12.0
+content_margin_right = 20.0
+content_margin_bottom = 12.0
+
+[sub_resource type="StyleBoxFlat" id="player_slot"]
+bg_color = Color(0.1, 0.12, 0.17, 1)
+border_width_left = 1
+border_width_top = 1
+border_width_right = 1
+border_width_bottom = 1
+border_color = Color(0.22, 0.25, 0.32, 1)
+corner_radius_top_left = 10
+corner_radius_top_right = 10
+corner_radius_bottom_right = 10
+corner_radius_bottom_left = 10
+content_margin_left = 14.0
+content_margin_top = 10.0
+content_margin_right = 14.0
+content_margin_bottom = 10.0
+
+[node name="LobbyScreen" type="Control"]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+script = ExtResource("1_lobby")
+
+[node name="Background" type="ColorRect" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+color = Color(0.07, 0.08, 0.13, 1)
+
+[node name="VBoxMain" type="VBoxContainer" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_constants/separation = 0
+
+[node name="TopBar" type="PanelContainer" parent="VBoxMain"]
+layout_mode = 2
+theme_override_styles/panel = SubResource("top_bar_bg")
+
+[node name="HBox" type="HBoxContainer" parent="VBoxMain/TopBar"]
+layout_mode = 2
+
+[node name="TitleLabel" type="Label" parent="VBoxMain/TopBar/HBox"]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_colors/font_color = Color(1, 1, 1, 1)
+theme_override_font_sizes/font_size = 24
+text = "로비"
+
+[node name="NicknameLabel" type="Label" parent="VBoxMain/TopBar/HBox"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.55, 0.75, 1.0, 1)
+theme_override_font_sizes/font_size = 18
+horizontal_alignment = 2
+
+[node name="Content" type="MarginContainer" parent="VBoxMain"]
+layout_mode = 2
+size_flags_vertical = 3
+theme_override_constants/margin_left = 20
+theme_override_constants/margin_top = 16
+theme_override_constants/margin_right = 20
+theme_override_constants/margin_bottom = 16
+
+[node name="LobbyPanel" type="VBoxContainer" parent="VBoxMain/Content"]
+layout_mode = 2
+theme_override_constants/separation = 14
+
+[node name="RoomListHeader" type="HBoxContainer" parent="VBoxMain/Content/LobbyPanel"]
+layout_mode = 2
+
+[node name="RoomListLabel" type="Label" parent="VBoxMain/Content/LobbyPanel/RoomListHeader"]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_colors/font_color = Color(0.65, 0.68, 0.78, 1)
+theme_override_font_sizes/font_size = 16
+text = "방 목록"
+
+[node name="RefreshButton" type="Button" parent="VBoxMain/Content/LobbyPanel/RoomListHeader"]
+layout_mode = 2
+custom_minimum_size = Vector2(80, 36)
+theme_override_font_sizes/font_size = 16
+text = "새로고침"
+
+[node name="ScrollContainer" type="ScrollContainer" parent="VBoxMain/Content/LobbyPanel"]
+layout_mode = 2
+size_flags_vertical = 3
+
+[node name="RoomList" type="VBoxContainer" parent="VBoxMain/Content/LobbyPanel/ScrollContainer"]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_constants/separation = 8
+
+[node name="NoRoomsLabel" type="Label" parent="VBoxMain/Content/LobbyPanel"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.45, 0.48, 0.56, 1)
+theme_override_font_sizes/font_size = 18
+text = "방이 없습니다
+새로운 방을 만들어보세요!"
+horizontal_alignment = 1
+autowrap_mode = 2
+
+[node name="CreateRoomButton" type="Button" parent="VBoxMain/Content/LobbyPanel"]
+layout_mode = 2
+custom_minimum_size = Vector2(0, 56)
+theme_override_font_sizes/font_size = 22
+theme_override_styles/normal = SubResource("green_btn")
+theme_override_styles/hover = SubResource("green_btn_hover")
+theme_override_styles/pressed = SubResource("green_btn_pressed")
+text = "+ 방 만들기"
+
+[node name="RoomPanel" type="VBoxContainer" parent="VBoxMain/Content"]
+visible = false
+layout_mode = 2
+theme_override_constants/separation = 14
+
+[node name="RoomNameLabel" type="Label" parent="VBoxMain/Content/RoomPanel"]
+layout_mode = 2
+theme_override_colors/font_color = Color(1, 1, 1, 1)
+theme_override_font_sizes/font_size = 26
+text = "방 이름"
+horizontal_alignment = 1
+
+[node name="TeamALabel" type="Label" parent="VBoxMain/Content/RoomPanel"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.4, 0.7, 1.0, 1)
+theme_override_font_sizes/font_size = 16
+text = "TEAM A"
+horizontal_alignment = 1
+
+[node name="PlayerSlot1" type="PanelContainer" parent="VBoxMain/Content/RoomPanel"]
+layout_mode = 2
+theme_override_styles/panel = SubResource("player_slot")
+
+[node name="Label" type="Label" parent="VBoxMain/Content/RoomPanel/PlayerSlot1"]
+layout_mode = 2
+theme_override_font_sizes/font_size = 20
+text = "[대기 중...]"
+horizontal_alignment = 1
+
+[node name="PlayerSlot2" type="PanelContainer" parent="VBoxMain/Content/RoomPanel"]
+layout_mode = 2
+theme_override_styles/panel = SubResource("player_slot")
+
+[node name="Label" type="Label" parent="VBoxMain/Content/RoomPanel/PlayerSlot2"]
+layout_mode = 2
+theme_override_font_sizes/font_size = 20
+text = "[대기 중...]"
+horizontal_alignment = 1
+
+[node name="TeamBLabel" type="Label" parent="VBoxMain/Content/RoomPanel"]
+layout_mode = 2
+theme_override_colors/font_color = Color(1.0, 0.5, 0.4, 1)
+theme_override_font_sizes/font_size = 16
+text = "TEAM B"
+horizontal_alignment = 1
+
+[node name="PlayerSlot3" type="PanelContainer" parent="VBoxMain/Content/RoomPanel"]
+layout_mode = 2
+theme_override_styles/panel = SubResource("player_slot")
+
+[node name="Label" type="Label" parent="VBoxMain/Content/RoomPanel/PlayerSlot3"]
+layout_mode = 2
+theme_override_font_sizes/font_size = 20
+text = "[대기 중...]"
+horizontal_alignment = 1
+
+[node name="PlayerSlot4" type="PanelContainer" parent="VBoxMain/Content/RoomPanel"]
+layout_mode = 2
+theme_override_styles/panel = SubResource("player_slot")
+
+[node name="Label" type="Label" parent="VBoxMain/Content/RoomPanel/PlayerSlot4"]
+layout_mode = 2
+theme_override_font_sizes/font_size = 20
+text = "[대기 중...]"
+horizontal_alignment = 1
+
+[node name="Spacer" type="Control" parent="VBoxMain/Content/RoomPanel"]
+layout_mode = 2
+size_flags_vertical = 3
+
+[node name="StartButton" type="Button" parent="VBoxMain/Content/RoomPanel"]
+layout_mode = 2
+custom_minimum_size = Vector2(0, 56)
+theme_override_font_sizes/font_size = 22
+theme_override_styles/normal = SubResource("orange_btn")
+theme_override_styles/hover = SubResource("orange_btn_hover")
+text = "게임 시작 (4명 필요)"
+
+[node name="LeaveButton" type="Button" parent="VBoxMain/Content/RoomPanel"]
+layout_mode = 2
+custom_minimum_size = Vector2(0, 48)
+theme_override_font_sizes/font_size = 18
+theme_override_styles/normal = SubResource("red_btn")
+theme_override_styles/hover = SubResource("red_btn_hover")
+text = "방 나가기"
+
+[node name="StatusLabel" type="Label" parent="VBoxMain"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.5, 0.52, 0.6, 1)
+theme_override_font_sizes/font_size = 15
+text = ""
+horizontal_alignment = 1
+
+[node name="CreateRoomDialog" type="AcceptDialog" parent="."]
+title = "방 만들기"
+size = Vector2i(500, 200)
+ok_button_text = "만들기"
+
+[node name="VBox" type="VBoxContainer" parent="CreateRoomDialog"]
+offset_left = 8.0
+offset_top = 8.0
+offset_right = 492.0
+offset_bottom = 150.0
+theme_override_constants/separation = 12
+
+[node name="Label" type="Label" parent="CreateRoomDialog/VBox"]
+layout_mode = 2
+text = "방 이름을 입력하세요"
+
+[node name="RoomNameInput" type="LineEdit" parent="CreateRoomDialog/VBox"]
+layout_mode = 2
+custom_minimum_size = Vector2(0, 48)
+placeholder_text = "방 이름"
+max_length = 30

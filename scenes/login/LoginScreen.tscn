@@ -1,0 +1,165 @@
+[gd_scene format=3 uid="uid://c4yq8m6xdp3kv"]
+
+[ext_resource type="Script" path="res://scripts/login/login_screen.gd" id="1_login"]
+
+[sub_resource type="StyleBoxFlat" id="title_bg"]
+bg_color = Color(0, 0, 0, 0)
+
+[sub_resource type="StyleBoxFlat" id="accent_btn"]
+bg_color = Color(0.95, 0.55, 0.15, 1)
+corner_radius_top_left = 14
+corner_radius_top_right = 14
+corner_radius_bottom_right = 14
+corner_radius_bottom_left = 14
+content_margin_left = 20.0
+content_margin_top = 14.0
+content_margin_right = 20.0
+content_margin_bottom = 14.0
+
+[sub_resource type="StyleBoxFlat" id="accent_btn_hover"]
+bg_color = Color(1.0, 0.62, 0.22, 1)
+corner_radius_top_left = 14
+corner_radius_top_right = 14
+corner_radius_bottom_right = 14
+corner_radius_bottom_left = 14
+content_margin_left = 20.0
+content_margin_top = 14.0
+content_margin_right = 20.0
+content_margin_bottom = 14.0
+
+[sub_resource type="StyleBoxFlat" id="accent_btn_pressed"]
+bg_color = Color(0.85, 0.45, 0.1, 1)
+corner_radius_top_left = 14
+corner_radius_top_right = 14
+corner_radius_bottom_right = 14
+corner_radius_bottom_left = 14
+content_margin_left = 20.0
+content_margin_top = 14.0
+content_margin_right = 20.0
+content_margin_bottom = 14.0
+
+[node name="LoginScreen" type="Control"]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+script = ExtResource("1_login")
+
+[node name="Background" type="ColorRect" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+color = Color(0.12, 0.08, 0.06, 1)
+
+[node name="GradientTop" type="ColorRect" parent="."]
+layout_mode = 1
+anchors_preset = 10
+anchor_right = 1.0
+offset_bottom = 400.0
+grow_horizontal = 2
+color = Color(0.45, 0.26, 0.16, 0.6)
+
+[node name="CenterContainer" type="CenterContainer" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="VBox" type="VBoxContainer" parent="CenterContainer"]
+layout_mode = 2
+custom_minimum_size = Vector2(500, 0)
+theme_override_constants/separation = 12
+
+[node name="IconLabel" type="Label" parent="CenterContainer/VBox"]
+layout_mode = 2
+theme_override_font_sizes/font_size = 60
+text = "🀄"
+horizontal_alignment = 1
+
+[node name="Title" type="Label" parent="CenterContainer/VBox"]
+layout_mode = 2
+theme_override_colors/font_color = Color(1, 1, 1, 1)
+theme_override_font_sizes/font_size = 38
+text = "TICHU"
+horizontal_alignment = 1
+
+[node name="SubTitle" type="Label" parent="CenterContainer/VBox"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.82, 0.72, 0.64, 1)
+theme_override_font_sizes/font_size = 18
+text = "온라인 카드 게임"
+horizontal_alignment = 1
+
+[node name="Spacer1" type="Control" parent="CenterContainer/VBox"]
+layout_mode = 2
+custom_minimum_size = Vector2(0, 40)
+
+[node name="NicknameInput" type="LineEdit" parent="CenterContainer/VBox"]
+layout_mode = 2
+custom_minimum_size = Vector2(0, 56)
+theme_override_font_sizes/font_size = 22
+placeholder_text = "닉네임을 입력하세요"
+alignment = 1
+max_length = 12
+
+[node name="Spacer2" type="Control" parent="CenterContainer/VBox"]
+layout_mode = 2
+custom_minimum_size = Vector2(0, 4)
+
+[node name="ServerInput" type="LineEdit" parent="CenterContainer/VBox"]
+layout_mode = 2
+custom_minimum_size = Vector2(0, 56)
+theme_override_colors/font_color = Color(0.82, 0.72, 0.64, 1)
+theme_override_font_sizes/font_size = 18
+text = "ws://172.30.1.98:8080"
+placeholder_text = "서버 주소"
+alignment = 1
+
+[node name="Spacer3" type="Control" parent="CenterContainer/VBox"]
+layout_mode = 2
+custom_minimum_size = Vector2(0, 12)
+
+[node name="ConnectButton" type="Button" parent="CenterContainer/VBox"]
+layout_mode = 2
+custom_minimum_size = Vector2(0, 60)
+theme_override_font_sizes/font_size = 24
+theme_override_styles/normal = SubResource("accent_btn")
+theme_override_styles/hover = SubResource("accent_btn_hover")
+theme_override_styles/pressed = SubResource("accent_btn_pressed")
+text = "게임 시작"
+
+[node name="Spacer4" type="Control" parent="CenterContainer/VBox"]
+layout_mode = 2
+custom_minimum_size = Vector2(0, 10)
+
+[node name="StatusLabel" type="Label" parent="CenterContainer/VBox"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.55, 0.58, 0.68, 1)
+theme_override_font_sizes/font_size = 16
+text = ""
+horizontal_alignment = 1
+autowrap_mode = 2
+
+[node name="VersionLabel" type="Label" parent="."]
+layout_mode = 1
+anchors_preset = 7
+anchor_left = 0.5
+anchor_top = 1.0
+anchor_right = 0.5
+anchor_bottom = 1.0
+offset_left = -100.0
+offset_top = -40.0
+offset_right = 100.0
+grow_horizontal = 2
+grow_vertical = 0
+theme_override_colors/font_color = Color(0.35, 0.37, 0.43, 1)
+theme_override_font_sizes/font_size = 14
+text = "v1.0"
+horizontal_alignment = 1

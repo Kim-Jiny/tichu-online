@@ -89,7 +89,7 @@ class _LoginScreenState extends State<LoginScreen> {
 
     game.addListener(listener);
     try {
-      await completer.future.timeout(const Duration(seconds: 6));
+      await completer.future.timeout(const Duration(seconds: 15));
     } on TimeoutException {
       setState(() {
         _error = '서버 응답 시간 초과';

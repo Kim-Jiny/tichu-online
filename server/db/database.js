@@ -4,9 +4,10 @@ const bcrypt = require('bcrypt');
 const SALT_ROUNDS = 10;
 
 // PostgreSQL connection pool
+const isProduction = process.env.NODE_ENV === 'production';
 const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
-  ssl: process.env.DATABASE_URL ? { rejectUnauthorized: false } : false,
+  ssl: isProduction ? { rejectUnauthorized: false } : false,
 });
 
 // Initialize database tables (tc_ prefix for tichu)

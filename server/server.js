@@ -1,15 +1,28 @@
 const { WebSocketServer } = require('ws');
+const http = require('http');
 const LobbyManager = require('./lobby/LobbyManager');
 const GameRoom = require('./game/GameRoom');
 
-const PORT = 8080;
-const wss = new WebSocketServer({ port: PORT });
+const PORT = process.env.PORT || 8080;
+
+// Create HTTP server for health checks (required by Render)
+const server = http.createServer((req, res) => {
+  if (req.url === '/health') {
+    res.writeHead(200, { 'Content-Type': 'text/plain' });
+    res.end('OK');
+  } else {
+    res.writeHead(200, { 'Content-Type': 'text/plain' });
+    res.end('Tichu WebSocket Server');
+  }
+});
+
+const wss = new WebSocketServer({ server });
 const lobby = new LobbyManager();
 
 let nextPlayerId = 1;
 
-wss.on('listening', () => {
-  console.log(`Tichu server running on ws://localhost:${PORT}`);
+server.listen(PORT, () => {
+  console.log(`Tichu server running on port ${PORT}`);
 });
 
 wss.on('connection', (ws) => {

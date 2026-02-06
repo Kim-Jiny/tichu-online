@@ -1,17 +1,17 @@
-# Godot 4+ specific ignores
-.godot/
-*.import
-/android/
-
-# iOS build artifacts
-build/ios/tichu.xcodeproj/xcuserdata/
-build/ios/tichu.xcodeproj/project.xcworkspace/
-build/ios/tichu.xcodeproj/xcshareddata/
-build/ios/DerivedData/
-build/ios/tichu/tichu.pck
-build/ios/*.xcframework/
-build/ios/tichu.pck
-build/ios/PrivacyInfo.xcprivacy
+# Flutter
+flutter_app/.dart_tool/
+flutter_app/.packages
+flutter_app/.pub/
+flutter_app/build/
+flutter_app/.flutter-plugins
+flutter_app/.flutter-plugins-dependencies
+flutter_app/*.iml
+flutter_app/.idea/
+flutter_app/.metadata
+flutter_app/ios/Pods/
+flutter_app/ios/.symlinks/
+flutter_app/android/.gradle/
+flutter_app/android/local.properties
 
 # Node.js
 node_modules/
@@ -25,3 +25,7 @@ server/node_modules/
 
 # Logs
 *.log
+
+# IDE
+.vscode/
+*.swp

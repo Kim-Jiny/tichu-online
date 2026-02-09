@@ -1,5 +1,7 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import '../models/player.dart';
 import '../services/game_service.dart';
 import '../widgets/playing_card.dart';
 import 'lobby_screen.dart';
@@ -13,6 +15,16 @@ class SpectatorScreen extends StatefulWidget {
 
 class _SpectatorScreenState extends State<SpectatorScreen> {
   bool _isLeaving = false;
+  bool _chatOpen = false;
+  final TextEditingController _chatController = TextEditingController();
+  final ScrollController _chatScrollController = ScrollController();
+
+  @override
+  void dispose() {
+    _chatController.dispose();
+    _chatScrollController.dispose();
+    super.dispose();
+  }
 
   void _leaveRoom(GameService game) {
     if (_isLeaving) return;
@@ -61,15 +73,209 @@ class _SpectatorScreenState extends State<SpectatorScreen> {
 
               final state = game.spectatorGameState;
               if (state == null) {
-                return const Center(
-                  child: CircularProgressIndicator(color: Colors.white),
-                );
+                return _buildWaitingRoomView(context, game);
               }
 
               return _buildSpectatorView(context, game, state);
             },
           ),
         ),
+      ),
+    );
+  }
+
+  Widget _buildWaitingRoomView(BuildContext context, GameService game) {
+    final players = game.roomPlayers;
+
+    return Stack(
+      children: [
+        Column(
+          children: [
+            // Top bar
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+              decoration: BoxDecoration(
+                color: Colors.black.withOpacity(0.3),
+              ),
+              child: Row(
+                children: [
+                  IconButton(
+                    onPressed: () => _leaveRoom(game),
+                    icon: const Icon(Icons.arrow_back, color: Colors.white),
+                  ),
+                  const SizedBox(width: 8),
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFE8E0F8),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: const Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(Icons.visibility, size: 14, color: Color(0xFF4A4080)),
+                        SizedBox(width: 4),
+                        Text(
+                          '관전중',
+                          style: TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.bold,
+                            color: Color(0xFF4A4080),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      game.currentRoomName,
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 14,
+                        fontWeight: FontWeight.bold,
+                      ),
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                  _buildChatButton(),
+                ],
+              ),
+            ),
+
+            // Player slots
+            Expanded(
+              child: Center(
+                child: Padding(
+                  padding: const EdgeInsets.all(24),
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      // Team A header
+                      const Text(
+                        'Team A',
+                        style: TextStyle(
+                          color: Color(0xFF6A9BD1),
+                          fontSize: 14,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          _buildPlayerSlot(players[0], 1),
+                          const SizedBox(width: 16),
+                          _buildPlayerSlot(players[2], 3),
+                        ],
+                      ),
+                      const SizedBox(height: 24),
+                      // Team B header
+                      const Text(
+                        'Team B',
+                        style: TextStyle(
+                          color: Color(0xFFF5B8C0),
+                          fontSize: 14,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          _buildPlayerSlot(players[1], 2),
+                          const SizedBox(width: 16),
+                          _buildPlayerSlot(players[3], 4),
+                        ],
+                      ),
+                      const SizedBox(height: 32),
+                      // Waiting text
+                      const Text(
+                        '게임 시작 대기 중...',
+                        style: TextStyle(
+                          color: Colors.white54,
+                          fontSize: 16,
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+                      const SizedBox(
+                        width: 24,
+                        height: 24,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          color: Colors.white38,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ),
+
+        // Chat panel overlay
+        if (_chatOpen) _buildChatPanel(game),
+      ],
+    );
+  }
+
+  Widget _buildPlayerSlot(Player? player, int slotNumber) {
+    final bool isEmpty = player == null;
+    final String name = isEmpty ? '' : player.name;
+    final bool isReady = isEmpty ? false : player.isReady;
+    final bool isHost = isEmpty ? false : player.isHost;
+
+    return Container(
+      width: 130,
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 16),
+      decoration: BoxDecoration(
+        color: isEmpty
+            ? Colors.white.withOpacity(0.05)
+            : Colors.white.withOpacity(0.1),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(
+          color: isEmpty
+              ? Colors.white.withOpacity(0.1)
+              : isReady
+                  ? Colors.greenAccent.withOpacity(0.5)
+                  : Colors.white.withOpacity(0.2),
+          width: isReady ? 2 : 1,
+        ),
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(
+            isEmpty ? Icons.person_outline : Icons.person,
+            color: isEmpty ? Colors.white24 : Colors.white70,
+            size: 32,
+          ),
+          const SizedBox(height: 8),
+          Text(
+            isEmpty ? '빈 자리' : name,
+            style: TextStyle(
+              color: isEmpty ? Colors.white24 : Colors.white,
+              fontSize: 13,
+              fontWeight: FontWeight.w500,
+            ),
+            overflow: TextOverflow.ellipsis,
+          ),
+          if (!isEmpty) ...[
+            const SizedBox(height: 4),
+            Text(
+              isHost ? '방장' : (isReady ? '준비완료' : '대기중'),
+              style: TextStyle(
+                color: isHost
+                    ? Colors.amber
+                    : isReady
+                        ? Colors.greenAccent
+                        : Colors.white38,
+                fontSize: 11,
+              ),
+            ),
+          ],
+        ],
       ),
     );
   }
@@ -86,47 +292,54 @@ class _SpectatorScreenState extends State<SpectatorScreen> {
     final currentPlayer = state['currentPlayer'] ?? '';
     final round = state['round'] ?? 1;
 
-    return Column(
+    return Stack(
       children: [
-        // Top bar
-        _buildTopBar(context, game, phase, round, totalScores),
+        Column(
+          children: [
+            // Top bar
+            _buildTopBar(context, game, phase, round, totalScores),
 
-        // Game area
-        Expanded(
-          child: Padding(
-            padding: const EdgeInsets.all(8),
-            child: Column(
-              children: [
-                // Top player (position 2 - partner of bottom)
-                if (players.length > 2) _buildPlayerSection(game, players[2], currentPlayer),
+            // Game area
+            Expanded(
+              child: Padding(
+                padding: const EdgeInsets.all(8),
+                child: Column(
+                  children: [
+                    // Top player (position 2 - partner of bottom)
+                    if (players.length > 2) _buildPlayerSection(game, players[2], currentPlayer),
 
-                // Middle row: left, center trick, right
-                Expanded(
-                  child: Row(
-                    crossAxisAlignment: CrossAxisAlignment.center,
-                    children: [
-                      // Left player (position 1)
-                      if (players.length > 1)
-                        _buildPlayerSection(game, players[1], currentPlayer, isLeft: true),
+                    // Middle row: left, center trick, right
+                    Expanded(
+                      child: Row(
+                        crossAxisAlignment: CrossAxisAlignment.center,
+                        children: [
+                          // Left player (position 1)
+                          if (players.length > 1)
+                            _buildPlayerSection(game, players[1], currentPlayer, isLeft: true),
 
-                      // Center: current trick
-                      Expanded(
-                        child: _buildTrickArea(currentTrick),
+                          // Center: current trick
+                          Expanded(
+                            child: _buildTrickArea(currentTrick),
+                          ),
+
+                          // Right player (position 3)
+                          if (players.length > 3)
+                            _buildPlayerSection(game, players[3], currentPlayer, isRight: true),
+                        ],
                       ),
+                    ),
 
-                      // Right player (position 3)
-                      if (players.length > 3)
-                        _buildPlayerSection(game, players[3], currentPlayer, isRight: true),
-                    ],
-                  ),
+                    // Bottom player (position 0)
+                    if (players.isNotEmpty) _buildPlayerSection(game, players[0], currentPlayer),
+                  ],
                 ),
-
-                // Bottom player (position 0)
-                if (players.isNotEmpty) _buildPlayerSection(game, players[0], currentPlayer),
-              ],
+              ),
             ),
-          ),
+          ],
         ),
+
+        // Chat panel overlay
+        if (_chatOpen) _buildChatPanel(game),
       ],
     );
   }
@@ -209,6 +422,8 @@ class _SpectatorScreenState extends State<SpectatorScreen> {
               ),
             ),
           ),
+          const SizedBox(width: 8),
+          _buildChatButton(),
         ],
       ),
     );
@@ -483,6 +698,196 @@ class _SpectatorScreenState extends State<SpectatorScreen> {
         ],
       ),
     );
+  }
+
+  Widget _buildChatButton() {
+    return GestureDetector(
+      onTap: () => setState(() => _chatOpen = !_chatOpen),
+      child: Container(
+        padding: const EdgeInsets.all(8),
+        decoration: BoxDecoration(
+          color: _chatOpen
+              ? const Color(0xFF64B5F6)
+              : Colors.white.withOpacity(0.2),
+          shape: BoxShape.circle,
+        ),
+        child: Icon(
+          Icons.chat_bubble_outline,
+          color: _chatOpen ? Colors.white : Colors.white70,
+          size: 18,
+        ),
+      ),
+    );
+  }
+
+  Widget _buildChatPanel(GameService game) {
+    return Positioned(
+      top: 50,
+      right: 8,
+      width: 280,
+      height: 350,
+      child: Container(
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(16),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.15),
+              blurRadius: 10,
+              offset: const Offset(0, 4),
+            ),
+          ],
+        ),
+        child: Column(
+          children: [
+            // Header
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+              decoration: const BoxDecoration(
+                color: Color(0xFF64B5F6),
+                borderRadius: BorderRadius.only(
+                  topLeft: Radius.circular(16),
+                  topRight: Radius.circular(16),
+                ),
+              ),
+              child: Row(
+                children: [
+                  const Text(
+                    '채팅',
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontWeight: FontWeight.bold,
+                      fontSize: 16,
+                    ),
+                  ),
+                  const Spacer(),
+                  GestureDetector(
+                    onTap: () => setState(() => _chatOpen = false),
+                    child: const Icon(Icons.close, color: Colors.white, size: 20),
+                  ),
+                ],
+              ),
+            ),
+            // Messages
+            Expanded(
+              child: ListView.builder(
+                controller: _chatScrollController,
+                padding: const EdgeInsets.all(8),
+                itemCount: game.chatMessages.length,
+                itemBuilder: (context, index) {
+                  final msg = game.chatMessages[index];
+                  final sender = msg['sender'] as String? ?? '';
+                  final message = msg['message'] as String? ?? '';
+                  final isMe = sender == game.playerName;
+                  final isBlocked = game.isBlocked(sender);
+
+                  if (isBlocked) return const SizedBox.shrink();
+
+                  return _buildChatBubble(sender, message, isMe);
+                },
+              ),
+            ),
+            // Input
+            Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                border: Border(
+                  top: BorderSide(color: Colors.grey.withOpacity(0.2)),
+                ),
+              ),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: TextField(
+                      controller: _chatController,
+                      decoration: const InputDecoration(
+                        hintText: '메시지 입력...',
+                        border: InputBorder.none,
+                        contentPadding: EdgeInsets.symmetric(horizontal: 12),
+                      ),
+                      style: const TextStyle(fontSize: 14),
+                      onSubmitted: (_) => _sendChatMessage(game),
+                    ),
+                  ),
+                  IconButton(
+                    onPressed: () => _sendChatMessage(game),
+                    icon: const Icon(Icons.send, color: Color(0xFF64B5F6)),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildChatBubble(String sender, String message, bool isMe) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 8),
+      child: Row(
+        mainAxisAlignment: isMe ? MainAxisAlignment.end : MainAxisAlignment.start,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          if (!isMe) ...[
+            CircleAvatar(
+              radius: 14,
+              backgroundColor: const Color(0xFFE0E0E0),
+              child: Text(
+                sender.isNotEmpty ? sender[0] : '?',
+                style: const TextStyle(fontSize: 12, color: Color(0xFF5A4038)),
+              ),
+            ),
+            const SizedBox(width: 6),
+          ],
+          Flexible(
+            child: Column(
+              crossAxisAlignment: isMe ? CrossAxisAlignment.end : CrossAxisAlignment.start,
+              children: [
+                if (!isMe)
+                  Padding(
+                    padding: const EdgeInsets.only(bottom: 2),
+                    child: Text(
+                      sender,
+                      style: const TextStyle(fontSize: 11, color: Color(0xFF8A8A8A)),
+                    ),
+                  ),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                  decoration: BoxDecoration(
+                    color: isMe ? const Color(0xFF64B5F6) : const Color(0xFFF0F0F0),
+                    borderRadius: BorderRadius.circular(16),
+                  ),
+                  child: Text(
+                    message,
+                    style: TextStyle(
+                      fontSize: 14,
+                      color: isMe ? Colors.white : const Color(0xFF333333),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _sendChatMessage(GameService game) {
+    final message = _chatController.text.trim();
+    if (message.isEmpty) return;
+    game.sendChatMessage(message);
+    _chatController.clear();
+    Future.delayed(const Duration(milliseconds: 100), () {
+      if (_chatScrollController.hasClients) {
+        _chatScrollController.animateTo(
+          _chatScrollController.position.maxScrollExtent,
+          duration: const Duration(milliseconds: 200),
+          curve: Curves.easeOut,
+        );
+      }
+    });
   }
 
   Widget _buildTrickArea(List currentTrick) {

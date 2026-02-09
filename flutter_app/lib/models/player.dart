@@ -9,6 +9,7 @@ class Player {
   final int finishPosition;
   final bool isHost;
   final bool connected;
+  final bool isReady;
 
   Player({
     required this.id,
@@ -21,6 +22,7 @@ class Player {
     this.finishPosition = 0,
     this.isHost = false,
     this.connected = true,
+    this.isReady = false,
   });
 
   factory Player.fromJson(Map<String, dynamic> json) {
@@ -35,6 +37,7 @@ class Player {
       finishPosition: json['finishPosition'] ?? 0,
       isHost: json['isHost'] ?? false,
       connected: json['connected'] ?? true,
+      isReady: json['isReady'] ?? false,
     );
   }
 }

@@ -36,8 +36,10 @@ class GameStateData {
   final bool needsToCallRank;
   final bool dragonPending;
   final bool exchangeDone;
+  final Map<String, String>? receivedFrom; // { left: cardId, partner: cardId, right: cardId }
   final bool largeTichuResponded;
   final bool canDeclareSmallTichu;
+  final int? turnDeadline; // epoch ms
 
   GameStateData({
     this.phase = '',
@@ -52,8 +54,10 @@ class GameStateData {
     this.needsToCallRank = false,
     this.dragonPending = false,
     this.exchangeDone = false,
+    this.receivedFrom,
     this.largeTichuResponded = false,
     this.canDeclareSmallTichu = false,
+    this.turnDeadline,
   });
 
   factory GameStateData.fromJson(Map<String, dynamic> json) {
@@ -100,8 +104,12 @@ class GameStateData {
       needsToCallRank: json['needsToCallRank'] ?? false,
       dragonPending: json['dragonPending'] ?? false,
       exchangeDone: json['exchangeDone'] ?? false,
+      receivedFrom: json['receivedFrom'] != null
+          ? Map<String, String>.from(json['receivedFrom'])
+          : null,
       largeTichuResponded: json['largeTichuResponded'] ?? false,
       canDeclareSmallTichu: json['canDeclareSmallTichu'] ?? false,
+      turnDeadline: json['turnDeadline'] as int?,
     );
   }
 }

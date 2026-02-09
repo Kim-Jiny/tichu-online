@@ -40,6 +40,7 @@ class TichuGame {
     this.largeTichuResponses = {}; // playerId -> true/false
     this.exchangeCards = {};  // playerId -> { left, partner, right }
     this.exchangeDone = {};
+    this.receivedFrom = {};  // playerId -> { left: cardId, partner: cardId, right: cardId }
 
     this.currentTrick = [];   // [{ playerId, cards, combo }]
     this.currentPlayer = null;
@@ -212,7 +213,10 @@ class TichuGame {
     // Seating: 0, 1, 2, 3 clockwise
     // Player i's left = (i+1)%4, partner = (i+2)%4, right = (i+3)%4
     const receiving = {};
-    for (const pid of this.playerIds) receiving[pid] = [];
+    for (const pid of this.playerIds) {
+      receiving[pid] = [];
+      this.receivedFrom[pid] = {};
+    }
 
     for (let i = 0; i < 4; i++) {
       const pid = this.playerIds[i];
@@ -226,10 +230,22 @@ class TichuGame {
         (c) => c !== ex.left && c !== ex.partner && c !== ex.right
       );
 
-      // Add to recipients
-      receiving[this.playerIds[leftIdx]].push(ex.left);
-      receiving[this.playerIds[partnerIdx]].push(ex.partner);
-      receiving[this.playerIds[rightIdx]].push(ex.right);
+      // Add to recipients and track who gave what
+      const leftPid = this.playerIds[leftIdx];
+      const partnerPid = this.playerIds[partnerIdx];
+      const rightPid = this.playerIds[rightIdx];
+
+      receiving[leftPid].push(ex.left);
+      receiving[partnerPid].push(ex.partner);
+      receiving[rightPid].push(ex.right);
+
+      // From the recipient's perspective: pid is their right/partner/left
+      // pid gives to left -> leftPid receives from right
+      this.receivedFrom[leftPid].right = ex.left;
+      // pid gives to partner -> partnerPid receives from partner
+      this.receivedFrom[partnerPid].partner = ex.partner;
+      // pid gives to right -> rightPid receives from left
+      this.receivedFrom[rightPid].left = ex.right;
     }
 
     // Add received cards
@@ -579,6 +595,7 @@ class TichuGame {
       broadcast: {
         type: 'dragon_given',
         from: playerId,
+        fromName: this.playerNames[playerId],
         to: targetId,
         targetName: this.playerNames[targetId],
       },
@@ -800,6 +817,7 @@ class TichuGame {
       needsToCallRank: this.needsToCallRank === playerId,
       dragonPending: this.dragonPending && this.dragonDecider === playerId,
       exchangeDone: !!this.exchangeDone[playerId],
+      receivedFrom: this.receivedFrom[playerId] || null,
       largeTichuResponded: this.largeTichuResponses[playerId] !== undefined,
       canDeclareSmallTichu: this.hands[playerId].length === 14 &&
         !this.smallTichuDeclarations.includes(playerId) &&
@@ -848,6 +866,74 @@ class TichuGame {
       dragonPending: this.dragonPending,
       dragonDecider: this.dragonDecider ? this.playerNames[this.dragonDecider] : null,
     };
+  }
+
+  // Auto timeout action for when a player's turn timer expires
+  getAutoTimeoutAction(playerId) {
+    if (this.state !== STATE.PLAYING) return null;
+
+    // Dragon give decision pending
+    if (this.dragonPending && this.dragonDecider === playerId) {
+      return { type: 'dragon_give', target: 'left' };
+    }
+
+    if (this.currentPlayer !== playerId) return null;
+
+    // Must start a new trick (can't pass) → play lowest card
+    if (this.currentTrick.length === 0) {
+      const hand = this.hands[playerId];
+      const sorted = [...hand].sort((a, b) => getCardValue(a) - getCardValue(b));
+      const card = sorted[0];
+      if (card === 'special_bird') {
+        const ranks = ['2','3','4','5','6','7','8','9','10','J','Q','K','A'];
+        return { type: 'play_cards', cards: [card], callRank: ranks[Math.floor(Math.random() * ranks.length)] };
+      }
+      return { type: 'play_cards', cards: [card] };
+    }
+
+    // Call obligation → find and play a card fulfilling the call
+    if (this.callRank && this.canFulfillCallAndBeat(playerId)) {
+      return this._findCallFulfillPlay(playerId);
+    }
+
+    // Otherwise → pass
+    return { type: 'pass' };
+  }
+
+  // Find a playable card combination that fulfills the active call
+  _findCallFulfillPlay(playerId) {
+    const hand = this.hands[playerId];
+    const wishValue = this.rankToValue(this.callRank);
+    const lastCombo = this.currentTrick[this.currentTrick.length - 1].combo;
+
+    const wishMask = hand.reduce((mask, cardId, idx) => {
+      return getCardValue(cardId) === wishValue ? (mask | (1 << idx)) : mask;
+    }, 0);
+
+    if (wishMask === 0) return { type: 'pass' };
+
+    const totalMasks = 1 << hand.length;
+    for (let mask = 1; mask < totalMasks; mask++) {
+      if ((mask & wishMask) === 0) continue;
+
+      const subset = [];
+      for (let i = 0; i < hand.length; i++) {
+        if (mask & (1 << i)) subset.push(hand[i]);
+      }
+
+      const combo = getComboType(subset);
+      if (combo.type === COMBO.INVALID) continue;
+
+      if (combo.isPhoenix && this.currentTrick.length > 0) {
+        combo.value = lastCombo.value + 0.5;
+      }
+
+      if (canBeat(lastCombo, combo)) {
+        return { type: 'play_cards', cards: subset };
+      }
+    }
+
+    return { type: 'pass' };
   }
 
   // Update player ID when reconnecting

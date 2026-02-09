@@ -1,7 +1,10 @@
 const TichuGame = require('./TichuGame');
+const { BotPlayer } = require('./BotPlayer');
+
+let nextBotNum = 1;
 
 class GameRoom {
-  constructor(id, name, hostId, hostNickname, password = '', isRanked = false) {
+  constructor(id, name, hostId, hostNickname, password = '', isRanked = false, turnTimeLimit = 30) {
     this.id = id;
     this.name = name;
     this.hostId = hostId;
@@ -9,15 +12,19 @@ class GameRoom {
     this.password = password;
     this.isPrivate = !!password;
     this.isRanked = !!isRanked;
+    this.turnTimeLimit = turnTimeLimit; // seconds
+    this.turnDeadline = null; // epoch ms when active
     // Fixed 4-slot system: host goes to slot 0, rest are null
     this.players = [
-      { id: hostId, nickname: hostNickname, connected: true },
+      { id: hostId, nickname: hostNickname, connected: true, ready: false },
       null,
       null,
       null,
     ];
     this.spectators = []; // { id, nickname }
     this.game = null;
+    // Bot tracking
+    this.bots = new Map(); // botId -> BotPlayer
     // Spectator card view permissions: { spectatorId: Set of playerId }
     this.spectatorPermissions = {};
     // Pending requests: { playerId: [{ spectatorId, spectatorNickname }] }
@@ -64,7 +71,7 @@ class GameRoom {
     if (emptySlot === -1) {
       return { success: false, message: 'Room is full' };
     }
-    this.players[emptySlot] = { id: playerId, nickname: nickname, connected: true };
+    this.players[emptySlot] = { id: playerId, nickname: nickname, connected: true, ready: false };
     console.log(`${nickname} joined room ${this.name} (slot ${emptySlot})`);
     return { success: true };
   }
@@ -78,17 +85,19 @@ class GameRoom {
     }
     const removed = this.players[idx];
     this.players[idx] = null; // Set slot to null instead of splice
+    this.bots.delete(playerId); // Clean up bot tracking if applicable
     console.log(`${removed.nickname} left room ${this.name}`);
-    // If host left, assign new host (first non-null player)
+    // If host left, assign new host (first non-null human player, skip bots)
     if (this.hostId === playerId) {
-      const nextHost = this.players.find((p) => p !== null);
+      const nextHost = this.players.find((p) => p !== null && !p.isBot);
       if (nextHost) {
         this.hostId = nextHost.id;
         this.hostNickname = nextHost.nickname;
       }
     }
     // If game was running and not enough players, end game
-    if (this.game && this.getPlayerCount() < 4) {
+    // But preserve game if already ended (so remaining players can see results)
+    if (this.game && this.getPlayerCount() < 4 && this.game.state !== 'game_end') {
       this.game = null;
     }
   }
@@ -216,6 +225,27 @@ class GameRoom {
     return this.pendingCardRequests[playerId] || [];
   }
 
+  // Get list of spectators currently viewing a player's cards
+  getViewersForPlayer(playerId) {
+    const viewers = [];
+    for (const [spectatorId, permittedSet] of Object.entries(this.spectatorPermissions)) {
+      if (permittedSet.has(playerId)) {
+        const spec = this.spectators.find(s => s.id === spectatorId);
+        if (spec) {
+          viewers.push({ id: spectatorId, nickname: spec.nickname });
+        }
+      }
+    }
+    return viewers;
+  }
+
+  // Revoke a spectator's permission to view a player's cards
+  revokeCardView(playerId, spectatorId) {
+    if (!this.spectatorPermissions[spectatorId]) return { success: false };
+    this.spectatorPermissions[spectatorId].delete(playerId);
+    return { success: true };
+  }
+
   // Clean up when spectator leaves
   removeSpectatorPermissions(spectatorId) {
     delete this.spectatorPermissions[spectatorId];
@@ -227,8 +257,60 @@ class GameRoom {
     }
   }
 
+  // --- Bot management ---
+
+  addBot(targetSlot) {
+    if (this.getPlayerCount() >= 4) {
+      return { success: false, message: '방이 가득 찼습니다' };
+    }
+    if (this.game) {
+      return { success: false, message: '게임 중에는 봇을 추가할 수 없습니다' };
+    }
+    let slot;
+    if (typeof targetSlot === 'number' && targetSlot >= 0 && targetSlot <= 3) {
+      if (this.players[targetSlot] !== null) {
+        return { success: false, message: '이미 다른 플레이어가 있는 자리입니다' };
+      }
+      slot = targetSlot;
+    } else {
+      slot = this.players.indexOf(null);
+    }
+    if (slot === -1) {
+      return { success: false, message: '빈 자리가 없습니다' };
+    }
+    const botId = `bot_${nextBotNum++}`;
+    const botNickname = `봇 ${this.bots.size + 1}`;
+    const bot = new BotPlayer(botId, botNickname);
+    this.bots.set(botId, bot);
+    this.players[slot] = { id: botId, nickname: botNickname, connected: true, isBot: true, ready: true };
+    console.log(`Bot ${botNickname} added to room ${this.name} (slot ${slot})`);
+    return { success: true, botId };
+  }
+
+  removeBots() {
+    for (const [botId] of this.bots) {
+      const idx = this.players.findIndex(p => p !== null && p.id === botId);
+      if (idx !== -1) {
+        this.players[idx] = null;
+      }
+    }
+    this.bots.clear();
+  }
+
+  isBot(playerId) {
+    return this.bots.has(playerId);
+  }
+
+  getBotIds() {
+    return [...this.bots.keys()];
+  }
+
   getPlayerCount() {
     return this.players.filter((p) => p !== null).length;
+  }
+
+  getHumanPlayerCount() {
+    return this.players.filter((p) => p !== null && !p.isBot).length;
   }
 
   // Move a player to a specific slot (only if target slot is empty)
@@ -273,6 +355,30 @@ class GameRoom {
     return true;
   }
 
+  toggleReady(playerId) {
+    const player = this.players.find(p => p !== null && p.id === playerId);
+    if (!player) return false;
+    player.ready = !player.ready;
+    return true;
+  }
+
+  areAllReady() {
+    // All non-null human players (except host) must be ready. Bots are always ready.
+    for (const p of this.players) {
+      if (p === null) return false; // need 4 players
+      if (p.isBot) continue;
+      if (p.id === this.hostId) continue; // host doesn't need to ready
+      if (!p.ready) return false;
+    }
+    return true;
+  }
+
+  resetReady() {
+    for (const p of this.players) {
+      if (p !== null) p.ready = false;
+    }
+  }
+
   getState() {
     return {
       id: this.id,
@@ -288,9 +394,12 @@ class GameRoom {
           name: p.nickname,
           isHost: p.id === this.hostId,
           connected: p.connected !== false,
+          isBot: !!p.isBot,
+          isReady: !!p.isBot || !!p.ready,
         };
       }),
       gameInProgress: !!this.game,
+      turnTimeLimit: this.turnTimeLimit,
     };
   }
 }

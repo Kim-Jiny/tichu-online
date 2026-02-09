@@ -56,6 +56,12 @@ async function initDatabase() {
       ALTER TABLE tc_reports ADD COLUMN IF NOT EXISTS chat_context TEXT
     `);
 
+    // Unique index: same reporter + same target + same room + same reason = no duplicate
+    await client.query(`
+      CREATE UNIQUE INDEX IF NOT EXISTS idx_report_unique
+      ON tc_reports (reporter_nickname, reported_nickname, room_id, reason)
+    `);
+
     // Inquiries table
     await client.query(`
       CREATE TABLE IF NOT EXISTS tc_inquiries (
@@ -104,6 +110,144 @@ async function initDatabase() {
     await client.query(`ALTER TABLE tc_users ADD COLUMN IF NOT EXISTS wins INT DEFAULT 0`);
     await client.query(`ALTER TABLE tc_users ADD COLUMN IF NOT EXISTS losses INT DEFAULT 0`);
     await client.query(`ALTER TABLE tc_users ADD COLUMN IF NOT EXISTS rating INT DEFAULT 1000`);
+    await client.query(`ALTER TABLE tc_users ADD COLUMN IF NOT EXISTS gold INT DEFAULT 0`);
+    await client.query(`ALTER TABLE tc_users ADD COLUMN IF NOT EXISTS leave_count INT DEFAULT 0`);
+    await client.query(`ALTER TABLE tc_users ADD COLUMN IF NOT EXISTS season_rating INT DEFAULT 1000`);
+    await client.query(`ALTER TABLE tc_users ADD COLUMN IF NOT EXISTS season_games INT DEFAULT 0`);
+    await client.query(`ALTER TABLE tc_users ADD COLUMN IF NOT EXISTS season_wins INT DEFAULT 0`);
+    await client.query(`ALTER TABLE tc_users ADD COLUMN IF NOT EXISTS season_losses INT DEFAULT 0`);
+    await client.query(`ALTER TABLE tc_users ADD COLUMN IF NOT EXISTS exp_total INT DEFAULT 0`);
+    await client.query(`ALTER TABLE tc_users ADD COLUMN IF NOT EXISTS level INT DEFAULT 1`);
+    await client.query(`ALTER TABLE tc_users ADD COLUMN IF NOT EXISTS ranked_ban_until TIMESTAMP`);
+
+    // Shop items table
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS tc_shop_items (
+        id SERIAL PRIMARY KEY,
+        item_key VARCHAR(80) UNIQUE NOT NULL,
+        name VARCHAR(100) NOT NULL,
+        category VARCHAR(30) NOT NULL,
+        price INT DEFAULT 0,
+        is_season BOOLEAN DEFAULT FALSE,
+        is_permanent BOOLEAN DEFAULT TRUE,
+        duration_days INT,
+        is_purchasable BOOLEAN DEFAULT TRUE,
+        effect_type VARCHAR(30),
+        effect_value INT,
+        metadata JSONB,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      )
+    `);
+
+    // User owned items
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS tc_user_items (
+        id SERIAL PRIMARY KEY,
+        nickname VARCHAR(50) NOT NULL,
+        item_key VARCHAR(80) NOT NULL,
+        acquired_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        expires_at TIMESTAMP,
+        is_active BOOLEAN DEFAULT FALSE,
+        source VARCHAR(30) DEFAULT 'shop'
+      )
+    `);
+
+    // User equipped cosmetics
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS tc_user_equips (
+        nickname VARCHAR(50) PRIMARY KEY,
+        banner_key VARCHAR(80),
+        title_key VARCHAR(80),
+        theme_key VARCHAR(80),
+        card_skin_key VARCHAR(80),
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      )
+    `);
+
+    // Seasons and rewards
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS tc_seasons (
+        id SERIAL PRIMARY KEY,
+        name VARCHAR(50) NOT NULL,
+        start_at TIMESTAMP NOT NULL,
+        end_at TIMESTAMP NOT NULL,
+        status VARCHAR(20) DEFAULT 'active',
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      )
+    `);
+
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS tc_season_rewards (
+        id SERIAL PRIMARY KEY,
+        season_id INT NOT NULL,
+        nickname VARCHAR(50) NOT NULL,
+        rank INT NOT NULL,
+        gold_reward INT DEFAULT 0,
+        banner_key VARCHAR(80),
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      )
+    `);
+
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS tc_season_rankings (
+        id SERIAL PRIMARY KEY,
+        season_id INT NOT NULL,
+        rank INT NOT NULL,
+        nickname VARCHAR(50) NOT NULL,
+        rating INT DEFAULT 0,
+        wins INT DEFAULT 0,
+        losses INT DEFAULT 0,
+        total_games INT DEFAULT 0,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        UNIQUE (season_id, rank)
+      )
+    `);
+
+    // Admin accounts table
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS admin_accounts (
+        id SERIAL PRIMARY KEY,
+        username VARCHAR(50) UNIQUE NOT NULL,
+        password VARCHAR(255) NOT NULL,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      )
+    `);
+
+    // Seed default admin account if none exists
+    const adminCount = await client.query('SELECT COUNT(*) FROM admin_accounts');
+    if (parseInt(adminCount.rows[0].count) === 0) {
+      const defaultPassword = await bcrypt.hash('admin1234', SALT_ROUNDS);
+      await client.query(
+        'INSERT INTO admin_accounts (username, password) VALUES ($1, $2)',
+        ['admin', defaultPassword]
+      );
+      console.log('Default admin account created (admin / admin1234)');
+    }
+
+    // Seed shop items (safe upsert)
+    await client.query(
+      `
+      INSERT INTO tc_shop_items
+        (item_key, name, category, price, is_season, is_permanent, duration_days, is_purchasable, effect_type, effect_value, metadata)
+      VALUES
+        ('banner_pastel', '파스텔 배너', 'banner', 300, FALSE, TRUE, NULL, TRUE, NULL, NULL, '{}'::jsonb),
+        ('banner_blossom', '블라썸 배너', 'banner', 280, FALSE, TRUE, NULL, TRUE, NULL, NULL, '{}'::jsonb),
+        ('banner_mint', '민트 배너', 'banner', 260, FALSE, TRUE, NULL, TRUE, NULL, NULL, '{}'::jsonb),
+        ('banner_sunset_7d', '노을 배너(7일)', 'banner', 120, FALSE, FALSE, 7, TRUE, NULL, NULL, '{}'::jsonb),
+        ('title_sweet', '달콤한 플레이어', 'title', 200, FALSE, TRUE, NULL, TRUE, NULL, NULL, '{}'::jsonb),
+        ('title_steady', '꾸준한 승부사', 'title', 240, FALSE, TRUE, NULL, TRUE, NULL, NULL, '{}'::jsonb),
+        ('title_flash_30d', '스피드 러너(30일)', 'title', 180, FALSE, FALSE, 30, TRUE, NULL, NULL, '{}'::jsonb),
+        ('theme_cotton', '코튼 테마', 'theme', 500, FALSE, TRUE, NULL, TRUE, NULL, NULL, '{"includesCardSkin": true}'::jsonb),
+        ('theme_sky', '스카이 테마', 'theme', 550, FALSE, TRUE, NULL, TRUE, NULL, NULL, '{"includesCardSkin": true}'::jsonb),
+        ('theme_mocha_30d', '모카 테마(30일)', 'theme', 300, FALSE, FALSE, 30, TRUE, NULL, NULL, '{"includesCardSkin": true}'::jsonb),
+        ('leave_reduce_1', '탈주 카운트 -1', 'utility', 150, FALSE, TRUE, NULL, TRUE, 'leave_count_reduce', 1, '{}'::jsonb),
+        ('leave_reduce_3', '탈주 카운트 -3', 'utility', 400, FALSE, TRUE, NULL, TRUE, 'leave_count_reduce', 3, '{}'::jsonb),
+        ('banner_season_gold', '시즌 골드 배너', 'banner', 0, TRUE, FALSE, 30, FALSE, NULL, NULL, '{}'::jsonb),
+        ('banner_season_silver', '시즌 실버 배너', 'banner', 0, TRUE, FALSE, 30, FALSE, NULL, NULL, '{}'::jsonb),
+        ('banner_season_bronze', '시즌 브론즈 배너', 'banner', 0, TRUE, FALSE, 30, FALSE, NULL, NULL, '{}'::jsonb)
+      ON CONFLICT (item_key) DO NOTHING
+      `
+    );
 
     console.log('Database initialized (tc_ tables)');
   } catch (err) {
@@ -315,6 +459,15 @@ async function getBlockedUsers(nickname) {
 async function reportUser(reporterNickname, reportedNickname, reason, roomId, chatContext = []) {
   const client = await pool.connect();
   try {
+    // Check for duplicate report (same reporter + target + room + reason)
+    const existing = await client.query(
+      'SELECT id FROM tc_reports WHERE reporter_nickname = $1 AND reported_nickname = $2 AND room_id = $3 AND reason = $4',
+      [reporterNickname, reportedNickname, roomId, reason]
+    );
+    if (existing.rows.length > 0) {
+      return { success: false, message: '이미 동일한 사유로 신고한 유저입니다' };
+    }
+
     const chatContextJson = JSON.stringify(chatContext);
     await client.query(
       'INSERT INTO tc_reports (reporter_nickname, reported_nickname, reason, room_id, chat_context) VALUES ($1, $2, $3, $4, $5)',
@@ -440,23 +593,51 @@ async function updateUserStats(nickname, won, isRanked = false) {
   const client = await pool.connect();
   try {
     const ratingChange = isRanked ? (won ? 25 : -20) : 0;
+    const goldChange = won ? 10 : 3;
+    const expChange = isRanked ? (won ? 15 : 8) : (won ? 10 : 5);
     if (won) {
       await client.query(
         `UPDATE tc_users
          SET total_games = total_games + 1,
              wins = wins + 1,
-             rating = GREATEST(0, rating + $2)
+             rating = GREATEST(0, rating + $2),
+             gold = gold + $3,
+             season_games = season_games + $4,
+             season_wins = season_wins + $4,
+             season_rating = GREATEST(0, season_rating + $5),
+             exp_total = exp_total + $6,
+             level = GREATEST(1, ((exp_total + $6) / 100) + 1)
          WHERE nickname = $1`,
-        [nickname, ratingChange]
+        [
+          nickname,
+          ratingChange,
+          goldChange,
+          isRanked ? 1 : 0,
+          isRanked ? ratingChange : 0,
+          expChange,
+        ]
       );
     } else {
       await client.query(
         `UPDATE tc_users
          SET total_games = total_games + 1,
              losses = losses + 1,
-             rating = GREATEST(0, rating + $2)
+             rating = GREATEST(0, rating + $2),
+             gold = gold + $3,
+             season_games = season_games + $4,
+             season_losses = season_losses + $4,
+             season_rating = GREATEST(0, season_rating + $5),
+             exp_total = exp_total + $6,
+             level = GREATEST(1, ((exp_total + $6) / 100) + 1)
          WHERE nickname = $1`,
-        [nickname, ratingChange]
+        [
+          nickname,
+          ratingChange,
+          goldChange,
+          isRanked ? 1 : 0,
+          isRanked ? ratingChange : 0,
+          expChange,
+        ]
       );
     }
     return { success: true };
@@ -473,8 +654,13 @@ async function getUserProfile(nickname) {
   const client = await pool.connect();
   try {
     const result = await client.query(
-      `SELECT nickname, total_games, wins, losses, rating, created_at
-       FROM tc_users WHERE nickname = $1`,
+      `SELECT u.nickname, u.total_games, u.wins, u.losses, u.rating, u.gold, u.leave_count,
+              u.season_rating, u.season_games, u.season_wins, u.season_losses,
+              u.exp_total, u.level, u.created_at,
+              e.banner_key
+       FROM tc_users u
+       LEFT JOIN tc_user_equips e ON e.nickname = u.nickname
+       WHERE u.nickname = $1`,
       [nickname]
     );
     if (result.rows.length === 0) {
@@ -484,13 +670,27 @@ async function getUserProfile(nickname) {
     const winRate = user.total_games > 0
       ? Math.round((user.wins / user.total_games) * 100)
       : 0;
+    const seasonWinRate = user.season_games > 0
+      ? Math.round((user.season_wins / user.season_games) * 100)
+      : 0;
+
     return {
       nickname: user.nickname,
       totalGames: user.total_games,
       wins: user.wins,
       losses: user.losses,
       rating: user.rating,
+      gold: user.gold,
+      leaveCount: user.leave_count,
       winRate,
+      seasonRating: user.season_rating,
+      seasonGames: user.season_games,
+      seasonWins: user.season_wins,
+      seasonLosses: user.season_losses,
+      seasonWinRate,
+      expTotal: user.exp_total,
+      level: user.level,
+      bannerKey: user.banner_key,
       createdAt: user.created_at,
     };
   } catch (err) {
@@ -532,6 +732,599 @@ async function getRecentMatches(nickname, limit = 5) {
   } catch (err) {
     console.error('Get recent matches error:', err);
     return [];
+  } finally {
+    client.release();
+  }
+}
+
+// Wallet
+async function getWallet(nickname) {
+  const client = await pool.connect();
+  try {
+    const result = await client.query(
+      `SELECT gold, leave_count FROM tc_users WHERE nickname = $1`,
+      [nickname]
+    );
+    if (result.rows.length === 0) {
+      return { success: false, message: '사용자를 찾을 수 없습니다' };
+    }
+    return { success: true, wallet: result.rows[0] };
+  } catch (err) {
+    console.error('Get wallet error:', err);
+    return { success: false, message: '지갑 정보를 가져오지 못했습니다' };
+  } finally {
+    client.release();
+  }
+}
+
+// Shop items
+async function getShopItems() {
+  const client = await pool.connect();
+  try {
+    const result = await client.query(
+      `
+      SELECT item_key, name, category, price, is_season, is_permanent,
+             duration_days, is_purchasable, effect_type, effect_value, metadata
+      FROM tc_shop_items
+      WHERE is_purchasable = TRUE AND is_season = FALSE
+      ORDER BY category ASC, price ASC, name ASC
+      `
+    );
+    return { success: true, items: result.rows };
+  } catch (err) {
+    console.error('Get shop items error:', err);
+    return { success: false, message: '상점 정보를 가져오지 못했습니다' };
+  } finally {
+    client.release();
+  }
+}
+
+async function cleanupExpiredItems(client, nickname) {
+  await client.query(
+    `
+    DELETE FROM tc_user_items
+    WHERE nickname = $1 AND expires_at IS NOT NULL AND expires_at < NOW()
+    `,
+    [nickname]
+  );
+}
+
+// Inventory
+async function getUserItems(nickname) {
+  const client = await pool.connect();
+  try {
+    await cleanupExpiredItems(client, nickname);
+    const result = await client.query(
+      `
+      SELECT ui.item_key, ui.acquired_at, ui.expires_at, ui.is_active,
+             si.name, si.category, si.is_season, si.is_permanent,
+             si.duration_days, si.effect_type, si.effect_value, si.metadata
+      FROM tc_user_items ui
+      JOIN tc_shop_items si ON si.item_key = ui.item_key
+      WHERE ui.nickname = $1
+      ORDER BY ui.acquired_at DESC
+      `,
+      [nickname]
+    );
+    return { success: true, items: result.rows };
+  } catch (err) {
+    console.error('Get user items error:', err);
+    return { success: false, message: '인벤토리를 불러오지 못했습니다' };
+  } finally {
+    client.release();
+  }
+}
+
+// Buy item
+async function buyItem(nickname, itemKey) {
+  const client = await pool.connect();
+  try {
+    await client.query('BEGIN');
+
+    const itemRes = await client.query(
+      `SELECT * FROM tc_shop_items WHERE item_key = $1`,
+      [itemKey]
+    );
+    if (itemRes.rows.length === 0) {
+      await client.query('ROLLBACK');
+      return { success: false, message: '아이템을 찾을 수 없습니다' };
+    }
+    const item = itemRes.rows[0];
+    if (!item.is_purchasable) {
+      await client.query('ROLLBACK');
+      return { success: false, message: '구매할 수 없는 아이템입니다' };
+    }
+
+    const walletRes = await client.query(
+      `SELECT gold FROM tc_users WHERE nickname = $1`,
+      [nickname]
+    );
+    if (walletRes.rows.length === 0) {
+      await client.query('ROLLBACK');
+      return { success: false, message: '사용자를 찾을 수 없습니다' };
+    }
+    const gold = walletRes.rows[0].gold || 0;
+    if (gold < item.price) {
+      await client.query('ROLLBACK');
+      return { success: false, message: '골드가 부족합니다' };
+    }
+
+    // Prevent duplicate ownership / extend duration for temp items
+    if (item.is_permanent) {
+      const owned = await client.query(
+        `SELECT 1 FROM tc_user_items WHERE nickname = $1 AND item_key = $2 LIMIT 1`,
+        [nickname, itemKey]
+      );
+      if (owned.rows.length > 0) {
+        await client.query('ROLLBACK');
+        return { success: false, message: '이미 보유한 아이템입니다' };
+      }
+    } else {
+      const ownedActive = await client.query(
+        `SELECT 1 FROM tc_user_items
+         WHERE nickname = $1 AND item_key = $2
+           AND (expires_at IS NULL OR expires_at >= NOW())
+         LIMIT 1`,
+        [nickname, itemKey]
+      );
+      if (ownedActive.rows.length > 0) {
+        if (!item.duration_days) {
+          await client.query('ROLLBACK');
+          return { success: false, message: '기간 정보를 찾을 수 없습니다' };
+        }
+        await client.query(
+          `
+          UPDATE tc_user_items
+          SET expires_at = CASE
+            WHEN expires_at IS NULL OR expires_at < NOW()
+              THEN NOW() + ($2 || ' days')::interval
+            ELSE expires_at + ($2 || ' days')::interval
+          END
+          WHERE nickname = $1 AND item_key = $3
+          `,
+          [nickname, item.duration_days, itemKey]
+        );
+
+        await client.query(
+          `UPDATE tc_users SET gold = gold - $2 WHERE nickname = $1`,
+          [nickname, item.price]
+        );
+
+        await client.query('COMMIT');
+        return { success: true, extended: true };
+      }
+    }
+
+    const expiresAt = item.is_permanent
+      ? null
+      : (item.duration_days
+          ? new Date(Date.now() + item.duration_days * 24 * 60 * 60 * 1000)
+          : null);
+
+    await client.query(
+      `INSERT INTO tc_user_items (nickname, item_key, expires_at, is_active, source)
+       VALUES ($1, $2, $3, $4, 'shop')`,
+      [nickname, itemKey, expiresAt, false]
+    );
+
+    await client.query(
+      `UPDATE tc_users SET gold = gold - $2 WHERE nickname = $1`,
+      [nickname, item.price]
+    );
+
+    await client.query('COMMIT');
+    return { success: true };
+  } catch (err) {
+    await client.query('ROLLBACK');
+    console.error('Buy item error:', err);
+    return { success: false, message: '구매 중 오류가 발생했습니다' };
+  } finally {
+    client.release();
+  }
+}
+
+// Equip item
+async function equipItem(nickname, itemKey) {
+  const client = await pool.connect();
+  try {
+    await cleanupExpiredItems(client, nickname);
+    const itemRes = await client.query(
+      `SELECT category FROM tc_shop_items WHERE item_key = $1`,
+      [itemKey]
+    );
+    if (itemRes.rows.length === 0) {
+      return { success: false, message: '아이템을 찾을 수 없습니다' };
+    }
+    const category = itemRes.rows[0].category;
+
+    const owned = await client.query(
+      `SELECT 1 FROM tc_user_items
+       WHERE nickname = $1 AND item_key = $2
+         AND (expires_at IS NULL OR expires_at >= NOW())
+       LIMIT 1`,
+      [nickname, itemKey]
+    );
+    if (owned.rows.length === 0) {
+      return { success: false, message: '보유하지 않은 아이템입니다' };
+    }
+
+    const fieldMap = {
+      banner: 'banner_key',
+      title: 'title_key',
+      theme: 'theme_key',
+      card_skin: 'card_skin_key',
+    };
+    const field = fieldMap[category];
+    if (!field) {
+      return { success: false, message: '장착할 수 없는 아이템입니다' };
+    }
+
+    await client.query(
+      `
+      INSERT INTO tc_user_equips (nickname, ${field}, updated_at)
+      VALUES ($1, $2, NOW())
+      ON CONFLICT (nickname)
+      DO UPDATE SET ${field} = EXCLUDED.${field}, updated_at = NOW()
+      `,
+      [nickname, itemKey]
+    );
+
+    await client.query(
+      `UPDATE tc_user_items SET is_active = FALSE
+       WHERE nickname = $1 AND item_key IN (
+         SELECT item_key FROM tc_shop_items WHERE category = $2
+       )`,
+      [nickname, category]
+    );
+    await client.query(
+      `UPDATE tc_user_items SET is_active = TRUE
+       WHERE nickname = $1 AND item_key = $2`,
+      [nickname, itemKey]
+    );
+
+    return { success: true };
+  } catch (err) {
+    console.error('Equip item error:', err);
+    return { success: false, message: '아이템 장착 중 오류가 발생했습니다' };
+  } finally {
+    client.release();
+  }
+}
+
+// Use consumable item
+async function useItem(nickname, itemKey) {
+  const client = await pool.connect();
+  try {
+    await client.query('BEGIN');
+
+    const itemRes = await client.query(
+      `SELECT effect_type, effect_value FROM tc_shop_items WHERE item_key = $1`,
+      [itemKey]
+    );
+    if (itemRes.rows.length === 0) {
+      await client.query('ROLLBACK');
+      return { success: false, message: '아이템을 찾을 수 없습니다' };
+    }
+    const { effect_type: effectType, effect_value: effectValue } = itemRes.rows[0];
+    if (effectType !== 'leave_count_reduce') {
+      await client.query('ROLLBACK');
+      return { success: false, message: '사용할 수 없는 아이템입니다' };
+    }
+
+    const owned = await client.query(
+      `SELECT id FROM tc_user_items
+       WHERE nickname = $1 AND item_key = $2
+         AND (expires_at IS NULL OR expires_at >= NOW())
+       LIMIT 1`,
+      [nickname, itemKey]
+    );
+    if (owned.rows.length === 0) {
+      await client.query('ROLLBACK');
+      return { success: false, message: '보유하지 않은 아이템입니다' };
+    }
+
+    await client.query(
+      `UPDATE tc_users SET leave_count = GREATEST(0, leave_count - $2)
+       WHERE nickname = $1`,
+      [nickname, effectValue || 1]
+    );
+
+    await client.query(
+      `DELETE FROM tc_user_items WHERE id = $1`,
+      [owned.rows[0].id]
+    );
+
+    await client.query('COMMIT');
+    return { success: true };
+  } catch (err) {
+    await client.query('ROLLBACK');
+    console.error('Use item error:', err);
+    return { success: false, message: '아이템 사용 중 오류가 발생했습니다' };
+  } finally {
+    client.release();
+  }
+}
+
+// Set ranked ban (1 hour from now)
+async function setRankedBan(nickname) {
+  const client = await pool.connect();
+  try {
+    await client.query(
+      `UPDATE tc_users SET ranked_ban_until = NOW() + INTERVAL '1 hour' WHERE nickname = $1`,
+      [nickname]
+    );
+    return { success: true };
+  } catch (err) {
+    console.error('Set ranked ban error:', err);
+    return { success: false };
+  } finally {
+    client.release();
+  }
+}
+
+// Get ranked ban remaining minutes (null if not banned)
+async function getRankedBan(nickname) {
+  const client = await pool.connect();
+  try {
+    const result = await client.query(
+      `SELECT ranked_ban_until FROM tc_users WHERE nickname = $1`,
+      [nickname]
+    );
+    if (result.rows.length === 0) return null;
+    const banUntil = result.rows[0].ranked_ban_until;
+    if (!banUntil) return null;
+    const remaining = new Date(banUntil) - new Date();
+    if (remaining <= 0) return null;
+    return Math.ceil(remaining / 60000); // minutes
+  } catch (err) {
+    console.error('Get ranked ban error:', err);
+    return null;
+  } finally {
+    client.release();
+  }
+}
+
+// Increment leave count (ranked quit)
+async function incrementLeaveCount(nickname) {
+  const client = await pool.connect();
+  try {
+    await client.query(
+      `UPDATE tc_users SET leave_count = leave_count + 1 WHERE nickname = $1`,
+      [nickname]
+    );
+    return { success: true };
+  } catch (err) {
+    console.error('Increment leave count error:', err);
+    return { success: false };
+  } finally {
+    client.release();
+  }
+}
+
+// Seasons
+async function getActiveSeason() {
+  const client = await pool.connect();
+  try {
+    const result = await client.query(
+      `SELECT id, name, start_at, end_at, status
+       FROM tc_seasons
+       WHERE status = 'active'
+       ORDER BY start_at DESC
+       LIMIT 1`
+    );
+    return result.rows[0] || null;
+  } catch (err) {
+    console.error('Get active season error:', err);
+    return null;
+  } finally {
+    client.release();
+  }
+}
+
+async function createSeason(name, startAt, endAt) {
+  const client = await pool.connect();
+  try {
+    const result = await client.query(
+      `INSERT INTO tc_seasons (name, start_at, end_at, status)
+       VALUES ($1, $2, $3, 'active')
+       RETURNING id, name, start_at, end_at, status`,
+      [name, startAt, endAt]
+    );
+    return result.rows[0];
+  } catch (err) {
+    console.error('Create season error:', err);
+    return null;
+  } finally {
+    client.release();
+  }
+}
+
+async function getSeasons() {
+  const client = await pool.connect();
+  try {
+    const result = await client.query(
+      `SELECT id, name, start_at, end_at, status
+       FROM tc_seasons
+       ORDER BY start_at DESC`
+    );
+    return { success: true, seasons: result.rows };
+  } catch (err) {
+    console.error('Get seasons error:', err);
+    return { success: false, message: '시즌 목록을 가져오지 못했습니다' };
+  } finally {
+    client.release();
+  }
+}
+
+async function getCurrentSeasonRankings(limit = 50) {
+  const client = await pool.connect();
+  try {
+    const result = await client.query(
+      `
+      SELECT u.nickname,
+             u.season_rating AS rating,
+             u.season_wins AS wins,
+             u.season_losses AS losses,
+             u.season_games AS total_games,
+             CASE
+               WHEN u.season_games > 0 THEN ROUND((u.season_wins::FLOAT / u.season_games) * 100)
+               ELSE 0
+             END AS win_rate,
+             e.banner_key
+      FROM tc_users u
+      LEFT JOIN tc_user_equips e ON e.nickname = u.nickname
+      ORDER BY u.season_rating DESC, u.season_wins DESC, u.season_games DESC, u.nickname ASC
+      LIMIT $1
+      `,
+      [limit]
+    );
+    return { success: true, rankings: result.rows };
+  } catch (err) {
+    console.error('Get current season rankings error:', err);
+    return { success: false, message: '시즌 랭킹을 가져오지 못했습니다' };
+  } finally {
+    client.release();
+  }
+}
+
+async function getSeasonRankings(seasonId, limit = 50) {
+  const client = await pool.connect();
+  try {
+    const result = await client.query(
+      `
+      SELECT r.nickname, r.rating, r.wins, r.losses, r.total_games,
+             CASE
+               WHEN r.total_games > 0 THEN ROUND((r.wins::FLOAT / r.total_games) * 100)
+               ELSE 0
+             END AS win_rate,
+             e.banner_key
+      FROM tc_season_rankings r
+      LEFT JOIN tc_user_equips e ON e.nickname = r.nickname
+      WHERE r.season_id = $1
+      ORDER BY r.rank ASC
+      LIMIT $2
+      `,
+      [seasonId, limit]
+    );
+    return { success: true, rankings: result.rows };
+  } catch (err) {
+    console.error('Get season rankings error:', err);
+    return { success: false, message: '시즌 랭킹을 가져오지 못했습니다' };
+  } finally {
+    client.release();
+  }
+}
+
+async function resetSeasonStats() {
+  const client = await pool.connect();
+  try {
+    await client.query(
+      `UPDATE tc_users
+       SET season_rating = 1000,
+           season_games = 0,
+           season_wins = 0,
+           season_losses = 0`
+    );
+    return { success: true };
+  } catch (err) {
+    console.error('Reset season stats error:', err);
+    return { success: false };
+  } finally {
+    client.release();
+  }
+}
+
+// Grant season rewards (top3 + banners + gold)
+async function grantSeasonRewards(seasonId) {
+  const client = await pool.connect();
+  try {
+    await client.query('BEGIN');
+
+    const seasonRes = await client.query(
+      `SELECT id, status FROM tc_seasons WHERE id = $1`,
+      [seasonId]
+    );
+    if (seasonRes.rows.length === 0) {
+      await client.query('ROLLBACK');
+      return { success: false, message: '시즌을 찾을 수 없습니다' };
+    }
+    if (seasonRes.rows[0].status === 'closed') {
+      await client.query('ROLLBACK');
+      return { success: false, message: '이미 종료된 시즌입니다' };
+    }
+
+    const topRes = await client.query(
+      `
+      SELECT nickname, rating
+      FROM tc_users
+      ORDER BY season_rating DESC, season_wins DESC, season_games DESC, nickname ASC
+      LIMIT 3
+      `
+    );
+    const top = topRes.rows;
+    const rewards = [
+      { rank: 1, gold: 1000, banner: 'banner_season_gold' },
+      { rank: 2, gold: 500, banner: 'banner_season_silver' },
+      { rank: 3, gold: 200, banner: 'banner_season_bronze' },
+    ];
+
+    const topFullRes = await client.query(
+      `
+      SELECT nickname,
+             season_rating AS rating,
+             season_wins AS wins,
+             season_losses AS losses,
+             season_games AS total_games
+      FROM tc_users
+      ORDER BY season_rating DESC, season_wins DESC, season_games DESC, nickname ASC
+      LIMIT 100
+      `
+    );
+    const topFull = topFullRes.rows;
+    for (let i = 0; i < topFull.length; i++) {
+      const u = topFull[i];
+      await client.query(
+        `INSERT INTO tc_season_rankings (season_id, rank, nickname, rating, wins, losses, total_games)
+         VALUES ($1, $2, $3, $4, $5, $6, $7)
+         ON CONFLICT (season_id, rank) DO NOTHING`,
+        [seasonId, i + 1, u.nickname, u.rating, u.wins, u.losses, u.total_games]
+      );
+    }
+
+    for (let i = 0; i < rewards.length; i++) {
+      const user = top[i];
+      if (!user) continue;
+      const reward = rewards[i];
+
+      await client.query(
+        `UPDATE tc_users SET gold = gold + $2 WHERE nickname = $1`,
+        [user.nickname, reward.gold]
+      );
+
+      await client.query(
+        `INSERT INTO tc_user_items (nickname, item_key, expires_at, is_active, source)
+         VALUES ($1, $2, NOW() + INTERVAL '30 days', FALSE, 'season')`,
+        [user.nickname, reward.banner]
+      );
+
+      await client.query(
+        `INSERT INTO tc_season_rewards (season_id, nickname, rank, gold_reward, banner_key)
+         VALUES ($1, $2, $3, $4, $5)`,
+        [seasonId, user.nickname, reward.rank, reward.gold, reward.banner]
+      );
+    }
+
+    await client.query(
+      `UPDATE tc_seasons SET status = 'closed' WHERE id = $1`,
+      [seasonId]
+    );
+
+    await client.query('COMMIT');
+    return { success: true };
+  } catch (err) {
+    await client.query('ROLLBACK');
+    console.error('Grant season rewards error:', err);
+    return { success: false, message: '시즌 보상 지급 실패' };
   } finally {
     client.release();
   }
@@ -607,15 +1400,29 @@ async function resolveInquiry(id, adminNote) {
   }
 }
 
-// Get reports with pagination
+// Get reports grouped by (reported_nickname, room_id)
 async function getReports(page = 1, limit = 20) {
   const client = await pool.connect();
   try {
     const offset = (page - 1) * limit;
-    const countResult = await client.query('SELECT COUNT(*) FROM tc_reports');
+    const countResult = await client.query(
+      'SELECT COUNT(*) FROM (SELECT 1 FROM tc_reports GROUP BY reported_nickname, room_id) sub'
+    );
     const total = parseInt(countResult.rows[0].count);
     const result = await client.query(
-      'SELECT * FROM tc_reports ORDER BY created_at DESC LIMIT $1 OFFSET $2',
+      `SELECT
+        reported_nickname,
+        room_id,
+        COUNT(*) AS report_count,
+        array_agg(DISTINCT reporter_nickname) AS reporters,
+        MAX(created_at) AS latest_date,
+        CASE WHEN bool_or(status = 'pending') THEN 'pending'
+             WHEN bool_or(status = 'reviewed') THEN 'reviewed'
+             ELSE 'resolved' END AS group_status
+       FROM tc_reports
+       GROUP BY reported_nickname, room_id
+       ORDER BY MAX(created_at) DESC
+       LIMIT $1 OFFSET $2`,
       [limit, offset]
     );
     return { rows: result.rows, total, page, limit };
@@ -627,31 +1434,36 @@ async function getReports(page = 1, limit = 20) {
   }
 }
 
-// Get single report by ID
-async function getReportById(id) {
+// Get all reports for a (reported_nickname, room_id) group
+async function getReportGroup(reportedNickname, roomId) {
   const client = await pool.connect();
   try {
-    const result = await client.query('SELECT * FROM tc_reports WHERE id = $1', [id]);
-    return result.rows[0] || null;
+    const result = await client.query(
+      `SELECT * FROM tc_reports
+       WHERE reported_nickname = $1 AND room_id = $2
+       ORDER BY created_at DESC`,
+      [reportedNickname, roomId]
+    );
+    return result.rows;
   } catch (err) {
-    console.error('Get report error:', err);
-    return null;
+    console.error('Get report group error:', err);
+    return [];
   } finally {
     client.release();
   }
 }
 
-// Update report status
-async function updateReportStatus(id, status) {
+// Update report status for all reports in a group
+async function updateReportGroupStatus(reportedNickname, roomId, status) {
   const client = await pool.connect();
   try {
     await client.query(
-      'UPDATE tc_reports SET status = $2 WHERE id = $1',
-      [id, status]
+      'UPDATE tc_reports SET status = $3 WHERE reported_nickname = $1 AND room_id = $2',
+      [reportedNickname, roomId, status]
     );
     return { success: true };
   } catch (err) {
-    console.error('Update report status error:', err);
+    console.error('Update report group status error:', err);
     return { success: false };
   } finally {
     client.release();
@@ -770,6 +1582,37 @@ async function verifyAdmin(username, password) {
   }
 }
 
+// Get rankings (top players by rating)
+async function getRankings(limit = 50) {
+  const client = await pool.connect();
+  try {
+    const result = await client.query(
+      `
+      SELECT
+        nickname,
+        rating,
+        wins,
+        losses,
+        total_games,
+        CASE
+          WHEN total_games > 0 THEN ROUND((wins::FLOAT / total_games) * 100)
+          ELSE 0
+        END AS win_rate
+      FROM tc_users
+      ORDER BY rating DESC, wins DESC, total_games DESC, nickname ASC
+      LIMIT $1
+      `,
+      [limit]
+    );
+    return { success: true, rankings: result.rows };
+  } catch (err) {
+    console.error('Get rankings error:', err);
+    return { success: false, message: '랭킹 정보를 가져오지 못했습니다' };
+  } finally {
+    client.release();
+  }
+}
+
 module.exports = {
   initDatabase,
   registerUser,
@@ -787,16 +1630,33 @@ module.exports = {
   updateUserStats,
   getUserProfile,
   getRecentMatches,
+  getWallet,
+  getShopItems,
+  getUserItems,
+  buyItem,
+  equipItem,
+  useItem,
+  incrementLeaveCount,
+  setRankedBan,
+  getRankedBan,
+  getActiveSeason,
+  createSeason,
+  getSeasons,
+  getCurrentSeasonRankings,
+  getSeasonRankings,
+  resetSeasonStats,
+  grantSeasonRewards,
   submitInquiry,
   getInquiries,
   getInquiryById,
   resolveInquiry,
   getReports,
-  getReportById,
-  updateReportStatus,
+  getReportGroup,
+  updateReportGroupStatus,
   getUsers,
   getUserDetail,
   getDashboardStats,
+  getRankings,
   verifyAdmin,
   pool,
 };

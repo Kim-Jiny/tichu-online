@@ -79,6 +79,21 @@ class NetworkService extends ChangeNotifier {
     _channel!.sink.add(jsonStr);
   }
 
+  String get serverUrl => _serverUrl;
+
+  Future<bool> reconnect() async {
+    disconnect();
+    for (int i = 0; i < 5; i++) {
+      try {
+        await connect(_serverUrl);
+        return true;
+      } catch (_) {
+        await Future.delayed(Duration(seconds: 2 << i)); // 2, 4, 8, 16, 32
+      }
+    }
+    return false;
+  }
+
   void disconnect() {
     _channel?.sink.close();
     _handleDisconnect();

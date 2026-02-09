@@ -1,7 +1,7 @@
 const crypto = require('crypto');
 const {
   verifyAdmin, getInquiries, getInquiryById, resolveInquiry,
-  getReports, getReportById, updateReportStatus,
+  getReports, getReportGroup, updateReportGroupStatus,
   getUsers, getUserDetail, deleteUser, getDashboardStats,
 } = require('./db/database');
 
@@ -368,7 +368,7 @@ async function handleAdminRoute(req, res, url, pathname, method, lobby, wss) {
     return redirect(res, `/tc-backstage/inquiries/${resolveMatch[1]}`);
   }
 
-  // ===== Reports =====
+  // ===== Reports (grouped by reported_nickname + room_id) =====
   if (pathname === '/tc-backstage/reports' && method === 'GET') {
     const page = parseInt(url.searchParams.get('page') || '1');
     const data = await getReports(page, 20);
@@ -376,16 +376,24 @@ async function handleAdminRoute(req, res, url, pathname, method, lobby, wss) {
     let tableContent = '';
     if (data.rows.length > 0) {
       tableContent = `<table>
-        <tr><th>ID</th><th>Reporter</th><th>Reported</th><th>Reason</th><th>Status</th><th>Date</th><th></th></tr>
-        ${data.rows.map(r => `<tr>
-          <td>${r.id}</td>
-          <td>${escapeHtml(r.reporter_nickname)}</td>
-          <td>${escapeHtml(r.reported_nickname)}</td>
-          <td>${escapeHtml((r.reason || '').substring(0, 50))}</td>
-          <td>${statusBadge(r.status)}</td>
-          <td>${formatDate(r.created_at)}</td>
-          <td><a href="/tc-backstage/reports/${r.id}" class="btn btn-secondary">View</a></td>
-        </tr>`).join('')}
+        <tr><th>Reported</th><th>Room</th><th>신고자</th><th>신고수</th><th>Status</th><th>Latest</th><th></th></tr>
+        ${data.rows.map(r => {
+          const cnt = parseInt(r.report_count) || 1;
+          const cntBadge = cnt >= 2
+            ? `<span class="badge" style="background:#ffebee;color:#c62828;font-weight:700">${cnt}</span>`
+            : `<span>${cnt}</span>`;
+          const reporters = (r.reporters || []).map(n => escapeHtml(n)).join(', ');
+          const detailUrl = `/tc-backstage/reports/group?target=${encodeURIComponent(r.reported_nickname)}&room=${encodeURIComponent(r.room_id || '')}`;
+          return `<tr>
+          <td><a href="/tc-backstage/users/${encodeURIComponent(r.reported_nickname)}">${escapeHtml(r.reported_nickname)}</a></td>
+          <td>${escapeHtml(r.room_id) || '-'}</td>
+          <td>${reporters}</td>
+          <td>${cntBadge}</td>
+          <td>${statusBadge(r.group_status)}</td>
+          <td>${formatDate(r.latest_date)}</td>
+          <td><a href="${detailUrl}" class="btn btn-secondary">View</a></td>
+        </tr>`;
+        }).join('')}
       </table>
       ${pagination(data.page, data.total, data.limit, '/tc-backstage/reports')}`;
     } else {
@@ -399,43 +407,63 @@ async function handleAdminRoute(req, res, url, pathname, method, lobby, wss) {
     return html(res, layout('Reports', content, 'reports'));
   }
 
-  // Report detail
-  const reportMatch = pathname.match(/^\/tc-backstage\/reports\/(\d+)$/);
-  if (reportMatch && method === 'GET') {
-    const report = await getReportById(parseInt(reportMatch[1]));
-    if (!report) return html(res, layout('Not Found', '<div class="empty">Report not found</div>', 'reports'), 404);
+  // Report group detail
+  if (pathname === '/tc-backstage/reports/group' && method === 'GET') {
+    const target = url.searchParams.get('target') || '';
+    const roomId = url.searchParams.get('room') || '';
+    if (!target) return html(res, layout('Not Found', '<div class="empty">Report not found</div>', 'reports'), 404);
 
-    // Parse chat context
+    const reports = await getReportGroup(target, roomId);
+    if (reports.length === 0) return html(res, layout('Not Found', '<div class="empty">Report not found</div>', 'reports'), 404);
+
+    const groupStatus = reports.some(r => r.status === 'pending') ? 'pending'
+      : reports.some(r => r.status === 'reviewed') ? 'reviewed' : 'resolved';
+
+    // Parse chat context from first report that has it
     let chatHtml = '';
-    if (report.chat_context) {
+    const reportWithChat = reports.find(r => r.chat_context);
+    if (reportWithChat) {
       try {
-        const chatMessages = JSON.parse(report.chat_context);
+        const chatMessages = JSON.parse(reportWithChat.chat_context);
         if (Array.isArray(chatMessages) && chatMessages.length > 0) {
           chatHtml = `<div class="chat-log">${chatMessages.map(m =>
             `<div class="chat-msg"><span class="sender">${escapeHtml(m.sender || m.nickname)}:</span> <span class="text">${escapeHtml(m.message)}</span></div>`
           ).join('')}</div>`;
         }
       } catch (e) {
-        chatHtml = `<div class="chat-log"><pre>${escapeHtml(report.chat_context)}</pre></div>`;
+        chatHtml = `<div class="chat-log"><pre>${escapeHtml(reportWithChat.chat_context)}</pre></div>`;
       }
     }
 
+    // Individual reports list
+    const reportsHtml = reports.map(r => `
+      <div style="border:1px solid #eee;border-radius:8px;padding:12px;margin-bottom:8px">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
+          <strong><a href="/tc-backstage/users/${encodeURIComponent(r.reporter_nickname)}">${escapeHtml(r.reporter_nickname)}</a></strong>
+          <span style="color:#888;font-size:12px">${formatDate(r.created_at)}</span>
+        </div>
+        <div style="color:#555;font-size:14px;white-space:pre-wrap">${escapeHtml(r.reason)}</div>
+      </div>
+    `).join('');
+
+    const formUrl = `/tc-backstage/reports/group/status?target=${encodeURIComponent(target)}&room=${encodeURIComponent(roomId)}`;
+
     const content = `
-      <h1 class="page-title">Report #${report.id}</h1>
+      <h1 class="page-title">${escapeHtml(target)} 신고 (${reports.length}건)</h1>
       <div class="card">
         <div class="detail-grid">
-          <div class="label">Reporter</div><div class="value"><a href="/tc-backstage/users/${encodeURIComponent(report.reporter_nickname)}">${escapeHtml(report.reporter_nickname)}</a></div>
-          <div class="label">Reported</div><div class="value"><a href="/tc-backstage/users/${encodeURIComponent(report.reported_nickname)}">${escapeHtml(report.reported_nickname)}</a></div>
-          <div class="label">Status</div><div class="value">${statusBadge(report.status)}</div>
-          <div class="label">Reason</div><div class="value" style="white-space:pre-wrap">${escapeHtml(report.reason)}</div>
-          <div class="label">Room ID</div><div class="value">${escapeHtml(report.room_id) || '-'}</div>
-          <div class="label">Created</div><div class="value">${formatDate(report.created_at)}</div>
+          <div class="label">Reported</div><div class="value"><a href="/tc-backstage/users/${encodeURIComponent(target)}">${escapeHtml(target)}</a></div>
+          <div class="label">Room ID</div><div class="value">${escapeHtml(roomId) || '-'}</div>
+          <div class="label">Status</div><div class="value">${statusBadge(groupStatus)}</div>
+          <div class="label">신고 수</div><div class="value"><strong>${reports.length}</strong>건</div>
         </div>
-        ${chatHtml ? `<h3>Chat Context</h3>${chatHtml}` : ''}
-        ${report.status !== 'resolved' ? `
-        <form method="POST" action="/tc-backstage/reports/${report.id}/status" style="margin-top:16px">
+        <h3 style="margin-top:16px">신고자 목록</h3>
+        ${reportsHtml}
+        ${chatHtml ? `<h3 style="margin-top:16px">Chat Context</h3>${chatHtml}` : ''}
+        ${groupStatus !== 'resolved' ? `
+        <form method="POST" action="${formUrl}" style="margin-top:16px">
           <select name="status" style="padding:8px;border-radius:8px;border:1px solid #ddd;font-size:14px">
-            <option value="reviewed" ${report.status === 'reviewed' ? 'selected' : ''}>Reviewed</option>
+            <option value="reviewed" ${groupStatus === 'reviewed' ? 'selected' : ''}>Reviewed</option>
             <option value="resolved">Resolved</option>
           </select>
           <button type="submit" class="btn btn-primary" style="margin-left:8px">Update Status</button>
@@ -443,18 +471,19 @@ async function handleAdminRoute(req, res, url, pathname, method, lobby, wss) {
       </div>
       <a href="/tc-backstage/reports" class="btn btn-secondary">Back to list</a>
     `;
-    return html(res, layout(`Report #${report.id}`, content, 'reports'));
+    return html(res, layout(`Reports: ${escapeHtml(target)}`, content, 'reports'));
   }
 
-  // Update report status
-  const reportStatusMatch = pathname.match(/^\/tc-backstage\/reports\/(\d+)\/status$/);
-  if (reportStatusMatch && method === 'POST') {
+  // Update report group status
+  if (pathname === '/tc-backstage/reports/group/status' && method === 'POST') {
+    const target = url.searchParams.get('target') || '';
+    const roomId = url.searchParams.get('room') || '';
     const body = await parseBody(req);
     const validStatuses = ['pending', 'reviewed', 'resolved'];
-    if (validStatuses.includes(body.status)) {
-      await updateReportStatus(parseInt(reportStatusMatch[1]), body.status);
+    if (target && validStatuses.includes(body.status)) {
+      await updateReportGroupStatus(target, roomId, body.status);
     }
-    return redirect(res, `/tc-backstage/reports/${reportStatusMatch[1]}`);
+    return redirect(res, `/tc-backstage/reports/group?target=${encodeURIComponent(target)}&room=${encodeURIComponent(roomId)}`);
   }
 
   // ===== Users =====

@@ -2,11 +2,16 @@ const { WebSocketServer } = require('ws');
 const http = require('http');
 const LobbyManager = require('./lobby/LobbyManager');
 const GameRoom = require('./game/GameRoom');
+const { decideBotAction } = require('./game/BotPlayer');
 const {
   initDatabase, registerUser, loginUser, checkNickname, deleteUser,
   blockUser, unblockUser, getBlockedUsers, reportUser, addFriend, getFriends,
   saveMatchResult, updateUserStats, getUserProfile, getRecentMatches,
-  submitInquiry,
+  submitInquiry, getRankings,
+  getWallet, getShopItems, getUserItems, buyItem, equipItem, useItem,
+  incrementLeaveCount, setRankedBan, getRankedBan, grantSeasonRewards,
+  getActiveSeason, createSeason, getSeasons,
+  getCurrentSeasonRankings, getSeasonRankings, resetSeasonStats,
 } = require('./db/database');
 const { handleAdminRoute } = require('./admin');
 
@@ -18,7 +23,13 @@ const server = http.createServer(async (req, res) => {
   const pathname = url.pathname;
 
   if (pathname.startsWith('/tc-backstage')) {
-    await handleAdminRoute(req, res, url, pathname, req.method, lobby, wss);
+    try {
+      await handleAdminRoute(req, res, url, pathname, req.method, lobby, wss);
+    } catch (err) {
+      console.error('Admin route error:', err);
+      res.writeHead(500, { 'Content-Type': 'text/plain' });
+      res.end('Internal Server Error: ' + err.message);
+    }
     return;
   }
 
@@ -39,6 +50,38 @@ let nextPlayerId = 1;
 // Track nickname -> roomId for reconnection during games
 const playerSessions = new Map(); // nickname -> { roomId, disconnectedAt }
 
+// Turn timer system
+const turnTimers = {};    // roomId -> setTimeout handle
+const timeoutCounts = {}; // roomId -> { playerId: count }
+const roundEndTimers = {}; // roomId -> setTimeout handle for auto next round
+
+function seasonNameFromDate(date) {
+  const y = date.getFullYear();
+  const m = String(date.getMonth() + 1).padStart(2, '0');
+  return `${y}-${m} 시즌`;
+}
+
+async function ensureSeasonCycle() {
+  const now = new Date();
+  const active = await getActiveSeason();
+
+  if (active) {
+    const endAt = new Date(active.end_at);
+    if (now >= endAt) {
+      await grantSeasonRewards(active.id);
+      await resetSeasonStats();
+      const startAt = new Date(now.getFullYear(), now.getMonth(), 1, 0, 0, 0);
+      const nextEnd = new Date(now.getFullYear(), now.getMonth() + 1, 1, 0, 0, 0);
+      await createSeason(seasonNameFromDate(startAt), startAt, nextEnd);
+    }
+    return;
+  }
+
+  const startAt = new Date(now.getFullYear(), now.getMonth(), 1, 0, 0, 0);
+  const endAt = new Date(now.getFullYear(), now.getMonth() + 1, 1, 0, 0, 0);
+  await createSeason(seasonNameFromDate(startAt), startAt, endAt);
+}
+
 // Clean up old sessions every 5 minutes
 setInterval(() => {
   const now = Date.now();
@@ -54,11 +97,17 @@ setInterval(() => {
 // Initialize database and start server
 (async () => {
   await initDatabase();
+  await ensureSeasonCycle();
 
   server.listen(PORT, () => {
     console.log(`Tichu server running on port ${PORT}`);
   });
 })();
+
+// Season cycle check every hour
+setInterval(() => {
+  ensureSeasonCycle();
+}, 60 * 60 * 1000);
 
 wss.on('connection', (ws) => {
   ws.playerId = null;
@@ -101,8 +150,8 @@ wss.on('connection', (ws) => {
         } else {
           // No game - just remove player
           room.removePlayer(ws.playerId);
-          if (room.getPlayerCount() === 0) {
-            lobby.removeRoom(ws.roomId);
+          if (room.getHumanPlayerCount() === 0) {
+            removeRoomAndNotifySpectators(ws.roomId);
           } else {
             broadcastRoomState(ws.roomId);
           }
@@ -154,6 +203,9 @@ function handleMessage(ws, data) {
     case 'spectate_room':
       handleSpectateRoom(ws, data);
       break;
+    case 'toggle_ready':
+      handleToggleReady(ws);
+      break;
     case 'start_game':
       handleStartGame(ws);
       break;
@@ -162,6 +214,9 @@ function handleMessage(ws, data) {
       break;
     case 'kick_player':
       handleKickPlayer(ws, data);
+      break;
+    case 'add_bot':
+      handleAddBot(ws, data);
       break;
     case 'get_profile':
       handleGetProfile(ws, data);
@@ -184,6 +239,9 @@ function handleMessage(ws, data) {
       break;
     case 'respond_card_view':
       handleRespondCardView(ws, data);
+      break;
+    case 'revoke_card_view':
+      handleRevokeCardView(ws, data);
       break;
     // Chat
     case 'chat_message':
@@ -210,6 +268,30 @@ function handleMessage(ws, data) {
       break;
     case 'get_friends':
       handleGetFriends(ws);
+      break;
+    case 'get_rankings':
+      handleGetRankings(ws, data);
+      break;
+    case 'get_seasons':
+      handleGetSeasons(ws);
+      break;
+    case 'get_wallet':
+      handleGetWallet(ws);
+      break;
+    case 'get_shop_items':
+      handleGetShopItems(ws);
+      break;
+    case 'get_inventory':
+      handleGetInventory(ws);
+      break;
+    case 'buy_item':
+      handleBuyItem(ws, data);
+      break;
+    case 'equip_item':
+      handleEquipItem(ws, data);
+      break;
+    case 'use_item':
+      handleUseItem(ws, data);
       break;
     default:
       sendTo(ws, { type: 'error', message: `Unknown message type: ${data.type}` });
@@ -314,20 +396,28 @@ function handleCreateRoom(ws, data) {
   const password = isRanked
     ? ''
     : (typeof data.password === 'string' ? data.password.trim() : '');
+  const turnTimeLimit = Math.min(Math.max(parseInt(data.turnTimeLimit) || 30, 10), 300);
   const room = lobby.createRoom(
     roomName,
     ws.playerId,
     ws.nickname,
     password,
-    isRanked
+    isRanked,
+    turnTimeLimit
   );
   ws.roomId = room.id;
+
+  // Auto-add 3 bots for local testing (non-ranked only)
+  if (!isRanked) {
+    for (let i = 0; i < 3; i++) room.addBot();
+  }
+
   sendTo(ws, { type: 'room_joined', roomId: room.id, roomName: room.name });
   broadcastRoomState(room.id);
   broadcastRoomList();
 }
 
-function handleJoinRoom(ws, data) {
+async function handleJoinRoom(ws, data) {
   if (!ws.playerId) {
     sendTo(ws, { type: 'error', message: 'Not logged in' });
     return;
@@ -340,6 +430,14 @@ function handleJoinRoom(ws, data) {
   if (!room) {
     sendTo(ws, { type: 'error', message: 'Room not found' });
     return;
+  }
+  // Ranked ban check
+  if (room.isRanked && ws.nickname) {
+    const banMinutes = await getRankedBan(ws.nickname);
+    if (banMinutes) {
+      sendTo(ws, { type: 'error', message: `탈주로 인해 ${banMinutes}분 동안 랭킹전이 제한됩니다` });
+      return;
+    }
   }
   const password = typeof data.password === 'string' ? data.password.trim() : '';
   const result = room.addPlayer(ws.playerId, ws.nickname, password);
@@ -355,8 +453,9 @@ function handleJoinRoom(ws, data) {
   broadcastRoomList();
 }
 
-function handleLeaveRoom(ws) {
+async function handleLeaveRoom(ws) {
   if (!ws.roomId) return;
+  clearTurnTimer(ws.roomId);
   const room = lobby.getRoom(ws.roomId);
   const roomId = ws.roomId;
   const wasSpectating = ws.isSpectator;
@@ -366,9 +465,13 @@ function handleLeaveRoom(ws) {
     if (wasSpectating) {
       room.removeSpectator(ws.playerId);
     } else {
+      // If game is active, treat as desertion → end game with scores
+      if (room.game && room.game.state !== 'game_end') {
+        await handleDesertion(roomId, ws.playerId);
+      }
       room.removePlayer(ws.playerId);
-      if (room.getPlayerCount() === 0) {
-        lobby.removeRoom(roomId);
+      if (room.getHumanPlayerCount() === 0) {
+        removeRoomAndNotifySpectators(roomId);
       } else {
         broadcastRoomState(roomId);
       }
@@ -378,8 +481,9 @@ function handleLeaveRoom(ws) {
   broadcastRoomList();
 }
 
-function handleLeaveGame(ws) {
+async function handleLeaveGame(ws) {
   if (!ws.roomId) return;
+  clearTurnTimer(ws.roomId);
   const room = lobby.getRoom(ws.roomId);
   const roomId = ws.roomId;
 
@@ -394,17 +498,19 @@ function handleLeaveGame(ws) {
     playerSessions.delete(ws.nickname);
   }
 
+  // If game is active (not ended), treat as desertion → end game with scores
+  if (room.game && room.game.state !== 'game_end') {
+    await handleDesertion(roomId, ws.playerId);
+  }
+
   // Remove player from room
   room.removePlayer(ws.playerId);
   ws.roomId = null;
 
-  if (room.getPlayerCount() === 0) {
-    lobby.removeRoom(roomId);
+  if (room.getHumanPlayerCount() === 0) {
+    removeRoomAndNotifySpectators(roomId);
   } else {
     broadcastRoomState(roomId);
-    if (room.game) {
-      sendGameStateToAll(roomId);
-    }
   }
 
   sendTo(ws, { type: 'room_left' });
@@ -433,12 +539,17 @@ function handleSpectateRoom(ws, data) {
   ws.roomId = room.id;
   ws.isSpectator = true;
   sendTo(ws, { type: 'spectate_joined', roomId: room.id, roomName: room.name });
+  // Send chat history to spectator
+  sendTo(ws, { type: 'chat_history', messages: room.getChatHistory() });
 
-  // Send current game state if game is in progress (without card permissions initially)
   if (room.game) {
+    // Send current game state if game is in progress (without card permissions initially)
     const permittedPlayers = room.getPermittedPlayers(ws.playerId);
     const state = room.game.getStateForSpectator(permittedPlayers);
     sendTo(ws, { type: 'spectator_game_state', state });
+  } else {
+    // Send waiting room state
+    sendTo(ws, { type: 'room_state', room: room.getState() });
   }
 }
 
@@ -457,7 +568,25 @@ function handleRequestCardView(ws, data) {
     return;
   }
 
-  // Notify the player about the request
+  // If target is a bot, auto-approve immediately
+  if (room.isBot(playerId)) {
+    room.respondCardViewRequest(playerId, ws.playerId, true);
+    const botPlayer = room.players.find(p => p !== null && p.id === playerId);
+    sendTo(ws, {
+      type: 'card_view_response',
+      playerId: playerId,
+      playerNickname: botPlayer ? botPlayer.nickname : '',
+      allowed: true,
+    });
+    if (room.game) {
+      const permittedPlayers = room.getPermittedPlayers(ws.playerId);
+      const state = room.game.getStateForSpectator(permittedPlayers);
+      sendTo(ws, { type: 'spectator_game_state', state });
+    }
+    return;
+  }
+
+  // Notify the human player about the request
   const playerWs = findWsByPlayerId(playerId);
   if (playerWs) {
     sendTo(playerWs, {
@@ -506,13 +635,50 @@ function handleRespondCardView(ws, data) {
   }
 }
 
-function handleStartGame(ws) {
+function handleRevokeCardView(ws, data) {
   if (!ws.roomId) {
     sendTo(ws, { type: 'error', message: 'Not in a room' });
     return;
   }
   const room = lobby.getRoom(ws.roomId);
   if (!room) return;
+
+  const spectatorId = data.spectatorId;
+  const result = room.revokeCardView(ws.playerId, spectatorId);
+  if (!result.success) {
+    sendTo(ws, { type: 'error', message: 'Failed to revoke' });
+    return;
+  }
+
+  // Send updated spectator game state (cards no longer visible)
+  const spectatorWs = findWsByPlayerId(spectatorId);
+  if (spectatorWs && room.game) {
+    const permittedPlayers = room.getPermittedPlayers(spectatorId);
+    const state = room.game.getStateForSpectator(permittedPlayers);
+    sendTo(spectatorWs, { type: 'spectator_game_state', state });
+  }
+
+  // Send updated game state to the player (cardViewers refreshed)
+  sendGameStateToAll(ws.roomId);
+}
+
+function handleToggleReady(ws) {
+  if (!ws.roomId) return;
+  const room = lobby.getRoom(ws.roomId);
+  if (!room) { sendTo(ws, { type: 'room_closed' }); ws.roomId = null; return; }
+  if (room.hostId === ws.playerId) return; // host doesn't ready
+  if (room.game) return; // game already started
+  room.toggleReady(ws.playerId);
+  broadcastRoomState(ws.roomId);
+}
+
+function handleStartGame(ws) {
+  if (!ws.roomId) {
+    sendTo(ws, { type: 'error', message: 'Not in a room' });
+    return;
+  }
+  const room = lobby.getRoom(ws.roomId);
+  if (!room) { sendTo(ws, { type: 'room_closed' }); ws.roomId = null; return; }
   if (room.hostId !== ws.playerId) {
     sendTo(ws, { type: 'error', message: 'Only the host can start the game' });
     return;
@@ -521,6 +687,11 @@ function handleStartGame(ws) {
     sendTo(ws, { type: 'error', message: 'Need 4 players to start' });
     return;
   }
+  if (!room.areAllReady()) {
+    sendTo(ws, { type: 'error', message: '모든 플레이어가 준비해야 합니다' });
+    return;
+  }
+  room.resetReady();
   room.startGame();
   broadcastRoomState(ws.roomId);
   // Send initial cards to each player
@@ -533,7 +704,7 @@ function handleChangeTeam(ws, data) {
     return;
   }
   const room = lobby.getRoom(ws.roomId);
-  if (!room) return;
+  if (!room) { sendTo(ws, { type: 'room_closed' }); ws.roomId = null; return; }
   if (room.isRanked) {
     sendTo(ws, { type: 'error', message: '랭크전에서는 팀을 변경할 수 없습니다' });
     return;
@@ -562,7 +733,7 @@ function handleKickPlayer(ws, data) {
     return;
   }
   const room = lobby.getRoom(ws.roomId);
-  if (!room) return;
+  if (!room) { sendTo(ws, { type: 'room_closed' }); ws.roomId = null; return; }
   if (room.hostId !== ws.playerId) {
     sendTo(ws, { type: 'error', message: '방장만 강퇴할 수 있습니다' });
     return;
@@ -588,6 +759,32 @@ function handleKickPlayer(ws, data) {
     targetWs.roomId = null;
   }
   room.removePlayer(targetPlayerId);
+  broadcastRoomState(ws.roomId);
+  broadcastRoomList();
+}
+
+// Add bot handler (host only)
+function handleAddBot(ws, data) {
+  if (!ws.roomId) {
+    sendTo(ws, { type: 'error', message: 'Not in a room' });
+    return;
+  }
+  const room = lobby.getRoom(ws.roomId);
+  if (!room) { sendTo(ws, { type: 'room_closed' }); ws.roomId = null; return; }
+  if (room.hostId !== ws.playerId) {
+    sendTo(ws, { type: 'error', message: '방장만 봇을 추가할 수 있습니다' });
+    return;
+  }
+  if (room.isRanked) {
+    sendTo(ws, { type: 'error', message: '랭크전에서는 봇을 추가할 수 없습니다' });
+    return;
+  }
+  const targetSlot = typeof data.targetSlot === 'number' ? data.targetSlot : undefined;
+  const result = room.addBot(targetSlot);
+  if (!result.success) {
+    sendTo(ws, { type: 'error', message: result.message });
+    return;
+  }
   broadcastRoomState(ws.roomId);
   broadcastRoomList();
 }
@@ -622,14 +819,24 @@ function handleGameAction(ws, data) {
   }
   const room = lobby.getRoom(ws.roomId);
   if (!room || !room.game) {
-    sendTo(ws, { type: 'error', message: 'No active game' });
+    sendTo(ws, { type: 'room_closed' });
+    ws.roomId = null;
     return;
   }
+
+  // Clear turn timer when a player acts
+  clearTurnTimer(ws.roomId);
 
   if (data.type === 'next_round') {
     if (room.hostId !== ws.playerId) {
       sendTo(ws, { type: 'error', message: 'Only the host can start the next round' });
       return;
+    }
+    // Reset timeout counts for new round
+    if (timeoutCounts[ws.roomId]) {
+      for (const pid in timeoutCounts[ws.roomId]) {
+        timeoutCounts[ws.roomId][pid] = 0;
+      }
     }
     const result = room.game.handleAction(ws.playerId, data);
     if (!result.success) {
@@ -661,6 +868,12 @@ function handleGameAction(ws, data) {
 // Save game result to database
 async function saveGameResult(room) {
   if (!room.game) return;
+  clearTurnTimer(room.id);
+  if (roundEndTimers[room.id]) {
+    clearTimeout(roundEndTimers[room.id]);
+    delete roundEndTimers[room.id];
+  }
+  delete timeoutCounts[room.id];
   const game = room.game;
   const totalScores = game.totalScores;
   const winnerTeam = totalScores.teamA >= totalScores.teamB ? 'A' : 'B';
@@ -685,12 +898,14 @@ async function saveGameResult(room) {
       isRanked: room.isRanked,
     });
 
-    // Update stats for each player
+    // Update stats for each player (skip bots)
     for (const pid of teamAPlayers) {
+      if (pid.startsWith('bot_')) continue;
       const nick = playerNames[pid];
       if (nick) await updateUserStats(nick, winnerTeam === 'A', room.isRanked);
     }
     for (const pid of teamBPlayers) {
+      if (pid.startsWith('bot_')) continue;
       const nick = playerNames[pid];
       if (nick) await updateUserStats(nick, winnerTeam === 'B', room.isRanked);
     }
@@ -704,6 +919,29 @@ function sendGameStateToAll(roomId) {
   const room = lobby.getRoom(roomId);
   if (!room || !room.game) return;
 
+  // Auto next round after 3 seconds
+  if (room.game.state === 'round_end') {
+    if (roundEndTimers[roomId]) clearTimeout(roundEndTimers[roomId]);
+    roundEndTimers[roomId] = setTimeout(() => {
+      delete roundEndTimers[roomId];
+      const r = lobby.getRoom(roomId);
+      if (!r || !r.game || r.game.state !== 'round_end') return;
+      r.game.nextRound();
+      sendGameStateToAll(roomId);
+    }, 3000);
+    // Send state without timer for round_end
+    _broadcastState(roomId, room);
+    return;
+  }
+
+  // Set timer BEFORE sending state so turnDeadline is included
+  scheduleBotActions(roomId);
+  startTurnTimer(roomId);
+
+  _broadcastState(roomId, room);
+}
+
+function _broadcastState(roomId, room) {
   // Build connection status map (skip null slots)
   const connectionStatus = {};
   for (const player of room.players) {
@@ -711,18 +949,20 @@ function sendGameStateToAll(roomId) {
     connectionStatus[player.id] = player.connected !== false;
   }
 
-  // Send to players (skip null slots)
+  // Send to human players (skip null slots and bots)
   for (const player of room.players) {
     if (player === null) continue;
-    if (player.connected === false) continue; // Skip disconnected players
+    if (player.connected === false) continue;
+    if (room.isBot(player.id)) continue;
     const ws = findWsByPlayerId(player.id);
     if (ws) {
       const state = room.game.getStateForPlayer(player.id);
-      // Add connection status to each player
       state.players = state.players.map(p => ({
         ...p,
         connected: connectionStatus[p.id] !== false,
       }));
+      state.turnDeadline = room.turnDeadline;
+      state.cardViewers = room.getViewersForPlayer(player.id);
       console.log(`[DEBUG] Sending game_state to ${player.nickname}: phase=${state.phase}, cards=${state.myCards?.length || 0}`);
       sendTo(ws, { type: 'game_state', state });
     }
@@ -734,14 +974,259 @@ function sendGameStateToAll(roomId) {
     if (ws) {
       const permittedPlayers = room.getPermittedPlayers(spectatorId);
       const spectatorState = room.game.getStateForSpectator(permittedPlayers);
-      // Add connection status to each player
       spectatorState.players = spectatorState.players.map(p => ({
         ...p,
         connected: connectionStatus[p.id] !== false,
       }));
+      spectatorState.turnDeadline = room.turnDeadline;
       sendTo(ws, { type: 'spectator_game_state', state: spectatorState });
     }
   }
+}
+
+// Bot auto-response: schedule a single delayed bot action check
+let pendingBotCheck = {}; // roomId -> true (prevent duplicate scheduling)
+
+function scheduleBotActions(roomId) {
+  const room = lobby.getRoom(roomId);
+  if (!room || !room.game) return;
+  if (room.getBotIds().length === 0) return;
+  if (pendingBotCheck[roomId]) return; // Already scheduled
+
+  pendingBotCheck[roomId] = true;
+  const delay = 300 + Math.floor(Math.random() * 500);
+
+  setTimeout(() => {
+    delete pendingBotCheck[roomId];
+    const r = lobby.getRoom(roomId);
+    if (!r || !r.game) return;
+
+    // Re-evaluate at execution time
+    for (const botId of r.getBotIds()) {
+      const action = decideBotAction(r.game, botId);
+      if (action) {
+        console.log(`[BOT] ${botId} action: ${action.type}`);
+        const result = r.game.handleAction(botId, action);
+        if (result && result.success) {
+          if (result.broadcast) {
+            broadcastGameEvent(roomId, result.broadcast);
+          }
+          if (r.game && r.game.state === 'game_end') {
+            saveGameResult(r);
+          }
+          sendGameStateToAll(roomId); // This will re-trigger scheduleBotActions
+        } else {
+          console.log(`[BOT] ${botId} action failed: ${result.message}`);
+        }
+        return; // One action at a time
+      }
+    }
+  }, delay);
+}
+
+// --- Turn Timer System ---
+
+function startTurnTimer(roomId) {
+  clearTurnTimer(roomId);
+  const room = lobby.getRoom(roomId);
+  if (!room || !room.game) return;
+
+  const gameState = room.game.state;
+
+  if (gameState === 'large_tichu_phase') {
+    // 라지 티츄 선언: 2배 시간, 응답 안 한 사람 대상
+    const pending = room.game.playerIds.filter(
+      pid => room.game.largeTichuResponses[pid] === undefined && !room.isBot(pid)
+    );
+    if (pending.length === 0) return;
+    const timeLimit = room.turnTimeLimit * 2 * 1000;
+    room.turnDeadline = Date.now() + timeLimit;
+    turnTimers[roomId] = setTimeout(() => {
+      handlePhaseTimeout(roomId, 'large_tichu_phase');
+    }, timeLimit);
+    return;
+  }
+
+  if (gameState === 'card_exchange') {
+    // 카드 교환: 2배 시간, 교환 안 한 사람 대상
+    const pending = room.game.playerIds.filter(
+      pid => !room.game.exchangeDone[pid] && !room.isBot(pid)
+    );
+    if (pending.length === 0) return;
+    const timeLimit = room.turnTimeLimit * 2 * 1000;
+    room.turnDeadline = Date.now() + timeLimit;
+    turnTimers[roomId] = setTimeout(() => {
+      handlePhaseTimeout(roomId, 'card_exchange');
+    }, timeLimit);
+    return;
+  }
+
+  if (gameState !== 'playing') return;
+
+  // Determine who needs to act
+  let targetPlayer = room.game.currentPlayer;
+  if (room.game.dragonPending) {
+    targetPlayer = room.game.dragonDecider;
+  }
+  if (!targetPlayer) return;
+  if (room.isBot(targetPlayer)) return; // Bots don't need timers
+
+  const timeLimit = room.turnTimeLimit * 1000;
+  room.turnDeadline = Date.now() + timeLimit;
+
+  turnTimers[roomId] = setTimeout(() => {
+    handleTurnTimeout(roomId, targetPlayer);
+  }, timeLimit);
+}
+
+function clearTurnTimer(roomId) {
+  if (turnTimers[roomId]) {
+    clearTimeout(turnTimers[roomId]);
+    delete turnTimers[roomId];
+  }
+  const room = lobby.getRoom(roomId);
+  if (room) room.turnDeadline = null;
+}
+
+function handlePhaseTimeout(roomId, phase) {
+  clearTurnTimer(roomId);
+  const room = lobby.getRoom(roomId);
+  if (!room || !room.game) return;
+
+  if (phase === 'large_tichu_phase' && room.game.state === 'large_tichu_phase') {
+    // 응답 안 한 플레이어 전부 자동 패스
+    const pending = room.game.playerIds.filter(
+      pid => room.game.largeTichuResponses[pid] === undefined
+    );
+    for (const pid of pending) {
+      const result = room.game.handleAction(pid, { type: 'pass_large_tichu' });
+      if (result && result.broadcast) {
+        broadcastGameEvent(roomId, result.broadcast);
+      }
+    }
+    sendGameStateToAll(roomId);
+    return;
+  }
+
+  if (phase === 'card_exchange' && room.game.state === 'card_exchange') {
+    // 교환 안 한 플레이어: 손패에서 처음 3장 자동 교환
+    const pending = room.game.playerIds.filter(
+      pid => !room.game.exchangeDone[pid]
+    );
+    for (const pid of pending) {
+      const hand = room.game.hands[pid];
+      const cards = { left: hand[0], partner: hand[1], right: hand[2] };
+      room.game.handleAction(pid, { type: 'exchange_cards', cards });
+    }
+    sendGameStateToAll(roomId);
+    return;
+  }
+}
+
+function handleTurnTimeout(roomId, playerId) {
+  clearTurnTimer(roomId);
+  const room = lobby.getRoom(roomId);
+  if (!room || !room.game) return;
+
+  // Increment timeout count
+  if (!timeoutCounts[roomId]) timeoutCounts[roomId] = {};
+  if (!timeoutCounts[roomId][playerId]) timeoutCounts[roomId][playerId] = 0;
+  timeoutCounts[roomId][playerId]++;
+
+  console.log(`[TIMEOUT] ${playerId} timeout #${timeoutCounts[roomId][playerId]}`);
+
+  // 3 timeouts → desertion
+  if (timeoutCounts[roomId][playerId] >= 3) {
+    handleDesertion(roomId, playerId, 'timeout');
+    return;
+  }
+
+  // Broadcast timeout event
+  broadcastGameEvent(roomId, {
+    type: 'turn_timeout',
+    player: playerId,
+    playerName: room.game.playerNames[playerId],
+    count: timeoutCounts[roomId][playerId],
+  });
+
+  // Auto action
+  const action = room.game.getAutoTimeoutAction(playerId);
+  if (action) {
+    const result = room.game.handleAction(playerId, action);
+    if (result && result.success) {
+      if (result.broadcast) broadcastGameEvent(roomId, result.broadcast);
+      if (room.game && room.game.state === 'game_end') saveGameResult(room);
+      sendGameStateToAll(roomId);
+    }
+  }
+}
+
+async function handleDesertion(roomId, playerId, reason = 'leave') {
+  const room = lobby.getRoom(roomId);
+  if (!room || !room.game) return;
+
+  const game = room.game;
+  const deserterNick = game.playerNames[playerId];
+
+  // Broadcast desertion event
+  broadcastGameEvent(roomId, {
+    type: 'player_deserted',
+    player: playerId,
+    playerName: deserterNick,
+    reason, // 'leave' or 'timeout'
+  });
+
+  // Increment leave_count + ranked ban (skip bots)
+  if (deserterNick && !playerId.startsWith('bot_')) {
+    await incrementLeaveCount(deserterNick);
+    if (room.isRanked) {
+      await setRankedBan(deserterNick);
+    }
+  }
+
+  const totalScores = game.totalScores;
+  const winnerTeam = totalScores.teamA >= totalScores.teamB ? 'A' : 'B';
+  const teams = game.teams;
+  const playerNames = game.playerNames;
+  const teamAPlayers = teams.teamA;
+  const teamBPlayers = teams.teamB;
+
+  try {
+    await saveMatchResult({
+      winnerTeam,
+      teamAScore: totalScores.teamA,
+      teamBScore: totalScores.teamB,
+      playerA1: playerNames[teamAPlayers[0]] || '',
+      playerA2: playerNames[teamAPlayers[1]] || '',
+      playerB1: playerNames[teamBPlayers[0]] || '',
+      playerB2: playerNames[teamBPlayers[1]] || '',
+      isRanked: room.isRanked,
+    });
+
+    // Update stats for all players (skip bots)
+    // Deserter: forced loss (ranked = -20 penalty)
+    if (deserterNick && !playerId.startsWith('bot_')) {
+      await updateUserStats(deserterNick, false, room.isRanked);
+    }
+
+    // Remaining players: score-based win/loss
+    for (const pid of game.playerIds) {
+      if (pid === playerId || pid.startsWith('bot_')) continue;
+      const nick = playerNames[pid];
+      if (!nick) continue;
+      const team = teams.teamA.includes(pid) ? 'A' : 'B';
+      await updateUserStats(nick, team === winnerTeam, room.isRanked);
+    }
+  } catch (err) {
+    console.error('Error saving desertion result:', err);
+  }
+
+  // Force game end
+  game.state = 'game_end';
+  game.deserted = true;
+
+  sendGameStateToAll(roomId);
+  delete timeoutCounts[roomId];
 }
 
 function broadcastGameEvent(roomId, event) {
@@ -776,6 +1261,29 @@ function broadcastRoomState(roomId) {
       sendTo(ws, { type: 'room_state', room: roomState });
     }
   }
+  // Send to spectators
+  for (const spectator of room.spectators) {
+    const ws = findWsByPlayerId(spectator.id);
+    if (ws) {
+      sendTo(ws, { type: 'room_state', room: roomState });
+    }
+  }
+}
+
+// Notify all spectators and remove room
+function removeRoomAndNotifySpectators(roomId) {
+  const room = lobby.getRoom(roomId);
+  if (room) {
+    for (const spectator of room.spectators) {
+      const ws = findWsByPlayerId(spectator.id);
+      if (ws) {
+        sendTo(ws, { type: 'room_closed' });
+        ws.roomId = null;
+        ws.isSpectator = false;
+      }
+    }
+  }
+  lobby.removeRoom(roomId);
 }
 
 function broadcastRoomList() {
@@ -886,6 +1394,79 @@ async function handleReportUser(ws, data) {
   }
   const result = await reportUser(ws.nickname, targetNickname, reason, ws.roomId || '', chatContext);
   sendTo(ws, { type: 'report_result', ...result });
+}
+
+// Rankings handler
+async function handleGetRankings(ws, data) {
+  const seasonId = data?.seasonId;
+  if (seasonId) {
+    const result = await getSeasonRankings(seasonId, 50);
+    sendTo(ws, { type: 'rankings_result', ...result });
+    return;
+  }
+  const result = await getCurrentSeasonRankings(50);
+  sendTo(ws, { type: 'rankings_result', ...result });
+}
+
+async function handleGetSeasons(ws) {
+  const result = await getSeasons();
+  sendTo(ws, { type: 'seasons_result', ...result });
+}
+
+// Wallet handler
+async function handleGetWallet(ws) {
+  if (!ws.nickname) {
+    sendTo(ws, { type: 'wallet_result', success: false, message: '로그인이 필요합니다' });
+    return;
+  }
+  const result = await getWallet(ws.nickname);
+  sendTo(ws, { type: 'wallet_result', ...result });
+}
+
+// Shop items handler
+async function handleGetShopItems(ws) {
+  const result = await getShopItems();
+  sendTo(ws, { type: 'shop_items_result', ...result });
+}
+
+// Inventory handler
+async function handleGetInventory(ws) {
+  if (!ws.nickname) {
+    sendTo(ws, { type: 'inventory_result', success: false, message: '로그인이 필요합니다' });
+    return;
+  }
+  const result = await getUserItems(ws.nickname);
+  sendTo(ws, { type: 'inventory_result', ...result });
+}
+
+async function handleBuyItem(ws, data) {
+  if (!ws.nickname) {
+    sendTo(ws, { type: 'purchase_result', success: false, message: '로그인이 필요합니다' });
+    return;
+  }
+  const itemKey = data.itemKey;
+  const result = await buyItem(ws.nickname, itemKey);
+  sendTo(ws, { type: 'purchase_result', itemKey, ...result });
+}
+
+async function handleEquipItem(ws, data) {
+  if (!ws.nickname) {
+    sendTo(ws, { type: 'equip_result', success: false, message: '로그인이 필요합니다' });
+    return;
+  }
+  const itemKey = data.itemKey;
+  const result = await equipItem(ws.nickname, itemKey);
+  sendTo(ws, { type: 'equip_result', ...result });
+}
+
+async function handleUseItem(ws, data) {
+  if (!ws.nickname) {
+    sendTo(ws, { type: 'use_item_result', success: false, message: '로그인이 필요합니다' });
+    return;
+  }
+  const itemKey = data.itemKey;
+  const result = await useItem(ws.nickname, itemKey);
+  sendTo(ws, { type: 'use_item_result', ...result });
 }
 
 // Submit inquiry handler

@@ -38,6 +38,9 @@ class GameService extends ChangeNotifier {
   // Incoming card view requests (for players)
   List<Map<String, String>> incomingCardViewRequests = []; // [{spectatorId, spectatorNickname}]
 
+  // Spectators currently viewing my cards
+  List<Map<String, String>> cardViewers = []; // [{id, nickname}]
+
   // Game state
   GameStateData? gameState;
 
@@ -62,9 +65,40 @@ class GameService extends ChangeNotifier {
   // Profile
   Map<String, dynamic>? profileData;
 
+  // Rankings
+  List<Map<String, dynamic>> rankings = [];
+  bool rankingsLoading = false;
+  String? rankingsError;
+  List<Map<String, dynamic>> seasons = [];
+
+  // Shop
+  int gold = 0;
+  int leaveCount = 0;
+  List<Map<String, dynamic>> shopItems = [];
+  List<Map<String, dynamic>> inventoryItems = [];
+  bool shopLoading = false;
+  bool inventoryLoading = false;
+  String? shopError;
+  String? inventoryError;
+  String? lastPurchaseItemKey;
+  bool? lastPurchaseSuccess;
+  bool lastPurchaseExtended = false;
+
+  // Report result
+  String? reportResultMessage;
+  bool? reportResultSuccess;
+
   // Inquiry
   String? inquiryResultMessage;
   bool? inquiryResultSuccess;
+
+  // Turn timeout
+  String? timeoutPlayerName; // show "시간 초과!" banner
+  String? desertedPlayerName; // show desertion message
+  String? desertedReason; // 'leave' or 'timeout'
+
+  // Dragon given
+  String? dragonGivenMessage; // "OO이(가) OO에게 용을 줬습니다"
 
   GameService(this._network) {
     _subscription = _network.messageStream.listen(_handleMessage);
@@ -195,6 +229,7 @@ class GameService extends ChangeNotifier {
         pendingCardViewRequests = {};
         approvedCardViews = {};
         incomingCardViewRequests = [];
+        cardViewers = [];
         chatMessages = [];
         notifyListeners();
         break;
@@ -213,6 +248,25 @@ class GameService extends ChangeNotifier {
           errorMessage = null;
           notifyListeners();
         });
+        break;
+
+      case 'room_closed':
+        currentRoomId = '';
+        currentRoomName = '';
+        roomPlayers = [null, null, null, null];
+        isHost = false;
+        isRankedRoom = false;
+        isSpectator = false;
+        spectatorGameState = null;
+        pendingCardViewRequests = {};
+        approvedCardViews = {};
+        incomingCardViewRequests = [];
+        cardViewers = [];
+        gameState = null;
+        chatMessages = [];
+        desertedPlayerName = null;
+        desertedReason = null;
+        notifyListeners();
         break;
 
       case 'room_state':
@@ -235,6 +289,22 @@ class GameService extends ChangeNotifier {
       case 'game_state':
         final state = data['state'] as Map<String, dynamic>?;
         if (state != null) {
+          // Clear desertion state when a new round/game starts
+          final phase = state['phase'] as String? ?? '';
+          if (phase != 'game_end') {
+            desertedPlayerName = null;
+            desertedReason = null;
+          }
+          // Parse card viewers
+          final viewers = state['cardViewers'] as List?;
+          if (viewers != null) {
+            cardViewers = viewers.map((v) => {
+              'id': (v['id'] ?? '').toString(),
+              'nickname': (v['nickname'] ?? '').toString(),
+            }).toList();
+          } else {
+            cardViewers = [];
+          }
           _applyGameStateWithDogDelay(state);
         }
         notifyListeners();
@@ -264,9 +334,17 @@ class GameService extends ChangeNotifier {
       case 'large_tichu_passed':
       case 'small_tichu_declared':
       case 'call_rank':
+        break;
       case 'dragon_given':
-        // Handle game events if needed
-        notifyListeners();
+        _handleDragonGiven(data);
+        break;
+
+      case 'turn_timeout':
+        _handleTurnTimeout(data);
+        break;
+
+      case 'player_deserted':
+        _handlePlayerDeserted(data);
         break;
 
       // Chat
@@ -322,13 +400,87 @@ class GameService extends ChangeNotifier {
         break;
 
       case 'friend_result':
+        notifyListeners();
+        break;
+
       case 'report_result':
-        // Just notify, UI will show snackbar if needed
+        reportResultSuccess = data['success'] == true;
+        reportResultMessage = data['message'] as String? ?? '';
         notifyListeners();
         break;
 
       case 'profile_result':
         profileData = data;
+        notifyListeners();
+        break;
+
+      case 'rankings_result':
+        rankingsLoading = false;
+        if (data['success'] == true) {
+          final list = data['rankings'] as List? ?? [];
+          rankings = list.map((e) => Map<String, dynamic>.from(e)).toList();
+          rankingsError = null;
+        } else {
+          rankingsError = data['message'] as String? ?? '랭킹을 불러오지 못했습니다';
+        }
+        notifyListeners();
+        break;
+
+      case 'seasons_result':
+        if (data['success'] == true) {
+          final list = data['seasons'] as List? ?? [];
+          seasons = list.map((e) => Map<String, dynamic>.from(e)).toList();
+        }
+        notifyListeners();
+        break;
+      case 'wallet_result':
+        if (data['success'] == true) {
+          final wallet = data['wallet'] as Map<String, dynamic>? ?? {};
+          gold = wallet['gold'] ?? 0;
+          leaveCount = wallet['leave_count'] ?? 0;
+        }
+        notifyListeners();
+        break;
+
+      case 'shop_items_result':
+        shopLoading = false;
+        if (data['success'] == true) {
+          final list = data['items'] as List? ?? [];
+          shopItems = list.map((e) => Map<String, dynamic>.from(e)).toList();
+          shopError = null;
+        } else {
+          shopError = data['message'] as String? ?? '상점 정보를 불러오지 못했습니다';
+        }
+        notifyListeners();
+        break;
+
+      case 'inventory_result':
+        inventoryLoading = false;
+        if (data['success'] == true) {
+          final list = data['items'] as List? ?? [];
+          inventoryItems = list.map((e) => Map<String, dynamic>.from(e)).toList();
+          inventoryError = null;
+        } else {
+          inventoryError = data['message'] as String? ?? '인벤토리를 불러오지 못했습니다';
+        }
+        notifyListeners();
+        break;
+
+      case 'purchase_result':
+      case 'equip_result':
+      case 'use_item_result':
+        // Refresh wallet/inventory after actions
+        requestWallet();
+        requestInventory();
+        if (type == 'purchase_result') {
+          lastPurchaseItemKey = data['itemKey'] as String?;
+          lastPurchaseSuccess = data['success'] == true;
+          lastPurchaseExtended = data['extended'] == true;
+        }
+        if (data['success'] != true) {
+          reportResultMessage = data['message'] as String?;
+          reportResultSuccess = false;
+        }
         notifyListeners();
         break;
 
@@ -351,6 +503,32 @@ class GameService extends ChangeNotifier {
       dogPlayPlayerName = '';
       notifyListeners();
     });
+  }
+
+  void _handleTurnTimeout(Map<String, dynamic> data) {
+    timeoutPlayerName = data['playerName'] as String? ?? '';
+    notifyListeners();
+    Future.delayed(const Duration(seconds: 2), () {
+      timeoutPlayerName = null;
+      notifyListeners();
+    });
+  }
+
+  void _handleDragonGiven(Map<String, dynamic> data) {
+    final fromName = data['fromName'] as String? ?? '';
+    final targetName = data['targetName'] as String? ?? '';
+    dragonGivenMessage = '$fromName → $targetName';
+    notifyListeners();
+    Future.delayed(const Duration(milliseconds: 1500), () {
+      dragonGivenMessage = null;
+      notifyListeners();
+    });
+  }
+
+  void _handlePlayerDeserted(Map<String, dynamic> data) {
+    desertedPlayerName = data['playerName'] as String? ?? '';
+    desertedReason = data['reason'] as String? ?? 'leave';
+    notifyListeners();
   }
 
   void _applyGameStateWithDogDelay(Map<String, dynamic> state) {
@@ -430,6 +608,7 @@ class GameService extends ChangeNotifier {
     pendingCardViewRequests = {};
     approvedCardViews = {};
     incomingCardViewRequests = [];
+    cardViewers = [];
     gameState = null;
     errorMessage = null;
     chatMessages = [];
@@ -458,6 +637,13 @@ class GameService extends ChangeNotifier {
     _network.send({'type': 'request_card_view', 'playerId': playerId});
   }
 
+  void revokeCardView(String spectatorId) {
+    _network.send({'type': 'revoke_card_view', 'spectatorId': spectatorId});
+    // Optimistically remove from local list
+    cardViewers.removeWhere((v) => v['id'] == spectatorId);
+    notifyListeners();
+  }
+
   void respondCardViewRequest(String spectatorId, bool allow) {
     _network.send({
       'type': 'respond_card_view',
@@ -469,12 +655,13 @@ class GameService extends ChangeNotifier {
     notifyListeners();
   }
 
-  void createRoom(String roomName, {String password = '', bool isRanked = false}) {
+  void createRoom(String roomName, {String password = '', bool isRanked = false, int turnTimeLimit = 30}) {
     _network.send({
       'type': 'create_room',
       'roomName': roomName,
       'password': password,
       'isRanked': isRanked,
+      'turnTimeLimit': turnTimeLimit,
     });
   }
 
@@ -488,6 +675,16 @@ class GameService extends ChangeNotifier {
 
   void leaveGame() {
     _network.send({'type': 'leave_game'});
+  }
+
+  void addBot({int? targetSlot}) {
+    final msg = <String, dynamic>{'type': 'add_bot'};
+    if (targetSlot != null) msg['targetSlot'] = targetSlot;
+    _network.send(msg);
+  }
+
+  void toggleReady() {
+    _network.send({'type': 'toggle_ready'});
   }
 
   void startGame() {
@@ -550,6 +747,62 @@ class GameService extends ChangeNotifier {
   void requestProfile(String nickname) {
     profileData = null;
     _network.send({'type': 'get_profile', 'nickname': nickname});
+  }
+
+  // Rankings
+  void requestRankings() {
+    rankingsLoading = true;
+    rankingsError = null;
+    _network.send({'type': 'get_rankings'});
+    notifyListeners();
+  }
+
+  void requestRankingsForSeason(int seasonId) {
+    rankingsLoading = true;
+    rankingsError = null;
+    _network.send({'type': 'get_rankings', 'seasonId': seasonId});
+    notifyListeners();
+  }
+
+  void requestSeasons() {
+    _network.send({'type': 'get_seasons'});
+  }
+
+  // Shop
+  void requestWallet() {
+    _network.send({'type': 'get_wallet'});
+  }
+
+  void requestShopItems() {
+    shopLoading = true;
+    shopError = null;
+    _network.send({'type': 'get_shop_items'});
+    notifyListeners();
+  }
+
+  void requestInventory() {
+    inventoryLoading = true;
+    inventoryError = null;
+    _network.send({'type': 'get_inventory'});
+    notifyListeners();
+  }
+
+  void buyItem(String itemKey) {
+    _network.send({'type': 'buy_item', 'itemKey': itemKey});
+  }
+
+  void equipItem(String itemKey) {
+    _network.send({'type': 'equip_item', 'itemKey': itemKey});
+  }
+
+  void useItem(String itemKey) {
+    _network.send({'type': 'use_item', 'itemKey': itemKey});
+  }
+
+  void clearLastPurchaseResult() {
+    lastPurchaseItemKey = null;
+    lastPurchaseSuccess = null;
+    lastPurchaseExtended = false;
   }
 
   // Chat

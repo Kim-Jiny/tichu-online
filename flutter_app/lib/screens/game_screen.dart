@@ -22,6 +22,27 @@ class _GameScreenState extends State<GameScreen> {
   List<String> _preExchangeHand = [];
   bool _exchangeSummaryShown = false;
 
+  // 채팅
+  bool _chatOpen = false;
+  final TextEditingController _chatController = TextEditingController();
+  final ScrollController _chatScrollController = ScrollController();
+
+  @override
+  void initState() {
+    super.initState();
+    // 로그인 후 차단 목록 요청
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      context.read<GameService>().requestBlockedUsers();
+    });
+  }
+
+  @override
+  void dispose() {
+    _chatController.dispose();
+    _chatScrollController.dispose();
+    super.dispose();
+  }
+
   void _toggleCard(String cardId, {bool singleSelect = false}) {
     setState(() {
       if (_selectedCards.contains(cardId)) {
@@ -178,6 +199,16 @@ class _GameScreenState extends State<GameScreen> {
                     right: 8,
                     child: _buildMenuButton(game),
                   ),
+
+                  // Chat button (top right, below menu)
+                  Positioned(
+                    top: 8,
+                    right: 56,
+                    child: _buildChatButton(game),
+                  ),
+
+                  // Chat panel
+                  if (_chatOpen) _buildChatPanel(game),
                 ],
               );
             },
@@ -192,11 +223,11 @@ class _GameScreenState extends State<GameScreen> {
       icon: Container(
         padding: const EdgeInsets.all(8),
         decoration: BoxDecoration(
-          color: Colors.white.withOpacity(0.8),
+          color: Colors.white.withValues(alpha: 0.8),
           shape: BoxShape.circle,
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withOpacity(0.1),
+              color: Colors.black.withValues(alpha: 0.1),
               blurRadius: 4,
             ),
           ],
@@ -224,6 +255,359 @@ class _GameScreenState extends State<GameScreen> {
           ),
         ),
       ],
+    );
+  }
+
+  Widget _buildChatButton(GameService game) {
+    final unreadCount = game.chatMessages.where((m) =>
+      !game.isBlocked(m['sender'] as String? ?? '')
+    ).length;
+
+    return GestureDetector(
+      onTap: () => setState(() => _chatOpen = !_chatOpen),
+      child: Container(
+        padding: const EdgeInsets.all(8),
+        decoration: BoxDecoration(
+          color: _chatOpen
+              ? const Color(0xFF64B5F6)
+              : Colors.white.withValues(alpha: 0.8),
+          shape: BoxShape.circle,
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.1),
+              blurRadius: 4,
+            ),
+          ],
+        ),
+        child: Icon(
+          Icons.chat_bubble_outline,
+          color: _chatOpen ? Colors.white : const Color(0xFF5A4038),
+          size: 20,
+        ),
+      ),
+    );
+  }
+
+  Widget _buildChatPanel(GameService game) {
+    return Positioned(
+      top: 50,
+      right: 8,
+      width: 280,
+      height: 350,
+      child: Container(
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(16),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.15),
+              blurRadius: 10,
+              offset: const Offset(0, 4),
+            ),
+          ],
+        ),
+        child: Column(
+          children: [
+            // Header
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+              decoration: const BoxDecoration(
+                color: Color(0xFF64B5F6),
+                borderRadius: BorderRadius.only(
+                  topLeft: Radius.circular(16),
+                  topRight: Radius.circular(16),
+                ),
+              ),
+              child: Row(
+                children: [
+                  const Text(
+                    '채팅',
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontWeight: FontWeight.bold,
+                      fontSize: 16,
+                    ),
+                  ),
+                  const Spacer(),
+                  GestureDetector(
+                    onTap: () => setState(() => _chatOpen = false),
+                    child: const Icon(Icons.close, color: Colors.white, size: 20),
+                  ),
+                ],
+              ),
+            ),
+            // Messages
+            Expanded(
+              child: ListView.builder(
+                controller: _chatScrollController,
+                padding: const EdgeInsets.all(8),
+                itemCount: game.chatMessages.length,
+                itemBuilder: (context, index) {
+                  final msg = game.chatMessages[index];
+                  final sender = msg['sender'] as String? ?? '';
+                  final message = msg['message'] as String? ?? '';
+                  final isMe = sender == game.playerName;
+                  final isBlocked = game.isBlocked(sender);
+
+                  if (isBlocked) return const SizedBox.shrink();
+
+                  return _buildChatBubble(sender, message, isMe, game);
+                },
+              ),
+            ),
+            // Input
+            Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                border: Border(
+                  top: BorderSide(color: Colors.grey.withValues(alpha: 0.2)),
+                ),
+              ),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: TextField(
+                      controller: _chatController,
+                      decoration: const InputDecoration(
+                        hintText: '메시지 입력...',
+                        border: InputBorder.none,
+                        contentPadding: EdgeInsets.symmetric(horizontal: 12),
+                      ),
+                      style: const TextStyle(fontSize: 14),
+                      onSubmitted: (_) => _sendChatMessage(game),
+                    ),
+                  ),
+                  IconButton(
+                    onPressed: () => _sendChatMessage(game),
+                    icon: const Icon(Icons.send, color: Color(0xFF64B5F6)),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildChatBubble(String sender, String message, bool isMe, GameService game) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 8),
+      child: GestureDetector(
+        onTap: isMe ? null : () => _showUserActionDialog(sender, game),
+        child: Row(
+          mainAxisAlignment: isMe ? MainAxisAlignment.end : MainAxisAlignment.start,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            if (!isMe) ...[
+              CircleAvatar(
+                radius: 14,
+                backgroundColor: const Color(0xFFE0E0E0),
+                child: Text(
+                  sender.isNotEmpty ? sender[0] : '?',
+                  style: const TextStyle(fontSize: 12, color: Color(0xFF5A4038)),
+                ),
+              ),
+              const SizedBox(width: 6),
+            ],
+            Flexible(
+              child: Column(
+                crossAxisAlignment: isMe ? CrossAxisAlignment.end : CrossAxisAlignment.start,
+                children: [
+                  if (!isMe)
+                    Padding(
+                      padding: const EdgeInsets.only(bottom: 2),
+                      child: Text(
+                        sender,
+                        style: const TextStyle(fontSize: 11, color: Color(0xFF8A8A8A)),
+                      ),
+                    ),
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                    decoration: BoxDecoration(
+                      color: isMe ? const Color(0xFF64B5F6) : const Color(0xFFF0F0F0),
+                      borderRadius: BorderRadius.circular(16),
+                    ),
+                    child: Text(
+                      message,
+                      style: TextStyle(
+                        fontSize: 14,
+                        color: isMe ? Colors.white : const Color(0xFF333333),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _sendChatMessage(GameService game) {
+    final message = _chatController.text.trim();
+    if (message.isEmpty) return;
+    game.sendChatMessage(message);
+    _chatController.clear();
+    // Scroll to bottom after sending
+    Future.delayed(const Duration(milliseconds: 100), () {
+      if (_chatScrollController.hasClients) {
+        _chatScrollController.animateTo(
+          _chatScrollController.position.maxScrollExtent,
+          duration: const Duration(milliseconds: 200),
+          curve: Curves.easeOut,
+        );
+      }
+    });
+  }
+
+  void _showUserActionDialog(String nickname, GameService game) {
+    final isBlocked = game.isBlocked(nickname);
+
+    showModalBottomSheet(
+      context: context,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (context) => Container(
+        padding: const EdgeInsets.all(20),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(
+              nickname,
+              style: const TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
+                color: Color(0xFF5A4038),
+              ),
+            ),
+            const SizedBox(height: 20),
+            _buildActionButton(
+              icon: Icons.person_add,
+              label: '친구 추가',
+              color: const Color(0xFF81C784),
+              onTap: () {
+                Navigator.pop(context);
+                game.addFriendAction(nickname);
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('친구 요청을 보냈습니다')),
+                );
+              },
+            ),
+            const SizedBox(height: 10),
+            _buildActionButton(
+              icon: isBlocked ? Icons.check_circle : Icons.block,
+              label: isBlocked ? '차단 해제' : '차단하기',
+              color: isBlocked ? const Color(0xFF64B5F6) : const Color(0xFFFF8A65),
+              onTap: () {
+                Navigator.pop(context);
+                if (isBlocked) {
+                  game.unblockUserAction(nickname);
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('차단이 해제되었습니다')),
+                  );
+                } else {
+                  game.blockUserAction(nickname);
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('차단되었습니다')),
+                  );
+                }
+              },
+            ),
+            const SizedBox(height: 10),
+            _buildActionButton(
+              icon: Icons.flag,
+              label: '신고하기',
+              color: const Color(0xFFE57373),
+              onTap: () {
+                Navigator.pop(context);
+                _showReportDialog(nickname, game);
+              },
+            ),
+            const SizedBox(height: 10),
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('취소'),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildActionButton({
+    required IconData icon,
+    required String label,
+    required Color color,
+    required VoidCallback onTap,
+  }) {
+    return SizedBox(
+      width: double.infinity,
+      child: ElevatedButton.icon(
+        onPressed: onTap,
+        icon: Icon(icon, size: 20),
+        label: Text(label),
+        style: ElevatedButton.styleFrom(
+          backgroundColor: color,
+          foregroundColor: Colors.white,
+          padding: const EdgeInsets.symmetric(vertical: 14),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+          ),
+        ),
+      ),
+    );
+  }
+
+  void _showReportDialog(String nickname, GameService game) {
+    final reasonController = TextEditingController();
+
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: Text('$nickname 신고'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Text('신고 사유를 입력해주세요'),
+            const SizedBox(height: 12),
+            TextField(
+              controller: reasonController,
+              maxLines: 3,
+              decoration: InputDecoration(
+                hintText: '신고 사유',
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(8),
+                ),
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('취소'),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              final reason = reasonController.text.trim();
+              if (reason.isEmpty) return;
+              Navigator.pop(context);
+              game.reportUserAction(nickname, reason);
+              ScaffoldMessenger.of(this.context).showSnackBar(
+                const SnackBar(content: Text('신고가 접수되었습니다')),
+              );
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: const Color(0xFFE57373),
+            ),
+            child: const Text('신고'),
+          ),
+        ],
+      ),
     );
   }
 

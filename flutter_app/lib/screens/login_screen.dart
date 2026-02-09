@@ -1,12 +1,20 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../services/network_service.dart';
 import '../services/game_service.dart';
 import 'lobby_screen.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
+
+  /// Clear saved login credentials
+  static Future<void> clearSavedCredentials() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.remove('saved_username');
+    await prefs.remove('saved_password');
+  }
 
   @override
   State<LoginScreen> createState() => _LoginScreenState();
@@ -15,20 +23,48 @@ class LoginScreen extends StatefulWidget {
 class _LoginScreenState extends State<LoginScreen> {
   final _usernameController = TextEditingController();
   final _passwordController = TextEditingController();
-  final _serverController = TextEditingController(
-    text: NetworkService.defaultUrl,
-  );
 
   bool _isConnecting = false;
   bool _showRegister = false;
+  bool _autoLoginAttempted = false;
   String? _error;
+
+  @override
+  void initState() {
+    super.initState();
+    _tryAutoLogin();
+  }
 
   @override
   void dispose() {
     _usernameController.dispose();
     _passwordController.dispose();
-    _serverController.dispose();
     super.dispose();
+  }
+
+  Future<void> _tryAutoLogin() async {
+    if (_autoLoginAttempted) return;
+    _autoLoginAttempted = true;
+
+    final prefs = await SharedPreferences.getInstance();
+    final savedUsername = prefs.getString('saved_username');
+    final savedPassword = prefs.getString('saved_password');
+
+    if (savedUsername != null && savedPassword != null && savedUsername.isNotEmpty) {
+      _usernameController.text = savedUsername;
+      _passwordController.text = savedPassword;
+      // Auto login
+      await Future.delayed(const Duration(milliseconds: 100));
+      if (mounted) {
+        _login();
+      }
+    }
+  }
+
+  Future<void> _saveCredentials(String username, String password) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString('saved_username', username);
+    await prefs.setString('saved_password', password);
   }
 
   Future<void> _login() async {
@@ -51,7 +87,7 @@ class _LoginScreenState extends State<LoginScreen> {
 
     try {
       final network = context.read<NetworkService>();
-      await network.connect(_serverController.text.trim());
+      await network.connect(NetworkService.defaultUrl);
 
       if (!mounted) return;
 
@@ -63,6 +99,9 @@ class _LoginScreenState extends State<LoginScreen> {
       if (!mounted) return;
 
       if (game.playerId.isNotEmpty) {
+        // Save credentials for auto-login
+        await _saveCredentials(username, password);
+
         Navigator.pushReplacement(
           context,
           MaterialPageRoute(builder: (_) => const LobbyScreen()),
@@ -180,13 +219,6 @@ class _LoginScreenState extends State<LoginScreen> {
                               icon: Icons.lock_outline,
                               obscure: true,
                             ),
-                            const SizedBox(height: 12),
-                            _buildTextField(
-                              controller: _serverController,
-                              hint: '서버 주소',
-                              icon: Icons.dns_outlined,
-                              fontSize: 14,
-                            ),
                             const SizedBox(height: 20),
                             SizedBox(
                               width: double.infinity,
@@ -235,13 +267,22 @@ class _LoginScreenState extends State<LoginScreen> {
                           ],
                         ),
                       ),
-                      const SizedBox(height: 32),
-                      const Text(
-                        'v1.0',
-                        style: TextStyle(color: Color(0xFFB0A8A4), fontSize: 14),
-                      ),
                     ],
                   ),
+                ),
+              ),
+            ),
+          ),
+          // Version display at bottom right
+          Positioned(
+            bottom: 16,
+            right: 16,
+            child: SafeArea(
+              child: Text(
+                'v1.0.0',
+                style: TextStyle(
+                  color: const Color(0xFFB0A8A4).withValues(alpha: 0.8),
+                  fontSize: 12,
                 ),
               ),
             ),
@@ -312,7 +353,7 @@ class _LoginScreenState extends State<LoginScreen> {
 
   Widget _buildRegisterDialog() {
     return RegisterDialog(
-      serverUrl: _serverController.text.trim(),
+      serverUrl: NetworkService.defaultUrl,
       onClose: () => setState(() => _showRegister = false),
       onSuccess: () {
         setState(() => _showRegister = false);

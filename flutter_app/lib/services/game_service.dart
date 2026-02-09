@@ -20,7 +20,8 @@ class GameService extends ChangeNotifier {
   // Room info
   String currentRoomId = '';
   String currentRoomName = '';
-  List<Player> roomPlayers = [];
+  // Fixed 4-slot system: always 4 elements, null for empty slots
+  List<Player?> roomPlayers = [null, null, null, null];
   bool isHost = false;
   bool isRankedRoom = false;
 
@@ -53,9 +54,24 @@ class GameService extends ChangeNotifier {
   bool dogPlayActive = false;
   String dogPlayPlayerName = '';
 
+  // Chat
+  List<Map<String, dynamic>> chatMessages = [];
+  Set<String> blockedUsers = {};
+  List<String> friends = [];
+
+  // Profile
+  Map<String, dynamic>? profileData;
+
+  // Inquiry
+  String? inquiryResultMessage;
+  bool? inquiryResultSuccess;
+
   GameService(this._network) {
     _subscription = _network.messageStream.listen(_handleMessage);
   }
+
+  // Helper: count of non-null players
+  int get playerCount => roomPlayers.where((p) => p != null).length;
 
   void _handleMessage(Map<String, dynamic> data) {
     final type = data['type'] as String?;
@@ -170,7 +186,7 @@ class GameService extends ChangeNotifier {
       case 'room_left':
         currentRoomId = '';
         currentRoomName = '';
-        roomPlayers = [];
+        roomPlayers = [null, null, null, null];
         isHost = false;
         isRankedRoom = false;
         isSpectator = false;
@@ -179,17 +195,38 @@ class GameService extends ChangeNotifier {
         pendingCardViewRequests = {};
         approvedCardViews = {};
         incomingCardViewRequests = [];
+        chatMessages = [];
         notifyListeners();
+        break;
+
+      case 'kicked':
+        currentRoomId = '';
+        currentRoomName = '';
+        roomPlayers = [null, null, null, null];
+        isHost = false;
+        isRankedRoom = false;
+        gameState = null;
+        chatMessages = [];
+        errorMessage = data['message'] as String? ?? '강퇴되었습니다';
+        notifyListeners();
+        Future.delayed(const Duration(seconds: 3), () {
+          errorMessage = null;
+          notifyListeners();
+        });
         break;
 
       case 'room_state':
         final room = data['room'] as Map<String, dynamic>?;
         if (room != null) {
-          roomPlayers = (room['players'] as List?)
-                  ?.map((p) => Player.fromJson(p))
-                  .toList() ??
-              [];
-          isHost = roomPlayers.any((p) => p.id == playerId && p.isHost);
+          final playersList = room['players'] as List?;
+          if (playersList != null && playersList.length == 4) {
+            // Parse 4-slot array with nulls
+            roomPlayers = playersList.map((p) {
+              if (p == null) return null;
+              return Player.fromJson(p as Map<String, dynamic>);
+            }).toList();
+          }
+          isHost = roomPlayers.any((p) => p != null && p.id == playerId && p.isHost);
           isRankedRoom = room['isRanked'] == true;
         }
         notifyListeners();
@@ -229,6 +266,75 @@ class GameService extends ChangeNotifier {
       case 'call_rank':
       case 'dragon_given':
         // Handle game events if needed
+        notifyListeners();
+        break;
+
+      // Chat
+      case 'chat_message':
+        final msg = {
+          'sender': data['sender'] ?? '',
+          'senderId': data['senderId'] ?? '',
+          'message': data['message'] ?? '',
+          'timestamp': data['timestamp'] ?? DateTime.now().millisecondsSinceEpoch,
+        };
+        chatMessages.add(msg);
+        if (chatMessages.length > 100) {
+          chatMessages.removeAt(0);
+        }
+        notifyListeners();
+        break;
+
+      case 'chat_history':
+        final messages = data['messages'] as List? ?? [];
+        chatMessages = messages.map((m) => {
+          'sender': m['sender'] ?? '',
+          'senderId': m['senderId'] ?? '',
+          'message': m['message'] ?? '',
+          'timestamp': m['timestamp'] ?? 0,
+        }).toList();
+        notifyListeners();
+        break;
+
+      case 'blocked_users':
+        final users = data['users'] as List? ?? [];
+        blockedUsers = users.map((u) => u.toString()).toSet();
+        notifyListeners();
+        break;
+
+      case 'block_result':
+        if (data['success'] == true) {
+          final nickname = data['nickname'] as String?;
+          if (nickname != null) {
+            if (data['blocked'] == true) {
+              blockedUsers.add(nickname);
+            } else {
+              blockedUsers.remove(nickname);
+            }
+          }
+        }
+        notifyListeners();
+        break;
+
+      case 'friends_list':
+        final friendsList = data['friends'] as List? ?? [];
+        friends = friendsList.map((f) => f.toString()).toList();
+        notifyListeners();
+        break;
+
+      case 'friend_result':
+      case 'report_result':
+        // Just notify, UI will show snackbar if needed
+        notifyListeners();
+        break;
+
+      case 'profile_result':
+        profileData = data;
+        notifyListeners();
+        break;
+
+      case 'inquiry_result':
+        inquiryResultSuccess = data['success'] == true;
+        inquiryResultMessage = data['message'] as String? ?? '';
         notifyListeners();
         break;
     }
@@ -314,7 +420,7 @@ class GameService extends ChangeNotifier {
     playerName = '';
     currentRoomId = '';
     currentRoomName = '';
-    roomPlayers = [];
+    roomPlayers = [null, null, null, null];
     isHost = false;
     isRankedRoom = false;
     roomList = [];
@@ -326,6 +432,8 @@ class GameService extends ChangeNotifier {
     incomingCardViewRequests = [];
     gameState = null;
     errorMessage = null;
+    chatMessages = [];
+    profileData = null;
     clearAuthState();
     notifyListeners();
   }
@@ -427,6 +535,74 @@ class GameService extends ChangeNotifier {
 
   void nextRound() {
     _network.send({'type': 'next_round'});
+  }
+
+  void changeTeam(int targetSlot) {
+    _network.send({'type': 'change_team', 'targetSlot': targetSlot});
+  }
+
+  // Kick player (host only)
+  void kickPlayer(String targetPlayerId) {
+    _network.send({'type': 'kick_player', 'playerId': targetPlayerId});
+  }
+
+  // Request user profile
+  void requestProfile(String nickname) {
+    profileData = null;
+    _network.send({'type': 'get_profile', 'nickname': nickname});
+  }
+
+  // Chat
+  void sendChatMessage(String message) {
+    _network.send({'type': 'chat_message', 'message': message});
+  }
+
+  void clearChatMessages() {
+    chatMessages.clear();
+    notifyListeners();
+  }
+
+  // Block/Unblock
+  void blockUserAction(String nickname) {
+    _network.send({'type': 'block_user', 'nickname': nickname});
+  }
+
+  void unblockUserAction(String nickname) {
+    _network.send({'type': 'unblock_user', 'nickname': nickname});
+  }
+
+  void requestBlockedUsers() {
+    _network.send({'type': 'get_blocked_users'});
+  }
+
+  bool isBlocked(String nickname) {
+    return blockedUsers.contains(nickname);
+  }
+
+  // Report
+  void reportUserAction(String nickname, String reason) {
+    _network.send({'type': 'report_user', 'nickname': nickname, 'reason': reason});
+  }
+
+  // Friends
+  void addFriendAction(String nickname) {
+    _network.send({'type': 'add_friend', 'nickname': nickname});
+  }
+
+  void requestFriends() {
+    _network.send({'type': 'get_friends'});
+  }
+
+  // Inquiry
+  void submitInquiry(String category, String title, String content) {
+    inquiryResultSuccess = null;
+    inquiryResultMessage = null;
+    _network.send({
+      'type': 'submit_inquiry',
+      'category': category,
+      'title': title,
+      'content': content,
+    });
   }
 
   @override

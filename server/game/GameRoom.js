@@ -9,7 +9,13 @@ class GameRoom {
     this.password = password;
     this.isPrivate = !!password;
     this.isRanked = !!isRanked;
-    this.players = [{ id: hostId, nickname: hostNickname, connected: true }];
+    // Fixed 4-slot system: host goes to slot 0, rest are null
+    this.players = [
+      { id: hostId, nickname: hostNickname, connected: true },
+      null,
+      null,
+      null,
+    ];
     this.spectators = []; // { id, nickname }
     this.game = null;
     // Spectator card view permissions: { spectatorId: Set of playerId }
@@ -17,49 +23,79 @@ class GameRoom {
     // Pending requests: { playerId: [{ spectatorId, spectatorNickname }] }
     this.pendingCardRequests = {};
     // Teams: players[0] & players[2] = Team A, players[1] & players[3] = Team B
+    // Chat history (최근 100개)
+    this.chatHistory = [];
+  }
+
+  addChatMessage(sender, senderId, message) {
+    const msg = {
+      sender,
+      senderId,
+      message,
+      timestamp: Date.now(),
+    };
+    this.chatHistory.push(msg);
+    // 최근 100개만 유지
+    if (this.chatHistory.length > 100) {
+      this.chatHistory.shift();
+    }
+    return msg;
+  }
+
+  getChatHistory() {
+    return this.chatHistory;
   }
 
   addPlayer(playerId, nickname, password = '') {
     if (this.isPrivate && this.password !== password) {
       return { success: false, message: 'Room password is incorrect' };
     }
-    if (this.players.length >= 4) {
+    if (this.getPlayerCount() >= 4) {
       return { success: false, message: 'Room is full' };
     }
     if (this.game) {
       return { success: false, message: 'Game already in progress' };
     }
-    if (this.players.find((p) => p.id === playerId)) {
+    if (this.players.some((p) => p !== null && p.id === playerId)) {
       return { success: false, message: 'Already in this room' };
     }
-    this.players.push({ id: playerId, nickname: nickname, connected: true });
-    console.log(`${nickname} joined room ${this.name}`);
+    // Find first null slot
+    const emptySlot = this.players.indexOf(null);
+    if (emptySlot === -1) {
+      return { success: false, message: 'Room is full' };
+    }
+    this.players[emptySlot] = { id: playerId, nickname: nickname, connected: true };
+    console.log(`${nickname} joined room ${this.name} (slot ${emptySlot})`);
     return { success: true };
   }
 
   removePlayer(playerId) {
-    const idx = this.players.findIndex((p) => p.id === playerId);
+    const idx = this.players.findIndex((p) => p !== null && p.id === playerId);
     if (idx === -1) {
       // Maybe a spectator
       this.removeSpectator(playerId);
       return;
     }
-    const removed = this.players.splice(idx, 1)[0];
+    const removed = this.players[idx];
+    this.players[idx] = null; // Set slot to null instead of splice
     console.log(`${removed.nickname} left room ${this.name}`);
-    // If host left, assign new host
-    if (this.hostId === playerId && this.players.length > 0) {
-      this.hostId = this.players[0].id;
-      this.hostNickname = this.players[0].nickname;
+    // If host left, assign new host (first non-null player)
+    if (this.hostId === playerId) {
+      const nextHost = this.players.find((p) => p !== null);
+      if (nextHost) {
+        this.hostId = nextHost.id;
+        this.hostNickname = nextHost.nickname;
+      }
     }
     // If game was running and not enough players, end game
-    if (this.game && this.players.length < 4) {
+    if (this.game && this.getPlayerCount() < 4) {
       this.game = null;
     }
   }
 
   // Mark player as disconnected (during game, don't remove)
   markPlayerDisconnected(playerId) {
-    const player = this.players.find((p) => p.id === playerId);
+    const player = this.players.find((p) => p !== null && p.id === playerId);
     if (player) {
       player.connected = false;
       console.log(`${player.nickname} disconnected in room ${this.name}`);
@@ -70,7 +106,7 @@ class GameRoom {
 
   // Reconnect player with new playerId
   reconnectPlayer(nickname, newPlayerId) {
-    const player = this.players.find((p) => p.nickname === nickname && !p.connected);
+    const player = this.players.find((p) => p !== null && p.nickname === nickname && !p.connected);
     if (player) {
       const oldPlayerId = player.id;
       player.id = newPlayerId;
@@ -91,12 +127,12 @@ class GameRoom {
 
   // Get disconnected player nicknames
   getDisconnectedPlayers() {
-    return this.players.filter(p => !p.connected).map(p => p.nickname);
+    return this.players.filter(p => p !== null && !p.connected).map(p => p.nickname);
   }
 
   // Check if a nickname can reconnect to this room
   canReconnect(nickname) {
-    return this.players.some(p => p.nickname === nickname && !p.connected);
+    return this.players.some(p => p !== null && p.nickname === nickname && !p.connected);
   }
 
   addSpectator(odId, nickname) {
@@ -121,12 +157,16 @@ class GameRoom {
     return this.spectators.map((s) => s.id);
   }
 
+  getPlayerIds() {
+    return this.players.filter((p) => p !== null).map((p) => p.id);
+  }
+
   // Request to view a player's cards
   requestCardView(spectatorId, spectatorNickname, playerId) {
     if (!this.spectators.find(s => s.id === spectatorId)) {
       return { success: false, message: 'Not a spectator' };
     }
-    if (!this.players.find(p => p.id === playerId)) {
+    if (!this.players.some(p => p !== null && p.id === playerId)) {
       return { success: false, message: 'Player not found' };
     }
     // Check if already has permission
@@ -188,11 +228,35 @@ class GameRoom {
   }
 
   getPlayerCount() {
-    return this.players.length;
+    return this.players.filter((p) => p !== null).length;
+  }
+
+  // Move a player to a specific slot (only if target slot is empty)
+  movePlayerToSlot(playerId, targetSlot) {
+    const currentIndex = this.players.findIndex((p) => p !== null && p.id === playerId);
+    if (currentIndex === -1) {
+      return { success: false, message: '플레이어를 찾을 수 없습니다' };
+    }
+    if (currentIndex === targetSlot) {
+      return { success: true }; // Already in this slot
+    }
+    if (targetSlot < 0 || targetSlot > 3) {
+      return { success: false, message: '잘못된 슬롯입니다' };
+    }
+    // Only allow move to empty (null) slot - no swapping
+    if (this.players[targetSlot] !== null) {
+      return { success: false, message: '이미 다른 플레이어가 있는 자리입니다' };
+    }
+    // Move player to target slot
+    this.players[targetSlot] = this.players[currentIndex];
+    this.players[currentIndex] = null;
+    console.log(`Player ${playerId} moved to slot ${targetSlot}`);
+    return { success: true };
   }
 
   startGame() {
-    if (this.players.length !== 4) return false;
+    // All 4 slots must be non-null
+    if (this.players.some((p) => p === null)) return false;
     const playerIds = this.players.map((p) => p.id);
     if (this.isRanked) {
       // Shuffle seating order for ranked rooms
@@ -216,12 +280,16 @@ class GameRoom {
       isPrivate: this.isPrivate,
       isRanked: this.isRanked,
       hostId: this.hostId,
-      players: this.players.map((p) => ({
-        id: p.id,
-        name: p.nickname,
-        isHost: p.id === this.hostId,
-        connected: p.connected !== false,
-      })),
+      // Send all 4 slots including nulls
+      players: this.players.map((p) => {
+        if (p === null) return null;
+        return {
+          id: p.id,
+          name: p.nickname,
+          isHost: p.id === this.hostId,
+          connected: p.connected !== false,
+        };
+      }),
       gameInProgress: !!this.game,
     };
   }

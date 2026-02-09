@@ -2,7 +2,7 @@ const { WebSocketServer } = require('ws');
 const http = require('http');
 const LobbyManager = require('./lobby/LobbyManager');
 const GameRoom = require('./game/GameRoom');
-const { initDatabase, registerUser, loginUser, checkNickname } = require('./db/database');
+const { initDatabase, registerUser, loginUser, checkNickname, deleteUser } = require('./db/database');
 
 const PORT = process.env.PORT || 8080;
 
@@ -120,6 +120,9 @@ function handleMessage(ws, data) {
     case 'check_nickname':
       handleCheckNickname(ws, data);
       break;
+    case 'delete_account':
+      handleDeleteAccount(ws);
+      break;
     case 'room_list':
       sendTo(ws, { type: 'room_list', rooms: lobby.getRoomList() });
       break;
@@ -177,6 +180,19 @@ async function handleRegister(ws, data) {
 async function handleCheckNickname(ws, data) {
   const result = await checkNickname(data.nickname);
   sendTo(ws, { type: 'nickname_check_result', ...result });
+}
+
+async function handleDeleteAccount(ws) {
+  if (!ws.nickname) {
+    sendTo(ws, { type: 'error', message: '로그인이 필요합니다' });
+    return;
+  }
+  const result = await deleteUser(ws.nickname);
+  if (result.success) {
+    ws.nickname = null;
+    ws.playerId = null;
+  }
+  sendTo(ws, { type: 'account_deleted', ...result });
 }
 
 async function handleLogin(ws, data) {

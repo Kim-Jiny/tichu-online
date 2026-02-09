@@ -309,6 +309,31 @@ class GameService extends ChangeNotifier {
     nicknameCheckMessage = null;
   }
 
+  void reset() {
+    playerId = '';
+    playerName = '';
+    currentRoomId = '';
+    currentRoomName = '';
+    roomPlayers = [];
+    isHost = false;
+    isRankedRoom = false;
+    roomList = [];
+    spectatableRooms = [];
+    isSpectator = false;
+    spectatorGameState = null;
+    pendingCardViewRequests = {};
+    approvedCardViews = {};
+    incomingCardViewRequests = [];
+    gameState = null;
+    errorMessage = null;
+    clearAuthState();
+    notifyListeners();
+  }
+
+  void deleteAccount() {
+    _network.send({'type': 'delete_account'});
+  }
+
   void requestRoomList() {
     _network.send({'type': 'room_list'});
   }

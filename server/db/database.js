@@ -155,10 +155,35 @@ async function checkNickname(nickname) {
   }
 }
 
+// Delete user account
+async function deleteUser(nickname) {
+  if (!nickname) {
+    return { success: false, message: '닉네임이 필요합니다' };
+  }
+
+  const client = await pool.connect();
+  try {
+    const result = await client.query(
+      'DELETE FROM tc_users WHERE nickname = $1',
+      [nickname]
+    );
+    if (result.rowCount === 0) {
+      return { success: false, message: '사용자를 찾을 수 없습니다' };
+    }
+    return { success: true, message: '계정이 삭제되었습니다' };
+  } catch (err) {
+    console.error('Delete user error:', err);
+    return { success: false, message: '계정 삭제 중 오류가 발생했습니다' };
+  } finally {
+    client.release();
+  }
+}
+
 module.exports = {
   initDatabase,
   registerUser,
   loginUser,
   checkNickname,
+  deleteUser,
   pool,
 };

@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../services/game_service.dart';
+import '../services/network_service.dart';
 import '../models/room.dart';
 import 'game_screen.dart';
 import 'spectator_screen.dart';
+import 'login_screen.dart';
 
 class LobbyScreen extends StatefulWidget {
   const LobbyScreen({super.key});
@@ -24,6 +26,153 @@ class _LobbyScreenState extends State<LobbyScreen> {
       game.requestRoomList();
       game.requestSpectatableRooms();
     });
+  }
+
+  void _showComingSoonDialog(String feature) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: Text(feature),
+        content: const Text('준비 중입니다!'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('확인'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showProfileDialog() {
+    final game = context.read<GameService>();
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: Row(
+          children: [
+            const Icon(Icons.person, color: Color(0xFF64B5F6)),
+            const SizedBox(width: 8),
+            Text(game.playerName),
+          ],
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton.icon(
+                onPressed: () {
+                  Navigator.pop(context);
+                  _logout();
+                },
+                icon: const Icon(Icons.logout),
+                label: const Text('로그아웃'),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color(0xFFE0E0E0),
+                  foregroundColor: const Color(0xFF5A4038),
+                  padding: const EdgeInsets.symmetric(vertical: 12),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                ),
+              ),
+            ),
+            const SizedBox(height: 12),
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton.icon(
+                onPressed: () {
+                  Navigator.pop(context);
+                  _showDeleteAccountDialog();
+                },
+                icon: const Icon(Icons.delete_forever),
+                label: const Text('회원탈퇴'),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color(0xFFFFCDD2),
+                  foregroundColor: const Color(0xFFC62828),
+                  padding: const EdgeInsets.symmetric(vertical: 12),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('닫기'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _logout() {
+    final network = context.read<NetworkService>();
+    final game = context.read<GameService>();
+    network.disconnect();
+    game.reset();
+    Navigator.pushReplacement(
+      context,
+      MaterialPageRoute(builder: (_) => const LoginScreen()),
+    );
+  }
+
+  void _showDeleteAccountDialog() {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: const Text('회원탈퇴'),
+        content: const Text('정말 탈퇴하시겠습니까?\n모든 데이터가 삭제됩니다.'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('취소'),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              Navigator.pop(context);
+              _deleteAccount();
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: const Color(0xFFC62828),
+              foregroundColor: Colors.white,
+            ),
+            child: const Text('탈퇴'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _deleteAccount() {
+    final game = context.read<GameService>();
+    game.deleteAccount();
+    _logout();
+  }
+
+  Widget _buildIconButton({
+    required IconData icon,
+    required Color color,
+    required VoidCallback onTap,
+  }) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.all(8),
+        decoration: BoxDecoration(
+          color: color.withValues(alpha: 0.15),
+          borderRadius: BorderRadius.circular(10),
+        ),
+        child: Icon(icon, color: color, size: 22),
+      ),
+    );
   }
 
   void _showCreateRoomDialog() {
@@ -189,11 +338,11 @@ class _LobbyScreenState extends State<LobbyScreen> {
   Widget _buildLobbyView(GameService game) {
     return Column(
       children: [
-        // Top bar
+        // Top bar with menu icons
         Container(
           padding: const EdgeInsets.all(16),
           decoration: BoxDecoration(
-            color: Colors.white.withOpacity(0.95),
+            color: Colors.white.withValues(alpha: 0.95),
             borderRadius: BorderRadius.circular(18),
           ),
           margin: const EdgeInsets.all(16),
@@ -208,12 +357,26 @@ class _LobbyScreenState extends State<LobbyScreen> {
                 ),
               ),
               const Spacer(),
-              Text(
-                game.playerName,
-                style: const TextStyle(
-                  fontSize: 16,
-                  color: Color(0xFF8A7A72),
-                ),
+              Row(
+                children: [
+                  _buildIconButton(
+                    icon: Icons.store,
+                    color: const Color(0xFFFFB74D),
+                    onTap: () => _showComingSoonDialog('상점'),
+                  ),
+                  const SizedBox(width: 8),
+                  _buildIconButton(
+                    icon: Icons.leaderboard,
+                    color: const Color(0xFF81C784),
+                    onTap: () => _showComingSoonDialog('랭킹'),
+                  ),
+                  const SizedBox(width: 8),
+                  _buildIconButton(
+                    icon: Icons.person,
+                    color: const Color(0xFF64B5F6),
+                    onTap: _showProfileDialog,
+                  ),
+                ],
               ),
             ],
           ),

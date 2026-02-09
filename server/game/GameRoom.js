@@ -313,6 +313,73 @@ class GameRoom {
     return this.players.filter((p) => p !== null && !p.isBot).length;
   }
 
+  // Switch a player to spectator mode
+  switchToSpectator(playerId) {
+    if (this.game) {
+      return { success: false, message: '게임 중에는 전환할 수 없습니다' };
+    }
+    const idx = this.players.findIndex(p => p !== null && p.id === playerId);
+    if (idx === -1) {
+      return { success: false, message: '플레이어를 찾을 수 없습니다' };
+    }
+    const player = this.players[idx];
+    const nickname = player.nickname;
+
+    // Remove from player slot
+    this.players[idx] = null;
+
+    // Add to spectators
+    this.spectators.push({ id: playerId, nickname });
+
+    // If host left, assign new host
+    if (this.hostId === playerId) {
+      const nextHost = this.players.find(p => p !== null && !p.isBot);
+      if (nextHost) {
+        this.hostId = nextHost.id;
+        this.hostNickname = nextHost.nickname;
+      }
+    }
+
+    console.log(`${nickname} switched to spectator in room ${this.name}`);
+    return { success: true };
+  }
+
+  // Switch a spectator to player mode
+  switchToPlayer(spectatorId, nickname, targetSlot) {
+    if (this.game) {
+      return { success: false, message: '게임 중에는 전환할 수 없습니다' };
+    }
+    if (this.getPlayerCount() >= 4) {
+      return { success: false, message: '방이 가득 찼습니다' };
+    }
+    const specIdx = this.spectators.findIndex(s => s.id === spectatorId);
+    if (specIdx === -1) {
+      return { success: false, message: '관전자를 찾을 수 없습니다' };
+    }
+    if (typeof targetSlot !== 'number' || targetSlot < 0 || targetSlot > 3) {
+      return { success: false, message: '잘못된 슬롯입니다' };
+    }
+    if (this.players[targetSlot] !== null) {
+      return { success: false, message: '이미 다른 플레이어가 있는 자리입니다' };
+    }
+
+    // Remove from spectators
+    this.spectators.splice(specIdx, 1);
+    this.removeSpectatorPermissions(spectatorId);
+
+    // Add to player slot
+    this.players[targetSlot] = { id: spectatorId, nickname, connected: true, ready: false };
+
+    // If no host (empty room edge case), assign this player
+    if (!this.players.some(p => p !== null && p.id === this.hostId)) {
+      this.hostId = spectatorId;
+      this.hostNickname = nickname;
+    }
+
+    console.log(`${nickname} switched to player in room ${this.name} (slot ${targetSlot})`);
+    return { success: true };
+  }
+
   // Move a player to a specific slot (only if target slot is empty)
   movePlayerToSlot(playerId, targetSlot) {
     const currentIndex = this.players.findIndex((p) => p !== null && p.id === playerId);

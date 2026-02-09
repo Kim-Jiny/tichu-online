@@ -164,9 +164,9 @@ class _SpectatorScreenState extends State<SpectatorScreen> {
                       Row(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
-                          _buildPlayerSlot(players[0], 1),
+                          _buildPlayerSlot(game, players[0], 0),
                           const SizedBox(width: 16),
-                          _buildPlayerSlot(players[2], 3),
+                          _buildPlayerSlot(game, players[2], 2),
                         ],
                       ),
                       const SizedBox(height: 24),
@@ -183,9 +183,9 @@ class _SpectatorScreenState extends State<SpectatorScreen> {
                       Row(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
-                          _buildPlayerSlot(players[1], 2),
+                          _buildPlayerSlot(game, players[1], 1),
                           const SizedBox(width: 16),
-                          _buildPlayerSlot(players[3], 4),
+                          _buildPlayerSlot(game, players[3], 3),
                         ],
                       ),
                       const SizedBox(height: 32),
@@ -220,26 +220,26 @@ class _SpectatorScreenState extends State<SpectatorScreen> {
     );
   }
 
-  Widget _buildPlayerSlot(Player? player, int slotNumber) {
+  Widget _buildPlayerSlot(GameService game, Player? player, int slotIndex) {
     final bool isEmpty = player == null;
     final String name = isEmpty ? '' : player.name;
     final bool isReady = isEmpty ? false : player.isReady;
     final bool isHost = isEmpty ? false : player.isHost;
 
-    return Container(
+    final content = Container(
       width: 130,
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 16),
       decoration: BoxDecoration(
         color: isEmpty
-            ? Colors.white.withOpacity(0.05)
-            : Colors.white.withOpacity(0.1),
+            ? Colors.white.withValues(alpha: 0.05)
+            : Colors.white.withValues(alpha: 0.1),
         borderRadius: BorderRadius.circular(16),
         border: Border.all(
           color: isEmpty
-              ? Colors.white.withOpacity(0.1)
+              ? Colors.blue.withValues(alpha: 0.3)
               : isReady
-                  ? Colors.greenAccent.withOpacity(0.5)
-                  : Colors.white.withOpacity(0.2),
+                  ? Colors.greenAccent.withValues(alpha: 0.5)
+                  : Colors.white.withValues(alpha: 0.2),
           width: isReady ? 2 : 1,
         ),
       ),
@@ -247,15 +247,15 @@ class _SpectatorScreenState extends State<SpectatorScreen> {
         mainAxisSize: MainAxisSize.min,
         children: [
           Icon(
-            isEmpty ? Icons.person_outline : Icons.person,
-            color: isEmpty ? Colors.white24 : Colors.white70,
+            isEmpty ? Icons.person_add : Icons.person,
+            color: isEmpty ? Colors.blue.withValues(alpha: 0.5) : Colors.white70,
             size: 32,
           ),
           const SizedBox(height: 8),
           Text(
-            isEmpty ? '빈 자리' : name,
+            isEmpty ? '착석' : name,
             style: TextStyle(
-              color: isEmpty ? Colors.white24 : Colors.white,
+              color: isEmpty ? Colors.blue.withValues(alpha: 0.7) : Colors.white,
               fontSize: 13,
               fontWeight: FontWeight.w500,
             ),
@@ -278,6 +278,20 @@ class _SpectatorScreenState extends State<SpectatorScreen> {
         ],
       ),
     );
+
+    if (isEmpty) {
+      return Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: () => game.switchToPlayer(slotIndex),
+          borderRadius: BorderRadius.circular(16),
+          splashColor: Colors.blue.withValues(alpha: 0.2),
+          child: content,
+        ),
+      );
+    }
+
+    return content;
   }
 
   Widget _buildSpectatorView(

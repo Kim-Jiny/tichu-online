@@ -1187,15 +1187,6 @@ class _GameScreenState extends State<GameScreen> {
             onPressed: () {
               Navigator.pop(ctx);
               game.leaveGame();
-              game.gameState = null;
-              game.desertedPlayerName = null;
-              game.desertedReason = null;
-              game.dragonGivenMessage = null;
-              game.currentRoomId = '';
-              game.currentRoomName = '';
-              game.roomPlayers = [null, null, null, null];
-              game.isHost = false;
-              game.chatMessages = [];
               Navigator.pushReplacement(
                 context,
                 MaterialPageRoute(builder: (_) => const LobbyScreen()),
@@ -2236,15 +2227,6 @@ class _GameScreenState extends State<GameScreen> {
             ElevatedButton(
               onPressed: () {
                 game.leaveRoom();
-                game.gameState = null;
-                game.desertedPlayerName = null;
-                game.desertedReason = null;
-                game.dragonGivenMessage = null;
-                game.currentRoomId = '';
-                game.currentRoomName = '';
-                game.roomPlayers = [null, null, null, null];
-                game.isHost = false;
-                game.chatMessages = [];
                 Navigator.pushReplacement(
                   context,
                   MaterialPageRoute(builder: (_) => const LobbyScreen()),

@@ -559,6 +559,9 @@ class _LobbyScreenState extends State<LobbyScreen> {
               if (game.currentRoomId.isEmpty && _inRoom) {
                 _inRoom = false;
               }
+              if (game.currentRoomId.isNotEmpty && !game.isSpectator && !_inRoom) {
+                _inRoom = true;
+              }
 
               // Check if spectating
               if (game.isSpectator && game.currentRoomId.isNotEmpty) {
@@ -944,6 +947,33 @@ class _LobbyScreenState extends State<LobbyScreen> {
                     overflow: TextOverflow.ellipsis,
                   ),
                 ),
+                // Switch to spectator button
+                GestureDetector(
+                  onTap: () => game.switchToSpectator(),
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFE8E0F8),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: const Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(Icons.visibility, size: 14, color: Color(0xFF4A4080)),
+                        SizedBox(width: 4),
+                        Text(
+                          '관전',
+                          style: TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.bold,
+                            color: Color(0xFF4A4080),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 8),
                 // Player count badge (non-null count)
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),

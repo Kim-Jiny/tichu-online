@@ -164,6 +164,25 @@ class GameService extends ChangeNotifier {
         notifyListeners();
         break;
 
+      case 'switched_to_spectator':
+        isSpectator = true;
+        gameState = null;
+        spectatorGameState = null;
+        pendingCardViewRequests = {};
+        approvedCardViews = {};
+        incomingCardViewRequests = [];
+        cardViewers = [];
+        notifyListeners();
+        break;
+
+      case 'switched_to_player':
+        isSpectator = false;
+        spectatorGameState = null;
+        pendingCardViewRequests = {};
+        approvedCardViews = {};
+        notifyListeners();
+        break;
+
       case 'spectatable_rooms':
         spectatableRooms = (data['rooms'] as List?)
                 ?.map((r) => Room.fromJson(r))
@@ -173,6 +192,7 @@ class GameService extends ChangeNotifier {
         break;
 
       case 'spectator_game_state':
+        if (currentRoomId.isEmpty) break; // Already left
         final state = data['state'] as Map<String, dynamic>?;
         if (state != null) {
           spectatorGameState = state;
@@ -287,6 +307,7 @@ class GameService extends ChangeNotifier {
         break;
 
       case 'game_state':
+        if (currentRoomId.isEmpty) break; // Already left
         final state = data['state'] as Map<String, dynamic>?;
         if (state != null) {
           // Clear desertion state when a new round/game starts
@@ -633,6 +654,14 @@ class GameService extends ChangeNotifier {
     _network.send({'type': 'spectate_room', 'roomId': roomId});
   }
 
+  void switchToSpectator() {
+    _network.send({'type': 'switch_to_spectator'});
+  }
+
+  void switchToPlayer(int targetSlot) {
+    _network.send({'type': 'switch_to_player', 'targetSlot': targetSlot});
+  }
+
   void requestCardView(String playerId) {
     _network.send({'type': 'request_card_view', 'playerId': playerId});
   }
@@ -671,10 +700,32 @@ class GameService extends ChangeNotifier {
 
   void leaveRoom() {
     _network.send({'type': 'leave_room'});
+    _clearRoomState();
   }
 
   void leaveGame() {
     _network.send({'type': 'leave_game'});
+    _clearRoomState();
+  }
+
+  void _clearRoomState() {
+    currentRoomId = '';
+    currentRoomName = '';
+    roomPlayers = [null, null, null, null];
+    isHost = false;
+    isRankedRoom = false;
+    isSpectator = false;
+    gameState = null;
+    spectatorGameState = null;
+    pendingCardViewRequests = {};
+    approvedCardViews = {};
+    incomingCardViewRequests = [];
+    cardViewers = [];
+    chatMessages = [];
+    desertedPlayerName = null;
+    desertedReason = null;
+    dragonGivenMessage = null;
+    notifyListeners();
   }
 
   void addBot({int? targetSlot}) {

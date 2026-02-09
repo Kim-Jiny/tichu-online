@@ -104,7 +104,28 @@ class _ConnectionOverlayState extends State<ConnectionOverlay>
     if (!mounted) return;
 
     if (loggedIn) {
-      // Re-request room list etc.
+      // If server restarted, our old room no longer exists
+      // Server sends 'reconnected' only if room recovery succeeded
+      // If we still have a roomId but no 'reconnected' came, clear room state
+      if (game.currentRoomId.isNotEmpty) {
+        // Wait briefly for potential 'reconnected' message
+        await Future.delayed(const Duration(milliseconds: 500));
+        if (mounted && game.currentRoomId.isNotEmpty && game.gameState == null && game.spectatorGameState == null) {
+          // No game state received - room is gone, clear client state
+          game.currentRoomId = '';
+          game.currentRoomName = '';
+          game.roomPlayers = [null, null, null, null];
+          game.isHost = false;
+          game.isRankedRoom = false;
+          game.isSpectator = false;
+          game.spectatorGameState = null;
+          game.gameState = null;
+          game.chatMessages = [];
+          game.cardViewers = [];
+          game.incomingCardViewRequests = [];
+          game.notifyListeners();
+        }
+      }
       game.requestRoomList();
       game.requestSpectatableRooms();
       game.requestBlockedUsers();

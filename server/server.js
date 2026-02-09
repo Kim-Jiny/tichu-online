@@ -218,6 +218,12 @@ function handleMessage(ws, data) {
     case 'add_bot':
       handleAddBot(ws, data);
       break;
+    case 'switch_to_spectator':
+      handleSwitchToSpectator(ws);
+      break;
+    case 'switch_to_player':
+      handleSwitchToPlayer(ws, data);
+      break;
     case 'get_profile':
       handleGetProfile(ws, data);
       break;
@@ -407,11 +413,6 @@ function handleCreateRoom(ws, data) {
   );
   ws.roomId = room.id;
 
-  // Auto-add 3 bots for local testing (non-ranked only)
-  if (!isRanked) {
-    for (let i = 0; i < 3; i++) room.addBot();
-  }
-
   sendTo(ws, { type: 'room_joined', roomId: room.id, roomName: room.name });
   broadcastRoomState(room.id);
   broadcastRoomList();
@@ -454,7 +455,11 @@ async function handleJoinRoom(ws, data) {
 }
 
 async function handleLeaveRoom(ws) {
-  if (!ws.roomId) return;
+  if (!ws.roomId) {
+    // Server may have restarted - client thinks it's in a room but server doesn't know
+    sendTo(ws, { type: 'room_left' });
+    return;
+  }
   clearTurnTimer(ws.roomId);
   const room = lobby.getRoom(ws.roomId);
   const roomId = ws.roomId;
@@ -482,7 +487,10 @@ async function handleLeaveRoom(ws) {
 }
 
 async function handleLeaveGame(ws) {
-  if (!ws.roomId) return;
+  if (!ws.roomId) {
+    sendTo(ws, { type: 'room_left' });
+    return;
+  }
   clearTurnTimer(ws.roomId);
   const room = lobby.getRoom(ws.roomId);
   const roomId = ws.roomId;
@@ -785,6 +793,49 @@ function handleAddBot(ws, data) {
     sendTo(ws, { type: 'error', message: result.message });
     return;
   }
+  broadcastRoomState(ws.roomId);
+  broadcastRoomList();
+}
+
+// Switch to spectator handler
+function handleSwitchToSpectator(ws) {
+  if (!ws.roomId || ws.isSpectator) {
+    sendTo(ws, { type: 'error', message: 'Not in a room as player' });
+    return;
+  }
+  const room = lobby.getRoom(ws.roomId);
+  if (!room) { sendTo(ws, { type: 'room_closed' }); ws.roomId = null; return; }
+  const result = room.switchToSpectator(ws.playerId);
+  if (!result.success) {
+    sendTo(ws, { type: 'error', message: result.message });
+    return;
+  }
+  ws.isSpectator = true;
+  sendTo(ws, { type: 'switched_to_spectator' });
+  broadcastRoomState(ws.roomId);
+  broadcastRoomList();
+}
+
+// Switch to player handler
+function handleSwitchToPlayer(ws, data) {
+  if (!ws.roomId || !ws.isSpectator) {
+    sendTo(ws, { type: 'error', message: 'Not spectating' });
+    return;
+  }
+  const room = lobby.getRoom(ws.roomId);
+  if (!room) { sendTo(ws, { type: 'room_closed' }); ws.roomId = null; return; }
+  const targetSlot = data.targetSlot;
+  if (typeof targetSlot !== 'number') {
+    sendTo(ws, { type: 'error', message: 'Invalid slot' });
+    return;
+  }
+  const result = room.switchToPlayer(ws.playerId, ws.nickname, targetSlot);
+  if (!result.success) {
+    sendTo(ws, { type: 'error', message: result.message });
+    return;
+  }
+  ws.isSpectator = false;
+  sendTo(ws, { type: 'switched_to_player', roomId: room.id, roomName: room.name });
   broadcastRoomState(ws.roomId);
   broadcastRoomList();
 }

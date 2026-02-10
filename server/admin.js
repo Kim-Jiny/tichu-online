@@ -3,6 +3,7 @@ const {
   verifyAdmin, getInquiries, getInquiryById, resolveInquiry,
   getReports, getReportGroup, updateReportGroupStatus,
   getUsers, getUserDetail, deleteUser, getDashboardStats,
+  getAllShopItemsAdmin, addShopItem, updateShopItem, deleteShopItem, getShopItemById,
 } = require('./db/database');
 
 // In-memory session store: token -> { username, createdAt }
@@ -142,6 +143,7 @@ input[type="text"], input[type="password"] { width: 100%; padding: 10px; border:
   <h2>Tichu Admin</h2>
   <a href="/tc-backstage/" class="${activePage === 'home' ? 'active' : ''}">Dashboard</a>
   <a href="/tc-backstage/inquiries" class="${activePage === 'inquiries' ? 'active' : ''}">Inquiries</a>
+  <a href="/tc-backstage/shop" class="${activePage === 'shop' ? 'active' : ''}">Shop</a>
   <a href="/tc-backstage/reports" class="${activePage === 'reports' ? 'active' : ''}">Reports</a>
   <a href="/tc-backstage/users" class="${activePage === 'users' ? 'active' : ''}">Users</a>
   <div class="logout">
@@ -215,6 +217,83 @@ function pagination(page, total, limit, baseUrl) {
 function escapeHtml(str) {
   if (!str) return '';
   return String(str).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+}
+
+// ===== Shop form helpers =====
+
+function formatDatetimeLocal(d) {
+  if (!d) return '';
+  const dt = new Date(d);
+  if (isNaN(dt.getTime())) return '';
+  const pad = n => String(n).padStart(2, '0');
+  return `${dt.getFullYear()}-${pad(dt.getMonth() + 1)}-${pad(dt.getDate())}T${pad(dt.getHours())}:${pad(dt.getMinutes())}`;
+}
+
+function shopForm(action, values, isEdit = false) {
+  const v = (key, def = '') => {
+    const val = values[key];
+    if (val === undefined || val === null) return def;
+    return val;
+  };
+  const checked = (key, def = false) => {
+    const val = values[key];
+    if (val === undefined || val === null) return def ? 'checked' : '';
+    if (val === 'on' || val === true || val === 't') return 'checked';
+    return '';
+  };
+  const categories = ['banner', 'title', 'theme', 'card_skin', 'utility'];
+  const categoryOptions = categories.map(c =>
+    `<option value="${c}" ${v('category') === c ? 'selected' : ''}>${c}</option>`
+  ).join('');
+
+  return `<form method="POST" action="${action}">
+    <div style="display:grid;grid-template-columns:140px 1fr;gap:12px 16px;align-items:center;max-width:600px">
+      <label>Item Key</label>
+      <input type="text" name="item_key" value="${escapeHtml(v('item_key'))}" ${isEdit ? 'readonly style="background:#f0f0f0"' : 'required'} placeholder="e.g. banner_new">
+      <label>Name</label>
+      <input type="text" name="name" value="${escapeHtml(v('name'))}" required placeholder="아이템 이름">
+      <label>Category</label>
+      <select name="category" style="padding:10px;border:1px solid #ddd;border-radius:8px;font-size:14px">${categoryOptions}</select>
+      <label>Price</label>
+      <input type="number" name="price" value="${v('price', 0)}" min="0" style="padding:10px;border:1px solid #ddd;border-radius:8px;font-size:14px">
+      <label>Permanent</label>
+      <input type="checkbox" name="is_permanent" ${checked('is_permanent', true)} style="width:20px;height:20px">
+      <label>Duration (days)</label>
+      <input type="number" name="duration_days" value="${v('duration_days', '')}" min="1" style="padding:10px;border:1px solid #ddd;border-radius:8px;font-size:14px" placeholder="영구 아이템이면 비워두세요">
+      <label>Purchasable</label>
+      <input type="checkbox" name="is_purchasable" ${checked('is_purchasable', true)} style="width:20px;height:20px">
+      <label>Season Item</label>
+      <input type="checkbox" name="is_season" ${checked('is_season', false)} style="width:20px;height:20px">
+      <label>Effect Type</label>
+      <input type="text" name="effect_type" value="${escapeHtml(v('effect_type', ''))}" placeholder="e.g. leave_count_reduce">
+      <label>Effect Value</label>
+      <input type="number" name="effect_value" value="${v('effect_value', '')}" style="padding:10px;border:1px solid #ddd;border-radius:8px;font-size:14px">
+      <label>Sale Start</label>
+      <input type="datetime-local" name="sale_start" value="${formatDatetimeLocal(v('sale_start'))}" style="padding:10px;border:1px solid #ddd;border-radius:8px;font-size:14px">
+      <label>Sale End</label>
+      <input type="datetime-local" name="sale_end" value="${formatDatetimeLocal(v('sale_end'))}" style="padding:10px;border:1px solid #ddd;border-radius:8px;font-size:14px">
+    </div>
+    <div style="margin-top:16px">
+      <button type="submit" class="btn btn-primary">${isEdit ? 'Save Changes' : 'Add Item'}</button>
+    </div>
+  </form>`;
+}
+
+function parseShopFormBody(body) {
+  return {
+    item_key: body.item_key || '',
+    name: body.name || '',
+    category: body.category || 'banner',
+    price: parseInt(body.price) || 0,
+    is_permanent: body.is_permanent === 'on',
+    duration_days: body.duration_days ? parseInt(body.duration_days) : null,
+    is_purchasable: body.is_purchasable === 'on',
+    is_season: body.is_season === 'on',
+    effect_type: body.effect_type || null,
+    effect_value: body.effect_value ? parseInt(body.effect_value) : null,
+    sale_start: body.sale_start || null,
+    sale_end: body.sale_end || null,
+  };
 }
 
 // ===== Route handler =====
@@ -569,6 +648,132 @@ async function handleAdminRoute(req, res, url, pathname, method, lobby, wss) {
     const nickname = decodeURIComponent(banMatch[1]);
     await deleteUser(nickname);
     return redirect(res, '/tc-backstage/users');
+  }
+
+  // ===== Shop Management =====
+  if (pathname === '/tc-backstage/shop' && method === 'GET') {
+    const items = await getAllShopItemsAdmin();
+    const now = new Date();
+
+    function saleBadge(item) {
+      if (!item.sale_start && !item.sale_end) return '<span class="badge" style="background:#e8f5e9;color:#2e7d32">상시</span>';
+      const start = item.sale_start ? new Date(item.sale_start) : null;
+      const end = item.sale_end ? new Date(item.sale_end) : null;
+      if (start && start > now) return '<span class="badge" style="background:#e3f2fd;color:#1565c0">예정</span>';
+      if (end && end < now) return '<span class="badge" style="background:#f3e5f5;color:#6a1b9a">종료</span>';
+      return '<span class="badge" style="background:#e8f5e9;color:#2e7d32">판매중</span>';
+    }
+
+    function shopCategoryBadge(cat) {
+      const colors = { banner: '#e3f2fd;color:#1565c0', title: '#fff3e0;color:#e65100', theme: '#e8eaf6;color:#283593', utility: '#fce4ec;color:#880e4f', card_skin: '#f1f8e9;color:#33691e' };
+      return `<span class="badge" style="background:${colors[cat] || '#f5f5f5;color:#333'}">${escapeHtml(cat)}</span>`;
+    }
+
+    let tableContent = '';
+    if (items.length > 0) {
+      tableContent = `<table>
+        <tr><th>ID</th><th>Key</th><th>Name</th><th>Category</th><th>Price</th><th>구분</th><th>판매기간</th><th>상태</th><th></th></tr>
+        ${items.map(item => `<tr>
+          <td>${item.id}</td>
+          <td style="font-family:monospace;font-size:12px">${escapeHtml(item.item_key)}</td>
+          <td>${escapeHtml(item.name)}</td>
+          <td>${shopCategoryBadge(item.category)}</td>
+          <td>${item.price}</td>
+          <td>${item.is_permanent ? '영구' : (item.duration_days ? item.duration_days + '일' : '-')}</td>
+          <td style="font-size:12px">${item.sale_start ? formatDate(item.sale_start) : '-'}<br>${item.sale_end ? '~ ' + formatDate(item.sale_end) : ''}</td>
+          <td>${saleBadge(item)}</td>
+          <td><a href="/tc-backstage/shop/${item.id}" class="btn btn-secondary">Edit</a></td>
+        </tr>`).join('')}
+      </table>`;
+    } else {
+      tableContent = '<div class="empty">No shop items</div>';
+    }
+
+    const content = `
+      <h1 class="page-title">Shop Items</h1>
+      <div style="margin-bottom:16px"><a href="/tc-backstage/shop/add" class="btn btn-primary">+ Add Item</a></div>
+      <div class="card">${tableContent}</div>
+    `;
+    return html(res, layout('Shop', content, 'shop'));
+  }
+
+  // Shop add form
+  if (pathname === '/tc-backstage/shop/add' && method === 'GET') {
+    const content = `
+      <h1 class="page-title">Add Shop Item</h1>
+      <div class="card">
+        ${shopForm('/tc-backstage/shop/add', {})}
+      </div>
+      <a href="/tc-backstage/shop" class="btn btn-secondary" style="margin-top:12px">Back to list</a>
+    `;
+    return html(res, layout('Add Item', content, 'shop'));
+  }
+
+  // Shop add process
+  if (pathname === '/tc-backstage/shop/add' && method === 'POST') {
+    const body = await parseBody(req);
+    const data = parseShopFormBody(body);
+    const result = await addShopItem(data);
+    if (!result.success) {
+      const content = `
+        <h1 class="page-title">Add Shop Item</h1>
+        <div style="color:#e53935;margin-bottom:12px">${escapeHtml(result.message)}</div>
+        <div class="card">
+          ${shopForm('/tc-backstage/shop/add', body)}
+        </div>
+        <a href="/tc-backstage/shop" class="btn btn-secondary" style="margin-top:12px">Back to list</a>
+      `;
+      return html(res, layout('Add Item', content, 'shop'));
+    }
+    return redirect(res, '/tc-backstage/shop');
+  }
+
+  // Shop edit form
+  const shopEditMatch = pathname.match(/^\/tc-backstage\/shop\/(\d+)$/);
+  if (shopEditMatch && method === 'GET') {
+    const item = await getShopItemById(parseInt(shopEditMatch[1]));
+    if (!item) return html(res, layout('Not Found', '<div class="empty">Item not found</div>', 'shop'), 404);
+
+    const content = `
+      <h1 class="page-title">Edit: ${escapeHtml(item.name)}</h1>
+      <div class="card">
+        ${shopForm('/tc-backstage/shop/' + item.id, item, true)}
+      </div>
+      <form method="POST" action="/tc-backstage/shop/${item.id}/delete"
+            onsubmit="return confirm('정말 이 아이템을 삭제하시겠습니까? 보유한 유저의 아이템도 함께 삭제됩니다.')"
+            style="margin-top:12px;display:inline-block">
+        <button type="submit" class="btn btn-danger">Delete Item</button>
+      </form>
+      <a href="/tc-backstage/shop" class="btn btn-secondary" style="margin-top:12px;margin-left:8px">Back to list</a>
+    `;
+    return html(res, layout(`Edit: ${escapeHtml(item.name)}`, content, 'shop'));
+  }
+
+  // Shop edit process
+  if (shopEditMatch && method === 'POST') {
+    const body = await parseBody(req);
+    const data = parseShopFormBody(body);
+    const result = await updateShopItem(parseInt(shopEditMatch[1]), data);
+    if (!result.success) {
+      const item = await getShopItemById(parseInt(shopEditMatch[1]));
+      const content = `
+        <h1 class="page-title">Edit: ${escapeHtml(item ? item.name : '')}</h1>
+        <div style="color:#e53935;margin-bottom:12px">${escapeHtml(result.message)}</div>
+        <div class="card">
+          ${shopForm('/tc-backstage/shop/' + shopEditMatch[1], body, true)}
+        </div>
+        <a href="/tc-backstage/shop" class="btn btn-secondary" style="margin-top:12px">Back to list</a>
+      `;
+      return html(res, layout('Edit Item', content, 'shop'));
+    }
+    return redirect(res, '/tc-backstage/shop/' + shopEditMatch[1]);
+  }
+
+  // Shop delete
+  const shopDeleteMatch = pathname.match(/^\/tc-backstage\/shop\/(\d+)\/delete$/);
+  if (shopDeleteMatch && method === 'POST') {
+    await deleteShopItem(parseInt(shopDeleteMatch[1]));
+    return redirect(res, '/tc-backstage/shop');
   }
 
   // 404

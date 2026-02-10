@@ -135,9 +135,15 @@ async function initDatabase() {
         effect_type VARCHAR(30),
         effect_value INT,
         metadata JSONB,
+        sale_start TIMESTAMP,
+        sale_end TIMESTAMP,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
       )
     `);
+
+    // Add sale_start/sale_end columns if not exists (for existing tables)
+    await client.query(`ALTER TABLE tc_shop_items ADD COLUMN IF NOT EXISTS sale_start TIMESTAMP`);
+    await client.query(`ALTER TABLE tc_shop_items ADD COLUMN IF NOT EXISTS sale_end TIMESTAMP`);
 
     // User owned items
     await client.query(`
@@ -767,6 +773,8 @@ async function getShopItems() {
              duration_days, is_purchasable, effect_type, effect_value, metadata
       FROM tc_shop_items
       WHERE is_purchasable = TRUE AND is_season = FALSE
+        AND (sale_start IS NULL OR sale_start <= NOW())
+        AND (sale_end IS NULL OR sale_end >= NOW())
       ORDER BY category ASC, price ASC, name ASC
       `
     );
@@ -1613,6 +1621,125 @@ async function getRankings(limit = 50) {
   }
 }
 
+// ===== Admin shop management =====
+
+// Get all shop items (admin, no filter)
+async function getAllShopItemsAdmin() {
+  const client = await pool.connect();
+  try {
+    const result = await client.query(
+      `SELECT * FROM tc_shop_items ORDER BY category ASC, id ASC`
+    );
+    return result.rows;
+  } catch (err) {
+    console.error('Get all shop items admin error:', err);
+    return [];
+  } finally {
+    client.release();
+  }
+}
+
+// Add new shop item
+async function addShopItem(data) {
+  const client = await pool.connect();
+  try {
+    const result = await client.query(
+      `INSERT INTO tc_shop_items
+        (item_key, name, category, price, is_permanent, duration_days, is_purchasable, is_season, effect_type, effect_value, sale_start, sale_end)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
+       RETURNING *`,
+      [
+        data.item_key, data.name, data.category, data.price || 0,
+        data.is_permanent !== false, data.duration_days || null,
+        data.is_purchasable !== false, data.is_season || false,
+        data.effect_type || null, data.effect_value || null,
+        data.sale_start || null, data.sale_end || null,
+      ]
+    );
+    return { success: true, item: result.rows[0] };
+  } catch (err) {
+    console.error('Add shop item error:', err);
+    if (err.code === '23505') {
+      return { success: false, message: '이미 존재하는 item_key입니다' };
+    }
+    return { success: false, message: '아이템 추가에 실패했습니다' };
+  } finally {
+    client.release();
+  }
+}
+
+// Update shop item
+async function updateShopItem(id, data) {
+  const client = await pool.connect();
+  try {
+    const result = await client.query(
+      `UPDATE tc_shop_items
+       SET name = $2, category = $3, price = $4, is_permanent = $5,
+           duration_days = $6, is_purchasable = $7, is_season = $8,
+           effect_type = $9, effect_value = $10, sale_start = $11, sale_end = $12
+       WHERE id = $1
+       RETURNING *`,
+      [
+        id, data.name, data.category, data.price || 0,
+        data.is_permanent !== false, data.duration_days || null,
+        data.is_purchasable !== false, data.is_season || false,
+        data.effect_type || null, data.effect_value || null,
+        data.sale_start || null, data.sale_end || null,
+      ]
+    );
+    if (result.rows.length === 0) {
+      return { success: false, message: '아이템을 찾을 수 없습니다' };
+    }
+    return { success: true, item: result.rows[0] };
+  } catch (err) {
+    console.error('Update shop item error:', err);
+    return { success: false, message: '아이템 수정에 실패했습니다' };
+  } finally {
+    client.release();
+  }
+}
+
+// Delete shop item (+ cascade delete user items)
+async function deleteShopItem(id) {
+  const client = await pool.connect();
+  try {
+    await client.query('BEGIN');
+    // Get item_key first
+    const itemRes = await client.query('SELECT item_key FROM tc_shop_items WHERE id = $1', [id]);
+    if (itemRes.rows.length === 0) {
+      await client.query('ROLLBACK');
+      return { success: false, message: '아이템을 찾을 수 없습니다' };
+    }
+    const itemKey = itemRes.rows[0].item_key;
+    // Delete related user items
+    await client.query('DELETE FROM tc_user_items WHERE item_key = $1', [itemKey]);
+    // Delete the shop item
+    await client.query('DELETE FROM tc_shop_items WHERE id = $1', [id]);
+    await client.query('COMMIT');
+    return { success: true };
+  } catch (err) {
+    await client.query('ROLLBACK');
+    console.error('Delete shop item error:', err);
+    return { success: false, message: '아이템 삭제에 실패했습니다' };
+  } finally {
+    client.release();
+  }
+}
+
+// Get single shop item by ID
+async function getShopItemById(id) {
+  const client = await pool.connect();
+  try {
+    const result = await client.query('SELECT * FROM tc_shop_items WHERE id = $1', [id]);
+    return result.rows[0] || null;
+  } catch (err) {
+    console.error('Get shop item by id error:', err);
+    return null;
+  } finally {
+    client.release();
+  }
+}
+
 module.exports = {
   initDatabase,
   registerUser,
@@ -1658,5 +1785,10 @@ module.exports = {
   getDashboardStats,
   getRankings,
   verifyAdmin,
+  getAllShopItemsAdmin,
+  addShopItem,
+  updateShopItem,
+  deleteShopItem,
+  getShopItemById,
   pool,
 };

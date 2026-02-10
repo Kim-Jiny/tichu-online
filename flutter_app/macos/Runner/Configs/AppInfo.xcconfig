@@ -8,7 +8,7 @@
 PRODUCT_NAME = tichu_online
 
 // The application's bundle identifier
-PRODUCT_BUNDLE_IDENTIFIER = com.tichu.tichuOnline
+PRODUCT_BUNDLE_IDENTIFIER = com.jiny.tichuOnline
 
 // The copyright displayed in application information
-PRODUCT_COPYRIGHT = Copyright © 2026 com.tichu. All rights reserved.
+PRODUCT_COPYRIGHT = Copyright © 2026 com.jiny. All rights reserved.

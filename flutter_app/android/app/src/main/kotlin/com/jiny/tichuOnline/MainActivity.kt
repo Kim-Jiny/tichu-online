@@ -1,4 +1,4 @@
-package com.tichu.tichu_online
+package com.jiny.tichuOnline
 
 import io.flutter.embedding.android.FlutterActivity
 

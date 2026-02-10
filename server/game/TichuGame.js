@@ -788,8 +788,9 @@ class TichuGame {
     this.totalScores.teamA += roundScores.teamA;
     this.totalScores.teamB += roundScores.teamB;
 
-    // Check if game is over
-    if (this.totalScores.teamA >= this.targetScore || this.totalScores.teamB >= this.targetScore) {
+    // Check if game is over (tied scores → continue playing)
+    if ((this.totalScores.teamA >= this.targetScore || this.totalScores.teamB >= this.targetScore)
+        && this.totalScores.teamA !== this.totalScores.teamB) {
       this.state = STATE.GAME_END;
     }
 

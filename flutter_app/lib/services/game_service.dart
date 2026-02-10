@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'package:flutter/foundation.dart';
+import 'package:flutter/material.dart';
 import '../models/player.dart';
 import '../models/room.dart';
 import '../models/game_state.dart';
@@ -61,6 +62,11 @@ class GameService extends ChangeNotifier {
   List<Map<String, dynamic>> chatMessages = [];
   Set<String> blockedUsers = {};
   List<String> friends = [];
+  List<Map<String, dynamic>> friendsData = [];
+  List<String> pendingFriendRequests = [];
+  int pendingFriendRequestCount = 0;
+  List<Map<String, dynamic>> roomInvites = [];
+  Set<String> sentFriendRequests = {};
 
   // Profile
   Map<String, dynamic>? profileData;
@@ -84,6 +90,9 @@ class GameService extends ChangeNotifier {
   bool? lastPurchaseSuccess;
   bool lastPurchaseExtended = false;
 
+  // Equipped theme
+  String? equippedTheme;
+
   // Report result
   String? reportResultMessage;
   bool? reportResultSuccess;
@@ -96,6 +105,7 @@ class GameService extends ChangeNotifier {
   String? timeoutPlayerName; // show "시간 초과!" banner
   String? desertedPlayerName; // show desertion message
   String? desertedReason; // 'leave' or 'timeout'
+  int myTimeoutCount = 0; // Bug #6: own timeout count (0-2)
 
   // Dragon given
   String? dragonGivenMessage; // "OO이(가) OO에게 용을 줬습니다"
@@ -109,6 +119,34 @@ class GameService extends ChangeNotifier {
   // Helper: count of non-null players
   int get playerCount => roomPlayers.where((p) => p != null).length;
 
+  // Theme gradient colors based on equipped theme
+  List<Color> get themeGradient {
+    switch (equippedTheme) {
+      case 'theme_cotton':
+        return const [Color(0xFFFFF8F0), Color(0xFFFFE8D8), Color(0xFFFFF0E8)];
+      case 'theme_sky':
+        return const [Color(0xFFE8F4FD), Color(0xFFD0E8F8), Color(0xFFC4E0F4)];
+      case 'theme_mocha_30d':
+        return const [Color(0xFFF0E8E0), Color(0xFFE0D0C4), Color(0xFFD8C8BC)];
+      default:
+        return const [Color(0xFFF8F4F6), Color(0xFFEDE6F0), Color(0xFFE0ECF6)];
+    }
+  }
+
+  // Card back colors based on equipped theme: [background, border, innerBorder]
+  List<Color> get cardBackColors {
+    switch (equippedTheme) {
+      case 'theme_cotton':
+        return const [Color(0xFFFFF0E0), Color(0xFFE8D8C8), Color(0xFFF0E0D0)];
+      case 'theme_sky':
+        return const [Color(0xFFE0F0FF), Color(0xFFC8D8E8), Color(0xFFD0E0F0)];
+      case 'theme_mocha_30d':
+        return const [Color(0xFFF0E8E0), Color(0xFFD8CCC0), Color(0xFFE0D4C8)];
+      default:
+        return const [Color(0xFFFFF1F5), Color(0xFFE6DCE8), Color(0xFFEDE2EF)];
+    }
+  }
+
   void _handleMessage(Map<String, dynamic> data) {
     final type = data['type'] as String?;
     if (type == null) return;
@@ -117,6 +155,7 @@ class GameService extends ChangeNotifier {
       case 'login_success':
         playerId = data['playerId'] ?? '';
         playerName = data['nickname'] ?? '';
+        equippedTheme = data['themeKey'] as String?;
         loginError = null;
         notifyListeners();
         break;
@@ -373,6 +412,11 @@ class GameService extends ChangeNotifier {
         _handlePlayerDeserted(data);
         break;
 
+      case 'timeout_reset':
+        myTimeoutCount = 0;
+        notifyListeners();
+        break;
+
       // Chat
       case 'chat_message':
         final msg = {
@@ -421,11 +465,93 @@ class GameService extends ChangeNotifier {
 
       case 'friends_list':
         final friendsList = data['friends'] as List? ?? [];
-        friends = friendsList.map((f) => f.toString()).toList();
+        // Support both object array [{nickname, isOnline, ...}] and string array
+        if (friendsList.isNotEmpty && friendsList.first is Map) {
+          friendsData = friendsList.map((f) => Map<String, dynamic>.from(f as Map)).toList();
+          friends = friendsData.map((f) => f['nickname']?.toString() ?? '').toList();
+        } else {
+          friends = friendsList.map((f) => f.toString()).toList();
+          friendsData = friends.map((f) => <String, dynamic>{'nickname': f, 'isOnline': false}).toList();
+        }
         notifyListeners();
         break;
 
       case 'friend_result':
+        // Refresh friends list and pending requests after add action
+        requestFriends();
+        requestPendingFriendRequests();
+        notifyListeners();
+        break;
+
+      case 'pending_friend_requests':
+        final requests = data['requests'] as List? ?? [];
+        pendingFriendRequests = requests.map((r) => r.toString()).toList();
+        pendingFriendRequestCount = pendingFriendRequests.length;
+        notifyListeners();
+        break;
+
+      case 'friend_request_result':
+        // Refresh after accept/reject
+        requestFriends();
+        requestPendingFriendRequests();
+        notifyListeners();
+        break;
+
+      case 'friend_request_received':
+        // Someone sent us a friend request
+        final fromNickname = data['fromNickname'] as String? ?? '';
+        if (fromNickname.isNotEmpty && !pendingFriendRequests.contains(fromNickname)) {
+          pendingFriendRequests.add(fromNickname);
+          pendingFriendRequestCount = pendingFriendRequests.length;
+        }
+        notifyListeners();
+        break;
+
+      case 'friend_request_accepted':
+        // Our request was accepted — refresh friends
+        requestFriends();
+        notifyListeners();
+        break;
+
+      case 'friend_removed':
+        final removedNick = data['nickname'] as String? ?? '';
+        if (removedNick.isNotEmpty) {
+          friends.remove(removedNick);
+          friendsData.removeWhere((f) => f['nickname'] == removedNick);
+        }
+        notifyListeners();
+        break;
+
+      case 'friend_status_changed':
+        final nick = data['nickname'] as String? ?? '';
+        final isOnline = data['isOnline'] == true;
+        final idx = friendsData.indexWhere((f) => f['nickname'] == nick);
+        if (idx != -1) {
+          friendsData[idx]['isOnline'] = isOnline;
+          if (!isOnline) {
+            friendsData[idx]['roomId'] = null;
+            friendsData[idx]['roomName'] = null;
+          }
+        }
+        notifyListeners();
+        break;
+
+      case 'room_invite':
+        roomInvites.add(Map<String, dynamic>.from(data));
+        notifyListeners();
+        break;
+
+      case 'invite_result':
+        // Show feedback via errorMessage for now
+        if (data['success'] != true) {
+          errorMessage = data['message'] as String?;
+          notifyListeners();
+          Future.delayed(const Duration(seconds: 3), () {
+            if (_disposed) return;
+            errorMessage = null;
+            notifyListeners();
+          });
+        }
         notifyListeners();
         break;
 
@@ -503,6 +629,12 @@ class GameService extends ChangeNotifier {
           lastPurchaseSuccess = data['success'] == true;
           lastPurchaseExtended = data['extended'] == true;
         }
+        if (type == 'equip_result' && data['success'] == true) {
+          final themeKey = data['themeKey'] as String?;
+          if (themeKey != null) {
+            equippedTheme = themeKey;
+          }
+        }
         if (data['success'] != true) {
           reportResultMessage = data['message'] as String?;
           reportResultSuccess = false;
@@ -533,6 +665,14 @@ class GameService extends ChangeNotifier {
 
   void _handleTurnTimeout(Map<String, dynamic> data) {
     timeoutPlayerName = data['playerName'] as String? ?? '';
+    // Bug #6: Track own timeout count
+    final timeoutName = data['playerName'] as String? ?? '';
+    if (timeoutName == playerName) {
+      final count = data['count'];
+      if (count is int) {
+        myTimeoutCount = count;
+      }
+    }
     notifyListeners();
     Future.delayed(const Duration(seconds: 2), () {
       if (_disposed) return; // C2
@@ -624,6 +764,7 @@ class GameService extends ChangeNotifier {
   void reset() {
     playerId = '';
     playerName = '';
+    equippedTheme = null;
     currentRoomId = '';
     currentRoomName = '';
     roomPlayers = [null, null, null, null];
@@ -641,6 +782,11 @@ class GameService extends ChangeNotifier {
     errorMessage = null;
     chatMessages = [];
     profileData = null;
+    friendsData = [];
+    pendingFriendRequests = [];
+    pendingFriendRequestCount = 0;
+    roomInvites = [];
+    sentFriendRequests = {};
     clearAuthState();
     notifyListeners();
   }
@@ -732,6 +878,7 @@ class GameService extends ChangeNotifier {
     desertedPlayerName = null;
     desertedReason = null;
     dragonGivenMessage = null;
+    myTimeoutCount = 0;
     notifyListeners();
   }
 
@@ -782,6 +929,10 @@ class GameService extends ChangeNotifier {
 
   void dragonGive(String target) {
     _network.send({'type': 'dragon_give', 'target': target});
+  }
+
+  void resetTimeout() {
+    _network.send({'type': 'reset_timeout'});
   }
 
   void callRank(String rank) {
@@ -908,10 +1059,49 @@ class GameService extends ChangeNotifier {
   // Friends
   void addFriendAction(String nickname) {
     _network.send({'type': 'add_friend', 'nickname': nickname});
+    sentFriendRequests.add(nickname);
+    notifyListeners();
   }
 
   void requestFriends() {
     _network.send({'type': 'get_friends'});
+  }
+
+  void requestPendingFriendRequests() {
+    _network.send({'type': 'get_pending_friend_requests'});
+  }
+
+  void acceptFriendRequest(String nickname) {
+    _network.send({'type': 'accept_friend_request', 'nickname': nickname});
+  }
+
+  void rejectFriendRequest(String nickname) {
+    _network.send({'type': 'reject_friend_request', 'nickname': nickname});
+  }
+
+  void removeFriendAction(String nickname) {
+    _network.send({'type': 'remove_friend', 'nickname': nickname});
+  }
+
+  void inviteToRoom(String nickname) {
+    _network.send({'type': 'invite_to_room', 'nickname': nickname});
+  }
+
+  void acceptInvite(Map<String, dynamic> invite) {
+    final roomId = invite['roomId'] as String? ?? '';
+    final password = invite['password'] as String? ?? '';
+    if (roomId.isNotEmpty) {
+      joinRoom(roomId, password: password);
+    }
+    roomInvites.remove(invite);
+    notifyListeners();
+  }
+
+  void dismissInvite(int index) {
+    if (index >= 0 && index < roomInvites.length) {
+      roomInvites.removeAt(index);
+      notifyListeners();
+    }
   }
 
   // Inquiry

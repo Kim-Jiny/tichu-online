@@ -23,6 +23,7 @@ class _GameScreenState extends State<GameScreen> {
   final Map<String, String> _exchangeAssignments = {}; // position -> cardId
   final Map<String, String> _exchangeGiven = {}; // position -> cardId
   bool _exchangeSummaryShown = false;
+  bool _exchangeSubmitted = false;
 
   // 채팅
   bool _chatOpen = false;
@@ -37,6 +38,7 @@ class _GameScreenState extends State<GameScreen> {
   bool _leavingGame = false;
   NetworkService? _networkService; // C6: Cache for safe dispose
   bool _profileRequested = false; // C8: Prevent requestProfile loop
+  int _lastSeenMessageCount = 0; // Bug #2: Chat unread badge
 
   @override
   void initState() {
@@ -189,18 +191,15 @@ class _GameScreenState extends State<GameScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final themeColors = context.watch<GameService>().themeGradient;
     return ConnectionOverlay(
       child: Scaffold(
         body: Container(
-          decoration: const BoxDecoration(
+          decoration: BoxDecoration(
             gradient: LinearGradient(
               begin: Alignment.topCenter,
               end: Alignment.bottomCenter,
-              colors: [
-                Color(0xFFF8F4F6),
-                Color(0xFFEDE6F0),
-                Color(0xFFE0ECF6),
-              ],
+              colors: themeColors,
             ),
           ),
           child: SafeArea(
@@ -222,6 +221,20 @@ class _GameScreenState extends State<GameScreen> {
                 final state = game.gameState;
                 if (state == null) {
                 return const Center(child: CircularProgressIndicator());
+              }
+
+              // Bug #1: Clear exchange assignments when phase leaves card_exchange
+              if (state.phase != 'card_exchange') {
+                if (_exchangeAssignments.isNotEmpty || _exchangeSubmitted) {
+                  WidgetsBinding.instance.addPostFrameCallback((_) {
+                    if (!mounted) return;
+                    setState(() {
+                      _exchangeAssignments.clear();
+                      _selectedCards.clear();
+                      _exchangeSubmitted = false;
+                    });
+                  });
+                }
               }
 
               _maybeShowExchangeSummary(state);
@@ -288,42 +301,86 @@ class _GameScreenState extends State<GameScreen> {
                   if (game.cardViewers.isNotEmpty)
                     _buildCardViewersChips(game),
 
-                  // Countdown timer (top left)
-                  if (_remainingSeconds > 0)
+                  // Countdown timer + timeout count (top left)
+                  if (_remainingSeconds > 0 || game.myTimeoutCount > 0)
                     Positioned(
                       top: 8,
                       left: 8,
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                        decoration: BoxDecoration(
-                          color: _remainingSeconds <= 10
-                              ? const Color(0xFFFFE4E4)
-                              : Colors.white,
-                          borderRadius: BorderRadius.circular(12),
-                          border: Border.all(
-                            color: _remainingSeconds <= 10
-                                ? const Color(0xFFFF6B6B)
-                                : const Color(0xFFCCCCCC),
-                            width: _remainingSeconds <= 10 ? 2 : 1,
-                          ),
-                          boxShadow: [
-                            BoxShadow(
-                              color: Colors.black.withOpacity(0.1),
-                              blurRadius: 4,
-                              offset: const Offset(0, 2),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          if (_remainingSeconds > 0)
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                              decoration: BoxDecoration(
+                                color: _remainingSeconds <= 10
+                                    ? const Color(0xFFFFE4E4)
+                                    : Colors.white,
+                                borderRadius: BorderRadius.circular(12),
+                                border: Border.all(
+                                  color: _remainingSeconds <= 10
+                                      ? const Color(0xFFFF6B6B)
+                                      : const Color(0xFFCCCCCC),
+                                  width: _remainingSeconds <= 10 ? 2 : 1,
+                                ),
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: Colors.black.withOpacity(0.1),
+                                    blurRadius: 4,
+                                    offset: const Offset(0, 2),
+                                  ),
+                                ],
+                              ),
+                              child: Text(
+                                '${_remainingSeconds}초',
+                                style: TextStyle(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.bold,
+                                  color: _remainingSeconds <= 10
+                                      ? const Color(0xFFCC4444)
+                                      : const Color(0xFF5A4038),
+                                ),
+                              ),
+                            ),
+                          if (game.myTimeoutCount > 0) ...[
+                            const SizedBox(width: 6),
+                            GestureDetector(
+                              onTap: () => game.resetTimeout(),
+                              child: Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+                                decoration: BoxDecoration(
+                                  color: const Color(0xFFFFF3E0),
+                                  borderRadius: BorderRadius.circular(12),
+                                  border: Border.all(
+                                    color: const Color(0xFFFFB74D),
+                                    width: 1,
+                                  ),
+                                ),
+                                child: Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    Text(
+                                      '${game.myTimeoutCount}/3',
+                                      style: const TextStyle(
+                                        fontSize: 13,
+                                        fontWeight: FontWeight.bold,
+                                        color: Color(0xFFE65100),
+                                      ),
+                                    ),
+                                    const SizedBox(width: 4),
+                                    const Text(
+                                      '잠수아님',
+                                      style: TextStyle(
+                                        fontSize: 11,
+                                        color: Color(0xFFE65100),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
                             ),
                           ],
-                        ),
-                        child: Text(
-                          '${_remainingSeconds}초',
-                          style: TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.bold,
-                            color: _remainingSeconds <= 10
-                                ? const Color(0xFFCC4444)
-                                : const Color(0xFF5A4038),
-                          ),
-                        ),
+                        ],
                       ),
                     ),
 
@@ -378,31 +435,69 @@ class _GameScreenState extends State<GameScreen> {
   }
 
   Widget _buildChatButton(GameService game) {
-    final unreadCount = game.chatMessages.where((m) =>
+    final totalMessages = game.chatMessages.where((m) =>
       !game.isBlocked(m['sender'] as String? ?? '')
     ).length;
 
+    // Update seen count when chat is open
+    if (_chatOpen) {
+      _lastSeenMessageCount = totalMessages;
+    }
+    final unreadCount = totalMessages - _lastSeenMessageCount;
+
     return GestureDetector(
-      onTap: () => setState(() => _chatOpen = !_chatOpen),
-      child: Container(
-        padding: const EdgeInsets.all(8),
-        decoration: BoxDecoration(
-          color: _chatOpen
-              ? const Color(0xFF64B5F6)
-              : Colors.white.withValues(alpha: 0.8),
-          shape: BoxShape.circle,
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withValues(alpha: 0.1),
-              blurRadius: 4,
+      onTap: () => setState(() {
+        _chatOpen = !_chatOpen;
+        if (_chatOpen) {
+          _lastSeenMessageCount = totalMessages;
+        }
+      }),
+      child: Stack(
+        clipBehavior: Clip.none,
+        children: [
+          Container(
+            padding: const EdgeInsets.all(8),
+            decoration: BoxDecoration(
+              color: _chatOpen
+                  ? const Color(0xFF64B5F6)
+                  : Colors.white.withValues(alpha: 0.8),
+              shape: BoxShape.circle,
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: 0.1),
+                  blurRadius: 4,
+                ),
+              ],
             ),
-          ],
-        ),
-        child: Icon(
-          Icons.chat_bubble_outline,
-          color: _chatOpen ? Colors.white : const Color(0xFF5A4038),
-          size: 20,
-        ),
+            child: Icon(
+              Icons.chat_bubble_outline,
+              color: _chatOpen ? Colors.white : const Color(0xFF5A4038),
+              size: 20,
+            ),
+          ),
+          if (unreadCount > 0)
+            Positioned(
+              right: -4,
+              top: -4,
+              child: Container(
+                padding: const EdgeInsets.all(4),
+                decoration: const BoxDecoration(
+                  color: Color(0xFFE53935),
+                  shape: BoxShape.circle,
+                ),
+                constraints: const BoxConstraints(minWidth: 18, minHeight: 18),
+                child: Text(
+                  unreadCount > 9 ? '9+' : '$unreadCount',
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 10,
+                    fontWeight: FontWeight.bold,
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+              ),
+            ),
+        ],
       ),
     );
   }
@@ -1767,12 +1862,21 @@ class _GameScreenState extends State<GameScreen> {
 
   Widget _buildLatestTrick(GameStateData state) {
     final lastPlay = state.currentTrick.last;
+    // Bug #9: Determine team color from player position
+    final isMyTeam = state.players.any((p) =>
+      (p.position == 'self' || p.position == 'partner') && p.id == lastPlay.playerId);
+    final trickBgColor = isMyTeam
+        ? const Color(0xFFE3F0FF) // blue tint for my team
+        : const Color(0xFFFFE8EC); // pink tint for opponent
+    final trickBorderColor = isMyTeam
+        ? const Color(0xFFB3D4F7)
+        : const Color(0xFFF5C0C8);
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
       decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.9),
+        color: trickBgColor,
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: const Color(0xFFE6DCE8)),
+        border: Border.all(color: trickBorderColor),
       ),
       child: Column(
         children: [
@@ -2066,6 +2170,7 @@ class _GameScreenState extends State<GameScreen> {
                               _exchangeAssignments['right']!,
                             );
                             setState(() {
+                              _exchangeSubmitted = true;
                               _exchangeAssignments.clear();
                               _selectedCards.clear();
                             });
@@ -2763,8 +2868,14 @@ class _GameScreenState extends State<GameScreen> {
   }
 
   Widget _buildHandRows(GameStateData state) {
-    final cards = state.myCards;
+    List<String> cards = state.myCards;
     final isExchangePhase = state.phase == 'card_exchange' && !state.exchangeDone;
+
+    // Bug #5: Hide submitted exchange cards from hand display
+    if (_exchangeSubmitted && state.exchangeDone && _exchangeGiven.isNotEmpty) {
+      final givenCards = _exchangeGiven.values.toSet();
+      cards = cards.where((c) => !givenCards.contains(c)).toList();
+    }
 
     // 교환 단계에서 이미 할당된 카드는 선택 불가
     bool isCardAssigned(String cardId) => _exchangeAssignments.containsValue(cardId);

@@ -37,6 +37,8 @@ class _LobbyScreenState extends State<LobbyScreen> {
       game.requestRoomList();
       game.requestSpectatableRooms();
       game.requestBlockedUsers();
+      game.requestFriends();
+      game.requestPendingFriendRequests();
       _networkService = context.read<NetworkService>();
       _networkService!.addListener(_onNetworkChanged);
     });
@@ -64,6 +66,184 @@ class _LobbyScreenState extends State<LobbyScreen> {
     _chatController.dispose();
     _chatScrollController.dispose();
     super.dispose();
+  }
+
+  void _showRoomInviteDialog(Map<String, dynamic> invite, GameService game) {
+    final fromNickname = invite['fromNickname'] as String? ?? '';
+    final roomName = invite['roomName'] as String? ?? '';
+    final isRanked = invite['isRanked'] == true;
+
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: const Row(
+          children: [
+            Icon(Icons.mail, color: Color(0xFF7E57C2)),
+            SizedBox(width: 8),
+            Text('방 초대'),
+          ],
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(
+              '$fromNickname님이 방에 초대했습니다!',
+              style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w600),
+            ),
+            const SizedBox(height: 8),
+            Container(
+              padding: const EdgeInsets.all(10),
+              decoration: BoxDecoration(
+                color: const Color(0xFFF3E5F5),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Row(
+                children: [
+                  if (isRanked) const Text('🏆 ', style: TextStyle(fontSize: 14)),
+                  Expanded(
+                    child: Text(
+                      roomName,
+                      style: const TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.bold,
+                        color: Color(0xFF5A4038),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('거절'),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              Navigator.pop(ctx);
+              game.acceptInvite(invite);
+              setState(() => _inRoom = true);
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: const Color(0xFF7E57C2),
+              foregroundColor: Colors.white,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            ),
+            child: const Text('참여'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showInviteFriendsDialog(GameService game) {
+    game.requestFriends();
+    showDialog(
+      context: context,
+      builder: (ctx) => Consumer<GameService>(
+        builder: (ctx, game, _) {
+          final onlineFriends = game.friendsData
+              .where((f) => f['isOnline'] == true && f['roomId'] == null)
+              .toList();
+          return AlertDialog(
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+            title: const Row(
+              children: [
+                Icon(Icons.person_add, color: Color(0xFF7E57C2)),
+                SizedBox(width: 8),
+                Text('친구 초대'),
+              ],
+            ),
+            content: onlineFriends.isEmpty
+                ? const SizedBox(
+                    height: 60,
+                    child: Center(
+                      child: Text(
+                        '초대 가능한 온라인 친구가 없습니다',
+                        style: TextStyle(color: Color(0xFF9A8E8A)),
+                      ),
+                    ),
+                  )
+                : SizedBox(
+                    width: double.maxFinite,
+                    height: 250,
+                    child: ListView.separated(
+                      itemCount: onlineFriends.length,
+                      separatorBuilder: (_, __) => const SizedBox(height: 6),
+                      itemBuilder: (context, index) {
+                        final friend = onlineFriends[index];
+                        final nickname = friend['nickname'] as String? ?? '';
+                        return Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFF1F8E9),
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(color: const Color(0xFFC8E6C9)),
+                          ),
+                          child: Row(
+                            children: [
+                              Container(
+                                width: 8,
+                                height: 8,
+                                decoration: const BoxDecoration(
+                                  shape: BoxShape.circle,
+                                  color: Color(0xFF4CAF50),
+                                ),
+                              ),
+                              const SizedBox(width: 10),
+                              Expanded(
+                                child: Text(
+                                  nickname,
+                                  style: const TextStyle(
+                                    fontSize: 14,
+                                    fontWeight: FontWeight.w600,
+                                    color: Color(0xFF5A4038),
+                                  ),
+                                ),
+                              ),
+                              GestureDetector(
+                                onTap: () {
+                                  game.inviteToRoom(nickname);
+                                  Navigator.pop(ctx);
+                                  ScaffoldMessenger.of(this.context).showSnackBar(
+                                    SnackBar(content: Text('$nickname님에게 초대를 보냈습니다')),
+                                  );
+                                },
+                                child: Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                                  decoration: BoxDecoration(
+                                    color: const Color(0xFF7E57C2),
+                                    borderRadius: BorderRadius.circular(8),
+                                  ),
+                                  child: const Text(
+                                    '초대',
+                                    style: TextStyle(
+                                      fontSize: 12,
+                                      fontWeight: FontWeight.bold,
+                                      color: Colors.white,
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        );
+                      },
+                    ),
+                  ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(ctx),
+                child: const Text('닫기'),
+              ),
+            ],
+          );
+        },
+      ),
+    );
   }
 
   void _showComingSoonDialog(String feature) {
@@ -577,6 +757,17 @@ class _LobbyScreenState extends State<LobbyScreen> {
         child: SafeArea(
           child: Consumer<GameService>(
             builder: (context, game, _) {
+              // Show room invite dialog if any
+              if (game.roomInvites.isNotEmpty) {
+                WidgetsBinding.instance.addPostFrameCallback((_) {
+                  if (!mounted || game.roomInvites.isEmpty) return;
+                  final invite = game.roomInvites.first;
+                  game.roomInvites.removeAt(0);
+                  game.notifyListeners();
+                  _showRoomInviteDialog(invite, game);
+                });
+              }
+
               // Sync local room flag with server state
               if (game.currentRoomId.isEmpty && _inRoom) {
                 _inRoom = false;
@@ -635,20 +826,20 @@ class _LobbyScreenState extends State<LobbyScreen> {
       children: [
         // Top bar with menu icons
         Container(
-          padding: const EdgeInsets.all(16),
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
           decoration: BoxDecoration(
             color: Colors.white.withValues(alpha: 0.95),
             borderRadius: BorderRadius.circular(18),
           ),
           margin: const EdgeInsets.all(16),
+          clipBehavior: Clip.none,
           child: Row(
             children: [
-              const Text(
-                '게임 라운지',
-                style: TextStyle(
-                  fontSize: 22,
-                  fontWeight: FontWeight.bold,
-                  color: Color(0xFF5A4038),
+              ConstrainedBox(
+                constraints: const BoxConstraints(maxHeight: 44),
+                child: Image.asset(
+                  'assets/logo2.png',
+                  fit: BoxFit.contain,
                 ),
               ),
               const Spacer(),
@@ -663,6 +854,43 @@ class _LobbyScreenState extends State<LobbyScreen> {
                         MaterialPageRoute(builder: (_) => const ShopScreen()),
                       );
                     },
+                  ),
+                  const SizedBox(width: 8),
+                  // Friends button with badge
+                  Stack(
+                    children: [
+                      _buildIconButton(
+                        icon: Icons.people,
+                        color: const Color(0xFF7E57C2),
+                        onTap: () {
+                          game.requestFriends();
+                          game.requestPendingFriendRequests();
+                          _showFriendsDialog(game);
+                        },
+                      ),
+                      if (game.pendingFriendRequestCount > 0)
+                        Positioned(
+                          right: 0,
+                          top: 0,
+                          child: Container(
+                            padding: const EdgeInsets.all(4),
+                            decoration: const BoxDecoration(
+                              color: Color(0xFFE53935),
+                              shape: BoxShape.circle,
+                            ),
+                            constraints: const BoxConstraints(minWidth: 16, minHeight: 16),
+                            child: Text(
+                              '${game.pendingFriendRequestCount}',
+                              style: const TextStyle(
+                                color: Colors.white,
+                                fontSize: 9,
+                                fontWeight: FontWeight.bold,
+                              ),
+                              textAlign: TextAlign.center,
+                            ),
+                          ),
+                        ),
+                    ],
                   ),
                   const SizedBox(width: 8),
                   _buildIconButton(
@@ -693,79 +921,483 @@ class _LobbyScreenState extends State<LobbyScreen> {
           ),
         ),
 
-        // Room list
+        // Room list or Friends panel
         Expanded(
-          child: Container(
-            margin: const EdgeInsets.symmetric(horizontal: 16),
-            padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(
-              color: Colors.white.withOpacity(0.95),
-              borderRadius: BorderRadius.circular(24),
-              boxShadow: [
-                BoxShadow(
-                  color: const Color(0xFFD9CCC8).withOpacity(0.6),
-                  blurRadius: 20,
-                  offset: const Offset(0, 10),
-                ),
-              ],
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  children: [
-                    const Text(
-                      '게임 방 리스트',
-                      style: TextStyle(
-                        fontSize: 16,
-                        color: Color(0xFF8A7A72),
-                      ),
-                    ),
-                    const Spacer(),
-                    IconButton(
-                      onPressed: () {
-                        game.requestRoomList();
-                      },
-                      icon: const Icon(Icons.refresh),
-                      color: const Color(0xFF8A7A72),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 8),
-                Expanded(
-                  child: game.roomList.isEmpty
-                      ? _buildEmptyRoomList()
-                      : _buildRoomList(game.roomList),
-                ),
-                const SizedBox(height: 16),
-                SizedBox(
-                  width: double.infinity,
-                  height: 52,
-                  child: ElevatedButton(
-                    onPressed: _showCreateRoomDialog,
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: const Color(0xFFC7E6D0),
-                      foregroundColor: const Color(0xFF3A5A40),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(20),
-                      ),
-                      elevation: 0,
-                    ),
-                    child: const Text(
-                      '새 방 만들기',
-                      style: TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ),
+          child: _buildRoomListPanel(game),
         ),
         const SizedBox(height: 16),
       ],
+    );
+  }
+
+  Widget _buildRoomListPanel(GameService game) {
+    return Container(
+      margin: const EdgeInsets.symmetric(horizontal: 16),
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white.withOpacity(0.95),
+        borderRadius: BorderRadius.circular(24),
+        boxShadow: [
+          BoxShadow(
+            color: const Color(0xFFD9CCC8).withOpacity(0.6),
+            blurRadius: 20,
+            offset: const Offset(0, 10),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              const Text(
+                '게임 방 리스트',
+                style: TextStyle(
+                  fontSize: 16,
+                  color: Color(0xFF8A7A72),
+                ),
+              ),
+              const Spacer(),
+              IconButton(
+                onPressed: () {
+                  game.requestRoomList();
+                },
+                icon: const Icon(Icons.refresh),
+                color: const Color(0xFF8A7A72),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          Expanded(
+            child: game.roomList.isEmpty
+                ? _buildEmptyRoomList()
+                : _buildRoomList(game.roomList),
+          ),
+          const SizedBox(height: 16),
+          SizedBox(
+            width: double.infinity,
+            height: 52,
+            child: ElevatedButton(
+              onPressed: _showCreateRoomDialog,
+              style: ElevatedButton.styleFrom(
+                backgroundColor: const Color(0xFFC7E6D0),
+                foregroundColor: const Color(0xFF3A5A40),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(20),
+                ),
+                elevation: 0,
+              ),
+              child: const Text(
+                '새 방 만들기',
+                style: TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showFriendsDialog(GameService game) {
+    showDialog(
+      context: context,
+      builder: (ctx) {
+        return Consumer<GameService>(
+          builder: (context, game, _) {
+            final sortedFriends = List<Map<String, dynamic>>.from(game.friendsData);
+            sortedFriends.sort((a, b) {
+              final aOnline = a['isOnline'] == true ? 0 : 1;
+              final bOnline = b['isOnline'] == true ? 0 : 1;
+              return aOnline.compareTo(bOnline);
+            });
+
+            return AlertDialog(
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+              title: Row(
+                children: [
+                  const Icon(Icons.people, size: 18, color: Color(0xFF7E57C2)),
+                  const SizedBox(width: 6),
+                  const Text(
+                    '친구 목록',
+                    style: TextStyle(fontSize: 16, color: Color(0xFF8A7A72)),
+                  ),
+                  const SizedBox(width: 8),
+                  if (game.pendingFriendRequestCount > 0)
+                    GestureDetector(
+                      onTap: () {
+                        Navigator.pop(ctx);
+                        _showPendingRequestsDialog(game);
+                      },
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFFFEBEE),
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: Text(
+                          '요청 ${game.pendingFriendRequestCount}건',
+                          style: const TextStyle(
+                            fontSize: 11,
+                            fontWeight: FontWeight.bold,
+                            color: Color(0xFFE53935),
+                          ),
+                        ),
+                      ),
+                    ),
+                  const Spacer(),
+                  IconButton(
+                    onPressed: () {
+                      game.requestFriends();
+                      game.requestPendingFriendRequests();
+                    },
+                    icon: const Icon(Icons.refresh, size: 20),
+                    color: const Color(0xFF8A7A72),
+                    padding: EdgeInsets.zero,
+                    constraints: const BoxConstraints(),
+                  ),
+                ],
+              ),
+              content: SizedBox(
+                width: double.maxFinite,
+                height: 400,
+                child: sortedFriends.isEmpty
+                    ? const Center(
+                        child: Text(
+                          '친구가 없어요!\n채팅에서 친구를 추가해보세요.',
+                          textAlign: TextAlign.center,
+                          style: TextStyle(fontSize: 14, color: Color(0xFF9A8E8A)),
+                        ),
+                      )
+                    : ListView.separated(
+                        itemCount: sortedFriends.length,
+                        separatorBuilder: (_, __) => const SizedBox(height: 6),
+                        itemBuilder: (context, index) {
+                          final friend = sortedFriends[index];
+                          final nickname = friend['nickname'] as String? ?? '';
+                          final isOnline = friend['isOnline'] == true;
+                          final roomName = friend['roomName'] as String?;
+
+                          String statusText;
+                          if (isOnline && roomName != null && roomName.isNotEmpty) {
+                            statusText = '$roomName에서 게임중';
+                          } else if (isOnline) {
+                            statusText = '온라인';
+                          } else {
+                            statusText = '오프라인';
+                          }
+
+                          return GestureDetector(
+                            onTap: () {
+                              Navigator.pop(ctx);
+                              _showUserProfileDialog(nickname, game);
+                            },
+                            child: Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                            decoration: BoxDecoration(
+                              color: isOnline ? const Color(0xFFF1F8E9) : const Color(0xFFFAF6F4),
+                              borderRadius: BorderRadius.circular(12),
+                              border: Border.all(
+                                color: isOnline ? const Color(0xFFC8E6C9) : const Color(0xFFDDD0CC),
+                              ),
+                            ),
+                            child: Row(
+                              children: [
+                                Container(
+                                  width: 8,
+                                  height: 8,
+                                  decoration: BoxDecoration(
+                                    shape: BoxShape.circle,
+                                    color: isOnline
+                                        ? const Color(0xFF4CAF50)
+                                        : const Color(0xFFBDBDBD),
+                                  ),
+                                ),
+                                const SizedBox(width: 10),
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        nickname,
+                                        style: const TextStyle(
+                                          fontSize: 14,
+                                          fontWeight: FontWeight.w600,
+                                          color: Color(0xFF5A4038),
+                                        ),
+                                      ),
+                                      const SizedBox(height: 2),
+                                      Text(
+                                        statusText,
+                                        style: TextStyle(
+                                          fontSize: 11,
+                                          color: isOnline
+                                              ? const Color(0xFF4CAF50)
+                                              : const Color(0xFF9A8E8A),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                                // Invite button (I'm in a room, friend is online & not in a room)
+                                if (isOnline && friend['roomId'] == null && game.currentRoomId.isNotEmpty)
+                                  Padding(
+                                    padding: const EdgeInsets.only(right: 6),
+                                    child: GestureDetector(
+                                      onTap: () {
+                                        game.inviteToRoom(nickname);
+                                        Navigator.pop(ctx);
+                                        ScaffoldMessenger.of(this.context).showSnackBar(
+                                          SnackBar(content: Text('$nickname님에게 초대를 보냈습니다')),
+                                        );
+                                      },
+                                      child: Container(
+                                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                        decoration: BoxDecoration(
+                                          color: const Color(0xFFE3F2FD),
+                                          borderRadius: BorderRadius.circular(8),
+                                        ),
+                                        child: const Row(
+                                          mainAxisSize: MainAxisSize.min,
+                                          children: [
+                                            Icon(Icons.send, size: 12, color: Color(0xFF1976D2)),
+                                            SizedBox(width: 4),
+                                            Text('초대', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Color(0xFF1976D2))),
+                                          ],
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                // Join/Spectate button (friend is in a room, I'm not in a room)
+                                if (friend['roomId'] != null && game.currentRoomId.isEmpty) ...[
+                                  () {
+                                    final roomId = friend['roomId'] as String;
+                                    final roomInGame = friend['roomInGame'] == true;
+                                    final roomPlayerCount = friend['roomPlayerCount'] as int? ?? 4;
+                                    final roomPassword = friend['roomPassword'] as String? ?? '';
+                                    final canJoin = !roomInGame && roomPlayerCount < 4;
+                                    return Padding(
+                                      padding: const EdgeInsets.only(right: 6),
+                                      child: GestureDetector(
+                                        onTap: () {
+                                          Navigator.pop(ctx);
+                                          if (canJoin) {
+                                            game.joinRoom(roomId, password: roomPassword);
+                                            setState(() => _inRoom = true);
+                                          } else {
+                                            game.spectateRoom(roomId);
+                                          }
+                                        },
+                                        child: Container(
+                                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                          decoration: BoxDecoration(
+                                            color: canJoin ? const Color(0xFFE8F5E9) : const Color(0xFFFFF3E0),
+                                            borderRadius: BorderRadius.circular(8),
+                                          ),
+                                          child: Row(
+                                            mainAxisSize: MainAxisSize.min,
+                                            children: [
+                                              Icon(canJoin ? Icons.login : Icons.visibility, size: 12, color: canJoin ? const Color(0xFF388E3C) : const Color(0xFFE65100)),
+                                              const SizedBox(width: 4),
+                                              Text(
+                                                canJoin ? '입장' : '관전',
+                                                style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: canJoin ? const Color(0xFF388E3C) : const Color(0xFFE65100)),
+                                              ),
+                                            ],
+                                          ),
+                                        ),
+                                      ),
+                                    );
+                                  }(),
+                                ],
+                                GestureDetector(
+                                  onTap: () {
+                                    Navigator.pop(ctx);
+                                    _showRemoveFriendConfirmation(nickname, game);
+                                  },
+                                  child: Container(
+                                    padding: const EdgeInsets.all(4),
+                                    decoration: BoxDecoration(
+                                      color: const Color(0xFFFFEBEE),
+                                      borderRadius: BorderRadius.circular(8),
+                                    ),
+                                    child: const Icon(Icons.person_remove, size: 14, color: Color(0xFFE57373)),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                          );
+                        },
+                      ),
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.pop(ctx),
+                  child: const Text('닫기'),
+                ),
+              ],
+            );
+          },
+        );
+      },
+    );
+  }
+
+  void _showPendingRequestsDialog(GameService game) {
+    showDialog(
+      context: context,
+      builder: (ctx) => Consumer<GameService>(
+        builder: (ctx, game, _) {
+          return AlertDialog(
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+            title: const Row(
+              children: [
+                Icon(Icons.person_add, color: Color(0xFF7E57C2)),
+                SizedBox(width: 8),
+                Text('받은 친구 요청'),
+              ],
+            ),
+            content: game.pendingFriendRequests.isEmpty
+                ? const SizedBox(
+                    height: 60,
+                    child: Center(
+                      child: Text(
+                        '받은 요청이 없습니다',
+                        style: TextStyle(color: Color(0xFF9A8E8A)),
+                      ),
+                    ),
+                  )
+                : SizedBox(
+                    width: double.maxFinite,
+                    height: 300,
+                    child: ListView.separated(
+                      itemCount: game.pendingFriendRequests.length,
+                      separatorBuilder: (_, __) => const SizedBox(height: 8),
+                      itemBuilder: (context, index) {
+                        final nickname = game.pendingFriendRequests[index];
+                        return Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFF3E5F5),
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(color: const Color(0xFFCE93D8)),
+                          ),
+                          child: Row(
+                            children: [
+                              CircleAvatar(
+                                radius: 14,
+                                backgroundColor: const Color(0xFFCE93D8),
+                                child: Text(
+                                  nickname.isNotEmpty ? nickname[0] : '?',
+                                  style: const TextStyle(fontSize: 12, color: Colors.white),
+                                ),
+                              ),
+                              const SizedBox(width: 10),
+                              Expanded(
+                                child: Text(
+                                  nickname,
+                                  style: const TextStyle(
+                                    fontSize: 14,
+                                    fontWeight: FontWeight.w600,
+                                    color: Color(0xFF5A4038),
+                                  ),
+                                ),
+                              ),
+                              // Accept
+                              GestureDetector(
+                                onTap: () {
+                                  game.acceptFriendRequest(nickname);
+                                  ScaffoldMessenger.of(this.context).showSnackBar(
+                                    SnackBar(content: Text('$nickname님과 친구가 되었습니다')),
+                                  );
+                                },
+                                child: Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                                  decoration: BoxDecoration(
+                                    color: const Color(0xFF81C784),
+                                    borderRadius: BorderRadius.circular(8),
+                                  ),
+                                  child: const Text(
+                                    '수락',
+                                    style: TextStyle(
+                                      fontSize: 12,
+                                      fontWeight: FontWeight.bold,
+                                      color: Colors.white,
+                                    ),
+                                  ),
+                                ),
+                              ),
+                              const SizedBox(width: 6),
+                              // Reject
+                              GestureDetector(
+                                onTap: () {
+                                  game.rejectFriendRequest(nickname);
+                                },
+                                child: Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                                  decoration: BoxDecoration(
+                                    color: const Color(0xFFE57373),
+                                    borderRadius: BorderRadius.circular(8),
+                                  ),
+                                  child: const Text(
+                                    '거절',
+                                    style: TextStyle(
+                                      fontSize: 12,
+                                      fontWeight: FontWeight.bold,
+                                      color: Colors.white,
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        );
+                      },
+                    ),
+                  ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(ctx),
+                child: const Text('닫기'),
+              ),
+            ],
+          );
+        },
+      ),
+    );
+  }
+
+  void _showRemoveFriendConfirmation(String nickname, GameService game) {
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: const Text('친구 삭제'),
+        content: Text('$nickname님을 친구 목록에서 삭제하시겠습니까?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('취소'),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              Navigator.pop(ctx);
+              game.removeFriendAction(nickname);
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(content: Text('$nickname님을 친구 목록에서 삭제했습니다')),
+              );
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: const Color(0xFFE57373),
+              foregroundColor: Colors.white,
+            ),
+            child: const Text('삭제'),
+          ),
+        ],
+      ),
     );
   }
 
@@ -970,6 +1602,33 @@ class _LobbyScreenState extends State<LobbyScreen> {
                     overflow: TextOverflow.ellipsis,
                   ),
                 ),
+                // Invite friends button
+                GestureDetector(
+                  onTap: () => _showInviteFriendsDialog(game),
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFF3E5F5),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: const Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(Icons.person_add, size: 14, color: Color(0xFF7E57C2)),
+                        SizedBox(width: 4),
+                        Text(
+                          '초대',
+                          style: TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.bold,
+                            color: Color(0xFF7E57C2),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 6),
                 // Switch to spectator button
                 GestureDetector(
                   onTap: () => game.switchToSpectator(),
@@ -1092,10 +1751,10 @@ class _LobbyScreenState extends State<LobbyScreen> {
                           ),
                           const SizedBox(height: 12),
                           for (int i = 0; i < 4; i++) ...[
-                            _buildPlayerSlot(
-                              game.roomPlayers[i]?.name,
-                              index: i + 1,
-                              isHost: game.roomPlayers[i]?.isHost ?? false,
+                            _buildClickablePlayerSlot(
+                              game.roomPlayers[i],
+                              slotIndex: i,
+                              game: game,
                             ),
                             if (i < 3) const SizedBox(height: 8),
                           ],
@@ -1732,17 +2391,33 @@ class _LobbyScreenState extends State<LobbyScreen> {
                         ),
                       ),
                       if (!isMe) ...[
-                        _buildTitleIconButton(
-                          icon: Icons.person_add,
-                          color: const Color(0xFF81C784),
-                          tooltip: '친구 추가',
-                          onTap: () {
-                            game.addFriendAction(nickname);
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(content: Text('친구 요청을 보냈습니다')),
-                            );
-                          },
-                        ),
+                        if (game.friends.contains(nickname))
+                          _buildTitleIconButton(
+                            icon: Icons.check,
+                            color: const Color(0xFFBDBDBD),
+                            tooltip: '이미 친구',
+                            onTap: () {},
+                          )
+                        else if (game.sentFriendRequests.contains(nickname))
+                          _buildTitleIconButton(
+                            icon: Icons.hourglass_top,
+                            color: const Color(0xFFBDBDBD),
+                            tooltip: '요청중',
+                            onTap: () {},
+                          )
+                        else
+                          _buildTitleIconButton(
+                            icon: Icons.person_add,
+                            color: const Color(0xFF81C784),
+                            tooltip: '친구 추가',
+                            onTap: () {
+                              game.addFriendAction(nickname);
+                              Navigator.pop(ctx);
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(content: Text('친구 요청을 보냈습니다')),
+                              );
+                            },
+                          ),
                         const SizedBox(width: 6),
                         _buildTitleIconButton(
                           icon: isBlockedUser ? Icons.block : Icons.shield_outlined,
@@ -1770,7 +2445,9 @@ class _LobbyScreenState extends State<LobbyScreen> {
                           height: 100,
                           child: Center(child: CircularProgressIndicator()),
                         )
-                      : _buildProfileContent(profile, game),
+                      : SingleChildScrollView(
+                          child: _buildProfileContent(profile, game),
+                        ),
                   actions: [
                     TextButton(
                       onPressed: () => Navigator.pop(ctx),
@@ -2171,69 +2848,7 @@ class _LobbyScreenState extends State<LobbyScreen> {
           else
             Column(
               children: recentMatches.take(3).map<Widget>((match) {
-                final won = match['won'] == true;
-                final teamAScore = match['teamAScore'] ?? 0;
-                final teamBScore = match['teamBScore'] ?? 0;
-                final teamA = _formatTeam(match['playerA1'], match['playerA2']);
-                final teamB = _formatTeam(match['playerB1'], match['playerB2']);
-                final date = _formatShortDate(match['createdAt']);
-                return Padding(
-                  padding: const EdgeInsets.only(bottom: 6),
-                  child: Row(
-                    children: [
-                      Container(
-                        width: 24,
-                        height: 24,
-                        alignment: Alignment.center,
-                        decoration: BoxDecoration(
-                          color: won ? const Color(0xFF81C784) : const Color(0xFFE57373),
-                          shape: BoxShape.circle,
-                        ),
-                        child: Text(
-                          won ? 'W' : 'L',
-                          style: const TextStyle(
-                            color: Colors.white,
-                            fontSize: 11,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                      ),
-                      const SizedBox(width: 8),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              date,
-                              style: const TextStyle(
-                                fontSize: 11,
-                                color: Color(0xFF8A8A8A),
-                              ),
-                            ),
-                            const SizedBox(height: 2),
-                            Text(
-                              '$teamA : $teamB',
-                              style: const TextStyle(
-                                fontSize: 12,
-                                fontWeight: FontWeight.bold,
-                                color: Color(0xFF5A4038),
-                              ),
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                          ],
-                        ),
-                      ),
-                      Text(
-                        '$teamAScore : $teamBScore',
-                        style: const TextStyle(
-                          fontSize: 12,
-                          fontWeight: FontWeight.bold,
-                          color: Color(0xFF5A4038),
-                        ),
-                      ),
-                    ],
-                  ),
-                );
+                return _buildMatchRow(match);
               }).toList(),
             ),
         ],
@@ -2254,67 +2869,7 @@ class _LobbyScreenState extends State<LobbyScreen> {
             itemCount: recentMatches.length,
             separatorBuilder: (_, __) => const Divider(height: 16),
             itemBuilder: (_, index) {
-              final match = recentMatches[index];
-              final won = match['won'] == true;
-              final teamAScore = match['teamAScore'] ?? 0;
-              final teamBScore = match['teamBScore'] ?? 0;
-              final teamA = _formatTeam(match['playerA1'], match['playerA2']);
-              final teamB = _formatTeam(match['playerB1'], match['playerB2']);
-              final date = _formatShortDate(match['createdAt']);
-              return Row(
-                children: [
-                  Container(
-                    width: 24,
-                    height: 24,
-                    alignment: Alignment.center,
-                    decoration: BoxDecoration(
-                      color: won ? const Color(0xFF81C784) : const Color(0xFFE57373),
-                      shape: BoxShape.circle,
-                    ),
-                    child: Text(
-                      won ? 'W' : 'L',
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontSize: 11,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                  ),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          date,
-                          style: const TextStyle(
-                            fontSize: 11,
-                            color: Color(0xFF8A8A8A),
-                          ),
-                        ),
-                        const SizedBox(height: 2),
-                        Text(
-                          '$teamA : $teamB',
-                          style: const TextStyle(
-                            fontSize: 12,
-                            fontWeight: FontWeight.bold,
-                            color: Color(0xFF5A4038),
-                          ),
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                      ],
-                    ),
-                  ),
-                  Text(
-                    '$teamAScore : $teamBScore',
-                    style: const TextStyle(
-                      fontSize: 12,
-                      fontWeight: FontWeight.bold,
-                      color: Color(0xFF5A4038),
-                    ),
-                  ),
-                ],
-              );
+              return _buildMatchRow(recentMatches[index]);
             },
           ),
         ),
@@ -2322,6 +2877,112 @@ class _LobbyScreenState extends State<LobbyScreen> {
           TextButton(
             onPressed: () => Navigator.pop(ctx),
             child: const Text('닫기'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildMatchRow(dynamic match) {
+    final isDraw = match['isDraw'] == true;
+    final won = !isDraw && match['won'] == true;
+    final teamAScore = match['teamAScore'] ?? 0;
+    final teamBScore = match['teamBScore'] ?? 0;
+    final teamA = _formatTeam(match['playerA1'], match['playerA2']);
+    final teamB = _formatTeam(match['playerB1'], match['playerB2']);
+    final date = _formatShortDate(match['createdAt']);
+    final isRanked = match['isRanked'] == true;
+
+    final Color badgeColor;
+    final String badgeText;
+    if (isDraw) {
+      badgeColor = const Color(0xFFBDBDBD);
+      badgeText = '무';
+    } else if (won) {
+      badgeColor = const Color(0xFF81C784);
+      badgeText = '승';
+    } else {
+      badgeColor = const Color(0xFFE57373);
+      badgeText = '패';
+    }
+
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 6),
+      child: Row(
+        children: [
+          Container(
+            width: 24,
+            height: 24,
+            alignment: Alignment.center,
+            decoration: BoxDecoration(
+              color: badgeColor,
+              shape: BoxShape.circle,
+            ),
+            child: Text(
+              badgeText,
+              style: const TextStyle(
+                color: Colors.white,
+                fontSize: 11,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+          ),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Text(
+                      date,
+                      style: const TextStyle(
+                        fontSize: 11,
+                        color: Color(0xFF8A8A8A),
+                      ),
+                    ),
+                    const SizedBox(width: 6),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
+                      decoration: BoxDecoration(
+                        color: isRanked
+                            ? const Color(0xFFFFF3E0)
+                            : const Color(0xFFF5F5F5),
+                        borderRadius: BorderRadius.circular(6),
+                      ),
+                      child: Text(
+                        isRanked ? '랭크' : '일반',
+                        style: TextStyle(
+                          fontSize: 9,
+                          fontWeight: FontWeight.bold,
+                          color: isRanked
+                              ? const Color(0xFFE65100)
+                              : const Color(0xFF9E9E9E),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  '$teamA : $teamB',
+                  style: const TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.bold,
+                    color: Color(0xFF5A4038),
+                  ),
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ],
+            ),
+          ),
+          Text(
+            '$teamAScore : $teamBScore',
+            style: const TextStyle(
+              fontSize: 12,
+              fontWeight: FontWeight.bold,
+              color: Color(0xFF5A4038),
+            ),
           ),
         ],
       ),
@@ -2452,6 +3113,12 @@ class _LobbyScreenState extends State<LobbyScreen> {
                 padding: EdgeInsets.only(right: 6),
                 child: Icon(Icons.block, size: 14, color: Color(0xFFE57373)),
               ),
+            // Bug #8: Disconnected indicator
+            if (player != null && !player.connected)
+              const Padding(
+                padding: EdgeInsets.only(right: 6),
+                child: Icon(Icons.wifi_off, size: 14, color: Color(0xFFFF8A65)),
+              ),
             Expanded(
               child: Text(
                 player?.name ?? '[빈 자리]',
@@ -2461,9 +3128,11 @@ class _LobbyScreenState extends State<LobbyScreen> {
                       ? const Color(0xFF3949AB)
                       : isBlockedPlayer
                           ? const Color(0xFFBB8888)
-                          : player != null
-                              ? const Color(0xFF5A4038)
-                              : const Color(0xFFAA9A92),
+                          : (player != null && !player.connected)
+                              ? const Color(0xFFBBAAAA)
+                              : player != null
+                                  ? const Color(0xFF5A4038)
+                                  : const Color(0xFFAA9A92),
                   fontWeight: isMySlot ? FontWeight.bold : FontWeight.normal,
                 ),
                 textAlign: TextAlign.center,
@@ -2471,7 +3140,7 @@ class _LobbyScreenState extends State<LobbyScreen> {
               ),
             ),
             // Add bot button on empty slots (host only)
-            if (isEmpty && game.isHost && !game.isRankedRoom)
+            if (isEmpty && game.isHost)
               GestureDetector(
                 onTap: () => game.addBot(targetSlot: slotIndex),
                 child: Container(
@@ -2550,75 +3219,6 @@ class _LobbyScreenState extends State<LobbyScreen> {
     );
   }
 
-  Widget _buildPlayerSlot(String? playerName, {int? index, bool isHost = false}) {
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-      decoration: BoxDecoration(
-        color: const Color(0xFFFAF6F4),
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: const Color(0xFFDDD0CC)),
-      ),
-      child: Row(
-        children: [
-          if (index != null) ...[
-            Container(
-              width: 24,
-              height: 24,
-              decoration: BoxDecoration(
-                color: playerName != null
-                    ? const Color(0xFFE8E0DC)
-                    : const Color(0xFFF0EAE8),
-                shape: BoxShape.circle,
-              ),
-              child: Center(
-                child: Text(
-                  '$index',
-                  style: TextStyle(
-                    fontSize: 12,
-                    fontWeight: FontWeight.bold,
-                    color: playerName != null
-                        ? const Color(0xFF6A5A52)
-                        : const Color(0xFFAA9A92),
-                  ),
-                ),
-              ),
-            ),
-            const SizedBox(width: 12),
-          ],
-          if (isHost)
-            Container(
-              margin: const EdgeInsets.only(right: 6),
-              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-              decoration: BoxDecoration(
-                color: const Color(0xFFFFE082),
-                borderRadius: BorderRadius.circular(8),
-              ),
-              child: const Text(
-                '방장',
-                style: TextStyle(
-                  fontSize: 10,
-                  fontWeight: FontWeight.bold,
-                  color: Color(0xFF8D6E00),
-                ),
-              ),
-            ),
-          Expanded(
-            child: Text(
-              playerName ?? '[대기 중...]',
-              style: TextStyle(
-                fontSize: 16,
-                color: playerName != null
-                    ? const Color(0xFF5A4038)
-                    : const Color(0xFFAA9A92),
-              ),
-              textAlign: index != null ? TextAlign.left : TextAlign.center,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
 }
 
 class _BannerStyle {

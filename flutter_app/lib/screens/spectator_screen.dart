@@ -358,7 +358,66 @@ class _SpectatorScreenState extends State<SpectatorScreen> {
 
         // Chat panel overlay
         if (_chatOpen) _buildChatPanel(game),
+
+        // Bug #10: Game end overlay for spectators
+        if (phase == 'game_end')
+          _buildGameEndOverlay(game, totalScores),
       ],
+    );
+  }
+
+  Widget _buildGameEndOverlay(GameService game, Map<String, dynamic> scores) {
+    final teamA = scores['teamA'] ?? 0;
+    final teamB = scores['teamB'] ?? 0;
+    final winnerText = teamA > teamB ? 'Team A 승리!' : teamB > teamA ? 'Team B 승리!' : '무승부!';
+
+    return Container(
+      color: Colors.black54,
+      child: Center(
+        child: Container(
+          margin: const EdgeInsets.all(32),
+          padding: const EdgeInsets.all(24),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(20),
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                winnerText,
+                style: const TextStyle(
+                  fontSize: 22,
+                  fontWeight: FontWeight.bold,
+                  color: Color(0xFF5A4038),
+                ),
+              ),
+              const SizedBox(height: 12),
+              Text(
+                'Team A: $teamA | Team B: $teamB',
+                style: const TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
+                  color: Color(0xFF6A5A52),
+                ),
+              ),
+              const SizedBox(height: 20),
+              ElevatedButton(
+                onPressed: () => _leaveRoom(game),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color(0xFF6A9BD1),
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(16),
+                  ),
+                ),
+                child: const Text('로비로 돌아가기'),
+              ),
+            ],
+          ),
+        ),
+      ),
     );
   }
 

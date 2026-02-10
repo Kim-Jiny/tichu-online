@@ -548,6 +548,70 @@ async function getFriends(nickname) {
   }
 }
 
+// Accept friend request (update pending → accepted)
+async function acceptFriendRequest(userNickname, friendNickname) {
+  const client = await pool.connect();
+  try {
+    const result = await client.query(
+      `UPDATE tc_friends SET status = 'accepted'
+       WHERE user_nickname = $2 AND friend_nickname = $1 AND status = 'pending'`,
+      [userNickname, friendNickname]
+    );
+    if (result.rowCount === 0) {
+      return { success: false, message: '요청을 찾을 수 없습니다' };
+    }
+    return { success: true, message: '친구가 되었습니다' };
+  } catch (err) {
+    console.error('Accept friend request error:', err);
+    return { success: false, message: '요청 수락에 실패했습니다' };
+  } finally {
+    client.release();
+  }
+}
+
+// Reject friend request (delete pending row)
+async function rejectFriendRequest(userNickname, friendNickname) {
+  const client = await pool.connect();
+  try {
+    const result = await client.query(
+      `DELETE FROM tc_friends
+       WHERE user_nickname = $2 AND friend_nickname = $1 AND status = 'pending'`,
+      [userNickname, friendNickname]
+    );
+    if (result.rowCount === 0) {
+      return { success: false, message: '요청을 찾을 수 없습니다' };
+    }
+    return { success: true, message: '요청을 거절했습니다' };
+  } catch (err) {
+    console.error('Reject friend request error:', err);
+    return { success: false, message: '요청 거절에 실패했습니다' };
+  } finally {
+    client.release();
+  }
+}
+
+// Remove friend (delete accepted row, both directions)
+async function removeFriend(userNickname, friendNickname) {
+  const client = await pool.connect();
+  try {
+    const result = await client.query(
+      `DELETE FROM tc_friends
+       WHERE ((user_nickname = $1 AND friend_nickname = $2) OR (user_nickname = $2 AND friend_nickname = $1))
+         AND status = 'accepted'`,
+      [userNickname, friendNickname]
+    );
+    if (result.rowCount === 0) {
+      return { success: false, message: '친구를 찾을 수 없습니다' };
+    }
+    return { success: true, message: '친구를 삭제했습니다' };
+  } catch (err) {
+    console.error('Remove friend error:', err);
+    return { success: false, message: '친구 삭제에 실패했습니다' };
+  } finally {
+    client.release();
+  }
+}
+
 // Get pending friend requests
 async function getPendingFriendRequests(nickname) {
   const client = await pool.connect();
@@ -663,7 +727,7 @@ async function getUserProfile(nickname) {
       `SELECT u.nickname, u.total_games, u.wins, u.losses, u.rating, u.gold, u.leave_count,
               u.season_rating, u.season_games, u.season_wins, u.season_losses,
               u.exp_total, u.level, u.created_at,
-              e.banner_key
+              e.banner_key, e.theme_key
        FROM tc_users u
        LEFT JOIN tc_user_equips e ON e.nickname = u.nickname
        WHERE u.nickname = $1`,
@@ -697,6 +761,7 @@ async function getUserProfile(nickname) {
       expTotal: user.exp_total,
       level: user.level,
       bannerKey: user.banner_key,
+      themeKey: user.theme_key,
       createdAt: user.created_at,
     };
   } catch (err) {
@@ -720,10 +785,12 @@ async function getRecentMatches(nickname, limit = 5) {
     );
     return result.rows.map(row => {
       const isTeamA = row.player_a1 === nickname || row.player_a2 === nickname;
-      const won = (isTeamA && row.winner_team === 'A') || (!isTeamA && row.winner_team === 'B');
+      const isDraw = row.winner_team === 'draw';
+      const won = !isDraw && ((isTeamA && row.winner_team === 'A') || (!isTeamA && row.winner_team === 'B'));
       return {
         id: row.id,
         won,
+        isDraw,
         myTeam: isTeamA ? 'A' : 'B',
         teamAScore: row.team_a_score,
         teamBScore: row.team_b_score,
@@ -990,7 +1057,7 @@ async function equipItem(nickname, itemKey) {
       [nickname, itemKey]
     );
 
-    return { success: true };
+    return { success: true, category };
   } catch (err) {
     console.error('Equip item error:', err);
     return { success: false, message: '아이템 장착 중 오류가 발생했습니다' };
@@ -1753,6 +1820,9 @@ module.exports = {
   addFriend,
   getFriends,
   getPendingFriendRequests,
+  acceptFriendRequest,
+  rejectFriendRequest,
+  removeFriend,
   saveMatchResult,
   updateUserStats,
   getUserProfile,

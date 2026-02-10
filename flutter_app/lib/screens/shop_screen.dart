@@ -798,7 +798,9 @@ class _ShopScreenState extends State<ShopScreen> {
               ? '$name 기간이 연장되었어요.'
               : isBanner
                   ? '구매가 완료되었습니다.\n배너가 적용되었습니다.'
-                  : '구매가 완료되었습니다.\n바로 장착하시겠어요?',
+                  : isConsumable
+                      ? '구매가 완료되었습니다.\n인벤토리에서 사용해주세요.'
+                      : '구매가 완료되었습니다.\n바로 장착하시겠어요?',
         ),
         actions: [
           TextButton(

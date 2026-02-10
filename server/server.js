@@ -5,7 +5,9 @@ const GameRoom = require('./game/GameRoom');
 const { decideBotAction } = require('./game/BotPlayer');
 const {
   initDatabase, registerUser, loginUser, checkNickname, deleteUser,
-  blockUser, unblockUser, getBlockedUsers, reportUser, addFriend, getFriends,
+  blockUser, unblockUser, getBlockedUsers, reportUser,
+  addFriend, getFriends, getPendingFriendRequests,
+  acceptFriendRequest, rejectFriendRequest, removeFriend,
   saveMatchResult, updateUserStats, getUserProfile, getRecentMatches,
   submitInquiry, getRankings,
   getWallet, getShopItems, getUserItems, buyItem, equipItem, useItem,
@@ -62,6 +64,8 @@ const playerSessions = new Map(); // nickname -> { roomId, disconnectedAt }
 const turnTimers = {};    // roomId -> setTimeout handle
 const timeoutCounts = {}; // roomId -> { playerId: count }
 const roundEndTimers = {}; // roomId -> setTimeout handle for auto next round
+const turnTimerPhases = {}; // roomId -> phase name (to prevent phase timer reset)
+const waitingRoomTimers = {}; // `${roomId}_${playerId}` -> setTimeout handle for waiting room disconnect
 
 function seasonNameFromDate(date) {
   const y = date.getFullYear();
@@ -138,6 +142,10 @@ wss.on('connection', (ws) => {
 
   ws.on('close', () => {
     console.log(`Player disconnected: ${ws.nickname} (${ws.playerId})`);
+    // Notify friends of offline status
+    if (ws.nickname) {
+      notifyFriendsOfStatusChange(ws.nickname, false);
+    }
     if (ws.roomId) {
       const room = lobby.getRoom(ws.roomId);
       if (room) {
@@ -156,13 +164,24 @@ wss.on('connection', (ws) => {
           broadcastRoomState(ws.roomId);
           sendGameStateToAll(ws.roomId);
         } else {
-          // No game - just remove player
-          room.removePlayer(ws.playerId);
-          if (room.getHumanPlayerCount() === 0) {
-            removeRoomAndNotifySpectators(ws.roomId);
-          } else {
-            broadcastRoomState(ws.roomId);
-          }
+          // No game - mark as disconnected and start 30s removal timer
+          const disconnectedPlayerId = ws.playerId;
+          const disconnectedRoomId = ws.roomId;
+          room.markPlayerDisconnected(disconnectedPlayerId);
+          broadcastRoomState(disconnectedRoomId);
+          const timerKey = `${disconnectedRoomId}_${disconnectedPlayerId}`;
+          waitingRoomTimers[timerKey] = setTimeout(() => {
+            delete waitingRoomTimers[timerKey];
+            const r = lobby.getRoom(disconnectedRoomId);
+            if (!r) return;
+            r.removePlayer(disconnectedPlayerId);
+            if (r.getHumanPlayerCount() === 0) {
+              removeRoomAndNotifySpectators(disconnectedRoomId);
+            } else {
+              broadcastRoomState(disconnectedRoomId);
+            }
+            broadcastRoomList();
+          }, 30000);
         }
       }
       ws.roomId = null;
@@ -253,6 +272,9 @@ function handleMessage(ws, data) {
     case 'call_rank':
       handleGameAction(ws, data);
       break;
+    case 'reset_timeout':
+      handleResetTimeout(ws);
+      break;
     // Spectator card view requests
     case 'request_card_view':
       handleRequestCardView(ws, data);
@@ -288,6 +310,21 @@ function handleMessage(ws, data) {
       break;
     case 'get_friends':
       handleGetFriends(ws);
+      break;
+    case 'get_pending_friend_requests':
+      handleGetPendingFriendRequests(ws);
+      break;
+    case 'accept_friend_request':
+      handleAcceptFriendRequest(ws, data);
+      break;
+    case 'reject_friend_request':
+      handleRejectFriendRequest(ws, data);
+      break;
+    case 'remove_friend':
+      handleRemoveFriend(ws, data);
+      break;
+    case 'invite_to_room':
+      handleInviteToRoom(ws, data);
       break;
     case 'get_rankings':
       handleGetRankings(ws, data);
@@ -376,10 +413,17 @@ async function handleLogin(ws, data) {
   ws.userId = result.userId;
   console.log(`Player logged in: ${ws.nickname} (${ws.playerId})`);
 
+  // Notify friends of online status
+  notifyFriendsOfStatusChange(ws.nickname, true);
+
   await handleReconnection(ws);
 }
 
 async function handleReconnection(ws) {
+  // Fetch user profile to get equipped theme
+  const profile = await getUserProfile(ws.nickname);
+  const themeKey = profile?.themeKey || null;
+
   // Check for reconnection to a game
   const session = playerSessions.get(ws.nickname);
   if (session) {
@@ -396,6 +440,7 @@ async function handleReconnection(ws) {
           type: 'login_success',
           playerId: ws.playerId,
           nickname: ws.nickname,
+          themeKey,
         });
         sendTo(ws, {
           type: 'reconnected',
@@ -414,10 +459,46 @@ async function handleReconnection(ws) {
     playerSessions.delete(ws.nickname);
   }
 
+  // Check if player was in a waiting room (no game, disconnected)
+  for (const [roomId, room] of lobby.rooms) {
+    if (room && !room.game) {
+      const player = room.players.find(p => p !== null && p.nickname === ws.nickname && p.connected === false);
+      if (player) {
+        // Cancel removal timer
+        const timerKey = `${roomId}_${player.id}`;
+        if (waitingRoomTimers[timerKey]) {
+          clearTimeout(waitingRoomTimers[timerKey]);
+          delete waitingRoomTimers[timerKey];
+        }
+        // Reconnect: update player ID and mark connected
+        const oldId = player.id;
+        player.id = ws.playerId;
+        player.connected = true;
+        ws.roomId = room.id;
+
+        sendTo(ws, {
+          type: 'login_success',
+          playerId: ws.playerId,
+          nickname: ws.nickname,
+          themeKey,
+        });
+        sendTo(ws, {
+          type: 'room_joined',
+          roomId: room.id,
+          roomName: room.name,
+        });
+        broadcastRoomState(room.id);
+        broadcastRoomList();
+        return;
+      }
+    }
+  }
+
   sendTo(ws, {
     type: 'login_success',
     playerId: ws.playerId,
     nickname: ws.nickname,
+    themeKey,
   });
   sendTo(ws, { type: 'room_list', rooms: lobby.getRoomList() });
 }
@@ -965,8 +1046,9 @@ function handleGameAction(ws, data) {
   }
 
   // S7: Only clear turn timer for actions that affect turn progression
-  // (not declare_small_tichu which can be sent by non-current player)
-  if (data.type !== 'declare_small_tichu') {
+  // Don't clear for phase-wide actions (large tichu / exchange) or small tichu declaration
+  const phaseActions = ['pass_large_tichu', 'declare_large_tichu', 'exchange_cards', 'declare_small_tichu'];
+  if (!phaseActions.includes(data.type)) {
     clearTurnTimer(ws.roomId);
   }
 
@@ -975,10 +1057,10 @@ function handleGameAction(ws, data) {
       sendTo(ws, { type: 'error', message: 'Only the host can start the next round' });
       return;
     }
-    // Reset timeout counts for new round
+    // Reset timeout counts for new round (keys are nicknames)
     if (timeoutCounts[ws.roomId]) {
-      for (const pid in timeoutCounts[ws.roomId]) {
-        timeoutCounts[ws.roomId][pid] = 0;
+      for (const key in timeoutCounts[ws.roomId]) {
+        timeoutCounts[ws.roomId][key] = 0;
       }
     }
     const result = room.game.handleAction(ws.playerId, data);
@@ -1182,13 +1264,15 @@ function scheduleBotActions(roomId) {
 // --- Turn Timer System ---
 
 function startTurnTimer(roomId) {
-  clearTurnTimer(roomId);
   const room = lobby.getRoom(roomId);
   if (!room || !room.game) return;
 
   const gameState = room.game.state;
 
   if (gameState === 'large_tichu_phase') {
+    // Skip if phase timer already running for this phase
+    if (turnTimerPhases[roomId] === 'large_tichu_phase') return;
+    clearTurnTimer(roomId);
     // 라지 티츄 선언: 2배 시간, 응답 안 한 사람 대상
     const pending = room.game.playerIds.filter(
       pid => room.game.largeTichuResponses[pid] === undefined && !room.isBot(pid)
@@ -1196,6 +1280,7 @@ function startTurnTimer(roomId) {
     if (pending.length === 0) return;
     const timeLimit = room.turnTimeLimit * 2 * 1000;
     room.turnDeadline = Date.now() + timeLimit;
+    turnTimerPhases[roomId] = 'large_tichu_phase';
     turnTimers[roomId] = setTimeout(() => {
       handlePhaseTimeout(roomId, 'large_tichu_phase');
     }, timeLimit);
@@ -1203,6 +1288,9 @@ function startTurnTimer(roomId) {
   }
 
   if (gameState === 'card_exchange') {
+    // Skip if phase timer already running for this phase
+    if (turnTimerPhases[roomId] === 'card_exchange') return;
+    clearTurnTimer(roomId);
     // 카드 교환: 2배 시간, 교환 안 한 사람 대상
     const pending = room.game.playerIds.filter(
       pid => !room.game.exchangeDone[pid] && !room.isBot(pid)
@@ -1210,11 +1298,14 @@ function startTurnTimer(roomId) {
     if (pending.length === 0) return;
     const timeLimit = room.turnTimeLimit * 2 * 1000;
     room.turnDeadline = Date.now() + timeLimit;
+    turnTimerPhases[roomId] = 'card_exchange';
     turnTimers[roomId] = setTimeout(() => {
       handlePhaseTimeout(roomId, 'card_exchange');
     }, timeLimit);
     return;
   }
+
+  clearTurnTimer(roomId);
 
   if (gameState !== 'playing') return;
 
@@ -1241,6 +1332,7 @@ function clearTurnTimer(roomId) {
     clearTimeout(turnTimers[roomId]);
     delete turnTimers[roomId];
   }
+  delete turnTimerPhases[roomId];
   const room = lobby.getRoom(roomId);
   if (room) room.turnDeadline = null;
 }
@@ -1285,15 +1377,18 @@ async function handleTurnTimeout(roomId, playerId) {
   const room = lobby.getRoom(roomId);
   if (!room || !room.game) return;
 
+  // Use nickname as key so timeout count persists across reconnections
+  const nickname = room.game.playerNames[playerId] || playerId;
+
   // Increment timeout count
   if (!timeoutCounts[roomId]) timeoutCounts[roomId] = {};
-  if (!timeoutCounts[roomId][playerId]) timeoutCounts[roomId][playerId] = 0;
-  timeoutCounts[roomId][playerId]++;
+  if (!timeoutCounts[roomId][nickname]) timeoutCounts[roomId][nickname] = 0;
+  timeoutCounts[roomId][nickname]++;
 
-  console.log(`[TIMEOUT] ${playerId} timeout #${timeoutCounts[roomId][playerId]}`);
+  console.log(`[TIMEOUT] ${nickname} (${playerId}) timeout #${timeoutCounts[roomId][nickname]}`);
 
   // 3 timeouts → desertion (S2: await async handleDesertion)
-  if (timeoutCounts[roomId][playerId] >= 3) {
+  if (timeoutCounts[roomId][nickname] >= 3) {
     await handleDesertion(roomId, playerId, 'timeout');
     return;
   }
@@ -1302,8 +1397,8 @@ async function handleTurnTimeout(roomId, playerId) {
   broadcastGameEvent(roomId, {
     type: 'turn_timeout',
     player: playerId,
-    playerName: room.game.playerNames[playerId],
-    count: timeoutCounts[roomId][playerId],
+    playerName: nickname,
+    count: timeoutCounts[roomId][nickname],
   });
 
   // Auto action
@@ -1316,6 +1411,17 @@ async function handleTurnTimeout(roomId, playerId) {
       sendGameStateToAll(roomId);
     }
   }
+}
+
+function handleResetTimeout(ws) {
+  if (!ws.roomId || !ws.nickname) return;
+  const roomId = ws.roomId;
+  if (!timeoutCounts[roomId]) return;
+  const nickname = ws.nickname;
+  if (!timeoutCounts[roomId][nickname] || timeoutCounts[roomId][nickname] === 0) return;
+  timeoutCounts[roomId][nickname] = 0;
+  console.log(`[TIMEOUT] ${nickname} reset timeout count`);
+  sendTo(ws, { type: 'timeout_reset', count: 0 });
 }
 
 async function handleDesertion(roomId, playerId, reason = 'leave') {
@@ -1342,11 +1448,13 @@ async function handleDesertion(roomId, playerId, reason = 'leave') {
   }
 
   const totalScores = game.totalScores;
-  const winnerTeam = totalScores.teamA >= totalScores.teamB ? 'A' : 'B';
   const teams = game.teams;
   const playerNames = game.playerNames;
   const teamAPlayers = teams.teamA;
   const teamBPlayers = teams.teamB;
+
+  // Desertion = draw for remaining players, loss for deserter
+  const winnerTeam = 'draw';
 
   try {
     await saveMatchResult({
@@ -1360,20 +1468,13 @@ async function handleDesertion(roomId, playerId, reason = 'leave') {
       isRanked: room.isRanked,
     });
 
-    // Update stats for all players (skip bots)
     // Deserter: forced loss (ranked = -20 penalty)
     if (deserterNick && !playerId.startsWith('bot_')) {
       await updateUserStats(deserterNick, false, room.isRanked);
     }
 
-    // Remaining players: score-based win/loss
-    for (const pid of game.playerIds) {
-      if (pid === playerId || pid.startsWith('bot_')) continue;
-      const nick = playerNames[pid];
-      if (!nick) continue;
-      const team = teams.teamA.includes(pid) ? 'A' : 'B';
-      await updateUserStats(nick, team === winnerTeam, room.isRanked);
-    }
+    // Remaining players: no stat change (draw)
+
   } catch (err) {
     console.error('Error saving desertion result:', err);
   }
@@ -1613,6 +1714,9 @@ async function handleEquipItem(ws, data) {
   }
   const itemKey = data.itemKey;
   const result = await equipItem(ws.nickname, itemKey);
+  if (result.success && result.category === 'theme') {
+    result.themeKey = itemKey;
+  }
   sendTo(ws, { type: 'equip_result', ...result });
 }
 
@@ -1658,6 +1762,18 @@ async function handleAddFriend(ws, data) {
   }
   const result = await addFriend(ws.nickname, targetNickname);
   sendTo(ws, { type: 'friend_result', ...result });
+  // Real-time notification to target
+  if (result.success) {
+    const targetWs = findWsByNickname(targetNickname);
+    if (targetWs) {
+      if (result.message === '친구가 되었습니다') {
+        // Auto-accepted (they had sent us a request) — notify both
+        sendTo(targetWs, { type: 'friend_request_accepted', nickname: ws.nickname });
+      } else {
+        sendTo(targetWs, { type: 'friend_request_received', fromNickname: ws.nickname });
+      }
+    }
+  }
 }
 
 // Get friends handler
@@ -1666,8 +1782,133 @@ async function handleGetFriends(ws) {
     sendTo(ws, { type: 'friends_list', friends: [] });
     return;
   }
-  const friends = await getFriends(ws.nickname);
+  const friendNicknames = await getFriends(ws.nickname);
+  const friends = friendNicknames.map(nick => {
+    const friendWs = findWsByNickname(nick);
+    const isOnline = !!friendWs;
+    let roomId = null;
+    let roomName = null;
+    if (friendWs && friendWs.roomId) {
+      const room = lobby.getRoom(friendWs.roomId);
+      if (room) {
+        roomId = room.id;
+        roomName = room.name;
+      }
+    }
+    let roomPlayerCount = 0;
+    let roomInGame = false;
+    let roomPassword = '';
+    if (friendWs && friendWs.roomId) {
+      const r = lobby.getRoom(friendWs.roomId);
+      if (r) {
+        roomPlayerCount = r.players ? r.players.filter(p => p !== null).length : 0;
+        roomInGame = !!(r.game && r.game.state && r.game.state !== 'waiting' && r.game.state !== 'game_end');
+        roomPassword = r.password || '';
+      }
+    }
+    return { nickname: nick, isOnline, roomId, roomName, roomPlayerCount, roomInGame, roomPassword };
+  });
   sendTo(ws, { type: 'friends_list', friends });
+}
+
+// Get pending friend requests handler
+async function handleGetPendingFriendRequests(ws) {
+  if (!ws.nickname) {
+    sendTo(ws, { type: 'pending_friend_requests', requests: [] });
+    return;
+  }
+  const requests = await getPendingFriendRequests(ws.nickname);
+  sendTo(ws, { type: 'pending_friend_requests', requests });
+}
+
+// Accept friend request handler
+async function handleAcceptFriendRequest(ws, data) {
+  if (!ws.nickname) {
+    sendTo(ws, { type: 'error', message: '로그인이 필요합니다' });
+    return;
+  }
+  const nickname = data.nickname;
+  if (!nickname) return;
+  const result = await acceptFriendRequest(ws.nickname, nickname);
+  sendTo(ws, { type: 'friend_request_result', action: 'accept', nickname, success: result.success });
+  // Notify the requester that their request was accepted
+  if (result.success) {
+    const requesterWs = findWsByNickname(nickname);
+    if (requesterWs) {
+      sendTo(requesterWs, { type: 'friend_request_accepted', nickname: ws.nickname });
+    }
+  }
+}
+
+// Reject friend request handler
+async function handleRejectFriendRequest(ws, data) {
+  if (!ws.nickname) {
+    sendTo(ws, { type: 'error', message: '로그인이 필요합니다' });
+    return;
+  }
+  const nickname = data.nickname;
+  if (!nickname) return;
+  const result = await rejectFriendRequest(ws.nickname, nickname);
+  sendTo(ws, { type: 'friend_request_result', action: 'reject', nickname, success: result.success });
+}
+
+// Remove friend handler
+async function handleRemoveFriend(ws, data) {
+  if (!ws.nickname) {
+    sendTo(ws, { type: 'error', message: '로그인이 필요합니다' });
+    return;
+  }
+  const nickname = data.nickname;
+  if (!nickname) return;
+  const result = await removeFriend(ws.nickname, nickname);
+  sendTo(ws, { type: 'friend_removed', nickname, success: result.success });
+  // Notify the other user
+  if (result.success) {
+    const otherWs = findWsByNickname(nickname);
+    if (otherWs) {
+      sendTo(otherWs, { type: 'friend_removed', nickname: ws.nickname, success: true });
+    }
+  }
+}
+
+// Invite to room handler
+function handleInviteToRoom(ws, data) {
+  if (!ws.nickname) {
+    sendTo(ws, { type: 'invite_result', success: false, message: '로그인이 필요합니다' });
+    return;
+  }
+  if (!ws.roomId) {
+    sendTo(ws, { type: 'invite_result', success: false, message: '방에 입장한 상태가 아닙니다' });
+    return;
+  }
+  const targetNickname = data.nickname;
+  if (!targetNickname) {
+    sendTo(ws, { type: 'invite_result', success: false, message: '초대할 대상이 없습니다' });
+    return;
+  }
+  const targetWs = findWsByNickname(targetNickname);
+  if (!targetWs) {
+    sendTo(ws, { type: 'invite_result', success: false, message: '상대방이 오프라인입니다' });
+    return;
+  }
+  if (targetWs.roomId) {
+    sendTo(ws, { type: 'invite_result', success: false, message: '상대방이 이미 방에 있습니다' });
+    return;
+  }
+  const room = lobby.getRoom(ws.roomId);
+  if (!room) {
+    sendTo(ws, { type: 'invite_result', success: false, message: '방을 찾을 수 없습니다' });
+    return;
+  }
+  sendTo(targetWs, {
+    type: 'room_invite',
+    fromNickname: ws.nickname,
+    roomId: room.id,
+    roomName: room.name,
+    isRanked: room.isRanked,
+    password: room.password || '',
+  });
+  sendTo(ws, { type: 'invite_result', success: true, message: '초대를 보냈습니다' });
 }
 
 function findWsByPlayerId(playerId) {
@@ -1675,6 +1916,27 @@ function findWsByPlayerId(playerId) {
     if (ws.playerId === playerId) return ws;
   }
   return null;
+}
+
+function findWsByNickname(nickname) {
+  for (const ws of wss.clients) {
+    if (ws.nickname === nickname && ws.readyState === ws.OPEN) return ws;
+  }
+  return null;
+}
+
+async function notifyFriendsOfStatusChange(nickname, isOnline) {
+  const friends = await getFriends(nickname);
+  for (const friendNick of friends) {
+    const friendWs = findWsByNickname(friendNick);
+    if (friendWs) {
+      sendTo(friendWs, {
+        type: 'friend_status_changed',
+        nickname,
+        isOnline,
+      });
+    }
+  }
 }
 
 function sendTo(ws, data) {

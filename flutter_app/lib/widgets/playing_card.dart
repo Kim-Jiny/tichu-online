@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+import '../services/game_service.dart';
 
 class PlayingCard extends StatelessWidget {
   final String cardId;
@@ -44,6 +46,10 @@ class PlayingCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final cardColors = context.watch<GameService>().cardBackColors;
+    final backBg = cardColors[0];
+    final backBorder = cardColors[1];
+
     return GestureDetector(
       onTap: isInteractive ? onTap : null,
       child: AnimatedContainer(
@@ -52,12 +58,12 @@ class PlayingCard extends StatelessWidget {
         width: width,
         height: height,
         decoration: BoxDecoration(
-          color: isFaceUp ? Colors.white : const Color(0xFFFFF1F5),
+          color: isFaceUp ? Colors.white : backBg,
           borderRadius: BorderRadius.circular(14),
           border: Border.all(
             color: isSelected
                 ? const Color(0xFF4D99FF)
-                : const Color(0xFFE6DCE8),
+                : isFaceUp ? const Color(0xFFE6DCE8) : backBorder,
             width: isSelected ? 2 : 1,
           ),
           boxShadow: [
@@ -68,7 +74,7 @@ class PlayingCard extends StatelessWidget {
             ),
           ],
         ),
-        child: isFaceUp ? _buildFrontFace() : _buildBackFace(),
+        child: isFaceUp ? _buildFrontFace() : _buildBackFace(cardColors),
       ),
     );
   }
@@ -104,6 +110,7 @@ class PlayingCard extends StatelessWidget {
               fontSize: symbolSize,
               color: color,
               fontWeight: FontWeight.bold,
+              fontFamily: 'serif', // Force text rendering, avoid emoji on Android
             ),
           ),
           SizedBox(height: 2 * scale),
@@ -137,13 +144,17 @@ class PlayingCard extends StatelessWidget {
     );
   }
 
-  Widget _buildBackFace() {
+  Widget _buildBackFace(List<Color> cardColors) {
+    final backBg = cardColors[0];
+    final backBorder = cardColors[1];
+    final innerBorder = cardColors[2];
+
     return Container(
       decoration: BoxDecoration(
-        color: const Color(0xFFFFF1F5),
+        color: backBg,
         borderRadius: BorderRadius.circular(14),
         border: Border.all(
-          color: const Color(0xFFE6DCE8),
+          color: backBorder,
           width: 2,
         ),
         boxShadow: [
@@ -164,7 +175,7 @@ class PlayingCard extends StatelessWidget {
                 color: Colors.white.withOpacity(0.9),
                 borderRadius: BorderRadius.circular(18),
                 border: Border.all(
-                  color: const Color(0xFFEDE2EF),
+                  color: innerBorder,
                   width: 1.5,
                 ),
               ),

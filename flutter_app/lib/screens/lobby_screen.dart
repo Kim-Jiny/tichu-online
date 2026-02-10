@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../services/game_service.dart';
@@ -22,6 +23,7 @@ class _LobbyScreenState extends State<LobbyScreen> {
   bool _inRoom = false;
   bool _navigatingToGame = false;
   bool _wasDisconnected = false;
+  NetworkService? _networkService; // C6: Cache for safe dispose
 
   // 채팅
   final TextEditingController _chatController = TextEditingController();
@@ -35,13 +37,15 @@ class _LobbyScreenState extends State<LobbyScreen> {
       game.requestRoomList();
       game.requestSpectatableRooms();
       game.requestBlockedUsers();
-      context.read<NetworkService>().addListener(_onNetworkChanged);
+      _networkService = context.read<NetworkService>();
+      _networkService!.addListener(_onNetworkChanged);
     });
   }
 
   void _onNetworkChanged() {
     if (!mounted) return;
-    final network = context.read<NetworkService>();
+    final network = _networkService;
+    if (network == null) return;
     if (!network.isConnected) {
       _wasDisconnected = true;
     } else if (_wasDisconnected && network.isConnected) {
@@ -55,7 +59,8 @@ class _LobbyScreenState extends State<LobbyScreen> {
 
   @override
   void dispose() {
-    context.read<NetworkService>().removeListener(_onNetworkChanged);
+    // C6: Use cached reference instead of context.read in dispose
+    _networkService?.removeListener(_onNetworkChanged);
     _chatController.dispose();
     _chatScrollController.dispose();
     super.dispose();
@@ -1660,9 +1665,13 @@ class _LobbyScreenState extends State<LobbyScreen> {
                         game.reportResultSuccess = null;
                         game.reportResultMessage = null;
                         game.reportUserAction(nickname, reason);
-                        void listener() {
+                        // C5: Add timeout to remove listener if server never responds
+                        late void Function() listener;
+                        Timer? cleanupTimer;
+                        listener = () {
                           if (game.reportResultMessage != null) {
                             game.removeListener(listener);
+                            cleanupTimer?.cancel();
                             if (mounted) {
                               final success = game.reportResultSuccess == true;
                               ScaffoldMessenger.of(context).showSnackBar(
@@ -1675,8 +1684,11 @@ class _LobbyScreenState extends State<LobbyScreen> {
                             game.reportResultSuccess = null;
                             game.reportResultMessage = null;
                           }
-                        }
+                        };
                         game.addListener(listener);
+                        cleanupTimer = Timer(const Duration(seconds: 10), () {
+                          game.removeListener(listener);
+                        });
                       },
                 style: ElevatedButton.styleFrom(
                   backgroundColor: const Color(0xFFE57373),

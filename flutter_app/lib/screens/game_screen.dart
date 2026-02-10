@@ -35,6 +35,8 @@ class _GameScreenState extends State<GameScreen> {
   bool _wasDisconnected = false;
   bool _birdCallDialogOpen = false;
   bool _leavingGame = false;
+  NetworkService? _networkService; // C6: Cache for safe dispose
+  bool _profileRequested = false; // C8: Prevent requestProfile loop
 
   @override
   void initState() {
@@ -42,7 +44,8 @@ class _GameScreenState extends State<GameScreen> {
     // 로그인 후 차단 목록 요청
     WidgetsBinding.instance.addPostFrameCallback((_) {
       context.read<GameService>().requestBlockedUsers();
-      context.read<NetworkService>().addListener(_onNetworkChanged);
+      _networkService = context.read<NetworkService>();
+      _networkService!.addListener(_onNetworkChanged);
     });
     _countdownTimer = Timer.periodic(const Duration(seconds: 1), (_) {
       _updateCountdown();
@@ -51,7 +54,8 @@ class _GameScreenState extends State<GameScreen> {
 
   void _onNetworkChanged() {
     if (!mounted) return;
-    final network = context.read<NetworkService>();
+    final network = _networkService;
+    if (network == null) return;
     if (!network.isConnected) {
       _wasDisconnected = true;
     } else if (_wasDisconnected && network.isConnected) {
@@ -62,7 +66,8 @@ class _GameScreenState extends State<GameScreen> {
 
   @override
   void dispose() {
-    context.read<NetworkService>().removeListener(_onNetworkChanged);
+    // C6: Use cached reference instead of context.read in dispose
+    _networkService?.removeListener(_onNetworkChanged);
     _chatController.dispose();
     _chatScrollController.dispose();
     _countdownTimer?.cancel();
@@ -1177,9 +1182,13 @@ class _GameScreenState extends State<GameScreen> {
                         game.reportResultSuccess = null;
                         game.reportResultMessage = null;
                         game.reportUserAction(nickname, reason);
-                        void listener() {
+                        // C5: Add timeout to remove listener if server never responds
+                        late void Function() listener;
+                        Timer? cleanupTimer;
+                        listener = () {
                           if (game.reportResultMessage != null) {
                             game.removeListener(listener);
+                            cleanupTimer?.cancel();
                             if (mounted) {
                               final success = game.reportResultSuccess == true;
                               ScaffoldMessenger.of(this.context).showSnackBar(
@@ -1193,8 +1202,11 @@ class _GameScreenState extends State<GameScreen> {
                             game.reportResultSuccess = null;
                             game.reportResultMessage = null;
                           }
-                        }
+                        };
                         game.addListener(listener);
+                        cleanupTimer = Timer(const Duration(seconds: 10), () {
+                          game.removeListener(listener);
+                        });
                       },
                 style: ElevatedButton.styleFrom(
                   backgroundColor: const Color(0xFFE57373),
@@ -2228,10 +2240,14 @@ class _GameScreenState extends State<GameScreen> {
       title = teamA > teamB ? '팀A 승리!' : '팀B 승리!';
     }
 
-    if (isGameEnd && game.isRankedRoom) {
+    // C8: Only request profile once to prevent rebuild loop
+    if (isGameEnd && game.isRankedRoom && !_profileRequested) {
       final profile = game.profileData;
       if (profile == null || profile['nickname'] != game.playerName) {
-        game.requestProfile(game.playerName);
+        _profileRequested = true;
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (mounted) game.requestProfile(game.playerName);
+        });
       }
     }
 

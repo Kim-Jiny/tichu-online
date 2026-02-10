@@ -100,6 +100,8 @@ class GameService extends ChangeNotifier {
   // Dragon given
   String? dragonGivenMessage; // "OO이(가) OO에게 용을 줬습니다"
 
+  bool _disposed = false; // C2: Track disposal to prevent stale callbacks
+
   GameService(this._network) {
     _subscription = _network.messageStream.listen(_handleMessage);
   }
@@ -260,11 +262,13 @@ class GameService extends ChangeNotifier {
         roomPlayers = [null, null, null, null];
         isHost = false;
         isRankedRoom = false;
+        isSpectator = false; // C10: Clear isSpectator on kick
         gameState = null;
         chatMessages = [];
         errorMessage = data['message'] as String? ?? '강퇴되었습니다';
         notifyListeners();
         Future.delayed(const Duration(seconds: 3), () {
+          if (_disposed) return; // C2: Don't notify after disposal
           errorMessage = null;
           notifyListeners();
         });
@@ -336,6 +340,7 @@ class GameService extends ChangeNotifier {
         notifyListeners();
         // Clear error after a delay
         Future.delayed(const Duration(seconds: 3), () {
+          if (_disposed) return; // C2: Don't notify after disposal
           errorMessage = null;
           notifyListeners();
         });
@@ -530,6 +535,7 @@ class GameService extends ChangeNotifier {
     timeoutPlayerName = data['playerName'] as String? ?? '';
     notifyListeners();
     Future.delayed(const Duration(seconds: 2), () {
+      if (_disposed) return; // C2
       timeoutPlayerName = null;
       notifyListeners();
     });
@@ -541,6 +547,7 @@ class GameService extends ChangeNotifier {
     dragonGivenMessage = '$fromName → $targetName';
     notifyListeners();
     Future.delayed(const Duration(milliseconds: 1500), () {
+      if (_disposed) return; // C2
       dragonGivenMessage = null;
       notifyListeners();
     });
@@ -921,6 +928,7 @@ class GameService extends ChangeNotifier {
 
   @override
   void dispose() {
+    _disposed = true; // C2: Mark as disposed
     _subscription?.cancel();
     _dogDelayTimer?.cancel();
     _dogClearTimer?.cancel();

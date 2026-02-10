@@ -20,18 +20,22 @@ class _ConnectionOverlayState extends State<ConnectionOverlay>
   bool _showOverlay = false;
   bool _reconnecting = false;
   bool _failed = false;
+  NetworkService? _networkService; // C1: Cache reference for dispose
 
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      context.read<NetworkService>().addListener(_onNetworkChanged);
+      _networkService = context.read<NetworkService>();
+      _networkService!.addListener(_onNetworkChanged);
     });
   }
 
   @override
   void dispose() {
+    // C1: Remove NetworkService listener to prevent zombie callbacks
+    _networkService?.removeListener(_onNetworkChanged);
     WidgetsBinding.instance.removeObserver(this);
     super.dispose();
   }
@@ -104,29 +108,28 @@ class _ConnectionOverlayState extends State<ConnectionOverlay>
     if (!mounted) return;
 
     if (loggedIn) {
-      // If server restarted, our old room no longer exists
-      // Server sends 'reconnected' only if room recovery succeeded
-      // If we still have a roomId but no 'reconnected' came, clear room state
-      if (game.currentRoomId.isNotEmpty) {
-        // Save old roomId, then clear stale state immediately
-        final oldRoomId = game.currentRoomId;
+      // C3+C4: Wait for server to confirm reconnection instead of using fixed delay
+      // Server sends 'reconnected' if room still exists, or room_list if not
+      final staleRoomId = game.currentRoomId;
+      if (staleRoomId.isNotEmpty) {
+        // Clear stale roomId so we can detect server's 'reconnected' message
         game.currentRoomId = '';
-        game.currentRoomName = '';
-        game.roomPlayers = [null, null, null, null];
-        game.isHost = false;
-        game.isRankedRoom = false;
-        game.isSpectator = false;
-        game.spectatorGameState = null;
-        game.gameState = null;
-        game.chatMessages = [];
-        game.cardViewers = [];
-        game.incomingCardViewRequests = [];
-        game.desertedPlayerName = null;
-        game.desertedReason = null;
-        game.notifyListeners();
-        // If server sends 'reconnected', the handler will restore roomId and state
-        // Wait briefly so reconnected message can arrive and restore state
-        await Future.delayed(const Duration(milliseconds: 800));
+        final completer = Completer<void>();
+        void listener() {
+          if (completer.isCompleted) return;
+          // 'reconnected' sets currentRoomId, 'room_list' populates roomList
+          if (game.currentRoomId.isNotEmpty || game.roomList.isNotEmpty) {
+            completer.complete();
+          }
+        }
+        game.addListener(listener);
+        try {
+          await completer.future.timeout(const Duration(seconds: 3));
+        } catch (_) {
+          // Timeout - server didn't reconnect us, room is gone
+        } finally {
+          game.removeListener(listener);
+        }
       }
       game.requestRoomList();
       game.requestSpectatableRooms();
@@ -142,6 +145,10 @@ class _ConnectionOverlayState extends State<ConnectionOverlay>
   }
 
   Future<bool> _waitForLogin(GameService game) async {
+    // C9: Check initial state before waiting
+    if (game.playerId.isNotEmpty) return true;
+    if (game.loginError != null) return false;
+
     final completer = Completer<bool>();
 
     void listener() {

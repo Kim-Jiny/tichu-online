@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 import '../models/player.dart';
 import '../services/game_service.dart';
 import '../widgets/playing_card.dart';
+import '../widgets/connection_overlay.dart';
 import 'lobby_screen.dart';
 
 class SpectatorScreen extends StatefulWidget {
@@ -38,7 +39,9 @@ class _SpectatorScreenState extends State<SpectatorScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
+    // C9: Wrap in ConnectionOverlay for reconnection support
+    return ConnectionOverlay(
+      child: Scaffold(
       body: Container(
         decoration: const BoxDecoration(
           gradient: LinearGradient(
@@ -81,6 +84,7 @@ class _SpectatorScreenState extends State<SpectatorScreen> {
           ),
         ),
       ),
+    ),
     );
   }
 

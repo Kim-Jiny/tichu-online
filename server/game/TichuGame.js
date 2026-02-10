@@ -1,5 +1,5 @@
 const { createDeck, deal, getCardValue, sortCards } = require('./Deck');
-const { getComboType, canBeat, isBomb, COMBO } = require('./CardValidator');
+const { getComboType, canBeat, isBomb, arrangeCardsWithPhoenix, COMBO } = require('./CardValidator');
 const { calculateRoundScores, calculateTrickPoints } = require('./ScoreCalculator');
 
 const STATE = {
@@ -276,6 +276,15 @@ class TichuGame {
       return { success: false, message: 'Waiting for Dragon give decision' };
     }
     if (playerId !== this.currentPlayer) {
+      // S5: Verify cards in hand BEFORE combo validation
+      if (!Array.isArray(cardIds)) {
+        return { success: false, message: 'Invalid cards' };
+      }
+      for (const c of cardIds) {
+        if (!this.hands[playerId].includes(c)) {
+          return { success: false, message: 'Not your turn' };
+        }
+      }
       // Allow bombs from anyone (interruption)
       const combo = getComboType(cardIds);
       if (!isBomb(combo)) {
@@ -283,6 +292,11 @@ class TichuGame {
       }
       // Bomb interruption
       return this.playBomb(playerId, cardIds, combo);
+    }
+
+    // S11: Validate cardIds is an array
+    if (!Array.isArray(cardIds) || cardIds.length === 0) {
+      return { success: false, message: 'Invalid cards' };
     }
 
     // Verify cards in hand
@@ -327,9 +341,10 @@ class TichuGame {
       }
     }
 
-    // Play the cards
+    // Play the cards (arrange Phoenix position for display)
+    const arrangedCards = arrangeCardsWithPhoenix(cardIds, combo);
     this.removeCardsFromHand(playerId, cardIds);
-    this.currentTrick.push({ playerId, cards: cardIds, combo });
+    this.currentTrick.push({ playerId, cards: arrangedCards, combo });
     this.lastPlayedBy = playerId;
     this.passCount = 0;
 
@@ -339,8 +354,9 @@ class TichuGame {
         type: 'cards_played',
         player: playerId,
         playerName: this.playerNames[playerId],
-        cards: cardIds,
+        cards: arrangedCards,
         combo: combo.type,
+        phoenixAs: combo.phoenixAs,
       },
     };
 
@@ -1012,6 +1028,12 @@ class TichuGame {
     if (this.exchangeDone[oldPlayerId]) {
       this.exchangeDone[newPlayerId] = this.exchangeDone[oldPlayerId];
       delete this.exchangeDone[oldPlayerId];
+    }
+
+    // S12: Update receivedFrom
+    if (this.receivedFrom[oldPlayerId]) {
+      this.receivedFrom[newPlayerId] = this.receivedFrom[oldPlayerId];
+      delete this.receivedFrom[oldPlayerId];
     }
 
     // Update finishOrder

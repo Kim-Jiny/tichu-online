@@ -98,8 +98,13 @@ function autoPlay(state, cards) {
       const wish = ranks[Math.floor(Math.random() * ranks.length)];
       return { type: 'play_cards', cards: ['special_bird'], callRank: wish };
     }
+    // S28: Only play Dog if partner hasn't finished yet
     if (cards.includes('special_dog')) {
-      return { type: 'play_cards', cards: ['special_dog'] };
+      const players = state.players || [];
+      const partner = players.find(p => p.position === 'partner');
+      if (partner && !partner.hasFinished) {
+        return { type: 'play_cards', cards: ['special_dog'] };
+      }
     }
     if (combos.pairs.length > 0 && Math.random() < 0.4) {
       return { type: 'play_cards', cards: combos.pairs[0] };
@@ -134,6 +139,10 @@ function autoPlay(state, cards) {
         return { type: 'play_cards', cards: [card] };
       }
     }
+    // S9/S10: Phoenix can beat any single except dragon
+    if (cards.includes('special_phoenix') && lastValue < 15) {
+      return { type: 'play_cards', cards: ['special_phoenix'] };
+    }
     if (cards.includes('special_dragon') && lastValue < 15) {
       return { type: 'play_cards', cards: ['special_dragon'] };
     }
@@ -151,15 +160,27 @@ function autoPlay(state, cards) {
 }
 
 function selectExchangeCards(cards) {
+  // S8: Ensure no duplicate card selections
   const normalCards = cards.filter(c => !c.startsWith('special_'));
   const sorted = [...normalCards].sort((a, b) => getCardValue(b) - getCardValue(a));
   const low = [...normalCards].sort((a, b) => getCardValue(a) - getCardValue(b));
 
-  return {
-    left: low[0] || cards[0],
-    partner: sorted[0] || cards[1],
-    right: low[1] || cards[2],
-  };
+  const used = new Set();
+  function pick(candidates, fallback) {
+    for (const c of candidates) {
+      if (!used.has(c)) { used.add(c); return c; }
+    }
+    for (const c of fallback) {
+      if (!used.has(c)) { used.add(c); return c; }
+    }
+    return fallback[0]; // should never happen with 14-card hand
+  }
+
+  const left = pick(low, cards);
+  const partner = pick(sorted, cards);
+  const right = pick(low.slice(1), cards);
+
+  return { left, partner, right };
 }
 
 function findCombos(cards) {

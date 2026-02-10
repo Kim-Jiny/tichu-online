@@ -76,7 +76,7 @@ function handlePair(normalCards, hasPhoenix) {
       if (normalCards[0] === 'special_bird' || normalCards[0] === 'special_dragon') {
         return { type: COMBO.INVALID };
       }
-      return { type: COMBO.PAIR, length: 2, value: v };
+      return { type: COMBO.PAIR, length: 2, value: v, phoenixAs: v };
     }
   }
   if (normalCards.length === 2) {
@@ -99,7 +99,7 @@ function handleTriple(normalCards, hasPhoenix) {
       const v1 = getCardValue(normalCards[0]);
       const v2 = getCardValue(normalCards[1]);
       if (v1 === v2 && isNormalRank(normalCards[0]) && isNormalRank(normalCards[1])) {
-        return { type: COMBO.TRIPLE, length: 3, value: v1 };
+        return { type: COMBO.TRIPLE, length: 3, value: v1, phoenixAs: v1 };
       }
     }
   } else {
@@ -188,13 +188,13 @@ function checkFullHouse(normalCards, hasPhoenix) {
     if (entries.length === 2) {
       const [c1, c2] = entries.map(([v, cnt]) => cnt);
       const [v1, v2] = entries.map(([v]) => parseInt(v));
-      // 3+1 → Phoenix makes it 3+2
-      if (c1 === 3 && c2 === 1) return { type: COMBO.FULL_HOUSE, length: 5, value: v1 };
-      if (c1 === 1 && c2 === 3) return { type: COMBO.FULL_HOUSE, length: 5, value: v2 };
-      // 2+2 → Phoenix makes one of them triple
+      // 3+1 → Phoenix makes it 3+2 (Phoenix completes the pair)
+      if (c1 === 3 && c2 === 1) return { type: COMBO.FULL_HOUSE, length: 5, value: v1, phoenixAs: v2 };
+      if (c1 === 1 && c2 === 3) return { type: COMBO.FULL_HOUSE, length: 5, value: v2, phoenixAs: v1 };
+      // 2+2 → Phoenix makes higher pair into triple
       if (c1 === 2 && c2 === 2) {
-        // Higher pair becomes triple
-        return { type: COMBO.FULL_HOUSE, length: 5, value: Math.max(v1, v2) };
+        const tripleVal = Math.max(v1, v2);
+        return { type: COMBO.FULL_HOUSE, length: 5, value: tripleVal, phoenixAs: tripleVal };
       }
     }
   } else {
@@ -237,22 +237,30 @@ function checkStraight(normalCards, hasPhoenix, totalLength) {
 
     // Try to fill a gap
     let gaps = 0;
+    let gapValue = null;
     let highValue = unique[unique.length - 1];
     for (let i = 1; i < unique.length; i++) {
       const diff = unique[i] - unique[i - 1];
       if (diff === 1) continue;
-      if (diff === 2) { gaps++; }
+      if (diff === 2) { gaps++; gapValue = unique[i - 1] + 1; }
       else return null;
     }
 
     if (gaps <= 1) {
-      // Phoenix fills the gap, or extends at top/bottom
+      let phoenixAs;
       if (gaps === 0) {
-        // Phoenix extends the straight: either at top or bottom
-        highValue = unique[unique.length - 1] + 1;
-        if (highValue > 14) highValue = unique[unique.length - 1]; // Can't go above Ace
+        // Phoenix extends the straight at top (or bottom if top exceeds Ace)
+        phoenixAs = unique[unique.length - 1] + 1;
+        highValue = phoenixAs;
+        if (highValue > 14) {
+          highValue = unique[unique.length - 1];
+          phoenixAs = unique[0] - 1; // extend at bottom
+        }
+      } else {
+        // Phoenix fills the gap
+        phoenixAs = gapValue;
       }
-      return { type: COMBO.STRAIGHT, length: totalLength, value: highValue };
+      return { type: COMBO.STRAIGHT, length: totalLength, value: highValue, phoenixAs };
     }
     return null;
   }
@@ -271,6 +279,7 @@ function checkSteps(normalCards, hasPhoenix, totalLength) {
   if (hasPhoenix) {
     // Phoenix can fill one missing card to complete a pair
     let phoenixUsed = false;
+    let phoenixAs = null;
     const pairs = [];
 
     for (const e of entries) {
@@ -278,9 +287,9 @@ function checkSteps(normalCards, hasPhoenix, totalLength) {
         pairs.push(e.value);
       } else if (e.count === 1 && !phoenixUsed) {
         pairs.push(e.value);
+        phoenixAs = e.value;
         phoenixUsed = true;
       } else if (e.count === 3 && !phoenixUsed) {
-        // Unusual but possible: 3 of one rank, phoenix pairs with itself? No, can't.
         return null;
       } else {
         return null;
@@ -292,7 +301,7 @@ function checkSteps(normalCards, hasPhoenix, totalLength) {
     for (let i = 1; i < pairs.length; i++) {
       if (pairs[i] !== pairs[i - 1] + 1) return null;
     }
-    return { type: COMBO.STEPS, length: totalLength, value: pairs[pairs.length - 1], numPairs };
+    return { type: COMBO.STEPS, length: totalLength, value: pairs[pairs.length - 1], numPairs, phoenixAs };
   } else {
     // All entries must be pairs
     if (entries.length !== numPairs) return null;
@@ -364,4 +373,27 @@ function isNormalRank(cardId) {
   return !cardId.startsWith('special_');
 }
 
-module.exports = { getComboType, canBeat, isBomb, COMBO };
+// Reorder cards so Phoenix appears in its logical position
+function arrangeCardsWithPhoenix(cardIds, combo) {
+  if (!cardIds.includes('special_phoenix') || combo.phoenixAs === undefined) return cardIds;
+
+  const normalCards = cardIds.filter((c) => c !== 'special_phoenix');
+  normalCards.sort((a, b) => getCardValue(a) - getCardValue(b));
+
+  const phoenixVal = combo.phoenixAs;
+  const result = [];
+  let inserted = false;
+
+  for (let i = 0; i < normalCards.length; i++) {
+    if (!inserted && getCardValue(normalCards[i]) > phoenixVal) {
+      result.push('special_phoenix');
+      inserted = true;
+    }
+    result.push(normalCards[i]);
+  }
+  if (!inserted) result.push('special_phoenix');
+
+  return result;
+}
+
+module.exports = { getComboType, canBeat, isBomb, arrangeCardsWithPhoenix, COMBO };

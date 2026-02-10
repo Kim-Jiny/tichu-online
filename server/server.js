@@ -28,7 +28,7 @@ const server = http.createServer(async (req, res) => {
     } catch (err) {
       console.error('Admin route error:', err);
       res.writeHead(500, { 'Content-Type': 'text/plain' });
-      res.end('Internal Server Error: ' + err.message);
+      res.end('Internal Server Error');
     }
     return;
   }
@@ -343,6 +343,26 @@ async function handleLogin(ws, data) {
     return;
   }
 
+  // S3: Disconnect existing connection with same nickname to prevent duplicate login
+  for (const client of wss.clients) {
+    if (client !== ws && client.nickname === result.nickname && client.readyState === client.OPEN) {
+      // Preemptively store session before close (close handler is async)
+      if (client.roomId) {
+        const oldRoom = lobby.getRoom(client.roomId);
+        if (oldRoom && oldRoom.game) {
+          oldRoom.markPlayerDisconnected(client.playerId);
+          playerSessions.set(client.nickname, {
+            roomId: client.roomId,
+            disconnectedAt: Date.now(),
+          });
+        }
+      }
+      sendTo(client, { type: 'kicked', message: '다른 기기에서 로그인되었습니다' });
+      client.roomId = null; // Prevent close handler from double-processing
+      client.close();
+    }
+  }
+
   ws.playerId = `player_${nextPlayerId++}`;
   ws.nickname = result.nickname;
   ws.userId = result.userId;
@@ -466,7 +486,10 @@ async function handleLeaveRoom(ws) {
     sendTo(ws, { type: 'room_left' });
     return;
   }
-  clearTurnTimer(ws.roomId);
+  // S17: Only clear turn timer for players, not spectators
+  if (!ws.isSpectator) {
+    clearTurnTimer(ws.roomId);
+  }
   const room = lobby.getRoom(ws.roomId);
   const roomId = ws.roomId;
   const wasSpectating = ws.isSpectator;
@@ -476,8 +499,8 @@ async function handleLeaveRoom(ws) {
     if (wasSpectating) {
       room.removeSpectator(ws.playerId);
     } else {
-      // If game is active, treat as desertion → end game with scores
-      if (room.game && room.game.state !== 'game_end') {
+      // S6: If game is active and not already deserted, treat as desertion
+      if (room.game && room.game.state !== 'game_end' && !room.game.deserted) {
         await handleDesertion(roomId, ws.playerId);
       }
       room.removePlayer(ws.playerId);
@@ -512,8 +535,8 @@ async function handleLeaveGame(ws) {
     playerSessions.delete(ws.nickname);
   }
 
-  // If game is active (not ended), treat as desertion → end game with scores
-  if (room.game && room.game.state !== 'game_end') {
+  // S6: If game is active (not ended) and not already deserted, treat as desertion
+  if (room.game && room.game.state !== 'game_end' && !room.game.deserted) {
     await handleDesertion(roomId, ws.playerId);
   }
 
@@ -542,6 +565,11 @@ function handleReturnToRoom(ws) {
     sendTo(ws, { type: 'room_closed' });
     return;
   }
+  // Only host can return to room (S1)
+  if (room.hostId !== ws.playerId) {
+    sendTo(ws, { type: 'error', message: 'Only the host can return to room' });
+    return;
+  }
   // Only allow when game has ended
   if (room.game && room.game.state !== 'game_end') {
     sendTo(ws, { type: 'error', message: 'Game is still in progress' });
@@ -568,6 +596,13 @@ function handleCheckRoom(ws) {
   }
   // Room exists - send current state
   sendTo(ws, { type: 'room_state', room: room.getState() });
+  // S27: Also send game state if game is active
+  if (room.game) {
+    const state = room.game.getStateForPlayer(ws.playerId);
+    state.turnDeadline = room.turnDeadline;
+    state.cardViewers = room.getViewersForPlayer(ws.playerId);
+    sendTo(ws, { type: 'game_state', state });
+  }
 }
 
 function handleSpectateRoom(ws, data) {
@@ -828,10 +863,11 @@ function handleAddBot(ws, data) {
     sendTo(ws, { type: 'error', message: '방장만 봇을 추가할 수 있습니다' });
     return;
   }
-  if (room.isRanked) {
-    sendTo(ws, { type: 'error', message: '랭크전에서는 봇을 추가할 수 없습니다' });
-    return;
-  }
+  // TODO: 테스트 후 복구 - 랭크전 봇 제한
+  // if (room.isRanked) {
+  //   sendTo(ws, { type: 'error', message: '랭크전에서는 봇을 추가할 수 없습니다' });
+  //   return;
+  // }
   const targetSlot = typeof data.targetSlot === 'number' ? data.targetSlot : undefined;
   const result = room.addBot(targetSlot);
   if (!result.success) {
@@ -920,8 +956,11 @@ function handleGameAction(ws, data) {
     return;
   }
 
-  // Clear turn timer when a player acts
-  clearTurnTimer(ws.roomId);
+  // S7: Only clear turn timer for actions that affect turn progression
+  // (not declare_small_tichu which can be sent by non-current player)
+  if (data.type !== 'declare_small_tichu') {
+    clearTurnTimer(ws.roomId);
+  }
 
   if (data.type === 'next_round') {
     if (room.hostId !== ws.playerId) {
@@ -964,6 +1003,8 @@ function handleGameAction(ws, data) {
 // Save game result to database
 async function saveGameResult(room) {
   if (!room.game) return;
+  if (room.game.resultSaved) return;
+  room.game.resultSaved = true;
   clearTurnTimer(room.id);
   if (roundEndTimers[room.id]) {
     clearTimeout(roundEndTimers[room.id]);
@@ -1120,10 +1161,11 @@ function scheduleBotActions(roomId) {
             saveGameResult(r);
           }
           sendGameStateToAll(roomId); // This will re-trigger scheduleBotActions
+          return; // One action at a time
         } else {
+          // S11: Don't return on failure - let other bots try
           console.log(`[BOT] ${botId} action failed: ${result?.message}`);
         }
-        return; // One action at a time
       }
     }
   }, delay);
@@ -1230,7 +1272,7 @@ function handlePhaseTimeout(roomId, phase) {
   }
 }
 
-function handleTurnTimeout(roomId, playerId) {
+async function handleTurnTimeout(roomId, playerId) {
   clearTurnTimer(roomId);
   const room = lobby.getRoom(roomId);
   if (!room || !room.game) return;
@@ -1242,9 +1284,9 @@ function handleTurnTimeout(roomId, playerId) {
 
   console.log(`[TIMEOUT] ${playerId} timeout #${timeoutCounts[roomId][playerId]}`);
 
-  // 3 timeouts → desertion
+  // 3 timeouts → desertion (S2: await async handleDesertion)
   if (timeoutCounts[roomId][playerId] >= 3) {
-    handleDesertion(roomId, playerId, 'timeout');
+    await handleDesertion(roomId, playerId, 'timeout');
     return;
   }
 

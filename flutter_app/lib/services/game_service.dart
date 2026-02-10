@@ -781,6 +781,16 @@ class GameService extends ChangeNotifier {
     _network.send({'type': 'call_rank', 'rank': rank});
   }
 
+  void returnToRoom() {
+    _network.send({'type': 'return_to_room'});
+    gameState = null;
+    notifyListeners();
+  }
+
+  void checkRoom() {
+    _network.send({'type': 'check_room'});
+  }
+
   void nextRound() {
     _network.send({'type': 'next_round'});
   }

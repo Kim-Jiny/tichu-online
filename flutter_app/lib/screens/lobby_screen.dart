@@ -21,6 +21,7 @@ class LobbyScreen extends StatefulWidget {
 class _LobbyScreenState extends State<LobbyScreen> {
   bool _inRoom = false;
   bool _navigatingToGame = false;
+  bool _wasDisconnected = false;
 
   // 채팅
   final TextEditingController _chatController = TextEditingController();
@@ -34,11 +35,27 @@ class _LobbyScreenState extends State<LobbyScreen> {
       game.requestRoomList();
       game.requestSpectatableRooms();
       game.requestBlockedUsers();
+      context.read<NetworkService>().addListener(_onNetworkChanged);
     });
+  }
+
+  void _onNetworkChanged() {
+    if (!mounted) return;
+    final network = context.read<NetworkService>();
+    if (!network.isConnected) {
+      _wasDisconnected = true;
+    } else if (_wasDisconnected && network.isConnected) {
+      _wasDisconnected = false;
+      // Reconnected - check if room still exists
+      if (_inRoom) {
+        context.read<GameService>().checkRoom();
+      }
+    }
   }
 
   @override
   void dispose() {
+    context.read<NetworkService>().removeListener(_onNetworkChanged);
     _chatController.dispose();
     _chatScrollController.dispose();
     super.dispose();
@@ -580,7 +597,8 @@ class _LobbyScreenState extends State<LobbyScreen> {
               // Check if game started
               if (game.gameState != null &&
                   game.gameState!.phase.isNotEmpty &&
-                  game.gameState!.phase != 'waiting') {
+                  game.gameState!.phase != 'waiting' &&
+                  game.gameState!.phase != 'game_end') {
                 if (!_navigatingToGame) {
                   _navigatingToGame = true;
                   WidgetsBinding.instance.addPostFrameCallback((_) {

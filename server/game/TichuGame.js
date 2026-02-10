@@ -211,7 +211,7 @@ class TichuGame {
   performExchange() {
     // Each player gives 1 card to left, 1 to partner, 1 to right
     // Seating: 0, 1, 2, 3 clockwise
-    // Player i's left = (i+1)%4, partner = (i+2)%4, right = (i+3)%4
+    // Consistent with getStateForPlayer: (i+1)%4 = right, (i+2)%4 = partner, (i+3)%4 = left
     const receiving = {};
     for (const pid of this.playerIds) {
       receiving[pid] = [];
@@ -221,9 +221,9 @@ class TichuGame {
     for (let i = 0; i < 4; i++) {
       const pid = this.playerIds[i];
       const ex = this.exchangeCards[pid];
-      const leftIdx = (i + 1) % 4;
+      const rightIdx = (i + 1) % 4;
       const partnerIdx = (i + 2) % 4;
-      const rightIdx = (i + 3) % 4;
+      const leftIdx = (i + 3) % 4;
 
       // Remove given cards from hand
       this.hands[pid] = this.hands[pid].filter(
@@ -239,7 +239,7 @@ class TichuGame {
       receiving[partnerPid].push(ex.partner);
       receiving[rightPid].push(ex.right);
 
-      // From the recipient's perspective: pid is their right/partner/left
+      // From the recipient's perspective:
       // pid gives to left -> leftPid receives from right
       this.receivedFrom[leftPid].right = ex.left;
       // pid gives to partner -> partnerPid receives from partner
@@ -557,9 +557,10 @@ class TichuGame {
     }
 
     // Target must be an opponent (left or right)
+    // Consistent with getStateForPlayer: (i+1)%4 = right, (i+3)%4 = left
     const myIdx = this.playerIds.indexOf(playerId);
-    const leftIdx = (myIdx + 1) % 4;
-    const rightIdx = (myIdx + 3) % 4;
+    const rightIdx = (myIdx + 1) % 4;
+    const leftIdx = (myIdx + 3) % 4;
     let targetId;
 
     if (target === 'left') {
@@ -613,6 +614,22 @@ class TichuGame {
     const lastPlay = this.currentTrick[this.currentTrick.length - 1];
     if (lastPlay.playerId !== playerId || !lastPlay.cards.includes('special_bird')) {
       return { success: false, message: 'Only the Bird player can call' };
+    }
+
+    // Allow "none" to skip calling
+    if (rank === 'none') {
+      this.callRank = null;
+      this.needsToCallRank = null;
+      console.log(`[DEBUG] call_rank skipped: player chose no call`);
+      return {
+        success: true,
+        broadcast: {
+          type: 'call_rank',
+          player: playerId,
+          playerName: this.playerNames[playerId],
+          rank: null,
+        },
+      };
     }
 
     // Validate rank (2-14 or "2"-"A")
@@ -871,6 +888,12 @@ class TichuGame {
   // Auto timeout action for when a player's turn timer expires
   getAutoTimeoutAction(playerId) {
     if (this.state !== STATE.PLAYING) return null;
+
+    // Needs to call rank (played bird without calling)
+    if (this.needsToCallRank === playerId) {
+      const ranks = ['2','3','4','5','6','7','8','9','10','J','Q','K','A'];
+      return { type: 'call_rank', rank: ranks[Math.floor(Math.random() * ranks.length)] };
+    }
 
     // Dragon give decision pending
     if (this.dragonPending && this.dragonDecider === playerId) {

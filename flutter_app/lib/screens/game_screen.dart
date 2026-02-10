@@ -2,6 +2,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../services/game_service.dart';
+import '../services/network_service.dart';
 import '../models/game_state.dart';
 import '../models/player.dart';
 import '../widgets/playing_card.dart';
@@ -31,6 +32,9 @@ class _GameScreenState extends State<GameScreen> {
   // 턴 타이머
   Timer? _countdownTimer;
   int _remainingSeconds = 0;
+  bool _wasDisconnected = false;
+  bool _birdCallDialogOpen = false;
+  bool _leavingGame = false;
 
   @override
   void initState() {
@@ -38,14 +42,27 @@ class _GameScreenState extends State<GameScreen> {
     // 로그인 후 차단 목록 요청
     WidgetsBinding.instance.addPostFrameCallback((_) {
       context.read<GameService>().requestBlockedUsers();
+      context.read<NetworkService>().addListener(_onNetworkChanged);
     });
     _countdownTimer = Timer.periodic(const Duration(seconds: 1), (_) {
       _updateCountdown();
     });
   }
 
+  void _onNetworkChanged() {
+    if (!mounted) return;
+    final network = context.read<NetworkService>();
+    if (!network.isConnected) {
+      _wasDisconnected = true;
+    } else if (_wasDisconnected && network.isConnected) {
+      _wasDisconnected = false;
+      context.read<GameService>().checkRoom();
+    }
+  }
+
   @override
   void dispose() {
+    context.read<NetworkService>().removeListener(_onNetworkChanged);
     _chatController.dispose();
     _chatScrollController.dispose();
     _countdownTimer?.cancel();
@@ -94,6 +111,7 @@ class _GameScreenState extends State<GameScreen> {
   }
 
   void _showBirdCallDialog() {
+    _birdCallDialogOpen = true;
     final ranks = ['2', '3', '4', '5', '6', '7', '8', '9', '10', 'J', 'Q', 'K', 'A'];
     showDialog(
       context: context,
@@ -110,6 +128,7 @@ class _GameScreenState extends State<GameScreen> {
               children: ranks.map((rank) {
                 return ElevatedButton(
                   onPressed: () {
+                    _birdCallDialogOpen = false;
                     Navigator.pop(ctx);
                     context.read<GameService>().playCards(
                       _selectedCards.toList(),
@@ -125,13 +144,30 @@ class _GameScreenState extends State<GameScreen> {
                 );
               }).toList(),
             ),
-            const SizedBox(height: 16),
+            const SizedBox(height: 12),
             OutlinedButton(
               onPressed: () {
+                _birdCallDialogOpen = false;
                 Navigator.pop(ctx);
+                context.read<GameService>().playCards(
+                  _selectedCards.toList(),
+                  callRank: 'none',
+                );
                 setState(() => _selectedCards.clear());
               },
               style: OutlinedButton.styleFrom(
+                minimumSize: const Size(120, 40),
+              ),
+              child: const Text('콜 안함'),
+            ),
+            const SizedBox(height: 8),
+            TextButton(
+              onPressed: () {
+                _birdCallDialogOpen = false;
+                Navigator.pop(ctx);
+                setState(() => _selectedCards.clear());
+              },
+              style: TextButton.styleFrom(
                 foregroundColor: const Color(0xFF6A5A52),
               ),
               child: const Text('취소 (다른 카드 내기)'),
@@ -166,7 +202,8 @@ class _GameScreenState extends State<GameScreen> {
             child: Consumer<GameService>(
               builder: (context, game, _) {
                 // Room closed - go back to lobby
-                if (game.currentRoomId.isEmpty) {
+                if (game.currentRoomId.isEmpty && !_leavingGame) {
+                  _leavingGame = true;
                   WidgetsBinding.instance.addPostFrameCallback((_) {
                     if (!mounted) return;
                     Navigator.pushReplacement(
@@ -217,7 +254,7 @@ class _GameScreenState extends State<GameScreen> {
 
                   if (state.dragonPending) _buildDragonDialog(state, game),
 
-                  if (state.needsToCallRank) _buildCallRankDialog(game),
+                  if (state.needsToCallRank && !_birdCallDialogOpen) _buildCallRankDialog(game),
 
                   if (state.phase == 'round_end' || state.phase == 'game_end')
                     _buildRoundEndDialog(state, game),
@@ -1186,6 +1223,7 @@ class _GameScreenState extends State<GameScreen> {
           TextButton(
             onPressed: () {
               Navigator.pop(ctx);
+              _leavingGame = true;
               game.leaveGame();
               Navigator.pushReplacement(
                 context,
@@ -2167,6 +2205,14 @@ class _GameScreenState extends State<GameScreen> {
               );
             }).toList(),
           ),
+          const SizedBox(height: 12),
+          OutlinedButton(
+            onPressed: () => game.callRank('none'),
+            style: OutlinedButton.styleFrom(
+              minimumSize: const Size(120, 40),
+            ),
+            child: const Text('콜 안함'),
+          ),
         ],
       ),
     );
@@ -2226,13 +2272,14 @@ class _GameScreenState extends State<GameScreen> {
             const SizedBox(height: 20),
             ElevatedButton(
               onPressed: () {
-                game.leaveRoom();
+                _leavingGame = true;
+                game.returnToRoom();
                 Navigator.pushReplacement(
                   context,
                   MaterialPageRoute(builder: (_) => const LobbyScreen()),
                 );
               },
-              child: const Text('로비로 돌아가기'),
+              child: const Text('방으로 돌아가기'),
             ),
           ],
         ],

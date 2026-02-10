@@ -108,23 +108,25 @@ class _ConnectionOverlayState extends State<ConnectionOverlay>
       // Server sends 'reconnected' only if room recovery succeeded
       // If we still have a roomId but no 'reconnected' came, clear room state
       if (game.currentRoomId.isNotEmpty) {
-        // Wait briefly for potential 'reconnected' message
-        await Future.delayed(const Duration(milliseconds: 500));
-        if (mounted && game.currentRoomId.isNotEmpty && game.gameState == null && game.spectatorGameState == null) {
-          // No game state received - room is gone, clear client state
-          game.currentRoomId = '';
-          game.currentRoomName = '';
-          game.roomPlayers = [null, null, null, null];
-          game.isHost = false;
-          game.isRankedRoom = false;
-          game.isSpectator = false;
-          game.spectatorGameState = null;
-          game.gameState = null;
-          game.chatMessages = [];
-          game.cardViewers = [];
-          game.incomingCardViewRequests = [];
-          game.notifyListeners();
-        }
+        // Save old roomId, then clear stale state immediately
+        final oldRoomId = game.currentRoomId;
+        game.currentRoomId = '';
+        game.currentRoomName = '';
+        game.roomPlayers = [null, null, null, null];
+        game.isHost = false;
+        game.isRankedRoom = false;
+        game.isSpectator = false;
+        game.spectatorGameState = null;
+        game.gameState = null;
+        game.chatMessages = [];
+        game.cardViewers = [];
+        game.incomingCardViewRequests = [];
+        game.desertedPlayerName = null;
+        game.desertedReason = null;
+        game.notifyListeners();
+        // If server sends 'reconnected', the handler will restore roomId and state
+        // Wait briefly so reconnected message can arrive and restore state
+        await Future.delayed(const Duration(milliseconds: 800));
       }
       game.requestRoomList();
       game.requestSpectatableRooms();

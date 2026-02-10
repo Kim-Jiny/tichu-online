@@ -35,6 +35,12 @@ function decideBotAction(game, botId) {
       break;
 
     case 'playing':
+      // Bot needs to call a rank (played bird in a combo without callRank)
+      if (state.needsToCallRank) {
+        const ranks = ['2','3','4','5','6','7','8','9','10','J','Q','K','A'];
+        const rank = ranks[Math.floor(Math.random() * ranks.length)];
+        return { type: 'call_rank', rank };
+      }
       // Check game-level dragonPending (blocks all play_cards)
       if (game.dragonPending) {
         if (game.dragonDecider === botId) {

@@ -200,6 +200,12 @@ function handleMessage(ws, data) {
     case 'leave_game':
       handleLeaveGame(ws);
       break;
+    case 'return_to_room':
+      handleReturnToRoom(ws);
+      break;
+    case 'check_room':
+      handleCheckRoom(ws);
+      break;
     case 'spectate_room':
       handleSpectateRoom(ws, data);
       break;
@@ -523,6 +529,45 @@ async function handleLeaveGame(ws) {
 
   sendTo(ws, { type: 'room_left' });
   broadcastRoomList();
+}
+
+function handleReturnToRoom(ws) {
+  if (!ws.roomId) {
+    sendTo(ws, { type: 'error', message: 'Not in a room' });
+    return;
+  }
+  const room = lobby.getRoom(ws.roomId);
+  if (!room) {
+    ws.roomId = null;
+    sendTo(ws, { type: 'room_closed' });
+    return;
+  }
+  // Only allow when game has ended
+  if (room.game && room.game.state !== 'game_end') {
+    sendTo(ws, { type: 'error', message: 'Game is still in progress' });
+    return;
+  }
+  // Clear the game and reset ready states
+  room.game = null;
+  room.resetReady();
+  clearTurnTimer(ws.roomId);
+  broadcastRoomState(ws.roomId);
+  broadcastRoomList();
+}
+
+function handleCheckRoom(ws) {
+  if (!ws.roomId) {
+    sendTo(ws, { type: 'room_closed' });
+    return;
+  }
+  const room = lobby.getRoom(ws.roomId);
+  if (!room) {
+    ws.roomId = null;
+    sendTo(ws, { type: 'room_closed' });
+    return;
+  }
+  // Room exists - send current state
+  sendTo(ws, { type: 'room_state', room: room.getState() });
 }
 
 function handleSpectateRoom(ws, data) {
@@ -1054,10 +1099,19 @@ function scheduleBotActions(roomId) {
 
     // Re-evaluate at execution time
     for (const botId of r.getBotIds()) {
-      const action = decideBotAction(r.game, botId);
+      let action = decideBotAction(r.game, botId);
       if (action) {
         console.log(`[BOT] ${botId} action: ${action.type}`);
-        const result = r.game.handleAction(botId, action);
+        let result = r.game.handleAction(botId, action);
+        // If bot's action failed (e.g. call obligation), use server's auto-action as fallback
+        if (result && !result.success && r.game) {
+          console.log(`[BOT] ${botId} action failed: ${result.message}, trying fallback`);
+          const fallback = r.game.getAutoTimeoutAction(botId);
+          if (fallback) {
+            console.log(`[BOT] ${botId} fallback: ${fallback.type}`);
+            result = r.game.handleAction(botId, fallback);
+          }
+        }
         if (result && result.success) {
           if (result.broadcast) {
             broadcastGameEvent(roomId, result.broadcast);
@@ -1067,7 +1121,7 @@ function scheduleBotActions(roomId) {
           }
           sendGameStateToAll(roomId); // This will re-trigger scheduleBotActions
         } else {
-          console.log(`[BOT] ${botId} action failed: ${result.message}`);
+          console.log(`[BOT] ${botId} action failed: ${result?.message}`);
         }
         return; // One action at a time
       }
@@ -1116,7 +1170,9 @@ function startTurnTimer(roomId) {
 
   // Determine who needs to act
   let targetPlayer = room.game.currentPlayer;
-  if (room.game.dragonPending) {
+  if (room.game.needsToCallRank) {
+    targetPlayer = room.game.needsToCallRank;
+  } else if (room.game.dragonPending) {
     targetPlayer = room.game.dragonDecider;
   }
   if (!targetPlayer) return;

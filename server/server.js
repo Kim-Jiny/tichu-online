@@ -22,6 +22,11 @@ const server = http.createServer(async (req, res) => {
   const url = new URL(req.url, `http://${req.headers.host}`);
   const pathname = url.pathname;
 
+  // Debug: log admin route attempts
+  if (pathname.startsWith('/tc-backstage') || pathname.includes('backstage')) {
+    console.log(`[ADMIN] ${req.method} ${pathname}`);
+  }
+
   if (pathname.startsWith('/tc-backstage')) {
     try {
       await handleAdminRoute(req, res, url, pathname, req.method, lobby, wss);
@@ -36,6 +41,9 @@ const server = http.createServer(async (req, res) => {
   if (pathname === '/health') {
     res.writeHead(200, { 'Content-Type': 'text/plain' });
     res.end('OK');
+  } else if (pathname === '/debug-path') {
+    res.writeHead(200, { 'Content-Type': 'text/plain' });
+    res.end(`pathname=${req.url} | hasAdmin=${typeof handleAdminRoute}`);
   } else {
     res.writeHead(200, { 'Content-Type': 'text/plain' });
     res.end('Tichu WebSocket Server');

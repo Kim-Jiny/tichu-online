@@ -250,6 +250,9 @@ class _GameScreenState extends State<GameScreen> {
                     ),
                   Column(
                     children: [
+                      // Top bar: timer + score + viewers/chat/exit
+                      _buildTopBar(state, game),
+
                       // Top area - partner
                       _buildPartnerArea(state, game),
 
@@ -302,66 +305,6 @@ class _GameScreenState extends State<GameScreen> {
                   if (_viewersOpen)
                     _buildViewersPanel(game),
 
-                  // Countdown timer (top left)
-                  if (_remainingSeconds > 0)
-                    Positioned(
-                      top: 8,
-                      left: 8,
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                        decoration: BoxDecoration(
-                          color: _remainingSeconds <= 10
-                              ? const Color(0xFFFFE4E4)
-                              : Colors.white,
-                          borderRadius: BorderRadius.circular(12),
-                          border: Border.all(
-                            color: _remainingSeconds <= 10
-                                ? const Color(0xFFFF6B6B)
-                                : const Color(0xFFCCCCCC),
-                            width: _remainingSeconds <= 10 ? 2 : 1,
-                          ),
-                          boxShadow: [
-                            BoxShadow(
-                              color: Colors.black.withValues(alpha: 0.1),
-                              blurRadius: 4,
-                              offset: const Offset(0, 2),
-                            ),
-                          ],
-                        ),
-                        child: Text(
-                          '${_remainingSeconds}초',
-                          style: TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.bold,
-                            color: _remainingSeconds <= 10
-                                ? const Color(0xFFCC4444)
-                                : const Color(0xFF5A4038),
-                          ),
-                        ),
-                      ),
-                    ),
-
-                  // Menu button (top right)
-                  Positioned(
-                    top: 8,
-                    right: 8,
-                    child: _buildMenuButton(game),
-                  ),
-
-                  // Viewers button (top right, left of chat)
-                  if (game.cardViewers.isNotEmpty)
-                    Positioned(
-                      top: 8,
-                      right: 104,
-                      child: _buildViewersButton(game),
-                    ),
-
-                  // Chat button (top right, below menu)
-                  Positioned(
-                    top: 8,
-                    right: 56,
-                    child: _buildChatButton(game),
-                  ),
 
                   // Chat panel
                   if (_chatOpen) _buildChatPanel(game),
@@ -1704,6 +1647,8 @@ class _GameScreenState extends State<GameScreen> {
               isTurn: isPartnerTurn,
               badge: _tichuBadgeForPlayer(partner),
               connected: partner?.connected ?? true,
+              timeoutCount: partner?.timeoutCount ?? 0,
+              teamLabel: _teamForPosition(state, 'partner'),
             ),
           ),
           const SizedBox(height: 4),
@@ -1750,6 +1695,8 @@ class _GameScreenState extends State<GameScreen> {
                   fontSize: 12,
                   badge: _tichuBadgeForPlayer(left),
                   connected: left?.connected ?? true,
+                  timeoutCount: left?.timeoutCount ?? 0,
+                  teamLabel: _teamForPosition(state, 'left'),
                 ),
               ),
               Text(
@@ -1787,6 +1734,8 @@ class _GameScreenState extends State<GameScreen> {
                   fontSize: 12,
                   badge: _tichuBadgeForPlayer(right),
                   connected: right?.connected ?? true,
+                  timeoutCount: right?.timeoutCount ?? 0,
+                  teamLabel: _teamForPosition(state, 'right'),
                 ),
               ),
               Text(
@@ -1874,12 +1823,69 @@ class _GameScreenState extends State<GameScreen> {
             if (state.currentTrick.isNotEmpty)
               _buildLatestTrick(state),
 
-            const SizedBox(height: 4),
-
-            // Score display (tappable for history)
-            _buildScoreBar(state),
           ],
         ),
+      ),
+    );
+  }
+
+  Widget _buildTopBar(GameStateData state, GameService game) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+      child: Stack(
+        alignment: Alignment.center,
+        children: [
+          // Score (always centered)
+          _buildScoreBar(state),
+
+          // Left: Timer
+          if (_remainingSeconds > 0)
+            Align(
+              alignment: Alignment.centerLeft,
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                decoration: BoxDecoration(
+                  color: _remainingSeconds <= 10
+                      ? const Color(0xFFFFE4E4)
+                      : Colors.white.withValues(alpha: 0.9),
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(
+                    color: _remainingSeconds <= 10
+                        ? const Color(0xFFFF6B6B)
+                        : const Color(0xFFCCCCCC),
+                    width: _remainingSeconds <= 10 ? 2 : 1,
+                  ),
+                ),
+                child: Text(
+                  '${_remainingSeconds}초',
+                  style: TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.bold,
+                    color: _remainingSeconds <= 10
+                        ? const Color(0xFFCC4444)
+                        : const Color(0xFF5A4038),
+                  ),
+                ),
+              ),
+            ),
+
+          // Right: Viewers + Chat + Exit
+          Align(
+            alignment: Alignment.centerRight,
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                if (game.cardViewers.isNotEmpty) ...[
+                  _buildViewersButton(game),
+                  const SizedBox(width: 6),
+                ],
+                _buildChatButton(game),
+                const SizedBox(width: 6),
+                _buildMenuButton(game),
+              ],
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -2219,6 +2225,32 @@ class _GameScreenState extends State<GameScreen> {
           Row(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
+              Container(
+                margin: const EdgeInsets.only(right: 5),
+                padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
+                decoration: BoxDecoration(
+                  color: state.myTeam == 'A'
+                      ? const Color(0xFFE3F0FF)
+                      : const Color(0xFFFFE8EC),
+                  borderRadius: BorderRadius.circular(6),
+                  border: Border.all(
+                    color: state.myTeam == 'A'
+                        ? const Color(0xFF4A90D9)
+                        : const Color(0xFFD24B4B),
+                    width: 0.5,
+                  ),
+                ),
+                child: Text(
+                  state.myTeam,
+                  style: TextStyle(
+                    fontSize: 9,
+                    fontWeight: FontWeight.bold,
+                    color: state.myTeam == 'A'
+                        ? const Color(0xFF4A90D9)
+                        : const Color(0xFFD24B4B),
+                  ),
+                ),
+              ),
               GestureDetector(
                 onTap: () => _showPlayerProfileDialog(game.playerName, game),
                 child: Text(
@@ -2996,7 +3028,12 @@ class _GameScreenState extends State<GameScreen> {
     if (!state.exchangeDone) return;
     // Wait until exchange is fully performed (phase moves past card_exchange)
     if (state.phase == 'card_exchange') return;
-    if (_exchangeGiven.isEmpty) return;
+
+    // Use local _exchangeGiven if available, otherwise fall back to server data
+    final givenData = _exchangeGiven.isNotEmpty
+        ? _exchangeGiven
+        : state.exchangeGiven;
+    if (givenData == null || givenData.isEmpty) return;
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted || _exchangeSummaryShown) return;
@@ -3005,9 +3042,9 @@ class _GameScreenState extends State<GameScreen> {
       final partnerName = _nameForPosition(state, 'partner');
       final rightName = _nameForPosition(state, 'right');
 
-      final givenLeft = _exchangeGiven['left'];
-      final givenPartner = _exchangeGiven['partner'];
-      final givenRight = _exchangeGiven['right'];
+      final givenLeft = givenData['left'];
+      final givenPartner = givenData['partner'];
+      final givenRight = givenData['right'];
 
       // Use server-provided receivedFrom data
       final receivedLeft = state.receivedFrom?['left'];
@@ -3094,12 +3131,20 @@ class _GameScreenState extends State<GameScreen> {
     );
   }
 
+  String _teamForPosition(GameStateData state, String position) {
+    final myTeam = state.myTeam;
+    final sameTeam = (position == 'self' || position == 'partner');
+    return sameTeam ? myTeam : (myTeam == 'A' ? 'B' : 'A');
+  }
+
   Widget _buildTurnName({
     required String name,
     required bool isTurn,
     double fontSize = 14,
     Widget? badge,
     bool connected = true,
+    int timeoutCount = 0,
+    String? teamLabel,
   }) {
     return AnimatedContainer(
       duration: const Duration(milliseconds: 200),
@@ -3114,6 +3159,33 @@ class _GameScreenState extends State<GameScreen> {
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
+          if (teamLabel != null)
+            Container(
+              margin: const EdgeInsets.only(right: 5),
+              padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
+              decoration: BoxDecoration(
+                color: teamLabel == 'A'
+                    ? const Color(0xFFE3F0FF)
+                    : const Color(0xFFFFE8EC),
+                borderRadius: BorderRadius.circular(6),
+                border: Border.all(
+                  color: teamLabel == 'A'
+                      ? const Color(0xFF4A90D9)
+                      : const Color(0xFFD24B4B),
+                  width: 0.5,
+                ),
+              ),
+              child: Text(
+                teamLabel,
+                style: TextStyle(
+                  fontSize: 9,
+                  fontWeight: FontWeight.bold,
+                  color: teamLabel == 'A'
+                      ? const Color(0xFF4A90D9)
+                      : const Color(0xFFD24B4B),
+                ),
+              ),
+            ),
           if (!connected)
             Container(
               margin: const EdgeInsets.only(right: 6),
@@ -3144,6 +3216,25 @@ class _GameScreenState extends State<GameScreen> {
           if (badge != null) ...[
             const SizedBox(width: 6),
             badge,
+          ],
+          if (timeoutCount > 0) ...[
+            const SizedBox(width: 6),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
+              decoration: BoxDecoration(
+                color: const Color(0xFFFFF3E0),
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: const Color(0xFFFFB74D)),
+              ),
+              child: Text(
+                '$timeoutCount/3',
+                style: const TextStyle(
+                  fontSize: 9,
+                  fontWeight: FontWeight.bold,
+                  color: Color(0xFFE65100),
+                ),
+              ),
+            ),
           ],
         ],
       ),

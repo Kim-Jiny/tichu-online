@@ -37,10 +37,12 @@ class GameStateData {
   final bool needsToCallRank;
   final bool dragonPending;
   final bool exchangeDone;
+  final Map<String, String>? exchangeGiven; // { left: cardId, partner: cardId, right: cardId }
   final Map<String, String>? receivedFrom; // { left: cardId, partner: cardId, right: cardId }
   final bool largeTichuResponded;
   final bool canDeclareSmallTichu;
   final int? turnDeadline; // epoch ms
+  final String myTeam; // 'A' or 'B'
 
   GameStateData({
     this.phase = '',
@@ -56,10 +58,12 @@ class GameStateData {
     this.needsToCallRank = false,
     this.dragonPending = false,
     this.exchangeDone = false,
+    this.exchangeGiven,
     this.receivedFrom,
     this.largeTichuResponded = false,
     this.canDeclareSmallTichu = false,
     this.turnDeadline,
+    this.myTeam = 'A',
   });
 
   factory GameStateData.fromJson(Map<String, dynamic> json) {
@@ -114,12 +118,28 @@ class GameStateData {
       needsToCallRank: json['needsToCallRank'] ?? false,
       dragonPending: json['dragonPending'] ?? false,
       exchangeDone: json['exchangeDone'] ?? false,
+      exchangeGiven: json['exchangeGiven'] != null
+          ? Map<String, String>.from(json['exchangeGiven'])
+          : null,
       receivedFrom: json['receivedFrom'] != null
           ? Map<String, String>.from(json['receivedFrom'])
           : null,
       largeTichuResponded: json['largeTichuResponded'] ?? false,
       canDeclareSmallTichu: json['canDeclareSmallTichu'] ?? false,
       turnDeadline: json['turnDeadline'] as int?,
+      myTeam: _resolveMyTeam(json, playerList),
     );
+  }
+
+  static String _resolveMyTeam(Map<String, dynamic> json, List<Player> players) {
+    final teams = json['teams'];
+    if (teams == null) return 'A';
+    final selfPlayer = players.cast<Player?>().firstWhere(
+      (p) => p?.position == 'self',
+      orElse: () => null,
+    );
+    if (selfPlayer == null) return 'A';
+    final teamA = List<String>.from(teams['teamA'] ?? []);
+    return teamA.contains(selfPlayer.id) ? 'A' : 'B';
   }
 }

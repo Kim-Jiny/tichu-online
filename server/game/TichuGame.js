@@ -859,6 +859,7 @@ class TichuGame {
       needsToCallRank: this.needsToCallRank === playerId,
       dragonPending: this.dragonPending && this.dragonDecider === playerId,
       exchangeDone: !!this.exchangeDone[playerId],
+      exchangeGiven: this.exchangeCards[playerId] || null,
       receivedFrom: this.receivedFrom[playerId] || null,
       largeTichuResponded: this.largeTichuResponses[playerId] !== undefined,
       canDeclareSmallTichu: this.hands[playerId].length === 14 &&

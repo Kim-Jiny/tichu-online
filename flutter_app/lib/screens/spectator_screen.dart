@@ -977,65 +977,61 @@ class _SpectatorScreenState extends State<SpectatorScreen> {
       );
     }
 
-    return Center(
-      child: Wrap(
-        alignment: WrapAlignment.center,
-        spacing: 8,
-        runSpacing: 8,
-        children: currentTrick.map((play) {
-          final playerName = play['playerName'] ?? '';
-          final cards = (play['cards'] as List?) ?? [];
-          final combo = play['combo'] ?? '';
+    // Show only the latest play (same as game screen)
+    final lastPlay = currentTrick.last;
+    final playerName = lastPlay['playerName'] ?? '';
+    final cards = (lastPlay['cards'] as List?) ?? [];
+    final combo = lastPlay['combo'] ?? '';
 
-          return Container(
-            padding: const EdgeInsets.all(6),
-            decoration: BoxDecoration(
-              color: Colors.black.withOpacity(0.3),
-              borderRadius: BorderRadius.circular(8),
+    return Center(
+      child: Container(
+        padding: const EdgeInsets.all(8),
+        decoration: BoxDecoration(
+          color: Colors.black.withValues(alpha: 0.3),
+          borderRadius: BorderRadius.circular(12),
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(
+              playerName,
+              style: const TextStyle(
+                color: Colors.white70,
+                fontSize: 11,
+                fontWeight: FontWeight.bold,
+              ),
             ),
-            child: Column(
+            const SizedBox(height: 6),
+            Row(
               mainAxisSize: MainAxisSize.min,
-              children: [
-                Text(
-                  playerName,
-                  style: const TextStyle(
-                    color: Colors.white70,
-                    fontSize: 10,
-                  ),
-                ),
-                const SizedBox(height: 4),
-                Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: cards.map((cardId) {
-                    return Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 1),
-                      child: SizedBox(
-                        width: 36,
-                        height: 54,
-                        child: PlayingCard(
-                          cardId: cardId.toString(),
-                          width: 36,
-                          height: 54,
-                        ),
-                      ),
-                    );
-                  }).toList(),
-                ),
-                if (combo.isNotEmpty)
-                  Padding(
-                    padding: const EdgeInsets.only(top: 2),
-                    child: Text(
-                      combo,
-                      style: const TextStyle(
-                        color: Colors.white54,
-                        fontSize: 8,
-                      ),
+              children: cards.map((cardId) {
+                return Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 1),
+                  child: SizedBox(
+                    width: 40,
+                    height: 60,
+                    child: PlayingCard(
+                      cardId: cardId.toString(),
+                      width: 40,
+                      height: 60,
                     ),
                   ),
-              ],
+                );
+              }).toList(),
             ),
-          );
-        }).toList(),
+            if (combo.isNotEmpty)
+              Padding(
+                padding: const EdgeInsets.only(top: 4),
+                child: Text(
+                  combo,
+                  style: const TextStyle(
+                    color: Colors.white54,
+                    fontSize: 9,
+                  ),
+                ),
+              ),
+          ],
+        ),
       ),
     );
   }

@@ -151,6 +151,7 @@ wss.on('connection', (ws) => {
       if (room) {
         if (ws.isSpectator) {
           room.removeSpectator(ws.playerId);
+          if (room.game) _broadcastState(ws.roomId, room);
         } else if (room.game) {
           // Game in progress - mark as disconnected, don't remove
           room.markPlayerDisconnected(ws.playerId);
@@ -587,6 +588,7 @@ async function handleLeaveRoom(ws) {
   if (room) {
     if (wasSpectating) {
       room.removeSpectator(ws.playerId);
+      if (room.game) _broadcastState(roomId, room);
     } else {
       // S6: If game is active and not already deserted, treat as desertion
       if (room.game && room.game.state !== 'game_end' && !room.game.deserted) {
@@ -814,6 +816,7 @@ function handleRespondCardView(ws, data) {
   // Send updated game state to the approving player so cardViewers refreshes immediately
   if (allow && room.game) {
     const playerState = room.game.getStateForPlayer(ws.playerId);
+    playerState.turnDeadline = room.turnDeadline;
     playerState.cardViewers = room.getViewersForPlayer(ws.playerId);
     sendTo(ws, { type: 'game_state', state: playerState });
   }
@@ -1183,6 +1186,9 @@ function _broadcastState(roomId, room) {
     connectionStatus[player.id] = player.connected !== false;
   }
 
+  // Build timeout count map by player name
+  const roomTimeouts = timeoutCounts[roomId] || {};
+
   // Send to human players (skip null slots and bots)
   for (const player of room.players) {
     if (player === null) continue;
@@ -1194,6 +1200,7 @@ function _broadcastState(roomId, room) {
       state.players = state.players.map(p => ({
         ...p,
         connected: connectionStatus[p.id] !== false,
+        timeoutCount: roomTimeouts[p.name] || 0,
       }));
       state.turnDeadline = room.turnDeadline;
       state.cardViewers = room.getViewersForPlayer(player.id);
@@ -1211,6 +1218,7 @@ function _broadcastState(roomId, room) {
       spectatorState.players = spectatorState.players.map(p => ({
         ...p,
         connected: connectionStatus[p.id] !== false,
+        timeoutCount: roomTimeouts[p.name] || 0,
       }));
       spectatorState.turnDeadline = room.turnDeadline;
       sendTo(ws, { type: 'spectator_game_state', state: spectatorState });

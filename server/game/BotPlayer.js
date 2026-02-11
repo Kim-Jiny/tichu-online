@@ -253,9 +253,6 @@ function followTrick(state, cards, normalCards, combos) {
 function selectExchangeCards(cards) {
   // S8: Ensure no duplicate card selections
   const normalCards = cards.filter(c => !c.startsWith('special_'));
-  // Partner gets best card — include dragon/phoenix as candidates
-  const allForPartner = cards.filter(c => c !== 'special_dog' && c !== 'special_bird');
-  const sortedForPartner = [...allForPartner].sort((a, b) => getCardValue(b) - getCardValue(a));
   const low = [...normalCards].sort((a, b) => getCardValue(a) - getCardValue(b));
 
   const used = new Set();
@@ -266,12 +263,19 @@ function selectExchangeCards(cards) {
     for (const c of fallback) {
       if (!used.has(c)) { used.add(c); return c; }
     }
-    return fallback[0]; // should never happen with 14-card hand
+    return fallback[0];
   }
 
+  // Partner first: prioritize dragon/phoenix, then highest normal card
+  const partnerPriority = [];
+  if (cards.includes('special_dragon')) partnerPriority.push('special_dragon');
+  if (cards.includes('special_phoenix')) partnerPriority.push('special_phoenix');
+  const highNormal = [...normalCards].sort((a, b) => getCardValue(b) - getCardValue(a));
+  partnerPriority.push(...highNormal);
+
+  const partner = pick(partnerPriority, cards);
   const left = pick(low, cards);
-  const partner = pick(sortedForPartner, cards);
-  const right = pick(low.slice(1), cards);
+  const right = pick(low, cards);
 
   return { left, partner, right };
 }

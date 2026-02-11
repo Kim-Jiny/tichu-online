@@ -10,6 +10,7 @@ class Player {
   final bool isHost;
   final bool connected;
   final bool isReady;
+  final int timeoutCount;
 
   Player({
     required this.id,
@@ -23,6 +24,7 @@ class Player {
     this.isHost = false,
     this.connected = true,
     this.isReady = false,
+    this.timeoutCount = 0,
   });
 
   factory Player.fromJson(Map<String, dynamic> json) {
@@ -38,6 +40,7 @@ class Player {
       isHost: json['isHost'] ?? false,
       connected: json['connected'] ?? true,
       isReady: json['isReady'] ?? false,
+      timeoutCount: json['timeoutCount'] ?? 0,
     );
   }
 }

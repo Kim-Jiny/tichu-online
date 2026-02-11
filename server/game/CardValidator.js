@@ -378,6 +378,9 @@ function arrangeCardsWithPhoenix(cardIds, combo) {
   const hasPhoenix = cardIds.includes('special_phoenix');
   const normalCards = cardIds.filter((c) => c !== 'special_phoenix');
 
+  // Single card: return as-is
+  if (cardIds.length === 1) return [...cardIds];
+
   // Sort normal cards by value (low to high)
   normalCards.sort((a, b) => getCardValue(a) - getCardValue(b));
 

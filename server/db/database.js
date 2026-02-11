@@ -262,6 +262,8 @@ async function initDatabase() {
         ('leave_reduce_3', '탈주 카운트 -3', 'utility', 400, FALSE, TRUE, NULL, TRUE, 'leave_count_reduce', 3, '{}'::jsonb),
         ('nickname_change', '닉네임 변경권', 'utility', 500, FALSE, TRUE, NULL, TRUE, 'nickname_change', NULL, '{}'::jsonb),
         ('top_card_counter_7d', '탑패 카운터(7일)', 'utility', 1000, FALSE, FALSE, 7, TRUE, NULL, NULL, '{}'::jsonb),
+        ('stats_reset', '전적 초기화권', 'utility', 2000, FALSE, TRUE, NULL, TRUE, 'stats_reset', NULL, '{}'::jsonb),
+        ('season_stats_reset', '랭킹전적 초기화권', 'utility', 1000, FALSE, TRUE, NULL, TRUE, 'season_stats_reset', NULL, '{}'::jsonb),
         ('banner_season_gold', '시즌 골드 배너', 'banner', 0, TRUE, FALSE, 30, FALSE, NULL, NULL, '{}'::jsonb),
         ('banner_season_silver', '시즌 실버 배너', 'banner', 0, TRUE, FALSE, 30, FALSE, NULL, NULL, '{}'::jsonb),
         ('banner_season_bronze', '시즌 브론즈 배너', 'banner', 0, TRUE, FALSE, 30, FALSE, NULL, NULL, '{}'::jsonb)
@@ -1115,7 +1117,8 @@ async function useItem(nickname, itemKey) {
       return { success: false, message: '아이템을 찾을 수 없습니다' };
     }
     const { effect_type: effectType, effect_value: effectValue } = itemRes.rows[0];
-    if (effectType !== 'leave_count_reduce') {
+    const allowedEffects = ['leave_count_reduce', 'stats_reset', 'season_stats_reset'];
+    if (!allowedEffects.includes(effectType)) {
       await client.query('ROLLBACK');
       return { success: false, message: '사용할 수 없는 아이템입니다' };
     }
@@ -1132,11 +1135,25 @@ async function useItem(nickname, itemKey) {
       return { success: false, message: '보유하지 않은 아이템입니다' };
     }
 
-    await client.query(
-      `UPDATE tc_users SET leave_count = GREATEST(0, leave_count - $2)
-       WHERE nickname = $1`,
-      [nickname, effectValue || 1]
-    );
+    if (effectType === 'leave_count_reduce') {
+      await client.query(
+        `UPDATE tc_users SET leave_count = GREATEST(0, leave_count - $2)
+         WHERE nickname = $1`,
+        [nickname, effectValue || 1]
+      );
+    } else if (effectType === 'stats_reset') {
+      await client.query(
+        `UPDATE tc_users SET total_games = 0, wins = 0, losses = 0
+         WHERE nickname = $1`,
+        [nickname]
+      );
+    } else if (effectType === 'season_stats_reset') {
+      await client.query(
+        `UPDATE tc_users SET season_games = 0, season_wins = 0, season_losses = 0
+         WHERE nickname = $1`,
+        [nickname]
+      );
+    }
 
     await client.query(
       `DELETE FROM tc_user_items WHERE id = $1`,
@@ -1643,6 +1660,27 @@ async function submitInquiry(nickname, category, title, content) {
   } catch (err) {
     console.error('Submit inquiry error:', err);
     return { success: false, message: '문의 접수에 실패했습니다' };
+  } finally {
+    client.release();
+  }
+}
+
+// Get inquiries for a user
+async function getUserInquiries(nickname, limit = 30) {
+  const client = await pool.connect();
+  try {
+    const result = await client.query(
+      `SELECT id, category, status, title, content, admin_note, created_at, resolved_at
+       FROM tc_inquiries
+       WHERE user_nickname = $1
+       ORDER BY created_at DESC
+       LIMIT $2`,
+      [nickname, limit]
+    );
+    return { success: true, inquiries: result.rows };
+  } catch (err) {
+    console.error('Get user inquiries error:', err);
+    return { success: false, message: '문의 내역을 불러오지 못했습니다', inquiries: [] };
   } finally {
     client.release();
   }
@@ -2164,6 +2202,7 @@ module.exports = {
   resetSeasonStats,
   grantSeasonRewards,
   submitInquiry,
+  getUserInquiries,
   getInquiries,
   getInquiryById,
   resolveInquiry,

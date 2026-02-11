@@ -11,6 +11,7 @@ class GameService extends ChangeNotifier {
   StreamSubscription? _subscription;
   Timer? _dogDelayTimer;
   Timer? _dogClearTimer;
+  Timer? _inquiryBannerTimer;
   DateTime? _dogDelayUntil;
   Map<String, dynamic>? _pendingGameState;
 
@@ -107,6 +108,11 @@ class GameService extends ChangeNotifier {
   // Inquiry
   String? inquiryResultMessage;
   bool? inquiryResultSuccess;
+  List<Map<String, dynamic>> inquiries = [];
+  bool inquiriesLoading = false;
+  String? inquiriesError;
+  String? inquiryBannerMessage;
+  final Set<int> _seenInquiryIds = {};
 
   // Nickname change
   String? nicknameChangeResult;
@@ -768,6 +774,22 @@ class GameService extends ChangeNotifier {
         notifyListeners();
         break;
 
+      case 'inquiries_result':
+        inquiriesLoading = false;
+        if (data['success'] == true) {
+          inquiries = (data['inquiries'] as List?)
+                  ?.map((e) => (e as Map).cast<String, dynamic>())
+                  .toList() ??
+              [];
+          inquiriesError = null;
+          _maybeShowInquiryBanner();
+        } else {
+          inquiriesError = data['message'] as String? ?? '문의 내역을 불러오지 못했습니다';
+          inquiries = [];
+        }
+        notifyListeners();
+        break;
+
       case 'maintenance_status':
         _parseMaintenanceStatus(data);
         notifyListeners();
@@ -1286,12 +1308,41 @@ class GameService extends ChangeNotifier {
     });
   }
 
+  void requestInquiries() {
+    inquiriesLoading = true;
+    inquiriesError = null;
+    notifyListeners();
+    _network.send({'type': 'get_inquiries'});
+  }
+
+  void _maybeShowInquiryBanner() {
+    for (final item in inquiries) {
+      final id = (item['id'] is int) ? item['id'] as int : int.tryParse('${item['id']}') ?? -1;
+      final status = item['status']?.toString() ?? '';
+      final adminNote = item['admin_note']?.toString() ?? '';
+      if (id <= 0) continue;
+      if (status == 'resolved' && adminNote.isNotEmpty && !_seenInquiryIds.contains(id)) {
+        _seenInquiryIds.add(id);
+        final title = item['title']?.toString() ?? '문의';
+        inquiryBannerMessage = '문의 답변이 도착했어요: $title';
+        _inquiryBannerTimer?.cancel();
+        _inquiryBannerTimer = Timer(const Duration(seconds: 4), () {
+          if (_disposed) return;
+          inquiryBannerMessage = null;
+          notifyListeners();
+        });
+        return;
+      }
+    }
+  }
+
   @override
   void dispose() {
     _disposed = true; // C2: Mark as disposed
     _subscription?.cancel();
     _dogDelayTimer?.cancel();
     _dogClearTimer?.cancel();
+    _inquiryBannerTimer?.cancel();
     super.dispose();
   }
 }

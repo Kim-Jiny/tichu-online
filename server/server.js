@@ -9,7 +9,7 @@ const {
   addFriend, getFriends, getPendingFriendRequests,
   acceptFriendRequest, rejectFriendRequest, removeFriend,
   saveMatchResult, updateUserStats, getUserProfile, getRecentMatches,
-  submitInquiry, getRankings,
+  submitInquiry, getUserInquiries, getRankings,
   getWallet, getShopItems, getUserItems, buyItem, equipItem, useItem, changeNickname,
   incrementLeaveCount, setRankedBan, getRankedBan, setChatBan, getChatBan, grantSeasonRewards,
   getActiveSeason, createSeason, getSeasons,
@@ -352,6 +352,9 @@ function handleMessage(ws, data) {
       break;
     case 'submit_inquiry':
       handleSubmitInquiry(ws, data);
+      break;
+    case 'get_inquiries':
+      handleGetInquiries(ws);
       break;
     case 'add_friend':
       handleAddFriend(ws, data);
@@ -1961,6 +1964,15 @@ async function handleSubmitInquiry(ws, data) {
   }
   const result = await submitInquiry(ws.nickname, category, title, content);
   sendTo(ws, { type: 'inquiry_result', ...result });
+}
+
+async function handleGetInquiries(ws) {
+  if (!ws.nickname) {
+    sendTo(ws, { type: 'inquiries_result', success: false, message: '로그인이 필요합니다', inquiries: [] });
+    return;
+  }
+  const result = await getUserInquiries(ws.nickname);
+  sendTo(ws, { type: 'inquiries_result', ...result });
 }
 
 // Add friend handler

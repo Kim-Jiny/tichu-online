@@ -811,6 +811,20 @@ class _ShopScreenState extends State<ShopScreen> {
           'gradient': [const Color(0xFFE8F5E9), const Color(0xFFA5D6A7)],
           'borderColor': const Color(0xFF81C784),
         };
+      case 'stats_reset':
+        return {
+          'icon': Icons.restart_alt,
+          'iconColor': const Color(0xFF757575),
+          'gradient': [const Color(0xFFF5F5F5), const Color(0xFFE0E0E0)],
+          'borderColor': const Color(0xFFBDBDBD),
+        };
+      case 'season_stats_reset':
+        return {
+          'icon': Icons.emoji_events,
+          'iconColor': const Color(0xFF7B1FA2),
+          'gradient': [const Color(0xFFF3E5F5), const Color(0xFFCE93D8)],
+          'borderColor': const Color(0xFFBA68C8),
+        };
     }
 
     // Fallback by category
@@ -940,6 +954,10 @@ class _ShopScreenState extends State<ShopScreen> {
       info.add('효과: 닉네임 1회 변경');
     } else if (effectType == 'leave_count_reduce') {
       info.add('효과: 탈주 -${effectValue ?? 1}');
+    } else if (effectType == 'stats_reset') {
+      info.add('효과: 전체 전적(승/패/판수) 초기화');
+    } else if (effectType == 'season_stats_reset') {
+      info.add('효과: 랭킹 전적(승/패/판수) 초기화');
     }
 
     showDialog(

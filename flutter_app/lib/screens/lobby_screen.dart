@@ -39,6 +39,7 @@ class _LobbyScreenState extends State<LobbyScreen> {
       game.requestBlockedUsers();
       game.requestFriends();
       game.requestPendingFriendRequests();
+      game.requestInquiries();
       _networkService = context.read<NetworkService>();
       _networkService!.addListener(_onNetworkChanged);
     });
@@ -395,28 +396,47 @@ class _LobbyScreenState extends State<LobbyScreen> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 const Text('카테고리', style: TextStyle(fontSize: 13, color: Color(0xFF8A8A8A))),
-                const SizedBox(height: 4),
-                Container(
-                  width: double.infinity,
-                  padding: const EdgeInsets.symmetric(horizontal: 12),
-                  decoration: BoxDecoration(
-                    border: Border.all(color: const Color(0xFFDDD0CC)),
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: DropdownButtonHideUnderline(
-                    child: DropdownButton<String>(
-                      value: selectedCategory,
-                      isExpanded: true,
-                      items: const [
-                        DropdownMenuItem(value: 'bug', child: Text('버그 신고')),
-                        DropdownMenuItem(value: 'suggestion', child: Text('건의사항')),
-                        DropdownMenuItem(value: 'other', child: Text('기타')),
-                      ],
-                      onChanged: (v) {
-                        if (v != null) setState(() => selectedCategory = v);
-                      },
+                const SizedBox(height: 6),
+                Wrap(
+                  spacing: 8,
+                  children: [
+                    ChoiceChip(
+                      label: const Text('버그 신고'),
+                      selected: selectedCategory == 'bug',
+                      onSelected: (_) => setState(() => selectedCategory = 'bug'),
+                      selectedColor: const Color(0xFFEDE7F6),
+                      labelStyle: TextStyle(
+                        color: selectedCategory == 'bug'
+                            ? const Color(0xFF6A4FA3)
+                            : const Color(0xFF5A4038),
+                        fontWeight: FontWeight.w600,
+                      ),
                     ),
-                  ),
+                    ChoiceChip(
+                      label: const Text('건의사항'),
+                      selected: selectedCategory == 'suggestion',
+                      onSelected: (_) => setState(() => selectedCategory = 'suggestion'),
+                      selectedColor: const Color(0xFFEDE7F6),
+                      labelStyle: TextStyle(
+                        color: selectedCategory == 'suggestion'
+                            ? const Color(0xFF6A4FA3)
+                            : const Color(0xFF5A4038),
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                    ChoiceChip(
+                      label: const Text('기타'),
+                      selected: selectedCategory == 'other',
+                      onSelected: (_) => setState(() => selectedCategory = 'other'),
+                      selectedColor: const Color(0xFFEDE7F6),
+                      labelStyle: TextStyle(
+                        color: selectedCategory == 'other'
+                            ? const Color(0xFF6A4FA3)
+                            : const Color(0xFF5A4038),
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ],
                 ),
                 const SizedBox(height: 12),
                 const Text('제목', style: TextStyle(fontSize: 13, color: Color(0xFF8A8A8A))),
@@ -480,6 +500,214 @@ class _LobbyScreenState extends State<LobbyScreen> {
     );
   }
 
+  void _showInquiryHistoryDialog() {
+    final game = context.read<GameService>();
+    game.requestInquiries();
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: const Row(
+          children: [
+            Icon(Icons.mark_email_read, color: Color(0xFF1E88E5)),
+            SizedBox(width: 8),
+            Text('문의 내역'),
+          ],
+        ),
+        content: SizedBox(
+          width: double.maxFinite,
+          child: Consumer<GameService>(
+            builder: (context, game, _) {
+              if (game.inquiriesLoading) {
+                return const SizedBox(
+                  height: 160,
+                  child: Center(child: CircularProgressIndicator()),
+                );
+              }
+              if (game.inquiriesError != null) {
+                return SizedBox(
+                  height: 160,
+                  child: Center(
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text(
+                          game.inquiriesError!,
+                          style: const TextStyle(color: Color(0xFFCC6666)),
+                          textAlign: TextAlign.center,
+                        ),
+                        const SizedBox(height: 10),
+                        TextButton(
+                          onPressed: () => game.requestInquiries(),
+                          child: const Text('다시 시도'),
+                        ),
+                      ],
+                    ),
+                  ),
+                );
+              }
+              if (game.inquiries.isEmpty) {
+                return const SizedBox(
+                  height: 140,
+                  child: Center(
+                    child: Text(
+                      '등록된 문의가 없습니다',
+                      style: TextStyle(color: Color(0xFF9A8E8A)),
+                    ),
+                  ),
+                );
+              }
+              return SizedBox(
+                height: 320,
+                child: ListView.separated(
+                  itemCount: game.inquiries.length,
+                  separatorBuilder: (_, __) => const SizedBox(height: 8),
+                  itemBuilder: (context, index) {
+                    final item = game.inquiries[index];
+                    final title = item['title']?.toString() ?? '';
+                    final category = _inquiryCategoryLabel(item['category']);
+                    final status = item['status']?.toString() ?? 'pending';
+                    final createdAt = _formatShortDate(item['created_at']);
+                    final isResolved = status == 'resolved';
+                    return InkWell(
+                      onTap: () => _showInquiryDetailDialog(item),
+                      borderRadius: BorderRadius.circular(12),
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(color: const Color(0xFFE0D8D4)),
+                        ),
+                        child: Row(
+                          children: [
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                              decoration: BoxDecoration(
+                                color: isResolved
+                                    ? const Color(0xFFE8F5E9)
+                                    : const Color(0xFFFFF8E1),
+                                borderRadius: BorderRadius.circular(10),
+                              ),
+                              child: Text(
+                                isResolved ? '답변완료' : '대기중',
+                                style: TextStyle(
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.bold,
+                                  color: isResolved
+                                      ? const Color(0xFF4CAF50)
+                                      : const Color(0xFFF57C00),
+                                ),
+                              ),
+                            ),
+                            const SizedBox(width: 8),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    title,
+                                    style: const TextStyle(
+                                      fontSize: 13,
+                                      fontWeight: FontWeight.w600,
+                                      color: Color(0xFF5A4038),
+                                    ),
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                  const SizedBox(height: 4),
+                                  Text(
+                                    '$category · $createdAt',
+                                    style: const TextStyle(
+                                      fontSize: 11,
+                                      color: Color(0xFF8A7A72),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                            const Icon(Icons.chevron_right, color: Color(0xFFB0A8A4)),
+                          ],
+                        ),
+                      ),
+                    );
+                  },
+                ),
+              );
+            },
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('닫기'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showInquiryDetailDialog(Map<String, dynamic> item) {
+    final title = item['title']?.toString() ?? '';
+    final content = item['content']?.toString() ?? '';
+    final adminNote = item['admin_note']?.toString() ?? '';
+    final status = item['status']?.toString() ?? 'pending';
+    final category = _inquiryCategoryLabel(item['category']);
+    final createdAt = _formatShortDate(item['created_at']);
+    final resolvedAt = _formatShortDate(item['resolved_at']);
+
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: Text(title),
+        content: SingleChildScrollView(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                '$category · $createdAt',
+                style: const TextStyle(fontSize: 12, color: Color(0xFF8A7A72)),
+              ),
+              const SizedBox(height: 12),
+              Text(
+                content,
+                style: const TextStyle(fontSize: 13, color: Color(0xFF5A4038)),
+              ),
+              const SizedBox(height: 16),
+              if (status == 'resolved' && adminNote.isNotEmpty) ...[
+                const Text(
+                  '답변',
+                  style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Color(0xFF4CAF50)),
+                ),
+                const SizedBox(height: 6),
+                Text(
+                  adminNote,
+                  style: const TextStyle(fontSize: 13, color: Color(0xFF5A4038)),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  '답변일: $resolvedAt',
+                  style: const TextStyle(fontSize: 11, color: Color(0xFF8A7A72)),
+                ),
+              ] else if (status != 'resolved') ...[
+                const Text(
+                  '아직 답변이 등록되지 않았습니다.',
+                  style: TextStyle(fontSize: 12, color: Color(0xFF9A8E8A)),
+                ),
+              ],
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('닫기'),
+          ),
+        ],
+      ),
+    );
+  }
+
   void _showProfileDialog() {
     final game = context.read<GameService>();
     _showUserProfileDialog(game.playerName, game);
@@ -512,6 +740,26 @@ class _LobbyScreenState extends State<LobbyScreen> {
                 style: ElevatedButton.styleFrom(
                   backgroundColor: const Color(0xFFF3E5F5),
                   foregroundColor: const Color(0xFFBA68C8),
+                  padding: const EdgeInsets.symmetric(vertical: 12),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                ),
+              ),
+            ),
+            const SizedBox(height: 10),
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton.icon(
+                onPressed: () {
+                  Navigator.pop(ctx);
+                  _showInquiryHistoryDialog();
+                },
+                icon: const Icon(Icons.mark_email_read),
+                label: const Text('문의 내역'),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color(0xFFE3F2FD),
+                  foregroundColor: const Color(0xFF1E88E5),
                   padding: const EdgeInsets.symmetric(vertical: 12),
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(12),
@@ -1030,6 +1278,8 @@ class _LobbyScreenState extends State<LobbyScreen> {
         // Maintenance notice banner
         if (game.hasMaintenanceNotice)
           _buildMaintenanceBanner(game),
+        if (game.inquiryBannerMessage != null)
+          _buildInquiryBanner(game),
 
         // Room list or Friends panel
         Expanded(
@@ -1086,6 +1336,39 @@ class _LobbyScreenState extends State<LobbyScreen> {
                   ),
               ],
             ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildInquiryBanner(GameService game) {
+    return Container(
+      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+      decoration: BoxDecoration(
+        color: const Color(0xFFE3F2FD),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: const Color(0xFF90CAF9)),
+      ),
+      child: Row(
+        children: [
+          const Icon(Icons.mark_email_read, color: Color(0xFF1E88E5), size: 20),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Text(
+              game.inquiryBannerMessage ?? '',
+              style: const TextStyle(
+                color: Color(0xFF1E88E5),
+                fontSize: 13,
+                fontWeight: FontWeight.w600,
+              ),
+              overflow: TextOverflow.ellipsis,
+            ),
+          ),
+          GestureDetector(
+            onTap: () => game.requestInquiries(),
+            child: const Icon(Icons.refresh, size: 18, color: Color(0xFF1E88E5)),
           ),
         ],
       ),
@@ -3264,6 +3547,19 @@ class _LobbyScreenState extends State<LobbyScreen> {
       return '${dt.year}.${dt.month.toString().padLeft(2, '0')}.${dt.day.toString().padLeft(2, '0')}';
     } catch (_) {
       return '-';
+    }
+  }
+
+  String _inquiryCategoryLabel(dynamic value) {
+    switch (value?.toString()) {
+      case 'bug':
+        return '버그 신고';
+      case 'suggestion':
+        return '건의사항';
+      case 'other':
+        return '기타';
+      default:
+        return '기타';
     }
   }
 

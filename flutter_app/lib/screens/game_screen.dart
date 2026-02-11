@@ -3146,98 +3146,102 @@ class _GameScreenState extends State<GameScreen> {
     int timeoutCount = 0,
     String? teamLabel,
   }) {
-    return AnimatedContainer(
-      duration: const Duration(milliseconds: 200),
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-      decoration: BoxDecoration(
-        color: isTurn ? const Color(0xFFFFF2B3) : Colors.transparent,
-        borderRadius: BorderRadius.circular(12),
-        border: isTurn
-            ? Border.all(color: const Color(0xFFE6C86A))
-            : null,
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          if (teamLabel != null)
-            Container(
-              margin: const EdgeInsets.only(right: 5),
-              padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
-              decoration: BoxDecoration(
-                color: teamLabel == 'A'
-                    ? const Color(0xFFE3F0FF)
-                    : const Color(0xFFFFE8EC),
-                borderRadius: BorderRadius.circular(6),
-                border: Border.all(
-                  color: teamLabel == 'A'
-                      ? const Color(0xFF4A90D9)
-                      : const Color(0xFFD24B4B),
-                  width: 0.5,
-                ),
-              ),
-              child: Text(
-                teamLabel,
-                style: TextStyle(
-                  fontSize: 9,
-                  fontWeight: FontWeight.bold,
-                  color: teamLabel == 'A'
-                      ? const Color(0xFF4A90D9)
-                      : const Color(0xFFD24B4B),
-                ),
-              ),
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        if (timeoutCount > 0)
+          Container(
+            margin: const EdgeInsets.only(bottom: 2),
+            padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
+            decoration: BoxDecoration(
+              color: const Color(0xFFFFF3E0),
+              borderRadius: BorderRadius.circular(8),
+              border: Border.all(color: const Color(0xFFFFB74D)),
             ),
-          if (!connected)
-            Container(
-              margin: const EdgeInsets.only(right: 6),
-              child: const Icon(
-                Icons.wifi_off,
-                size: 14,
-                color: Colors.red,
+            child: Text(
+              '⏱ $timeoutCount/3',
+              style: const TextStyle(
+                fontSize: 9,
+                fontWeight: FontWeight.bold,
+                color: Color(0xFFE65100),
               ),
-            )
-          else if (isTurn)
-            Container(
-              width: 8,
-              height: 8,
-              margin: const EdgeInsets.only(right: 6),
-              decoration: BoxDecoration(
-                color: const Color(0xFFE6A800),
-                shape: BoxShape.circle,
-              ),
-            ),
-          Text(
-            name,
-            style: TextStyle(
-              fontSize: fontSize,
-              fontWeight: FontWeight.bold,
-              color: connected ? const Color(0xFF5A4038) : Colors.grey,
             ),
           ),
-          if (badge != null) ...[
-            const SizedBox(width: 6),
-            badge,
-          ],
-          if (timeoutCount > 0) ...[
-            const SizedBox(width: 6),
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
-              decoration: BoxDecoration(
-                color: const Color(0xFFFFF3E0),
-                borderRadius: BorderRadius.circular(8),
-                border: Border.all(color: const Color(0xFFFFB74D)),
-              ),
-              child: Text(
-                '$timeoutCount/3',
-                style: const TextStyle(
-                  fontSize: 9,
+        AnimatedContainer(
+          duration: const Duration(milliseconds: 200),
+          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+          decoration: BoxDecoration(
+            color: isTurn ? const Color(0xFFFFF2B3) : Colors.transparent,
+            borderRadius: BorderRadius.circular(12),
+            border: isTurn
+                ? Border.all(color: const Color(0xFFE6C86A))
+                : null,
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              if (teamLabel != null)
+                Container(
+                  margin: const EdgeInsets.only(right: 5),
+                  padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
+                  decoration: BoxDecoration(
+                    color: teamLabel == 'A'
+                        ? const Color(0xFFE3F0FF)
+                        : const Color(0xFFFFE8EC),
+                    borderRadius: BorderRadius.circular(6),
+                    border: Border.all(
+                      color: teamLabel == 'A'
+                          ? const Color(0xFF4A90D9)
+                          : const Color(0xFFD24B4B),
+                      width: 0.5,
+                    ),
+                  ),
+                  child: Text(
+                    teamLabel,
+                    style: TextStyle(
+                      fontSize: 9,
+                      fontWeight: FontWeight.bold,
+                      color: teamLabel == 'A'
+                          ? const Color(0xFF4A90D9)
+                          : const Color(0xFFD24B4B),
+                    ),
+                  ),
+                ),
+              if (!connected)
+                Container(
+                  margin: const EdgeInsets.only(right: 6),
+                  child: const Icon(
+                    Icons.wifi_off,
+                    size: 14,
+                    color: Colors.red,
+                  ),
+                )
+              else if (isTurn)
+                Container(
+                  width: 8,
+                  height: 8,
+                  margin: const EdgeInsets.only(right: 6),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFE6A800),
+                    shape: BoxShape.circle,
+                  ),
+                ),
+              Text(
+                name,
+                style: TextStyle(
+                  fontSize: fontSize,
                   fontWeight: FontWeight.bold,
-                  color: Color(0xFFE65100),
+                  color: connected ? const Color(0xFF5A4038) : Colors.grey,
                 ),
               ),
-            ),
-          ],
-        ],
-      ),
+              if (badge != null) ...[
+                const SizedBox(width: 6),
+                badge,
+              ],
+            ],
+          ),
+        ),
+      ],
     );
   }
 

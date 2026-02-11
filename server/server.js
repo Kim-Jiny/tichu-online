@@ -10,7 +10,7 @@ const {
   acceptFriendRequest, rejectFriendRequest, removeFriend,
   saveMatchResult, updateUserStats, getUserProfile, getRecentMatches,
   submitInquiry, getRankings,
-  getWallet, getShopItems, getUserItems, buyItem, equipItem, useItem,
+  getWallet, getShopItems, getUserItems, buyItem, equipItem, useItem, changeNickname,
   incrementLeaveCount, setRankedBan, getRankedBan, grantSeasonRewards,
   getActiveSeason, createSeason, getSeasons,
   getCurrentSeasonRankings, getSeasonRankings, resetSeasonStats,
@@ -350,6 +350,9 @@ function handleMessage(ws, data) {
       break;
     case 'use_item':
       handleUseItem(ws, data);
+      break;
+    case 'change_nickname':
+      handleChangeNickname(ws, data);
       break;
     default:
       sendTo(ws, { type: 'error', message: `알 수 없는 메시지: ${data.type}` });
@@ -1743,6 +1746,22 @@ async function handleUseItem(ws, data) {
   const itemKey = data.itemKey;
   const result = await useItem(ws.nickname, itemKey);
   sendTo(ws, { type: 'use_item_result', ...result });
+}
+
+async function handleChangeNickname(ws, data) {
+  if (!ws.nickname) {
+    sendTo(ws, { type: 'change_nickname_result', success: false, message: '로그인이 필요합니다' });
+    return;
+  }
+  if (ws.roomId) {
+    sendTo(ws, { type: 'change_nickname_result', success: false, message: '게임 중에는 닉네임을 변경할 수 없습니다' });
+    return;
+  }
+  const result = await changeNickname(ws.nickname, data.newNickname);
+  if (result.success) {
+    ws.nickname = result.newNickname;
+  }
+  sendTo(ws, { type: 'change_nickname_result', ...result });
 }
 
 // Submit inquiry handler

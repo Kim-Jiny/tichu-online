@@ -248,6 +248,7 @@ async function initDatabase() {
         ('theme_mocha_30d', '모카 테마(30일)', 'theme', 300, FALSE, FALSE, 30, TRUE, NULL, NULL, '{"includesCardSkin": true}'::jsonb),
         ('leave_reduce_1', '탈주 카운트 -1', 'utility', 150, FALSE, TRUE, NULL, TRUE, 'leave_count_reduce', 1, '{}'::jsonb),
         ('leave_reduce_3', '탈주 카운트 -3', 'utility', 400, FALSE, TRUE, NULL, TRUE, 'leave_count_reduce', 3, '{}'::jsonb),
+        ('nickname_change', '닉네임 변경권', 'utility', 500, FALSE, TRUE, NULL, TRUE, 'nickname_change', NULL, '{}'::jsonb),
         ('banner_season_gold', '시즌 골드 배너', 'banner', 0, TRUE, FALSE, 30, FALSE, NULL, NULL, '{}'::jsonb),
         ('banner_season_silver', '시즌 실버 배너', 'banner', 0, TRUE, FALSE, 30, FALSE, NULL, NULL, '{}'::jsonb),
         ('banner_season_bronze', '시즌 브론즈 배너', 'banner', 0, TRUE, FALSE, 30, FALSE, NULL, NULL, '{}'::jsonb)
@@ -1120,6 +1121,81 @@ async function useItem(nickname, itemKey) {
   }
 }
 
+// Change nickname using nickname_change item
+async function changeNickname(oldNickname, newNickname) {
+  if (!newNickname || typeof newNickname !== 'string') {
+    return { success: false, message: '닉네임을 입력해주세요' };
+  }
+  const trimmed = newNickname.trim();
+  if (trimmed.length < 2 || trimmed.length > 10) {
+    return { success: false, message: '닉네임은 2~10자여야 합니다' };
+  }
+  if (/\s/.test(trimmed)) {
+    return { success: false, message: '닉네임에 공백을 사용할 수 없습니다' };
+  }
+
+  const client = await pool.connect();
+  try {
+    await client.query('BEGIN');
+
+    // Check duplicate nickname
+    const dupCheck = await client.query(
+      `SELECT nickname FROM tc_users WHERE nickname = $1`,
+      [trimmed]
+    );
+    if (dupCheck.rows.length > 0) {
+      await client.query('ROLLBACK');
+      return { success: false, message: '이미 사용 중인 닉네임입니다' };
+    }
+
+    // Check ownership of nickname_change item
+    const owned = await client.query(
+      `SELECT id FROM tc_user_items
+       WHERE nickname = $1 AND item_key = 'nickname_change'
+         AND (expires_at IS NULL OR expires_at >= NOW())
+       LIMIT 1`,
+      [oldNickname]
+    );
+    if (owned.rows.length === 0) {
+      await client.query('ROLLBACK');
+      return { success: false, message: '닉네임 변경권을 보유하고 있지 않습니다' };
+    }
+
+    // Update nickname in tc_users
+    await client.query(
+      `UPDATE tc_users SET nickname = $2 WHERE nickname = $1`,
+      [oldNickname, trimmed]
+    );
+
+    // Update nickname in tc_user_items
+    await client.query(
+      `UPDATE tc_user_items SET nickname = $2 WHERE nickname = $1`,
+      [oldNickname, trimmed]
+    );
+
+    // Update nickname in tc_user_equips
+    await client.query(
+      `UPDATE tc_user_equips SET nickname = $2 WHERE nickname = $1`,
+      [oldNickname, trimmed]
+    );
+
+    // Delete one nickname_change item
+    await client.query(
+      `DELETE FROM tc_user_items WHERE id = $1`,
+      [owned.rows[0].id]
+    );
+
+    await client.query('COMMIT');
+    return { success: true, newNickname: trimmed };
+  } catch (err) {
+    await client.query('ROLLBACK');
+    console.error('Change nickname error:', err);
+    return { success: false, message: '닉네임 변경 중 오류가 발생했습니다' };
+  } finally {
+    client.release();
+  }
+}
+
 // Set ranked ban (1 hour from now)
 async function setRankedBan(nickname) {
   const client = await pool.connect();
@@ -1833,6 +1909,7 @@ module.exports = {
   buyItem,
   equipItem,
   useItem,
+  changeNickname,
   incrementLeaveCount,
   setRankedBan,
   getRankedBan,

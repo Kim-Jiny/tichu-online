@@ -1819,9 +1819,9 @@ class _LobbyScreenState extends State<LobbyScreen> {
                           ),
                         ],
                         // Ready / Start buttons
-                        if (game.playerCount >= 4) ...[
-                          const SizedBox(height: 12),
-                          if (game.isHost)
+                        const SizedBox(height: 12),
+                        if (game.isHost) ...[
+                          if (game.playerCount >= 4)
                             SizedBox(
                               width: double.infinity,
                               height: 48,
@@ -1843,35 +1843,34 @@ class _LobbyScreenState extends State<LobbyScreen> {
                                   ),
                                 ),
                               ),
-                            )
-                          else
-                            SizedBox(
-                              width: double.infinity,
-                              height: 48,
-                              child: ElevatedButton(
-                                onPressed: () => game.toggleReady(),
-                                style: ElevatedButton.styleFrom(
-                                  backgroundColor: _isMyReady(game)
-                                      ? const Color(0xFFC8E6C9)
-                                      : const Color(0xFFF5F5F5),
-                                  foregroundColor: _isMyReady(game)
-                                      ? const Color(0xFF2E7D32)
-                                      : const Color(0xFF5A4038),
-                                  shape: RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.circular(16),
-                                  ),
-                                  elevation: 0,
+                            ),
+                        ] else
+                          SizedBox(
+                            width: double.infinity,
+                            height: 48,
+                            child: ElevatedButton(
+                              onPressed: () => game.toggleReady(),
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: _isMyReady(game)
+                                    ? const Color(0xFFC8E6C9)
+                                    : const Color(0xFFF5F5F5),
+                                foregroundColor: _isMyReady(game)
+                                    ? const Color(0xFF2E7D32)
+                                    : const Color(0xFF5A4038),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(16),
                                 ),
-                                child: Text(
-                                  _isMyReady(game) ? '준비 완료!' : '준비',
-                                  style: const TextStyle(
-                                    fontSize: 15,
-                                    fontWeight: FontWeight.bold,
-                                  ),
+                                elevation: 0,
+                              ),
+                              child: Text(
+                                _isMyReady(game) ? '준비 완료!' : '준비',
+                                style: const TextStyle(
+                                  fontSize: 15,
+                                  fontWeight: FontWeight.bold,
                                 ),
                               ),
                             ),
-                        ],
+                          ),
                       ],
                     ),
                   ),

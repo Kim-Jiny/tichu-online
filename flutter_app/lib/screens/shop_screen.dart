@@ -42,6 +42,7 @@ class _ShopScreenState extends State<ShopScreen> {
                 WidgetsBinding.instance.addPostFrameCallback((_) {
                   if (!mounted) return;
                   _maybeShowPurchaseDialog(context, game);
+                  _maybeShowNicknameChangeResult(context, game);
                 });
                 return Column(
                   children: [
@@ -499,7 +500,9 @@ class _ShopScreenState extends State<ShopScreen> {
             child: ElevatedButton(
               onPressed: () {
                 final key = item['item_key']?.toString() ?? '';
-                if (isConsumable) {
+                if (effectType == 'nickname_change') {
+                  _showNicknameChangeDialog(context, game);
+                } else if (isConsumable) {
                   game.useItem(key);
                 } else {
                   game.equipItem(key);
@@ -767,6 +770,20 @@ class _ShopScreenState extends State<ShopScreen> {
     }
   }
 
+  void _maybeShowNicknameChangeResult(BuildContext context, GameService game) {
+    final msg = game.nicknameChangeResult;
+    if (msg == null) return;
+    final ok = game.nicknameChangeSuccess == true;
+    game.nicknameChangeResult = null;
+    game.nicknameChangeSuccess = null;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(msg),
+        backgroundColor: ok ? const Color(0xFF66BB6A) : const Color(0xFFEF5350),
+      ),
+    );
+  }
+
   void _maybeShowPurchaseDialog(BuildContext context, GameService game) {
     if (game.lastPurchaseItemKey == null || game.lastPurchaseSuccess != true) {
       return;
@@ -836,7 +853,9 @@ class _ShopScreenState extends State<ShopScreen> {
       isSeason ? '시즌 아이템' : '일반 아이템',
       isPermanent ? '영구' : '기간제 ${durationDays ?? '-'}일',
     ];
-    if (effectType == 'leave_count_reduce') {
+    if (effectType == 'nickname_change') {
+      info.add('효과: 닉네임 1회 변경');
+    } else if (effectType == 'leave_count_reduce') {
       info.add('효과: 탈주 -${effectValue ?? 1}');
     }
 
@@ -883,6 +902,56 @@ class _ShopScreenState extends State<ShopScreen> {
           TextButton(
             onPressed: () => Navigator.pop(ctx),
             child: const Text('닫기'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showNicknameChangeDialog(BuildContext context, GameService game) {
+    final controller = TextEditingController();
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: const Text('닉네임 변경'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Text(
+              '새로운 닉네임을 입력해주세요.\n(2~10자, 공백 불가)',
+              style: TextStyle(fontSize: 13, color: Color(0xFF6A5A52)),
+            ),
+            const SizedBox(height: 12),
+            TextField(
+              controller: controller,
+              maxLength: 10,
+              decoration: const InputDecoration(
+                hintText: '새 닉네임',
+                border: OutlineInputBorder(),
+                contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('취소'),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              final nick = controller.text.trim();
+              if (nick.length < 2 || nick.length > 10) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('닉네임은 2~10자여야 합니다')),
+                );
+                return;
+              }
+              Navigator.pop(ctx);
+              game.changeNickname(nick);
+            },
+            child: const Text('변경'),
           ),
         ],
       ),

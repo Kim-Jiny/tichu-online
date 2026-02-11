@@ -101,6 +101,10 @@ class GameService extends ChangeNotifier {
   String? inquiryResultMessage;
   bool? inquiryResultSuccess;
 
+  // Nickname change
+  String? nicknameChangeResult;
+  bool? nicknameChangeSuccess;
+
   // Turn timeout
   String? timeoutPlayerName; // show "시간 초과!" banner
   String? desertedPlayerName; // show desertion message
@@ -647,6 +651,21 @@ class GameService extends ChangeNotifier {
         inquiryResultMessage = data['message'] as String? ?? '';
         notifyListeners();
         break;
+
+      case 'change_nickname_result':
+        if (data['success'] == true) {
+          final nn = data['newNickname'] as String? ?? '';
+          if (nn.isNotEmpty) playerName = nn;
+          nicknameChangeResult = '닉네임이 변경되었습니다';
+          nicknameChangeSuccess = true;
+        } else {
+          nicknameChangeResult = data['message'] as String? ?? '닉네임 변경에 실패했습니다';
+          nicknameChangeSuccess = false;
+        }
+        requestWallet();
+        requestInventory();
+        notifyListeners();
+        break;
     }
   }
 
@@ -1016,6 +1035,10 @@ class GameService extends ChangeNotifier {
 
   void useItem(String itemKey) {
     _network.send({'type': 'use_item', 'itemKey': itemKey});
+  }
+
+  void changeNickname(String newNickname) {
+    _network.send({'type': 'change_nickname', 'newNickname': newNickname});
   }
 
   void clearLastPurchaseResult() {

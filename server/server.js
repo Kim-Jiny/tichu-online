@@ -19,6 +19,48 @@ const { handleAdminRoute } = require('./admin');
 
 const PORT = process.env.PORT || 8080;
 
+// Maintenance config (in-memory)
+let maintenanceConfig = {
+  noticeStart: null,    // ISO string
+  noticeEnd: null,
+  maintenanceStart: null,
+  maintenanceEnd: null,
+  message: '',
+};
+
+function getMaintenanceConfig() {
+  return { ...maintenanceConfig };
+}
+
+function setMaintenanceConfig(config) {
+  maintenanceConfig = { ...maintenanceConfig, ...config };
+}
+
+function getMaintenanceStatus() {
+  const now = new Date();
+  let notice = false;
+  let maintenance = false;
+
+  if (maintenanceConfig.noticeStart && maintenanceConfig.noticeEnd) {
+    const ns = new Date(maintenanceConfig.noticeStart);
+    const ne = new Date(maintenanceConfig.noticeEnd);
+    if (now >= ns && now <= ne) notice = true;
+  }
+  if (maintenanceConfig.maintenanceStart && maintenanceConfig.maintenanceEnd) {
+    const ms = new Date(maintenanceConfig.maintenanceStart);
+    const me = new Date(maintenanceConfig.maintenanceEnd);
+    if (now >= ms && now <= me) maintenance = true;
+  }
+
+  return {
+    notice,
+    maintenance,
+    message: maintenanceConfig.message || '',
+    maintenanceStart: maintenanceConfig.maintenanceStart,
+    maintenanceEnd: maintenanceConfig.maintenanceEnd,
+  };
+}
+
 // Create HTTP server for health checks (required by Render) and admin dashboard
 const server = http.createServer(async (req, res) => {
   const url = new URL(req.url, `http://${req.headers.host}`);
@@ -31,7 +73,7 @@ const server = http.createServer(async (req, res) => {
 
   if (pathname.startsWith('/tc-backstage')) {
     try {
-      await handleAdminRoute(req, res, url, pathname, req.method, lobby, wss);
+      await handleAdminRoute(req, res, url, pathname, req.method, lobby, wss, { getMaintenanceConfig, setMaintenanceConfig, getMaintenanceStatus });
     } catch (err) {
       console.error('Admin route error:', err);
       res.writeHead(500, { 'Content-Type': 'text/plain' });
@@ -152,6 +194,8 @@ wss.on('connection', (ws) => {
         if (ws.isSpectator) {
           room.removeSpectator(ws.playerId);
           if (room.game) _broadcastState(ws.roomId, room);
+          broadcastRoomState(ws.roomId);
+          broadcastRoomList();
         } else if (room.game) {
           // Game in progress - mark as disconnected, don't remove
           room.markPlayerDisconnected(ws.playerId);
@@ -354,6 +398,9 @@ function handleMessage(ws, data) {
     case 'change_nickname':
       handleChangeNickname(ws, data);
       break;
+    case 'get_maintenance_status':
+      sendTo(ws, { type: 'maintenance_status', ...getMaintenanceStatus() });
+      break;
     default:
       sendTo(ws, { type: 'error', message: `알 수 없는 메시지: ${data.type}` });
   }
@@ -392,6 +439,13 @@ async function handleLogin(ws, data) {
     return;
   }
 
+  // Block login during maintenance
+  const mStatus = getMaintenanceStatus();
+  if (mStatus.maintenance) {
+    sendTo(ws, { type: 'login_error', message: mStatus.message || '서버 점검 중입니다' });
+    return;
+  }
+
   // S3: Disconnect existing connection with same nickname to prevent duplicate login
   for (const client of wss.clients) {
     if (client !== ws && client.nickname === result.nickname && client.readyState === client.OPEN) {
@@ -424,9 +478,11 @@ async function handleLogin(ws, data) {
 }
 
 async function handleReconnection(ws) {
-  // Fetch user profile to get equipped theme
+  // Fetch user profile to get equipped theme and title
   const profile = await getUserProfile(ws.nickname);
   const themeKey = profile?.themeKey || null;
+  const titleKey = profile?.titleKey || null;
+  ws.titleKey = titleKey;
 
   // Check for reconnection to a game
   const session = playerSessions.get(ws.nickname);
@@ -445,6 +501,8 @@ async function handleReconnection(ws) {
           playerId: ws.playerId,
           nickname: ws.nickname,
           themeKey,
+          titleKey,
+          maintenanceStatus: getMaintenanceStatus(),
         });
         sendTo(ws, {
           type: 'reconnected',
@@ -485,6 +543,8 @@ async function handleReconnection(ws) {
           playerId: ws.playerId,
           nickname: ws.nickname,
           themeKey,
+          titleKey,
+          maintenanceStatus: getMaintenanceStatus(),
         });
         sendTo(ws, {
           type: 'room_joined',
@@ -503,6 +563,8 @@ async function handleReconnection(ws) {
     playerId: ws.playerId,
     nickname: ws.nickname,
     themeKey,
+    titleKey,
+    maintenanceStatus: getMaintenanceStatus(),
   });
   sendTo(ws, { type: 'room_list', rooms: lobby.getRoomList() });
 }
@@ -531,6 +593,10 @@ function handleCreateRoom(ws, data) {
     turnTimeLimit
   );
   ws.roomId = room.id;
+  // Set title on host player
+  if (ws.titleKey) {
+    room.players[0].titleKey = ws.titleKey;
+  }
 
   sendTo(ws, { type: 'room_joined', roomId: room.id, roomName: room.name });
   broadcastRoomState(room.id);
@@ -566,6 +632,11 @@ async function handleJoinRoom(ws, data) {
     return;
   }
   ws.roomId = room.id;
+  // Set title on joined player
+  if (ws.titleKey) {
+    const p = room.players.find(p => p !== null && p.id === ws.playerId);
+    if (p) p.titleKey = ws.titleKey;
+  }
   sendTo(ws, { type: 'room_joined', roomId: room.id, roomName: room.name });
   // 채팅 히스토리 전송
   sendTo(ws, { type: 'chat_history', messages: room.getChatHistory() });
@@ -592,6 +663,7 @@ async function handleLeaveRoom(ws) {
     if (wasSpectating) {
       room.removeSpectator(ws.playerId);
       if (room.game) _broadcastState(roomId, room);
+      broadcastRoomState(roomId);
     } else {
       // S6: If game is active and not already deserted, treat as desertion
       if (room.game && room.game.state !== 'game_end' && !room.game.deserted) {
@@ -698,6 +770,8 @@ function handleCheckRoom(ws) {
     const state = room.game.getStateForPlayer(ws.playerId);
     state.turnDeadline = room.turnDeadline;
     state.cardViewers = room.getViewersForPlayer(ws.playerId);
+    state.spectators = room.spectators.map((s) => ({ id: s.id, nickname: s.nickname }));
+    state.spectatorCount = room.spectators.length;
     sendTo(ws, { type: 'game_state', state });
   }
 }
@@ -726,11 +800,16 @@ function handleSpectateRoom(ws, data) {
   sendTo(ws, { type: 'spectate_joined', roomId: room.id, roomName: room.name });
   // Send chat history to spectator
   sendTo(ws, { type: 'chat_history', messages: room.getChatHistory() });
+  // Update room state/list for everyone
+  broadcastRoomState(room.id);
+  broadcastRoomList();
 
   if (room.game) {
     // Send current game state if game is in progress (without card permissions initially)
     const permittedPlayers = room.getPermittedPlayers(ws.playerId);
     const state = room.game.getStateForSpectator(permittedPlayers);
+    state.spectators = room.spectators.map((s) => ({ id: s.id, nickname: s.nickname }));
+    state.spectatorCount = room.spectators.length;
     sendTo(ws, { type: 'spectator_game_state', state });
   } else {
     // Send waiting room state
@@ -766,6 +845,8 @@ function handleRequestCardView(ws, data) {
     if (room.game) {
       const permittedPlayers = room.getPermittedPlayers(ws.playerId);
       const state = room.game.getStateForSpectator(permittedPlayers);
+      state.spectators = room.spectators.map((s) => ({ id: s.id, nickname: s.nickname }));
+      state.spectatorCount = room.spectators.length;
       sendTo(ws, { type: 'spectator_game_state', state });
     }
     return;
@@ -815,6 +896,8 @@ function handleRespondCardView(ws, data) {
     if (allow && room.game) {
       const permittedPlayers = room.getPermittedPlayers(spectatorId);
       const state = room.game.getStateForSpectator(permittedPlayers);
+      state.spectators = room.spectators.map((s) => ({ id: s.id, nickname: s.nickname }));
+      state.spectatorCount = room.spectators.length;
       sendTo(spectatorWs, { type: 'spectator_game_state', state });
     }
   }
@@ -824,6 +907,8 @@ function handleRespondCardView(ws, data) {
     const playerState = room.game.getStateForPlayer(ws.playerId);
     playerState.turnDeadline = room.turnDeadline;
     playerState.cardViewers = room.getViewersForPlayer(ws.playerId);
+    playerState.spectators = room.spectators.map((s) => ({ id: s.id, nickname: s.nickname }));
+    playerState.spectatorCount = room.spectators.length;
     sendTo(ws, { type: 'game_state', state: playerState });
   }
 }
@@ -848,6 +933,8 @@ function handleRevokeCardView(ws, data) {
   if (spectatorWs && room.game) {
     const permittedPlayers = room.getPermittedPlayers(spectatorId);
     const state = room.game.getStateForSpectator(permittedPlayers);
+    state.spectators = room.spectators.map((s) => ({ id: s.id, nickname: s.nickname }));
+    state.spectatorCount = room.spectators.length;
     sendTo(spectatorWs, { type: 'spectator_game_state', state });
   }
 
@@ -1021,6 +1108,11 @@ function handleSwitchToPlayer(ws, data) {
     return;
   }
   ws.isSpectator = false;
+  // Set title on player slot
+  if (ws.titleKey) {
+    const p = room.players[targetSlot];
+    if (p) p.titleKey = ws.titleKey;
+  }
   sendTo(ws, { type: 'switched_to_player', roomId: room.id, roomName: room.name });
   broadcastRoomState(ws.roomId);
   broadcastRoomList();
@@ -1192,6 +1284,8 @@ function _broadcastState(roomId, room) {
     connectionStatus[player.id] = player.connected !== false;
   }
 
+  const spectatorList = room.spectators.map((s) => ({ id: s.id, nickname: s.nickname }));
+
   // Build timeout count map by player name
   const roomTimeouts = timeoutCounts[roomId] || {};
 
@@ -1210,6 +1304,8 @@ function _broadcastState(roomId, room) {
       }));
       state.turnDeadline = room.turnDeadline;
       state.cardViewers = room.getViewersForPlayer(player.id);
+      state.spectators = spectatorList;
+      state.spectatorCount = spectatorList.length;
       console.log(`[DEBUG] Sending game_state to ${player.nickname}: phase=${state.phase}, cards=${state.myCards?.length || 0}`);
       sendTo(ws, { type: 'game_state', state });
     }
@@ -1227,6 +1323,8 @@ function _broadcastState(roomId, room) {
         timeoutCount: roomTimeouts[p.name] || 0,
       }));
       spectatorState.turnDeadline = room.turnDeadline;
+      spectatorState.spectators = spectatorList;
+      spectatorState.spectatorCount = spectatorList.length;
       sendTo(ws, { type: 'spectator_game_state', state: spectatorState });
     }
   }
@@ -1771,6 +1869,19 @@ async function handleEquipItem(ws, data) {
   const result = await equipItem(ws.nickname, itemKey);
   if (result.success && result.category === 'theme') {
     result.themeKey = itemKey;
+  }
+  if (result.success && result.category === 'title') {
+    result.titleKey = itemKey;
+    ws.titleKey = itemKey;
+    // Update room player data if in a room
+    if (ws.roomId) {
+      const room = lobby.getRoom(ws.roomId);
+      if (room) {
+        const p = room.players.find(p => p !== null && p.id === ws.playerId);
+        if (p) p.titleKey = itemKey;
+        broadcastRoomState(ws.roomId);
+      }
+    }
   }
   sendTo(ws, { type: 'equip_result', ...result });
 }

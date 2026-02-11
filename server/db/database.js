@@ -740,7 +740,7 @@ async function getUserProfile(nickname) {
       `SELECT u.nickname, u.total_games, u.wins, u.losses, u.rating, u.gold, u.leave_count,
               u.season_rating, u.season_games, u.season_wins, u.season_losses,
               u.exp_total, u.level, u.created_at,
-              e.banner_key, e.theme_key
+              e.banner_key, e.theme_key, e.title_key
        FROM tc_users u
        LEFT JOIN tc_user_equips e ON e.nickname = u.nickname
        WHERE u.nickname = $1`,
@@ -784,6 +784,7 @@ async function getUserProfile(nickname) {
       level: user.level,
       bannerKey: user.banner_key,
       themeKey: user.theme_key,
+      titleKey: user.title_key,
       createdAt: user.created_at,
     };
   } catch (err) {

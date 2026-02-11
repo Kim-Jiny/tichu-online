@@ -25,6 +25,17 @@ class TichuApp extends StatelessWidget {
       child: MaterialApp(
         title: 'Tichu Online',
         debugShowCheckedModeBanner: false,
+        builder: (context, child) {
+          final media = MediaQuery.of(context);
+          final platform = Theme.of(context).platform;
+          final adjustedScale = platform == TargetPlatform.android
+              ? (media.textScaleFactor * 0.92).clamp(0.9, 1.0)
+              : media.textScaleFactor;
+          return MediaQuery(
+            data: media.copyWith(textScaleFactor: adjustedScale),
+            child: child ?? const SizedBox.shrink(),
+          );
+        },
         theme: ThemeData(
           colorScheme: ColorScheme.fromSeed(
             seedColor: const Color(0xFFF28C26),

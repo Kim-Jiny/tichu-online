@@ -246,6 +246,75 @@ class _LobbyScreenState extends State<LobbyScreen> {
     );
   }
 
+  void _showSpectatorListDialog(GameService game) {
+    final spectators = game.spectators;
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: const Row(
+          children: [
+            Icon(Icons.visibility, color: Color(0xFF4A4080)),
+            SizedBox(width: 8),
+            Text('관전자 목록'),
+          ],
+        ),
+        content: spectators.isEmpty
+            ? const SizedBox(
+                height: 60,
+                child: Center(
+                  child: Text(
+                    '관전 중인 사람이 없습니다',
+                    style: TextStyle(color: Color(0xFF9A8E8A)),
+                  ),
+                ),
+              )
+            : SizedBox(
+                width: double.maxFinite,
+                height: 220,
+                child: ListView.separated(
+                  itemCount: spectators.length,
+                  separatorBuilder: (_, __) => const SizedBox(height: 6),
+                  itemBuilder: (context, index) {
+                    final nickname = spectators[index]['nickname'] ?? '';
+                    return Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFEDE7F6),
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(color: const Color(0xFFD1C4E9)),
+                      ),
+                      child: Row(
+                        children: [
+                          const Icon(Icons.person, size: 16, color: Color(0xFF6A5A52)),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: Text(
+                              nickname,
+                              style: const TextStyle(
+                                fontSize: 13,
+                                fontWeight: FontWeight.w600,
+                                color: Color(0xFF5A4038),
+                              ),
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                        ],
+                      ),
+                    );
+                  },
+                ),
+              ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('닫기'),
+          ),
+        ],
+      ),
+    );
+  }
+
   void _showComingSoonDialog(String feature) {
     showDialog(
       context: context,
@@ -918,12 +987,68 @@ class _LobbyScreenState extends State<LobbyScreen> {
           ),
         ),
 
+        // Maintenance notice banner
+        if (game.hasMaintenanceNotice)
+          _buildMaintenanceBanner(game),
+
         // Room list or Friends panel
         Expanded(
           child: _buildRoomListPanel(game),
         ),
         const SizedBox(height: 16),
       ],
+    );
+  }
+
+  Widget _buildMaintenanceBanner(GameService game) {
+    String timeText = '';
+    if (game.maintenanceStart != null && game.maintenanceEnd != null) {
+      try {
+        final start = DateTime.parse(game.maintenanceStart!).toLocal();
+        final end = DateTime.parse(game.maintenanceEnd!).toLocal();
+        final fmt = (DateTime d) => '${d.month}/${d.day} ${d.hour.toString().padLeft(2, '0')}:${d.minute.toString().padLeft(2, '0')}';
+        timeText = '${fmt(start)} ~ ${fmt(end)}';
+      } catch (_) {}
+    }
+    return Container(
+      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+      decoration: BoxDecoration(
+        color: const Color(0xFFFFF3E0),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: const Color(0xFFFFB74D)),
+      ),
+      child: Row(
+        children: [
+          const Icon(Icons.construction, color: Color(0xFFE65100), size: 20),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  game.maintenanceMessage.isNotEmpty
+                      ? game.maintenanceMessage
+                      : '서버 점검 예정',
+                  style: const TextStyle(
+                    color: Color(0xFFE65100),
+                    fontSize: 13,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+                if (timeText.isNotEmpty)
+                  Text(
+                    timeText,
+                    style: const TextStyle(
+                      color: Color(0xFFBF360C),
+                      fontSize: 11,
+                    ),
+                  ),
+              ],
+            ),
+          ),
+        ],
+      ),
     );
   }
 
@@ -1619,6 +1744,33 @@ class _LobbyScreenState extends State<LobbyScreen> {
                             fontSize: 12,
                             fontWeight: FontWeight.bold,
                             color: Color(0xFF7E57C2),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 6),
+                // Spectator list button
+                GestureDetector(
+                  onTap: () => _showSpectatorListDialog(game),
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFEDE7F6),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        const Icon(Icons.visibility, size: 14, color: Color(0xFF4A4080)),
+                        const SizedBox(width: 4),
+                        Text(
+                          '관전자 ${game.spectators.length}',
+                          style: const TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.bold,
+                            color: Color(0xFF4A4080),
                           ),
                         ),
                       ],
@@ -3045,7 +3197,8 @@ class _LobbyScreenState extends State<LobbyScreen> {
       },
       child: Container(
         width: double.infinity,
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 14),
+        height: 56,
+        padding: const EdgeInsets.symmetric(horizontal: 12),
         decoration: BoxDecoration(
           color: isReady
               ? const Color(0xFFE8F5E9)
@@ -3127,23 +3280,55 @@ class _LobbyScreenState extends State<LobbyScreen> {
                 child: Icon(Icons.wifi_off, size: 14, color: Color(0xFFFF8A65)),
               ),
             Expanded(
-              child: Text(
-                player?.name ?? '[빈 자리]',
-                style: TextStyle(
-                  fontSize: 16,
-                  color: isBot
-                      ? const Color(0xFF3949AB)
-                      : isBlockedPlayer
-                          ? const Color(0xFFBB8888)
-                          : (player != null && !player.connected)
-                              ? const Color(0xFFBBAAAA)
-                              : player != null
-                                  ? const Color(0xFF5A4038)
-                                  : const Color(0xFFAA9A92),
-                  fontWeight: isMySlot ? FontWeight.bold : FontWeight.normal,
-                ),
-                textAlign: TextAlign.center,
-                overflow: TextOverflow.ellipsis,
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  if (player != null && player.titleName != null)
+                    Padding(
+                      padding: const EdgeInsets.only(bottom: 2),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(
+                            _getTitleIcon(player.titleKey),
+                            size: 11,
+                            color: _getTitleColor(player.titleKey),
+                          ),
+                          const SizedBox(width: 3),
+                          Text(
+                            player.titleName!,
+                            style: TextStyle(
+                              fontSize: 11,
+                              color: _getTitleColor(player.titleKey),
+                              fontWeight: FontWeight.w600,
+                            ),
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ],
+                      ),
+                    ),
+                  Align(
+                    alignment: Alignment.center,
+                    child: Text(
+                      player?.name ?? '[빈 자리]',
+                      style: TextStyle(
+                        fontSize: 16,
+                        color: isBot
+                            ? const Color(0xFF3949AB)
+                            : isBlockedPlayer
+                                ? const Color(0xFFBB8888)
+                                : (player != null && !player.connected)
+                                    ? const Color(0xFFBBAAAA)
+                                    : player != null
+                                        ? const Color(0xFF5A4038)
+                                        : const Color(0xFFAA9A92),
+                        fontWeight: isMySlot ? FontWeight.bold : FontWeight.normal,
+                      ),
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                ],
               ),
             ),
             // Add bot button on empty slots (host only)
@@ -3196,6 +3381,24 @@ class _LobbyScreenState extends State<LobbyScreen> {
         ),
       ),
     );
+  }
+
+  IconData _getTitleIcon(String? titleKey) {
+    switch (titleKey) {
+      case 'title_sweet': return Icons.cake;
+      case 'title_steady': return Icons.shield;
+      case 'title_flash_30d': return Icons.flash_on;
+      default: return Icons.star;
+    }
+  }
+
+  Color _getTitleColor(String? titleKey) {
+    switch (titleKey) {
+      case 'title_sweet': return const Color(0xFFEC407A);
+      case 'title_steady': return const Color(0xFF5C6BC0);
+      case 'title_flash_30d': return const Color(0xFFFFA000);
+      default: return const Color(0xFF7E57C2);
+    }
   }
 
   void _showKickConfirmDialog(String playerName, String playerId, GameService game) {

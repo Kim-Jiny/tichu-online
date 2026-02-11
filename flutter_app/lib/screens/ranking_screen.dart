@@ -42,7 +42,9 @@ class _RankingScreenState extends State<RankingScreen> {
               return Column(
                 children: [
                   _buildTopBar(context),
+                  const SizedBox(height: 6),
                   _buildSeasonSelector(game),
+                  const SizedBox(height: 6),
                   Expanded(
                     child: _buildBody(game),
                   ),
@@ -102,7 +104,7 @@ class _RankingScreenState extends State<RankingScreen> {
     _selectedSeasonId ??= active['id'] as int;
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 16),
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
       decoration: BoxDecoration(
         color: Colors.white.withOpacity(0.95),
         borderRadius: BorderRadius.circular(14),
@@ -164,7 +166,7 @@ class _RankingScreenState extends State<RankingScreen> {
     }
 
     return ListView.separated(
-      padding: const EdgeInsets.fromLTRB(16, 0, 16, 20),
+      padding: const EdgeInsets.fromLTRB(16, 8, 16, 20),
       itemCount: game.rankings.length,
       separatorBuilder: (_, __) => const SizedBox(height: 8),
       itemBuilder: (context, index) {
@@ -205,7 +207,7 @@ class _RankingScreenState extends State<RankingScreen> {
             },
       borderRadius: BorderRadius.circular(16),
       child: Container(
-        padding: const EdgeInsets.all(14),
+        padding: const EdgeInsets.all(12),
         decoration: BoxDecoration(
           gradient: banner.gradient,
           color: banner.gradient == null ? Colors.white.withOpacity(0.95) : null,

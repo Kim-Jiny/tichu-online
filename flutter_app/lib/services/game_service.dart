@@ -42,6 +42,9 @@ class GameService extends ChangeNotifier {
   // Spectators currently viewing my cards
   List<Map<String, String>> cardViewers = []; // [{id, nickname}]
 
+  // Spectators in the room
+  List<Map<String, String>> spectators = []; // [{id, nickname}]
+
   // Game state
   GameStateData? gameState;
 
@@ -93,6 +96,9 @@ class GameService extends ChangeNotifier {
   // Equipped theme
   String? equippedTheme;
 
+  // Equipped title
+  String? equippedTitle;
+
   // Report result
   String? reportResultMessage;
   bool? reportResultSuccess;
@@ -113,6 +119,13 @@ class GameService extends ChangeNotifier {
 
   // Dragon given
   String? dragonGivenMessage; // "OO이(가) OO에게 용을 줬습니다"
+
+  // Maintenance
+  bool isUnderMaintenance = false;
+  bool hasMaintenanceNotice = false;
+  String maintenanceMessage = '';
+  String? maintenanceStart;
+  String? maintenanceEnd;
 
   bool _disposed = false; // C2: Track disposal to prevent stale callbacks
 
@@ -200,7 +213,9 @@ class GameService extends ChangeNotifier {
         playerId = data['playerId'] ?? '';
         playerName = data['nickname'] ?? '';
         equippedTheme = data['themeKey'] as String?;
+        equippedTitle = data['titleKey'] as String?;
         loginError = null;
+        _parseMaintenanceStatus(data['maintenanceStatus'] as Map<String, dynamic>?);
         notifyListeners();
         break;
 
@@ -281,6 +296,15 @@ class GameService extends ChangeNotifier {
         final state = data['state'] as Map<String, dynamic>?;
         if (state != null) {
           spectatorGameState = state;
+          final spectatorList = state['spectators'] as List?;
+          if (spectatorList != null) {
+            spectators = spectatorList.map((s) => {
+              'id': (s['id'] ?? '').toString(),
+              'nickname': (s['nickname'] ?? '').toString(),
+            }).toList();
+          } else {
+            spectators = [];
+          }
         }
         notifyListeners();
         break;
@@ -369,6 +393,7 @@ class GameService extends ChangeNotifier {
         approvedCardViews = {};
         incomingCardViewRequests = [];
         cardViewers = [];
+        spectators = [];
         gameState = null;
         chatMessages = [];
         desertedPlayerName = null;
@@ -386,6 +411,15 @@ class GameService extends ChangeNotifier {
               if (p == null) return null;
               return Player.fromJson(p as Map<String, dynamic>);
             }).toList();
+          }
+          final spectatorList = room['spectators'] as List?;
+          if (spectatorList != null) {
+            spectators = spectatorList.map((s) => {
+              'id': (s['id'] ?? '').toString(),
+              'nickname': (s['nickname'] ?? '').toString(),
+            }).toList();
+          } else {
+            spectators = [];
           }
           isHost = roomPlayers.any((p) => p != null && p.id == playerId && p.isHost);
           isRankedRoom = room['isRanked'] == true;
@@ -412,6 +446,15 @@ class GameService extends ChangeNotifier {
             }).toList();
           } else {
             cardViewers = [];
+          }
+          final spectatorList = state['spectators'] as List?;
+          if (spectatorList != null) {
+            spectators = spectatorList.map((s) => {
+              'id': (s['id'] ?? '').toString(),
+              'nickname': (s['nickname'] ?? '').toString(),
+            }).toList();
+          } else {
+            spectators = [];
           }
           _applyGameStateWithDogDelay(state);
         }
@@ -692,6 +735,10 @@ class GameService extends ChangeNotifier {
           if (themeKey != null) {
             equippedTheme = themeKey;
           }
+          final titleKey = data['titleKey'] as String?;
+          if (titleKey != null) {
+            equippedTitle = titleKey;
+          }
         }
         if (data['success'] != true) {
           reportResultMessage = data['message'] as String?;
@@ -703,6 +750,11 @@ class GameService extends ChangeNotifier {
       case 'inquiry_result':
         inquiryResultSuccess = data['success'] == true;
         inquiryResultMessage = data['message'] as String? ?? '';
+        notifyListeners();
+        break;
+
+      case 'maintenance_status':
+        _parseMaintenanceStatus(data);
         notifyListeners();
         break;
 
@@ -721,6 +773,15 @@ class GameService extends ChangeNotifier {
         notifyListeners();
         break;
     }
+  }
+
+  void _parseMaintenanceStatus(Map<String, dynamic>? status) {
+    if (status == null) return;
+    hasMaintenanceNotice = status['notice'] == true;
+    isUnderMaintenance = status['maintenance'] == true;
+    maintenanceMessage = (status['message'] as String?) ?? '';
+    maintenanceStart = status['maintenanceStart'] as String?;
+    maintenanceEnd = status['maintenanceEnd'] as String?;
   }
 
   void _handleDogPlayed(Map<String, dynamic> data) {
@@ -838,6 +899,7 @@ class GameService extends ChangeNotifier {
     playerId = '';
     playerName = '';
     equippedTheme = null;
+    equippedTitle = null;
     currentRoomId = '';
     currentRoomName = '';
     roomPlayers = [null, null, null, null];
@@ -860,8 +922,17 @@ class GameService extends ChangeNotifier {
     pendingFriendRequestCount = 0;
     roomInvites = [];
     sentFriendRequests = {};
+    isUnderMaintenance = false;
+    hasMaintenanceNotice = false;
+    maintenanceMessage = '';
+    maintenanceStart = null;
+    maintenanceEnd = null;
     clearAuthState();
     notifyListeners();
+  }
+
+  void requestMaintenanceStatus() {
+    _network.send({'type': 'get_maintenance_status'});
   }
 
   void deleteAccount() {

@@ -3,6 +3,12 @@ const { BotPlayer } = require('./BotPlayer');
 
 let nextBotNum = 1;
 
+const TITLE_NAMES = {
+  'title_sweet': '달콤한 플레이어',
+  'title_steady': '꾸준한 승부사',
+  'title_flash_30d': '스피드 러너',
+};
+
 class GameRoom {
   constructor(id, name, hostId, hostNickname, password = '', isRanked = false, turnTimeLimit = 30) {
     this.id = id;
@@ -453,6 +459,11 @@ class GameRoom {
       isPrivate: this.isPrivate,
       isRanked: this.isRanked,
       hostId: this.hostId,
+      spectators: this.spectators.map((s) => ({
+        id: s.id,
+        nickname: s.nickname,
+      })),
+      spectatorCount: this.spectators.length,
       // Send all 4 slots including nulls
       players: this.players.map((p) => {
         if (p === null) return null;
@@ -463,6 +474,8 @@ class GameRoom {
           connected: p.connected !== false,
           isBot: !!p.isBot,
           isReady: !!p.isBot || !!p.ready,
+          titleKey: p.titleKey || null,
+          titleName: TITLE_NAMES[p.titleKey] || null,
         };
       }),
       gameInProgress: !!this.game,

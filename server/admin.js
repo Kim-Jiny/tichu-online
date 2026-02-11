@@ -146,6 +146,7 @@ input[type="text"], input[type="password"] { width: 100%; padding: 10px; border:
   <a href="/tc-backstage/shop" class="${activePage === 'shop' ? 'active' : ''}">Shop</a>
   <a href="/tc-backstage/reports" class="${activePage === 'reports' ? 'active' : ''}">Reports</a>
   <a href="/tc-backstage/users" class="${activePage === 'users' ? 'active' : ''}">Users</a>
+  <a href="/tc-backstage/maintenance" class="${activePage === 'maintenance' ? 'active' : ''}">Maintenance</a>
   <div class="logout">
     <a href="/tc-backstage/logout">Logout</a>
   </div>
@@ -298,7 +299,8 @@ function parseShopFormBody(body) {
 
 // ===== Route handler =====
 
-async function handleAdminRoute(req, res, url, pathname, method, lobby, wss) {
+async function handleAdminRoute(req, res, url, pathname, method, lobby, wss, maintenanceFns = {}) {
+  const { getMaintenanceConfig, setMaintenanceConfig, getMaintenanceStatus } = maintenanceFns;
   // Login page (no auth required)
   if (pathname === '/tc-backstage/login') {
     if (method === 'GET') {
@@ -1031,6 +1033,74 @@ async function handleAdminRoute(req, res, url, pathname, method, lobby, wss) {
   if (shopDeleteMatch && method === 'POST') {
     await deleteShopItem(parseInt(shopDeleteMatch[1]));
     return redirect(res, '/tc-backstage/shop');
+  }
+
+  // ===== Maintenance =====
+  if (pathname === '/tc-backstage/maintenance' && method === 'GET') {
+    const config = getMaintenanceConfig ? getMaintenanceConfig() : {};
+    const status = getMaintenanceStatus ? getMaintenanceStatus() : {};
+
+    let statusText = '<span class="badge" style="background:#e8f5e9;color:#2e7d32">비활성</span>';
+    if (status.maintenance) {
+      statusText = '<span class="badge badge-bug">점검 중</span>';
+    } else if (status.notice) {
+      statusText = '<span class="badge badge-pending">안내 중</span>';
+    }
+
+    const content = `
+      <h1 class="page-title">Maintenance</h1>
+      <div class="card">
+        <h3>현재 상태: ${statusText}</h3>
+        <form method="POST" action="/tc-backstage/maintenance" style="margin-top:16px">
+          <div style="display:grid;grid-template-columns:160px 1fr;gap:12px 16px;align-items:center;max-width:600px">
+            <label>안내 시작</label>
+            <input type="datetime-local" name="noticeStart" value="${formatDatetimeLocal(config.noticeStart)}" style="padding:10px;border:1px solid #ddd;border-radius:8px;font-size:14px">
+            <label>안내 종료</label>
+            <input type="datetime-local" name="noticeEnd" value="${formatDatetimeLocal(config.noticeEnd)}" style="padding:10px;border:1px solid #ddd;border-radius:8px;font-size:14px">
+            <label>점검 시작</label>
+            <input type="datetime-local" name="maintenanceStart" value="${formatDatetimeLocal(config.maintenanceStart)}" style="padding:10px;border:1px solid #ddd;border-radius:8px;font-size:14px">
+            <label>점검 종료</label>
+            <input type="datetime-local" name="maintenanceEnd" value="${formatDatetimeLocal(config.maintenanceEnd)}" style="padding:10px;border:1px solid #ddd;border-radius:8px;font-size:14px">
+            <label>안내 메시지</label>
+            <textarea name="message" rows="3" placeholder="점검 안내 메시지">${escapeHtml(config.message || '')}</textarea>
+          </div>
+          <div style="margin-top:16px;display:flex;gap:8px">
+            <button type="submit" class="btn btn-primary">Save</button>
+          </div>
+        </form>
+        <form method="POST" action="/tc-backstage/maintenance/clear" style="margin-top:12px">
+          <button type="submit" class="btn btn-danger" onclick="return confirm('점검 설정을 초기화하시겠습니까?')">Clear All</button>
+        </form>
+      </div>
+    `;
+    return html(res, layout('Maintenance', content, 'maintenance'));
+  }
+
+  if (pathname === '/tc-backstage/maintenance' && method === 'POST') {
+    if (setMaintenanceConfig) {
+      const body = await parseBody(req);
+      setMaintenanceConfig({
+        noticeStart: body.noticeStart || null,
+        noticeEnd: body.noticeEnd || null,
+        maintenanceStart: body.maintenanceStart || null,
+        maintenanceEnd: body.maintenanceEnd || null,
+        message: body.message || '',
+      });
+    }
+    return redirect(res, '/tc-backstage/maintenance');
+  }
+
+  if (pathname === '/tc-backstage/maintenance/clear' && method === 'POST') {
+    if (setMaintenanceConfig) {
+      setMaintenanceConfig({
+        noticeStart: null,
+        noticeEnd: null,
+        maintenanceStart: null,
+        maintenanceEnd: null,
+        message: '',
+      });
+    }
+    return redirect(res, '/tc-backstage/maintenance');
   }
 
   // 404

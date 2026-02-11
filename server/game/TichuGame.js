@@ -548,6 +548,28 @@ class TichuGame {
       // Don't clear trick yet; wait for dragon_give
       this.currentTrick = [];
       this.passCount = 0;
+
+      // Auto-give if only one opponent still has cards
+      const myTeam = this.teams.teamA.includes(winner) ? 'teamA' : 'teamB';
+      const eligibleOpponents = this.playerIds.filter((pid) => {
+        const isOpponent = (this.teams.teamA.includes(pid) ? 'teamA' : 'teamB') !== myTeam;
+        return isOpponent && this.hands[pid].length > 0 && !this.finishOrder.includes(pid);
+      });
+      if (eligibleOpponents.length === 1) {
+        const targetId = eligibleOpponents[0];
+        this.trickPiles[targetId].push(...this.pendingTrickCards);
+        this.dragonPending = false;
+        this.dragonDecider = null;
+        this.pendingTrickCards = null;
+
+        // Winner starts next trick
+        if (this.finishOrder.includes(winner)) {
+          this.currentPlayer = this.getNextActivePlayer(winner);
+        } else {
+          this.currentPlayer = winner;
+        }
+        this.trickStarter = this.currentPlayer;
+      }
       return;
     }
 

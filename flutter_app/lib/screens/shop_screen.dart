@@ -25,42 +25,50 @@ class _ShopScreenState extends State<ShopScreen> {
   @override
   Widget build(BuildContext context) {
     final themeColors = context.watch<GameService>().themeGradient;
+    final isAndroid = Theme.of(context).platform == TargetPlatform.android;
+    final baseScale = MediaQuery.of(context).textScaleFactor;
+    final adjustedScale = isAndroid
+        ? (baseScale * 0.92).clamp(0.9, 1.0)
+        : baseScale;
     return DefaultTabController(
       length: 2,
-      child: Scaffold(
-        body: Container(
-          decoration: BoxDecoration(
-            gradient: LinearGradient(
-              begin: Alignment.topCenter,
-              end: Alignment.bottomCenter,
-              colors: themeColors,
+      child: MediaQuery(
+        data: MediaQuery.of(context).copyWith(textScaleFactor: adjustedScale),
+        child: Scaffold(
+          body: Container(
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                begin: Alignment.topCenter,
+                end: Alignment.bottomCenter,
+                colors: themeColors,
+              ),
             ),
-          ),
-          child: SafeArea(
-            child: Consumer<GameService>(
-              builder: (context, game, _) {
-                WidgetsBinding.instance.addPostFrameCallback((_) {
-                  if (!mounted) return;
-                  _maybeShowPurchaseDialog(context, game);
-                  _maybeShowNicknameChangeResult(context, game);
-                });
-                return Column(
-                  children: [
-                    _buildTopBar(context, game),
-                    _buildWalletBar(game),
-                    const SizedBox(height: 8),
-                    _buildTabs(),
-                    Expanded(
-                      child: TabBarView(
-                        children: [
-                          _buildShopTab(game),
-                          _buildInventoryTab(game),
-                        ],
+            child: SafeArea(
+              child: Consumer<GameService>(
+                builder: (context, game, _) {
+                  WidgetsBinding.instance.addPostFrameCallback((_) {
+                    if (!mounted) return;
+                    _maybeShowPurchaseDialog(context, game);
+                    _maybeShowNicknameChangeResult(context, game);
+                  });
+                  return Column(
+                    children: [
+                      _buildTopBar(context, game),
+                      _buildWalletBar(game),
+                      const SizedBox(height: 8),
+                      _buildTabs(),
+                      Expanded(
+                        child: TabBarView(
+                          children: [
+                            _buildShopTab(game),
+                            _buildInventoryTab(game),
+                          ],
+                        ),
                       ),
-                    ),
-                  ],
-                );
-              },
+                    ],
+                  );
+                },
+              ),
             ),
           ),
         ),
@@ -185,17 +193,16 @@ class _ShopScreenState extends State<ShopScreen> {
     }
 
     return DefaultTabController(
-      length: 5,
+      length: 4,
       child: Column(
         children: [
           const SizedBox(height: 8),
           _buildCategoryTabs(
-            const ['전체', '배너', '칭호', '테마', '유틸'],
+            const ['배너', '칭호', '테마', '유틸'],
           ),
           Expanded(
             child: TabBarView(
               children: [
-                _buildShopList(context, game, _filterShop(game.shopItems, 'all')),
                 _buildShopList(context, game, _filterShop(game.shopItems, 'banner')),
                 _buildShopList(context, game, _filterShop(game.shopItems, 'title')),
                 _buildShopList(context, game, _filterShop(game.shopItems, 'theme')),
@@ -394,17 +401,16 @@ class _ShopScreenState extends State<ShopScreen> {
     }
 
     return DefaultTabController(
-      length: 6,
+      length: 5,
       child: Column(
         children: [
           const SizedBox(height: 8),
           _buildCategoryTabs(
-            const ['전체', '배너', '칭호', '테마', '유틸', '시즌'],
+            const ['배너', '칭호', '테마', '유틸', '시즌'],
           ),
           Expanded(
             child: TabBarView(
               children: [
-                _buildInventoryList(_filterInventory(game.inventoryItems, 'all')),
                 _buildInventoryList(_filterInventory(game.inventoryItems, 'banner')),
                 _buildInventoryList(_filterInventory(game.inventoryItems, 'title')),
                 _buildInventoryList(_filterInventory(game.inventoryItems, 'theme')),
@@ -790,6 +796,13 @@ class _ShopScreenState extends State<ShopScreen> {
           'iconColor': const Color(0xFF66BB6A),
           'gradient': [const Color(0xFFE8F5E9), const Color(0xFFC8E6C9)],
           'borderColor': const Color(0xFFA5D6A7),
+        };
+      case 'top_card_counter_7d':
+        return {
+          'icon': Icons.analytics,
+          'iconColor': const Color(0xFF5C6BC0),
+          'gradient': [const Color(0xFFE8EAF6), const Color(0xFFC5CAE9)],
+          'borderColor': const Color(0xFF9FA8DA),
         };
       case 'leave_reduce_3':
         return {

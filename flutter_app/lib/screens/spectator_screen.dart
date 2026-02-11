@@ -42,14 +42,16 @@ class _SpectatorScreenState extends State<SpectatorScreen> {
     // C9: Wrap in ConnectionOverlay for reconnection support
     return ConnectionOverlay(
       child: Scaffold(
+      resizeToAvoidBottomInset: false,
       body: Container(
         decoration: const BoxDecoration(
           gradient: LinearGradient(
             begin: Alignment.topCenter,
             end: Alignment.bottomCenter,
             colors: [
-              Color(0xFF2D3436),
-              Color(0xFF1E272E),
+              Color(0xFFF8F4F6),
+              Color(0xFFF0E8F0),
+              Color(0xFFE8F0F8),
             ],
           ),
         ),
@@ -97,15 +99,18 @@ class _SpectatorScreenState extends State<SpectatorScreen> {
           children: [
             // Top bar
             Container(
+              margin: const EdgeInsets.all(12),
               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
               decoration: BoxDecoration(
-                color: Colors.black.withOpacity(0.3),
+                color: Colors.white.withOpacity(0.95),
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(color: const Color(0xFFE0D8D4)),
               ),
               child: Row(
                 children: [
                   IconButton(
                     onPressed: () => _leaveRoom(game),
-                    icon: const Icon(Icons.arrow_back, color: Colors.white),
+                    icon: const Icon(Icons.arrow_back, color: Color(0xFF6A5A52)),
                   ),
                   const SizedBox(width: 8),
                   Container(
@@ -135,7 +140,7 @@ class _SpectatorScreenState extends State<SpectatorScreen> {
                     child: Text(
                       game.currentRoomName,
                       style: const TextStyle(
-                        color: Colors.white,
+                        color: Color(0xFF5A4038),
                         fontSize: 14,
                         fontWeight: FontWeight.bold,
                       ),
@@ -151,66 +156,81 @@ class _SpectatorScreenState extends State<SpectatorScreen> {
             Expanded(
               child: Center(
                 child: Padding(
-                  padding: const EdgeInsets.all(24),
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      // Team A header
-                      const Text(
-                        'Team A',
-                        style: TextStyle(
-                          color: Color(0xFF6A9BD1),
-                          fontSize: 14,
-                          fontWeight: FontWeight.bold,
+                  padding: const EdgeInsets.all(20),
+                  child: Container(
+                    padding: const EdgeInsets.all(16),
+                    decoration: BoxDecoration(
+                      color: Colors.white.withOpacity(0.95),
+                      borderRadius: BorderRadius.circular(20),
+                      border: Border.all(color: const Color(0xFFE0D8D4)),
+                      boxShadow: [
+                        BoxShadow(
+                          color: const Color(0xFFD9CCC8).withOpacity(0.4),
+                          blurRadius: 10,
+                          offset: const Offset(0, 4),
                         ),
-                      ),
-                      const SizedBox(height: 8),
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          _buildPlayerSlot(game, players[0], 0),
-                          const SizedBox(width: 16),
-                          _buildPlayerSlot(game, players[2], 2),
-                        ],
-                      ),
-                      const SizedBox(height: 24),
-                      // Team B header
-                      const Text(
-                        'Team B',
-                        style: TextStyle(
-                          color: Color(0xFFF5B8C0),
-                          fontSize: 14,
-                          fontWeight: FontWeight.bold,
+                      ],
+                    ),
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        // Team A header
+                        const Text(
+                          'TEAM A',
+                          style: TextStyle(
+                            color: Color(0xFF6A9BD1),
+                            fontSize: 14,
+                            fontWeight: FontWeight.bold,
+                          ),
                         ),
-                      ),
-                      const SizedBox(height: 8),
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          _buildPlayerSlot(game, players[1], 1),
-                          const SizedBox(width: 16),
-                          _buildPlayerSlot(game, players[3], 3),
-                        ],
-                      ),
-                      const SizedBox(height: 32),
-                      // Waiting text
-                      const Text(
-                        '게임 시작 대기 중...',
-                        style: TextStyle(
-                          color: Colors.white54,
-                          fontSize: 16,
+                        const SizedBox(height: 8),
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            _buildPlayerSlot(game, players[0], 0),
+                            const SizedBox(width: 16),
+                            _buildPlayerSlot(game, players[2], 2),
+                          ],
                         ),
-                      ),
-                      const SizedBox(height: 12),
-                      const SizedBox(
-                        width: 24,
-                        height: 24,
-                        child: CircularProgressIndicator(
-                          strokeWidth: 2,
-                          color: Colors.white38,
+                        const SizedBox(height: 24),
+                        // Team B header
+                        const Text(
+                          'TEAM B',
+                          style: TextStyle(
+                            color: Color(0xFFF5B8C0),
+                            fontSize: 14,
+                            fontWeight: FontWeight.bold,
+                          ),
                         ),
-                      ),
-                    ],
+                        const SizedBox(height: 8),
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            _buildPlayerSlot(game, players[1], 1),
+                            const SizedBox(width: 16),
+                            _buildPlayerSlot(game, players[3], 3),
+                          ],
+                        ),
+                        const SizedBox(height: 28),
+                        // Waiting text
+                        const Text(
+                          '게임 시작 대기 중...',
+                          style: TextStyle(
+                            color: Color(0xFF8A8A8A),
+                            fontSize: 15,
+                          ),
+                        ),
+                        const SizedBox(height: 10),
+                        const SizedBox(
+                          width: 24,
+                          height: 24,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            color: Color(0xFFB0A8A4),
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
                 ),
               ),
@@ -232,18 +252,16 @@ class _SpectatorScreenState extends State<SpectatorScreen> {
 
     final content = Container(
       width: 130,
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 16),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 14),
       decoration: BoxDecoration(
-        color: isEmpty
-            ? Colors.white.withValues(alpha: 0.05)
-            : Colors.white.withValues(alpha: 0.1),
+        color: isEmpty ? const Color(0xFFF7F2F0) : Colors.white,
         borderRadius: BorderRadius.circular(16),
         border: Border.all(
           color: isEmpty
-              ? Colors.blue.withValues(alpha: 0.3)
+              ? const Color(0xFFD8CFCB)
               : isReady
-                  ? Colors.greenAccent.withValues(alpha: 0.5)
-                  : Colors.white.withValues(alpha: 0.2),
+                  ? const Color(0xFF9ED6A5)
+                  : const Color(0xFFE0D8D4),
           width: isReady ? 2 : 1,
         ),
       ),
@@ -252,15 +270,15 @@ class _SpectatorScreenState extends State<SpectatorScreen> {
         children: [
           Icon(
             isEmpty ? Icons.person_add : Icons.person,
-            color: isEmpty ? Colors.blue.withValues(alpha: 0.5) : Colors.white70,
-            size: 32,
+            color: isEmpty ? const Color(0xFF9AA7B0) : const Color(0xFF6A5A52),
+            size: 30,
           ),
           const SizedBox(height: 8),
           Text(
             isEmpty ? '착석' : name,
             style: TextStyle(
-              color: isEmpty ? Colors.blue.withValues(alpha: 0.7) : Colors.white,
-              fontSize: 13,
+              color: isEmpty ? const Color(0xFF9AA7B0) : const Color(0xFF5A4038),
+              fontSize: 12,
               fontWeight: FontWeight.w500,
             ),
             overflow: TextOverflow.ellipsis,
@@ -271,11 +289,11 @@ class _SpectatorScreenState extends State<SpectatorScreen> {
               isHost ? '방장' : (isReady ? '준비완료' : '대기중'),
               style: TextStyle(
                 color: isHost
-                    ? Colors.amber
+                    ? const Color(0xFFE6A800)
                     : isReady
-                        ? Colors.greenAccent
-                        : Colors.white38,
-                fontSize: 11,
+                        ? const Color(0xFF4BAA6A)
+                        : const Color(0xFF9A8E8A),
+                fontSize: 10,
               ),
             ),
           ],
@@ -333,7 +351,7 @@ class _SpectatorScreenState extends State<SpectatorScreen> {
                         children: [
                           // Left player (position 1)
                           if (players.length > 1)
-                            _buildPlayerSection(game, players[1], currentPlayer, isLeft: true),
+                            _buildPlayerSection(game, players[3], currentPlayer, isLeft: true),
 
                           // Center: current trick
                           Expanded(
@@ -342,7 +360,7 @@ class _SpectatorScreenState extends State<SpectatorScreen> {
 
                           // Right player (position 3)
                           if (players.length > 3)
-                            _buildPlayerSection(game, players[3], currentPlayer, isRight: true),
+                            _buildPlayerSection(game, players[1], currentPlayer, isRight: true),
                         ],
                       ),
                     ),
@@ -429,78 +447,97 @@ class _SpectatorScreenState extends State<SpectatorScreen> {
     Map<String, dynamic> scores,
   ) {
     return Container(
+      margin: const EdgeInsets.all(12),
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
       decoration: BoxDecoration(
-        color: Colors.black.withOpacity(0.3),
-      ),
-      child: Row(
-        children: [
-          IconButton(
-            onPressed: () => _leaveRoom(game),
-            icon: const Icon(Icons.arrow_back, color: Colors.white),
+        color: Colors.white.withOpacity(0.95),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: const Color(0xFFE0D8D4)),
+        boxShadow: [
+          BoxShadow(
+            color: const Color(0xFFD9CCC8).withOpacity(0.35),
+            blurRadius: 8,
+            offset: const Offset(0, 3),
           ),
-          const SizedBox(width: 8),
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-            decoration: BoxDecoration(
-              color: const Color(0xFFE8E0F8),
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: const Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Icon(Icons.visibility, size: 14, color: Color(0xFF4A4080)),
-                SizedBox(width: 4),
-                Text(
-                  '관전중',
-                  style: TextStyle(
-                    fontSize: 12,
+        ],
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Row(
+            children: [
+              IconButton(
+                onPressed: () => _leaveRoom(game),
+                icon: const Icon(Icons.arrow_back, color: Color(0xFF6A5A52)),
+              ),
+              const SizedBox(width: 8),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFE8E0F8),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: const Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(Icons.visibility, size: 14, color: Color(0xFF4A4080)),
+                    SizedBox(width: 4),
+                    Text(
+                      '관전중',
+                      style: TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.bold,
+                        color: Color(0xFF4A4080),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const Spacer(),
+              _buildChatButton(),
+            ],
+          ),
+          const SizedBox(height: 6),
+          Row(
+            children: [
+              Text(
+                'R$round | ${_getPhaseText(phase)}',
+                style: const TextStyle(color: Color(0xFF8A7E78), fontSize: 12),
+              ),
+              const Spacer(),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                decoration: BoxDecoration(
+                  color: const Color(0xFF6A9BD1),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Text(
+                  'A: ${scores['teamA'] ?? 0}',
+                  style: const TextStyle(
+                    color: Colors.white,
                     fontWeight: FontWeight.bold,
-                    color: Color(0xFF4A4080),
+                    fontSize: 12,
                   ),
                 ),
-              ],
-            ),
-          ),
-          const Spacer(),
-          Text(
-            'R$round | ${_getPhaseText(phase)}',
-            style: const TextStyle(color: Colors.white70, fontSize: 12),
-          ),
-          const SizedBox(width: 12),
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-            decoration: BoxDecoration(
-              color: const Color(0xFF6A9BD1),
-              borderRadius: BorderRadius.circular(8),
-            ),
-            child: Text(
-              'A: ${scores['teamA'] ?? 0}',
-              style: const TextStyle(
-                color: Colors.white,
-                fontWeight: FontWeight.bold,
-                fontSize: 12,
               ),
-            ),
-          ),
-          const SizedBox(width: 6),
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-            decoration: BoxDecoration(
-              color: const Color(0xFFF5B8C0),
-              borderRadius: BorderRadius.circular(8),
-            ),
-            child: Text(
-              'B: ${scores['teamB'] ?? 0}',
-              style: const TextStyle(
-                color: Colors.white,
-                fontWeight: FontWeight.bold,
-                fontSize: 12,
+              const SizedBox(width: 6),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFF5B8C0),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Text(
+                  'B: ${scores['teamB'] ?? 0}',
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontWeight: FontWeight.bold,
+                    fontSize: 12,
+                  ),
+                ),
               ),
-            ),
+            ],
           ),
-          const SizedBox(width: 8),
-          _buildChatButton(),
         ],
       ),
     );
@@ -509,7 +546,7 @@ class _SpectatorScreenState extends State<SpectatorScreen> {
   String _getPhaseText(String phase) {
     switch (phase) {
       case 'large_tichu_phase':
-        return '그랜드 티츄';
+        return '라지 티츄';
       case 'card_exchange':
         return '카드 교환';
       case 'playing':
@@ -549,15 +586,21 @@ class _SpectatorScreenState extends State<SpectatorScreen> {
 
     return Container(
       margin: const EdgeInsets.all(4),
-      padding: const EdgeInsets.all(6),
+      padding: const EdgeInsets.all(8),
       decoration: BoxDecoration(
-        color: isCurrentTurn
-            ? Colors.yellow.withValues(alpha: 0.2)
-            : Colors.black.withValues(alpha: 0.2),
+        color: Colors.white.withOpacity(0.98),
         borderRadius: BorderRadius.circular(12),
-        border: isCurrentTurn
-            ? Border.all(color: Colors.yellow, width: 2)
-            : null,
+        border: Border.all(
+          color: isCurrentTurn ? const Color(0xFFF3C97A) : const Color(0xFFE6DDD8),
+          width: isCurrentTurn ? 2 : 1,
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: const Color(0xFFE5DAD6).withOpacity(0.35),
+            blurRadius: 6,
+            offset: const Offset(0, 2),
+          ),
+        ],
       ),
       child: Column(
         mainAxisSize: MainAxisSize.min,
@@ -582,12 +625,15 @@ class _SpectatorScreenState extends State<SpectatorScreen> {
                     shape: BoxShape.circle,
                   ),
                 ),
-              Text(
-                name,
-                style: TextStyle(
-                  color: connected ? Colors.white : Colors.grey,
-                  fontWeight: FontWeight.bold,
-                  fontSize: 12,
+              Flexible(
+                child: Text(
+                  name,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                    color: connected ? const Color(0xFF4E3A34) : Colors.grey,
+                    fontWeight: FontWeight.bold,
+                    fontSize: 12,
+                  ),
                 ),
               ),
               if (hasLargeTichu) ...[
@@ -595,11 +641,11 @@ class _SpectatorScreenState extends State<SpectatorScreen> {
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
                   decoration: BoxDecoration(
-                    color: Colors.red,
+                    color: const Color(0xFFE86A6A),
                     borderRadius: BorderRadius.circular(4),
                   ),
                   child: const Text(
-                    'GT',
+                    'LT',
                     style: TextStyle(color: Colors.white, fontSize: 8),
                   ),
                 ),
@@ -608,7 +654,7 @@ class _SpectatorScreenState extends State<SpectatorScreen> {
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
                   decoration: BoxDecoration(
-                    color: Colors.orange,
+                    color: const Color(0xFFF1A15F),
                     borderRadius: BorderRadius.circular(4),
                   ),
                   child: const Text(
@@ -622,7 +668,7 @@ class _SpectatorScreenState extends State<SpectatorScreen> {
                 Text(
                   '#$finishPosition',
                   style: const TextStyle(
-                    color: Colors.greenAccent,
+                    color: Color(0xFF6BBE7A),
                     fontWeight: FontWeight.bold,
                     fontSize: 10,
                   ),
@@ -637,7 +683,7 @@ class _SpectatorScreenState extends State<SpectatorScreen> {
               padding: EdgeInsets.all(8),
               child: Text(
                 '완료',
-                style: TextStyle(color: Colors.white54, fontSize: 10),
+                style: TextStyle(color: Color(0xFF9A8E8A), fontSize: 10),
               ),
             )
           else if (canSeeCards && cards.isNotEmpty)
@@ -699,7 +745,7 @@ class _SpectatorScreenState extends State<SpectatorScreen> {
       return Container(
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
         decoration: BoxDecoration(
-          color: Colors.orange.withValues(alpha: 0.3),
+          color: const Color(0xFFFFEFD8),
           borderRadius: BorderRadius.circular(8),
         ),
         child: Column(
@@ -710,13 +756,13 @@ class _SpectatorScreenState extends State<SpectatorScreen> {
               height: 16,
               child: CircularProgressIndicator(
                 strokeWidth: 2,
-                color: Colors.orange,
+                color: Color(0xFFF2A65A),
               ),
             ),
             const SizedBox(height: 4),
             Text(
               '요청중... ($cardCount장)',
-              style: const TextStyle(color: Colors.orange, fontSize: 10),
+              style: const TextStyle(color: Color(0xFFB58343), fontSize: 10),
             ),
           ],
         ),
@@ -728,18 +774,18 @@ class _SpectatorScreenState extends State<SpectatorScreen> {
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
         decoration: BoxDecoration(
-          color: Colors.blue.withValues(alpha: 0.3),
+          color: const Color(0xFFEAF4FF),
           borderRadius: BorderRadius.circular(8),
-          border: Border.all(color: Colors.blue.withValues(alpha: 0.5)),
+          border: Border.all(color: const Color(0xFFB7D3EF)),
         ),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Icon(Icons.visibility, color: Colors.blue, size: 20),
+            const Icon(Icons.visibility, color: Color(0xFF4F88C8), size: 20),
             const SizedBox(height: 2),
             Text(
               '패 보기 요청 ($cardCount장)',
-              style: const TextStyle(color: Colors.blue, fontSize: 10),
+              style: const TextStyle(color: Color(0xFF4F88C8), fontSize: 10),
             ),
           ],
         ),
@@ -784,13 +830,14 @@ class _SpectatorScreenState extends State<SpectatorScreen> {
         padding: const EdgeInsets.all(8),
         decoration: BoxDecoration(
           color: _chatOpen
-              ? const Color(0xFF64B5F6)
-              : Colors.white.withOpacity(0.2),
+              ? const Color(0xFF77B8E8)
+              : Colors.white.withOpacity(0.9),
           shape: BoxShape.circle,
+          border: Border.all(color: const Color(0xFFE0D8D4)),
         ),
         child: Icon(
           Icons.chat_bubble_outline,
-          color: _chatOpen ? Colors.white : Colors.white70,
+          color: _chatOpen ? Colors.white : const Color(0xFF6A5A52),
           size: 18,
         ),
       ),
@@ -798,11 +845,20 @@ class _SpectatorScreenState extends State<SpectatorScreen> {
   }
 
   Widget _buildChatPanel(GameService game) {
-    return Positioned(
-      top: 50,
+    final bottomInset = MediaQuery.of(context).viewInsets.bottom;
+    final maxHeight = MediaQuery.of(context).size.height - bottomInset - 120;
+    final panelHeight = maxHeight < 240
+        ? 240.0
+        : (maxHeight < 350 ? maxHeight : 350.0);
+
+    return AnimatedPositioned(
+      duration: const Duration(milliseconds: 180),
+      curve: Curves.easeOut,
       right: 8,
+      top: bottomInset > 0 ? null : 50,
+      bottom: bottomInset > 0 ? 8 + bottomInset : null,
       width: 280,
-      height: 350,
+      height: panelHeight,
       child: Container(
         decoration: BoxDecoration(
           color: Colors.white,
@@ -821,7 +877,7 @@ class _SpectatorScreenState extends State<SpectatorScreen> {
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
               decoration: const BoxDecoration(
-                color: Color(0xFF64B5F6),
+                color: Color(0xFF77B8E8),
                 borderRadius: BorderRadius.only(
                   topLeft: Radius.circular(16),
                   topRight: Radius.circular(16),
@@ -888,7 +944,7 @@ class _SpectatorScreenState extends State<SpectatorScreen> {
                   ),
                   IconButton(
                     onPressed: () => _sendChatMessage(game),
-                    icon: const Icon(Icons.send, color: Color(0xFF64B5F6)),
+                    icon: const Icon(Icons.send, color: Color(0xFF77B8E8)),
                   ),
                 ],
               ),
@@ -972,7 +1028,7 @@ class _SpectatorScreenState extends State<SpectatorScreen> {
       return const Center(
         child: Text(
           '새 트릭 시작',
-          style: TextStyle(color: Colors.white38, fontSize: 14),
+          style: TextStyle(color: Color(0xFF9A8E8A), fontSize: 14),
         ),
       );
     }
@@ -987,8 +1043,16 @@ class _SpectatorScreenState extends State<SpectatorScreen> {
       child: Container(
         padding: const EdgeInsets.all(8),
         decoration: BoxDecoration(
-          color: Colors.black.withValues(alpha: 0.3),
+          color: Colors.white.withOpacity(0.95),
           borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: const Color(0xFFE0D8D4)),
+          boxShadow: [
+            BoxShadow(
+              color: const Color(0xFFD9CCC8).withOpacity(0.35),
+              blurRadius: 8,
+              offset: const Offset(0, 3),
+            ),
+          ],
         ),
         child: Column(
           mainAxisSize: MainAxisSize.min,
@@ -996,7 +1060,7 @@ class _SpectatorScreenState extends State<SpectatorScreen> {
             Text(
               playerName,
               style: const TextStyle(
-                color: Colors.white70,
+                color: Color(0xFF5A4038),
                 fontSize: 11,
                 fontWeight: FontWeight.bold,
               ),
@@ -1025,7 +1089,7 @@ class _SpectatorScreenState extends State<SpectatorScreen> {
                 child: Text(
                   combo,
                   style: const TextStyle(
-                    color: Colors.white54,
+                    color: Color(0xFF8A7E78),
                     fontSize: 9,
                   ),
                 ),

@@ -119,6 +119,8 @@ async function initDatabase() {
     await client.query(`ALTER TABLE tc_users ADD COLUMN IF NOT EXISTS exp_total INT DEFAULT 0`);
     await client.query(`ALTER TABLE tc_users ADD COLUMN IF NOT EXISTS level INT DEFAULT 1`);
     await client.query(`ALTER TABLE tc_users ADD COLUMN IF NOT EXISTS ranked_ban_until TIMESTAMP`);
+    await client.query(`ALTER TABLE tc_users ADD COLUMN IF NOT EXISTS chat_ban_until TIMESTAMP`);
+    await client.query(`ALTER TABLE tc_users ADD COLUMN IF NOT EXISTS admin_memo TEXT`);
 
     // Shop items table
     await client.query(`
@@ -755,6 +757,14 @@ async function getUserProfile(nickname) {
       ? Math.round((user.season_wins / user.season_games) * 100)
       : 0;
 
+    // Report count in last 6 months
+    const reportRes = await client.query(
+      `SELECT COUNT(*) FROM tc_reports
+       WHERE reported_nickname = $1 AND created_at >= NOW() - INTERVAL '6 months'`,
+      [nickname]
+    );
+    const reportCount = parseInt(reportRes.rows[0].count, 10) || 0;
+
     return {
       nickname: user.nickname,
       totalGames: user.total_games,
@@ -763,6 +773,7 @@ async function getUserProfile(nickname) {
       rating: user.rating,
       gold: user.gold,
       leaveCount: user.leave_count,
+      reportCount,
       winRate,
       seasonRating: user.season_rating,
       seasonGames: user.season_games,
@@ -1189,6 +1200,60 @@ async function changeNickname(oldNickname, newNickname) {
       [oldNickname, trimmed]
     );
 
+    // Update nickname in tc_friends (both columns)
+    await client.query(
+      `UPDATE tc_friends SET user_nickname = $2 WHERE user_nickname = $1`,
+      [oldNickname, trimmed]
+    );
+    await client.query(
+      `UPDATE tc_friends SET friend_nickname = $2 WHERE friend_nickname = $1`,
+      [oldNickname, trimmed]
+    );
+
+    // Update nickname in tc_blocked_users (both columns)
+    await client.query(
+      `UPDATE tc_blocked_users SET blocker_nickname = $2 WHERE blocker_nickname = $1`,
+      [oldNickname, trimmed]
+    );
+    await client.query(
+      `UPDATE tc_blocked_users SET blocked_nickname = $2 WHERE blocked_nickname = $1`,
+      [oldNickname, trimmed]
+    );
+
+    // Update nickname in tc_inquiries
+    await client.query(
+      `UPDATE tc_inquiries SET user_nickname = $2 WHERE user_nickname = $1`,
+      [oldNickname, trimmed]
+    );
+
+    // Update nickname in tc_reports (both columns)
+    await client.query(
+      `UPDATE tc_reports SET reporter_nickname = $2 WHERE reporter_nickname = $1`,
+      [oldNickname, trimmed]
+    );
+    await client.query(
+      `UPDATE tc_reports SET reported_nickname = $2 WHERE reported_nickname = $1`,
+      [oldNickname, trimmed]
+    );
+
+    // Update nickname in tc_match_history (all 4 player columns)
+    await client.query(
+      `UPDATE tc_match_history SET player_a1 = $2 WHERE player_a1 = $1`,
+      [oldNickname, trimmed]
+    );
+    await client.query(
+      `UPDATE tc_match_history SET player_a2 = $2 WHERE player_a2 = $1`,
+      [oldNickname, trimmed]
+    );
+    await client.query(
+      `UPDATE tc_match_history SET player_b1 = $2 WHERE player_b1 = $1`,
+      [oldNickname, trimmed]
+    );
+    await client.query(
+      `UPDATE tc_match_history SET player_b2 = $2 WHERE player_b2 = $1`,
+      [oldNickname, trimmed]
+    );
+
     // Delete one nickname_change item
     await client.query(
       `DELETE FROM tc_user_items WHERE id = $1`,
@@ -1239,6 +1304,69 @@ async function getRankedBan(nickname) {
     return Math.ceil(remaining / 60000); // minutes
   } catch (err) {
     console.error('Get ranked ban error:', err);
+    return null;
+  } finally {
+    client.release();
+  }
+}
+
+// Set chat ban (admin-controlled, duration in minutes)
+// Set admin memo for a user
+async function setAdminMemo(nickname, memo) {
+  const client = await pool.connect();
+  try {
+    await client.query(
+      `UPDATE tc_users SET admin_memo = $2 WHERE nickname = $1`,
+      [nickname, memo || null]
+    );
+    return { success: true };
+  } catch (err) {
+    console.error('Set admin memo error:', err);
+    return { success: false };
+  } finally {
+    client.release();
+  }
+}
+
+async function setChatBan(nickname, minutes) {
+  const client = await pool.connect();
+  try {
+    if (minutes <= 0) {
+      await client.query(
+        `UPDATE tc_users SET chat_ban_until = NULL WHERE nickname = $1`,
+        [nickname]
+      );
+    } else {
+      await client.query(
+        `UPDATE tc_users SET chat_ban_until = NOW() + INTERVAL '1 minute' * $2 WHERE nickname = $1`,
+        [nickname, minutes]
+      );
+    }
+    return { success: true };
+  } catch (err) {
+    console.error('Set chat ban error:', err);
+    return { success: false };
+  } finally {
+    client.release();
+  }
+}
+
+// Get chat ban remaining minutes (null if not banned)
+async function getChatBan(nickname) {
+  const client = await pool.connect();
+  try {
+    const result = await client.query(
+      `SELECT chat_ban_until FROM tc_users WHERE nickname = $1`,
+      [nickname]
+    );
+    if (result.rows.length === 0) return null;
+    const banUntil = result.rows[0].chat_ban_until;
+    if (!banUntil) return null;
+    const remaining = new Date(banUntil) - new Date();
+    if (remaining <= 0) return null;
+    return Math.ceil(remaining / 60000); // minutes
+  } catch (err) {
+    console.error('Get chat ban error:', err);
     return null;
   } finally {
     client.release();
@@ -1666,7 +1794,7 @@ async function getUserDetail(nickname) {
   const client = await pool.connect();
   try {
     const userResult = await client.query(
-      `SELECT id, username, nickname, total_games, wins, losses, rating, created_at, last_login
+      `SELECT id, username, nickname, total_games, wins, losses, rating, created_at, last_login, chat_ban_until, leave_count, gold, level, season_rating, admin_memo
        FROM tc_users WHERE nickname = $1`,
       [nickname]
     );
@@ -1698,6 +1826,7 @@ async function getUserDetail(nickname) {
 async function getDashboardStats() {
   const client = await pool.connect();
   try {
+    // Basic counts
     const totalUsers = await client.query('SELECT COUNT(*) FROM tc_users');
     const pendingInquiries = await client.query(`SELECT COUNT(*) FROM tc_inquiries WHERE status = 'pending'`);
     const pendingReports = await client.query(`SELECT COUNT(*) FROM tc_reports WHERE status = 'pending'`);
@@ -1707,16 +1836,105 @@ async function getDashboardStats() {
     const recentMatches = await client.query(
       'SELECT * FROM tc_match_history ORDER BY created_at DESC LIMIT 10'
     );
+
+    // New users today
+    const newUsersToday = await client.query(
+      `SELECT COUNT(*) FROM tc_users WHERE created_at >= CURRENT_DATE`
+    );
+
+    // Active users (logged in within 24h / 7d)
+    const activeUsers24h = await client.query(
+      `SELECT COUNT(*) FROM tc_users WHERE last_login >= NOW() - INTERVAL '24 hours'`
+    );
+    const activeUsers7d = await client.query(
+      `SELECT COUNT(*) FROM tc_users WHERE last_login >= NOW() - INTERVAL '7 days'`
+    );
+
+    // Total matches + ranked matches
+    const totalMatches = await client.query('SELECT COUNT(*) FROM tc_match_history');
+    const rankedMatchesToday = await client.query(
+      `SELECT COUNT(*) FROM tc_match_history WHERE created_at >= CURRENT_DATE AND is_ranked = true`
+    );
+
+    // Games per day (last 7 days)
+    const dailyGames = await client.query(`
+      SELECT DATE(created_at) as day, COUNT(*) as cnt,
+             SUM(CASE WHEN is_ranked THEN 1 ELSE 0 END) as ranked_cnt
+      FROM tc_match_history
+      WHERE created_at >= CURRENT_DATE - INTERVAL '6 days'
+      GROUP BY DATE(created_at)
+      ORDER BY day
+    `);
+
+    // New users per day (last 7 days)
+    const dailySignups = await client.query(`
+      SELECT DATE(created_at) as day, COUNT(*) as cnt
+      FROM tc_users
+      WHERE created_at >= CURRENT_DATE - INTERVAL '6 days'
+      GROUP BY DATE(created_at)
+      ORDER BY day
+    `);
+
+    // Top 10 players by rating
+    const topPlayers = await client.query(`
+      SELECT nickname, rating, wins, losses, total_games, season_rating, level
+      FROM tc_users ORDER BY rating DESC LIMIT 10
+    `);
+
+    // Gold economy
+    const goldStats = await client.query(`
+      SELECT SUM(gold) as total_gold, AVG(gold) as avg_gold, MAX(gold) as max_gold
+      FROM tc_users
+    `);
+
+    // Shop revenue (total items purchased)
+    const shopStats = await client.query(`
+      SELECT COUNT(*) as total_purchased,
+             COUNT(DISTINCT nickname) as unique_buyers
+      FROM tc_user_items WHERE source = 'shop'
+    `);
+
+    // Leave stats
+    const leaveStats = await client.query(`
+      SELECT SUM(leave_count) as total_leaves,
+             COUNT(CASE WHEN leave_count >= 3 THEN 1 END) as problem_users
+      FROM tc_users
+    `);
+
+    // Report stats (last 30 days)
+    const reportStats30d = await client.query(`
+      SELECT COUNT(*) as total_reports,
+             COUNT(DISTINCT reported_nickname) as unique_reported
+      FROM tc_reports WHERE created_at >= NOW() - INTERVAL '30 days'
+    `);
+
     return {
       totalUsers: parseInt(totalUsers.rows[0].count),
       pendingInquiries: parseInt(pendingInquiries.rows[0].count),
       pendingReports: parseInt(pendingReports.rows[0].count),
       todayGames: parseInt(todayGames.rows[0].count),
       recentMatches: recentMatches.rows,
+      newUsersToday: parseInt(newUsersToday.rows[0].count),
+      activeUsers24h: parseInt(activeUsers24h.rows[0].count),
+      activeUsers7d: parseInt(activeUsers7d.rows[0].count),
+      totalMatches: parseInt(totalMatches.rows[0].count),
+      rankedMatchesToday: parseInt(rankedMatchesToday.rows[0].count),
+      dailyGames: dailyGames.rows,
+      dailySignups: dailySignups.rows,
+      topPlayers: topPlayers.rows,
+      goldStats: goldStats.rows[0],
+      shopStats: shopStats.rows[0],
+      leaveStats: leaveStats.rows[0],
+      reportStats30d: reportStats30d.rows[0],
     };
   } catch (err) {
     console.error('Get dashboard stats error:', err);
-    return { totalUsers: 0, pendingInquiries: 0, pendingReports: 0, todayGames: 0, recentMatches: [] };
+    return {
+      totalUsers: 0, pendingInquiries: 0, pendingReports: 0, todayGames: 0,
+      recentMatches: [], newUsersToday: 0, activeUsers24h: 0, activeUsers7d: 0,
+      totalMatches: 0, rankedMatchesToday: 0, dailyGames: [], dailySignups: [],
+      topPlayers: [], goldStats: {}, shopStats: {}, leaveStats: {}, reportStats30d: {},
+    };
   } finally {
     client.release();
   }
@@ -1923,6 +2141,9 @@ module.exports = {
   incrementLeaveCount,
   setRankedBan,
   getRankedBan,
+  setChatBan,
+  getChatBan,
+  setAdminMemo,
   getActiveSeason,
   createSeason,
   getSeasons,

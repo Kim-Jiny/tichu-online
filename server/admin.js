@@ -2,7 +2,7 @@ const crypto = require('crypto');
 const {
   verifyAdmin, getInquiries, getInquiryById, resolveInquiry,
   getReports, getReportGroup, updateReportGroupStatus,
-  getUsers, getUserDetail, deleteUser, getDashboardStats,
+  getUsers, getUserDetail, deleteUser, getDashboardStats, setChatBan, setAdminMemo,
   getAllShopItemsAdmin, addShopItem, updateShopItem, deleteShopItem, getShopItemById,
 } = require('./db/database');
 
@@ -340,39 +340,229 @@ async function handleAdminRoute(req, res, url, pathname, method, lobby, wss) {
     const allRooms = lobby ? lobby.getRoomList() : [];
     const activeRooms = allRooms.length;
     const gamingRooms = allRooms.filter(r => r.gameInProgress).length;
+    const waitingRooms = activeRooms - gamingRooms;
+    const totalSpectators = allRooms.reduce((s, r) => s + (r.spectatorCount || 0), 0);
 
+    // Chart data
+    const last7 = [];
+    for (let i = 6; i >= 0; i--) {
+      const d = new Date(); d.setDate(d.getDate() - i);
+      last7.push(d.toISOString().split('T')[0]);
+    }
+    const gamesByDay = {};
+    const rankedByDay = {};
+    const signupsByDay = {};
+    for (const d of last7) { gamesByDay[d] = 0; rankedByDay[d] = 0; signupsByDay[d] = 0; }
+    for (const r of stats.dailyGames) {
+      const d = new Date(r.day).toISOString().split('T')[0];
+      gamesByDay[d] = parseInt(r.cnt) || 0;
+      rankedByDay[d] = parseInt(r.ranked_cnt) || 0;
+    }
+    for (const r of stats.dailySignups) {
+      const d = new Date(r.day).toISOString().split('T')[0];
+      signupsByDay[d] = parseInt(r.cnt) || 0;
+    }
+    const chartLabels = last7.map(d => d.slice(5)); // MM-DD
+    const chartGames = last7.map(d => gamesByDay[d]);
+    const chartRanked = last7.map(d => rankedByDay[d]);
+    const chartSignups = last7.map(d => signupsByDay[d]);
+    const maxGames = Math.max(...chartGames, 1);
+    const maxSignups = Math.max(...chartSignups, 1);
+
+    function miniBar(values, max, color, label) {
+      return `<div style="display:flex;align-items:flex-end;gap:6px;height:80px;padding:8px 0">
+        ${values.map((v, i) => {
+          const h = Math.max(v / max * 60, 2);
+          return `<div style="display:flex;flex-direction:column;align-items:center;flex:1;gap:2px">
+            <span style="font-size:10px;color:#666">${v}</span>
+            <div style="width:100%;max-width:28px;height:${h}px;background:${color};border-radius:4px 4px 0 0;transition:height 0.3s"></div>
+            <span style="font-size:9px;color:#aaa">${label[i]}</span>
+          </div>`;
+        }).join('')}
+      </div>`;
+    }
+
+    // Gold economy
+    const totalGold = parseInt(stats.goldStats?.total_gold) || 0;
+    const avgGold = Math.round(parseFloat(stats.goldStats?.avg_gold) || 0);
+    const maxGold = parseInt(stats.goldStats?.max_gold) || 0;
+    const totalPurchased = parseInt(stats.shopStats?.total_purchased) || 0;
+    const uniqueBuyers = parseInt(stats.shopStats?.unique_buyers) || 0;
+    const totalLeaves = parseInt(stats.leaveStats?.total_leaves) || 0;
+    const problemUsers = parseInt(stats.leaveStats?.problem_users) || 0;
+    const reports30d = parseInt(stats.reportStats30d?.total_reports) || 0;
+    const uniqueReported30d = parseInt(stats.reportStats30d?.unique_reported) || 0;
+
+    // Recent matches table
     let matchesTable = '';
     if (stats.recentMatches.length > 0) {
       matchesTable = `<table>
-        <tr><th>ID</th><th>Winner</th><th>Score</th><th>Team A</th><th>Team B</th><th>Ranked</th><th>Date</th></tr>
-        ${stats.recentMatches.map(m => `<tr>
+        <tr><th>ID</th><th>Result</th><th>Score</th><th>Team A</th><th>Team B</th><th>Type</th><th>Date</th></tr>
+        ${stats.recentMatches.map(m => {
+          const isDraw = m.team_a_score === m.team_b_score;
+          const winBadge = isDraw
+            ? '<span class="badge" style="background:#f5f5f5;color:#888">Draw</span>'
+            : m.winner_team === 'A'
+              ? '<span class="badge" style="background:#ffebee;color:#c62828">A Win</span>'
+              : '<span class="badge" style="background:#e3f2fd;color:#1565c0">B Win</span>';
+          const aStyle = !isDraw && m.winner_team === 'A' ? 'font-weight:700;color:#c62828' : '';
+          const bStyle = !isDraw && m.winner_team === 'B' ? 'font-weight:700;color:#1565c0' : '';
+          return `<tr>
           <td>${m.id}</td>
-          <td>Team ${m.winner_team}</td>
-          <td>${m.team_a_score} : ${m.team_b_score}</td>
-          <td>${escapeHtml(m.player_a1)}, ${escapeHtml(m.player_a2)}</td>
-          <td>${escapeHtml(m.player_b1)}, ${escapeHtml(m.player_b2)}</td>
-          <td>${m.is_ranked ? 'Yes' : 'No'}</td>
-          <td>${formatDate(m.created_at)}</td>
-        </tr>`).join('')}
+          <td>${winBadge}</td>
+          <td style="font-weight:600"><span style="${aStyle}">${m.team_a_score}</span> : <span style="${bStyle}">${m.team_b_score}</span></td>
+          <td style="${aStyle}">${escapeHtml(m.player_a1)}, ${escapeHtml(m.player_a2)}</td>
+          <td style="${bStyle}">${escapeHtml(m.player_b1)}, ${escapeHtml(m.player_b2)}</td>
+          <td>${m.is_ranked ? '<span class="badge" style="background:#fff3e0;color:#e65100">Ranked</span>' : '<span class="badge" style="background:#f5f5f5;color:#999">Normal</span>'}</td>
+          <td style="font-size:12px;color:#888">${formatDate(m.created_at)}</td>
+        </tr>`;
+        }).join('')}
       </table>`;
     } else {
       matchesTable = '<div class="empty">No recent matches</div>';
     }
 
+    // Top players table
+    let topPlayersTable = '';
+    if (stats.topPlayers.length > 0) {
+      topPlayersTable = `<table>
+        <tr><th>#</th><th>Nickname</th><th>Rating</th><th>Season</th><th>W/L</th><th>Games</th><th>Lv</th></tr>
+        ${stats.topPlayers.map((p, i) => {
+          const medal = i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : `${i + 1}`;
+          const winRate = p.total_games > 0 ? Math.round(p.wins / p.total_games * 100) : 0;
+          return `<tr>
+            <td style="text-align:center">${medal}</td>
+            <td><a href="/tc-backstage/users/${encodeURIComponent(p.nickname)}" style="color:#6c63ff;text-decoration:none;font-weight:600">${escapeHtml(p.nickname)}</a></td>
+            <td style="font-weight:700">${p.rating}</td>
+            <td>${p.season_rating}</td>
+            <td>${p.wins}W / ${p.losses}L <span style="color:#888;font-size:12px">(${winRate}%)</span></td>
+            <td>${p.total_games}</td>
+            <td>${p.level}</td>
+          </tr>`;
+        }).join('')}
+      </table>`;
+    }
+
+    // Active rooms table
+    let roomsTable = '';
+    if (allRooms.length > 0) {
+      roomsTable = `<table>
+        <tr><th>Room</th><th>Host</th><th>Players</th><th>Status</th><th>Type</th><th>Spectators</th></tr>
+        ${allRooms.map(r => `<tr>
+          <td>${escapeHtml(r.name)}</td>
+          <td>${escapeHtml(r.hostName)}</td>
+          <td>${r.playerCount}/4</td>
+          <td>${r.gameInProgress
+            ? '<span class="badge badge-resolved">In Game</span>'
+            : '<span class="badge badge-pending">Waiting</span>'}</td>
+          <td>${r.isRanked ? '<span class="badge" style="background:#fff3e0;color:#e65100">Ranked</span>' : 'Normal'}</td>
+          <td>${r.spectatorCount || 0}</td>
+        </tr>`).join('')}
+      </table>`;
+    } else {
+      roomsTable = '<div class="empty">No active rooms</div>';
+    }
+
     const content = `
       <h1 class="page-title">Dashboard</h1>
-      <div class="stats-grid">
-        <div class="stat-card"><div class="label">Connected Users</div><div class="value purple">${connectedUsers}</div></div>
-        <div class="stat-card"><div class="label">Active Rooms</div><div class="value">${activeRooms}</div></div>
-        <div class="stat-card"><div class="label">Games In Progress</div><div class="value green">${gamingRooms}</div></div>
+
+      <div style="margin-bottom:8px;font-size:13px;color:#888">Real-time Server Status</div>
+      <div class="stats-grid" style="grid-template-columns:repeat(auto-fit, minmax(150px, 1fr))">
+        <div class="stat-card" style="border-left:4px solid #6c63ff"><div class="label">Connected</div><div class="value purple">${connectedUsers}</div></div>
+        <div class="stat-card" style="border-left:4px solid #4caf50"><div class="label">In Game</div><div class="value green">${gamingRooms}</div></div>
+        <div class="stat-card" style="border-left:4px solid #ff9800"><div class="label">Waiting</div><div class="value orange">${waitingRooms}</div></div>
+        <div class="stat-card" style="border-left:4px solid #42a5f5"><div class="label">Spectators</div><div class="value" style="color:#42a5f5">${totalSpectators}</div></div>
+      </div>
+
+      <div style="margin:20px 0 8px;font-size:13px;color:#888">User & Match Overview</div>
+      <div class="stats-grid" style="grid-template-columns:repeat(auto-fit, minmax(150px, 1fr))">
+        <div class="stat-card"><div class="label">Total Users</div><div class="value">${stats.totalUsers}</div><div style="font-size:12px;color:#4caf50;margin-top:4px">+${stats.newUsersToday} today</div></div>
+        <div class="stat-card"><div class="label">Active (24h)</div><div class="value">${stats.activeUsers24h}</div></div>
+        <div class="stat-card"><div class="label">Active (7d)</div><div class="value">${stats.activeUsers7d}</div></div>
+        <div class="stat-card"><div class="label">Total Matches</div><div class="value">${stats.totalMatches}</div></div>
+        <div class="stat-card"><div class="label">Today's Games</div><div class="value green">${stats.todayGames}</div><div style="font-size:12px;color:#e65100;margin-top:4px">${stats.rankedMatchesToday} ranked</div></div>
         <div class="stat-card"><div class="label">Pending Inquiries</div><div class="value orange">${stats.pendingInquiries}</div></div>
         <div class="stat-card"><div class="label">Pending Reports</div><div class="value red">${stats.pendingReports}</div></div>
-        <div class="stat-card"><div class="label">Total Users</div><div class="value">${stats.totalUsers}</div></div>
-        <div class="stat-card"><div class="label">Today's Games</div><div class="value">${stats.todayGames}</div></div>
       </div>
+
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;margin-bottom:20px">
+        <div class="card">
+          <h3>Games / Day (7d)</h3>
+          ${miniBar(chartGames, maxGames, '#6c63ff', chartLabels)}
+          <div style="margin-top:4px;font-size:11px;color:#888">
+            <span style="display:inline-block;width:10px;height:10px;background:#6c63ff;border-radius:2px;margin-right:4px"></span>Total
+          </div>
+          <div style="margin-top:8px">
+            <h3 style="font-size:14px">Ranked / Day</h3>
+            ${miniBar(chartRanked, maxGames, '#ff9800', chartLabels)}
+          </div>
+        </div>
+        <div class="card">
+          <h3>New Users / Day (7d)</h3>
+          ${miniBar(chartSignups, maxSignups, '#4caf50', chartLabels)}
+        </div>
+      </div>
+
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;margin-bottom:20px">
+        <div class="card">
+          <h3>Economy</h3>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+            <div style="background:#f8f9fa;border-radius:10px;padding:14px;text-align:center">
+              <div style="font-size:12px;color:#888">Total Gold</div>
+              <div style="font-size:20px;font-weight:700;color:#ff9800">${totalGold.toLocaleString()}</div>
+            </div>
+            <div style="background:#f8f9fa;border-radius:10px;padding:14px;text-align:center">
+              <div style="font-size:12px;color:#888">Avg Gold</div>
+              <div style="font-size:20px;font-weight:700;color:#5A4038">${avgGold.toLocaleString()}</div>
+            </div>
+            <div style="background:#f8f9fa;border-radius:10px;padding:14px;text-align:center">
+              <div style="font-size:12px;color:#888">Max Gold</div>
+              <div style="font-size:20px;font-weight:700;color:#e65100">${maxGold.toLocaleString()}</div>
+            </div>
+            <div style="background:#f8f9fa;border-radius:10px;padding:14px;text-align:center">
+              <div style="font-size:12px;color:#888">Shop Purchases</div>
+              <div style="font-size:20px;font-weight:700;color:#6c63ff">${totalPurchased}</div>
+              <div style="font-size:11px;color:#888">${uniqueBuyers} buyers</div>
+            </div>
+          </div>
+        </div>
+        <div class="card">
+          <h3>Health</h3>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+            <div style="background:#f8f9fa;border-radius:10px;padding:14px;text-align:center">
+              <div style="font-size:12px;color:#888">Total Leaves</div>
+              <div style="font-size:20px;font-weight:700;color:#e57373">${totalLeaves}</div>
+            </div>
+            <div style="background:#f8f9fa;border-radius:10px;padding:14px;text-align:center">
+              <div style="font-size:12px;color:#888">Leavers (3+)</div>
+              <div style="font-size:20px;font-weight:700;color:#c62828">${problemUsers}</div>
+            </div>
+            <div style="background:#f8f9fa;border-radius:10px;padding:14px;text-align:center">
+              <div style="font-size:12px;color:#888">Reports (30d)</div>
+              <div style="font-size:20px;font-weight:700;color:#ff9800">${reports30d}</div>
+            </div>
+            <div style="background:#f8f9fa;border-radius:10px;padding:14px;text-align:center">
+              <div style="font-size:12px;color:#888">Reported Users</div>
+              <div style="font-size:20px;font-weight:700;color:#e65100">${uniqueReported30d}</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
       <div class="card">
-        <h3>Recent Matches</h3>
-        ${matchesTable}
+        <h3>Active Rooms <span style="font-size:13px;color:#888;font-weight:400">(${activeRooms})</span></h3>
+        ${roomsTable}
+      </div>
+
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;margin-bottom:20px">
+        <div class="card">
+          <h3>Top 10 Players</h3>
+          ${topPlayersTable || '<div class="empty">No players yet</div>'}
+        </div>
+        <div class="card">
+          <h3>Recent Matches</h3>
+          ${matchesTable}
+        </div>
       </div>
     `;
     return html(res, layout('Dashboard', content, 'home'));
@@ -618,20 +808,68 @@ async function handleAdminRoute(req, res, url, pathname, method, lobby, wss) {
 
     const winRate = user.total_games > 0 ? Math.round((user.wins / user.total_games) * 100) : 0;
 
+    // Chat ban status
+    let chatBanHtml = '<span style="color:#4caf50;font-weight:600">None</span>';
+    if (user.chat_ban_until) {
+      const remaining = new Date(user.chat_ban_until) - new Date();
+      if (remaining > 0) {
+        const mins = Math.ceil(remaining / 60000);
+        const hours = Math.floor(mins / 60);
+        const display = hours > 0 ? `${hours}h ${mins % 60}m` : `${mins}m`;
+        chatBanHtml = `<span style="color:#e53935;font-weight:600">${display} remaining</span> <span style="color:#888;font-size:12px">(until ${formatDate(user.chat_ban_until)})</span>`;
+      }
+    }
+
     const content = `
       <h1 class="page-title">User: ${escapeHtml(user.nickname)}</h1>
       <div class="card">
-        <div class="detail-grid">
-          <div class="label">Nickname</div><div class="value">${escapeHtml(user.nickname)}</div>
+        <div class="detail-grid" style="grid-template-columns:130px 1fr">
+          <div class="label">Nickname</div><div class="value" style="font-weight:600">${escapeHtml(user.nickname)}</div>
           <div class="label">Username</div><div class="value">${escapeHtml(user.username)}</div>
+          <div class="label">Level</div><div class="value">${user.level || 1}</div>
+          <div class="label">Gold</div><div class="value" style="color:#ff9800;font-weight:600">${(user.gold || 0).toLocaleString()}</div>
+          <div class="label">Rating</div><div class="value" style="font-weight:600">${user.rating}</div>
+          <div class="label">Season Rating</div><div class="value">${user.season_rating || 1000}</div>
           <div class="label">Games</div><div class="value">${user.total_games}</div>
           <div class="label">Record</div><div class="value">${user.wins}W / ${user.losses}L (${winRate}%)</div>
-          <div class="label">Rating</div><div class="value">${user.rating}</div>
+          <div class="label">Leave Count</div><div class="value" style="color:${(user.leave_count || 0) >= 3 ? '#e53935' : '#333'}">${user.leave_count || 0}</div>
           <div class="label">Reports</div><div class="value">${user.report_count}</div>
           <div class="label">Inquiries</div><div class="value">${user.inquiry_count}</div>
           <div class="label">Joined</div><div class="value">${formatDate(user.created_at)}</div>
           <div class="label">Last Login</div><div class="value">${formatDate(user.last_login)}</div>
+          <div class="label">Chat Ban</div><div class="value">${chatBanHtml}</div>
         </div>
+      </div>
+
+      <div class="card">
+        <h3>Chat Ban</h3>
+        <form method="POST" action="/tc-backstage/users/${encodeURIComponent(user.nickname)}/chat-ban" style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+          <select name="duration" style="padding:8px 12px;border-radius:8px;border:1px solid #ddd;font-size:14px">
+            <option value="0">해제</option>
+            <option value="30">30분</option>
+            <option value="60">1시간</option>
+            <option value="180">3시간</option>
+            <option value="360">6시간</option>
+            <option value="720">12시간</option>
+            <option value="1440">1일</option>
+            <option value="4320">3일</option>
+            <option value="10080">7일</option>
+            <option value="43200">30일</option>
+          </select>
+          <button type="submit" class="btn btn-primary">Apply</button>
+        </form>
+      </div>
+
+      <div class="card">
+        <h3>Admin Memo</h3>
+        <form method="POST" action="/tc-backstage/users/${encodeURIComponent(user.nickname)}/memo">
+          <textarea name="memo" rows="3" placeholder="관리자 메모 (신고 이력, 주의사항 등)">${escapeHtml(user.admin_memo || '')}</textarea>
+          <div style="margin-top:8px"><button type="submit" class="btn btn-primary">Save Memo</button></div>
+        </form>
+      </div>
+
+      <div class="card" style="margin-top:0">
+        <h3 style="color:#e53935">Danger Zone</h3>
         <form method="POST" action="/tc-backstage/users/${encodeURIComponent(user.nickname)}/ban"
               onsubmit="return confirm('Are you sure you want to ban (delete) this user? This cannot be undone.')">
           <button type="submit" class="btn btn-danger">Ban User (Delete Account)</button>
@@ -642,7 +880,26 @@ async function handleAdminRoute(req, res, url, pathname, method, lobby, wss) {
     return html(res, layout(`User: ${escapeHtml(user.nickname)}`, content, 'users'));
   }
 
-  // Ban user
+  // Chat ban
+  const chatBanMatch = pathname.match(/^\/tc-backstage\/users\/([^/]+)\/chat-ban$/);
+  if (chatBanMatch && method === 'POST') {
+    const nickname = decodeURIComponent(chatBanMatch[1]);
+    const body = await parseBody(req);
+    const duration = parseInt(body.duration) || 0;
+    await setChatBan(nickname, duration);
+    return redirect(res, `/tc-backstage/users/${encodeURIComponent(nickname)}`);
+  }
+
+  // Admin memo
+  const memoMatch = pathname.match(/^\/tc-backstage\/users\/([^/]+)\/memo$/);
+  if (memoMatch && method === 'POST') {
+    const nickname = decodeURIComponent(memoMatch[1]);
+    const body = await parseBody(req);
+    await setAdminMemo(nickname, (body.memo || '').trim());
+    return redirect(res, `/tc-backstage/users/${encodeURIComponent(nickname)}`);
+  }
+
+  // Ban user (delete account)
   const banMatch = pathname.match(/^\/tc-backstage\/users\/([^/]+)\/ban$/);
   if (banMatch && method === 'POST') {
     const nickname = decodeURIComponent(banMatch[1]);

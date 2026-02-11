@@ -2378,11 +2378,10 @@ class _LobbyScreenState extends State<LobbyScreen> {
                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
                   title: Row(
                     children: [
-                      const Icon(Icons.person, color: Color(0xFF64B5F6)),
-                      const SizedBox(width: 8),
-                      const Expanded(
+                      Expanded(
                         child: Text(
-                          '프로필',
+                          nickname,
+                          style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
                           overflow: TextOverflow.ellipsis,
                         ),
                       ),
@@ -2481,15 +2480,17 @@ class _LobbyScreenState extends State<LobbyScreen> {
     final expTotal = profile['expTotal'] ?? 0;
     final gold = profile['gold'] ?? 0;
     final leaveCount = profile['leaveCount'] ?? 0;
+    final reportCount = profile['reportCount'] ?? 0;
     final bannerKey = profile['bannerKey']?.toString();
     final recentMatches = data['recentMatches'] as List<dynamic>? ?? [];
+    final isMe = nickname == game.playerName;
 
     return Column(
       mainAxisSize: MainAxisSize.min,
       children: [
         _buildProfileHeader(nickname, level, expTotal, bannerKey),
         const SizedBox(height: 8),
-        _buildMiniStatRow(gold: gold, leaveCount: leaveCount),
+        _buildMannerLeaveRow(reportCount: reportCount as int, leaveCount: leaveCount as int),
         const SizedBox(height: 10),
         _buildProfileSectionCard(
           title: '시즌 랭킹전',
@@ -2554,7 +2555,7 @@ class _LobbyScreenState extends State<LobbyScreen> {
     final expPercent = expInLevel / 100;
     final banner = _bannerStyle(bannerKey);
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
       decoration: BoxDecoration(
         gradient: banner.gradient,
         color: banner.gradient == null ? Colors.white.withOpacity(0.95) : null,
@@ -2563,40 +2564,20 @@ class _LobbyScreenState extends State<LobbyScreen> {
       ),
       child: Row(
         children: [
-          CircleAvatar(
-            radius: 16,
-            backgroundColor: const Color(0xFFE8E0DC),
-            child: Text(
-              nickname.isNotEmpty ? nickname[0] : '?',
-              style: const TextStyle(fontSize: 14, color: Color(0xFF5A4038)),
+          Text(
+            'Lv.$level',
+            style: const TextStyle(
+              fontSize: 14,
+              fontWeight: FontWeight.bold,
+              color: Color(0xFF5A4038),
             ),
           ),
-          const SizedBox(width: 10),
+          const SizedBox(width: 12),
           Expanded(
-            child: Text(
-              nickname,
-              style: const TextStyle(
-                fontSize: 14,
-                fontWeight: FontWeight.bold,
-                color: Color(0xFF5A4038),
-              ),
-            ),
-          ),
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.end,
-            children: [
-              Text(
-                'Lv.$level',
-                style: const TextStyle(
-                  fontSize: 11,
-                  fontWeight: FontWeight.bold,
-                  color: Color(0xFF5A4038),
-                ),
-              ),
-              const SizedBox(height: 4),
-              SizedBox(
-                width: 70,
-                child: ClipRRect(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                ClipRRect(
                   borderRadius: BorderRadius.circular(6),
                   child: LinearProgressIndicator(
                     value: expPercent,
@@ -2605,13 +2586,13 @@ class _LobbyScreenState extends State<LobbyScreen> {
                     valueColor: const AlwaysStoppedAnimation(Color(0xFF64B5F6)),
                   ),
                 ),
-              ),
-              const SizedBox(height: 2),
-              Text(
-                '$expInLevel/100 EXP',
-                style: const TextStyle(fontSize: 9, color: Color(0xFF9A8E8A)),
-              ),
-            ],
+                const SizedBox(height: 2),
+                Text(
+                  '$expInLevel/100 EXP',
+                  style: const TextStyle(fontSize: 9, color: Color(0xFF9A8E8A)),
+                ),
+              ],
+            ),
           ),
         ],
       ),
@@ -2722,6 +2703,36 @@ class _LobbyScreenState extends State<LobbyScreen> {
   }
 
   Widget _buildMiniStatRow({required int gold, required int leaveCount}) {
+    return _buildMannerLeaveRow(reportCount: 0, leaveCount: leaveCount);
+  }
+
+  static String _mannerLabel(int reportCount) {
+    if (reportCount <= 1) return '좋음';
+    if (reportCount <= 3) return '보통';
+    if (reportCount <= 6) return '나쁨';
+    if (reportCount <= 10) return '아주 나쁨';
+    return '최악';
+  }
+
+  static Color _mannerColor(int reportCount) {
+    if (reportCount <= 1) return const Color(0xFF66BB6A);
+    if (reportCount <= 3) return const Color(0xFF8D9E56);
+    if (reportCount <= 6) return const Color(0xFFFFA726);
+    if (reportCount <= 10) return const Color(0xFFEF5350);
+    return const Color(0xFFB71C1C);
+  }
+
+  static IconData _mannerIcon(int reportCount) {
+    if (reportCount <= 1) return Icons.sentiment_satisfied_alt;
+    if (reportCount <= 3) return Icons.sentiment_neutral;
+    if (reportCount <= 6) return Icons.sentiment_dissatisfied;
+    return Icons.sentiment_very_dissatisfied;
+  }
+
+  Widget _buildMannerLeaveRow({required int reportCount, required int leaveCount}) {
+    final label = _mannerLabel(reportCount);
+    final color = _mannerColor(reportCount);
+    final icon = _mannerIcon(reportCount);
     return Row(
       children: [
         Expanded(
@@ -2735,14 +2746,14 @@ class _LobbyScreenState extends State<LobbyScreen> {
             child: Row(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                const Icon(Icons.monetization_on, color: Color(0xFFFFB74D), size: 16),
+                Icon(icon, color: color, size: 16),
                 const SizedBox(width: 6),
                 Text(
-                  '$gold 골드',
-                  style: const TextStyle(
+                  '매너 $label',
+                  style: TextStyle(
                     fontSize: 12,
                     fontWeight: FontWeight.bold,
-                    color: Color(0xFF5A4038),
+                    color: color,
                   ),
                 ),
               ],

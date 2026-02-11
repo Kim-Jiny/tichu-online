@@ -11,7 +11,7 @@ const {
   saveMatchResult, updateUserStats, getUserProfile, getRecentMatches,
   submitInquiry, getRankings,
   getWallet, getShopItems, getUserItems, buyItem, equipItem, useItem, changeNickname,
-  incrementLeaveCount, setRankedBan, getRankedBan, grantSeasonRewards,
+  incrementLeaveCount, setRankedBan, getRankedBan, setChatBan, getChatBan, grantSeasonRewards,
   getActiveSeason, createSeason, getSeasons,
   getCurrentSeasonRankings, getSeasonRankings, resetSeasonStats,
 } = require('./db/database');
@@ -1323,9 +1323,13 @@ function startTurnTimer(roomId) {
     return;
   }
 
-  clearTurnTimer(roomId);
+  if (gameState !== 'playing') {
+    clearTurnTimer(roomId);
+    return;
+  }
 
-  if (gameState !== 'playing') return;
+  // If a turn timer is already running, keep the existing deadline
+  if (turnTimers[roomId]) return;
 
   // Determine who needs to act
   let targetPlayer = room.game.currentPlayer;
@@ -1572,7 +1576,7 @@ function broadcastRoomList() {
 }
 
 // Chat message handler
-function handleChatMessage(ws, data) {
+async function handleChatMessage(ws, data) {
   if (!ws.roomId || !ws.nickname) {
     sendTo(ws, { type: 'error', message: '방에 참가하고 있지 않습니다' });
     return;
@@ -1582,6 +1586,13 @@ function handleChatMessage(ws, data) {
 
   const message = (data.message || '').trim();
   if (!message || message.length > 200) return;
+
+  // Check chat ban
+  const chatBanMinutes = await getChatBan(ws.nickname);
+  if (chatBanMinutes) {
+    sendTo(ws, { type: 'chat_banned', remainingMinutes: chatBanMinutes });
+    return;
+  }
 
   // 방에 메시지 저장
   room.addChatMessage(ws.nickname, ws.playerId, message);

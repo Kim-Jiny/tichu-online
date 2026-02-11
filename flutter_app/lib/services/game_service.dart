@@ -476,6 +476,20 @@ class GameService extends ChangeNotifier {
         notifyListeners();
         break;
 
+      case 'chat_banned':
+        final mins = data['remainingMinutes'] ?? 0;
+        final hours = mins ~/ 60;
+        final display = hours > 0 ? '${hours}시간 ${mins % 60}분' : '${mins}분';
+        chatMessages.add({
+          'sender': '',
+          'senderId': '',
+          'message': '채팅이 제한되었습니다 ($display 남음)',
+          'timestamp': DateTime.now().millisecondsSinceEpoch,
+          'isSystem': true,
+        });
+        notifyListeners();
+        break;
+
       case 'chat_history':
         final messages = data['messages'] as List? ?? [];
         chatMessages = messages.map((m) => {

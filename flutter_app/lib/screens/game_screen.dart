@@ -17,12 +17,17 @@ class GameScreen extends StatefulWidget {
 }
 
 class _GameScreenState extends State<GameScreen> {
+  // Responsive scale factor (updated every build)
+  double _s = 1.0;  // scale factor based on screen width
+  int _maxNameLen = 4;
+
   final Set<String> _selectedCards = {};
 
   // 카드 교환용 상태
   final Map<String, String> _exchangeAssignments = {}; // position -> cardId
   final Map<String, String> _exchangeGiven = {}; // position -> cardId
   bool _exchangeSummaryShown = false;
+  String _prevPhase = ''; // track phase transitions
   bool _exchangeSubmitted = false;
 
   // 채팅
@@ -39,7 +44,7 @@ class _GameScreenState extends State<GameScreen> {
   bool _leavingGame = false;
   NetworkService? _networkService; // C6: Cache for safe dispose
   bool _profileRequested = false; // C8: Prevent requestProfile loop
-  int _lastSeenMessageCount = 0; // Bug #2: Chat unread badge
+  int _lastSeenMessageCount = -1; // -1 = not yet initialized
 
   @override
   void initState() {
@@ -192,6 +197,9 @@ class _GameScreenState extends State<GameScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final screenW = MediaQuery.of(context).size.width;
+    _s = (screenW / 400).clamp(0.8, 1.0);
+    _maxNameLen = screenW < 370 ? 3 : 4;
     final themeColors = context.watch<GameService>().themeGradient;
     return ConnectionOverlay(
       child: Scaffold(
@@ -238,7 +246,15 @@ class _GameScreenState extends State<GameScreen> {
                 }
               }
 
-              _maybeShowExchangeSummary(state);
+              // Track phase transitions for exchange summary
+              if (state.phase == 'card_exchange' && !state.exchangeDone) {
+                _exchangeSummaryShown = false;
+              }
+              // Only show exchange summary on card_exchange → playing transition
+              if (_prevPhase == 'card_exchange' && state.phase != 'card_exchange') {
+                _maybeShowExchangeSummary(state);
+              }
+              _prevPhase = state.phase;
 
               return Stack(
                 children: [
@@ -347,6 +363,10 @@ class _GameScreenState extends State<GameScreen> {
       !game.isBlocked(m['sender'] as String? ?? '')
     ).length;
 
+    // Initialize on first build so existing messages don't show as unread
+    if (_lastSeenMessageCount < 0) {
+      _lastSeenMessageCount = totalMessages;
+    }
     // Update seen count when chat is open
     if (_chatOpen) {
       _lastSeenMessageCount = totalMessages;
@@ -594,27 +614,78 @@ class _GameScreenState extends State<GameScreen> {
           builder: (ctx, game, _) {
             final profile = game.profileData;
             final isLoading = profile == null || profile['nickname'] != nickname;
+            final isMe = nickname == game.playerName;
+            final isBlockedUser = game.isBlocked(nickname);
 
             return AlertDialog(
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
               title: Row(
                 children: [
-                  CircleAvatar(
-                    radius: 20,
-                    backgroundColor: const Color(0xFFE0D8D4),
-                    child: Text(
-                      nickname.isNotEmpty ? nickname[0] : '?',
-                      style: const TextStyle(fontSize: 18, color: Color(0xFF5A4038)),
-                    ),
-                  ),
-                  const SizedBox(width: 12),
                   Expanded(
                     child: Text(
                       nickname,
-                      style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                      style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
                       overflow: TextOverflow.ellipsis,
                     ),
                   ),
+                  if (!isMe) ...[
+                    if (game.friends.contains(nickname))
+                      _buildProfileIconButton(
+                        icon: Icons.check,
+                        color: const Color(0xFFBDBDBD),
+                        tooltip: '이미 친구',
+                        onTap: () {},
+                      )
+                    else if (game.sentFriendRequests.contains(nickname))
+                      _buildProfileIconButton(
+                        icon: Icons.hourglass_top,
+                        color: const Color(0xFFBDBDBD),
+                        tooltip: '요청중',
+                        onTap: () {},
+                      )
+                    else
+                      _buildProfileIconButton(
+                        icon: Icons.person_add,
+                        color: const Color(0xFF81C784),
+                        tooltip: '친구 추가',
+                        onTap: () {
+                          game.addFriendAction(nickname);
+                          Navigator.pop(ctx);
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(content: Text('친구 요청을 보냈습니다')),
+                          );
+                        },
+                      ),
+                    const SizedBox(width: 6),
+                    _buildProfileIconButton(
+                      icon: isBlockedUser ? Icons.block : Icons.shield_outlined,
+                      color: isBlockedUser ? const Color(0xFF64B5F6) : const Color(0xFFFF8A65),
+                      tooltip: isBlockedUser ? '차단 해제' : '차단하기',
+                      onTap: () {
+                        if (isBlockedUser) {
+                          game.unblockUserAction(nickname);
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(content: Text('차단이 해제되었습니다')),
+                          );
+                        } else {
+                          game.blockUserAction(nickname);
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(content: Text('차단되었습니다')),
+                          );
+                        }
+                      },
+                    ),
+                    const SizedBox(width: 6),
+                    _buildProfileIconButton(
+                      icon: Icons.flag,
+                      color: const Color(0xFFE57373),
+                      tooltip: '신고하기',
+                      onTap: () {
+                        Navigator.pop(ctx);
+                        _showReportDialog(nickname, game);
+                      },
+                    ),
+                  ],
                 ],
               ),
               content: isLoading
@@ -622,7 +693,9 @@ class _GameScreenState extends State<GameScreen> {
                       height: 100,
                       child: Center(child: CircularProgressIndicator()),
                     )
-                  : _buildPlayerProfileContent(profile),
+                  : SingleChildScrollView(
+                      child: _buildPlayerProfileContent(profile),
+                    ),
               actions: [
                 TextButton(
                   onPressed: () => Navigator.pop(ctx),
@@ -636,6 +709,31 @@ class _GameScreenState extends State<GameScreen> {
     );
   }
 
+  Widget _buildProfileIconButton({
+    required IconData icon,
+    required Color color,
+    required String tooltip,
+    required VoidCallback onTap,
+  }) {
+    return Tooltip(
+      message: tooltip,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(12),
+        child: Container(
+          width: 28,
+          height: 28,
+          decoration: BoxDecoration(
+            color: color.withValues(alpha: 0.15),
+            borderRadius: BorderRadius.circular(10),
+            border: Border.all(color: color.withValues(alpha: 0.35)),
+          ),
+          child: Icon(icon, size: 16, color: color),
+        ),
+      ),
+    );
+  }
+
   Widget _buildPlayerProfileContent(Map<String, dynamic> data) {
     final profile = data['profile'] as Map<String, dynamic>?;
     if (profile == null) {
@@ -645,172 +743,53 @@ class _GameScreenState extends State<GameScreen> {
     final totalGames = profile['totalGames'] ?? 0;
     final wins = profile['wins'] ?? 0;
     final losses = profile['losses'] ?? 0;
-    final rating = profile['rating'] ?? 1000;
     final winRate = profile['winRate'] ?? 0;
     final seasonRating = profile['seasonRating'] ?? 1000;
     final seasonGames = profile['seasonGames'] ?? 0;
     final seasonWins = profile['seasonWins'] ?? 0;
     final seasonLosses = profile['seasonLosses'] ?? 0;
     final seasonWinRate = profile['seasonWinRate'] ?? 0;
+    final level = profile['level'] ?? 1;
+    final expTotal = profile['expTotal'] ?? 0;
+    final leaveCount = profile['leaveCount'] ?? 0;
+    final reportCount = profile['reportCount'] ?? 0;
+    final bannerKey = profile['bannerKey']?.toString();
     final recentMatches = data['recentMatches'] as List<dynamic>? ?? [];
 
     return Column(
       mainAxisSize: MainAxisSize.min,
       children: [
-        // Season rating
-        Container(
-          padding: const EdgeInsets.all(10),
-          decoration: BoxDecoration(
-            color: const Color(0xFFF6F3FA),
-            borderRadius: BorderRadius.circular(12),
-            border: Border.all(color: const Color(0xFFE4DFF2)),
-          ),
-          child: Column(
-            children: [
-              const Text(
-                '시즌 랭킹전',
-                style: TextStyle(
-                  fontSize: 12,
-                  color: Color(0xFF7A6A95),
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-              const SizedBox(height: 6),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  const Icon(Icons.emoji_events, color: Color(0xFFFFD54F), size: 18),
-                  const SizedBox(width: 6),
-                  Text(
-                    '$seasonRating',
-                    style: const TextStyle(
-                      fontSize: 20,
-                      fontWeight: FontWeight.bold,
-                      color: Color(0xFF4A4080),
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 6),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceAround,
-                children: [
-                  _buildProfileStatItem(
-                    '전적',
-                    '${seasonGames}전 ${seasonWins}승 ${seasonLosses}패',
-                  ),
-                  _buildProfileStatItem('승률', '$seasonWinRate%'),
-                ],
-              ),
-            ],
-          ),
+        _buildProfileHeader(level as int, expTotal as int, bannerKey),
+        const SizedBox(height: 8),
+        _buildMannerLeaveRow(reportCount: reportCount as int, leaveCount: leaveCount as int),
+        const SizedBox(height: 10),
+        _buildProfileSectionCard(
+          title: '시즌 랭킹전',
+          accent: const Color(0xFF7A6A95),
+          background: const Color(0xFFF6F3FA),
+          icon: Icons.emoji_events,
+          iconColor: const Color(0xFFFFD54F),
+          mainText: '$seasonRating',
+          chips: [
+            _buildStatChip('전적', '$seasonGames전 ${seasonWins}승 ${seasonLosses}패'),
+            _buildStatChip('승률', '$seasonWinRate%'),
+          ],
         ),
         const SizedBox(height: 10),
-        // Stats
-        Container(
-          padding: const EdgeInsets.all(12),
-          decoration: BoxDecoration(
-            color: const Color(0xFFF5F5F5),
-            borderRadius: BorderRadius.circular(12),
-          ),
-          child: Column(
-            children: [
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceAround,
-                children: [
-                  _buildProfileStatItem('전적', '${totalGames}전 ${wins}승 ${losses}패'),
-                  _buildProfileStatItem('승률', '$winRate%'),
-                ],
-              ),
-            ],
-          ),
+        _buildProfileSectionCard(
+          title: '전체 전적',
+          accent: const Color(0xFF5A4038),
+          background: const Color(0xFFF5F5F5),
+          icon: Icons.star,
+          iconColor: const Color(0xFFFFB74D),
+          mainText: '',
+          chips: [
+            _buildStatChip('전적', '$totalGames전 ${wins}승 ${losses}패'),
+            _buildStatChip('승률', '$winRate%'),
+          ],
         ),
-        // Recent 5 matches
-        if (recentMatches.isNotEmpty) ...[
-          const SizedBox(height: 12),
-          Row(
-            children: [
-              const Text(
-                '최근 전적 (3)',
-                style: TextStyle(fontSize: 12, color: Color(0xFF8A8A8A)),
-              ),
-              const Spacer(),
-              if (recentMatches.length > 3)
-                TextButton(
-                  onPressed: () => _showRecentMatchesDialog(recentMatches),
-                  child: const Text('더보기'),
-                ),
-            ],
-          ),
-          const SizedBox(height: 6),
-          Column(
-            children: recentMatches.take(3).map<Widget>((match) {
-              final won = match['won'] == true;
-              final teamAScore = match['teamAScore'] ?? 0;
-              final teamBScore = match['teamBScore'] ?? 0;
-              final teamA = _formatTeam(match['playerA1'], match['playerA2']);
-              final teamB = _formatTeam(match['playerB1'], match['playerB2']);
-              final date = _formatShortDate(match['createdAt']);
-              return Padding(
-                padding: const EdgeInsets.only(bottom: 6),
-                child: Row(
-                  children: [
-                    Container(
-                      width: 24,
-                      height: 24,
-                      alignment: Alignment.center,
-                      decoration: BoxDecoration(
-                        color: won ? const Color(0xFF81C784) : const Color(0xFFE57373),
-                        shape: BoxShape.circle,
-                      ),
-                      child: Text(
-                        won ? 'W' : 'L',
-                        style: const TextStyle(
-                          color: Colors.white,
-                          fontSize: 11,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                    ),
-                    const SizedBox(width: 8),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            date,
-                            style: const TextStyle(
-                              fontSize: 11,
-                              color: Color(0xFF8A8A8A),
-                            ),
-                          ),
-                          const SizedBox(height: 2),
-                          Text(
-                            '$teamA : $teamB',
-                            style: const TextStyle(
-                              fontSize: 12,
-                              fontWeight: FontWeight.bold,
-                              color: Color(0xFF5A4038),
-                            ),
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                        ],
-                      ),
-                    ),
-                    Text(
-                      '$teamAScore : $teamBScore',
-                      style: const TextStyle(
-                        fontSize: 12,
-                        fontWeight: FontWeight.bold,
-                        color: Color(0xFF5A4038),
-                      ),
-                    ),
-                  ],
-                ),
-              );
-            }).toList(),
-          ),
-        ],
+        const SizedBox(height: 12),
+        _buildRecentMatches(recentMatches),
       ],
     );
   }
@@ -830,6 +809,91 @@ class _GameScreenState extends State<GameScreen> {
     }
   }
 
+  static String _mannerLabel(int reportCount) {
+    if (reportCount <= 1) return '좋음';
+    if (reportCount <= 3) return '보통';
+    if (reportCount <= 6) return '나쁨';
+    if (reportCount <= 10) return '아주 나쁨';
+    return '최악';
+  }
+
+  static Color _mannerColor(int reportCount) {
+    if (reportCount <= 1) return const Color(0xFF66BB6A);
+    if (reportCount <= 3) return const Color(0xFF8D9E56);
+    if (reportCount <= 6) return const Color(0xFFFFA726);
+    if (reportCount <= 10) return const Color(0xFFEF5350);
+    return const Color(0xFFB71C1C);
+  }
+
+  static IconData _mannerIcon(int reportCount) {
+    if (reportCount <= 1) return Icons.sentiment_satisfied_alt;
+    if (reportCount <= 3) return Icons.sentiment_neutral;
+    if (reportCount <= 6) return Icons.sentiment_dissatisfied;
+    return Icons.sentiment_very_dissatisfied;
+  }
+
+  Widget _buildMannerLeaveRow({required int reportCount, required int leaveCount}) {
+    final label = _mannerLabel(reportCount);
+    final color = _mannerColor(reportCount);
+    final icon = _mannerIcon(reportCount);
+    return Row(
+      children: [
+        Expanded(
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+            decoration: BoxDecoration(
+              color: Colors.white.withOpacity(0.95),
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: const Color(0xFFE0D8D4)),
+            ),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(icon, color: color, size: 16),
+                const SizedBox(width: 6),
+                Text(
+                  '매너 $label',
+                  style: TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.bold,
+                    color: color,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+        const SizedBox(width: 8),
+        Expanded(
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+            decoration: BoxDecoration(
+              color: Colors.white.withOpacity(0.95),
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: const Color(0xFFE0D8D4)),
+            ),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                const Icon(Icons.warning_amber_rounded,
+                    color: Color(0xFFE57373), size: 16),
+                const SizedBox(width: 6),
+                Text(
+                  '탈주 $leaveCount',
+                  style: const TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.bold,
+                    color: Color(0xFF9A6A6A),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
   void _showRecentMatchesDialog(List<dynamic> recentMatches) {
     showDialog(
       context: context,
@@ -842,69 +906,7 @@ class _GameScreenState extends State<GameScreen> {
           child: ListView.separated(
             itemCount: recentMatches.length,
             separatorBuilder: (_, __) => const Divider(height: 16),
-            itemBuilder: (_, index) {
-              final match = recentMatches[index];
-              final won = match['won'] == true;
-              final teamAScore = match['teamAScore'] ?? 0;
-              final teamBScore = match['teamBScore'] ?? 0;
-              final teamA = _formatTeam(match['playerA1'], match['playerA2']);
-              final teamB = _formatTeam(match['playerB1'], match['playerB2']);
-              final date = _formatShortDate(match['createdAt']);
-              return Row(
-                children: [
-                  Container(
-                    width: 24,
-                    height: 24,
-                    alignment: Alignment.center,
-                    decoration: BoxDecoration(
-                      color: won ? const Color(0xFF81C784) : const Color(0xFFE57373),
-                      shape: BoxShape.circle,
-                    ),
-                    child: Text(
-                      won ? 'W' : 'L',
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontSize: 11,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                  ),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          date,
-                          style: const TextStyle(
-                            fontSize: 11,
-                            color: Color(0xFF8A8A8A),
-                          ),
-                        ),
-                        const SizedBox(height: 2),
-                        Text(
-                          '$teamA : $teamB',
-                          style: const TextStyle(
-                            fontSize: 12,
-                            fontWeight: FontWeight.bold,
-                            color: Color(0xFF5A4038),
-                          ),
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                      ],
-                    ),
-                  ),
-                  Text(
-                    '$teamAScore : $teamBScore',
-                    style: const TextStyle(
-                      fontSize: 12,
-                      fontWeight: FontWeight.bold,
-                      color: Color(0xFF5A4038),
-                    ),
-                  ),
-                ],
-              );
-            },
+            itemBuilder: (_, index) => _buildMatchRow(recentMatches[index]),
           ),
         ),
         actions: [
@@ -917,23 +919,305 @@ class _GameScreenState extends State<GameScreen> {
     );
   }
 
-  Widget _buildProfileStatItem(String label, String value) {
-    return Column(
-      children: [
-        Text(
-          label,
-          style: const TextStyle(fontSize: 11, color: Color(0xFF8A8A8A)),
-        ),
-        const SizedBox(height: 2),
-        Text(
-          value,
-          style: const TextStyle(
-            fontSize: 14,
-            fontWeight: FontWeight.bold,
-            color: Color(0xFF5A4038),
+  Widget _buildProfileHeader(int level, int expTotal, String? bannerKey) {
+    final expInLevel = expTotal % 100;
+    final expPercent = expInLevel / 100;
+    final banner = _bannerStyle(bannerKey);
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+      decoration: BoxDecoration(
+        gradient: banner.gradient,
+        color: banner.gradient == null ? Colors.white.withValues(alpha: 0.95) : null,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: const Color(0xFFE0D8D4)),
+      ),
+      child: Row(
+        children: [
+          Text(
+            'Lv.$level',
+            style: const TextStyle(
+              fontSize: 14,
+              fontWeight: FontWeight.bold,
+              color: Color(0xFF5A4038),
+            ),
           ),
-        ),
-      ],
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(6),
+                  child: LinearProgressIndicator(
+                    value: expPercent,
+                    minHeight: 6,
+                    backgroundColor: const Color(0xFFEFE7E3),
+                    valueColor: const AlwaysStoppedAnimation(Color(0xFF64B5F6)),
+                  ),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  '$expInLevel/100 EXP',
+                  style: const TextStyle(fontSize: 9, color: Color(0xFF9A8E8A)),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  _BannerStyle _bannerStyle(String? key) {
+    switch (key) {
+      case 'banner_pastel':
+        return const _BannerStyle(gradient: LinearGradient(colors: [Color(0xFFF6C1C9), Color(0xFFF3E7EA)]));
+      case 'banner_blossom':
+        return const _BannerStyle(gradient: LinearGradient(colors: [Color(0xFFF7D6D0), Color(0xFFF3E9E6)]));
+      case 'banner_mint':
+        return const _BannerStyle(gradient: LinearGradient(colors: [Color(0xFFCDEBD8), Color(0xFFEFF8F2)]));
+      case 'banner_sunset_7d':
+        return const _BannerStyle(gradient: LinearGradient(colors: [Color(0xFFFFC3A0), Color(0xFFFFE5B4)]));
+      case 'banner_season_gold':
+        return const _BannerStyle(gradient: LinearGradient(colors: [Color(0xFFFFE082), Color(0xFFFFF3C0)]));
+      case 'banner_season_silver':
+        return const _BannerStyle(gradient: LinearGradient(colors: [Color(0xFFCFD8DC), Color(0xFFF1F3F4)]));
+      case 'banner_season_bronze':
+        return const _BannerStyle(gradient: LinearGradient(colors: [Color(0xFFD7B59A), Color(0xFFF4E8DC)]));
+      default:
+        return const _BannerStyle();
+    }
+  }
+
+  Widget _buildProfileSectionCard({
+    required String title,
+    required Color accent,
+    required Color background,
+    required IconData icon,
+    required Color iconColor,
+    required String mainText,
+    required List<Widget> chips,
+  }) {
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: background,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: background.withValues(alpha: 0.6)),
+      ),
+      child: Column(
+        children: [
+          Row(
+            children: [
+              Icon(icon, color: iconColor, size: 16),
+              const SizedBox(width: 6),
+              Text(
+                title,
+                style: TextStyle(
+                  fontSize: 12,
+                  color: accent,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              const Spacer(),
+              if (mainText.isNotEmpty)
+                Text(
+                  mainText,
+                  style: TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                    color: accent,
+                  ),
+                ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          Wrap(
+            spacing: 6,
+            runSpacing: 6,
+            alignment: WrapAlignment.center,
+            children: chips,
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildStatChip(String label, String value) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      decoration: BoxDecoration(
+        color: Colors.white.withValues(alpha: 0.9),
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: const Color(0xFFE0D8D4)),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text(
+            label,
+            style: const TextStyle(fontSize: 10, color: Color(0xFF8A8A8A)),
+          ),
+          const SizedBox(width: 4),
+          Text(
+            value,
+            style: const TextStyle(
+              fontSize: 11,
+              fontWeight: FontWeight.bold,
+              color: Color(0xFF5A4038),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildRecentMatches(List<dynamic> recentMatches) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: Colors.white.withValues(alpha: 0.95),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: const Color(0xFFE0D8D4)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              const Text(
+                '최근 전적 (3)',
+                style: TextStyle(fontSize: 12, color: Color(0xFF8A8A8A)),
+              ),
+              const Spacer(),
+              if (recentMatches.length > 3)
+                TextButton(
+                  onPressed: () => _showRecentMatchesDialog(recentMatches),
+                  child: const Text('더보기'),
+                ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          if (recentMatches.isEmpty)
+            const Text(
+              '최근 전적이 없습니다',
+              style: TextStyle(fontSize: 12, color: Color(0xFF9A8E8A)),
+            )
+          else
+            Column(
+              children: recentMatches.take(3).map<Widget>((match) {
+                return _buildMatchRow(match);
+              }).toList(),
+            ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildMatchRow(dynamic match) {
+    final isDraw = match['isDraw'] == true;
+    final won = !isDraw && match['won'] == true;
+    final teamAScore = match['teamAScore'] ?? 0;
+    final teamBScore = match['teamBScore'] ?? 0;
+    final teamA = _formatTeam(match['playerA1'], match['playerA2']);
+    final teamB = _formatTeam(match['playerB1'], match['playerB2']);
+    final date = _formatShortDate(match['createdAt']);
+    final isRanked = match['isRanked'] == true;
+
+    final Color badgeColor;
+    final String badgeText;
+    if (isDraw) {
+      badgeColor = const Color(0xFFBDBDBD);
+      badgeText = '무';
+    } else if (won) {
+      badgeColor = const Color(0xFF81C784);
+      badgeText = '승';
+    } else {
+      badgeColor = const Color(0xFFE57373);
+      badgeText = '패';
+    }
+
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 6),
+      child: Row(
+        children: [
+          Container(
+            width: 24,
+            height: 24,
+            alignment: Alignment.center,
+            decoration: BoxDecoration(
+              color: badgeColor,
+              shape: BoxShape.circle,
+            ),
+            child: Text(
+              badgeText,
+              style: const TextStyle(
+                color: Colors.white,
+                fontSize: 11,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+          ),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Text(
+                      date,
+                      style: const TextStyle(
+                        fontSize: 11,
+                        color: Color(0xFF8A8A8A),
+                      ),
+                    ),
+                    const SizedBox(width: 6),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
+                      decoration: BoxDecoration(
+                        color: isRanked
+                            ? const Color(0xFFFFF3E0)
+                            : const Color(0xFFF5F5F5),
+                        borderRadius: BorderRadius.circular(6),
+                      ),
+                      child: Text(
+                        isRanked ? '랭크' : '일반',
+                        style: TextStyle(
+                          fontSize: 9,
+                          fontWeight: FontWeight.bold,
+                          color: isRanked
+                              ? const Color(0xFFE65100)
+                              : const Color(0xFF9E9E9E),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  '$teamA : $teamB',
+                  style: const TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.bold,
+                    color: Color(0xFF5A4038),
+                  ),
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ],
+            ),
+          ),
+          Text(
+            '$teamAScore : $teamBScore',
+            style: const TextStyle(
+              fontSize: 12,
+              fontWeight: FontWeight.bold,
+              color: Color(0xFF5A4038),
+            ),
+          ),
+        ],
+      ),
     );
   }
 
@@ -1637,7 +1921,7 @@ class _GameScreenState extends State<GameScreen> {
     final isPartnerTurn = partner?.id == state.currentPlayer;
 
     return Container(
-      padding: const EdgeInsets.all(12),
+      padding: EdgeInsets.all(10 * _s),
       child: Column(
         children: [
           GestureDetector(
@@ -1651,21 +1935,21 @@ class _GameScreenState extends State<GameScreen> {
               teamLabel: _teamForPosition(state, 'partner'),
             ),
           ),
-          const SizedBox(height: 4),
+          const SizedBox(height: 3),
           Text(
             _getPlayerInfo(partner),
-            style: const TextStyle(
-              fontSize: 12,
-              color: Color(0xFF8A7A72),
+            style: TextStyle(
+              fontSize: 11 * _s,
+              color: const Color(0xFF8A7A72),
             ),
           ),
-          const SizedBox(height: 8),
+          const SizedBox(height: 6),
           // Card backs
           _buildOverlappedHand(
             count: partner?.cardCount ?? 0,
-            cardWidth: 30,
-            cardHeight: 42,
-            overlap: 18,
+            cardWidth: 26 * _s,
+            cardHeight: 36 * _s,
+            overlap: 16 * _s,
             maxVisible: 14,
           ),
         ],
@@ -1683,7 +1967,7 @@ class _GameScreenState extends State<GameScreen> {
       children: [
         // Left player
         SizedBox(
-          width: 80,
+          width: 70 * _s,
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
@@ -1692,7 +1976,7 @@ class _GameScreenState extends State<GameScreen> {
                 child: _buildTurnName(
                   name: left?.name ?? '좌측',
                   isTurn: isLeftTurn,
-                  fontSize: 12,
+                  fontSize: 11,
                   badge: _tichuBadgeForPlayer(left),
                   connected: left?.connected ?? true,
                   timeoutCount: left?.timeoutCount ?? 0,
@@ -1701,14 +1985,14 @@ class _GameScreenState extends State<GameScreen> {
               ),
               Text(
                 _getPlayerInfo(left),
-                style: const TextStyle(fontSize: 10, color: Color(0xFF8A7A72)),
+                style: TextStyle(fontSize: 9 * _s, color: const Color(0xFF8A7A72)),
               ),
-              const SizedBox(height: 6),
+              const SizedBox(height: 4),
               _buildOverlappedHandVertical(
                 count: left?.cardCount ?? 0,
-                cardWidth: 24,
-                cardHeight: 34,
-                overlap: 26,
+                cardWidth: 22 * _s,
+                cardHeight: 30 * _s,
+                overlap: 22 * _s,
                 maxVisible: 14,
               ),
             ],
@@ -1722,7 +2006,7 @@ class _GameScreenState extends State<GameScreen> {
 
         // Right player
         SizedBox(
-          width: 80,
+          width: 70 * _s,
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
@@ -1731,7 +2015,7 @@ class _GameScreenState extends State<GameScreen> {
                 child: _buildTurnName(
                   name: right?.name ?? '우측',
                   isTurn: isRightTurn,
-                  fontSize: 12,
+                  fontSize: 11,
                   badge: _tichuBadgeForPlayer(right),
                   connected: right?.connected ?? true,
                   timeoutCount: right?.timeoutCount ?? 0,
@@ -1740,14 +2024,14 @@ class _GameScreenState extends State<GameScreen> {
               ),
               Text(
                 _getPlayerInfo(right),
-                style: const TextStyle(fontSize: 10, color: Color(0xFF8A7A72)),
+                style: TextStyle(fontSize: 9 * _s, color: const Color(0xFF8A7A72)),
               ),
-              const SizedBox(height: 6),
+              const SizedBox(height: 4),
               _buildOverlappedHandVertical(
                 count: right?.cardCount ?? 0,
-                cardWidth: 24,
-                cardHeight: 34,
-                overlap: 26,
+                cardWidth: 22 * _s,
+                cardHeight: 30 * _s,
+                overlap: 22 * _s,
                 maxVisible: 14,
               ),
             ],
@@ -1760,8 +2044,8 @@ class _GameScreenState extends State<GameScreen> {
   Widget _buildCenterArea(GameStateData state, GameService game) {
     return Center(
       child: Container(
-        width: 240,
-        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+        width: 220 * _s,
+        padding: EdgeInsets.symmetric(horizontal: 8 * _s, vertical: 6 * _s),
         decoration: BoxDecoration(
           color: Colors.white.withOpacity(0.7),
           borderRadius: BorderRadius.circular(16),
@@ -1859,7 +2143,7 @@ class _GameScreenState extends State<GameScreen> {
                 child: Text(
                   '${_remainingSeconds}초',
                   style: TextStyle(
-                    fontSize: 14,
+                    fontSize: 13 * _s,
                     fontWeight: FontWeight.bold,
                     color: _remainingSeconds <= 10
                         ? const Color(0xFFCC4444)
@@ -1899,7 +2183,7 @@ class _GameScreenState extends State<GameScreen> {
     return GestureDetector(
       onTap: () => _showScoreHistoryDialog(state),
       child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+        padding: EdgeInsets.symmetric(horizontal: 12 * _s, vertical: 5 * _s),
         decoration: BoxDecoration(
           color: const Color(0xFFF8F4F0),
           borderRadius: BorderRadius.circular(20),
@@ -1911,26 +2195,26 @@ class _GameScreenState extends State<GameScreen> {
             Text(
               'A',
               style: TextStyle(
-                fontSize: 11,
+                fontSize: 10 * _s,
                 fontWeight: FontWeight.bold,
                 color: aLeading ? const Color(0xFF4A90D9) : const Color(0xFF8A7A72),
               ),
             ),
-            const SizedBox(width: 4),
+            SizedBox(width: 3 * _s),
             Text(
               '$teamA',
               style: TextStyle(
-                fontSize: 15,
+                fontSize: 14 * _s,
                 fontWeight: FontWeight.bold,
                 color: aLeading ? const Color(0xFF4A90D9) : const Color(0xFF5A4038),
               ),
             ),
             Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 8),
+              padding: EdgeInsets.symmetric(horizontal: 6 * _s),
               child: Text(
                 ':',
                 style: TextStyle(
-                  fontSize: 15,
+                  fontSize: 14 * _s,
                   fontWeight: FontWeight.bold,
                   color: const Color(0xFF8A7A72),
                 ),
@@ -1939,22 +2223,22 @@ class _GameScreenState extends State<GameScreen> {
             Text(
               '$teamB',
               style: TextStyle(
-                fontSize: 15,
+                fontSize: 14 * _s,
                 fontWeight: FontWeight.bold,
                 color: bLeading ? const Color(0xFFD24B4B) : const Color(0xFF5A4038),
               ),
             ),
-            const SizedBox(width: 4),
+            SizedBox(width: 3 * _s),
             Text(
               'B',
               style: TextStyle(
-                fontSize: 11,
+                fontSize: 10 * _s,
                 fontWeight: FontWeight.bold,
                 color: bLeading ? const Color(0xFFD24B4B) : const Color(0xFF8A7A72),
               ),
             ),
-            const SizedBox(width: 6),
-            const Icon(Icons.history, size: 14, color: Color(0xFF8A7A72)),
+            SizedBox(width: 4 * _s),
+            Icon(Icons.history, size: 12 * _s, color: const Color(0xFF8A7A72)),
           ],
         ),
       ),
@@ -2207,7 +2491,7 @@ class _GameScreenState extends State<GameScreen> {
   Widget _buildBottomArea(GameStateData state, GameService game) {
     final isMyTurn = state.isMyTurn;
     return Container(
-      padding: const EdgeInsets.all(12),
+      padding: EdgeInsets.all(10 * _s),
       decoration: BoxDecoration(
         color: Colors.white.withOpacity(0.95),
         borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
@@ -2226,8 +2510,8 @@ class _GameScreenState extends State<GameScreen> {
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
               Container(
-                margin: const EdgeInsets.only(right: 5),
-                padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
+                margin: EdgeInsets.only(right: 4 * _s),
+                padding: EdgeInsets.symmetric(horizontal: 3 * _s, vertical: 1),
                 decoration: BoxDecoration(
                   color: state.myTeam == 'A'
                       ? const Color(0xFFE3F0FF)
@@ -2243,7 +2527,7 @@ class _GameScreenState extends State<GameScreen> {
                 child: Text(
                   state.myTeam,
                   style: TextStyle(
-                    fontSize: 9,
+                    fontSize: 8 * _s,
                     fontWeight: FontWeight.bold,
                     color: state.myTeam == 'A'
                         ? const Color(0xFF4A90D9)
@@ -2255,31 +2539,31 @@ class _GameScreenState extends State<GameScreen> {
                 onTap: () => _showPlayerProfileDialog(game.playerName, game),
                 child: Text(
                   game.playerName,
-                  style: const TextStyle(
-                    fontSize: 13,
+                  style: TextStyle(
+                    fontSize: 12 * _s,
                     fontWeight: FontWeight.bold,
-                    color: Color(0xFF64B5F6),
+                    color: const Color(0xFF64B5F6),
                     decoration: TextDecoration.underline,
-                    decorationColor: Color(0xFF64B5F6),
+                    decorationColor: const Color(0xFF64B5F6),
                   ),
                 ),
               ),
               if (isMyTurn) ...[
-                const SizedBox(width: 8),
+                SizedBox(width: 6 * _s),
                 Container(
                   padding:
-                      const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                      EdgeInsets.symmetric(horizontal: 8 * _s, vertical: 3 * _s),
                   decoration: BoxDecoration(
                     color: const Color(0xFFFFF2B3),
                     borderRadius: BorderRadius.circular(12),
                     border: Border.all(color: const Color(0xFFE6C86A)),
                   ),
-                  child: const Text(
+                  child: Text(
                     '내 턴!',
                     style: TextStyle(
-                      fontSize: 12,
+                      fontSize: 11 * _s,
                       fontWeight: FontWeight.bold,
-                      color: Color(0xFF5A4038),
+                      color: const Color(0xFF5A4038),
                     ),
                   ),
                 ),
@@ -3146,30 +3430,43 @@ class _GameScreenState extends State<GameScreen> {
     int timeoutCount = 0,
     String? teamLabel,
   }) {
+    final maxLen = _maxNameLen;
+    final displayName = name.length > maxLen ? '${name.substring(0, maxLen)}..' : name;
+    final s = _s;
     return Column(
       mainAxisSize: MainAxisSize.min,
       children: [
-        if (timeoutCount > 0)
-          Container(
-            margin: const EdgeInsets.only(bottom: 2),
-            padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
-            decoration: BoxDecoration(
-              color: const Color(0xFFFFF3E0),
-              borderRadius: BorderRadius.circular(8),
-              border: Border.all(color: const Color(0xFFFFB74D)),
-            ),
-            child: Text(
-              '⏱ $timeoutCount/3',
-              style: const TextStyle(
-                fontSize: 9,
-                fontWeight: FontWeight.bold,
-                color: Color(0xFFE65100),
-              ),
+        if (badge != null || timeoutCount > 0)
+          Padding(
+            padding: const EdgeInsets.only(bottom: 2),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                if (badge != null) badge,
+                if (badge != null && timeoutCount > 0) SizedBox(width: 3 * s),
+                if (timeoutCount > 0)
+                  Container(
+                    padding: EdgeInsets.symmetric(horizontal: 4 * s, vertical: 1),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFFFF3E0),
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(color: const Color(0xFFFFB74D)),
+                    ),
+                    child: Text(
+                      '⏱ $timeoutCount/3',
+                      style: TextStyle(
+                        fontSize: 8 * s,
+                        fontWeight: FontWeight.bold,
+                        color: const Color(0xFFE65100),
+                      ),
+                    ),
+                  ),
+              ],
             ),
           ),
         AnimatedContainer(
           duration: const Duration(milliseconds: 200),
-          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+          padding: EdgeInsets.symmetric(horizontal: 8 * s, vertical: 3 * s),
           decoration: BoxDecoration(
             color: isTurn ? const Color(0xFFFFF2B3) : Colors.transparent,
             borderRadius: BorderRadius.circular(12),
@@ -3182,8 +3479,8 @@ class _GameScreenState extends State<GameScreen> {
             children: [
               if (teamLabel != null)
                 Container(
-                  margin: const EdgeInsets.only(right: 5),
-                  padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
+                  margin: EdgeInsets.only(right: 4 * s),
+                  padding: EdgeInsets.symmetric(horizontal: 3 * s, vertical: 1),
                   decoration: BoxDecoration(
                     color: teamLabel == 'A'
                         ? const Color(0xFFE3F0FF)
@@ -3199,7 +3496,7 @@ class _GameScreenState extends State<GameScreen> {
                   child: Text(
                     teamLabel,
                     style: TextStyle(
-                      fontSize: 9,
+                      fontSize: 8 * s,
                       fontWeight: FontWeight.bold,
                       color: teamLabel == 'A'
                           ? const Color(0xFF4A90D9)
@@ -3209,35 +3506,31 @@ class _GameScreenState extends State<GameScreen> {
                 ),
               if (!connected)
                 Container(
-                  margin: const EdgeInsets.only(right: 6),
-                  child: const Icon(
+                  margin: EdgeInsets.only(right: 4 * s),
+                  child: Icon(
                     Icons.wifi_off,
-                    size: 14,
+                    size: 12 * s,
                     color: Colors.red,
                   ),
                 )
               else if (isTurn)
                 Container(
-                  width: 8,
-                  height: 8,
-                  margin: const EdgeInsets.only(right: 6),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFFE6A800),
+                  width: 6 * s,
+                  height: 6 * s,
+                  margin: EdgeInsets.only(right: 4 * s),
+                  decoration: const BoxDecoration(
+                    color: Color(0xFFE6A800),
                     shape: BoxShape.circle,
                   ),
                 ),
               Text(
-                name,
+                displayName,
                 style: TextStyle(
-                  fontSize: fontSize,
+                  fontSize: fontSize * s,
                   fontWeight: FontWeight.bold,
                   color: connected ? const Color(0xFF5A4038) : Colors.grey,
                 ),
               ),
-              if (badge != null) ...[
-                const SizedBox(width: 6),
-                badge,
-              ],
             ],
           ),
         ),
@@ -3373,4 +3666,9 @@ class _ExchangeSummaryItem {
   final String name;
   final String? cardId;
   const _ExchangeSummaryItem(this.name, this.cardId);
+}
+
+class _BannerStyle {
+  const _BannerStyle({this.gradient});
+  final LinearGradient? gradient;
 }

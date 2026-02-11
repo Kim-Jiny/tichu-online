@@ -315,6 +315,46 @@ class _LobbyScreenState extends State<LobbyScreen> {
     );
   }
 
+  void _showRoomSettingsDialog(GameService game) {
+    final controller = TextEditingController(text: game.currentRoomName);
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: const Row(
+          children: [
+            Icon(Icons.settings, color: Color(0xFF1E88E5)),
+            SizedBox(width: 8),
+            Text('방 설정'),
+          ],
+        ),
+        content: TextField(
+          controller: controller,
+          maxLength: 20,
+          decoration: InputDecoration(
+            hintText: '방 제목을 입력하세요',
+            border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('취소'),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              final name = controller.text.trim();
+              if (name.isEmpty) return;
+              game.changeRoomName(name);
+              Navigator.pop(ctx);
+            },
+            child: const Text('변경'),
+          ),
+        ],
+      ),
+    );
+  }
+
   void _showComingSoonDialog(String feature) {
     showDialog(
       context: context,
@@ -1579,13 +1619,26 @@ class _LobbyScreenState extends State<LobbyScreen> {
           child: Row(
             children: [
               Expanded(
-                child: Text(
-                  '${room.isPrivate ? '🔒 ' : ''}${room.isRanked ? '🏆 ' : ''}${room.name}',
-                  style: const TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.w500,
-                    color: Color(0xFF5A4038),
-                  ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      '${room.isPrivate ? '🔒 ' : ''}${room.isRanked ? '🏆 ' : ''}${room.name}',
+                      style: const TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w500,
+                        color: Color(0xFF5A4038),
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      '${room.turnTimeLimit}초',
+                      style: const TextStyle(
+                        fontSize: 11,
+                        color: Color(0xFF9A8A82),
+                      ),
+                    ),
+                  ],
                 ),
               ),
               if (isInProgress)
@@ -1700,130 +1753,181 @@ class _LobbyScreenState extends State<LobbyScreen> {
               borderRadius: BorderRadius.circular(18),
             ),
             margin: const EdgeInsets.all(16),
-            child: Row(
+            child: Column(
               children: [
-                IconButton(
-                  onPressed: () {
-                    game.leaveRoom();
-                    setState(() => _inRoom = false);
-                  },
-                  icon: const Icon(Icons.arrow_back),
-                  color: const Color(0xFF8A7A72),
-                  padding: EdgeInsets.zero,
-                  constraints: const BoxConstraints(),
-                ),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: Text(
-                    game.currentRoomName,
-                    style: const TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold,
-                      color: Color(0xFF5A4038),
+                Row(
+                  children: [
+                    IconButton(
+                      onPressed: () {
+                        game.leaveRoom();
+                        setState(() => _inRoom = false);
+                      },
+                      icon: const Icon(Icons.arrow_back),
+                      color: const Color(0xFF8A7A72),
+                      padding: EdgeInsets.zero,
+                      constraints: const BoxConstraints(),
                     ),
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                ),
-                // Invite friends button
-                GestureDetector(
-                  onTap: () => _showInviteFriendsDialog(game),
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                    decoration: BoxDecoration(
-                      color: const Color(0xFFF3E5F5),
-                      borderRadius: BorderRadius.circular(12),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        game.currentRoomName,
+                        style: const TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                          color: Color(0xFF5A4038),
+                        ),
+                        overflow: TextOverflow.ellipsis,
+                      ),
                     ),
-                    child: const Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Icon(Icons.person_add, size: 14, color: Color(0xFF7E57C2)),
-                        SizedBox(width: 4),
-                        Text(
-                          '초대',
-                          style: TextStyle(
-                            fontSize: 12,
-                            fontWeight: FontWeight.bold,
-                            color: Color(0xFF7E57C2),
+                    // Turn time limit
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                      margin: const EdgeInsets.only(right: 8),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFF0EBE8),
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      child: Text(
+                        '${game.roomTurnTimeLimit}초',
+                        style: const TextStyle(
+                          fontSize: 12,
+                          color: Color(0xFF8A7A72),
+                        ),
+                      ),
+                    ),
+                    // Player count badge (non-null count)
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                      decoration: BoxDecoration(
+                        color: game.playerCount >= 4
+                            ? const Color(0xFFE8F5E9)
+                            : const Color(0xFFFFF8E1),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: Text(
+                        '${game.playerCount}/4',
+                        style: TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.bold,
+                          color: game.playerCount >= 4
+                              ? const Color(0xFF4CAF50)
+                              : const Color(0xFFFF9800),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 8),
+                Row(
+                  children: [
+                    // Invite friends button
+                    GestureDetector(
+                      onTap: () => _showInviteFriendsDialog(game),
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFF3E5F5),
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: const Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(Icons.person_add, size: 14, color: Color(0xFF7E57C2)),
+                            SizedBox(width: 4),
+                            Text(
+                              '초대',
+                              style: TextStyle(
+                                fontSize: 12,
+                                fontWeight: FontWeight.bold,
+                                color: Color(0xFF7E57C2),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 6),
+                    // Switch to spectator button
+                    GestureDetector(
+                      onTap: () => game.switchToSpectator(),
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFE8E0F8),
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: const Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(Icons.visibility, size: 14, color: Color(0xFF4A4080)),
+                            SizedBox(width: 4),
+                            Text(
+                              '관전',
+                              style: TextStyle(
+                                fontSize: 12,
+                                fontWeight: FontWeight.bold,
+                                color: Color(0xFF4A4080),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 6),
+                    // Spectator list button
+                    GestureDetector(
+                      onTap: () => _showSpectatorListDialog(game),
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFEDE7F6),
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            const Icon(Icons.visibility, size: 14, color: Color(0xFF4A4080)),
+                            const SizedBox(width: 4),
+                            Text(
+                              '관전자 ${game.spectators.length}',
+                              style: const TextStyle(
+                                fontSize: 12,
+                                fontWeight: FontWeight.bold,
+                                color: Color(0xFF4A4080),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                    const Spacer(),
+                    if (game.isHost)
+                      GestureDetector(
+                        onTap: () => _showRoomSettingsDialog(game),
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFE3F2FD),
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: const Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(Icons.settings, size: 14, color: Color(0xFF1E88E5)),
+                              SizedBox(width: 4),
+                              Text(
+                                '방설정',
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.bold,
+                                  color: Color(0xFF1E88E5),
+                                ),
+                              ),
+                            ],
                           ),
                         ),
-                      ],
-                    ),
-                  ),
-                ),
-                const SizedBox(width: 6),
-                // Spectator list button
-                GestureDetector(
-                  onTap: () => _showSpectatorListDialog(game),
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                    decoration: BoxDecoration(
-                      color: const Color(0xFFEDE7F6),
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        const Icon(Icons.visibility, size: 14, color: Color(0xFF4A4080)),
-                        const SizedBox(width: 4),
-                        Text(
-                          '관전자 ${game.spectators.length}',
-                          style: const TextStyle(
-                            fontSize: 12,
-                            fontWeight: FontWeight.bold,
-                            color: Color(0xFF4A4080),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-                const SizedBox(width: 6),
-                // Switch to spectator button
-                GestureDetector(
-                  onTap: () => game.switchToSpectator(),
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                    decoration: BoxDecoration(
-                      color: const Color(0xFFE8E0F8),
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: const Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Icon(Icons.visibility, size: 14, color: Color(0xFF4A4080)),
-                        SizedBox(width: 4),
-                        Text(
-                          '관전',
-                          style: TextStyle(
-                            fontSize: 12,
-                            fontWeight: FontWeight.bold,
-                            color: Color(0xFF4A4080),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-                const SizedBox(width: 8),
-                // Player count badge (non-null count)
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                  decoration: BoxDecoration(
-                    color: game.playerCount >= 4
-                        ? const Color(0xFFE8F5E9)
-                        : const Color(0xFFFFF8E1),
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: Text(
-                    '${game.playerCount}/4',
-                    style: TextStyle(
-                      fontSize: 14,
-                      fontWeight: FontWeight.bold,
-                      color: game.playerCount >= 4
-                          ? const Color(0xFF4CAF50)
-                          : const Color(0xFFFF9800),
-                    ),
-                  ),
+                      ),
+                  ],
                 ),
               ],
             ),

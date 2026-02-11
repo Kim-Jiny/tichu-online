@@ -10,6 +10,7 @@ class Room {
   final bool isPrivate;
   final bool isRanked;
   final bool gameInProgress;
+  final int turnTimeLimit;
 
   Room({
     required this.id,
@@ -21,6 +22,7 @@ class Room {
     this.isPrivate = false,
     this.isRanked = false,
     this.gameInProgress = false,
+    this.turnTimeLimit = 30,
   });
 
   factory Room.fromJson(Map<String, dynamic> json) {
@@ -41,6 +43,7 @@ class Room {
       isPrivate: json['isPrivate'] ?? false,
       isRanked: json['isRanked'] ?? false,
       gameInProgress: json['gameInProgress'] ?? false,
+      turnTimeLimit: json['turnTimeLimit'] ?? 30,
     );
   }
 }

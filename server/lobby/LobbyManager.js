@@ -37,6 +37,7 @@ class LobbyManager {
         isRanked: room.isRanked,
         gameInProgress: !!room.game,
         spectatorCount: room.spectators.length,
+        turnTimeLimit: room.turnTimeLimit,
       });
     }
     return list;

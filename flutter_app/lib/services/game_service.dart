@@ -25,6 +25,7 @@ class GameService extends ChangeNotifier {
   List<Player?> roomPlayers = [null, null, null, null];
   bool isHost = false;
   bool isRankedRoom = false;
+  int roomTurnTimeLimit = 30;
 
   // Room list
   List<Room> roomList = [];
@@ -356,6 +357,7 @@ class GameService extends ChangeNotifier {
         roomPlayers = [null, null, null, null];
         isHost = false;
         isRankedRoom = false;
+    roomTurnTimeLimit = 30;
         isSpectator = false;
         gameState = null;
         spectatorGameState = null;
@@ -373,6 +375,7 @@ class GameService extends ChangeNotifier {
         roomPlayers = [null, null, null, null];
         isHost = false;
         isRankedRoom = false;
+    roomTurnTimeLimit = 30;
         isSpectator = false; // C10: Clear isSpectator on kick
         gameState = null;
         chatMessages = [];
@@ -391,6 +394,7 @@ class GameService extends ChangeNotifier {
         roomPlayers = [null, null, null, null];
         isHost = false;
         isRankedRoom = false;
+    roomTurnTimeLimit = 30;
         isSpectator = false;
         spectatorGameState = null;
         pendingCardViewRequests = {};
@@ -430,6 +434,7 @@ class GameService extends ChangeNotifier {
           }
           isHost = roomPlayers.any((p) => p != null && p.id == playerId && p.isHost);
           isRankedRoom = room['isRanked'] == true;
+          roomTurnTimeLimit = room['turnTimeLimit'] ?? 30;
         }
         notifyListeners();
         break;
@@ -915,6 +920,7 @@ class GameService extends ChangeNotifier {
     roomPlayers = [null, null, null, null];
     isHost = false;
     isRankedRoom = false;
+    roomTurnTimeLimit = 30;
     roomList = [];
     spectatableRooms = [];
     isSpectator = false;
@@ -1022,6 +1028,7 @@ class GameService extends ChangeNotifier {
     roomPlayers = [null, null, null, null];
     isHost = false;
     isRankedRoom = false;
+    roomTurnTimeLimit = 30;
     isSpectator = false;
     gameState = null;
     spectatorGameState = null;

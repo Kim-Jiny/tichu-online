@@ -632,6 +632,9 @@ async function handleLeaveGame(ws) {
   // S6: If game is active (not ended) and not already deserted, treat as desertion
   if (room.game && room.game.state !== 'game_end' && !room.game.deserted) {
     await handleDesertion(roomId, ws.playerId);
+    // handleDesertion already removes player and cleans up room
+    sendTo(ws, { type: 'room_left' });
+    return;
   }
 
   // Remove player from room
@@ -1507,6 +1510,29 @@ async function handleDesertion(roomId, playerId, reason = 'leave') {
 
   sendGameStateToAll(roomId);
   delete timeoutCounts[roomId];
+
+  // Remove deserter from room (including host)
+  if (deserterNick) {
+    playerSessions.delete(deserterNick);
+  }
+  const deserterWs = findWsByPlayerId(playerId);
+  if (deserterWs) {
+    sendTo(deserterWs, { type: 'kicked', message: '시간 초과 3회로 퇴장되었습니다' });
+    deserterWs.roomId = null;
+  }
+  room.removePlayer(playerId);
+
+  // Clean up game so room shows as not in game
+  room.game = null;
+  room.resetReady();
+  clearTurnTimer(roomId);
+
+  if (room.getHumanPlayerCount() === 0) {
+    removeRoomAndNotifySpectators(roomId);
+  } else {
+    broadcastRoomState(roomId);
+  }
+  broadcastRoomList();
 }
 
 function broadcastGameEvent(roomId, event) {

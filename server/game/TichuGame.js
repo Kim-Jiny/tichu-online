@@ -24,6 +24,7 @@ class TichuGame {
       teamB: [playerIds[1], playerIds[3]],
     };
     this.totalScores = { teamA: 0, teamB: 0 };
+    this.scoreHistory = []; // [{round, teamA, teamB}]
     this.targetScore = 1000;
     this.state = STATE.WAITING;
     this.round = 0;
@@ -99,13 +100,13 @@ class TichuGame {
       case 'call_rank':
         return this.handleCallRank(playerId, data.rank);
       default:
-        return { success: false, message: `Unknown action: ${data.type}` };
+        return { success: false, message: `알 수 없는 액션: ${data.type}` };
     }
   }
 
   handleNextRound(_playerId) {
     if (this.state !== STATE.ROUND_END) {
-      return { success: false, message: 'Round is not finished' };
+      return { success: false, message: '라운드가 아직 끝나지 않았습니다' };
     }
     this.nextRound();
     return { success: true };
@@ -113,10 +114,10 @@ class TichuGame {
 
   handleLargeTichu(playerId, declare) {
     if (this.state !== STATE.LARGE_TICHU_PHASE) {
-      return { success: false, message: 'Not in Large Tichu phase' };
+      return { success: false, message: '라지 티츄 단계가 아닙니다' };
     }
     if (this.largeTichuResponses[playerId] !== undefined) {
-      return { success: false, message: 'Already responded' };
+      return { success: false, message: '이미 응답했습니다' };
     }
 
     this.largeTichuResponses[playerId] = declare;
@@ -151,16 +152,16 @@ class TichuGame {
   handleSmallTichuDeclaration(playerId) {
     // Small Tichu can be declared before playing first card (14 cards in hand)
     if (this.state !== STATE.CARD_EXCHANGE && this.state !== STATE.PLAYING) {
-      return { success: false, message: 'Cannot declare Small Tichu now' };
+      return { success: false, message: '지금은 스몰 티츄를 선언할 수 없습니다' };
     }
     if (this.smallTichuDeclarations.includes(playerId)) {
-      return { success: false, message: 'Already declared Small Tichu' };
+      return { success: false, message: '이미 스몰 티츄를 선언했습니다' };
     }
     if (this.largeTichuDeclarations.includes(playerId)) {
-      return { success: false, message: 'Already declared Large Tichu' };
+      return { success: false, message: '이미 라지 티츄를 선언했습니다' };
     }
     if (this.hands[playerId].length < 14) {
-      return { success: false, message: 'Can only declare Small Tichu with 14 cards' };
+      return { success: false, message: '카드를 낸 후에는 스몰 티츄를 선언할 수 없습니다' };
     }
 
     this.smallTichuDeclarations.push(playerId);
@@ -176,25 +177,25 @@ class TichuGame {
 
   handleExchange(playerId, cards) {
     if (this.state !== STATE.CARD_EXCHANGE) {
-      return { success: false, message: 'Not in exchange phase' };
+      return { success: false, message: '교환 단계가 아닙니다' };
     }
     if (this.exchangeDone[playerId]) {
-      return { success: false, message: 'Already exchanged' };
+      return { success: false, message: '이미 교환했습니다' };
     }
     // cards = { left: cardId, partner: cardId, right: cardId }
     if (!cards.left || !cards.partner || !cards.right) {
-      return { success: false, message: 'Must select 3 cards to exchange' };
+      return { success: false, message: '교환할 카드 3장을 선택해주세요' };
     }
     // Verify player has these cards
     const exchangeList = [cards.left, cards.partner, cards.right];
     for (const c of exchangeList) {
       if (!this.hands[playerId].includes(c)) {
-        return { success: false, message: `Card ${c} not in hand` };
+        return { success: false, message: '손에 없는 카드입니다' };
       }
     }
     // Check for duplicates
     if (new Set(exchangeList).size !== 3) {
-      return { success: false, message: 'Must select 3 different cards' };
+      return { success: false, message: '서로 다른 카드 3장을 선택해주세요' };
     }
 
     this.exchangeCards[playerId] = cards;
@@ -270,25 +271,25 @@ class TichuGame {
 
   handlePlayCards(playerId, cardIds, callRank = null) {
     if (this.state !== STATE.PLAYING) {
-      return { success: false, message: 'Not in playing phase' };
+      return { success: false, message: '플레이 단계가 아닙니다' };
     }
     if (this.dragonPending) {
-      return { success: false, message: 'Waiting for Dragon give decision' };
+      return { success: false, message: '용 카드를 줄 대상을 선택 중입니다' };
     }
     if (playerId !== this.currentPlayer) {
       // S5: Verify cards in hand BEFORE combo validation
       if (!Array.isArray(cardIds)) {
-        return { success: false, message: 'Invalid cards' };
+        return { success: false, message: '잘못된 카드입니다' };
       }
       for (const c of cardIds) {
         if (!this.hands[playerId].includes(c)) {
-          return { success: false, message: 'Not your turn' };
+          return { success: false, message: '당신의 턴이 아닙니다' };
         }
       }
       // Allow bombs from anyone (interruption)
       const combo = getComboType(cardIds);
       if (!isBomb(combo)) {
-        return { success: false, message: 'Not your turn' };
+        return { success: false, message: '당신의 턴이 아닙니다' };
       }
       // Bomb interruption
       return this.playBomb(playerId, cardIds, combo);
@@ -296,13 +297,13 @@ class TichuGame {
 
     // S11: Validate cardIds is an array
     if (!Array.isArray(cardIds) || cardIds.length === 0) {
-      return { success: false, message: 'Invalid cards' };
+      return { success: false, message: '잘못된 카드입니다' };
     }
 
     // Verify cards in hand
     for (const c of cardIds) {
       if (!this.hands[playerId].includes(c)) {
-        return { success: false, message: `Card ${c} not in hand` };
+        return { success: false, message: '손에 없는 카드입니다' };
       }
     }
 
@@ -314,7 +315,7 @@ class TichuGame {
     // Validate combo
     const combo = getComboType(cardIds);
     if (combo.type === COMBO.INVALID) {
-      return { success: false, message: 'Invalid card combination' };
+      return { success: false, message: '유효하지 않은 카드 조합입니다' };
     }
 
     // If Phoenix played as single, set value to current top + 0.5
@@ -327,7 +328,7 @@ class TichuGame {
     if (this.currentTrick.length > 0) {
       const lastCombo = this.currentTrick[this.currentTrick.length - 1].combo;
       if (!canBeat(lastCombo, combo)) {
-        return { success: false, message: 'Cannot beat current cards' };
+        return { success: false, message: '현재 카드를 이길 수 없는 조합입니다' };
       }
     }
 
@@ -336,7 +337,7 @@ class TichuGame {
       if (!this.isCallFulfilled(playerId, cardIds, combo)) {
         // Player must fulfill call if possible
         if (this.canFulfillCallAndBeat(playerId)) {
-          return { success: false, message: `Must play a card of rank ${this.callRank} (Call)` };
+          return { success: false, message: `${this.callRank} 카드를 내야 합니다 (콜)` };
         }
       }
     }
@@ -429,14 +430,14 @@ class TichuGame {
     // Verify cards in hand
     for (const c of cardIds) {
       if (!this.hands[playerId].includes(c)) {
-        return { success: false, message: `Card ${c} not in hand` };
+        return { success: false, message: '손에 없는 카드입니다' };
       }
     }
 
     if (this.currentTrick.length > 0) {
       const lastCombo = this.currentTrick[this.currentTrick.length - 1].combo;
       if (!canBeat(lastCombo, combo)) {
-        return { success: false, message: 'Bomb is not strong enough' };
+        return { success: false, message: '폭탄이 충분히 강하지 않습니다' };
       }
     }
 
@@ -461,7 +462,7 @@ class TichuGame {
 
   playDog(playerId) {
     if (this.currentTrick.length > 0) {
-      return { success: false, message: 'Dog can only be played to start a trick' };
+      return { success: false, message: '개는 선턴에서만 낼 수 있습니다' };
     }
 
     this.removeCardsFromHand(playerId, ['special_dog']);
@@ -491,18 +492,18 @@ class TichuGame {
 
   handlePass(playerId) {
     if (this.state !== STATE.PLAYING) {
-      return { success: false, message: 'Not in playing phase' };
+      return { success: false, message: '플레이 단계가 아닙니다' };
     }
     if (playerId !== this.currentPlayer) {
-      return { success: false, message: 'Not your turn' };
+      return { success: false, message: '당신의 턴이 아닙니다' };
     }
     if (this.currentTrick.length === 0) {
-      return { success: false, message: 'Cannot pass when starting a new trick' };
+      return { success: false, message: '선턴에서는 패스할 수 없습니다' };
     }
 
     // Check if player CAN play (Call obligation)
     if (this.callRank && this.canFulfillCallAndBeat(playerId)) {
-      return { success: false, message: `Must play a card of rank ${this.callRank} (Call)` };
+      return { success: false, message: `${this.callRank} 카드를 내야 합니다 (콜)` };
     }
 
     this.passCount++;
@@ -569,7 +570,7 @@ class TichuGame {
 
   handleDragonGive(playerId, target) {
     if (!this.dragonPending || this.dragonDecider !== playerId) {
-      return { success: false, message: 'Not waiting for your Dragon give decision' };
+      return { success: false, message: '용 카드 전달 대기 중이 아닙니다' };
     }
 
     // Target must be an opponent (left or right)
@@ -584,14 +585,14 @@ class TichuGame {
     } else if (target === 'right') {
       targetId = this.playerIds[rightIdx];
     } else {
-      return { success: false, message: 'Target must be "left" or "right"' };
+      return { success: false, message: '왼쪽 또는 오른쪽을 선택해주세요' };
     }
 
     // Verify target is an opponent
     const myTeam = this.teams.teamA.includes(playerId) ? 'teamA' : 'teamB';
     const targetTeam = this.teams.teamA.includes(targetId) ? 'teamA' : 'teamB';
     if (myTeam === targetTeam) {
-      return { success: false, message: 'Must give Dragon trick to an opponent' };
+      return { success: false, message: '용은 상대 팀에게만 줄 수 있습니다' };
     }
 
     this.trickPiles[targetId].push(...this.pendingTrickCards);
@@ -621,15 +622,15 @@ class TichuGame {
 
   handleCallRank(playerId, rank) {
     if (this.state !== STATE.PLAYING) {
-      return { success: false, message: 'Not in playing phase' };
+      return { success: false, message: '플레이 단계가 아닙니다' };
     }
     // Verify this player just played Bird
     if (this.currentTrick.length === 0) {
-      return { success: false, message: 'No current trick' };
+      return { success: false, message: '현재 트릭이 없습니다' };
     }
     const lastPlay = this.currentTrick[this.currentTrick.length - 1];
     if (lastPlay.playerId !== playerId || !lastPlay.cards.includes('special_bird')) {
-      return { success: false, message: 'Only the Bird player can call' };
+      return { success: false, message: '참새를 낸 플레이어만 콜할 수 있습니다' };
     }
 
     // Allow "none" to skip calling
@@ -651,7 +652,7 @@ class TichuGame {
     // Validate rank (2-14 or "2"-"A")
     const validRanks = ['2', '3', '4', '5', '6', '7', '8', '9', '10', 'J', 'Q', 'K', 'A'];
     if (!validRanks.includes(rank) && !validRanks.includes(rank.toString())) {
-      return { success: false, message: 'Invalid call rank' };
+      return { success: false, message: '유효하지 않은 콜 랭크입니다' };
     }
 
     this.callRank = rank.toString();
@@ -788,6 +789,12 @@ class TichuGame {
     this.totalScores.teamA += roundScores.teamA;
     this.totalScores.teamB += roundScores.teamB;
 
+    this.scoreHistory.push({
+      round: this.round,
+      teamA: roundScores.teamA,
+      teamB: roundScores.teamB,
+    });
+
     // Check if game is over (tied scores → continue playing)
     if ((this.totalScores.teamA >= this.targetScore || this.totalScores.teamB >= this.targetScore)
         && this.totalScores.teamA !== this.totalScores.teamB) {
@@ -846,6 +853,7 @@ class TichuGame {
       teams: this.teams,
       totalScores: this.totalScores,
       lastRoundScores: this.lastRoundScores || null,
+      scoreHistory: this.scoreHistory,
       finishOrder: this.finishOrder,
       callRank: this.callRank,
       needsToCallRank: this.needsToCallRank === playerId,
@@ -895,6 +903,7 @@ class TichuGame {
       teams: this.teams,
       totalScores: this.totalScores,
       lastRoundScores: this.lastRoundScores || null,
+      scoreHistory: this.scoreHistory,
       finishOrder: this.finishOrder,
       callRank: this.callRank,
       dragonPending: this.dragonPending,

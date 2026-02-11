@@ -27,6 +27,7 @@ class _GameScreenState extends State<GameScreen> {
 
   // 채팅
   bool _chatOpen = false;
+  bool _viewersOpen = false;
   final TextEditingController _chatController = TextEditingController();
   final ScrollController _chatScrollController = ScrollController();
 
@@ -297,90 +298,46 @@ class _GameScreenState extends State<GameScreen> {
                   if (game.incomingCardViewRequests.isNotEmpty)
                     _buildCardViewRequestPopup(game),
 
-                  // Card viewers (spectators watching my cards)
-                  if (game.cardViewers.isNotEmpty)
-                    _buildCardViewersChips(game),
+                  // Viewers panel popup
+                  if (_viewersOpen)
+                    _buildViewersPanel(game),
 
-                  // Countdown timer + timeout count (top left)
-                  if (_remainingSeconds > 0 || game.myTimeoutCount > 0)
+                  // Countdown timer (top left)
+                  if (_remainingSeconds > 0)
                     Positioned(
                       top: 8,
                       left: 8,
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          if (_remainingSeconds > 0)
-                            Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                              decoration: BoxDecoration(
-                                color: _remainingSeconds <= 10
-                                    ? const Color(0xFFFFE4E4)
-                                    : Colors.white,
-                                borderRadius: BorderRadius.circular(12),
-                                border: Border.all(
-                                  color: _remainingSeconds <= 10
-                                      ? const Color(0xFFFF6B6B)
-                                      : const Color(0xFFCCCCCC),
-                                  width: _remainingSeconds <= 10 ? 2 : 1,
-                                ),
-                                boxShadow: [
-                                  BoxShadow(
-                                    color: Colors.black.withOpacity(0.1),
-                                    blurRadius: 4,
-                                    offset: const Offset(0, 2),
-                                  ),
-                                ],
-                              ),
-                              child: Text(
-                                '${_remainingSeconds}초',
-                                style: TextStyle(
-                                  fontSize: 16,
-                                  fontWeight: FontWeight.bold,
-                                  color: _remainingSeconds <= 10
-                                      ? const Color(0xFFCC4444)
-                                      : const Color(0xFF5A4038),
-                                ),
-                              ),
-                            ),
-                          if (game.myTimeoutCount > 0) ...[
-                            const SizedBox(width: 6),
-                            GestureDetector(
-                              onTap: () => game.resetTimeout(),
-                              child: Container(
-                                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
-                                decoration: BoxDecoration(
-                                  color: const Color(0xFFFFF3E0),
-                                  borderRadius: BorderRadius.circular(12),
-                                  border: Border.all(
-                                    color: const Color(0xFFFFB74D),
-                                    width: 1,
-                                  ),
-                                ),
-                                child: Row(
-                                  mainAxisSize: MainAxisSize.min,
-                                  children: [
-                                    Text(
-                                      '${game.myTimeoutCount}/3',
-                                      style: const TextStyle(
-                                        fontSize: 13,
-                                        fontWeight: FontWeight.bold,
-                                        color: Color(0xFFE65100),
-                                      ),
-                                    ),
-                                    const SizedBox(width: 4),
-                                    const Text(
-                                      '잠수아님',
-                                      style: TextStyle(
-                                        fontSize: 11,
-                                        color: Color(0xFFE65100),
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ),
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                        decoration: BoxDecoration(
+                          color: _remainingSeconds <= 10
+                              ? const Color(0xFFFFE4E4)
+                              : Colors.white,
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(
+                            color: _remainingSeconds <= 10
+                                ? const Color(0xFFFF6B6B)
+                                : const Color(0xFFCCCCCC),
+                            width: _remainingSeconds <= 10 ? 2 : 1,
+                          ),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black.withValues(alpha: 0.1),
+                              blurRadius: 4,
+                              offset: const Offset(0, 2),
                             ),
                           ],
-                        ],
+                        ),
+                        child: Text(
+                          '${_remainingSeconds}초',
+                          style: TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.bold,
+                            color: _remainingSeconds <= 10
+                                ? const Color(0xFFCC4444)
+                                : const Color(0xFF5A4038),
+                          ),
+                        ),
                       ),
                     ),
 
@@ -390,6 +347,14 @@ class _GameScreenState extends State<GameScreen> {
                     right: 8,
                     child: _buildMenuButton(game),
                   ),
+
+                  // Viewers button (top right, left of chat)
+                  if (game.cardViewers.isNotEmpty)
+                    Positioned(
+                      top: 8,
+                      right: 104,
+                      child: _buildViewersButton(game),
+                    ),
 
                   // Chat button (top right, below menu)
                   Positioned(
@@ -1583,45 +1548,140 @@ class _GameScreenState extends State<GameScreen> {
     );
   }
 
-  Widget _buildCardViewersChips(GameService game) {
-    return Positioned(
-      top: 40,
-      right: 8,
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.end,
-        children: game.cardViewers.map((viewer) {
-          final nickname = viewer['nickname'] ?? '';
-          final spectatorId = viewer['id'] ?? '';
-          return Padding(
-            padding: const EdgeInsets.only(bottom: 4),
-            child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-              decoration: BoxDecoration(
-                color: Colors.black.withOpacity(0.6),
-                borderRadius: BorderRadius.circular(16),
-              ),
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  const Icon(Icons.visibility, size: 14, color: Colors.white70),
-                  const SizedBox(width: 4),
-                  Text(
-                    nickname,
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontSize: 12,
-                    ),
+  Widget _buildViewersButton(GameService game) {
+    final count = game.cardViewers.length;
+    return GestureDetector(
+      onTap: () => setState(() => _viewersOpen = !_viewersOpen),
+      child: Stack(
+        clipBehavior: Clip.none,
+        children: [
+          Container(
+            padding: const EdgeInsets.all(8),
+            decoration: BoxDecoration(
+              color: _viewersOpen
+                  ? const Color(0xFF81C784)
+                  : Colors.white.withValues(alpha: 0.8),
+              shape: BoxShape.circle,
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: 0.1),
+                  blurRadius: 4,
+                ),
+              ],
+            ),
+            child: Icon(
+              Icons.visibility,
+              color: _viewersOpen ? Colors.white : const Color(0xFF5A4038),
+              size: 20,
+            ),
+          ),
+          if (count > 0)
+            Positioned(
+              top: -4,
+              right: -4,
+              child: Container(
+                padding: const EdgeInsets.all(4),
+                decoration: const BoxDecoration(
+                  color: Color(0xFFE53935),
+                  shape: BoxShape.circle,
+                ),
+                child: Text(
+                  '$count',
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 10,
+                    fontWeight: FontWeight.bold,
                   ),
-                  const SizedBox(width: 4),
-                  GestureDetector(
-                    onTap: () => game.revokeCardView(spectatorId),
-                    child: const Icon(Icons.close, size: 14, color: Colors.white70),
-                  ),
-                ],
+                ),
               ),
             ),
-          );
-        }).toList(),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildViewersPanel(GameService game) {
+    return Positioned(
+      top: 48,
+      right: 8,
+      child: Container(
+        width: 200,
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(12),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.15),
+              blurRadius: 8,
+              offset: const Offset(0, 2),
+            ),
+          ],
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                const Icon(Icons.visibility, size: 16, color: Color(0xFF5A4038)),
+                const SizedBox(width: 6),
+                const Expanded(
+                  child: Text(
+                    '내 패를 보는 중',
+                    style: TextStyle(
+                      fontSize: 13,
+                      fontWeight: FontWeight.bold,
+                      color: Color(0xFF5A4038),
+                    ),
+                  ),
+                ),
+                GestureDetector(
+                  onTap: () => setState(() => _viewersOpen = false),
+                  child: const Icon(Icons.close, size: 18, color: Color(0xFF999999)),
+                ),
+              ],
+            ),
+            const SizedBox(height: 8),
+            if (game.cardViewers.isEmpty)
+              const Text(
+                '보고 있는 사람 없음',
+                style: TextStyle(fontSize: 12, color: Color(0xFF999999)),
+              )
+            else
+              ...game.cardViewers.map((viewer) {
+                final nickname = viewer['nickname'] ?? '';
+                final spectatorId = viewer['id'] ?? '';
+                return Padding(
+                  padding: const EdgeInsets.only(bottom: 6),
+                  child: Row(
+                    children: [
+                      const Icon(Icons.person, size: 16, color: Color(0xFF888888)),
+                      const SizedBox(width: 6),
+                      Expanded(
+                        child: Text(
+                          nickname,
+                          style: const TextStyle(fontSize: 13),
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                      GestureDetector(
+                        onTap: () => game.revokeCardView(spectatorId),
+                        child: Container(
+                          padding: const EdgeInsets.all(4),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFFFEBEE),
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: const Icon(Icons.close, size: 14, color: Color(0xFFE53935)),
+                        ),
+                      ),
+                    ],
+                  ),
+                );
+              }),
+          ],
+        ),
       ),
     );
   }
@@ -1816,16 +1876,246 @@ class _GameScreenState extends State<GameScreen> {
 
             const SizedBox(height: 4),
 
-            // Score display
-            Text(
-              '팀A: ${state.totalScores['teamA']} | 팀B: ${state.totalScores['teamB']}',
-              style: const TextStyle(
-                fontSize: 11,
-                color: Color(0xFF6A5A52),
-              ),
-              textAlign: TextAlign.center,
-            ),
+            // Score display (tappable for history)
+            _buildScoreBar(state),
           ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildScoreBar(GameStateData state) {
+    final teamA = state.totalScores['teamA'] ?? 0;
+    final teamB = state.totalScores['teamB'] ?? 0;
+    final aLeading = teamA > teamB;
+    final bLeading = teamB > teamA;
+
+    return GestureDetector(
+      onTap: () => _showScoreHistoryDialog(state),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+        decoration: BoxDecoration(
+          color: const Color(0xFFF8F4F0),
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(color: const Color(0xFFE6DCE8)),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(
+              'A',
+              style: TextStyle(
+                fontSize: 11,
+                fontWeight: FontWeight.bold,
+                color: aLeading ? const Color(0xFF4A90D9) : const Color(0xFF8A7A72),
+              ),
+            ),
+            const SizedBox(width: 4),
+            Text(
+              '$teamA',
+              style: TextStyle(
+                fontSize: 15,
+                fontWeight: FontWeight.bold,
+                color: aLeading ? const Color(0xFF4A90D9) : const Color(0xFF5A4038),
+              ),
+            ),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 8),
+              child: Text(
+                ':',
+                style: TextStyle(
+                  fontSize: 15,
+                  fontWeight: FontWeight.bold,
+                  color: const Color(0xFF8A7A72),
+                ),
+              ),
+            ),
+            Text(
+              '$teamB',
+              style: TextStyle(
+                fontSize: 15,
+                fontWeight: FontWeight.bold,
+                color: bLeading ? const Color(0xFFD24B4B) : const Color(0xFF5A4038),
+              ),
+            ),
+            const SizedBox(width: 4),
+            Text(
+              'B',
+              style: TextStyle(
+                fontSize: 11,
+                fontWeight: FontWeight.bold,
+                color: bLeading ? const Color(0xFFD24B4B) : const Color(0xFF8A7A72),
+              ),
+            ),
+            const SizedBox(width: 6),
+            const Icon(Icons.history, size: 14, color: Color(0xFF8A7A72)),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _showScoreHistoryDialog(GameStateData state) {
+    final history = state.scoreHistory;
+    final teamA = state.totalScores['teamA'] ?? 0;
+    final teamB = state.totalScores['teamB'] ?? 0;
+
+    showDialog(
+      context: context,
+      builder: (ctx) => Dialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        child: Container(
+          width: 280,
+          padding: const EdgeInsets.all(20),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Text(
+                '점수 기록',
+                style: TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
+                  color: Color(0xFF5A4038),
+                ),
+              ),
+              const SizedBox(height: 16),
+              // Header
+              Row(
+                children: [
+                  const Expanded(
+                    flex: 2,
+                    child: Text(
+                      '라운드',
+                      style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Color(0xFF8A7A72)),
+                      textAlign: TextAlign.center,
+                    ),
+                  ),
+                  const Expanded(
+                    flex: 3,
+                    child: Text(
+                      '팀 A',
+                      style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Color(0xFF4A90D9)),
+                      textAlign: TextAlign.center,
+                    ),
+                  ),
+                  const Expanded(
+                    flex: 3,
+                    child: Text(
+                      '팀 B',
+                      style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Color(0xFFD24B4B)),
+                      textAlign: TextAlign.center,
+                    ),
+                  ),
+                ],
+              ),
+              const Divider(height: 16),
+              // Rounds
+              if (history.isEmpty)
+                const Padding(
+                  padding: EdgeInsets.symmetric(vertical: 12),
+                  child: Text(
+                    '아직 완료된 라운드 없음',
+                    style: TextStyle(fontSize: 13, color: Color(0xFF8A7A72)),
+                  ),
+                )
+              else
+                ConstrainedBox(
+                  constraints: const BoxConstraints(maxHeight: 300),
+                  child: ListView.separated(
+                    shrinkWrap: true,
+                    itemCount: history.length,
+                    separatorBuilder: (_, __) => const Divider(height: 1),
+                    itemBuilder: (_, i) {
+                      final r = history[i];
+                      final rA = r['teamA'] ?? 0;
+                      final rB = r['teamB'] ?? 0;
+                      return Padding(
+                        padding: const EdgeInsets.symmetric(vertical: 8),
+                        child: Row(
+                          children: [
+                            Expanded(
+                              flex: 2,
+                              child: Text(
+                                'R${r['round'] ?? i + 1}',
+                                style: const TextStyle(fontSize: 13, color: Color(0xFF8A7A72)),
+                                textAlign: TextAlign.center,
+                              ),
+                            ),
+                            Expanded(
+                              flex: 3,
+                              child: Text(
+                                rA >= 0 ? '+$rA' : '$rA',
+                                style: TextStyle(
+                                  fontSize: 14,
+                                  fontWeight: FontWeight.bold,
+                                  color: rA > rB ? const Color(0xFF4A90D9) : const Color(0xFF5A4038),
+                                ),
+                                textAlign: TextAlign.center,
+                              ),
+                            ),
+                            Expanded(
+                              flex: 3,
+                              child: Text(
+                                rB >= 0 ? '+$rB' : '$rB',
+                                style: TextStyle(
+                                  fontSize: 14,
+                                  fontWeight: FontWeight.bold,
+                                  color: rB > rA ? const Color(0xFFD24B4B) : const Color(0xFF5A4038),
+                                ),
+                                textAlign: TextAlign.center,
+                              ),
+                            ),
+                          ],
+                        ),
+                      );
+                    },
+                  ),
+                ),
+              const Divider(height: 16),
+              // Total
+              Row(
+                children: [
+                  const Expanded(
+                    flex: 2,
+                    child: Text(
+                      '합계',
+                      style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: Color(0xFF5A4038)),
+                      textAlign: TextAlign.center,
+                    ),
+                  ),
+                  Expanded(
+                    flex: 3,
+                    child: Text(
+                      '$teamA',
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                        color: teamA >= teamB ? const Color(0xFF4A90D9) : const Color(0xFF5A4038),
+                      ),
+                      textAlign: TextAlign.center,
+                    ),
+                  ),
+                  Expanded(
+                    flex: 3,
+                    child: Text(
+                      '$teamB',
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                        color: teamB >= teamA ? const Color(0xFFD24B4B) : const Color(0xFF5A4038),
+                      ),
+                      textAlign: TextAlign.center,
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 16),
+              TextButton(
+                onPressed: () => Navigator.of(ctx).pop(),
+                child: const Text('닫기'),
+              ),
+            ],
+          ),
         ),
       ),
     );
@@ -1965,6 +2255,41 @@ class _GameScreenState extends State<GameScreen> {
               if (_tichuBadgeForSelf(state) != null) ...[
                 const SizedBox(width: 8),
                 _tichuBadgeForSelf(state)!,
+              ],
+              if (game.myTimeoutCount > 0) ...[
+                const SizedBox(width: 8),
+                GestureDetector(
+                  onTap: () => game.resetTimeout(),
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFFFF3E0),
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: const Color(0xFFFFB74D)),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text(
+                          '${game.myTimeoutCount}/3',
+                          style: const TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.bold,
+                            color: Color(0xFFE65100),
+                          ),
+                        ),
+                        const SizedBox(width: 4),
+                        const Text(
+                          '잠수아님',
+                          style: TextStyle(
+                            fontSize: 11,
+                            color: Color(0xFFE65100),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
               ],
             ],
           ),

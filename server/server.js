@@ -133,7 +133,7 @@ wss.on('connection', (ws) => {
     try {
       data = JSON.parse(raw.toString());
     } catch (e) {
-      sendTo(ws, { type: 'error', message: 'Invalid JSON' });
+      sendTo(ws, { type: 'error', message: '잘못된 데이터 형식입니다' });
       return;
     }
 
@@ -351,7 +351,7 @@ function handleMessage(ws, data) {
       handleUseItem(ws, data);
       break;
     default:
-      sendTo(ws, { type: 'error', message: `Unknown message type: ${data.type}` });
+      sendTo(ws, { type: 'error', message: `알 수 없는 메시지: ${data.type}` });
   }
 }
 
@@ -505,11 +505,11 @@ async function handleReconnection(ws) {
 
 function handleCreateRoom(ws, data) {
   if (!ws.playerId) {
-    sendTo(ws, { type: 'error', message: 'Not logged in' });
+    sendTo(ws, { type: 'error', message: '로그인이 필요합니다' });
     return;
   }
   if (ws.roomId) {
-    sendTo(ws, { type: 'error', message: 'Already in a room' });
+    sendTo(ws, { type: 'error', message: '이미 방에 참가 중입니다' });
     return;
   }
   const roomName = (data.roomName || `${ws.nickname}'s Room`).trim();
@@ -535,16 +535,16 @@ function handleCreateRoom(ws, data) {
 
 async function handleJoinRoom(ws, data) {
   if (!ws.playerId) {
-    sendTo(ws, { type: 'error', message: 'Not logged in' });
+    sendTo(ws, { type: 'error', message: '로그인이 필요합니다' });
     return;
   }
   if (ws.roomId) {
-    sendTo(ws, { type: 'error', message: 'Already in a room' });
+    sendTo(ws, { type: 'error', message: '이미 방에 참가 중입니다' });
     return;
   }
   const room = lobby.getRoom(data.roomId);
   if (!room) {
-    sendTo(ws, { type: 'error', message: 'Room not found' });
+    sendTo(ws, { type: 'error', message: '방을 찾을 수 없습니다' });
     return;
   }
   // Ranked ban check
@@ -645,7 +645,7 @@ async function handleLeaveGame(ws) {
 
 function handleReturnToRoom(ws) {
   if (!ws.roomId) {
-    sendTo(ws, { type: 'error', message: 'Not in a room' });
+    sendTo(ws, { type: 'error', message: '방에 참가하고 있지 않습니다' });
     return;
   }
   const room = lobby.getRoom(ws.roomId);
@@ -656,12 +656,12 @@ function handleReturnToRoom(ws) {
   }
   // Only host can return to room (S1)
   if (room.hostId !== ws.playerId) {
-    sendTo(ws, { type: 'error', message: 'Only the host can return to room' });
+    sendTo(ws, { type: 'error', message: '방장만 대기실로 돌아갈 수 있습니다' });
     return;
   }
   // Only allow when game has ended
   if (room.game && room.game.state !== 'game_end') {
-    sendTo(ws, { type: 'error', message: 'Game is still in progress' });
+    sendTo(ws, { type: 'error', message: '게임이 아직 진행 중입니다' });
     return;
   }
   // Clear the game and reset ready states
@@ -696,16 +696,16 @@ function handleCheckRoom(ws) {
 
 function handleSpectateRoom(ws, data) {
   if (!ws.playerId) {
-    sendTo(ws, { type: 'error', message: 'Not logged in' });
+    sendTo(ws, { type: 'error', message: '로그인이 필요합니다' });
     return;
   }
   if (ws.roomId) {
-    sendTo(ws, { type: 'error', message: 'Already in a room' });
+    sendTo(ws, { type: 'error', message: '이미 방에 참가 중입니다' });
     return;
   }
   const room = lobby.getRoom(data.roomId);
   if (!room) {
-    sendTo(ws, { type: 'error', message: 'Room not found' });
+    sendTo(ws, { type: 'error', message: '방을 찾을 수 없습니다' });
     return;
   }
   const result = room.addSpectator(ws.playerId, ws.nickname);
@@ -732,7 +732,7 @@ function handleSpectateRoom(ws, data) {
 
 function handleRequestCardView(ws, data) {
   if (!ws.roomId || !ws.isSpectator) {
-    sendTo(ws, { type: 'error', message: 'Not spectating' });
+    sendTo(ws, { type: 'error', message: '관전 중이 아닙니다' });
     return;
   }
   const room = lobby.getRoom(ws.roomId);
@@ -778,7 +778,7 @@ function handleRequestCardView(ws, data) {
 
 function handleRespondCardView(ws, data) {
   if (!ws.roomId) {
-    sendTo(ws, { type: 'error', message: 'Not in a room' });
+    sendTo(ws, { type: 'error', message: '방에 참가하고 있지 않습니다' });
     return;
   }
   const room = lobby.getRoom(ws.roomId);
@@ -810,11 +810,18 @@ function handleRespondCardView(ws, data) {
       sendTo(spectatorWs, { type: 'spectator_game_state', state });
     }
   }
+
+  // Send updated game state to the approving player so cardViewers refreshes immediately
+  if (allow && room.game) {
+    const playerState = room.game.getStateForPlayer(ws.playerId);
+    playerState.cardViewers = room.getViewersForPlayer(ws.playerId);
+    sendTo(ws, { type: 'game_state', state: playerState });
+  }
 }
 
 function handleRevokeCardView(ws, data) {
   if (!ws.roomId) {
-    sendTo(ws, { type: 'error', message: 'Not in a room' });
+    sendTo(ws, { type: 'error', message: '방에 참가하고 있지 않습니다' });
     return;
   }
   const room = lobby.getRoom(ws.roomId);
@@ -823,7 +830,7 @@ function handleRevokeCardView(ws, data) {
   const spectatorId = data.spectatorId;
   const result = room.revokeCardView(ws.playerId, spectatorId);
   if (!result.success) {
-    sendTo(ws, { type: 'error', message: 'Failed to revoke' });
+    sendTo(ws, { type: 'error', message: '취소에 실패했습니다' });
     return;
   }
 
@@ -851,17 +858,17 @@ function handleToggleReady(ws) {
 
 function handleStartGame(ws) {
   if (!ws.roomId) {
-    sendTo(ws, { type: 'error', message: 'Not in a room' });
+    sendTo(ws, { type: 'error', message: '방에 참가하고 있지 않습니다' });
     return;
   }
   const room = lobby.getRoom(ws.roomId);
   if (!room) { sendTo(ws, { type: 'room_closed' }); ws.roomId = null; return; }
   if (room.hostId !== ws.playerId) {
-    sendTo(ws, { type: 'error', message: 'Only the host can start the game' });
+    sendTo(ws, { type: 'error', message: '방장만 게임을 시작할 수 있습니다' });
     return;
   }
   if (room.getPlayerCount() < 4) {
-    sendTo(ws, { type: 'error', message: 'Need 4 players to start' });
+    sendTo(ws, { type: 'error', message: '4명이 모여야 시작할 수 있습니다' });
     return;
   }
   if (!room.areAllReady()) {
@@ -877,7 +884,7 @@ function handleStartGame(ws) {
 
 function handleChangeTeam(ws, data) {
   if (!ws.roomId) {
-    sendTo(ws, { type: 'error', message: 'Not in a room' });
+    sendTo(ws, { type: 'error', message: '방에 참가하고 있지 않습니다' });
     return;
   }
   const room = lobby.getRoom(ws.roomId);
@@ -892,7 +899,7 @@ function handleChangeTeam(ws, data) {
   }
   const targetSlot = data.targetSlot;
   if (typeof targetSlot !== 'number' || targetSlot < 0 || targetSlot > 3) {
-    sendTo(ws, { type: 'error', message: 'Invalid slot' });
+    sendTo(ws, { type: 'error', message: '잘못된 슬롯입니다' });
     return;
   }
   const result = room.movePlayerToSlot(ws.playerId, targetSlot);
@@ -906,7 +913,7 @@ function handleChangeTeam(ws, data) {
 // Kick player handler (host only, not during game)
 function handleKickPlayer(ws, data) {
   if (!ws.roomId) {
-    sendTo(ws, { type: 'error', message: 'Not in a room' });
+    sendTo(ws, { type: 'error', message: '방에 참가하고 있지 않습니다' });
     return;
   }
   const room = lobby.getRoom(ws.roomId);
@@ -943,7 +950,7 @@ function handleKickPlayer(ws, data) {
 // Add bot handler (host only)
 function handleAddBot(ws, data) {
   if (!ws.roomId) {
-    sendTo(ws, { type: 'error', message: 'Not in a room' });
+    sendTo(ws, { type: 'error', message: '방에 참가하고 있지 않습니다' });
     return;
   }
   const room = lobby.getRoom(ws.roomId);
@@ -970,7 +977,7 @@ function handleAddBot(ws, data) {
 // Switch to spectator handler
 function handleSwitchToSpectator(ws) {
   if (!ws.roomId || ws.isSpectator) {
-    sendTo(ws, { type: 'error', message: 'Not in a room as player' });
+    sendTo(ws, { type: 'error', message: '플레이어로 방에 참가하고 있지 않습니다' });
     return;
   }
   const room = lobby.getRoom(ws.roomId);
@@ -989,14 +996,14 @@ function handleSwitchToSpectator(ws) {
 // Switch to player handler
 function handleSwitchToPlayer(ws, data) {
   if (!ws.roomId || !ws.isSpectator) {
-    sendTo(ws, { type: 'error', message: 'Not spectating' });
+    sendTo(ws, { type: 'error', message: '관전 중이 아닙니다' });
     return;
   }
   const room = lobby.getRoom(ws.roomId);
   if (!room) { sendTo(ws, { type: 'room_closed' }); ws.roomId = null; return; }
   const targetSlot = data.targetSlot;
   if (typeof targetSlot !== 'number') {
-    sendTo(ws, { type: 'error', message: 'Invalid slot' });
+    sendTo(ws, { type: 'error', message: '잘못된 슬롯입니다' });
     return;
   }
   const result = room.switchToPlayer(ws.playerId, ws.nickname, targetSlot);
@@ -1035,7 +1042,7 @@ async function handleGetProfile(ws, data) {
 
 function handleGameAction(ws, data) {
   if (!ws.roomId) {
-    sendTo(ws, { type: 'error', message: 'Not in a room' });
+    sendTo(ws, { type: 'error', message: '방에 참가하고 있지 않습니다' });
     return;
   }
   const room = lobby.getRoom(ws.roomId);
@@ -1054,7 +1061,7 @@ function handleGameAction(ws, data) {
 
   if (data.type === 'next_round') {
     if (room.hostId !== ws.playerId) {
-      sendTo(ws, { type: 'error', message: 'Only the host can start the next round' });
+      sendTo(ws, { type: 'error', message: '방장만 다음 라운드를 시작할 수 있습니다' });
       return;
     }
     // Reset timeout counts for new round (keys are nicknames)
@@ -1556,7 +1563,7 @@ function broadcastRoomList() {
 // Chat message handler
 function handleChatMessage(ws, data) {
   if (!ws.roomId || !ws.nickname) {
-    sendTo(ws, { type: 'error', message: 'Not in a room' });
+    sendTo(ws, { type: 'error', message: '방에 참가하고 있지 않습니다' });
     return;
   }
   const room = lobby.getRoom(ws.roomId);

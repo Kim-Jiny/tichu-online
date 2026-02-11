@@ -740,18 +740,15 @@ class _LobbyScreenState extends State<LobbyScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final themeColors = context.watch<GameService>().themeGradient;
     return ConnectionOverlay(
       child: Scaffold(
         body: Container(
-        decoration: const BoxDecoration(
+        decoration: BoxDecoration(
           gradient: LinearGradient(
             begin: Alignment.topCenter,
             end: Alignment.bottomCenter,
-            colors: [
-              Color(0xFFF8F4F6),
-              Color(0xFFF0E8F0),
-              Color(0xFFE8F0F8),
-            ],
+            colors: themeColors,
           ),
         ),
         child: SafeArea(

@@ -373,27 +373,54 @@ function isNormalRank(cardId) {
   return !cardId.startsWith('special_');
 }
 
-// Reorder cards so Phoenix appears in its logical position
+// Reorder cards for display: straights low→high, full house pair→triple, steps low→high
 function arrangeCardsWithPhoenix(cardIds, combo) {
-  if (!cardIds.includes('special_phoenix') || combo.phoenixAs === undefined) return cardIds;
-
+  const hasPhoenix = cardIds.includes('special_phoenix');
   const normalCards = cardIds.filter((c) => c !== 'special_phoenix');
+
+  // Sort normal cards by value (low to high)
   normalCards.sort((a, b) => getCardValue(a) - getCardValue(b));
 
-  const phoenixVal = combo.phoenixAs;
-  const result = [];
-  let inserted = false;
-
-  for (let i = 0; i < normalCards.length; i++) {
-    if (!inserted && getCardValue(normalCards[i]) > phoenixVal) {
-      result.push('special_phoenix');
-      inserted = true;
+  // Full house: pair first, then triple
+  if (combo.type === COMBO.FULL_HOUSE) {
+    const tripleVal = combo.value;
+    const pairCards = [];
+    const tripleCards = [];
+    for (const c of normalCards) {
+      if (getCardValue(c) === tripleVal && tripleCards.length < 3) {
+        tripleCards.push(c);
+      } else {
+        pairCards.push(c);
+      }
     }
-    result.push(normalCards[i]);
+    // Phoenix in full house: insert into whichever group needs it
+    if (hasPhoenix && combo.phoenixAs !== undefined) {
+      if (tripleCards.length < 3 && combo.phoenixAs === tripleVal) {
+        tripleCards.push('special_phoenix');
+      } else {
+        pairCards.push('special_phoenix');
+      }
+    }
+    return [...pairCards, ...tripleCards];
   }
-  if (!inserted) result.push('special_phoenix');
 
-  return result;
+  // For other combos: just insert phoenix at its logical position
+  if (hasPhoenix && combo.phoenixAs !== undefined) {
+    const phoenixVal = combo.phoenixAs;
+    const result = [];
+    let inserted = false;
+    for (let i = 0; i < normalCards.length; i++) {
+      if (!inserted && getCardValue(normalCards[i]) > phoenixVal) {
+        result.push('special_phoenix');
+        inserted = true;
+      }
+      result.push(normalCards[i]);
+    }
+    if (!inserted) result.push('special_phoenix');
+    return result;
+  }
+
+  return normalCards;
 }
 
 module.exports = { getComboType, canBeat, isBomb, arrangeCardsWithPhoenix, COMBO };

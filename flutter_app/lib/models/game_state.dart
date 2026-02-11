@@ -32,6 +32,7 @@ class GameStateData {
   final List<TrickPlay> currentTrick;
   final Map<String, int> totalScores;
   final Map<String, int> lastRoundScores;
+  final List<Map<String, dynamic>> scoreHistory;
   final String? callRank;
   final bool needsToCallRank;
   final bool dragonPending;
@@ -50,6 +51,7 @@ class GameStateData {
     this.currentTrick = const [],
     this.totalScores = const {'teamA': 0, 'teamB': 0},
     this.lastRoundScores = const {},
+    this.scoreHistory = const [],
     this.callRank,
     this.needsToCallRank = false,
     this.dragonPending = false,
@@ -91,6 +93,13 @@ class GameStateData {
       };
     }
 
+    List<Map<String, dynamic>> history = [];
+    if (json['scoreHistory'] != null) {
+      history = (json['scoreHistory'] as List)
+          .map((e) => Map<String, dynamic>.from(e))
+          .toList();
+    }
+
     return GameStateData(
       phase: json['phase'] ?? '',
       players: playerList,
@@ -100,6 +109,7 @@ class GameStateData {
       currentTrick: trickList,
       totalScores: scores,
       lastRoundScores: lastScores,
+      scoreHistory: history,
       callRank: json['callRank'],
       needsToCallRank: json['needsToCallRank'] ?? false,
       dragonPending: json['dragonPending'] ?? false,

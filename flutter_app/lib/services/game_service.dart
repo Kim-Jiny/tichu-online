@@ -132,6 +132,26 @@ class GameService extends ChangeNotifier {
         return const [Color(0xFFE8F4FD), Color(0xFFD0E8F8), Color(0xFFC4E0F4)];
       case 'theme_mocha_30d':
         return const [Color(0xFFF0E8E0), Color(0xFFE0D0C4), Color(0xFFD8C8BC)];
+      case 'theme_lavender':
+        return const [Color(0xFFF3E8FF), Color(0xFFE8D5FF), Color(0xFFF0E0FF)];
+      case 'theme_cherry':
+        return const [Color(0xFFFFF0F5), Color(0xFFFFE0EC), Color(0xFFFFE8F0)];
+      case 'theme_midnight':
+        return const [Color(0xFFE8EAF6), Color(0xFFC5CAE9), Color(0xFFD1D5E8)];
+      case 'theme_sunset':
+        return const [Color(0xFFFFF3E0), Color(0xFFFFE0B2), Color(0xFFFFECCC)];
+      case 'theme_forest':
+        return const [Color(0xFFE8F5E9), Color(0xFFC8E6C9), Color(0xFFDCE8DC)];
+      case 'theme_rose':
+        return const [Color(0xFFFBE9E7), Color(0xFFFFCCBC), Color(0xFFF0E0DC)];
+      case 'theme_ocean':
+        return const [Color(0xFFE0F7FA), Color(0xFFB2EBF2), Color(0xFFD0F0F8)];
+      case 'theme_aurora':
+        return const [Color(0xFFE8F5E9), Color(0xFFE0F7FA), Color(0xFFF3E5F5)];
+      case 'theme_mintchoco_30d':
+        return const [Color(0xFFE8F5E9), Color(0xFFE0F2F1), Color(0xFFE8F0E8)];
+      case 'theme_peach_30d':
+        return const [Color(0xFFFFF8E1), Color(0xFFFFE8D0), Color(0xFFFFF0E0)];
       default:
         return const [Color(0xFFF8F4F6), Color(0xFFEDE6F0), Color(0xFFE0ECF6)];
     }
@@ -146,6 +166,26 @@ class GameService extends ChangeNotifier {
         return const [Color(0xFFE0F0FF), Color(0xFFC8D8E8), Color(0xFFD0E0F0)];
       case 'theme_mocha_30d':
         return const [Color(0xFFF0E8E0), Color(0xFFD8CCC0), Color(0xFFE0D4C8)];
+      case 'theme_lavender':
+        return const [Color(0xFFF0E0FF), Color(0xFFD8C0E8), Color(0xFFE0D0F0)];
+      case 'theme_cherry':
+        return const [Color(0xFFFFE8F0), Color(0xFFE8C8D8), Color(0xFFF0D0E0)];
+      case 'theme_midnight':
+        return const [Color(0xFFD0D4E8), Color(0xFFB0B8D0), Color(0xFFC0C8E0)];
+      case 'theme_sunset':
+        return const [Color(0xFFFFE8CC), Color(0xFFE8CCA8), Color(0xFFF0D8B8)];
+      case 'theme_forest':
+        return const [Color(0xFFDCE8DC), Color(0xFFB8C8B8), Color(0xFFC8D8C8)];
+      case 'theme_rose':
+        return const [Color(0xFFF0E0D8), Color(0xFFD8C0B8), Color(0xFFE0D0C8)];
+      case 'theme_ocean':
+        return const [Color(0xFFD0F0F8), Color(0xFFB0D8E8), Color(0xFFC0E0F0)];
+      case 'theme_aurora':
+        return const [Color(0xFFE0F0F0), Color(0xFFC0D8D8), Color(0xFFD0E0E0)];
+      case 'theme_mintchoco_30d':
+        return const [Color(0xFFE0F0E8), Color(0xFFC0D8C8), Color(0xFFD0E0D0)];
+      case 'theme_peach_30d':
+        return const [Color(0xFFFFE8D0), Color(0xFFE8D0B8), Color(0xFFF0D8C8)];
       default:
         return const [Color(0xFFFFF1F5), Color(0xFFE6DCE8), Color(0xFFEDE2EF)];
     }

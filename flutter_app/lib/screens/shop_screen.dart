@@ -713,6 +713,76 @@ class _ShopScreenState extends State<ShopScreen> {
           'gradient': [const Color(0xFFEFEBE9), const Color(0xFFD7CCC8)],
           'borderColor': const Color(0xFFBCAAA4),
         };
+      case 'theme_lavender':
+        return {
+          'icon': Icons.local_florist,
+          'iconColor': const Color(0xFF9C27B0),
+          'gradient': [const Color(0xFFF3E5F5), const Color(0xFFE1BEE7)],
+          'borderColor': const Color(0xFFCE93D8),
+        };
+      case 'theme_cherry':
+        return {
+          'icon': Icons.filter_vintage,
+          'iconColor': const Color(0xFFE91E63),
+          'gradient': [const Color(0xFFFCE4EC), const Color(0xFFF8BBD0)],
+          'borderColor': const Color(0xFFF48FB1),
+        };
+      case 'theme_midnight':
+        return {
+          'icon': Icons.nights_stay,
+          'iconColor': const Color(0xFF303F9F),
+          'gradient': [const Color(0xFFE8EAF6), const Color(0xFFC5CAE9)],
+          'borderColor': const Color(0xFF9FA8DA),
+        };
+      case 'theme_sunset':
+        return {
+          'icon': Icons.wb_twilight,
+          'iconColor': const Color(0xFFF57C00),
+          'gradient': [const Color(0xFFFFF3E0), const Color(0xFFFFE0B2)],
+          'borderColor': const Color(0xFFFFCC80),
+        };
+      case 'theme_forest':
+        return {
+          'icon': Icons.park,
+          'iconColor': const Color(0xFF2E7D32),
+          'gradient': [const Color(0xFFE8F5E9), const Color(0xFFC8E6C9)],
+          'borderColor': const Color(0xFFA5D6A7),
+        };
+      case 'theme_rose':
+        return {
+          'icon': Icons.spa,
+          'iconColor': const Color(0xFFD4A08A),
+          'gradient': [const Color(0xFFFBE9E7), const Color(0xFFFFCCBC)],
+          'borderColor': const Color(0xFFFFAB91),
+        };
+      case 'theme_ocean':
+        return {
+          'icon': Icons.waves,
+          'iconColor': const Color(0xFF0097A7),
+          'gradient': [const Color(0xFFE0F7FA), const Color(0xFFB2EBF2)],
+          'borderColor': const Color(0xFF80DEEA),
+        };
+      case 'theme_aurora':
+        return {
+          'icon': Icons.auto_awesome,
+          'iconColor': const Color(0xFF26A69A),
+          'gradient': [const Color(0xFFE0F7FA), const Color(0xFFE8F5E9)],
+          'borderColor': const Color(0xFF80CBC4),
+        };
+      case 'theme_mintchoco_30d':
+        return {
+          'icon': Icons.icecream,
+          'iconColor': const Color(0xFF00897B),
+          'gradient': [const Color(0xFFE0F2F1), const Color(0xFFB2DFDB)],
+          'borderColor': const Color(0xFF80CBC4),
+        };
+      case 'theme_peach_30d':
+        return {
+          'icon': Icons.brightness_7,
+          'iconColor': const Color(0xFFFF8A65),
+          'gradient': [const Color(0xFFFFF3E0), const Color(0xFFFFCCBC)],
+          'borderColor': const Color(0xFFFFAB91),
+        };
       // Utility
       case 'leave_reduce_1':
         return {

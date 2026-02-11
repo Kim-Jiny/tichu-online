@@ -261,6 +261,7 @@ async function initDatabase() {
         ('leave_reduce_1', '탈주 카운트 -1', 'utility', 150, FALSE, TRUE, NULL, TRUE, 'leave_count_reduce', 1, '{}'::jsonb),
         ('leave_reduce_3', '탈주 카운트 -3', 'utility', 400, FALSE, TRUE, NULL, TRUE, 'leave_count_reduce', 3, '{}'::jsonb),
         ('nickname_change', '닉네임 변경권', 'utility', 500, FALSE, TRUE, NULL, TRUE, 'nickname_change', NULL, '{}'::jsonb),
+        ('top_card_counter_7d', '탑패 카운터(7일)', 'utility', 1000, FALSE, FALSE, 7, TRUE, NULL, NULL, '{}'::jsonb),
         ('banner_season_gold', '시즌 골드 배너', 'banner', 0, TRUE, FALSE, 30, FALSE, NULL, NULL, '{}'::jsonb),
         ('banner_season_silver', '시즌 실버 배너', 'banner', 0, TRUE, FALSE, 30, FALSE, NULL, NULL, '{}'::jsonb),
         ('banner_season_bronze', '시즌 브론즈 배너', 'banner', 0, TRUE, FALSE, 30, FALSE, NULL, NULL, '{}'::jsonb)
@@ -765,6 +766,15 @@ async function getUserProfile(nickname) {
     );
     const reportCount = parseInt(reportRes.rows[0].count, 10) || 0;
 
+    // Check active top card counter item
+    const topCardRes = await client.query(
+      `SELECT 1 FROM tc_user_items
+       WHERE nickname = $1 AND item_key = 'top_card_counter_7d'
+         AND (expires_at IS NULL OR expires_at >= NOW()) LIMIT 1`,
+      [nickname]
+    );
+    const hasTopCardCounter = topCardRes.rows.length > 0;
+
     return {
       nickname: user.nickname,
       totalGames: user.total_games,
@@ -786,6 +796,7 @@ async function getUserProfile(nickname) {
       themeKey: user.theme_key,
       titleKey: user.title_key,
       createdAt: user.created_at,
+      hasTopCardCounter,
     };
   } catch (err) {
     console.error('Get user profile error:', err);

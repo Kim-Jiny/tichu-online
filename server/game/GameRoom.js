@@ -482,6 +482,10 @@ class GameRoom {
       turnTimeLimit: this.turnTimeLimit,
     };
   }
+
+  setName(newName) {
+    this.name = newName;
+  }
 }
 
 module.exports = GameRoom;

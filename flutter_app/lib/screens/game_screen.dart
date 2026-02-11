@@ -270,6 +270,10 @@ class _GameScreenState extends State<GameScreen> {
                       // Top bar: timer + score + viewers/chat/exit
                       _buildTopBar(state, game),
 
+                      // Top card counter (if item active + playing phase)
+                      if (game.hasTopCardCounter && state.phase == 'playing')
+                        _buildTopCardCounter(state),
+
                       // Top area - partner
                       _buildPartnerArea(state, game),
 
@@ -2301,6 +2305,25 @@ class _GameScreenState extends State<GameScreen> {
             ),
           ),
         ],
+      ),
+    );
+  }
+
+  Widget _buildTopCardCounter(GameStateData state) {
+    final aces = state.remainingAces;
+    final dragon = state.remainingDragon > 0;
+    final phoenix = state.remainingPhoenix > 0;
+    return Align(
+      alignment: Alignment.centerLeft,
+      child: Padding(
+        padding: const EdgeInsets.only(left: 10, bottom: 2),
+        child: Text(
+          'A:$aces  \u{1F409}${dragon ? "\u25CB" : "\u2715"}  \u{1F426}${phoenix ? "\u25CB" : "\u2715"}',
+          style: TextStyle(
+            fontSize: 10 * _s,
+            color: const Color(0xFF8A7A6A),
+          ),
+        ),
       ),
     );
   }

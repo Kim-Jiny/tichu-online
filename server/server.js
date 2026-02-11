@@ -272,6 +272,9 @@ function handleMessage(ws, data) {
     case 'leave_game':
       handleLeaveGame(ws);
       break;
+    case 'change_room_name':
+      handleChangeRoomName(ws, data);
+      break;
     case 'return_to_room':
       handleReturnToRoom(ws);
       break;
@@ -482,6 +485,7 @@ async function handleReconnection(ws) {
   const profile = await getUserProfile(ws.nickname);
   const themeKey = profile?.themeKey || null;
   const titleKey = profile?.titleKey || null;
+  const hasTopCardCounter = profile?.hasTopCardCounter || false;
   ws.titleKey = titleKey;
 
   // Check for reconnection to a game
@@ -502,6 +506,7 @@ async function handleReconnection(ws) {
           nickname: ws.nickname,
           themeKey,
           titleKey,
+          hasTopCardCounter,
           maintenanceStatus: getMaintenanceStatus(),
         });
         sendTo(ws, {
@@ -544,6 +549,7 @@ async function handleReconnection(ws) {
           nickname: ws.nickname,
           themeKey,
           titleKey,
+          hasTopCardCounter,
           maintenanceStatus: getMaintenanceStatus(),
         });
         sendTo(ws, {
@@ -564,6 +570,7 @@ async function handleReconnection(ws) {
     nickname: ws.nickname,
     themeKey,
     titleKey,
+    hasTopCardCounter,
     maintenanceStatus: getMaintenanceStatus(),
   });
   sendTo(ws, { type: 'room_list', rooms: lobby.getRoomList() });
@@ -976,6 +983,31 @@ function handleStartGame(ws) {
   broadcastRoomState(ws.roomId);
   // Send initial cards to each player
   sendGameStateToAll(ws.roomId);
+}
+
+function handleChangeRoomName(ws, data) {
+  if (!ws.roomId) {
+    sendTo(ws, { type: 'error', message: '방에 참가하고 있지 않습니다' });
+    return;
+  }
+  const room = lobby.getRoom(ws.roomId);
+  if (!room) {
+    sendTo(ws, { type: 'error', message: '방을 찾을 수 없습니다' });
+    return;
+  }
+  if (room.hostId !== ws.playerId) {
+    sendTo(ws, { type: 'error', message: '방장만 변경할 수 있습니다' });
+    return;
+  }
+  const rawName = typeof data.roomName === 'string' ? data.roomName.trim() : '';
+  if (!rawName) {
+    sendTo(ws, { type: 'error', message: '방 제목을 입력해주세요' });
+    return;
+  }
+  const newName = rawName.slice(0, 20);
+  room.setName(newName);
+  broadcastRoomState(room.id);
+  broadcastRoomList();
 }
 
 function handleChangeTeam(ws, data) {

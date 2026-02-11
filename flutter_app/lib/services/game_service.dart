@@ -111,6 +111,9 @@ class GameService extends ChangeNotifier {
   String? nicknameChangeResult;
   bool? nicknameChangeSuccess;
 
+  // Top card counter
+  bool hasTopCardCounter = false;
+
   // Turn timeout
   String? timeoutPlayerName; // show "시간 초과!" banner
   String? desertedPlayerName; // show desertion message
@@ -214,6 +217,7 @@ class GameService extends ChangeNotifier {
         playerName = data['nickname'] ?? '';
         equippedTheme = data['themeKey'] as String?;
         equippedTitle = data['titleKey'] as String?;
+        hasTopCardCounter = data['hasTopCardCounter'] == true;
         loginError = null;
         _parseMaintenanceStatus(data['maintenanceStatus'] as Map<String, dynamic>?);
         notifyListeners();
@@ -404,6 +408,9 @@ class GameService extends ChangeNotifier {
       case 'room_state':
         final room = data['room'] as Map<String, dynamic>?;
         if (room != null) {
+          if (currentRoomId.isNotEmpty) {
+            currentRoomName = room['name'] ?? currentRoomName;
+          }
           final playersList = room['players'] as List?;
           if (playersList != null && playersList.length == 4) {
             // Parse 4-slot array with nulls
@@ -729,6 +736,9 @@ class GameService extends ChangeNotifier {
           lastPurchaseItemKey = data['itemKey'] as String?;
           lastPurchaseSuccess = data['success'] == true;
           lastPurchaseExtended = data['extended'] == true;
+          if (data['success'] == true && data['itemKey'] == 'top_card_counter_7d') {
+            hasTopCardCounter = true;
+          }
         }
         if (type == 'equip_result' && data['success'] == true) {
           final themeKey = data['themeKey'] as String?;
@@ -922,6 +932,7 @@ class GameService extends ChangeNotifier {
     pendingFriendRequestCount = 0;
     roomInvites = [];
     sentFriendRequests = {};
+    hasTopCardCounter = false;
     isUnderMaintenance = false;
     hasMaintenanceNotice = false;
     maintenanceMessage = '';
@@ -1099,6 +1110,10 @@ class GameService extends ChangeNotifier {
 
   void changeTeam(int targetSlot) {
     _network.send({'type': 'change_team', 'targetSlot': targetSlot});
+  }
+
+  void changeRoomName(String newName) {
+    _network.send({'type': 'change_room_name', 'roomName': newName});
   }
 
   // Kick player (host only)

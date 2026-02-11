@@ -43,6 +43,9 @@ class GameStateData {
   final bool canDeclareSmallTichu;
   final int? turnDeadline; // epoch ms
   final String myTeam; // 'A' or 'B'
+  final int remainingAces; // 0~4
+  final int remainingDragon; // 0 or 1
+  final int remainingPhoenix; // 0 or 1
 
   GameStateData({
     this.phase = '',
@@ -64,6 +67,9 @@ class GameStateData {
     this.canDeclareSmallTichu = false,
     this.turnDeadline,
     this.myTeam = 'A',
+    this.remainingAces = 0,
+    this.remainingDragon = 0,
+    this.remainingPhoenix = 0,
   });
 
   factory GameStateData.fromJson(Map<String, dynamic> json) {
@@ -128,6 +134,9 @@ class GameStateData {
       canDeclareSmallTichu: json['canDeclareSmallTichu'] ?? false,
       turnDeadline: json['turnDeadline'] as int?,
       myTeam: _resolveMyTeam(json, playerList),
+      remainingAces: (json['remainingSpecials'] as Map?)?['aces'] as int? ?? 0,
+      remainingDragon: (json['remainingSpecials'] as Map?)?['dragon'] as int? ?? 0,
+      remainingPhoenix: (json['remainingSpecials'] as Map?)?['phoenix'] as int? ?? 0,
     );
   }
 

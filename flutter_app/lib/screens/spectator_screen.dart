@@ -17,6 +17,7 @@ class SpectatorScreen extends StatefulWidget {
 class _SpectatorScreenState extends State<SpectatorScreen> {
   bool _isLeaving = false;
   bool _chatOpen = false;
+  bool _soundPanelOpen = false;
   final TextEditingController _chatController = TextEditingController();
   final ScrollController _chatScrollController = ScrollController();
 
@@ -147,6 +148,10 @@ class _SpectatorScreenState extends State<SpectatorScreen> {
                       overflow: TextOverflow.ellipsis,
                     ),
                   ),
+                  _buildSpectatorButton(game),
+                  const SizedBox(width: 6),
+                  _buildSoundButton(game),
+                  const SizedBox(width: 6),
                   _buildChatButton(),
                 ],
               ),
@@ -237,6 +242,9 @@ class _SpectatorScreenState extends State<SpectatorScreen> {
             ),
           ],
         ),
+
+        // Sound panel overlay
+        if (_soundPanelOpen) _buildSoundPanel(game),
 
         // Chat panel overlay
         if (_chatOpen) _buildChatPanel(game),
@@ -374,6 +382,9 @@ class _SpectatorScreenState extends State<SpectatorScreen> {
           ],
         ),
 
+        // Sound panel overlay
+        if (_soundPanelOpen) _buildSoundPanel(game),
+
         // Chat panel overlay
         if (_chatOpen) _buildChatPanel(game),
 
@@ -494,6 +505,10 @@ class _SpectatorScreenState extends State<SpectatorScreen> {
                 ),
               ),
               const Spacer(),
+              _buildSpectatorButton(game),
+              const SizedBox(width: 6),
+              _buildSoundButton(game),
+              const SizedBox(width: 6),
               _buildChatButton(),
             ],
           ),
@@ -823,6 +838,167 @@ class _SpectatorScreenState extends State<SpectatorScreen> {
     );
   }
 
+  Widget _buildSoundButton(GameService game) {
+    final hasMuted = game.sfxVolume <= 0.01;
+    return GestureDetector(
+      onTap: () => setState(() => _soundPanelOpen = !_soundPanelOpen),
+      child: Container(
+        padding: const EdgeInsets.all(8),
+        decoration: BoxDecoration(
+          color: _soundPanelOpen
+              ? const Color(0xFF81C784)
+              : Colors.white.withOpacity(0.9),
+          shape: BoxShape.circle,
+          border: Border.all(color: const Color(0xFFE0D8D4)),
+        ),
+        child: Icon(
+          hasMuted ? Icons.volume_off : Icons.volume_up,
+          color: _soundPanelOpen ? Colors.white : const Color(0xFF6A5A52),
+          size: 18,
+        ),
+      ),
+    );
+  }
+
+  Widget _buildSoundPanel(GameService game) {
+    return Positioned(
+      top: 96,
+      right: 12,
+      child: Container(
+        width: 180,
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+        decoration: BoxDecoration(
+          color: Colors.white.withOpacity(0.97),
+          borderRadius: BorderRadius.circular(14),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.15),
+              blurRadius: 8,
+              offset: const Offset(0, 3),
+            ),
+          ],
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text(
+              '효과음',
+              style: TextStyle(
+                fontSize: 12,
+                fontWeight: FontWeight.bold,
+                color: Color(0xFF5A4038),
+              ),
+            ),
+            Slider(
+              value: game.sfxVolume,
+              onChanged: (v) => game.setSfxVolume(v),
+              onChangeEnd: (v) => game.setSfxVolume(v, persist: true),
+              min: 0,
+              max: 1,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildSpectatorButton(GameService game) {
+    final count = game.spectators.length;
+    return GestureDetector(
+      onTap: () => _showSpectatorListDialog(game),
+      child: Stack(
+        clipBehavior: Clip.none,
+        children: [
+          Container(
+            padding: const EdgeInsets.all(8),
+            decoration: BoxDecoration(
+              color: Colors.white.withOpacity(0.9),
+              shape: BoxShape.circle,
+              border: Border.all(color: const Color(0xFFE0D8D4)),
+            ),
+            child: const Icon(
+              Icons.people_alt,
+              color: Color(0xFF6A5A52),
+              size: 18,
+            ),
+          ),
+          if (count > 0)
+            Positioned(
+              top: -4,
+              right: -4,
+              child: Container(
+                padding: const EdgeInsets.all(4),
+                decoration: const BoxDecoration(
+                  color: Color(0xFF7E57C2),
+                  shape: BoxShape.circle,
+                ),
+                child: Text(
+                  '$count',
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 10,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+
+  void _showSpectatorListDialog(GameService game) {
+    final spectators = game.spectators;
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: const Row(
+          children: [
+            Icon(Icons.people_alt, color: Color(0xFF5A4038)),
+            SizedBox(width: 8),
+            Text('관전자 목록'),
+          ],
+        ),
+        content: spectators.isEmpty
+            ? const SizedBox(
+                height: 60,
+                child: Center(
+                  child: Text(
+                    '관전자가 없습니다',
+                    style: TextStyle(color: Color(0xFF9A8E8A)),
+                  ),
+                ),
+              )
+            : SizedBox(
+                width: 240,
+                child: ListView.separated(
+                  shrinkWrap: true,
+                  itemCount: spectators.length,
+                  separatorBuilder: (_, __) => const Divider(height: 1),
+                  itemBuilder: (_, i) {
+                    final name = spectators[i]['nickname'] ?? '';
+                    return Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 8),
+                      child: Text(
+                        name,
+                        style: const TextStyle(fontSize: 13, color: Color(0xFF5A4038)),
+                      ),
+                    );
+                  },
+                ),
+              ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('닫기'),
+          ),
+        ],
+      ),
+    );
+  }
+
   Widget _buildChatButton() {
     return GestureDetector(
       onTap: () => setState(() => _chatOpen = !_chatOpen),
@@ -1066,22 +1242,41 @@ class _SpectatorScreenState extends State<SpectatorScreen> {
               ),
             ),
             const SizedBox(height: 6),
-            Row(
-              mainAxisSize: MainAxisSize.min,
-              children: cards.map((cardId) {
-                return Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 1),
-                  child: SizedBox(
-                    width: 40,
-                    height: 60,
-                    child: PlayingCard(
-                      cardId: cardId.toString(),
-                      width: 40,
-                      height: 60,
+            LayoutBuilder(
+              builder: (context, constraints) {
+                final available = constraints.maxWidth.clamp(140.0, 260.0);
+                final count = cards.length;
+                final gap = 2.0;
+                final cardWidth =
+                    ((available - (count - 1) * gap) / count).clamp(24.0, 40.0);
+                final cardHeight = cardWidth * 1.5;
+
+                return SizedBox(
+                  width: available,
+                  height: cardHeight,
+                  child: SingleChildScrollView(
+                    scrollDirection: Axis.horizontal,
+                    physics: const BouncingScrollPhysics(),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: cards.map((cardId) {
+                        return Padding(
+                          padding: EdgeInsets.symmetric(horizontal: gap / 2),
+                          child: SizedBox(
+                            width: cardWidth,
+                            height: cardHeight,
+                            child: PlayingCard(
+                              cardId: cardId.toString(),
+                              width: cardWidth,
+                              height: cardHeight,
+                            ),
+                          ),
+                        );
+                      }).toList(),
                     ),
                   ),
                 );
-              }).toList(),
+              },
             ),
             if (combo.isNotEmpty)
               Padding(

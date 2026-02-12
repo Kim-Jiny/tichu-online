@@ -7,6 +7,7 @@ import '../models/player.dart';
 import '../models/room.dart';
 import '../models/game_state.dart';
 import 'network_service.dart';
+import 'sfx_service.dart';
 
 class GameService extends ChangeNotifier {
   final NetworkService _network;
@@ -17,6 +18,8 @@ class GameService extends ChangeNotifier {
   Timer? _pushToggleTimer;
   DateTime? _dogDelayUntil;
   Map<String, dynamic>? _pendingGameState;
+  GameStateData? _prevGameState;
+  final SfxService _sfx = SfxService();
 
   // Player info
   String playerId = '';
@@ -120,6 +123,7 @@ class GameService extends ChangeNotifier {
   // Push settings
   bool pushEnabled = true;
   bool pushFriendInviteEnabled = true;
+  double sfxVolume = 0.7;
 
   // Nickname change
   String? nicknameChangeResult;
@@ -173,6 +177,7 @@ class GameService extends ChangeNotifier {
       }
     });
     _loadPushPrefs();
+    _loadSfxPrefs();
   }
 
   // Helper: count of non-null players
@@ -325,6 +330,7 @@ class GameService extends ChangeNotifier {
       case 'switched_to_spectator':
         isSpectator = true;
         gameState = null;
+        _prevGameState = null;
         spectatorGameState = null;
         pendingCardViewRequests = {};
         approvedCardViews = {};
@@ -338,6 +344,7 @@ class GameService extends ChangeNotifier {
         spectatorGameState = null;
         pendingCardViewRequests = {};
         approvedCardViews = {};
+        _prevGameState = null;
         notifyListeners();
         break;
 
@@ -419,6 +426,7 @@ class GameService extends ChangeNotifier {
         incomingCardViewRequests = [];
         cardViewers = [];
         chatMessages = [];
+        _prevGameState = null;
         notifyListeners();
         break;
 
@@ -433,6 +441,7 @@ class GameService extends ChangeNotifier {
         roomTurnTimeLimit = 30;
         isSpectator = false; // C10: Clear isSpectator on kick
         gameState = null;
+        _prevGameState = null;
         chatMessages = [];
         if (isDuplicateLogin) {
           playerId = '';
@@ -465,6 +474,7 @@ class GameService extends ChangeNotifier {
         cardViewers = [];
         spectators = [];
         gameState = null;
+        _prevGameState = null;
         chatMessages = [];
         desertedPlayerName = null;
         desertedReason = null;
@@ -505,6 +515,9 @@ class GameService extends ChangeNotifier {
         if (currentRoomId.isEmpty) break; // Already left
         final state = data['state'] as Map<String, dynamic>?;
         if (state != null) {
+          final nextState = GameStateData.fromJson(state);
+          _handleSfxTransitions(_prevGameState, nextState);
+          _prevGameState = nextState;
           // Clear desertion state when a new round/game starts
           final phase = state['phase'] as String? ?? '';
           if (phase != 'game_end') {
@@ -549,16 +562,30 @@ class GameService extends ChangeNotifier {
       // Game events (for potential animations/sounds)
       case 'dog_played':
         _handleDogPlayed(data);
+        _sfx.play('dog');
         notifyListeners();
         break;
       case 'cards_played':
+        _sfx.play('card');
+        final cards = (data['cards'] as List?)?.map((e) => e.toString()).toList() ?? [];
+        if (cards.contains('special_dragon')) _sfx.play('dragon');
+        if (cards.contains('special_dog')) _sfx.play('dog');
+        break;
       case 'bomb_played':
+        _sfx.play('card');
+        break;
       case 'player_passed':
+        break;
       case 'trick_won':
       case 'round_end':
       case 'large_tichu_declared':
+        _sfx.play('large_tichu');
+        break;
       case 'large_tichu_passed':
+        break;
       case 'small_tichu_declared':
+        _sfx.play('small_tichu');
+        break;
       case 'call_rank':
         break;
       case 'dragon_given':
@@ -589,6 +616,9 @@ class GameService extends ChangeNotifier {
         chatMessages.add(msg);
         if (chatMessages.length > 100) {
           chatMessages.removeAt(0);
+        }
+        if ((data['sender'] ?? '') != playerName) {
+          _sfx.play('chat');
         }
         notifyListeners();
         break;
@@ -949,6 +979,57 @@ class GameService extends ChangeNotifier {
     desertedPlayerName = data['playerName'] as String? ?? '';
     desertedReason = data['reason'] as String? ?? 'leave';
     notifyListeners();
+  }
+
+  void _handleSfxTransitions(GameStateData? prev, GameStateData next) {
+    if (prev == null) {
+      if (next.isMyTurn) {
+        _sfx.play('my_turn');
+      }
+      return;
+    }
+
+    if (!prev.isMyTurn && next.isMyTurn) {
+      _sfx.play('my_turn');
+    }
+
+    if (prev.phase != next.phase) {
+      if (next.phase == 'round_end') {
+        _sfx.play('round_end');
+      } else if (next.phase == 'game_end') {
+        final teamA = next.totalScores['teamA'] ?? 0;
+        final teamB = next.totalScores['teamB'] ?? 0;
+        final isWin = next.myTeam == 'A' ? teamA > teamB : teamB > teamA;
+        _sfx.play(isWin ? 'victory' : 'defeat');
+      }
+    }
+  }
+
+  Future<void> _loadSfxPrefs() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final saved = prefs.getDouble('sfx_volume');
+      if (saved != null) {
+        sfxVolume = saved.clamp(0.0, 1.0);
+        await _sfx.setVolume(sfxVolume);
+      }
+    } catch (_) {}
+  }
+
+  Future<void> setSfxVolume(double value, {bool persist = false}) async {
+    sfxVolume = value.clamp(0.0, 1.0);
+    await _sfx.setVolume(sfxVolume);
+    if (persist) {
+      try {
+        final prefs = await SharedPreferences.getInstance();
+        await prefs.setDouble('sfx_volume', sfxVolume);
+      } catch (_) {}
+    }
+    notifyListeners();
+  }
+
+  void playCountdownTick() {
+    _sfx.play('countdown_tick');
   }
 
   void _applyGameStateWithDogDelay(Map<String, dynamic> state) {

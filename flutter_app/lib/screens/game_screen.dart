@@ -33,12 +33,15 @@ class _GameScreenState extends State<GameScreen> {
   // 채팅
   bool _chatOpen = false;
   bool _viewersOpen = false;
+  bool _soundPanelOpen = false;
+  bool _moreOpen = false;
   final TextEditingController _chatController = TextEditingController();
   final ScrollController _chatScrollController = ScrollController();
 
   // 턴 타이머
   Timer? _countdownTimer;
   int _remainingSeconds = 0;
+  int _lastTickSoundSecond = 999;
   bool _wasDisconnected = false;
   bool _birdCallDialogOpen = false;
   bool _leavingGame = false;
@@ -94,6 +97,10 @@ class _GameScreenState extends State<GameScreen> {
     final remaining = ((state.turnDeadline! - now) / 1000).ceil().clamp(0, 999);
     if (remaining != _remainingSeconds) {
       setState(() => _remainingSeconds = remaining);
+      if (remaining <= 3 && remaining > 0 && remaining != _lastTickSoundSecond) {
+        _lastTickSoundSecond = remaining;
+        context.read<GameService>().playCountdownTick();
+      }
     }
   }
 
@@ -324,8 +331,15 @@ class _GameScreenState extends State<GameScreen> {
 
                   // Viewers panel popup
                   if (_viewersOpen)
-                    _buildViewersPanel(game),
+                    _buildViewersPanel(game, topOffset: _moreOpen ? 150 : 66),
 
+                  // Sound panel
+                  if (_soundPanelOpen)
+                    _buildSoundPanel(game),
+
+                  // More menu
+                  if (_moreOpen)
+                    _buildMoreMenu(game),
 
                   // Chat panel
                   if (_chatOpen) _buildChatPanel(game),
@@ -431,6 +445,147 @@ class _GameScreenState extends State<GameScreen> {
               ),
             ),
         ],
+      ),
+    );
+  }
+
+  Widget _buildSoundButton(GameService game) {
+    final hasMuted = game.sfxVolume <= 0.01;
+    return GestureDetector(
+      onTap: () => setState(() => _soundPanelOpen = !_soundPanelOpen),
+      child: Container(
+        padding: const EdgeInsets.all(8),
+        decoration: BoxDecoration(
+          color: _soundPanelOpen
+              ? const Color(0xFF81C784)
+              : Colors.white.withValues(alpha: 0.8),
+          shape: BoxShape.circle,
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.1),
+              blurRadius: 4,
+            ),
+          ],
+        ),
+        child: Icon(
+          hasMuted ? Icons.volume_off : Icons.volume_up,
+          color: _soundPanelOpen ? Colors.white : const Color(0xFF5A4038),
+          size: 20,
+        ),
+      ),
+    );
+  }
+
+  Widget _buildMoreButton(GameService game) {
+    return GestureDetector(
+      onTap: () => setState(() {
+        _moreOpen = !_moreOpen;
+        if (!_moreOpen) return;
+        _soundPanelOpen = false;
+        _viewersOpen = false;
+      }),
+      child: Container(
+        padding: const EdgeInsets.all(8),
+        decoration: BoxDecoration(
+          color: _moreOpen
+              ? const Color(0xFF81C784)
+              : Colors.white.withValues(alpha: 0.8),
+          shape: BoxShape.circle,
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.1),
+              blurRadius: 4,
+            ),
+          ],
+        ),
+        child: Icon(
+          Icons.more_horiz,
+          color: _moreOpen ? Colors.white : const Color(0xFF5A4038),
+          size: 20,
+        ),
+      ),
+    );
+  }
+
+  Widget _buildMoreMenu(GameService game) {
+    final hasViewers = game.cardViewers.isNotEmpty;
+    return Positioned(
+      top: 56,
+      right: 10,
+      child: AnimatedOpacity(
+        opacity: _moreOpen ? 1 : 0,
+        duration: const Duration(milliseconds: 160),
+        child: AnimatedScale(
+          scale: _moreOpen ? 1 : 0.95,
+          duration: const Duration(milliseconds: 160),
+          child: Container(
+            width: hasViewers ? 230 : 190,
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+            decoration: BoxDecoration(
+              color: Colors.white.withValues(alpha: 0.97),
+              borderRadius: BorderRadius.circular(14),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: 0.15),
+                  blurRadius: 8,
+                  offset: const Offset(0, 3),
+                ),
+              ],
+            ),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                _buildSpectatorButton(game),
+                if (hasViewers) _buildViewersButton(game),
+                _buildSoundButton(game),
+                _buildMenuButton(game),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildSoundPanel(GameService game) {
+    return Positioned(
+      top: _moreOpen ? 108 : 56,
+      right: 10,
+      child: Container(
+        width: 180,
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+        decoration: BoxDecoration(
+          color: Colors.white.withValues(alpha: 0.97),
+          borderRadius: BorderRadius.circular(14),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.15),
+              blurRadius: 8,
+              offset: const Offset(0, 3),
+            ),
+          ],
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text(
+              '효과음',
+              style: TextStyle(
+                fontSize: 12,
+                fontWeight: FontWeight.bold,
+                color: Color(0xFF5A4038),
+              ),
+            ),
+            Slider(
+              value: game.sfxVolume,
+              onChanged: (v) => game.setSfxVolume(v),
+              onChangeEnd: (v) => game.setSfxVolume(v, persist: true),
+              min: 0,
+              max: 1,
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -1791,8 +1946,10 @@ class _GameScreenState extends State<GameScreen> {
 
   Widget _buildSpectatorButton(GameService game) {
     final count = game.spectators.length;
+    final hasViewers = game.cardViewers.isNotEmpty;
     return GestureDetector(
       onTap: () => _showSpectatorListDialog(game),
+      onLongPress: hasViewers ? () => setState(() => _viewersOpen = !_viewersOpen) : null,
       child: Stack(
         clipBehavior: Clip.none,
         children: [
@@ -1814,6 +1971,23 @@ class _GameScreenState extends State<GameScreen> {
               size: 20,
             ),
           ),
+          if (hasViewers)
+            Positioned(
+              bottom: -4,
+              right: -4,
+              child: Container(
+                padding: const EdgeInsets.all(3),
+                decoration: const BoxDecoration(
+                  color: Color(0xFF81C784),
+                  shape: BoxShape.circle,
+                ),
+                child: const Icon(
+                  Icons.visibility,
+                  size: 10,
+                  color: Colors.white,
+                ),
+              ),
+            ),
           if (count > 0)
             Positioned(
               top: -4,
@@ -1960,9 +2134,9 @@ class _GameScreenState extends State<GameScreen> {
     );
   }
 
-  Widget _buildViewersPanel(GameService game) {
+  Widget _buildViewersPanel(GameService game, {double topOffset = 48}) {
     return Positioned(
-      top: 48,
+      top: topOffset,
       right: 8,
       child: Container(
         width: 200,
@@ -2292,15 +2466,9 @@ class _GameScreenState extends State<GameScreen> {
             child: Row(
               mainAxisSize: MainAxisSize.min,
               children: [
-                _buildSpectatorButton(game),
-                const SizedBox(width: 6),
-                if (game.cardViewers.isNotEmpty) ...[
-                  _buildViewersButton(game),
-                  const SizedBox(width: 6),
-                ],
                 _buildChatButton(game),
                 const SizedBox(width: 6),
-                _buildMenuButton(game),
+                _buildMoreButton(game),
               ],
             ),
           ),

@@ -207,7 +207,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
   void _showInquiryHistoryDialog() {
     final game = context.read<GameService>();
     game.markInquiriesRead();
-    game.requestInquiries();
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(

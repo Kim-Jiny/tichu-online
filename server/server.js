@@ -2313,6 +2313,8 @@ async function handleGetInquiries(ws) {
 async function handleMarkInquiriesRead(ws) {
   if (!ws.nickname) return;
   await markInquiriesRead(ws.nickname);
+  const result = await getUserInquiries(ws.nickname);
+  sendTo(ws, { type: 'inquiries_result', ...result });
 }
 
 // Add friend handler

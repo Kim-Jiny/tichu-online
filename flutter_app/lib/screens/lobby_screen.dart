@@ -505,7 +505,7 @@ class _LobbyScreenState extends State<LobbyScreen> {
 
   void _showInquiryHistoryDialog() {
     final game = context.read<GameService>();
-    game.requestInquiries();
+    game.markInquiriesRead();
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(

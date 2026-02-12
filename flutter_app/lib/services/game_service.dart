@@ -1517,13 +1517,17 @@ class GameService extends ChangeNotifier {
   }
 
   void markInquiriesRead() {
+    inquiriesLoading = true;
+    inquiriesError = null;
+    notifyListeners();
     _network.send({'type': 'mark_inquiries_read'});
-    // Update local state so banner doesn't reappear
+    // Also update local state immediately so banner disappears
     for (final item in inquiries) {
       if (item['status'] == 'resolved') {
         item['user_read'] = true;
       }
     }
+    inquiryBannerMessage = null;
   }
 
   @override

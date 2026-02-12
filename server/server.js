@@ -775,6 +775,9 @@ async function handleSocialLink(ws, data) {
     }
 
     const result = await linkSocial(ws.userId, provider, verified.uid, verified.email);
+    if (result.success && result.provider) {
+      ws.authProvider = result.provider;
+    }
     sendTo(ws, { type: 'social_link_result', success: result.success, message: result.message, provider: result.provider });
   } catch (err) {
     console.error('Social link error:', err);
@@ -790,6 +793,9 @@ async function handleSocialUnlink(ws) {
 
   try {
     const result = await unlinkSocial(ws.userId);
+    if (result.success) {
+      ws.authProvider = 'local';
+    }
     sendTo(ws, { type: 'social_unlink_result', success: result.success, message: result.message });
   } catch (err) {
     console.error('Social unlink error:', err);
@@ -822,6 +828,7 @@ async function handleReconnection(ws) {
 
   const socialInfo = await getLinkedSocial(ws.userId);
   const authProvider = socialInfo?.provider || 'local';
+  ws.authProvider = authProvider;
 
   // Check for reconnection to a game
   const session = playerSessions.get(ws.nickname);
@@ -925,6 +932,10 @@ function handleCreateRoom(ws, data) {
   }
   const roomName = (data.roomName || `${ws.nickname}'s Room`).trim();
   const isRanked = !!data.isRanked;
+  if (isRanked && ws.authProvider === 'local') {
+    sendTo(ws, { type: 'error', message: '랭크전은 소셜 연동이 필요합니다' });
+    return;
+  }
   const password = isRanked
     ? ''
     : (typeof data.password === 'string' ? data.password.trim() : '');
@@ -960,6 +971,10 @@ async function handleJoinRoom(ws, data) {
   const room = lobby.getRoom(data.roomId);
   if (!room) {
     sendTo(ws, { type: 'error', message: '방을 찾을 수 없습니다' });
+    return;
+  }
+  if (room.isRanked && ws.authProvider === 'local') {
+    sendTo(ws, { type: 'error', message: '랭크전은 소셜 연동이 필요합니다' });
     return;
   }
   // Ranked ban check
@@ -1467,6 +1482,10 @@ function handleSwitchToPlayer(ws, data) {
   }
   const room = lobby.getRoom(ws.roomId);
   if (!room) { sendTo(ws, { type: 'room_closed' }); ws.roomId = null; return; }
+  if (room.isRanked && ws.authProvider === 'local') {
+    sendTo(ws, { type: 'error', message: '랭크전은 소셜 연동이 필요합니다' });
+    return;
+  }
   const targetSlot = data.targetSlot;
   if (typeof targetSlot !== 'number') {
     sendTo(ws, { type: 'error', message: '잘못된 슬롯입니다' });

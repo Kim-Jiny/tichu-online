@@ -1277,6 +1277,7 @@ class _LobbyScreenState extends State<LobbyScreen> {
                       style: TextStyle(fontSize: 11, color: Color(0xFF9A8E8A)),
                     ),
                   ),
+                if (context.read<GameService>().authProvider != 'local') ...[
                 const SizedBox(height: 6),
                 Row(
                   children: [
@@ -1301,6 +1302,7 @@ class _LobbyScreenState extends State<LobbyScreen> {
                     style: TextStyle(fontSize: 11, color: Color(0xFF9A8E8A)),
                   ),
                 ),
+                ],
                 const SizedBox(height: 8),
                 Row(
                   children: [
@@ -2220,6 +2222,10 @@ class _LobbyScreenState extends State<LobbyScreen> {
             context.read<GameService>().spectateRoom(room.id);
             return;
           }
+          if (room.isRanked && context.read<GameService>().authProvider == 'local') {
+            _showRankedSocialRequiredDialog();
+            return;
+          }
           if (room.isPrivate) {
             _showJoinPrivateRoomDialog(room);
             return;
@@ -2323,6 +2329,32 @@ class _LobbyScreenState extends State<LobbyScreen> {
             ],
           ),
         ),
+      ),
+    );
+  }
+
+  void _showRankedSocialRequiredDialog() {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: const Row(
+          children: [
+            Icon(Icons.lock, color: Color(0xFFF2A65A), size: 22),
+            SizedBox(width: 8),
+            Text('소셜 연동 필요', style: TextStyle(fontSize: 16)),
+          ],
+        ),
+        content: const Text(
+          '랭크전은 소셜 계정 연동이 필요합니다.\n설정 > 소셜 연동에서 Google 또는 Kakao 계정을 연동해주세요.',
+          style: TextStyle(fontSize: 14, color: Color(0xFF5A4038)),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('확인'),
+          ),
+        ],
       ),
     );
   }
@@ -4068,8 +4100,8 @@ class _LobbyScreenState extends State<LobbyScreen> {
                 ],
               ),
             ),
-            // Add bot button on empty slots (host only)
-            if (isEmpty && game.isHost)
+            // Add bot button on empty slots (host only, not ranked)
+            if (isEmpty && game.isHost && !game.isRankedRoom)
               GestureDetector(
                 onTap: () => game.addBot(targetSlot: slotIndex),
                 child: Container(

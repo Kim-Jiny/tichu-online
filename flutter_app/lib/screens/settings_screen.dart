@@ -693,7 +693,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                                     ? '${game.authProvider.toUpperCase()} 연동됨'
                                     : (game.linkedSocialProvider != null && game.linkedSocialProvider != 'local')
                                         ? '${game.linkedSocialProvider!.toUpperCase()} 연동됨'
-                                        : '연동된 계정 없음',
+                                        : '연동된 계정 없음 (랭크전 이용 불가)',
                                 trailing: game.authProvider == 'local' &&
                                         (game.linkedSocialProvider == null || game.linkedSocialProvider == 'local')
                                     ? TextButton(

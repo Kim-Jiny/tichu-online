@@ -1,0 +1,54 @@
+{
+  "project_info": {
+    "project_number": "503039725107",
+    "project_id": "tichu-online-95",
+    "storage_bucket": "tichu-online-95.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:503039725107:android:563e774d177ee992571d46",
+        "android_client_info": {
+          "package_name": "com.jiny.tichuOnline"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "503039725107-r8bsepe4vji4brl4gm5sqq2u92i7jje1.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.jiny.tichuOnline",
+            "certificate_hash": "92c790774fb6743a6d5b1721992bb4f57c790c01"
+          }
+        },
+        {
+          "client_id": "503039725107-9r14psilpt3vv5pveslb78a9u7cdco74.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyB76qN7hKNCbVfZfdmqtQN5ZH6vwwWlQGg"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "503039725107-9r14psilpt3vv5pveslb78a9u7cdco74.apps.googleusercontent.com",
+              "client_type": 3
+            },
+            {
+              "client_id": "503039725107-tqgloi94e5dnkp18tc2lue5a3u87d7kl.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "com.jiny.tichuOnline"
+              }
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

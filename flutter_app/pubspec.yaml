@@ -37,6 +37,15 @@ dependencies:
   web_socket_channel: ^3.0.3
   provider: ^6.1.5+1
   shared_preferences: ^2.3.5
+  firebase_core: ^3.12.1
+  firebase_auth: ^5.5.1
+  google_sign_in: ^6.2.2
+  sign_in_with_apple: ^6.1.4
+  kakao_flutter_sdk_user: ^1.9.7
+  crypto: ^3.0.6
+  firebase_messaging: ^15.2.4
+  device_info_plus: ^11.3.3
+  package_info_plus: ^8.3.0
 
 dev_dependencies:
   flutter_test:

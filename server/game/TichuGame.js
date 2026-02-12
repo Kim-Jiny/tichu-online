@@ -1,6 +1,6 @@
 const { createDeck, deal, getCardValue, sortCards } = require('./Deck');
 const { getComboType, canBeat, isBomb, arrangeCardsWithPhoenix, COMBO } = require('./CardValidator');
-const { calculateRoundScores, calculateTrickPoints } = require('./ScoreCalculator');
+const { calculateRoundScores, calculateTrickPoints, getCardPoints } = require('./ScoreCalculator');
 
 const STATE = {
   WAITING: 'waiting',
@@ -792,12 +792,52 @@ class TichuGame {
   endRound() {
     this.state = STATE.ROUND_END;
 
+    // Flush any in-progress trick to the last player who played
+    if (this.currentTrick.length > 0) {
+      const allTrickCards = [];
+      for (const play of this.currentTrick) {
+        allTrickCards.push(...play.cards);
+      }
+      const lastPlay = this.currentTrick[this.currentTrick.length - 1];
+      const winner = lastPlay.playerId;
+      this.trickPiles[winner].push(...allTrickCards);
+      this.currentTrick = [];
+    }
+
+    // Flush pending dragon trick
+    if (this.dragonPending && this.pendingTrickCards) {
+      const decider = this.dragonDecider;
+      const deciderTeam = this.teams.teamA.includes(decider) ? 'teamA' : 'teamB';
+      const opponents = deciderTeam === 'teamA' ? this.teams.teamB : this.teams.teamA;
+      // Give to first available opponent (prefer the one not yet finished)
+      const target = opponents.find(p => !this.finishOrder.includes(p)) || opponents[0];
+      this.trickPiles[target].push(...this.pendingTrickCards);
+      this.dragonPending = false;
+      this.pendingTrickCards = null;
+    }
+
     // Add remaining active player to finish order
     for (const pid of this.playerIds) {
       if (!this.finishOrder.includes(pid)) {
         this.finishOrder.push(pid);
       }
     }
+
+    // DEBUG: Score audit
+    const allTrickCards = [];
+    for (const [pid, cards] of Object.entries(this.trickPiles)) {
+      const pts = cards.reduce((s, c) => s + getCardPoints(c), 0);
+      console.log(`[SCORE DEBUG] trickPile ${pid}: ${cards.length} cards, ${pts} pts`);
+      allTrickCards.push(...cards);
+    }
+    for (const [pid, cards] of Object.entries(this.hands)) {
+      if (cards.length > 0) {
+        const pts = cards.reduce((s, c) => s + getCardPoints(c), 0);
+        console.log(`[SCORE DEBUG] remaining hand ${pid}: ${cards.length} cards, ${pts} pts - [${cards.join(', ')}]`);
+      }
+    }
+    console.log(`[SCORE DEBUG] total tracked cards: ${allTrickCards.length + Object.values(this.hands).reduce((s, h) => s + h.length, 0)} / 56`);
+    console.log(`[SCORE DEBUG] finishOrder: ${JSON.stringify(this.finishOrder)}`);
 
     const roundScores = calculateRoundScores({
       finishOrder: this.finishOrder,
@@ -807,6 +847,8 @@ class TichuGame {
       largeTichuDeclarations: this.largeTichuDeclarations,
       playerCards: this.hands,
     });
+
+    console.log(`[SCORE DEBUG] result: teamA=${roundScores.teamA}, teamB=${roundScores.teamB}, sum=${roundScores.teamA + roundScores.teamB}`);
 
     this.totalScores.teamA += roundScores.teamA;
     this.totalScores.teamB += roundScores.teamB;

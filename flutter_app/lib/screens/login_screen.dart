@@ -1,9 +1,12 @@
 import 'dart:async';
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../services/network_service.dart';
 import '../services/game_service.dart';
+import '../services/auth_service.dart';
+import '../services/device_info_service.dart';
 import 'lobby_screen.dart';
 
 class LoginScreen extends StatefulWidget {
@@ -14,6 +17,7 @@ class LoginScreen extends StatefulWidget {
     final prefs = await SharedPreferences.getInstance();
     await prefs.remove('saved_username');
     await prefs.remove('saved_password');
+    await AuthService.clearAuthInfo();
   }
 
   @override
@@ -26,8 +30,12 @@ class _LoginScreenState extends State<LoginScreen> {
 
   bool _isConnecting = false;
   bool _showRegister = false;
+  bool _showSocialNickname = false;
   bool _autoLoginAttempted = false;
   String? _error;
+  String? _socialProvider;
+  String? _socialToken;
+  Map<String, String?>? _deviceInfo;
 
   @override
   void initState() {
@@ -46,6 +54,23 @@ class _LoginScreenState extends State<LoginScreen> {
     if (_autoLoginAttempted) return;
     _autoLoginAttempted = true;
 
+    // Try social auto-login first
+    final savedProvider = await AuthService.getSavedProvider();
+    if (savedProvider != null) {
+      final token = await AuthService.refreshToken(savedProvider);
+      if (token != null) {
+        _socialProvider = savedProvider;
+        _socialToken = token;
+        await Future.delayed(const Duration(milliseconds: 100));
+        if (mounted) {
+          _socialLogin(savedProvider, token);
+        }
+        return;
+      }
+      // Token refresh failed - clear and fall through to credential login
+      await AuthService.clearAuthInfo();
+    }
+
     final prefs = await SharedPreferences.getInstance();
     final savedUsername = prefs.getString('saved_username');
     final savedPassword = prefs.getString('saved_password');
@@ -53,7 +78,6 @@ class _LoginScreenState extends State<LoginScreen> {
     if (savedUsername != null && savedPassword != null && savedUsername.isNotEmpty) {
       _usernameController.text = savedUsername;
       _passwordController.text = savedPassword;
-      // Auto login
       await Future.delayed(const Duration(milliseconds: 100));
       if (mounted) {
         _login();
@@ -86,13 +110,17 @@ class _LoginScreenState extends State<LoginScreen> {
     });
 
     try {
+      if (_deviceInfo == null || _deviceInfo!['fcmToken'] == null) {
+        _deviceInfo = await DeviceInfoService.collectDeviceInfo();
+      }
+
       final network = context.read<NetworkService>();
       await network.connect(NetworkService.defaultUrl);
 
       if (!mounted) return;
 
       final game = context.read<GameService>();
-      game.loginWithCredentials(username, password);
+      game.loginWithCredentials(username, password, deviceInfo: _deviceInfo);
 
       await _waitForLoginResult(game);
 
@@ -102,6 +130,161 @@ class _LoginScreenState extends State<LoginScreen> {
         // Save credentials for auto-login
         await _saveCredentials(username, password);
 
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(builder: (_) => const LobbyScreen()),
+        );
+      }
+    } catch (e) {
+      setState(() {
+        _error = '$e';
+        _isConnecting = false;
+      });
+    }
+  }
+
+  Future<void> _handleSocialSignIn(String providerName) async {
+    setState(() {
+      _isConnecting = true;
+      _error = null;
+    });
+
+    try {
+      SocialAuthResult result;
+      switch (providerName) {
+        case 'google':
+          result = await AuthService.signInWithGoogle();
+          break;
+        case 'apple':
+          result = await AuthService.signInWithApple();
+          break;
+        case 'kakao':
+          result = await AuthService.signInWithKakao();
+          break;
+        default:
+          throw Exception('Unknown provider: $providerName');
+      }
+
+      if (result.cancelled) {
+        setState(() => _isConnecting = false);
+        return;
+      }
+
+      if (!mounted) return;
+
+      _socialProvider = result.provider;
+      _socialToken = result.token;
+      await _socialLogin(result.provider, result.token);
+    } catch (e) {
+      setState(() {
+        _error = '소셜 로그인 실패: $e';
+        _isConnecting = false;
+      });
+    }
+  }
+
+  Future<void> _socialLogin(String provider, String token) async {
+    setState(() {
+      _isConnecting = true;
+      _error = null;
+    });
+
+    try {
+      if (_deviceInfo == null || _deviceInfo!['fcmToken'] == null) {
+        _deviceInfo = await DeviceInfoService.collectDeviceInfo();
+      }
+
+      final network = context.read<NetworkService>();
+      await network.connect(NetworkService.defaultUrl);
+
+      if (!mounted) return;
+
+      final game = context.read<GameService>();
+      game.loginSocial(provider, token, deviceInfo: _deviceInfo);
+
+      await _waitForSocialResult(game);
+
+      if (!mounted) return;
+
+      if (game.playerId.isNotEmpty) {
+        await AuthService.saveAuthInfo(provider);
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(builder: (_) => const LobbyScreen()),
+        );
+      } else if (game.needNickname) {
+        setState(() {
+          _isConnecting = false;
+          _showSocialNickname = true;
+        });
+      }
+    } catch (e) {
+      setState(() {
+        _error = '$e';
+        _isConnecting = false;
+      });
+    }
+  }
+
+  Future<void> _waitForSocialResult(GameService game) async {
+    final completer = Completer<void>();
+
+    void listener() {
+      if (game.playerId.isNotEmpty) {
+        if (!completer.isCompleted) completer.complete();
+      } else if (game.needNickname) {
+        if (!completer.isCompleted) completer.complete();
+      } else if (game.loginError != null) {
+        if (!completer.isCompleted) completer.completeError(game.loginError!);
+      }
+    }
+
+    game.addListener(listener);
+    try {
+      await completer.future.timeout(const Duration(seconds: 15));
+    } on TimeoutException {
+      setState(() {
+        _error = '서버 응답 시간 초과';
+        _isConnecting = false;
+      });
+    } catch (e) {
+      setState(() {
+        _error = e.toString();
+        _isConnecting = false;
+      });
+    } finally {
+      game.removeListener(listener);
+    }
+  }
+
+  Future<void> _onSocialNicknameSubmitted(String nickname) async {
+    if (_socialProvider == null || _socialToken == null) return;
+
+    setState(() {
+      _isConnecting = true;
+      _showSocialNickname = false;
+    });
+
+    try {
+      if (_deviceInfo == null || _deviceInfo!['fcmToken'] == null) {
+        _deviceInfo = await DeviceInfoService.collectDeviceInfo();
+      }
+
+      final game = context.read<GameService>();
+      game.registerSocial(
+        _socialProvider!,
+        _socialToken!,
+        nickname,
+        existingUser: game.socialExistingUser,
+        deviceInfo: _deviceInfo,
+      );
+
+      await _waitForLoginResult(game);
+
+      if (!mounted) return;
+
+      if (game.playerId.isNotEmpty) {
+        await AuthService.saveAuthInfo(_socialProvider!);
         Navigator.pushReplacement(
           context,
           MaterialPageRoute(builder: (_) => const LobbyScreen()),
@@ -293,6 +476,51 @@ class _LoginScreenState extends State<LoginScreen> {
                           ],
                         ),
                       ),
+                      const SizedBox(height: 24),
+                      // Social login divider
+                      Row(
+                        children: [
+                          Expanded(child: Divider(color: const Color(0xFFD9CCC8).withValues(alpha: 0.5))),
+                          const Padding(
+                            padding: EdgeInsets.symmetric(horizontal: 12),
+                            child: Text(
+                              '간편 로그인',
+                              style: TextStyle(color: Color(0xFFAA9A92), fontSize: 13),
+                            ),
+                          ),
+                          Expanded(child: Divider(color: const Color(0xFFD9CCC8).withValues(alpha: 0.5))),
+                        ],
+                      ),
+                      const SizedBox(height: 16),
+                      // Social login buttons
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          // Google
+                          _buildSocialButton(
+                            onTap: () => _handleSocialSignIn('google'),
+                            backgroundColor: Colors.white,
+                            borderColor: const Color(0xFFDADADA),
+                            child: const Text('G', style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: Color(0xFF4285F4))),
+                          ),
+                          const SizedBox(width: 16),
+                          // Apple (iOS only)
+                          if (Platform.isIOS) ...[
+                            _buildSocialButton(
+                              onTap: () => _handleSocialSignIn('apple'),
+                              backgroundColor: Colors.black,
+                              child: const Icon(Icons.apple, color: Colors.white, size: 28),
+                            ),
+                            const SizedBox(width: 16),
+                          ],
+                          // Kakao
+                          _buildSocialButton(
+                            onTap: () => _handleSocialSignIn('kakao'),
+                            backgroundColor: const Color(0xFFFEE500),
+                            child: const Text('K', style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: Color(0xFF3C1E1E))),
+                          ),
+                        ],
+                      ),
                     ],
                   ),
                 ),
@@ -315,6 +543,7 @@ class _LoginScreenState extends State<LoginScreen> {
           ),
           if (_isConnecting) _buildConnectingOverlay(),
           if (_showRegister) _buildRegisterDialog(),
+          if (_showSocialNickname) _buildSocialNicknameDialog(),
         ],
       ),
     ),
@@ -344,6 +573,43 @@ class _LoginScreenState extends State<LoginScreen> {
         ),
         contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
       ),
+    );
+  }
+
+  Widget _buildSocialButton({
+    required VoidCallback onTap,
+    required Color backgroundColor,
+    Color? borderColor,
+    required Widget child,
+  }) {
+    return GestureDetector(
+      onTap: _isConnecting ? null : onTap,
+      child: Container(
+        width: 56,
+        height: 56,
+        decoration: BoxDecoration(
+          color: backgroundColor,
+          borderRadius: BorderRadius.circular(16),
+          border: borderColor != null ? Border.all(color: borderColor) : null,
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.1),
+              blurRadius: 8,
+              offset: const Offset(0, 2),
+            ),
+          ],
+        ),
+        child: Center(child: child),
+      ),
+    );
+  }
+
+  Widget _buildSocialNicknameDialog() {
+    return SocialNicknameDialog(
+      onSubmit: _onSocialNicknameSubmitted,
+      onClose: () {
+        setState(() => _showSocialNickname = false);
+      },
     );
   }
 
@@ -748,6 +1014,223 @@ class _RegisterDialogState extends State<RegisterDialog> {
           ),
         ],
       ],
+    );
+  }
+}
+
+class SocialNicknameDialog extends StatefulWidget {
+  final Future<void> Function(String nickname) onSubmit;
+  final VoidCallback onClose;
+
+  const SocialNicknameDialog({
+    super.key,
+    required this.onSubmit,
+    required this.onClose,
+  });
+
+  @override
+  State<SocialNicknameDialog> createState() => _SocialNicknameDialogState();
+}
+
+class _SocialNicknameDialogState extends State<SocialNicknameDialog> {
+  final _nicknameController = TextEditingController();
+  bool _isLoading = false;
+  String? _error;
+  String? _nicknameStatus;
+  bool _nicknameChecked = false;
+  bool _nicknameAvailable = false;
+  Timer? _nicknameDebounce;
+
+  @override
+  void dispose() {
+    _nicknameController.dispose();
+    _nicknameDebounce?.cancel();
+    super.dispose();
+  }
+
+  void _onNicknameChanged(String value) {
+    _nicknameDebounce?.cancel();
+    setState(() {
+      _nicknameChecked = false;
+      _nicknameAvailable = false;
+      _nicknameStatus = null;
+    });
+
+    if (value.trim().isEmpty) return;
+
+    _nicknameDebounce = Timer(const Duration(milliseconds: 500), () {
+      _checkNickname();
+    });
+  }
+
+  Future<void> _checkNickname() async {
+    final nickname = _nicknameController.text.trim();
+    if (nickname.isEmpty) return;
+
+    final game = context.read<GameService>();
+    game.checkNickname(nickname);
+
+    await Future.delayed(const Duration(milliseconds: 100));
+    for (int i = 0; i < 30; i++) {
+      if (game.nicknameCheckMessage != null) {
+        setState(() {
+          _nicknameChecked = true;
+          _nicknameAvailable = game.nicknameAvailable ?? false;
+          _nicknameStatus = game.nicknameCheckMessage;
+        });
+        return;
+      }
+      await Future.delayed(const Duration(milliseconds: 100));
+    }
+  }
+
+  Future<void> _submit() async {
+    final nickname = _nicknameController.text.trim();
+    if (nickname.isEmpty) {
+      setState(() => _error = '닉네임을 입력해주세요');
+      return;
+    }
+    if (!_nicknameChecked || !_nicknameAvailable) {
+      setState(() => _error = '닉네임 중복확인을 해주세요');
+      return;
+    }
+
+    setState(() {
+      _isLoading = true;
+      _error = null;
+    });
+
+    await widget.onSubmit(nickname);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: () => FocusScope.of(context).unfocus(),
+      child: Container(
+        color: Colors.black54,
+        child: Center(
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.all(24),
+            child: Container(
+              padding: const EdgeInsets.all(24),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(24),
+              ),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      const Text(
+                        '닉네임 설정',
+                        style: TextStyle(
+                          fontSize: 24,
+                          fontWeight: FontWeight.bold,
+                          color: Color(0xFF5A4038),
+                        ),
+                      ),
+                      IconButton(
+                        onPressed: widget.onClose,
+                        icon: const Icon(Icons.close),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 8),
+                  const Text(
+                    '게임에서 사용할 닉네임을 설정해주세요',
+                    style: TextStyle(color: Color(0xFF8A7A72), fontSize: 14),
+                  ),
+                  const SizedBox(height: 24),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: TextField(
+                          controller: _nicknameController,
+                          onChanged: _onNicknameChanged,
+                          decoration: InputDecoration(
+                            hintText: '닉네임',
+                            hintStyle: const TextStyle(color: Color(0xFFAA9A92), fontSize: 14),
+                            prefixIcon: const Icon(Icons.badge_outlined, color: Color(0xFFAA9A92)),
+                            filled: true,
+                            fillColor: const Color(0xFFF8F4F2),
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(12),
+                              borderSide: BorderSide.none,
+                            ),
+                            contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      if (_nicknameChecked)
+                        Icon(
+                          _nicknameAvailable ? Icons.check_circle : Icons.cancel,
+                          color: _nicknameAvailable ? Colors.green : Colors.red,
+                          size: 28,
+                        ),
+                    ],
+                  ),
+                  if (_nicknameStatus != null) ...[
+                    const SizedBox(height: 4),
+                    Align(
+                      alignment: Alignment.centerLeft,
+                      child: Text(
+                        _nicknameStatus!,
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: _nicknameAvailable ? Colors.green : Colors.red,
+                        ),
+                      ),
+                    ),
+                  ],
+                  const SizedBox(height: 24),
+                  SizedBox(
+                    width: double.infinity,
+                    height: 56,
+                    child: ElevatedButton(
+                      onPressed: _isLoading ? null : _submit,
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: const Color(0xFFF28C26),
+                        foregroundColor: Colors.white,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(16),
+                        ),
+                      ),
+                      child: _isLoading
+                          ? const SizedBox(
+                              width: 24,
+                              height: 24,
+                              child: CircularProgressIndicator(
+                                color: Colors.white,
+                                strokeWidth: 2,
+                              ),
+                            )
+                          : const Text(
+                              '시작하기',
+                              style: TextStyle(
+                                fontSize: 18,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                    ),
+                  ),
+                  if (_error != null) ...[
+                    const SizedBox(height: 16),
+                    Text(
+                      _error!,
+                      style: const TextStyle(color: Colors.red, fontSize: 14),
+                      textAlign: TextAlign.center,
+                    ),
+                  ],
+                ],
+              ),
+            ),
+          ),
+        ),
+      ),
     );
   }
 }

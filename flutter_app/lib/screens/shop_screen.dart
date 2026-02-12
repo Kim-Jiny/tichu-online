@@ -10,6 +10,8 @@ class ShopScreen extends StatefulWidget {
 }
 
 class _ShopScreenState extends State<ShopScreen> {
+  final _inventoryTabController = ValueNotifier<int>(0);
+
   @override
   void initState() {
     super.initState();
@@ -20,6 +22,12 @@ class _ShopScreenState extends State<ShopScreen> {
       game.requestShopItems();
       game.requestInventory();
     });
+  }
+
+  @override
+  void dispose() {
+    _inventoryTabController.dispose();
+    super.dispose();
   }
 
   @override
@@ -402,24 +410,35 @@ class _ShopScreenState extends State<ShopScreen> {
 
     return DefaultTabController(
       length: 5,
-      child: Column(
-        children: [
-          const SizedBox(height: 8),
-          _buildCategoryTabs(
-            const ['배너', '칭호', '테마', '유틸', '시즌'],
-          ),
-          Expanded(
-            child: TabBarView(
-              children: [
-                _buildInventoryList(_filterInventory(game.inventoryItems, 'banner')),
-                _buildInventoryList(_filterInventory(game.inventoryItems, 'title')),
-                _buildInventoryList(_filterInventory(game.inventoryItems, 'theme')),
-                _buildInventoryList(_filterInventory(game.inventoryItems, 'utility')),
-                _buildInventoryList(_filterInventory(game.inventoryItems, 'season')),
-              ],
-            ),
-          ),
-        ],
+      initialIndex: _inventoryTabController.value,
+      child: Builder(
+        builder: (context) {
+          final tabController = DefaultTabController.of(context);
+          tabController.addListener(() {
+            if (!tabController.indexIsChanging) {
+              _inventoryTabController.value = tabController.index;
+            }
+          });
+          return Column(
+            children: [
+              const SizedBox(height: 8),
+              _buildCategoryTabs(
+                const ['배너', '칭호', '테마', '유틸', '시즌'],
+              ),
+              Expanded(
+                child: TabBarView(
+                  children: [
+                    _buildInventoryList(_filterInventory(game.inventoryItems, 'banner')),
+                    _buildInventoryList(_filterInventory(game.inventoryItems, 'title')),
+                    _buildInventoryList(_filterInventory(game.inventoryItems, 'theme')),
+                    _buildInventoryList(_filterInventory(game.inventoryItems, 'utility')),
+                    _buildInventoryList(_filterInventory(game.inventoryItems, 'season')),
+                  ],
+                ),
+              ),
+            ],
+          );
+        },
       ),
     );
   }

@@ -1,8 +1,10 @@
 import 'dart:async';
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../services/game_service.dart';
 import '../services/network_service.dart';
+import '../services/auth_service.dart';
 import '../models/player.dart';
 import '../models/room.dart';
 import 'game_screen.dart';
@@ -10,6 +12,7 @@ import 'ranking_screen.dart';
 import 'shop_screen.dart';
 import 'spectator_screen.dart';
 import 'login_screen.dart';
+import 'settings_screen.dart';
 import '../widgets/connection_overlay.dart';
 
 class LobbyScreen extends StatefulWidget {
@@ -767,6 +770,28 @@ class _LobbyScreenState extends State<LobbyScreen> {
                 ),
               ),
             ),
+            if (context.read<GameService>().authProvider == 'local') ...[
+              const SizedBox(height: 10),
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton.icon(
+                  onPressed: () {
+                    Navigator.pop(ctx);
+                    _showSocialLinkDialog();
+                  },
+                  icon: const Icon(Icons.link),
+                  label: const Text('소셜 연동'),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFFFFF3E0),
+                    foregroundColor: const Color(0xFFF57C00),
+                    padding: const EdgeInsets.symmetric(vertical: 12),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                  ),
+                ),
+              ),
+            ],
             const SizedBox(height: 12),
             SizedBox(
               width: double.infinity,
@@ -824,12 +849,254 @@ class _LobbyScreenState extends State<LobbyScreen> {
     final game = context.read<GameService>();
     network.disconnect();
     game.reset();
-    // Clear saved credentials
+    // Clear saved credentials and social auth
     await LoginScreen.clearSavedCredentials();
+    await AuthService.signOut();
     if (!mounted) return;
     Navigator.pushReplacement(
       context,
       MaterialPageRoute(builder: (_) => const LoginScreen()),
+    );
+  }
+
+  void _showSocialLinkDialog() {
+    final game = context.read<GameService>();
+    game.getLinkedSocial();
+
+    showDialog(
+      context: context,
+      builder: (ctx) {
+        bool isLinking = false;
+        return StatefulBuilder(
+          builder: (ctx, setDialogState) {
+            return Consumer<GameService>(
+              builder: (ctx, game, _) {
+                final provider = game.linkedSocialProvider;
+                final isLinked = provider != null && provider != 'local';
+
+                // Show link result
+                if (game.socialLinkResultSuccess != null) {
+                  final success = game.socialLinkResultSuccess!;
+                  final msg = game.socialLinkResultMessage ?? '';
+                  WidgetsBinding.instance.addPostFrameCallback((_) {
+                    game.clearSocialLinkResult();
+                    if (!success && msg.isNotEmpty) {
+                      showDialog(
+                        context: context,
+                        builder: (_) => AlertDialog(
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                          title: const Text('연동 실패'),
+                          content: Text(msg),
+                          actions: [
+                            TextButton(
+                              onPressed: () => Navigator.pop(context),
+                              child: const Text('확인'),
+                            ),
+                          ],
+                        ),
+                      );
+                    }
+                    setDialogState(() => isLinking = false);
+                  });
+                }
+
+                String providerLabel(String p) {
+                  switch (p) {
+                    case 'google': return 'Google';
+                    case 'apple': return 'Apple';
+                    case 'kakao': return 'Kakao';
+                    default: return p;
+                  }
+                }
+
+                return AlertDialog(
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+                  title: const Row(
+                    children: [
+                      Icon(Icons.link, color: Color(0xFFF57C00)),
+                      SizedBox(width: 8),
+                      Text('소셜 연동'),
+                    ],
+                  ),
+                  content: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      if (!isLinked) ...[
+                        const Text(
+                          '소셜 계정을 연동하면\n간편 로그인이 가능합니다',
+                          textAlign: TextAlign.center,
+                          style: TextStyle(fontSize: 14, color: Colors.grey),
+                        ),
+                        const SizedBox(height: 16),
+                        if (isLinking)
+                          const Padding(
+                            padding: EdgeInsets.all(16),
+                            child: CircularProgressIndicator(),
+                          )
+                        else ...[
+                          _socialLinkButton(
+                            label: 'Google 연동',
+                            color: const Color(0xFFDB4437),
+                            icon: Icons.g_mobiledata,
+                            onTap: () async {
+                              setDialogState(() => isLinking = true);
+                              try {
+                                final result = await AuthService.signInWithGoogle();
+                                if (result.cancelled) {
+                                  setDialogState(() => isLinking = false);
+                                  return;
+                                }
+                                game.linkSocial(result.provider, result.token);
+                              } catch (e) {
+                                setDialogState(() => isLinking = false);
+                              }
+                            },
+                          ),
+                          if (Platform.isIOS) ...[
+                            const SizedBox(height: 10),
+                            _socialLinkButton(
+                              label: 'Apple 연동',
+                              color: Colors.black87,
+                              icon: Icons.apple,
+                              onTap: () async {
+                                setDialogState(() => isLinking = true);
+                                try {
+                                  final result = await AuthService.signInWithApple();
+                                  if (result.cancelled) {
+                                    setDialogState(() => isLinking = false);
+                                    return;
+                                  }
+                                  game.linkSocial(result.provider, result.token);
+                                } catch (e) {
+                                  setDialogState(() => isLinking = false);
+                                }
+                              },
+                            ),
+                          ],
+                          const SizedBox(height: 10),
+                          _socialLinkButton(
+                            label: 'Kakao 연동',
+                            color: const Color(0xFFFEE500),
+                            textColor: const Color(0xFF3C1E1E),
+                            icon: Icons.chat_bubble,
+                            onTap: () async {
+                              setDialogState(() => isLinking = true);
+                              try {
+                                final result = await AuthService.signInWithKakao();
+                                if (result.cancelled) {
+                                  setDialogState(() => isLinking = false);
+                                  return;
+                                }
+                                game.linkSocial(result.provider, result.token);
+                              } catch (e) {
+                                setDialogState(() => isLinking = false);
+                              }
+                            },
+                          ),
+                        ],
+                      ] else ...[
+                        Container(
+                          padding: const EdgeInsets.all(16),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFF5F5F5),
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: Column(
+                            children: [
+                              Text(
+                                '현재 연동: ${providerLabel(provider!)}',
+                                style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                              ),
+                              if (game.linkedSocialEmail != null && game.linkedSocialEmail!.isNotEmpty)
+                                Padding(
+                                  padding: const EdgeInsets.only(top: 4),
+                                  child: Text(
+                                    game.linkedSocialEmail!,
+                                    style: const TextStyle(fontSize: 13, color: Colors.grey),
+                                  ),
+                                ),
+                            ],
+                          ),
+                        ),
+                        const SizedBox(height: 16),
+                        SizedBox(
+                          width: double.infinity,
+                          child: ElevatedButton(
+                            onPressed: isLinking ? null : () {
+                              showDialog(
+                                context: context,
+                                builder: (_) => AlertDialog(
+                                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                                  title: const Text('연동 해제'),
+                                  content: const Text('소셜 연동을 해제하시겠습니까?\nID/PW로만 로그인 가능합니다.'),
+                                  actions: [
+                                    TextButton(
+                                      onPressed: () => Navigator.pop(context),
+                                      child: const Text('취소'),
+                                    ),
+                                    TextButton(
+                                      onPressed: () {
+                                        Navigator.pop(context);
+                                        setDialogState(() => isLinking = true);
+                                        game.unlinkSocial();
+                                      },
+                                      child: const Text('해제', style: TextStyle(color: Colors.red)),
+                                    ),
+                                  ],
+                                ),
+                              );
+                            },
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: const Color(0xFFFFCDD2),
+                              foregroundColor: const Color(0xFFC62828),
+                              padding: const EdgeInsets.symmetric(vertical: 12),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                            ),
+                            child: const Text('연동 해제'),
+                          ),
+                        ),
+                      ],
+                    ],
+                  ),
+                  actions: [
+                    TextButton(
+                      onPressed: () => Navigator.pop(ctx),
+                      child: const Text('닫기'),
+                    ),
+                  ],
+                );
+              },
+            );
+          },
+        );
+      },
+    );
+  }
+
+  Widget _socialLinkButton({
+    required String label,
+    required Color color,
+    Color textColor = Colors.white,
+    required IconData icon,
+    required VoidCallback onTap,
+  }) {
+    return SizedBox(
+      width: double.infinity,
+      child: ElevatedButton.icon(
+        onPressed: onTap,
+        icon: Icon(icon),
+        label: Text(label),
+        style: ElevatedButton.styleFrom(
+          backgroundColor: color,
+          foregroundColor: textColor,
+          padding: const EdgeInsets.symmetric(vertical: 12),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+          ),
+        ),
+      ),
     );
   }
 
@@ -905,51 +1172,76 @@ class _LobbyScreenState extends State<LobbyScreen> {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        title: Row(
-          children: const [
-            Icon(Icons.home_filled, color: Color(0xFF6A5A52)),
-            SizedBox(width: 8),
-            Text('방 만들기'),
-          ],
-        ),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: null,
+        contentPadding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
+        backgroundColor: context.read<GameService>().themeGradient.first.withValues(alpha: 0.9),
         content: StatefulBuilder(
           builder: (context, setState) {
+            final themeColors = context.read<GameService>().themeGradient;
+            final accent = themeColors.length > 1 ? themeColors[1] : themeColors.first;
             return SingleChildScrollView(
-              child: Column(
+              child: Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                    colors: [
+                      themeColors.first.withValues(alpha: 0.9),
+                      themeColors.last.withValues(alpha: 0.7),
+                    ],
+                  ),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
+                Row(
+                  children: [
+                    const Text('방 이름', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 12)),
+                    const Spacer(),
+                    TextButton(
+                      onPressed: () => setState(() => controller.text = randomName),
+                      style: TextButton.styleFrom(padding: EdgeInsets.zero, minimumSize: const Size(40, 24)),
+                      child: Text(
+                        '랜덤',
+                        style: TextStyle(color: accent),
+                      ),
+                    ),
+                  ],
+                ),
                 TextField(
                   controller: controller,
                   decoration: InputDecoration(
                     hintText: randomName,
                     filled: true,
-                    fillColor: const Color(0xFFF7F2F0),
+                    fillColor: themeColors.first.withValues(alpha: 0.35),
                     border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(14),
-                      borderSide: const BorderSide(color: Color(0xFFE0D6D1)),
+                      borderRadius: BorderRadius.circular(10),
+                      borderSide: BorderSide(color: accent.withValues(alpha: 0.35)),
                     ),
                     enabledBorder: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(14),
-                      borderSide: const BorderSide(color: Color(0xFFE0D6D1)),
+                      borderRadius: BorderRadius.circular(10),
+                      borderSide: BorderSide(color: accent.withValues(alpha: 0.35)),
                     ),
                     focusedBorder: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(14),
-                      borderSide: const BorderSide(color: Color(0xFFB9A8A1)),
+                      borderRadius: BorderRadius.circular(10),
+                      borderSide: BorderSide(color: accent),
                     ),
+                    isDense: true,
+                    contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
                   ),
                   autofocus: true,
                 ),
-                const SizedBox(height: 12),
+                const SizedBox(height: 10),
                 Row(
                   children: [
-                    const Text('비공개', style: TextStyle(fontWeight: FontWeight.w600)),
+                    const Text('비공개', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 12)),
                     const Spacer(),
                     Switch(
                       value: isPrivate,
-                      onChanged: isRanked
-                          ? null
-                          : (v) => setState(() => isPrivate = v),
+                      onChanged: isRanked ? null : (v) => setState(() => isPrivate = v),
                     ),
                   ],
                 ),
@@ -959,26 +1251,36 @@ class _LobbyScreenState extends State<LobbyScreen> {
                     decoration: InputDecoration(
                       hintText: '비밀번호 (4자 이상)',
                       filled: true,
-                      fillColor: const Color(0xFFF7F2F0),
+                      fillColor: themeColors.first.withValues(alpha: 0.35),
                       border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(14),
-                        borderSide: const BorderSide(color: Color(0xFFE0D6D1)),
+                        borderRadius: BorderRadius.circular(10),
+                        borderSide: BorderSide(color: accent.withValues(alpha: 0.35)),
                       ),
                       enabledBorder: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(14),
-                        borderSide: const BorderSide(color: Color(0xFFE0D6D1)),
+                        borderRadius: BorderRadius.circular(10),
+                        borderSide: BorderSide(color: accent.withValues(alpha: 0.35)),
                       ),
                       focusedBorder: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(14),
-                        borderSide: const BorderSide(color: Color(0xFFB9A8A1)),
+                        borderRadius: BorderRadius.circular(10),
+                        borderSide: BorderSide(color: accent),
                       ),
+                      isDense: true,
+                      contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
                     ),
                     obscureText: true,
+                  )
+                else
+                  const Align(
+                    alignment: Alignment.centerLeft,
+                    child: Text(
+                      '비공개를 켜면 비밀번호가 필요합니다',
+                      style: TextStyle(fontSize: 11, color: Color(0xFF9A8E8A)),
+                    ),
                   ),
-                const SizedBox(height: 8),
+                const SizedBox(height: 6),
                 Row(
                   children: [
-                    const Text('랭크전', style: TextStyle(fontWeight: FontWeight.w600)),
+                    const Text('랭크전', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 12)),
                     const Spacer(),
                     Switch(
                       value: isRanked,
@@ -992,10 +1294,17 @@ class _LobbyScreenState extends State<LobbyScreen> {
                     ),
                   ],
                 ),
+                const Align(
+                  alignment: Alignment.centerLeft,
+                  child: Text(
+                    '랭크전은 비공개 방을 만들 수 없습니다',
+                    style: TextStyle(fontSize: 11, color: Color(0xFF9A8E8A)),
+                  ),
+                ),
                 const SizedBox(height: 8),
                 Row(
                   children: [
-                    const Text('시간 제한', style: TextStyle(fontWeight: FontWeight.w600)),
+                    const Text('시간 제한', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 12)),
                     const SizedBox(width: 12),
                     Expanded(
                       child: TextField(
@@ -1006,20 +1315,20 @@ class _LobbyScreenState extends State<LobbyScreen> {
                           suffixText: '초',
                           hintText: '10~300',
                           filled: true,
-                          fillColor: const Color(0xFFF7F2F0),
+                          fillColor: themeColors.first.withValues(alpha: 0.35),
                           isDense: true,
                           contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
                           border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(14),
-                            borderSide: const BorderSide(color: Color(0xFFE0D6D1)),
+                            borderRadius: BorderRadius.circular(10),
+                            borderSide: BorderSide(color: accent.withValues(alpha: 0.35)),
                           ),
                           enabledBorder: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(14),
-                            borderSide: const BorderSide(color: Color(0xFFE0D6D1)),
+                            borderRadius: BorderRadius.circular(10),
+                            borderSide: BorderSide(color: accent.withValues(alpha: 0.35)),
                           ),
                           focusedBorder: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(14),
-                            borderSide: const BorderSide(color: Color(0xFFB9A8A1)),
+                            borderRadius: BorderRadius.circular(10),
+                            borderSide: BorderSide(color: accent),
                           ),
                         ),
                       ),
@@ -1042,6 +1351,7 @@ class _LobbyScreenState extends State<LobbyScreen> {
                 ],
               ],
             ),
+              ),
             );
           },
         ),
@@ -1081,8 +1391,8 @@ class _LobbyScreenState extends State<LobbyScreen> {
               setState(() => _inRoom = true);
             },
             style: ElevatedButton.styleFrom(
-              backgroundColor: const Color(0xFFC7E6D0),
-              foregroundColor: const Color(0xFF3A5A40),
+              backgroundColor: context.read<GameService>().themeGradient[1],
+              foregroundColor: const Color(0xFF3A2A1E),
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(14),
               ),
@@ -1111,6 +1421,28 @@ class _LobbyScreenState extends State<LobbyScreen> {
         child: SafeArea(
           child: Consumer<GameService>(
             builder: (context, game, _) {
+              // Handle duplicate login kick
+              if (game.duplicateLoginKicked) {
+                WidgetsBinding.instance.addPostFrameCallback((_) async {
+                  if (!mounted) return;
+                  game.duplicateLoginKicked = false;
+                  await LoginScreen.clearSavedCredentials();
+                  final network = context.read<NetworkService>();
+                  network.disconnect();
+                  game.reset();
+                  if (!mounted) return;
+                  Navigator.pushReplacement(
+                    context,
+                    MaterialPageRoute(builder: (_) => const LoginScreen()),
+                  );
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text('다른 기기에서 로그인되어 로그아웃되었습니다'),
+                      backgroundColor: Colors.red,
+                    ),
+                  );
+                });
+              }
               // Show room invite dialog if any
               if (game.roomInvites.isNotEmpty) {
                 WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -1267,7 +1599,12 @@ class _LobbyScreenState extends State<LobbyScreen> {
                   _buildIconButton(
                     icon: Icons.settings,
                     color: const Color(0xFF9E9E9E),
-                    onTap: _showSettingsDialog,
+                    onTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(builder: (_) => const SettingsScreen()),
+                      );
+                    },
                   ),
                 ],
               ),

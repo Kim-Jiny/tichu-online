@@ -300,7 +300,7 @@ function parseShopFormBody(body) {
 // ===== Route handler =====
 
 async function handleAdminRoute(req, res, url, pathname, method, lobby, wss, maintenanceFns = {}) {
-  const { getMaintenanceConfig, setMaintenanceConfig, getMaintenanceStatus } = maintenanceFns;
+  const { getMaintenanceConfig, setMaintenanceConfig, getMaintenanceStatus, sendPushNotification } = maintenanceFns;
   // Login page (no auth required)
   if (pathname === '/tc-backstage/login') {
     if (method === 'GET') {
@@ -635,7 +635,17 @@ async function handleAdminRoute(req, res, url, pathname, method, lobby, wss, mai
   const resolveMatch = pathname.match(/^\/tc-backstage\/inquiries\/(\d+)\/resolve$/);
   if (resolveMatch && method === 'POST') {
     const body = await parseBody(req);
-    await resolveInquiry(parseInt(resolveMatch[1]), body.admin_note || '');
+    const resolved = await resolveInquiry(parseInt(resolveMatch[1]), body.admin_note || '');
+    if (resolved && resolved.success && resolved.inquiry && sendPushNotification) {
+      const targetNickname = resolved.inquiry.user_nickname;
+      const user = await getUserDetail(targetNickname);
+      if (user && user.fcm_token && user.push_enabled !== false) {
+        const title = '문의 답변이 도착했어요';
+        const inquiryTitle = resolved.inquiry.title || '';
+        const message = inquiryTitle ? `제목: ${inquiryTitle}` : '앱에서 확인해주세요.';
+        await sendPushNotification(user.fcm_token, title, message);
+      }
+    }
     return redirect(res, `/tc-backstage/inquiries/${resolveMatch[1]}`);
   }
 
@@ -844,6 +854,29 @@ async function handleAdminRoute(req, res, url, pathname, method, lobby, wss, mai
       </div>
 
       <div class="card">
+        <h3>Device Info</h3>
+        <div class="detail-grid" style="grid-template-columns:130px 1fr">
+          <div class="label">Platform</div><div class="value">${escapeHtml(user.device_platform || '-')}</div>
+          <div class="label">Device Model</div><div class="value">${escapeHtml(user.device_model || '-')}</div>
+          <div class="label">OS Version</div><div class="value">${escapeHtml(user.os_version || '-')}</div>
+          <div class="label">App Version</div><div class="value">${escapeHtml(user.app_version || '-')}</div>
+          <div class="label">Last IP</div><div class="value">${escapeHtml(user.last_ip || '-')}</div>
+          <div class="label">FCM Token</div><div class="value" style="word-break:break-all;font-size:12px">${escapeHtml(user.fcm_token || '-')}</div>
+        </div>
+      </div>
+
+      ${user.fcm_token ? `<div class="card">
+        <h3>Push Notification</h3>
+        ${url.searchParams.get('push') === 'ok' ? '<div style="color:#4caf50;margin-bottom:12px;font-weight:600">Push sent successfully</div>' : ''}
+        ${url.searchParams.get('push') === 'fail' ? `<div style="color:#e53935;margin-bottom:12px;font-weight:600">Push failed: ${escapeHtml(url.searchParams.get('reason') || 'unknown')}</div>` : ''}
+        <form method="POST" action="/tc-backstage/users/${encodeURIComponent(user.nickname)}/push">
+          <input type="text" name="title" placeholder="제목" required style="margin-bottom:8px">
+          <textarea name="body" rows="3" placeholder="내용" required></textarea>
+          <div style="margin-top:8px"><button type="submit" class="btn btn-primary">Send Push</button></div>
+        </form>
+      </div>` : ''}
+
+      <div class="card">
         <h3>Chat Ban</h3>
         <form method="POST" action="/tc-backstage/users/${encodeURIComponent(user.nickname)}/chat-ban" style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
           <select name="duration" style="padding:8px 12px;border-radius:8px;border:1px solid #ddd;font-size:14px">
@@ -907,6 +940,30 @@ async function handleAdminRoute(req, res, url, pathname, method, lobby, wss, mai
     const nickname = decodeURIComponent(banMatch[1]);
     await deleteUser(nickname);
     return redirect(res, '/tc-backstage/users');
+  }
+
+  // Push notification
+  const pushMatch = pathname.match(/^\/tc-backstage\/users\/([^/]+)\/push$/);
+  if (pushMatch && method === 'POST') {
+    const nickname = decodeURIComponent(pushMatch[1]);
+    const body = await parseBody(req);
+    const user = await getUserDetail(nickname);
+    const redirectBase = `/tc-backstage/users/${encodeURIComponent(nickname)}`;
+    if (!user || !user.fcm_token) {
+      return redirect(res, `${redirectBase}?push=fail&reason=no+FCM+token`);
+    }
+    if (user.push_enabled === false) {
+      return redirect(res, `${redirectBase}?push=fail&reason=${encodeURIComponent('사용자 알림이 비활성화되어 있어 전송할 수 없습니다')}`);
+    }
+    if (sendPushNotification) {
+      const result = await sendPushNotification(user.fcm_token, body.title || '', body.body || '');
+      if (result.success) {
+        return redirect(res, `${redirectBase}?push=ok`);
+      } else {
+        return redirect(res, `${redirectBase}?push=fail&reason=${encodeURIComponent(result.message || 'unknown')}`);
+      }
+    }
+    return redirect(res, `${redirectBase}?push=fail&reason=not+configured`);
   }
 
   // ===== Shop Management =====

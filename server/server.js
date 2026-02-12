@@ -9,12 +9,78 @@ const {
   addFriend, getFriends, getPendingFriendRequests,
   acceptFriendRequest, rejectFriendRequest, removeFriend,
   saveMatchResult, updateUserStats, getUserProfile, getRecentMatches,
-  submitInquiry, getUserInquiries, getRankings,
+  submitInquiry, getUserInquiries, markInquiriesRead, getRankings,
   getWallet, getShopItems, getUserItems, buyItem, equipItem, useItem, changeNickname,
   incrementLeaveCount, setRankedBan, getRankedBan, setChatBan, getChatBan, grantSeasonRewards,
   getActiveSeason, createSeason, getSeasons,
   getCurrentSeasonRankings, getSeasonRankings, resetSeasonStats,
+  loginSocial, registerSocial,
+  linkSocial, unlinkSocial, getLinkedSocial,
+  updateDeviceInfo,
+  setPushEnabled,
+  setPushFriendInvite,
 } = require('./db/database');
+
+// Firebase Admin SDK initialization (optional - only if FIREBASE_SERVICE_ACCOUNT is set)
+let firebaseAdmin = null;
+try {
+  const admin = require('firebase-admin');
+  const serviceAccountJson = process.env.FIREBASE_SERVICE_ACCOUNT;
+  if (serviceAccountJson) {
+    const serviceAccount = JSON.parse(serviceAccountJson);
+    admin.initializeApp({ credential: admin.credential.cert(serviceAccount) });
+    firebaseAdmin = admin;
+    console.log('Firebase Admin SDK initialized');
+  } else {
+    console.log('FIREBASE_SERVICE_ACCOUNT not set - Firebase social login disabled');
+  }
+} catch (err) {
+  console.log('Firebase Admin SDK not available:', err.message);
+}
+
+// Token verification functions
+async function verifyFirebaseToken(idToken) {
+  if (firebaseAdmin) {
+    const decoded = await firebaseAdmin.auth().verifyIdToken(idToken);
+    return { uid: decoded.uid, email: decoded.email || null };
+  }
+  // Fallback: decode JWT without signature verification (local dev)
+  try {
+    const payload = idToken.split('.')[1];
+    const decoded = JSON.parse(Buffer.from(payload, 'base64url').toString());
+    console.log('Firebase token decoded (no verification - dev mode)');
+    return { uid: decoded.sub || decoded.user_id, email: decoded.email || null };
+  } catch (e) {
+    throw new Error('Firebase token decode failed: ' + e.message);
+  }
+}
+
+async function verifyKakaoToken(accessToken) {
+  const res = await fetch('https://kapi.kakao.com/v2/user/me', {
+    headers: { 'Authorization': `Bearer ${accessToken}` },
+  });
+  if (!res.ok) throw new Error('Kakao token verification failed');
+  const data = await res.json();
+  return {
+    uid: String(data.id),
+    email: data.kakao_account?.email || null,
+  };
+}
+// Push notification helper
+async function sendPushNotification(fcmToken, title, body) {
+  if (!firebaseAdmin) return { success: false, message: 'Firebase not configured' };
+  try {
+    await firebaseAdmin.messaging().send({
+      token: fcmToken,
+      notification: { title, body },
+    });
+    return { success: true };
+  } catch (err) {
+    console.error('Push notification error:', err.message);
+    return { success: false, message: err.message };
+  }
+}
+
 const { handleAdminRoute } = require('./admin');
 
 const PORT = process.env.PORT || 8080;
@@ -73,7 +139,7 @@ const server = http.createServer(async (req, res) => {
 
   if (pathname.startsWith('/tc-backstage')) {
     try {
-      await handleAdminRoute(req, res, url, pathname, req.method, lobby, wss, { getMaintenanceConfig, setMaintenanceConfig, getMaintenanceStatus });
+      await handleAdminRoute(req, res, url, pathname, req.method, lobby, wss, { getMaintenanceConfig, setMaintenanceConfig, getMaintenanceStatus, sendPushNotification });
     } catch (err) {
       console.error('Admin route error:', err);
       res.writeHead(500, { 'Content-Type': 'text/plain' });
@@ -163,10 +229,12 @@ setInterval(() => {
   ensureSeasonCycle();
 }, 60 * 60 * 1000);
 
-wss.on('connection', (ws) => {
+wss.on('connection', (ws, req) => {
   ws.playerId = null;
   ws.nickname = null;
   ws.roomId = null;
+  ws.clientIp = req.headers['x-forwarded-for']?.split(',')[0]?.trim()
+    || req.socket.remoteAddress || null;
 
   console.log('New connection established');
 
@@ -356,6 +424,9 @@ function handleMessage(ws, data) {
     case 'get_inquiries':
       handleGetInquiries(ws);
       break;
+    case 'mark_inquiries_read':
+      handleMarkInquiriesRead(ws);
+      break;
     case 'add_friend':
       handleAddFriend(ws, data);
       break;
@@ -403,6 +474,36 @@ function handleMessage(ws, data) {
       break;
     case 'change_nickname':
       handleChangeNickname(ws, data);
+      break;
+    case 'social_login':
+      handleSocialLogin(ws, data);
+      break;
+    case 'social_register':
+      handleSocialRegister(ws, data);
+      break;
+    case 'social_link':
+      handleSocialLink(ws, data);
+      break;
+    case 'social_unlink':
+      handleSocialUnlink(ws);
+      break;
+    case 'get_linked_social':
+      handleGetLinkedSocial(ws);
+      break;
+    case 'update_fcm_token':
+      if (ws.nickname && data.fcmToken) {
+        updateDeviceInfo(ws.nickname, { fcmToken: data.fcmToken });
+      }
+      break;
+    case 'update_push_setting':
+      if (ws.nickname) {
+        if (data.enabled != null) {
+          setPushEnabled(ws.nickname, data.enabled === true);
+        }
+        if (data.friendInvite != null) {
+          setPushFriendInvite(ws.nickname, data.friendInvite === true);
+        }
+      }
       break;
     case 'get_maintenance_status':
       sendTo(ws, { type: 'maintenance_status', ...getMaintenanceStatus() });
@@ -481,6 +582,234 @@ async function handleLogin(ws, data) {
   notifyFriendsOfStatusChange(ws.nickname, true);
 
   await handleReconnection(ws);
+
+  // Save device info (fire-and-forget)
+  const deviceInfo = data.deviceInfo || {};
+  deviceInfo.lastIp = ws.clientIp;
+  updateDeviceInfo(ws.nickname, deviceInfo);
+}
+
+async function handleSocialLogin(ws, data) {
+  const { provider, token } = data;
+  if (!provider || !token) {
+    sendTo(ws, { type: 'login_error', message: '잘못된 요청입니다' });
+    return;
+  }
+
+  try {
+    // Verify token
+    let verified;
+    if (provider === 'kakao') {
+      verified = await verifyKakaoToken(token);
+    } else {
+      // google, apple → Firebase
+      verified = await verifyFirebaseToken(token);
+    }
+
+    // Block login during maintenance
+    const mStatus = getMaintenanceStatus();
+    if (mStatus.maintenance) {
+      sendTo(ws, { type: 'login_error', message: mStatus.message || '서버 점검 중입니다' });
+      return;
+    }
+
+    // Check if user exists
+    const result = await loginSocial(provider, verified.uid);
+    if (result.found) {
+      // Check for empty nickname (existing user with blank nickname)
+      if (!result.nickname || result.nickname.trim() === '') {
+        sendTo(ws, {
+          type: 'need_nickname',
+          provider,
+          providerUid: verified.uid,
+          email: verified.email,
+          existingUser: true,
+          userId: result.userId,
+        });
+        return;
+      }
+
+      // Existing user - proceed with login flow (same as handleLogin post-auth)
+      // Disconnect existing connection with same nickname
+      for (const client of wss.clients) {
+        if (client !== ws && client.nickname === result.nickname && client.readyState === client.OPEN) {
+          if (client.roomId) {
+            const oldRoom = lobby.getRoom(client.roomId);
+            if (oldRoom && oldRoom.game) {
+              oldRoom.markPlayerDisconnected(client.playerId);
+              playerSessions.set(client.nickname, {
+                roomId: client.roomId,
+                disconnectedAt: Date.now(),
+              });
+            }
+          }
+          sendTo(client, { type: 'kicked', message: '다른 기기에서 로그인되었습니다' });
+          client.roomId = null;
+          client.close();
+        }
+      }
+
+      ws.playerId = `player_${nextPlayerId++}`;
+      ws.nickname = result.nickname;
+      ws.userId = result.userId;
+      console.log(`Player logged in (social/${provider}): ${ws.nickname} (${ws.playerId})`);
+
+      notifyFriendsOfStatusChange(ws.nickname, true);
+      await handleReconnection(ws);
+
+      // Save device info (fire-and-forget)
+      const socialDeviceInfo = data.deviceInfo || {};
+      socialDeviceInfo.lastIp = ws.clientIp;
+      updateDeviceInfo(ws.nickname, socialDeviceInfo);
+    } else {
+      // New user - need nickname
+      sendTo(ws, { type: 'need_nickname', provider, providerUid: verified.uid, email: verified.email });
+    }
+  } catch (err) {
+    console.error('Social login error:', err);
+    sendTo(ws, { type: 'login_error', message: '소셜 로그인에 실패했습니다' });
+  }
+}
+
+async function handleSocialRegister(ws, data) {
+  const { provider, token, nickname, existingUser } = data;
+  if (!provider || !token || !nickname) {
+    sendTo(ws, { type: 'login_error', message: '잘못된 요청입니다' });
+    return;
+  }
+
+  try {
+    // Re-verify token
+    let verified;
+    if (provider === 'kakao') {
+      verified = await verifyKakaoToken(token);
+    } else {
+      verified = await verifyFirebaseToken(token);
+    }
+
+    // Block during maintenance
+    const mStatus = getMaintenanceStatus();
+    if (mStatus.maintenance) {
+      sendTo(ws, { type: 'login_error', message: mStatus.message || '서버 점검 중입니다' });
+      return;
+    }
+
+    let result;
+    if (existingUser) {
+      // Existing user with empty nickname - update nickname directly
+      const { pool } = require('./db/database');
+      const client = await pool.connect();
+      try {
+        // Check nickname duplicate
+        const dupCheck = await client.query(
+          'SELECT id FROM tc_users WHERE nickname = $1',
+          [nickname.trim()]
+        );
+        if (dupCheck.rows.length > 0) {
+          sendTo(ws, { type: 'login_error', message: '이미 사용중인 닉네임입니다' });
+          return;
+        }
+        // Find user by provider + uid
+        const userRes = await client.query(
+          'SELECT id FROM tc_users WHERE auth_provider = $1 AND provider_uid = $2',
+          [provider, verified.uid]
+        );
+        if (userRes.rows.length === 0) {
+          sendTo(ws, { type: 'login_error', message: '사용자를 찾을 수 없습니다' });
+          return;
+        }
+        const userId = userRes.rows[0].id;
+        await client.query(
+          'UPDATE tc_users SET nickname = $1 WHERE id = $2',
+          [nickname.trim(), userId]
+        );
+        result = { success: true, userId, nickname: nickname.trim() };
+      } finally {
+        client.release();
+      }
+    } else {
+      result = await registerSocial(provider, verified.uid, verified.email, nickname);
+    }
+
+    if (!result.success) {
+      sendTo(ws, { type: 'login_error', message: result.message });
+      return;
+    }
+
+    // Auto-login after registration (same flow as handleLogin post-auth)
+    ws.playerId = `player_${nextPlayerId++}`;
+    ws.nickname = result.nickname;
+    ws.userId = result.userId;
+    console.log(`Player registered & logged in (social/${provider}): ${ws.nickname} (${ws.playerId})`);
+
+    notifyFriendsOfStatusChange(ws.nickname, true);
+    await handleReconnection(ws);
+
+    // Save device info (fire-and-forget)
+    const regDeviceInfo = data.deviceInfo || {};
+    regDeviceInfo.lastIp = ws.clientIp;
+    updateDeviceInfo(ws.nickname, regDeviceInfo);
+  } catch (err) {
+    console.error('Social register error:', err);
+    sendTo(ws, { type: 'login_error', message: '소셜 회원가입에 실패했습니다' });
+  }
+}
+
+async function handleSocialLink(ws, data) {
+  if (!ws.userId) {
+    sendTo(ws, { type: 'social_link_result', success: false, message: '로그인이 필요합니다' });
+    return;
+  }
+  const { provider, token } = data;
+  if (!provider || !token) {
+    sendTo(ws, { type: 'social_link_result', success: false, message: '잘못된 요청입니다' });
+    return;
+  }
+
+  try {
+    let verified;
+    if (provider === 'kakao') {
+      verified = await verifyKakaoToken(token);
+    } else {
+      verified = await verifyFirebaseToken(token);
+    }
+
+    const result = await linkSocial(ws.userId, provider, verified.uid, verified.email);
+    sendTo(ws, { type: 'social_link_result', success: result.success, message: result.message, provider: result.provider });
+  } catch (err) {
+    console.error('Social link error:', err);
+    sendTo(ws, { type: 'social_link_result', success: false, message: '소셜 연동에 실패했습니다' });
+  }
+}
+
+async function handleSocialUnlink(ws) {
+  if (!ws.userId) {
+    sendTo(ws, { type: 'social_unlink_result', success: false, message: '로그인이 필요합니다' });
+    return;
+  }
+
+  try {
+    const result = await unlinkSocial(ws.userId);
+    sendTo(ws, { type: 'social_unlink_result', success: result.success, message: result.message });
+  } catch (err) {
+    console.error('Social unlink error:', err);
+    sendTo(ws, { type: 'social_unlink_result', success: false, message: '연동 해제에 실패했습니다' });
+  }
+}
+
+async function handleGetLinkedSocial(ws) {
+  if (!ws.userId) {
+    sendTo(ws, { type: 'linked_social_info', provider: 'local', email: null });
+    return;
+  }
+
+  try {
+    const result = await getLinkedSocial(ws.userId);
+    sendTo(ws, { type: 'linked_social_info', provider: result.provider, email: result.email });
+  } catch (err) {
+    console.error('Get linked social error:', err);
+    sendTo(ws, { type: 'linked_social_info', provider: 'local', email: null });
+  }
 }
 
 async function handleReconnection(ws) {
@@ -490,6 +819,9 @@ async function handleReconnection(ws) {
   const titleKey = profile?.titleKey || null;
   const hasTopCardCounter = profile?.hasTopCardCounter || false;
   ws.titleKey = titleKey;
+
+  const socialInfo = await getLinkedSocial(ws.userId);
+  const authProvider = socialInfo?.provider || 'local';
 
   // Check for reconnection to a game
   const session = playerSessions.get(ws.nickname);
@@ -510,6 +842,7 @@ async function handleReconnection(ws) {
           themeKey,
           titleKey,
           hasTopCardCounter,
+          authProvider,
           maintenanceStatus: getMaintenanceStatus(),
         });
         sendTo(ws, {
@@ -553,6 +886,7 @@ async function handleReconnection(ws) {
           themeKey,
           titleKey,
           hasTopCardCounter,
+          authProvider,
           maintenanceStatus: getMaintenanceStatus(),
         });
         sendTo(ws, {
@@ -574,6 +908,7 @@ async function handleReconnection(ws) {
     themeKey,
     titleKey,
     hasTopCardCounter,
+    authProvider,
     maintenanceStatus: getMaintenanceStatus(),
   });
   sendTo(ws, { type: 'room_list', rooms: lobby.getRoomList() });
@@ -1091,10 +1426,10 @@ function handleAddBot(ws, data) {
     return;
   }
   // TODO: 테스트 후 복구 - 랭크전 봇 제한
-  // if (room.isRanked) {
-  //   sendTo(ws, { type: 'error', message: '랭크전에서는 봇을 추가할 수 없습니다' });
-  //   return;
-  // }
+  if (room.isRanked) {
+    sendTo(ws, { type: 'error', message: '랭크전에서는 봇을 추가할 수 없습니다' });
+    return;
+  }
   const targetSlot = typeof data.targetSlot === 'number' ? data.targetSlot : undefined;
   const result = room.addBot(targetSlot);
   if (!result.success) {
@@ -1973,6 +2308,11 @@ async function handleGetInquiries(ws) {
   }
   const result = await getUserInquiries(ws.nickname);
   sendTo(ws, { type: 'inquiries_result', ...result });
+}
+
+async function handleMarkInquiriesRead(ws) {
+  if (!ws.nickname) return;
+  await markInquiriesRead(ws.nickname);
 }
 
 // Add friend handler

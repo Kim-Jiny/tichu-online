@@ -77,6 +77,11 @@ async function initDatabase() {
       )
     `);
 
+    // Add user_read column to tc_inquiries if not exists
+    await client.query(`
+      ALTER TABLE tc_inquiries ADD COLUMN IF NOT EXISTS user_read BOOLEAN DEFAULT FALSE
+    `);
+
     // Friends table
     await client.query(`
       CREATE TABLE IF NOT EXISTS tc_friends (
@@ -121,6 +126,26 @@ async function initDatabase() {
     await client.query(`ALTER TABLE tc_users ADD COLUMN IF NOT EXISTS ranked_ban_until TIMESTAMP`);
     await client.query(`ALTER TABLE tc_users ADD COLUMN IF NOT EXISTS chat_ban_until TIMESTAMP`);
     await client.query(`ALTER TABLE tc_users ADD COLUMN IF NOT EXISTS admin_memo TEXT`);
+
+    // Device info columns
+    await client.query(`ALTER TABLE tc_users ADD COLUMN IF NOT EXISTS fcm_token TEXT`);
+    await client.query(`ALTER TABLE tc_users ADD COLUMN IF NOT EXISTS push_enabled BOOLEAN DEFAULT true`);
+    await client.query(`ALTER TABLE tc_users ADD COLUMN IF NOT EXISTS push_friend_invite BOOLEAN DEFAULT true`);
+    await client.query(`ALTER TABLE tc_users ADD COLUMN IF NOT EXISTS device_platform VARCHAR(20)`);
+    await client.query(`ALTER TABLE tc_users ADD COLUMN IF NOT EXISTS device_model VARCHAR(100)`);
+    await client.query(`ALTER TABLE tc_users ADD COLUMN IF NOT EXISTS os_version VARCHAR(50)`);
+    await client.query(`ALTER TABLE tc_users ADD COLUMN IF NOT EXISTS app_version VARCHAR(50)`);
+    await client.query(`ALTER TABLE tc_users ADD COLUMN IF NOT EXISTS last_ip VARCHAR(45)`);
+
+    // Social login columns
+    await client.query(`ALTER TABLE tc_users ADD COLUMN IF NOT EXISTS auth_provider VARCHAR(20) DEFAULT 'local'`);
+    await client.query(`ALTER TABLE tc_users ADD COLUMN IF NOT EXISTS provider_uid VARCHAR(255)`);
+    await client.query(`ALTER TABLE tc_users ADD COLUMN IF NOT EXISTS email VARCHAR(255)`);
+    await client.query(`ALTER TABLE tc_users ALTER COLUMN password_hash DROP NOT NULL`);
+    await client.query(`
+      CREATE UNIQUE INDEX IF NOT EXISTS idx_social_provider_uid
+      ON tc_users (auth_provider, provider_uid) WHERE auth_provider != 'local'
+    `);
 
     // Shop items table
     await client.query(`
@@ -1670,7 +1695,7 @@ async function getUserInquiries(nickname, limit = 30) {
   const client = await pool.connect();
   try {
     const result = await client.query(
-      `SELECT id, category, status, title, content, admin_note, created_at, resolved_at
+      `SELECT id, category, status, title, content, admin_note, user_read, created_at, resolved_at
        FROM tc_inquiries
        WHERE user_nickname = $1
        ORDER BY created_at DESC
@@ -1681,6 +1706,23 @@ async function getUserInquiries(nickname, limit = 30) {
   } catch (err) {
     console.error('Get user inquiries error:', err);
     return { success: false, message: '문의 내역을 불러오지 못했습니다', inquiries: [] };
+  } finally {
+    client.release();
+  }
+}
+
+// Mark resolved inquiries as read for a user
+async function markInquiriesRead(nickname) {
+  const client = await pool.connect();
+  try {
+    await client.query(
+      `UPDATE tc_inquiries SET user_read = TRUE WHERE user_nickname = $1 AND status = 'resolved' AND user_read = FALSE`,
+      [nickname]
+    );
+    return { success: true };
+  } catch (err) {
+    console.error('Mark inquiries read error:', err);
+    return { success: false };
   } finally {
     client.release();
   }
@@ -1730,7 +1772,11 @@ async function resolveInquiry(id, adminNote) {
       `UPDATE tc_inquiries SET status = 'resolved', admin_note = $2, resolved_at = CURRENT_TIMESTAMP WHERE id = $1`,
       [id, adminNote]
     );
-    return { success: true };
+    const result = await client.query(
+      `SELECT user_nickname, title FROM tc_inquiries WHERE id = $1`,
+      [id]
+    );
+    return { success: true, inquiry: result.rows[0] || null };
   } catch (err) {
     console.error('Resolve inquiry error:', err);
     return { success: false };
@@ -1844,7 +1890,8 @@ async function getUserDetail(nickname) {
   const client = await pool.connect();
   try {
     const userResult = await client.query(
-      `SELECT id, username, nickname, total_games, wins, losses, rating, created_at, last_login, chat_ban_until, leave_count, gold, level, season_rating, admin_memo
+      `SELECT id, username, nickname, total_games, wins, losses, rating, created_at, last_login, chat_ban_until, leave_count, gold, level, season_rating, admin_memo,
+              fcm_token, push_enabled, device_platform, device_model, os_version, app_version, last_ip
        FROM tc_users WHERE nickname = $1`,
       [nickname]
     );
@@ -2161,6 +2208,207 @@ async function getShopItemById(id) {
   }
 }
 
+// Social login: find user by provider + provider_uid
+async function loginSocial(provider, providerUid) {
+  const client = await pool.connect();
+  try {
+    const result = await client.query(
+      'SELECT id, nickname FROM tc_users WHERE auth_provider = $1 AND provider_uid = $2',
+      [provider, providerUid]
+    );
+    if (result.rows.length === 0) {
+      return { found: false };
+    }
+    const user = result.rows[0];
+    await client.query(
+      'UPDATE tc_users SET last_login = CURRENT_TIMESTAMP WHERE id = $1',
+      [user.id]
+    );
+    return { found: true, userId: user.id, nickname: user.nickname };
+  } catch (err) {
+    console.error('Social login error:', err);
+    return { found: false, error: '소셜 로그인 중 오류가 발생했습니다' };
+  } finally {
+    client.release();
+  }
+}
+
+// Social register: create user with provider info
+async function registerSocial(provider, providerUid, email, nickname) {
+  if (!nickname || nickname.trim().length < 1) {
+    return { success: false, message: '닉네임을 입력해주세요' };
+  }
+
+  const client = await pool.connect();
+  try {
+    // Check nickname duplicate
+    const nicknameCheck = await client.query(
+      'SELECT id FROM tc_users WHERE nickname = $1',
+      [nickname.trim()]
+    );
+    if (nicknameCheck.rows.length > 0) {
+      return { success: false, message: '이미 사용중인 닉네임입니다' };
+    }
+
+    // Check provider_uid duplicate
+    const providerCheck = await client.query(
+      'SELECT id FROM tc_users WHERE auth_provider = $1 AND provider_uid = $2',
+      [provider, providerUid]
+    );
+    if (providerCheck.rows.length > 0) {
+      return { success: false, message: '이미 가입된 소셜 계정입니다' };
+    }
+
+    // Auto-generate username
+    const username = `${provider}_${providerUid.substring(0, 20)}`;
+
+    const result = await client.query(
+      `INSERT INTO tc_users (username, password_hash, nickname, auth_provider, provider_uid, email)
+       VALUES ($1, NULL, $2, $3, $4, $5) RETURNING id`,
+      [username, nickname.trim(), provider, providerUid, email || null]
+    );
+
+    return { success: true, userId: result.rows[0].id, nickname: nickname.trim() };
+  } catch (err) {
+    console.error('Social register error:', err);
+    return { success: false, message: '소셜 회원가입 중 오류가 발생했습니다' };
+  } finally {
+    client.release();
+  }
+}
+
+// Link social account to existing user
+async function linkSocial(userId, provider, providerUid, email) {
+  const client = await pool.connect();
+  try {
+    // Check if this social account is already linked to another user
+    const existing = await client.query(
+      'SELECT id FROM tc_users WHERE auth_provider = $1 AND provider_uid = $2',
+      [provider, providerUid]
+    );
+    if (existing.rows.length > 0 && existing.rows[0].id !== userId) {
+      return { success: false, message: '이미 해당계정이 존재합니다' };
+    }
+
+    await client.query(
+      'UPDATE tc_users SET auth_provider = $1, provider_uid = $2, email = $3 WHERE id = $4',
+      [provider, providerUid, email || null, userId]
+    );
+    return { success: true, provider };
+  } catch (err) {
+    console.error('Link social error:', err);
+    return { success: false, message: '소셜 연동 중 오류가 발생했습니다' };
+  } finally {
+    client.release();
+  }
+}
+
+// Unlink social account (only if password exists)
+async function unlinkSocial(userId) {
+  const client = await pool.connect();
+  try {
+    const userRes = await client.query(
+      'SELECT password_hash FROM tc_users WHERE id = $1',
+      [userId]
+    );
+    if (userRes.rows.length === 0) {
+      return { success: false, message: '사용자를 찾을 수 없습니다' };
+    }
+    if (!userRes.rows[0].password_hash) {
+      return { success: false, message: '비밀번호가 설정되지 않아 연동을 해제할 수 없습니다' };
+    }
+
+    await client.query(
+      "UPDATE tc_users SET auth_provider = 'local', provider_uid = NULL WHERE id = $1",
+      [userId]
+    );
+    return { success: true };
+  } catch (err) {
+    console.error('Unlink social error:', err);
+    return { success: false, message: '연동 해제 중 오류가 발생했습니다' };
+  } finally {
+    client.release();
+  }
+}
+
+// Get linked social info for a user
+async function getLinkedSocial(userId) {
+  const client = await pool.connect();
+  try {
+    const result = await client.query(
+      'SELECT auth_provider, email FROM tc_users WHERE id = $1',
+      [userId]
+    );
+    if (result.rows.length === 0) {
+      return { provider: 'local', email: null };
+    }
+    return { provider: result.rows[0].auth_provider, email: result.rows[0].email };
+  } catch (err) {
+    console.error('Get linked social error:', err);
+    return { provider: 'local', email: null };
+  } finally {
+    client.release();
+  }
+}
+
+// Update device info on login
+async function updateDeviceInfo(nickname, deviceInfo) {
+  const client = await pool.connect();
+  try {
+    await client.query(
+      `UPDATE tc_users
+       SET fcm_token = $2, device_platform = $3, device_model = $4,
+           os_version = $5, app_version = $6, last_ip = $7
+       WHERE nickname = $1`,
+      [
+        nickname,
+        deviceInfo.fcmToken || null,
+        deviceInfo.devicePlatform || null,
+        deviceInfo.deviceModel || null,
+        deviceInfo.osVersion || null,
+        deviceInfo.appVersion || null,
+        deviceInfo.lastIp || null,
+      ]
+    );
+  } catch (err) {
+    console.error('Update device info error:', err);
+  } finally {
+    client.release();
+  }
+}
+
+async function setPushEnabled(nickname, enabled) {
+  const client = await pool.connect();
+  try {
+    await client.query(
+      `UPDATE tc_users SET push_enabled = $2 WHERE nickname = $1`,
+      [nickname, enabled === true]
+    );
+    return { success: true };
+  } catch (err) {
+    console.error('Set push enabled error:', err);
+    return { success: false, message: '푸시 설정 저장에 실패했습니다' };
+  } finally {
+    client.release();
+  }
+}
+
+async function setPushFriendInvite(nickname, enabled) {
+  const client = await pool.connect();
+  try {
+    await client.query(
+      `UPDATE tc_users SET push_friend_invite = $2 WHERE nickname = $1`,
+      [nickname, enabled === true]
+    );
+    return { success: true };
+  } catch (err) {
+    console.error('Set push friend invite error:', err);
+    return { success: false, message: '푸시 설정 저장에 실패했습니다' };
+  } finally {
+    client.release();
+  }
+}
+
 module.exports = {
   initDatabase,
   registerUser,
@@ -2203,6 +2451,7 @@ module.exports = {
   grantSeasonRewards,
   submitInquiry,
   getUserInquiries,
+  markInquiriesRead,
   getInquiries,
   getInquiryById,
   resolveInquiry,
@@ -2219,5 +2468,13 @@ module.exports = {
   updateShopItem,
   deleteShopItem,
   getShopItemById,
+  loginSocial,
+  registerSocial,
+  linkSocial,
+  unlinkSocial,
+  getLinkedSocial,
+  updateDeviceInfo,
+  setPushEnabled,
+  setPushFriendInvite,
   pool,
 };

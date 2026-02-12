@@ -1,6 +1,8 @@
 import 'dart:async';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:firebase_messaging/firebase_messaging.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../models/player.dart';
 import '../models/room.dart';
 import '../models/game_state.dart';
@@ -12,6 +14,7 @@ class GameService extends ChangeNotifier {
   Timer? _dogDelayTimer;
   Timer? _dogClearTimer;
   Timer? _inquiryBannerTimer;
+  Timer? _pushToggleTimer;
   DateTime? _dogDelayUntil;
   Map<String, dynamic>? _pendingGameState;
 
@@ -34,6 +37,7 @@ class GameService extends ChangeNotifier {
 
   // Spectator mode
   bool isSpectator = false;
+  bool duplicateLoginKicked = false;
   Map<String, dynamic>? spectatorGameState;
   Set<String> pendingCardViewRequests = {}; // player IDs we've requested
   Set<String> approvedCardViews = {}; // player IDs that approved
@@ -112,7 +116,10 @@ class GameService extends ChangeNotifier {
   bool inquiriesLoading = false;
   String? inquiriesError;
   String? inquiryBannerMessage;
-  final Set<int> _seenInquiryIds = {};
+
+  // Push settings
+  bool pushEnabled = true;
+  bool pushFriendInviteEnabled = true;
 
   // Nickname change
   String? nicknameChangeResult;
@@ -120,6 +127,23 @@ class GameService extends ChangeNotifier {
 
   // Top card counter
   bool hasTopCardCounter = false;
+
+  // Social login
+  bool needNickname = false;
+  String? socialProvider;
+  String? socialToken;
+  String? socialProviderUid;
+  String? socialEmail;
+  bool socialExistingUser = false;
+
+  // Auth provider (from login_success)
+  String authProvider = 'local';
+
+  // Social link
+  String? linkedSocialProvider;
+  String? linkedSocialEmail;
+  String? socialLinkResultMessage;
+  bool? socialLinkResultSuccess;
 
   // Turn timeout
   String? timeoutPlayerName; // show "시간 초과!" banner
@@ -139,8 +163,16 @@ class GameService extends ChangeNotifier {
 
   bool _disposed = false; // C2: Track disposal to prevent stale callbacks
 
+  StreamSubscription? _fcmTokenSubscription;
+
   GameService(this._network) {
     _subscription = _network.messageStream.listen(_handleMessage);
+    _fcmTokenSubscription = FirebaseMessaging.instance.onTokenRefresh.listen((newToken) {
+      if (playerId.isNotEmpty && pushEnabled) {
+        _network.send({'type': 'update_fcm_token', 'fcmToken': newToken});
+      }
+    });
+    _loadPushPrefs();
   }
 
   // Helper: count of non-null players
@@ -225,13 +257,28 @@ class GameService extends ChangeNotifier {
         equippedTheme = data['themeKey'] as String?;
         equippedTitle = data['titleKey'] as String?;
         hasTopCardCounter = data['hasTopCardCounter'] == true;
+        authProvider = data['authProvider'] as String? ?? 'local';
         loginError = null;
         _parseMaintenanceStatus(data['maintenanceStatus'] as Map<String, dynamic>?);
+        _network.send({
+          'type': 'update_push_setting',
+          'enabled': pushEnabled,
+          'friendInvite': pushFriendInviteEnabled,
+        });
         notifyListeners();
         break;
 
       case 'login_error':
         loginError = data['message'] ?? '로그인 실패';
+        notifyListeners();
+        break;
+
+      case 'need_nickname':
+        needNickname = true;
+        socialProvider = data['provider'] as String?;
+        socialProviderUid = data['providerUid'] as String?;
+        socialEmail = data['email'] as String?;
+        socialExistingUser = data['existingUser'] == true;
         notifyListeners();
         break;
 
@@ -376,22 +423,31 @@ class GameService extends ChangeNotifier {
         break;
 
       case 'kicked':
+        final kickMessage = data['message'] as String? ?? '강퇴되었습니다';
+        final isDuplicateLogin = kickMessage.contains('다른 기기');
         currentRoomId = '';
         currentRoomName = '';
         roomPlayers = [null, null, null, null];
         isHost = false;
         isRankedRoom = false;
-    roomTurnTimeLimit = 30;
+        roomTurnTimeLimit = 30;
         isSpectator = false; // C10: Clear isSpectator on kick
         gameState = null;
         chatMessages = [];
-        errorMessage = data['message'] as String? ?? '강퇴되었습니다';
+        if (isDuplicateLogin) {
+          playerId = '';
+          playerName = '';
+          duplicateLoginKicked = true;
+        }
+        errorMessage = kickMessage;
         notifyListeners();
-        Future.delayed(const Duration(seconds: 3), () {
-          if (_disposed) return; // C2: Don't notify after disposal
-          errorMessage = null;
-          notifyListeners();
-        });
+        if (!isDuplicateLogin) {
+          Future.delayed(const Duration(seconds: 3), () {
+            if (_disposed) return; // C2: Don't notify after disposal
+            errorMessage = null;
+            notifyListeners();
+          });
+        }
         break;
 
       case 'room_closed':
@@ -809,6 +865,31 @@ class GameService extends ChangeNotifier {
         requestInventory();
         notifyListeners();
         break;
+
+      case 'social_link_result':
+        socialLinkResultSuccess = data['success'] == true;
+        socialLinkResultMessage = data['message'] as String?;
+        if (data['success'] == true) {
+          linkedSocialProvider = data['provider'] as String?;
+        }
+        notifyListeners();
+        break;
+
+      case 'social_unlink_result':
+        socialLinkResultSuccess = data['success'] == true;
+        socialLinkResultMessage = data['message'] as String?;
+        if (data['success'] == true) {
+          linkedSocialProvider = 'local';
+          linkedSocialEmail = null;
+        }
+        notifyListeners();
+        break;
+
+      case 'linked_social_info':
+        linkedSocialProvider = data['provider'] as String?;
+        linkedSocialEmail = data['email'] as String?;
+        notifyListeners();
+        break;
     }
   }
 
@@ -904,9 +985,39 @@ class GameService extends ChangeNotifier {
     _network.send({'type': 'login', 'nickname': nickname});
   }
 
-  void loginWithCredentials(String username, String password) {
+  void loginWithCredentials(String username, String password, {Map<String, String?>? deviceInfo}) {
     loginError = null;
-    _network.send({'type': 'login', 'username': username, 'password': password});
+    _network.send({
+      'type': 'login',
+      'username': username,
+      'password': password,
+      if (deviceInfo != null) 'deviceInfo': deviceInfo,
+    });
+  }
+
+  void loginSocial(String provider, String token, {Map<String, String?>? deviceInfo}) {
+    loginError = null;
+    needNickname = false;
+    socialProvider = provider;
+    socialToken = token;
+    _network.send({
+      'type': 'social_login',
+      'provider': provider,
+      'token': token,
+      if (deviceInfo != null) 'deviceInfo': deviceInfo,
+    });
+  }
+
+  void registerSocial(String provider, String token, String nickname, {bool existingUser = false, Map<String, String?>? deviceInfo}) {
+    loginError = null;
+    _network.send({
+      'type': 'social_register',
+      'provider': provider,
+      'token': token,
+      'nickname': nickname,
+      if (existingUser) 'existingUser': true,
+      if (deviceInfo != null) 'deviceInfo': deviceInfo,
+    });
   }
 
   void register(String username, String password, String nickname) {
@@ -946,6 +1057,7 @@ class GameService extends ChangeNotifier {
     roomList = [];
     spectatableRooms = [];
     isSpectator = false;
+    duplicateLoginKicked = false;
     spectatorGameState = null;
     pendingCardViewRequests = {};
     approvedCardViews = {};
@@ -961,6 +1073,17 @@ class GameService extends ChangeNotifier {
     roomInvites = [];
     sentFriendRequests = {};
     hasTopCardCounter = false;
+    authProvider = 'local';
+    needNickname = false;
+    socialProvider = null;
+    socialToken = null;
+    socialProviderUid = null;
+    socialEmail = null;
+    socialExistingUser = false;
+    linkedSocialProvider = null;
+    linkedSocialEmail = null;
+    socialLinkResultMessage = null;
+    socialLinkResultSuccess = null;
     isUnderMaintenance = false;
     hasMaintenanceNotice = false;
     maintenanceMessage = '';
@@ -1210,6 +1333,28 @@ class GameService extends ChangeNotifier {
     _network.send({'type': 'change_nickname', 'newNickname': newNickname});
   }
 
+  // Social link
+  void linkSocial(String provider, String token) {
+    socialLinkResultSuccess = null;
+    socialLinkResultMessage = null;
+    _network.send({'type': 'social_link', 'provider': provider, 'token': token});
+  }
+
+  void unlinkSocial() {
+    socialLinkResultSuccess = null;
+    socialLinkResultMessage = null;
+    _network.send({'type': 'social_unlink'});
+  }
+
+  void getLinkedSocial() {
+    _network.send({'type': 'get_linked_social'});
+  }
+
+  void clearSocialLinkResult() {
+    socialLinkResultSuccess = null;
+    socialLinkResultMessage = null;
+  }
+
   void clearLastPurchaseResult() {
     lastPurchaseItemKey = null;
     lastPurchaseSuccess = null;
@@ -1315,14 +1460,49 @@ class GameService extends ChangeNotifier {
     _network.send({'type': 'get_inquiries'});
   }
 
+  Future<void> _loadPushPrefs() async {
+    final prefs = await SharedPreferences.getInstance();
+    pushEnabled = prefs.getBool('push_enabled') ?? true;
+    pushFriendInviteEnabled = prefs.getBool('push_friend_invite') ?? true;
+    notifyListeners();
+  }
+
+  Future<void> setPushEnabled(bool enabled) async {
+    pushEnabled = enabled;
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool('push_enabled', enabled);
+
+    _pushToggleTimer?.cancel();
+    _pushToggleTimer = Timer(const Duration(milliseconds: 200), () async {
+      if (playerId.isNotEmpty) {
+        _network.send({
+          'type': 'update_push_setting',
+          'enabled': enabled,
+          'friendInvite': pushFriendInviteEnabled,
+        });
+      }
+    });
+    notifyListeners();
+  }
+
+  Future<void> setPushFriendInviteEnabled(bool enabled) async {
+    pushFriendInviteEnabled = enabled;
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool('push_friend_invite', enabled);
+    if (playerId.isNotEmpty) {
+      _network.send({'type': 'update_push_setting', 'friendInvite': enabled});
+    }
+    notifyListeners();
+  }
+
   void _maybeShowInquiryBanner() {
     for (final item in inquiries) {
       final id = (item['id'] is int) ? item['id'] as int : int.tryParse('${item['id']}') ?? -1;
       final status = item['status']?.toString() ?? '';
       final adminNote = item['admin_note']?.toString() ?? '';
+      final userRead = item['user_read'] == true;
       if (id <= 0) continue;
-      if (status == 'resolved' && adminNote.isNotEmpty && !_seenInquiryIds.contains(id)) {
-        _seenInquiryIds.add(id);
+      if (status == 'resolved' && adminNote.isNotEmpty && !userRead) {
         final title = item['title']?.toString() ?? '문의';
         inquiryBannerMessage = '문의 답변이 도착했어요: $title';
         _inquiryBannerTimer?.cancel();
@@ -1336,13 +1516,25 @@ class GameService extends ChangeNotifier {
     }
   }
 
+  void markInquiriesRead() {
+    _network.send({'type': 'mark_inquiries_read'});
+    // Update local state so banner doesn't reappear
+    for (final item in inquiries) {
+      if (item['status'] == 'resolved') {
+        item['user_read'] = true;
+      }
+    }
+  }
+
   @override
   void dispose() {
     _disposed = true; // C2: Mark as disposed
     _subscription?.cancel();
+    _fcmTokenSubscription?.cancel();
     _dogDelayTimer?.cancel();
     _dogClearTimer?.cancel();
     _inquiryBannerTimer?.cancel();
+    _pushToggleTimer?.cancel();
     super.dispose();
   }
 }

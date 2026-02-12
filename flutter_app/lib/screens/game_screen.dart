@@ -2765,7 +2765,7 @@ class _GameScreenState extends State<GameScreen> {
 
           // My hand - two rows (split in half)
           Padding(
-            padding: const EdgeInsets.symmetric(vertical: 10),
+            padding: EdgeInsets.symmetric(vertical: state.myCards.length >= 13 ? 6 : 10),
             child: _buildHandRows(state),
           ),
           const SizedBox(height: 8),
@@ -3775,11 +3775,17 @@ class _GameScreenState extends State<GameScreen> {
         const horizontalMargin = 16.0;
         final availableWidth = constraints.maxWidth - (horizontalMargin * 2);
         final perRow = cards.length <= 6 ? cards.length : (cards.length / 2).ceil();
-        const cardPadding = 4.0; // 2px on each side
+        final dense = cards.length >= 13;
+        final cardPadding = dense ? 3.0 : 4.0; // 2px on each side
         final totalPadding = perRow * cardPadding;
+        final maxWidth = dense ? 46.0 : 50.0;
+        final minWidth = dense ? 34.0 : 38.0;
         final cardWidth =
-            ((availableWidth - totalPadding) / perRow).clamp(38.0, 50.0);
-        final cardHeight = (cardWidth * 1.4).clamp(53.0, 70.0);
+            ((availableWidth - totalPadding) / perRow).clamp(minWidth, maxWidth);
+        final cardHeight = (cardWidth * (dense ? 1.35 : 1.4)).clamp(
+          dense ? 48.0 : 53.0,
+          dense ? 64.0 : 70.0,
+        );
 
         List<Widget> rowWidgets(List<String> row) {
           return row.map((cardId) => buildCardWidget(cardId, cardWidth, cardHeight)).toList();
@@ -3807,7 +3813,7 @@ class _GameScreenState extends State<GameScreen> {
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: rowWidgets(firstRow),
               ),
-              const SizedBox(height: 4),
+              SizedBox(height: dense ? 2 : 4),
               Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: rowWidgets(secondRow),

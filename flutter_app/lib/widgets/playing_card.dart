@@ -44,29 +44,31 @@ class PlayingCard extends StatelessWidget {
 
     return GestureDetector(
       onTap: isInteractive ? onTap : null,
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 150),
-        transform: Matrix4.translationValues(0, isSelected ? -8 : 0, 0),
+      child: SizedBox(
         width: width,
         height: height,
-        decoration: BoxDecoration(
-          color: isFaceUp ? Colors.white : backBg,
-          borderRadius: BorderRadius.circular(14),
-          border: Border.all(
-            color: isSelected
-                ? const Color(0xFF4D99FF)
-                : isFaceUp ? const Color(0xFFE6DCE8) : backBorder,
-            width: isSelected ? 2 : 1,
-          ),
-          boxShadow: [
-            BoxShadow(
-              color: const Color(0xFFE1D7E6).withValues(alpha: 0.4),
-              blurRadius: 6,
-              offset: const Offset(0, 3),
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 150),
+          transform: Matrix4.translationValues(0, isSelected ? -8 : 0, 0),
+          decoration: BoxDecoration(
+            color: isFaceUp ? Colors.white : backBg,
+            borderRadius: BorderRadius.circular(14),
+            border: Border.all(
+              color: isSelected
+                  ? const Color(0xFF4D99FF)
+                  : isFaceUp ? const Color(0xFFE6DCE8) : backBorder,
+              width: isSelected ? 2 : 1,
             ),
-          ],
+            boxShadow: [
+              BoxShadow(
+                color: const Color(0xFFE1D7E6).withValues(alpha: 0.4),
+                blurRadius: 6,
+                offset: const Offset(0, 3),
+              ),
+            ],
+          ),
+          child: isFaceUp ? _buildFrontFace() : _buildBackFace(cardColors),
         ),
-        child: isFaceUp ? _buildFrontFace() : _buildBackFace(cardColors),
       ),
     );
   }

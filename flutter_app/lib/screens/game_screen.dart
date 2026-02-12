@@ -3753,10 +3753,10 @@ class _GameScreenState extends State<GameScreen> {
     // 교환 단계에서 이미 할당된 카드는 선택 불가
     bool isCardAssigned(String cardId) => _exchangeAssignments.containsValue(cardId);
 
-    Widget buildCardWidget(String cardId, double cardWidth, double cardHeight) {
+    Widget buildCardWidget(String cardId, double cardWidth, double cardHeight, double padding) {
       final assigned = isCardAssigned(cardId);
       return Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 2),
+        padding: EdgeInsets.symmetric(horizontal: padding),
         child: Opacity(
           opacity: assigned ? 0.4 : 1.0,
           child: PlayingCard(
@@ -3776,8 +3776,8 @@ class _GameScreenState extends State<GameScreen> {
         final availableWidth = constraints.maxWidth - (horizontalMargin * 2);
         final perRow = cards.length <= 6 ? cards.length : (cards.length / 2).ceil();
         final dense = cards.length >= 13;
-        final cardPadding = dense ? 3.0 : 4.0; // 2px on each side
-        final totalPadding = perRow * cardPadding;
+        final cardPadding = dense ? 2.0 : 3.0;
+        final totalPadding = perRow * cardPadding * 2;
         final maxWidth = dense ? 46.0 : 50.0;
         final minWidth = dense ? 34.0 : 38.0;
         final cardWidth =
@@ -3788,7 +3788,9 @@ class _GameScreenState extends State<GameScreen> {
         );
 
         List<Widget> rowWidgets(List<String> row) {
-          return row.map((cardId) => buildCardWidget(cardId, cardWidth, cardHeight)).toList();
+          return row
+              .map((cardId) => buildCardWidget(cardId, cardWidth, cardHeight, cardPadding))
+              .toList();
         }
 
         if (cards.length <= 6) {

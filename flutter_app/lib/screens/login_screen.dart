@@ -714,7 +714,7 @@ class _RegisterDialogState extends State<RegisterDialog> {
     }
   }
 
-  Future<void> _checkNickname() async {
+  void _checkNickname() {
     final nickname = _nicknameController.text.trim();
     if (nickname.isEmpty) {
       setState(() => _nicknameStatus = '닉네임을 입력해주세요');
@@ -723,22 +723,20 @@ class _RegisterDialogState extends State<RegisterDialog> {
     setState(() => _nicknameChecking = true);
 
     final game = context.read<GameService>();
-    game.checkNickname(nickname);
-
-    await Future.delayed(const Duration(milliseconds: 100));
-    for (int i = 0; i < 30; i++) {
+    void listener() {
       if (game.nicknameCheckMessage != null) {
+        game.removeListener(listener);
+        if (!mounted) return;
         setState(() {
           _nicknameChecking = false;
           _nicknameChecked = true;
           _nicknameAvailable = game.nicknameAvailable ?? false;
           _nicknameStatus = game.nicknameCheckMessage;
         });
-        return;
       }
-      await Future.delayed(const Duration(milliseconds: 100));
     }
-    setState(() => _nicknameChecking = false);
+    game.addListener(listener);
+    game.checkNickname(nickname);
   }
 
   Future<void> _register() async {
@@ -1086,22 +1084,20 @@ class _SocialNicknameDialogState extends State<SocialNicknameDialog> {
     setState(() => _nicknameChecking = true);
 
     final game = context.read<GameService>();
-    game.checkNickname(nickname);
-
-    await Future.delayed(const Duration(milliseconds: 100));
-    for (int i = 0; i < 30; i++) {
+    void listener() {
       if (game.nicknameCheckMessage != null) {
+        game.removeListener(listener);
+        if (!mounted) return;
         setState(() {
           _nicknameChecking = false;
           _nicknameChecked = true;
           _nicknameAvailable = game.nicknameAvailable ?? false;
           _nicknameStatus = game.nicknameCheckMessage;
         });
-        return;
       }
-      await Future.delayed(const Duration(milliseconds: 100));
     }
-    setState(() => _nicknameChecking = false);
+    game.addListener(listener);
+    game.checkNickname(nickname);
   }
 
   Future<void> _submit() async {

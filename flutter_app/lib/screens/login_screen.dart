@@ -693,45 +693,43 @@ class _RegisterDialogState extends State<RegisterDialog> {
   String? _nicknameStatus;
   bool _nicknameChecked = false;
   bool _nicknameAvailable = false;
-  Timer? _nicknameDebounce;
-
   @override
   void dispose() {
     _usernameController.dispose();
     _passwordController.dispose();
     _confirmPasswordController.dispose();
     _nicknameController.dispose();
-    _nicknameDebounce?.cancel();
     super.dispose();
   }
 
+  bool _nicknameChecking = false;
+
   void _onNicknameChanged(String value) {
-    _nicknameDebounce?.cancel();
-    setState(() {
-      _nicknameChecked = false;
-      _nicknameAvailable = false;
-      _nicknameStatus = null;
-    });
-
-    if (value.trim().isEmpty) return;
-
-    _nicknameDebounce = Timer(const Duration(milliseconds: 500), () {
-      _checkNickname();
-    });
+    if (_nicknameChecked) {
+      setState(() {
+        _nicknameChecked = false;
+        _nicknameAvailable = false;
+        _nicknameStatus = null;
+      });
+    }
   }
 
   Future<void> _checkNickname() async {
     final nickname = _nicknameController.text.trim();
-    if (nickname.isEmpty) return;
+    if (nickname.isEmpty) {
+      setState(() => _nicknameStatus = '닉네임을 입력해주세요');
+      return;
+    }
+    setState(() => _nicknameChecking = true);
 
     final game = context.read<GameService>();
     game.checkNickname(nickname);
 
-    // Wait for response
     await Future.delayed(const Duration(milliseconds: 100));
     for (int i = 0; i < 30; i++) {
       if (game.nicknameCheckMessage != null) {
         setState(() {
+          _nicknameChecking = false;
           _nicknameChecked = true;
           _nicknameAvailable = game.nicknameAvailable ?? false;
           _nicknameStatus = game.nicknameCheckMessage;
@@ -740,6 +738,7 @@ class _RegisterDialogState extends State<RegisterDialog> {
       }
       await Future.delayed(const Duration(milliseconds: 100));
     }
+    setState(() => _nicknameChecking = false);
   }
 
   Future<void> _register() async {
@@ -997,16 +996,31 @@ class _RegisterDialogState extends State<RegisterDialog> {
                     borderSide: BorderSide.none,
                   ),
                   contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                  suffixIcon: _nicknameChecked
+                      ? Icon(
+                          _nicknameAvailable ? Icons.check_circle : Icons.cancel,
+                          color: _nicknameAvailable ? Colors.green : Colors.red,
+                        )
+                      : null,
                 ),
               ),
             ),
             const SizedBox(width: 8),
-            if (_nicknameChecked)
-              Icon(
-                _nicknameAvailable ? Icons.check_circle : Icons.cancel,
-                color: _nicknameAvailable ? Colors.green : Colors.red,
-                size: 28,
+            SizedBox(
+              height: 48,
+              child: ElevatedButton(
+                onPressed: _nicknameChecking ? null : _checkNickname,
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color(0xFF8B7355),
+                  foregroundColor: Colors.white,
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  padding: const EdgeInsets.symmetric(horizontal: 14),
+                ),
+                child: _nicknameChecking
+                    ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+                    : const Text('중복확인', style: TextStyle(fontSize: 13)),
               ),
+            ),
           ],
         ),
         if (_nicknameStatus != null) ...[
@@ -1045,33 +1059,31 @@ class _SocialNicknameDialogState extends State<SocialNicknameDialog> {
   String? _nicknameStatus;
   bool _nicknameChecked = false;
   bool _nicknameAvailable = false;
-  Timer? _nicknameDebounce;
+  bool _nicknameChecking = false;
 
   @override
   void dispose() {
     _nicknameController.dispose();
-    _nicknameDebounce?.cancel();
     super.dispose();
   }
 
   void _onNicknameChanged(String value) {
-    _nicknameDebounce?.cancel();
-    setState(() {
-      _nicknameChecked = false;
-      _nicknameAvailable = false;
-      _nicknameStatus = null;
-    });
-
-    if (value.trim().isEmpty) return;
-
-    _nicknameDebounce = Timer(const Duration(milliseconds: 500), () {
-      _checkNickname();
-    });
+    if (_nicknameChecked) {
+      setState(() {
+        _nicknameChecked = false;
+        _nicknameAvailable = false;
+        _nicknameStatus = null;
+      });
+    }
   }
 
   Future<void> _checkNickname() async {
     final nickname = _nicknameController.text.trim();
-    if (nickname.isEmpty) return;
+    if (nickname.isEmpty) {
+      setState(() => _nicknameStatus = '닉네임을 입력해주세요');
+      return;
+    }
+    setState(() => _nicknameChecking = true);
 
     final game = context.read<GameService>();
     game.checkNickname(nickname);
@@ -1080,6 +1092,7 @@ class _SocialNicknameDialogState extends State<SocialNicknameDialog> {
     for (int i = 0; i < 30; i++) {
       if (game.nicknameCheckMessage != null) {
         setState(() {
+          _nicknameChecking = false;
           _nicknameChecked = true;
           _nicknameAvailable = game.nicknameAvailable ?? false;
           _nicknameStatus = game.nicknameCheckMessage;
@@ -1088,6 +1101,7 @@ class _SocialNicknameDialogState extends State<SocialNicknameDialog> {
       }
       await Future.delayed(const Duration(milliseconds: 100));
     }
+    setState(() => _nicknameChecking = false);
   }
 
   Future<void> _submit() async {
@@ -1167,16 +1181,31 @@ class _SocialNicknameDialogState extends State<SocialNicknameDialog> {
                               borderSide: BorderSide.none,
                             ),
                             contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                            suffixIcon: _nicknameChecked
+                                ? Icon(
+                                    _nicknameAvailable ? Icons.check_circle : Icons.cancel,
+                                    color: _nicknameAvailable ? Colors.green : Colors.red,
+                                  )
+                                : null,
                           ),
                         ),
                       ),
                       const SizedBox(width: 8),
-                      if (_nicknameChecked)
-                        Icon(
-                          _nicknameAvailable ? Icons.check_circle : Icons.cancel,
-                          color: _nicknameAvailable ? Colors.green : Colors.red,
-                          size: 28,
+                      SizedBox(
+                        height: 48,
+                        child: ElevatedButton(
+                          onPressed: _nicknameChecking ? null : _checkNickname,
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: const Color(0xFF8B7355),
+                            foregroundColor: Colors.white,
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                            padding: const EdgeInsets.symmetric(horizontal: 14),
+                          ),
+                          child: _nicknameChecking
+                              ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+                              : const Text('중복확인', style: TextStyle(fontSize: 13)),
                         ),
+                      ),
                     ],
                   ),
                   if (_nicknameStatus != null) ...[

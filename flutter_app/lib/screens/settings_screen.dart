@@ -1,3 +1,4 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:package_info_plus/package_info_plus.dart';
@@ -460,6 +461,24 @@ class _SettingsScreenState extends State<SettingsScreen> {
             },
             child: const Text('Google', style: TextStyle(color: Color(0xFF4285F4), fontWeight: FontWeight.bold)),
           ),
+          if (Platform.isIOS)
+            TextButton(
+              onPressed: () async {
+                Navigator.pop(ctx);
+                try {
+                  final result = await AuthService.signInWithApple();
+                  if (result.cancelled || !mounted) return;
+                  context.read<GameService>().linkSocial(result.provider, result.token);
+                } catch (e) {
+                  if (mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(content: Text('연동 실패: $e')),
+                    );
+                  }
+                }
+              },
+              child: const Text('Apple', style: TextStyle(color: Colors.black, fontWeight: FontWeight.bold)),
+            ),
           TextButton(
             onPressed: () async {
               Navigator.pop(ctx);

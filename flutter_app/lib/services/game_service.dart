@@ -899,8 +899,9 @@ class GameService extends ChangeNotifier {
       case 'social_link_result':
         socialLinkResultSuccess = data['success'] == true;
         socialLinkResultMessage = data['message'] as String?;
-        if (data['success'] == true) {
+        if (data['success'] == true && data['provider'] != null) {
           linkedSocialProvider = data['provider'] as String?;
+          authProvider = data['provider'] as String;
         }
         notifyListeners();
         break;
@@ -911,6 +912,7 @@ class GameService extends ChangeNotifier {
         if (data['success'] == true) {
           linkedSocialProvider = 'local';
           linkedSocialEmail = null;
+          authProvider = 'local';
         }
         notifyListeners();
         break;

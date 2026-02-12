@@ -673,18 +673,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
                                   onChanged: (v) => game.setPushEnabled(v),
                                 ),
                               ),
-                              const Divider(height: 1, color: Color(0xFFEAE2DE)),
-                              _buildRow(
-                                icon: Icons.person_add_alt_1,
-                                iconColor: const Color(0xFF5AB67E),
-                                title: '친구 초대 알림',
-                                subtitle: '친구 초대 푸시만 따로 설정합니다',
-                                enabled: game.pushEnabled,
-                                trailing: Switch(
-                                  value: game.pushFriendInviteEnabled,
-                                  onChanged: game.pushEnabled ? (v) => game.setPushFriendInviteEnabled(v) : null,
-                                ),
-                              ),
                             ],
                           ),
                           const SizedBox(height: 12),

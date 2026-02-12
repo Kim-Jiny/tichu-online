@@ -80,6 +80,7 @@ flutter:
   assets:
     - assets/cards/
     - assets/sfx/
+    - assets/icons/
     - assets/icon.png
     - assets/logo.png
     - assets/logo2.png

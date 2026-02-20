@@ -236,6 +236,113 @@ async function initDatabase() {
       )
     `);
 
+    // App config table (EULA, etc.)
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS tc_config (
+        key VARCHAR(100) PRIMARY KEY,
+        value TEXT,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      )
+    `);
+
+    // Seed default EULA content
+    await client.query(`
+      INSERT INTO tc_config (key, value)
+      VALUES ('eula_content', '티추 온라인 이용약관
+
+제 1 조 (목적)
+본 약관은 티추 온라인(이하 "서비스")의 이용과 관련하여 서비스 제공자와 이용자 간의 권리, 의무 및 책임사항을 규정함을 목적으로 합니다.
+
+제 2 조 (정의)
+1. "서비스"란 티추 온라인에서 제공하는 모든 게임 및 관련 기능을 말합니다.
+2. "이용자"란 본 약관에 따라 서비스를 이용하는 자를 말합니다.
+3. "콘텐츠"란 이용자가 서비스 내에서 생성, 공유하는 텍스트, 닉네임, 채팅 메시지 등을 말합니다.
+
+제 3 조 (약관의 효력 및 변경)
+1. 본 약관은 서비스 화면에 게시하거나 기타의 방법으로 이용자에게 공지함으로써 효력을 발생합니다.
+2. 서비스 제공자는 필요한 경우 약관을 변경할 수 있으며, 변경된 약관은 공지 후 효력을 발생합니다.
+
+제 4 조 (이용자의 의무)
+1. 이용자는 다음 행위를 하여서는 안 됩니다:
+  - 타인의 정보를 도용하는 행위
+  - 서비스의 운영을 방해하는 행위
+  - 타인에 대한 욕설, 비방, 차별, 혐오 발언
+  - 음란하거나 폭력적인 콘텐츠를 게시하는 행위
+  - 불법적이거나 부정한 목적으로 서비스를 이용하는 행위
+  - 게임 내 버그를 악용하거나 비정상적인 방법으로 게임을 진행하는 행위
+2. 이용자가 위 의무를 위반한 경우, 서비스 이용이 제한될 수 있습니다.
+
+제 5 조 (서비스의 제공 및 변경)
+1. 서비스 제공자는 서비스의 내용을 변경하거나 중단할 수 있습니다.
+2. 서비스 제공자는 서비스 변경 시 사전에 공지합니다.
+
+제 6 조 (게시물 관리)
+1. 이용자가 작성한 게시물(채팅 메시지, 닉네임 등)의 저작권은 해당 이용자에게 있습니다.
+2. 서비스 제공자는 다음에 해당하는 게시물을 사전 통보 없이 삭제하거나 이용을 제한할 수 있습니다:
+  - 다른 이용자를 비방하거나 명예를 훼손하는 내용
+  - 공공질서 및 미풍양속에 위반되는 내용
+  - 범죄와 관련된 내용
+  - 서비스 제공자의 저작권 등 지적재산권을 침해하는 내용
+
+제 7 조 (개인정보 보호)
+서비스 제공자는 이용자의 개인정보를 보호하기 위해 노력하며, 관련 법령에 따라 개인정보를 처리합니다.
+
+제 8 조 (면책)
+1. 서비스 제공자는 천재지변, 전쟁 등 불가항력으로 인해 서비스를 제공할 수 없는 경우 책임을 지지 않습니다.
+2. 서비스 제공자는 이용자의 귀책사유로 인한 서비스 이용 장애에 대해 책임을 지지 않습니다.
+
+제 9 조 (분쟁 해결)
+본 약관과 관련된 분쟁은 대한민국 법령에 따라 해결합니다.
+
+부칙
+본 약관은 2025년 1월 1일부터 시행합니다.')
+      ON CONFLICT (key) DO NOTHING
+    `);
+
+    // Seed default privacy policy
+    await client.query(`
+      INSERT INTO tc_config (key, value)
+      VALUES ('privacy_policy', '개인정보처리방침
+
+1. 수집하는 개인정보 항목
+서비스는 회원가입 및 서비스 이용을 위해 다음의 정보를 수집합니다:
+- 필수: 아이디, 닉네임, 비밀번호
+- 선택: 소셜 로그인 시 이메일, 소셜 계정 식별자
+- 자동 수집: 기기 정보(모델, OS 버전), 앱 버전, IP 주소
+
+2. 개인정보의 수집 및 이용 목적
+- 회원 식별 및 서비스 제공
+- 게임 매칭 및 전적 관리
+- 부정 이용 방지 및 신고 처리
+- 푸시 알림 발송 (사용자 동의 시)
+- 서비스 개선 및 통계 분석
+
+3. 개인정보의 보유 및 이용 기간
+- 회원 탈퇴 시 즉시 삭제
+- 관련 법령에 따라 보존이 필요한 경우 해당 기간 동안 보관
+
+4. 개인정보의 제3자 제공
+서비스는 이용자의 개인정보를 제3자에게 제공하지 않습니다.
+다만, 법령에 의해 요구되는 경우는 예외로 합니다.
+
+5. 개인정보의 파기
+회원 탈퇴 또는 보유 기간 만료 시, 전자적 파일 형태의 정보는 복구할 수 없는 방법으로 삭제합니다.
+
+6. 이용자의 권리
+이용자는 언제든지 자신의 개인정보를 조회, 수정, 삭제할 수 있으며, 회원 탈퇴를 통해 처리를 요청할 수 있습니다.
+
+7. 개인정보 보호를 위한 기술적 조치
+- 비밀번호 암호화 저장
+- SSL/TLS 암호화 통신
+- 접근 권한 관리
+
+8. 개인정보 보호 책임자
+서비스 운영자에게 문의하기를 통해 연락할 수 있습니다.
+
+시행일: 2025년 1월 1일')
+      ON CONFLICT (key) DO NOTHING
+    `);
+
     // Admin accounts table
     await client.query(`
       CREATE TABLE IF NOT EXISTS admin_accounts (
@@ -2409,6 +2516,33 @@ async function setPushFriendInvite(nickname, enabled) {
   }
 }
 
+async function getConfig(key) {
+  const client = await pool.connect();
+  try {
+    const result = await client.query('SELECT value FROM tc_config WHERE key = $1', [key]);
+    return result.rows.length > 0 ? result.rows[0].value : null;
+  } finally {
+    client.release();
+  }
+}
+
+async function updateConfig(key, value) {
+  const client = await pool.connect();
+  try {
+    await client.query(
+      `INSERT INTO tc_config (key, value, updated_at) VALUES ($1, $2, NOW())
+       ON CONFLICT (key) DO UPDATE SET value = $2, updated_at = NOW()`,
+      [key, value]
+    );
+    return { success: true };
+  } catch (err) {
+    console.error('Update config error:', err);
+    return { success: false, message: err.message };
+  } finally {
+    client.release();
+  }
+}
+
 module.exports = {
   initDatabase,
   registerUser,
@@ -2476,5 +2610,7 @@ module.exports = {
   updateDeviceInfo,
   setPushEnabled,
   setPushFriendInvite,
+  getConfig,
+  updateConfig,
   pool,
 };

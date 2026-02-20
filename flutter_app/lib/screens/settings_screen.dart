@@ -27,7 +27,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
     try {
       final info = await PackageInfo.fromPlatform();
       if (!mounted) return;
-      setState(() => _appVersion = '${info.version}+${info.buildNumber}');
+      setState(() => _appVersion = info.version);
     } catch (_) {}
   }
   void _logout() async {
@@ -435,6 +435,50 @@ class _SettingsScreenState extends State<SettingsScreen> {
     }
   }
 
+  void _showTextViewDialog(String title, String? content) {
+    final game = context.read<GameService>();
+    if (content == null || content.isEmpty) {
+      // Fetch from server if not loaded yet
+      game.requestAppConfig();
+    }
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: Text(title),
+        content: SizedBox(
+          width: double.maxFinite,
+          height: 400,
+          child: Consumer<GameService>(
+            builder: (context, game, _) {
+              final text = title == '이용약관' ? game.eulaContent : game.privacyPolicy;
+              if (text == null) {
+                return const Center(child: CircularProgressIndicator());
+              }
+              if (text.isEmpty) {
+                return const Center(
+                  child: Text('내용을 불러올 수 없습니다.', style: TextStyle(color: Color(0xFF9A8E8A))),
+                );
+              }
+              return SingleChildScrollView(
+                child: Text(
+                  text,
+                  style: const TextStyle(fontSize: 13, height: 1.6, color: Color(0xFF5A4038)),
+                ),
+              );
+            },
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('닫기'),
+          ),
+        ],
+      ),
+    );
+  }
+
   void _showLinkDialog() {
     showDialog(
       context: context,
@@ -732,6 +776,22 @@ class _SettingsScreenState extends State<SettingsScreen> {
                                 iconColor: const Color(0xFF7E57C2),
                                 title: '앱 버전',
                                 subtitle: _appVersion.isEmpty ? '-' : _appVersion,
+                              ),
+                              const Divider(height: 1, color: Color(0xFFEAE2DE)),
+                              _buildRow(
+                                icon: Icons.description_outlined,
+                                iconColor: const Color(0xFF8A7A72),
+                                title: '이용약관',
+                                onTap: () => _showTextViewDialog('이용약관', game.eulaContent),
+                                trailing: const Icon(Icons.chevron_right, color: Color(0xFFB0A8A4)),
+                              ),
+                              const Divider(height: 1, color: Color(0xFFEAE2DE)),
+                              _buildRow(
+                                icon: Icons.privacy_tip_outlined,
+                                iconColor: const Color(0xFF8A7A72),
+                                title: '개인정보처리방침',
+                                onTap: () => _showTextViewDialog('개인정보처리방침', game.privacyPolicy),
+                                trailing: const Icon(Icons.chevron_right, color: Color(0xFFB0A8A4)),
                               ),
                             ],
                           ),

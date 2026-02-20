@@ -4,6 +4,7 @@ const {
   getReports, getReportGroup, updateReportGroupStatus,
   getUsers, getUserDetail, deleteUser, getDashboardStats, setChatBan, setAdminMemo,
   getAllShopItemsAdmin, addShopItem, updateShopItem, deleteShopItem, getShopItemById,
+  getConfig, updateConfig,
 } = require('./db/database');
 
 // In-memory session store: token -> { username, createdAt }
@@ -147,6 +148,7 @@ input[type="text"], input[type="password"] { width: 100%; padding: 10px; border:
   <a href="/tc-backstage/reports" class="${activePage === 'reports' ? 'active' : ''}">Reports</a>
   <a href="/tc-backstage/users" class="${activePage === 'users' ? 'active' : ''}">Users</a>
   <a href="/tc-backstage/maintenance" class="${activePage === 'maintenance' ? 'active' : ''}">Maintenance</a>
+  <a href="/tc-backstage/settings" class="${activePage === 'settings' ? 'active' : ''}">Settings</a>
   <div class="logout">
     <a href="/tc-backstage/logout">Logout</a>
   </div>
@@ -1158,6 +1160,45 @@ async function handleAdminRoute(req, res, url, pathname, method, lobby, wss, mai
       });
     }
     return redirect(res, '/tc-backstage/maintenance');
+  }
+
+  // ===== Settings =====
+  if (pathname === '/tc-backstage/settings' && method === 'GET') {
+    const eulaContent = await getConfig('eula_content') || '';
+    const privacyPolicy = await getConfig('privacy_policy') || '';
+    const saved = url.searchParams.get('saved');
+
+    const content = `
+      <h1 class="page-title">Settings</h1>
+      ${saved ? '<div style="color:#4caf50;margin-bottom:12px;font-weight:600">저장되었습니다.</div>' : ''}
+      <div class="card">
+        <h3>EULA / 이용약관</h3>
+        <form method="POST" action="/tc-backstage/settings/eula">
+          <textarea name="eula_content" rows="20" style="font-size:13px;line-height:1.6">${escapeHtml(eulaContent)}</textarea>
+          <div style="margin-top:12px"><button type="submit" class="btn btn-primary">Save</button></div>
+        </form>
+      </div>
+      <div class="card">
+        <h3>개인정보처리방침</h3>
+        <form method="POST" action="/tc-backstage/settings/privacy">
+          <textarea name="privacy_policy" rows="20" style="font-size:13px;line-height:1.6">${escapeHtml(privacyPolicy)}</textarea>
+          <div style="margin-top:12px"><button type="submit" class="btn btn-primary">Save</button></div>
+        </form>
+      </div>
+    `;
+    return html(res, layout('Settings', content, 'settings'));
+  }
+
+  if (pathname === '/tc-backstage/settings/eula' && method === 'POST') {
+    const body = await parseBody(req);
+    await updateConfig('eula_content', body.eula_content || '');
+    return redirect(res, '/tc-backstage/settings?saved=1');
+  }
+
+  if (pathname === '/tc-backstage/settings/privacy' && method === 'POST') {
+    const body = await parseBody(req);
+    await updateConfig('privacy_policy', body.privacy_policy || '');
+    return redirect(res, '/tc-backstage/settings?saved=1');
   }
 
   // 404

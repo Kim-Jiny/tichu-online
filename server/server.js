@@ -12,7 +12,7 @@ const {
   submitInquiry, getUserInquiries, markInquiriesRead, getRankings,
   getWallet, getShopItems, getUserItems, buyItem, equipItem, useItem, changeNickname,
   incrementLeaveCount, setRankedBan, getRankedBan, setChatBan, getChatBan, grantSeasonRewards,
-  getActiveSeason, createSeason, getSeasons,
+  getActiveSeason, createSeason, getSeasons, getConfig,
   getCurrentSeasonRankings, getSeasonRankings, resetSeasonStats,
   loginSocial, registerSocial,
   linkSocial, unlinkSocial, getLinkedSocial,
@@ -508,8 +508,22 @@ function handleMessage(ws, data) {
     case 'get_maintenance_status':
       sendTo(ws, { type: 'maintenance_status', ...getMaintenanceStatus() });
       break;
+    case 'get_app_config':
+      handleGetAppConfig(ws);
+      break;
     default:
       sendTo(ws, { type: 'error', message: `알 수 없는 메시지: ${data.type}` });
+  }
+}
+
+async function handleGetAppConfig(ws) {
+  try {
+    const eulaContent = await getConfig('eula_content');
+    const privacyPolicy = await getConfig('privacy_policy');
+    sendTo(ws, { type: 'app_config', eulaContent: eulaContent || '', privacyPolicy: privacyPolicy || '' });
+  } catch (err) {
+    console.error('get_app_config error:', err);
+    sendTo(ws, { type: 'app_config', eulaContent: '', privacyPolicy: '' });
   }
 }
 

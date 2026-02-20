@@ -158,6 +158,10 @@ class GameService extends ChangeNotifier {
   // Dragon given
   String? dragonGivenMessage; // "OO이(가) OO에게 용을 줬습니다"
 
+  // App config (EULA, Privacy Policy)
+  String? eulaContent;
+  String? privacyPolicy;
+
   // Maintenance
   bool isUnderMaintenance = false;
   bool hasMaintenanceNotice = false;
@@ -922,6 +926,12 @@ class GameService extends ChangeNotifier {
         linkedSocialEmail = data['email'] as String?;
         notifyListeners();
         break;
+
+      case 'app_config':
+        eulaContent = data['eulaContent'] as String? ?? '';
+        privacyPolicy = data['privacyPolicy'] as String? ?? '';
+        notifyListeners();
+        break;
     }
   }
 
@@ -1382,6 +1392,10 @@ class GameService extends ChangeNotifier {
   }
 
   // Shop
+  void requestAppConfig() {
+    _network.send({'type': 'get_app_config'});
+  }
+
   void requestWallet() {
     _network.send({'type': 'get_wallet'});
   }

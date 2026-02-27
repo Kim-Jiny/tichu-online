@@ -83,13 +83,15 @@ function layout(title, content, activePage = '') {
 <style>
 * { margin: 0; padding: 0; box-sizing: border-box; }
 body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #f0f2f5; color: #1a1a2e; display: flex; min-height: 100vh; }
-.sidebar { width: 220px; background: #1a1a2e; color: #e0e0e0; padding: 20px 0; position: fixed; height: 100vh; overflow-y: auto; }
+.sidebar { width: 220px; background: #1a1a2e; color: #e0e0e0; padding: 20px 0; position: fixed; height: 100vh; overflow-y: auto; z-index: 100; transition: transform 0.3s ease; }
 .sidebar h2 { padding: 0 20px 20px; font-size: 18px; color: #fff; border-bottom: 1px solid #2a2a4e; margin-bottom: 10px; }
 .sidebar a { display: block; padding: 12px 20px; color: #b0b0c8; text-decoration: none; font-size: 14px; transition: all 0.2s; }
 .sidebar a:hover { background: #2a2a4e; color: #fff; }
 .sidebar a.active { background: #2a2a4e; color: #6c63ff; border-left: 3px solid #6c63ff; }
 .sidebar .logout { margin-top: 20px; border-top: 1px solid #2a2a4e; padding-top: 10px; }
 .sidebar .logout a { color: #e57373; }
+.menu-toggle { display: none; position: fixed; top: 12px; left: 12px; z-index: 200; background: #1a1a2e; color: #fff; border: none; border-radius: 8px; width: 40px; height: 40px; font-size: 22px; cursor: pointer; align-items: center; justify-content: center; box-shadow: 0 2px 8px rgba(0,0,0,0.2); }
+.sidebar-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 90; }
 .main { margin-left: 220px; flex: 1; padding: 24px; min-height: 100vh; }
 .page-title { font-size: 24px; font-weight: 700; margin-bottom: 20px; color: #1a1a2e; }
 .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 16px; margin-bottom: 24px; }
@@ -102,11 +104,12 @@ body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; b
 .stat-card .value.red { color: #e53935; }
 .card { background: #fff; border-radius: 12px; padding: 20px; box-shadow: 0 2px 8px rgba(0,0,0,0.06); margin-bottom: 20px; }
 .card h3 { font-size: 16px; margin-bottom: 16px; color: #1a1a2e; }
+.table-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; }
 table { width: 100%; border-collapse: collapse; }
-th { text-align: left; padding: 10px 12px; background: #f8f9fa; color: #666; font-size: 13px; font-weight: 600; border-bottom: 2px solid #e0e0e0; }
+th { text-align: left; padding: 10px 12px; background: #f8f9fa; color: #666; font-size: 13px; font-weight: 600; border-bottom: 2px solid #e0e0e0; white-space: nowrap; }
 td { padding: 10px 12px; border-bottom: 1px solid #f0f0f0; font-size: 14px; }
 tr:hover td { background: #f8f9fa; }
-.badge { display: inline-block; padding: 3px 10px; border-radius: 12px; font-size: 12px; font-weight: 600; }
+.badge { display: inline-block; padding: 3px 10px; border-radius: 12px; font-size: 12px; font-weight: 600; white-space: nowrap; }
 .badge-pending { background: #fff3e0; color: #e65100; }
 .badge-resolved { background: #e8f5e9; color: #2e7d32; }
 .badge-reviewed { background: #e3f2fd; color: #1565c0; }
@@ -124,12 +127,12 @@ tr:hover td { background: #f8f9fa; }
 .btn-secondary:hover { background: #bdbdbd; }
 .detail-grid { display: grid; grid-template-columns: 120px 1fr; gap: 8px 16px; margin-bottom: 16px; }
 .detail-grid .label { color: #888; font-size: 13px; font-weight: 600; }
-.detail-grid .value { font-size: 14px; }
+.detail-grid .value { font-size: 14px; word-break: break-word; }
 textarea { width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 8px; font-size: 14px; resize: vertical; font-family: inherit; }
 input[type="text"], input[type="password"] { width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 8px; font-size: 14px; font-family: inherit; }
 .search-bar { display: flex; gap: 8px; margin-bottom: 16px; }
 .search-bar input { flex: 1; }
-.pagination { display: flex; gap: 8px; margin-top: 16px; justify-content: center; }
+.pagination { display: flex; gap: 8px; margin-top: 16px; justify-content: center; flex-wrap: wrap; }
 .pagination a { padding: 6px 12px; border-radius: 6px; background: #e0e0e0; color: #333; text-decoration: none; font-size: 13px; }
 .pagination a.active { background: #6c63ff; color: #fff; }
 .chat-log { max-height: 400px; overflow-y: auto; background: #f8f9fa; border-radius: 8px; padding: 12px; margin: 12px 0; }
@@ -137,18 +140,51 @@ input[type="text"], input[type="password"] { width: 100%; padding: 10px; border:
 .chat-msg .sender { font-weight: 600; color: #1a1a2e; }
 .chat-msg .text { color: #555; }
 .empty { text-align: center; padding: 40px; color: #999; font-size: 15px; }
+.grid-2col { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 20px; }
+.form-grid { display: grid; grid-template-columns: 140px 1fr; gap: 12px 16px; align-items: center; max-width: 600px; }
+
+@media (max-width: 768px) {
+  .menu-toggle { display: flex; }
+  .sidebar { transform: translateX(-100%); }
+  .sidebar.open { transform: translateX(0); }
+  .sidebar-overlay.open { display: block; }
+  .main { margin-left: 0; padding: 16px; padding-top: 60px; }
+  .page-title { font-size: 20px; }
+  .stats-grid { grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 10px; }
+  .stat-card { padding: 14px; }
+  .stat-card .value { font-size: 22px; }
+  .card { padding: 14px; }
+  .grid-2col { grid-template-columns: 1fr; }
+  .detail-grid { grid-template-columns: 100px 1fr; gap: 6px 12px; }
+  .form-grid { grid-template-columns: 1fr; max-width: 100%; }
+  .form-grid label { font-weight: 600; margin-top: 4px; }
+  .search-bar { flex-direction: column; }
+  .search-bar .btn { width: 100%; text-align: center; }
+  .btn { padding: 10px 16px; }
+  table { font-size: 13px; }
+  th, td { padding: 8px; }
+}
+@media (max-width: 480px) {
+  .stats-grid { grid-template-columns: 1fr 1fr; gap: 8px; }
+  .stat-card { padding: 10px; }
+  .stat-card .value { font-size: 18px; }
+  .detail-grid { grid-template-columns: 1fr; }
+  .detail-grid .label { margin-top: 8px; }
+}
 </style>
 </head>
 <body>
+<button class="menu-toggle" onclick="document.querySelector('.sidebar').classList.toggle('open');document.querySelector('.sidebar-overlay').classList.toggle('open')">&#9776;</button>
+<div class="sidebar-overlay" onclick="document.querySelector('.sidebar').classList.remove('open');this.classList.remove('open')"></div>
 <nav class="sidebar">
   <h2>Tichu Admin</h2>
-  <a href="/tc-backstage/" class="${activePage === 'home' ? 'active' : ''}">Dashboard</a>
-  <a href="/tc-backstage/inquiries" class="${activePage === 'inquiries' ? 'active' : ''}">Inquiries</a>
-  <a href="/tc-backstage/shop" class="${activePage === 'shop' ? 'active' : ''}">Shop</a>
-  <a href="/tc-backstage/reports" class="${activePage === 'reports' ? 'active' : ''}">Reports</a>
-  <a href="/tc-backstage/users" class="${activePage === 'users' ? 'active' : ''}">Users</a>
-  <a href="/tc-backstage/maintenance" class="${activePage === 'maintenance' ? 'active' : ''}">Maintenance</a>
-  <a href="/tc-backstage/settings" class="${activePage === 'settings' ? 'active' : ''}">Settings</a>
+  <a href="/tc-backstage/" class="${activePage === 'home' ? 'active' : ''}" onclick="closeSidebar()">Dashboard</a>
+  <a href="/tc-backstage/inquiries" class="${activePage === 'inquiries' ? 'active' : ''}" onclick="closeSidebar()">Inquiries</a>
+  <a href="/tc-backstage/shop" class="${activePage === 'shop' ? 'active' : ''}" onclick="closeSidebar()">Shop</a>
+  <a href="/tc-backstage/reports" class="${activePage === 'reports' ? 'active' : ''}" onclick="closeSidebar()">Reports</a>
+  <a href="/tc-backstage/users" class="${activePage === 'users' ? 'active' : ''}" onclick="closeSidebar()">Users</a>
+  <a href="/tc-backstage/maintenance" class="${activePage === 'maintenance' ? 'active' : ''}" onclick="closeSidebar()">Maintenance</a>
+  <a href="/tc-backstage/settings" class="${activePage === 'settings' ? 'active' : ''}" onclick="closeSidebar()">Settings</a>
   <div class="logout">
     <a href="/tc-backstage/logout">Logout</a>
   </div>
@@ -156,6 +192,7 @@ input[type="text"], input[type="password"] { width: 100%; padding: 10px; border:
 <main class="main">
 ${content}
 </main>
+<script>function closeSidebar(){document.querySelector('.sidebar').classList.remove('open');document.querySelector('.sidebar-overlay').classList.remove('open')}</script>
 </body>
 </html>`;
 }
@@ -170,7 +207,7 @@ function loginPage(error = '') {
 <style>
 * { margin: 0; padding: 0; box-sizing: border-box; }
 body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #1a1a2e; display: flex; align-items: center; justify-content: center; min-height: 100vh; }
-.login-box { background: #fff; border-radius: 16px; padding: 40px; width: 360px; box-shadow: 0 8px 32px rgba(0,0,0,0.3); }
+.login-box { background: #fff; border-radius: 16px; padding: 40px; width: 360px; max-width: 90vw; box-shadow: 0 8px 32px rgba(0,0,0,0.3); }
 .login-box h2 { text-align: center; margin-bottom: 24px; color: #1a1a2e; }
 .login-box input { width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 8px; font-size: 14px; margin-bottom: 12px; }
 .login-box button { width: 100%; padding: 12px; background: #6c63ff; color: #fff; border: none; border-radius: 8px; font-size: 16px; font-weight: 600; cursor: pointer; }
@@ -250,7 +287,7 @@ function shopForm(action, values, isEdit = false) {
   ).join('');
 
   return `<form method="POST" action="${action}">
-    <div style="display:grid;grid-template-columns:140px 1fr;gap:12px 16px;align-items:center;max-width:600px">
+    <div class="form-grid">
       <label>Item Key</label>
       <input type="text" name="item_key" value="${escapeHtml(v('item_key'))}" ${isEdit ? 'readonly style="background:#f0f0f0"' : 'required'} placeholder="e.g. banner_new">
       <label>Name</label>
@@ -400,7 +437,7 @@ async function handleAdminRoute(req, res, url, pathname, method, lobby, wss, mai
     // Recent matches table
     let matchesTable = '';
     if (stats.recentMatches.length > 0) {
-      matchesTable = `<table>
+      matchesTable = `<div class="table-wrap"><table>
         <tr><th>ID</th><th>Result</th><th>Score</th><th>Team A</th><th>Team B</th><th>Type</th><th>Date</th></tr>
         ${stats.recentMatches.map(m => {
           const isDraw = m.team_a_score === m.team_b_score;
@@ -421,7 +458,7 @@ async function handleAdminRoute(req, res, url, pathname, method, lobby, wss, mai
           <td style="font-size:12px;color:#888">${formatDate(m.created_at)}</td>
         </tr>`;
         }).join('')}
-      </table>`;
+      </table></div>`;
     } else {
       matchesTable = '<div class="empty">No recent matches</div>';
     }
@@ -429,7 +466,7 @@ async function handleAdminRoute(req, res, url, pathname, method, lobby, wss, mai
     // Top players table
     let topPlayersTable = '';
     if (stats.topPlayers.length > 0) {
-      topPlayersTable = `<table>
+      topPlayersTable = `<div class="table-wrap"><table>
         <tr><th>#</th><th>Nickname</th><th>Rating</th><th>Season</th><th>W/L</th><th>Games</th><th>Lv</th></tr>
         ${stats.topPlayers.map((p, i) => {
           const medal = i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : `${i + 1}`;
@@ -444,13 +481,13 @@ async function handleAdminRoute(req, res, url, pathname, method, lobby, wss, mai
             <td>${p.level}</td>
           </tr>`;
         }).join('')}
-      </table>`;
+      </table></div>`;
     }
 
     // Active rooms table
     let roomsTable = '';
     if (allRooms.length > 0) {
-      roomsTable = `<table>
+      roomsTable = `<div class="table-wrap"><table>
         <tr><th>Room</th><th>Host</th><th>Players</th><th>Status</th><th>Type</th><th>Spectators</th></tr>
         ${allRooms.map(r => `<tr>
           <td>${escapeHtml(r.name)}</td>
@@ -462,7 +499,7 @@ async function handleAdminRoute(req, res, url, pathname, method, lobby, wss, mai
           <td>${r.isRanked ? '<span class="badge" style="background:#fff3e0;color:#e65100">Ranked</span>' : 'Normal'}</td>
           <td>${r.spectatorCount || 0}</td>
         </tr>`).join('')}
-      </table>`;
+      </table></div>`;
     } else {
       roomsTable = '<div class="empty">No active rooms</div>';
     }
@@ -489,7 +526,7 @@ async function handleAdminRoute(req, res, url, pathname, method, lobby, wss, mai
         <div class="stat-card"><div class="label">Pending Reports</div><div class="value red">${stats.pendingReports}</div></div>
       </div>
 
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;margin-bottom:20px">
+      <div class="grid-2col">
         <div class="card">
           <h3>Games / Day (7d)</h3>
           ${miniBar(chartGames, maxGames, '#6c63ff', chartLabels)}
@@ -507,7 +544,7 @@ async function handleAdminRoute(req, res, url, pathname, method, lobby, wss, mai
         </div>
       </div>
 
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;margin-bottom:20px">
+      <div class="grid-2col">
         <div class="card">
           <h3>Economy</h3>
           <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
@@ -558,7 +595,7 @@ async function handleAdminRoute(req, res, url, pathname, method, lobby, wss, mai
         ${roomsTable}
       </div>
 
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;margin-bottom:20px">
+      <div class="grid-2col">
         <div class="card">
           <h3>Top 10 Players</h3>
           ${topPlayersTable || '<div class="empty">No players yet</div>'}
@@ -579,7 +616,7 @@ async function handleAdminRoute(req, res, url, pathname, method, lobby, wss, mai
 
     let tableContent = '';
     if (data.rows.length > 0) {
-      tableContent = `<table>
+      tableContent = `<div class="table-wrap"><table>
         <tr><th>ID</th><th>User</th><th>Category</th><th>Title</th><th>Status</th><th>Date</th><th></th></tr>
         ${data.rows.map(r => `<tr>
           <td>${r.id}</td>
@@ -590,7 +627,7 @@ async function handleAdminRoute(req, res, url, pathname, method, lobby, wss, mai
           <td>${formatDate(r.created_at)}</td>
           <td><a href="/tc-backstage/inquiries/${r.id}" class="btn btn-secondary">View</a></td>
         </tr>`).join('')}
-      </table>
+      </table></div>
       ${pagination(data.page, data.total, data.limit, '/tc-backstage/inquiries')}`;
     } else {
       tableContent = '<div class="empty">No inquiries</div>';
@@ -658,7 +695,7 @@ async function handleAdminRoute(req, res, url, pathname, method, lobby, wss, mai
 
     let tableContent = '';
     if (data.rows.length > 0) {
-      tableContent = `<table>
+      tableContent = `<div class="table-wrap"><table>
         <tr><th>Reported</th><th>Room</th><th>신고자</th><th>신고수</th><th>Status</th><th>Latest</th><th></th></tr>
         ${data.rows.map(r => {
           const cnt = parseInt(r.report_count) || 1;
@@ -677,7 +714,7 @@ async function handleAdminRoute(req, res, url, pathname, method, lobby, wss, mai
           <td><a href="${detailUrl}" class="btn btn-secondary">View</a></td>
         </tr>`;
         }).join('')}
-      </table>
+      </table></div>
       ${pagination(data.page, data.total, data.limit, '/tc-backstage/reports')}`;
     } else {
       tableContent = '<div class="empty">No reports</div>';
@@ -786,7 +823,7 @@ async function handleAdminRoute(req, res, url, pathname, method, lobby, wss, mai
 
     let tableContent = '';
     if (data.rows.length > 0) {
-      tableContent = `<table>
+      tableContent = `<div class="table-wrap"><table>
         <tr><th>Nickname</th><th>Username</th><th>Games</th><th>W/L</th><th>Rating</th><th>Joined</th><th></th></tr>
         ${data.rows.map(u => `<tr>
           <td>${escapeHtml(u.nickname)}</td>
@@ -797,7 +834,7 @@ async function handleAdminRoute(req, res, url, pathname, method, lobby, wss, mai
           <td>${formatDate(u.created_at)}</td>
           <td><a href="/tc-backstage/users/${encodeURIComponent(u.nickname)}" class="btn btn-secondary">View</a></td>
         </tr>`).join('')}
-      </table>
+      </table></div>
       ${pagination(data.page, data.total, data.limit, `/tc-backstage/users${search ? '?q=' + encodeURIComponent(search) : ''}`)}`;
     } else {
       tableContent = '<div class="empty">No users found</div>';
@@ -989,7 +1026,7 @@ async function handleAdminRoute(req, res, url, pathname, method, lobby, wss, mai
 
     let tableContent = '';
     if (items.length > 0) {
-      tableContent = `<table>
+      tableContent = `<div class="table-wrap"><table>
         <tr><th>ID</th><th>Key</th><th>Name</th><th>Category</th><th>Price</th><th>구분</th><th>판매기간</th><th>상태</th><th></th></tr>
         ${items.map(item => `<tr>
           <td>${item.id}</td>
@@ -1002,7 +1039,7 @@ async function handleAdminRoute(req, res, url, pathname, method, lobby, wss, mai
           <td>${saleBadge(item)}</td>
           <td><a href="/tc-backstage/shop/${item.id}" class="btn btn-secondary">Edit</a></td>
         </tr>`).join('')}
-      </table>`;
+      </table></div>`;
     } else {
       tableContent = '<div class="empty">No shop items</div>';
     }
@@ -1111,7 +1148,7 @@ async function handleAdminRoute(req, res, url, pathname, method, lobby, wss, mai
       <div class="card">
         <h3>현재 상태: ${statusText}</h3>
         <form method="POST" action="/tc-backstage/maintenance" style="margin-top:16px">
-          <div style="display:grid;grid-template-columns:160px 1fr;gap:12px 16px;align-items:center;max-width:600px">
+          <div class="form-grid" style="grid-template-columns:160px 1fr">
             <label>안내 시작</label>
             <input type="datetime-local" name="noticeStart" value="${formatDatetimeLocal(config.noticeStart)}" style="padding:10px;border:1px solid #ddd;border-radius:8px;font-size:14px">
             <label>안내 종료</label>

@@ -20,6 +20,7 @@ class _SpectatorScreenState extends State<SpectatorScreen> {
   bool _soundPanelOpen = false;
   final TextEditingController _chatController = TextEditingController();
   final ScrollController _chatScrollController = ScrollController();
+  int _lastChatMessageCount = 0;
 
   @override
   void dispose() {
@@ -1001,7 +1002,12 @@ class _SpectatorScreenState extends State<SpectatorScreen> {
 
   Widget _buildChatButton() {
     return GestureDetector(
-      onTap: () => setState(() => _chatOpen = !_chatOpen),
+      onTap: () => setState(() {
+        _chatOpen = !_chatOpen;
+        if (_chatOpen) {
+          _scrollChatToBottom();
+        }
+      }),
       child: Container(
         padding: const EdgeInsets.all(8),
         decoration: BoxDecoration(
@@ -1021,6 +1027,10 @@ class _SpectatorScreenState extends State<SpectatorScreen> {
   }
 
   Widget _buildChatPanel(GameService game) {
+    if (game.chatMessages.length != _lastChatMessageCount) {
+      _lastChatMessageCount = game.chatMessages.length;
+      _scrollChatToBottom();
+    }
     final bottomInset = MediaQuery.of(context).viewInsets.bottom;
     final maxHeight = MediaQuery.of(context).size.height - bottomInset - 120;
     final panelHeight = maxHeight < 240
@@ -1183,20 +1193,22 @@ class _SpectatorScreenState extends State<SpectatorScreen> {
     );
   }
 
+  void _scrollChatToBottom() {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (_chatScrollController.hasClients) {
+        _chatScrollController.jumpTo(
+          _chatScrollController.position.maxScrollExtent,
+        );
+      }
+    });
+  }
+
   void _sendChatMessage(GameService game) {
     final message = _chatController.text.trim();
     if (message.isEmpty) return;
     game.sendChatMessage(message);
     _chatController.clear();
-    Future.delayed(const Duration(milliseconds: 100), () {
-      if (_chatScrollController.hasClients) {
-        _chatScrollController.animateTo(
-          _chatScrollController.position.maxScrollExtent,
-          duration: const Duration(milliseconds: 200),
-          curve: Curves.easeOut,
-        );
-      }
-    });
+    _scrollChatToBottom();
   }
 
   Widget _buildTrickArea(List currentTrick) {

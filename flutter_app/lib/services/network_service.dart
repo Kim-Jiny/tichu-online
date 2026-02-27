@@ -5,7 +5,7 @@ import 'package:web_socket_channel/web_socket_channel.dart';
 
 class NetworkService extends ChangeNotifier {
   static String get defaultUrl => kDebugMode
-      ? 'ws://172.30.1.98:8080'  // Mac IP for iOS simulator/device
+      ? 'ws://172.30.1.80:8080'  // Mac IP for iOS simulator/device
       : 'wss://tichu-server.onrender.com';
 
   WebSocketChannel? _channel;

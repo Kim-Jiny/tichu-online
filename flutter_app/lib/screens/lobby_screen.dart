@@ -31,6 +31,7 @@ class _LobbyScreenState extends State<LobbyScreen> {
   // 채팅
   final TextEditingController _chatController = TextEditingController();
   final ScrollController _chatScrollController = ScrollController();
+  int _lastChatMessageCount = 0;
 
   @override
   void initState() {
@@ -2809,6 +2810,10 @@ class _LobbyScreenState extends State<LobbyScreen> {
   }
 
   Widget _buildRoomChat(GameService game) {
+    if (game.chatMessages.length != _lastChatMessageCount) {
+      _lastChatMessageCount = game.chatMessages.length;
+      _scrollChatToBottom();
+    }
     return Container(
       decoration: BoxDecoration(
         color: const Color(0xFFF8F6F4),
@@ -2964,20 +2969,22 @@ class _LobbyScreenState extends State<LobbyScreen> {
     );
   }
 
+  void _scrollChatToBottom() {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (_chatScrollController.hasClients) {
+        _chatScrollController.jumpTo(
+          _chatScrollController.position.maxScrollExtent,
+        );
+      }
+    });
+  }
+
   void _sendRoomChatMessage(GameService game) {
     final message = _chatController.text.trim();
     if (message.isEmpty) return;
     game.sendChatMessage(message);
     _chatController.clear();
-    Future.delayed(const Duration(milliseconds: 100), () {
-      if (_chatScrollController.hasClients) {
-        _chatScrollController.animateTo(
-          _chatScrollController.position.maxScrollExtent,
-          duration: const Duration(milliseconds: 200),
-          curve: Curves.easeOut,
-        );
-      }
-    });
+    _scrollChatToBottom();
   }
 
   void _showUserActionSheet(String nickname, GameService game) {

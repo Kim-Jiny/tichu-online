@@ -37,6 +37,7 @@ class _GameScreenState extends State<GameScreen> {
   bool _moreOpen = false;
   final TextEditingController _chatController = TextEditingController();
   final ScrollController _chatScrollController = ScrollController();
+  int _lastChatMessageCount = 0;
 
   // 턴 타이머
   Timer? _countdownTimer;
@@ -397,6 +398,7 @@ class _GameScreenState extends State<GameScreen> {
         _chatOpen = !_chatOpen;
         if (_chatOpen) {
           _lastSeenMessageCount = totalMessages;
+          _scrollChatToBottom();
         }
       }),
       child: Stack(
@@ -591,6 +593,10 @@ class _GameScreenState extends State<GameScreen> {
   }
 
   Widget _buildChatPanel(GameService game) {
+    if (game.chatMessages.length != _lastChatMessageCount) {
+      _lastChatMessageCount = game.chatMessages.length;
+      _scrollChatToBottom();
+    }
     final bottomInset = MediaQuery.of(context).viewInsets.bottom;
     final maxHeight = MediaQuery.of(context).size.height - bottomInset - 120;
     final panelHeight = maxHeight < 240
@@ -756,21 +762,22 @@ class _GameScreenState extends State<GameScreen> {
     );
   }
 
+  void _scrollChatToBottom() {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (_chatScrollController.hasClients) {
+        _chatScrollController.jumpTo(
+          _chatScrollController.position.maxScrollExtent,
+        );
+      }
+    });
+  }
+
   void _sendChatMessage(GameService game) {
     final message = _chatController.text.trim();
     if (message.isEmpty) return;
     game.sendChatMessage(message);
     _chatController.clear();
-    // Scroll to bottom after sending
-    Future.delayed(const Duration(milliseconds: 100), () {
-      if (_chatScrollController.hasClients) {
-        _chatScrollController.animateTo(
-          _chatScrollController.position.maxScrollExtent,
-          duration: const Duration(milliseconds: 200),
-          curve: Curves.easeOut,
-        );
-      }
-    });
+    _scrollChatToBottom();
   }
 
   void _showPlayerProfileDialog(String nickname, GameService game) {

@@ -15,5 +15,6 @@ jobs:
           username: ${{ secrets.SERVER_USER }}
           key: ${{ secrets.SERVER_SSH_KEY }}
           port: ${{ secrets.SERVER_PORT }}
+          passphrase: ${{ secrets.SERVER_SSH_PASSPHRASE }}
           script: |
             /opt/services/tichu-online/deploy.sh

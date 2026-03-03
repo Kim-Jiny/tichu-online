@@ -23,6 +23,9 @@ server/node_modules/
 # Claude Code
 .claude/
 
+# Environment
+.env
+
 # Logs
 *.log
 

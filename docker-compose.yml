@@ -1,7 +1,7 @@
 services:
   server:
     build: ./server
-    container_name: tichu-server
+    container_name: tichu-online
     restart: unless-stopped
     ports:
       - "3000:3000"
@@ -13,6 +13,8 @@ services:
     depends_on:
       db:
         condition: service_healthy
+    networks:
+      - app-network
 
   db:
     image: postgres:16-alpine
@@ -29,6 +31,12 @@ services:
       interval: 5s
       timeout: 3s
       retries: 5
+    networks:
+      - app-network
 
 volumes:
   pgdata:
+
+networks:
+  app-network:
+    external: true

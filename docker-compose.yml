@@ -9,7 +9,7 @@ services:
     environment:
       - NODE_ENV=production
       - PORT=3000
-      - DATABASE_URL=postgresql://tichu:${DB_PASSWORD}@db:5432/tichu
+      - DATABASE_URL=${DATABASE_URL}
       - FIREBASE_SERVICE_ACCOUNT=${FIREBASE_SERVICE_ACCOUNT}
     depends_on:
       db:

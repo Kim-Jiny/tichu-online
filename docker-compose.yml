@@ -1,3 +1,4 @@
+name: tichu
 services:
   server:
     build: ./server

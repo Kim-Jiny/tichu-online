@@ -238,8 +238,18 @@ class _GameScreenState extends State<GameScreen> {
 
                 final state = game.gameState;
                 if (state == null) {
-                return const Center(child: CircularProgressIndicator());
-              }
+                  if (!_leavingGame) {
+                    _leavingGame = true;
+                    WidgetsBinding.instance.addPostFrameCallback((_) {
+                      if (!mounted) return;
+                      Navigator.pushReplacement(
+                        context,
+                        MaterialPageRoute(builder: (_) => const LobbyScreen()),
+                      );
+                    });
+                  }
+                  return const Center(child: CircularProgressIndicator());
+                }
 
               // Bug #1: Clear exchange assignments when phase leaves card_exchange
               if (state.phase != 'card_exchange') {
@@ -3357,7 +3367,7 @@ class _GameScreenState extends State<GameScreen> {
               style: TextStyle(fontSize: 12, color: Color(0xFF8A7A72)),
             ),
           ],
-          if (isGameEnd) ...[
+          if (isGameEnd && game.isHost) ...[
             const SizedBox(height: 20),
             ElevatedButton(
               onPressed: () {

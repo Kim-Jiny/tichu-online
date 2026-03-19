@@ -416,21 +416,7 @@ class GameService extends ChangeNotifier {
         break;
 
       case 'room_left':
-        currentRoomId = '';
-        currentRoomName = '';
-        roomPlayers = [null, null, null, null];
-        isHost = false;
-        isRankedRoom = false;
-    roomTurnTimeLimit = 30;
-        isSpectator = false;
-        gameState = null;
-        spectatorGameState = null;
-        pendingCardViewRequests = {};
-        approvedCardViews = {};
-        incomingCardViewRequests = [];
-        cardViewers = [];
-        chatMessages = [];
-        _prevGameState = null;
+        _clearRoomState(notify: false);
         notifyListeners();
         break;
 
@@ -511,6 +497,11 @@ class GameService extends ChangeNotifier {
           isHost = roomPlayers.any((p) => p != null && p.id == playerId && p.isHost);
           isRankedRoom = room['isRanked'] == true;
           roomTurnTimeLimit = room['turnTimeLimit'] ?? 30;
+          if (room['gameInProgress'] != true) {
+            gameState = null;
+            spectatorGameState = null;
+            _prevGameState = null;
+          }
         }
         notifyListeners();
         break;
@@ -1260,7 +1251,7 @@ class GameService extends ChangeNotifier {
     _clearRoomState();
   }
 
-  void _clearRoomState() {
+  void _clearRoomState({bool notify = true}) {
     currentRoomId = '';
     currentRoomName = '';
     roomPlayers = [null, null, null, null];
@@ -1274,12 +1265,15 @@ class GameService extends ChangeNotifier {
     approvedCardViews = {};
     incomingCardViewRequests = [];
     cardViewers = [];
+    spectators = [];
     chatMessages = [];
     desertedPlayerName = null;
     desertedReason = null;
     dragonGivenMessage = null;
     myTimeoutCount = 0;
-    notifyListeners();
+    if (notify) {
+      notifyListeners();
+    }
   }
 
   void addBot({int? targetSlot}) {
@@ -1341,8 +1335,6 @@ class GameService extends ChangeNotifier {
 
   void returnToRoom() {
     _network.send({'type': 'return_to_room'});
-    gameState = null;
-    notifyListeners();
   }
 
   void checkRoom() {

@@ -2024,7 +2024,10 @@ async function handleDesertion(roomId, playerId, reason = 'leave') {
   }
   const deserterWs = findWsByPlayerId(playerId);
   if (deserterWs) {
-    sendTo(deserterWs, { type: 'kicked', message: '시간 초과 3회로 퇴장되었습니다' });
+    const kickMessage = reason === 'timeout'
+      ? '시간 초과 3회로 퇴장되었습니다'
+      : '게임에서 나가 패배 처리되었습니다';
+    sendTo(deserterWs, { type: 'kicked', message: kickMessage });
     deserterWs.roomId = null;
   }
   room.removePlayer(playerId);

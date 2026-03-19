@@ -1118,6 +1118,12 @@ function handleReturnToRoom(ws) {
     sendTo(ws, { type: 'error', message: '게임이 아직 진행 중입니다' });
     return;
   }
+  // Solo bot rooms should be cleaned up instead of lingering in the lobby.
+  if (room.getHumanPlayerCount() <= 1 && room.getBotIds().length > 0) {
+    closeRoom(room.id, 'room_left');
+    broadcastRoomList();
+    return;
+  }
   // Clear the game and reset ready states
   room.game = null;
   room.resetReady();
@@ -2077,20 +2083,33 @@ function broadcastRoomState(roomId) {
   }
 }
 
-// Notify all spectators and remove room
-function removeRoomAndNotifySpectators(roomId) {
+// Notify all connected participants and remove room
+function closeRoom(roomId, messageType = 'room_closed') {
   const room = lobby.getRoom(roomId);
   if (room) {
+    for (const player of room.players) {
+      if (player === null || room.isBot(player.id)) continue;
+      const ws = findWsByPlayerId(player.id);
+      if (ws) {
+        sendTo(ws, { type: messageType });
+        ws.roomId = null;
+        ws.isSpectator = false;
+      }
+    }
     for (const spectator of room.spectators) {
       const ws = findWsByPlayerId(spectator.id);
       if (ws) {
-        sendTo(ws, { type: 'room_closed' });
+        sendTo(ws, { type: messageType });
         ws.roomId = null;
         ws.isSpectator = false;
       }
     }
   }
   lobby.removeRoom(roomId);
+}
+
+function removeRoomAndNotifySpectators(roomId) {
+  closeRoom(roomId);
 }
 
 function broadcastRoomList() {

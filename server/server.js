@@ -579,6 +579,20 @@ async function handleLogin(ws, data) {
             roomId: client.roomId,
             disconnectedAt: Date.now(),
           });
+        } else if (oldRoom) {
+          // Waiting room (no game) - clean up properly
+          const timerKey = `${client.roomId}_${client.playerId}`;
+          if (waitingRoomTimers[timerKey]) {
+            clearTimeout(waitingRoomTimers[timerKey]);
+            delete waitingRoomTimers[timerKey];
+          }
+          oldRoom.removePlayer(client.playerId);
+          if (oldRoom.getHumanPlayerCount() === 0) {
+            removeRoomAndNotifySpectators(client.roomId);
+          } else {
+            broadcastRoomState(client.roomId);
+          }
+          broadcastRoomList();
         }
       }
       sendTo(client, { type: 'kicked', message: '다른 기기에서 로그인되었습니다' });
@@ -655,6 +669,20 @@ async function handleSocialLogin(ws, data) {
                 roomId: client.roomId,
                 disconnectedAt: Date.now(),
               });
+            } else if (oldRoom) {
+              // Waiting room (no game) - clean up properly
+              const timerKey = `${client.roomId}_${client.playerId}`;
+              if (waitingRoomTimers[timerKey]) {
+                clearTimeout(waitingRoomTimers[timerKey]);
+                delete waitingRoomTimers[timerKey];
+              }
+              oldRoom.removePlayer(client.playerId);
+              if (oldRoom.getHumanPlayerCount() === 0) {
+                removeRoomAndNotifySpectators(client.roomId);
+              } else {
+                broadcastRoomState(client.roomId);
+              }
+              broadcastRoomList();
             }
           }
           sendTo(client, { type: 'kicked', message: '다른 기기에서 로그인되었습니다' });

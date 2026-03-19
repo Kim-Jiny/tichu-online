@@ -131,6 +131,31 @@ class _GameScreenState extends State<GameScreen> {
     setState(() => _selectedCards.clear());
   }
 
+  bool _isBombCombo(List<String> cards) {
+    // Four of a kind: 4 non-special cards with same rank
+    if (cards.length == 4) {
+      if (cards.any((c) => c.startsWith('special_'))) return false;
+      final ranks = cards.map((c) => c.split('_')[1]).toSet();
+      return ranks.length == 1;
+    }
+    // Straight flush: 5+ same-suit consecutive cards (no specials)
+    if (cards.length >= 5) {
+      if (cards.any((c) => c.startsWith('special_'))) return false;
+      final suits = cards.map((c) => c.split('_')[0]).toSet();
+      if (suits.length != 1) return false;
+      const rankValues = {
+        '2': 2, '3': 3, '4': 4, '5': 5, '6': 6, '7': 7, '8': 8,
+        '9': 9, '10': 10, 'J': 11, 'Q': 12, 'K': 13, 'A': 14,
+      };
+      final values = cards.map((c) => rankValues[c.split('_')[1]] ?? 0).toList()..sort();
+      for (int i = 1; i < values.length; i++) {
+        if (values[i] != values[i - 1] + 1) return false;
+      }
+      return true;
+    }
+    return false;
+  }
+
   void _showBirdCallDialog() {
     _birdCallDialogOpen = true;
     final ranks = ['2', '3', '4', '5', '6', '7', '8', '9', '10', 'J', 'Q', 'K', 'A'];
@@ -2961,8 +2986,9 @@ class _GameScreenState extends State<GameScreen> {
             children: [
               ElevatedButton(
                 onPressed: (state.phase == 'playing' &&
-                        state.isMyTurn &&
-                        _selectedCards.isNotEmpty)
+                        _selectedCards.isNotEmpty &&
+                        !state.dragonPending &&
+                        (state.isMyTurn || _isBombCombo(_selectedCards.toList())))
                     ? _playCards
                     : null,
                 style: ElevatedButton.styleFrom(

@@ -1969,8 +1969,16 @@ async function handleTurnTimeout(roomId, playerId) {
     if (result && result.success) {
       if (result.broadcast) broadcastGameEvent(roomId, result.broadcast);
       if (room.game && room.game.state === 'game_end') saveGameResult(room);
-      sendGameStateToAll(roomId);
+    } else {
+      console.log(`[TIMEOUT] Auto action failed for ${nickname}: ${result?.message}`);
     }
+  } else {
+    console.log(`[TIMEOUT] No auto action for ${nickname} (currentPlayer: ${room.game.currentPlayer})`);
+  }
+
+  // Always restart timer and broadcast state to prevent game from getting stuck
+  if (room.game && room.game.state === 'playing') {
+    sendGameStateToAll(roomId);
   }
 }
 

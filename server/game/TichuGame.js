@@ -1033,9 +1033,14 @@ class TichuGame {
       return { type: 'call_rank', rank: ranks[Math.floor(Math.random() * ranks.length)] };
     }
 
-    // Dragon give decision pending
+    // Dragon give decision pending - must give to an opponent
     if (this.dragonPending && this.dragonDecider === playerId) {
-      return { type: 'dragon_give', target: 'left' };
+      const myIdx = this.playerIds.indexOf(playerId);
+      const leftIdx = (myIdx + 3) % 4;
+      const rightIdx = (myIdx + 1) % 4;
+      const myTeam = this.teams.teamA.includes(playerId) ? 'teamA' : 'teamB';
+      const leftIsOpponent = (this.teams.teamA.includes(this.playerIds[leftIdx]) ? 'teamA' : 'teamB') !== myTeam;
+      return { type: 'dragon_give', target: leftIsOpponent ? 'left' : 'right' };
     }
 
     if (this.currentPlayer !== playerId) return null;

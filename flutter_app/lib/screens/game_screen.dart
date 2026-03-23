@@ -2864,23 +2864,108 @@ class _GameScreenState extends State<GameScreen> {
             ),
           ),
           const SizedBox(height: 4),
-          Wrap(
-            alignment: WrapAlignment.center,
-            spacing: 3,
-            runSpacing: 3,
-            children: lastPlay.cards
-                .map(
-                  (cardId) => PlayingCard(
-                    cardId: cardId,
-                    width: 36,
-                    height: 50,
-                    isInteractive: false,
-                  ),
-                )
-                .toList(),
-          ),
+          _buildOverlappedTrick(lastPlay.cards),
         ],
       ),
+    );
+  }
+
+  Widget _buildOverlappedTrick(List<String> cards) {
+    const double cardW = 36;
+    const double cardH = 50;
+    const double minOverlap = 20;
+    const double maxOverlap = 30;
+
+    if (cards.length <= 4) {
+      return Wrap(
+        alignment: WrapAlignment.center,
+        spacing: 3,
+        children: cards
+            .map((cardId) => PlayingCard(
+                  cardId: cardId,
+                  width: cardW,
+                  height: cardH,
+                  isInteractive: false,
+                ))
+            .toList(),
+      );
+    }
+
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final availableWidth = constraints.maxWidth - 16; // padding
+        // Calculate overlap to fit all cards in one row
+        final neededOverlap = cards.length > 1
+            ? (availableWidth - cardW) / (cards.length - 1)
+            : availableWidth;
+
+        if (neededOverlap >= minOverlap) {
+          // Fits in one row
+          final overlap = neededOverlap.clamp(minOverlap, maxOverlap);
+          final totalWidth = cardW + overlap * (cards.length - 1);
+          return Center(
+            child: SizedBox(
+              width: totalWidth,
+              height: cardH,
+              child: Stack(
+                clipBehavior: Clip.none,
+                children: [
+                  for (int i = 0; i < cards.length; i++)
+                    Positioned(
+                      left: i * overlap,
+                      child: PlayingCard(
+                        cardId: cards[i],
+                        width: cardW,
+                        height: cardH,
+                        isInteractive: false,
+                      ),
+                    ),
+                ],
+              ),
+            ),
+          );
+        }
+
+        // Split into two rows
+        final mid = (cards.length + 1) ~/ 2;
+        final row1 = cards.sublist(0, mid);
+        final row2 = cards.sublist(mid);
+
+        Widget buildRow(List<String> rowCards) {
+          final overlap = rowCards.length > 1
+              ? ((availableWidth - cardW) / (rowCards.length - 1)).clamp(minOverlap, maxOverlap)
+              : 0.0;
+          final totalWidth = cardW + overlap * (rowCards.length - 1);
+          return SizedBox(
+            width: totalWidth,
+            height: cardH,
+            child: Stack(
+              clipBehavior: Clip.none,
+              children: [
+                for (int i = 0; i < rowCards.length; i++)
+                  Positioned(
+                    left: i * overlap,
+                    child: PlayingCard(
+                      cardId: rowCards[i],
+                      width: cardW,
+                      height: cardH,
+                      isInteractive: false,
+                    ),
+                  ),
+              ],
+            ),
+          );
+        }
+
+        return Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            buildRow(row1),
+            const SizedBox(height: 4),
+            buildRow(row2),
+          ],
+        );
+      },
     );
   }
 
@@ -3132,15 +3217,15 @@ class _GameScreenState extends State<GameScreen> {
             ),
           ],
         ),
-        child: Wrap(
-          alignment: WrapAlignment.center,
-          spacing: 12,
-          runSpacing: 8,
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          crossAxisAlignment: CrossAxisAlignment.center,
           children: [
             const Text(
               '라지티츄?',
               style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
             ),
+            const SizedBox(width: 12),
             ElevatedButton(
               onPressed: () => game.declareLargeTichu(),
               style: ElevatedButton.styleFrom(
@@ -3149,6 +3234,7 @@ class _GameScreenState extends State<GameScreen> {
               ),
               child: const Text('선언!'),
             ),
+            const SizedBox(width: 12),
             OutlinedButton(
               onPressed: () => game.passLargeTichu(),
               style: OutlinedButton.styleFrom(
@@ -3765,21 +3851,10 @@ class _GameScreenState extends State<GameScreen> {
             mainAxisSize: MainAxisSize.min,
             children: [
               const Text(
-                '카드 교환 결과',
+                '받은 카드',
                 style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
               ),
               const SizedBox(height: 12),
-              _buildExchangeSummaryRowLine([
-                _ExchangeSummaryItem(leftName, givenLeft),
-                _ExchangeSummaryItem(partnerName, givenPartner),
-                _ExchangeSummaryItem(rightName, givenRight),
-              ]),
-              const SizedBox(height: 12),
-              const Text(
-                '받은 카드',
-                style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
-              ),
-              const SizedBox(height: 6),
               _buildExchangeSummaryRowLine([
                 _ExchangeSummaryItem(leftName, receivedLeft),
                 _ExchangeSummaryItem(partnerName, receivedPartner),
@@ -3859,32 +3934,29 @@ class _GameScreenState extends State<GameScreen> {
     return Column(
       mainAxisSize: MainAxisSize.min,
       children: [
-        if (badge != null || timeoutCount > 0)
+        if (badge != null)
           Padding(
             padding: const EdgeInsets.only(bottom: 2),
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                if (badge != null) badge,
-                if (badge != null && timeoutCount > 0) SizedBox(width: 3 * s),
-                if (timeoutCount > 0)
-                  Container(
-                    padding: EdgeInsets.symmetric(horizontal: 4 * s, vertical: 1),
-                    decoration: BoxDecoration(
-                      color: const Color(0xFFFFF3E0),
-                      borderRadius: BorderRadius.circular(8),
-                      border: Border.all(color: const Color(0xFFFFB74D)),
-                    ),
-                    child: Text(
-                      '⏱ $timeoutCount/3',
-                      style: TextStyle(
-                        fontSize: 8 * s,
-                        fontWeight: FontWeight.bold,
-                        color: const Color(0xFFE65100),
-                      ),
-                    ),
-                  ),
-              ],
+            child: badge,
+          ),
+        if (timeoutCount > 0)
+          Padding(
+            padding: const EdgeInsets.only(bottom: 2),
+            child: Container(
+              padding: EdgeInsets.symmetric(horizontal: 4 * s, vertical: 1),
+              decoration: BoxDecoration(
+                color: const Color(0xFFFFF3E0),
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: const Color(0xFFFFB74D)),
+              ),
+              child: Text(
+                '⏱ $timeoutCount/3',
+                style: TextStyle(
+                  fontSize: 8 * s,
+                  fontWeight: FontWeight.bold,
+                  color: const Color(0xFFE65100),
+                ),
+              ),
             ),
           ),
         AnimatedContainer(
@@ -3973,7 +4045,7 @@ class _GameScreenState extends State<GameScreen> {
     if (player == null) return null;
     if (player.hasLargeTichu) {
       return _tichuBadge(
-        label: '🔥라지',
+        label: '라지',
         bg: const Color(0xFFFF4444),
         fg: Colors.white,
         border: const Color(0xFFCC0000),
@@ -3981,7 +4053,7 @@ class _GameScreenState extends State<GameScreen> {
     }
     if (player.hasSmallTichu) {
       return _tichuBadge(
-        label: '⭐스몰',
+        label: '스몰',
         bg: const Color(0xFF2979FF),
         fg: Colors.white,
         border: const Color(0xFF1565C0),

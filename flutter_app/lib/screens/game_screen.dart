@@ -2434,14 +2434,32 @@ class _GameScreenState extends State<GameScreen> {
 
             // Call rank display
             if (state.callRank != null && state.callRank!.isNotEmpty) ...[
-              const SizedBox(height: 3),
-              Text(
-                '콜: ${state.callRank}',
-                style: const TextStyle(
-                  fontSize: 11,
-                  color: Color(0xFFCC6666),
+              const SizedBox(height: 4),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                decoration: BoxDecoration(
+                  color: const Color(0x33FF4444),
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: const Color(0xFFFF4444), width: 1.5),
                 ),
-                textAlign: TextAlign.center,
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const Text(
+                      '🐦',
+                      style: TextStyle(fontSize: 14),
+                    ),
+                    const SizedBox(width: 4),
+                    Text(
+                      '콜 ${state.callRank}',
+                      style: const TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                        color: Color(0xFFFF4444),
+                      ),
+                    ),
+                  ],
+                ),
               ),
             ],
 
@@ -2824,11 +2842,25 @@ class _GameScreenState extends State<GameScreen> {
       ),
       child: Column(
         children: [
-          Text(
-            '${lastPlay.playerName}가 낸 패',
-            style: const TextStyle(
-              fontSize: 11,
-              color: Color(0xFF8A7A72),
+          Text.rich(
+            TextSpan(
+              children: [
+                TextSpan(
+                  text: lastPlay.playerName,
+                  style: TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.bold,
+                    color: isMyTeam ? const Color(0xFF4A90D9) : const Color(0xFFD94A5A),
+                  ),
+                ),
+                const TextSpan(
+                  text: '가 낸 패',
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: Color(0xFF8A7A72),
+                  ),
+                ),
+              ],
             ),
           ),
           const SizedBox(height: 4),
@@ -2857,15 +2889,22 @@ class _GameScreenState extends State<GameScreen> {
     return Container(
       padding: EdgeInsets.all(10 * _s),
       decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.95),
+        color: isMyTurn
+            ? const Color(0xFFFFF8E1)
+            : Colors.white.withOpacity(0.95),
         borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.1),
+            color: isMyTurn
+                ? const Color(0xFFFFD54F).withOpacity(0.4)
+                : Colors.black.withOpacity(0.1),
             blurRadius: 10,
             offset: const Offset(0, -4),
           ),
         ],
+        border: isMyTurn
+            ? const Border(top: BorderSide(color: Color(0xFFFFCA28), width: 2.5))
+            : null,
       ),
       child: Column(
         children: [
@@ -3032,7 +3071,28 @@ class _GameScreenState extends State<GameScreen> {
               if (state.canDeclareSmallTichu &&
                   !state.players.any((p) => p.hasLargeTichu))
                 ElevatedButton(
-                  onPressed: () => game.declareSmallTichu(),
+                  onPressed: () {
+                    showDialog(
+                      context: context,
+                      builder: (ctx) => AlertDialog(
+                        title: const Text('스몰티츄 선언'),
+                        content: const Text('스몰티츄를 선언하시겠습니까?\n성공 시 +100점, 실패 시 -100점'),
+                        actions: [
+                          TextButton(
+                            onPressed: () => Navigator.of(ctx).pop(),
+                            child: const Text('취소'),
+                          ),
+                          ElevatedButton(
+                            onPressed: () {
+                              Navigator.of(ctx).pop();
+                              game.declareSmallTichu();
+                            },
+                            child: const Text('선언'),
+                          ),
+                        ],
+                      ),
+                    );
+                  },
                   style: ElevatedButton.styleFrom(
                     backgroundColor: const Color(0xFFFFE4B5),
                     foregroundColor: const Color(0xFF8B6914),
@@ -3912,10 +3972,20 @@ class _GameScreenState extends State<GameScreen> {
   Widget? _tichuBadgeForPlayer(Player? player) {
     if (player == null) return null;
     if (player.hasLargeTichu) {
-      return _tichuBadge(label: '라지', bg: const Color(0xFFFFD6D6), fg: const Color(0xFFB44A4A));
+      return _tichuBadge(
+        label: '🔥라지',
+        bg: const Color(0xFFFF4444),
+        fg: Colors.white,
+        border: const Color(0xFFCC0000),
+      );
     }
     if (player.hasSmallTichu) {
-      return _tichuBadge(label: '스몰', bg: const Color(0xFFDCEBFF), fg: const Color(0xFF3C6BB5));
+      return _tichuBadge(
+        label: '⭐스몰',
+        bg: const Color(0xFF2979FF),
+        fg: Colors.white,
+        border: const Color(0xFF1565C0),
+      );
     }
     return null;
   }
@@ -3929,16 +3999,25 @@ class _GameScreenState extends State<GameScreen> {
     required String label,
     required Color bg,
     required Color fg,
+    required Color border,
   }) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
       decoration: BoxDecoration(
         color: bg,
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: border, width: 1.5),
+        boxShadow: [
+          BoxShadow(
+            color: bg.withOpacity(0.4),
+            blurRadius: 6,
+            offset: const Offset(0, 2),
+          ),
+        ],
       ),
       child: Text(
         label,
-        style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: fg),
+        style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: fg),
       ),
     );
   }

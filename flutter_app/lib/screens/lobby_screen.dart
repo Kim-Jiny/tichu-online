@@ -1972,7 +1972,7 @@ class _LobbyScreenState extends State<LobbyScreen> {
                                             game.joinRoom(roomId, password: roomPassword);
                                             setState(() => _inRoom = true);
                                           } else {
-                                            game.spectateRoom(roomId);
+                                            game.spectateRoom(roomId, password: roomPassword);
                                           }
                                         },
                                         child: Container(
@@ -2220,7 +2220,7 @@ class _LobbyScreenState extends State<LobbyScreen> {
       child: InkWell(
         onTap: () {
           if (isInProgress) {
-            context.read<GameService>().spectateRoom(room.id);
+            _spectateWithPasswordCheck(room);
             return;
           }
           if (room.isRanked && context.read<GameService>().authProvider == 'local') {
@@ -2294,7 +2294,7 @@ class _LobbyScreenState extends State<LobbyScreen> {
               if (!isInProgress)
                 GestureDetector(
                   onTap: () {
-                    context.read<GameService>().spectateRoom(room.id);
+                    _spectateWithPasswordCheck(room);
                   },
                   child: Container(
                     padding: const EdgeInsets.all(8),
@@ -2361,11 +2361,40 @@ class _LobbyScreenState extends State<LobbyScreen> {
   }
 
   void _showJoinPrivateRoomDialog(Room room) {
+    _showPasswordDialog(
+      title: '비공개 방 입장',
+      buttonText: '입장',
+      onSubmit: (password) {
+        context.read<GameService>().joinRoom(room.id, password: password);
+        setState(() => _inRoom = true);
+      },
+    );
+  }
+
+  void _spectateWithPasswordCheck(Room room) {
+    if (room.isPrivate) {
+      _showPasswordDialog(
+        title: '비공개 방 관전',
+        buttonText: '관전',
+        onSubmit: (password) {
+          context.read<GameService>().spectateRoom(room.id, password: password);
+        },
+      );
+    } else {
+      context.read<GameService>().spectateRoom(room.id);
+    }
+  }
+
+  void _showPasswordDialog({
+    required String title,
+    required String buttonText,
+    required void Function(String password) onSubmit,
+  }) {
     final controller = TextEditingController();
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('비공개 방 입장'),
+        title: Text(title),
         content: TextField(
           controller: controller,
           decoration: const InputDecoration(
@@ -2382,11 +2411,10 @@ class _LobbyScreenState extends State<LobbyScreen> {
             onPressed: () {
               final password = controller.text.trim();
               if (password.isEmpty) return;
-              context.read<GameService>().joinRoom(room.id, password: password);
               Navigator.pop(context);
-              setState(() => _inRoom = true);
+              onSubmit(password);
             },
-            child: const Text('입장'),
+            child: Text(buttonText),
           ),
         ],
       ),

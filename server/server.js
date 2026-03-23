@@ -1198,7 +1198,8 @@ function handleSpectateRoom(ws, data) {
     sendTo(ws, { type: 'error', message: '방을 찾을 수 없습니다' });
     return;
   }
-  const result = room.addSpectator(ws.playerId, ws.nickname);
+  const password = typeof data.password === 'string' ? data.password.trim() : '';
+  const result = room.addSpectator(ws.playerId, ws.nickname, password);
   if (!result.success) {
     sendTo(ws, { type: 'error', message: result.message });
     return;

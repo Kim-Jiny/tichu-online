@@ -1193,8 +1193,8 @@ class GameService extends ChangeNotifier {
     _network.send({'type': 'spectatable_rooms'});
   }
 
-  void spectateRoom(String roomId) {
-    _network.send({'type': 'spectate_room', 'roomId': roomId});
+  void spectateRoom(String roomId, {String password = ''}) {
+    _network.send({'type': 'spectate_room', 'roomId': roomId, 'password': password});
   }
 
   void switchToSpectator() {

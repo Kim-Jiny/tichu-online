@@ -446,9 +446,8 @@ class TichuGame {
     this.lastPlayedBy = playerId;
     this.passCount = 0;
     this.currentPlayer = playerId;
-    this.advanceTurn();
 
-    return {
+    const result = {
       success: true,
       broadcast: {
         type: 'bomb_played',
@@ -458,6 +457,36 @@ class TichuGame {
         combo: combo.type,
       },
     };
+
+    // Check if player finished (bomb was their last cards)
+    if (this.hands[playerId].length === 0) {
+      this.finishOrder.push(playerId);
+      result.broadcast.playerFinished = true;
+      result.broadcast.finishPosition = this.finishOrder.length;
+
+      // Check for 1-2 finish (same team finishes 1st and 2nd)
+      if (this.finishOrder.length === 2) {
+        const first = this.finishOrder[0];
+        const second = this.finishOrder[1];
+        const firstTeam = this.teams.teamA.includes(first) ? 'teamA' : 'teamB';
+        const secondTeam = this.teams.teamA.includes(second) ? 'teamA' : 'teamB';
+        if (firstTeam === secondTeam) {
+          result.broadcast.oneTwoFinish = true;
+          result.broadcast.winningTeam = firstTeam;
+          this.endRound();
+          return result;
+        }
+      }
+
+      // Check if round is over (3 players finished)
+      if (this.finishOrder.length >= 3) {
+        this.endRound();
+        return result;
+      }
+    }
+
+    this.advanceTurn();
+    return result;
   }
 
   playDog(playerId) {
@@ -519,7 +548,9 @@ class TichuGame {
 
     // Count active players (not finished)
     const activePlayers = this.playerIds.filter((p) => !this.finishOrder.includes(p));
-    const passesNeeded = activePlayers.length - 1;
+    // If the last player who played has finished, all active players must pass
+    const lastPlayerActive = !this.finishOrder.includes(this.lastPlayedBy);
+    const passesNeeded = lastPlayerActive ? activePlayers.length - 1 : activePlayers.length;
 
     // Check if trick is won
     if (this.passCount >= passesNeeded) {

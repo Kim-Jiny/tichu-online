@@ -150,7 +150,10 @@ class GameRoom {
     return this.players.some(p => p !== null && p.nickname === nickname && !p.connected);
   }
 
-  addSpectator(odId, nickname) {
+  addSpectator(odId, nickname, password = '') {
+    if (this.isPrivate && this.password !== password) {
+      return { success: false, message: '비밀번호가 틀렸습니다' };
+    }
     if (this.spectators.find((s) => s.id === odId)) {
       return { success: false, message: 'Already spectating' };
     }

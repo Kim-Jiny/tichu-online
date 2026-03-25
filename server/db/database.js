@@ -407,6 +407,15 @@ async function initDatabase() {
       `
     );
 
+    // Ad rewards table
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS tc_ad_rewards (
+        id SERIAL PRIMARY KEY,
+        nickname VARCHAR(50) NOT NULL,
+        claimed_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      )
+    `);
+
     console.log('Database initialized (tc_ tables)');
   } catch (err) {
     console.error('Database initialization error:', err);
@@ -1001,6 +1010,49 @@ async function getWallet(nickname) {
   } catch (err) {
     console.error('Get wallet error:', err);
     return { success: false, message: '지갑 정보를 가져오지 못했습니다' };
+  } finally {
+    client.release();
+  }
+}
+
+// Ad reward claim (max 5 per day, 10 gold each)
+async function claimAdReward(nickname) {
+  const client = await pool.connect();
+  try {
+    await client.query('BEGIN');
+    // Count today's claims
+    const countResult = await client.query(
+      `SELECT COUNT(*) as cnt FROM tc_ad_rewards
+       WHERE nickname = $1 AND claimed_at::date = CURRENT_DATE`,
+      [nickname]
+    );
+    const todayCount = parseInt(countResult.rows[0].cnt, 10);
+    if (todayCount >= 5) {
+      await client.query('ROLLBACK');
+      return { success: false, message: '오늘의 광고 보상을 모두 받았습니다', remaining: 0 };
+    }
+    // Grant 50 gold
+    await client.query(
+      `UPDATE tc_users SET gold = gold + 50 WHERE nickname = $1`,
+      [nickname]
+    );
+    // Record claim
+    await client.query(
+      `INSERT INTO tc_ad_rewards (nickname) VALUES ($1)`,
+      [nickname]
+    );
+    await client.query('COMMIT');
+    // Get updated gold
+    const walletResult = await client.query(
+      `SELECT gold FROM tc_users WHERE nickname = $1`,
+      [nickname]
+    );
+    const gold = walletResult.rows[0]?.gold ?? 0;
+    return { success: true, gold, remaining: 5 - todayCount - 1 };
+  } catch (err) {
+    await client.query('ROLLBACK');
+    console.error('Claim ad reward error:', err);
+    return { success: false, message: '보상 지급에 실패했습니다' };
   } finally {
     client.release();
   }
@@ -2673,5 +2725,6 @@ module.exports = {
   getConfig,
   updateConfig,
   adminAdjustGold,
+  claimAdReward,
   pool,
 };

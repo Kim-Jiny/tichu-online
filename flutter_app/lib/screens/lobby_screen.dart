@@ -14,6 +14,8 @@ import 'spectator_screen.dart';
 import 'login_screen.dart';
 import 'settings_screen.dart';
 import '../widgets/connection_overlay.dart';
+import '../services/ad_service.dart';
+import 'package:google_mobile_ads/google_mobile_ads.dart';
 
 class LobbyScreen extends StatefulWidget {
   const LobbyScreen({super.key});
@@ -33,9 +35,19 @@ class _LobbyScreenState extends State<LobbyScreen> {
   final ScrollController _chatScrollController = ScrollController();
   int _lastChatMessageCount = 0;
 
+  // 배너 광고
+  BannerAd? _bannerAd;
+  bool _bannerAdLoaded = false;
+
   @override
   void initState() {
     super.initState();
+    _bannerAd = AdService.createBannerAd(
+      AdService.lobbyBannerId,
+      onAdLoaded: (_) { if (mounted) setState(() => _bannerAdLoaded = true); },
+      onAdFailedToLoad: (_, __) { if (mounted) setState(() { _bannerAd = null; _bannerAdLoaded = false; }); },
+    );
+    _bannerAd!.load();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       final game = context.read<GameService>();
       game.requestRoomList();
@@ -70,6 +82,7 @@ class _LobbyScreenState extends State<LobbyScreen> {
     _networkService?.removeListener(_onNetworkChanged);
     _chatController.dispose();
     _chatScrollController.dispose();
+    _bannerAd?.dispose();
     super.dispose();
   }
 
@@ -1625,7 +1638,13 @@ class _LobbyScreenState extends State<LobbyScreen> {
         Expanded(
           child: _buildRoomListPanel(game),
         ),
-        const SizedBox(height: 16),
+        if (_bannerAd != null && _bannerAdLoaded)
+          SizedBox(
+            height: _bannerAd!.size.height.toDouble(),
+            width: _bannerAd!.size.width.toDouble(),
+            child: AdWidget(ad: _bannerAd!, key: ValueKey(_bannerAd!.hashCode)),
+          ),
+        const SizedBox(height: 8),
       ],
     );
   }

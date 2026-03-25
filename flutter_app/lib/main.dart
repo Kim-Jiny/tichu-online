@@ -4,6 +4,8 @@ import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:kakao_flutter_sdk_user/kakao_flutter_sdk_user.dart' as kakao;
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:google_mobile_ads/google_mobile_ads.dart';
+import 'package:app_tracking_transparency/app_tracking_transparency.dart';
 import 'firebase_options.dart';
 import 'services/network_service.dart';
 import 'services/game_service.dart';
@@ -15,6 +17,10 @@ void main() async {
     options: DefaultFirebaseOptions.currentPlatform,
   );
   kakao.KakaoSdk.init(nativeAppKey: 'd9b4b3cfc86537fed9a80a659641ad30');
+  MobileAds.instance.updateRequestConfiguration(
+    RequestConfiguration(testDeviceIds: ['45b45cb9d1be2ccb4c01a54eea9a0a64']),
+  );
+  await MobileAds.instance.initialize();
 
   final messaging = FirebaseMessaging.instance;
   await messaging.requestPermission(
@@ -87,7 +93,19 @@ class _EntryScreenState extends State<_EntryScreen> {
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _requestATT();
+    });
     _checkEula();
+  }
+
+  Future<void> _requestATT() async {
+    final status = await AppTrackingTransparency.trackingAuthorizationStatus;
+    debugPrint('[ATT] current status: $status');
+    if (status == TrackingStatus.notDetermined) {
+      final result = await AppTrackingTransparency.requestTrackingAuthorization();
+      debugPrint('[ATT] request result: $result');
+    }
   }
 
   Future<void> _checkEula() async {

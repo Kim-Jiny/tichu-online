@@ -891,6 +891,17 @@ class GameService extends ChangeNotifier {
         notifyListeners();
         break;
 
+      case 'ad_reward_result':
+        adRewardSuccess = data['success'] == true;
+        if (adRewardSuccess!) {
+          gold = (data['gold'] as num?)?.toInt() ?? gold;
+          adRewardResult = '50골드를 받았습니다! (남은 횟수: ${data['remaining'] ?? 0})';
+        } else {
+          adRewardResult = data['message'] as String? ?? '보상 지급에 실패했습니다';
+        }
+        notifyListeners();
+        break;
+
       case 'social_link_result':
         socialLinkResultSuccess = data['success'] == true;
         socialLinkResultMessage = data['message'] as String?;
@@ -1390,6 +1401,14 @@ class GameService extends ChangeNotifier {
 
   void requestWallet() {
     _network.send({'type': 'get_wallet'});
+  }
+
+  // 광고 보상
+  String? adRewardResult;
+  bool? adRewardSuccess;
+
+  void claimAdReward() {
+    _network.send({'type': 'ad_reward'});
   }
 
   void requestShopItems() {

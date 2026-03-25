@@ -19,6 +19,7 @@ const {
   updateDeviceInfo,
   setPushEnabled,
   setPushFriendInvite,
+  claimAdReward,
 } = require('./db/database');
 
 // Firebase Admin SDK initialization (optional - only if FIREBASE_SERVICE_ACCOUNT is set)
@@ -503,6 +504,12 @@ function handleMessage(ws, data) {
         if (data.friendInvite != null) {
           setPushFriendInvite(ws.nickname, data.friendInvite === true);
         }
+      }
+      break;
+    case 'ad_reward':
+      if (ws.nickname) {
+        const result = await claimAdReward(ws.nickname);
+        sendTo(ws, { type: 'ad_reward_result', ...result });
       }
       break;
     case 'get_maintenance_status':
@@ -1779,7 +1786,7 @@ function scheduleBotActions(roomId) {
   if (pendingBotCheck[roomId]) return; // Already scheduled
 
   pendingBotCheck[roomId] = true;
-  const delay = 300 + Math.floor(Math.random() * 500);
+  const delay = 500 + Math.floor(Math.random() * 500);
 
   setTimeout(() => {
     delete pendingBotCheck[roomId];

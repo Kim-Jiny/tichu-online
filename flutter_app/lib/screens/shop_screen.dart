@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:google_mobile_ads/google_mobile_ads.dart';
 import '../services/game_service.dart';
+import '../services/ad_service.dart';
 
 class ShopScreen extends StatefulWidget {
   const ShopScreen({super.key});
@@ -11,10 +13,16 @@ class ShopScreen extends StatefulWidget {
 
 class _ShopScreenState extends State<ShopScreen> {
   final _inventoryTabController = ValueNotifier<int>(0);
+  int _todayAdCount = 0;
+  bool _adLoading = false;
+  RewardedAd? _rewardedAd;
+  bool _rewardedAdReady = false;
 
   @override
   void initState() {
     super.initState();
+    _loadAdCount();
+    _preloadRewardedAd();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
       final game = context.read<GameService>();
@@ -24,8 +32,31 @@ class _ShopScreenState extends State<ShopScreen> {
     });
   }
 
+  Future<void> _loadAdCount() async {
+    final count = await AdService.getTodayRewardCount();
+    if (mounted) setState(() => _todayAdCount = count);
+  }
+
+  void _preloadRewardedAd() {
+    RewardedAd.load(
+      adUnitId: AdService.rewardedAdId,
+      request: const AdRequest(),
+      rewardedAdLoadCallback: RewardedAdLoadCallback(
+        onAdLoaded: (ad) {
+          _rewardedAd = ad;
+          if (mounted) setState(() => _rewardedAdReady = true);
+        },
+        onAdFailedToLoad: (error) {
+          debugPrint('[AdService] Rewarded FAILED: ${error.message}');
+          _rewardedAdReady = false;
+        },
+      ),
+    );
+  }
+
   @override
   void dispose() {
+    _rewardedAd?.dispose();
     _inventoryTabController.dispose();
     super.dispose();
   }
@@ -58,11 +89,13 @@ class _ShopScreenState extends State<ShopScreen> {
                     if (!mounted) return;
                     _maybeShowPurchaseDialog(context, game);
                     _maybeShowNicknameChangeResult(context, game);
+                    _maybeShowAdRewardResult(context, game);
                   });
                   return Column(
                     children: [
                       _buildTopBar(context, game),
                       _buildWalletBar(game),
+                      if (_rewardedAdReady) _buildAdRewardButton(game),
                       const SizedBox(height: 8),
                       _buildTabs(),
                       Expanded(
@@ -1149,5 +1182,87 @@ class _ShopScreenState extends State<ShopScreen> {
     } catch (_) {
       return '만료 예정';
     }
+  }
+
+  Widget _buildAdRewardButton(GameService game) {
+    final canWatch = _todayAdCount < AdService.maxDailyRewards;
+    return Container(
+      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+      child: SizedBox(
+        width: double.infinity,
+        height: 44,
+        child: ElevatedButton.icon(
+          onPressed: (canWatch && !_adLoading)
+              ? () {
+                  final ad = _rewardedAd;
+                  if (ad == null) return;
+                  setState(() {
+                    _adLoading = true;
+                    _rewardedAd = null;
+                    _rewardedAdReady = false;
+                  });
+                  ad.fullScreenContentCallback = FullScreenContentCallback(
+                    onAdDismissedFullScreenContent: (ad) {
+                      ad.dispose();
+                      _preloadRewardedAd(); // 다음 광고 미리 로드
+                    },
+                    onAdFailedToShowFullScreenContent: (ad, error) {
+                      ad.dispose();
+                      if (mounted) {
+                        setState(() => _adLoading = false);
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(content: Text('광고를 표시할 수 없습니다')),
+                        );
+                      }
+                      _preloadRewardedAd();
+                    },
+                  );
+                  ad.show(
+                    onUserEarnedReward: (ad, reward) {
+                      AdService.incrementRewardCount();
+                      game.claimAdReward();
+                      _loadAdCount();
+                      if (mounted) setState(() => _adLoading = false);
+                    },
+                  );
+                }
+              : null,
+          icon: _adLoading
+              ? const SizedBox(
+                  width: 18,
+                  height: 18,
+                  child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                )
+              : const Icon(Icons.play_circle_fill, size: 20),
+          label: Text(
+            canWatch
+                ? '광고 보고 50골드 받기 ($_todayAdCount/${AdService.maxDailyRewards})'
+                : '오늘의 광고 보상 완료',
+            style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
+          ),
+          style: ElevatedButton.styleFrom(
+            backgroundColor: canWatch ? const Color(0xFF7E57C2) : Colors.grey,
+            foregroundColor: Colors.white,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  void _maybeShowAdRewardResult(BuildContext context, GameService game) {
+    final msg = game.adRewardResult;
+    if (msg == null) return;
+    game.adRewardResult = null;
+    final success = game.adRewardSuccess == true;
+    game.adRewardSuccess = null;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(msg),
+        backgroundColor: success ? Colors.green : Colors.red,
+      ),
+    );
   }
 }

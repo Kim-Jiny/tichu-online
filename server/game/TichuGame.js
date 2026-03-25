@@ -796,9 +796,17 @@ class TichuGame {
     const currentIdx = this.playerIds.indexOf(this.currentPlayer);
     let nextIdx = (currentIdx + 1) % 4;
 
-    // Skip finished players
+    // Skip finished players (and auto-finish players with 0 cards)
     for (let i = 0; i < 4; i++) {
       const candidate = this.playerIds[nextIdx];
+      // Auto-finish: 0 cards but not in finishOrder
+      if (this.hands[candidate].length === 0 && !this.finishOrder.includes(candidate)) {
+        this.finishOrder.push(candidate);
+        if (this.finishOrder.length >= 3) {
+          this.endRound();
+          return;
+        }
+      }
       if (!this.finishOrder.includes(candidate)) {
         this.currentPlayer = candidate;
         return;
@@ -812,6 +820,14 @@ class TichuGame {
     let nextIdx = (fromIdx + 1) % 4;
     for (let i = 0; i < 4; i++) {
       const candidate = this.playerIds[nextIdx];
+      // Auto-finish: 0 cards but not in finishOrder
+      if (this.hands[candidate].length === 0 && !this.finishOrder.includes(candidate)) {
+        this.finishOrder.push(candidate);
+        if (this.finishOrder.length >= 3) {
+          this.endRound();
+          return null;
+        }
+      }
       if (!this.finishOrder.includes(candidate)) {
         return candidate;
       }

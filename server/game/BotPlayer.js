@@ -278,6 +278,10 @@ function decideSmallTichu(cards, state) {
   // Already declared large tichu or small tichu
   if (!state.canDeclareSmallTichu) return false;
 
+  // Don't declare if teammate already declared tichu
+  const partner = getPartner(state);
+  if (partner && (partner.hasSmallTichu || partner.hasLargeTichu)) return false;
+
   const eval_ = evaluateHand(cards);
 
   // Strong hand: high score + few plays
@@ -1237,19 +1241,9 @@ function decideBotAction(game, botId) {
       if (state.isMyTurn) {
         // Safety: if we have no cards but game thinks it's our turn
         if (myCards.length === 0) {
+          // No cards left — pass if possible, otherwise engine will auto-finish
           if (state.currentTrick && state.currentTrick.length > 0) {
             return { type: 'pass' };
-          }
-          // Edge case: leading with 0 cards (game engine issue)
-          // Force-add to finishOrder and advance via game internals
-          if (!game.finishOrder.includes(botId)) {
-            game.finishOrder.push(botId);
-            if (game.finishOrder.length >= 3) {
-              game.endRound();
-            } else {
-              game.currentPlayer = game.getNextActivePlayer(botId);
-              game.trickStarter = game.currentPlayer;
-            }
           }
           return null;
         }

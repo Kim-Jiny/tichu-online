@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:google_mobile_ads/google_mobile_ads.dart';
 import '../services/game_service.dart';
+import '../services/ad_service.dart';
 import 'lobby_screen.dart';
 
 class RankingScreen extends StatefulWidget {
@@ -12,16 +14,30 @@ class RankingScreen extends StatefulWidget {
 
 class _RankingScreenState extends State<RankingScreen> {
   int? _selectedSeasonId;
+  BannerAd? _bannerAd;
+  bool _bannerAdLoaded = false;
 
   @override
   void initState() {
     super.initState();
+    _bannerAd = AdService.createBannerAd(
+      AdService.rankingBannerId,
+      onAdLoaded: (_) { if (mounted) setState(() => _bannerAdLoaded = true); },
+      onAdFailedToLoad: (_, __) { if (mounted) setState(() { _bannerAd = null; _bannerAdLoaded = false; }); },
+    );
+    _bannerAd!.load();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
       final game = context.read<GameService>();
       game.requestSeasons();
       game.requestRankings();
     });
+  }
+
+  @override
+  void dispose() {
+    _bannerAd?.dispose();
+    super.dispose();
   }
 
   @override
@@ -48,6 +64,12 @@ class _RankingScreenState extends State<RankingScreen> {
                   Expanded(
                     child: _buildBody(game),
                   ),
+                  if (_bannerAd != null && _bannerAdLoaded)
+                    SizedBox(
+                      height: _bannerAd!.size.height.toDouble(),
+                      width: _bannerAd!.size.width.toDouble(),
+                      child: AdWidget(ad: _bannerAd!, key: ValueKey(_bannerAd!.hashCode)),
+                    ),
                 ],
               );
             },

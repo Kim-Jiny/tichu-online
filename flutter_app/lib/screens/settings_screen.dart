@@ -6,6 +6,8 @@ import '../services/game_service.dart';
 import '../services/network_service.dart';
 import '../services/auth_service.dart';
 import 'login_screen.dart';
+import '../services/ad_service.dart';
+import 'package:google_mobile_ads/google_mobile_ads.dart';
 
 class SettingsScreen extends StatefulWidget {
   const SettingsScreen({super.key});
@@ -16,11 +18,25 @@ class SettingsScreen extends StatefulWidget {
 
 class _SettingsScreenState extends State<SettingsScreen> {
   String _appVersion = '';
+  BannerAd? _bannerAd;
+  bool _bannerAdLoaded = false;
 
   @override
   void initState() {
     super.initState();
+    _bannerAd = AdService.createBannerAd(
+      AdService.settingsBannerId,
+      onAdLoaded: (_) { if (mounted) setState(() => _bannerAdLoaded = true); },
+      onAdFailedToLoad: (_, __) { if (mounted) setState(() { _bannerAd = null; _bannerAdLoaded = false; }); },
+    );
+    _bannerAd!.load();
     _loadAppVersion();
+  }
+
+  @override
+  void dispose() {
+    _bannerAd?.dispose();
+    super.dispose();
   }
 
   Future<void> _loadAppVersion() async {
@@ -837,6 +853,15 @@ class _SettingsScreenState extends State<SettingsScreen> {
                               ),
                             ],
                           ),
+                          const SizedBox(height: 12),
+                          if (_bannerAd != null && _bannerAdLoaded)
+                            Center(
+                              child: SizedBox(
+                                height: _bannerAd!.size.height.toDouble(),
+                                width: _bannerAd!.size.width.toDouble(),
+                                child: AdWidget(ad: _bannerAd!, key: ValueKey(_bannerAd!.hashCode)),
+                              ),
+                            ),
                         ],
                       ),
                     ),

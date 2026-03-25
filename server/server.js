@@ -508,8 +508,11 @@ function handleMessage(ws, data) {
       break;
     case 'ad_reward':
       if (ws.nickname) {
-        const result = await claimAdReward(ws.nickname);
-        sendTo(ws, { type: 'ad_reward_result', ...result });
+        claimAdReward(ws.nickname).then(result => {
+          sendTo(ws, { type: 'ad_reward_result', ...result });
+        }).catch(err => {
+          sendTo(ws, { type: 'ad_reward_result', success: false, message: '보상 지급에 실패했습니다' });
+        });
       }
       break;
     case 'get_maintenance_status':

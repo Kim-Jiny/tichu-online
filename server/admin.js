@@ -2,7 +2,7 @@ const crypto = require('crypto');
 const {
   verifyAdmin, getInquiries, getInquiryById, resolveInquiry,
   getReports, getReportGroup, updateReportGroupStatus,
-  getUsers, getUserDetail, deleteUser, getDashboardStats, setChatBan, setAdminMemo,
+  getUsers, getUserDetail, deleteUser, getDashboardStats, setChatBan, setAdminMemo, getRecentMatches, adminAdjustGold,
   getAllShopItemsAdmin, addShopItem, updateShopItem, deleteShopItem, getShopItemById,
   getConfig, updateConfig,
 } = require('./db/database');
@@ -438,7 +438,7 @@ async function handleAdminRoute(req, res, url, pathname, method, lobby, wss, mai
     let matchesTable = '';
     if (stats.recentMatches.length > 0) {
       matchesTable = `<div class="table-wrap"><table>
-        <tr><th>ID</th><th>Result</th><th>Score</th><th>Team A</th><th>Team B</th><th>Type</th><th>Date</th></tr>
+        <tr><th>ID</th><th>Result</th><th>Score</th><th>Team A</th><th>Team B</th><th>Type</th><th>End</th><th>Date</th></tr>
         ${stats.recentMatches.map(m => {
           const isDraw = m.team_a_score === m.team_b_score;
           const winBadge = isDraw
@@ -448,6 +448,13 @@ async function handleAdminRoute(req, res, url, pathname, method, lobby, wss, mai
               : '<span class="badge" style="background:#e3f2fd;color:#1565c0">B Win</span>';
           const aStyle = !isDraw && m.winner_team === 'A' ? 'font-weight:700;color:#c62828' : '';
           const bStyle = !isDraw && m.winner_team === 'B' ? 'font-weight:700;color:#1565c0' : '';
+          const endReason = m.end_reason || 'normal';
+          let endBadge = '<span class="badge" style="background:#e8f5e9;color:#2e7d32">Normal</span>';
+          if (endReason === 'leave') {
+            endBadge = `<span class="badge" style="background:#fce4ec;color:#c62828">Leave</span>${m.deserter_nickname ? `<br><span style="font-size:11px;color:#c62828">${escapeHtml(m.deserter_nickname)}</span>` : ''}`;
+          } else if (endReason === 'timeout') {
+            endBadge = `<span class="badge" style="background:#fff8e1;color:#f57f17">Timeout</span>${m.deserter_nickname ? `<br><span style="font-size:11px;color:#f57f17">${escapeHtml(m.deserter_nickname)}</span>` : ''}`;
+          }
           return `<tr>
           <td>${m.id}</td>
           <td>${winBadge}</td>
@@ -455,6 +462,7 @@ async function handleAdminRoute(req, res, url, pathname, method, lobby, wss, mai
           <td style="${aStyle}">${escapeHtml(m.player_a1)}, ${escapeHtml(m.player_a2)}</td>
           <td style="${bStyle}">${escapeHtml(m.player_b1)}, ${escapeHtml(m.player_b2)}</td>
           <td>${m.is_ranked ? '<span class="badge" style="background:#fff3e0;color:#e65100">Ranked</span>' : '<span class="badge" style="background:#f5f5f5;color:#999">Normal</span>'}</td>
+          <td>${endBadge}</td>
           <td style="font-size:12px;color:#888">${formatDate(m.created_at)}</td>
         </tr>`;
         }).join('')}
@@ -490,7 +498,7 @@ async function handleAdminRoute(req, res, url, pathname, method, lobby, wss, mai
       roomsTable = `<div class="table-wrap"><table>
         <tr><th>Room</th><th>Host</th><th>Players</th><th>Status</th><th>Type</th><th>Spectators</th></tr>
         ${allRooms.map(r => `<tr>
-          <td>${escapeHtml(r.name)}</td>
+          <td><a href="/tc-backstage/rooms/${encodeURIComponent(r.id)}" style="color:#6c63ff;text-decoration:none;font-weight:600">${escapeHtml(r.name)}</a></td>
           <td>${escapeHtml(r.hostName)}</td>
           <td>${r.playerCount}/4</td>
           <td>${r.gameInProgress
@@ -509,10 +517,10 @@ async function handleAdminRoute(req, res, url, pathname, method, lobby, wss, mai
 
       <div style="margin-bottom:8px;font-size:13px;color:#888">Real-time Server Status</div>
       <div class="stats-grid" style="grid-template-columns:repeat(auto-fit, minmax(150px, 1fr))">
-        <div class="stat-card" style="border-left:4px solid #6c63ff"><div class="label">Connected</div><div class="value purple">${connectedUsers}</div></div>
-        <div class="stat-card" style="border-left:4px solid #4caf50"><div class="label">In Game</div><div class="value green">${gamingRooms}</div></div>
-        <div class="stat-card" style="border-left:4px solid #ff9800"><div class="label">Waiting</div><div class="value orange">${waitingRooms}</div></div>
-        <div class="stat-card" style="border-left:4px solid #42a5f5"><div class="label">Spectators</div><div class="value" style="color:#42a5f5">${totalSpectators}</div></div>
+        <a href="/tc-backstage/online?filter=connected" class="stat-card" style="border-left:4px solid #6c63ff;text-decoration:none;cursor:pointer"><div class="label">Connected</div><div class="value purple">${connectedUsers}</div></a>
+        <a href="/tc-backstage/online?filter=ingame" class="stat-card" style="border-left:4px solid #4caf50;text-decoration:none;cursor:pointer"><div class="label">In Game</div><div class="value green">${gamingRooms}</div></a>
+        <a href="/tc-backstage/online?filter=waiting" class="stat-card" style="border-left:4px solid #ff9800;text-decoration:none;cursor:pointer"><div class="label">Waiting</div><div class="value orange">${waitingRooms}</div></a>
+        <a href="/tc-backstage/online?filter=spectators" class="stat-card" style="border-left:4px solid #42a5f5;text-decoration:none;cursor:pointer"><div class="label">Spectators</div><div class="value" style="color:#42a5f5">${totalSpectators}</div></a>
       </div>
 
       <div style="margin:20px 0 8px;font-size:13px;color:#888">User & Match Overview</div>
@@ -810,13 +818,46 @@ async function handleAdminRoute(req, res, url, pathname, method, lobby, wss, mai
   if (pathname === '/tc-backstage/users' && method === 'GET') {
     const search = url.searchParams.get('q') || '';
     const page = parseInt(url.searchParams.get('page') || '1');
-    const data = await getUsers(search, page, 20);
+    const sort = url.searchParams.get('sort') || 'joined_desc';
+    const minRating = url.searchParams.get('minRating') || '';
+    const minGames = url.searchParams.get('minGames') || '';
+    const minLeaves = url.searchParams.get('minLeaves') || '';
+    const data = await getUsers(search, page, 20, { sort, minRating, minGames, minLeaves });
+
+    // Build query string for pagination links
+    const qs = new URLSearchParams();
+    if (search) qs.set('q', search);
+    if (sort && sort !== 'joined_desc') qs.set('sort', sort);
+    if (minRating) qs.set('minRating', minRating);
+    if (minGames) qs.set('minGames', minGames);
+    if (minLeaves) qs.set('minLeaves', minLeaves);
+    const qsStr = qs.toString();
+    const paginationBase = `/tc-backstage/users${qsStr ? '?' + qsStr : ''}`;
+
+    const sortOpts = [
+      ['joined_desc', 'Newest'],
+      ['joined_asc', 'Oldest'],
+      ['rating_desc', 'Rating High'],
+      ['rating_asc', 'Rating Low'],
+      ['games_desc', 'Most Games'],
+      ['gold_desc', 'Most Gold'],
+      ['level_desc', 'Highest Level'],
+      ['leaves_desc', 'Most Leaves'],
+      ['login_desc', 'Recent Login'],
+    ];
 
     const searchForm = `
       <div class="search-bar">
-        <form method="GET" action="/tc-backstage/users" style="display:flex;gap:8px;width:100%">
-          <input type="text" name="q" placeholder="Search nickname or username..." value="${escapeHtml(search)}">
+        <form method="GET" action="/tc-backstage/users" style="display:flex;flex-wrap:wrap;gap:8px;width:100%;align-items:center">
+          <input type="text" name="q" placeholder="Search nickname or username..." value="${escapeHtml(search)}" style="flex:1;min-width:180px">
+          <select name="sort" style="padding:8px 10px;border-radius:8px;border:1px solid #ddd;font-size:13px">
+            ${sortOpts.map(([v, l]) => `<option value="${v}"${sort === v ? ' selected' : ''}>${l}</option>`).join('')}
+          </select>
+          <input type="number" name="minRating" placeholder="Min Rating" value="${escapeHtml(minRating)}" style="width:100px;padding:8px 10px;border-radius:8px;border:1px solid #ddd;font-size:13px">
+          <input type="number" name="minGames" placeholder="Min Games" value="${escapeHtml(minGames)}" style="width:100px;padding:8px 10px;border-radius:8px;border:1px solid #ddd;font-size:13px">
+          <input type="number" name="minLeaves" placeholder="Min Leaves" value="${escapeHtml(minLeaves)}" style="width:100px;padding:8px 10px;border-radius:8px;border:1px solid #ddd;font-size:13px">
           <button type="submit" class="btn btn-primary">Search</button>
+          ${qsStr ? `<a href="/tc-backstage/users" class="btn btn-secondary" style="font-size:12px">Reset</a>` : ''}
         </form>
       </div>
     `;
@@ -824,24 +865,35 @@ async function handleAdminRoute(req, res, url, pathname, method, lobby, wss, mai
     let tableContent = '';
     if (data.rows.length > 0) {
       tableContent = `<div class="table-wrap"><table>
-        <tr><th>Nickname</th><th>Username</th><th>Games</th><th>W/L</th><th>Rating</th><th>Joined</th><th></th></tr>
-        ${data.rows.map(u => `<tr>
-          <td>${escapeHtml(u.nickname)}</td>
-          <td>${escapeHtml(u.username)}</td>
+        <tr><th>Nickname</th><th>Lv</th><th>Gold</th><th>Rating</th><th>Games</th><th>W/L</th><th>Leaves</th><th>Last Login</th><th></th></tr>
+        ${data.rows.map(u => {
+          const winRate = u.total_games > 0 ? Math.round(u.wins / u.total_games * 100) : 0;
+          const leaveStyle = (u.leave_count || 0) >= 3 ? 'color:#e53935;font-weight:600' : '';
+          return `<tr>
+          <td><a href="/tc-backstage/users/${encodeURIComponent(u.nickname)}" style="color:#6c63ff;text-decoration:none;font-weight:600">${escapeHtml(u.nickname)}</a></td>
+          <td>${u.level || 1}</td>
+          <td style="color:#ff9800;font-weight:600">${(u.gold || 0).toLocaleString()}
+            <form method="POST" action="/tc-backstage/users/${encodeURIComponent(u.nickname)}/gold" style="display:inline-flex;gap:2px;margin-left:4px;vertical-align:middle">
+              <input type="number" name="amount" placeholder="+/-" style="width:55px;padding:2px 4px;border-radius:4px;border:1px solid #ddd;font-size:11px" required>
+              <button type="submit" class="btn btn-primary" style="font-size:10px;padding:2px 6px">Go</button>
+            </form>
+          </td>
+          <td style="font-weight:600">${u.rating}</td>
           <td>${u.total_games}</td>
-          <td>${u.wins}W / ${u.losses}L</td>
-          <td>${u.rating}</td>
-          <td>${formatDate(u.created_at)}</td>
-          <td><a href="/tc-backstage/users/${encodeURIComponent(u.nickname)}" class="btn btn-secondary">View</a></td>
-        </tr>`).join('')}
+          <td>${u.wins}W/${u.losses}L <span style="color:#888;font-size:11px">(${winRate}%)</span></td>
+          <td style="${leaveStyle}">${u.leave_count || 0}</td>
+          <td style="font-size:12px;color:#888">${u.last_login ? formatDate(u.last_login) : '-'}</td>
+          <td><a href="/tc-backstage/users/${encodeURIComponent(u.nickname)}" class="btn btn-secondary" style="font-size:12px;padding:4px 10px">View</a></td>
+        </tr>`;
+        }).join('')}
       </table></div>
-      ${pagination(data.page, data.total, data.limit, `/tc-backstage/users${search ? '?q=' + encodeURIComponent(search) : ''}`)}`;
+      ${pagination(data.page, data.total, data.limit, paginationBase)}`;
     } else {
       tableContent = '<div class="empty">No users found</div>';
     }
 
     const content = `
-      <h1 class="page-title">Users</h1>
+      <h1 class="page-title">Users <span style="font-size:14px;color:#888;font-weight:400">(${data.total.toLocaleString()} total)</span></h1>
       <div class="card">
         ${searchForm}
         ${tableContent}
@@ -854,7 +906,10 @@ async function handleAdminRoute(req, res, url, pathname, method, lobby, wss, mai
   const userDetailMatch = pathname.match(/^\/tc-backstage\/users\/([^/]+)$/);
   if (userDetailMatch && method === 'GET') {
     const nickname = decodeURIComponent(userDetailMatch[1]);
-    const user = await getUserDetail(nickname);
+    const [user, recentMatches] = await Promise.all([
+      getUserDetail(nickname),
+      getRecentMatches(nickname, 20),
+    ]);
     if (!user) return html(res, layout('Not Found', '<div class="empty">User not found</div>', 'users'), 404);
 
     const winRate = user.total_games > 0 ? Math.round((user.wins / user.total_games) * 100) : 0;
@@ -878,7 +933,12 @@ async function handleAdminRoute(req, res, url, pathname, method, lobby, wss, mai
           <div class="label">Nickname</div><div class="value" style="font-weight:600">${escapeHtml(user.nickname)}</div>
           <div class="label">Username</div><div class="value">${escapeHtml(user.username)}</div>
           <div class="label">Level</div><div class="value">${user.level || 1}</div>
-          <div class="label">Gold</div><div class="value" style="color:#ff9800;font-weight:600">${(user.gold || 0).toLocaleString()}</div>
+          <div class="label">Gold</div><div class="value" style="color:#ff9800;font-weight:600">${(user.gold || 0).toLocaleString()}
+            <form method="POST" action="/tc-backstage/users/${encodeURIComponent(user.nickname)}/gold" style="display:inline-flex;align-items:center;gap:4px;margin-left:12px">
+              <input type="number" name="amount" placeholder="+/-" style="width:80px;padding:4px 8px;border-radius:6px;border:1px solid #ddd;font-size:12px" required>
+              <button type="submit" class="btn btn-primary" style="font-size:11px;padding:4px 10px">Grant</button>
+            </form>
+          </div>
           <div class="label">Rating</div><div class="value" style="font-weight:600">${user.rating}</div>
           <div class="label">Season Rating</div><div class="value">${user.season_rating || 1000}</div>
           <div class="label">Games</div><div class="value">${user.total_games}</div>
@@ -940,6 +1000,37 @@ async function handleAdminRoute(req, res, url, pathname, method, lobby, wss, mai
           <textarea name="memo" rows="3" placeholder="관리자 메모 (신고 이력, 주의사항 등)">${escapeHtml(user.admin_memo || '')}</textarea>
           <div style="margin-top:8px"><button type="submit" class="btn btn-primary">Save Memo</button></div>
         </form>
+      </div>
+
+      <div class="card">
+        <h3>Recent Matches <span style="font-size:13px;color:#888;font-weight:400">(${recentMatches.length})</span></h3>
+        ${recentMatches.length > 0 ? `<div class="table-wrap"><table>
+          <tr><th>ID</th><th>Result</th><th>Score</th><th>Team A</th><th>Team B</th><th>Type</th><th>End</th><th>Date</th></tr>
+          ${recentMatches.map(m => {
+            const resultBadge = m.isDraw
+              ? '<span class="badge" style="background:#f5f5f5;color:#888">Draw</span>'
+              : m.won
+                ? '<span class="badge" style="background:#e8f5e9;color:#2e7d32">Win</span>'
+                : '<span class="badge" style="background:#ffebee;color:#c62828">Loss</span>';
+            const myTeamStyle = m.myTeam === 'A' ? 'font-weight:700;color:#c62828' : 'font-weight:700;color:#1565c0';
+            let endBadge = '<span class="badge" style="background:#e8f5e9;color:#2e7d32">Normal</span>';
+            if (m.endReason === 'leave') {
+              endBadge = '<span class="badge" style="background:#fce4ec;color:#c62828">Leave</span>' + (m.deserterNickname ? '<br><span style="font-size:11px;color:#c62828">' + escapeHtml(m.deserterNickname) + '</span>' : '');
+            } else if (m.endReason === 'timeout') {
+              endBadge = '<span class="badge" style="background:#fff8e1;color:#f57f17">Timeout</span>' + (m.deserterNickname ? '<br><span style="font-size:11px;color:#f57f17">' + escapeHtml(m.deserterNickname) + '</span>' : '');
+            }
+            return `<tr>
+              <td>${m.id}</td>
+              <td>${resultBadge}</td>
+              <td style="font-weight:600">${m.teamAScore} : ${m.teamBScore}</td>
+              <td style="${m.myTeam === 'A' ? myTeamStyle : ''}">${escapeHtml(m.playerA1)}, ${escapeHtml(m.playerA2)}</td>
+              <td style="${m.myTeam === 'B' ? myTeamStyle : ''}">${escapeHtml(m.playerB1)}, ${escapeHtml(m.playerB2)}</td>
+              <td>${m.isRanked ? '<span class="badge" style="background:#fff3e0;color:#e65100">Ranked</span>' : '<span class="badge" style="background:#f5f5f5;color:#999">Normal</span>'}</td>
+              <td>${endBadge}</td>
+              <td style="font-size:12px;color:#888">${formatDate(m.createdAt)}</td>
+            </tr>`;
+          }).join('')}
+        </table></div>` : '<div class="empty">No match history</div>'}
       </div>
 
       <div class="card" style="margin-top:0">
@@ -1236,6 +1327,350 @@ async function handleAdminRoute(req, res, url, pathname, method, lobby, wss, mai
     const body = await parseBody(req);
     await updateConfig('privacy_policy', body.privacy_policy || '');
     return redirect(res, '/tc-backstage/settings?saved=1');
+  }
+
+  // Room detail
+  const roomDetailMatch = pathname.match(/^\/tc-backstage\/rooms\/([^/]+)$/);
+  if (roomDetailMatch && method === 'GET') {
+    const roomId = decodeURIComponent(roomDetailMatch[1]);
+    if (!lobby) return html(res, layout('Room', '<div class="empty">Lobby not available</div>'), 404);
+    const room = lobby.getRoom(roomId);
+    if (!room) return html(res, layout('Room', '<div class="empty">Room not found (may have been closed)</div>'), 404);
+
+    const roomState = room.getState();
+    const game = room.game;
+
+    // Players table
+    const playersHtml = roomState.players.map((p, i) => {
+      if (!p) return `<tr><td>Slot ${i}</td><td colspan="6" style="color:#999">Empty</td></tr>`;
+      const teamLabel = (i === 0 || i === 2) ? '<span class="badge" style="background:#e3f2fd;color:#1565c0">Team A</span>' : '<span class="badge" style="background:#fce4ec;color:#c62828">Team B</span>';
+      const statusBadges = [];
+      if (p.isHost) statusBadges.push('<span class="badge badge-resolved">Host</span>');
+      if (p.isBot) statusBadges.push('<span class="badge" style="background:#f3e5f5;color:#6a1b9a">Bot</span>');
+      if (!p.connected) statusBadges.push('<span class="badge badge-pending">Disconnected</span>');
+      if (p.isReady) statusBadges.push('<span class="badge" style="background:#e8f5e9;color:#2e7d32">Ready</span>');
+
+      let cardCount = '-';
+      let tichu = '';
+      let finished = '';
+      if (game) {
+        const hand = game.hands[p.id];
+        cardCount = hand ? hand.length : 0;
+        if (game.largeTichuDeclarations.includes(p.id)) tichu = '<span class="badge" style="background:#ffebee;color:#c62828">Large Tichu</span>';
+        else if (game.smallTichuDeclarations.includes(p.id)) tichu = '<span class="badge" style="background:#fff3e0;color:#e65100">Small Tichu</span>';
+        const finishPos = game.finishOrder.indexOf(p.id);
+        if (finishPos !== -1) finished = `<span class="badge badge-resolved">${finishPos + 1}${['st','nd','rd','th'][finishPos] || 'th'}</span>`;
+      }
+
+      return `<tr>
+        <td>Slot ${i}</td>
+        <td style="font-weight:600">${escapeHtml(p.name)}</td>
+        <td>${teamLabel}</td>
+        <td>${statusBadges.join(' ')}</td>
+        <td style="font-weight:700;font-size:16px">${cardCount}</td>
+        <td>${tichu || '-'}</td>
+        <td>${finished || '-'}</td>
+      </tr>`;
+    }).join('');
+
+    // Spectators
+    const specHtml = roomState.spectators.length > 0
+      ? roomState.spectators.map(s => escapeHtml(s.nickname)).join(', ')
+      : '<span style="color:#999">None</span>';
+
+    // Game state details
+    let gameHtml = '';
+    if (game) {
+      const phase = game.state;
+      const round = game.round;
+      const currentPlayerName = game.currentPlayer ? (game.playerNames[game.currentPlayer] || game.currentPlayer) : '-';
+
+      // Phase badge
+      const phaseColors = {
+        'waiting': 'badge-pending',
+        'dealing_first_8': 'badge-pending',
+        'large_tichu_phase': 'badge-pending',
+        'dealing_remaining_6': 'badge-pending',
+        'card_exchange': 'badge-suggestion',
+        'playing': 'badge-resolved',
+        'round_end': 'badge-reviewed',
+        'game_end': 'badge-bug',
+      };
+      const phaseBadge = `<span class="badge ${phaseColors[phase] || 'badge-other'}">${phase}</span>`;
+
+      // Current trick
+      let trickHtml = '';
+      if (game.currentTrick.length > 0) {
+        trickHtml = `<div class="table-wrap"><table>
+          <tr><th>Player</th><th>Cards</th><th>Combo</th><th>Value</th></tr>
+          ${game.currentTrick.map(t => `<tr>
+            <td style="font-weight:600">${escapeHtml(game.playerNames[t.playerId])}</td>
+            <td><code style="background:#f0f0f0;padding:2px 6px;border-radius:4px;font-size:12px">${t.cards.join(', ')}</code></td>
+            <td><span class="badge badge-reviewed">${t.combo.type}</span></td>
+            <td style="font-weight:700">${t.combo.value}</td>
+          </tr>`).join('')}
+        </table></div>`;
+      } else {
+        trickHtml = '<div style="color:#999;font-size:13px">No cards on table</div>';
+      }
+
+      // Trick piles summary (points collected per player)
+      let trickPilesHtml = '';
+      if (game.trickPiles) {
+        const pileRows = game.playerIds.map(pid => {
+          const cards = game.trickPiles[pid] || [];
+          const pts = cards.reduce((s, c) => {
+            const rank = c.startsWith('special_') ? c.split('_')[1] : c.split('_')[1];
+            if (rank === '5') return s + 5;
+            if (rank === '10' || rank === 'K') return s + 10;
+            if (c === 'special_dragon') return s + 25;
+            if (c === 'special_phoenix') return s - 25;
+            return s;
+          }, 0);
+          return `<tr>
+            <td style="font-weight:600">${escapeHtml(game.playerNames[pid])}</td>
+            <td>${cards.length}</td>
+            <td style="font-weight:700;color:${pts >= 0 ? '#4caf50' : '#e53935'}">${pts}</td>
+          </tr>`;
+        }).join('');
+        trickPilesHtml = `<div class="table-wrap"><table>
+          <tr><th>Player</th><th>Cards Won</th><th>Points</th></tr>
+          ${pileRows}
+        </table></div>`;
+      }
+
+      // Hands (card list per player)
+      let handsHtml = '';
+      if (game.hands) {
+        const handRows = game.playerIds.map(pid => {
+          const hand = game.hands[pid] || [];
+          const cardDisplay = hand.length > 0
+            ? hand.map(c => {
+                let style = 'background:#f0f0f0;padding:2px 6px;border-radius:4px;font-size:11px;margin:1px;display:inline-block;';
+                if (c.startsWith('special_')) style += 'background:#fff3e0;color:#e65100;font-weight:600;';
+                else if (c.endsWith('_A') || c.endsWith('_K')) style += 'font-weight:600;';
+                return `<code style="${style}">${c}</code>`;
+              }).join(' ')
+            : '<span style="color:#999">Empty</span>';
+          return `<tr>
+            <td style="font-weight:600;white-space:nowrap">${escapeHtml(game.playerNames[pid])}</td>
+            <td>${cardDisplay}</td>
+          </tr>`;
+        }).join('');
+        handsHtml = `<div class="table-wrap"><table>
+          <tr><th style="width:100px">Player</th><th>Cards</th></tr>
+          ${handRows}
+        </table></div>`;
+      }
+
+      // Score history
+      let scoreHistoryHtml = '';
+      if (game.scoreHistory && game.scoreHistory.length > 0) {
+        scoreHistoryHtml = `<div class="table-wrap"><table>
+          <tr><th>Round</th><th>Team A</th><th>Team B</th></tr>
+          ${game.scoreHistory.map(s => `<tr>
+            <td>R${s.round}</td>
+            <td style="font-weight:600;color:${s.teamA > 0 ? '#4caf50' : s.teamA < 0 ? '#e53935' : '#333'}">${s.teamA > 0 ? '+' : ''}${s.teamA}</td>
+            <td style="font-weight:600;color:${s.teamB > 0 ? '#4caf50' : s.teamB < 0 ? '#e53935' : '#333'}">${s.teamB > 0 ? '+' : ''}${s.teamB}</td>
+          </tr>`).join('')}
+          <tr style="border-top:2px solid #333;font-weight:700">
+            <td>Total</td>
+            <td style="color:#1565c0;font-size:16px">${game.totalScores.teamA}</td>
+            <td style="color:#c62828;font-size:16px">${game.totalScores.teamB}</td>
+          </tr>
+        </table></div>`;
+      }
+
+      // Special states
+      let specialHtml = '';
+      if (game.callRank) specialHtml += `<div style="margin-bottom:8px"><strong>Active Wish:</strong> <span class="badge badge-pending">${game.callRank}</span></div>`;
+      if (game.dragonPending) specialHtml += `<div style="margin-bottom:8px"><strong>Dragon Pending:</strong> <span class="badge" style="background:#ffebee;color:#c62828">${escapeHtml(game.playerNames[game.dragonDecider] || '?')} must give</span></div>`;
+      if (game.passCount > 0) specialHtml += `<div style="margin-bottom:8px"><strong>Pass Count:</strong> ${game.passCount}</div>`;
+
+      gameHtml = `
+        <div class="stats-grid" style="grid-template-columns:repeat(auto-fit, minmax(130px, 1fr));margin-bottom:20px">
+          <div class="stat-card" style="border-left:4px solid #6c63ff"><div class="label">Phase</div><div style="margin-top:4px">${phaseBadge}</div></div>
+          <div class="stat-card" style="border-left:4px solid #ff9800"><div class="label">Round</div><div class="value orange">${round}</div></div>
+          <div class="stat-card" style="border-left:4px solid #4caf50"><div class="label">Current Turn</div><div style="font-weight:600;font-size:16px;margin-top:4px">${escapeHtml(currentPlayerName)}</div></div>
+          <div class="stat-card" style="border-left:4px solid #1565c0"><div class="label">Team A</div><div class="value" style="color:#1565c0">${game.totalScores.teamA}</div></div>
+          <div class="stat-card" style="border-left:4px solid #c62828"><div class="label">Team B</div><div class="value" style="color:#c62828">${game.totalScores.teamB}</div></div>
+        </div>
+
+        ${specialHtml ? `<div class="card"><h3>Active States</h3>${specialHtml}</div>` : ''}
+
+        <div class="card">
+          <h3>Current Trick</h3>
+          ${trickHtml}
+        </div>
+
+        <div class="card">
+          <h3>Player Hands</h3>
+          ${handsHtml}
+        </div>
+
+        <div class="grid-2col">
+          <div class="card">
+            <h3>Trick Piles (Points)</h3>
+            ${trickPilesHtml}
+          </div>
+          <div class="card">
+            <h3>Score History</h3>
+            ${scoreHistoryHtml || '<div style="color:#999;font-size:13px">No rounds completed yet</div>'}
+          </div>
+        </div>
+      `;
+    } else {
+      gameHtml = '<div class="card"><div class="empty">No game in progress</div></div>';
+    }
+
+    // Chat history
+    let chatHtml = '';
+    const chatHistory = room.getChatHistory();
+    if (chatHistory.length > 0) {
+      chatHtml = `<div class="card">
+        <h3>Chat Log <span style="font-size:13px;color:#888;font-weight:400">(${chatHistory.length})</span></h3>
+        <div class="chat-log">
+          ${chatHistory.map(m => `<div class="chat-msg">
+            <span class="sender">${escapeHtml(m.sender)}</span>
+            <span style="color:#aaa;font-size:11px;margin-left:6px">${new Date(m.timestamp).toLocaleTimeString('ko-KR')}</span>
+            <div class="text">${escapeHtml(m.message)}</div>
+          </div>`).join('')}
+        </div>
+      </div>`;
+    }
+
+    const content = `
+      <h1 class="page-title">
+        <a href="/tc-backstage/" style="color:#888;text-decoration:none;font-size:14px">Dashboard</a>
+        <span style="color:#ccc;margin:0 8px">/</span>
+        Room: ${escapeHtml(roomState.name)}
+      </h1>
+
+      <div class="card">
+        <div class="detail-grid" style="grid-template-columns:120px 1fr">
+          <div class="label">Room ID</div><div class="value"><code>${escapeHtml(roomId)}</code></div>
+          <div class="label">Room Name</div><div class="value" style="font-weight:600">${escapeHtml(roomState.name)}</div>
+          <div class="label">Host</div><div class="value">${escapeHtml(roomState.players.find(p => p && p.isHost)?.name || '-')}</div>
+          <div class="label">Type</div><div class="value">${roomState.isRanked ? '<span class="badge" style="background:#fff3e0;color:#e65100">Ranked</span>' : 'Normal'}${roomState.isPrivate ? ' <span class="badge" style="background:#ffebee;color:#c62828">Private</span>' : ''}</div>
+          <div class="label">Turn Limit</div><div class="value">${roomState.turnTimeLimit}s</div>
+          <div class="label">Spectators</div><div class="value">${specHtml}</div>
+        </div>
+      </div>
+
+      <div class="card">
+        <h3>Players</h3>
+        <div class="table-wrap"><table>
+          <tr><th>Slot</th><th>Name</th><th>Team</th><th>Status</th><th>Cards</th><th>Tichu</th><th>Finish</th></tr>
+          ${playersHtml}
+        </table></div>
+      </div>
+
+      ${gameHtml}
+      ${chatHtml}
+
+      <div style="text-align:center;margin-top:20px">
+        <a href="/tc-backstage/rooms/${encodeURIComponent(roomId)}" class="btn btn-secondary" style="margin-right:8px">Refresh</a>
+        <a href="/tc-backstage/" class="btn btn-secondary">Back to Dashboard</a>
+      </div>
+    `;
+    return html(res, layout(`Room: ${room.name}`, content, 'home'));
+  }
+
+  // Online users list
+  if (pathname === '/tc-backstage/online' && method === 'GET') {
+    const filter = url.searchParams.get('filter') || 'connected';
+    const allRooms = lobby ? lobby.getRoomList() : [];
+    let users = [];
+    let title = 'Connected Users';
+
+    if (filter === 'connected') {
+      title = 'Connected Users';
+      if (wss) {
+        wss.clients.forEach(ws => {
+          if (ws.nickname) {
+            const roomInfo = ws.roomId ? allRooms.find(r => r.id === ws.roomId) : null;
+            users.push({ nickname: ws.nickname, room: roomInfo ? roomInfo.name : null, roomId: ws.roomId, status: roomInfo ? (roomInfo.gameInProgress ? 'In Game' : 'Waiting') : 'Lobby' });
+          }
+        });
+      }
+    } else if (filter === 'ingame') {
+      title = 'In Game Users';
+      const gamingRoomList = allRooms.filter(r => r.gameInProgress);
+      for (const r of gamingRoomList) {
+        const room = lobby.getRoom(r.id);
+        if (!room) continue;
+        for (const p of room.players) {
+          if (p && !p.isBot) users.push({ nickname: p.nickname, room: r.name, roomId: r.id, status: p.connected !== false ? 'Playing' : 'Disconnected' });
+        }
+      }
+    } else if (filter === 'waiting') {
+      title = 'Waiting Users';
+      const waitingRoomList = allRooms.filter(r => !r.gameInProgress);
+      for (const r of waitingRoomList) {
+        const room = lobby.getRoom(r.id);
+        if (!room) continue;
+        for (const p of room.players) {
+          if (p && !p.isBot) users.push({ nickname: p.nickname, room: r.name, roomId: r.id, status: p.connected !== false ? 'Ready' : 'Disconnected' });
+        }
+      }
+    } else if (filter === 'spectators') {
+      title = 'Spectators';
+      for (const r of allRooms) {
+        const room = lobby.getRoom(r.id);
+        if (!room) continue;
+        for (const s of room.spectators) {
+          users.push({ nickname: s.nickname, room: r.name, roomId: r.id, status: 'Spectating' });
+        }
+      }
+    }
+
+    const filterBtns = [
+      ['connected', 'Connected', '#6c63ff'],
+      ['ingame', 'In Game', '#4caf50'],
+      ['waiting', 'Waiting', '#ff9800'],
+      ['spectators', 'Spectators', '#42a5f5'],
+    ].map(([v, l, c]) => `<a href="/tc-backstage/online?filter=${v}" class="btn" style="background:${filter === v ? c : '#f5f5f5'};color:${filter === v ? '#fff' : '#666'};font-size:13px;padding:6px 14px;border-radius:20px;text-decoration:none">${l}</a>`).join('');
+
+    let tableHtml = '';
+    if (users.length > 0) {
+      tableHtml = `<div class="table-wrap"><table>
+        <tr><th>Nickname</th><th>Room</th><th>Status</th><th></th></tr>
+        ${users.map(u => `<tr>
+          <td><a href="/tc-backstage/users/${encodeURIComponent(u.nickname)}" style="color:#6c63ff;text-decoration:none;font-weight:600">${escapeHtml(u.nickname)}</a></td>
+          <td>${u.room ? `<a href="/tc-backstage/rooms/${encodeURIComponent(u.roomId)}" style="color:#6c63ff;text-decoration:none">${escapeHtml(u.room)}</a>` : '<span style="color:#888">-</span>'}</td>
+          <td>${escapeHtml(u.status)}</td>
+          <td><a href="/tc-backstage/users/${encodeURIComponent(u.nickname)}" class="btn btn-secondary" style="font-size:12px;padding:4px 10px">View</a></td>
+        </tr>`).join('')}
+      </table></div>`;
+    } else {
+      tableHtml = '<div class="empty">No users in this category</div>';
+    }
+
+    const content = `
+      <h1 class="page-title">${title} <span style="font-size:14px;color:#888;font-weight:400">(${users.length})</span></h1>
+      <div class="card">
+        <div style="display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap">${filterBtns}</div>
+        ${tableHtml}
+      </div>
+      <a href="/tc-backstage/" class="btn btn-secondary">Back to Dashboard</a>
+    `;
+    return html(res, layout(title, content, 'home'));
+  }
+
+  // Admin gold adjustment
+  const goldMatch = pathname.match(/^\/tc-backstage\/users\/([^/]+)\/gold$/);
+  if (goldMatch && method === 'POST') {
+    const nickname = decodeURIComponent(goldMatch[1]);
+    const body = await parseBody(req);
+    const amount = parseInt(body.amount);
+    if (!isNaN(amount) && amount !== 0) {
+      await adminAdjustGold(nickname, amount);
+    }
+    const referer = req.headers.referer || '';
+    if (referer.includes('/tc-backstage/users?') || referer.endsWith('/tc-backstage/users')) {
+      return redirect(res, referer);
+    }
+    return redirect(res, `/tc-backstage/users/${encodeURIComponent(nickname)}`);
   }
 
   // 404

@@ -110,6 +110,10 @@ async function initDatabase() {
       )
     `);
 
+    // Match history: end reason tracking
+    await client.query(`ALTER TABLE tc_match_history ADD COLUMN IF NOT EXISTS end_reason VARCHAR(20) DEFAULT 'normal'`);
+    await client.query(`ALTER TABLE tc_match_history ADD COLUMN IF NOT EXISTS deserter_nickname VARCHAR(50) DEFAULT NULL`);
+
     // User stats columns
     await client.query(`ALTER TABLE tc_users ADD COLUMN IF NOT EXISTS total_games INT DEFAULT 0`);
     await client.query(`ALTER TABLE tc_users ADD COLUMN IF NOT EXISTS wins INT DEFAULT 0`);
@@ -784,8 +788,8 @@ async function saveMatchResult(matchData) {
   try {
     await client.query(
       `INSERT INTO tc_match_history
-       (winner_team, team_a_score, team_b_score, player_a1, player_a2, player_b1, player_b2, is_ranked)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
+       (winner_team, team_a_score, team_b_score, player_a1, player_a2, player_b1, player_b2, is_ranked, end_reason, deserter_nickname)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)`,
       [
         matchData.winnerTeam,
         matchData.teamAScore,
@@ -795,6 +799,8 @@ async function saveMatchResult(matchData) {
         matchData.playerB1,
         matchData.playerB2,
         matchData.isRanked || false,
+        matchData.endReason || 'normal',
+        matchData.deserterNickname || null,
       ]
     );
     return { success: true };
@@ -967,6 +973,8 @@ async function getRecentMatches(nickname, limit = 5) {
         playerB1: row.player_b1,
         playerB2: row.player_b2,
         isRanked: row.is_ranked,
+        endReason: row.end_reason || 'normal',
+        deserterNickname: row.deserter_nickname || null,
         createdAt: row.created_at,
       };
     });
@@ -1963,26 +1971,60 @@ async function updateReportGroupStatus(reportedNickname, roomId, status) {
 }
 
 // Get users with search and pagination
-async function getUsers(search = '', page = 1, limit = 20) {
+async function getUsers(search = '', page = 1, limit = 20, options = {}) {
   const client = await pool.connect();
   try {
     const offset = (page - 1) * limit;
-    let countQuery, dataQuery, params;
+    const conditions = [];
+    const countParams = [];
+    let paramIdx = 1;
+
     if (search) {
-      countQuery = `SELECT COUNT(*) FROM tc_users WHERE nickname ILIKE $1 OR username ILIKE $1`;
-      dataQuery = `SELECT id, username, nickname, total_games, wins, losses, rating, created_at, last_login
-                   FROM tc_users WHERE nickname ILIKE $1 OR username ILIKE $1
-                   ORDER BY created_at DESC LIMIT $2 OFFSET $3`;
-      params = [`%${search}%`, limit, offset];
-    } else {
-      countQuery = 'SELECT COUNT(*) FROM tc_users';
-      dataQuery = `SELECT id, username, nickname, total_games, wins, losses, rating, created_at, last_login
-                   FROM tc_users ORDER BY created_at DESC LIMIT $1 OFFSET $2`;
-      params = [limit, offset];
+      conditions.push(`(nickname ILIKE $${paramIdx} OR username ILIKE $${paramIdx})`);
+      countParams.push(`%${search}%`);
+      paramIdx++;
     }
-    const countResult = await client.query(countQuery, search ? [`%${search}%`] : []);
+    if (options.minRating) {
+      conditions.push(`rating >= $${paramIdx}`);
+      countParams.push(parseInt(options.minRating));
+      paramIdx++;
+    }
+    if (options.minGames) {
+      conditions.push(`total_games >= $${paramIdx}`);
+      countParams.push(parseInt(options.minGames));
+      paramIdx++;
+    }
+    if (options.minLeaves) {
+      conditions.push(`leave_count >= $${paramIdx}`);
+      countParams.push(parseInt(options.minLeaves));
+      paramIdx++;
+    }
+
+    const whereClause = conditions.length > 0 ? `WHERE ${conditions.join(' AND ')}` : '';
+
+    // Sort options
+    const sortOptions = {
+      'rating_desc': 'rating DESC',
+      'rating_asc': 'rating ASC',
+      'games_desc': 'total_games DESC',
+      'gold_desc': 'gold DESC',
+      'level_desc': 'level DESC',
+      'leaves_desc': 'leave_count DESC',
+      'login_desc': 'last_login DESC NULLS LAST',
+      'joined_desc': 'created_at DESC',
+      'joined_asc': 'created_at ASC',
+    };
+    const orderBy = sortOptions[options.sort] || 'created_at DESC';
+
+    const countQuery = `SELECT COUNT(*) FROM tc_users ${whereClause}`;
+    const countResult = await client.query(countQuery, countParams);
     const total = parseInt(countResult.rows[0].count);
-    const result = await client.query(dataQuery, params);
+
+    const dataParams = [...countParams, limit, offset];
+    const dataQuery = `SELECT id, username, nickname, total_games, wins, losses, rating, gold, level, leave_count, season_rating, created_at, last_login
+                   FROM tc_users ${whereClause}
+                   ORDER BY ${orderBy} LIMIT $${paramIdx} OFFSET $${paramIdx + 1}`;
+    const result = await client.query(dataQuery, dataParams);
     return { rows: result.rows, total, page, limit };
   } catch (err) {
     console.error('Get users error:', err);
@@ -2516,6 +2558,24 @@ async function setPushFriendInvite(nickname, enabled) {
   }
 }
 
+// Admin: adjust user gold (positive = add, negative = deduct)
+async function adminAdjustGold(nickname, amount) {
+  const client = await pool.connect();
+  try {
+    const result = await client.query(
+      `UPDATE tc_users SET gold = GREATEST(0, gold + $2) WHERE nickname = $1 RETURNING gold`,
+      [nickname, amount]
+    );
+    if (result.rows.length === 0) return { success: false, message: 'User not found' };
+    return { success: true, newGold: result.rows[0].gold };
+  } catch (err) {
+    console.error('Admin adjust gold error:', err);
+    return { success: false, message: err.message };
+  } finally {
+    client.release();
+  }
+}
+
 async function getConfig(key) {
   const client = await pool.connect();
   try {
@@ -2612,5 +2672,6 @@ module.exports = {
   setPushFriendInvite,
   getConfig,
   updateConfig,
+  adminAdjustGold,
   pool,
 };

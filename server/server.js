@@ -1669,6 +1669,7 @@ async function saveGameResult(room) {
       playerB1: playerNames[teamBPlayers[0]] || '',
       playerB2: playerNames[teamBPlayers[1]] || '',
       isRanked: room.isRanked,
+      endReason: 'normal',
     });
 
     // Update stats for each player (skip bots)
@@ -2035,6 +2036,8 @@ async function handleDesertion(roomId, playerId, reason = 'leave') {
       playerB1: playerNames[teamBPlayers[0]] || '',
       playerB2: playerNames[teamBPlayers[1]] || '',
       isRanked: room.isRanked,
+      endReason: reason,
+      deserterNickname: deserterNick || null,
     });
 
     // Deserter: forced loss (ranked = -20 penalty)

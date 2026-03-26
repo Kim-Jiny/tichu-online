@@ -253,41 +253,12 @@ function evaluateHand(cards) {
 // ========== TICHU DECLARATION ==========
 
 function decideLargeTichu(cards) {
-  // Only 8 cards are visible
-  const hasDragon = cards.includes('special_dragon');
-  const hasPhoenix = cards.includes('special_phoenix');
-  const normalCards = cards.filter(c => !c.startsWith('special_'));
-  const aces = normalCards.filter(c => getRankFromCard(c) === 'A');
-
-  // Very conservative: Dragon + Phoenix + A, or Dragon + 2 Aces
-  if (hasDragon && hasPhoenix && aces.length >= 1) return true;
-  if (hasDragon && aces.length >= 2) return true;
-
-  // Dragon + Phoenix + strong cards (K count)
-  const kings = normalCards.filter(c => getRankFromCard(c) === 'K');
-  if (hasDragon && hasPhoenix && kings.length >= 1 && aces.length >= 0) {
-    // Check if we have several high cards total
-    const highCards = normalCards.filter(c => getCardValue(c) >= 12);
-    if (highCards.length >= 3) return true;
-  }
-
+  // Bots never declare large tichu
   return false;
 }
 
 function decideSmallTichu(cards, state) {
-  // Already declared large tichu or small tichu
-  if (!state.canDeclareSmallTichu) return false;
-
-  // Don't declare if teammate already declared tichu
-  const partner = getPartner(state);
-  if (partner && (partner.hasSmallTichu || partner.hasLargeTichu)) return false;
-
-  const eval_ = evaluateHand(cards);
-
-  // Strong hand: high score + few plays
-  if (eval_.score >= 75 && eval_.playCount <= 5) return true;
-  if (eval_.score >= 65 && eval_.hasBomb && eval_.playCount <= 6) return true;
-
+  // Bots never declare small tichu
   return false;
 }
 
@@ -337,20 +308,16 @@ function selectExchangeCards(cards) {
     }
     // Ultimate fallback
     for (const c of cards) {
-      if (!used.has(c) && c !== 'special_dragon') { used.add(c); return c; }
+      if (!used.has(c)) { used.add(c); return c; }
     }
     return cards[0];
   }
 
-  // PARTNER: Give high free card, or Phoenix if hand is strong
+  // PARTNER: Dragon > Phoenix > top card (by value desc)
   const partnerCandidates = [];
-  if (cards.includes('special_phoenix') && eval_.score > 65) {
-    partnerCandidates.push('special_phoenix');
-  }
-  // High free cards (not Dragon, not point cards for opponents)
-  const highFree = freeByValueDesc.filter(c => c !== 'special_dragon');
-  partnerCandidates.push(...highFree);
-  partnerCandidates.push(...allByValueDesc.filter(c => c !== 'special_dragon'));
+  if (cards.includes('special_dragon')) partnerCandidates.push('special_dragon');
+  if (cards.includes('special_phoenix')) partnerCandidates.push('special_phoenix');
+  partnerCandidates.push(...allByValueDesc);
 
   const partner = pickCard(partnerCandidates, allByValueDesc);
 
@@ -965,11 +932,12 @@ function handleFollowSingle(state, cards, normalCards, combos, lastValue, trickP
     }
   }
 
-  // Dragon as single: very conservative
+  // Dragon as single
   if (cards.includes('special_dragon') && lastValue < 15) {
     const shouldUseDragon = (
       cards.length <= 2 ||  // almost done
-      trickPts >= 15        // valuable trick worth winning
+      trickPts >= 15 ||     // valuable trick worth winning
+      lastValue >= 14       // opponent played A — dragon is the only answer
     );
     if (shouldUseDragon) {
       return { type: 'play_cards', cards: ['special_dragon'] };

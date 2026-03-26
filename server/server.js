@@ -1156,18 +1156,29 @@ function handleReturnToRoom(ws) {
     sendTo(ws, { type: 'error', message: '게임이 아직 진행 중입니다' });
     return;
   }
-  // Solo bot rooms should be cleaned up instead of lingering in the lobby.
-  if (room.getHumanPlayerCount() <= 1 && room.getBotIds().length > 0) {
-    closeRoom(room.id, 'room_left');
-    broadcastRoomList();
-    return;
-  }
   // Clear the game and reset ready states
   room.game = null;
   room.resetReady();
   clearTurnTimer(ws.roomId);
   broadcastRoomState(ws.roomId);
   broadcastRoomList();
+}
+
+// Auto return to room 3 seconds after game_end
+const autoReturnTimers = {};
+function scheduleAutoReturnToRoom(roomId) {
+  if (autoReturnTimers[roomId]) return; // Already scheduled
+  autoReturnTimers[roomId] = setTimeout(() => {
+    delete autoReturnTimers[roomId];
+    const room = lobby.getRoom(roomId);
+    if (!room) return;
+    if (!room.game || room.game.state !== 'game_end') return;
+    room.game = null;
+    room.resetReady();
+    clearTurnTimer(roomId);
+    broadcastRoomState(roomId);
+    broadcastRoomList();
+  }, 3000);
 }
 
 function handleCheckRoom(ws) {
@@ -1643,6 +1654,7 @@ function handleGameAction(ws, data) {
   // Check for game end and save match result
   if (room.game && room.game.state === 'game_end') {
     saveGameResult(room);
+    scheduleAutoReturnToRoom(ws.roomId);
   }
 }
 
@@ -1789,7 +1801,8 @@ function scheduleBotActions(roomId) {
   if (pendingBotCheck[roomId]) return; // Already scheduled
 
   pendingBotCheck[roomId] = true;
-  const delay = 500 + Math.floor(Math.random() * 500);
+  // Faster for declarations/exchanges, slower for card play
+  const baseDelay = 300 + Math.floor(Math.random() * 300);
 
   setTimeout(() => {
     delete pendingBotCheck[roomId];
@@ -1800,6 +1813,35 @@ function scheduleBotActions(roomId) {
     for (const botId of r.getBotIds()) {
       let action = decideBotAction(r.game, botId);
       if (action) {
+        // Add extra delay for card play actions to feel more natural
+        const isCardPlay = action.type === 'play_cards' || action.type === 'pass';
+        if (isCardPlay) {
+          pendingBotCheck[roomId] = true;
+          setTimeout(() => {
+            delete pendingBotCheck[roomId];
+            const r2 = lobby.getRoom(roomId);
+            if (!r2 || !r2.game) return;
+            // Re-decide in case state changed
+            let action2 = decideBotAction(r2.game, botId);
+            if (!action2) return;
+            console.log(`[BOT] ${botId} action: ${action2.type}`);
+            let result2 = r2.game.handleAction(botId, action2);
+            if (result2 && !result2.success && r2.game) {
+              console.log(`[BOT] ${botId} action failed: ${result2.message}, trying fallback`);
+              const fallback2 = r2.game.getAutoTimeoutAction(botId);
+              if (fallback2) {
+                console.log(`[BOT] ${botId} fallback: ${fallback2.type}`);
+                result2 = r2.game.handleAction(botId, fallback2);
+              }
+            }
+            if (result2 && result2.success) {
+              if (result2.broadcast) broadcastGameEvent(roomId, result2.broadcast);
+              if (r2.game && r2.game.state === 'game_end') { saveGameResult(r2); scheduleAutoReturnToRoom(roomId); }
+              sendGameStateToAll(roomId);
+            }
+          }, 500);
+          return;
+        }
         console.log(`[BOT] ${botId} action: ${action.type}`);
         let result = r.game.handleAction(botId, action);
         // If bot's action failed (e.g. call obligation), use server's auto-action as fallback
@@ -1817,6 +1859,7 @@ function scheduleBotActions(roomId) {
           }
           if (r.game && r.game.state === 'game_end') {
             saveGameResult(r);
+            scheduleAutoReturnToRoom(roomId);
           }
           sendGameStateToAll(roomId); // This will re-trigger scheduleBotActions
           return; // One action at a time
@@ -1826,7 +1869,7 @@ function scheduleBotActions(roomId) {
         }
       }
     }
-  }, delay);
+  }, baseDelay);
 }
 
 // --- Turn Timer System ---
@@ -1979,7 +2022,7 @@ async function handleTurnTimeout(roomId, playerId) {
     const result = room.game.handleAction(playerId, action);
     if (result && result.success) {
       if (result.broadcast) broadcastGameEvent(roomId, result.broadcast);
-      if (room.game && room.game.state === 'game_end') saveGameResult(room);
+      if (room.game && room.game.state === 'game_end') { saveGameResult(room); scheduleAutoReturnToRoom(roomId); }
     } else {
       console.log(`[TIMEOUT] Auto action failed for ${nickname}: ${result?.message}`);
     }
@@ -2066,6 +2109,7 @@ async function handleDesertion(roomId, playerId, reason = 'leave') {
   game.deserted = true;
 
   sendGameStateToAll(roomId);
+  scheduleAutoReturnToRoom(roomId);
   delete timeoutCounts[roomId];
 
   // Remove deserter from room (including host)
@@ -2157,6 +2201,10 @@ function closeRoom(roomId, messageType = 'room_closed') {
         ws.isSpectator = false;
       }
     }
+  }
+  if (autoReturnTimers[roomId]) {
+    clearTimeout(autoReturnTimers[roomId]);
+    delete autoReturnTimers[roomId];
   }
   lobby.removeRoom(roomId);
 }

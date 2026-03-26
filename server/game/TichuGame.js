@@ -982,17 +982,19 @@ class TichuGame {
 
   _countRemainingSpecials() {
     let aces = 0;
+    let kings = 0;
     let dragon = 0;
     let phoenix = 0;
     for (const pid of this.playerIds) {
       for (const card of this.hands[pid]) {
         const id = typeof card === 'string' ? card : card.id;
         if (id.endsWith('_A')) aces++;
+        else if (id.endsWith('_K')) kings++;
         else if (id === 'special_dragon') dragon = 1;
         else if (id === 'special_phoenix') phoenix = 1;
       }
     }
-    return { aces, dragon, phoenix };
+    return { aces, kings, dragon, phoenix };
   }
 
   getStateForSpectator(permittedPlayerIds = new Set()) {

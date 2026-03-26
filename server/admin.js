@@ -178,15 +178,15 @@ input[type="text"], input[type="password"] { width: 100%; padding: 10px; border:
 <div class="sidebar-overlay" onclick="document.querySelector('.sidebar').classList.remove('open');this.classList.remove('open')"></div>
 <nav class="sidebar">
   <h2>Tichu Admin</h2>
-  <a href="/tc-backstage/" class="${activePage === 'home' ? 'active' : ''}" onclick="closeSidebar()">Dashboard</a>
-  <a href="/tc-backstage/inquiries" class="${activePage === 'inquiries' ? 'active' : ''}" onclick="closeSidebar()">Inquiries</a>
-  <a href="/tc-backstage/shop" class="${activePage === 'shop' ? 'active' : ''}" onclick="closeSidebar()">Shop</a>
-  <a href="/tc-backstage/reports" class="${activePage === 'reports' ? 'active' : ''}" onclick="closeSidebar()">Reports</a>
-  <a href="/tc-backstage/users" class="${activePage === 'users' ? 'active' : ''}" onclick="closeSidebar()">Users</a>
-  <a href="/tc-backstage/maintenance" class="${activePage === 'maintenance' ? 'active' : ''}" onclick="closeSidebar()">Maintenance</a>
-  <a href="/tc-backstage/settings" class="${activePage === 'settings' ? 'active' : ''}" onclick="closeSidebar()">Settings</a>
+  <a href="/tc-backstage/" class="${activePage === 'home' ? 'active' : ''}" onclick="closeSidebar()">대시보드</a>
+  <a href="/tc-backstage/inquiries" class="${activePage === 'inquiries' ? 'active' : ''}" onclick="closeSidebar()">문의</a>
+  <a href="/tc-backstage/shop" class="${activePage === 'shop' ? 'active' : ''}" onclick="closeSidebar()">상점</a>
+  <a href="/tc-backstage/reports" class="${activePage === 'reports' ? 'active' : ''}" onclick="closeSidebar()">신고</a>
+  <a href="/tc-backstage/users" class="${activePage === 'users' ? 'active' : ''}" onclick="closeSidebar()">유저</a>
+  <a href="/tc-backstage/maintenance" class="${activePage === 'maintenance' ? 'active' : ''}" onclick="closeSidebar()">점검</a>
+  <a href="/tc-backstage/settings" class="${activePage === 'settings' ? 'active' : ''}" onclick="closeSidebar()">설정</a>
   <div class="logout">
-    <a href="/tc-backstage/logout">Logout</a>
+    <a href="/tc-backstage/logout">로그아웃</a>
   </div>
 </nav>
 <main class="main">
@@ -219,9 +219,9 @@ body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; b
 <form class="login-box" method="POST" action="/tc-backstage/login">
   <h2>Tichu Admin</h2>
   ${error ? `<div class="error">${error}</div>` : ''}
-  <input type="text" name="username" placeholder="Username" required autofocus>
-  <input type="password" name="password" placeholder="Password" required>
-  <button type="submit">Login</button>
+  <input type="text" name="username" placeholder="아이디" required autofocus>
+  <input type="password" name="password" placeholder="비밀번호" required>
+  <button type="submit">로그인</button>
 </form>
 </body>
 </html>`;
@@ -233,7 +233,16 @@ function categoryBadge(cat) {
 }
 
 function statusBadge(status) {
-  return `<span class="badge badge-${status}">${status}</span>`;
+  const statusMap = { pending: '대기', resolved: '처리됨', reviewed: '검토됨' };
+  return `<span class="badge badge-${status}">${statusMap[status] || status}</span>`;
+}
+
+function deviceBadge(platform) {
+  if (!platform) return '<span style="color:#ccc">-</span>';
+  const p = platform.toLowerCase();
+  if (p === 'ios') return '<span class="badge" style="background:#e3f2fd;color:#1565c0;font-size:11px;padding:2px 8px">iOS</span>';
+  if (p === 'android') return '<span class="badge" style="background:#e8f5e9;color:#2e7d32;font-size:11px;padding:2px 8px">AOS</span>';
+  return `<span class="badge" style="background:#f5f5f5;color:#888;font-size:11px;padding:2px 8px">${escapeHtml(platform)}</span>`;
 }
 
 function formatDate(d) {
@@ -288,33 +297,33 @@ function shopForm(action, values, isEdit = false) {
 
   return `<form method="POST" action="${action}">
     <div class="form-grid">
-      <label>Item Key</label>
-      <input type="text" name="item_key" value="${escapeHtml(v('item_key'))}" ${isEdit ? 'readonly style="background:#f0f0f0"' : 'required'} placeholder="e.g. banner_new">
-      <label>Name</label>
+      <label>아이템 키</label>
+      <input type="text" name="item_key" value="${escapeHtml(v('item_key'))}" ${isEdit ? 'readonly style="background:#f0f0f0"' : 'required'} placeholder="예: banner_new">
+      <label>이름</label>
       <input type="text" name="name" value="${escapeHtml(v('name'))}" required placeholder="아이템 이름">
-      <label>Category</label>
+      <label>분류</label>
       <select name="category" style="padding:10px;border:1px solid #ddd;border-radius:8px;font-size:14px">${categoryOptions}</select>
-      <label>Price</label>
+      <label>가격</label>
       <input type="number" name="price" value="${v('price', 0)}" min="0" style="padding:10px;border:1px solid #ddd;border-radius:8px;font-size:14px">
-      <label>Permanent</label>
+      <label>영구</label>
       <input type="checkbox" name="is_permanent" ${checked('is_permanent', true)} style="width:20px;height:20px">
-      <label>Duration (days)</label>
+      <label>기간 (일)</label>
       <input type="number" name="duration_days" value="${v('duration_days', '')}" min="1" style="padding:10px;border:1px solid #ddd;border-radius:8px;font-size:14px" placeholder="영구 아이템이면 비워두세요">
-      <label>Purchasable</label>
+      <label>구매 가능</label>
       <input type="checkbox" name="is_purchasable" ${checked('is_purchasable', true)} style="width:20px;height:20px">
-      <label>Season Item</label>
+      <label>시즌 아이템</label>
       <input type="checkbox" name="is_season" ${checked('is_season', false)} style="width:20px;height:20px">
-      <label>Effect Type</label>
-      <input type="text" name="effect_type" value="${escapeHtml(v('effect_type', ''))}" placeholder="e.g. leave_count_reduce">
-      <label>Effect Value</label>
+      <label>효과 유형</label>
+      <input type="text" name="effect_type" value="${escapeHtml(v('effect_type', ''))}" placeholder="예: leave_count_reduce">
+      <label>효과 수치</label>
       <input type="number" name="effect_value" value="${v('effect_value', '')}" style="padding:10px;border:1px solid #ddd;border-radius:8px;font-size:14px">
-      <label>Sale Start</label>
+      <label>판매 시작</label>
       <input type="datetime-local" name="sale_start" value="${formatDatetimeLocal(v('sale_start'))}" style="padding:10px;border:1px solid #ddd;border-radius:8px;font-size:14px">
-      <label>Sale End</label>
+      <label>판매 종료</label>
       <input type="datetime-local" name="sale_end" value="${formatDatetimeLocal(v('sale_end'))}" style="padding:10px;border:1px solid #ddd;border-radius:8px;font-size:14px">
     </div>
     <div style="margin-top:16px">
-      <button type="submit" class="btn btn-primary">${isEdit ? 'Save Changes' : 'Add Item'}</button>
+      <button type="submit" class="btn btn-primary">${isEdit ? '저장' : '추가'}</button>
     </div>
   </form>`;
 }
@@ -438,22 +447,22 @@ async function handleAdminRoute(req, res, url, pathname, method, lobby, wss, mai
     let matchesTable = '';
     if (stats.recentMatches.length > 0) {
       matchesTable = `<div class="table-wrap"><table>
-        <tr><th>ID</th><th>Result</th><th>Score</th><th>Team A</th><th>Team B</th><th>Type</th><th>End</th><th>Date</th></tr>
+        <tr><th>ID</th><th>결과</th><th>점수</th><th>팀 A</th><th>팀 B</th><th>유형</th><th>종료</th><th>날짜</th></tr>
         ${stats.recentMatches.map(m => {
           const isDraw = m.team_a_score === m.team_b_score;
           const winBadge = isDraw
-            ? '<span class="badge" style="background:#f5f5f5;color:#888">Draw</span>'
+            ? '<span class="badge" style="background:#f5f5f5;color:#888">무승부</span>'
             : m.winner_team === 'A'
-              ? '<span class="badge" style="background:#ffebee;color:#c62828">A Win</span>'
-              : '<span class="badge" style="background:#e3f2fd;color:#1565c0">B Win</span>';
+              ? '<span class="badge" style="background:#ffebee;color:#c62828">A 승</span>'
+              : '<span class="badge" style="background:#e3f2fd;color:#1565c0">B 승</span>';
           const aStyle = !isDraw && m.winner_team === 'A' ? 'font-weight:700;color:#c62828' : '';
           const bStyle = !isDraw && m.winner_team === 'B' ? 'font-weight:700;color:#1565c0' : '';
           const endReason = m.end_reason || 'normal';
-          let endBadge = '<span class="badge" style="background:#e8f5e9;color:#2e7d32">Normal</span>';
+          let endBadge = '<span class="badge" style="background:#e8f5e9;color:#2e7d32">정상</span>';
           if (endReason === 'leave') {
-            endBadge = `<span class="badge" style="background:#fce4ec;color:#c62828">Leave</span>${m.deserter_nickname ? `<br><span style="font-size:11px;color:#c62828">${escapeHtml(m.deserter_nickname)}</span>` : ''}`;
+            endBadge = `<span class="badge" style="background:#fce4ec;color:#c62828">이탈</span>${m.deserter_nickname ? `<br><span style="font-size:11px;color:#c62828">${escapeHtml(m.deserter_nickname)}</span>` : ''}`;
           } else if (endReason === 'timeout') {
-            endBadge = `<span class="badge" style="background:#fff8e1;color:#f57f17">Timeout</span>${m.deserter_nickname ? `<br><span style="font-size:11px;color:#f57f17">${escapeHtml(m.deserter_nickname)}</span>` : ''}`;
+            endBadge = `<span class="badge" style="background:#fff8e1;color:#f57f17">시간초과</span>${m.deserter_nickname ? `<br><span style="font-size:11px;color:#f57f17">${escapeHtml(m.deserter_nickname)}</span>` : ''}`;
           }
           return `<tr>
           <td>${m.id}</td>
@@ -461,21 +470,21 @@ async function handleAdminRoute(req, res, url, pathname, method, lobby, wss, mai
           <td style="font-weight:600"><span style="${aStyle}">${m.team_a_score}</span> : <span style="${bStyle}">${m.team_b_score}</span></td>
           <td style="${aStyle}">${escapeHtml(m.player_a1)}, ${escapeHtml(m.player_a2)}</td>
           <td style="${bStyle}">${escapeHtml(m.player_b1)}, ${escapeHtml(m.player_b2)}</td>
-          <td>${m.is_ranked ? '<span class="badge" style="background:#fff3e0;color:#e65100">Ranked</span>' : '<span class="badge" style="background:#f5f5f5;color:#999">Normal</span>'}</td>
+          <td>${m.is_ranked ? '<span class="badge" style="background:#fff3e0;color:#e65100">랭크</span>' : '<span class="badge" style="background:#f5f5f5;color:#999">일반</span>'}</td>
           <td>${endBadge}</td>
           <td style="font-size:12px;color:#888">${formatDate(m.created_at)}</td>
         </tr>`;
         }).join('')}
       </table></div>`;
     } else {
-      matchesTable = '<div class="empty">No recent matches</div>';
+      matchesTable = '<div class="empty">최근 매치 없음</div>';
     }
 
     // Top players table
     let topPlayersTable = '';
     if (stats.topPlayers.length > 0) {
       topPlayersTable = `<div class="table-wrap"><table>
-        <tr><th>#</th><th>Nickname</th><th>Rating</th><th>Season</th><th>W/L</th><th>Games</th><th>Lv</th></tr>
+        <tr><th>#</th><th>닉네임</th><th>레이팅</th><th>시즌</th><th>승/패</th><th>게임</th><th>Lv</th></tr>
         ${stats.topPlayers.map((p, i) => {
           const medal = i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : `${i + 1}`;
           const winRate = p.total_games > 0 ? Math.round(p.wins / p.total_games * 100) : 0;
@@ -484,7 +493,7 @@ async function handleAdminRoute(req, res, url, pathname, method, lobby, wss, mai
             <td><a href="/tc-backstage/users/${encodeURIComponent(p.nickname)}" style="color:#6c63ff;text-decoration:none;font-weight:600">${escapeHtml(p.nickname)}</a></td>
             <td style="font-weight:700">${p.rating}</td>
             <td>${p.season_rating}</td>
-            <td>${p.wins}W / ${p.losses}L <span style="color:#888;font-size:12px">(${winRate}%)</span></td>
+            <td>${p.wins}승 / ${p.losses}패 <span style="color:#888;font-size:12px">(${winRate}%)</span></td>
             <td>${p.total_games}</td>
             <td>${p.level}</td>
           </tr>`;
@@ -496,102 +505,102 @@ async function handleAdminRoute(req, res, url, pathname, method, lobby, wss, mai
     let roomsTable = '';
     if (allRooms.length > 0) {
       roomsTable = `<div class="table-wrap"><table>
-        <tr><th>Room</th><th>Host</th><th>Players</th><th>Status</th><th>Type</th><th>Spectators</th></tr>
+        <tr><th>방</th><th>방장</th><th>인원</th><th>상태</th><th>유형</th><th>관전</th></tr>
         ${allRooms.map(r => `<tr>
           <td><a href="/tc-backstage/rooms/${encodeURIComponent(r.id)}" style="color:#6c63ff;text-decoration:none;font-weight:600">${escapeHtml(r.name)}</a></td>
           <td>${escapeHtml(r.hostName)}</td>
           <td>${r.playerCount}/4</td>
           <td>${r.gameInProgress
-            ? '<span class="badge badge-resolved">In Game</span>'
-            : '<span class="badge badge-pending">Waiting</span>'}</td>
-          <td>${r.isRanked ? '<span class="badge" style="background:#fff3e0;color:#e65100">Ranked</span>' : 'Normal'}</td>
+            ? '<span class="badge badge-resolved">게임 중</span>'
+            : '<span class="badge badge-pending">대기 중</span>'}</td>
+          <td>${r.isRanked ? '<span class="badge" style="background:#fff3e0;color:#e65100">랭크</span>' : '일반'}</td>
           <td>${r.spectatorCount || 0}</td>
         </tr>`).join('')}
       </table></div>`;
     } else {
-      roomsTable = '<div class="empty">No active rooms</div>';
+      roomsTable = '<div class="empty">활성 방 없음</div>';
     }
 
     const content = `
-      <h1 class="page-title">Dashboard</h1>
+      <h1 class="page-title">대시보드</h1>
 
-      <div style="margin-bottom:8px;font-size:13px;color:#888">Real-time Server Status</div>
+      <div style="margin-bottom:8px;font-size:13px;color:#888">실시간 서버 상태</div>
       <div class="stats-grid" style="grid-template-columns:repeat(auto-fit, minmax(150px, 1fr))">
-        <a href="/tc-backstage/online?filter=connected" class="stat-card" style="border-left:4px solid #6c63ff;text-decoration:none;cursor:pointer"><div class="label">Connected</div><div class="value purple">${connectedUsers}</div></a>
-        <a href="/tc-backstage/online?filter=ingame" class="stat-card" style="border-left:4px solid #4caf50;text-decoration:none;cursor:pointer"><div class="label">In Game</div><div class="value green">${gamingRooms}</div></a>
-        <a href="/tc-backstage/online?filter=waiting" class="stat-card" style="border-left:4px solid #ff9800;text-decoration:none;cursor:pointer"><div class="label">Waiting</div><div class="value orange">${waitingRooms}</div></a>
-        <a href="/tc-backstage/online?filter=spectators" class="stat-card" style="border-left:4px solid #42a5f5;text-decoration:none;cursor:pointer"><div class="label">Spectators</div><div class="value" style="color:#42a5f5">${totalSpectators}</div></a>
+        <a href="/tc-backstage/online?filter=connected" class="stat-card" style="border-left:4px solid #6c63ff;text-decoration:none;cursor:pointer"><div class="label">접속 중</div><div class="value purple">${connectedUsers}</div></a>
+        <a href="/tc-backstage/online?filter=ingame" class="stat-card" style="border-left:4px solid #4caf50;text-decoration:none;cursor:pointer"><div class="label">게임 중</div><div class="value green">${gamingRooms}</div></a>
+        <a href="/tc-backstage/online?filter=waiting" class="stat-card" style="border-left:4px solid #ff9800;text-decoration:none;cursor:pointer"><div class="label">대기 중</div><div class="value orange">${waitingRooms}</div></a>
+        <a href="/tc-backstage/online?filter=spectators" class="stat-card" style="border-left:4px solid #42a5f5;text-decoration:none;cursor:pointer"><div class="label">관전 중</div><div class="value" style="color:#42a5f5">${totalSpectators}</div></a>
       </div>
 
-      <div style="margin:20px 0 8px;font-size:13px;color:#888">User & Match Overview</div>
+      <div style="margin:20px 0 8px;font-size:13px;color:#888">유저 & 매치 현황</div>
       <div class="stats-grid" style="grid-template-columns:repeat(auto-fit, minmax(150px, 1fr))">
-        <div class="stat-card"><div class="label">Total Users</div><div class="value">${stats.totalUsers}</div><div style="font-size:12px;color:#4caf50;margin-top:4px">+${stats.newUsersToday} today</div></div>
-        <div class="stat-card"><div class="label">Active (24h)</div><div class="value">${stats.activeUsers24h}</div></div>
-        <div class="stat-card"><div class="label">Active (7d)</div><div class="value">${stats.activeUsers7d}</div></div>
-        <div class="stat-card"><div class="label">Total Matches</div><div class="value">${stats.totalMatches}</div></div>
-        <div class="stat-card"><div class="label">Today's Games</div><div class="value green">${stats.todayGames}</div><div style="font-size:12px;color:#e65100;margin-top:4px">${stats.rankedMatchesToday} ranked</div></div>
-        <div class="stat-card"><div class="label">Pending Inquiries</div><div class="value orange">${stats.pendingInquiries}</div></div>
-        <div class="stat-card"><div class="label">Pending Reports</div><div class="value red">${stats.pendingReports}</div></div>
+        <div class="stat-card"><div class="label">전체 유저</div><div class="value">${stats.totalUsers}</div><div style="font-size:12px;color:#4caf50;margin-top:4px">+${stats.newUsersToday} 오늘</div></div>
+        <div class="stat-card"><div class="label">활성 (24시간)</div><div class="value">${stats.activeUsers24h}</div></div>
+        <div class="stat-card"><div class="label">활성 (7일)</div><div class="value">${stats.activeUsers7d}</div></div>
+        <div class="stat-card"><div class="label">총 매치</div><div class="value">${stats.totalMatches}</div></div>
+        <div class="stat-card"><div class="label">오늘 게임</div><div class="value green">${stats.todayGames}</div><div style="font-size:12px;color:#e65100;margin-top:4px">${stats.rankedMatchesToday} 랭크</div></div>
+        <div class="stat-card"><div class="label">미처리 문의</div><div class="value orange">${stats.pendingInquiries}</div></div>
+        <div class="stat-card"><div class="label">미처리 신고</div><div class="value red">${stats.pendingReports}</div></div>
       </div>
 
       <div class="grid-2col">
         <div class="card">
-          <h3>Games / Day (7d)</h3>
+          <h3>일별 게임 (7일)</h3>
           ${miniBar(chartGames, maxGames, '#6c63ff', chartLabels)}
           <div style="margin-top:4px;font-size:11px;color:#888">
-            <span style="display:inline-block;width:10px;height:10px;background:#6c63ff;border-radius:2px;margin-right:4px"></span>Total
+            <span style="display:inline-block;width:10px;height:10px;background:#6c63ff;border-radius:2px;margin-right:4px"></span>전체
           </div>
           <div style="margin-top:8px">
-            <h3 style="font-size:14px">Ranked / Day</h3>
+            <h3 style="font-size:14px">일별 랭크</h3>
             ${miniBar(chartRanked, maxGames, '#ff9800', chartLabels)}
           </div>
         </div>
         <div class="card">
-          <h3>New Users / Day (7d)</h3>
+          <h3>일별 신규 가입 (7일)</h3>
           ${miniBar(chartSignups, maxSignups, '#4caf50', chartLabels)}
         </div>
       </div>
 
       <div class="grid-2col">
         <div class="card">
-          <h3>Economy</h3>
+          <h3>경제</h3>
           <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
             <div style="background:#f8f9fa;border-radius:10px;padding:14px;text-align:center">
-              <div style="font-size:12px;color:#888">Total Gold</div>
+              <div style="font-size:12px;color:#888">총 골드</div>
               <div style="font-size:20px;font-weight:700;color:#ff9800">${totalGold.toLocaleString()}</div>
             </div>
             <div style="background:#f8f9fa;border-radius:10px;padding:14px;text-align:center">
-              <div style="font-size:12px;color:#888">Avg Gold</div>
+              <div style="font-size:12px;color:#888">평균 골드</div>
               <div style="font-size:20px;font-weight:700;color:#5A4038">${avgGold.toLocaleString()}</div>
             </div>
             <div style="background:#f8f9fa;border-radius:10px;padding:14px;text-align:center">
-              <div style="font-size:12px;color:#888">Max Gold</div>
+              <div style="font-size:12px;color:#888">최대 골드</div>
               <div style="font-size:20px;font-weight:700;color:#e65100">${maxGold.toLocaleString()}</div>
             </div>
             <div style="background:#f8f9fa;border-radius:10px;padding:14px;text-align:center">
-              <div style="font-size:12px;color:#888">Shop Purchases</div>
+              <div style="font-size:12px;color:#888">상점 구매</div>
               <div style="font-size:20px;font-weight:700;color:#6c63ff">${totalPurchased}</div>
-              <div style="font-size:11px;color:#888">${uniqueBuyers} buyers</div>
+              <div style="font-size:11px;color:#888">${uniqueBuyers}명 구매</div>
             </div>
           </div>
         </div>
         <div class="card">
-          <h3>Health</h3>
+          <h3>건강도</h3>
           <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
             <div style="background:#f8f9fa;border-radius:10px;padding:14px;text-align:center">
-              <div style="font-size:12px;color:#888">Total Leaves</div>
+              <div style="font-size:12px;color:#888">총 이탈</div>
               <div style="font-size:20px;font-weight:700;color:#e57373">${totalLeaves}</div>
             </div>
             <div style="background:#f8f9fa;border-radius:10px;padding:14px;text-align:center">
-              <div style="font-size:12px;color:#888">Leavers (3+)</div>
+              <div style="font-size:12px;color:#888">이탈자 (3회+)</div>
               <div style="font-size:20px;font-weight:700;color:#c62828">${problemUsers}</div>
             </div>
             <div style="background:#f8f9fa;border-radius:10px;padding:14px;text-align:center">
-              <div style="font-size:12px;color:#888">Reports (30d)</div>
+              <div style="font-size:12px;color:#888">신고 (30일)</div>
               <div style="font-size:20px;font-weight:700;color:#ff9800">${reports30d}</div>
             </div>
             <div style="background:#f8f9fa;border-radius:10px;padding:14px;text-align:center">
-              <div style="font-size:12px;color:#888">Reported Users</div>
+              <div style="font-size:12px;color:#888">피신고 유저</div>
               <div style="font-size:20px;font-weight:700;color:#e65100">${uniqueReported30d}</div>
             </div>
           </div>
@@ -599,22 +608,22 @@ async function handleAdminRoute(req, res, url, pathname, method, lobby, wss, mai
       </div>
 
       <div class="card">
-        <h3>Active Rooms <span style="font-size:13px;color:#888;font-weight:400">(${activeRooms})</span></h3>
+        <h3>활성 방 <span style="font-size:13px;color:#888;font-weight:400">(${activeRooms})</span></h3>
         ${roomsTable}
       </div>
 
       <div class="grid-2col">
         <div class="card">
-          <h3>Top 10 Players</h3>
-          ${topPlayersTable || '<div class="empty">No players yet</div>'}
+          <h3>상위 10명</h3>
+          ${topPlayersTable || '<div class="empty">아직 플레이어 없음</div>'}
         </div>
         <div class="card">
-          <h3>Recent Matches</h3>
+          <h3>최근 매치</h3>
           ${matchesTable}
         </div>
       </div>
     `;
-    return html(res, layout('Dashboard', content, 'home'));
+    return html(res, layout('대시보드', content, 'home'));
   }
 
   // ===== Inquiries =====
@@ -625,7 +634,7 @@ async function handleAdminRoute(req, res, url, pathname, method, lobby, wss, mai
     let tableContent = '';
     if (data.rows.length > 0) {
       tableContent = `<div class="table-wrap"><table>
-        <tr><th>ID</th><th>User</th><th>Category</th><th>Title</th><th>Status</th><th>Date</th><th></th></tr>
+        <tr><th>ID</th><th>유저</th><th>분류</th><th>제목</th><th>상태</th><th>날짜</th><th></th></tr>
         ${data.rows.map(r => `<tr>
           <td>${r.id}</td>
           <td>${escapeHtml(r.user_nickname)}</td>
@@ -633,47 +642,47 @@ async function handleAdminRoute(req, res, url, pathname, method, lobby, wss, mai
           <td>${escapeHtml(r.title)}</td>
           <td>${statusBadge(r.status)}</td>
           <td>${formatDate(r.created_at)}</td>
-          <td><a href="/tc-backstage/inquiries/${r.id}" class="btn btn-secondary">View</a></td>
+          <td><a href="/tc-backstage/inquiries/${r.id}" class="btn btn-secondary">보기</a></td>
         </tr>`).join('')}
       </table></div>
       ${pagination(data.page, data.total, data.limit, '/tc-backstage/inquiries')}`;
     } else {
-      tableContent = '<div class="empty">No inquiries</div>';
+      tableContent = '<div class="empty">문의 없음</div>';
     }
 
     const content = `
-      <h1 class="page-title">Inquiries</h1>
+      <h1 class="page-title">문의</h1>
       <div class="card">${tableContent}</div>
     `;
-    return html(res, layout('Inquiries', content, 'inquiries'));
+    return html(res, layout('문의', content, 'inquiries'));
   }
 
   // Inquiry detail
   const inquiryMatch = pathname.match(/^\/tc-backstage\/inquiries\/(\d+)$/);
   if (inquiryMatch && method === 'GET') {
     const inquiry = await getInquiryById(parseInt(inquiryMatch[1]));
-    if (!inquiry) return html(res, layout('Not Found', '<div class="empty">Inquiry not found</div>', 'inquiries'), 404);
+    if (!inquiry) return html(res, layout('찾을 수 없음', '<div class="empty">문의를 찾을 수 없습니다</div>', 'inquiries'), 404);
 
     const content = `
-      <h1 class="page-title">Inquiry #${inquiry.id}</h1>
+      <h1 class="page-title">문의 #${inquiry.id}</h1>
       <div class="card">
         <div class="detail-grid">
-          <div class="label">User</div><div class="value"><a href="/tc-backstage/users/${encodeURIComponent(inquiry.user_nickname)}">${escapeHtml(inquiry.user_nickname)}</a></div>
-          <div class="label">Category</div><div class="value">${categoryBadge(inquiry.category)}</div>
-          <div class="label">Status</div><div class="value">${statusBadge(inquiry.status)}</div>
-          <div class="label">Title</div><div class="value">${escapeHtml(inquiry.title)}</div>
-          <div class="label">Content</div><div class="value" style="white-space:pre-wrap">${escapeHtml(inquiry.content)}</div>
-          <div class="label">Created</div><div class="value">${formatDate(inquiry.created_at)}</div>
-          ${inquiry.resolved_at ? `<div class="label">Resolved</div><div class="value">${formatDate(inquiry.resolved_at)}</div>` : ''}
-          ${inquiry.admin_note ? `<div class="label">Admin Note</div><div class="value" style="white-space:pre-wrap">${escapeHtml(inquiry.admin_note)}</div>` : ''}
+          <div class="label">유저</div><div class="value"><a href="/tc-backstage/users/${encodeURIComponent(inquiry.user_nickname)}">${escapeHtml(inquiry.user_nickname)}</a></div>
+          <div class="label">분류</div><div class="value">${categoryBadge(inquiry.category)}</div>
+          <div class="label">상태</div><div class="value">${statusBadge(inquiry.status)}</div>
+          <div class="label">제목</div><div class="value">${escapeHtml(inquiry.title)}</div>
+          <div class="label">내용</div><div class="value" style="white-space:pre-wrap">${escapeHtml(inquiry.content)}</div>
+          <div class="label">작성일</div><div class="value">${formatDate(inquiry.created_at)}</div>
+          ${inquiry.resolved_at ? `<div class="label">처리일</div><div class="value">${formatDate(inquiry.resolved_at)}</div>` : ''}
+          ${inquiry.admin_note ? `<div class="label">관리자 메모</div><div class="value" style="white-space:pre-wrap">${escapeHtml(inquiry.admin_note)}</div>` : ''}
         </div>
         ${inquiry.status === 'pending' ? `
         <form method="POST" action="/tc-backstage/inquiries/${inquiry.id}/resolve" style="margin-top:16px">
-          <textarea name="admin_note" rows="3" placeholder="Admin note (optional)"></textarea>
-          <div style="margin-top:8px"><button type="submit" class="btn btn-success">Mark Resolved</button></div>
+          <textarea name="admin_note" rows="3" placeholder="관리자 메모 (선택)"></textarea>
+          <div style="margin-top:8px"><button type="submit" class="btn btn-success">처리 완료</button></div>
         </form>` : ''}
       </div>
-      <a href="/tc-backstage/inquiries" class="btn btn-secondary">Back to list</a>
+      <a href="/tc-backstage/inquiries" class="btn btn-secondary">목록으로</a>
     `;
     return html(res, layout(`Inquiry #${inquiry.id}`, content, 'inquiries'));
   }
@@ -704,7 +713,7 @@ async function handleAdminRoute(req, res, url, pathname, method, lobby, wss, mai
     let tableContent = '';
     if (data.rows.length > 0) {
       tableContent = `<div class="table-wrap"><table>
-        <tr><th>Reported</th><th>Room</th><th>신고자</th><th>신고수</th><th>Status</th><th>Latest</th><th></th></tr>
+        <tr><th>피신고자</th><th>방</th><th>신고자</th><th>신고수</th><th>상태</th><th>최근</th><th></th></tr>
         ${data.rows.map(r => {
           const cnt = parseInt(r.report_count) || 1;
           const cntBadge = cnt >= 2
@@ -719,30 +728,30 @@ async function handleAdminRoute(req, res, url, pathname, method, lobby, wss, mai
           <td>${cntBadge}</td>
           <td>${statusBadge(r.group_status)}</td>
           <td>${formatDate(r.latest_date)}</td>
-          <td><a href="${detailUrl}" class="btn btn-secondary">View</a></td>
+          <td><a href="${detailUrl}" class="btn btn-secondary">보기</a></td>
         </tr>`;
         }).join('')}
       </table></div>
       ${pagination(data.page, data.total, data.limit, '/tc-backstage/reports')}`;
     } else {
-      tableContent = '<div class="empty">No reports</div>';
+      tableContent = '<div class="empty">신고 없음</div>';
     }
 
     const content = `
-      <h1 class="page-title">Reports</h1>
+      <h1 class="page-title">신고</h1>
       <div class="card">${tableContent}</div>
     `;
-    return html(res, layout('Reports', content, 'reports'));
+    return html(res, layout('신고', content, 'reports'));
   }
 
   // Report group detail
   if (pathname === '/tc-backstage/reports/group' && method === 'GET') {
     const target = url.searchParams.get('target') || '';
     const roomId = url.searchParams.get('room') || '';
-    if (!target) return html(res, layout('Not Found', '<div class="empty">Report not found</div>', 'reports'), 404);
+    if (!target) return html(res, layout('찾을 수 없음', '<div class="empty">신고를 찾을 수 없습니다</div>', 'reports'), 404);
 
     const reports = await getReportGroup(target, roomId);
-    if (reports.length === 0) return html(res, layout('Not Found', '<div class="empty">Report not found</div>', 'reports'), 404);
+    if (reports.length === 0) return html(res, layout('찾을 수 없음', '<div class="empty">신고를 찾을 수 없습니다</div>', 'reports'), 404);
 
     const groupStatus = reports.some(r => r.status === 'pending') ? 'pending'
       : reports.some(r => r.status === 'reviewed') ? 'reviewed' : 'resolved';
@@ -780,26 +789,26 @@ async function handleAdminRoute(req, res, url, pathname, method, lobby, wss, mai
       <h1 class="page-title">${escapeHtml(target)} 신고 (${reports.length}건)</h1>
       <div class="card">
         <div class="detail-grid">
-          <div class="label">Reported</div><div class="value"><a href="/tc-backstage/users/${encodeURIComponent(target)}">${escapeHtml(target)}</a></div>
-          <div class="label">Room ID</div><div class="value">${escapeHtml(roomId) || '-'}</div>
-          <div class="label">Status</div><div class="value">${statusBadge(groupStatus)}</div>
+          <div class="label">피신고자</div><div class="value"><a href="/tc-backstage/users/${encodeURIComponent(target)}">${escapeHtml(target)}</a></div>
+          <div class="label">방 ID</div><div class="value">${escapeHtml(roomId) || '-'}</div>
+          <div class="label">상태</div><div class="value">${statusBadge(groupStatus)}</div>
           <div class="label">신고 수</div><div class="value"><strong>${reports.length}</strong>건</div>
         </div>
         <h3 style="margin-top:16px">신고자 목록</h3>
         ${reportsHtml}
-        ${chatHtml ? `<h3 style="margin-top:16px">Chat Context</h3>${chatHtml}` : ''}
+        ${chatHtml ? `<h3 style="margin-top:16px">채팅 내역</h3>${chatHtml}` : ''}
         ${groupStatus !== 'resolved' ? `
         <form method="POST" action="${formUrl}" style="margin-top:16px">
           <select name="status" style="padding:8px;border-radius:8px;border:1px solid #ddd;font-size:14px">
-            <option value="reviewed" ${groupStatus === 'reviewed' ? 'selected' : ''}>Reviewed</option>
-            <option value="resolved">Resolved</option>
+            <option value="reviewed" ${groupStatus === 'reviewed' ? 'selected' : ''}>검토됨</option>
+            <option value="resolved">처리됨</option>
           </select>
-          <button type="submit" class="btn btn-primary" style="margin-left:8px">Update Status</button>
+          <button type="submit" class="btn btn-primary" style="margin-left:8px">상태 변경</button>
         </form>` : ''}
       </div>
-      <a href="/tc-backstage/reports" class="btn btn-secondary">Back to list</a>
+      <a href="/tc-backstage/reports" class="btn btn-secondary">목록으로</a>
     `;
-    return html(res, layout(`Reports: ${escapeHtml(target)}`, content, 'reports'));
+    return html(res, layout(`신고: ${escapeHtml(target)}`, content, 'reports'));
   }
 
   // Update report group status
@@ -835,29 +844,29 @@ async function handleAdminRoute(req, res, url, pathname, method, lobby, wss, mai
     const paginationBase = `/tc-backstage/users${qsStr ? '?' + qsStr : ''}`;
 
     const sortOpts = [
-      ['joined_desc', 'Newest'],
-      ['joined_asc', 'Oldest'],
-      ['rating_desc', 'Rating High'],
-      ['rating_asc', 'Rating Low'],
-      ['games_desc', 'Most Games'],
-      ['gold_desc', 'Most Gold'],
-      ['level_desc', 'Highest Level'],
-      ['leaves_desc', 'Most Leaves'],
-      ['login_desc', 'Recent Login'],
+      ['joined_desc', '최신순'],
+      ['joined_asc', '오래된순'],
+      ['rating_desc', '레이팅 높은순'],
+      ['rating_asc', '레이팅 낮은순'],
+      ['games_desc', '게임 많은순'],
+      ['gold_desc', '골드 많은순'],
+      ['level_desc', '레벨 높은순'],
+      ['leaves_desc', '이탈 많은순'],
+      ['login_desc', '최근 로그인순'],
     ];
 
     const searchForm = `
       <div class="search-bar">
         <form method="GET" action="/tc-backstage/users" style="display:flex;flex-wrap:wrap;gap:8px;width:100%;align-items:center">
-          <input type="text" name="q" placeholder="Search nickname or username..." value="${escapeHtml(search)}" style="flex:1;min-width:180px">
+          <input type="text" name="q" placeholder="닉네임 또는 계정명 검색..." value="${escapeHtml(search)}" style="flex:1;min-width:180px">
           <select name="sort" style="padding:8px 10px;border-radius:8px;border:1px solid #ddd;font-size:13px">
             ${sortOpts.map(([v, l]) => `<option value="${v}"${sort === v ? ' selected' : ''}>${l}</option>`).join('')}
           </select>
-          <input type="number" name="minRating" placeholder="Min Rating" value="${escapeHtml(minRating)}" style="width:100px;padding:8px 10px;border-radius:8px;border:1px solid #ddd;font-size:13px">
-          <input type="number" name="minGames" placeholder="Min Games" value="${escapeHtml(minGames)}" style="width:100px;padding:8px 10px;border-radius:8px;border:1px solid #ddd;font-size:13px">
-          <input type="number" name="minLeaves" placeholder="Min Leaves" value="${escapeHtml(minLeaves)}" style="width:100px;padding:8px 10px;border-radius:8px;border:1px solid #ddd;font-size:13px">
-          <button type="submit" class="btn btn-primary">Search</button>
-          ${qsStr ? `<a href="/tc-backstage/users" class="btn btn-secondary" style="font-size:12px">Reset</a>` : ''}
+          <input type="number" name="minRating" placeholder="최소 레이팅" value="${escapeHtml(minRating)}" style="width:100px;padding:8px 10px;border-radius:8px;border:1px solid #ddd;font-size:13px">
+          <input type="number" name="minGames" placeholder="최소 게임" value="${escapeHtml(minGames)}" style="width:100px;padding:8px 10px;border-radius:8px;border:1px solid #ddd;font-size:13px">
+          <input type="number" name="minLeaves" placeholder="최소 이탈" value="${escapeHtml(minLeaves)}" style="width:100px;padding:8px 10px;border-radius:8px;border:1px solid #ddd;font-size:13px">
+          <button type="submit" class="btn btn-primary">검색</button>
+          ${qsStr ? `<a href="/tc-backstage/users" class="btn btn-secondary" style="font-size:12px">초기화</a>` : ''}
         </form>
       </div>
     `;
@@ -865,12 +874,13 @@ async function handleAdminRoute(req, res, url, pathname, method, lobby, wss, mai
     let tableContent = '';
     if (data.rows.length > 0) {
       tableContent = `<div class="table-wrap"><table>
-        <tr><th>Nickname</th><th>Lv</th><th>Gold</th><th>Rating</th><th>Games</th><th>W/L</th><th>Leaves</th><th>Last Login</th><th></th></tr>
+        <tr><th>닉네임</th><th>기기</th><th>Lv</th><th>골드</th><th>레이팅</th><th>게임</th><th>승/패</th><th>이탈</th><th>최근 접속</th><th></th></tr>
         ${data.rows.map(u => {
           const winRate = u.total_games > 0 ? Math.round(u.wins / u.total_games * 100) : 0;
           const leaveStyle = (u.leave_count || 0) >= 3 ? 'color:#e53935;font-weight:600' : '';
           return `<tr>
           <td><a href="/tc-backstage/users/${encodeURIComponent(u.nickname)}" style="color:#6c63ff;text-decoration:none;font-weight:600">${escapeHtml(u.nickname)}</a></td>
+          <td>${deviceBadge(u.device_platform)}</td>
           <td>${u.level || 1}</td>
           <td style="color:#ff9800;font-weight:600">${(u.gold || 0).toLocaleString()}
             <form method="POST" action="/tc-backstage/users/${encodeURIComponent(u.nickname)}/gold" style="display:inline-flex;gap:2px;margin-left:4px;vertical-align:middle">
@@ -880,26 +890,26 @@ async function handleAdminRoute(req, res, url, pathname, method, lobby, wss, mai
           </td>
           <td style="font-weight:600">${u.rating}</td>
           <td>${u.total_games}</td>
-          <td>${u.wins}W/${u.losses}L <span style="color:#888;font-size:11px">(${winRate}%)</span></td>
+          <td>${u.wins}승/${u.losses}패 <span style="color:#888;font-size:11px">(${winRate}%)</span></td>
           <td style="${leaveStyle}">${u.leave_count || 0}</td>
           <td style="font-size:12px;color:#888">${u.last_login ? formatDate(u.last_login) : '-'}</td>
-          <td><a href="/tc-backstage/users/${encodeURIComponent(u.nickname)}" class="btn btn-secondary" style="font-size:12px;padding:4px 10px">View</a></td>
+          <td><a href="/tc-backstage/users/${encodeURIComponent(u.nickname)}" class="btn btn-secondary" style="font-size:12px;padding:4px 10px">보기</a></td>
         </tr>`;
         }).join('')}
       </table></div>
       ${pagination(data.page, data.total, data.limit, paginationBase)}`;
     } else {
-      tableContent = '<div class="empty">No users found</div>';
+      tableContent = '<div class="empty">유저 없음</div>';
     }
 
     const content = `
-      <h1 class="page-title">Users <span style="font-size:14px;color:#888;font-weight:400">(${data.total.toLocaleString()} total)</span></h1>
+      <h1 class="page-title">유저 <span style="font-size:14px;color:#888;font-weight:400">(${data.total.toLocaleString()}명)</span></h1>
       <div class="card">
         ${searchForm}
         ${tableContent}
       </div>
     `;
-    return html(res, layout('Users', content, 'users'));
+    return html(res, layout('유저', content, 'users'));
   }
 
   // User detail
@@ -910,73 +920,73 @@ async function handleAdminRoute(req, res, url, pathname, method, lobby, wss, mai
       getUserDetail(nickname),
       getRecentMatches(nickname, 20),
     ]);
-    if (!user) return html(res, layout('Not Found', '<div class="empty">User not found</div>', 'users'), 404);
+    if (!user) return html(res, layout('찾을 수 없음', '<div class="empty">유저를 찾을 수 없습니다</div>', 'users'), 404);
 
     const winRate = user.total_games > 0 ? Math.round((user.wins / user.total_games) * 100) : 0;
 
     // Chat ban status
-    let chatBanHtml = '<span style="color:#4caf50;font-weight:600">None</span>';
+    let chatBanHtml = '<span style="color:#4caf50;font-weight:600">없음</span>';
     if (user.chat_ban_until) {
       const remaining = new Date(user.chat_ban_until) - new Date();
       if (remaining > 0) {
         const mins = Math.ceil(remaining / 60000);
         const hours = Math.floor(mins / 60);
-        const display = hours > 0 ? `${hours}h ${mins % 60}m` : `${mins}m`;
-        chatBanHtml = `<span style="color:#e53935;font-weight:600">${display} remaining</span> <span style="color:#888;font-size:12px">(until ${formatDate(user.chat_ban_until)})</span>`;
+        const display = hours > 0 ? `${hours}시간 ${mins % 60}분` : `${mins}분`;
+        chatBanHtml = `<span style="color:#e53935;font-weight:600">${display} 남음</span> <span style="color:#888;font-size:12px">(${formatDate(user.chat_ban_until)}까지)</span>`;
       }
     }
 
     const content = `
-      <h1 class="page-title">User: ${escapeHtml(user.nickname)}</h1>
+      <h1 class="page-title">유저: ${escapeHtml(user.nickname)}</h1>
       <div class="card">
         <div class="detail-grid" style="grid-template-columns:130px 1fr">
-          <div class="label">Nickname</div><div class="value" style="font-weight:600">${escapeHtml(user.nickname)}</div>
-          <div class="label">Username</div><div class="value">${escapeHtml(user.username)}</div>
-          <div class="label">Level</div><div class="value">${user.level || 1}</div>
-          <div class="label">Gold</div><div class="value" style="color:#ff9800;font-weight:600">${(user.gold || 0).toLocaleString()}
+          <div class="label">닉네임</div><div class="value" style="font-weight:600">${escapeHtml(user.nickname)}</div>
+          <div class="label">계정명</div><div class="value">${escapeHtml(user.username)}</div>
+          <div class="label">레벨</div><div class="value">${user.level || 1}</div>
+          <div class="label">골드</div><div class="value" style="color:#ff9800;font-weight:600">${(user.gold || 0).toLocaleString()}
             <form method="POST" action="/tc-backstage/users/${encodeURIComponent(user.nickname)}/gold" style="display:inline-flex;align-items:center;gap:4px;margin-left:12px">
               <input type="number" name="amount" placeholder="+/-" style="width:80px;padding:4px 8px;border-radius:6px;border:1px solid #ddd;font-size:12px" required>
-              <button type="submit" class="btn btn-primary" style="font-size:11px;padding:4px 10px">Grant</button>
+              <button type="submit" class="btn btn-primary" style="font-size:11px;padding:4px 10px">지급</button>
             </form>
           </div>
-          <div class="label">Rating</div><div class="value" style="font-weight:600">${user.rating}</div>
-          <div class="label">Season Rating</div><div class="value">${user.season_rating || 1000}</div>
-          <div class="label">Games</div><div class="value">${user.total_games}</div>
-          <div class="label">Record</div><div class="value">${user.wins}W / ${user.losses}L (${winRate}%)</div>
-          <div class="label">Leave Count</div><div class="value" style="color:${(user.leave_count || 0) >= 3 ? '#e53935' : '#333'}">${user.leave_count || 0}</div>
-          <div class="label">Reports</div><div class="value">${user.report_count}</div>
-          <div class="label">Inquiries</div><div class="value">${user.inquiry_count}</div>
-          <div class="label">Joined</div><div class="value">${formatDate(user.created_at)}</div>
-          <div class="label">Last Login</div><div class="value">${formatDate(user.last_login)}</div>
-          <div class="label">Chat Ban</div><div class="value">${chatBanHtml}</div>
+          <div class="label">레이팅</div><div class="value" style="font-weight:600">${user.rating}</div>
+          <div class="label">시즌 레이팅</div><div class="value">${user.season_rating || 1000}</div>
+          <div class="label">게임 수</div><div class="value">${user.total_games}</div>
+          <div class="label">전적</div><div class="value">${user.wins}승 / ${user.losses}패 (${winRate}%)</div>
+          <div class="label">이탈 수</div><div class="value" style="color:${(user.leave_count || 0) >= 3 ? '#e53935' : '#333'}">${user.leave_count || 0}</div>
+          <div class="label">신고</div><div class="value">${user.report_count}</div>
+          <div class="label">문의</div><div class="value">${user.inquiry_count}</div>
+          <div class="label">가입일</div><div class="value">${formatDate(user.created_at)}</div>
+          <div class="label">최근 접속</div><div class="value">${formatDate(user.last_login)}</div>
+          <div class="label">채팅 금지</div><div class="value">${chatBanHtml}</div>
         </div>
       </div>
 
       <div class="card">
-        <h3>Device Info</h3>
+        <h3>기기 정보</h3>
         <div class="detail-grid" style="grid-template-columns:130px 1fr">
-          <div class="label">Platform</div><div class="value">${escapeHtml(user.device_platform || '-')}</div>
-          <div class="label">Device Model</div><div class="value">${escapeHtml(user.device_model || '-')}</div>
-          <div class="label">OS Version</div><div class="value">${escapeHtml(user.os_version || '-')}</div>
-          <div class="label">App Version</div><div class="value">${escapeHtml(user.app_version || '-')}</div>
-          <div class="label">Last IP</div><div class="value">${escapeHtml(user.last_ip || '-')}</div>
-          <div class="label">FCM Token</div><div class="value" style="word-break:break-all;font-size:12px">${escapeHtml(user.fcm_token || '-')}</div>
+          <div class="label">플랫폼</div><div class="value">${deviceBadge(user.device_platform)}</div>
+          <div class="label">기기 모델</div><div class="value">${escapeHtml(user.device_model || '-')}</div>
+          <div class="label">OS 버전</div><div class="value">${escapeHtml(user.os_version || '-')}</div>
+          <div class="label">앱 버전</div><div class="value">${escapeHtml(user.app_version || '-')}</div>
+          <div class="label">최근 IP</div><div class="value">${escapeHtml(user.last_ip || '-')}</div>
+          <div class="label">FCM 토큰</div><div class="value" style="word-break:break-all;font-size:12px">${escapeHtml(user.fcm_token || '-')}</div>
         </div>
       </div>
 
       ${user.fcm_token ? `<div class="card">
-        <h3>Push Notification</h3>
-        ${url.searchParams.get('push') === 'ok' ? '<div style="color:#4caf50;margin-bottom:12px;font-weight:600">Push sent successfully</div>' : ''}
-        ${url.searchParams.get('push') === 'fail' ? `<div style="color:#e53935;margin-bottom:12px;font-weight:600">Push failed: ${escapeHtml(url.searchParams.get('reason') || 'unknown')}</div>` : ''}
+        <h3>푸시 알림</h3>
+        ${url.searchParams.get('push') === 'ok' ? '<div style="color:#4caf50;margin-bottom:12px;font-weight:600">푸시 전송 완료</div>' : ''}
+        ${url.searchParams.get('push') === 'fail' ? `<div style="color:#e53935;margin-bottom:12px;font-weight:600">푸시 전송 실패: ${escapeHtml(url.searchParams.get('reason') || 'unknown')}</div>` : ''}
         <form method="POST" action="/tc-backstage/users/${encodeURIComponent(user.nickname)}/push">
           <input type="text" name="title" placeholder="제목" required style="margin-bottom:8px">
           <textarea name="body" rows="3" placeholder="내용" required></textarea>
-          <div style="margin-top:8px"><button type="submit" class="btn btn-primary">Send Push</button></div>
+          <div style="margin-top:8px"><button type="submit" class="btn btn-primary">푸시 전송</button></div>
         </form>
       </div>` : ''}
 
       <div class="card">
-        <h3>Chat Ban</h3>
+        <h3>채팅 금지</h3>
         <form method="POST" action="/tc-backstage/users/${encodeURIComponent(user.nickname)}/chat-ban" style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
           <select name="duration" style="padding:8px 12px;border-radius:8px;border:1px solid #ddd;font-size:14px">
             <option value="0">해제</option>
@@ -990,34 +1000,34 @@ async function handleAdminRoute(req, res, url, pathname, method, lobby, wss, mai
             <option value="10080">7일</option>
             <option value="43200">30일</option>
           </select>
-          <button type="submit" class="btn btn-primary">Apply</button>
+          <button type="submit" class="btn btn-primary">적용</button>
         </form>
       </div>
 
       <div class="card">
-        <h3>Admin Memo</h3>
+        <h3>관리자 메모</h3>
         <form method="POST" action="/tc-backstage/users/${encodeURIComponent(user.nickname)}/memo">
           <textarea name="memo" rows="3" placeholder="관리자 메모 (신고 이력, 주의사항 등)">${escapeHtml(user.admin_memo || '')}</textarea>
-          <div style="margin-top:8px"><button type="submit" class="btn btn-primary">Save Memo</button></div>
+          <div style="margin-top:8px"><button type="submit" class="btn btn-primary">메모 저장</button></div>
         </form>
       </div>
 
       <div class="card">
-        <h3>Recent Matches <span style="font-size:13px;color:#888;font-weight:400">(${recentMatches.length})</span></h3>
+        <h3>최근 매치 <span style="font-size:13px;color:#888;font-weight:400">(${recentMatches.length})</span></h3>
         ${recentMatches.length > 0 ? `<div class="table-wrap"><table>
-          <tr><th>ID</th><th>Result</th><th>Score</th><th>Team A</th><th>Team B</th><th>Type</th><th>End</th><th>Date</th></tr>
+          <tr><th>ID</th><th>결과</th><th>점수</th><th>팀 A</th><th>팀 B</th><th>유형</th><th>종료</th><th>날짜</th></tr>
           ${recentMatches.map(m => {
             const resultBadge = m.isDraw
-              ? '<span class="badge" style="background:#f5f5f5;color:#888">Draw</span>'
+              ? '<span class="badge" style="background:#f5f5f5;color:#888">무승부</span>'
               : m.won
-                ? '<span class="badge" style="background:#e8f5e9;color:#2e7d32">Win</span>'
-                : '<span class="badge" style="background:#ffebee;color:#c62828">Loss</span>';
+                ? '<span class="badge" style="background:#e8f5e9;color:#2e7d32">승</span>'
+                : '<span class="badge" style="background:#ffebee;color:#c62828">패</span>';
             const myTeamStyle = m.myTeam === 'A' ? 'font-weight:700;color:#c62828' : 'font-weight:700;color:#1565c0';
-            let endBadge = '<span class="badge" style="background:#e8f5e9;color:#2e7d32">Normal</span>';
+            let endBadge = '<span class="badge" style="background:#e8f5e9;color:#2e7d32">정상</span>';
             if (m.endReason === 'leave') {
-              endBadge = '<span class="badge" style="background:#fce4ec;color:#c62828">Leave</span>' + (m.deserterNickname ? '<br><span style="font-size:11px;color:#c62828">' + escapeHtml(m.deserterNickname) + '</span>' : '');
+              endBadge = '<span class="badge" style="background:#fce4ec;color:#c62828">이탈</span>' + (m.deserterNickname ? '<br><span style="font-size:11px;color:#c62828">' + escapeHtml(m.deserterNickname) + '</span>' : '');
             } else if (m.endReason === 'timeout') {
-              endBadge = '<span class="badge" style="background:#fff8e1;color:#f57f17">Timeout</span>' + (m.deserterNickname ? '<br><span style="font-size:11px;color:#f57f17">' + escapeHtml(m.deserterNickname) + '</span>' : '');
+              endBadge = '<span class="badge" style="background:#fff8e1;color:#f57f17">시간초과</span>' + (m.deserterNickname ? '<br><span style="font-size:11px;color:#f57f17">' + escapeHtml(m.deserterNickname) + '</span>' : '');
             }
             return `<tr>
               <td>${m.id}</td>
@@ -1025,24 +1035,24 @@ async function handleAdminRoute(req, res, url, pathname, method, lobby, wss, mai
               <td style="font-weight:600">${m.teamAScore} : ${m.teamBScore}</td>
               <td style="${m.myTeam === 'A' ? myTeamStyle : ''}">${escapeHtml(m.playerA1)}, ${escapeHtml(m.playerA2)}</td>
               <td style="${m.myTeam === 'B' ? myTeamStyle : ''}">${escapeHtml(m.playerB1)}, ${escapeHtml(m.playerB2)}</td>
-              <td>${m.isRanked ? '<span class="badge" style="background:#fff3e0;color:#e65100">Ranked</span>' : '<span class="badge" style="background:#f5f5f5;color:#999">Normal</span>'}</td>
+              <td>${m.isRanked ? '<span class="badge" style="background:#fff3e0;color:#e65100">랭크</span>' : '<span class="badge" style="background:#f5f5f5;color:#999">일반</span>'}</td>
               <td>${endBadge}</td>
               <td style="font-size:12px;color:#888">${formatDate(m.createdAt)}</td>
             </tr>`;
           }).join('')}
-        </table></div>` : '<div class="empty">No match history</div>'}
+        </table></div>` : '<div class="empty">매치 기록 없음</div>'}
       </div>
 
       <div class="card" style="margin-top:0">
-        <h3 style="color:#e53935">Danger Zone</h3>
+        <h3 style="color:#e53935">위험 영역</h3>
         <form method="POST" action="/tc-backstage/users/${encodeURIComponent(user.nickname)}/ban"
-              onsubmit="return confirm('Are you sure you want to ban (delete) this user? This cannot be undone.')">
-          <button type="submit" class="btn btn-danger">Ban User (Delete Account)</button>
+              onsubmit="return confirm('정말 이 유저를 차단(삭제)하시겠습니까? 되돌릴 수 없습니다.')">
+          <button type="submit" class="btn btn-danger">유저 차단 (계정 삭제)</button>
         </form>
       </div>
-      <a href="/tc-backstage/users" class="btn btn-secondary">Back to list</a>
+      <a href="/tc-backstage/users" class="btn btn-secondary">목록으로</a>
     `;
-    return html(res, layout(`User: ${escapeHtml(user.nickname)}`, content, 'users'));
+    return html(res, layout(`유저: ${escapeHtml(user.nickname)}`, content, 'users'));
   }
 
   // Chat ban
@@ -1118,7 +1128,7 @@ async function handleAdminRoute(req, res, url, pathname, method, lobby, wss, mai
     let tableContent = '';
     if (items.length > 0) {
       tableContent = `<div class="table-wrap"><table>
-        <tr><th>ID</th><th>Key</th><th>Name</th><th>Category</th><th>Price</th><th>구분</th><th>판매기간</th><th>상태</th><th></th></tr>
+        <tr><th>ID</th><th>키</th><th>이름</th><th>분류</th><th>가격</th><th>구분</th><th>판매기간</th><th>상태</th><th></th></tr>
         ${items.map(item => `<tr>
           <td>${item.id}</td>
           <td style="font-family:monospace;font-size:12px">${escapeHtml(item.item_key)}</td>
@@ -1128,31 +1138,31 @@ async function handleAdminRoute(req, res, url, pathname, method, lobby, wss, mai
           <td>${item.is_permanent ? '영구' : (item.duration_days ? item.duration_days + '일' : '-')}</td>
           <td style="font-size:12px">${item.sale_start ? formatDate(item.sale_start) : '-'}<br>${item.sale_end ? '~ ' + formatDate(item.sale_end) : ''}</td>
           <td>${saleBadge(item)}</td>
-          <td><a href="/tc-backstage/shop/${item.id}" class="btn btn-secondary">Edit</a></td>
+          <td><a href="/tc-backstage/shop/${item.id}" class="btn btn-secondary">수정</a></td>
         </tr>`).join('')}
       </table></div>`;
     } else {
-      tableContent = '<div class="empty">No shop items</div>';
+      tableContent = '<div class="empty">상점 아이템 없음</div>';
     }
 
     const content = `
-      <h1 class="page-title">Shop Items</h1>
-      <div style="margin-bottom:16px"><a href="/tc-backstage/shop/add" class="btn btn-primary">+ Add Item</a></div>
+      <h1 class="page-title">상점 아이템</h1>
+      <div style="margin-bottom:16px"><a href="/tc-backstage/shop/add" class="btn btn-primary">+ 아이템 추가</a></div>
       <div class="card">${tableContent}</div>
     `;
-    return html(res, layout('Shop', content, 'shop'));
+    return html(res, layout('상점', content, 'shop'));
   }
 
   // Shop add form
   if (pathname === '/tc-backstage/shop/add' && method === 'GET') {
     const content = `
-      <h1 class="page-title">Add Shop Item</h1>
+      <h1 class="page-title">아이템 추가</h1>
       <div class="card">
         ${shopForm('/tc-backstage/shop/add', {})}
       </div>
-      <a href="/tc-backstage/shop" class="btn btn-secondary" style="margin-top:12px">Back to list</a>
+      <a href="/tc-backstage/shop" class="btn btn-secondary" style="margin-top:12px">목록으로</a>
     `;
-    return html(res, layout('Add Item', content, 'shop'));
+    return html(res, layout('아이템 추가', content, 'shop'));
   }
 
   // Shop add process
@@ -1162,14 +1172,14 @@ async function handleAdminRoute(req, res, url, pathname, method, lobby, wss, mai
     const result = await addShopItem(data);
     if (!result.success) {
       const content = `
-        <h1 class="page-title">Add Shop Item</h1>
+        <h1 class="page-title">아이템 추가</h1>
         <div style="color:#e53935;margin-bottom:12px">${escapeHtml(result.message)}</div>
         <div class="card">
           ${shopForm('/tc-backstage/shop/add', body)}
         </div>
-        <a href="/tc-backstage/shop" class="btn btn-secondary" style="margin-top:12px">Back to list</a>
+        <a href="/tc-backstage/shop" class="btn btn-secondary" style="margin-top:12px">목록으로</a>
       `;
-      return html(res, layout('Add Item', content, 'shop'));
+      return html(res, layout('아이템 추가', content, 'shop'));
     }
     return redirect(res, '/tc-backstage/shop');
   }
@@ -1178,21 +1188,21 @@ async function handleAdminRoute(req, res, url, pathname, method, lobby, wss, mai
   const shopEditMatch = pathname.match(/^\/tc-backstage\/shop\/(\d+)$/);
   if (shopEditMatch && method === 'GET') {
     const item = await getShopItemById(parseInt(shopEditMatch[1]));
-    if (!item) return html(res, layout('Not Found', '<div class="empty">Item not found</div>', 'shop'), 404);
+    if (!item) return html(res, layout('찾을 수 없음', '<div class="empty">아이템을 찾을 수 없습니다</div>', 'shop'), 404);
 
     const content = `
-      <h1 class="page-title">Edit: ${escapeHtml(item.name)}</h1>
+      <h1 class="page-title">수정: ${escapeHtml(item.name)}</h1>
       <div class="card">
         ${shopForm('/tc-backstage/shop/' + item.id, item, true)}
       </div>
       <form method="POST" action="/tc-backstage/shop/${item.id}/delete"
             onsubmit="return confirm('정말 이 아이템을 삭제하시겠습니까? 보유한 유저의 아이템도 함께 삭제됩니다.')"
             style="margin-top:12px;display:inline-block">
-        <button type="submit" class="btn btn-danger">Delete Item</button>
+        <button type="submit" class="btn btn-danger">아이템 삭제</button>
       </form>
-      <a href="/tc-backstage/shop" class="btn btn-secondary" style="margin-top:12px;margin-left:8px">Back to list</a>
+      <a href="/tc-backstage/shop" class="btn btn-secondary" style="margin-top:12px;margin-left:8px">목록으로</a>
     `;
-    return html(res, layout(`Edit: ${escapeHtml(item.name)}`, content, 'shop'));
+    return html(res, layout(`수정: ${escapeHtml(item.name)}`, content, 'shop'));
   }
 
   // Shop edit process
@@ -1203,14 +1213,14 @@ async function handleAdminRoute(req, res, url, pathname, method, lobby, wss, mai
     if (!result.success) {
       const item = await getShopItemById(parseInt(shopEditMatch[1]));
       const content = `
-        <h1 class="page-title">Edit: ${escapeHtml(item ? item.name : '')}</h1>
+        <h1 class="page-title">수정: ${escapeHtml(item ? item.name : '')}</h1>
         <div style="color:#e53935;margin-bottom:12px">${escapeHtml(result.message)}</div>
         <div class="card">
           ${shopForm('/tc-backstage/shop/' + shopEditMatch[1], body, true)}
         </div>
-        <a href="/tc-backstage/shop" class="btn btn-secondary" style="margin-top:12px">Back to list</a>
+        <a href="/tc-backstage/shop" class="btn btn-secondary" style="margin-top:12px">목록으로</a>
       `;
-      return html(res, layout('Edit Item', content, 'shop'));
+      return html(res, layout('수정', content, 'shop'));
     }
     return redirect(res, '/tc-backstage/shop/' + shopEditMatch[1]);
   }
@@ -1235,7 +1245,7 @@ async function handleAdminRoute(req, res, url, pathname, method, lobby, wss, mai
     }
 
     const content = `
-      <h1 class="page-title">Maintenance</h1>
+      <h1 class="page-title">점검</h1>
       <div class="card">
         <h3>현재 상태: ${statusText}</h3>
         <form method="POST" action="/tc-backstage/maintenance" style="margin-top:16px">
@@ -1252,15 +1262,15 @@ async function handleAdminRoute(req, res, url, pathname, method, lobby, wss, mai
             <textarea name="message" rows="3" placeholder="점검 안내 메시지">${escapeHtml(config.message || '')}</textarea>
           </div>
           <div style="margin-top:16px;display:flex;gap:8px">
-            <button type="submit" class="btn btn-primary">Save</button>
+            <button type="submit" class="btn btn-primary">저장</button>
           </div>
         </form>
         <form method="POST" action="/tc-backstage/maintenance/clear" style="margin-top:12px">
-          <button type="submit" class="btn btn-danger" onclick="return confirm('점검 설정을 초기화하시겠습니까?')">Clear All</button>
+          <button type="submit" class="btn btn-danger" onclick="return confirm('점검 설정을 초기화하시겠습니까?')">전체 초기화</button>
         </form>
       </div>
     `;
-    return html(res, layout('Maintenance', content, 'maintenance'));
+    return html(res, layout('점검', content, 'maintenance'));
   }
 
   if (pathname === '/tc-backstage/maintenance' && method === 'POST') {
@@ -1297,24 +1307,24 @@ async function handleAdminRoute(req, res, url, pathname, method, lobby, wss, mai
     const saved = url.searchParams.get('saved');
 
     const content = `
-      <h1 class="page-title">Settings</h1>
+      <h1 class="page-title">설정</h1>
       ${saved ? '<div style="color:#4caf50;margin-bottom:12px;font-weight:600">저장되었습니다.</div>' : ''}
       <div class="card">
         <h3>EULA / 이용약관</h3>
         <form method="POST" action="/tc-backstage/settings/eula">
           <textarea name="eula_content" rows="20" style="font-size:13px;line-height:1.6">${escapeHtml(eulaContent)}</textarea>
-          <div style="margin-top:12px"><button type="submit" class="btn btn-primary">Save</button></div>
+          <div style="margin-top:12px"><button type="submit" class="btn btn-primary">저장</button></div>
         </form>
       </div>
       <div class="card">
         <h3>개인정보처리방침</h3>
         <form method="POST" action="/tc-backstage/settings/privacy">
           <textarea name="privacy_policy" rows="20" style="font-size:13px;line-height:1.6">${escapeHtml(privacyPolicy)}</textarea>
-          <div style="margin-top:12px"><button type="submit" class="btn btn-primary">Save</button></div>
+          <div style="margin-top:12px"><button type="submit" class="btn btn-primary">저장</button></div>
         </form>
       </div>
     `;
-    return html(res, layout('Settings', content, 'settings'));
+    return html(res, layout('설정', content, 'settings'));
   }
 
   if (pathname === '/tc-backstage/settings/eula' && method === 'POST') {
@@ -1333,22 +1343,22 @@ async function handleAdminRoute(req, res, url, pathname, method, lobby, wss, mai
   const roomDetailMatch = pathname.match(/^\/tc-backstage\/rooms\/([^/]+)$/);
   if (roomDetailMatch && method === 'GET') {
     const roomId = decodeURIComponent(roomDetailMatch[1]);
-    if (!lobby) return html(res, layout('Room', '<div class="empty">Lobby not available</div>'), 404);
+    if (!lobby) return html(res, layout('방', '<div class="empty">로비를 사용할 수 없습니다</div>'), 404);
     const room = lobby.getRoom(roomId);
-    if (!room) return html(res, layout('Room', '<div class="empty">Room not found (may have been closed)</div>'), 404);
+    if (!room) return html(res, layout('방', '<div class="empty">방을 찾을 수 없습니다 (이미 닫혔을 수 있음)</div>'), 404);
 
     const roomState = room.getState();
     const game = room.game;
 
     // Players table
     const playersHtml = roomState.players.map((p, i) => {
-      if (!p) return `<tr><td>Slot ${i}</td><td colspan="6" style="color:#999">Empty</td></tr>`;
+      if (!p) return `<tr><td>슬롯 ${i}</td><td colspan="6" style="color:#999">비어있음</td></tr>`;
       const teamLabel = (i === 0 || i === 2) ? '<span class="badge" style="background:#e3f2fd;color:#1565c0">Team A</span>' : '<span class="badge" style="background:#fce4ec;color:#c62828">Team B</span>';
       const statusBadges = [];
-      if (p.isHost) statusBadges.push('<span class="badge badge-resolved">Host</span>');
-      if (p.isBot) statusBadges.push('<span class="badge" style="background:#f3e5f5;color:#6a1b9a">Bot</span>');
-      if (!p.connected) statusBadges.push('<span class="badge badge-pending">Disconnected</span>');
-      if (p.isReady) statusBadges.push('<span class="badge" style="background:#e8f5e9;color:#2e7d32">Ready</span>');
+      if (p.isHost) statusBadges.push('<span class="badge badge-resolved">방장</span>');
+      if (p.isBot) statusBadges.push('<span class="badge" style="background:#f3e5f5;color:#6a1b9a">봇</span>');
+      if (!p.connected) statusBadges.push('<span class="badge badge-pending">연결 끊김</span>');
+      if (p.isReady) statusBadges.push('<span class="badge" style="background:#e8f5e9;color:#2e7d32">준비</span>');
 
       let cardCount = '-';
       let tichu = '';
@@ -1356,14 +1366,14 @@ async function handleAdminRoute(req, res, url, pathname, method, lobby, wss, mai
       if (game) {
         const hand = game.hands[p.id];
         cardCount = hand ? hand.length : 0;
-        if (game.largeTichuDeclarations.includes(p.id)) tichu = '<span class="badge" style="background:#ffebee;color:#c62828">Large Tichu</span>';
-        else if (game.smallTichuDeclarations.includes(p.id)) tichu = '<span class="badge" style="background:#fff3e0;color:#e65100">Small Tichu</span>';
+        if (game.largeTichuDeclarations.includes(p.id)) tichu = '<span class="badge" style="background:#ffebee;color:#c62828">라지 티츄</span>';
+        else if (game.smallTichuDeclarations.includes(p.id)) tichu = '<span class="badge" style="background:#fff3e0;color:#e65100">스몰 티츄</span>';
         const finishPos = game.finishOrder.indexOf(p.id);
         if (finishPos !== -1) finished = `<span class="badge badge-resolved">${finishPos + 1}${['st','nd','rd','th'][finishPos] || 'th'}</span>`;
       }
 
       return `<tr>
-        <td>Slot ${i}</td>
+        <td>슬롯 ${i}</td>
         <td style="font-weight:600">${escapeHtml(p.name)}</td>
         <td>${teamLabel}</td>
         <td>${statusBadges.join(' ')}</td>
@@ -1376,7 +1386,7 @@ async function handleAdminRoute(req, res, url, pathname, method, lobby, wss, mai
     // Spectators
     const specHtml = roomState.spectators.length > 0
       ? roomState.spectators.map(s => escapeHtml(s.nickname)).join(', ')
-      : '<span style="color:#999">None</span>';
+      : '<span style="color:#999">없음</span>';
 
     // Game state details
     let gameHtml = '';
@@ -1402,7 +1412,7 @@ async function handleAdminRoute(req, res, url, pathname, method, lobby, wss, mai
       let trickHtml = '';
       if (game.currentTrick.length > 0) {
         trickHtml = `<div class="table-wrap"><table>
-          <tr><th>Player</th><th>Cards</th><th>Combo</th><th>Value</th></tr>
+          <tr><th>플레이어</th><th>카드</th><th>조합</th><th>값</th></tr>
           ${game.currentTrick.map(t => `<tr>
             <td style="font-weight:600">${escapeHtml(game.playerNames[t.playerId])}</td>
             <td><code style="background:#f0f0f0;padding:2px 6px;border-radius:4px;font-size:12px">${t.cards.join(', ')}</code></td>
@@ -1411,7 +1421,7 @@ async function handleAdminRoute(req, res, url, pathname, method, lobby, wss, mai
           </tr>`).join('')}
         </table></div>`;
       } else {
-        trickHtml = '<div style="color:#999;font-size:13px">No cards on table</div>';
+        trickHtml = '<div style="color:#999;font-size:13px">테이블에 카드 없음</div>';
       }
 
       // Trick piles summary (points collected per player)
@@ -1434,7 +1444,7 @@ async function handleAdminRoute(req, res, url, pathname, method, lobby, wss, mai
           </tr>`;
         }).join('');
         trickPilesHtml = `<div class="table-wrap"><table>
-          <tr><th>Player</th><th>Cards Won</th><th>Points</th></tr>
+          <tr><th>플레이어</th><th>획득 카드</th><th>점수</th></tr>
           ${pileRows}
         </table></div>`;
       }
@@ -1451,14 +1461,14 @@ async function handleAdminRoute(req, res, url, pathname, method, lobby, wss, mai
                 else if (c.endsWith('_A') || c.endsWith('_K')) style += 'font-weight:600;';
                 return `<code style="${style}">${c}</code>`;
               }).join(' ')
-            : '<span style="color:#999">Empty</span>';
+            : '<span style="color:#999">비어있음</span>';
           return `<tr>
             <td style="font-weight:600;white-space:nowrap">${escapeHtml(game.playerNames[pid])}</td>
             <td>${cardDisplay}</td>
           </tr>`;
         }).join('');
         handsHtml = `<div class="table-wrap"><table>
-          <tr><th style="width:100px">Player</th><th>Cards</th></tr>
+          <tr><th style="width:100px">플레이어</th><th>카드</th></tr>
           ${handRows}
         </table></div>`;
       }
@@ -1467,7 +1477,7 @@ async function handleAdminRoute(req, res, url, pathname, method, lobby, wss, mai
       let scoreHistoryHtml = '';
       if (game.scoreHistory && game.scoreHistory.length > 0) {
         scoreHistoryHtml = `<div class="table-wrap"><table>
-          <tr><th>Round</th><th>Team A</th><th>Team B</th></tr>
+          <tr><th>라운드</th><th>팀 A</th><th>팀 B</th></tr>
           ${game.scoreHistory.map(s => `<tr>
             <td>R${s.round}</td>
             <td style="font-weight:600;color:${s.teamA > 0 ? '#4caf50' : s.teamA < 0 ? '#e53935' : '#333'}">${s.teamA > 0 ? '+' : ''}${s.teamA}</td>
@@ -1483,44 +1493,44 @@ async function handleAdminRoute(req, res, url, pathname, method, lobby, wss, mai
 
       // Special states
       let specialHtml = '';
-      if (game.callRank) specialHtml += `<div style="margin-bottom:8px"><strong>Active Wish:</strong> <span class="badge badge-pending">${game.callRank}</span></div>`;
-      if (game.dragonPending) specialHtml += `<div style="margin-bottom:8px"><strong>Dragon Pending:</strong> <span class="badge" style="background:#ffebee;color:#c62828">${escapeHtml(game.playerNames[game.dragonDecider] || '?')} must give</span></div>`;
-      if (game.passCount > 0) specialHtml += `<div style="margin-bottom:8px"><strong>Pass Count:</strong> ${game.passCount}</div>`;
+      if (game.callRank) specialHtml += `<div style="margin-bottom:8px"><strong>소원 활성:</strong> <span class="badge badge-pending">${game.callRank}</span></div>`;
+      if (game.dragonPending) specialHtml += `<div style="margin-bottom:8px"><strong>용 처리 대기:</strong> <span class="badge" style="background:#ffebee;color:#c62828">${escapeHtml(game.playerNames[game.dragonDecider] || '?')} 넘겨야 함</span></div>`;
+      if (game.passCount > 0) specialHtml += `<div style="margin-bottom:8px"><strong>패스 횟수:</strong> ${game.passCount}</div>`;
 
       gameHtml = `
         <div class="stats-grid" style="grid-template-columns:repeat(auto-fit, minmax(130px, 1fr));margin-bottom:20px">
-          <div class="stat-card" style="border-left:4px solid #6c63ff"><div class="label">Phase</div><div style="margin-top:4px">${phaseBadge}</div></div>
-          <div class="stat-card" style="border-left:4px solid #ff9800"><div class="label">Round</div><div class="value orange">${round}</div></div>
-          <div class="stat-card" style="border-left:4px solid #4caf50"><div class="label">Current Turn</div><div style="font-weight:600;font-size:16px;margin-top:4px">${escapeHtml(currentPlayerName)}</div></div>
+          <div class="stat-card" style="border-left:4px solid #6c63ff"><div class="label">단계</div><div style="margin-top:4px">${phaseBadge}</div></div>
+          <div class="stat-card" style="border-left:4px solid #ff9800"><div class="label">라운드</div><div class="value orange">${round}</div></div>
+          <div class="stat-card" style="border-left:4px solid #4caf50"><div class="label">현재 턴</div><div style="font-weight:600;font-size:16px;margin-top:4px">${escapeHtml(currentPlayerName)}</div></div>
           <div class="stat-card" style="border-left:4px solid #1565c0"><div class="label">Team A</div><div class="value" style="color:#1565c0">${game.totalScores.teamA}</div></div>
           <div class="stat-card" style="border-left:4px solid #c62828"><div class="label">Team B</div><div class="value" style="color:#c62828">${game.totalScores.teamB}</div></div>
         </div>
 
-        ${specialHtml ? `<div class="card"><h3>Active States</h3>${specialHtml}</div>` : ''}
+        ${specialHtml ? `<div class="card"><h3>활성 상태</h3>${specialHtml}</div>` : ''}
 
         <div class="card">
-          <h3>Current Trick</h3>
+          <h3>현재 트릭</h3>
           ${trickHtml}
         </div>
 
         <div class="card">
-          <h3>Player Hands</h3>
+          <h3>플레이어 핸드</h3>
           ${handsHtml}
         </div>
 
         <div class="grid-2col">
           <div class="card">
-            <h3>Trick Piles (Points)</h3>
+            <h3>트릭 포인트</h3>
             ${trickPilesHtml}
           </div>
           <div class="card">
-            <h3>Score History</h3>
-            ${scoreHistoryHtml || '<div style="color:#999;font-size:13px">No rounds completed yet</div>'}
+            <h3>점수 기록</h3>
+            ${scoreHistoryHtml || '<div style="color:#999;font-size:13px">아직 완료된 라운드 없음</div>'}
           </div>
         </div>
       `;
     } else {
-      gameHtml = '<div class="card"><div class="empty">No game in progress</div></div>';
+      gameHtml = '<div class="card"><div class="empty">진행 중인 게임 없음</div></div>';
     }
 
     // Chat history
@@ -1528,7 +1538,7 @@ async function handleAdminRoute(req, res, url, pathname, method, lobby, wss, mai
     const chatHistory = room.getChatHistory();
     if (chatHistory.length > 0) {
       chatHtml = `<div class="card">
-        <h3>Chat Log <span style="font-size:13px;color:#888;font-weight:400">(${chatHistory.length})</span></h3>
+        <h3>채팅 로그 <span style="font-size:13px;color:#888;font-weight:400">(${chatHistory.length})</span></h3>
         <div class="chat-log">
           ${chatHistory.map(m => `<div class="chat-msg">
             <span class="sender">${escapeHtml(m.sender)}</span>
@@ -1541,26 +1551,26 @@ async function handleAdminRoute(req, res, url, pathname, method, lobby, wss, mai
 
     const content = `
       <h1 class="page-title">
-        <a href="/tc-backstage/" style="color:#888;text-decoration:none;font-size:14px">Dashboard</a>
+        <a href="/tc-backstage/" style="color:#888;text-decoration:none;font-size:14px">대시보드</a>
         <span style="color:#ccc;margin:0 8px">/</span>
-        Room: ${escapeHtml(roomState.name)}
+        방: ${escapeHtml(roomState.name)}
       </h1>
 
       <div class="card">
         <div class="detail-grid" style="grid-template-columns:120px 1fr">
-          <div class="label">Room ID</div><div class="value"><code>${escapeHtml(roomId)}</code></div>
-          <div class="label">Room Name</div><div class="value" style="font-weight:600">${escapeHtml(roomState.name)}</div>
-          <div class="label">Host</div><div class="value">${escapeHtml(roomState.players.find(p => p && p.isHost)?.name || '-')}</div>
-          <div class="label">Type</div><div class="value">${roomState.isRanked ? '<span class="badge" style="background:#fff3e0;color:#e65100">Ranked</span>' : 'Normal'}${roomState.isPrivate ? ' <span class="badge" style="background:#ffebee;color:#c62828">Private</span>' : ''}</div>
-          <div class="label">Turn Limit</div><div class="value">${roomState.turnTimeLimit}s</div>
-          <div class="label">Spectators</div><div class="value">${specHtml}</div>
+          <div class="label">방 ID</div><div class="value"><code>${escapeHtml(roomId)}</code></div>
+          <div class="label">방 이름</div><div class="value" style="font-weight:600">${escapeHtml(roomState.name)}</div>
+          <div class="label">방장</div><div class="value">${escapeHtml(roomState.players.find(p => p && p.isHost)?.name || '-')}</div>
+          <div class="label">유형</div><div class="value">${roomState.isRanked ? '<span class="badge" style="background:#fff3e0;color:#e65100">랭크</span>' : '일반'}${roomState.isPrivate ? ' <span class="badge" style="background:#ffebee;color:#c62828">비공개</span>' : ''}</div>
+          <div class="label">턴 제한</div><div class="value">${roomState.turnTimeLimit}초</div>
+          <div class="label">관전자</div><div class="value">${specHtml}</div>
         </div>
       </div>
 
       <div class="card">
-        <h3>Players</h3>
+        <h3>플레이어</h3>
         <div class="table-wrap"><table>
-          <tr><th>Slot</th><th>Name</th><th>Team</th><th>Status</th><th>Cards</th><th>Tichu</th><th>Finish</th></tr>
+          <tr><th>슬롯</th><th>이름</th><th>팀</th><th>상태</th><th>카드</th><th>티츄</th><th>완료</th></tr>
           ${playersHtml}
         </table></div>
       </div>
@@ -1569,8 +1579,8 @@ async function handleAdminRoute(req, res, url, pathname, method, lobby, wss, mai
       ${chatHtml}
 
       <div style="text-align:center;margin-top:20px">
-        <a href="/tc-backstage/rooms/${encodeURIComponent(roomId)}" class="btn btn-secondary" style="margin-right:8px">Refresh</a>
-        <a href="/tc-backstage/" class="btn btn-secondary">Back to Dashboard</a>
+        <a href="/tc-backstage/rooms/${encodeURIComponent(roomId)}" class="btn btn-secondary" style="margin-right:8px">새로고침</a>
+        <a href="/tc-backstage/" class="btn btn-secondary">대시보드로</a>
       </div>
     `;
     return html(res, layout(`Room: ${room.name}`, content, 'home'));
@@ -1581,69 +1591,69 @@ async function handleAdminRoute(req, res, url, pathname, method, lobby, wss, mai
     const filter = url.searchParams.get('filter') || 'connected';
     const allRooms = lobby ? lobby.getRoomList() : [];
     let users = [];
-    let title = 'Connected Users';
+    let title = '접속 중 유저';
 
     if (filter === 'connected') {
-      title = 'Connected Users';
+      title = '접속 중 유저';
       if (wss) {
         wss.clients.forEach(ws => {
           if (ws.nickname) {
             const roomInfo = ws.roomId ? allRooms.find(r => r.id === ws.roomId) : null;
-            users.push({ nickname: ws.nickname, room: roomInfo ? roomInfo.name : null, roomId: ws.roomId, status: roomInfo ? (roomInfo.gameInProgress ? 'In Game' : 'Waiting') : 'Lobby' });
+            users.push({ nickname: ws.nickname, room: roomInfo ? roomInfo.name : null, roomId: ws.roomId, status: roomInfo ? (roomInfo.gameInProgress ? '게임 중' : '대기 중') : '로비' });
           }
         });
       }
     } else if (filter === 'ingame') {
-      title = 'In Game Users';
+      title = '게임 중 유저';
       const gamingRoomList = allRooms.filter(r => r.gameInProgress);
       for (const r of gamingRoomList) {
         const room = lobby.getRoom(r.id);
         if (!room) continue;
         for (const p of room.players) {
-          if (p && !p.isBot) users.push({ nickname: p.nickname, room: r.name, roomId: r.id, status: p.connected !== false ? 'Playing' : 'Disconnected' });
+          if (p && !p.isBot) users.push({ nickname: p.nickname, room: r.name, roomId: r.id, status: p.connected !== false ? '플레이 중' : '연결 끊김' });
         }
       }
     } else if (filter === 'waiting') {
-      title = 'Waiting Users';
+      title = '대기 중 유저';
       const waitingRoomList = allRooms.filter(r => !r.gameInProgress);
       for (const r of waitingRoomList) {
         const room = lobby.getRoom(r.id);
         if (!room) continue;
         for (const p of room.players) {
-          if (p && !p.isBot) users.push({ nickname: p.nickname, room: r.name, roomId: r.id, status: p.connected !== false ? 'Ready' : 'Disconnected' });
+          if (p && !p.isBot) users.push({ nickname: p.nickname, room: r.name, roomId: r.id, status: p.connected !== false ? '준비' : '연결 끊김' });
         }
       }
     } else if (filter === 'spectators') {
-      title = 'Spectators';
+      title = '관전자';
       for (const r of allRooms) {
         const room = lobby.getRoom(r.id);
         if (!room) continue;
         for (const s of room.spectators) {
-          users.push({ nickname: s.nickname, room: r.name, roomId: r.id, status: 'Spectating' });
+          users.push({ nickname: s.nickname, room: r.name, roomId: r.id, status: '관전 중' });
         }
       }
     }
 
     const filterBtns = [
-      ['connected', 'Connected', '#6c63ff'],
-      ['ingame', 'In Game', '#4caf50'],
-      ['waiting', 'Waiting', '#ff9800'],
-      ['spectators', 'Spectators', '#42a5f5'],
+      ['connected', '접속 중', '#6c63ff'],
+      ['ingame', '게임 중', '#4caf50'],
+      ['waiting', '대기 중', '#ff9800'],
+      ['spectators', '관전자', '#42a5f5'],
     ].map(([v, l, c]) => `<a href="/tc-backstage/online?filter=${v}" class="btn" style="background:${filter === v ? c : '#f5f5f5'};color:${filter === v ? '#fff' : '#666'};font-size:13px;padding:6px 14px;border-radius:20px;text-decoration:none">${l}</a>`).join('');
 
     let tableHtml = '';
     if (users.length > 0) {
       tableHtml = `<div class="table-wrap"><table>
-        <tr><th>Nickname</th><th>Room</th><th>Status</th><th></th></tr>
+        <tr><th>닉네임</th><th>방</th><th>상태</th><th></th></tr>
         ${users.map(u => `<tr>
           <td><a href="/tc-backstage/users/${encodeURIComponent(u.nickname)}" style="color:#6c63ff;text-decoration:none;font-weight:600">${escapeHtml(u.nickname)}</a></td>
           <td>${u.room ? `<a href="/tc-backstage/rooms/${encodeURIComponent(u.roomId)}" style="color:#6c63ff;text-decoration:none">${escapeHtml(u.room)}</a>` : '<span style="color:#888">-</span>'}</td>
           <td>${escapeHtml(u.status)}</td>
-          <td><a href="/tc-backstage/users/${encodeURIComponent(u.nickname)}" class="btn btn-secondary" style="font-size:12px;padding:4px 10px">View</a></td>
+          <td><a href="/tc-backstage/users/${encodeURIComponent(u.nickname)}" class="btn btn-secondary" style="font-size:12px;padding:4px 10px">보기</a></td>
         </tr>`).join('')}
       </table></div>`;
     } else {
-      tableHtml = '<div class="empty">No users in this category</div>';
+      tableHtml = '<div class="empty">해당 카테고리에 유저 없음</div>';
     }
 
     const content = `
@@ -1652,7 +1662,7 @@ async function handleAdminRoute(req, res, url, pathname, method, lobby, wss, mai
         <div style="display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap">${filterBtns}</div>
         ${tableHtml}
       </div>
-      <a href="/tc-backstage/" class="btn btn-secondary">Back to Dashboard</a>
+      <a href="/tc-backstage/" class="btn btn-secondary">대시보드로</a>
     `;
     return html(res, layout(title, content, 'home'));
   }
@@ -1674,7 +1684,7 @@ async function handleAdminRoute(req, res, url, pathname, method, lobby, wss, mai
   }
 
   // 404
-  html(res, layout('Not Found', '<div class="empty">Page not found</div>'), 404);
+  html(res, layout('찾을 수 없음', '<div class="empty">페이지를 찾을 수 없습니다</div>'), 404);
 }
 
 module.exports = { handleAdminRoute };

@@ -44,6 +44,7 @@ class GameStateData {
   final int? turnDeadline; // epoch ms
   final String myTeam; // 'A' or 'B'
   final int remainingAces; // 0~4
+  final int remainingKings; // 0~4
   final int remainingDragon; // 0 or 1
   final int remainingPhoenix; // 0 or 1
 
@@ -68,6 +69,7 @@ class GameStateData {
     this.turnDeadline,
     this.myTeam = 'A',
     this.remainingAces = 0,
+    this.remainingKings = 0,
     this.remainingDragon = 0,
     this.remainingPhoenix = 0,
   });
@@ -135,6 +137,7 @@ class GameStateData {
       turnDeadline: json['turnDeadline'] as int?,
       myTeam: _resolveMyTeam(json, playerList),
       remainingAces: (json['remainingSpecials'] as Map?)?['aces'] as int? ?? 0,
+      remainingKings: (json['remainingSpecials'] as Map?)?['kings'] as int? ?? 0,
       remainingDragon: (json['remainingSpecials'] as Map?)?['dragon'] as int? ?? 0,
       remainingPhoenix: (json['remainingSpecials'] as Map?)?['phoenix'] as int? ?? 0,
     );

@@ -4,7 +4,8 @@ import 'package:flutter/foundation.dart';
 import 'package:web_socket_channel/web_socket_channel.dart';
 
 class NetworkService extends ChangeNotifier {
-  static String get defaultUrl => 'wss://tichu.jiny.shop';
+  static String get defaultUrl =>
+      kDebugMode ? 'ws://172.30.1.99:8080' : 'wss://tichu.jiny.shop';
 
   WebSocketChannel? _channel;
   bool _isConnected = false;

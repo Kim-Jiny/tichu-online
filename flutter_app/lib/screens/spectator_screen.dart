@@ -431,18 +431,10 @@ class _SpectatorScreenState extends State<SpectatorScreen> {
                   color: Color(0xFF6A5A52),
                 ),
               ),
-              const SizedBox(height: 20),
-              ElevatedButton(
-                onPressed: () => _leaveRoom(game),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFF6A9BD1),
-                  foregroundColor: Colors.white,
-                  padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(16),
-                  ),
-                ),
-                child: const Text('로비로 돌아가기'),
+              const SizedBox(height: 12),
+              const Text(
+                '3초 후 대기실로 이동...',
+                style: TextStyle(fontSize: 12, color: Color(0xFF8A7A72)),
               ),
             ],
           ),

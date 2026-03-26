@@ -2539,18 +2539,34 @@ class _GameScreenState extends State<GameScreen> {
 
   Widget _buildTopCardCounter(GameStateData state) {
     final aces = state.remainingAces;
+    final kings = state.remainingKings;
     final dragon = state.remainingDragon > 0;
     final phoenix = state.remainingPhoenix > 0;
     return Align(
       alignment: Alignment.centerLeft,
-      child: Padding(
-        padding: const EdgeInsets.only(left: 10, bottom: 2),
-        child: Text(
-          'A:$aces  \u{1F409}${dragon ? "\u25CB" : "\u2715"}  \u{1F426}${phoenix ? "\u25CB" : "\u2715"}',
-          style: TextStyle(
-            fontSize: 10 * _s,
-            color: const Color(0xFF8A7A6A),
-          ),
+      child: Container(
+        margin: EdgeInsets.only(left: 10 * _s, bottom: 2 * _s),
+        padding: EdgeInsets.symmetric(horizontal: 8 * _s, vertical: 4 * _s),
+        decoration: BoxDecoration(
+          color: const Color(0xFFF8F4F0),
+          borderRadius: BorderRadius.circular(8 * _s),
+          border: Border.all(color: const Color(0xFFE6DCE8)),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text('A', style: TextStyle(fontSize: 13 * _s, fontWeight: FontWeight.bold, color: const Color(0xFF5A4038))),
+            Text(':$aces', style: TextStyle(fontSize: 13 * _s, fontWeight: FontWeight.bold, color: const Color(0xFF8A7A6A))),
+            SizedBox(width: 8 * _s),
+            Text('K', style: TextStyle(fontSize: 13 * _s, fontWeight: FontWeight.bold, color: const Color(0xFF5A4038))),
+            Text(':$kings', style: TextStyle(fontSize: 13 * _s, fontWeight: FontWeight.bold, color: const Color(0xFF8A7A6A))),
+            SizedBox(width: 8 * _s),
+            Text('\u{1F409}', style: TextStyle(fontSize: 13 * _s)),
+            Text(dragon ? '\u25CB' : '\u2715', style: TextStyle(fontSize: 12 * _s, color: dragon ? const Color(0xFF4A90D9) : const Color(0xFFCCC0B8))),
+            SizedBox(width: 6 * _s),
+            Text('\u{1F426}', style: TextStyle(fontSize: 13 * _s)),
+            Text(phoenix ? '\u25CB' : '\u2715', style: TextStyle(fontSize: 12 * _s, color: phoenix ? const Color(0xFFD4A030) : const Color(0xFFCCC0B8))),
+          ],
         ),
       ),
     );
@@ -3532,27 +3548,11 @@ class _GameScreenState extends State<GameScreen> {
             const SizedBox(height: 14),
             _buildRankedResult(game),
           ],
-          if (!isGameEnd) ...[
-            const SizedBox(height: 12),
-            const Text(
-              '3초 후 자동 진행...',
-              style: TextStyle(fontSize: 12, color: Color(0xFF8A7A72)),
-            ),
-          ],
-          if (isGameEnd && game.isHost) ...[
-            const SizedBox(height: 20),
-            ElevatedButton(
-              onPressed: () {
-                _leavingGame = true;
-                game.returnToRoom();
-                Navigator.pushReplacement(
-                  context,
-                  MaterialPageRoute(builder: (_) => const LobbyScreen()),
-                );
-              },
-              child: const Text('방으로 돌아가기'),
-            ),
-          ],
+          const SizedBox(height: 12),
+          Text(
+            isGameEnd ? '3초 후 대기실로 이동...' : '3초 후 자동 진행...',
+            style: const TextStyle(fontSize: 12, color: Color(0xFF8A7A72)),
+          ),
         ],
       ),
     );

@@ -2073,7 +2073,7 @@ async function getUsers(search = '', page = 1, limit = 20, options = {}) {
     const total = parseInt(countResult.rows[0].count);
 
     const dataParams = [...countParams, limit, offset];
-    const dataQuery = `SELECT id, username, nickname, total_games, wins, losses, rating, gold, level, leave_count, season_rating, created_at, last_login
+    const dataQuery = `SELECT id, username, nickname, total_games, wins, losses, rating, gold, level, leave_count, season_rating, created_at, last_login, device_platform
                    FROM tc_users ${whereClause}
                    ORDER BY ${orderBy} LIMIT $${paramIdx} OFFSET $${paramIdx + 1}`;
     const result = await client.query(dataQuery, dataParams);

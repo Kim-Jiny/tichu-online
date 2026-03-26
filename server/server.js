@@ -992,13 +992,17 @@ function handleCreateRoom(ws, data) {
     ? ''
     : (typeof data.password === 'string' ? data.password.trim() : '');
   const turnTimeLimit = Math.min(Math.max(parseInt(data.turnTimeLimit) || 30, 10), 300);
+  const targetScore = isRanked
+    ? 1000
+    : Math.min(Math.max(parseInt(data.targetScore) || 1000, 100), 2000);
   const room = lobby.createRoom(
     roomName,
     ws.playerId,
     ws.nickname,
     password,
     isRanked,
-    turnTimeLimit
+    turnTimeLimit,
+    targetScore
   );
   ws.roomId = room.id;
   // Set title on host player

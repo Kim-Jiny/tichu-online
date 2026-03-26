@@ -1182,6 +1182,7 @@ class _LobbyScreenState extends State<LobbyScreen> {
     bool isPrivate = false;
     bool isRanked = false;
     final timeLimitController = TextEditingController(text: '30');
+    final targetScoreController = TextEditingController(text: '1000');
     String? errorText;
     showDialog(
       context: context,
@@ -1351,6 +1352,42 @@ class _LobbyScreenState extends State<LobbyScreen> {
                     ),
                   ],
                 ),
+                if (!isRanked) ...[
+                const SizedBox(height: 8),
+                Row(
+                  children: [
+                    const Text('목표 점수', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 12)),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: TextField(
+                        controller: targetScoreController,
+                        keyboardType: TextInputType.number,
+                        textAlign: TextAlign.center,
+                        decoration: InputDecoration(
+                          suffixText: '점',
+                          hintText: '100~2000',
+                          filled: true,
+                          fillColor: themeColors.first.withValues(alpha: 0.35),
+                          isDense: true,
+                          contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(10),
+                            borderSide: BorderSide(color: accent.withValues(alpha: 0.35)),
+                          ),
+                          enabledBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(10),
+                            borderSide: BorderSide(color: accent.withValues(alpha: 0.35)),
+                          ),
+                          focusedBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(10),
+                            borderSide: BorderSide(color: accent),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+                ],
                 if (errorText != null) ...[
                   const SizedBox(height: 8),
                   Align(
@@ -1395,6 +1432,11 @@ class _LobbyScreenState extends State<LobbyScreen> {
                 setState(() => errorText = '시간 제한은 10~300초 사이로 입력해줘.');
                 return;
               }
+              final targetScore = isRanked ? 1000 : (int.tryParse(targetScoreController.text.trim()) ?? 1000);
+              if (!isRanked && (targetScore < 100 || targetScore > 2000)) {
+                setState(() => errorText = '목표 점수는 100~2000 사이로 입력해줘.');
+                return;
+              }
               context
                   .read<GameService>()
                   .createRoom(
@@ -1402,6 +1444,7 @@ class _LobbyScreenState extends State<LobbyScreen> {
                     password: isPrivate ? password : '',
                     isRanked: isRanked,
                     turnTimeLimit: turnTimeLimit,
+                    targetScore: targetScore,
                   );
               Navigator.pop(context);
               setState(() => _inRoom = true);
@@ -2278,7 +2321,7 @@ class _LobbyScreenState extends State<LobbyScreen> {
                     ),
                     const SizedBox(height: 2),
                     Text(
-                      '${room.turnTimeLimit}초',
+                      '${room.turnTimeLimit}초 · ${room.targetScore}점',
                       style: const TextStyle(
                         fontSize: 11,
                         color: Color(0xFF9A8A82),
@@ -2489,6 +2532,22 @@ class _LobbyScreenState extends State<LobbyScreen> {
                       ),
                       child: Text(
                         '${game.roomTurnTimeLimit}초',
+                        style: const TextStyle(
+                          fontSize: 12,
+                          color: Color(0xFF8A7A72),
+                        ),
+                      ),
+                    ),
+                    // Target score
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                      margin: const EdgeInsets.only(right: 8),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFF0EBE8),
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      child: Text(
+                        '${game.roomTargetScore}점',
                         style: const TextStyle(
                           fontSize: 12,
                           color: Color(0xFF8A7A72),

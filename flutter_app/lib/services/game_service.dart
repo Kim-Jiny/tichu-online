@@ -33,6 +33,7 @@ class GameService extends ChangeNotifier {
   bool isHost = false;
   bool isRankedRoom = false;
   int roomTurnTimeLimit = 30;
+  int roomTargetScore = 1000;
 
   // Room list
   List<Room> roomList = [];
@@ -429,6 +430,7 @@ class GameService extends ChangeNotifier {
         isHost = false;
         isRankedRoom = false;
         roomTurnTimeLimit = 30;
+        roomTargetScore = 1000;
         isSpectator = false; // C10: Clear isSpectator on kick
         gameState = null;
         _prevGameState = null;
@@ -456,6 +458,7 @@ class GameService extends ChangeNotifier {
         isHost = false;
         isRankedRoom = false;
     roomTurnTimeLimit = 30;
+        roomTargetScore = 1000;
         isSpectator = false;
         spectatorGameState = null;
         pendingCardViewRequests = {};
@@ -497,6 +500,7 @@ class GameService extends ChangeNotifier {
           isHost = roomPlayers.any((p) => p != null && p.id == playerId && p.isHost);
           isRankedRoom = room['isRanked'] == true;
           roomTurnTimeLimit = room['turnTimeLimit'] ?? 30;
+          roomTargetScore = room['targetScore'] ?? 1000;
           if (room['gameInProgress'] != true) {
             gameState = null;
             spectatorGameState = null;
@@ -1149,6 +1153,7 @@ class GameService extends ChangeNotifier {
     isHost = false;
     isRankedRoom = false;
     roomTurnTimeLimit = 30;
+    roomTargetScore = 1000;
     roomList = [];
     spectatableRooms = [];
     isSpectator = false;
@@ -1238,13 +1243,14 @@ class GameService extends ChangeNotifier {
     notifyListeners();
   }
 
-  void createRoom(String roomName, {String password = '', bool isRanked = false, int turnTimeLimit = 30}) {
+  void createRoom(String roomName, {String password = '', bool isRanked = false, int turnTimeLimit = 30, int targetScore = 1000}) {
     _network.send({
       'type': 'create_room',
       'roomName': roomName,
       'password': password,
       'isRanked': isRanked,
       'turnTimeLimit': turnTimeLimit,
+      'targetScore': targetScore,
     });
   }
 
@@ -1269,6 +1275,7 @@ class GameService extends ChangeNotifier {
     isHost = false;
     isRankedRoom = false;
     roomTurnTimeLimit = 30;
+    roomTargetScore = 1000;
     isSpectator = false;
     gameState = null;
     spectatorGameState = null;

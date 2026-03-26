@@ -14,7 +14,7 @@ const STATE = {
 };
 
 class TichuGame {
-  constructor(playerIds, playerNames) {
+  constructor(playerIds, playerNames, targetScore = 1000) {
     // playerIds: [p0, p1, p2, p3] seated clockwise
     // Teams: p0 & p2 = Team A, p1 & p3 = Team B
     this.playerIds = playerIds;
@@ -25,7 +25,7 @@ class TichuGame {
     };
     this.totalScores = { teamA: 0, teamB: 0 };
     this.scoreHistory = []; // [{round, teamA, teamB}]
-    this.targetScore = 1000;
+    this.targetScore = targetScore;
     this.state = STATE.WAITING;
     this.round = 0;
 

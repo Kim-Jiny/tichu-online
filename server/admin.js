@@ -416,8 +416,16 @@ async function handleAdminRoute(req, res, url, pathname, method, lobby, wss, mai
     const chartGames = last7.map(d => gamesByDay[d]);
     const chartRanked = last7.map(d => rankedByDay[d]);
     const chartSignups = last7.map(d => signupsByDay[d]);
+    const adRewardsByDay = {};
+    for (const d of last7) { adRewardsByDay[d] = 0; }
+    for (const r of (stats.dailyAdRewards || [])) {
+      const d = new Date(r.day).toISOString().split('T')[0];
+      adRewardsByDay[d] = parseInt(r.cnt) || 0;
+    }
+    const chartAdRewards = last7.map(d => adRewardsByDay[d]);
     const maxGames = Math.max(...chartGames, 1);
     const maxSignups = Math.max(...chartSignups, 1);
+    const maxAdRewards = Math.max(...chartAdRewards, 1);
 
     function miniBar(values, max, color, label) {
       return `<div style="display:flex;align-items:flex-end;gap:6px;height:80px;padding:8px 0">
@@ -438,6 +446,10 @@ async function handleAdminRoute(req, res, url, pathname, method, lobby, wss, mai
     const maxGold = parseInt(stats.goldStats?.max_gold) || 0;
     const totalPurchased = parseInt(stats.shopStats?.total_purchased) || 0;
     const uniqueBuyers = parseInt(stats.shopStats?.unique_buyers) || 0;
+    const adTotalClaims = parseInt(stats.adRewardStats?.total_claims) || 0;
+    const adUniqueUsers = parseInt(stats.adRewardStats?.unique_users) || 0;
+    const adTodayClaims = parseInt(stats.adRewardStats?.today_claims) || 0;
+    const adTodayUsers = parseInt(stats.adRewardStats?.today_users) || 0;
     const totalLeaves = parseInt(stats.leaveStats?.total_leaves) || 0;
     const problemUsers = parseInt(stats.leaveStats?.problem_users) || 0;
     const reports30d = parseInt(stats.reportStats30d?.total_reports) || 0;
@@ -604,6 +616,36 @@ async function handleAdminRoute(req, res, url, pathname, method, lobby, wss, mai
               <div style="font-size:20px;font-weight:700;color:#e65100">${uniqueReported30d}</div>
             </div>
           </div>
+        </div>
+      </div>
+
+      <div class="grid-2col">
+        <div class="card">
+          <h3>광고 보상</h3>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+            <div style="background:#f8f9fa;border-radius:10px;padding:14px;text-align:center">
+              <div style="font-size:12px;color:#888">오늘 시청</div>
+              <div style="font-size:20px;font-weight:700;color:#43a047">${adTodayClaims}</div>
+              <div style="font-size:11px;color:#888">${adTodayUsers}명</div>
+            </div>
+            <div style="background:#f8f9fa;border-radius:10px;padding:14px;text-align:center">
+              <div style="font-size:12px;color:#888">총 시청</div>
+              <div style="font-size:20px;font-weight:700;color:#2e7d32">${adTotalClaims.toLocaleString()}</div>
+              <div style="font-size:11px;color:#888">${adUniqueUsers}명</div>
+            </div>
+            <div style="background:#f8f9fa;border-radius:10px;padding:14px;text-align:center">
+              <div style="font-size:12px;color:#888">오늘 지급 골드</div>
+              <div style="font-size:20px;font-weight:700;color:#ff9800">${(adTodayClaims * 50).toLocaleString()}</div>
+            </div>
+            <div style="background:#f8f9fa;border-radius:10px;padding:14px;text-align:center">
+              <div style="font-size:12px;color:#888">총 지급 골드</div>
+              <div style="font-size:20px;font-weight:700;color:#e65100">${(adTotalClaims * 50).toLocaleString()}</div>
+            </div>
+          </div>
+        </div>
+        <div class="card">
+          <h3>일별 광고 시청 (7일)</h3>
+          ${miniBar(chartAdRewards, maxAdRewards, '#43a047', chartLabels)}
         </div>
       </div>
 
@@ -956,6 +998,7 @@ async function handleAdminRoute(req, res, url, pathname, method, lobby, wss, mai
           <div class="label">이탈 수</div><div class="value" style="color:${(user.leave_count || 0) >= 3 ? '#e53935' : '#333'}">${user.leave_count || 0}</div>
           <div class="label">신고</div><div class="value">${user.report_count}</div>
           <div class="label">문의</div><div class="value">${user.inquiry_count}</div>
+          <div class="label">광고 보상</div><div class="value"><span style="color:#43a047;font-weight:600">${user.ad_reward_today || 0}/5 오늘</span> <span style="color:#888;font-size:12px">(총 ${user.ad_reward_total || 0}회 / ${((user.ad_reward_total || 0) * 50).toLocaleString()}골드)</span></div>
           <div class="label">가입일</div><div class="value">${formatDate(user.created_at)}</div>
           <div class="label">최근 접속</div><div class="value">${formatDate(user.last_login)}</div>
           <div class="label">채팅 금지</div><div class="value">${chatBanHtml}</div>

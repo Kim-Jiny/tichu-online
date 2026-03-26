@@ -2107,10 +2107,18 @@ async function getUserDetail(nickname) {
       'SELECT COUNT(*) FROM tc_inquiries WHERE user_nickname = $1',
       [nickname]
     );
+    const adRewardCount = await client.query(
+      `SELECT COUNT(*) as total,
+              COUNT(*) FILTER (WHERE claimed_at::date = CURRENT_DATE) as today
+       FROM tc_ad_rewards WHERE nickname = $1`,
+      [nickname]
+    );
     return {
       ...user,
       report_count: parseInt(reportCount.rows[0].count),
       inquiry_count: parseInt(inquiryCount.rows[0].count),
+      ad_reward_total: parseInt(adRewardCount.rows[0].total),
+      ad_reward_today: parseInt(adRewardCount.rows[0].today),
     };
   } catch (err) {
     console.error('Get user detail error:', err);
@@ -2206,6 +2214,24 @@ async function getDashboardStats() {
       FROM tc_reports WHERE created_at >= NOW() - INTERVAL '30 days'
     `);
 
+    // Ad reward stats
+    const adRewardStats = await client.query(`
+      SELECT COUNT(*) as total_claims,
+             COUNT(DISTINCT nickname) as unique_users,
+             COUNT(*) FILTER (WHERE claimed_at::date = CURRENT_DATE) as today_claims,
+             COUNT(DISTINCT nickname) FILTER (WHERE claimed_at::date = CURRENT_DATE) as today_users
+      FROM tc_ad_rewards
+    `);
+
+    // Daily ad rewards (last 7 days)
+    const dailyAdRewards = await client.query(`
+      SELECT DATE(claimed_at) as day, COUNT(*) as cnt, COUNT(DISTINCT nickname) as users
+      FROM tc_ad_rewards
+      WHERE claimed_at >= CURRENT_DATE - INTERVAL '6 days'
+      GROUP BY DATE(claimed_at)
+      ORDER BY day
+    `);
+
     return {
       totalUsers: parseInt(totalUsers.rows[0].count),
       pendingInquiries: parseInt(pendingInquiries.rows[0].count),
@@ -2224,6 +2250,8 @@ async function getDashboardStats() {
       shopStats: shopStats.rows[0],
       leaveStats: leaveStats.rows[0],
       reportStats30d: reportStats30d.rows[0],
+      adRewardStats: adRewardStats.rows[0],
+      dailyAdRewards: dailyAdRewards.rows,
     };
   } catch (err) {
     console.error('Get dashboard stats error:', err);
@@ -2232,6 +2260,7 @@ async function getDashboardStats() {
       recentMatches: [], newUsersToday: 0, activeUsers24h: 0, activeUsers7d: 0,
       totalMatches: 0, rankedMatchesToday: 0, dailyGames: [], dailySignups: [],
       topPlayers: [], goldStats: {}, shopStats: {}, leaveStats: {}, reportStats30d: {},
+      adRewardStats: {}, dailyAdRewards: [],
     };
   } finally {
     client.release();

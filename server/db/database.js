@@ -2096,7 +2096,7 @@ async function getUsers(search = '', page = 1, limit = 20, options = {}) {
       'joined_desc': 'created_at DESC',
       'joined_asc': 'created_at ASC',
     };
-    const orderBy = sortOptions[options.sort] || 'created_at DESC';
+    const orderBy = sortOptions[options.sort] || 'last_login DESC NULLS LAST';
 
     const countQuery = `SELECT COUNT(*) FROM tc_users ${whereClause}`;
     const countResult = await client.query(countQuery, countParams);

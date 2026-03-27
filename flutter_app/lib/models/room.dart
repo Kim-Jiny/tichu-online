@@ -11,6 +11,7 @@ class Room {
   final bool isRanked;
   final bool gameInProgress;
   final int turnTimeLimit;
+  final int targetScore;
 
   Room({
     required this.id,
@@ -23,6 +24,7 @@ class Room {
     this.isRanked = false,
     this.gameInProgress = false,
     this.turnTimeLimit = 30,
+    this.targetScore = 1000,
   });
 
   factory Room.fromJson(Map<String, dynamic> json) {
@@ -44,6 +46,7 @@ class Room {
       isRanked: json['isRanked'] ?? false,
       gameInProgress: json['gameInProgress'] ?? false,
       turnTimeLimit: json['turnTimeLimit'] ?? 30,
+      targetScore: json['targetScore'] ?? 1000,
     );
   }
 }

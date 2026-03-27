@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:io';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import '../services/game_service.dart';
 import '../services/network_service.dart';
@@ -1182,6 +1183,7 @@ class _LobbyScreenState extends State<LobbyScreen> {
     bool isPrivate = false;
     bool isRanked = false;
     final timeLimitController = TextEditingController(text: '30');
+    final targetScoreController = TextEditingController(text: '1000');
     String? errorText;
     showDialog(
       context: context,
@@ -1304,6 +1306,7 @@ class _LobbyScreenState extends State<LobbyScreen> {
                         if (isRanked) {
                           isPrivate = false;
                           passwordController.clear();
+                          targetScoreController.text = '1000';
                         }
                       }),
                     ),
@@ -1326,10 +1329,14 @@ class _LobbyScreenState extends State<LobbyScreen> {
                       child: TextField(
                         controller: timeLimitController,
                         keyboardType: TextInputType.number,
+                        inputFormatters: [
+                          FilteringTextInputFormatter.digitsOnly,
+                          LengthLimitingTextInputFormatter(3),
+                        ],
                         textAlign: TextAlign.center,
                         decoration: InputDecoration(
                           suffixText: '초',
-                          hintText: '10~300',
+                          hintText: '10~999',
                           filled: true,
                           fillColor: themeColors.first.withValues(alpha: 0.35),
                           isDense: true,
@@ -1351,6 +1358,53 @@ class _LobbyScreenState extends State<LobbyScreen> {
                     ),
                   ],
                 ),
+                const SizedBox(height: 8),
+                Row(
+                  children: [
+                    const Text('목표 점수', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 12)),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: TextField(
+                        controller: targetScoreController,
+                        enabled: !isRanked,
+                        keyboardType: TextInputType.number,
+                        inputFormatters: [
+                          FilteringTextInputFormatter.digitsOnly,
+                          LengthLimitingTextInputFormatter(5),
+                        ],
+                        textAlign: TextAlign.center,
+                        decoration: InputDecoration(
+                          suffixText: '점',
+                          hintText: isRanked ? '1000 (고정)' : '100~20000',
+                          filled: true,
+                          fillColor: themeColors.first.withValues(alpha: 0.35),
+                          isDense: true,
+                          contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(10),
+                            borderSide: BorderSide(color: accent.withValues(alpha: 0.35)),
+                          ),
+                          enabledBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(10),
+                            borderSide: BorderSide(color: accent.withValues(alpha: 0.35)),
+                          ),
+                          focusedBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(10),
+                            borderSide: BorderSide(color: accent),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+                if (!isRanked)
+                  const Align(
+                    alignment: Alignment.centerLeft,
+                    child: Text(
+                      '100~20000점 사이로 설정할 수 있습니다',
+                      style: TextStyle(fontSize: 11, color: Color(0xFF9A8E8A)),
+                    ),
+                  ),
                 if (errorText != null) ...[
                   const SizedBox(height: 8),
                   Align(
@@ -1383,18 +1437,15 @@ class _LobbyScreenState extends State<LobbyScreen> {
                   : controller.text.trim();
               final password = passwordController.text.trim();
               if (name.isEmpty) {
-                setState(() => errorText = '방 이름을 입력해줘.');
+                setState(() => errorText = '방 이름을 입력해주세요.');
                 return;
               }
               if (isPrivate && password.length < 4) {
-                setState(() => errorText = '비밀번호는 4자 이상이야.');
+                setState(() => errorText = '비밀번호는 4자 이상이어야 합니다.');
                 return;
               }
-              final turnTimeLimit = int.tryParse(timeLimitController.text.trim()) ?? 30;
-              if (turnTimeLimit < 10 || turnTimeLimit > 300) {
-                setState(() => errorText = '시간 제한은 10~300초 사이로 입력해줘.');
-                return;
-              }
+              final turnTimeLimit = (int.tryParse(timeLimitController.text.trim()) ?? 30).clamp(10, 999);
+              final targetScore = isRanked ? 1000 : (int.tryParse(targetScoreController.text.trim()) ?? 1000).clamp(100, 20000);
               context
                   .read<GameService>()
                   .createRoom(
@@ -1402,6 +1453,7 @@ class _LobbyScreenState extends State<LobbyScreen> {
                     password: isPrivate ? password : '',
                     isRanked: isRanked,
                     turnTimeLimit: turnTimeLimit,
+                    targetScore: targetScore,
                   );
               Navigator.pop(context);
               setState(() => _inRoom = true);
@@ -2275,10 +2327,12 @@ class _LobbyScreenState extends State<LobbyScreen> {
                         fontWeight: FontWeight.w500,
                         color: Color(0xFF5A4038),
                       ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
                     ),
                     const SizedBox(height: 2),
                     Text(
-                      '${room.turnTimeLimit}초',
+                      '${room.turnTimeLimit}초 · ${room.targetScore}점',
                       style: const TextStyle(
                         fontSize: 11,
                         color: Color(0xFF9A8A82),
@@ -2479,7 +2533,7 @@ class _LobbyScreenState extends State<LobbyScreen> {
                         overflow: TextOverflow.ellipsis,
                       ),
                     ),
-                    // Turn time limit
+                    // Turn time limit & target score
                     Container(
                       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                       margin: const EdgeInsets.only(right: 8),
@@ -2488,7 +2542,7 @@ class _LobbyScreenState extends State<LobbyScreen> {
                         borderRadius: BorderRadius.circular(10),
                       ),
                       child: Text(
-                        '${game.roomTurnTimeLimit}초',
+                        '${game.roomTurnTimeLimit}초 · ${game.roomTargetScore}점',
                         style: const TextStyle(
                           fontSize: 12,
                           color: Color(0xFF8A7A72),

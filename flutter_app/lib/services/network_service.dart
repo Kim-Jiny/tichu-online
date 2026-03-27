@@ -82,12 +82,13 @@ class NetworkService extends ChangeNotifier {
 
   Future<bool> reconnect() async {
     disconnect();
-    for (int i = 0; i < 5; i++) {
+    const delays = [1, 2, 3, 5, 8]; // seconds – fast initial retries
+    for (int i = 0; i < delays.length; i++) {
       try {
         await connect(_serverUrl);
         return true;
       } catch (_) {
-        await Future.delayed(Duration(seconds: 2 << i)); // 2, 4, 8, 16, 32
+        await Future.delayed(Duration(seconds: delays[i]));
       }
     }
     return false;

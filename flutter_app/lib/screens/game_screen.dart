@@ -632,20 +632,12 @@ class _GameScreenState extends State<GameScreen> {
       _lastChatMessageCount = game.chatMessages.length;
       _scrollChatToBottom();
     }
-    final bottomInset = MediaQuery.of(context).viewInsets.bottom;
-    final maxHeight = MediaQuery.of(context).size.height - bottomInset - 120;
-    final panelHeight = maxHeight < 240
-        ? 240.0
-        : (maxHeight < 350 ? maxHeight : 350.0);
 
-    return AnimatedPositioned(
-      duration: const Duration(milliseconds: 180),
-      curve: Curves.easeOut,
+    return Positioned(
       right: 8,
-      top: bottomInset > 0 ? null : 50,
-      bottom: bottomInset > 0 ? 8 + bottomInset : null,
+      top: 50,
       width: 280,
-      height: panelHeight,
+      height: 350,
       child: Container(
         decoration: BoxDecoration(
           color: Colors.white,
@@ -3893,7 +3885,7 @@ class _GameScreenState extends State<GameScreen> {
               mainAxisSize: MainAxisSize.min,
               children: [
                 Text(
-                  item.name,
+                  item.name.length > 4 ? '${item.name.substring(0, 4)}…' : item.name,
                   style: const TextStyle(
                     fontSize: 12,
                     color: Color(0xFF8A7A72),

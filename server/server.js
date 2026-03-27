@@ -991,14 +991,16 @@ function handleCreateRoom(ws, data) {
   const password = isRanked
     ? ''
     : (typeof data.password === 'string' ? data.password.trim() : '');
-  const turnTimeLimit = Math.min(Math.max(parseInt(data.turnTimeLimit) || 30, 10), 300);
+  const turnTimeLimit = Math.min(Math.max(parseInt(data.turnTimeLimit) || 30, 10), 999);
+  const targetScore = Math.min(Math.max(parseInt(data.targetScore) || 1000, 100), 20000);
   const room = lobby.createRoom(
     roomName,
     ws.playerId,
     ws.nickname,
     password,
     isRanked,
-    turnTimeLimit
+    turnTimeLimit,
+    targetScore
   );
   ws.roomId = room.id;
   // Set title on host player
@@ -1398,7 +1400,7 @@ function handleStartGame(ws) {
     return;
   }
   if (!room.areAllReady()) {
-    sendTo(ws, { type: 'error', message: '모든 플레이어가 준비해야 합니다' });
+    broadcastGameEvent(ws.roomId, { type: 'error', message: '모든 플레이어가 준비해야 합니다' });
     return;
   }
   room.resetReady();

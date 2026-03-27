@@ -714,7 +714,7 @@ class _RegisterDialogState extends State<RegisterDialog> {
     }
   }
 
-  void _checkNickname() {
+  Future<void> _checkNickname() async {
     final nickname = _nicknameController.text.trim();
     if (nickname.isEmpty) {
       setState(() => _nicknameStatus = '닉네임을 입력해주세요');
@@ -722,9 +722,26 @@ class _RegisterDialogState extends State<RegisterDialog> {
     }
     setState(() => _nicknameChecking = true);
 
+    try {
+      final network = context.read<NetworkService>();
+      if (!network.isConnected) {
+        await network.connect(widget.serverUrl);
+      }
+    } catch (_) {
+      if (!mounted) return;
+      setState(() {
+        _nicknameChecking = false;
+        _nicknameStatus = '서버에 연결할 수 없습니다.';
+      });
+      return;
+    }
+
+    if (!mounted) return;
     final game = context.read<GameService>();
+    Timer? timeout;
     void listener() {
       if (game.nicknameCheckMessage != null) {
+        timeout?.cancel();
         game.removeListener(listener);
         if (!mounted) return;
         setState(() {
@@ -735,6 +752,14 @@ class _RegisterDialogState extends State<RegisterDialog> {
         });
       }
     }
+    timeout = Timer(const Duration(seconds: 5), () {
+      game.removeListener(listener);
+      if (!mounted) return;
+      setState(() {
+        _nicknameChecking = false;
+        _nicknameStatus = '서버 응답이 없습니다. 다시 시도해주세요.';
+      });
+    });
     game.addListener(listener);
     game.checkNickname(nickname);
   }
@@ -1083,9 +1108,26 @@ class _SocialNicknameDialogState extends State<SocialNicknameDialog> {
     }
     setState(() => _nicknameChecking = true);
 
+    try {
+      final network = context.read<NetworkService>();
+      if (!network.isConnected) {
+        await network.connect();
+      }
+    } catch (_) {
+      if (!mounted) return;
+      setState(() {
+        _nicknameChecking = false;
+        _nicknameStatus = '서버에 연결할 수 없습니다.';
+      });
+      return;
+    }
+
+    if (!mounted) return;
     final game = context.read<GameService>();
+    Timer? timeout;
     void listener() {
       if (game.nicknameCheckMessage != null) {
+        timeout?.cancel();
         game.removeListener(listener);
         if (!mounted) return;
         setState(() {
@@ -1096,6 +1138,14 @@ class _SocialNicknameDialogState extends State<SocialNicknameDialog> {
         });
       }
     }
+    timeout = Timer(const Duration(seconds: 5), () {
+      game.removeListener(listener);
+      if (!mounted) return;
+      setState(() {
+        _nicknameChecking = false;
+        _nicknameStatus = '서버 응답이 없습니다. 다시 시도해주세요.';
+      });
+    });
     game.addListener(listener);
     game.checkNickname(nickname);
   }

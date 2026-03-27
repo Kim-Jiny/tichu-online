@@ -10,7 +10,7 @@ const TITLE_NAMES = {
 };
 
 class GameRoom {
-  constructor(id, name, hostId, hostNickname, password = '', isRanked = false, turnTimeLimit = 30) {
+  constructor(id, name, hostId, hostNickname, password = '', isRanked = false, turnTimeLimit = 30, targetScore = 1000) {
     this.id = id;
     this.name = name;
     this.hostId = hostId;
@@ -19,6 +19,7 @@ class GameRoom {
     this.isPrivate = !!password;
     this.isRanked = !!isRanked;
     this.turnTimeLimit = turnTimeLimit; // seconds
+    this.targetScore = targetScore;
     this.turnDeadline = null; // epoch ms when active
     // Fixed 4-slot system: host goes to slot 0, rest are null
     this.players = [
@@ -426,6 +427,7 @@ class GameRoom {
     const playerNames = {};
     this.players.forEach((p) => (playerNames[p.id] = p.nickname));
     this.game = new TichuGame(playerIds, playerNames);
+    this.game.targetScore = this.targetScore;
     this.game.start();
     console.log(`Game started in room ${this.name}`);
     return true;
@@ -483,6 +485,7 @@ class GameRoom {
       }),
       gameInProgress: !!this.game,
       turnTimeLimit: this.turnTimeLimit,
+      targetScore: this.targetScore,
     };
   }
 

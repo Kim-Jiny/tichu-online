@@ -562,6 +562,56 @@ class TichuGame {
     return result;
   }
 
+  // Force play cards fulfilling call obligation - bypasses normal validation, used by timeout handler
+  forcePlayCallCards(playerId) {
+    if (this.state !== STATE.PLAYING) return null;
+    if (playerId !== this.currentPlayer) return null;
+    if (!this.callRank || this.currentTrick.length === 0) return null;
+
+    const play = this._findCallFulfillPlay(playerId);
+    if (!play || play.type !== 'play_cards' || !play.cards) return null;
+
+    const cardIds = play.cards;
+    const combo = getComboType(cardIds);
+    if (combo.type === COMBO.INVALID) return null;
+
+    if (combo.isPhoenix && this.currentTrick.length > 0) {
+      const lastCombo = this.currentTrick[this.currentTrick.length - 1].combo;
+      combo.value = lastCombo.value + 0.5;
+    }
+
+    const arrangedCards = arrangeCardsWithPhoenix(cardIds, combo);
+    this.removeCardsFromHand(playerId, cardIds);
+    this.currentTrick.push({ playerId, cards: arrangedCards, combo });
+    this.lastPlayedBy = playerId;
+    this.passCount = 0;
+
+    // Check call fulfillment
+    if (this.callRank && this.isCallFulfilled(playerId, cardIds, combo)) {
+      this.callRank = null;
+    }
+
+    const broadcast = {
+      type: 'cards_played',
+      player: playerId,
+      playerName: this.playerNames[playerId],
+      cards: arrangedCards,
+      combo: { type: combo.type, length: combo.length, value: combo.value },
+    };
+
+    // Check if player finished
+    if (this.hands[playerId].length === 0) {
+      this.finishOrder.push(playerId);
+      broadcast.finished = true;
+      broadcast.finishPosition = this.finishOrder.length;
+      const endResult = this.checkRoundEnd();
+      if (endResult) return { success: true, broadcast, endResult };
+    }
+
+    this.advanceTurn();
+    return { success: true, broadcast };
+  }
+
   resolveTrick() {
     const winner = this.lastPlayedBy;
     const allTrickCards = [];

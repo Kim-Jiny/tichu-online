@@ -2047,17 +2047,29 @@ async function handleTurnTimeout(roomId, playerId) {
   });
 
   // Auto action
-  const action = room.game.getAutoTimeoutAction(playerId);
-  if (action) {
-    const result = room.game.handleAction(playerId, action);
-    if (result && result.success) {
-      if (result.broadcast) broadcastGameEvent(roomId, result.broadcast);
-      if (room.game && room.game.state === 'game_end') { saveGameResult(room); scheduleAutoReturnToRoom(roomId); }
+  try {
+    const action = room.game.getAutoTimeoutAction(playerId);
+    if (action) {
+      const result = room.game.handleAction(playerId, action);
+      if (result && result.success) {
+        if (result.broadcast) broadcastGameEvent(roomId, result.broadcast);
+        if (room.game && room.game.state === 'game_end') { saveGameResult(room); scheduleAutoReturnToRoom(roomId); }
+      } else {
+        console.log(`[TIMEOUT] Auto action failed for ${nickname}: ${result?.message}`);
+        // Force play call cards to prevent game from getting stuck
+        const forceResult = room.game.forcePlayCallCards(playerId);
+        if (forceResult && forceResult.success) {
+          if (forceResult.broadcast) broadcastGameEvent(roomId, forceResult.broadcast);
+          if (room.game && room.game.state === 'game_end') { saveGameResult(room); scheduleAutoReturnToRoom(roomId); }
+        }
+      }
     } else {
-      console.log(`[TIMEOUT] Auto action failed for ${nickname}: ${result?.message}`);
+      console.log(`[TIMEOUT] No auto action for ${nickname} (currentPlayer: ${room.game.currentPlayer})`);
     }
-  } else {
-    console.log(`[TIMEOUT] No auto action for ${nickname} (currentPlayer: ${room.game.currentPlayer})`);
+  } catch (err) {
+    console.error(`[TIMEOUT] Exception during auto action for ${nickname}:`, err);
+    // Force play call cards to prevent game from getting stuck
+    try { room.game.forcePlayCallCards(playerId); } catch (_) {}
   }
 
   // Always restart timer and broadcast state to prevent game from getting stuck

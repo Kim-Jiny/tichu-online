@@ -347,12 +347,15 @@ class _FriendsScreenState extends State<FriendsScreen> with TickerProviderStateM
                         children: [
                           Row(
                             children: [
-                              Text(
-                                nickname,
-                                style: const TextStyle(
-                                  fontSize: 15,
-                                  fontWeight: FontWeight.w600,
-                                  color: Color(0xFF5A4038),
+                              Flexible(
+                                child: Text(
+                                  nickname,
+                                  style: const TextStyle(
+                                    fontSize: 15,
+                                    fontWeight: FontWeight.w600,
+                                    color: Color(0xFF5A4038),
+                                  ),
+                                  overflow: TextOverflow.ellipsis,
                                 ),
                               ),
                               if (unread > 0) ...[
@@ -538,6 +541,7 @@ class _FriendsScreenState extends State<FriendsScreen> with TickerProviderStateM
                                     fontWeight: FontWeight.w600,
                                     color: Color(0xFF5A4038),
                                   ),
+                                  overflow: TextOverflow.ellipsis,
                                 ),
                               ),
                               _buildFriendStatusButton(nickname, friendStatus, game),
@@ -668,6 +672,7 @@ class _FriendsScreenState extends State<FriendsScreen> with TickerProviderStateM
                         fontWeight: FontWeight.w600,
                         color: Color(0xFF5A4038),
                       ),
+                      overflow: TextOverflow.ellipsis,
                     ),
                   ),
                   GestureDetector(
@@ -746,12 +751,15 @@ class _FriendsScreenState extends State<FriendsScreen> with TickerProviderStateM
                       ),
                     ),
                     const SizedBox(width: 12),
-                    Text(
-                      _dmChatPartner ?? '',
-                      style: const TextStyle(
-                        fontSize: 18,
-                        fontWeight: FontWeight.bold,
-                        color: Color(0xFF5A4038),
+                    Expanded(
+                      child: Text(
+                        _dmChatPartner ?? '',
+                        style: const TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                          color: Color(0xFF5A4038),
+                        ),
+                        overflow: TextOverflow.ellipsis,
                       ),
                     ),
                   ],

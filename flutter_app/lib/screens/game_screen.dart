@@ -2812,11 +2812,15 @@ class _GameScreenState extends State<GameScreen> {
       child: Column(
         children: [
           Text(
-            playerName.isNotEmpty ? '$playerName가 개를 냈어' : '개가 나왔어',
+            playerName.isNotEmpty
+                ? '${playerName.length > 8 ? '${playerName.substring(0, 8)}..' : playerName}가 개를 냈어'
+                : '개가 나왔어',
             style: const TextStyle(
               fontSize: 11,
               color: Color(0xFF8A7A72),
             ),
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
           ),
           const SizedBox(height: 4),
           const PlayingCard(
@@ -2854,7 +2858,9 @@ class _GameScreenState extends State<GameScreen> {
             TextSpan(
               children: [
                 TextSpan(
-                  text: lastPlay.playerName,
+                  text: lastPlay.playerName.length > 8
+                      ? '${lastPlay.playerName.substring(0, 8)}..'
+                      : lastPlay.playerName,
                   style: TextStyle(
                     fontSize: 14,
                     fontWeight: FontWeight.bold,
@@ -2870,6 +2876,8 @@ class _GameScreenState extends State<GameScreen> {
                 ),
               ],
             ),
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
           ),
           const SizedBox(height: 4),
           _buildOverlappedTrick(lastPlay.cards),

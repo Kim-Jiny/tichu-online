@@ -1245,7 +1245,7 @@ class _SpectatorScreenState extends State<SpectatorScreen> {
               TextSpan(
                 children: [
                   TextSpan(
-                    text: playerName,
+                    text: playerName.length > 8 ? '${playerName.substring(0, 8)}..' : playerName,
                     style: TextStyle(
                       fontSize: 14,
                       fontWeight: FontWeight.bold,
@@ -1258,6 +1258,8 @@ class _SpectatorScreenState extends State<SpectatorScreen> {
                   ),
                 ],
               ),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
             ),
             const SizedBox(height: 6),
             _buildOverlappedCards(cards),

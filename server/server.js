@@ -20,6 +20,12 @@ const {
   setPushEnabled,
   setPushFriendInvite,
   claimAdReward,
+  searchUsers,
+  sendDm,
+  getDmHistory,
+  markDmRead,
+  getDmConversations,
+  getTotalUnreadDmCount,
 } = require('./db/database');
 
 // Firebase Admin SDK initialization (optional - only if FIREBASE_SERVICE_ACCOUNT is set)
@@ -521,6 +527,24 @@ function handleMessage(ws, data) {
     case 'get_app_config':
       handleGetAppConfig(ws);
       break;
+    case 'search_users':
+      handleSearchUsers(ws, data);
+      break;
+    case 'send_dm':
+      handleSendDm(ws, data);
+      break;
+    case 'get_dm_history':
+      handleGetDmHistory(ws, data);
+      break;
+    case 'mark_dm_read':
+      handleMarkDmRead(ws, data);
+      break;
+    case 'get_dm_conversations':
+      handleGetDmConversations(ws);
+      break;
+    case 'get_unread_dm_count':
+      handleGetUnreadDmCount(ws);
+      break;
     default:
       sendTo(ws, { type: 'error', message: `알 수 없는 메시지: ${data.type}` });
   }
@@ -971,6 +995,10 @@ async function handleReconnection(ws) {
     maintenanceStatus: getMaintenanceStatus(),
   });
   sendTo(ws, { type: 'room_list', rooms: lobby.getRoomList() });
+  // Send unread DM count on login
+  getTotalUnreadDmCount(ws.nickname).then(count => {
+    sendTo(ws, { type: 'unread_dm_count', count });
+  });
 }
 
 function handleCreateRoom(ws, data) {
@@ -2592,6 +2620,125 @@ async function handleRemoveFriend(ws, data) {
       sendTo(otherWs, { type: 'friend_removed', nickname: ws.nickname, success: true });
     }
   }
+}
+
+// === DM Handlers ===
+
+async function handleSearchUsers(ws, data) {
+  if (!ws.nickname) {
+    sendTo(ws, { type: 'search_users_result', users: [] });
+    return;
+  }
+  const query = (data.query || '').trim();
+  if (!query || query.length < 1) {
+    sendTo(ws, { type: 'search_users_result', users: [] });
+    return;
+  }
+  const nicknames = await searchUsers(query, ws.nickname);
+  const friendsList = await getFriends(ws.nickname);
+  const pendingIncoming = await getPendingFriendRequests(ws.nickname);
+  // Check outgoing pending: query tc_friends where I sent and status=pending
+  const { pool } = require('./db/database');
+  let pendingOutgoing = [];
+  try {
+    const res = await pool.query(
+      `SELECT friend_nickname FROM tc_friends WHERE user_nickname = $1 AND status = 'pending'`,
+      [ws.nickname]
+    );
+    pendingOutgoing = res.rows.map(r => r.friend_nickname);
+  } catch (_) {}
+  const users = nicknames.map(nick => {
+    let friendStatus = 'none';
+    if (friendsList.includes(nick)) friendStatus = 'friend';
+    else if (pendingIncoming.includes(nick)) friendStatus = 'pending_incoming';
+    else if (pendingOutgoing.includes(nick)) friendStatus = 'pending_outgoing';
+    return { nickname: nick, friendStatus };
+  });
+  sendTo(ws, { type: 'search_users_result', users });
+}
+
+async function handleSendDm(ws, data) {
+  if (!ws.nickname) {
+    sendTo(ws, { type: 'dm_error', message: '로그인이 필요합니다' });
+    return;
+  }
+  const targetNickname = data.nickname;
+  const message = (data.message || '').trim();
+  if (!targetNickname || !message) {
+    sendTo(ws, { type: 'dm_error', message: '메시지를 입력해주세요' });
+    return;
+  }
+  if (message.length > 500) {
+    sendTo(ws, { type: 'dm_error', message: '메시지는 500자 이내로 입력해주세요' });
+    return;
+  }
+  // Check friendship
+  const friendsList = await getFriends(ws.nickname);
+  if (!friendsList.includes(targetNickname)) {
+    sendTo(ws, { type: 'dm_error', message: '친구에게만 DM을 보낼 수 있습니다' });
+    return;
+  }
+  // Check blocked
+  const blockedList = await getBlockedUsers(ws.nickname);
+  const blockedByTarget = await getBlockedUsers(targetNickname);
+  if (blockedList.some(b => b.nickname === targetNickname) || blockedByTarget.some(b => b.nickname === ws.nickname)) {
+    sendTo(ws, { type: 'dm_error', message: '차단된 사용자에게 DM을 보낼 수 없습니다' });
+    return;
+  }
+  // Check chat ban
+  const chatBan = await getChatBan(ws.nickname);
+  if (chatBan && chatBan.banned) {
+    sendTo(ws, { type: 'dm_error', message: '채팅 금지 상태입니다' });
+    return;
+  }
+  const result = await sendDm(ws.nickname, targetNickname, message);
+  if (!result.success) {
+    sendTo(ws, { type: 'dm_error', message: result.message });
+    return;
+  }
+  const dmMsg = {
+    type: 'dm_message',
+    id: result.id,
+    sender: ws.nickname,
+    receiver: targetNickname,
+    message,
+    createdAt: result.createdAt,
+  };
+  sendTo(ws, dmMsg);
+  // Real-time delivery to target
+  const targetWs = findWsByNickname(targetNickname);
+  if (targetWs) {
+    sendTo(targetWs, dmMsg);
+  }
+}
+
+async function handleGetDmHistory(ws, data) {
+  if (!ws.nickname) return;
+  const targetNickname = data.nickname;
+  if (!targetNickname) return;
+  const beforeId = data.beforeId || null;
+  const messages = await getDmHistory(ws.nickname, targetNickname, beforeId);
+  sendTo(ws, { type: 'dm_history', nickname: targetNickname, messages });
+}
+
+async function handleMarkDmRead(ws, data) {
+  if (!ws.nickname) return;
+  const targetNickname = data.nickname;
+  if (!targetNickname) return;
+  await markDmRead(ws.nickname, targetNickname);
+  sendTo(ws, { type: 'dm_marked_read', nickname: targetNickname });
+}
+
+async function handleGetDmConversations(ws) {
+  if (!ws.nickname) return;
+  const conversations = await getDmConversations(ws.nickname);
+  sendTo(ws, { type: 'dm_conversations', conversations });
+}
+
+async function handleGetUnreadDmCount(ws) {
+  if (!ws.nickname) return;
+  const count = await getTotalUnreadDmCount(ws.nickname);
+  sendTo(ws, { type: 'unread_dm_count', count });
 }
 
 // Invite to room handler

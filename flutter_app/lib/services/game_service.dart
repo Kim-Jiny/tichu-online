@@ -167,6 +167,12 @@ class GameService extends ChangeNotifier {
   bool isUnderMaintenance = false;
   bool hasMaintenanceNotice = false;
   String maintenanceMessage = '';
+
+  // DM / Search
+  List<Map<String, dynamic>> dmConversations = [];
+  Map<String, List<Map<String, dynamic>>> dmMessages = {};
+  int totalUnreadDmCount = 0;
+  List<Map<String, dynamic>> searchResults = [];
   String? maintenanceStart;
   String? maintenanceEnd;
 
@@ -737,6 +743,78 @@ class GameService extends ChangeNotifier {
             friendsData[idx]['roomName'] = null;
           }
         }
+        notifyListeners();
+        break;
+
+      case 'search_users_result':
+        final users = data['users'] as List? ?? [];
+        searchResults = users.map((u) => Map<String, dynamic>.from(u as Map)).toList();
+        notifyListeners();
+        break;
+
+      case 'dm_message':
+        final sender = data['sender'] as String? ?? '';
+        final receiver = data['receiver'] as String? ?? '';
+        final partner = sender == playerName ? receiver : sender;
+        final msg = {
+          'id': data['id'],
+          'sender': sender,
+          'receiver': receiver,
+          'message': data['message'] as String? ?? '',
+          'createdAt': data['createdAt']?.toString() ?? '',
+        };
+        dmMessages.putIfAbsent(partner, () => []);
+        // Avoid duplicate
+        if (!dmMessages[partner]!.any((m) => m['id'] == msg['id'])) {
+          dmMessages[partner]!.add(msg);
+        }
+        // Update conversations
+        requestDmConversations();
+        if (sender != playerName) {
+          totalUnreadDmCount++;
+        }
+        notifyListeners();
+        break;
+
+      case 'dm_error':
+        errorMessage = data['message'] as String?;
+        notifyListeners();
+        Future.delayed(const Duration(seconds: 3), () {
+          if (_disposed) return;
+          errorMessage = null;
+          notifyListeners();
+        });
+        break;
+
+      case 'dm_history':
+        final nickname = data['nickname'] as String? ?? '';
+        final messages = data['messages'] as List? ?? [];
+        final parsed = messages.map((m) => Map<String, dynamic>.from(m as Map)).toList();
+        if (nickname.isNotEmpty) {
+          final existing = dmMessages[nickname] ?? [];
+          final existingIds = existing.map((m) => m['id']).toSet();
+          final newMsgs = parsed.where((m) => !existingIds.contains(m['id'])).toList();
+          dmMessages[nickname] = [...newMsgs, ...existing];
+        }
+        notifyListeners();
+        break;
+
+      case 'dm_marked_read':
+        final nickname = data['nickname'] as String? ?? '';
+        if (nickname.isNotEmpty) {
+          requestDmConversations();
+          requestUnreadDmCount();
+        }
+        break;
+
+      case 'dm_conversations':
+        final convs = data['conversations'] as List? ?? [];
+        dmConversations = convs.map((c) => Map<String, dynamic>.from(c as Map)).toList();
+        notifyListeners();
+        break;
+
+      case 'unread_dm_count':
+        totalUnreadDmCount = data['count'] as int? ?? 0;
         notifyListeners();
         break;
 
@@ -1537,6 +1615,38 @@ class GameService extends ChangeNotifier {
 
   void inviteToRoom(String nickname) {
     _network.send({'type': 'invite_to_room', 'nickname': nickname});
+  }
+
+  // DM / Search actions
+  void searchUsersAction(String query) {
+    _network.send({'type': 'search_users', 'query': query});
+  }
+
+  void sendDm(String nickname, String message) {
+    _network.send({'type': 'send_dm', 'nickname': nickname, 'message': message});
+  }
+
+  void requestDmHistory(String nickname, {int? beforeId}) {
+    final msg = <String, dynamic>{'type': 'get_dm_history', 'nickname': nickname};
+    if (beforeId != null) msg['beforeId'] = beforeId;
+    _network.send(msg);
+  }
+
+  void markDmReadAction(String nickname) {
+    _network.send({'type': 'mark_dm_read', 'nickname': nickname});
+  }
+
+  void requestDmConversations() {
+    _network.send({'type': 'get_dm_conversations'});
+  }
+
+  void requestUnreadDmCount() {
+    _network.send({'type': 'get_unread_dm_count'});
+  }
+
+  void clearSearchResults() {
+    searchResults = [];
+    notifyListeners();
   }
 
   void acceptInvite(Map<String, dynamic> invite) {

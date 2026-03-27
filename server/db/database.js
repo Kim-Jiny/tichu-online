@@ -416,6 +416,26 @@ async function initDatabase() {
       )
     `);
 
+    // DM messages table
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS tc_dm_messages (
+        id SERIAL PRIMARY KEY,
+        sender_nickname VARCHAR(50) NOT NULL,
+        receiver_nickname VARCHAR(50) NOT NULL,
+        message TEXT NOT NULL,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        read_at TIMESTAMP
+      )
+    `);
+    await client.query(`
+      CREATE INDEX IF NOT EXISTS idx_dm_participants
+      ON tc_dm_messages (sender_nickname, receiver_nickname, created_at DESC)
+    `);
+    await client.query(`
+      CREATE INDEX IF NOT EXISTS idx_dm_unread
+      ON tc_dm_messages (receiver_nickname, read_at) WHERE read_at IS NULL
+    `);
+
     console.log('Database initialized (tc_ tables)');
   } catch (err) {
     console.error('Database initialization error:', err);
@@ -1444,6 +1464,16 @@ async function changeNickname(oldNickname, newNickname) {
     // Update nickname in tc_inquiries
     await client.query(
       `UPDATE tc_inquiries SET user_nickname = $2 WHERE user_nickname = $1`,
+      [oldNickname, trimmed]
+    );
+
+    // Update nickname in tc_dm_messages (both columns)
+    await client.query(
+      `UPDATE tc_dm_messages SET sender_nickname = $2 WHERE sender_nickname = $1`,
+      [oldNickname, trimmed]
+    );
+    await client.query(
+      `UPDATE tc_dm_messages SET receiver_nickname = $2 WHERE receiver_nickname = $1`,
       [oldNickname, trimmed]
     );
 
@@ -2684,6 +2714,154 @@ async function updateConfig(key, value) {
   }
 }
 
+// === DM Functions ===
+
+async function searchUsers(query, requesterNickname) {
+  const client = await pool.connect();
+  try {
+    const result = await client.query(
+      `SELECT nickname FROM tc_users
+       WHERE nickname ILIKE $1 AND nickname != $2
+       ORDER BY nickname
+       LIMIT 20`,
+      [`%${query}%`, requesterNickname]
+    );
+    return result.rows.map(r => r.nickname);
+  } catch (err) {
+    console.error('Search users error:', err);
+    return [];
+  } finally {
+    client.release();
+  }
+}
+
+async function sendDm(sender, receiver, message) {
+  const client = await pool.connect();
+  try {
+    const result = await client.query(
+      `INSERT INTO tc_dm_messages (sender_nickname, receiver_nickname, message)
+       VALUES ($1, $2, $3)
+       RETURNING id, created_at`,
+      [sender, receiver, message]
+    );
+    return { success: true, id: result.rows[0].id, createdAt: result.rows[0].created_at };
+  } catch (err) {
+    console.error('Send DM error:', err);
+    return { success: false, message: 'DM 전송 실패' };
+  } finally {
+    client.release();
+  }
+}
+
+async function getDmHistory(nick1, nick2, beforeId, limit = 50) {
+  const client = await pool.connect();
+  try {
+    let query, params;
+    if (beforeId) {
+      query = `SELECT id, sender_nickname, receiver_nickname, message, created_at, read_at
+               FROM tc_dm_messages
+               WHERE ((sender_nickname = $1 AND receiver_nickname = $2)
+                  OR (sender_nickname = $2 AND receiver_nickname = $1))
+                 AND id < $3
+               ORDER BY id DESC
+               LIMIT $4`;
+      params = [nick1, nick2, beforeId, limit];
+    } else {
+      query = `SELECT id, sender_nickname, receiver_nickname, message, created_at, read_at
+               FROM tc_dm_messages
+               WHERE ((sender_nickname = $1 AND receiver_nickname = $2)
+                  OR (sender_nickname = $2 AND receiver_nickname = $1))
+               ORDER BY id DESC
+               LIMIT $3`;
+      params = [nick1, nick2, limit];
+    }
+    const result = await client.query(query, params);
+    return result.rows.reverse(); // oldest first
+  } catch (err) {
+    console.error('Get DM history error:', err);
+    return [];
+  } finally {
+    client.release();
+  }
+}
+
+async function markDmRead(receiver, sender) {
+  const client = await pool.connect();
+  try {
+    await client.query(
+      `UPDATE tc_dm_messages SET read_at = NOW()
+       WHERE receiver_nickname = $1 AND sender_nickname = $2 AND read_at IS NULL`,
+      [receiver, sender]
+    );
+    return { success: true };
+  } catch (err) {
+    console.error('Mark DM read error:', err);
+    return { success: false };
+  } finally {
+    client.release();
+  }
+}
+
+async function getDmConversations(nickname) {
+  const client = await pool.connect();
+  try {
+    const result = await client.query(
+      `WITH partners AS (
+         SELECT DISTINCT
+           CASE WHEN sender_nickname = $1 THEN receiver_nickname ELSE sender_nickname END AS partner
+         FROM tc_dm_messages
+         WHERE sender_nickname = $1 OR receiver_nickname = $1
+       ),
+       latest AS (
+         SELECT DISTINCT ON (p.partner)
+           p.partner,
+           m.id, m.message, m.created_at, m.sender_nickname
+         FROM partners p
+         JOIN tc_dm_messages m
+           ON ((m.sender_nickname = $1 AND m.receiver_nickname = p.partner)
+            OR (m.sender_nickname = p.partner AND m.receiver_nickname = $1))
+         ORDER BY p.partner, m.created_at DESC
+       ),
+       unread AS (
+         SELECT sender_nickname AS partner, COUNT(*) AS unread_count
+         FROM tc_dm_messages
+         WHERE receiver_nickname = $1 AND read_at IS NULL
+         GROUP BY sender_nickname
+       )
+       SELECT l.partner, l.message AS last_message, l.created_at AS last_message_at,
+              l.sender_nickname AS last_sender,
+              COALESCE(u.unread_count, 0)::int AS unread_count
+       FROM latest l
+       LEFT JOIN unread u ON l.partner = u.partner
+       ORDER BY l.created_at DESC`,
+      [nickname]
+    );
+    return result.rows;
+  } catch (err) {
+    console.error('Get DM conversations error:', err);
+    return [];
+  } finally {
+    client.release();
+  }
+}
+
+async function getTotalUnreadDmCount(nickname) {
+  const client = await pool.connect();
+  try {
+    const result = await client.query(
+      `SELECT COUNT(*)::int AS count FROM tc_dm_messages
+       WHERE receiver_nickname = $1 AND read_at IS NULL`,
+      [nickname]
+    );
+    return result.rows[0].count;
+  } catch (err) {
+    console.error('Get total unread DM count error:', err);
+    return 0;
+  } finally {
+    client.release();
+  }
+}
+
 module.exports = {
   initDatabase,
   registerUser,
@@ -2755,5 +2933,11 @@ module.exports = {
   updateConfig,
   adminAdjustGold,
   claimAdReward,
+  searchUsers,
+  sendDm,
+  getDmHistory,
+  markDmRead,
+  getDmConversations,
+  getTotalUnreadDmCount,
   pool,
 };

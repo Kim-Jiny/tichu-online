@@ -2617,8 +2617,12 @@ async function updateDeviceInfo(nickname, deviceInfo) {
   try {
     await client.query(
       `UPDATE tc_users
-       SET fcm_token = $2, device_platform = $3, device_model = $4,
-           os_version = $5, app_version = $6, last_ip = $7
+       SET fcm_token = COALESCE($2, fcm_token),
+           device_platform = COALESCE($3, device_platform),
+           device_model = COALESCE($4, device_model),
+           os_version = COALESCE($5, os_version),
+           app_version = COALESCE($6, app_version),
+           last_ip = COALESCE($7, last_ip)
        WHERE nickname = $1`,
       [
         nickname,

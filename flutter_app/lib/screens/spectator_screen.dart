@@ -1203,97 +1203,178 @@ class _SpectatorScreenState extends State<SpectatorScreen> {
 
   Widget _buildTrickArea(List currentTrick) {
     if (currentTrick.isEmpty) {
-      return const Center(
-        child: Text(
-          '새 트릭 시작',
-          style: TextStyle(color: Color(0xFF9A8E8A), fontSize: 14),
+      return Center(
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+          decoration: BoxDecoration(
+            color: Colors.white.withOpacity(0.6),
+            borderRadius: BorderRadius.circular(12),
+          ),
+          child: const Text(
+            '새 트릭 시작',
+            style: TextStyle(color: Color(0xFF9A8E8A), fontSize: 14),
+          ),
         ),
       );
     }
 
-    // Show only the latest play (same as game screen)
     final lastPlay = currentTrick.last;
     final playerName = lastPlay['playerName'] ?? '';
     final cards = (lastPlay['cards'] as List?) ?? [];
     final combo = lastPlay['combo'] ?? '';
 
+    // Alternate colors based on play index (even = blue, odd = pink)
+    final playIndex = currentTrick.length - 1;
+    final isBlue = playIndex % 2 == 0;
+    final bgColor = isBlue ? const Color(0xFFE3F0FF) : const Color(0xFFFFE8EC);
+    final borderColor = isBlue ? const Color(0xFFB3D4F7) : const Color(0xFFF5C0C8);
+    final nameColor = isBlue ? const Color(0xFF4A90D9) : const Color(0xFFD94A5A);
+
     return Center(
       child: Container(
-        padding: const EdgeInsets.all(8),
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
         decoration: BoxDecoration(
-          color: Colors.white.withOpacity(0.95),
+          color: bgColor,
           borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: const Color(0xFFE0D8D4)),
-          boxShadow: [
-            BoxShadow(
-              color: const Color(0xFFD9CCC8).withOpacity(0.35),
-              blurRadius: 8,
-              offset: const Offset(0, 3),
-            ),
-          ],
+          border: Border.all(color: borderColor),
         ),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Text(
-              playerName,
-              style: const TextStyle(
-                color: Color(0xFF5A4038),
-                fontSize: 11,
-                fontWeight: FontWeight.bold,
+            Text.rich(
+              TextSpan(
+                children: [
+                  TextSpan(
+                    text: playerName,
+                    style: TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.bold,
+                      color: nameColor,
+                    ),
+                  ),
+                  const TextSpan(
+                    text: '가 낸 패',
+                    style: TextStyle(fontSize: 12, color: Color(0xFF8A7A72)),
+                  ),
+                ],
               ),
             ),
             const SizedBox(height: 6),
-            LayoutBuilder(
-              builder: (context, constraints) {
-                final available = constraints.maxWidth.clamp(140.0, 260.0);
-                final count = cards.length;
-                final gap = 2.0;
-                final cardWidth =
-                    ((available - (count - 1) * gap) / count).clamp(24.0, 40.0);
-                final cardHeight = cardWidth * 1.5;
-
-                return SizedBox(
-                  width: available,
-                  height: cardHeight,
-                  child: SingleChildScrollView(
-                    scrollDirection: Axis.horizontal,
-                    physics: const BouncingScrollPhysics(),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: cards.map((cardId) {
-                        return Padding(
-                          padding: EdgeInsets.symmetric(horizontal: gap / 2),
-                          child: SizedBox(
-                            width: cardWidth,
-                            height: cardHeight,
-                            child: PlayingCard(
-                              cardId: cardId.toString(),
-                              width: cardWidth,
-                              height: cardHeight,
-                            ),
-                          ),
-                        );
-                      }).toList(),
-                    ),
-                  ),
-                );
-              },
-            ),
+            _buildOverlappedCards(cards),
             if (combo.isNotEmpty)
               Padding(
                 padding: const EdgeInsets.only(top: 4),
-                child: Text(
-                  combo,
-                  style: const TextStyle(
-                    color: Color(0xFF8A7E78),
-                    fontSize: 9,
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                  decoration: BoxDecoration(
+                    color: Colors.white.withOpacity(0.7),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Text(
+                    combo,
+                    style: const TextStyle(fontSize: 10, color: Color(0xFF8A7E78)),
                   ),
                 ),
               ),
           ],
         ),
       ),
+    );
+  }
+
+  Widget _buildOverlappedCards(List cards) {
+    const double cardW = 36;
+    const double cardH = 50;
+    const double minOverlap = 20;
+    const double maxOverlap = 30;
+
+    if (cards.length <= 4) {
+      return Wrap(
+        alignment: WrapAlignment.center,
+        spacing: 3,
+        children: cards
+            .map((cardId) => PlayingCard(
+                  cardId: cardId.toString(),
+                  width: cardW,
+                  height: cardH,
+                  isInteractive: false,
+                ))
+            .toList(),
+      );
+    }
+
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final availableWidth = constraints.maxWidth - 16;
+        final neededOverlap = cards.length > 1
+            ? (availableWidth - cardW) / (cards.length - 1)
+            : availableWidth;
+
+        if (neededOverlap >= minOverlap) {
+          final overlap = neededOverlap.clamp(minOverlap, maxOverlap);
+          final totalWidth = cardW + overlap * (cards.length - 1);
+          return Center(
+            child: SizedBox(
+              width: totalWidth,
+              height: cardH,
+              child: Stack(
+                clipBehavior: Clip.none,
+                children: [
+                  for (int i = 0; i < cards.length; i++)
+                    Positioned(
+                      left: i * overlap,
+                      child: PlayingCard(
+                        cardId: cards[i].toString(),
+                        width: cardW,
+                        height: cardH,
+                        isInteractive: false,
+                      ),
+                    ),
+                ],
+              ),
+            ),
+          );
+        }
+
+        final mid = (cards.length + 1) ~/ 2;
+        final row1 = cards.sublist(0, mid);
+        final row2 = cards.sublist(mid);
+
+        Widget buildRow(List rowCards) {
+          final overlap = rowCards.length > 1
+              ? ((availableWidth - cardW) / (rowCards.length - 1)).clamp(minOverlap, maxOverlap)
+              : 0.0;
+          final totalWidth = cardW + overlap * (rowCards.length - 1);
+          return SizedBox(
+            width: totalWidth,
+            height: cardH,
+            child: Stack(
+              clipBehavior: Clip.none,
+              children: [
+                for (int i = 0; i < rowCards.length; i++)
+                  Positioned(
+                    left: i * overlap,
+                    child: PlayingCard(
+                      cardId: rowCards[i].toString(),
+                      width: cardW,
+                      height: cardH,
+                      isInteractive: false,
+                    ),
+                  ),
+              ],
+            ),
+          );
+        }
+
+        return Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            buildRow(row1),
+            const SizedBox(height: 4),
+            buildRow(row2),
+          ],
+        );
+      },
     );
   }
 }

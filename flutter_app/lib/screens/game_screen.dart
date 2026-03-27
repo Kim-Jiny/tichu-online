@@ -1958,7 +1958,27 @@ class _GameScreenState extends State<GameScreen> {
                     child: const Text('거부'),
                   ),
                 ),
-                const SizedBox(width: 12),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: OutlinedButton(
+                    onPressed: () {
+                      game.autoRejectCardView = true;
+                      // Reject all pending requests
+                      for (final req in List.from(game.incomingCardViewRequests)) {
+                        game.respondCardViewRequest(req['spectatorId'] ?? '', false);
+                      }
+                      game.incomingCardViewRequests.clear();
+                      game.notifyListeners();
+                    },
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: const Color(0xFF999999),
+                      side: const BorderSide(color: Color(0xFFCCCCCC)),
+                      padding: const EdgeInsets.symmetric(vertical: 10),
+                    ),
+                    child: const Text('항상거절', style: TextStyle(fontSize: 13)),
+                  ),
+                ),
+                const SizedBox(width: 8),
                 Expanded(
                   child: ElevatedButton(
                     onPressed: () => game.respondCardViewRequest(spectatorId, true),

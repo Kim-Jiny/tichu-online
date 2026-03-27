@@ -48,6 +48,7 @@ class GameService extends ChangeNotifier {
 
   // Incoming card view requests (for players)
   List<Map<String, String>> incomingCardViewRequests = []; // [{spectatorId, spectatorNickname}]
+  bool autoRejectCardView = false; // 패 보기 요청 항상 거절
 
   // Spectators currently viewing my cards
   List<Map<String, String>> cardViewers = []; // [{id, nickname}]
@@ -414,12 +415,17 @@ class GameService extends ChangeNotifier {
         final spectatorId = data['spectatorId'] as String?;
         final spectatorNickname = data['spectatorNickname'] as String?;
         if (spectatorId != null && spectatorNickname != null) {
-          // Remove duplicate if exists
-          incomingCardViewRequests.removeWhere((r) => r['spectatorId'] == spectatorId);
-          incomingCardViewRequests.add({
-            'spectatorId': spectatorId,
-            'spectatorNickname': spectatorNickname,
-          });
+          if (autoRejectCardView) {
+            // Auto-reject
+            respondCardViewRequest(spectatorId, false);
+          } else {
+            // Remove duplicate if exists
+            incomingCardViewRequests.removeWhere((r) => r['spectatorId'] == spectatorId);
+            incomingCardViewRequests.add({
+              'spectatorId': spectatorId,
+              'spectatorNickname': spectatorNickname,
+            });
+          }
         }
         notifyListeners();
         break;
@@ -1366,6 +1372,7 @@ class GameService extends ChangeNotifier {
     pendingCardViewRequests = {};
     approvedCardViews = {};
     incomingCardViewRequests = [];
+    autoRejectCardView = false;
     cardViewers = [];
     spectators = [];
     chatMessages = [];

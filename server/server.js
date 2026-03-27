@@ -2369,6 +2369,35 @@ async function handleGetRankings(ws, data) {
     return;
   }
   const result = await getCurrentSeasonRankings(50);
+  // Calculate requester's rank
+  if (ws.nickname && result.success) {
+    const { pool } = require('./db/database');
+    try {
+      const myRankRes = await pool.query(
+        `SELECT COUNT(*) + 1 AS rank FROM tc_users
+         WHERE season_rating > (SELECT season_rating FROM tc_users WHERE nickname = $1)
+            OR (season_rating = (SELECT season_rating FROM tc_users WHERE nickname = $1)
+                AND season_wins > (SELECT season_wins FROM tc_users WHERE nickname = $1))`,
+        [ws.nickname]
+      );
+      const myProfileRes = await pool.query(
+        `SELECT u.nickname, u.season_rating AS rating, u.season_wins AS wins,
+                u.season_losses AS losses, u.season_games AS total_games,
+                CASE WHEN u.season_games > 0
+                  THEN ROUND((u.season_wins::FLOAT / u.season_games) * 100)
+                  ELSE 0 END AS win_rate,
+                e.banner_key
+         FROM tc_users u
+         LEFT JOIN tc_user_equips e ON e.nickname = u.nickname
+         WHERE u.nickname = $1`,
+        [ws.nickname]
+      );
+      if (myProfileRes.rows.length > 0) {
+        result.myRank = parseInt(myRankRes.rows[0].rank);
+        result.myRankData = myProfileRes.rows[0];
+      }
+    } catch (_) {}
+  }
   sendTo(ws, { type: 'rankings_result', ...result });
 }
 

@@ -189,12 +189,111 @@ class _RankingScreenState extends State<RankingScreen> {
 
     return ListView.separated(
       padding: const EdgeInsets.fromLTRB(16, 8, 16, 20),
-      itemCount: game.rankings.length,
+      itemCount: game.rankings.length + (game.myRankData != null ? 1 : 0),
       separatorBuilder: (_, __) => const SizedBox(height: 8),
       itemBuilder: (context, index) {
-        final row = game.rankings[index];
-        return _buildRankItem(index + 1, row);
+        // First item: my rank card
+        if (game.myRankData != null && index == 0) {
+          return _buildMyRankCard(game);
+        }
+        final rankIndex = game.myRankData != null ? index - 1 : index;
+        final row = game.rankings[rankIndex];
+        return _buildRankItem(rankIndex + 1, row);
       },
+    );
+  }
+
+  Widget _buildMyRankCard(GameService game) {
+    final data = game.myRankData!;
+    final rank = game.myRank ?? 0;
+    final nickname = data['nickname']?.toString() ?? '';
+    final rating = data['rating'] ?? 0;
+    final wins = data['wins'] ?? 0;
+    final losses = data['losses'] ?? 0;
+    final total = data['total_games'] ?? 0;
+    final winRate = data['win_rate'] ?? 0;
+
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        gradient: const LinearGradient(
+          colors: [Color(0xFFEDE7F6), Color(0xFFF3E5F5)],
+        ),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: const Color(0xFFCE93D8)),
+      ),
+      child: Row(
+        children: [
+          Container(
+            width: 40,
+            height: 40,
+            alignment: Alignment.center,
+            decoration: const BoxDecoration(
+              color: Color(0xFF7E57C2),
+              shape: BoxShape.circle,
+            ),
+            child: Text(
+              '$rank',
+              style: const TextStyle(
+                fontWeight: FontWeight.bold,
+                color: Colors.white,
+                fontSize: 14,
+              ),
+            ),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Text(
+                      nickname,
+                      style: const TextStyle(
+                        fontSize: 15,
+                        fontWeight: FontWeight.bold,
+                        color: Color(0xFF5A4038),
+                      ),
+                    ),
+                    const SizedBox(width: 6),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFF7E57C2),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: const Text(
+                        'ME',
+                        style: TextStyle(fontSize: 10, color: Colors.white, fontWeight: FontWeight.bold),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  '전적 $total전 $wins승 $losses패 · 승률 $winRate%',
+                  style: const TextStyle(fontSize: 12, color: Color(0xFF8A7A72)),
+                ),
+              ],
+            ),
+          ),
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.end,
+            children: [
+              const Text('시즌점수', style: TextStyle(fontSize: 11, color: Color(0xFF9A8E8A))),
+              Text(
+                '$rating',
+                style: const TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                  color: Color(0xFF4A4080),
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
     );
   }
 

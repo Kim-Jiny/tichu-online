@@ -88,6 +88,8 @@ class GameService extends ChangeNotifier {
   List<Map<String, dynamic>> rankings = [];
   bool rankingsLoading = false;
   String? rankingsError;
+  int? myRank;
+  Map<String, dynamic>? myRankData;
   List<Map<String, dynamic>> seasons = [];
 
   // Shop
@@ -854,6 +856,10 @@ class GameService extends ChangeNotifier {
           final list = data['rankings'] as List? ?? [];
           rankings = list.map((e) => Map<String, dynamic>.from(e)).toList();
           rankingsError = null;
+          myRank = data['myRank'] as int?;
+          myRankData = data['myRankData'] != null
+              ? Map<String, dynamic>.from(data['myRankData'] as Map)
+              : null;
         } else {
           rankingsError = data['message'] as String? ?? '랭킹을 불러오지 못했습니다';
         }

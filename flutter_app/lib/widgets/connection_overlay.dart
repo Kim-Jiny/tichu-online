@@ -21,6 +21,7 @@ class _ConnectionOverlayState extends State<ConnectionOverlay>
   bool _reconnecting = false;
   bool _failed = false;
   NetworkService? _networkService; // C1: Cache reference for dispose
+  DateTime? _pausedAt; // Track when app was backgrounded
 
   @override
   void initState() {
@@ -47,9 +48,22 @@ class _ConnectionOverlayState extends State<ConnectionOverlay>
 
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
-    if (state == AppLifecycleState.resumed) {
+    if (state == AppLifecycleState.paused || state == AppLifecycleState.inactive) {
+      _pausedAt ??= DateTime.now();
+    } else if (state == AppLifecycleState.resumed) {
       final network = context.read<NetworkService>();
-      if (!network.isConnected && !_reconnecting) {
+      final wasPausedLong = _pausedAt != null &&
+          DateTime.now().difference(_pausedAt!).inSeconds >= 2;
+      _pausedAt = null;
+
+      if (_reconnecting) return;
+
+      if (network.isConnected && wasPausedLong) {
+        // Android: WebSocket may be silently dead after backgrounding.
+        // Force disconnect and reconnect to avoid long TCP timeout wait.
+        network.disconnect();
+        _startReconnect();
+      } else if (!network.isConnected) {
         _startReconnect();
       }
     }

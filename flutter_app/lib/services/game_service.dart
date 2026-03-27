@@ -457,7 +457,7 @@ class GameService extends ChangeNotifier {
         roomPlayers = [null, null, null, null];
         isHost = false;
         isRankedRoom = false;
-    roomTurnTimeLimit = 30;
+        roomTurnTimeLimit = 30;
         roomTargetScore = 1000;
         isSpectator = false;
         spectatorGameState = null;

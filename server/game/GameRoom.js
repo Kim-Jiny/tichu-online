@@ -426,7 +426,8 @@ class GameRoom {
     }
     const playerNames = {};
     this.players.forEach((p) => (playerNames[p.id] = p.nickname));
-    this.game = new TichuGame(playerIds, playerNames, this.targetScore);
+    this.game = new TichuGame(playerIds, playerNames);
+    this.game.targetScore = this.targetScore;
     this.game.start();
     console.log(`Game started in room ${this.name}`);
     return true;

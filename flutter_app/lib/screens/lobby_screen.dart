@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:io';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import '../services/game_service.dart';
 import '../services/network_service.dart';
@@ -1305,6 +1306,7 @@ class _LobbyScreenState extends State<LobbyScreen> {
                         if (isRanked) {
                           isPrivate = false;
                           passwordController.clear();
+                          targetScoreController.text = '1000';
                         }
                       }),
                     ),
@@ -1327,10 +1329,14 @@ class _LobbyScreenState extends State<LobbyScreen> {
                       child: TextField(
                         controller: timeLimitController,
                         keyboardType: TextInputType.number,
+                        inputFormatters: [
+                          FilteringTextInputFormatter.digitsOnly,
+                          LengthLimitingTextInputFormatter(3),
+                        ],
                         textAlign: TextAlign.center,
                         decoration: InputDecoration(
                           suffixText: '초',
-                          hintText: '10~300',
+                          hintText: '10~999',
                           filled: true,
                           fillColor: themeColors.first.withValues(alpha: 0.35),
                           isDense: true,
@@ -1352,7 +1358,6 @@ class _LobbyScreenState extends State<LobbyScreen> {
                     ),
                   ],
                 ),
-                if (!isRanked) ...[
                 const SizedBox(height: 8),
                 Row(
                   children: [
@@ -1361,11 +1366,16 @@ class _LobbyScreenState extends State<LobbyScreen> {
                     Expanded(
                       child: TextField(
                         controller: targetScoreController,
+                        enabled: !isRanked,
                         keyboardType: TextInputType.number,
+                        inputFormatters: [
+                          FilteringTextInputFormatter.digitsOnly,
+                          LengthLimitingTextInputFormatter(5),
+                        ],
                         textAlign: TextAlign.center,
                         decoration: InputDecoration(
                           suffixText: '점',
-                          hintText: '100~2000',
+                          hintText: isRanked ? '1000 (고정)' : '100~20000',
                           filled: true,
                           fillColor: themeColors.first.withValues(alpha: 0.35),
                           isDense: true,
@@ -1387,7 +1397,14 @@ class _LobbyScreenState extends State<LobbyScreen> {
                     ),
                   ],
                 ),
-                ],
+                if (!isRanked)
+                  const Align(
+                    alignment: Alignment.centerLeft,
+                    child: Text(
+                      '100~20000점 사이로 설정할 수 있습니다',
+                      style: TextStyle(fontSize: 11, color: Color(0xFF9A8E8A)),
+                    ),
+                  ),
                 if (errorText != null) ...[
                   const SizedBox(height: 8),
                   Align(
@@ -1420,23 +1437,15 @@ class _LobbyScreenState extends State<LobbyScreen> {
                   : controller.text.trim();
               final password = passwordController.text.trim();
               if (name.isEmpty) {
-                setState(() => errorText = '방 이름을 입력해줘.');
+                setState(() => errorText = '방 이름을 입력해주세요.');
                 return;
               }
               if (isPrivate && password.length < 4) {
-                setState(() => errorText = '비밀번호는 4자 이상이야.');
+                setState(() => errorText = '비밀번호는 4자 이상이어야 합니다.');
                 return;
               }
-              final turnTimeLimit = int.tryParse(timeLimitController.text.trim()) ?? 30;
-              if (turnTimeLimit < 10 || turnTimeLimit > 300) {
-                setState(() => errorText = '시간 제한은 10~300초 사이로 입력해줘.');
-                return;
-              }
-              final targetScore = isRanked ? 1000 : (int.tryParse(targetScoreController.text.trim()) ?? 1000);
-              if (!isRanked && (targetScore < 100 || targetScore > 2000)) {
-                setState(() => errorText = '목표 점수는 100~2000 사이로 입력해줘.');
-                return;
-              }
+              final turnTimeLimit = (int.tryParse(timeLimitController.text.trim()) ?? 30).clamp(10, 999);
+              final targetScore = isRanked ? 1000 : (int.tryParse(targetScoreController.text.trim()) ?? 1000).clamp(100, 20000);
               context
                   .read<GameService>()
                   .createRoom(
@@ -2318,6 +2327,8 @@ class _LobbyScreenState extends State<LobbyScreen> {
                         fontWeight: FontWeight.w500,
                         color: Color(0xFF5A4038),
                       ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
                     ),
                     const SizedBox(height: 2),
                     Text(
@@ -2522,7 +2533,7 @@ class _LobbyScreenState extends State<LobbyScreen> {
                         overflow: TextOverflow.ellipsis,
                       ),
                     ),
-                    // Turn time limit
+                    // Turn time limit & target score
                     Container(
                       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                       margin: const EdgeInsets.only(right: 8),
@@ -2531,7 +2542,7 @@ class _LobbyScreenState extends State<LobbyScreen> {
                         borderRadius: BorderRadius.circular(10),
                       ),
                       child: Text(
-                        '${game.roomTurnTimeLimit}초',
+                        '${game.roomTurnTimeLimit}초 · ${game.roomTargetScore}점',
                         style: const TextStyle(
                           fontSize: 12,
                           color: Color(0xFF8A7A72),

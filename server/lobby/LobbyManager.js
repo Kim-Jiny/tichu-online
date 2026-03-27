@@ -47,7 +47,7 @@ class LobbyManager {
   getSpectatableRooms() {
     const list = [];
     for (const [id, room] of this.rooms) {
-      if (room.game) {
+      if (room.game && room.getHumanPlayerCount() >= 2) {
         list.push({
           id: room.id,
           name: room.name,

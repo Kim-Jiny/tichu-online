@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:io' show Platform;
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -64,9 +65,18 @@ class _ConnectionOverlayState extends State<ConnectionOverlay>
         _reconnecting = false;
       }
 
-      network.disconnect();
-      if (wasPausedLong || !network.isConnected) {
-        _startReconnect();
+      if (Platform.isAndroid) {
+        // Android kills WebSocket in background, so always force reconnect
+        network.disconnect();
+        if (wasPausedLong || !network.isConnected) {
+          _startReconnect();
+        }
+      } else {
+        // iOS keeps WebSocket alive in short background periods
+        // Only reconnect if the connection is actually broken
+        if (!network.isConnected) {
+          _startReconnect();
+        }
       }
     }
   }

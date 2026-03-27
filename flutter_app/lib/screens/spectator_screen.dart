@@ -1023,8 +1023,7 @@ class _SpectatorScreenState extends State<SpectatorScreen> {
       _lastChatMessageCount = game.chatMessages.length;
       _scrollChatToBottom();
     }
-    final bottomInset = MediaQuery.of(context).viewInsets.bottom;
-    final maxHeight = MediaQuery.of(context).size.height - bottomInset - 120;
+    final maxHeight = MediaQuery.of(context).size.height - 120;
     final panelHeight = maxHeight < 240
         ? 240.0
         : (maxHeight < 350 ? maxHeight : 350.0);
@@ -1033,8 +1032,7 @@ class _SpectatorScreenState extends State<SpectatorScreen> {
       duration: const Duration(milliseconds: 180),
       curve: Curves.easeOut,
       right: 8,
-      top: bottomInset > 0 ? null : 50,
-      bottom: bottomInset > 0 ? 8 + bottomInset : null,
+      top: 50,
       width: 280,
       height: panelHeight,
       child: Container(

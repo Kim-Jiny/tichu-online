@@ -134,16 +134,13 @@ class _ConnectionOverlayState extends State<ConnectionOverlay>
     if (!mounted) return;
 
     if (loggedIn) {
-      // C3+C4: Wait for server to confirm reconnection instead of using fixed delay
-      // Server sends 'reconnected' if room still exists, or room_list if not
       final staleRoomId = game.currentRoomId;
       if (staleRoomId.isNotEmpty) {
-        // Clear stale roomId so we can detect server's 'reconnected' message
+        // Clear stale roomId BEFORE waiting so we can detect server's 'reconnected' message
         game.currentRoomId = '';
         final completer = Completer<void>();
         void listener() {
           if (completer.isCompleted) return;
-          // 'reconnected' sets currentRoomId, 'room_list' populates roomList
           if (game.currentRoomId.isNotEmpty || game.roomList.isNotEmpty) {
             completer.complete();
           }
@@ -157,9 +154,35 @@ class _ConnectionOverlayState extends State<ConnectionOverlay>
           game.removeListener(listener);
         }
       }
+
+      // Always request fresh data after reconnection
       game.requestRoomList();
       game.requestSpectatableRooms();
       game.requestBlockedUsers();
+      game.requestFriends();
+      game.requestPendingFriendRequests();
+      game.requestDmConversations();
+      game.requestUnreadDmCount();
+
+      // Wait briefly for room list to arrive
+      if (game.roomList.isEmpty) {
+        final roomCompleter = Completer<void>();
+        void roomListener() {
+          if (roomCompleter.isCompleted) return;
+          if (game.roomList.isNotEmpty) {
+            roomCompleter.complete();
+          }
+        }
+        game.addListener(roomListener);
+        try {
+          await roomCompleter.future.timeout(const Duration(seconds: 2));
+        } catch (_) {
+          // Timeout is OK - maybe there are no rooms
+        } finally {
+          game.removeListener(roomListener);
+        }
+      }
+
       setState(() {
         _showOverlay = false;
         _reconnecting = false;

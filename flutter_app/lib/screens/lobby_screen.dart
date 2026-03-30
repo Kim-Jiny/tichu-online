@@ -71,9 +71,13 @@ class _LobbyScreenState extends State<LobbyScreen> {
       _wasDisconnected = true;
     } else if (_wasDisconnected && network.isConnected) {
       _wasDisconnected = false;
-      // Reconnected - check if room still exists
+      final game = context.read<GameService>();
       if (_inRoom) {
-        context.read<GameService>().checkRoom();
+        game.checkRoom();
+      } else {
+        // Reload room list after reconnection
+        game.requestRoomList();
+        game.requestSpectatableRooms();
       }
     }
   }

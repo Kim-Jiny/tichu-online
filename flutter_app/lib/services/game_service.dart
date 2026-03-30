@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:io' show Platform;
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
@@ -284,6 +285,8 @@ class GameService extends ChangeNotifier {
           'enabled': pushEnabled,
           'friendInvite': pushFriendInviteEnabled,
         });
+        // Async FCM token update - don't block login
+        _sendFcmTokenAsync();
         notifyListeners();
         break;
 
@@ -1706,6 +1709,27 @@ class GameService extends ChangeNotifier {
     inquiriesError = null;
     notifyListeners();
     _network.send({'type': 'get_inquiries'});
+  }
+
+  // Send FCM token to server asynchronously after login
+  Future<void> _sendFcmTokenAsync() async {
+    try {
+      final messaging = FirebaseMessaging.instance;
+      // iOS: wait for APNs token first
+      if (Platform.isIOS) {
+        for (int i = 0; i < 30; i++) {
+          final apns = await messaging.getAPNSToken();
+          if (apns != null) break;
+          await Future.delayed(const Duration(milliseconds: 1000));
+        }
+      }
+      final token = await messaging.getToken().timeout(const Duration(seconds: 15));
+      if (token != null && playerId.isNotEmpty) {
+        _network.send({'type': 'update_fcm_token', 'fcmToken': token});
+      }
+    } catch (e) {
+      debugPrint('[FCM] Failed to get token: $e');
+    }
   }
 
   Future<void> _loadPushPrefs() async {

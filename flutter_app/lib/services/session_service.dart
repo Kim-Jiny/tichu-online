@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import 'auth_service.dart';
@@ -22,13 +23,15 @@ class SessionAuthResult {
       : this._(SessionAuthStatus.failed, error);
 }
 
-class SessionService {
+class SessionService extends ChangeNotifier {
   SessionService(this._network, this._game);
 
   final NetworkService _network;
   final GameService _game;
 
   bool _restoreInProgress = false;
+
+  bool get isRestoring => _restoreInProgress;
 
   Future<void> ensureConnected([String? url]) async {
     if (_network.isConnected || _network.isConnecting) return;
@@ -99,7 +102,7 @@ class SessionService {
 
   Future<bool> restoreSavedSession() async {
     if (_restoreInProgress) return false;
-    _restoreInProgress = true;
+    _setRestoring(true);
     try {
       final savedProvider = await AuthService.getSavedProvider();
       if (savedProvider != null) {
@@ -139,7 +142,7 @@ class SessionService {
 
       return false;
     } finally {
-      _restoreInProgress = false;
+      _setRestoring(false);
     }
   }
 
@@ -275,5 +278,11 @@ class SessionService {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString('saved_username', username);
     await prefs.setString('saved_password', password);
+  }
+
+  void _setRestoring(bool value) {
+    if (_restoreInProgress == value) return;
+    _restoreInProgress = value;
+    notifyListeners();
   }
 }

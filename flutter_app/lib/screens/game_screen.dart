@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../services/game_service.dart';
 import '../services/network_service.dart';
+import '../services/session_service.dart';
 import '../models/game_state.dart';
 import '../models/player.dart';
 import '../widgets/playing_card.dart';
@@ -235,6 +236,7 @@ class _GameScreenState extends State<GameScreen> {
     _s = (screenW / 400).clamp(0.8, 1.0);
     _maxNameLen = screenW < 370 ? 3 : 4;
     final themeColors = context.watch<GameService>().themeGradient;
+    final session = context.watch<SessionService>();
     return ConnectionOverlay(
       child: Scaffold(
         resizeToAvoidBottomInset: false,
@@ -250,6 +252,10 @@ class _GameScreenState extends State<GameScreen> {
             child: Consumer<GameService>(
               builder: (context, game, _) {
                 // Room closed - go back to lobby
+                if (session.isRestoring) {
+                  return const Center(child: CircularProgressIndicator());
+                }
+
                 if (game.currentRoomId.isEmpty && !_leavingGame) {
                   _leavingGame = true;
                   WidgetsBinding.instance.addPostFrameCallback((_) {

@@ -49,7 +49,7 @@ class TichuApp extends StatelessWidget {
           update: (context, network, previous) =>
               previous ?? GameService(network),
         ),
-        Provider(
+        ChangeNotifierProvider(
           create: (context) => SessionService(
             context.read<NetworkService>(),
             context.read<GameService>(),

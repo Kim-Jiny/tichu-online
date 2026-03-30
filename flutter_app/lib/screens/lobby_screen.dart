@@ -1476,6 +1476,7 @@ class _LobbyScreenState extends State<LobbyScreen> {
   @override
   Widget build(BuildContext context) {
     final themeColors = context.watch<GameService>().themeGradient;
+    final session = context.watch<SessionService>();
     return ConnectionOverlay(
       child: Scaffold(
         body: Container(
@@ -1530,7 +1531,9 @@ class _LobbyScreenState extends State<LobbyScreen> {
               }
 
               // Check if spectating
-              if (game.isSpectator && game.currentRoomId.isNotEmpty) {
+              if (!session.isRestoring &&
+                  game.isSpectator &&
+                  game.currentRoomId.isNotEmpty) {
                 if (!_navigatingToGame) {
                   _navigatingToGame = true;
                   WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -1544,7 +1547,8 @@ class _LobbyScreenState extends State<LobbyScreen> {
               }
 
               // Check if game started
-              if (game.currentRoomId.isNotEmpty &&
+              if (!session.isRestoring &&
+                  game.currentRoomId.isNotEmpty &&
                   game.gameState != null &&
                   game.gameState!.phase.isNotEmpty &&
                   game.gameState!.phase != 'waiting' &&

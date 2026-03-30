@@ -838,7 +838,12 @@ function followTrick(state, cards, normalCards, combos) {
     const finishPlay = findFinishingPlay(comboType, lastValue, lastLength, cards, normalCards, combos);
     if (finishPlay) return { type: 'play_cards', cards: finishPlay };
 
-    return { type: 'pass' };
+    // If partner already finished, play normally instead of passing
+    if (partner && partner.hasFinished) {
+      // Fall through to normal play logic
+    } else {
+      return { type: 'pass' };
+    }
   }
 
   // === BOMB CHECK ===

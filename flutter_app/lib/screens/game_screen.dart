@@ -325,6 +325,26 @@ class _GameScreenState extends State<GameScreen> {
                         child: _buildMiddleArea(state, game),
                       ),
 
+                      // Card exchange above hand
+                      if (state.phase == 'card_exchange' && !state.exchangeDone)
+                        Padding(
+                          padding: const EdgeInsets.only(bottom: 12),
+                          child: _buildExchangeInline(state, game),
+                        ),
+
+                      // Dragon given banner above hand
+                      if (game.dragonGivenMessage != null)
+                        Padding(
+                          padding: const EdgeInsets.only(bottom: 8),
+                          child: _buildDragonGivenInline(game.dragonGivenMessage!),
+                        ),
+
+                      // Small tichu button above hand
+                      if (state.canDeclareSmallTichu &&
+                          state.phase != 'card_exchange' &&
+                          !state.players.any((p) => p.position == 'self' && p.hasLargeTichu))
+                        _buildSmallTichuInline(game),
+
                       // Bottom area - my hand
                       _buildBottomArea(state, game),
                     ],
@@ -335,8 +355,6 @@ class _GameScreenState extends State<GameScreen> {
                       !state.largeTichuResponded)
                     _buildLargeTichuDialog(game),
 
-                  if (state.phase == 'card_exchange' && !state.exchangeDone)
-                    _buildExchangeDialog(state, game),
 
                   if (state.dragonPending) _buildDragonDialog(state, game),
 
@@ -344,10 +362,6 @@ class _GameScreenState extends State<GameScreen> {
 
                   if (state.phase == 'round_end' || state.phase == 'game_end')
                     _buildRoundEndDialog(state, game),
-
-                  // Dragon given banner
-                  if (game.dragonGivenMessage != null)
-                    _buildDragonGivenBanner(game.dragonGivenMessage!),
 
                   // Timeout banner
                   if (game.timeoutPlayerName != null)
@@ -3226,45 +3240,6 @@ class _GameScreenState extends State<GameScreen> {
                 ),
                 child: const Text('패스'),
               ),
-              const SizedBox(width: 12),
-              if (state.canDeclareSmallTichu &&
-                  !state.players.any((p) => p.hasLargeTichu))
-                ElevatedButton(
-                  onPressed: () {
-                    showDialog(
-                      context: context,
-                      builder: (ctx) => AlertDialog(
-                        title: const Text('스몰티츄 선언'),
-                        content: const Text('스몰티츄를 선언하시겠습니까?\n성공 시 +100점, 실패 시 -100점'),
-                        actions: [
-                          TextButton(
-                            onPressed: () => Navigator.of(ctx).pop(),
-                            child: const Text('취소'),
-                          ),
-                          ElevatedButton(
-                            onPressed: () {
-                              Navigator.of(ctx).pop();
-                              game.declareSmallTichu();
-                            },
-                            child: const Text('선언'),
-                          ),
-                        ],
-                      ),
-                    );
-                  },
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFFFFE4B5),
-                    foregroundColor: const Color(0xFF8B6914),
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 16,
-                      vertical: 12,
-                    ),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(16),
-                    ),
-                  ),
-                  child: const Text('스몰티츄'),
-                ),
             ],
           ),
         ],
@@ -3322,6 +3297,45 @@ class _GameScreenState extends State<GameScreen> {
     );
   }
 
+  Widget _buildSmallTichuInline(GameService game) {
+    return Container(
+      padding: const EdgeInsets.symmetric(vertical: 4),
+      child: ElevatedButton(
+        onPressed: () {
+          showDialog(
+            context: context,
+            builder: (ctx) => AlertDialog(
+              title: const Text('스몰티츄 선언'),
+              content: const Text('스몰티츄를 선언하시겠습니까?\n성공 시 +100점, 실패 시 -100점'),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.of(ctx).pop(),
+                  child: const Text('취소'),
+                ),
+                ElevatedButton(
+                  onPressed: () {
+                    Navigator.of(ctx).pop();
+                    game.declareSmallTichu();
+                  },
+                  child: const Text('선언'),
+                ),
+              ],
+            ),
+          );
+        },
+        style: ElevatedButton.styleFrom(
+          backgroundColor: const Color(0xFFFFE4B5),
+          foregroundColor: const Color(0xFF8B6914),
+          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 6),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+          ),
+        ),
+        child: const Text('스몰티츄 선언', style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold)),
+      ),
+    );
+  }
+
   Widget _buildExchangeDialog(GameStateData state, GameService game) {
     final left = _firstWhereOrNull(state.players, (p) => p.position == 'left');
     final partner = _firstWhereOrNull(state.players, (p) => p.position == 'partner');
@@ -3330,103 +3344,102 @@ class _GameScreenState extends State<GameScreen> {
     final selectedCard = _selectedCards.isNotEmpty ? _selectedCards.first : null;
     final assignedCount = _exchangeAssignments.length;
 
-    return Positioned(
-      bottom: 280,
-      left: 0,
-      right: 0,
-      child: Container(
-        margin: const EdgeInsets.symmetric(horizontal: 12),
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(16),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withOpacity(0.15),
-              blurRadius: 10,
-              offset: const Offset(0, 4),
-            ),
-          ],
-        ),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Text(
-                  selectedCard != null ? '카드를 줄 상대 선택' : '교환할 카드 선택 ($assignedCount/3)',
-                  style: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold),
-                ),
-                if (_exchangeAssignments.isNotEmpty) ...[
-                  const SizedBox(width: 6),
-                  SizedBox(
-                    height: 28,
-                    child: TextButton(
-                      onPressed: () {
-                        setState(() {
-                          _exchangeAssignments.clear();
-                          _selectedCards.clear();
-                        });
-                      },
-                      style: TextButton.styleFrom(
-                        padding: const EdgeInsets.symmetric(horizontal: 8),
-                        minimumSize: Size.zero,
-                        tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                      ),
-                      child: const Text('초기화', style: TextStyle(fontSize: 12)),
-                    ),
-                  ),
-                ],
+    return Container(
+      margin: const EdgeInsets.symmetric(horizontal: 12),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.15),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Text(
+                selectedCard != null ? '카드를 줄 상대 선택' : '교환할 카드 선택 ($assignedCount/3)',
+                style: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold),
+              ),
+              if (_exchangeAssignments.isNotEmpty) ...[
                 const SizedBox(width: 6),
                 SizedBox(
                   height: 28,
-                  child: ElevatedButton(
-                    onPressed: assignedCount == 3
-                        ? () {
-                            _exchangeGiven
-                              ..clear()
-                              ..addAll(_exchangeAssignments);
-                            _exchangeSummaryShown = false;
-                            game.exchangeCards(
-                              _exchangeAssignments['left']!,
-                              _exchangeAssignments['partner']!,
-                              _exchangeAssignments['right']!,
-                            );
-                            setState(() {
-                              _exchangeSubmitted = true;
-                              _exchangeAssignments.clear();
-                              _selectedCards.clear();
-                            });
-                          }
-                        : null,
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: const Color(0xFFC7E6D0),
-                      foregroundColor: const Color(0xFF3A5A40),
-                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 0),
+                  child: TextButton(
+                    onPressed: () {
+                      setState(() {
+                        _exchangeAssignments.clear();
+                        _selectedCards.clear();
+                      });
+                    },
+                    style: TextButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(horizontal: 8),
                       minimumSize: Size.zero,
                       tapTargetSize: MaterialTapTargetSize.shrinkWrap,
                     ),
-                    child: const Text('교환 완료', style: TextStyle(fontSize: 12)),
+                    child: const Text('초기화', style: TextStyle(fontSize: 12)),
                   ),
                 ),
               ],
-            ),
-            const SizedBox(height: 6),
-            Wrap(
-              alignment: WrapAlignment.center,
-              spacing: 8,
-              runSpacing: 8,
-              children: [
-                _buildExchangeButton('left', left?.name ?? '좌측', selectedCard),
-                _buildExchangeButton('partner', partner?.name ?? '파트너', selectedCard),
-                _buildExchangeButton('right', right?.name ?? '우측', selectedCard),
-              ],
-            ),
-          ],
-        ),
+              const SizedBox(width: 6),
+              SizedBox(
+                height: 28,
+                child: ElevatedButton(
+                  onPressed: assignedCount == 3
+                      ? () {
+                          _exchangeGiven
+                            ..clear()
+                            ..addAll(_exchangeAssignments);
+                          _exchangeSummaryShown = false;
+                          game.exchangeCards(
+                            _exchangeAssignments['left']!,
+                            _exchangeAssignments['partner']!,
+                            _exchangeAssignments['right']!,
+                          );
+                          setState(() {
+                            _exchangeSubmitted = true;
+                            _exchangeAssignments.clear();
+                            _selectedCards.clear();
+                          });
+                        }
+                      : null,
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFFC7E6D0),
+                    foregroundColor: const Color(0xFF3A5A40),
+                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 0),
+                    minimumSize: Size.zero,
+                    tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                  ),
+                  child: const Text('교환 완료', style: TextStyle(fontSize: 12)),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 6),
+          Wrap(
+            alignment: WrapAlignment.center,
+            spacing: 8,
+            runSpacing: 8,
+            children: [
+              _buildExchangeButton('left', left?.name ?? '좌측', selectedCard),
+              _buildExchangeButton('partner', partner?.name ?? '파트너', selectedCard),
+              _buildExchangeButton('right', right?.name ?? '우측', selectedCard),
+            ],
+          ),
+        ],
       ),
     );
+  }
+
+  Widget _buildExchangeInline(GameStateData state, GameService game) {
+    return _buildExchangeDialog(state, game);
   }
 
   Widget _buildExchangeButton(String position, String name, String? selectedCard) {
@@ -3513,6 +3526,34 @@ class _GameScreenState extends State<GameScreen> {
                 child: Text(rightName),
               ),
             ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildDragonGivenInline(String message) {
+    return Container(
+      margin: const EdgeInsets.symmetric(horizontal: 24),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      decoration: BoxDecoration(
+        color: const Color(0xFFE8F5E9),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: const Color(0xFF66BB6A)),
+      ),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.center,
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          const Text('\u{1F409}', style: TextStyle(fontSize: 20)),
+          const SizedBox(width: 8),
+          Text(
+            message,
+            style: const TextStyle(
+              fontSize: 14,
+              fontWeight: FontWeight.bold,
+              color: Color(0xFF2E7D32),
+            ),
           ),
         ],
       ),

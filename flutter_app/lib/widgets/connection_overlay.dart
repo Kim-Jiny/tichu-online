@@ -90,6 +90,8 @@ class _ConnectionOverlayState extends State<ConnectionOverlay>
     }
   }
 
+  int _retryCount = 0;
+
   Future<void> _startReconnect() async {
     if (_reconnecting) return;
 
@@ -105,12 +107,24 @@ class _ConnectionOverlayState extends State<ConnectionOverlay>
     if (!mounted) return;
 
     if (success) {
+      _retryCount = 0;
       await _relogin();
     } else {
-      setState(() {
-        _reconnecting = false;
-        _failed = true;
-      });
+      _retryCount++;
+      if (_retryCount < 5) {
+        // Auto-retry after a delay
+        setState(() => _reconnecting = false);
+        await Future.delayed(Duration(seconds: _retryCount * 2));
+        if (mounted && _inForeground && !_reconnecting) {
+          _startReconnect();
+        }
+      } else {
+        // After 5 auto-retries, show manual retry button
+        setState(() {
+          _reconnecting = false;
+          _failed = true;
+        });
+      }
     }
   }
 
@@ -249,6 +263,7 @@ class _ConnectionOverlayState extends State<ConnectionOverlay>
   }
 
   void _retry() {
+    _retryCount = 0;
     setState(() {
       _failed = false;
     });

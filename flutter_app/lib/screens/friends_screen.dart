@@ -2,6 +2,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../services/game_service.dart';
+import 'ranking_screen.dart';
 
 class FriendsScreen extends StatefulWidget {
   const FriendsScreen({super.key});
@@ -396,6 +397,22 @@ class _FriendsScreenState extends State<FriendsScreen> with TickerProviderStateM
                     if (friend['roomId'] != null && game.currentRoomId.isEmpty)
                       _buildRoomActionChip(friend, game),
                     const SizedBox(width: 4),
+                    // Profile
+                    GestureDetector(
+                      onTap: () => Navigator.push(
+                        context,
+                        MaterialPageRoute(builder: (_) => ProfileViewScreen(nickname: nickname)),
+                      ),
+                      child: Container(
+                        padding: const EdgeInsets.all(6),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFE8EAF6),
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: const Icon(Icons.person, size: 14, color: Color(0xFF5C6BC0)),
+                      ),
+                    ),
+                    const SizedBox(width: 4),
                     // Remove friend
                     GestureDetector(
                       onTap: () => _showRemoveFriendConfirmation(nickname, game),
@@ -516,7 +533,12 @@ class _FriendsScreenState extends State<FriendsScreen> with TickerProviderStateM
                         final nickname = user['nickname'] as String? ?? '';
                         final friendStatus = user['friendStatus'] as String? ?? 'none';
 
-                        return Container(
+                        return GestureDetector(
+                          onTap: () => Navigator.push(
+                            context,
+                            MaterialPageRoute(builder: (_) => ProfileViewScreen(nickname: nickname)),
+                          ),
+                          child: Container(
                           padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
                           decoration: BoxDecoration(
                             color: Colors.white.withOpacity(0.85),
@@ -547,6 +569,7 @@ class _FriendsScreenState extends State<FriendsScreen> with TickerProviderStateM
                               _buildFriendStatusButton(nickname, friendStatus, game),
                             ],
                           ),
+                        ),
                         );
                       },
                     ),

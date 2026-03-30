@@ -3,8 +3,8 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 import '../services/game_service.dart';
-import '../services/network_service.dart';
 import '../services/auth_service.dart';
+import '../services/session_service.dart';
 import 'login_screen.dart';
 import '../services/ad_service.dart';
 import 'package:google_mobile_ads/google_mobile_ads.dart';
@@ -47,12 +47,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
     } catch (_) {}
   }
   void _logout() async {
-    final network = context.read<NetworkService>();
-    final game = context.read<GameService>();
-    network.disconnect();
-    game.reset();
-    await LoginScreen.clearSavedCredentials();
-    await AuthService.signOut();
+    await context.read<SessionService>().logout();
     if (!mounted) return;
     Navigator.pushReplacement(
       context,

@@ -6,6 +6,7 @@ import 'package:provider/provider.dart';
 import '../services/game_service.dart';
 import '../services/network_service.dart';
 import '../services/auth_service.dart';
+import '../services/session_service.dart';
 import '../models/player.dart';
 import '../models/room.dart';
 import 'game_screen.dart';
@@ -865,13 +866,7 @@ class _LobbyScreenState extends State<LobbyScreen> {
   }
 
   void _logout() async {
-    final network = context.read<NetworkService>();
-    final game = context.read<GameService>();
-    network.disconnect();
-    game.reset();
-    // Clear saved credentials and social auth
-    await LoginScreen.clearSavedCredentials();
-    await AuthService.signOut();
+    await context.read<SessionService>().logout();
     if (!mounted) return;
     Navigator.pushReplacement(
       context,
@@ -1499,16 +1494,15 @@ class _LobbyScreenState extends State<LobbyScreen> {
                 WidgetsBinding.instance.addPostFrameCallback((_) async {
                   if (!mounted) return;
                   game.duplicateLoginKicked = false;
-                  await LoginScreen.clearSavedCredentials();
-                  final network = context.read<NetworkService>();
-                  network.disconnect();
-                  game.reset();
+                  final session = context.read<SessionService>();
+                  final navigator = Navigator.of(context);
+                  final messenger = ScaffoldMessenger.of(context);
+                  await session.logout();
                   if (!mounted) return;
-                  Navigator.pushReplacement(
-                    context,
+                  navigator.pushReplacement(
                     MaterialPageRoute(builder: (_) => const LoginScreen()),
                   );
-                  ScaffoldMessenger.of(context).showSnackBar(
+                  messenger.showSnackBar(
                     const SnackBar(
                       content: Text('다른 기기에서 로그인되어 로그아웃되었습니다'),
                       backgroundColor: Colors.red,
@@ -1550,7 +1544,8 @@ class _LobbyScreenState extends State<LobbyScreen> {
               }
 
               // Check if game started
-              if (game.gameState != null &&
+              if (game.currentRoomId.isNotEmpty &&
+                  game.gameState != null &&
                   game.gameState!.phase.isNotEmpty &&
                   game.gameState!.phase != 'waiting' &&
                   game.gameState!.phase != 'game_end') {

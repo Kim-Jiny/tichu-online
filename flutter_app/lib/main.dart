@@ -9,6 +9,7 @@ import 'package:app_tracking_transparency/app_tracking_transparency.dart';
 import 'firebase_options.dart';
 import 'services/network_service.dart';
 import 'services/game_service.dart';
+import 'services/session_service.dart';
 import 'screens/login_screen.dart';
 
 void main() async {
@@ -47,6 +48,12 @@ class TichuApp extends StatelessWidget {
           create: (context) => GameService(context.read<NetworkService>()),
           update: (context, network, previous) =>
               previous ?? GameService(network),
+        ),
+        Provider(
+          create: (context) => SessionService(
+            context.read<NetworkService>(),
+            context.read<GameService>(),
+          ),
         ),
       ],
       child: MaterialApp(

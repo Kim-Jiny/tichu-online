@@ -46,6 +46,7 @@ class _GameScreenState extends State<GameScreen> {
   bool _wasDisconnected = false;
   bool _birdCallDialogOpen = false;
   bool _leavingGame = false;
+  bool _waitingForRoomRecovery = false;
   NetworkService? _networkService; // C6: Cache for safe dispose
   bool _profileRequested = false; // C8: Prevent requestProfile loop
   int _lastSeenMessageCount = -1; // -1 = not yet initialized
@@ -263,6 +264,17 @@ class _GameScreenState extends State<GameScreen> {
 
                 final state = game.gameState;
                 if (state == null) {
+                  if (game.currentRoomId.isNotEmpty && !_leavingGame) {
+                    if (!_waitingForRoomRecovery) {
+                      _waitingForRoomRecovery = true;
+                      WidgetsBinding.instance.addPostFrameCallback((_) {
+                        if (!mounted) return;
+                        context.read<GameService>().checkRoom();
+                      });
+                    }
+                    return const Center(child: CircularProgressIndicator());
+                  }
+
                   if (!_leavingGame) {
                     _leavingGame = true;
                     WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -275,6 +287,8 @@ class _GameScreenState extends State<GameScreen> {
                   }
                   return const Center(child: CircularProgressIndicator());
                 }
+
+              _waitingForRoomRecovery = false;
 
               // Bug #1: Clear exchange assignments when phase leaves card_exchange
               if (state.phase != 'card_exchange') {

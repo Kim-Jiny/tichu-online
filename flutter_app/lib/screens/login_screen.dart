@@ -6,7 +6,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../services/network_service.dart';
 import '../services/game_service.dart';
 import '../services/auth_service.dart';
-import '../services/device_info_service.dart';
+import '../services/session_service.dart';
 import 'lobby_screen.dart';
 
 class LoginScreen extends StatefulWidget {
@@ -35,7 +35,6 @@ class _LoginScreenState extends State<LoginScreen> {
   String? _error;
   String? _socialProvider;
   String? _socialToken;
-  Map<String, String?>? _deviceInfo;
 
   @override
   void initState() {
@@ -54,41 +53,32 @@ class _LoginScreenState extends State<LoginScreen> {
     if (_autoLoginAttempted) return;
     _autoLoginAttempted = true;
 
-    // Try social auto-login first
-    final savedProvider = await AuthService.getSavedProvider();
-    if (savedProvider != null) {
-      final token = await AuthService.refreshToken(savedProvider);
-      if (token != null) {
-        _socialProvider = savedProvider;
-        _socialToken = token;
-        await Future.delayed(const Duration(milliseconds: 100));
-        if (mounted) {
-          _socialLogin(savedProvider, token);
-        }
-        return;
-      }
-      // Token refresh failed - clear and fall through to credential login
-      await AuthService.clearAuthInfo();
+    setState(() {
+      _isConnecting = true;
+      _error = null;
+    });
+
+    final session = context.read<SessionService>();
+    final success = await session.restoreSavedSession();
+    if (!mounted) return;
+
+    if (success) {
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(builder: (_) => const LobbyScreen()),
+      );
+      return;
     }
 
     final prefs = await SharedPreferences.getInstance();
     final savedUsername = prefs.getString('saved_username');
     final savedPassword = prefs.getString('saved_password');
-
     if (savedUsername != null && savedPassword != null && savedUsername.isNotEmpty) {
       _usernameController.text = savedUsername;
       _passwordController.text = savedPassword;
-      await Future.delayed(const Duration(milliseconds: 100));
-      if (mounted) {
-        _login();
-      }
     }
-  }
 
-  Future<void> _saveCredentials(String username, String password) async {
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setString('saved_username', username);
-    await prefs.setString('saved_password', password);
+    setState(() => _isConnecting = false);
   }
 
   Future<void> _login() async {
@@ -110,30 +100,25 @@ class _LoginScreenState extends State<LoginScreen> {
     });
 
     try {
-      if (_deviceInfo == null || _deviceInfo!['fcmToken'] == null) {
-        _deviceInfo = await DeviceInfoService.collectDeviceInfo();
-      }
-
-      final network = context.read<NetworkService>();
-      await network.connect(NetworkService.defaultUrl);
-
-      if (!mounted) return;
-
-      final game = context.read<GameService>();
-      game.loginWithCredentials(username, password, deviceInfo: _deviceInfo);
-
-      await _waitForLoginResult(game);
+      final session = context.read<SessionService>();
+      final result = await session.loginWithCredentials(
+        username,
+        password,
+        url: NetworkService.defaultUrl,
+      );
 
       if (!mounted) return;
 
-      if (game.playerId.isNotEmpty) {
-        // Save credentials for auto-login
-        await _saveCredentials(username, password);
-
+      if (result.status == SessionAuthStatus.success) {
         Navigator.pushReplacement(
           context,
           MaterialPageRoute(builder: (_) => const LobbyScreen()),
         );
+      } else {
+        setState(() {
+          _error = result.error ?? '로그인 실패';
+          _isConnecting = false;
+        });
       }
     } catch (e) {
       setState(() {
@@ -190,32 +175,29 @@ class _LoginScreenState extends State<LoginScreen> {
     });
 
     try {
-      if (_deviceInfo == null || _deviceInfo!['fcmToken'] == null) {
-        _deviceInfo = await DeviceInfoService.collectDeviceInfo();
-      }
-
-      final network = context.read<NetworkService>();
-      await network.connect(NetworkService.defaultUrl);
-
-      if (!mounted) return;
-
-      final game = context.read<GameService>();
-      game.loginSocial(provider, token, deviceInfo: _deviceInfo);
-
-      await _waitForSocialResult(game);
+      final session = context.read<SessionService>();
+      final result = await session.loginWithSocial(
+        provider,
+        token,
+        url: NetworkService.defaultUrl,
+      );
 
       if (!mounted) return;
 
-      if (game.playerId.isNotEmpty) {
-        await AuthService.saveAuthInfo(provider);
+      if (result.status == SessionAuthStatus.success) {
         Navigator.pushReplacement(
           context,
           MaterialPageRoute(builder: (_) => const LobbyScreen()),
         );
-      } else if (game.needNickname) {
+      } else if (result.status == SessionAuthStatus.needsNickname) {
         setState(() {
           _isConnecting = false;
           _showSocialNickname = true;
+        });
+      } else {
+        setState(() {
+          _error = result.error ?? '소셜 로그인 실패';
+          _isConnecting = false;
         });
       }
     } catch (e) {
@@ -223,37 +205,6 @@ class _LoginScreenState extends State<LoginScreen> {
         _error = '$e';
         _isConnecting = false;
       });
-    }
-  }
-
-  Future<void> _waitForSocialResult(GameService game) async {
-    final completer = Completer<void>();
-
-    void listener() {
-      if (game.playerId.isNotEmpty) {
-        if (!completer.isCompleted) completer.complete();
-      } else if (game.needNickname) {
-        if (!completer.isCompleted) completer.complete();
-      } else if (game.loginError != null) {
-        if (!completer.isCompleted) completer.completeError(game.loginError!);
-      }
-    }
-
-    game.addListener(listener);
-    try {
-      await completer.future.timeout(const Duration(seconds: 15));
-    } on TimeoutException {
-      setState(() {
-        _error = '서버 응답 시간 초과';
-        _isConnecting = false;
-      });
-    } catch (e) {
-      setState(() {
-        _error = e.toString();
-        _isConnecting = false;
-      });
-    } finally {
-      game.removeListener(listener);
     }
   }
 
@@ -266,64 +217,33 @@ class _LoginScreenState extends State<LoginScreen> {
     });
 
     try {
-      if (_deviceInfo == null || _deviceInfo!['fcmToken'] == null) {
-        _deviceInfo = await DeviceInfoService.collectDeviceInfo();
-      }
-
       final game = context.read<GameService>();
-      game.registerSocial(
+      final session = context.read<SessionService>();
+      final result = await session.completeSocialRegistration(
         _socialProvider!,
         _socialToken!,
         nickname,
         existingUser: game.socialExistingUser,
-        deviceInfo: _deviceInfo,
       );
-
-      await _waitForLoginResult(game);
 
       if (!mounted) return;
 
-      if (game.playerId.isNotEmpty) {
-        await AuthService.saveAuthInfo(_socialProvider!);
+      if (result.status == SessionAuthStatus.success) {
         Navigator.pushReplacement(
           context,
           MaterialPageRoute(builder: (_) => const LobbyScreen()),
         );
+      } else {
+        setState(() {
+          _error = result.error ?? '로그인 실패';
+          _isConnecting = false;
+        });
       }
     } catch (e) {
       setState(() {
         _error = '$e';
         _isConnecting = false;
       });
-    }
-  }
-
-  Future<void> _waitForLoginResult(GameService game) async {
-    final completer = Completer<void>();
-
-    void listener() {
-      if (game.playerId.isNotEmpty) {
-        completer.complete();
-      } else if (game.loginError != null) {
-        completer.completeError(game.loginError!);
-      }
-    }
-
-    game.addListener(listener);
-    try {
-      await completer.future.timeout(const Duration(seconds: 15));
-    } on TimeoutException {
-      setState(() {
-        _error = '서버 응답 시간 초과';
-        _isConnecting = false;
-      });
-    } catch (e) {
-      setState(() {
-        _error = e.toString();
-        _isConnecting = false;
-      });
-    } finally {
-      game.removeListener(listener);
     }
   }
 

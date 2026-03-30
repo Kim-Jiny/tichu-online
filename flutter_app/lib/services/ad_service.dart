@@ -4,8 +4,8 @@ import 'package:google_mobile_ads/google_mobile_ads.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class AdService {
-  // 항상 실제 광고 사용 (디버그에서도)
-  static const bool _useTestAds = false;
+  // 디버그 빌드면 테스트 광고, 릴리스면 실제 광고
+  static const bool _useTestAds = kDebugMode;
 
   // --- 배너 광고 ID ---
   static String get lobbyBannerId => _useTestAds

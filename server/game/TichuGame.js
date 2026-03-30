@@ -1016,6 +1016,7 @@ class TichuGame {
       lastRoundScores: this.lastRoundScores || null,
       scoreHistory: this.scoreHistory,
       finishOrder: this.finishOrder,
+      passCount: this.passCount,
       callRank: this.callRank,
       needsToCallRank: this.needsToCallRank === playerId,
       dragonPending: this.dragonPending && this.dragonDecider === playerId,

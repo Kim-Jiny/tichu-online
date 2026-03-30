@@ -777,8 +777,8 @@ function leadTrick(state, cards, normalCards, combos) {
       if (b.length !== a.length) return b.length - a.length;
       return getHighestValue(a) - getHighestValue(b);
     });
-    // But play the LOWEST value combo to preserve strong cards
-    const lowestMulti = multiCardPlans[multiCardPlans.length - 1];
+    // Play the LOWEST value combo among the largest length to preserve strong cards
+    const lowestMulti = multiCardPlans[0];
     return { type: 'play_cards', cards: lowestMulti };
   }
 
@@ -846,13 +846,20 @@ function followTrick(state, cards, normalCards, combos) {
   if (bombPlay) return { type: 'play_cards', cards: bombPlay };
 
   // === PARTNER DECLARED TICHU: stay passive, let partner take the lead ===
-  // Only play if we can finish, or the trick is very valuable and we must defend
+  // But if partner already passed, we should take the trick to prevent opponents from winning it
   if (partnerTichu) {
     const finishPlay = findFinishingPlay(comboType, lastValue, lastLength, cards, normalCards, combos);
     if (finishPlay) return { type: 'play_cards', cards: finishPlay };
 
-    // Only intervene if trick has many points and opponent is about to win it
-    if (trickPts >= 20 && minOppCards <= 2) {
+    // Check if partner already passed (passCount >= 1 means at least one person passed)
+    // If partner is not the last player and trick doesn't contain partner's play, partner passed
+    const partnerPlayedInTrick = trick.some(t => t.playerId === partner.id);
+    const partnerPassed = !partnerPlayedInTrick && (state.passCount || 0) >= 1;
+
+    if (partnerPassed) {
+      // Partner passed - we should try to take the trick with lowest possible cards
+      // Fall through to normal opponent play logic below
+    } else if (trickPts >= 20 && minOppCards <= 2) {
       // Fall through to normal opponent play logic below
     } else {
       return { type: 'pass' };

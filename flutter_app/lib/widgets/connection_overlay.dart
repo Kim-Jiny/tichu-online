@@ -121,7 +121,11 @@ class _ConnectionOverlayState extends State<ConnectionOverlay>
     if (!mounted) return;
 
     if (username == null || password == null || username.isEmpty) {
-      _goToLogin();
+      // No saved credentials - show retry/login screen
+      setState(() {
+        _reconnecting = false;
+        _failed = true;
+      });
       return;
     }
 
@@ -189,7 +193,11 @@ class _ConnectionOverlayState extends State<ConnectionOverlay>
         _failed = false;
       });
     } else {
-      _goToLogin();
+      // Login failed or timed out - show retry screen, don't go to login
+      setState(() {
+        _reconnecting = false;
+        _failed = true;
+      });
     }
   }
 

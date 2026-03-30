@@ -1715,17 +1715,29 @@ class GameService extends ChangeNotifier {
   Future<void> _sendFcmTokenAsync() async {
     try {
       final messaging = FirebaseMessaging.instance;
+      debugPrint('[FCM] Starting token fetch (platform: ${Platform.operatingSystem})');
+
       // iOS: wait for APNs token first
       if (Platform.isIOS) {
+        String? apns;
         for (int i = 0; i < 30; i++) {
-          final apns = await messaging.getAPNSToken();
+          apns = await messaging.getAPNSToken();
+          debugPrint('[FCM] APNs attempt $i: ${apns != null ? "OK" : "null"}');
           if (apns != null) break;
           await Future.delayed(const Duration(milliseconds: 1000));
         }
+        if (apns == null) {
+          debugPrint('[FCM] APNs token never arrived after 30 attempts');
+        }
       }
+
+      debugPrint('[FCM] Calling getToken()...');
       final token = await messaging.getToken().timeout(const Duration(seconds: 15));
+      debugPrint('[FCM] Token result: ${token != null ? "${token.substring(0, 20)}..." : "null"}');
+
       if (token != null && playerId.isNotEmpty) {
         _network.send({'type': 'update_fcm_token', 'fcmToken': token});
+        debugPrint('[FCM] Token sent to server');
       }
     } catch (e) {
       debugPrint('[FCM] Failed to get token: $e');

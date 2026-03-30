@@ -22,12 +22,6 @@ void main() async {
   );
   await MobileAds.instance.initialize();
 
-  final messaging = FirebaseMessaging.instance;
-  await messaging.requestPermission(
-    alert: true,
-    badge: true,
-    sound: true,
-  );
   FirebaseMessaging.onMessage.listen((RemoteMessage message) {
     debugPrint('Foreground push: ${message.notification?.title} - ${message.notification?.body}');
   });
@@ -106,6 +100,12 @@ class _EntryScreenState extends State<_EntryScreen> {
       final result = await AppTrackingTransparency.requestTrackingAuthorization();
       debugPrint('[ATT] request result: $result');
     }
+    // Request push permission AFTER ATT to avoid overlapping iOS system dialogs
+    await FirebaseMessaging.instance.requestPermission(
+      alert: true,
+      badge: true,
+      sound: true,
+    );
   }
 
   Future<void> _checkEula() async {

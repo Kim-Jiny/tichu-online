@@ -276,6 +276,18 @@ class _GameScreenState extends State<GameScreen> {
                       WidgetsBinding.instance.addPostFrameCallback((_) {
                         if (!mounted) return;
                         context.read<GameService>().checkRoom();
+                        // If game ended (no game_state response), go to lobby
+                        Future.delayed(const Duration(milliseconds: 500), () {
+                          if (!mounted) return;
+                          final g = context.read<GameService>();
+                          if (g.gameState == null && !_leavingGame) {
+                            _leavingGame = true;
+                            Navigator.pushReplacement(
+                              context,
+                              MaterialPageRoute(builder: (_) => const LobbyScreen()),
+                            );
+                          }
+                        });
                       });
                     }
                     return const Center(child: CircularProgressIndicator());

@@ -4,26 +4,26 @@ import 'package:google_mobile_ads/google_mobile_ads.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class AdService {
-  // 디버그 빌드면 테스트 광고, 릴리스면 실제 광고
-  static const bool _useTestAds = kDebugMode;
+  // 항상 실제 광고 사용 (디버그에서도)
+  static const bool _useTestAds = false;
 
   // --- 배너 광고 ID ---
   static String get lobbyBannerId => _useTestAds
       ? _testBannerId
-      : (Platform.isIOS ? 'ca-app-pub-7380937505685851/5998930812' : 'ca-app-pub-7380937505685851/5799887160');
+      : (Platform.isIOS ? 'ca-app-pub-2707874353926722/5998930812' : 'ca-app-pub-2707874353926722/5799887160');
 
   static String get settingsBannerId => _useTestAds
       ? _testBannerId
-      : (Platform.isIOS ? 'ca-app-pub-7380937505685851/6681590547' : 'ca-app-pub-7380937505685851/6490018856');
+      : (Platform.isIOS ? 'ca-app-pub-2707874353926722/6681590547' : 'ca-app-pub-2707874353926722/6490018856');
 
   static String get rankingBannerId => _useTestAds
       ? _testBannerId
-      : (Platform.isIOS ? 'ca-app-pub-7380937505685851/4685849144' : 'ca-app-pub-7380937505685851/4486805490');
+      : (Platform.isIOS ? 'ca-app-pub-2707874353926722/4685849144' : 'ca-app-pub-2707874353926722/4486805490');
 
   // --- 보상형 광고 ID ---
   static String get rewardedAdId => _useTestAds
       ? _testRewardedId
-      : (Platform.isIOS ? 'ca-app-pub-7380937505685851/9523376308' : 'ca-app-pub-7380937505685851/7360113945');
+      : (Platform.isIOS ? 'ca-app-pub-2707874353926722/9523376308' : 'ca-app-pub-2707874353926722/7360113945');
 
   // Google 공식 테스트 광고 ID
   static String get _testBannerId => Platform.isIOS

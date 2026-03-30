@@ -319,8 +319,12 @@ class TichuGame {
     }
 
     // If Phoenix played as single, set value to current top + 0.5
+    // Phoenix cannot beat Dragon (only bombs can beat Dragon)
     if (combo.isPhoenix && this.currentTrick.length > 0) {
       const lastCombo = this.currentTrick[this.currentTrick.length - 1].combo;
+      if (lastCombo.value === 15) {
+        return { success: false, message: '봉황으로 용을 이길 수 없습니다' };
+      }
       combo.value = lastCombo.value + 0.5;
     }
 

@@ -797,7 +797,17 @@ class GameService extends ChangeNotifier {
       case 'dm_history':
         final nickname = data['nickname'] as String? ?? '';
         final messages = data['messages'] as List? ?? [];
-        final parsed = messages.map((m) => Map<String, dynamic>.from(m as Map)).toList();
+        final parsed = messages.map((m) {
+          final raw = Map<String, dynamic>.from(m as Map);
+          // Normalize DB column names to match dm_message format
+          return {
+            'id': raw['id'],
+            'sender': raw['sender_nickname'] ?? raw['sender'] ?? '',
+            'receiver': raw['receiver_nickname'] ?? raw['receiver'] ?? '',
+            'message': raw['message'] ?? '',
+            'createdAt': (raw['created_at'] ?? raw['createdAt'] ?? '').toString(),
+          };
+        }).toList();
         if (nickname.isNotEmpty) {
           final existing = dmMessages[nickname] ?? [];
           final existingIds = existing.map((m) => m['id']).toSet();

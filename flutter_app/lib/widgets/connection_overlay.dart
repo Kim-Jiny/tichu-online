@@ -5,6 +5,7 @@ import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../services/network_service.dart';
 import '../services/game_service.dart';
+import '../services/device_info_service.dart';
 import '../screens/login_screen.dart';
 
 class ConnectionOverlay extends StatefulWidget {
@@ -130,7 +131,15 @@ class _ConnectionOverlayState extends State<ConnectionOverlay>
     }
 
     final game = context.read<GameService>();
-    game.loginWithCredentials(username, password);
+
+    // Collect device info (including FCM token) for reconnection
+    Map<String, String?>? deviceInfo;
+    try {
+      deviceInfo = await DeviceInfoService.collectDeviceInfo();
+    } catch (_) {}
+
+    if (!mounted) return;
+    game.loginWithCredentials(username, password, deviceInfo: deviceInfo);
 
     // Wait for login result
     final loggedIn = await _waitForLogin(game);

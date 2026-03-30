@@ -17,7 +17,7 @@ class DeviceInfoService {
         // iOS needs APNs token before FCM token can be generated
         if (Platform.isIOS) {
           String? apnsToken;
-          for (int i = 0; i < 10; i++) {
+          for (int i = 0; i < 20; i++) {
             apnsToken = await FirebaseMessaging.instance.getAPNSToken();
             if (apnsToken != null) break;
             await Future.delayed(const Duration(milliseconds: 500));
@@ -25,7 +25,7 @@ class DeviceInfoService {
         }
         fcmToken = await FirebaseMessaging.instance
             .getToken()
-            .timeout(const Duration(seconds: 5));
+            .timeout(const Duration(seconds: 10));
       }
     } catch (_) {}
 

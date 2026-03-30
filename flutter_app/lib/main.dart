@@ -21,6 +21,12 @@ void main() async {
     RequestConfiguration(testDeviceIds: ['45b45cb9d1be2ccb4c01a54eea9a0a64']),
   );
   await MobileAds.instance.initialize();
+  await FirebaseMessaging.instance.setForegroundNotificationPresentationOptions(
+    alert: true,
+    badge: true,
+    sound: true,
+  );
+  await FirebaseMessaging.instance.setAutoInitEnabled(true);
 
   FirebaseMessaging.onMessage.listen((RemoteMessage message) {
     debugPrint('Foreground push: ${message.notification?.title} - ${message.notification?.body}');
@@ -101,11 +107,12 @@ class _EntryScreenState extends State<_EntryScreen> {
       debugPrint('[ATT] request result: $result');
     }
     // Request push permission AFTER ATT to avoid overlapping iOS system dialogs
-    await FirebaseMessaging.instance.requestPermission(
+    final settings = await FirebaseMessaging.instance.requestPermission(
       alert: true,
       badge: true,
       sound: true,
     );
+    debugPrint('[FCM] Notification permission: ${settings.authorizationStatus}');
   }
 
   Future<void> _checkEula() async {

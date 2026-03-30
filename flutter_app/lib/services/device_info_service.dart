@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'package:flutter/foundation.dart';
 import 'package:device_info_plus/device_info_plus.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
@@ -19,6 +20,7 @@ class DeviceInfoService {
           String? apnsToken;
           for (int i = 0; i < 20; i++) {
             apnsToken = await FirebaseMessaging.instance.getAPNSToken();
+            debugPrint('[FCM][DeviceInfo] APNs attempt $i: ${apnsToken != null ? "OK" : "null"}');
             if (apnsToken != null) break;
             await Future.delayed(const Duration(milliseconds: 500));
           }
@@ -26,8 +28,11 @@ class DeviceInfoService {
         fcmToken = await FirebaseMessaging.instance
             .getToken()
             .timeout(const Duration(seconds: 10));
+        debugPrint('[FCM][DeviceInfo] getToken result: ${fcmToken != null ? "${fcmToken.substring(0, 20)}..." : "null"}');
       }
-    } catch (_) {}
+    } catch (e) {
+      debugPrint('[FCM][DeviceInfo] Failed to collect token: $e');
+    }
 
     // Platform
     try {

@@ -187,8 +187,10 @@ class GameService extends ChangeNotifier {
   GameService(this._network) {
     _subscription = _network.messageStream.listen(_handleMessage);
     _fcmTokenSubscription = FirebaseMessaging.instance.onTokenRefresh.listen((newToken) {
+      debugPrint('[FCM] onTokenRefresh: ${newToken.substring(0, 20)}...');
       if (playerId.isNotEmpty && pushEnabled) {
         _network.send({'type': 'update_fcm_token', 'fcmToken': newToken});
+        debugPrint('[FCM] Refreshed token sent to server');
       }
     });
     _loadPushPrefs();

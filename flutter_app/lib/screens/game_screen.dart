@@ -279,7 +279,7 @@ class _GameScreenState extends State<GameScreen> {
                         if (!mounted) return;
                         context.read<GameService>().checkRoom();
                         // If game ended (no game_state response), go to lobby
-                        Future.delayed(const Duration(milliseconds: 500), () {
+                        Future.delayed(const Duration(milliseconds: 2000), () {
                           if (!mounted) return;
                           final g = context.read<GameService>();
                           if (g.gameState == null && !_leavingGame) {

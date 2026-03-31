@@ -34,7 +34,26 @@ class SessionService extends ChangeNotifier {
   bool get isRestoring => _restoreInProgress;
 
   Future<void> ensureConnected([String? url]) async {
-    if (_network.isConnected || _network.isConnecting) return;
+    if (_network.isConnected) return;
+    if (_network.isConnecting) {
+      // 연결 진행 중이면 완료될 때까지 대기
+      final completer = Completer<void>();
+      void listener() {
+        if (_network.isConnected || (!_network.isConnecting && !_network.isConnected)) {
+          if (!completer.isCompleted) completer.complete();
+        }
+      }
+      _network.addListener(listener);
+      try {
+        await completer.future.timeout(const Duration(seconds: 15));
+      } finally {
+        _network.removeListener(listener);
+      }
+      if (!_network.isConnected) {
+        throw Exception('연결 실패');
+      }
+      return;
+    }
     await _network.connect(url);
   }
 

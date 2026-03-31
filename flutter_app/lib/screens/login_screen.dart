@@ -253,7 +253,9 @@ class _LoginScreenState extends State<LoginScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return GestureDetector(
+    return PopScope(
+      canPop: false,
+      child: GestureDetector(
       onTap: () => FocusScope.of(context).unfocus(),
       child: Scaffold(
         body: Stack(
@@ -472,6 +474,7 @@ class _LoginScreenState extends State<LoginScreen> {
           if (_showSocialNickname) _buildSocialNicknameDialog(),
         ],
       ),
+    ),
     ),
     );
   }

@@ -1478,7 +1478,9 @@ class _LobbyScreenState extends State<LobbyScreen> {
     final themeColors = context.watch<GameService>().themeGradient;
     final session = context.watch<SessionService>();
     return ConnectionOverlay(
-      child: Scaffold(
+      child: PopScope(
+        canPop: false,
+        child: Scaffold(
         body: Container(
         decoration: BoxDecoration(
           gradient: LinearGradient(
@@ -1574,6 +1576,7 @@ class _LobbyScreenState extends State<LobbyScreen> {
             },
           ),
         ),
+      ),
       ),
       ),
     );

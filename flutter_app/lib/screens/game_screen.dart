@@ -238,7 +238,9 @@ class _GameScreenState extends State<GameScreen> {
     final themeColors = context.watch<GameService>().themeGradient;
     final session = context.watch<SessionService>();
     return ConnectionOverlay(
-      child: Scaffold(
+      child: PopScope(
+        canPop: false,
+        child: Scaffold(
         resizeToAvoidBottomInset: false,
         body: Container(
           decoration: BoxDecoration(
@@ -431,6 +433,7 @@ class _GameScreenState extends State<GameScreen> {
             ),
           ),
         ),
+      ),
       ),
     );
   }

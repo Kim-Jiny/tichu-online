@@ -43,7 +43,9 @@ class _SpectatorScreenState extends State<SpectatorScreen> {
   Widget build(BuildContext context) {
     // C9: Wrap in ConnectionOverlay for reconnection support
     return ConnectionOverlay(
-      child: Scaffold(
+      child: PopScope(
+        canPop: false,
+        child: Scaffold(
       resizeToAvoidBottomInset: false,
       body: Container(
         decoration: const BoxDecoration(
@@ -88,6 +90,7 @@ class _SpectatorScreenState extends State<SpectatorScreen> {
           ),
         ),
       ),
+    ),
     ),
     );
   }

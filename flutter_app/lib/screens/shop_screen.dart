@@ -17,6 +17,7 @@ class _ShopScreenState extends State<ShopScreen> {
   bool _adLoading = false;
   RewardedAd? _rewardedAd;
   bool _rewardedAdReady = false;
+  TabController? _inventoryTabs;
 
   @override
   void initState() {
@@ -56,6 +57,7 @@ class _ShopScreenState extends State<ShopScreen> {
 
   @override
   void dispose() {
+    _inventoryTabs?.removeListener(_handleInventoryTabChanged);
     _rewardedAd?.dispose();
     _inventoryTabController.dispose();
     super.dispose();
@@ -65,14 +67,16 @@ class _ShopScreenState extends State<ShopScreen> {
   Widget build(BuildContext context) {
     final themeColors = context.watch<GameService>().themeGradient;
     final isAndroid = Theme.of(context).platform == TargetPlatform.android;
-    final baseScale = MediaQuery.of(context).textScaleFactor;
+    final baseScale = MediaQuery.of(context).textScaler.scale(1.0);
     final adjustedScale = isAndroid
         ? (baseScale * 0.92).clamp(0.9, 1.0)
         : baseScale;
     return DefaultTabController(
       length: 2,
       child: MediaQuery(
-        data: MediaQuery.of(context).copyWith(textScaleFactor: adjustedScale),
+        data: MediaQuery.of(
+          context,
+        ).copyWith(textScaler: TextScaler.linear(adjustedScale)),
         child: Scaffold(
           body: Container(
             decoration: BoxDecoration(
@@ -117,12 +121,18 @@ class _ShopScreenState extends State<ShopScreen> {
     );
   }
 
+  void _handleInventoryTabChanged() {
+    final tabController = _inventoryTabs;
+    if (tabController == null || tabController.indexIsChanging) return;
+    _inventoryTabController.value = tabController.index;
+  }
+
   Widget _buildTopBar(BuildContext context, GameService game) {
     return Container(
       margin: const EdgeInsets.all(16),
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.95),
+        color: Colors.white.withValues(alpha: 0.95),
         borderRadius: BorderRadius.circular(18),
       ),
       child: Row(
@@ -161,7 +171,7 @@ class _ShopScreenState extends State<ShopScreen> {
       margin: const EdgeInsets.symmetric(horizontal: 16),
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
       decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.95),
+        color: Colors.white.withValues(alpha: 0.95),
         borderRadius: BorderRadius.circular(16),
         border: Border.all(color: const Color(0xFFE0D8D4)),
       ),
@@ -197,7 +207,7 @@ class _ShopScreenState extends State<ShopScreen> {
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 16),
       decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.95),
+        color: Colors.white.withValues(alpha: 0.95),
         borderRadius: BorderRadius.circular(14),
       ),
       child: const TabBar(
@@ -272,7 +282,7 @@ class _ShopScreenState extends State<ShopScreen> {
     return ListView.separated(
       padding: const EdgeInsets.fromLTRB(16, 12, 16, 20),
       itemCount: items.length,
-      separatorBuilder: (_, __) => const SizedBox(height: 8),
+      separatorBuilder: (_, _) => const SizedBox(height: 8),
       itemBuilder: (context, index) => _buildShopItem(context, game, items[index]),
     );
   }
@@ -298,7 +308,7 @@ class _ShopScreenState extends State<ShopScreen> {
       child: Container(
         padding: const EdgeInsets.all(14),
         decoration: BoxDecoration(
-          color: Colors.white.withOpacity(0.95),
+          color: Colors.white.withValues(alpha: 0.95),
           borderRadius: BorderRadius.circular(14),
           border: Border.all(color: const Color(0xFFE0D8D4)),
         ),
@@ -401,7 +411,7 @@ class _ShopScreenState extends State<ShopScreen> {
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
         title: const Text('기간 연장'),
         content: Text(
-          '이미 보유하고 있는 아이템입니다.\n$name의 기간을 ${durationDays}일 연장하시겠습니까?\n\n비용: $price 골드',
+          '이미 보유하고 있는 아이템입니다.\n$name의 기간을 $durationDays일 연장하시겠습니까?\n\n비용: $price 골드',
         ),
         actions: [
           TextButton(
@@ -447,11 +457,11 @@ class _ShopScreenState extends State<ShopScreen> {
       child: Builder(
         builder: (context) {
           final tabController = DefaultTabController.of(context);
-          tabController.addListener(() {
-            if (!tabController.indexIsChanging) {
-              _inventoryTabController.value = tabController.index;
-            }
-          });
+          if (!identical(_inventoryTabs, tabController)) {
+            _inventoryTabs?.removeListener(_handleInventoryTabChanged);
+            _inventoryTabs = tabController;
+            _inventoryTabs?.addListener(_handleInventoryTabChanged);
+          }
           return Column(
             children: [
               const SizedBox(height: 8),
@@ -488,7 +498,7 @@ class _ShopScreenState extends State<ShopScreen> {
     return ListView.separated(
       padding: const EdgeInsets.fromLTRB(16, 12, 16, 20),
       itemCount: items.length,
-      separatorBuilder: (_, __) => const SizedBox(height: 8),
+      separatorBuilder: (_, _) => const SizedBox(height: 8),
       itemBuilder: (context, index) => _buildInventoryItem(context, items[index]),
     );
   }
@@ -506,7 +516,7 @@ class _ShopScreenState extends State<ShopScreen> {
     return Container(
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.95),
+        color: Colors.white.withValues(alpha: 0.95),
         borderRadius: BorderRadius.circular(14),
         border: Border.all(color: const Color(0xFFE0D8D4)),
       ),
@@ -582,42 +592,6 @@ class _ShopScreenState extends State<ShopScreen> {
           ),
         ],
       ),
-    );
-  }
-
-  Widget _buildCategoryIcon(String category) {
-    IconData icon = Icons.category;
-    Color color = const Color(0xFFB0BEC5);
-    switch (category) {
-      case 'banner':
-        icon = Icons.flag;
-        color = const Color(0xFFF5B8C0);
-        break;
-      case 'title':
-        icon = Icons.badge;
-        color = const Color(0xFFB39DDB);
-        break;
-      case 'theme':
-        icon = Icons.palette;
-        color = const Color(0xFF81C784);
-        break;
-      case 'utility':
-        icon = Icons.handyman;
-        color = const Color(0xFFFFB74D);
-        break;
-      case 'season':
-        icon = Icons.emoji_events;
-        color = const Color(0xFFFFD54F);
-        break;
-    }
-    return Container(
-      width: 36,
-      height: 36,
-      decoration: BoxDecoration(
-        color: color.withOpacity(0.2),
-        borderRadius: BorderRadius.circular(12),
-      ),
-      child: Icon(icon, color: color, size: 18),
     );
   }
 
@@ -1130,7 +1104,7 @@ class _ShopScreenState extends State<ShopScreen> {
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 16),
       decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.95),
+        color: Colors.white.withValues(alpha: 0.95),
         borderRadius: BorderRadius.circular(14),
       ),
       child: TabBar(
@@ -1170,7 +1144,7 @@ class _ShopScreenState extends State<ShopScreen> {
       return '영구';
     }
     if (durationDays != null) {
-      return '기간제 ${durationDays}일';
+      return '기간제 $durationDays일';
     }
     return '기간제';
   }

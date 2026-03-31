@@ -761,10 +761,20 @@ function leadTrick(state, cards, normalCards, combos) {
     }
   }
 
-  // 4. Plan-based play: follow decomposed hand plan
+  // 4. If bomb is our only remaining cards, play it to finish
+  for (const bomb of combos.bombs) {
+    if (bomb.length === cards.length) {
+      return { type: 'play_cards', cards: bomb };
+    }
+  }
+
+  // 5. Plan-based play: follow decomposed hand plan
   // Play lowest multi-card combo first, then singles
+  // Filter out bombs from lead plays - bombs should be saved for defensive use
+  const bombSet = new Set(combos.bombs.flat());
   const multiCardPlans = plans.filter(p =>
-    p.length >= 2 && !p.includes('special_dog') && !p.includes('special_bird')
+    p.length >= 2 && !p.includes('special_dog') && !p.includes('special_bird') &&
+    !(p.length === 4 && p.every(c => bombSet.has(c)))
   );
   const singlePlans = plans.filter(p =>
     p.length === 1 && !p[0].startsWith('special_')
@@ -782,12 +792,24 @@ function leadTrick(state, cards, normalCards, combos) {
     return { type: 'play_cards', cards: lowestMulti };
   }
 
-  // 5. Single card - play lowest
+  // 6. Single card - play lowest
   if (singlePlans.length > 0) {
     return { type: 'play_cards', cards: [singlePlans[0][0]] };
   }
 
-  // 6. Only specials left
+  // 7. Only bomb + specials left: play a special rather than breaking the bomb
+  if (combos.bombs.length > 0) {
+    if (cards.includes('special_phoenix')) {
+      return { type: 'play_cards', cards: ['special_phoenix'] };
+    }
+    if (cards.includes('special_dragon')) {
+      return { type: 'play_cards', cards: ['special_dragon'] };
+    }
+    // No specials available - play the lowest bomb (no other choice)
+    return { type: 'play_cards', cards: combos.bombs[0] };
+  }
+
+  // 8. Fallback
   if (normalCards.length > 0) {
     const sorted = [...normalCards].sort((a, b) => getCardValue(a) - getCardValue(b));
     return { type: 'play_cards', cards: [sorted[0]] };

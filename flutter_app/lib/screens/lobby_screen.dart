@@ -1,19 +1,14 @@
 import 'dart:async';
-import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import '../services/game_service.dart';
 import '../services/network_service.dart';
-import '../services/auth_service.dart';
 import '../services/session_service.dart';
 import '../models/player.dart';
 import '../models/room.dart';
-import 'game_screen.dart';
 import 'ranking_screen.dart';
 import 'shop_screen.dart';
-import 'spectator_screen.dart';
-import 'login_screen.dart';
 import 'settings_screen.dart';
 import 'friends_screen.dart';
 import '../widgets/connection_overlay.dart';
@@ -29,7 +24,6 @@ class LobbyScreen extends StatefulWidget {
 
 class _LobbyScreenState extends State<LobbyScreen> {
   bool _inRoom = false;
-  bool _navigatingToGame = false;
   bool _wasDisconnected = false;
   NetworkService? _networkService; // C6: Cache for safe dispose
 
@@ -48,7 +42,7 @@ class _LobbyScreenState extends State<LobbyScreen> {
     _bannerAd = AdService.createBannerAd(
       AdService.lobbyBannerId,
       onAdLoaded: (_) { if (mounted) setState(() => _bannerAdLoaded = true); },
-      onAdFailedToLoad: (_, __) { if (mounted) setState(() { _bannerAd = null; _bannerAdLoaded = false; }); },
+      onAdFailedToLoad: (_, _) { if (mounted) setState(() { _bannerAd = null; _bannerAdLoaded = false; }); },
     );
     _bannerAd!.load();
     WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -197,7 +191,7 @@ class _LobbyScreenState extends State<LobbyScreen> {
                     height: 250,
                     child: ListView.separated(
                       itemCount: onlineFriends.length,
-                      separatorBuilder: (_, __) => const SizedBox(height: 6),
+                      separatorBuilder: (_, _) => const SizedBox(height: 6),
                       itemBuilder: (context, index) {
                         final friend = onlineFriends[index];
                         final nickname = friend['nickname'] as String? ?? '';
@@ -299,7 +293,7 @@ class _LobbyScreenState extends State<LobbyScreen> {
                 height: 220,
                 child: ListView.separated(
                   itemCount: spectators.length,
-                  separatorBuilder: (_, __) => const SizedBox(height: 6),
+                  separatorBuilder: (_, _) => const SizedBox(height: 6),
                   itemBuilder: (context, index) {
                     final nickname = spectators[index]['nickname'] ?? '';
                     return Container(
@@ -380,773 +374,9 @@ class _LobbyScreenState extends State<LobbyScreen> {
     );
   }
 
-  void _showComingSoonDialog(String feature) {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        title: Text(feature),
-        content: const Text('준비 중입니다!'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('확인'),
-          ),
-        ],
-      ),
-    );
-  }
-
-  void _showInquiryDialog() {
-    final titleController = TextEditingController();
-    final contentController = TextEditingController();
-    String selectedCategory = 'bug';
-
-    showDialog(
-      context: context,
-      builder: (context) => StatefulBuilder(
-        builder: (context, setState) => AlertDialog(
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-          title: const Row(
-            children: [
-              Icon(Icons.help_outline, color: Color(0xFFBA68C8)),
-              SizedBox(width: 8),
-              Text('문의하기'),
-            ],
-          ),
-          content: SingleChildScrollView(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const Text('카테고리', style: TextStyle(fontSize: 13, color: Color(0xFF8A8A8A))),
-                const SizedBox(height: 6),
-                Wrap(
-                  spacing: 8,
-                  children: [
-                    ChoiceChip(
-                      label: const Text('버그 신고'),
-                      selected: selectedCategory == 'bug',
-                      onSelected: (_) => setState(() => selectedCategory = 'bug'),
-                      selectedColor: const Color(0xFFEDE7F6),
-                      labelStyle: TextStyle(
-                        color: selectedCategory == 'bug'
-                            ? const Color(0xFF6A4FA3)
-                            : const Color(0xFF5A4038),
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                    ChoiceChip(
-                      label: const Text('건의사항'),
-                      selected: selectedCategory == 'suggestion',
-                      onSelected: (_) => setState(() => selectedCategory = 'suggestion'),
-                      selectedColor: const Color(0xFFEDE7F6),
-                      labelStyle: TextStyle(
-                        color: selectedCategory == 'suggestion'
-                            ? const Color(0xFF6A4FA3)
-                            : const Color(0xFF5A4038),
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                    ChoiceChip(
-                      label: const Text('기타'),
-                      selected: selectedCategory == 'other',
-                      onSelected: (_) => setState(() => selectedCategory = 'other'),
-                      selectedColor: const Color(0xFFEDE7F6),
-                      labelStyle: TextStyle(
-                        color: selectedCategory == 'other'
-                            ? const Color(0xFF6A4FA3)
-                            : const Color(0xFF5A4038),
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 12),
-                const Text('제목', style: TextStyle(fontSize: 13, color: Color(0xFF8A8A8A))),
-                const SizedBox(height: 4),
-                TextField(
-                  controller: titleController,
-                  decoration: InputDecoration(
-                    hintText: '제목을 입력해주세요',
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-                  ),
-                ),
-                const SizedBox(height: 12),
-                const Text('내용', style: TextStyle(fontSize: 13, color: Color(0xFF8A8A8A))),
-                const SizedBox(height: 4),
-                TextField(
-                  controller: contentController,
-                  maxLines: 5,
-                  decoration: InputDecoration(
-                    hintText: '내용을 입력해주세요',
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    contentPadding: const EdgeInsets.all(12),
-                  ),
-                ),
-              ],
-            ),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(context),
-              child: const Text('취소'),
-            ),
-            ElevatedButton(
-              onPressed: () {
-                final title = titleController.text.trim();
-                final content = contentController.text.trim();
-                if (title.isEmpty || content.isEmpty) return;
-                final game = this.context.read<GameService>();
-                game.submitInquiry(selectedCategory, title, content);
-                Navigator.pop(context);
-                ScaffoldMessenger.of(this.context).showSnackBar(
-                  const SnackBar(content: Text('문의가 접수되었습니다')),
-                );
-              },
-              style: ElevatedButton.styleFrom(
-                backgroundColor: const Color(0xFFBA68C8),
-                foregroundColor: Colors.white,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),
-                ),
-              ),
-              child: const Text('제출'),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  void _showInquiryHistoryDialog() {
-    final game = context.read<GameService>();
-    game.markInquiriesRead();
-    showDialog(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        title: const Row(
-          children: [
-            Icon(Icons.mark_email_read, color: Color(0xFF1E88E5)),
-            SizedBox(width: 8),
-            Text('문의 내역'),
-          ],
-        ),
-        content: SizedBox(
-          width: double.maxFinite,
-          child: Consumer<GameService>(
-            builder: (context, game, _) {
-              if (game.inquiriesLoading) {
-                return const SizedBox(
-                  height: 160,
-                  child: Center(child: CircularProgressIndicator()),
-                );
-              }
-              if (game.inquiriesError != null) {
-                return SizedBox(
-                  height: 160,
-                  child: Center(
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Text(
-                          game.inquiriesError!,
-                          style: const TextStyle(color: Color(0xFFCC6666)),
-                          textAlign: TextAlign.center,
-                        ),
-                        const SizedBox(height: 10),
-                        TextButton(
-                          onPressed: () => game.requestInquiries(),
-                          child: const Text('다시 시도'),
-                        ),
-                      ],
-                    ),
-                  ),
-                );
-              }
-              if (game.inquiries.isEmpty) {
-                return const SizedBox(
-                  height: 140,
-                  child: Center(
-                    child: Text(
-                      '등록된 문의가 없습니다',
-                      style: TextStyle(color: Color(0xFF9A8E8A)),
-                    ),
-                  ),
-                );
-              }
-              return SizedBox(
-                height: 320,
-                child: ListView.separated(
-                  itemCount: game.inquiries.length,
-                  separatorBuilder: (_, __) => const SizedBox(height: 8),
-                  itemBuilder: (context, index) {
-                    final item = game.inquiries[index];
-                    final title = item['title']?.toString() ?? '';
-                    final category = _inquiryCategoryLabel(item['category']);
-                    final status = item['status']?.toString() ?? 'pending';
-                    final createdAt = _formatShortDate(item['created_at']);
-                    final isResolved = status == 'resolved';
-                    return InkWell(
-                      onTap: () => _showInquiryDetailDialog(item),
-                      borderRadius: BorderRadius.circular(12),
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-                        decoration: BoxDecoration(
-                          color: Colors.white,
-                          borderRadius: BorderRadius.circular(12),
-                          border: Border.all(color: const Color(0xFFE0D8D4)),
-                        ),
-                        child: Row(
-                          children: [
-                            Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                              decoration: BoxDecoration(
-                                color: isResolved
-                                    ? const Color(0xFFE8F5E9)
-                                    : const Color(0xFFFFF8E1),
-                                borderRadius: BorderRadius.circular(10),
-                              ),
-                              child: Text(
-                                isResolved ? '답변완료' : '대기중',
-                                style: TextStyle(
-                                  fontSize: 11,
-                                  fontWeight: FontWeight.bold,
-                                  color: isResolved
-                                      ? const Color(0xFF4CAF50)
-                                      : const Color(0xFFF57C00),
-                                ),
-                              ),
-                            ),
-                            const SizedBox(width: 8),
-                            Expanded(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text(
-                                    title,
-                                    style: const TextStyle(
-                                      fontSize: 13,
-                                      fontWeight: FontWeight.w600,
-                                      color: Color(0xFF5A4038),
-                                    ),
-                                    overflow: TextOverflow.ellipsis,
-                                  ),
-                                  const SizedBox(height: 4),
-                                  Text(
-                                    '$category · $createdAt',
-                                    style: const TextStyle(
-                                      fontSize: 11,
-                                      color: Color(0xFF8A7A72),
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                            const Icon(Icons.chevron_right, color: Color(0xFFB0A8A4)),
-                          ],
-                        ),
-                      ),
-                    );
-                  },
-                ),
-              );
-            },
-          ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx),
-            child: const Text('닫기'),
-          ),
-        ],
-      ),
-    );
-  }
-
-  void _showInquiryDetailDialog(Map<String, dynamic> item) {
-    final title = item['title']?.toString() ?? '';
-    final content = item['content']?.toString() ?? '';
-    final adminNote = item['admin_note']?.toString() ?? '';
-    final status = item['status']?.toString() ?? 'pending';
-    final category = _inquiryCategoryLabel(item['category']);
-    final createdAt = _formatShortDate(item['created_at']);
-    final resolvedAt = _formatShortDate(item['resolved_at']);
-
-    showDialog(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        title: Text(title),
-        content: SingleChildScrollView(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                '$category · $createdAt',
-                style: const TextStyle(fontSize: 12, color: Color(0xFF8A7A72)),
-              ),
-              const SizedBox(height: 12),
-              Text(
-                content,
-                style: const TextStyle(fontSize: 13, color: Color(0xFF5A4038)),
-              ),
-              const SizedBox(height: 16),
-              if (status == 'resolved' && adminNote.isNotEmpty) ...[
-                const Text(
-                  '답변',
-                  style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Color(0xFF4CAF50)),
-                ),
-                const SizedBox(height: 6),
-                Text(
-                  adminNote,
-                  style: const TextStyle(fontSize: 13, color: Color(0xFF5A4038)),
-                ),
-                const SizedBox(height: 8),
-                Text(
-                  '답변일: $resolvedAt',
-                  style: const TextStyle(fontSize: 11, color: Color(0xFF8A7A72)),
-                ),
-              ] else if (status != 'resolved') ...[
-                const Text(
-                  '아직 답변이 등록되지 않았습니다.',
-                  style: TextStyle(fontSize: 12, color: Color(0xFF9A8E8A)),
-                ),
-              ],
-            ],
-          ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx),
-            child: const Text('닫기'),
-          ),
-        ],
-      ),
-    );
-  }
-
   void _showProfileDialog() {
     final game = context.read<GameService>();
     _showUserProfileDialog(game.playerName, game);
-  }
-
-  void _showSettingsDialog() {
-    showDialog(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        title: const Row(
-          children: [
-            Icon(Icons.settings, color: Color(0xFF9E9E9E)),
-            SizedBox(width: 8),
-            Text('설정'),
-          ],
-        ),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            SizedBox(
-              width: double.infinity,
-              child: ElevatedButton.icon(
-                onPressed: () {
-                  Navigator.pop(ctx);
-                  _showInquiryDialog();
-                },
-                icon: const Icon(Icons.help_outline),
-                label: const Text('문의하기'),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFFF3E5F5),
-                  foregroundColor: const Color(0xFFBA68C8),
-                  padding: const EdgeInsets.symmetric(vertical: 12),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                ),
-              ),
-            ),
-            const SizedBox(height: 10),
-            SizedBox(
-              width: double.infinity,
-              child: ElevatedButton.icon(
-                onPressed: () {
-                  Navigator.pop(ctx);
-                  _showInquiryHistoryDialog();
-                },
-                icon: const Icon(Icons.mark_email_read),
-                label: const Text('문의 내역'),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFFE3F2FD),
-                  foregroundColor: const Color(0xFF1E88E5),
-                  padding: const EdgeInsets.symmetric(vertical: 12),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                ),
-              ),
-            ),
-            if (context.read<GameService>().authProvider == 'local') ...[
-              const SizedBox(height: 10),
-              SizedBox(
-                width: double.infinity,
-                child: ElevatedButton.icon(
-                  onPressed: () {
-                    Navigator.pop(ctx);
-                    _showSocialLinkDialog();
-                  },
-                  icon: const Icon(Icons.link),
-                  label: const Text('소셜 연동'),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFFFFF3E0),
-                    foregroundColor: const Color(0xFFF57C00),
-                    padding: const EdgeInsets.symmetric(vertical: 12),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                  ),
-                ),
-              ),
-            ],
-            const SizedBox(height: 12),
-            SizedBox(
-              width: double.infinity,
-              child: ElevatedButton.icon(
-                onPressed: () {
-                  Navigator.pop(ctx);
-                  _logout();
-                },
-                icon: const Icon(Icons.logout),
-                label: const Text('로그아웃'),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFFE0E0E0),
-                  foregroundColor: const Color(0xFF5A4038),
-                  padding: const EdgeInsets.symmetric(vertical: 12),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                ),
-              ),
-            ),
-            const SizedBox(height: 12),
-            SizedBox(
-              width: double.infinity,
-              child: ElevatedButton.icon(
-                onPressed: () {
-                  Navigator.pop(ctx);
-                  _showDeleteAccountDialog();
-                },
-                icon: const Icon(Icons.delete_forever),
-                label: const Text('회원탈퇴'),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFFFFCDD2),
-                  foregroundColor: const Color(0xFFC62828),
-                  padding: const EdgeInsets.symmetric(vertical: 12),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                ),
-              ),
-            ),
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx),
-            child: const Text('닫기'),
-          ),
-        ],
-      ),
-    );
-  }
-
-  void _logout() async {
-    await context.read<SessionService>().logout();
-    if (!mounted) return;
-    Navigator.pushReplacement(
-      context,
-      MaterialPageRoute(builder: (_) => const LoginScreen()),
-    );
-  }
-
-  void _showSocialLinkDialog() {
-    final game = context.read<GameService>();
-    game.getLinkedSocial();
-
-    showDialog(
-      context: context,
-      builder: (ctx) {
-        bool isLinking = false;
-        return StatefulBuilder(
-          builder: (ctx, setDialogState) {
-            return Consumer<GameService>(
-              builder: (ctx, game, _) {
-                final provider = game.linkedSocialProvider;
-                final isLinked = provider != null && provider != 'local';
-
-                // Show link result
-                if (game.socialLinkResultSuccess != null) {
-                  final success = game.socialLinkResultSuccess!;
-                  final msg = game.socialLinkResultMessage ?? '';
-                  WidgetsBinding.instance.addPostFrameCallback((_) {
-                    game.clearSocialLinkResult();
-                    if (!success && msg.isNotEmpty) {
-                      showDialog(
-                        context: context,
-                        builder: (_) => AlertDialog(
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-                          title: const Text('연동 실패'),
-                          content: Text(msg),
-                          actions: [
-                            TextButton(
-                              onPressed: () => Navigator.pop(context),
-                              child: const Text('확인'),
-                            ),
-                          ],
-                        ),
-                      );
-                    }
-                    setDialogState(() => isLinking = false);
-                  });
-                }
-
-                String providerLabel(String p) {
-                  switch (p) {
-                    case 'google': return 'Google';
-                    case 'apple': return 'Apple';
-                    case 'kakao': return 'Kakao';
-                    default: return p;
-                  }
-                }
-
-                return AlertDialog(
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-                  title: const Row(
-                    children: [
-                      Icon(Icons.link, color: Color(0xFFF57C00)),
-                      SizedBox(width: 8),
-                      Text('소셜 연동'),
-                    ],
-                  ),
-                  content: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      if (!isLinked) ...[
-                        const Text(
-                          '소셜 계정을 연동하면\n간편 로그인이 가능합니다',
-                          textAlign: TextAlign.center,
-                          style: TextStyle(fontSize: 14, color: Colors.grey),
-                        ),
-                        const SizedBox(height: 16),
-                        if (isLinking)
-                          const Padding(
-                            padding: EdgeInsets.all(16),
-                            child: CircularProgressIndicator(),
-                          )
-                        else ...[
-                          _socialLinkButton(
-                            label: 'Google 연동',
-                            color: const Color(0xFFDB4437),
-                            icon: Icons.g_mobiledata,
-                            onTap: () async {
-                              setDialogState(() => isLinking = true);
-                              try {
-                                final result = await AuthService.signInWithGoogle();
-                                if (result.cancelled) {
-                                  setDialogState(() => isLinking = false);
-                                  return;
-                                }
-                                game.linkSocial(result.provider, result.token);
-                              } catch (e) {
-                                setDialogState(() => isLinking = false);
-                              }
-                            },
-                          ),
-                          if (Platform.isIOS) ...[
-                            const SizedBox(height: 10),
-                            _socialLinkButton(
-                              label: 'Apple 연동',
-                              color: Colors.black87,
-                              icon: Icons.apple,
-                              onTap: () async {
-                                setDialogState(() => isLinking = true);
-                                try {
-                                  final result = await AuthService.signInWithApple();
-                                  if (result.cancelled) {
-                                    setDialogState(() => isLinking = false);
-                                    return;
-                                  }
-                                  game.linkSocial(result.provider, result.token);
-                                } catch (e) {
-                                  setDialogState(() => isLinking = false);
-                                }
-                              },
-                            ),
-                          ],
-                          const SizedBox(height: 10),
-                          _socialLinkButton(
-                            label: 'Kakao 연동',
-                            color: const Color(0xFFFEE500),
-                            textColor: const Color(0xFF3C1E1E),
-                            icon: Icons.chat_bubble,
-                            onTap: () async {
-                              setDialogState(() => isLinking = true);
-                              try {
-                                final result = await AuthService.signInWithKakao();
-                                if (result.cancelled) {
-                                  setDialogState(() => isLinking = false);
-                                  return;
-                                }
-                                game.linkSocial(result.provider, result.token);
-                              } catch (e) {
-                                setDialogState(() => isLinking = false);
-                              }
-                            },
-                          ),
-                        ],
-                      ] else ...[
-                        Container(
-                          padding: const EdgeInsets.all(16),
-                          decoration: BoxDecoration(
-                            color: const Color(0xFFF5F5F5),
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          child: Column(
-                            children: [
-                              Text(
-                                '현재 연동: ${providerLabel(provider!)}',
-                                style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-                              ),
-                              if (game.linkedSocialEmail != null && game.linkedSocialEmail!.isNotEmpty)
-                                Padding(
-                                  padding: const EdgeInsets.only(top: 4),
-                                  child: Text(
-                                    game.linkedSocialEmail!,
-                                    style: const TextStyle(fontSize: 13, color: Colors.grey),
-                                  ),
-                                ),
-                            ],
-                          ),
-                        ),
-                        const SizedBox(height: 16),
-                        SizedBox(
-                          width: double.infinity,
-                          child: ElevatedButton(
-                            onPressed: isLinking ? null : () {
-                              showDialog(
-                                context: context,
-                                builder: (_) => AlertDialog(
-                                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-                                  title: const Text('연동 해제'),
-                                  content: const Text('소셜 연동을 해제하시겠습니까?\nID/PW로만 로그인 가능합니다.'),
-                                  actions: [
-                                    TextButton(
-                                      onPressed: () => Navigator.pop(context),
-                                      child: const Text('취소'),
-                                    ),
-                                    TextButton(
-                                      onPressed: () {
-                                        Navigator.pop(context);
-                                        setDialogState(() => isLinking = true);
-                                        game.unlinkSocial();
-                                      },
-                                      child: const Text('해제', style: TextStyle(color: Colors.red)),
-                                    ),
-                                  ],
-                                ),
-                              );
-                            },
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: const Color(0xFFFFCDD2),
-                              foregroundColor: const Color(0xFFC62828),
-                              padding: const EdgeInsets.symmetric(vertical: 12),
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(12),
-                              ),
-                            ),
-                            child: const Text('연동 해제'),
-                          ),
-                        ),
-                      ],
-                    ],
-                  ),
-                  actions: [
-                    TextButton(
-                      onPressed: () => Navigator.pop(ctx),
-                      child: const Text('닫기'),
-                    ),
-                  ],
-                );
-              },
-            );
-          },
-        );
-      },
-    );
-  }
-
-  Widget _socialLinkButton({
-    required String label,
-    required Color color,
-    Color textColor = Colors.white,
-    required IconData icon,
-    required VoidCallback onTap,
-  }) {
-    return SizedBox(
-      width: double.infinity,
-      child: ElevatedButton.icon(
-        onPressed: onTap,
-        icon: Icon(icon),
-        label: Text(label),
-        style: ElevatedButton.styleFrom(
-          backgroundColor: color,
-          foregroundColor: textColor,
-          padding: const EdgeInsets.symmetric(vertical: 12),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(12),
-          ),
-        ),
-      ),
-    );
-  }
-
-  void _showDeleteAccountDialog() {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        title: const Text('회원탈퇴'),
-        content: const Text('정말 탈퇴하시겠습니까?\n모든 데이터가 삭제됩니다.'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('취소'),
-          ),
-          ElevatedButton(
-            onPressed: () {
-              Navigator.pop(context);
-              _deleteAccount();
-            },
-            style: ElevatedButton.styleFrom(
-              backgroundColor: const Color(0xFFC62828),
-              foregroundColor: Colors.white,
-            ),
-            child: const Text('탈퇴'),
-          ),
-        ],
-      ),
-    );
-  }
-
-  void _deleteAccount() {
-    final game = context.read<GameService>();
-    game.deleteAccount();
-    _logout();
   }
 
   Widget _buildIconButton({
@@ -1185,290 +415,398 @@ class _LobbyScreenState extends State<LobbyScreen> {
     final timeLimitController = TextEditingController(text: '30');
     final targetScoreController = TextEditingController(text: '1000');
     String? errorText;
+    void Function(void Function())? dialogSetState;
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: null,
-        contentPadding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
-        backgroundColor: context.read<GameService>().themeGradient.first.withValues(alpha: 0.9),
-        content: StatefulBuilder(
-          builder: (context, setState) {
-            final themeColors = context.read<GameService>().themeGradient;
-            final accent = themeColors.length > 1 ? themeColors[1] : themeColors.first;
-            return SingleChildScrollView(
-              child: Container(
-                padding: const EdgeInsets.all(8),
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                    colors: [
-                      themeColors.first.withValues(alpha: 0.9),
-                      themeColors.last.withValues(alpha: 0.7),
-                    ],
-                  ),
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: Column(
-              mainAxisSize: MainAxisSize.min,
+      builder: (context) => StatefulBuilder(
+        builder: (context, setState) {
+          dialogSetState = setState;
+          final themeColors = context.read<GameService>().themeGradient;
+          final accent = themeColors.length > 1 ? themeColors[1] : themeColors.first;
+          final fillColor = Colors.white.withValues(alpha: 0.82);
+
+          InputDecoration fieldDecoration(
+            String hintText, {
+            String? suffixText,
+          }) {
+            return InputDecoration(
+              hintText: hintText,
+              suffixText: suffixText,
+              filled: true,
+              fillColor: fillColor,
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+                borderSide: BorderSide(color: accent.withValues(alpha: 0.2)),
+              ),
+              enabledBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+                borderSide: BorderSide(color: accent.withValues(alpha: 0.2)),
+              ),
+              focusedBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+                borderSide: BorderSide(color: accent, width: 1.4),
+              ),
+              isDense: true,
+              contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+            );
+          }
+
+          Widget sectionTitle(String title, String subtitle) {
+            return Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Row(
-                  children: [
-                    const Text('방 이름', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 12)),
-                    const Spacer(),
-                    TextButton(
-                      onPressed: () => setState(() => controller.text = randomName),
-                      style: TextButton.styleFrom(padding: EdgeInsets.zero, minimumSize: const Size(40, 24)),
-                      child: Text(
-                        '랜덤',
-                        style: TextStyle(color: accent),
-                      ),
-                    ),
-                  ],
-                ),
-                TextField(
-                  controller: controller,
-                  decoration: InputDecoration(
-                    hintText: randomName,
-                    filled: true,
-                    fillColor: themeColors.first.withValues(alpha: 0.35),
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(10),
-                      borderSide: BorderSide(color: accent.withValues(alpha: 0.35)),
-                    ),
-                    enabledBorder: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(10),
-                      borderSide: BorderSide(color: accent.withValues(alpha: 0.35)),
-                    ),
-                    focusedBorder: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(10),
-                      borderSide: BorderSide(color: accent),
-                    ),
-                    isDense: true,
-                    contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-                  ),
-                  autofocus: true,
-                ),
-                const SizedBox(height: 10),
-                Row(
-                  children: [
-                    const Text('비공개', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 12)),
-                    const Spacer(),
-                    Switch(
-                      value: isPrivate,
-                      onChanged: isRanked ? null : (v) => setState(() => isPrivate = v),
-                    ),
-                  ],
-                ),
-                if (isPrivate)
-                  TextField(
-                    controller: passwordController,
-                    decoration: InputDecoration(
-                      hintText: '비밀번호 (4자 이상)',
-                      filled: true,
-                      fillColor: themeColors.first.withValues(alpha: 0.35),
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(10),
-                        borderSide: BorderSide(color: accent.withValues(alpha: 0.35)),
-                      ),
-                      enabledBorder: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(10),
-                        borderSide: BorderSide(color: accent.withValues(alpha: 0.35)),
-                      ),
-                      focusedBorder: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(10),
-                        borderSide: BorderSide(color: accent),
-                      ),
-                      isDense: true,
-                      contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-                    ),
-                    obscureText: true,
-                  )
-                else
-                  const Align(
-                    alignment: Alignment.centerLeft,
-                    child: Text(
-                      '비공개를 켜면 비밀번호가 필요합니다',
-                      style: TextStyle(fontSize: 11, color: Color(0xFF9A8E8A)),
-                    ),
-                  ),
-                if (context.read<GameService>().authProvider != 'local') ...[
-                const SizedBox(height: 6),
-                Row(
-                  children: [
-                    const Text('랭크전', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 12)),
-                    const Spacer(),
-                    Switch(
-                      value: isRanked,
-                      onChanged: (v) => setState(() {
-                        isRanked = v;
-                        if (isRanked) {
-                          isPrivate = false;
-                          passwordController.clear();
-                          targetScoreController.text = '1000';
-                        }
-                      }),
-                    ),
-                  ],
-                ),
-                const Align(
-                  alignment: Alignment.centerLeft,
-                  child: Text(
-                    '랭크전은 비공개 방을 만들 수 없습니다',
-                    style: TextStyle(fontSize: 11, color: Color(0xFF9A8E8A)),
+                Text(
+                  title,
+                  style: const TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w700,
+                    color: Color(0xFF3E312A),
                   ),
                 ),
-                ],
-                const SizedBox(height: 8),
-                Row(
-                  children: [
-                    const Text('시간 제한', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 12)),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: TextField(
-                        controller: timeLimitController,
-                        keyboardType: TextInputType.number,
-                        inputFormatters: [
-                          FilteringTextInputFormatter.digitsOnly,
-                          LengthLimitingTextInputFormatter(3),
-                        ],
-                        textAlign: TextAlign.center,
-                        decoration: InputDecoration(
-                          suffixText: '초',
-                          hintText: '10~999',
-                          filled: true,
-                          fillColor: themeColors.first.withValues(alpha: 0.35),
-                          isDense: true,
-                          contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-                          border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(10),
-                            borderSide: BorderSide(color: accent.withValues(alpha: 0.35)),
-                          ),
-                          enabledBorder: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(10),
-                            borderSide: BorderSide(color: accent.withValues(alpha: 0.35)),
-                          ),
-                          focusedBorder: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(10),
-                            borderSide: BorderSide(color: accent),
-                          ),
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 8),
-                Row(
-                  children: [
-                    const Text('목표 점수', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 12)),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: TextField(
-                        controller: targetScoreController,
-                        enabled: !isRanked,
-                        keyboardType: TextInputType.number,
-                        inputFormatters: [
-                          FilteringTextInputFormatter.digitsOnly,
-                          LengthLimitingTextInputFormatter(5),
-                        ],
-                        textAlign: TextAlign.center,
-                        decoration: InputDecoration(
-                          suffixText: '점',
-                          hintText: isRanked ? '1000 (고정)' : '100~20000',
-                          filled: true,
-                          fillColor: themeColors.first.withValues(alpha: 0.35),
-                          isDense: true,
-                          contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-                          border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(10),
-                            borderSide: BorderSide(color: accent.withValues(alpha: 0.35)),
-                          ),
-                          enabledBorder: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(10),
-                            borderSide: BorderSide(color: accent.withValues(alpha: 0.35)),
-                          ),
-                          focusedBorder: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(10),
-                            borderSide: BorderSide(color: accent),
-                          ),
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-                if (!isRanked)
-                  const Align(
-                    alignment: Alignment.centerLeft,
-                    child: Text(
-                      '100~20000점 사이로 설정할 수 있습니다',
-                      style: TextStyle(fontSize: 11, color: Color(0xFF9A8E8A)),
-                    ),
+                const SizedBox(height: 2),
+                Text(
+                  subtitle,
+                  style: const TextStyle(
+                    fontSize: 11,
+                    color: Color(0xFF7E7069),
                   ),
-                if (errorText != null) ...[
-                  const SizedBox(height: 8),
-                  Align(
-                    alignment: Alignment.centerLeft,
-                    child: Text(
-                      errorText!,
-                      style: const TextStyle(
-                        fontSize: 12,
-                        color: Color(0xFFCC6666),
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                  ),
-                ],
+                ),
               ],
-            ),
+            );
+          }
+
+          Widget optionCard({
+            required String title,
+            required String description,
+            required bool value,
+            required ValueChanged<bool> onChanged,
+            bool enabled = true,
+          }) {
+            return Container(
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+              decoration: BoxDecoration(
+                color: Colors.white.withValues(alpha: enabled ? 0.72 : 0.42),
+                borderRadius: BorderRadius.circular(14),
+                border: Border.all(
+                  color: value
+                      ? accent.withValues(alpha: 0.65)
+                      : const Color(0xFFE0D5D0),
+                ),
+              ),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          title,
+                          style: TextStyle(
+                            fontSize: 13,
+                            fontWeight: FontWeight.w700,
+                            color: enabled
+                                ? const Color(0xFF4B3C35)
+                                : const Color(0xFF9A8E8A),
+                          ),
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          description,
+                          style: TextStyle(
+                            fontSize: 11,
+                            color: enabled
+                                ? const Color(0xFF7E7069)
+                                : const Color(0xFFAAA09C),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Switch(
+                    value: value,
+                    onChanged: enabled ? onChanged : null,
+                  ),
+                ],
               ),
             );
-          },
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('취소'),
-          ),
-          ElevatedButton(
-            onPressed: () {
-              final name = controller.text.trim().isEmpty
-                  ? randomName
-                  : controller.text.trim();
-              final password = passwordController.text.trim();
-              if (name.isEmpty) {
-                setState(() => errorText = '방 이름을 입력해주세요.');
-                return;
-              }
-              if (isPrivate && password.length < 4) {
-                setState(() => errorText = '비밀번호는 4자 이상이어야 합니다.');
-                return;
-              }
-              final turnTimeLimit = (int.tryParse(timeLimitController.text.trim()) ?? 30).clamp(10, 999);
-              final targetScore = isRanked ? 1000 : (int.tryParse(targetScoreController.text.trim()) ?? 1000).clamp(100, 20000);
-              context
-                  .read<GameService>()
-                  .createRoom(
+          }
+
+          return AlertDialog(
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+            backgroundColor: themeColors.first.withValues(alpha: 0.94),
+            contentPadding: const EdgeInsets.fromLTRB(18, 18, 18, 10),
+            content: ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 440),
+              child: SingleChildScrollView(
+                child: Container(
+                  padding: const EdgeInsets.all(10),
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                      colors: [
+                        themeColors.first.withValues(alpha: 0.92),
+                        themeColors.last.withValues(alpha: 0.76),
+                      ],
+                    ),
+                    borderRadius: BorderRadius.circular(18),
+                  ),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          Container(
+                            width: 38,
+                            height: 38,
+                            decoration: BoxDecoration(
+                              color: Colors.white.withValues(alpha: 0.28),
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            child: const Icon(
+                              Icons.add_home_work_rounded,
+                              color: Color(0xFF3E312A),
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          const Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  '새 방 만들기',
+                                  style: TextStyle(
+                                    fontSize: 18,
+                                    fontWeight: FontWeight.w800,
+                                    color: Color(0xFF2F241F),
+                                  ),
+                                ),
+                                SizedBox(height: 2),
+                                Text(
+                                  '방 제목과 규칙을 정하면 바로 대기실이 열립니다.',
+                                  style: TextStyle(
+                                    fontSize: 12,
+                                    color: Color(0xFF695D57),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 16),
+                      sectionTitle('기본 정보', '먼저 방 이름과 공개 여부를 정합니다.'),
+                      const SizedBox(height: 10),
+                      Row(
+                        children: [
+                          const Text(
+                            '방 이름',
+                            style: TextStyle(fontWeight: FontWeight.w700, fontSize: 12),
+                          ),
+                          const Spacer(),
+                          TextButton.icon(
+                            onPressed: () => setState(() => controller.text = randomName),
+                            style: TextButton.styleFrom(
+                              padding: const EdgeInsets.symmetric(horizontal: 8),
+                              minimumSize: const Size(0, 28),
+                              tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                              foregroundColor: accent,
+                            ),
+                            icon: const Icon(Icons.casino_outlined, size: 16),
+                            label: const Text('랜덤'),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 6),
+                      TextField(
+                        controller: controller,
+                        decoration: fieldDecoration(randomName),
+                      ),
+                      const SizedBox(height: 12),
+                      optionCard(
+                        title: '비공개 방',
+                        description: isRanked
+                            ? '랭크전에서는 비공개 방을 만들 수 없습니다.'
+                            : '초대한 사람이나 비밀번호를 아는 사람만 들어올 수 있습니다.',
+                        value: isPrivate,
+                        enabled: !isRanked,
+                        onChanged: (v) => setState(() => isPrivate = v),
+                      ),
+                      if (isPrivate) ...[
+                        const SizedBox(height: 10),
+                        TextField(
+                          controller: passwordController,
+                          obscureText: true,
+                          decoration: fieldDecoration('비밀번호 (4자 이상)'),
+                        ),
+                      ],
+                      if (context.read<GameService>().authProvider != 'local') ...[
+                        const SizedBox(height: 12),
+                        optionCard(
+                          title: '랭크전',
+                          description: '점수는 1000점 고정이며 비공개 설정은 자동으로 꺼집니다.',
+                          value: isRanked,
+                          onChanged: (v) => setState(() {
+                            isRanked = v;
+                            if (isRanked) {
+                              isPrivate = false;
+                              passwordController.clear();
+                              targetScoreController.text = '1000';
+                            }
+                          }),
+                        ),
+                      ],
+                      const SizedBox(height: 16),
+                      sectionTitle('게임 설정', '턴 시간과 목표 점수를 정합니다.'),
+                      const SizedBox(height: 10),
+                      Row(
+                        children: [
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                const Text(
+                                  '시간 제한',
+                                  style: TextStyle(fontWeight: FontWeight.w700, fontSize: 12),
+                                ),
+                                const SizedBox(height: 6),
+                                TextField(
+                                  controller: timeLimitController,
+                                  keyboardType: TextInputType.number,
+                                  inputFormatters: [
+                                    FilteringTextInputFormatter.digitsOnly,
+                                    LengthLimitingTextInputFormatter(3),
+                                  ],
+                                  textAlign: TextAlign.center,
+                                  decoration: fieldDecoration('10~999', suffixText: '초'),
+                                ),
+                              ],
+                            ),
+                          ),
+                          const SizedBox(width: 10),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                const Text(
+                                  '목표 점수',
+                                  style: TextStyle(fontWeight: FontWeight.w700, fontSize: 12),
+                                ),
+                                const SizedBox(height: 6),
+                                TextField(
+                                  controller: targetScoreController,
+                                  enabled: !isRanked,
+                                  keyboardType: TextInputType.number,
+                                  inputFormatters: [
+                                    FilteringTextInputFormatter.digitsOnly,
+                                    LengthLimitingTextInputFormatter(5),
+                                  ],
+                                  textAlign: TextAlign.center,
+                                  decoration: fieldDecoration(
+                                    isRanked ? '1000 (고정)' : '100~20000',
+                                    suffixText: '점',
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 10),
+                      Container(
+                        width: double.infinity,
+                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                        decoration: BoxDecoration(
+                          color: Colors.white.withValues(alpha: 0.55),
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: Text(
+                          isRanked
+                              ? '랭크전은 목표 점수 1000점으로 고정됩니다.'
+                              : '시간 제한은 10~999초, 목표 점수는 100~20000점까지 설정할 수 있습니다.',
+                          style: const TextStyle(
+                            fontSize: 11,
+                            color: Color(0xFF6D615B),
+                          ),
+                        ),
+                      ),
+                      if (errorText != null) ...[
+                        const SizedBox(height: 12),
+                        Container(
+                          width: double.infinity,
+                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFFFECEC),
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(color: const Color(0xFFF2B3B3)),
+                          ),
+                          child: Text(
+                            errorText!,
+                            style: const TextStyle(
+                              fontSize: 12,
+                              color: Color(0xFFB54A4A),
+                              fontWeight: FontWeight.w700,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ],
+                  ),
+                ),
+              ),
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context),
+                child: const Text('취소'),
+              ),
+              ElevatedButton.icon(
+                onPressed: () {
+                  final name = controller.text.trim().isEmpty
+                      ? randomName
+                      : controller.text.trim();
+                  final password = passwordController.text.trim();
+                  if (name.isEmpty) {
+                    dialogSetState?.call(() => errorText = '방 이름을 입력해주세요.');
+                    return;
+                  }
+                  if (isPrivate && password.length < 4) {
+                    dialogSetState?.call(() => errorText = '비밀번호는 4자 이상이어야 합니다.');
+                    return;
+                  }
+                  final turnTimeLimit =
+                      (int.tryParse(timeLimitController.text.trim()) ?? 30).clamp(10, 999);
+                  final targetScore = isRanked
+                      ? 1000
+                      : (int.tryParse(targetScoreController.text.trim()) ?? 1000)
+                          .clamp(100, 20000);
+                  context.read<GameService>().createRoom(
                     name,
                     password: isPrivate ? password : '',
                     isRanked: isRanked,
                     turnTimeLimit: turnTimeLimit,
                     targetScore: targetScore,
                   );
-              Navigator.pop(context);
-              setState(() => _inRoom = true);
-            },
-            style: ElevatedButton.styleFrom(
-              backgroundColor: context.read<GameService>().themeGradient[1],
-              foregroundColor: const Color(0xFF3A2A1E),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(14),
+                  Navigator.pop(context);
+                  setState(() => _inRoom = true);
+                },
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: accent,
+                  foregroundColor: const Color(0xFF2A1E18),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(14),
+                  ),
+                  elevation: 0,
+                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                ),
+                icon: const Icon(Icons.check_circle_outline, size: 18),
+                label: const Text('방 만들기'),
               ),
-              elevation: 0,
-            ),
-            child: const Text('만들기'),
-          ),
-        ],
+            ],
+          );
+        },
       ),
     );
   }
@@ -1476,7 +814,8 @@ class _LobbyScreenState extends State<LobbyScreen> {
   @override
   Widget build(BuildContext context) {
     final themeColors = context.watch<GameService>().themeGradient;
-    final session = context.watch<SessionService>();
+    final isLandscape =
+        MediaQuery.of(context).orientation == Orientation.landscape;
     return ConnectionOverlay(
       child: PopScope(
         canPop: false,
@@ -1496,15 +835,11 @@ class _LobbyScreenState extends State<LobbyScreen> {
               if (game.duplicateLoginKicked) {
                 WidgetsBinding.instance.addPostFrameCallback((_) async {
                   if (!mounted) return;
-                  game.duplicateLoginKicked = false;
+                  if (!game.consumeDuplicateLoginKick()) return;
                   final session = context.read<SessionService>();
-                  final navigator = Navigator.of(context);
                   final messenger = ScaffoldMessenger.of(context);
                   await session.logout();
                   if (!mounted) return;
-                  navigator.pushReplacement(
-                    MaterialPageRoute(builder: (_) => const LoginScreen()),
-                  );
                   messenger.showSnackBar(
                     const SnackBar(
                       content: Text('다른 기기에서 로그인되어 로그아웃되었습니다'),
@@ -1514,65 +849,31 @@ class _LobbyScreenState extends State<LobbyScreen> {
                 });
               }
               // Show room invite dialog if any
-              if (game.roomInvites.isNotEmpty) {
+              if (game.hasRoomInvites) {
                 WidgetsBinding.instance.addPostFrameCallback((_) {
-                  if (!mounted || game.roomInvites.isEmpty) return;
-                  final invite = game.roomInvites.first;
-                  game.roomInvites.removeAt(0);
-                  game.notifyListeners();
+                  if (!mounted) return;
+                  final invite = game.firstRoomInvite;
+                  if (invite == null) return;
+                  game.dismissInvite(0);
                   _showRoomInviteDialog(invite, game);
                 });
               }
 
               // Sync local room flag with server state
-              if (game.currentRoomId.isEmpty && _inRoom) {
+              if (!game.hasRoom && _inRoom) {
                 _inRoom = false;
               }
-              if (game.currentRoomId.isNotEmpty && !game.isSpectator && !_inRoom) {
+              if (game.isInWaitingRoom && !_inRoom) {
                 _inRoom = true;
               }
 
-              // Check if spectating
-              if (!session.isRestoring &&
-                  game.isSpectator &&
-                  game.currentRoomId.isNotEmpty) {
-                if (!_navigatingToGame) {
-                  _navigatingToGame = true;
-                  WidgetsBinding.instance.addPostFrameCallback((_) {
-                    if (!mounted) return;
-                    Navigator.pushReplacement(
-                      context,
-                      MaterialPageRoute(builder: (_) => const SpectatorScreen()),
-                    );
-                  });
-                }
-              }
+              final destination = game.currentDestination;
 
-              // Check if game started
-              if (!session.isRestoring &&
-                  game.currentRoomId.isNotEmpty &&
-                  game.gameState != null &&
-                  game.gameState!.phase.isNotEmpty &&
-                  game.gameState!.phase != 'waiting' &&
-                  game.gameState!.phase != 'game_end') {
-                if (!_navigatingToGame) {
-                  _navigatingToGame = true;
-                  WidgetsBinding.instance.addPostFrameCallback((_) {
-                    if (!mounted) return;
-                    Navigator.pushReplacement(
-                      context,
-                      MaterialPageRoute(builder: (_) => const GameScreen()),
-                    );
-                  });
-                }
-              }
-
-              // Show room or lobby based on state
-              if (game.currentRoomId.isNotEmpty || _inRoom) {
+              if (destination != AppDestination.lobby || _inRoom) {
                 _inRoom = true;
-                return _buildRoomView(game);
+                return _buildRoomView(game, isLandscape: isLandscape);
               }
-              return _buildLobbyView(game);
+              return _buildLobbyView(game, isLandscape: isLandscape);
             },
           ),
         ),
@@ -1582,111 +883,46 @@ class _LobbyScreenState extends State<LobbyScreen> {
     );
   }
 
-  Widget _buildLobbyView(GameService game) {
-    return Column(
-      children: [
-        // Top bar with menu icons
-        Container(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-          decoration: BoxDecoration(
-            color: Colors.white.withValues(alpha: 0.95),
-            borderRadius: BorderRadius.circular(18),
+  Widget _buildLobbyView(GameService game, {required bool isLandscape}) {
+    if (isLandscape) {
+      final hasTopNotices =
+          game.hasMaintenanceNotice || game.inquiryBannerMessage != null;
+      final hasBanner = _bannerAd != null && _bannerAdLoaded;
+      return Column(
+        children: [
+          _buildLobbyHeader(game, isLandscape: true),
+          if (hasTopNotices)
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
+              child: _buildLandscapeLobbyUtilityBar(game),
+            ),
+          Expanded(
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
+              child: _buildRoomListPanel(game),
+            ),
           ),
-          margin: const EdgeInsets.all(16),
-          clipBehavior: Clip.none,
-          child: Row(
-            children: [
-              ConstrainedBox(
-                constraints: const BoxConstraints(maxHeight: 44),
-                child: Image.asset(
-                  'assets/logo2.png',
-                  fit: BoxFit.contain,
+          if (hasBanner)
+            Padding(
+              padding: const EdgeInsets.only(bottom: 8),
+              child: Center(
+                child: SizedBox(
+                  height: _bannerAd!.size.height.toDouble(),
+                  width: _bannerAd!.size.width.toDouble(),
+                  child: AdWidget(
+                    ad: _bannerAd!,
+                    key: ValueKey(_bannerAd!.hashCode),
+                  ),
                 ),
               ),
-              const Spacer(),
-              Row(
-                children: [
-                  _buildIconButton(
-                    icon: Icons.store,
-                    color: const Color(0xFFFFB74D),
-                    onTap: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(builder: (_) => const ShopScreen()),
-                      );
-                    },
-                  ),
-                  const SizedBox(width: 8),
-                  // Friends button with badge
-                  Stack(
-                    children: [
-                      _buildIconButton(
-                        icon: Icons.people,
-                        color: const Color(0xFF7E57C2),
-                        onTap: () {
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(builder: (_) => const FriendsScreen()),
-                          );
-                        },
-                      ),
-                      if ((game.pendingFriendRequestCount + game.totalUnreadDmCount) > 0)
-                        Positioned(
-                          right: 0,
-                          top: 0,
-                          child: Container(
-                            padding: const EdgeInsets.all(4),
-                            decoration: const BoxDecoration(
-                              color: Color(0xFFE53935),
-                              shape: BoxShape.circle,
-                            ),
-                            constraints: const BoxConstraints(minWidth: 16, minHeight: 16),
-                            child: Text(
-                              '${game.pendingFriendRequestCount + game.totalUnreadDmCount}',
-                              style: const TextStyle(
-                                color: Colors.white,
-                                fontSize: 9,
-                                fontWeight: FontWeight.bold,
-                              ),
-                              textAlign: TextAlign.center,
-                            ),
-                          ),
-                        ),
-                    ],
-                  ),
-                  const SizedBox(width: 8),
-                  _buildIconButton(
-                    icon: Icons.leaderboard,
-                    color: const Color(0xFF81C784),
-                    onTap: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(builder: (_) => const RankingScreen()),
-                      );
-                    },
-                  ),
-                  const SizedBox(width: 8),
-                  _buildIconButton(
-                    icon: Icons.person,
-                    color: const Color(0xFF64B5F6),
-                    onTap: _showProfileDialog,
-                  ),
-                  const SizedBox(width: 8),
-                  _buildIconButton(
-                    icon: Icons.settings,
-                    color: const Color(0xFF9E9E9E),
-                    onTap: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(builder: (_) => const SettingsScreen()),
-                      );
-                    },
-                  ),
-                ],
-              ),
-            ],
-          ),
-        ),
+            ),
+        ],
+      );
+    }
+
+    return Column(
+      children: [
+        _buildLobbyHeader(game, isLandscape: false),
 
         // Maintenance notice banner
         if (game.hasMaintenanceNotice)
@@ -1709,13 +945,158 @@ class _LobbyScreenState extends State<LobbyScreen> {
     );
   }
 
+  Widget _buildLandscapeLobbyUtilityBar(GameService game) {
+    final hasTopNotices =
+        game.hasMaintenanceNotice || game.inquiryBannerMessage != null;
+
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: Colors.white.withValues(alpha: 0.78),
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(color: const Color(0xFFE9DED9)),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.center,
+        children: [
+          if (hasTopNotices)
+            Expanded(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  if (game.hasMaintenanceNotice) _buildMaintenanceBanner(game),
+                  if (game.inquiryBannerMessage != null)
+                    _buildInquiryBanner(game),
+                ],
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildLobbyHeader(GameService game, {required bool isLandscape}) {
+    return Container(
+      padding: EdgeInsets.symmetric(
+        horizontal: isLandscape ? 14 : 16,
+        vertical: isLandscape ? 12 : 10,
+      ),
+      decoration: BoxDecoration(
+        color: Colors.white.withValues(alpha: 0.95),
+        borderRadius: BorderRadius.circular(18),
+      ),
+      margin: EdgeInsets.all(isLandscape ? 12 : 16),
+      clipBehavior: Clip.none,
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.center,
+        children: [
+          ConstrainedBox(
+            constraints: BoxConstraints(maxHeight: isLandscape ? 36 : 44),
+            child: Image.asset(
+              'assets/logo2.png',
+              fit: BoxFit.contain,
+            ),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Align(
+              alignment: Alignment.centerRight,
+              child: Wrap(
+                spacing: 8,
+                runSpacing: 8,
+                alignment: WrapAlignment.end,
+                children: _buildLobbyActionButtons(game),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  List<Widget> _buildLobbyActionButtons(GameService game) {
+    return [
+      _buildIconButton(
+        icon: Icons.store,
+        color: const Color(0xFFFFB74D),
+        onTap: () {
+          Navigator.push(
+            context,
+            MaterialPageRoute(builder: (_) => const ShopScreen()),
+          );
+        },
+      ),
+      Stack(
+        children: [
+          _buildIconButton(
+            icon: Icons.people,
+            color: const Color(0xFF7E57C2),
+            onTap: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => const FriendsScreen()),
+              );
+            },
+          ),
+          if ((game.pendingFriendRequestCount + game.totalUnreadDmCount) > 0)
+            Positioned(
+              right: 0,
+              top: 0,
+              child: Container(
+                padding: const EdgeInsets.all(4),
+                decoration: const BoxDecoration(
+                  color: Color(0xFFE53935),
+                  shape: BoxShape.circle,
+                ),
+                constraints: const BoxConstraints(minWidth: 16, minHeight: 16),
+                child: Text(
+                  '${game.pendingFriendRequestCount + game.totalUnreadDmCount}',
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 9,
+                    fontWeight: FontWeight.bold,
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+              ),
+            ),
+        ],
+      ),
+      _buildIconButton(
+        icon: Icons.leaderboard,
+        color: const Color(0xFF81C784),
+        onTap: () {
+          Navigator.push(
+            context,
+            MaterialPageRoute(builder: (_) => const RankingScreen()),
+          );
+        },
+      ),
+      _buildIconButton(
+        icon: Icons.person,
+        color: const Color(0xFF64B5F6),
+        onTap: _showProfileDialog,
+      ),
+      _buildIconButton(
+        icon: Icons.settings,
+        color: const Color(0xFF9E9E9E),
+        onTap: () {
+          Navigator.push(
+            context,
+            MaterialPageRoute(builder: (_) => const SettingsScreen()),
+          );
+        },
+      ),
+    ];
+  }
+
   Widget _buildMaintenanceBanner(GameService game) {
     String timeText = '';
     if (game.maintenanceStart != null && game.maintenanceEnd != null) {
       try {
         final start = DateTime.parse(game.maintenanceStart!).toLocal();
         final end = DateTime.parse(game.maintenanceEnd!).toLocal();
-        final fmt = (DateTime d) => '${d.month}/${d.day} ${d.hour.toString().padLeft(2, '0')}:${d.minute.toString().padLeft(2, '0')}';
+        String fmt(DateTime d) => '${d.month}/${d.day} ${d.hour.toString().padLeft(2, '0')}:${d.minute.toString().padLeft(2, '0')}';
         timeText = '${fmt(start)} ~ ${fmt(end)}';
       } catch (_) {}
     }
@@ -1799,11 +1180,11 @@ class _LobbyScreenState extends State<LobbyScreen> {
       margin: const EdgeInsets.symmetric(horizontal: 16),
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.95),
+        color: Colors.white.withValues(alpha: 0.95),
         borderRadius: BorderRadius.circular(24),
         boxShadow: [
           BoxShadow(
-            color: const Color(0xFFD9CCC8).withOpacity(0.6),
+            color: const Color(0xFFD9CCC8).withValues(alpha: 0.6),
             blurRadius: 20,
             offset: const Offset(0, 10),
           ),
@@ -1884,7 +1265,7 @@ class _LobbyScreenState extends State<LobbyScreen> {
   Widget _buildRoomList(List<Room> rooms) {
     return ListView.separated(
       itemCount: rooms.length,
-      separatorBuilder: (_, __) => const SizedBox(height: 8),
+      separatorBuilder: (_, _) => const SizedBox(height: 8),
       itemBuilder: (context, index) {
         final room = rooms[index];
         return _buildRoomItem(room);
@@ -2103,198 +1484,12 @@ class _LobbyScreenState extends State<LobbyScreen> {
     );
   }
 
-  Widget _buildRoomView(GameService game) {
+  Widget _buildRoomView(GameService game, {required bool isLandscape}) {
     return GestureDetector(
       onTap: () => FocusScope.of(context).unfocus(),
       child: Column(
         children: [
-          // Top bar with player count
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-            decoration: BoxDecoration(
-              color: Colors.white.withOpacity(0.95),
-              borderRadius: BorderRadius.circular(18),
-            ),
-            margin: const EdgeInsets.all(16),
-            child: Column(
-              children: [
-                Row(
-                  children: [
-                    IconButton(
-                      onPressed: () {
-                        game.leaveRoom();
-                        setState(() => _inRoom = false);
-                      },
-                      icon: const Icon(Icons.arrow_back),
-                      color: const Color(0xFF8A7A72),
-                      padding: EdgeInsets.zero,
-                      constraints: const BoxConstraints(),
-                    ),
-                    const SizedBox(width: 8),
-                    Expanded(
-                      child: Text(
-                        game.currentRoomName,
-                        style: const TextStyle(
-                          fontSize: 18,
-                          fontWeight: FontWeight.bold,
-                          color: Color(0xFF5A4038),
-                        ),
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                    ),
-                    // Turn time limit & target score
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                      margin: const EdgeInsets.only(right: 8),
-                      decoration: BoxDecoration(
-                        color: const Color(0xFFF0EBE8),
-                        borderRadius: BorderRadius.circular(10),
-                      ),
-                      child: Text(
-                        '${game.roomTurnTimeLimit}초 · ${game.roomTargetScore}점',
-                        style: const TextStyle(
-                          fontSize: 12,
-                          color: Color(0xFF8A7A72),
-                        ),
-                      ),
-                    ),
-                    // Player count badge (non-null count)
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                      decoration: BoxDecoration(
-                        color: game.playerCount >= 4
-                            ? const Color(0xFFE8F5E9)
-                            : const Color(0xFFFFF8E1),
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      child: Text(
-                        '${game.playerCount}/4',
-                        style: TextStyle(
-                          fontSize: 14,
-                          fontWeight: FontWeight.bold,
-                          color: game.playerCount >= 4
-                              ? const Color(0xFF4CAF50)
-                              : const Color(0xFFFF9800),
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 8),
-                Row(
-                  children: [
-                    // Invite friends button
-                    GestureDetector(
-                      onTap: () => _showInviteFriendsDialog(game),
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                        decoration: BoxDecoration(
-                          color: const Color(0xFFF3E5F5),
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        child: const Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Icon(Icons.person_add, size: 14, color: Color(0xFF7E57C2)),
-                            SizedBox(width: 4),
-                            Text(
-                              '초대',
-                              style: TextStyle(
-                                fontSize: 12,
-                                fontWeight: FontWeight.bold,
-                                color: Color(0xFF7E57C2),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-                    const SizedBox(width: 6),
-                    // Switch to spectator button
-                    GestureDetector(
-                      onTap: () => game.switchToSpectator(),
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                        decoration: BoxDecoration(
-                          color: const Color(0xFFE8E0F8),
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        child: const Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Icon(Icons.visibility, size: 14, color: Color(0xFF4A4080)),
-                            SizedBox(width: 4),
-                            Text(
-                              '관전',
-                              style: TextStyle(
-                                fontSize: 12,
-                                fontWeight: FontWeight.bold,
-                                color: Color(0xFF4A4080),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-                    const SizedBox(width: 6),
-                    // Spectator list button
-                    GestureDetector(
-                      onTap: () => _showSpectatorListDialog(game),
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                        decoration: BoxDecoration(
-                          color: const Color(0xFFEDE7F6),
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            const Icon(Icons.visibility, size: 14, color: Color(0xFF4A4080)),
-                            const SizedBox(width: 4),
-                            Text(
-                              '관전자 ${game.spectators.length}',
-                              style: const TextStyle(
-                                fontSize: 12,
-                                fontWeight: FontWeight.bold,
-                                color: Color(0xFF4A4080),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-                    const Spacer(),
-                    if (game.isHost)
-                      GestureDetector(
-                        onTap: () => _showRoomSettingsDialog(game),
-                        child: Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                          decoration: BoxDecoration(
-                            color: const Color(0xFFE3F2FD),
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          child: const Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Icon(Icons.settings, size: 14, color: Color(0xFF1E88E5)),
-                              SizedBox(width: 4),
-                              Text(
-                                '방설정',
-                                style: TextStyle(
-                                  fontSize: 12,
-                                  fontWeight: FontWeight.bold,
-                                  color: Color(0xFF1E88E5),
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ),
-                  ],
-                ),
-              ],
-            ),
-          ),
+          _buildRoomHeader(game, isLandscape: isLandscape),
 
           // Error message banner
           if (game.errorMessage != null)
@@ -2321,202 +1516,455 @@ class _LobbyScreenState extends State<LobbyScreen> {
 
           // Scrollable content area
           Expanded(
-            child: SingleChildScrollView(
-              padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
-              child: Column(
-                children: [
-                  // Player slots section
-                  Container(
-                    padding: const EdgeInsets.all(16),
-                    decoration: BoxDecoration(
-                      color: Colors.white.withOpacity(0.95),
-                      borderRadius: BorderRadius.circular(20),
-                      boxShadow: [
-                        BoxShadow(
-                          color: const Color(0xFFD9CCC8).withOpacity(0.4),
-                          blurRadius: 10,
-                          offset: const Offset(0, 4),
+            child: isLandscape
+                ? Padding(
+                    padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+                    child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        Expanded(
+                          flex: 5,
+                          child: SingleChildScrollView(
+                            child: _buildRoomPlayersPanel(game),
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          flex: 4,
+                          child: _buildRoomChatContainer(game),
                         ),
                       ],
                     ),
+                  )
+                : SingleChildScrollView(
+                    padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
                     child: Column(
                       children: [
-                        if (game.isRankedRoom) ...[
-                          // Ranked room badge
-                          Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                            decoration: BoxDecoration(
-                              color: const Color(0xFFFFF3E0),
-                              borderRadius: BorderRadius.circular(12),
-                            ),
-                            child: const Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                Text('🏆', style: TextStyle(fontSize: 14)),
-                                SizedBox(width: 6),
-                                Text(
-                                  '랭크전 - 팀 랜덤 배정',
-                                  style: TextStyle(
-                                    fontSize: 13,
-                                    fontWeight: FontWeight.bold,
-                                    color: Color(0xFFE65100),
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                          const SizedBox(height: 12),
-                          for (int i = 0; i < 4; i++) ...[
-                            _buildClickablePlayerSlot(
-                              game.roomPlayers[i],
-                              slotIndex: i,
-                              game: game,
-                            ),
-                            if (i < 3) const SizedBox(height: 8),
-                          ],
-                        ] else ...[
-                          // Normal room: Team A and Team B side by side
-                          Row(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              // Team A (slots 0, 2)
-                              Expanded(
-                                child: Column(
-                                  children: [
-                                    const Text(
-                                      'TEAM A',
-                                      style: TextStyle(
-                                        fontSize: 13,
-                                        fontWeight: FontWeight.bold,
-                                        color: Color(0xFF6A9BD1),
-                                      ),
-                                    ),
-                                    const SizedBox(height: 8),
-                                    _buildClickablePlayerSlot(
-                                      game.roomPlayers[0],
-                                      slotIndex: 0,
-                                      game: game,
-                                    ),
-                                    const SizedBox(height: 6),
-                                    _buildClickablePlayerSlot(
-                                      game.roomPlayers[2],
-                                      slotIndex: 2,
-                                      game: game,
-                                    ),
-                                  ],
-                                ),
-                              ),
-                              const SizedBox(width: 12),
-                              // Team B (slots 1, 3)
-                              Expanded(
-                                child: Column(
-                                  children: [
-                                    const Text(
-                                      'TEAM B',
-                                      style: TextStyle(
-                                        fontSize: 13,
-                                        fontWeight: FontWeight.bold,
-                                        color: Color(0xFFF5B8C0),
-                                      ),
-                                    ),
-                                    const SizedBox(height: 8),
-                                    _buildClickablePlayerSlot(
-                                      game.roomPlayers[1],
-                                      slotIndex: 1,
-                                      game: game,
-                                    ),
-                                    const SizedBox(height: 6),
-                                    _buildClickablePlayerSlot(
-                                      game.roomPlayers[3],
-                                      slotIndex: 3,
-                                      game: game,
-                                    ),
-                                  ],
-                                ),
-                              ),
-                            ],
-                          ),
-                        ],
-                        // Ready / Start buttons
+                        _buildRoomPlayersPanel(game),
                         const SizedBox(height: 12),
-                        if (game.isHost) ...[
-                          if (game.playerCount >= 4)
-                            SizedBox(
-                              width: double.infinity,
-                              height: 48,
-                              child: ElevatedButton(
-                                onPressed: () => game.startGame(),
-                                style: ElevatedButton.styleFrom(
-                                  backgroundColor: const Color(0xFFDEDBFA),
-                                  foregroundColor: const Color(0xFF4A4080),
-                                  shape: RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.circular(16),
-                                  ),
-                                  elevation: 0,
-                                ),
-                                child: const Text(
-                                  '게임 시작',
-                                  style: TextStyle(
-                                    fontSize: 15,
-                                    fontWeight: FontWeight.bold,
-                                  ),
-                                ),
-                              ),
-                            ),
-                        ] else
-                          SizedBox(
-                            width: double.infinity,
-                            height: 48,
-                            child: ElevatedButton(
-                              onPressed: () => game.toggleReady(),
-                              style: ElevatedButton.styleFrom(
-                                backgroundColor: _isMyReady(game)
-                                    ? const Color(0xFFC8E6C9)
-                                    : const Color(0xFFF5F5F5),
-                                foregroundColor: _isMyReady(game)
-                                    ? const Color(0xFF2E7D32)
-                                    : const Color(0xFF5A4038),
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(16),
-                                ),
-                                elevation: 0,
-                              ),
-                              child: Text(
-                                _isMyReady(game) ? '준비 완료!' : '준비',
-                                style: const TextStyle(
-                                  fontSize: 15,
-                                  fontWeight: FontWeight.bold,
-                                ),
-                              ),
-                            ),
-                          ),
+                        _buildRoomChatContainer(game, height: 280),
                       ],
                     ),
                   ),
-                  const SizedBox(height: 12),
-                  // Chat section with fixed height
-                  Container(
-                    height: 280,
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildRoomHeader(GameService game, {required bool isLandscape}) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+      decoration: BoxDecoration(
+        color: Colors.white.withValues(alpha: 0.95),
+        borderRadius: BorderRadius.circular(18),
+      ),
+      margin: EdgeInsets.all(isLandscape ? 12 : 16),
+      child: Column(
+        children: [
+          Row(
+            children: [
+              IconButton(
+                onPressed: () {
+                  game.leaveRoom();
+                  setState(() => _inRoom = false);
+                },
+                icon: const Icon(Icons.arrow_back),
+                color: const Color(0xFF8A7A72),
+                padding: EdgeInsets.zero,
+                constraints: const BoxConstraints(),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  game.currentRoomName,
+                  style: const TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                    color: Color(0xFF5A4038),
+                  ),
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
+              Container(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                margin: const EdgeInsets.only(right: 8),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFF0EBE8),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: Text(
+                  '${game.roomTurnTimeLimit}초 · ${game.roomTargetScore}점',
+                  style: const TextStyle(
+                    fontSize: 12,
+                    color: Color(0xFF8A7A72),
+                  ),
+                ),
+              ),
+              Container(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                decoration: BoxDecoration(
+                  color: game.playerCount >= 4
+                      ? const Color(0xFFE8F5E9)
+                      : const Color(0xFFFFF8E1),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Text(
+                  '${game.playerCount}/4',
+                  style: TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.bold,
+                    color: game.playerCount >= 4
+                        ? const Color(0xFF4CAF50)
+                        : const Color(0xFFFF9800),
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          Align(
+            alignment: Alignment.centerLeft,
+            child: Wrap(
+              spacing: 6,
+              runSpacing: 6,
+              children: [
+                GestureDetector(
+                  onTap: () => _showInviteFriendsDialog(game),
+                  child: Container(
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
                     decoration: BoxDecoration(
-                      color: Colors.white.withOpacity(0.95),
-                      borderRadius: BorderRadius.circular(20),
-                      boxShadow: [
-                        BoxShadow(
-                          color: const Color(0xFFD9CCC8).withOpacity(0.4),
-                          blurRadius: 10,
-                          offset: const Offset(0, 4),
+                      color: const Color(0xFFF3E5F5),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: const Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(
+                          Icons.person_add,
+                          size: 14,
+                          color: Color(0xFF7E57C2),
+                        ),
+                        SizedBox(width: 4),
+                        Text(
+                          '초대',
+                          style: TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.bold,
+                            color: Color(0xFF7E57C2),
+                          ),
                         ),
                       ],
                     ),
-                    child: _buildRoomChat(game),
                   ),
-                ],
-              ),
+                ),
+                GestureDetector(
+                  onTap: () => game.switchToSpectator(),
+                  child: Container(
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFE8E0F8),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: const Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(Icons.visibility, size: 14, color: Color(0xFF4A4080)),
+                        SizedBox(width: 4),
+                        Text(
+                          '관전',
+                          style: TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.bold,
+                            color: Color(0xFF4A4080),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+                Stack(
+                  clipBehavior: Clip.none,
+                  children: [
+                    GestureDetector(
+                      onTap: () => _showRoomUtilitySheet(game),
+                      child: Container(
+                        padding:
+                            const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFF6F3F2),
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: const Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(Icons.more_horiz, size: 14, color: Color(0xFF8A7A72)),
+                            SizedBox(width: 4),
+                            Text(
+                              '더보기',
+                              style: TextStyle(
+                                fontSize: 12,
+                                fontWeight: FontWeight.w700,
+                                color: Color(0xFF8A7A72),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                    if ((game.pendingFriendRequestCount + game.totalUnreadDmCount) > 0)
+                      Positioned(
+                        right: -6,
+                        top: -6,
+                        child: Container(
+                          padding: const EdgeInsets.all(4),
+                          decoration: const BoxDecoration(
+                            color: Color(0xFFE53935),
+                            shape: BoxShape.circle,
+                          ),
+                          constraints: const BoxConstraints(minWidth: 18, minHeight: 18),
+                          child: Text(
+                            (game.pendingFriendRequestCount + game.totalUnreadDmCount) > 9
+                                ? '9+'
+                                : '${game.pendingFriendRequestCount + game.totalUnreadDmCount}',
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontSize: 10,
+                              fontWeight: FontWeight.bold,
+                            ),
+                            textAlign: TextAlign.center,
+                          ),
+                        ),
+                      ),
+                  ],
+                ),
+                if (game.isHost)
+                  GestureDetector(
+                    onTap: () => _showRoomSettingsDialog(game),
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 10,
+                        vertical: 6,
+                      ),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFE3F2FD),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: const Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(Icons.settings, size: 14, color: Color(0xFF1E88E5)),
+                          SizedBox(width: 4),
+                          Text(
+                            '방설정',
+                            style: TextStyle(
+                              fontSize: 12,
+                              fontWeight: FontWeight.bold,
+                              color: Color(0xFF1E88E5),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+              ],
             ),
           ),
         ],
       ),
     );
+  }
+
+  Widget _buildRoomPlayersPanel(GameService game) {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white.withValues(alpha: 0.95),
+        borderRadius: BorderRadius.circular(20),
+        boxShadow: [
+          BoxShadow(
+            color: const Color(0xFFD9CCC8).withValues(alpha: 0.4),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Column(
+        children: [
+          if (game.isRankedRoom) ...[
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+              decoration: BoxDecoration(
+                color: const Color(0xFFFFF3E0),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: const Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text('🏆', style: TextStyle(fontSize: 14)),
+                  SizedBox(width: 6),
+                  Text(
+                    '랭크전 - 팀 랜덤 배정',
+                    style: TextStyle(
+                      fontSize: 13,
+                      fontWeight: FontWeight.bold,
+                      color: Color(0xFFE65100),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 12),
+            for (int i = 0; i < 4; i++) ...[
+              _buildClickablePlayerSlot(
+                game.roomPlayers[i],
+                slotIndex: i,
+                game: game,
+              ),
+              if (i < 3) const SizedBox(height: 8),
+            ],
+          ] else ...[
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Expanded(
+                  child: Column(
+                    children: [
+                      const Text(
+                        'TEAM A',
+                        style: TextStyle(
+                          fontSize: 13,
+                          fontWeight: FontWeight.bold,
+                          color: Color(0xFF6A9BD1),
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      _buildClickablePlayerSlot(
+                        game.roomPlayers[0],
+                        slotIndex: 0,
+                        game: game,
+                      ),
+                      const SizedBox(height: 6),
+                      _buildClickablePlayerSlot(
+                        game.roomPlayers[2],
+                        slotIndex: 2,
+                        game: game,
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    children: [
+                      const Text(
+                        'TEAM B',
+                        style: TextStyle(
+                          fontSize: 13,
+                          fontWeight: FontWeight.bold,
+                          color: Color(0xFFF5B8C0),
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      _buildClickablePlayerSlot(
+                        game.roomPlayers[1],
+                        slotIndex: 1,
+                        game: game,
+                      ),
+                      const SizedBox(height: 6),
+                      _buildClickablePlayerSlot(
+                        game.roomPlayers[3],
+                        slotIndex: 3,
+                        game: game,
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ],
+          const SizedBox(height: 12),
+          if (game.isHost) ...[
+            if (game.playerCount >= 4)
+              SizedBox(
+                width: double.infinity,
+                height: 48,
+                child: ElevatedButton(
+                  onPressed: () => game.startGame(),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFFDEDBFA),
+                    foregroundColor: const Color(0xFF4A4080),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(16),
+                    ),
+                    elevation: 0,
+                  ),
+                  child: const Text(
+                    '게임 시작',
+                    style: TextStyle(
+                      fontSize: 15,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ),
+              ),
+          ] else
+            SizedBox(
+              width: double.infinity,
+              height: 48,
+              child: ElevatedButton(
+                onPressed: () => game.toggleReady(),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: _isMyReady(game)
+                      ? const Color(0xFFC8E6C9)
+                      : const Color(0xFFF5F5F5),
+                  foregroundColor: _isMyReady(game)
+                      ? const Color(0xFF2E7D32)
+                      : const Color(0xFF5A4038),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(16),
+                  ),
+                  elevation: 0,
+                ),
+                child: Text(
+                  _isMyReady(game) ? '준비 완료!' : '준비',
+                  style: const TextStyle(
+                    fontSize: 15,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildRoomChatContainer(GameService game, {double? height}) {
+    final chat = Container(
+      decoration: BoxDecoration(
+        color: Colors.white.withValues(alpha: 0.95),
+        borderRadius: BorderRadius.circular(20),
+        boxShadow: [
+          BoxShadow(
+            color: const Color(0xFFD9CCC8).withValues(alpha: 0.4),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: _buildRoomChat(game),
+    );
+
+    if (height != null) {
+      return SizedBox(height: height, child: chat);
+    }
+
+    return chat;
   }
 
   Widget _buildRoomChat(GameService game) {
@@ -2782,6 +2230,153 @@ class _LobbyScreenState extends State<LobbyScreen> {
     );
   }
 
+  void _showRoomUtilitySheet(GameService game) {
+    final unreadCount = game.pendingFriendRequestCount + game.totalUnreadDmCount;
+    showModalBottomSheet(
+      context: context,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      builder: (ctx) => SafeArea(
+        top: false,
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(20, 16, 20, 20),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Center(
+                child: Container(
+                  width: 40,
+                  height: 4,
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFD8CEC8),
+                    borderRadius: BorderRadius.circular(999),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 16),
+              const Text(
+                '대기실 도구',
+                style: TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.w800,
+                  color: Color(0xFF4E342E),
+                ),
+              ),
+              const SizedBox(height: 6),
+              const Text(
+                '게임 준비와 직접 관련 없는 기능은 여기에서 확인할 수 있어요.',
+                style: TextStyle(
+                  fontSize: 13,
+                  height: 1.35,
+                  color: Color(0xFF8A7A72),
+                ),
+              ),
+              const SizedBox(height: 16),
+              ListTile(
+                contentPadding: const EdgeInsets.symmetric(horizontal: 4),
+                leading: Stack(
+                  clipBehavior: Clip.none,
+                  children: [
+                    Container(
+                      width: 42,
+                      height: 42,
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFF3E5F5),
+                        borderRadius: BorderRadius.circular(14),
+                      ),
+                      child: const Icon(
+                        Icons.forum_outlined,
+                        color: Color(0xFF7E57C2),
+                      ),
+                    ),
+                    if (unreadCount > 0)
+                      Positioned(
+                        right: -4,
+                        top: -4,
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 2),
+                          decoration: const BoxDecoration(
+                            color: Color(0xFFE53935),
+                            borderRadius: BorderRadius.all(Radius.circular(999)),
+                          ),
+                          child: Text(
+                            unreadCount > 9 ? '9+' : '$unreadCount',
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontSize: 10,
+                              fontWeight: FontWeight.w800,
+                            ),
+                          ),
+                        ),
+                      ),
+                  ],
+                ),
+                title: const Text(
+                  '친구 / DM',
+                  style: TextStyle(
+                    fontWeight: FontWeight.w700,
+                    color: Color(0xFF4E342E),
+                  ),
+                ),
+                subtitle: Text(
+                  unreadCount > 0
+                      ? '읽지 않은 요청과 DM이 $unreadCount개 있어요.'
+                      : '친구 목록과 DM 대화를 확인할 수 있어요.',
+                  style: const TextStyle(
+                    color: Color(0xFF8A7A72),
+                  ),
+                ),
+                trailing: const Icon(Icons.chevron_right, color: Color(0xFF8A7A72)),
+                onTap: () {
+                  Navigator.pop(ctx);
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (_) => const FriendsScreen()),
+                  );
+                },
+              ),
+              ListTile(
+                contentPadding: const EdgeInsets.symmetric(horizontal: 4),
+                leading: Container(
+                  width: 42,
+                  height: 42,
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFF6F3F2),
+                    borderRadius: BorderRadius.circular(14),
+                  ),
+                  child: const Icon(
+                    Icons.visibility_outlined,
+                    color: Color(0xFF8A7A72),
+                  ),
+                ),
+                title: const Text(
+                  '관전자 목록',
+                  style: TextStyle(
+                    fontWeight: FontWeight.w700,
+                    color: Color(0xFF4E342E),
+                  ),
+                ),
+                subtitle: Text(
+                  '현재 관전자 ${game.spectators.length}명을 확인할 수 있어요.',
+                  style: const TextStyle(
+                    color: Color(0xFF8A7A72),
+                  ),
+                ),
+                trailing: const Icon(Icons.chevron_right, color: Color(0xFF8A7A72)),
+                onTap: () {
+                  Navigator.pop(ctx);
+                  _showSpectatorListDialog(game);
+                },
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
   Widget _buildUserActionBtn({
     required IconData icon,
     required String label,
@@ -2994,79 +2589,140 @@ class _LobbyScreenState extends State<LobbyScreen> {
           builder: (ctx, setDialogState) {
             return Consumer<GameService>(
               builder: (ctx, game, _) {
-                final profile = game.profileData;
+                final profile = game.profileFor(nickname);
                 final isLoading = profile == null || profile['nickname'] != nickname;
 
                 final isMe = nickname == game.playerName;
                 final isBlockedUser = game.blockedUsers.contains(nickname);
                 return AlertDialog(
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-                  title: Row(
-                    children: [
-                      Expanded(
-                        child: Text(
-                          nickname,
-                          style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-                          overflow: TextOverflow.ellipsis,
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+                  backgroundColor: const Color(0xFFF8F4F1),
+                  titlePadding: const EdgeInsets.fromLTRB(18, 18, 18, 0),
+                  contentPadding: const EdgeInsets.fromLTRB(18, 14, 18, 10),
+                  title: Container(
+                    padding: const EdgeInsets.all(14),
+                    decoration: BoxDecoration(
+                      color: Colors.white.withValues(alpha: 0.92),
+                      borderRadius: BorderRadius.circular(18),
+                      border: Border.all(color: const Color(0xFFE8DDD8)),
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            Container(
+                              width: 38,
+                              height: 38,
+                              decoration: BoxDecoration(
+                                color: const Color(0xFFE8F0F7),
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              child: const Icon(
+                                Icons.person_outline,
+                                color: Color(0xFF4F6B7A),
+                              ),
+                            ),
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    nickname,
+                                    style: const TextStyle(
+                                      fontSize: 17,
+                                      fontWeight: FontWeight.w800,
+                                      color: Color(0xFF3E312A),
+                                    ),
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                  const SizedBox(height: 2),
+                                  Text(
+                                    isMe ? '내 프로필' : '플레이어 프로필',
+                                    style: const TextStyle(
+                                      fontSize: 12,
+                                      color: Color(0xFF84766E),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ],
                         ),
-                      ),
-                      if (!isMe) ...[
-                        if (game.friends.contains(nickname))
-                          _buildTitleIconButton(
-                            icon: Icons.check,
-                            color: const Color(0xFFBDBDBD),
-                            tooltip: '이미 친구',
-                            onTap: () {},
-                          )
-                        else if (game.sentFriendRequests.contains(nickname))
-                          _buildTitleIconButton(
-                            icon: Icons.hourglass_top,
-                            color: const Color(0xFFBDBDBD),
-                            tooltip: '요청중',
-                            onTap: () {},
-                          )
-                        else
-                          _buildTitleIconButton(
-                            icon: Icons.person_add,
-                            color: const Color(0xFF81C784),
-                            tooltip: '친구 추가',
-                            onTap: () {
-                              game.addFriendAction(nickname);
-                              Navigator.pop(ctx);
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                const SnackBar(content: Text('친구 요청을 보냈습니다')),
-                              );
-                            },
+                        if (!isMe) ...[
+                          const SizedBox(height: 12),
+                          Wrap(
+                            spacing: 8,
+                            runSpacing: 8,
+                            children: [
+                              if (game.friends.contains(nickname))
+                                _buildTitleIconButton(
+                                  icon: Icons.check,
+                                  color: const Color(0xFFBDBDBD),
+                                  tooltip: '이미 친구',
+                                  onTap: () {},
+                                )
+                              else if (game.sentFriendRequests.contains(nickname))
+                                _buildTitleIconButton(
+                                  icon: Icons.hourglass_top,
+                                  color: const Color(0xFFBDBDBD),
+                                  tooltip: '요청중',
+                                  onTap: () {},
+                                )
+                              else
+                                _buildTitleIconButton(
+                                  icon: Icons.person_add,
+                                  color: const Color(0xFF81C784),
+                                  tooltip: '친구 추가',
+                                  onTap: () {
+                                    game.addFriendAction(nickname);
+                                    Navigator.pop(ctx);
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      const SnackBar(content: Text('친구 요청을 보냈습니다')),
+                                    );
+                                  },
+                                ),
+                              _buildTitleIconButton(
+                                icon: isBlockedUser ? Icons.block : Icons.shield_outlined,
+                                color: isBlockedUser
+                                    ? const Color(0xFF64B5F6)
+                                    : const Color(0xFFFF8A65),
+                                tooltip: isBlockedUser ? '차단 해제' : '차단하기',
+                                onTap: () {
+                                  if (isBlockedUser) {
+                                    game.unblockUserAction(nickname);
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      const SnackBar(content: Text('차단이 해제되었습니다')),
+                                    );
+                                  } else {
+                                    game.blockUserAction(nickname);
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      const SnackBar(content: Text('차단되었습니다')),
+                                    );
+                                  }
+                                },
+                              ),
+                            ],
                           ),
-                        const SizedBox(width: 6),
-                        _buildTitleIconButton(
-                          icon: isBlockedUser ? Icons.block : Icons.shield_outlined,
-                          color: isBlockedUser ? const Color(0xFF64B5F6) : const Color(0xFFFF8A65),
-                          tooltip: isBlockedUser ? '차단 해제' : '차단하기',
-                          onTap: () {
-                            if (isBlockedUser) {
-                              game.unblockUserAction(nickname);
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                const SnackBar(content: Text('차단이 해제되었습니다')),
-                              );
-                            } else {
-                              game.blockUserAction(nickname);
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                const SnackBar(content: Text('차단되었습니다')),
-                              );
-                            }
-                          },
-                        ),
+                        ],
                       ],
-                    ],
+                    ),
                   ),
                   content: isLoading
                       ? const SizedBox(
-                          height: 100,
+                          height: 140,
+                          width: 360,
                           child: Center(child: CircularProgressIndicator()),
                         )
-                      : SingleChildScrollView(
-                          child: _buildProfileContent(profile, game),
+                      : ConstrainedBox(
+                          constraints: const BoxConstraints(
+                            maxWidth: 420,
+                            maxHeight: 560,
+                          ),
+                          child: SingleChildScrollView(
+                            child: _buildProfileContent(profile, game),
+                          ),
                         ),
                   actions: [
                     TextButton(
@@ -3094,7 +2750,6 @@ class _LobbyScreenState extends State<LobbyScreen> {
     final totalGames = profile['totalGames'] ?? 0;
     final wins = profile['wins'] ?? 0;
     final losses = profile['losses'] ?? 0;
-    final rating = profile['rating'] ?? 1000;
     final winRate = profile['winRate'] ?? 0;
     final seasonRating = profile['seasonRating'] ?? 1000;
     final seasonGames = profile['seasonGames'] ?? 0;
@@ -3103,13 +2758,11 @@ class _LobbyScreenState extends State<LobbyScreen> {
     final seasonWinRate = profile['seasonWinRate'] ?? 0;
     final level = profile['level'] ?? 1;
     final expTotal = profile['expTotal'] ?? 0;
-    final gold = profile['gold'] ?? 0;
     final leaveCount = profile['leaveCount'] ?? 0;
     final reportCount = profile['reportCount'] ?? 0;
     final bannerKey = profile['bannerKey']?.toString();
     final recentMatches = data['recentMatches'] as List<dynamic>? ?? [];
-    final isMe = nickname == game.playerName;
-
+    final profileNickname = data['nickname']?.toString() ?? nickname;
     return Column(
       mainAxisSize: MainAxisSize.min,
       children: [
@@ -3125,7 +2778,7 @@ class _LobbyScreenState extends State<LobbyScreen> {
           iconColor: const Color(0xFFFFD54F),
           mainText: '$seasonRating',
           chips: [
-            _buildStatChip('전적', '$seasonGames전 ${seasonWins}승 ${seasonLosses}패'),
+            _buildStatChip('전적', '$seasonGames전 $seasonWins승 $seasonLosses패'),
             _buildStatChip('승률', '$seasonWinRate%'),
           ],
         ),
@@ -3138,12 +2791,12 @@ class _LobbyScreenState extends State<LobbyScreen> {
           iconColor: const Color(0xFFFFB74D),
           mainText: '',
           chips: [
-            _buildStatChip('전적', '$totalGames전 ${wins}승 ${losses}패'),
+            _buildStatChip('전적', '$totalGames전 $wins승 $losses패'),
             _buildStatChip('승률', '$winRate%'),
           ],
         ),
         const SizedBox(height: 12),
-        _buildRecentMatches(recentMatches),
+        _buildRecentMatches(recentMatches, profileNickname),
       ],
     );
   }
@@ -3163,9 +2816,9 @@ class _LobbyScreenState extends State<LobbyScreen> {
           width: 28,
           height: 28,
           decoration: BoxDecoration(
-            color: color.withOpacity(0.15),
+            color: color.withValues(alpha: 0.15),
             borderRadius: BorderRadius.circular(10),
-            border: Border.all(color: color.withOpacity(0.35)),
+            border: Border.all(color: color.withValues(alpha: 0.35)),
           ),
           child: Icon(icon, size: 16, color: color),
         ),
@@ -3183,7 +2836,7 @@ class _LobbyScreenState extends State<LobbyScreen> {
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
       decoration: BoxDecoration(
         gradient: banner.gradient,
-        color: banner.gradient == null ? Colors.white.withOpacity(0.95) : null,
+        color: banner.gradient == null ? Colors.white.withValues(alpha: 0.95) : null,
         borderRadius: BorderRadius.circular(14),
         border: Border.all(color: const Color(0xFFE0D8D4)),
       ),
@@ -3287,7 +2940,7 @@ class _LobbyScreenState extends State<LobbyScreen> {
       decoration: BoxDecoration(
         color: background,
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: background.withOpacity(0.6)),
+        border: Border.all(color: background.withValues(alpha: 0.6)),
       ),
       child: Column(
         children: [
@@ -3327,10 +2980,6 @@ class _LobbyScreenState extends State<LobbyScreen> {
     );
   }
 
-  Widget _buildMiniStatRow({required int gold, required int leaveCount}) {
-    return _buildMannerLeaveRow(reportCount: 0, leaveCount: leaveCount);
-  }
-
   static String _mannerLabel(int reportCount) {
     if (reportCount <= 1) return '좋음';
     if (reportCount <= 3) return '보통';
@@ -3364,7 +3013,7 @@ class _LobbyScreenState extends State<LobbyScreen> {
           child: Container(
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
             decoration: BoxDecoration(
-              color: Colors.white.withOpacity(0.95),
+              color: Colors.white.withValues(alpha: 0.95),
               borderRadius: BorderRadius.circular(12),
               border: Border.all(color: const Color(0xFFE0D8D4)),
             ),
@@ -3390,7 +3039,7 @@ class _LobbyScreenState extends State<LobbyScreen> {
           child: Container(
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
             decoration: BoxDecoration(
-              color: Colors.white.withOpacity(0.95),
+              color: Colors.white.withValues(alpha: 0.95),
               borderRadius: BorderRadius.circular(12),
               border: Border.all(color: const Color(0xFFE0D8D4)),
             ),
@@ -3420,7 +3069,7 @@ class _LobbyScreenState extends State<LobbyScreen> {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
       decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.9),
+        color: Colors.white.withValues(alpha: 0.9),
         borderRadius: BorderRadius.circular(10),
         border: Border.all(color: const Color(0xFFE0D8D4)),
       ),
@@ -3445,12 +3094,15 @@ class _LobbyScreenState extends State<LobbyScreen> {
     );
   }
 
-  Widget _buildRecentMatches(List<dynamic> recentMatches) {
+  Widget _buildRecentMatches(
+    List<dynamic> recentMatches,
+    String profileNickname,
+  ) {
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.95),
+        color: Colors.white.withValues(alpha: 0.95),
         borderRadius: BorderRadius.circular(12),
         border: Border.all(color: const Color(0xFFE0D8D4)),
       ),
@@ -3466,7 +3118,8 @@ class _LobbyScreenState extends State<LobbyScreen> {
               const Spacer(),
               if (recentMatches.length > 3)
                 TextButton(
-                  onPressed: () => _showRecentMatchesDialog(recentMatches),
+                  onPressed: () =>
+                      _showRecentMatchesDialog(recentMatches, profileNickname),
                   child: const Text('더보기'),
                 ),
             ],
@@ -3480,7 +3133,7 @@ class _LobbyScreenState extends State<LobbyScreen> {
           else
             Column(
               children: recentMatches.take(3).map<Widget>((match) {
-                return _buildMatchRow(match);
+                return _buildMatchRow(match, profileNickname);
               }).toList(),
             ),
         ],
@@ -3488,34 +3141,88 @@ class _LobbyScreenState extends State<LobbyScreen> {
     );
   }
 
-  void _showRecentMatchesDialog(List<dynamic> recentMatches) {
+  void _showRecentMatchesDialog(
+    List<dynamic> recentMatches,
+    String profileNickname,
+  ) {
     showDialog(
       context: context,
-      builder: (ctx) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: const Text('최근 전적'),
-        content: SizedBox(
-          width: double.maxFinite,
-          height: 320,
-          child: ListView.separated(
-            itemCount: recentMatches.length,
-            separatorBuilder: (_, __) => const Divider(height: 16),
-            itemBuilder: (_, index) {
-              return _buildMatchRow(recentMatches[index]);
-            },
+      builder: (ctx) {
+        final media = MediaQuery.of(ctx).size;
+        return AlertDialog(
+          insetPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 24),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+          backgroundColor: const Color(0xFFF8F4F1),
+          titlePadding: const EdgeInsets.fromLTRB(18, 18, 18, 0),
+          contentPadding: const EdgeInsets.fromLTRB(18, 14, 18, 10),
+          title: Container(
+            padding: const EdgeInsets.all(14),
+            decoration: BoxDecoration(
+              color: Colors.white.withValues(alpha: 0.92),
+              borderRadius: BorderRadius.circular(18),
+              border: Border.all(color: const Color(0xFFE8DDD8)),
+            ),
+            child: Row(
+              children: [
+                const Icon(Icons.history, color: Color(0xFF6A5A52)),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text(
+                        '최근 전적',
+                        style: TextStyle(
+                          fontSize: 17,
+                          fontWeight: FontWeight.w800,
+                          color: Color(0xFF3E312A),
+                        ),
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        '최근 ${recentMatches.length}경기 결과를 확인할 수 있습니다.',
+                        style: const TextStyle(
+                          fontSize: 12,
+                          color: Color(0xFF84766E),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
           ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx),
-            child: const Text('닫기'),
+          content: ConstrainedBox(
+            constraints: BoxConstraints(
+              maxWidth: media.width > 700 ? 520 : media.width - 40,
+              maxHeight: media.height * 0.72,
+            ),
+            child: ListView.separated(
+              shrinkWrap: true,
+              itemCount: recentMatches.length,
+              separatorBuilder: (_, _) => const SizedBox(height: 10),
+              itemBuilder: (_, index) {
+                return _buildMatchRow(recentMatches[index], profileNickname);
+              },
+            ),
           ),
-        ],
-      ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(ctx),
+              child: const Text('닫기'),
+            ),
+          ],
+        );
+      },
     );
   }
 
-  Widget _buildMatchRow(dynamic match) {
+  Widget _buildMatchRow(dynamic match, String profileNickname) {
+    final deserterNickname = match['deserterNickname']?.toString();
+    final isDesertionLoss = match['isDesertionLoss'] == true ||
+        (deserterNickname != null &&
+            deserterNickname.isNotEmpty &&
+            deserterNickname == profileNickname);
     final isDraw = match['isDraw'] == true;
     final won = !isDraw && match['won'] == true;
     final teamAScore = match['teamAScore'] ?? 0;
@@ -3527,7 +3234,10 @@ class _LobbyScreenState extends State<LobbyScreen> {
 
     final Color badgeColor;
     final String badgeText;
-    if (isDraw) {
+    if (isDesertionLoss) {
+      badgeColor = const Color(0xFFFFB74D);
+      badgeText = '탈';
+    } else if (isDraw) {
       badgeColor = const Color(0xFFBDBDBD);
       badgeText = '무';
     } else if (won) {
@@ -3633,19 +3343,6 @@ class _LobbyScreenState extends State<LobbyScreen> {
       return '${dt.year}.${dt.month.toString().padLeft(2, '0')}.${dt.day.toString().padLeft(2, '0')}';
     } catch (_) {
       return '-';
-    }
-  }
-
-  String _inquiryCategoryLabel(dynamic value) {
-    switch (value?.toString()) {
-      case 'bug':
-        return '버그 신고';
-      case 'suggestion':
-        return '건의사항';
-      case 'other':
-        return '기타';
-      default:
-        return '기타';
     }
   }
 

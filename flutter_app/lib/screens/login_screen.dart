@@ -1,13 +1,13 @@
 import 'dart:async';
 import 'dart:io';
 import 'package:flutter/material.dart';
+import 'package:package_info_plus/package_info_plus.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../services/network_service.dart';
 import '../services/game_service.dart';
 import '../services/auth_service.dart';
 import '../services/session_service.dart';
-import 'lobby_screen.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -35,10 +35,12 @@ class _LoginScreenState extends State<LoginScreen> {
   String? _error;
   String? _socialProvider;
   String? _socialToken;
+  String _appVersion = '';
 
   @override
   void initState() {
     super.initState();
+    _loadAppVersion();
     _tryAutoLogin();
   }
 
@@ -50,27 +52,33 @@ class _LoginScreenState extends State<LoginScreen> {
   }
 
   Future<void> _tryAutoLogin() async {
-    if (_autoLoginAttempted) return;
+    await _attemptAutoLogin();
+  }
+
+  Future<void> _attemptAutoLogin({bool force = false}) async {
+    if (_autoLoginAttempted && !force) return;
     _autoLoginAttempted = true;
+
+    final session = context.read<SessionService>();
+    if (session.consumeAutoRestoreSuppression()) {
+      return;
+    }
 
     setState(() {
       _isConnecting = true;
       _error = null;
     });
 
-    final session = context.read<SessionService>();
     final success = await session.restoreSavedSession();
     if (!mounted) return;
 
     if (success) {
-      Navigator.pushReplacement(
-        context,
-        MaterialPageRoute(builder: (_) => const LobbyScreen()),
-      );
+      setState(() => _isConnecting = false);
       return;
     }
 
     final prefs = await SharedPreferences.getInstance();
+    if (!mounted) return;
     final savedUsername = prefs.getString('saved_username');
     final savedPassword = prefs.getString('saved_password');
     if (savedUsername != null && savedPassword != null && savedUsername.isNotEmpty) {
@@ -79,6 +87,19 @@ class _LoginScreenState extends State<LoginScreen> {
     }
 
     setState(() => _isConnecting = false);
+  }
+
+  Future<void> _retryAutoLogin() async {
+    context.read<SessionService>().clearAutoRestoreSuppression();
+    await _attemptAutoLogin(force: true);
+  }
+
+  Future<void> _loadAppVersion() async {
+    try {
+      final info = await PackageInfo.fromPlatform();
+      if (!mounted) return;
+      setState(() => _appVersion = info.version);
+    } catch (_) {}
   }
 
   Future<void> _login() async {
@@ -98,6 +119,7 @@ class _LoginScreenState extends State<LoginScreen> {
       _isConnecting = true;
       _error = null;
     });
+    context.read<SessionService>().clearRestoreFeedback();
 
     try {
       final session = context.read<SessionService>();
@@ -110,10 +132,7 @@ class _LoginScreenState extends State<LoginScreen> {
       if (!mounted) return;
 
       if (result.status == SessionAuthStatus.success) {
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(builder: (_) => const LobbyScreen()),
-        );
+        setState(() => _isConnecting = false);
       } else {
         setState(() {
           _error = result.error ?? '로그인 실패';
@@ -133,6 +152,7 @@ class _LoginScreenState extends State<LoginScreen> {
       _isConnecting = true;
       _error = null;
     });
+    context.read<SessionService>().clearRestoreFeedback();
 
     try {
       SocialAuthResult result;
@@ -185,10 +205,7 @@ class _LoginScreenState extends State<LoginScreen> {
       if (!mounted) return;
 
       if (result.status == SessionAuthStatus.success) {
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(builder: (_) => const LobbyScreen()),
-        );
+        setState(() => _isConnecting = false);
       } else if (result.status == SessionAuthStatus.needsNickname) {
         setState(() {
           _isConnecting = false;
@@ -215,6 +232,7 @@ class _LoginScreenState extends State<LoginScreen> {
       _isConnecting = true;
       _showSocialNickname = false;
     });
+    context.read<SessionService>().clearRestoreFeedback();
 
     try {
       final game = context.read<GameService>();
@@ -229,10 +247,7 @@ class _LoginScreenState extends State<LoginScreen> {
       if (!mounted) return;
 
       if (result.status == SessionAuthStatus.success) {
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(builder: (_) => const LobbyScreen()),
-        );
+        setState(() => _isConnecting = false);
       } else {
         setState(() {
           _error = result.error ?? '로그인 실패';
@@ -253,6 +268,7 @@ class _LoginScreenState extends State<LoginScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final session = context.watch<SessionService>();
     return PopScope(
       canPop: false,
       child: GestureDetector(
@@ -273,185 +289,45 @@ class _LoginScreenState extends State<LoginScreen> {
               ),
             ),
             child: SafeArea(
-              child: Center(
-                child: SingleChildScrollView(
-                  padding: const EdgeInsets.all(24),
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      const Text('🐥', style: TextStyle(fontSize: 60)),
-                      const SizedBox(height: 8),
-                      const Text(
-                        'TICHU',
-                        style: TextStyle(
-                          fontSize: 40,
-                          fontWeight: FontWeight.bold,
-                          color: Color(0xFF5A4038),
-                          letterSpacing: 4,
+              child: LayoutBuilder(
+                builder: (context, constraints) {
+                  final isLandscape =
+                      constraints.maxWidth > constraints.maxHeight;
+                  final horizontalPadding = isLandscape ? 32.0 : 24.0;
+                  return Center(
+                    child: SingleChildScrollView(
+                      padding: EdgeInsets.all(horizontalPadding),
+                      child: ConstrainedBox(
+                        constraints: BoxConstraints(
+                          maxWidth: isLandscape ? 960 : 460,
                         ),
-                      ),
-                      const SizedBox(height: 4),
-                      const Text(
-                        '팀 카드게임',
-                        style: TextStyle(fontSize: 16, color: Color(0xFF8A7A72)),
-                      ),
-                      const SizedBox(height: 48),
-                      // Login card
-                      Container(
-                        padding: const EdgeInsets.all(24),
-                        decoration: BoxDecoration(
-                          color: Colors.white.withValues(alpha: 0.95),
-                          borderRadius: BorderRadius.circular(24),
-                          boxShadow: [
-                            BoxShadow(
-                              color: const Color(0xFFD9CCC8).withValues(alpha: 0.6),
-                              blurRadius: 20,
-                              offset: const Offset(0, 10),
-                            ),
-                          ],
-                        ),
-                        child: Column(
-                          children: [
-                            _buildTextField(
-                              controller: _usernameController,
-                              hint: '아이디',
-                              icon: Icons.person_outline,
-                            ),
-                            const SizedBox(height: 12),
-                            _buildTextField(
-                              controller: _passwordController,
-                              hint: '비밀번호',
-                              icon: Icons.lock_outline,
-                              obscure: true,
-                            ),
-                            const SizedBox(height: 20),
-                            SizedBox(
-                              width: double.infinity,
-                              height: 56,
-                              child: ElevatedButton(
-                                onPressed: _isConnecting ? null : _login,
-                                style: ElevatedButton.styleFrom(
-                                  backgroundColor: const Color(0xFFF28C26),
-                                  foregroundColor: Colors.white,
-                                  shape: RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.circular(16),
+                        child: isLandscape
+                            ? Row(
+                                crossAxisAlignment: CrossAxisAlignment.center,
+                                children: [
+                                  Expanded(
+                                    child: Padding(
+                                      padding: const EdgeInsets.only(right: 28),
+                                      child: _buildBrandSection(compact: true),
+                                    ),
                                   ),
-                                  elevation: 0,
-                                ),
-                                child: const Text(
-                                  '로그인',
-                                  style: TextStyle(
-                                    fontSize: 18,
-                                    fontWeight: FontWeight.bold,
+                                  Expanded(
+                                    child: _buildLoginCard(session, compact: true),
                                   ),
-                                ),
+                                ],
+                              )
+                            : Column(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  _buildBrandSection(compact: false),
+                                  const SizedBox(height: 48),
+                                  _buildLoginCard(session, compact: false),
+                                ],
                               ),
-                            ),
-                            const SizedBox(height: 12),
-                            TextButton(
-                              onPressed: _showRegisterDialog,
-                              child: const Text(
-                                '회원가입',
-                                style: TextStyle(
-                                  color: Color(0xFF8A7A72),
-                                  fontSize: 16,
-                                ),
-                              ),
-                            ),
-                            if (_error != null) ...[
-                              const SizedBox(height: 16),
-                              if (_error!.contains('점검'))
-                                Container(
-                                  padding: const EdgeInsets.all(16),
-                                  decoration: BoxDecoration(
-                                    color: const Color(0xFFFFF3E0),
-                                    borderRadius: BorderRadius.circular(12),
-                                    border: Border.all(color: const Color(0xFFFFB74D)),
-                                  ),
-                                  child: Row(
-                                    children: [
-                                      const Icon(Icons.construction, color: Color(0xFFE65100), size: 24),
-                                      const SizedBox(width: 12),
-                                      Expanded(
-                                        child: Text(
-                                          _error!,
-                                          style: const TextStyle(
-                                            color: Color(0xFFE65100),
-                                            fontSize: 14,
-                                            fontWeight: FontWeight.w600,
-                                          ),
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                )
-                              else
-                                Text(
-                                  _error!,
-                                  style: const TextStyle(
-                                    color: Colors.red,
-                                    fontSize: 14,
-                                  ),
-                                  textAlign: TextAlign.center,
-                                ),
-                            ],
-                          ],
-                        ),
                       ),
-                      const SizedBox(height: 24),
-                      // Social login divider
-                      Row(
-                        children: [
-                          Expanded(child: Divider(color: const Color(0xFFD9CCC8).withValues(alpha: 0.5))),
-                          const Padding(
-                            padding: EdgeInsets.symmetric(horizontal: 12),
-                            child: Text(
-                              '간편 로그인',
-                              style: TextStyle(color: Color(0xFFAA9A92), fontSize: 13),
-                            ),
-                          ),
-                          Expanded(child: Divider(color: const Color(0xFFD9CCC8).withValues(alpha: 0.5))),
-                        ],
-                      ),
-                      const SizedBox(height: 16),
-                      // Social login buttons
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          // Google
-                          _buildSocialButton(
-                            onTap: () => _handleSocialSignIn('google'),
-                            backgroundColor: Colors.white,
-                            borderColor: const Color(0xFFDADADA),
-                            child: Padding(
-                              padding: const EdgeInsets.all(12),
-                              child: Image.asset('assets/icons/google_logo.png'),
-                            ),
-                          ),
-                          const SizedBox(width: 16),
-                          // Apple (iOS only)
-                          if (Platform.isIOS) ...[
-                            _buildSocialButton(
-                              onTap: () => _handleSocialSignIn('apple'),
-                              backgroundColor: Colors.black,
-                              child: const Icon(Icons.apple, color: Colors.white, size: 30),
-                            ),
-                            const SizedBox(width: 16),
-                          ],
-                          // Kakao
-                          _buildSocialButton(
-                            onTap: () => _handleSocialSignIn('kakao'),
-                            backgroundColor: const Color(0xFFFEE500),
-                            child: CustomPaint(
-                              size: const Size(24, 24),
-                              painter: _KakaoLogoPainter(),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ],
-                  ),
-                ),
+                    ),
+                  );
+                },
               ),
             ),
           ),
@@ -461,7 +337,7 @@ class _LoginScreenState extends State<LoginScreen> {
             right: 16,
             child: SafeArea(
               child: Text(
-                'v1.0.0',
+                _appVersion.isEmpty ? 'v-' : 'v$_appVersion',
                 style: TextStyle(
                   color: const Color(0xFFB0A8A4).withValues(alpha: 0.8),
                   fontSize: 12,
@@ -469,13 +345,228 @@ class _LoginScreenState extends State<LoginScreen> {
               ),
             ),
           ),
-          if (_isConnecting) _buildConnectingOverlay(),
+          if (_isConnecting) _buildConnectingOverlay(session),
           if (_showRegister) _buildRegisterDialog(),
           if (_showSocialNickname) _buildSocialNicknameDialog(),
         ],
       ),
     ),
     ),
+    );
+  }
+
+  Widget _buildBrandSection({required bool compact}) {
+    return Column(
+      mainAxisAlignment: MainAxisAlignment.center,
+      crossAxisAlignment:
+          compact ? CrossAxisAlignment.start : CrossAxisAlignment.center,
+      children: [
+        Text('🐥', style: TextStyle(fontSize: compact ? 52 : 60)),
+        const SizedBox(height: 8),
+        Text(
+          'TICHU',
+          style: TextStyle(
+            fontSize: compact ? 34 : 40,
+            fontWeight: FontWeight.bold,
+            color: const Color(0xFF5A4038),
+            letterSpacing: compact ? 3 : 4,
+          ),
+        ),
+        const SizedBox(height: 4),
+        Text(
+          '팀 카드게임',
+          style: TextStyle(
+            fontSize: compact ? 15 : 16,
+            color: const Color(0xFF8A7A72),
+          ),
+        ),
+        if (compact) ...[
+          const SizedBox(height: 16),
+          const Text(
+            '빠르게 다시 접속하고,\n불필요한 화면 왕복 없이 바로 게임으로 돌아가세요.',
+            style: TextStyle(
+              fontSize: 14,
+              height: 1.5,
+              color: Color(0xFF8A7A72),
+            ),
+          ),
+        ],
+      ],
+    );
+  }
+
+  Widget _buildLoginCard(SessionService session, {required bool compact}) {
+    final cardPadding = compact ? 20.0 : 24.0;
+    final socialSpacing = compact ? 12.0 : 16.0;
+    final loginButtonHeight = compact ? 52.0 : 56.0;
+
+    return Container(
+      padding: EdgeInsets.all(cardPadding),
+      decoration: BoxDecoration(
+        color: Colors.white.withValues(alpha: 0.95),
+        borderRadius: BorderRadius.circular(24),
+        boxShadow: [
+          BoxShadow(
+            color: const Color(0xFFD9CCC8).withValues(alpha: 0.6),
+            blurRadius: 20,
+            offset: const Offset(0, 10),
+          ),
+        ],
+      ),
+      child: Column(
+        children: [
+          _buildTextField(
+            controller: _usernameController,
+            hint: '아이디',
+            icon: Icons.person_outline,
+            fontSize: compact ? 16 : 18,
+          ),
+          const SizedBox(height: 12),
+          _buildTextField(
+            controller: _passwordController,
+            hint: '비밀번호',
+            icon: Icons.lock_outline,
+            obscure: true,
+            fontSize: compact ? 16 : 18,
+          ),
+          if (!_isConnecting && session.hasRestoreError) ...[
+            const SizedBox(height: 16),
+            _buildAutoLoginNotice(session),
+          ],
+          const SizedBox(height: 20),
+          SizedBox(
+            width: double.infinity,
+            height: loginButtonHeight,
+            child: ElevatedButton(
+              onPressed: _isConnecting ? null : _login,
+              style: ElevatedButton.styleFrom(
+                backgroundColor: const Color(0xFFF28C26),
+                foregroundColor: Colors.white,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(16),
+                ),
+                elevation: 0,
+              ),
+              child: Text(
+                '로그인',
+                style: TextStyle(
+                  fontSize: compact ? 16 : 18,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ),
+          ),
+          const SizedBox(height: 12),
+          TextButton(
+            onPressed: _showRegisterDialog,
+            child: const Text(
+              '회원가입',
+              style: TextStyle(
+                color: Color(0xFF8A7A72),
+                fontSize: 16,
+              ),
+            ),
+          ),
+          if (_error != null) ...[
+            const SizedBox(height: 16),
+            if (_error!.contains('점검'))
+              Container(
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFFFF3E0),
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: const Color(0xFFFFB74D)),
+                ),
+                child: Row(
+                  children: [
+                    const Icon(
+                      Icons.construction,
+                      color: Color(0xFFE65100),
+                      size: 24,
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Text(
+                        _error!,
+                        style: const TextStyle(
+                          color: Color(0xFFE65100),
+                          fontSize: 14,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              )
+            else
+              Text(
+                _error!,
+                style: const TextStyle(
+                  color: Colors.red,
+                  fontSize: 14,
+                ),
+                textAlign: TextAlign.center,
+              ),
+          ],
+          SizedBox(height: compact ? 20 : 24),
+          Row(
+            children: [
+              Expanded(
+                child: Divider(
+                  color: const Color(0xFFD9CCC8).withValues(alpha: 0.5),
+                ),
+              ),
+              const Padding(
+                padding: EdgeInsets.symmetric(horizontal: 12),
+                child: Text(
+                  '간편 로그인',
+                  style: TextStyle(color: Color(0xFFAA9A92), fontSize: 13),
+                ),
+              ),
+              Expanded(
+                child: Divider(
+                  color: const Color(0xFFD9CCC8).withValues(alpha: 0.5),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 16),
+          Wrap(
+            alignment: WrapAlignment.center,
+            spacing: socialSpacing,
+            runSpacing: socialSpacing,
+            children: [
+              _buildSocialButton(
+                onTap: () => _handleSocialSignIn('google'),
+                backgroundColor: Colors.white,
+                borderColor: const Color(0xFFDADADA),
+                child: Padding(
+                  padding: const EdgeInsets.all(12),
+                  child: Image.asset('assets/icons/google_logo.png'),
+                ),
+              ),
+              if (Platform.isIOS)
+                _buildSocialButton(
+                  onTap: () => _handleSocialSignIn('apple'),
+                  backgroundColor: Colors.black,
+                  child: const Icon(
+                    Icons.apple,
+                    color: Colors.white,
+                    size: 30,
+                  ),
+                ),
+              _buildSocialButton(
+                onTap: () => _handleSocialSignIn('kakao'),
+                backgroundColor: const Color(0xFFFEE500),
+                child: CustomPaint(
+                  size: const Size(24, 24),
+                  painter: _KakaoLogoPainter(),
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
     );
   }
 
@@ -542,7 +633,62 @@ class _LoginScreenState extends State<LoginScreen> {
     );
   }
 
-  Widget _buildConnectingOverlay() {
+  Widget _buildAutoLoginNotice(SessionService session) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: const Color(0xFFFFF7ED),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: const Color(0xFFF2C185)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text(
+            '자동 로그인에 실패했습니다',
+            style: TextStyle(
+              fontSize: 14,
+              fontWeight: FontWeight.w700,
+              color: Color(0xFF7A4B1F),
+            ),
+          ),
+          const SizedBox(height: 6),
+          Text(
+            session.restoreError ?? '저장된 로그인 정보를 다시 확인해주세요.',
+            style: const TextStyle(
+              fontSize: 13,
+              color: Color(0xFF7A4B1F),
+              height: 1.4,
+            ),
+          ),
+          const SizedBox(height: 12),
+          Row(
+            children: [
+              ElevatedButton(
+                onPressed: _isConnecting ? null : _retryAutoLogin,
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color(0xFFF28C26),
+                  foregroundColor: Colors.white,
+                  elevation: 0,
+                ),
+                child: const Text('다시 시도'),
+              ),
+              const SizedBox(width: 10),
+              TextButton(
+                onPressed: _isConnecting
+                    ? null
+                    : () => context.read<SessionService>().clearRestoreFeedback(),
+                child: const Text('직접 로그인'),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildConnectingOverlay(SessionService session) {
     return Container(
       color: Colors.black54,
       child: Center(
@@ -552,17 +698,29 @@ class _LoginScreenState extends State<LoginScreen> {
             color: Colors.white,
             borderRadius: BorderRadius.circular(20),
           ),
-          child: const Column(
+          child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              CircularProgressIndicator(color: Color(0xFFF28C26)),
-              SizedBox(height: 20),
+              const CircularProgressIndicator(color: Color(0xFFF28C26)),
+              const SizedBox(height: 20),
               Text(
-                '로그인 중...',
-                style: TextStyle(
+                session.isRestoring ? '자동 로그인 중...' : '로그인 중...',
+                style: const TextStyle(
                   fontSize: 16,
                   fontWeight: FontWeight.bold,
                   color: Color(0xFF5A4038),
+                ),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                session.isRestoring
+                    ? session.restoreStatusMessage
+                    : '계정 정보를 확인하고 있습니다.',
+                textAlign: TextAlign.center,
+                style: const TextStyle(
+                  fontSize: 13,
+                  color: Color(0xFF8A746A),
+                  height: 1.4,
                 ),
               ),
             ],
@@ -737,7 +895,9 @@ class _RegisterDialogState extends State<RegisterDialog> {
 
       // Wait for result
       await Future.delayed(const Duration(milliseconds: 100));
+      if (!mounted) return;
       for (int i = 0; i < 50; i++) {
+        if (!mounted) return;
         if (game.registerResult != null) {
           if (game.registerResult!.contains('완료')) {
             widget.onSuccess();
@@ -751,6 +911,7 @@ class _RegisterDialogState extends State<RegisterDialog> {
           }
         }
         await Future.delayed(const Duration(milliseconds: 100));
+        if (!mounted) return;
       }
 
       setState(() {

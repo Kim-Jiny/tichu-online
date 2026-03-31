@@ -5,7 +5,12 @@ import '../services/game_service.dart';
 import 'ranking_screen.dart';
 
 class FriendsScreen extends StatefulWidget {
-  const FriendsScreen({super.key});
+  const FriendsScreen({
+    super.key,
+    this.allowDmChat = true,
+  });
+
+  final bool allowDmChat;
 
   @override
   State<FriendsScreen> createState() => _FriendsScreenState();
@@ -15,12 +20,14 @@ class _FriendsScreenState extends State<FriendsScreen> with TickerProviderStateM
   late TabController _tabController;
   final TextEditingController _searchController = TextEditingController();
   Timer? _searchDebounce;
+  GameService? _gameService;
 
   // DM chat state
   String? _dmChatPartner;
   final TextEditingController _dmInputController = TextEditingController();
   final ScrollController _dmScrollController = ScrollController();
   bool _dmLoadingMore = false;
+  DateTime? _lastBlockedDmNoticeAt;
 
   @override
   void initState() {
@@ -28,6 +35,7 @@ class _FriendsScreenState extends State<FriendsScreen> with TickerProviderStateM
     _tabController = TabController(length: 3, vsync: this);
     WidgetsBinding.instance.addPostFrameCallback((_) {
       final game = context.read<GameService>();
+      _gameService = game;
       game.requestFriends();
       game.requestPendingFriendRequests();
       game.requestDmConversations();
@@ -38,6 +46,7 @@ class _FriendsScreenState extends State<FriendsScreen> with TickerProviderStateM
 
   @override
   void dispose() {
+    _gameService?.setActiveDmPartner(null);
     _tabController.dispose();
     _searchController.dispose();
     _searchDebounce?.cancel();
@@ -76,13 +85,29 @@ class _FriendsScreenState extends State<FriendsScreen> with TickerProviderStateM
   }
 
   void _openDmChat(String partner) {
+    if (!widget.allowDmChat) {
+      final now = DateTime.now();
+      if (_lastBlockedDmNoticeAt == null ||
+          now.difference(_lastBlockedDmNoticeAt!) > const Duration(seconds: 2)) {
+        _lastBlockedDmNoticeAt = now;
+        final messenger = ScaffoldMessenger.of(context);
+        messenger.hideCurrentSnackBar();
+        messenger.showSnackBar(
+          const SnackBar(content: Text('게임 중에는 DM 채팅방에 들어갈 수 없습니다')),
+        );
+      }
+      return;
+    }
     final game = context.read<GameService>();
+    _gameService = game;
     game.requestDmHistory(partner);
     game.markDmReadAction(partner);
+    game.setActiveDmPartner(partner);
     setState(() => _dmChatPartner = partner);
   }
 
   void _closeDmChat() {
+    _gameService?.setActiveDmPartner(null);
     setState(() {
       _dmChatPartner = null;
       _dmInputController.clear();
@@ -155,7 +180,7 @@ class _FriendsScreenState extends State<FriendsScreen> with TickerProviderStateM
             child: Container(
               padding: const EdgeInsets.all(8),
               decoration: BoxDecoration(
-                color: Colors.white.withOpacity(0.7),
+                color: Colors.white.withValues(alpha: 0.7),
                 borderRadius: BorderRadius.circular(12),
               ),
               child: const Icon(Icons.arrow_back, size: 20, color: Color(0xFF5A4038)),
@@ -181,7 +206,7 @@ class _FriendsScreenState extends State<FriendsScreen> with TickerProviderStateM
             child: Container(
               padding: const EdgeInsets.all(8),
               decoration: BoxDecoration(
-                color: Colors.white.withOpacity(0.7),
+                color: Colors.white.withValues(alpha: 0.7),
                 borderRadius: BorderRadius.circular(12),
               ),
               child: const Icon(Icons.refresh, size: 20, color: Color(0xFF8A7A72)),
@@ -198,7 +223,7 @@ class _FriendsScreenState extends State<FriendsScreen> with TickerProviderStateM
         return Container(
           margin: const EdgeInsets.symmetric(horizontal: 16),
           decoration: BoxDecoration(
-            color: Colors.white.withOpacity(0.6),
+            color: Colors.white.withValues(alpha: 0.6),
             borderRadius: BorderRadius.circular(12),
           ),
           child: TabBar(
@@ -301,7 +326,7 @@ class _FriendsScreenState extends State<FriendsScreen> with TickerProviderStateM
         return ListView.separated(
           padding: const EdgeInsets.all(16),
           itemCount: sorted.length,
-          separatorBuilder: (_, __) => const SizedBox(height: 8),
+          separatorBuilder: (_, _) => const SizedBox(height: 8),
           itemBuilder: (context, index) {
             final friend = sorted[index];
             final nickname = friend['nickname'] as String? ?? '';
@@ -323,7 +348,7 @@ class _FriendsScreenState extends State<FriendsScreen> with TickerProviderStateM
               child: Container(
                 padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
                 decoration: BoxDecoration(
-                  color: Colors.white.withOpacity(0.85),
+                  color: Colors.white.withValues(alpha: 0.85),
                   borderRadius: BorderRadius.circular(14),
                   border: Border.all(
                     color: isOnline ? const Color(0xFFC8E6C9) : const Color(0xFFE0D6D0),
@@ -373,6 +398,24 @@ class _FriendsScreenState extends State<FriendsScreen> with TickerProviderStateM
                                   ),
                                 ),
                               ],
+                              if (!widget.allowDmChat) ...[
+                                const SizedBox(width: 6),
+                                Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                  decoration: BoxDecoration(
+                                    color: const Color(0xFFFFF3E0),
+                                    borderRadius: BorderRadius.circular(10),
+                                  ),
+                                  child: const Text(
+                                    '게임 중 제한',
+                                    style: TextStyle(
+                                      fontSize: 10,
+                                      color: Color(0xFFE65100),
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
+                                ),
+                              ],
                             ],
                           ),
                           const SizedBox(height: 2),
@@ -387,13 +430,27 @@ class _FriendsScreenState extends State<FriendsScreen> with TickerProviderStateM
                       ),
                     ),
                     // Action buttons
-                    if (isOnline && friend['roomId'] == null && game.currentRoomId.isNotEmpty)
-                      _buildActionChip('초대', Icons.send, const Color(0xFF1976D2), const Color(0xFFE3F2FD), () {
-                        game.inviteToRoom(nickname);
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(content: Text('$nickname님에게 초대를 보냈습니다')),
-                        );
-                      }),
+                    if (isOnline && friend['roomId'] == null && game.isInWaitingRoom)
+                      game.isRoomInvitePending(nickname)
+                          ? _buildActionChip(
+                              '초대됨',
+                              Icons.schedule,
+                              const Color(0xFF8A8A8A),
+                              const Color(0xFFF1F1F1),
+                              () {},
+                            )
+                          : _buildActionChip(
+                              '초대',
+                              Icons.send,
+                              const Color(0xFF1976D2),
+                              const Color(0xFFE3F2FD),
+                              () {
+                                game.inviteToRoom(nickname);
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(content: Text('$nickname님에게 초대를 보냈습니다')),
+                                );
+                              },
+                            ),
                     if (friend['roomId'] != null && game.currentRoomId.isEmpty)
                       _buildRoomActionChip(friend, game),
                     const SizedBox(width: 4),
@@ -507,7 +564,7 @@ class _FriendsScreenState extends State<FriendsScreen> with TickerProviderStateM
                         )
                       : null,
                   filled: true,
-                  fillColor: Colors.white.withOpacity(0.85),
+                  fillColor: Colors.white.withValues(alpha: 0.85),
                   border: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(14),
                     borderSide: BorderSide.none,
@@ -527,7 +584,7 @@ class _FriendsScreenState extends State<FriendsScreen> with TickerProviderStateM
                   : ListView.separated(
                       padding: const EdgeInsets.symmetric(horizontal: 16),
                       itemCount: game.searchResults.length,
-                      separatorBuilder: (_, __) => const SizedBox(height: 8),
+                      separatorBuilder: (_, _) => const SizedBox(height: 8),
                       itemBuilder: (context, index) {
                         final user = game.searchResults[index];
                         final nickname = user['nickname'] as String? ?? '';
@@ -541,7 +598,7 @@ class _FriendsScreenState extends State<FriendsScreen> with TickerProviderStateM
                           child: Container(
                           padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
                           decoration: BoxDecoration(
-                            color: Colors.white.withOpacity(0.85),
+                            color: Colors.white.withValues(alpha: 0.85),
                             borderRadius: BorderRadius.circular(14),
                           ),
                           child: Row(
@@ -666,15 +723,15 @@ class _FriendsScreenState extends State<FriendsScreen> with TickerProviderStateM
         return ListView.separated(
           padding: const EdgeInsets.all(16),
           itemCount: game.pendingFriendRequests.length,
-          separatorBuilder: (_, __) => const SizedBox(height: 8),
+          separatorBuilder: (_, _) => const SizedBox(height: 8),
           itemBuilder: (context, index) {
             final nickname = game.pendingFriendRequests[index];
             return Container(
               padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
               decoration: BoxDecoration(
-                color: Colors.white.withOpacity(0.85),
+                color: Colors.white.withValues(alpha: 0.85),
                 borderRadius: BorderRadius.circular(14),
-                border: Border.all(color: const Color(0xFFCE93D8).withOpacity(0.5)),
+                border: Border.all(color: const Color(0xFFCE93D8).withValues(alpha: 0.5)),
               ),
               child: Row(
                 children: [
@@ -767,7 +824,7 @@ class _FriendsScreenState extends State<FriendsScreen> with TickerProviderStateM
                       child: Container(
                         padding: const EdgeInsets.all(8),
                         decoration: BoxDecoration(
-                          color: Colors.white.withOpacity(0.7),
+                          color: Colors.white.withValues(alpha: 0.7),
                           borderRadius: BorderRadius.circular(12),
                         ),
                         child: const Icon(Icons.arrow_back, size: 20, color: Color(0xFF5A4038)),
@@ -831,7 +888,7 @@ class _FriendsScreenState extends State<FriendsScreen> with TickerProviderStateM
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                 decoration: BoxDecoration(
-                  color: Colors.white.withOpacity(0.9),
+                  color: Colors.white.withValues(alpha: 0.9),
                   border: Border(top: BorderSide(color: Colors.grey.shade200)),
                 ),
                 child: Row(
@@ -914,7 +971,7 @@ class _FriendsScreenState extends State<FriendsScreen> with TickerProviderStateM
                 ),
                 boxShadow: [
                   BoxShadow(
-                    color: Colors.black.withOpacity(0.05),
+                    color: Colors.black.withValues(alpha: 0.05),
                     blurRadius: 4,
                     offset: const Offset(0, 2),
                   ),

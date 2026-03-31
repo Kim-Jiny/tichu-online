@@ -990,10 +990,12 @@ async function getRecentMatches(nickname, limit = 5) {
       const isTeamA = row.player_a1 === nickname || row.player_a2 === nickname;
       const isDraw = row.winner_team === 'draw';
       const won = !isDraw && ((isTeamA && row.winner_team === 'A') || (!isTeamA && row.winner_team === 'B'));
+      const deserterNickname = row.deserter_nickname || null;
       return {
         id: row.id,
         won,
         isDraw,
+        isDesertionLoss: deserterNickname === nickname,
         myTeam: isTeamA ? 'A' : 'B',
         teamAScore: row.team_a_score,
         teamBScore: row.team_b_score,
@@ -1003,7 +1005,7 @@ async function getRecentMatches(nickname, limit = 5) {
         playerB2: row.player_b2,
         isRanked: row.is_ranked,
         endReason: row.end_reason || 'normal',
-        deserterNickname: row.deserter_nickname || null,
+        deserterNickname,
         createdAt: row.created_at,
       };
     });

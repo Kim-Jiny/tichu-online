@@ -1,11 +1,10 @@
-import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../models/player.dart';
 import '../services/game_service.dart';
+import '../services/session_service.dart';
 import '../widgets/playing_card.dart';
 import '../widgets/connection_overlay.dart';
-import 'lobby_screen.dart';
 
 class SpectatorScreen extends StatefulWidget {
   const SpectatorScreen({super.key});
@@ -20,6 +19,53 @@ class _SpectatorScreenState extends State<SpectatorScreen> {
   bool _soundPanelOpen = false;
   final TextEditingController _chatController = TextEditingController();
   final ScrollController _chatScrollController = ScrollController();
+
+  Widget _buildRecoveryLoading({
+    required String title,
+    String? subtitle,
+  }) {
+    return Center(
+      child: Container(
+        constraints: const BoxConstraints(maxWidth: 320),
+        padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 20),
+        decoration: BoxDecoration(
+          color: Colors.black.withValues(alpha: 0.18),
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(
+            color: Colors.white.withValues(alpha: 0.14),
+          ),
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const CircularProgressIndicator(color: Colors.white),
+            const SizedBox(height: 16),
+            Text(
+              title,
+              textAlign: TextAlign.center,
+              style: const TextStyle(
+                color: Colors.white,
+                fontSize: 17,
+                fontWeight: FontWeight.w800,
+              ),
+            ),
+            if (subtitle != null && subtitle.trim().isNotEmpty) ...[
+              const SizedBox(height: 8),
+              Text(
+                subtitle,
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  color: Colors.white.withValues(alpha: 0.82),
+                  fontSize: 13,
+                  height: 1.35,
+                ),
+              ),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
   int _lastChatMessageCount = 0;
 
   @override
@@ -33,14 +79,13 @@ class _SpectatorScreenState extends State<SpectatorScreen> {
     if (_isLeaving) return;
     _isLeaving = true;
     game.leaveRoom();
-    Navigator.pushReplacement(
-      context,
-      MaterialPageRoute(builder: (_) => const LobbyScreen()),
-    );
   }
 
   @override
   Widget build(BuildContext context) {
+    final session = context.watch<SessionService>();
+    final isLandscape =
+        MediaQuery.of(context).orientation == Orientation.landscape;
     // C9: Wrap in ConnectionOverlay for reconnection support
     return ConnectionOverlay(
       child: PopScope(
@@ -60,32 +105,36 @@ class _SpectatorScreenState extends State<SpectatorScreen> {
           ),
         ),
         child: SafeArea(
+          bottom: !isLandscape,
           child: Consumer<GameService>(
             builder: (context, game, _) {
-              // Check if we left the room (e.g. disconnected)
-              if (!game.isSpectator || game.currentRoomId.isEmpty) {
-                if (!_isLeaving) {
-                  _isLeaving = true;
-                  WidgetsBinding.instance.addPostFrameCallback((_) {
-                    if (mounted) {
-                      Navigator.pushReplacement(
-                        context,
-                        MaterialPageRoute(builder: (_) => const LobbyScreen()),
-                      );
-                    }
-                  });
-                }
-                return const Center(
-                  child: CircularProgressIndicator(color: Colors.white),
+              if (session.isRestoring) {
+                return _buildRecoveryLoading(
+                  title: '관전 복구 중...',
+                  subtitle: session.restoreStatusMessage,
                 );
               }
 
-              final state = game.spectatorGameState;
-              if (state == null) {
-                return _buildWaitingRoomView(context, game);
+              final destination = game.currentDestination;
+              if (destination != AppDestination.spectator) {
+                if (!_isLeaving) {
+                  _isLeaving = true;
+                }
+                return _buildRecoveryLoading(
+                  title: '관전 화면 전환 중...',
+                  subtitle: '현재 관전 상태를 다시 확인하고 있습니다.',
+                );
+              }
+              if (_isLeaving) {
+                _isLeaving = false;
               }
 
-              return _buildSpectatorView(context, game, state);
+              final state = game.spectatorGameState;
+              if (!game.hasSpectatorGameState || state == null) {
+                return _buildWaitingRoomView(context, game, isLandscape);
+              }
+
+              return _buildSpectatorView(context, game, state, isLandscape);
             },
           ),
         ),
@@ -95,7 +144,11 @@ class _SpectatorScreenState extends State<SpectatorScreen> {
     );
   }
 
-  Widget _buildWaitingRoomView(BuildContext context, GameService game) {
+  Widget _buildWaitingRoomView(
+    BuildContext context,
+    GameService game,
+    bool isLandscape,
+  ) {
     final players = game.roomPlayers;
 
     return Stack(
@@ -107,7 +160,7 @@ class _SpectatorScreenState extends State<SpectatorScreen> {
               margin: const EdgeInsets.all(12),
               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
               decoration: BoxDecoration(
-                color: Colors.white.withOpacity(0.95),
+                color: Colors.white.withValues(alpha: 0.95),
                 borderRadius: BorderRadius.circular(16),
                 border: Border.all(color: const Color(0xFFE0D8D4)),
               ),
@@ -165,16 +218,19 @@ class _SpectatorScreenState extends State<SpectatorScreen> {
             Expanded(
               child: Center(
                 child: Padding(
-                  padding: const EdgeInsets.all(20),
+                  padding: EdgeInsets.all(isLandscape ? 12 : 20),
                   child: Container(
-                    padding: const EdgeInsets.all(16),
+                    constraints: BoxConstraints(
+                      maxWidth: isLandscape ? 920 : 560,
+                    ),
+                    padding: EdgeInsets.all(isLandscape ? 20 : 16),
                     decoration: BoxDecoration(
-                      color: Colors.white.withOpacity(0.95),
+                      color: Colors.white.withValues(alpha: 0.95),
                       borderRadius: BorderRadius.circular(20),
                       border: Border.all(color: const Color(0xFFE0D8D4)),
                       boxShadow: [
                         BoxShadow(
-                          color: const Color(0xFFD9CCC8).withOpacity(0.4),
+                          color: const Color(0xFFD9CCC8).withValues(alpha: 0.4),
                           blurRadius: 10,
                           offset: const Offset(0, 4),
                         ),
@@ -183,44 +239,60 @@ class _SpectatorScreenState extends State<SpectatorScreen> {
                     child: Column(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        // Team A header
-                        const Text(
-                          'TEAM A',
-                          style: TextStyle(
-                            color: Color(0xFF6A9BD1),
-                            fontSize: 14,
-                            fontWeight: FontWeight.bold,
+                        if (isLandscape)
+                          Wrap(
+                            alignment: WrapAlignment.center,
+                            spacing: 20,
+                            runSpacing: 20,
+                            children: [
+                              _buildWaitingTeamCard(
+                                label: 'TEAM A',
+                                color: const Color(0xFF6A9BD1),
+                                children: [
+                                  _buildPlayerSlot(game, players[0], 0),
+                                  _buildPlayerSlot(game, players[2], 2),
+                                ],
+                              ),
+                              _buildWaitingTeamCard(
+                                label: 'TEAM B',
+                                color: const Color(0xFFF5B8C0),
+                                children: [
+                                  _buildPlayerSlot(game, players[1], 1),
+                                  _buildPlayerSlot(game, players[3], 3),
+                                ],
+                              ),
+                            ],
+                          )
+                        else ...[
+                          _buildWaitingTeamLabel(
+                            label: 'TEAM A',
+                            color: const Color(0xFF6A9BD1),
                           ),
-                        ),
-                        const SizedBox(height: 8),
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            _buildPlayerSlot(game, players[0], 0),
-                            const SizedBox(width: 16),
-                            _buildPlayerSlot(game, players[2], 2),
-                          ],
-                        ),
-                        const SizedBox(height: 24),
-                        // Team B header
-                        const Text(
-                          'TEAM B',
-                          style: TextStyle(
-                            color: Color(0xFFF5B8C0),
-                            fontSize: 14,
-                            fontWeight: FontWeight.bold,
+                          const SizedBox(height: 8),
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              _buildPlayerSlot(game, players[0], 0),
+                              const SizedBox(width: 16),
+                              _buildPlayerSlot(game, players[2], 2),
+                            ],
                           ),
-                        ),
-                        const SizedBox(height: 8),
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            _buildPlayerSlot(game, players[1], 1),
-                            const SizedBox(width: 16),
-                            _buildPlayerSlot(game, players[3], 3),
-                          ],
-                        ),
-                        const SizedBox(height: 28),
+                          const SizedBox(height: 24),
+                          _buildWaitingTeamLabel(
+                            label: 'TEAM B',
+                            color: const Color(0xFFF5B8C0),
+                          ),
+                          const SizedBox(height: 8),
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              _buildPlayerSlot(game, players[1], 1),
+                              const SizedBox(width: 16),
+                              _buildPlayerSlot(game, players[3], 3),
+                            ],
+                          ),
+                        ],
+                        SizedBox(height: isLandscape ? 20 : 28),
                         // Waiting text
                         const Text(
                           '게임 시작 대기 중...',
@@ -253,6 +325,48 @@ class _SpectatorScreenState extends State<SpectatorScreen> {
         // Chat panel overlay
         if (_chatOpen) _buildChatPanel(game),
       ],
+    );
+  }
+
+  Widget _buildWaitingTeamLabel({
+    required String label,
+    required Color color,
+  }) {
+    return Text(
+      label,
+      style: TextStyle(
+        color: color,
+        fontSize: 14,
+        fontWeight: FontWeight.bold,
+      ),
+    );
+  }
+
+  Widget _buildWaitingTeamCard({
+    required String label,
+    required Color color,
+    required List<Widget> children,
+  }) {
+    return Container(
+      width: 320,
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: const Color(0xFFF9F6F4),
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(color: const Color(0xFFE6DDD8)),
+      ),
+      child: Column(
+        children: [
+          _buildWaitingTeamLabel(label: label, color: color),
+          const SizedBox(height: 12),
+          Wrap(
+            alignment: WrapAlignment.center,
+            spacing: 12,
+            runSpacing: 12,
+            children: children,
+          ),
+        ],
+      ),
     );
   }
 
@@ -332,6 +446,7 @@ class _SpectatorScreenState extends State<SpectatorScreen> {
     BuildContext context,
     GameService game,
     Map<String, dynamic> state,
+    bool isLandscape,
   ) {
     final players = (state['players'] as List?) ?? [];
     final currentTrick = (state['currentTrick'] as List?) ?? [];
@@ -344,43 +459,30 @@ class _SpectatorScreenState extends State<SpectatorScreen> {
       children: [
         Column(
           children: [
-            // Top bar
-            _buildTopBar(context, game, phase, round, totalScores),
-
-            // Game area
+            _buildTopBar(
+              context,
+              game,
+              phase,
+              round,
+              totalScores,
+              isLandscape,
+            ),
             Expanded(
               child: Padding(
                 padding: const EdgeInsets.all(8),
-                child: Column(
-                  children: [
-                    // Top player (position 2 - partner of bottom)
-                    if (players.length > 2) _buildPlayerSection(game, players[2], currentPlayer),
-
-                    // Middle row: left, center trick, right
-                    Expanded(
-                      child: Row(
-                        crossAxisAlignment: CrossAxisAlignment.center,
-                        children: [
-                          // Left player (position 1)
-                          if (players.length > 1)
-                            _buildPlayerSection(game, players[3], currentPlayer, isLeft: true),
-
-                          // Center: current trick
-                          Expanded(
-                            child: _buildTrickArea(currentTrick),
-                          ),
-
-                          // Right player (position 3)
-                          if (players.length > 3)
-                            _buildPlayerSection(game, players[1], currentPlayer, isRight: true),
-                        ],
+                child: isLandscape
+                    ? _buildLandscapeSpectatorBoard(
+                        game,
+                        players,
+                        currentPlayer,
+                        currentTrick,
+                      )
+                    : _buildPortraitSpectatorBoard(
+                        game,
+                        players,
+                        currentPlayer,
+                        currentTrick,
                       ),
-                    ),
-
-                    // Bottom player (position 0)
-                    if (players.isNotEmpty) _buildPlayerSection(game, players[0], currentPlayer),
-                  ],
-                ),
               ),
             ),
           ],
@@ -396,6 +498,175 @@ class _SpectatorScreenState extends State<SpectatorScreen> {
         if (phase == 'game_end')
           _buildGameEndOverlay(game, totalScores),
       ],
+    );
+  }
+
+  Widget _buildPortraitSpectatorBoard(
+    GameService game,
+    List players,
+    String currentPlayer,
+    List currentTrick,
+  ) {
+    return Column(
+      children: [
+        if (players.length > 2)
+          _buildPlayerSection(game, players[2], currentPlayer),
+        Expanded(
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              if (players.length > 3)
+                _buildPlayerSection(game, players[3], currentPlayer, isLeft: true),
+              Expanded(
+                child: _buildTrickArea(currentTrick),
+              ),
+              if (players.length > 1)
+                _buildPlayerSection(game, players[1], currentPlayer, isRight: true),
+            ],
+          ),
+        ),
+        if (players.isNotEmpty)
+          _buildPlayerSection(game, players[0], currentPlayer),
+      ],
+    );
+  }
+
+  Widget _buildLandscapeSpectatorBoard(
+    GameService game,
+    List players,
+    String currentPlayer,
+    List currentTrick,
+  ) {
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final cramped = constraints.maxHeight < 390;
+        final compact = constraints.maxHeight < 520;
+        final sideWidth = cramped
+            ? 72.0
+            : (constraints.maxHeight > 620 ? 104.0 : 86.0);
+        final playerSlotHeight = (constraints.maxHeight *
+                (cramped ? 0.20 : (compact ? 0.23 : 0.26)))
+            .clamp(cramped ? 48.0 : 56.0, constraints.maxHeight > 620 ? 108.0 : 92.0);
+        final trickSlotHeight = (constraints.maxHeight *
+                (cramped ? 0.34 : (compact ? 0.40 : 0.46)))
+            .clamp(cramped ? 76.0 : 88.0, constraints.maxHeight > 620 ? 180.0 : 132.0);
+
+        return Row(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            if (players.length > 3)
+              SizedBox(
+                width: sideWidth,
+                child: _buildScaledPlayerSection(
+                  game,
+                  players[3],
+                  currentPlayer,
+                  isLeft: true,
+                  compact: compact,
+                  forceScaleDown: cramped,
+                ),
+              ),
+            if (players.length > 3) const SizedBox(width: 6),
+            Expanded(
+              child: Column(
+                children: [
+                  if (players.length > 2)
+                    SizedBox(
+                      height: playerSlotHeight,
+                      child: _buildScaledPlayerSection(
+                        game,
+                        players[2],
+                        currentPlayer,
+                        compact: compact,
+                        forceScaleDown: cramped,
+                      ),
+                    ),
+                  const SizedBox(height: 4),
+                  Expanded(
+                    child: Center(
+                      child: ConstrainedBox(
+                        constraints: BoxConstraints(
+                          maxHeight: trickSlotHeight,
+                          maxWidth: constraints.maxWidth,
+                        ),
+                        child: _buildTrickArea(
+                          currentTrick,
+                          compact: compact,
+                          landscapeCompact: compact,
+                        ),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  if (players.isNotEmpty)
+                    SizedBox(
+                      height: playerSlotHeight,
+                      child: _buildScaledPlayerSection(
+                        game,
+                        players[0],
+                        currentPlayer,
+                        compact: compact,
+                        forceScaleDown: cramped,
+                      ),
+                    ),
+                ],
+              ),
+            ),
+            if (players.length > 1) const SizedBox(width: 6),
+            if (players.length > 1)
+              SizedBox(
+                width: sideWidth,
+                child: _buildScaledPlayerSection(
+                  game,
+                  players[1],
+                  currentPlayer,
+                  isRight: true,
+                  compact: compact,
+                  forceScaleDown: cramped,
+                ),
+              ),
+          ],
+        );
+      },
+    );
+  }
+
+  Widget _buildScaledPlayerSection(
+    GameService game,
+    Map<String, dynamic> player,
+    String currentPlayerId, {
+    bool isLeft = false,
+    bool isRight = false,
+    bool compact = false,
+    bool forceScaleDown = false,
+  }) {
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final child = ConstrainedBox(
+          constraints: BoxConstraints(
+            maxWidth: constraints.maxWidth,
+            maxHeight: constraints.maxHeight,
+          ),
+          child: _buildPlayerSection(
+            game,
+            player,
+            currentPlayerId,
+            isLeft: isLeft,
+            isRight: isRight,
+            compact: compact,
+          ),
+        );
+        return Align(
+          alignment: Alignment.center,
+          child: forceScaleDown
+              ? FittedBox(
+                  fit: BoxFit.scaleDown,
+                  alignment: Alignment.center,
+                  child: child,
+                )
+              : child,
+        );
+      },
     );
   }
 
@@ -452,104 +723,187 @@ class _SpectatorScreenState extends State<SpectatorScreen> {
     String phase,
     int round,
     Map<String, dynamic> scores,
+    bool isLandscape,
   ) {
     return Container(
       margin: const EdgeInsets.all(12),
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      padding: EdgeInsets.symmetric(
+        horizontal: isLandscape ? 10 : 12,
+        vertical: isLandscape ? 6 : 8,
+      ),
       decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.95),
+        color: Colors.white.withValues(alpha: 0.95),
         borderRadius: BorderRadius.circular(16),
         border: Border.all(color: const Color(0xFFE0D8D4)),
         boxShadow: [
           BoxShadow(
-            color: const Color(0xFFD9CCC8).withOpacity(0.35),
+            color: const Color(0xFFD9CCC8).withValues(alpha: 0.35),
             blurRadius: 8,
             offset: const Offset(0, 3),
           ),
         ],
       ),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Row(
-            children: [
-              IconButton(
-                onPressed: () => _leaveRoom(game),
-                icon: const Icon(Icons.arrow_back, color: Color(0xFF6A5A52)),
-              ),
-              const SizedBox(width: 8),
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                decoration: BoxDecoration(
-                  color: const Color(0xFFE8E0F8),
-                  borderRadius: BorderRadius.circular(12),
+      child: isLandscape
+          ? Row(
+              children: [
+                IconButton(
+                  visualDensity: VisualDensity.compact,
+                  padding: EdgeInsets.zero,
+                  constraints: const BoxConstraints.tightFor(width: 32, height: 32),
+                  onPressed: () => _leaveRoom(game),
+                  icon: const Icon(
+                    Icons.arrow_back,
+                    color: Color(0xFF6A5A52),
+                    size: 20,
+                  ),
                 ),
-                child: const Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Icon(Icons.visibility, size: 14, color: Color(0xFF4A4080)),
-                    SizedBox(width: 4),
-                    Text(
-                      '관전중',
-                      style: TextStyle(
-                        fontSize: 12,
-                        fontWeight: FontWeight.bold,
-                        color: Color(0xFF4A4080),
+                const SizedBox(width: 6),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFE8E0F8),
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: const Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(Icons.visibility, size: 12, color: Color(0xFF4A4080)),
+                      SizedBox(width: 3),
+                      Text(
+                        '관전중',
+                        style: TextStyle(
+                          fontSize: 11,
+                          fontWeight: FontWeight.bold,
+                          color: Color(0xFF4A4080),
+                        ),
                       ),
+                    ],
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    'R$round | ${_getPhaseText(phase)}',
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(
+                      color: Color(0xFF8A7E78),
+                      fontSize: 11,
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 6),
+                _buildScoreChip(
+                  'A',
+                  scores['teamA'] ?? 0,
+                  const Color(0xFF6A9BD1),
+                  compact: true,
+                ),
+                const SizedBox(width: 4),
+                _buildScoreChip(
+                  'B',
+                  scores['teamB'] ?? 0,
+                  const Color(0xFFF5B8C0),
+                  compact: true,
+                ),
+                const SizedBox(width: 6),
+                _buildSpectatorButton(game),
+                const SizedBox(width: 4),
+                _buildSoundButton(game),
+                const SizedBox(width: 4),
+                _buildChatButton(),
+              ],
+            )
+          : Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Row(
+                  children: [
+                    IconButton(
+                      onPressed: () => _leaveRoom(game),
+                      icon: const Icon(Icons.arrow_back, color: Color(0xFF6A5A52)),
+                    ),
+                    const SizedBox(width: 8),
+                    Container(
+                      padding:
+                          const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFE8E0F8),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: const Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(Icons.visibility, size: 14, color: Color(0xFF4A4080)),
+                          SizedBox(width: 4),
+                          Text(
+                            '관전중',
+                            style: TextStyle(
+                              fontSize: 12,
+                              fontWeight: FontWeight.bold,
+                              color: Color(0xFF4A4080),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const Spacer(),
+                    _buildSpectatorButton(game),
+                    const SizedBox(width: 6),
+                    _buildSoundButton(game),
+                    const SizedBox(width: 6),
+                    _buildChatButton(),
+                  ],
+                ),
+                const SizedBox(height: 6),
+                Row(
+                  children: [
+                    Text(
+                      'R$round | ${_getPhaseText(phase)}',
+                      style:
+                          const TextStyle(color: Color(0xFF8A7E78), fontSize: 12),
+                    ),
+                    const Spacer(),
+                    _buildScoreChip(
+                      'A',
+                      scores['teamA'] ?? 0,
+                      const Color(0xFF6A9BD1),
+                    ),
+                    const SizedBox(width: 6),
+                    _buildScoreChip(
+                      'B',
+                      scores['teamB'] ?? 0,
+                      const Color(0xFFF5B8C0),
                     ),
                   ],
                 ),
-              ),
-              const Spacer(),
-              _buildSpectatorButton(game),
-              const SizedBox(width: 6),
-              _buildSoundButton(game),
-              const SizedBox(width: 6),
-              _buildChatButton(),
-            ],
-          ),
-          const SizedBox(height: 6),
-          Row(
-            children: [
-              Text(
-                'R$round | ${_getPhaseText(phase)}',
-                style: const TextStyle(color: Color(0xFF8A7E78), fontSize: 12),
-              ),
-              const Spacer(),
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                decoration: BoxDecoration(
-                  color: const Color(0xFF6A9BD1),
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: Text(
-                  'A: ${scores['teamA'] ?? 0}',
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontWeight: FontWeight.bold,
-                    fontSize: 12,
-                  ),
-                ),
-              ),
-              const SizedBox(width: 6),
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                decoration: BoxDecoration(
-                  color: const Color(0xFFF5B8C0),
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: Text(
-                  'B: ${scores['teamB'] ?? 0}',
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontWeight: FontWeight.bold,
-                    fontSize: 12,
-                  ),
-                ),
-              ),
-            ],
-          ),
-        ],
+              ],
+            ),
+    );
+  }
+
+  Widget _buildScoreChip(
+    String label,
+    dynamic score,
+    Color color, {
+    bool compact = false,
+  }) {
+    return Container(
+      padding: EdgeInsets.symmetric(
+        horizontal: compact ? 8 : 10,
+        vertical: compact ? 3 : 4,
+      ),
+      decoration: BoxDecoration(
+        color: color,
+        borderRadius: BorderRadius.circular(compact ? 7 : 8),
+      ),
+      child: Text(
+        '$label: $score',
+        style: TextStyle(
+          color: Colors.white,
+          fontWeight: FontWeight.bold,
+          fontSize: compact ? 11 : 12,
+        ),
       ),
     );
   }
@@ -577,6 +931,7 @@ class _SpectatorScreenState extends State<SpectatorScreen> {
     String currentPlayerId, {
     bool isLeft = false,
     bool isRight = false,
+    bool compact = false,
   }) {
     final playerId = player['id'] ?? '';
     final name = player['name'] ?? '';
@@ -596,10 +951,10 @@ class _SpectatorScreenState extends State<SpectatorScreen> {
     final teamColor = team == 'A' ? const Color(0xFF6A9BD1) : const Color(0xFFF5B8C0);
 
     return Container(
-      margin: const EdgeInsets.all(4),
-      padding: const EdgeInsets.all(8),
+      margin: EdgeInsets.all(compact ? 2 : 4),
+      padding: EdgeInsets.all(compact ? 6 : 8),
       decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.98),
+        color: Colors.white.withValues(alpha: 0.98),
         borderRadius: BorderRadius.circular(12),
         border: Border.all(
           color: isCurrentTurn ? const Color(0xFFF3C97A) : const Color(0xFFE6DDD8),
@@ -607,7 +962,7 @@ class _SpectatorScreenState extends State<SpectatorScreen> {
         ),
         boxShadow: [
           BoxShadow(
-            color: const Color(0xFFE5DAD6).withOpacity(0.35),
+            color: const Color(0xFFE5DAD6).withValues(alpha: 0.35),
             blurRadius: 6,
             offset: const Offset(0, 2),
           ),
@@ -643,7 +998,7 @@ class _SpectatorScreenState extends State<SpectatorScreen> {
                   style: TextStyle(
                     color: connected ? const Color(0xFF4E3A34) : Colors.grey,
                     fontWeight: FontWeight.bold,
-                    fontSize: 12,
+                    fontSize: compact ? 11 : 12,
                   ),
                 ),
               ),
@@ -690,28 +1045,42 @@ class _SpectatorScreenState extends State<SpectatorScreen> {
           const SizedBox(height: 4),
           // Cards or request button
           if (hasFinished && cardCount == 0)
-            const Padding(
-              padding: EdgeInsets.all(8),
+            Padding(
+              padding: EdgeInsets.all(compact ? 6 : 8),
               child: Text(
                 '완료',
-                style: TextStyle(color: Color(0xFF9A8E8A), fontSize: 10),
+                style: TextStyle(
+                  color: const Color(0xFF9A8E8A),
+                  fontSize: compact ? 9 : 10,
+                ),
               ),
             )
           else if (canSeeCards && cards.isNotEmpty)
             vertical
-                ? _buildRotatedCards(cards, isLeft: isLeft)
-                : _buildHorizontalCards(cards)
+                ? _buildRotatedCards(cards, isLeft: isLeft, compact: compact)
+                : _buildHorizontalCards(cards, compact: compact)
           else
-            _buildCardRequestArea(game, playerId, cardCount, isPending, vertical),
+            _buildCardRequestArea(
+              game,
+              playerId,
+              cardCount,
+              isPending,
+              vertical,
+              compact: compact,
+            ),
         ],
       ),
     );
   }
 
-  Widget _buildRotatedCards(List cards, {bool isLeft = true}) {
-    const cardWidth = 30.0;
-    const cardHeight = 45.0;
-    const overlap = 20.0; // 덜 겹치게
+  Widget _buildRotatedCards(
+    List cards, {
+    bool isLeft = true,
+    bool compact = false,
+  }) {
+    final cardWidth = compact ? 24.0 : 30.0;
+    final cardHeight = compact ? 36.0 : 45.0;
+    final overlap = compact ? 14.0 : 20.0;
 
     final totalHeight = cardHeight + (cards.length - 1) * overlap;
     // 좌측: 90도 (pi/2), 우측: 270도 (3*pi/2 = -pi/2)
@@ -719,7 +1088,7 @@ class _SpectatorScreenState extends State<SpectatorScreen> {
 
     return SizedBox(
       width: cardHeight + 4, // 회전 후 잘림 방지
-      height: totalHeight.clamp(50.0, 300.0),
+      height: totalHeight.clamp(40.0, compact ? 180.0 : 300.0),
       child: Stack(
         clipBehavior: Clip.none,
         children: [
@@ -751,10 +1120,20 @@ class _SpectatorScreenState extends State<SpectatorScreen> {
     );
   }
 
-  Widget _buildCardRequestArea(GameService game, String playerId, int cardCount, bool isPending, bool vertical) {
+  Widget _buildCardRequestArea(
+    GameService game,
+    String playerId,
+    int cardCount,
+    bool isPending,
+    bool vertical, {
+    bool compact = false,
+  }) {
     if (isPending) {
       return Container(
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+        padding: EdgeInsets.symmetric(
+          horizontal: compact ? 8 : 12,
+          vertical: compact ? 6 : 8,
+        ),
         decoration: BoxDecoration(
           color: const Color(0xFFFFEFD8),
           borderRadius: BorderRadius.circular(8),
@@ -762,18 +1141,21 @@ class _SpectatorScreenState extends State<SpectatorScreen> {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const SizedBox(
-              width: 16,
-              height: 16,
+            SizedBox(
+              width: compact ? 14 : 16,
+              height: compact ? 14 : 16,
               child: CircularProgressIndicator(
                 strokeWidth: 2,
                 color: Color(0xFFF2A65A),
               ),
             ),
-            const SizedBox(height: 4),
+            SizedBox(height: compact ? 3 : 4),
             Text(
               '요청중... ($cardCount장)',
-              style: const TextStyle(color: Color(0xFFB58343), fontSize: 10),
+              style: TextStyle(
+                color: const Color(0xFFB58343),
+                fontSize: compact ? 9 : 10,
+              ),
             ),
           ],
         ),
@@ -783,7 +1165,10 @@ class _SpectatorScreenState extends State<SpectatorScreen> {
     return GestureDetector(
       onTap: () => game.requestCardView(playerId),
       child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+        padding: EdgeInsets.symmetric(
+          horizontal: compact ? 8 : 12,
+          vertical: compact ? 6 : 8,
+        ),
         decoration: BoxDecoration(
           color: const Color(0xFFEAF4FF),
           borderRadius: BorderRadius.circular(8),
@@ -792,11 +1177,18 @@ class _SpectatorScreenState extends State<SpectatorScreen> {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Icon(Icons.visibility, color: Color(0xFF4F88C8), size: 20),
-            const SizedBox(height: 2),
+            Icon(
+              Icons.visibility,
+              color: const Color(0xFF4F88C8),
+              size: compact ? 16 : 20,
+            ),
+            SizedBox(height: compact ? 1 : 2),
             Text(
               '패 보기 요청 ($cardCount장)',
-              style: const TextStyle(color: Color(0xFF4F88C8), fontSize: 10),
+              style: TextStyle(
+                color: const Color(0xFF4F88C8),
+                fontSize: compact ? 9 : 10,
+              ),
             ),
           ],
         ),
@@ -804,16 +1196,16 @@ class _SpectatorScreenState extends State<SpectatorScreen> {
     );
   }
 
-  Widget _buildHorizontalCards(List cards) {
-    const cardWidth = 30.0;
-    const cardHeight = 45.0;
-    const overlap = 20.0; // 약간 겹침
+  Widget _buildHorizontalCards(List cards, {bool compact = false}) {
+    final cardWidth = compact ? 24.0 : 30.0;
+    final cardHeight = compact ? 36.0 : 45.0;
+    final overlap = compact ? 16.0 : 20.0;
 
     final totalWidth = cardWidth + (cards.length - 1) * overlap;
 
     return SizedBox(
       height: cardHeight,
-      width: totalWidth.clamp(50.0, 280.0),
+      width: totalWidth.clamp(40.0, compact ? 200.0 : 280.0),
       child: Stack(
         children: [
           for (int i = 0; i < cards.length; i++)
@@ -843,7 +1235,7 @@ class _SpectatorScreenState extends State<SpectatorScreen> {
         decoration: BoxDecoration(
           color: _soundPanelOpen
               ? const Color(0xFF81C784)
-              : Colors.white.withOpacity(0.9),
+              : Colors.white.withValues(alpha: 0.9),
           shape: BoxShape.circle,
           border: Border.all(color: const Color(0xFFE0D8D4)),
         ),
@@ -864,11 +1256,11 @@ class _SpectatorScreenState extends State<SpectatorScreen> {
         width: 180,
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
         decoration: BoxDecoration(
-          color: Colors.white.withOpacity(0.97),
+          color: Colors.white.withValues(alpha: 0.97),
           borderRadius: BorderRadius.circular(14),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withOpacity(0.15),
+              color: Colors.black.withValues(alpha: 0.15),
               blurRadius: 8,
               offset: const Offset(0, 3),
             ),
@@ -909,7 +1301,7 @@ class _SpectatorScreenState extends State<SpectatorScreen> {
           Container(
             padding: const EdgeInsets.all(8),
             decoration: BoxDecoration(
-              color: Colors.white.withOpacity(0.9),
+              color: Colors.white.withValues(alpha: 0.9),
               shape: BoxShape.circle,
               border: Border.all(color: const Color(0xFFE0D8D4)),
             ),
@@ -972,7 +1364,7 @@ class _SpectatorScreenState extends State<SpectatorScreen> {
                 child: ListView.separated(
                   shrinkWrap: true,
                   itemCount: spectators.length,
-                  separatorBuilder: (_, __) => const Divider(height: 1),
+                  separatorBuilder: (_, _) => const Divider(height: 1),
                   itemBuilder: (_, i) {
                     final name = spectators[i]['nickname'] ?? '';
                     return Padding(
@@ -1008,7 +1400,7 @@ class _SpectatorScreenState extends State<SpectatorScreen> {
         decoration: BoxDecoration(
           color: _chatOpen
               ? const Color(0xFF77B8E8)
-              : Colors.white.withOpacity(0.9),
+              : Colors.white.withValues(alpha: 0.9),
           shape: BoxShape.circle,
           border: Border.all(color: const Color(0xFFE0D8D4)),
         ),
@@ -1026,17 +1418,19 @@ class _SpectatorScreenState extends State<SpectatorScreen> {
       _lastChatMessageCount = game.chatMessages.length;
       _scrollChatToBottom();
     }
-    final maxHeight = MediaQuery.of(context).size.height - 120;
+    final media = MediaQuery.of(context);
+    final maxHeight = media.size.height - media.viewInsets.bottom - 74;
     final panelHeight = maxHeight < 240
         ? 240.0
         : (maxHeight < 350 ? maxHeight : 350.0);
+    final panelWidth = (media.size.width - 16).clamp(220.0, 320.0);
 
     return AnimatedPositioned(
       duration: const Duration(milliseconds: 180),
       curve: Curves.easeOut,
       right: 8,
       top: 50,
-      width: 280,
+      width: panelWidth,
       height: panelHeight,
       child: Container(
         decoration: BoxDecoration(
@@ -1044,7 +1438,7 @@ class _SpectatorScreenState extends State<SpectatorScreen> {
           borderRadius: BorderRadius.circular(16),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withOpacity(0.15),
+              color: Colors.black.withValues(alpha: 0.15),
               blurRadius: 10,
               offset: const Offset(0, 4),
             ),
@@ -1104,7 +1498,7 @@ class _SpectatorScreenState extends State<SpectatorScreen> {
               padding: const EdgeInsets.all(8),
               decoration: BoxDecoration(
                 border: Border(
-                  top: BorderSide(color: Colors.grey.withOpacity(0.2)),
+                  top: BorderSide(color: Colors.grey.withValues(alpha: 0.2)),
                 ),
               ),
               child: Row(
@@ -1204,18 +1598,28 @@ class _SpectatorScreenState extends State<SpectatorScreen> {
     _scrollChatToBottom();
   }
 
-  Widget _buildTrickArea(List currentTrick) {
+  Widget _buildTrickArea(
+    List currentTrick, {
+    bool compact = false,
+    bool landscapeCompact = false,
+  }) {
     if (currentTrick.isEmpty) {
       return Center(
         child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+          padding: EdgeInsets.symmetric(
+            horizontal: compact ? 12 : 16,
+            vertical: compact ? 8 : 10,
+          ),
           decoration: BoxDecoration(
-            color: Colors.white.withOpacity(0.6),
+            color: Colors.white.withValues(alpha: 0.6),
             borderRadius: BorderRadius.circular(12),
           ),
-          child: const Text(
+          child: Text(
             '새 트릭 시작',
-            style: TextStyle(color: Color(0xFF9A8E8A), fontSize: 14),
+            style: TextStyle(
+              color: const Color(0xFF9A8E8A),
+              fontSize: compact ? 12 : 14,
+            ),
           ),
         ),
       );
@@ -1224,7 +1628,6 @@ class _SpectatorScreenState extends State<SpectatorScreen> {
     final lastPlay = currentTrick.last;
     final playerName = lastPlay['playerName'] ?? '';
     final cards = (lastPlay['cards'] as List?) ?? [];
-    final combo = lastPlay['combo'] ?? '';
 
     // Alternate colors based on play index (even = blue, odd = pink)
     final playIndex = currentTrick.length - 1;
@@ -1235,7 +1638,10 @@ class _SpectatorScreenState extends State<SpectatorScreen> {
 
     return Center(
       child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+        padding: EdgeInsets.symmetric(
+          horizontal: compact ? 10 : 12,
+          vertical: compact ? 6 : 8,
+        ),
         decoration: BoxDecoration(
           color: bgColor,
           borderRadius: BorderRadius.circular(12),
@@ -1250,48 +1656,44 @@ class _SpectatorScreenState extends State<SpectatorScreen> {
                   TextSpan(
                     text: playerName.length > 8 ? '${playerName.substring(0, 8)}..' : playerName,
                     style: TextStyle(
-                      fontSize: 14,
+                      fontSize: compact ? 12 : 14,
                       fontWeight: FontWeight.bold,
                       color: nameColor,
                     ),
                   ),
-                  const TextSpan(
+                  TextSpan(
                     text: '가 낸 패',
-                    style: TextStyle(fontSize: 12, color: Color(0xFF8A7A72)),
+                    style: TextStyle(
+                      fontSize: compact ? 11 : 12,
+                      color: const Color(0xFF8A7A72),
+                    ),
                   ),
                 ],
               ),
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
             ),
-            const SizedBox(height: 6),
-            _buildOverlappedCards(cards),
-            if (combo.isNotEmpty)
-              Padding(
-                padding: const EdgeInsets.only(top: 4),
-                child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                  decoration: BoxDecoration(
-                    color: Colors.white.withOpacity(0.7),
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: Text(
-                    combo,
-                    style: const TextStyle(fontSize: 10, color: Color(0xFF8A7E78)),
-                  ),
-                ),
-              ),
+            SizedBox(height: compact ? 4 : 6),
+            _buildOverlappedCards(
+              cards,
+              compact: compact,
+              forceSingleRow: landscapeCompact,
+            ),
           ],
         ),
       ),
     );
   }
 
-  Widget _buildOverlappedCards(List cards) {
-    const double cardW = 36;
-    const double cardH = 50;
-    const double minOverlap = 20;
-    const double maxOverlap = 30;
+  Widget _buildOverlappedCards(
+    List cards, {
+    bool compact = false,
+    bool forceSingleRow = false,
+  }) {
+    final double cardW = compact ? 24 : 36;
+    final double cardH = compact ? 34 : 50;
+    final double minOverlap = compact ? 10 : 20;
+    final double maxOverlap = compact ? 18 : 30;
 
     if (cards.length <= 4) {
       return Wrap(
@@ -1315,12 +1717,14 @@ class _SpectatorScreenState extends State<SpectatorScreen> {
             ? (availableWidth - cardW) / (cards.length - 1)
             : availableWidth;
 
-        if (neededOverlap >= minOverlap) {
-          final overlap = neededOverlap.clamp(minOverlap, maxOverlap);
+        if (neededOverlap >= minOverlap || forceSingleRow) {
+          final overlap =
+              (forceSingleRow ? neededOverlap : neededOverlap.clamp(minOverlap, maxOverlap))
+                  .clamp(compact ? 7.0 : minOverlap, maxOverlap);
           final totalWidth = cardW + overlap * (cards.length - 1);
           return Center(
             child: SizedBox(
-              width: totalWidth,
+              width: totalWidth.clamp(cardW, constraints.maxWidth),
               height: cardH,
               child: Stack(
                 clipBehavior: Clip.none,

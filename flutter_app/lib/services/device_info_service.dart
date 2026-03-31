@@ -28,7 +28,10 @@ class DeviceInfoService {
         fcmToken = await FirebaseMessaging.instance
             .getToken()
             .timeout(const Duration(seconds: 10));
-        debugPrint('[FCM][DeviceInfo] getToken result: ${fcmToken != null ? "${fcmToken.substring(0, 20)}..." : "null"}');
+        final preview = fcmToken != null
+            ? fcmToken.substring(0, fcmToken.length.clamp(0, 20))
+            : 'null';
+        debugPrint('[FCM][DeviceInfo] getToken result: $preview...');
       }
     } catch (e) {
       debugPrint('[FCM][DeviceInfo] Failed to collect token: $e');

@@ -3,12 +3,22 @@ import 'dart:async';
 import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import '../app_navigation.dart';
 import 'auth_service.dart';
 import 'device_info_service.dart';
 import 'game_service.dart';
 import 'network_service.dart';
 
 enum SessionAuthStatus { success, needsNickname, failed, cancelled }
+enum RestorePhase {
+  idle,
+  refreshingSocialToken,
+  restoringSocialSession,
+  restoringLocalSession,
+  restoringRoomState,
+  loadingLobbyData,
+  failed,
+}
 
 class SessionAuthResult {
   final SessionAuthStatus status;
@@ -30,31 +40,58 @@ class SessionService extends ChangeNotifier {
   final GameService _game;
 
   bool _restoreInProgress = false;
+  bool _skipNextAutoRestore = false;
+  RestorePhase _restorePhase = RestorePhase.idle;
+  String? _restoreError;
 
   bool get isRestoring => _restoreInProgress;
+  RestorePhase get restorePhase => _restorePhase;
+  String? get restoreError => _restoreError;
+  bool get hasRestoreError => _restoreError != null;
+  String get restoreStatusMessage {
+    switch (_restorePhase) {
+      case RestorePhase.refreshingSocialToken:
+        return '소셜 로그인 정보를 확인하는 중...';
+      case RestorePhase.restoringSocialSession:
+        return '소셜 계정으로 로그인하는 중...';
+      case RestorePhase.restoringLocalSession:
+        return '저장된 계정으로 로그인하는 중...';
+      case RestorePhase.restoringRoomState:
+        return '방 정보를 복구하는 중...';
+      case RestorePhase.loadingLobbyData:
+        return '대기실 정보를 불러오는 중...';
+      case RestorePhase.failed:
+        return _restoreError ?? '자동 로그인에 실패했습니다.';
+      case RestorePhase.idle:
+        return '연결 중...';
+    }
+  }
 
-  Future<void> ensureConnected([String? url]) async {
-    if (_network.isConnected) return;
-    if (_network.isConnecting) {
-      // 연결 진행 중이면 완료될 때까지 대기
-      final completer = Completer<void>();
-      void listener() {
-        if (_network.isConnected || (!_network.isConnecting && !_network.isConnected)) {
-          if (!completer.isCompleted) completer.complete();
-        }
-      }
-      _network.addListener(listener);
-      try {
-        await completer.future.timeout(const Duration(seconds: 15));
-      } finally {
-        _network.removeListener(listener);
-      }
-      if (!_network.isConnected) {
-        throw Exception('연결 실패');
-      }
+  bool consumeAutoRestoreSuppression() {
+    if (!_skipNextAutoRestore) return false;
+    _skipNextAutoRestore = false;
+    return true;
+  }
+
+  void clearAutoRestoreSuppression() {
+    _skipNextAutoRestore = false;
+  }
+
+  void clearRestoreFeedback() {
+    if (_restoreInProgress) {
+      if (_restoreError == null) return;
+      _restoreError = null;
+      notifyListeners();
       return;
     }
-    await _network.connect(url);
+    if (_restorePhase == RestorePhase.idle && _restoreError == null) return;
+    _restorePhase = RestorePhase.idle;
+    _restoreError = null;
+    notifyListeners();
+  }
+
+  Future<void> ensureConnected([String? url]) async {
+    await _network.ensureConnected(url);
   }
 
   Future<SessionAuthResult> loginWithCredentials(
@@ -63,6 +100,8 @@ class SessionService extends ChangeNotifier {
     String? url,
     bool persistCredentials = true,
   }) async {
+    clearAutoRestoreSuppression();
+    clearRestoreFeedback();
     await ensureConnected(url);
     final deviceInfo = await _collectDeviceInfo();
     _prepareForLogin();
@@ -86,6 +125,8 @@ class SessionService extends ChangeNotifier {
     String? url,
     bool persistProvider = true,
   }) async {
+    clearAutoRestoreSuppression();
+    clearRestoreFeedback();
     await ensureConnected(url);
     final deviceInfo = await _collectDeviceInfo();
     _prepareForLogin();
@@ -100,6 +141,8 @@ class SessionService extends ChangeNotifier {
     String nickname, {
     bool existingUser = false,
   }) async {
+    clearAutoRestoreSuppression();
+    clearRestoreFeedback();
     final deviceInfo = await _collectDeviceInfo();
     _prepareForLogin();
     _game.registerSocial(
@@ -122,11 +165,14 @@ class SessionService extends ChangeNotifier {
   Future<bool> restoreSavedSession() async {
     if (_restoreInProgress) return false;
     _setRestoring(true);
+    _restoreError = null;
     try {
       final savedProvider = await AuthService.getSavedProvider();
       if (savedProvider != null) {
+        _setRestorePhase(RestorePhase.refreshingSocialToken);
         final token = await AuthService.refreshToken(savedProvider);
         if (token != null && token.isNotEmpty) {
+          _setRestorePhase(RestorePhase.restoringSocialSession);
           final result = await loginWithSocial(
             savedProvider,
             token,
@@ -137,17 +183,22 @@ class SessionService extends ChangeNotifier {
             return true;
           }
           if (result.status == SessionAuthStatus.needsNickname) {
+            _setRestoreFailure('추가 닉네임 설정이 필요합니다.');
             return false;
           }
+          _restoreError = result.error ?? '소셜 로그인 복구에 실패했습니다.';
         } else {
-          await AuthService.clearAuthInfo();
+          _restoreError = '소셜 로그인 정보를 다시 확인해야 합니다.';
         }
+        _setRestoreFailure(_restoreError ?? '소셜 로그인 복구에 실패했습니다.');
+        return false;
       }
 
       final prefs = await SharedPreferences.getInstance();
       final username = prefs.getString('saved_username');
       final password = prefs.getString('saved_password');
       if (username != null && password != null && username.isNotEmpty) {
+        _setRestorePhase(RestorePhase.restoringLocalSession);
         final result = await loginWithCredentials(
           username,
           password,
@@ -157,8 +208,13 @@ class SessionService extends ChangeNotifier {
           await _refreshPostLoginData();
           return true;
         }
+        _restoreError = result.error ?? '저장된 계정 로그인에 실패했습니다.';
       }
 
+      _setRestoreFailure(_restoreError ?? '자동 로그인에 실패했습니다.');
+      return false;
+    } catch (_) {
+      _setRestoreFailure(_restoreError ?? '자동 로그인 복구 중 오류가 발생했습니다.');
       return false;
     } finally {
       _setRestoring(false);
@@ -174,8 +230,19 @@ class SessionService extends ChangeNotifier {
   Future<void> logout() async {
     _network.disconnect(intentional: true);
     _game.reset();
+    _skipNextAutoRestore = true;
+    appNavigatorKey.currentState?.popUntil((route) => route.isFirst);
     await clearPersistedSession();
     await AuthService.signOut();
+  }
+
+  void resetToLoginState({bool suppressAutoRestore = false}) {
+    _network.disconnect(intentional: true);
+    _game.reset();
+    appNavigatorKey.currentState?.popUntil((route) => route.isFirst);
+    if (suppressAutoRestore) {
+      _skipNextAutoRestore = true;
+    }
   }
 
   Future<void> clearPersistedSession() async {
@@ -186,31 +253,27 @@ class SessionService extends ChangeNotifier {
   }
 
   void _prepareForLogin() {
-    _game.playerId = '';
-    _game.loginError = null;
-    _game.needNickname = false;
-    _game.gameState = null;
-    _game.spectatorGameState = null;
+    _game.prepareForLoginAttempt();
   }
 
   Future<Map<String, String?>?> _collectDeviceInfo() async {
     try {
-      return await DeviceInfoService.collectDeviceInfo();
+      return await DeviceInfoService.collectDeviceInfo(includeFcmToken: false);
     } catch (_) {
       return null;
     }
   }
 
   Future<bool> _waitForLoginResult() async {
-    if (_game.playerId.isNotEmpty) return true;
-    if (_game.loginError != null) return false;
+    if (_game.isLoggedIn) return true;
+    if (_game.hasLoginError) return false;
 
     final completer = Completer<bool>();
 
     void listener() {
-      if (_game.playerId.isNotEmpty) {
+      if (_game.isLoggedIn) {
         if (!completer.isCompleted) completer.complete(true);
-      } else if (_game.loginError != null) {
+      } else if (_game.hasLoginError) {
         if (!completer.isCompleted) completer.complete(false);
       }
     }
@@ -232,15 +295,15 @@ class SessionService extends ChangeNotifier {
     final completer = Completer<SessionAuthResult>();
 
     void listener() {
-      if (_game.playerId.isNotEmpty) {
+      if (_game.isLoggedIn) {
         if (!completer.isCompleted) {
           completer.complete(const SessionAuthResult.success());
         }
-      } else if (_game.needNickname) {
+      } else if (_game.hasPendingSocialNickname) {
         if (!completer.isCompleted) {
           completer.complete(const SessionAuthResult.needsNickname());
         }
-      } else if (_game.loginError != null) {
+      } else if (_game.hasLoginError) {
         if (!completer.isCompleted) {
           completer.complete(SessionAuthResult.failed(_game.loginError));
         }
@@ -262,10 +325,20 @@ class SessionService extends ChangeNotifier {
   }
 
   Future<void> _refreshPostLoginData() async {
-    if (_game.currentRoomId.isNotEmpty) {
-      _game.checkRoom();
+    _setRestorePhase(RestorePhase.restoringRoomState);
+    var restored = await _game.checkRoomAndWait(
+      timeout: const Duration(seconds: 6),
+    );
+    if (!restored && _network.isConnected) {
+      restored = await _game.checkRoomAndWait(
+        timeout: const Duration(seconds: 6),
+      );
+    }
+    if (!restored) {
+      _game.fallbackToLobbyAfterRestoreFailure();
     }
 
+    _setRestorePhase(RestorePhase.loadingLobbyData);
     _game.requestRoomList();
     _game.requestSpectatableRooms();
     _game.requestBlockedUsers();
@@ -302,6 +375,21 @@ class SessionService extends ChangeNotifier {
   void _setRestoring(bool value) {
     if (_restoreInProgress == value) return;
     _restoreInProgress = value;
+    if (!value && _restorePhase != RestorePhase.failed) {
+      _restorePhase = RestorePhase.idle;
+    }
+    notifyListeners();
+  }
+
+  void _setRestorePhase(RestorePhase phase) {
+    if (_restorePhase == phase) return;
+    _restorePhase = phase;
+    notifyListeners();
+  }
+
+  void _setRestoreFailure(String message) {
+    _restoreError = message;
+    _restorePhase = RestorePhase.failed;
     notifyListeners();
   }
 }

@@ -3,7 +3,6 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../services/network_service.dart';
 import '../services/session_service.dart';
-import '../screens/login_screen.dart';
 
 class ConnectionOverlay extends StatefulWidget {
   final Widget child;
@@ -87,31 +86,22 @@ class _ConnectionOverlayState extends State<ConnectionOverlay>
     if (_globalReconnecting) return;
     _globalReconnecting = true;
 
-    final session = context.read<SessionService>();
-    final success = await session.reconnectAndRestore();
+    try {
+      final session = context.read<SessionService>();
+      final success = await session.reconnectAndRestore();
 
-    if (!mounted) {
+      if (!mounted) return;
+      if (!success) {
+        _goToLogin();
+      }
+    } finally {
       _globalReconnecting = false;
-      return;
     }
-
-    if (!success) {
-      _globalReconnecting = false;
-      _goToLogin();
-      return;
-    }
-    _globalReconnecting = false;
   }
 
   void _goToLogin() {
     if (!mounted) return;
-    _networkService?.removeListener(_onNetworkChanged);
-    context.read<NetworkService>().disconnect(intentional: true);
-    Navigator.pushAndRemoveUntil(
-      context,
-      MaterialPageRoute(builder: (_) => const LoginScreen()),
-      (_) => false,
-    );
+    context.read<SessionService>().resetToLoginState(suppressAutoRestore: true);
   }
 
   @override

@@ -62,7 +62,7 @@ class AuthService {
       );
 
       debugPrint('Apple identityToken: ${appleCredential.identityToken != null ? 'present' : 'NULL'}');
-      debugPrint('Apple authorizationCode: ${appleCredential.authorizationCode != null ? 'present' : 'NULL'}');
+      debugPrint('Apple authorizationCode: present');
 
       final oauthCredential = OAuthProvider('apple.com').credential(
         idToken: appleCredential.identityToken,

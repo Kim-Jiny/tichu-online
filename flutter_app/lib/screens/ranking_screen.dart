@@ -3,7 +3,6 @@ import 'package:provider/provider.dart';
 import 'package:google_mobile_ads/google_mobile_ads.dart';
 import '../services/game_service.dart';
 import '../services/ad_service.dart';
-import 'lobby_screen.dart';
 
 class RankingScreen extends StatefulWidget {
   const RankingScreen({super.key});
@@ -23,7 +22,7 @@ class _RankingScreenState extends State<RankingScreen> {
     _bannerAd = AdService.createBannerAd(
       AdService.rankingBannerId,
       onAdLoaded: (_) { if (mounted) setState(() => _bannerAdLoaded = true); },
-      onAdFailedToLoad: (_, __) { if (mounted) setState(() { _bannerAd = null; _bannerAdLoaded = false; }); },
+      onAdFailedToLoad: (_, _) { if (mounted) setState(() { _bannerAd = null; _bannerAdLoaded = false; }); },
     );
     _bannerAd!.load();
     WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -84,7 +83,7 @@ class _RankingScreenState extends State<RankingScreen> {
       margin: const EdgeInsets.all(16),
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.95),
+        color: Colors.white.withValues(alpha: 0.95),
         borderRadius: BorderRadius.circular(18),
       ),
       child: Row(
@@ -128,7 +127,7 @@ class _RankingScreenState extends State<RankingScreen> {
       margin: const EdgeInsets.symmetric(horizontal: 16),
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
       decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.95),
+        color: Colors.white.withValues(alpha: 0.95),
         borderRadius: BorderRadius.circular(14),
       ),
       child: Row(
@@ -190,7 +189,7 @@ class _RankingScreenState extends State<RankingScreen> {
     return ListView.separated(
       padding: const EdgeInsets.fromLTRB(16, 8, 16, 20),
       itemCount: game.rankings.length + (game.myRankData != null ? 1 : 0),
-      separatorBuilder: (_, __) => const SizedBox(height: 8),
+      separatorBuilder: (_, _) => const SizedBox(height: 8),
       itemBuilder: (context, index) {
         // First item: my rank card
         if (game.myRankData != null && index == 0) {
@@ -331,12 +330,12 @@ class _RankingScreenState extends State<RankingScreen> {
         padding: const EdgeInsets.all(12),
         decoration: BoxDecoration(
           gradient: banner.gradient,
-          color: banner.gradient == null ? Colors.white.withOpacity(0.95) : null,
+          color: banner.gradient == null ? Colors.white.withValues(alpha: 0.95) : null,
           borderRadius: BorderRadius.circular(16),
           border: Border.all(color: const Color(0xFFE0D8D4)),
           boxShadow: [
             BoxShadow(
-              color: const Color(0xFFD9CCC8).withOpacity(0.35),
+              color: const Color(0xFFD9CCC8).withValues(alpha: 0.35),
               blurRadius: 8,
               offset: const Offset(0, 4),
             ),
@@ -456,7 +455,7 @@ class _ProfileTopBar extends StatelessWidget {
       margin: const EdgeInsets.all(16),
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.95),
+        color: Colors.white.withValues(alpha: 0.95),
         borderRadius: BorderRadius.circular(18),
       ),
       child: Row(
@@ -507,7 +506,7 @@ class _ProfileBodyState extends State<_ProfileBody> {
   Widget build(BuildContext context) {
     return Consumer<GameService>(
       builder: (context, game, _) {
-        final profile = game.profileData;
+        final profile = game.profileFor(widget.nickname);
         final isLoading = profile == null || profile['nickname'] != widget.nickname;
         if (isLoading) {
           return const Center(child: CircularProgressIndicator());
@@ -537,7 +536,6 @@ class _ProfileContent extends StatelessWidget {
     final totalGames = profile['totalGames'] ?? 0;
     final wins = profile['wins'] ?? 0;
     final losses = profile['losses'] ?? 0;
-    final rating = profile['rating'] ?? 1000;
     final winRate = profile['winRate'] ?? 0;
     final seasonRating = profile['seasonRating'] ?? 1000;
     final seasonGames = profile['seasonGames'] ?? 0;
@@ -570,7 +568,7 @@ class _ProfileContent extends StatelessWidget {
           iconColor: const Color(0xFFFFD54F),
           mainText: '$seasonRating',
           chips: [
-            _ProfileStatChip('전적', '$seasonGames전 ${seasonWins}승 ${seasonLosses}패'),
+            _ProfileStatChip('전적', '$seasonGames전 $seasonWins승 $seasonLosses패'),
             _ProfileStatChip('승률', '$seasonWinRate%'),
           ],
         ),
@@ -583,7 +581,7 @@ class _ProfileContent extends StatelessWidget {
           iconColor: const Color(0xFFFFB74D),
           mainText: '',
           chips: [
-            _ProfileStatChip('전적', '$totalGames전 ${wins}승 ${losses}패'),
+            _ProfileStatChip('전적', '$totalGames전 $wins승 $losses패'),
             _ProfileStatChip('승률', '$winRate%'),
           ],
         ),
@@ -616,7 +614,7 @@ class _ProfileHeader extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
       decoration: BoxDecoration(
         gradient: banner.gradient,
-        color: banner.gradient == null ? Colors.white.withOpacity(0.95) : null,
+        color: banner.gradient == null ? Colors.white.withValues(alpha: 0.95) : null,
         borderRadius: BorderRadius.circular(14),
         border: Border.all(color: const Color(0xFFE0D8D4)),
       ),
@@ -758,7 +756,7 @@ class _ProfileSectionCard extends StatelessWidget {
       decoration: BoxDecoration(
         color: background,
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: background.withOpacity(0.6)),
+        border: Border.all(color: background.withValues(alpha: 0.6)),
       ),
       child: Column(
         children: [
@@ -810,7 +808,7 @@ class _ProfileStatChip extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
       decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.9),
+        color: Colors.white.withValues(alpha: 0.9),
         borderRadius: BorderRadius.circular(10),
         border: Border.all(color: const Color(0xFFE0D8D4)),
       ),
@@ -844,7 +842,7 @@ class _ProfileRecentMatches extends StatelessWidget {
       width: double.infinity,
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.95),
+        color: Colors.white.withValues(alpha: 0.95),
         borderRadius: BorderRadius.circular(12),
         border: Border.all(color: const Color(0xFFE0D8D4)),
       ),
@@ -965,7 +963,7 @@ void _showRecentMatchesDialog(BuildContext context, List<dynamic> recentMatches)
         height: 320,
         child: ListView.separated(
           itemCount: recentMatches.length,
-          separatorBuilder: (_, __) => const Divider(height: 16),
+          separatorBuilder: (_, _) => const Divider(height: 16),
           itemBuilder: (_, index) {
             final match = recentMatches[index];
             final won = match['won'] == true;
@@ -1070,7 +1068,7 @@ class _ProfileMiniStatRow extends StatelessWidget {
           child: Container(
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
             decoration: BoxDecoration(
-              color: Colors.white.withOpacity(0.95),
+              color: Colors.white.withValues(alpha: 0.95),
               borderRadius: BorderRadius.circular(12),
               border: Border.all(color: const Color(0xFFE0D8D4)),
             ),
@@ -1096,7 +1094,7 @@ class _ProfileMiniStatRow extends StatelessWidget {
           child: Container(
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
             decoration: BoxDecoration(
-              color: Colors.white.withOpacity(0.95),
+              color: Colors.white.withValues(alpha: 0.95),
               borderRadius: BorderRadius.circular(12),
               border: Border.all(color: const Color(0xFFE0D8D4)),
             ),

@@ -5,7 +5,6 @@ import 'package:package_info_plus/package_info_plus.dart';
 import '../services/game_service.dart';
 import '../services/auth_service.dart';
 import '../services/session_service.dart';
-import 'login_screen.dart';
 import '../services/ad_service.dart';
 import 'package:google_mobile_ads/google_mobile_ads.dart';
 
@@ -27,7 +26,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
     _bannerAd = AdService.createBannerAd(
       AdService.settingsBannerId,
       onAdLoaded: (_) { if (mounted) setState(() => _bannerAdLoaded = true); },
-      onAdFailedToLoad: (_, __) { if (mounted) setState(() { _bannerAd = null; _bannerAdLoaded = false; }); },
+      onAdFailedToLoad: (_, _) { if (mounted) setState(() { _bannerAd = null; _bannerAdLoaded = false; }); },
     );
     _bannerAd!.load();
     _loadAppVersion();
@@ -48,11 +47,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
   }
   void _logout() async {
     await context.read<SessionService>().logout();
-    if (!mounted) return;
-    Navigator.pushReplacement(
-      context,
-      MaterialPageRoute(builder: (_) => const LoginScreen()),
-    );
   }
 
   void _showDeleteAccountDialog() {
@@ -85,8 +79,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
   void _deleteAccount() {
     final game = context.read<GameService>();
-    game.deleteAccount();
-    _logout();
+    game.deleteAccount().whenComplete(_logout);
   }
 
   void _showInquiryDialog() {
@@ -277,7 +270,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 height: 320,
                 child: ListView.separated(
                   itemCount: game.inquiries.length,
-                  separatorBuilder: (_, __) => const SizedBox(height: 8),
+                  separatorBuilder: (_, _) => const SizedBox(height: 8),
                   itemBuilder: (context, index) {
                     final item = game.inquiries[index];
                     final title = item['title']?.toString() ?? '';
@@ -560,34 +553,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
     );
   }
 
-  void _showUnlinkDialog(GameService game) {
-    showDialog(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        title: const Text('연동 해제'),
-        content: Text('${game.linkedSocialProvider?.toUpperCase()} 연동을 해제하시겠습니까?'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx),
-            child: const Text('취소'),
-          ),
-          ElevatedButton(
-            onPressed: () {
-              Navigator.pop(ctx);
-              game.unlinkSocial();
-            },
-            style: ElevatedButton.styleFrom(
-              backgroundColor: const Color(0xFFC62828),
-              foregroundColor: Colors.white,
-            ),
-            child: const Text('해제'),
-          ),
-        ],
-      ),
-    );
-  }
-
   Widget _buildRow({
     required IconData icon,
     required String title,
@@ -628,7 +593,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
               ],
             ),
           ),
-          if (trailing != null) trailing,
+          ...?trailing == null ? null : [trailing],
         ],
       ),
     );
@@ -659,7 +624,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
           Container(
             padding: const EdgeInsets.symmetric(vertical: 6),
             decoration: BoxDecoration(
-              color: Colors.white.withOpacity(0.95),
+              color: Colors.white.withValues(alpha: 0.95),
               borderRadius: BorderRadius.circular(16),
               border: Border.all(color: const Color(0xFFE0D8D4)),
             ),
@@ -706,7 +671,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     margin: const EdgeInsets.all(16),
                     padding: const EdgeInsets.all(12),
                     decoration: BoxDecoration(
-                      color: Colors.white.withOpacity(0.95),
+                      color: Colors.white.withValues(alpha: 0.95),
                       borderRadius: BorderRadius.circular(18),
                     ),
                     child: Row(

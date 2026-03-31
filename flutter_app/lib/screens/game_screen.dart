@@ -7,7 +7,6 @@ import '../services/session_service.dart';
 import '../models/game_state.dart';
 import '../models/player.dart';
 import '../widgets/playing_card.dart';
-import 'lobby_screen.dart';
 import '../widgets/connection_overlay.dart';
 
 class GameScreen extends StatefulWidget {
@@ -46,8 +45,8 @@ class _GameScreenState extends State<GameScreen> {
   int _lastTickSoundSecond = 999;
   bool _wasDisconnected = false;
   bool _birdCallDialogOpen = false;
-  bool _leavingGame = false;
   bool _waitingForRoomRecovery = false;
+  GameService? _gameService;
   NetworkService? _networkService; // C6: Cache for safe dispose
   bool _profileRequested = false; // C8: Prevent requestProfile loop
   int _lastSeenMessageCount = -1; // -1 = not yet initialized
@@ -57,7 +56,8 @@ class _GameScreenState extends State<GameScreen> {
     super.initState();
     // 로그인 후 차단 목록 요청
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      context.read<GameService>().requestBlockedUsers();
+      _gameService = context.read<GameService>();
+      _gameService!.requestBlockedUsers();
       _networkService = context.read<NetworkService>();
       _networkService!.addListener(_onNetworkChanged);
     });
@@ -78,6 +78,64 @@ class _GameScreenState extends State<GameScreen> {
     }
   }
 
+  Future<void> _recoverRoomState() async {
+    if (_waitingForRoomRecovery) return;
+    _waitingForRoomRecovery = true;
+    await context.read<GameService>().checkRoomAndWait();
+    if (!mounted) return;
+    setState(() {
+      _waitingForRoomRecovery = false;
+    });
+  }
+
+  Widget _buildRecoveryLoading({
+    required String title,
+    String? subtitle,
+    Color spinnerColor = Colors.white,
+  }) {
+    return Center(
+      child: Container(
+        constraints: const BoxConstraints(maxWidth: 320),
+        padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 20),
+        decoration: BoxDecoration(
+          color: Colors.black.withValues(alpha: 0.18),
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(
+            color: Colors.white.withValues(alpha: 0.14),
+          ),
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            CircularProgressIndicator(color: spinnerColor),
+            const SizedBox(height: 16),
+            Text(
+              title,
+              textAlign: TextAlign.center,
+              style: const TextStyle(
+                color: Colors.white,
+                fontSize: 17,
+                fontWeight: FontWeight.w800,
+              ),
+            ),
+            if (subtitle != null && subtitle.trim().isNotEmpty) ...[
+              const SizedBox(height: 8),
+              Text(
+                subtitle,
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  color: Colors.white.withValues(alpha: 0.82),
+                  fontSize: 13,
+                  height: 1.35,
+                ),
+              ),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+
   @override
   void dispose() {
     // C6: Use cached reference instead of context.read in dispose
@@ -89,7 +147,8 @@ class _GameScreenState extends State<GameScreen> {
   }
 
   void _updateCountdown() {
-    final state = context.read<GameService>().gameState;
+    if (!mounted) return;
+    final state = _gameService?.gameState ?? context.read<GameService>().gameState;
     if (state == null || state.turnDeadline == null) {
       if (_remainingSeconds != 0) {
         setState(() => _remainingSeconds = 0);
@@ -100,7 +159,10 @@ class _GameScreenState extends State<GameScreen> {
     final remaining = ((state.turnDeadline! - now) / 1000).ceil().clamp(0, 999);
     if (remaining != _remainingSeconds) {
       setState(() => _remainingSeconds = remaining);
-      if (remaining <= 3 && remaining > 0 && remaining != _lastTickSoundSecond) {
+      if (state.isMyTurn &&
+          remaining <= 3 &&
+          remaining > 0 &&
+          remaining != _lastTickSoundSecond) {
         _lastTickSoundSecond = remaining;
         context.read<GameService>().playCountdownTick();
       }
@@ -160,69 +222,143 @@ class _GameScreenState extends State<GameScreen> {
 
   void _showBirdCallDialog() {
     _birdCallDialogOpen = true;
-    final ranks = ['2', '3', '4', '5', '6', '7', '8', '9', '10', 'J', 'Q', 'K', 'A'];
+    final lowRanks = ['2', '3', '4', '5', '6', '7', '8'];
+    final highRanks = ['9', '10', 'J', 'Q', 'K', 'A'];
     showDialog(
       context: context,
       barrierDismissible: false,
-      builder: (ctx) => AlertDialog(
-        title: const Text('콜할 숫자 선택'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Wrap(
-              spacing: 8,
-              runSpacing: 8,
-              alignment: WrapAlignment.center,
-              children: ranks.map((rank) {
-                return ElevatedButton(
-                  onPressed: () {
-                    _birdCallDialogOpen = false;
-                    Navigator.pop(ctx);
-                    context.read<GameService>().playCards(
-                      _selectedCards.toList(),
-                      callRank: rank,
-                    );
-                    setState(() => _selectedCards.clear());
-                  },
-                  style: ElevatedButton.styleFrom(
-                    minimumSize: const Size(48, 40),
-                    padding: const EdgeInsets.symmetric(horizontal: 12),
+      builder: (ctx) {
+        return AlertDialog(
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+          titlePadding: const EdgeInsets.fromLTRB(20, 18, 20, 0),
+          contentPadding: const EdgeInsets.fromLTRB(20, 14, 20, 12),
+          title: const Row(
+            children: [
+              Text('🐦', style: TextStyle(fontSize: 20)),
+              SizedBox(width: 8),
+              Text(
+                '참새 콜',
+                style: TextStyle(
+                  fontSize: 17,
+                  fontWeight: FontWeight.w800,
+                  color: Color(0xFF3E312A),
+                ),
+              ),
+            ],
+          ),
+          content: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 380),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFF7F1EC),
+                    borderRadius: BorderRadius.circular(14),
+                    border: Border.all(color: const Color(0xFFE7DBD4)),
                   ),
-                  child: Text(rank),
-                );
-              }).toList(),
+                  child: const Text(
+                    '부를 숫자를 선택하세요',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w600,
+                      color: Color(0xFF6A5A52),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 8),
+                _buildBirdCallRankRow(ctx, lowRanks),
+                const SizedBox(height: 8),
+                _buildBirdCallRankRow(ctx, highRanks),
+                const SizedBox(height: 12),
+                SizedBox(
+                  width: double.infinity,
+                  child: OutlinedButton.icon(
+                    onPressed: () {
+                      _birdCallDialogOpen = false;
+                      Navigator.pop(ctx);
+                      context.read<GameService>().playCards(
+                        _selectedCards.toList(),
+                        callRank: 'none',
+                      );
+                      setState(() => _selectedCards.clear());
+                    },
+                    style: OutlinedButton.styleFrom(
+                      minimumSize: const Size.fromHeight(44),
+                      side: const BorderSide(color: Color(0xFFD8CCC5)),
+                      foregroundColor: const Color(0xFF6A5A52),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(14),
+                      ),
+                    ),
+                    icon: const Icon(Icons.remove_circle_outline, size: 18),
+                    label: const Text('콜 안함'),
+                  ),
+                ),
+                const SizedBox(height: 6),
+                Center(
+                  child: TextButton(
+                    onPressed: () {
+                      _birdCallDialogOpen = false;
+                      Navigator.pop(ctx);
+                      setState(() => _selectedCards.clear());
+                    },
+                    style: TextButton.styleFrom(
+                      foregroundColor: const Color(0xFF6A5A52),
+                    ),
+                    child: const Text('취소하고 다른 카드 고르기'),
+                  ),
+                ),
+              ],
             ),
-            const SizedBox(height: 12),
-            OutlinedButton(
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildBirdCallRankRow(BuildContext ctx, List<String> ranks) {
+    return Row(
+      children: ranks.map((rank) {
+        return Expanded(
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 3),
+            child: FilledButton(
               onPressed: () {
                 _birdCallDialogOpen = false;
                 Navigator.pop(ctx);
                 context.read<GameService>().playCards(
                   _selectedCards.toList(),
-                  callRank: 'none',
+                  callRank: rank,
                 );
                 setState(() => _selectedCards.clear());
               },
-              style: OutlinedButton.styleFrom(
-                minimumSize: const Size(120, 40),
+              style: FilledButton.styleFrom(
+                backgroundColor: const Color(0xFFE6F1FF),
+                foregroundColor: const Color(0xFF355D89),
+                minimumSize: const Size(0, 42),
+                padding: const EdgeInsets.symmetric(horizontal: 0),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                elevation: 0,
               ),
-              child: const Text('콜 안함'),
-            ),
-            const SizedBox(height: 8),
-            TextButton(
-              onPressed: () {
-                _birdCallDialogOpen = false;
-                Navigator.pop(ctx);
-                setState(() => _selectedCards.clear());
-              },
-              style: TextButton.styleFrom(
-                foregroundColor: const Color(0xFF6A5A52),
+              child: Text(
+                rank,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: const TextStyle(
+                  fontWeight: FontWeight.w800,
+                  color: Color(0xFF355D89),
+                ),
               ),
-              child: const Text('취소 (다른 카드 내기)'),
             ),
-          ],
-        ),
-      ),
+          ),
+        );
+      }).toList(),
     );
   }
 
@@ -232,9 +368,12 @@ class _GameScreenState extends State<GameScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final screenW = MediaQuery.of(context).size.width;
-    _s = (screenW / 400).clamp(0.8, 1.0);
-    _maxNameLen = screenW < 370 ? 3 : 4;
+    final mediaQuery = MediaQuery.of(context);
+    final screenSize = mediaQuery.size;
+    final isLandscape = mediaQuery.orientation == Orientation.landscape;
+    final shortestSide = screenSize.shortestSide;
+    _s = (shortestSide / 400).clamp(0.72, 1.0);
+    _maxNameLen = screenSize.width < 370 ? 3 : (isLandscape ? 6 : 4);
     final themeColors = context.watch<GameService>().themeGradient;
     final session = context.watch<SessionService>();
     return ConnectionOverlay(
@@ -251,64 +390,47 @@ class _GameScreenState extends State<GameScreen> {
             ),
           ),
           child: SafeArea(
-            child: Consumer<GameService>(
+            bottom: !isLandscape,
+              child: Consumer<GameService>(
               builder: (context, game, _) {
-                // Room closed - go back to lobby
-                if (session.isRestoring) {
-                  return const Center(child: CircularProgressIndicator());
-                }
-
-                if (game.currentRoomId.isEmpty && !_leavingGame) {
-                  _leavingGame = true;
-                  WidgetsBinding.instance.addPostFrameCallback((_) {
-                    if (!mounted) return;
-                    Navigator.pushReplacement(
-                      context,
-                      MaterialPageRoute(builder: (_) => const LobbyScreen()),
-                    );
-                  });
-                  return const Center(child: CircularProgressIndicator());
+                if (session.isRestoring || _waitingForRoomRecovery) {
+                  return _buildRecoveryLoading(
+                    title: session.isRestoring ? '게임 복구 중...' : '게임 상태 확인 중...',
+                    subtitle: session.isRestoring
+                        ? session.restoreStatusMessage
+                        : '현재 방 상태를 다시 확인하고 있습니다.',
+                  );
                 }
 
                 final state = game.gameState;
                 if (state == null) {
-                  if (game.currentRoomId.isNotEmpty && !_leavingGame) {
-                    if (!_waitingForRoomRecovery) {
-                      _waitingForRoomRecovery = true;
-                      WidgetsBinding.instance.addPostFrameCallback((_) {
-                        if (!mounted) return;
-                        context.read<GameService>().checkRoom();
-                        // If game ended (no game_state response), go to lobby
-                        Future.delayed(const Duration(milliseconds: 2000), () {
-                          if (!mounted) return;
-                          final g = context.read<GameService>();
-                          if (g.gameState == null && !_leavingGame) {
-                            _leavingGame = true;
-                            Navigator.pushReplacement(
-                              context,
-                              MaterialPageRoute(builder: (_) => const LobbyScreen()),
-                            );
-                          }
-                        });
-                      });
-                    }
-                    return const Center(child: CircularProgressIndicator());
+                  if (game.hasRoom) {
+                    WidgetsBinding.instance.addPostFrameCallback((_) {
+                      if (mounted) {
+                        _recoverRoomState();
+                      }
+                    });
+                    return _buildRecoveryLoading(
+                      title: '방 정보를 다시 불러오는 중...',
+                      subtitle: '잠시만 기다리면 현재 게임 상태로 복구됩니다.',
+                    );
                   }
 
-                  if (!_leavingGame) {
-                    _leavingGame = true;
-                    WidgetsBinding.instance.addPostFrameCallback((_) {
-                      if (!mounted) return;
-                      Navigator.pushReplacement(
-                        context,
-                        MaterialPageRoute(builder: (_) => const LobbyScreen()),
-                      );
-                    });
-                  }
-                  return const Center(child: CircularProgressIndicator());
+                  return _buildRecoveryLoading(
+                    title: '게임 화면 준비 중...',
+                    subtitle: '화면 전환 상태를 다시 맞추고 있습니다.',
+                  );
                 }
 
-              _waitingForRoomRecovery = false;
+                final destination = game.currentDestination;
+                if (destination != AppDestination.game) {
+                  return _buildRecoveryLoading(
+                    title: '게임 화면 전환 중...',
+                    subtitle: '현재 목적지 상태를 다시 확인하고 있습니다.',
+                  );
+                }
+
+                _waitingForRoomRecovery = false;
 
               // Bug #1: Clear exchange assignments when phase leaves card_exchange
               if (state.phase != 'card_exchange') {
@@ -342,47 +464,9 @@ class _GameScreenState extends State<GameScreen> {
                         color: _tichuOverlayColor(state),
                       ),
                     ),
-                  Column(
-                    children: [
-                      // Top bar: timer + score + viewers/chat/exit
-                      _buildTopBar(state, game),
-
-                      // Top card counter (if item active + playing phase)
-                      if (game.hasTopCardCounter && state.phase == 'playing')
-                        _buildTopCardCounter(state),
-
-                      // Top area - partner
-                      _buildPartnerArea(state, game),
-
-                      // Middle area - opponents + center
-                      Expanded(
-                        child: _buildMiddleArea(state, game),
-                      ),
-
-                      // Card exchange above hand
-                      if (state.phase == 'card_exchange' && !state.exchangeDone)
-                        Padding(
-                          padding: const EdgeInsets.only(bottom: 12),
-                          child: _buildExchangeInline(state, game),
-                        ),
-
-                      // Dragon given banner above hand
-                      if (game.dragonGivenMessage != null)
-                        Padding(
-                          padding: const EdgeInsets.only(bottom: 8),
-                          child: _buildDragonGivenInline(game.dragonGivenMessage!),
-                        ),
-
-                      // Small tichu button above hand
-                      if (state.canDeclareSmallTichu &&
-                          state.phase != 'card_exchange' &&
-                          !state.players.any((p) => p.position == 'self' && p.hasLargeTichu))
-                        _buildSmallTichuInline(game),
-
-                      // Bottom area - my hand
-                      _buildBottomArea(state, game),
-                    ],
-                  ),
+                  isLandscape
+                      ? _buildLandscapeGameLayout(state, game)
+                      : _buildPortraitGameLayout(state, game),
 
                   // Dialogs/Panels
                   if (state.phase == 'large_tichu_phase' &&
@@ -410,7 +494,7 @@ class _GameScreenState extends State<GameScreen> {
                     _buildErrorBanner(game.errorMessage!),
 
                   // Spectator card view requests
-                  if (game.incomingCardViewRequests.isNotEmpty)
+                  if (game.hasIncomingCardViewRequests)
                     _buildCardViewRequestPopup(game),
 
                   // Viewers panel popup
@@ -436,6 +520,104 @@ class _GameScreenState extends State<GameScreen> {
       ),
       ),
     );
+  }
+
+  Widget _buildPortraitGameLayout(GameStateData state, GameService game) {
+    return Column(
+      children: [
+        _buildTopBar(state, game),
+        _buildPartnerArea(state, game),
+        Expanded(
+          child: _buildMiddleArea(state, game),
+        ),
+        if (state.phase == 'card_exchange' && !state.exchangeDone)
+          Padding(
+            padding: const EdgeInsets.only(bottom: 12),
+            child: _buildExchangeInline(state, game),
+          ),
+        if (game.dragonGivenMessage != null)
+          Padding(
+            padding: const EdgeInsets.only(bottom: 8),
+            child: _buildDragonGivenInline(game.dragonGivenMessage!),
+          ),
+        if (_canShowSmallTichu(state))
+          _buildSmallTichuInline(game),
+        _buildBottomArea(state, game),
+      ],
+    );
+  }
+
+  Widget _buildLandscapeGameLayout(GameStateData state, GameService game) {
+    return Column(
+      children: [
+        _buildTopBar(state, game),
+        Expanded(
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(12, 0, 12, 12),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Expanded(
+                  flex: 5,
+                  child: Column(
+                    children: [
+                      _buildPartnerArea(state, game),
+                      Expanded(
+                        child: _buildMiddleArea(state, game),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  flex: 6,
+                  child: LayoutBuilder(
+                    builder: (context, constraints) {
+                      return SingleChildScrollView(
+                        child: ConstrainedBox(
+                          constraints: BoxConstraints(minHeight: constraints.maxHeight),
+                          child: Column(
+                            mainAxisAlignment: MainAxisAlignment.end,
+                            children: [
+                              if (state.phase == 'card_exchange' && !state.exchangeDone)
+                                Padding(
+                                  padding: const EdgeInsets.only(bottom: 8),
+                                  child: _buildExchangeInline(state, game),
+                                ),
+                              if (game.dragonGivenMessage != null)
+                                Padding(
+                                  padding: const EdgeInsets.only(bottom: 8),
+                                  child: _buildDragonGivenInline(
+                                    game.dragonGivenMessage!,
+                                  ),
+                                ),
+                              if (_canShowSmallTichu(state))
+                                Padding(
+                                  padding: const EdgeInsets.only(bottom: 8),
+                                  child: _buildSmallTichuInline(game),
+                                ),
+                              _buildBottomArea(state, game),
+                            ],
+                          ),
+                        ),
+                      );
+                    },
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  bool _canShowSmallTichu(GameStateData state) {
+    return state.canDeclareSmallTichu &&
+        state.phase != 'card_exchange' &&
+        !state.players.any(
+          (p) => p.position == 'self' && p.hasLargeTichu,
+        );
   }
 
   Widget _buildMenuButton(GameService game) {
@@ -605,7 +787,7 @@ class _GameScreenState extends State<GameScreen> {
           scale: _moreOpen ? 1 : 0.95,
           duration: const Duration(milliseconds: 160),
           child: Container(
-            width: hasViewers ? 230 : 190,
+            width: hasViewers ? 190 : 150,
             padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
             decoration: BoxDecoration(
               color: Colors.white.withValues(alpha: 0.97),
@@ -681,12 +863,20 @@ class _GameScreenState extends State<GameScreen> {
       _lastChatMessageCount = game.chatMessages.length;
       _scrollChatToBottom();
     }
+    final media = MediaQuery.of(context);
+    final keyboardHeight = media.viewInsets.bottom;
+    final topInset = media.padding.top;
+    final availableWidth = (media.size.width - 16).clamp(220.0, 320.0);
+    final topOffset = topInset + 42;
+    final bottomOffset = 8 + keyboardHeight;
+    final maxHeight = media.size.height - topOffset - bottomOffset;
+    final panelHeight = maxHeight.clamp(160.0, 350.0);
 
     return Positioned(
       right: 8,
-      top: 50,
-      width: 280,
-      height: 350,
+      top: topOffset,
+      width: availableWidth,
+      height: panelHeight,
       child: Container(
         decoration: BoxDecoration(
           color: Colors.white,
@@ -864,89 +1054,149 @@ class _GameScreenState extends State<GameScreen> {
       builder: (ctx) {
         return Consumer<GameService>(
           builder: (ctx, game, _) {
-            final profile = game.profileData;
+            final profile = game.profileFor(nickname);
             final isLoading = profile == null || profile['nickname'] != nickname;
             final isMe = nickname == game.playerName;
             final isBlockedUser = game.isBlocked(nickname);
 
             return AlertDialog(
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-              title: Row(
-                children: [
-                  Expanded(
-                    child: Text(
-                      nickname,
-                      style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-                      overflow: TextOverflow.ellipsis,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+              backgroundColor: const Color(0xFFF8F4F1),
+              titlePadding: const EdgeInsets.fromLTRB(18, 18, 18, 0),
+              contentPadding: const EdgeInsets.fromLTRB(18, 14, 18, 10),
+              title: Container(
+                padding: const EdgeInsets.all(14),
+                decoration: BoxDecoration(
+                  color: Colors.white.withValues(alpha: 0.92),
+                  borderRadius: BorderRadius.circular(18),
+                  border: Border.all(color: const Color(0xFFE8DDD8)),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        Container(
+                          width: 38,
+                          height: 38,
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFE8F0F7),
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: const Icon(
+                            Icons.person_outline,
+                            color: Color(0xFF4F6B7A),
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                nickname,
+                                style: const TextStyle(
+                                  fontSize: 17,
+                                  fontWeight: FontWeight.w800,
+                                  color: Color(0xFF3E312A),
+                                ),
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                              const SizedBox(height: 2),
+                              Text(
+                                isMe ? '내 프로필' : '플레이어 프로필',
+                                style: const TextStyle(
+                                  fontSize: 12,
+                                  color: Color(0xFF84766E),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
                     ),
-                  ),
-                  if (!isMe) ...[
-                    if (game.friends.contains(nickname))
-                      _buildProfileIconButton(
-                        icon: Icons.check,
-                        color: const Color(0xFFBDBDBD),
-                        tooltip: '이미 친구',
-                        onTap: () {},
-                      )
-                    else if (game.sentFriendRequests.contains(nickname))
-                      _buildProfileIconButton(
-                        icon: Icons.hourglass_top,
-                        color: const Color(0xFFBDBDBD),
-                        tooltip: '요청중',
-                        onTap: () {},
-                      )
-                    else
-                      _buildProfileIconButton(
-                        icon: Icons.person_add,
-                        color: const Color(0xFF81C784),
-                        tooltip: '친구 추가',
-                        onTap: () {
-                          game.addFriendAction(nickname);
-                          Navigator.pop(ctx);
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(content: Text('친구 요청을 보냈습니다')),
-                          );
-                        },
+                    if (!isMe) ...[
+                      const SizedBox(height: 12),
+                      Wrap(
+                        spacing: 8,
+                        runSpacing: 8,
+                        children: [
+                          if (game.friends.contains(nickname))
+                            _buildProfileIconButton(
+                              icon: Icons.check,
+                              color: const Color(0xFFBDBDBD),
+                              tooltip: '이미 친구',
+                              onTap: () {},
+                            )
+                          else if (game.sentFriendRequests.contains(nickname))
+                            _buildProfileIconButton(
+                              icon: Icons.hourglass_top,
+                              color: const Color(0xFFBDBDBD),
+                              tooltip: '요청중',
+                              onTap: () {},
+                            )
+                          else
+                            _buildProfileIconButton(
+                              icon: Icons.person_add,
+                              color: const Color(0xFF81C784),
+                              tooltip: '친구 추가',
+                              onTap: () {
+                                game.addFriendAction(nickname);
+                                Navigator.pop(ctx);
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  const SnackBar(content: Text('친구 요청을 보냈습니다')),
+                                );
+                              },
+                            ),
+                          _buildProfileIconButton(
+                            icon: isBlockedUser ? Icons.block : Icons.shield_outlined,
+                            color: isBlockedUser
+                                ? const Color(0xFF64B5F6)
+                                : const Color(0xFFFF8A65),
+                            tooltip: isBlockedUser ? '차단 해제' : '차단하기',
+                            onTap: () {
+                              if (isBlockedUser) {
+                                game.unblockUserAction(nickname);
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  const SnackBar(content: Text('차단이 해제되었습니다')),
+                                );
+                              } else {
+                                game.blockUserAction(nickname);
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  const SnackBar(content: Text('차단되었습니다')),
+                                );
+                              }
+                            },
+                          ),
+                          _buildProfileIconButton(
+                            icon: Icons.flag,
+                            color: const Color(0xFFE57373),
+                            tooltip: '신고하기',
+                            onTap: () {
+                              Navigator.pop(ctx);
+                              _showReportDialog(nickname, game);
+                            },
+                          ),
+                        ],
                       ),
-                    const SizedBox(width: 6),
-                    _buildProfileIconButton(
-                      icon: isBlockedUser ? Icons.block : Icons.shield_outlined,
-                      color: isBlockedUser ? const Color(0xFF64B5F6) : const Color(0xFFFF8A65),
-                      tooltip: isBlockedUser ? '차단 해제' : '차단하기',
-                      onTap: () {
-                        if (isBlockedUser) {
-                          game.unblockUserAction(nickname);
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(content: Text('차단이 해제되었습니다')),
-                          );
-                        } else {
-                          game.blockUserAction(nickname);
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(content: Text('차단되었습니다')),
-                          );
-                        }
-                      },
-                    ),
-                    const SizedBox(width: 6),
-                    _buildProfileIconButton(
-                      icon: Icons.flag,
-                      color: const Color(0xFFE57373),
-                      tooltip: '신고하기',
-                      onTap: () {
-                        Navigator.pop(ctx);
-                        _showReportDialog(nickname, game);
-                      },
-                    ),
+                    ],
                   ],
-                ],
+                ),
               ),
               content: isLoading
                   ? const SizedBox(
-                      height: 100,
+                      height: 140,
+                      width: 360,
                       child: Center(child: CircularProgressIndicator()),
                     )
-                  : SingleChildScrollView(
-                      child: _buildPlayerProfileContent(profile),
+                  : ConstrainedBox(
+                      constraints: const BoxConstraints(
+                        maxWidth: 420,
+                        maxHeight: 560,
+                      ),
+                      child: SingleChildScrollView(
+                        child: _buildPlayerProfileContent(profile),
+                      ),
                     ),
               actions: [
                 TextButton(
@@ -1007,6 +1257,7 @@ class _GameScreenState extends State<GameScreen> {
     final reportCount = profile['reportCount'] ?? 0;
     final bannerKey = profile['bannerKey']?.toString();
     final recentMatches = data['recentMatches'] as List<dynamic>? ?? [];
+    final profileNickname = data['nickname']?.toString() ?? '';
 
     return Column(
       mainAxisSize: MainAxisSize.min,
@@ -1023,7 +1274,7 @@ class _GameScreenState extends State<GameScreen> {
           iconColor: const Color(0xFFFFD54F),
           mainText: '$seasonRating',
           chips: [
-            _buildStatChip('전적', '$seasonGames전 ${seasonWins}승 ${seasonLosses}패'),
+            _buildStatChip('전적', '$seasonGames전 $seasonWins승 $seasonLosses패'),
             _buildStatChip('승률', '$seasonWinRate%'),
           ],
         ),
@@ -1036,12 +1287,12 @@ class _GameScreenState extends State<GameScreen> {
           iconColor: const Color(0xFFFFB74D),
           mainText: '',
           chips: [
-            _buildStatChip('전적', '$totalGames전 ${wins}승 ${losses}패'),
+            _buildStatChip('전적', '$totalGames전 $wins승 $losses패'),
             _buildStatChip('승률', '$winRate%'),
           ],
         ),
         const SizedBox(height: 12),
-        _buildRecentMatches(recentMatches),
+        _buildRecentMatches(recentMatches, profileNickname),
       ],
     );
   }
@@ -1094,7 +1345,7 @@ class _GameScreenState extends State<GameScreen> {
           child: Container(
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
             decoration: BoxDecoration(
-              color: Colors.white.withOpacity(0.95),
+              color: Colors.white.withValues(alpha: 0.95),
               borderRadius: BorderRadius.circular(12),
               border: Border.all(color: const Color(0xFFE0D8D4)),
             ),
@@ -1120,7 +1371,7 @@ class _GameScreenState extends State<GameScreen> {
           child: Container(
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
             decoration: BoxDecoration(
-              color: Colors.white.withOpacity(0.95),
+              color: Colors.white.withValues(alpha: 0.95),
               borderRadius: BorderRadius.circular(12),
               border: Border.all(color: const Color(0xFFE0D8D4)),
             ),
@@ -1146,28 +1397,78 @@ class _GameScreenState extends State<GameScreen> {
     );
   }
 
-  void _showRecentMatchesDialog(List<dynamic> recentMatches) {
+  void _showRecentMatchesDialog(
+    List<dynamic> recentMatches,
+    String profileNickname,
+  ) {
     showDialog(
       context: context,
-      builder: (ctx) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: const Text('최근 전적'),
-        content: SizedBox(
-          width: double.maxFinite,
-          height: 320,
-          child: ListView.separated(
-            itemCount: recentMatches.length,
-            separatorBuilder: (_, __) => const Divider(height: 16),
-            itemBuilder: (_, index) => _buildMatchRow(recentMatches[index]),
+      builder: (ctx) {
+        final media = MediaQuery.of(ctx).size;
+        return AlertDialog(
+          insetPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 24),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+          backgroundColor: const Color(0xFFF8F4F1),
+          titlePadding: const EdgeInsets.fromLTRB(18, 18, 18, 0),
+          contentPadding: const EdgeInsets.fromLTRB(18, 14, 18, 10),
+          title: Container(
+            padding: const EdgeInsets.all(14),
+            decoration: BoxDecoration(
+              color: Colors.white.withValues(alpha: 0.92),
+              borderRadius: BorderRadius.circular(18),
+              border: Border.all(color: const Color(0xFFE8DDD8)),
+            ),
+            child: Row(
+              children: [
+                const Icon(Icons.history, color: Color(0xFF6A5A52)),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text(
+                        '최근 전적',
+                        style: TextStyle(
+                          fontSize: 17,
+                          fontWeight: FontWeight.w800,
+                          color: Color(0xFF3E312A),
+                        ),
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        '최근 ${recentMatches.length}경기 결과를 확인할 수 있습니다.',
+                        style: const TextStyle(
+                          fontSize: 12,
+                          color: Color(0xFF84766E),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
           ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx),
-            child: const Text('닫기'),
+          content: ConstrainedBox(
+            constraints: BoxConstraints(
+              maxWidth: media.width > 700 ? 520 : media.width - 40,
+              maxHeight: media.height * 0.72,
+            ),
+            child: ListView.separated(
+              shrinkWrap: true,
+              itemCount: recentMatches.length,
+              separatorBuilder: (_, _) => const SizedBox(height: 10),
+              itemBuilder: (_, index) =>
+                  _buildMatchRow(recentMatches[index], profileNickname),
+            ),
           ),
-        ],
-      ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(ctx),
+              child: const Text('닫기'),
+            ),
+          ],
+        );
+      },
     );
   }
 
@@ -1324,7 +1625,10 @@ class _GameScreenState extends State<GameScreen> {
     );
   }
 
-  Widget _buildRecentMatches(List<dynamic> recentMatches) {
+  Widget _buildRecentMatches(
+    List<dynamic> recentMatches,
+    String profileNickname,
+  ) {
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(12),
@@ -1345,7 +1649,8 @@ class _GameScreenState extends State<GameScreen> {
               const Spacer(),
               if (recentMatches.length > 3)
                 TextButton(
-                  onPressed: () => _showRecentMatchesDialog(recentMatches),
+                  onPressed: () =>
+                      _showRecentMatchesDialog(recentMatches, profileNickname),
                   child: const Text('더보기'),
                 ),
             ],
@@ -1359,7 +1664,7 @@ class _GameScreenState extends State<GameScreen> {
           else
             Column(
               children: recentMatches.take(3).map<Widget>((match) {
-                return _buildMatchRow(match);
+                return _buildMatchRow(match, profileNickname);
               }).toList(),
             ),
         ],
@@ -1367,7 +1672,12 @@ class _GameScreenState extends State<GameScreen> {
     );
   }
 
-  Widget _buildMatchRow(dynamic match) {
+  Widget _buildMatchRow(dynamic match, String profileNickname) {
+    final deserterNickname = match['deserterNickname']?.toString();
+    final isDesertionLoss = match['isDesertionLoss'] == true ||
+        (deserterNickname != null &&
+            deserterNickname.isNotEmpty &&
+            deserterNickname == profileNickname);
     final isDraw = match['isDraw'] == true;
     final won = !isDraw && match['won'] == true;
     final teamAScore = match['teamAScore'] ?? 0;
@@ -1379,7 +1689,10 @@ class _GameScreenState extends State<GameScreen> {
 
     final Color badgeColor;
     final String badgeText;
-    if (isDraw) {
+    if (isDesertionLoss) {
+      badgeColor = const Color(0xFFFFB74D);
+      badgeText = '탈';
+    } else if (isDraw) {
       badgeColor = const Color(0xFFBDBDBD);
       badgeText = '무';
     } else if (won) {
@@ -1597,7 +1910,12 @@ class _GameScreenState extends State<GameScreen> {
       context: context,
       builder: (context) => StatefulBuilder(
         builder: (ctx, setState) {
-          return AlertDialog(
+          final media = MediaQuery.of(ctx);
+          return AnimatedPadding(
+            duration: const Duration(milliseconds: 180),
+            curve: Curves.easeOut,
+            padding: EdgeInsets.only(bottom: media.viewInsets.bottom),
+            child: AlertDialog(
             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
             title: Row(
               children: [
@@ -1612,97 +1930,106 @@ class _GameScreenState extends State<GameScreen> {
                 ),
               ],
             ),
-            content: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Container(
-                  width: double.infinity,
-                  padding: const EdgeInsets.all(10),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFFFFF1F1),
-                    borderRadius: BorderRadius.circular(12),
-                    border: Border.all(color: const Color(0xFFF0C7C7)),
-                  ),
-                  child: const Text(
-                    '신고는 운영팀이 확인합니다.\n허위 신고는 제재될 수 있어요.',
-                    style: TextStyle(
-                      fontSize: 12,
-                      color: Color(0xFF9A4A4A),
-                      height: 1.4,
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 12),
-                Align(
-                  alignment: Alignment.centerLeft,
-                  child: Text(
-                    '사유 선택',
-                    style: TextStyle(
-                      fontSize: 12,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.grey.shade700,
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 6),
-                Wrap(
-                  spacing: 8,
-                  runSpacing: 8,
-                  children: reasons.map((r) {
-                    final isSelected = selectedReason == r;
-                    return InkWell(
-                      onTap: () => setState(() => selectedReason = r),
-                      borderRadius: BorderRadius.circular(16),
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                        decoration: BoxDecoration(
-                          color: isSelected
-                              ? const Color(0xFFDDECF7)
-                              : const Color(0xFFF6F2F0),
-                          borderRadius: BorderRadius.circular(16),
-                          border: Border.all(
-                            color: isSelected
-                                ? const Color(0xFF9EC5E6)
-                                : const Color(0xFFE2D8D4),
-                          ),
-                        ),
-                        child: Text(
-                          r,
-                          style: TextStyle(
-                            fontSize: 12,
-                            color: isSelected
-                                ? const Color(0xFF3E6D8E)
-                                : const Color(0xFF6A5A52),
-                            fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
-                          ),
+            content: ConstrainedBox(
+              constraints: BoxConstraints(
+                maxWidth: 420,
+                maxHeight: media.size.height * 0.55,
+              ),
+              child: SingleChildScrollView(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.all(10),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFFFF1F1),
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(color: const Color(0xFFF0C7C7)),
+                      ),
+                      child: const Text(
+                        '신고는 운영팀이 확인합니다.\n허위 신고는 제재될 수 있어요.',
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: Color(0xFF9A4A4A),
+                          height: 1.4,
                         ),
                       ),
-                    );
-                  }).toList(),
+                    ),
+                    const SizedBox(height: 12),
+                    Align(
+                      alignment: Alignment.centerLeft,
+                      child: Text(
+                        '사유 선택',
+                        style: TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.grey.shade700,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 6),
+                    Wrap(
+                      spacing: 8,
+                      runSpacing: 8,
+                      children: reasons.map((r) {
+                        final isSelected = selectedReason == r;
+                        return InkWell(
+                          onTap: () => setState(() => selectedReason = r),
+                          borderRadius: BorderRadius.circular(16),
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                            decoration: BoxDecoration(
+                              color: isSelected
+                                  ? const Color(0xFFDDECF7)
+                                  : const Color(0xFFF6F2F0),
+                              borderRadius: BorderRadius.circular(16),
+                              border: Border.all(
+                                color: isSelected
+                                    ? const Color(0xFF9EC5E6)
+                                    : const Color(0xFFE2D8D4),
+                              ),
+                            ),
+                            child: Text(
+                              r,
+                              style: TextStyle(
+                                fontSize: 12,
+                                color: isSelected
+                                    ? const Color(0xFF3E6D8E)
+                                    : const Color(0xFF6A5A52),
+                                fontWeight:
+                                    isSelected ? FontWeight.bold : FontWeight.normal,
+                              ),
+                            ),
+                          ),
+                        );
+                      }).toList(),
+                    ),
+                    const SizedBox(height: 12),
+                    TextField(
+                      controller: reasonController,
+                      maxLines: 3,
+                      decoration: InputDecoration(
+                        hintText: '상세 사유를 입력해주세요 (선택)',
+                        filled: true,
+                        fillColor: const Color(0xFFF7F2F0),
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                          borderSide: const BorderSide(color: Color(0xFFE0D6D1)),
+                        ),
+                        enabledBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                          borderSide: const BorderSide(color: Color(0xFFE0D6D1)),
+                        ),
+                        focusedBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                          borderSide: const BorderSide(color: Color(0xFFB9A8A1)),
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
-                const SizedBox(height: 12),
-                TextField(
-                  controller: reasonController,
-                  maxLines: 3,
-                  decoration: InputDecoration(
-                    hintText: '상세 사유를 입력해주세요 (선택)',
-                    filled: true,
-                    fillColor: const Color(0xFFF7F2F0),
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(12),
-                      borderSide: const BorderSide(color: Color(0xFFE0D6D1)),
-                    ),
-                    enabledBorder: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(12),
-                      borderSide: const BorderSide(color: Color(0xFFE0D6D1)),
-                    ),
-                    focusedBorder: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(12),
-                      borderSide: const BorderSide(color: Color(0xFFB9A8A1)),
-                    ),
-                  ),
-                ),
-              ],
+              ),
             ),
             actions: [
               TextButton(
@@ -1754,7 +2081,8 @@ class _GameScreenState extends State<GameScreen> {
                 child: const Text('신고하기'),
               ),
             ],
-          );
+          ),
+        );
         },
       ),
     );
@@ -1774,12 +2102,7 @@ class _GameScreenState extends State<GameScreen> {
           TextButton(
             onPressed: () {
               Navigator.pop(ctx);
-              _leavingGame = true;
               game.leaveGame();
-              Navigator.pushReplacement(
-                context,
-                MaterialPageRoute(builder: (_) => const LobbyScreen()),
-              );
             },
             style: TextButton.styleFrom(foregroundColor: Colors.red),
             child: const Text('나가기'),
@@ -1808,7 +2131,7 @@ class _GameScreenState extends State<GameScreen> {
           border: Border.all(color: const Color(0xFFFF6B6B)),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withOpacity(0.1),
+              color: Colors.black.withValues(alpha: 0.1),
               blurRadius: 8,
               offset: const Offset(0, 2),
             ),
@@ -1834,44 +2157,6 @@ class _GameScreenState extends State<GameScreen> {
     );
   }
 
-  Widget _buildDragonGivenBanner(String message) {
-    return Positioned(
-      bottom: 240,
-      left: 20,
-      right: 20,
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-        decoration: BoxDecoration(
-          color: const Color(0xFFE8F5E9),
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: const Color(0xFF66BB6A)),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withOpacity(0.1),
-              blurRadius: 8,
-              offset: const Offset(0, 2),
-            ),
-          ],
-        ),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            const Text('🐉', style: TextStyle(fontSize: 20)),
-            const SizedBox(width: 8),
-            Text(
-              message,
-              style: const TextStyle(
-                color: Color(0xFF2E7D32),
-                fontWeight: FontWeight.bold,
-                fontSize: 15,
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
   Widget _buildTimeoutBanner(String playerName) {
     return Positioned(
       bottom: 240,
@@ -1885,7 +2170,7 @@ class _GameScreenState extends State<GameScreen> {
           border: Border.all(color: const Color(0xFFFFB74D)),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withOpacity(0.1),
+              color: Colors.black.withValues(alpha: 0.1),
               blurRadius: 8,
               offset: const Offset(0, 2),
             ),
@@ -1924,7 +2209,7 @@ class _GameScreenState extends State<GameScreen> {
           border: Border.all(color: const Color(0xFFFF6B6B)),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withOpacity(0.1),
+              color: Colors.black.withValues(alpha: 0.1),
               blurRadius: 8,
               offset: const Offset(0, 2),
             ),
@@ -1953,7 +2238,10 @@ class _GameScreenState extends State<GameScreen> {
   }
 
   Widget _buildCardViewRequestPopup(GameService game) {
-    final request = game.incomingCardViewRequests.first;
+    final request = game.firstIncomingCardViewRequest;
+    if (request == null) {
+      return const SizedBox.shrink();
+    }
     final spectatorNickname = request['spectatorNickname'] ?? '관전자';
     final spectatorId = request['spectatorId'] ?? '';
 
@@ -1968,7 +2256,7 @@ class _GameScreenState extends State<GameScreen> {
           borderRadius: BorderRadius.circular(16),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withOpacity(0.2),
+              color: Colors.black.withValues(alpha: 0.2),
               blurRadius: 12,
               offset: const Offset(0, 4),
             ),
@@ -2011,13 +2299,7 @@ class _GameScreenState extends State<GameScreen> {
                 Expanded(
                   child: OutlinedButton(
                     onPressed: () {
-                      game.autoRejectCardView = true;
-                      // Reject all pending requests
-                      for (final req in List.from(game.incomingCardViewRequests)) {
-                        game.respondCardViewRequest(req['spectatorId'] ?? '', false);
-                      }
-                      game.incomingCardViewRequests.clear();
-                      game.notifyListeners();
+                      game.rejectAllCardViewRequests();
                     },
                     style: OutlinedButton.styleFrom(
                       foregroundColor: const Color(0xFF999999),
@@ -2196,7 +2478,7 @@ class _GameScreenState extends State<GameScreen> {
                 height: 220,
                 child: ListView.separated(
                   itemCount: spectators.length,
-                  separatorBuilder: (_, __) => const SizedBox(height: 6),
+                  separatorBuilder: (_, _) => const SizedBox(height: 6),
                   itemBuilder: (context, index) {
                     final nickname = spectators[index]['nickname'] ?? '';
                     return Container(
@@ -2233,8 +2515,7 @@ class _GameScreenState extends State<GameScreen> {
               builder: (context, setDialogState) {
                 return GestureDetector(
                   onTap: () {
-                    game.autoRejectCardView = !game.autoRejectCardView;
-                    game.notifyListeners();
+                    game.setAutoRejectCardView(!game.autoRejectCardView);
                     setDialogState(() {});
                   },
                   child: Container(
@@ -2495,7 +2776,7 @@ class _GameScreenState extends State<GameScreen> {
         width: 220 * _s,
         padding: EdgeInsets.symmetric(horizontal: 8 * _s, vertical: 6 * _s),
         decoration: BoxDecoration(
-          color: Colors.white.withOpacity(0.7),
+          color: Colors.white.withValues(alpha: 0.7),
           borderRadius: BorderRadius.circular(16),
         ),
         child: Column(
@@ -2580,49 +2861,88 @@ class _GameScreenState extends State<GameScreen> {
   }
 
   Widget _buildTopBar(GameStateData state, GameService game) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
-      child: Stack(
-        alignment: Alignment.center,
-        children: [
-          // Score (always centered)
-          _buildScoreBar(state),
-
-          // Left: Timer
-          if (_remainingSeconds > 0)
-            Align(
-              alignment: Alignment.centerLeft,
-              child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-                decoration: BoxDecoration(
-                  color: _remainingSeconds <= 10
-                      ? const Color(0xFFFFE4E4)
-                      : Colors.white.withValues(alpha: 0.9),
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(
-                    color: _remainingSeconds <= 10
-                        ? const Color(0xFFFF6B6B)
-                        : const Color(0xFFCCCCCC),
-                    width: _remainingSeconds <= 10 ? 2 : 1,
-                  ),
-                ),
-                child: Text(
-                  '${_remainingSeconds}초',
-                  style: TextStyle(
-                    fontSize: 13 * _s,
-                    fontWeight: FontWeight.bold,
-                    color: _remainingSeconds <= 10
-                        ? const Color(0xFFCC4444)
-                        : const Color(0xFF5A4038),
-                  ),
-                ),
+    final isLandscape =
+        MediaQuery.of(context).orientation == Orientation.landscape;
+    final currentPlayerName = _getCurrentPlayerName(state);
+    final compactPlayerName = currentPlayerName.length > 4
+        ? '${currentPlayerName.substring(0, 4)}…'
+        : currentPlayerName;
+    final turnLabel = state.isMyTurn
+        ? (isLandscape ? '내 턴' : '내 턴')
+        : (isLandscape ? '$compactPlayerName 턴' : '$currentPlayerName 대기');
+    final timerFontSize = isLandscape ? 11.5 * _s : 13 * _s;
+    final timerIconSize = isLandscape ? 12.5 * _s : 14 * _s;
+    final timerPadding = isLandscape
+        ? const EdgeInsets.symmetric(horizontal: 8, vertical: 4)
+        : const EdgeInsets.symmetric(horizontal: 10, vertical: 5);
+    final timerBadge = _remainingSeconds > 0
+        ? Container(
+            padding: timerPadding,
+            decoration: BoxDecoration(
+              color: _remainingSeconds <= 10
+                  ? const Color(0xFFFFE4E4)
+                  : Colors.white.withValues(alpha: 0.9),
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(
+                color: _remainingSeconds <= 10
+                    ? const Color(0xFFFF6B6B)
+                    : const Color(0xFFCCCCCC),
+                width: _remainingSeconds <= 10 ? 2 : 1,
               ),
             ),
-
-          // Right: Viewers + Chat + Exit
-          Align(
-            alignment: Alignment.centerRight,
             child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(
+                  Icons.schedule,
+                  size: timerIconSize,
+                  color: _remainingSeconds <= 10
+                      ? const Color(0xFFCC4444)
+                      : const Color(0xFF6A5A52),
+                ),
+                SizedBox(width: 5 * _s),
+                Flexible(
+                  child: Text(
+                    '$turnLabel $_remainingSeconds초',
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    softWrap: false,
+                    style: TextStyle(
+                      fontSize: timerFontSize,
+                      fontWeight: FontWeight.bold,
+                      color: _remainingSeconds <= 10
+                          ? const Color(0xFFCC4444)
+                          : const Color(0xFF5A4038),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          )
+        : null;
+
+    if (isLandscape) {
+      return Container(
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+        child: Row(
+          children: [
+            Expanded(
+              child: Row(
+                children: [
+                  if (game.hasTopCardCounter && state.phase == 'playing')
+                    Flexible(child: _buildTopCardCounter(state, compact: true)),
+                  if (game.hasTopCardCounter &&
+                      state.phase == 'playing' &&
+                      timerBadge != null)
+                    const SizedBox(width: 6),
+                  if (timerBadge != null) Flexible(child: timerBadge),
+                ],
+              ),
+            ),
+            const SizedBox(width: 10),
+            Flexible(child: Align(alignment: Alignment.center, child: _buildScoreBar(state))),
+            const SizedBox(width: 10),
+            Row(
               mainAxisSize: MainAxisSize.min,
               children: [
                 _buildChatButton(game),
@@ -2630,22 +2950,68 @@ class _GameScreenState extends State<GameScreen> {
                 _buildMoreButton(game),
               ],
             ),
+          ],
+        ),
+      );
+    }
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Stack(
+            alignment: Alignment.center,
+            children: [
+              _buildScoreBar(state),
+              if (game.hasTopCardCounter && state.phase == 'playing')
+                Align(
+                  alignment: Alignment.centerLeft,
+                  child: _buildTopCardCounter(state),
+                ),
+              Align(
+                alignment: Alignment.centerRight,
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    _buildChatButton(game),
+                    const SizedBox(width: 6),
+                    _buildMoreButton(game),
+                  ],
+                ),
+              ),
+            ],
           ),
+          if (_remainingSeconds > 0)
+            Padding(
+              padding: const EdgeInsets.only(top: 6),
+              child: Align(
+                alignment: Alignment.centerLeft,
+                child: timerBadge,
+              ),
+            ),
         ],
       ),
     );
   }
 
-  Widget _buildTopCardCounter(GameStateData state) {
+  Widget _buildTopCardCounter(GameStateData state, {bool compact = false}) {
     final aces = state.remainingAces;
     final kings = state.remainingKings;
     final dragon = state.remainingDragon > 0;
     final phoenix = state.remainingPhoenix > 0;
+    final horizontal = compact ? 6.0 * _s : 8.0 * _s;
+    final vertical = compact ? 3.0 * _s : 4.0 * _s;
+    final spacing = compact ? 5.0 * _s : 8.0 * _s;
+    final iconFont = compact ? 12.0 * _s : 13.0 * _s;
+    final textFont = compact ? 12.0 * _s : 13.0 * _s;
     return Align(
       alignment: Alignment.centerLeft,
       child: Container(
-        margin: EdgeInsets.only(left: 10 * _s, bottom: 2 * _s),
-        padding: EdgeInsets.symmetric(horizontal: 8 * _s, vertical: 4 * _s),
+        margin: compact
+            ? EdgeInsets.zero
+            : EdgeInsets.only(left: 10 * _s, bottom: 2 * _s),
+        padding: EdgeInsets.symmetric(horizontal: horizontal, vertical: vertical),
         decoration: BoxDecoration(
           color: const Color(0xFFF8F4F0),
           borderRadius: BorderRadius.circular(8 * _s),
@@ -2654,16 +3020,16 @@ class _GameScreenState extends State<GameScreen> {
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Text('A', style: TextStyle(fontSize: 13 * _s, fontWeight: FontWeight.bold, color: const Color(0xFF5A4038))),
-            Text(':$aces', style: TextStyle(fontSize: 13 * _s, fontWeight: FontWeight.bold, color: const Color(0xFF8A7A6A))),
-            SizedBox(width: 8 * _s),
-            Text('K', style: TextStyle(fontSize: 13 * _s, fontWeight: FontWeight.bold, color: const Color(0xFF5A4038))),
-            Text(':$kings', style: TextStyle(fontSize: 13 * _s, fontWeight: FontWeight.bold, color: const Color(0xFF8A7A6A))),
-            SizedBox(width: 8 * _s),
-            Text('\u{1F409}', style: TextStyle(fontSize: 13 * _s)),
+            Text('A', style: TextStyle(fontSize: textFont, fontWeight: FontWeight.bold, color: const Color(0xFF5A4038))),
+            Text(':$aces', style: TextStyle(fontSize: textFont, fontWeight: FontWeight.bold, color: const Color(0xFF8A7A6A))),
+            SizedBox(width: spacing),
+            Text('K', style: TextStyle(fontSize: textFont, fontWeight: FontWeight.bold, color: const Color(0xFF5A4038))),
+            Text(':$kings', style: TextStyle(fontSize: textFont, fontWeight: FontWeight.bold, color: const Color(0xFF8A7A6A))),
+            SizedBox(width: spacing),
+            Text('\u{1F409}', style: TextStyle(fontSize: iconFont)),
             Text(dragon ? '\u25CB' : '\u2715', style: TextStyle(fontSize: 12 * _s, color: dragon ? const Color(0xFF4A90D9) : const Color(0xFFCCC0B8))),
-            SizedBox(width: 6 * _s),
-            Text('\u{1F426}', style: TextStyle(fontSize: 13 * _s)),
+            SizedBox(width: compact ? 4 * _s : 6 * _s),
+            Text('\u{1F426}', style: TextStyle(fontSize: iconFont)),
             Text(phoenix ? '\u25CB' : '\u2715', style: TextStyle(fontSize: 12 * _s, color: phoenix ? const Color(0xFFD4A030) : const Color(0xFFCCC0B8))),
           ],
         ),
@@ -2750,160 +3116,264 @@ class _GameScreenState extends State<GameScreen> {
     showDialog(
       context: context,
       builder: (ctx) => Dialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        child: Container(
-          width: 280,
-          padding: const EdgeInsets.all(20),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              const Text(
-                '점수 기록',
-                style: TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.bold,
-                  color: Color(0xFF5A4038),
-                ),
-              ),
-              const SizedBox(height: 16),
-              // Header
-              Row(
-                children: [
-                  const Expanded(
-                    flex: 2,
-                    child: Text(
-                      '라운드',
-                      style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Color(0xFF8A7A72)),
-                      textAlign: TextAlign.center,
-                    ),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(22)),
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 360, maxHeight: 560),
+          child: Padding(
+            padding: const EdgeInsets.all(18),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFF7F2EF),
+                    borderRadius: BorderRadius.circular(16),
+                    border: Border.all(color: const Color(0xFFE8DDD7)),
                   ),
-                  const Expanded(
-                    flex: 3,
-                    child: Text(
-                      '팀 A',
-                      style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Color(0xFF4A90D9)),
-                      textAlign: TextAlign.center,
-                    ),
-                  ),
-                  const Expanded(
-                    flex: 3,
-                    child: Text(
-                      '팀 B',
-                      style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Color(0xFFD24B4B)),
-                      textAlign: TextAlign.center,
-                    ),
-                  ),
-                ],
-              ),
-              const Divider(height: 16),
-              // Rounds
-              if (history.isEmpty)
-                const Padding(
-                  padding: EdgeInsets.symmetric(vertical: 12),
-                  child: Text(
-                    '아직 완료된 라운드 없음',
-                    style: TextStyle(fontSize: 13, color: Color(0xFF8A7A72)),
-                  ),
-                )
-              else
-                ConstrainedBox(
-                  constraints: const BoxConstraints(maxHeight: 300),
-                  child: ListView.separated(
-                    shrinkWrap: true,
-                    itemCount: history.length,
-                    separatorBuilder: (_, __) => const Divider(height: 1),
-                    itemBuilder: (_, i) {
-                      final r = history[i];
-                      final rA = r['teamA'] ?? 0;
-                      final rB = r['teamB'] ?? 0;
-                      return Padding(
-                        padding: const EdgeInsets.symmetric(vertical: 8),
-                        child: Row(
+                  child: Row(
+                    children: [
+                      Container(
+                        width: 36,
+                        height: 36,
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFEADFD8),
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: const Icon(
+                          Icons.history,
+                          color: Color(0xFF6A5A52),
+                          size: 20,
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      const Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          mainAxisSize: MainAxisSize.min,
                           children: [
-                            Expanded(
-                              flex: 2,
-                              child: Text(
-                                'R${r['round'] ?? i + 1}',
-                                style: const TextStyle(fontSize: 13, color: Color(0xFF8A7A72)),
-                                textAlign: TextAlign.center,
+                            Text(
+                              '점수 기록',
+                              style: TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.bold,
+                                color: Color(0xFF5A4038),
                               ),
                             ),
-                            Expanded(
-                              flex: 3,
-                              child: Text(
-                                rA >= 0 ? '+$rA' : '$rA',
-                                style: TextStyle(
-                                  fontSize: 14,
-                                  fontWeight: FontWeight.bold,
-                                  color: rA > rB ? const Color(0xFF4A90D9) : const Color(0xFF5A4038),
-                                ),
-                                textAlign: TextAlign.center,
-                              ),
-                            ),
-                            Expanded(
-                              flex: 3,
-                              child: Text(
-                                rB >= 0 ? '+$rB' : '$rB',
-                                style: TextStyle(
-                                  fontSize: 14,
-                                  fontWeight: FontWeight.bold,
-                                  color: rB > rA ? const Color(0xFFD24B4B) : const Color(0xFF5A4038),
-                                ),
-                                textAlign: TextAlign.center,
+                            SizedBox(height: 2),
+                            Text(
+                              '라운드별 점수 변화와 현재 합계',
+                              style: TextStyle(
+                                fontSize: 12,
+                                color: Color(0xFF8A7A72),
                               ),
                             ),
                           ],
                         ),
-                      );
-                    },
+                      ),
+                    ],
                   ),
                 ),
-              const Divider(height: 16),
-              // Total
-              Row(
-                children: [
-                  const Expanded(
-                    flex: 2,
-                    child: Text(
-                      '합계',
-                      style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: Color(0xFF5A4038)),
-                      textAlign: TextAlign.center,
-                    ),
-                  ),
-                  Expanded(
-                    flex: 3,
-                    child: Text(
-                      '$teamA',
-                      style: TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.bold,
-                        color: teamA >= teamB ? const Color(0xFF4A90D9) : const Color(0xFF5A4038),
+                const SizedBox(height: 14),
+                Row(
+                  children: [
+                    Expanded(
+                      child: _buildScoreHistoryTotalCard(
+                        label: 'TEAM A',
+                        score: teamA,
+                        color: const Color(0xFF6A9BD1),
+                        leading: teamA >= teamB,
                       ),
-                      textAlign: TextAlign.center,
                     ),
-                  ),
-                  Expanded(
-                    flex: 3,
-                    child: Text(
-                      '$teamB',
-                      style: TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.bold,
-                        color: teamB >= teamA ? const Color(0xFFD24B4B) : const Color(0xFF5A4038),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: _buildScoreHistoryTotalCard(
+                        label: 'TEAM B',
+                        score: teamB,
+                        color: const Color(0xFFF5B8C0),
+                        leading: teamB >= teamA,
                       ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 14),
+                if (history.isEmpty)
+                  Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.symmetric(vertical: 28, horizontal: 16),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFF9F6F4),
+                      borderRadius: BorderRadius.circular(16),
+                      border: Border.all(color: const Color(0xFFE8DDD7)),
+                    ),
+                    child: const Text(
+                      '아직 완료된 라운드가 없습니다',
                       textAlign: TextAlign.center,
+                      style: TextStyle(
+                        fontSize: 13,
+                        color: Color(0xFF8A7A72),
+                      ),
+                    ),
+                  )
+                else
+                  Flexible(
+                    child: ListView.separated(
+                      shrinkWrap: true,
+                      itemCount: history.length,
+                      separatorBuilder: (_, _) => const SizedBox(height: 10),
+                      itemBuilder: (_, i) {
+                        final r = history[i];
+                        final round = r['round'] ?? i + 1;
+                        final rA = r['teamA'] ?? 0;
+                        final rB = r['teamB'] ?? 0;
+                        final aWon = rA > rB;
+                        final bWon = rB > rA;
+                        return Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 14,
+                            vertical: 12,
+                          ),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFFCFAF8),
+                            borderRadius: BorderRadius.circular(16),
+                            border: Border.all(color: const Color(0xFFEAE0DA)),
+                          ),
+                          child: Row(
+                            children: [
+                              Container(
+                                width: 52,
+                                padding: const EdgeInsets.symmetric(vertical: 6),
+                                decoration: BoxDecoration(
+                                  color: const Color(0xFFF1E8E2),
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+                                child: Text(
+                                  'R$round',
+                                  textAlign: TextAlign.center,
+                                  style: const TextStyle(
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.bold,
+                                    color: Color(0xFF7A675E),
+                                  ),
+                                ),
+                              ),
+                              const SizedBox(width: 12),
+                              Expanded(
+                                child: _buildScoreHistoryDelta(
+                                  label: 'A',
+                                  score: rA,
+                                  color: const Color(0xFF6A9BD1),
+                                  highlighted: aWon,
+                                ),
+                              ),
+                              const SizedBox(width: 10),
+                              Expanded(
+                                child: _buildScoreHistoryDelta(
+                                  label: 'B',
+                                  score: rB,
+                                  color: const Color(0xFFF29AA7),
+                                  highlighted: bWon,
+                                ),
+                              ),
+                            ],
+                          ),
+                        );
+                      },
                     ),
                   ),
-                ],
-              ),
-              const SizedBox(height: 16),
-              TextButton(
-                onPressed: () => Navigator.of(ctx).pop(),
-                child: const Text('닫기'),
-              ),
-            ],
+                const SizedBox(height: 14),
+                SizedBox(
+                  width: double.infinity,
+                  child: TextButton(
+                    onPressed: () => Navigator.of(ctx).pop(),
+                    style: TextButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(vertical: 12),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(14),
+                      ),
+                    ),
+                    child: const Text('닫기'),
+                  ),
+                ),
+              ],
+            ),
           ),
         ),
+      ),
+    );
+  }
+
+  Widget _buildScoreHistoryTotalCard({
+    required String label,
+    required int score,
+    required Color color,
+    required bool leading,
+  }) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.14),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: color.withValues(alpha: 0.35)),
+      ),
+      child: Column(
+        children: [
+          Text(
+            label,
+            style: TextStyle(
+              fontSize: 11,
+              fontWeight: FontWeight.bold,
+              color: color,
+            ),
+          ),
+          const SizedBox(height: 6),
+          Text(
+            '$score',
+            style: TextStyle(
+              fontSize: 22,
+              fontWeight: FontWeight.bold,
+              color: leading ? color : const Color(0xFF5A4038),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildScoreHistoryDelta({
+    required String label,
+    required int score,
+    required Color color,
+    required bool highlighted,
+  }) {
+    final display = score >= 0 ? '+$score' : '$score';
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
+      decoration: BoxDecoration(
+        color: highlighted ? color.withValues(alpha: 0.12) : const Color(0xFFF7F2EF),
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            '팀 $label',
+            style: TextStyle(
+              fontSize: 11,
+              fontWeight: FontWeight.w600,
+              color: color,
+            ),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            display,
+            style: TextStyle(
+              fontSize: 16,
+              fontWeight: FontWeight.bold,
+              color: highlighted ? color : const Color(0xFF5A4038),
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -3099,13 +3569,13 @@ class _GameScreenState extends State<GameScreen> {
       decoration: BoxDecoration(
         color: isMyTurn
             ? const Color(0xFFFFF8E1)
-            : Colors.white.withOpacity(0.95),
+            : Colors.white.withValues(alpha: 0.95),
         borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
         boxShadow: [
           BoxShadow(
             color: isMyTurn
-                ? const Color(0xFFFFD54F).withOpacity(0.4)
-                : Colors.black.withOpacity(0.1),
+                ? const Color(0xFFFFD54F).withValues(alpha: 0.4)
+                : Colors.black.withValues(alpha: 0.1),
             blurRadius: 10,
             offset: const Offset(0, -4),
           ),
@@ -3295,7 +3765,7 @@ class _GameScreenState extends State<GameScreen> {
           borderRadius: BorderRadius.circular(16),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withOpacity(0.15),
+              color: Colors.black.withValues(alpha: 0.15),
               blurRadius: 10,
               offset: const Offset(0, 4),
             ),
@@ -3387,7 +3857,7 @@ class _GameScreenState extends State<GameScreen> {
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.15),
+            color: Colors.black.withValues(alpha: 0.15),
             blurRadius: 10,
             offset: const Offset(0, 4),
           ),
@@ -3647,7 +4117,7 @@ class _GameScreenState extends State<GameScreen> {
 
     // C8: Only request profile once to prevent rebuild loop
     if (isGameEnd && game.isRankedRoom && !_profileRequested) {
-      final profile = game.profileData;
+      final profile = game.profileFor(game.playerName);
       if (profile == null || profile['nickname'] != game.playerName) {
         _profileRequested = true;
         WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -3693,7 +4163,7 @@ class _GameScreenState extends State<GameScreen> {
   }
 
   Widget _buildRankedResult(GameService game) {
-    final profile = game.profileData;
+    final profile = game.profileFor(game.playerName);
     if (profile == null || profile['nickname'] != game.playerName) {
       return const SizedBox(
         height: 40,
@@ -3756,9 +4226,9 @@ class _GameScreenState extends State<GameScreen> {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
       decoration: BoxDecoration(
-        color: color.withOpacity(0.2),
+        color: color.withValues(alpha: 0.2),
         borderRadius: BorderRadius.circular(10),
-        border: Border.all(color: color.withOpacity(0.4)),
+        border: Border.all(color: color.withValues(alpha: 0.4)),
       ),
       child: Row(
         children: [
@@ -3769,30 +4239,6 @@ class _GameScreenState extends State<GameScreen> {
             style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: color),
           ),
         ],
-      ),
-    );
-  }
-
-  Widget _buildTopBanner({required Widget child}) {
-    return Positioned(
-      top: 0,
-      left: 0,
-      right: 0,
-      child: Container(
-        margin: const EdgeInsets.all(12),
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(16),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withOpacity(0.15),
-              blurRadius: 10,
-              offset: const Offset(0, 4),
-            ),
-          ],
-        ),
-        child: child,
       ),
     );
   }
@@ -3887,7 +4333,7 @@ class _GameScreenState extends State<GameScreen> {
                   padding:
                       const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                   decoration: BoxDecoration(
-                    color: Colors.white.withOpacity(0.9),
+                    color: Colors.white.withValues(alpha: 0.9),
                     borderRadius: BorderRadius.circular(10),
                     border: Border.all(color: const Color(0xFFE6DCE8)),
                   ),
@@ -3968,10 +4414,6 @@ class _GameScreenState extends State<GameScreen> {
       final leftName = _nameForPosition(state, 'left');
       final partnerName = _nameForPosition(state, 'partner');
       final rightName = _nameForPosition(state, 'right');
-
-      final givenLeft = givenData['left'];
-      final givenPartner = givenData['partner'];
-      final givenRight = givenData['right'];
 
       // Use server-provided receivedFrom data
       final receivedLeft = state.receivedFrom?['left'];
@@ -4215,7 +4657,7 @@ class _GameScreenState extends State<GameScreen> {
         border: Border.all(color: border, width: 1.5),
         boxShadow: [
           BoxShadow(
-            color: bg.withOpacity(0.4),
+            color: bg.withValues(alpha: 0.4),
             blurRadius: 6,
             offset: const Offset(0, 2),
           ),

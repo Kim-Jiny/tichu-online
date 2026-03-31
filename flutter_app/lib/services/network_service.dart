@@ -14,6 +14,7 @@ class NetworkService extends ChangeNotifier {
   bool _isConnecting = false;
   String _serverUrl = defaultUrl;
   bool _shouldAutoReconnect = true;
+  Completer<void>? _connectCompleter;
 
   final StreamController<Map<String, dynamic>> _messageController =
       StreamController<Map<String, dynamic>>.broadcast();
@@ -24,11 +25,19 @@ class NetworkService extends ChangeNotifier {
   Stream<Map<String, dynamic>> get messageStream => _messageController.stream;
 
   Future<void> connect([String? url]) async {
-    if (_isConnected || _isConnecting) return;
+    if (_isConnected) return;
+    if (_isConnecting) {
+      await waitForConnection();
+      return;
+    }
+
+    await _subscription?.cancel();
+    _subscription = null;
 
     _serverUrl = url ?? defaultUrl;
     _shouldAutoReconnect = true;
     _isConnecting = true;
+    _connectCompleter = Completer<void>();
     notifyListeners();
 
     try {
@@ -38,6 +47,8 @@ class NetworkService extends ChangeNotifier {
       _isConnecting = false;
       _isConnected = true;
       final myId = ++_connectionId;
+      _connectCompleter?.complete();
+      _connectCompleter = null;
       notifyListeners();
 
       _subscription = _channel!.stream.listen(
@@ -65,9 +76,32 @@ class NetworkService extends ChangeNotifier {
       debugPrint('[Network] Connected to $_serverUrl (id=$myId)');
     } catch (e) {
       debugPrint('[Network] Connection failed: $e');
+      _connectCompleter?.completeError(e);
+      _connectCompleter = null;
       _handleDisconnect();
       rethrow;
     }
+  }
+
+  Future<void> waitForConnection({Duration timeout = const Duration(seconds: 15)}) async {
+    if (_isConnected) return;
+    if (!_isConnecting) {
+      throw Exception('연결 진행 중이 아닙니다');
+    }
+    final completer = _connectCompleter;
+    if (completer == null) {
+      throw Exception('연결 상태를 확인할 수 없습니다');
+    }
+    await completer.future.timeout(timeout);
+  }
+
+  Future<void> ensureConnected([String? url]) async {
+    if (_isConnected) return;
+    if (_isConnecting) {
+      await waitForConnection();
+      return;
+    }
+    await connect(url);
   }
 
   void _handleDisconnect({bool intentional = false}) {
@@ -76,9 +110,12 @@ class NetworkService extends ChangeNotifier {
     _isConnecting = false;
     _channel = null;
     _shouldAutoReconnect = !intentional;
+    if (_connectCompleter != null && !_connectCompleter!.isCompleted) {
+      _connectCompleter!.completeError(Exception('연결이 종료되었습니다'));
+    }
+    _connectCompleter = null;
     if (wasConnected) {
       debugPrint('[Network] _handleDisconnect (was connected, id=$_connectionId)');
-      debugPrint(StackTrace.current.toString().split('\n').take(5).join('\n'));
     }
     notifyListeners();
   }

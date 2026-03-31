@@ -88,6 +88,22 @@ async function sendPushNotification(fcmToken, title, body) {
   }
 }
 
+async function sendFriendRequestPush(targetNickname, fromNickname) {
+  try {
+    const { pool } = require('./db/database');
+    const res = await pool.query(
+      'SELECT fcm_token, push_enabled, push_friend_invite FROM tc_users WHERE nickname = $1',
+      [targetNickname]
+    );
+    if (res.rows.length === 0) return;
+    const user = res.rows[0];
+    if (!user.fcm_token || user.push_enabled === false || user.push_friend_invite === false) return;
+    await sendPushNotification(user.fcm_token, 'Tichu Online', `${fromNickname}님이 친구 요청을 보냈습니다`);
+  } catch (err) {
+    console.error('Friend request push error:', err.message);
+  }
+}
+
 const { handleAdminRoute } = require('./admin');
 
 const PORT = process.env.PORT || 8080;
@@ -100,6 +116,8 @@ let maintenanceConfig = {
   maintenanceEnd: null,
   message: '',
 };
+
+const recentRoomInvites = new Map();
 
 function getMaintenanceConfig() {
   return { ...maintenanceConfig };
@@ -1214,12 +1232,14 @@ function scheduleAutoReturnToRoom(roomId) {
 function handleCheckRoom(ws) {
   if (!ws.roomId) {
     sendTo(ws, { type: 'room_closed' });
+    sendTo(ws, { type: 'restore_complete', destination: 'lobby' });
     return;
   }
   const room = lobby.getRoom(ws.roomId);
   if (!room) {
     ws.roomId = null;
     sendTo(ws, { type: 'room_closed' });
+    sendTo(ws, { type: 'restore_complete', destination: 'lobby' });
     return;
   }
   // Room exists - send current state
@@ -1232,7 +1252,16 @@ function handleCheckRoom(ws) {
     state.spectators = room.spectators.map((s) => ({ id: s.id, nickname: s.nickname }));
     state.spectatorCount = room.spectators.length;
     sendTo(ws, { type: 'game_state', state });
+    sendTo(ws, {
+      type: 'restore_complete',
+      destination: ws.isSpectator ? 'spectator' : 'game',
+    });
+    return;
   }
+  sendTo(ws, {
+    type: 'restore_complete',
+    destination: ws.isSpectator ? 'spectator' : 'waiting_room',
+  });
 }
 
 function handleSpectateRoom(ws, data) {
@@ -1434,6 +1463,7 @@ function handleStartGame(ws) {
   room.resetReady();
   room.startGame();
   broadcastRoomState(ws.roomId);
+  broadcastRoomList();
   // Send initial cards to each player
   sendGameStateToAll(ws.roomId);
 }
@@ -1619,7 +1649,7 @@ async function handleGetProfile(ws, data) {
     return;
   }
   const profile = await getUserProfile(targetNickname);
-  const recentMatches = await getRecentMatches(targetNickname, 5);
+  const recentMatches = await getRecentMatches(targetNickname, 20);
   const isBlocked = (await getBlockedUsers(ws.nickname)).includes(targetNickname);
   sendTo(ws, {
     type: 'profile_result',
@@ -1853,7 +1883,11 @@ function scheduleBotActions(roomId) {
             if (!r2 || !r2.game) return;
             // Re-decide in case state changed
             let action2 = decideBotAction(r2.game, botId);
-            if (!action2) return;
+            if (!action2) {
+              // State changed (e.g. bomb interrupt) - re-schedule for other bots
+              scheduleBotActions(roomId);
+              return;
+            }
             console.log(`[BOT] ${botId} action: ${action2.type}`);
             let result2 = r2.game.handleAction(botId, action2);
             if (result2 && !result2.success && r2.game) {
@@ -2248,6 +2282,21 @@ function closeRoom(roomId, messageType = 'room_closed') {
     clearTimeout(autoReturnTimers[roomId]);
     delete autoReturnTimers[roomId];
   }
+  if (turnTimers[roomId]) {
+    clearTimeout(turnTimers[roomId]);
+    delete turnTimers[roomId];
+  }
+  if (roundEndTimers[roomId]) {
+    clearTimeout(roundEndTimers[roomId]);
+    delete roundEndTimers[roomId];
+  }
+  Object.keys(waitingRoomTimers).forEach((key) => {
+    if (!key.startsWith(`${roomId}_`)) return;
+    clearTimeout(waitingRoomTimers[key]);
+    delete waitingRoomTimers[key];
+  });
+  delete timeoutCounts[roomId];
+  delete turnTimerPhases[roomId];
   lobby.removeRoom(roomId);
 }
 
@@ -2565,6 +2614,10 @@ async function handleAddFriend(ws, data) {
         sendTo(targetWs, { type: 'friend_request_received', fromNickname: ws.nickname });
       }
     }
+    // Push notification for friend request (offline or online)
+    if (result.message !== '친구가 되었습니다') {
+      sendFriendRequestPush(targetNickname, ws.nickname);
+    }
   }
 }
 
@@ -2722,13 +2775,13 @@ async function handleSendDm(ws, data) {
   // Check blocked
   const blockedList = await getBlockedUsers(ws.nickname);
   const blockedByTarget = await getBlockedUsers(targetNickname);
-  if (blockedList.some(b => b.nickname === targetNickname) || blockedByTarget.some(b => b.nickname === ws.nickname)) {
+  if (blockedList.includes(targetNickname) || blockedByTarget.includes(ws.nickname)) {
     sendTo(ws, { type: 'dm_error', message: '차단된 사용자에게 DM을 보낼 수 없습니다' });
     return;
   }
   // Check chat ban
   const chatBan = await getChatBan(ws.nickname);
-  if (chatBan && chatBan.banned) {
+  if (chatBan) {
     sendTo(ws, { type: 'dm_error', message: '채팅 금지 상태입니다' });
     return;
   }
@@ -2811,6 +2864,23 @@ function handleInviteToRoom(ws, data) {
     sendTo(ws, { type: 'invite_result', success: false, message: '방을 찾을 수 없습니다' });
     return;
   }
+  if (room.game) {
+    sendTo(ws, { type: 'invite_result', success: false, message: '게임 진행 중에는 초대를 보낼 수 없습니다' });
+    return;
+  }
+  const inviteKey = `${ws.nickname}->${targetNickname}`;
+  const now = Date.now();
+  for (const [key, timestamp] of recentRoomInvites.entries()) {
+    if (now - timestamp > 60000) {
+      recentRoomInvites.delete(key);
+    }
+  }
+  const lastInviteAt = recentRoomInvites.get(inviteKey) || 0;
+  if (now - lastInviteAt < 10000) {
+    sendTo(ws, { type: 'invite_result', success: false, message: '이미 초대를 보냈습니다. 잠시 후 다시 시도해주세요' });
+    return;
+  }
+  recentRoomInvites.set(inviteKey, now);
   sendTo(targetWs, {
     type: 'room_invite',
     fromNickname: ws.nickname,

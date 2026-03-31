@@ -1,6 +1,5 @@
 import 'dart:async';
 import 'dart:io' show Platform;
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -8,7 +7,11 @@ import '../models/player.dart';
 import '../models/room.dart';
 import '../models/game_state.dart';
 import 'network_service.dart';
+import 'profile_store.dart';
+import 'restore_sync_tracker.dart';
 import 'sfx_service.dart';
+
+enum AppDestination { lobby, waitingRoom, game, spectator }
 
 class GameService extends ChangeNotifier {
   final NetworkService _network;
@@ -17,10 +20,12 @@ class GameService extends ChangeNotifier {
   Timer? _dogClearTimer;
   Timer? _inquiryBannerTimer;
   Timer? _pushToggleTimer;
+  final Map<String, DateTime> _roomInviteCooldowns = {};
   DateTime? _dogDelayUntil;
   Map<String, dynamic>? _pendingGameState;
   GameStateData? _prevGameState;
   final SfxService _sfx = SfxService();
+  final RestoreSyncTracker _restoreSync = RestoreSyncTracker();
 
   // Player info
   String playerId = '';
@@ -84,7 +89,7 @@ class GameService extends ChangeNotifier {
   Set<String> sentFriendRequests = {};
 
   // Profile
-  Map<String, dynamic>? profileData;
+  final ProfileStore _profiles = ProfileStore();
 
   // Rankings
   List<Map<String, dynamic>> rankings = [];
@@ -177,6 +182,7 @@ class GameService extends ChangeNotifier {
   Map<String, List<Map<String, dynamic>>> dmMessages = {};
   int totalUnreadDmCount = 0;
   List<Map<String, dynamic>> searchResults = [];
+  String? _activeDmPartner;
   String? maintenanceStart;
   String? maintenanceEnd;
 
@@ -187,7 +193,8 @@ class GameService extends ChangeNotifier {
   GameService(this._network) {
     _subscription = _network.messageStream.listen(_handleMessage);
     _fcmTokenSubscription = FirebaseMessaging.instance.onTokenRefresh.listen((newToken) {
-      debugPrint('[FCM] onTokenRefresh: ${newToken.substring(0, 20)}...');
+      final preview = newToken.substring(0, newToken.length.clamp(0, 20));
+      debugPrint('[FCM] onTokenRefresh: $preview...');
       if (playerId.isNotEmpty && pushEnabled) {
         _network.send({'type': 'update_fcm_token', 'fcmToken': newToken});
         debugPrint('[FCM] Refreshed token sent to server');
@@ -199,6 +206,42 @@ class GameService extends ChangeNotifier {
 
   // Helper: count of non-null players
   int get playerCount => roomPlayers.where((p) => p != null).length;
+  bool get isLoggedIn => playerId.isNotEmpty;
+  bool get hasLoginError => loginError != null;
+  bool get hasRoom => currentRoomId.isNotEmpty;
+  bool get hasSpectatorRoom => isSpectator && hasRoom;
+  bool get isInWaitingRoom => hasRoom && !isSpectator && !hasActiveGame;
+  bool get hasActiveGame =>
+      gameState != null &&
+      gameState!.phase.isNotEmpty &&
+      gameState!.phase != 'waiting' &&
+      gameState!.phase != 'game_end';
+  bool get hasSpectatorGameState => spectatorGameState != null;
+  bool get hasPendingSocialNickname => needNickname;
+  Map<String, dynamic>? get profileData => _profiles.current;
+  Map<String, dynamic>? profileFor(String nickname) => _profiles.profileFor(nickname);
+  AppDestination get currentDestination {
+    if (isSpectator && hasRoom) return AppDestination.spectator;
+    if (!hasRoom) return AppDestination.lobby;
+    if (gameState != null) return AppDestination.game;
+    return AppDestination.waitingRoom;
+  }
+
+  bool isRoomInvitePending(String nickname) {
+    final until = _roomInviteCooldowns[nickname];
+    if (until == null) return false;
+    if (DateTime.now().isAfter(until)) {
+      _roomInviteCooldowns.remove(nickname);
+      return false;
+    }
+    return true;
+  }
+
+  bool canInviteToRoom(String nickname) {
+    if (!isInWaitingRoom) return false;
+    if (nickname.isEmpty) return false;
+    return !isRoomInvitePending(nickname);
+  }
 
   // Theme gradient colors based on equipped theme
   List<Color> get themeGradient {
@@ -391,6 +434,10 @@ class GameService extends ChangeNotifier {
           }
         }
         notifyListeners();
+        break;
+
+      case 'restore_complete':
+        _restoreSync.complete();
         break;
 
       case 'card_view_requested':
@@ -644,7 +691,7 @@ class GameService extends ChangeNotifier {
       case 'chat_banned':
         final mins = data['remainingMinutes'] ?? 0;
         final hours = mins ~/ 60;
-        final display = hours > 0 ? '${hours}시간 ${mins % 60}분' : '${mins}분';
+        final display = hours > 0 ? '$hours시간 ${mins % 60}분' : '$mins분';
         chatMessages.add({
           'sender': '',
           'senderId': '',
@@ -778,13 +825,19 @@ class GameService extends ChangeNotifier {
         };
         dmMessages.putIfAbsent(partner, () => []);
         // Avoid duplicate
-        if (!dmMessages[partner]!.any((m) => m['id'] == msg['id'])) {
+        final isNewMessage = !dmMessages[partner]!.any((m) => m['id'] == msg['id']);
+        if (isNewMessage) {
           dmMessages[partner]!.add(msg);
         }
         // Update conversations
         requestDmConversations();
-        if (sender != playerName) {
-          totalUnreadDmCount++;
+        if (isNewMessage && sender != playerName) {
+          if (_activeDmPartner == partner) {
+            markDmReadAction(partner);
+            requestUnreadDmCount();
+          } else {
+            totalUnreadDmCount++;
+          }
         }
         notifyListeners();
         break;
@@ -842,8 +895,18 @@ class GameService extends ChangeNotifier {
         break;
 
       case 'room_invite':
-        roomInvites.add(Map<String, dynamic>.from(data));
-        notifyListeners();
+        final invite = Map<String, dynamic>.from(data);
+        final roomId = invite['roomId'] as String? ?? '';
+        final fromNickname = invite['fromNickname'] as String? ?? '';
+        final exists = roomInvites.any(
+          (item) =>
+              (item['roomId'] as String? ?? '') == roomId &&
+              (item['fromNickname'] as String? ?? '') == fromNickname,
+        );
+        if (!exists) {
+          roomInvites.add(invite);
+          notifyListeners();
+        }
         break;
 
       case 'invite_result':
@@ -867,7 +930,7 @@ class GameService extends ChangeNotifier {
         break;
 
       case 'profile_result':
-        profileData = data;
+        _profiles.store(data);
         notifyListeners();
         break;
 
@@ -1062,6 +1125,7 @@ class GameService extends ChangeNotifier {
 
     _dogClearTimer?.cancel();
     _dogClearTimer = Timer(const Duration(seconds: 2), () {
+      if (_disposed) return;
       dogPlayActive = false;
       dogPlayPlayerName = '';
       notifyListeners();
@@ -1172,6 +1236,7 @@ class GameService extends ChangeNotifier {
     _dogDelayTimer?.cancel();
     final remaining = _dogDelayUntil!.difference(now);
     _dogDelayTimer = Timer(remaining, () {
+      if (_disposed) return;
       if (_pendingGameState != null) {
         gameState = GameStateData.fromJson(_pendingGameState!);
         _pendingGameState = null;
@@ -1195,7 +1260,7 @@ class GameService extends ChangeNotifier {
       'type': 'login',
       'username': username,
       'password': password,
-      if (deviceInfo != null) 'deviceInfo': deviceInfo,
+      ...?deviceInfo == null ? null : {'deviceInfo': deviceInfo},
     });
   }
 
@@ -1208,7 +1273,7 @@ class GameService extends ChangeNotifier {
       'type': 'social_login',
       'provider': provider,
       'token': token,
-      if (deviceInfo != null) 'deviceInfo': deviceInfo,
+      ...?deviceInfo == null ? null : {'deviceInfo': deviceInfo},
     });
   }
 
@@ -1220,7 +1285,7 @@ class GameService extends ChangeNotifier {
       'token': token,
       'nickname': nickname,
       if (existingUser) 'existingUser': true,
-      if (deviceInfo != null) 'deviceInfo': deviceInfo,
+      ...?deviceInfo == null ? null : {'deviceInfo': deviceInfo},
     });
   }
 
@@ -1248,6 +1313,17 @@ class GameService extends ChangeNotifier {
   }
 
   void reset() {
+    _dogDelayTimer?.cancel();
+    _dogDelayTimer = null;
+    _dogClearTimer?.cancel();
+    _dogClearTimer = null;
+    _inquiryBannerTimer?.cancel();
+    _inquiryBannerTimer = null;
+    _pushToggleTimer?.cancel();
+    _pushToggleTimer = null;
+    _dogDelayUntil = null;
+    _pendingGameState = null;
+    _prevGameState = null;
     playerId = '';
     playerName = '';
     equippedTheme = null;
@@ -1268,16 +1344,62 @@ class GameService extends ChangeNotifier {
     approvedCardViews = {};
     incomingCardViewRequests = [];
     cardViewers = [];
+    spectators = [];
     gameState = null;
     errorMessage = null;
     chatMessages = [];
-    profileData = null;
+    blockedUsers = {};
+    friends = [];
+    dmConversations = [];
+    dmMessages = {};
+    totalUnreadDmCount = 0;
+    _activeDmPartner = null;
+    searchResults = [];
+    _profiles.clear();
     friendsData = [];
     pendingFriendRequests = [];
     pendingFriendRequestCount = 0;
     roomInvites = [];
     sentFriendRequests = {};
+    _roomInviteCooldowns.clear();
+    rankings = [];
+    rankingsLoading = false;
+    rankingsError = null;
+    myRank = null;
+    adRewardResult = null;
+    adRewardSuccess = null;
+    autoRejectCardView = false;
+    myRankData = null;
+    seasons = [];
+    gold = 0;
+    leaveCount = 0;
+    shopItems = [];
+    inventoryItems = [];
+    shopLoading = false;
+    inventoryLoading = false;
+    shopError = null;
+    inventoryError = null;
+    lastPurchaseItemKey = null;
+    lastPurchaseSuccess = null;
+    lastPurchaseExtended = false;
+    reportResultMessage = null;
+    reportResultSuccess = null;
+    inquiryResultMessage = null;
+    inquiryResultSuccess = null;
+    inquiries = [];
+    inquiriesLoading = false;
+    inquiriesError = null;
     hasTopCardCounter = false;
+    dogPlayActive = false;
+    dogPlayPlayerName = '';
+    inquiryBannerMessage = null;
+    dragonGivenMessage = null;
+    timeoutPlayerName = null;
+    desertedPlayerName = null;
+    desertedReason = null;
+    myTimeoutCount = 0;
+    nicknameChangeResult = null;
+    nicknameChangeSuccess = null;
     authProvider = 'local';
     needNickname = false;
     socialProvider = null;
@@ -1298,12 +1420,27 @@ class GameService extends ChangeNotifier {
     notifyListeners();
   }
 
+  void prepareForLoginAttempt() {
+    playerId = '';
+    loginError = null;
+    needNickname = false;
+    gameState = null;
+    spectatorGameState = null;
+  }
+
+  bool consumeDuplicateLoginKick() {
+    if (!duplicateLoginKicked) return false;
+    duplicateLoginKicked = false;
+    return true;
+  }
+
   void requestMaintenanceStatus() {
     _network.send({'type': 'get_maintenance_status'});
   }
 
-  void deleteAccount() {
+  Future<void> deleteAccount() async {
     _network.send({'type': 'delete_account'});
+    await Future<void>.delayed(const Duration(milliseconds: 150));
   }
 
   void requestRoomList() {
@@ -1348,6 +1485,28 @@ class GameService extends ChangeNotifier {
     notifyListeners();
   }
 
+  void rejectAllCardViewRequests() {
+    for (final req in List<Map<String, String>>.from(incomingCardViewRequests)) {
+      respondCardViewRequest(req['spectatorId'] ?? '', false);
+    }
+    incomingCardViewRequests.clear();
+    autoRejectCardView = true;
+    notifyListeners();
+  }
+
+  void setAutoRejectCardView(bool value) {
+    if (autoRejectCardView == value) return;
+    autoRejectCardView = value;
+    notifyListeners();
+  }
+
+  bool get hasIncomingCardViewRequests => incomingCardViewRequests.isNotEmpty;
+
+  Map<String, String>? get firstIncomingCardViewRequest {
+    if (incomingCardViewRequests.isEmpty) return null;
+    return incomingCardViewRequests.first;
+  }
+
   void createRoom(String roomName, {String password = '', bool isRanked = false, int turnTimeLimit = 30, int targetScore = 1000}) {
     _network.send({
       'type': 'create_room',
@@ -1365,12 +1524,10 @@ class GameService extends ChangeNotifier {
 
   void leaveRoom() {
     _network.send({'type': 'leave_room'});
-    _clearRoomState();
   }
 
   void leaveGame() {
     _network.send({'type': 'leave_game'});
-    _clearRoomState();
   }
 
   void _clearRoomState({bool notify = true}) {
@@ -1465,6 +1622,15 @@ class GameService extends ChangeNotifier {
     _network.send({'type': 'check_room'});
   }
 
+  Future<bool> checkRoomAndWait({
+    Duration timeout = const Duration(seconds: 3),
+  }) async {
+    return _restoreSync.begin(
+      timeout: timeout,
+      request: () => _network.send({'type': 'check_room'}),
+    );
+  }
+
   void nextRound() {
     _network.send({'type': 'next_round'});
   }
@@ -1484,8 +1650,26 @@ class GameService extends ChangeNotifier {
 
   // Request user profile
   void requestProfile(String nickname) {
-    profileData = null;
+    _profiles.beginRequest(nickname);
     _network.send({'type': 'get_profile', 'nickname': nickname});
+  }
+
+  void fallbackToLobbyAfterRestoreFailure() {
+    currentRoomId = '';
+    currentRoomName = '';
+    roomPlayers = [null, null, null, null];
+    isHost = false;
+    isRankedRoom = false;
+    isSpectator = false;
+    spectatorGameState = null;
+    pendingCardViewRequests = {};
+    approvedCardViews = {};
+    incomingCardViewRequests = [];
+    cardViewers = [];
+    gameState = null;
+    _prevGameState = null;
+    errorMessage = '방 정보를 복구하지 못해 로비로 이동했습니다.';
+    notifyListeners();
   }
 
   // Rankings
@@ -1642,7 +1826,33 @@ class GameService extends ChangeNotifier {
   }
 
   void inviteToRoom(String nickname) {
+    if (!isInWaitingRoom) {
+      errorMessage = '게임 진행 중에는 방 초대를 보낼 수 없습니다';
+      notifyListeners();
+      Future.delayed(const Duration(seconds: 3), () {
+        if (_disposed) return;
+        if (errorMessage == '게임 진행 중에는 방 초대를 보낼 수 없습니다') {
+          errorMessage = null;
+          notifyListeners();
+        }
+      });
+      return;
+    }
+    if (isRoomInvitePending(nickname)) {
+      errorMessage = '이미 초대를 보냈습니다. 잠시 후 다시 시도해주세요';
+      notifyListeners();
+      Future.delayed(const Duration(seconds: 3), () {
+        if (_disposed) return;
+        if (errorMessage == '이미 초대를 보냈습니다. 잠시 후 다시 시도해주세요') {
+          errorMessage = null;
+          notifyListeners();
+        }
+      });
+      return;
+    }
+    _roomInviteCooldowns[nickname] = DateTime.now().add(const Duration(seconds: 10));
     _network.send({'type': 'invite_to_room', 'nickname': nickname});
+    notifyListeners();
   }
 
   // DM / Search actions
@@ -1652,6 +1862,10 @@ class GameService extends ChangeNotifier {
 
   void sendDm(String nickname, String message) {
     _network.send({'type': 'send_dm', 'nickname': nickname, 'message': message});
+  }
+
+  void setActiveDmPartner(String? nickname) {
+    _activeDmPartner = nickname;
   }
 
   void requestDmHistory(String nickname, {int? beforeId}) {
@@ -1692,6 +1906,13 @@ class GameService extends ChangeNotifier {
       roomInvites.removeAt(index);
       notifyListeners();
     }
+  }
+
+  bool get hasRoomInvites => roomInvites.isNotEmpty;
+
+  Map<String, dynamic>? get firstRoomInvite {
+    if (roomInvites.isEmpty) return null;
+    return roomInvites.first;
   }
 
   // Inquiry
@@ -1735,7 +1956,10 @@ class GameService extends ChangeNotifier {
 
       debugPrint('[FCM] Calling getToken()...');
       final token = await messaging.getToken().timeout(const Duration(seconds: 15));
-      debugPrint('[FCM] Token result: ${token != null ? "${token.substring(0, 20)}..." : "null"}');
+      final preview = token != null
+          ? token.substring(0, token.length.clamp(0, 20))
+          : 'null';
+      debugPrint('[FCM] Token result: $preview...');
 
       if (token != null && playerId.isNotEmpty) {
         _network.send({'type': 'update_fcm_token', 'fcmToken': token});
@@ -1760,6 +1984,7 @@ class GameService extends ChangeNotifier {
 
     _pushToggleTimer?.cancel();
     _pushToggleTimer = Timer(const Duration(milliseconds: 200), () async {
+      if (_disposed) return;
       if (playerId.isNotEmpty) {
         _network.send({
           'type': 'update_push_setting',
@@ -1776,7 +2001,11 @@ class GameService extends ChangeNotifier {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setBool('push_friend_invite', enabled);
     if (playerId.isNotEmpty) {
-      _network.send({'type': 'update_push_setting', 'friendInvite': enabled});
+      _network.send({
+        'type': 'update_push_setting',
+        'enabled': pushEnabled,
+        'friendInvite': enabled,
+      });
     }
     notifyListeners();
   }

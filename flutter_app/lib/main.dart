@@ -6,11 +6,15 @@ import 'package:kakao_flutter_sdk_user/kakao_flutter_sdk_user.dart' as kakao;
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:google_mobile_ads/google_mobile_ads.dart';
 import 'package:app_tracking_transparency/app_tracking_transparency.dart';
+import 'app_navigation.dart';
 import 'firebase_options.dart';
 import 'services/network_service.dart';
 import 'services/game_service.dart';
 import 'services/session_service.dart';
+import 'screens/game_screen.dart';
 import 'screens/login_screen.dart';
+import 'screens/lobby_screen.dart';
+import 'screens/spectator_screen.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -57,16 +61,18 @@ class TichuApp extends StatelessWidget {
         ),
       ],
       child: MaterialApp(
+        navigatorKey: appNavigatorKey,
         title: 'Tichu Online',
         debugShowCheckedModeBanner: false,
         builder: (context, child) {
           final media = MediaQuery.of(context);
           final platform = Theme.of(context).platform;
+          final currentScale = media.textScaler.scale(1.0);
           final adjustedScale = platform == TargetPlatform.android
-              ? (media.textScaleFactor * 0.92).clamp(0.9, 1.0)
-              : media.textScaleFactor;
+              ? (currentScale * 0.92).clamp(0.9, 1.0)
+              : currentScale;
           return MediaQuery(
-            data: media.copyWith(textScaleFactor: adjustedScale),
+            data: media.copyWith(textScaler: TextScaler.linear(adjustedScale)),
             child: child ?? const SizedBox.shrink(),
           );
         },
@@ -83,6 +89,60 @@ class TichuApp extends StatelessWidget {
   }
 }
 
+class _AppFlowScreen extends StatelessWidget {
+  const _AppFlowScreen();
+
+  @override
+  Widget build(BuildContext context) {
+    final session = context.watch<SessionService>();
+    final game = context.watch<GameService>();
+
+    Widget child;
+    if (session.isRestoring && !game.isLoggedIn) {
+      child = const Scaffold(
+        body: Center(child: CircularProgressIndicator()),
+      );
+    } else if (!game.isLoggedIn) {
+      child = const LoginScreen();
+    } else {
+      switch (game.currentDestination) {
+        case AppDestination.game:
+          child = const GameScreen();
+          break;
+        case AppDestination.spectator:
+          child = const SpectatorScreen();
+          break;
+        case AppDestination.lobby:
+        case AppDestination.waitingRoom:
+          child = const LobbyScreen();
+          break;
+      }
+    }
+
+    return AnimatedSwitcher(
+      duration: const Duration(milliseconds: 180),
+      child: KeyedSubtree(
+        key: ValueKey(
+          '${game.isLoggedIn}-${_flowKeyForDestination(game.currentDestination)}',
+        ),
+        child: child,
+      ),
+    );
+  }
+
+  String _flowKeyForDestination(AppDestination destination) {
+    switch (destination) {
+      case AppDestination.lobby:
+      case AppDestination.waitingRoom:
+        return 'lobby';
+      case AppDestination.game:
+        return 'game';
+      case AppDestination.spectator:
+        return 'spectator';
+    }
+  }
+}
+
 class _EntryScreen extends StatefulWidget {
   const _EntryScreen();
 
@@ -96,6 +156,8 @@ class _EntryScreenState extends State<_EntryScreen> {
   bool _agreed = false;
   bool _loading = false;
   String? _eulaText;
+  GameService? _gameService;
+  bool _eulaListenerAttached = false;
 
   @override
   void initState() {
@@ -124,6 +186,7 @@ class _EntryScreenState extends State<_EntryScreen> {
 
   Future<void> _checkEula() async {
     final prefs = await SharedPreferences.getInstance();
+    if (!mounted) return;
     final accepted = prefs.getBool('eula_accepted') ?? false;
     if (accepted) {
       setState(() {
@@ -142,10 +205,10 @@ class _EntryScreenState extends State<_EntryScreen> {
 
   void _fetchEula() {
     final network = context.read<NetworkService>();
-    final game = context.read<GameService>();
+    _gameService ??= context.read<GameService>();
+    final game = _gameService!;
 
-    // Listen for eulaContent change
-    game.addListener(_onEulaReceived);
+    _attachEulaListener();
 
     if (network.isConnected) {
       game.requestAppConfig();
@@ -153,6 +216,7 @@ class _EntryScreenState extends State<_EntryScreen> {
       network.connect().then((_) {
         if (mounted) game.requestAppConfig();
       }).catchError((e) {
+        _detachEulaListener();
         if (mounted) {
           setState(() {
             _loading = false;
@@ -164,9 +228,10 @@ class _EntryScreenState extends State<_EntryScreen> {
   }
 
   void _onEulaReceived() {
-    final game = context.read<GameService>();
+    final game = _gameService;
+    if (game == null) return;
     if (game.eulaContent != null) {
-      game.removeListener(_onEulaReceived);
+      _detachEulaListener();
       if (mounted) {
         setState(() {
           _eulaText = game.eulaContent;
@@ -179,6 +244,7 @@ class _EntryScreenState extends State<_EntryScreen> {
   Future<void> _acceptEula() async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setBool('eula_accepted', true);
+    if (!mounted) return;
     setState(() {
       _eulaAccepted = true;
     });
@@ -186,11 +252,20 @@ class _EntryScreenState extends State<_EntryScreen> {
 
   @override
   void dispose() {
-    // Safety: remove listener if still attached
-    try {
-      context.read<GameService>().removeListener(_onEulaReceived);
-    } catch (_) {}
+    _detachEulaListener();
     super.dispose();
+  }
+
+  void _attachEulaListener() {
+    if (_eulaListenerAttached) return;
+    _gameService?.addListener(_onEulaReceived);
+    _eulaListenerAttached = true;
+  }
+
+  void _detachEulaListener() {
+    if (!_eulaListenerAttached) return;
+    _gameService?.removeListener(_onEulaReceived);
+    _eulaListenerAttached = false;
   }
 
   @override
@@ -202,7 +277,7 @@ class _EntryScreenState extends State<_EntryScreen> {
     }
 
     if (_eulaAccepted) {
-      return const LoginScreen();
+      return const _AppFlowScreen();
     }
 
     return Scaffold(

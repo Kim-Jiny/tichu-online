@@ -2325,7 +2325,7 @@ class _SKGameScreenState extends State<SKGameScreen> {
                 height: isLandscape ? 38 : 42,
                 child: FilledButton.icon(
                   onPressed: () {
-                    if (selectedCard == 'sk_tigress') {
+                    if (selectedCard.startsWith('sk_tigress')) {
                       _showTigressDialog(game, selectedCard);
                     } else {
                       game.playCard(selectedCard);
@@ -2544,15 +2544,6 @@ class _SKGameScreenState extends State<SKGameScreen> {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              const Text(
-                'Tigress',
-                style: TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.w800,
-                  color: Color(0xFF3E312A),
-                ),
-              ),
-              const SizedBox(height: 16),
               Row(
                 children: [
                   Expanded(
@@ -3416,7 +3407,7 @@ class _SKGameScreenState extends State<SKGameScreen> {
 
   _CardInfo _parseCardId(String cardId) {
     if (cardId == 'sk_skull_king') return _CardInfo(type: 'skull_king');
-    if (cardId == 'sk_tigress') return _CardInfo(type: 'tigress');
+    if (cardId.startsWith('sk_tigress')) return _CardInfo(type: 'tigress');
     if (cardId == 'sk_escape') return _CardInfo(type: 'escape');
     if (cardId == 'sk_pirate') return _CardInfo(type: 'pirate');
     if (cardId == 'sk_mermaid') return _CardInfo(type: 'mermaid');

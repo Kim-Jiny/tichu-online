@@ -124,17 +124,60 @@ function decideFollowCard(game, botId, legalCards, tricksNeeded) {
     (p.info.type === CARD_TYPE.TIGRESS && p.tigressChoice === 'pirate')));
   const hasMermaid = trickCards.some(p => p.info && p.info.type === CARD_TYPE.MERMAID);
 
-  // Helper: play weak card to dump the trick
+  // Helper: determine if a number card would win against the current trick
+  const wouldCardWin = (card) => {
+    // Find lead suit
+    let leadSuit = null;
+    for (const t of trickCards) {
+      if (t.info && t.info.type === CARD_TYPE.NUMBER) { leadSuit = t.info.suit; break; }
+    }
+    const numbered = trickCards.filter(t => t.info && t.info.type === CARD_TYPE.NUMBER);
+    const trumpOnTable = numbered.filter(t => t.info.suit === 'black');
+    let winSuit, winValue;
+    if (trumpOnTable.length > 0) {
+      winSuit = 'black';
+      winValue = Math.max(...trumpOnTable.map(t => t.info.value));
+    } else {
+      const leadOnTable = numbered.filter(t => t.info.suit === leadSuit);
+      if (leadOnTable.length > 0) {
+        winSuit = leadSuit;
+        winValue = Math.max(...leadOnTable.map(t => t.info.value));
+      } else {
+        return false;
+      }
+    }
+    if (winSuit === 'black') {
+      return card.info.suit === 'black' && card.info.value > winValue;
+    }
+    if (card.info.suit === 'black') return true;
+    if (card.info.suit === winSuit && card.info.value > winValue) return true;
+    return false;
+  };
+
+  // Helper: play weak card to dump the trick (highest loser first)
   const playWeak = () => {
     const escapes = infos.filter(c => c.info.type === CARD_TYPE.ESCAPE);
     if (escapes.length > 0) return makePlayAction(escapes[0].id, escapes[0].info);
     const tigress = infos.find(c => c.info.type === CARD_TYPE.TIGRESS);
     if (tigress) return makePlayAction(tigress.id, tigress.info, 'escape');
-    const numbers = infos
-      .filter(c => c.info.type === CARD_TYPE.NUMBER)
-      .sort((a, b) => a.info.value - b.info.value);
-    if (numbers.length > 0) return makePlayAction(numbers[0].id, numbers[0].info);
-    return null;
+    const numbers = infos.filter(c => c.info.type === CARD_TYPE.NUMBER);
+    if (numbers.length === 0) return null;
+    // If special cards are winning, all numbers lose → play highest
+    if (hasSK || hasPirate || hasMermaid) {
+      numbers.sort((a, b) => b.info.value - a.info.value);
+      return makePlayAction(numbers[0].id, numbers[0].info);
+    }
+    // Split into losers and winners
+    const losers = numbers.filter(c => !wouldCardWin(c));
+    const winners = numbers.filter(c => wouldCardWin(c));
+    if (losers.length > 0) {
+      // Play highest loser
+      losers.sort((a, b) => b.info.value - a.info.value);
+      return makePlayAction(losers[0].id, losers[0].info);
+    }
+    // All cards would win → play lowest to minimize damage
+    winners.sort((a, b) => a.info.value - b.info.value);
+    return makePlayAction(winners[0].id, winners[0].info);
   };
 
   // For zero-bid defense, preserve escapes if a special lead already guarantees a loss.

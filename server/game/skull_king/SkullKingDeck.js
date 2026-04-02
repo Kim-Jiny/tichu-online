@@ -1,14 +1,14 @@
 /**
- * Skull King Deck - 70 cards total
- * 56 numbered (4 suits x 14 ranks) + 5 Escape + 5 Pirate + 2 Mermaid + 1 Skull King + 1 Tigress
+ * Skull King Deck - 66 cards total
+ * 52 numbered (4 suits x 13 ranks) + 5 Escape + 4 Pirate + 2 Mermaid + 1 Skull King + 3 Tigress
  */
 
 const SK_SUITS = ['yellow', 'green', 'purple', 'black']; // black is trump
-const SK_RANKS = ['1', '2', '3', '4', '5', '6', '7', '8', '9', '10', '11', '12', '13', '14'];
+const SK_RANKS = ['1', '2', '3', '4', '5', '6', '7', '8', '9', '10', '11', '12', '13'];
 
 const SK_RANK_VALUES = {
   '1': 1, '2': 2, '3': 3, '4': 4, '5': 5, '6': 6, '7': 7,
-  '8': 8, '9': 9, '10': 10, '11': 11, '12': 12, '13': 13, '14': 14,
+  '8': 8, '9': 9, '10': 10, '11': 11, '12': 12, '13': 13,
 };
 
 // Card types for trick resolution
@@ -42,8 +42,8 @@ function createDeck() {
     deck.push({ id: `sk_escape_${i}`, suit: 'special', rank: 'escape', value: 0, type: CARD_TYPE.ESCAPE });
   }
 
-  // 5 Pirate cards
-  for (let i = 1; i <= 5; i++) {
+  // 4 Pirate cards
+  for (let i = 1; i <= 4; i++) {
     deck.push({ id: `sk_pirate_${i}`, suit: 'special', rank: 'pirate', value: 0, type: CARD_TYPE.PIRATE });
   }
 
@@ -55,8 +55,10 @@ function createDeck() {
   // 1 Skull King
   deck.push({ id: 'sk_skull_king', suit: 'special', rank: 'skull_king', value: 0, type: CARD_TYPE.SKULL_KING });
 
-  // 1 Tigress (can be played as pirate or escape)
-  deck.push({ id: 'sk_tigress', suit: 'special', rank: 'tigress', value: 0, type: CARD_TYPE.TIGRESS });
+  // 3 Tigress (can be played as pirate or escape)
+  for (let i = 1; i <= 3; i++) {
+    deck.push({ id: `sk_tigress_${i}`, suit: 'special', rank: 'tigress', value: 0, type: CARD_TYPE.TIGRESS });
+  }
 
   return deck;
 }
@@ -88,7 +90,7 @@ function getCardInfo(cardId) {
   if (cardId === 'sk_skull_king') {
     return { type: CARD_TYPE.SKULL_KING, suit: 'special', rank: 'skull_king', value: 0 };
   }
-  if (cardId === 'sk_tigress') {
+  if (cardId.startsWith('sk_tigress')) {
     return { type: CARD_TYPE.TIGRESS, suit: 'special', rank: 'tigress', value: 0 };
   }
   if (cardId.startsWith('sk_escape_')) {

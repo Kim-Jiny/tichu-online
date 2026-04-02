@@ -23,6 +23,7 @@ class _SKGameScreenState extends State<SKGameScreen> {
   Timer? _cardViewRequestTimer;
   int _lastBiddingRound = -1;
   bool _chatOpen = false;
+  int _readChatCount = 0;
   bool _viewersOpen = false;
   final TextEditingController _chatController = TextEditingController();
   final ScrollController _chatScrollController = ScrollController();
@@ -484,13 +485,13 @@ class _SKGameScreenState extends State<SKGameScreen> {
           _buildTopActionButton(
             icon: Icons.chat_bubble_outline_rounded,
             active: _chatOpen,
-            badgeCount: game.chatMessages.where((m) {
-              final sender = (m['sender'] ?? '').toString();
-              return sender.isNotEmpty && sender != game.playerName;
-            }).length,
+            badgeCount: _chatOpen ? 0 : (game.chatMessages.length - _readChatCount).clamp(0, 99),
             onTap: () {
               setState(() {
                 _chatOpen = !_chatOpen;
+                if (_chatOpen) {
+                  _readChatCount = game.chatMessages.length;
+                }
               });
             },
           ),
@@ -622,13 +623,13 @@ class _SKGameScreenState extends State<SKGameScreen> {
           _buildTopActionButton(
             icon: Icons.chat_bubble_outline_rounded,
             active: _chatOpen,
-            badgeCount: game.chatMessages.where((m) {
-              final sender = (m['sender'] ?? '').toString();
-              return sender.isNotEmpty && sender != game.playerName;
-            }).length,
+            badgeCount: _chatOpen ? 0 : (game.chatMessages.length - _readChatCount).clamp(0, 99),
             onTap: () {
               setState(() {
                 _chatOpen = !_chatOpen;
+                if (_chatOpen) {
+                  _readChatCount = game.chatMessages.length;
+                }
               });
             },
           ),
@@ -646,8 +647,9 @@ class _SKGameScreenState extends State<SKGameScreen> {
 
   Widget _buildSpectatorTopBar(SKGameStateData state, GameService game) {
     if (state.players.isEmpty) return const SizedBox.shrink();
+    final displayId = state.phase == 'bidding' ? state.roundStarter : state.currentPlayer;
     final currentPlayerName = state.players
-        .firstWhere((p) => p.id == state.currentPlayer, orElse: () => state.players.first)
+        .firstWhere((p) => p.id == displayId, orElse: () => state.players.first)
         .name;
 
     return Container(
@@ -706,7 +708,9 @@ class _SKGameScreenState extends State<SKGameScreen> {
                 ),
                 const SizedBox(height: 2),
                 Text(
-                  state.phase == 'bidding' ? '승리예측 진행 중' : '$currentPlayerName 차례',
+                  state.phase == 'bidding'
+                      ? '승리예측 진행 중 · 선: $currentPlayerName'
+                      : '$currentPlayerName 차례',
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   style: TextStyle(
@@ -727,13 +731,13 @@ class _SKGameScreenState extends State<SKGameScreen> {
           _buildTopActionButton(
             icon: Icons.chat_bubble_outline_rounded,
             active: _chatOpen,
-            badgeCount: game.chatMessages.where((m) {
-              final sender = (m['sender'] ?? '').toString();
-              return sender.isNotEmpty && sender != game.playerName;
-            }).length,
+            badgeCount: _chatOpen ? 0 : (game.chatMessages.length - _readChatCount).clamp(0, 99),
             onTap: () {
               setState(() {
                 _chatOpen = !_chatOpen;
+                if (_chatOpen) {
+                  _readChatCount = game.chatMessages.length;
+                }
               });
             },
           ),
@@ -750,14 +754,14 @@ class _SKGameScreenState extends State<SKGameScreen> {
   }
 
   Widget _buildSpectatorScoreboard(SKGameStateData state, GameService game) {
-    final n = state.players.length;
-    final horizontalPad = n <= 3 ? (MediaQuery.of(context).size.width - n * 110) / 2 : 6.0;
     return Container(
-      padding: EdgeInsets.symmetric(horizontal: horizontalPad.clamp(6.0, double.infinity), vertical: 6),
-      margin: const EdgeInsets.only(bottom: 36),
+      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 6),
+      margin: const EdgeInsets.only(bottom: 96),
       child: Row(
         children: state.players.map((p) {
-          final isCurrentTurn = p.id == state.currentPlayer;
+          final isCurrentTurn = state.phase == 'bidding'
+              ? p.id == state.roundStarter
+              : p.id == state.currentPlayer;
           final isPending = game.pendingCardViewRequests.contains(p.id);
           final isApproved = game.approvedCardViews.contains(p.id) && p.canViewCards;
           final isViewing = _viewingPlayerId == p.id && isApproved;
@@ -783,7 +787,9 @@ class _SKGameScreenState extends State<SKGameScreen> {
                       });
                     }
                   },
-                  child: Stack(
+                  child: SizedBox(
+                    width: double.infinity,
+                    child: Stack(
                     clipBehavior: Clip.none,
                     children: [
                       AnimatedContainer(
@@ -807,9 +813,22 @@ class _SKGameScreenState extends State<SKGameScreen> {
                           opacity: p.connected ? 1.0 : 0.45,
                           child: Column(
                             children: [
+                              // Timeout area (always reserved)
+                              SizedBox(
+                                height: 16,
+                                child: p.timeoutCount > 0
+                                    ? Text(
+                                        '⏱ ${p.timeoutCount}/3',
+                                        style: const TextStyle(
+                                          color: Color(0xFFE65100),
+                                          fontSize: 10,
+                                          fontWeight: FontWeight.w800,
+                                        ),
+                                      )
+                                    : null,
+                              ),
                               Row(
                                 mainAxisAlignment: MainAxisAlignment.center,
-                                mainAxisSize: MainAxisSize.min,
                                 children: [
                                   if (isCurrentTurn)
                                     Container(
@@ -844,59 +863,46 @@ class _SKGameScreenState extends State<SKGameScreen> {
                                   fontWeight: FontWeight.bold,
                                 ),
                               ),
-                              if (p.timeoutCount > 0)
-                                Container(
-                                  margin: const EdgeInsets.only(top: 3),
-                                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
-                                  decoration: BoxDecoration(
-                                    color: const Color(0xFFFFF3E0),
-                                    borderRadius: BorderRadius.circular(8),
-                                    border: Border.all(color: const Color(0xFFFFB74D)),
-                                  ),
-                                  child: Text(
-                                    '⏱ ${p.timeoutCount}/3',
-                                    style: const TextStyle(
-                                      color: Color(0xFFE65100),
-                                      fontSize: 10,
-                                      fontWeight: FontWeight.w800,
-                                    ),
-                                  ),
-                                ),
-                              if (p.hasBid && p.bid != null)
-                                Container(
-                                  margin: const EdgeInsets.only(top: 2),
-                                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
-                                  decoration: BoxDecoration(
-                                    color: p.tricks == p.bid
-                                        ? const Color(0xFFE8F5E9)
-                                        : p.tricks > p.bid!
-                                            ? const Color(0xFFFFF3E0)
-                                            : const Color(0xFFF5F5F5),
-                                    borderRadius: BorderRadius.circular(8),
-                                  ),
-                                  child: Text(
-                                    '${p.tricks}/${p.bid}',
-                                    style: TextStyle(
-                                      color: p.tricks == p.bid
-                                          ? const Color(0xFF4CAF50)
-                                          : p.tricks > p.bid!
-                                              ? const Color(0xFFE65100)
-                                              : const Color(0xFF8A7A72),
-                                      fontSize: 11,
-                                      fontWeight: FontWeight.bold,
-                                    ),
-                                  ),
-                                )
-                              else if (p.hasBid && p.bid == null)
-                                Container(
-                                  margin: const EdgeInsets.only(top: 2),
-                                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
-                                  decoration: BoxDecoration(
-                                    color: const Color(0xFFF0EBF8),
-                                    borderRadius: BorderRadius.circular(8),
-                                  ),
-                                  child: const Icon(Icons.check, size: 12, color: Color(0xFF7A6A95)),
-                                ),
+                              // Bid area (always reserved)
+                              SizedBox(
+                                height: 18,
+                                child: p.hasBid && p.bid != null
+                                    ? Container(
+                                        margin: const EdgeInsets.only(top: 2),
+                                        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
+                                        decoration: BoxDecoration(
+                                          color: p.tricks == p.bid
+                                              ? const Color(0xFFE8F5E9)
+                                              : p.tricks > p.bid!
+                                                  ? const Color(0xFFFFF3E0)
+                                                  : const Color(0xFFF5F5F5),
+                                          borderRadius: BorderRadius.circular(8),
+                                        ),
+                                        child: Text(
+                                          '${p.tricks}/${p.bid}',
+                                          style: TextStyle(
+                                            color: p.tricks == p.bid
+                                                ? const Color(0xFF4CAF50)
+                                                : p.tricks > p.bid!
+                                                    ? const Color(0xFFE65100)
+                                                    : const Color(0xFF8A7A72),
+                                            fontSize: 11,
+                                            fontWeight: FontWeight.bold,
+                                          ),
+                                        ),
+                                      )
+                                    : p.hasBid && p.bid == null
+                                        ? Container(
+                                            margin: const EdgeInsets.only(top: 2),
+                                            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
+                                            decoration: BoxDecoration(
+                                              color: const Color(0xFFF0EBF8),
+                                              borderRadius: BorderRadius.circular(8),
+                                            ),
+                                            child: const Icon(Icons.check, size: 12, color: Color(0xFF7A6A95)),
+                                          )
+                                        : null,
+                              ),
                             ],
                           ),
                         ),
@@ -947,7 +953,7 @@ class _SKGameScreenState extends State<SKGameScreen> {
                         Positioned(
                           left: 0,
                           right: 0,
-                          bottom: -30,
+                          bottom: -90,
                           child: Center(
                             child: _buildPlayedCardBadge(
                               trickPlay,
@@ -956,6 +962,7 @@ class _SKGameScreenState extends State<SKGameScreen> {
                           ),
                         ),
                     ],
+                  ),
                   ),
                 ),
               );
@@ -1094,13 +1101,16 @@ class _SKGameScreenState extends State<SKGameScreen> {
   Widget _buildCenterTimerBadge(SKGameStateData state) {
     if (_remainingSeconds <= 0 || state.players.isEmpty) return const SizedBox.shrink();
 
+    final timerId = state.phase == 'bidding' ? state.roundStarter : state.currentPlayer;
     final currentPlayerName = state.players
-        .firstWhere((p) => p.id == state.currentPlayer, orElse: () => state.players.first)
+        .firstWhere((p) => p.id == timerId, orElse: () => state.players.first)
         .name;
     final displayName = currentPlayerName.length > 8
         ? '${currentPlayerName.substring(0, 8)}…'
         : currentPlayerName;
-    final turnLabel = state.isMyTurn ? '내 턴' : '$displayName 대기';
+    final turnLabel = state.phase == 'bidding'
+        ? '선: $displayName'
+        : state.isMyTurn ? '내 턴' : '$displayName 대기';
 
     return ConstrainedBox(
       constraints: const BoxConstraints(maxWidth: 220),
@@ -1266,14 +1276,14 @@ class _SKGameScreenState extends State<SKGameScreen> {
 
   // ── Scoreboard ──
   Widget _buildScoreboard(SKGameStateData state, GameService game) {
-    final n = state.players.length;
-    final horizontalPad = n <= 3 ? (MediaQuery.of(context).size.width - n * 110) / 2 : 6.0;
     return Container(
-      padding: EdgeInsets.symmetric(horizontal: horizontalPad.clamp(6.0, double.infinity), vertical: 6),
-      margin: const EdgeInsets.only(bottom: 36),
+      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 6),
+      margin: const EdgeInsets.only(bottom: 96),
       child: Row(
         children: state.players.map((p) {
-          final isCurrentTurn = p.id == state.currentPlayer;
+          final isCurrentTurn = state.phase == 'bidding'
+              ? p.id == state.roundStarter
+              : p.id == state.currentPlayer;
           final isSelf = p.position == 'self';
           final trickPlay = state.currentTrick
               .cast<SKTrickPlay?>()
@@ -1283,7 +1293,9 @@ class _SKGameScreenState extends State<SKGameScreen> {
           return Expanded(
             child: GestureDetector(
                   onTap: isSelf ? null : () => _showPlayerProfileDialog(p.name, game),
-                  child: Stack(
+                  child: SizedBox(
+                    width: double.infinity,
+                    child: Stack(
                     clipBehavior: Clip.none,
                     children: [
                       AnimatedContainer(
@@ -1305,10 +1317,24 @@ class _SKGameScreenState extends State<SKGameScreen> {
                               : null,
                         ),
                         child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.center,
                           children: [
+                            // Timeout area (always reserved)
+                            SizedBox(
+                              height: 16,
+                              child: p.timeoutCount > 0
+                                  ? Text(
+                                      '⏱ ${p.timeoutCount}/3',
+                                      style: const TextStyle(
+                                        color: Color(0xFFE65100),
+                                        fontSize: 10,
+                                        fontWeight: FontWeight.w800,
+                                      ),
+                                    )
+                                  : null,
+                            ),
                             Row(
                               mainAxisAlignment: MainAxisAlignment.center,
-                              mainAxisSize: MainAxisSize.min,
                               children: [
                                 if (isCurrentTurn)
                                   Container(
@@ -1343,59 +1369,46 @@ class _SKGameScreenState extends State<SKGameScreen> {
                                 fontWeight: FontWeight.bold,
                               ),
                             ),
-                            if (p.timeoutCount > 0)
-                              Container(
-                                margin: const EdgeInsets.only(top: 3),
-                                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
-                                decoration: BoxDecoration(
-                                  color: const Color(0xFFFFF3E0),
-                                  borderRadius: BorderRadius.circular(8),
-                                  border: Border.all(color: const Color(0xFFFFB74D)),
-                                ),
-                                child: Text(
-                                  '⏱ ${p.timeoutCount}/3',
-                                  style: const TextStyle(
-                                    color: Color(0xFFE65100),
-                                    fontSize: 10,
-                                    fontWeight: FontWeight.w800,
-                                  ),
-                                ),
-                              ),
-                            if (p.hasBid && p.bid != null)
-                              Container(
-                                margin: const EdgeInsets.only(top: 2),
-                                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
-                                decoration: BoxDecoration(
-                                  color: p.tricks == p.bid
-                                      ? const Color(0xFFE8F5E9)
-                                      : p.tricks > p.bid!
-                                          ? const Color(0xFFFFF3E0)
-                                          : const Color(0xFFF5F5F5),
-                                  borderRadius: BorderRadius.circular(8),
-                                ),
-                                child: Text(
-                                  '${p.tricks}/${p.bid}',
-                                  style: TextStyle(
-                                    color: p.tricks == p.bid
-                                        ? const Color(0xFF4CAF50)
-                                        : p.tricks > p.bid!
-                                            ? const Color(0xFFE65100)
-                                            : const Color(0xFF8A7A72),
-                                    fontSize: 11,
-                                    fontWeight: FontWeight.bold,
-                                  ),
-                                ),
-                              )
-                            else if (p.hasBid && p.bid == null)
-                              Container(
-                                margin: const EdgeInsets.only(top: 2),
-                                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
-                                decoration: BoxDecoration(
-                                  color: const Color(0xFFF0EBF8),
-                                  borderRadius: BorderRadius.circular(8),
-                                ),
-                                child: const Icon(Icons.check, size: 12, color: Color(0xFF7A6A95)),
-                              ),
+                            // Bid area (always reserved)
+                            SizedBox(
+                              height: 18,
+                              child: p.hasBid && p.bid != null
+                                  ? Container(
+                                      margin: const EdgeInsets.only(top: 2),
+                                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
+                                      decoration: BoxDecoration(
+                                        color: p.tricks == p.bid
+                                            ? const Color(0xFFE8F5E9)
+                                            : p.tricks > p.bid!
+                                                ? const Color(0xFFFFF3E0)
+                                                : const Color(0xFFF5F5F5),
+                                        borderRadius: BorderRadius.circular(8),
+                                      ),
+                                      child: Text(
+                                        '${p.tricks}/${p.bid}',
+                                        style: TextStyle(
+                                          color: p.tricks == p.bid
+                                              ? const Color(0xFF4CAF50)
+                                              : p.tricks > p.bid!
+                                                  ? const Color(0xFFE65100)
+                                                  : const Color(0xFF8A7A72),
+                                          fontSize: 11,
+                                          fontWeight: FontWeight.bold,
+                                        ),
+                                      ),
+                                    )
+                                  : p.hasBid && p.bid == null
+                                      ? Container(
+                                          margin: const EdgeInsets.only(top: 2),
+                                          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
+                                          decoration: BoxDecoration(
+                                            color: const Color(0xFFF0EBF8),
+                                            borderRadius: BorderRadius.circular(8),
+                                          ),
+                                          child: const Icon(Icons.check, size: 12, color: Color(0xFF7A6A95)),
+                                        )
+                                      : null,
+                            ),
                           ],
                         ),
                       ),
@@ -1403,7 +1416,7 @@ class _SKGameScreenState extends State<SKGameScreen> {
                         Positioned(
                           left: 0,
                           right: 0,
-                          bottom: -30,
+                          bottom: -90,
                           child: Center(
                             child: _buildPlayedCardBadge(
                               trickPlay,
@@ -1412,6 +1425,7 @@ class _SKGameScreenState extends State<SKGameScreen> {
                           ),
                         ),
                     ],
+                  ),
                   ),
                 ),
               );
@@ -1424,33 +1438,12 @@ class _SKGameScreenState extends State<SKGameScreen> {
     SKTrickPlay play, {
     required bool highlighted,
   }) {
-    return Column(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        _buildCard(play.cardId, size: 58, highlighted: highlighted),
-        if (play.tigressChoice != null)
-          Container(
-            margin: const EdgeInsets.only(top: 4),
-            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-            decoration: BoxDecoration(
-              color: play.tigressChoice == 'pirate'
-                  ? const Color(0xFFFFE8EC)
-                  : const Color(0xFFF5F5F5),
-              borderRadius: BorderRadius.circular(6),
-            ),
-            child: Text(
-              play.tigressChoice == 'pirate' ? '해적' : '도주',
-              style: TextStyle(
-                color: play.tigressChoice == 'pirate'
-                    ? const Color(0xFFD24B4B)
-                    : const Color(0xFF8A7A72),
-                fontSize: 10,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-          ),
-      ],
-    );
+    final displayCardId = play.tigressChoice == 'pirate'
+        ? 'sk_pirate'
+        : play.tigressChoice == 'escape'
+            ? 'sk_escape'
+            : play.cardId;
+    return _buildCard(displayCardId, size: 72, highlighted: highlighted);
   }
 
   Widget _buildSKErrorBanner(String message) {
@@ -1634,6 +1627,7 @@ class _SKGameScreenState extends State<SKGameScreen> {
   Widget _buildChatPanel(GameService game) {
     if (game.chatMessages.length != _lastChatMessageCount) {
       _lastChatMessageCount = game.chatMessages.length;
+      _readChatCount = game.chatMessages.length;
       _scrollChatToBottom();
     }
 
@@ -2541,67 +2535,94 @@ class _SKGameScreenState extends State<SKGameScreen> {
   void _showTigressDialog(GameService game, String cardId) {
     showDialog(
       context: context,
-      builder: (ctx) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+      barrierColor: Colors.black54,
+      builder: (ctx) => Dialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
         backgroundColor: const Color(0xFFF8F4F1),
-        titlePadding: const EdgeInsets.fromLTRB(20, 18, 20, 0),
-        contentPadding: const EdgeInsets.fromLTRB(20, 14, 20, 12),
-        title: Container(
-          padding: const EdgeInsets.all(14),
-          decoration: BoxDecoration(
-            color: Colors.white.withValues(alpha: 0.92),
-            borderRadius: BorderRadius.circular(18),
-            border: Border.all(color: const Color(0xFFE8DDD8)),
-          ),
-          child: const Row(
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 20),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
             children: [
-              Icon(Icons.style, color: Color(0xFF6B3FA0)),
-              SizedBox(width: 10),
-              Text(
+              const Text(
                 'Tigress',
                 style: TextStyle(
-                  fontSize: 17,
+                  fontSize: 18,
                   fontWeight: FontWeight.w800,
                   color: Color(0xFF3E312A),
                 ),
               ),
+              const SizedBox(height: 16),
+              Row(
+                children: [
+                  Expanded(
+                    child: GestureDetector(
+                      onTap: () {
+                        Navigator.pop(ctx);
+                        game.playCard(cardId, tigressChoice: 'escape');
+                        setState(() => _selectedCard = null);
+                      },
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(vertical: 12),
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(16),
+                          border: Border.all(color: const Color(0xFFD8CCC5), width: 1.5),
+                        ),
+                        child: Column(
+                          children: [
+                            _buildCard('sk_escape', size: 80, highlighted: false),
+                            const SizedBox(height: 8),
+                            const Text(
+                              '백기',
+                              style: TextStyle(
+                                fontSize: 14,
+                                fontWeight: FontWeight.w700,
+                                color: Color(0xFF6A5A52),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: GestureDetector(
+                      onTap: () {
+                        Navigator.pop(ctx);
+                        game.playCard(cardId, tigressChoice: 'pirate');
+                        setState(() => _selectedCard = null);
+                      },
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(vertical: 12),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFFFF0F0),
+                          borderRadius: BorderRadius.circular(16),
+                          border: Border.all(color: const Color(0xFFD24B4B), width: 1.5),
+                        ),
+                        child: Column(
+                          children: [
+                            _buildCard('sk_pirate', size: 80, highlighted: false),
+                            const SizedBox(height: 8),
+                            const Text(
+                              '해적',
+                              style: TextStyle(
+                                fontSize: 14,
+                                fontWeight: FontWeight.w700,
+                                color: Color(0xFFD24B4B),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
             ],
           ),
         ),
-        content: const Text(
-          '해적으로 플레이할까요, 도주로 플레이할까요?',
-          style: TextStyle(fontSize: 14, color: Color(0xFF6A5A52)),
-        ),
-        actions: [
-          OutlinedButton.icon(
-            onPressed: () {
-              Navigator.pop(ctx);
-              game.playCard(cardId, tigressChoice: 'escape');
-              setState(() => _selectedCard = null);
-            },
-            style: OutlinedButton.styleFrom(
-              side: const BorderSide(color: Color(0xFFD8CCC5)),
-              foregroundColor: const Color(0xFF6A5A52),
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-            ),
-            icon: const Icon(Icons.remove_circle_outline, size: 18),
-            label: const Text('도주 (Escape)'),
-          ),
-          ElevatedButton.icon(
-            onPressed: () {
-              Navigator.pop(ctx);
-              game.playCard(cardId, tigressChoice: 'pirate');
-              setState(() => _selectedCard = null);
-            },
-            style: ElevatedButton.styleFrom(
-              backgroundColor: const Color(0xFFD24B4B),
-              foregroundColor: Colors.white,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-            ),
-            icon: const Icon(Icons.local_fire_department, size: 18),
-            label: const Text('해적 (Pirate)'),
-          ),
-        ],
       ),
     );
   }
@@ -3396,6 +3417,9 @@ class _SKGameScreenState extends State<SKGameScreen> {
   _CardInfo _parseCardId(String cardId) {
     if (cardId == 'sk_skull_king') return _CardInfo(type: 'skull_king');
     if (cardId == 'sk_tigress') return _CardInfo(type: 'tigress');
+    if (cardId == 'sk_escape') return _CardInfo(type: 'escape');
+    if (cardId == 'sk_pirate') return _CardInfo(type: 'pirate');
+    if (cardId == 'sk_mermaid') return _CardInfo(type: 'mermaid');
     if (cardId.startsWith('sk_escape_')) {
       return _CardInfo(type: 'escape', number: cardId.split('_').last);
     }

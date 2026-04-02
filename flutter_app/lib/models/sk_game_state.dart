@@ -86,6 +86,7 @@ class SKGameStateData {
   final int lastTrickBonus;
   final List<Map<String, dynamic>> lastTrickBonusDetail;
   final String? trickStarter;
+  final String? roundStarter;
   final int? turnDeadline;
 
   SKGameStateData({
@@ -106,6 +107,7 @@ class SKGameStateData {
     this.lastTrickBonus = 0,
     this.lastTrickBonusDetail = const [],
     this.trickStarter,
+    this.roundStarter,
     this.turnDeadline,
   });
 
@@ -170,6 +172,7 @@ class SKGameStateData {
       lastTrickBonus: json['lastTrickBonus'] ?? 0,
       lastTrickBonusDetail: bonusDetail,
       trickStarter: json['trickStarter'],
+      roundStarter: json['roundStarter'],
       turnDeadline: json['turnDeadline'] as int?,
     );
   }

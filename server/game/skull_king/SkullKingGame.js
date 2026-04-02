@@ -375,6 +375,7 @@ class SkullKingGame {
       lastTrickBonus: this.lastTrickBonus,
       lastTrickBonusDetail: this.lastTrickBonusDetail,
       trickStarter: this.trickStarter,
+      roundStarter: this._getRoundStarter(),
     };
   }
 
@@ -414,7 +415,13 @@ class SkullKingGame {
       lastTrickBonus: this.lastTrickBonus,
       lastTrickBonusDetail: this.lastTrickBonusDetail,
       trickStarter: this.trickStarter,
+      roundStarter: this._getRoundStarter(),
     };
+  }
+
+  _getRoundStarter() {
+    const dealerIndex = (this.initialDealerIndex + this.round - 1) % this.playerCount;
+    return this.playerIds[(dealerIndex + 1) % this.playerCount];
   }
 
   getAutoTimeoutAction(playerId) {

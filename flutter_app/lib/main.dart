@@ -230,6 +230,7 @@ class _EntryScreen extends StatefulWidget {
 }
 
 class _EntryScreenState extends State<_EntryScreen> {
+  bool _showSplash = true;
   bool _checking = true;
   bool _eulaAccepted = false;
   bool _agreed = false;
@@ -241,6 +242,13 @@ class _EntryScreenState extends State<_EntryScreen> {
   @override
   void initState() {
     super.initState();
+    SystemChrome.setEnabledSystemUIMode(SystemUiMode.immersiveSticky);
+    Future.delayed(const Duration(milliseconds: 1800), () {
+      if (mounted) {
+        SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
+        setState(() => _showSplash = false);
+      }
+    });
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _requestATT();
     });
@@ -349,6 +357,18 @@ class _EntryScreenState extends State<_EntryScreen> {
 
   @override
   Widget build(BuildContext context) {
+    if (_showSplash) {
+      return Scaffold(
+        backgroundColor: Colors.black,
+        body: SizedBox.expand(
+          child: Image.asset(
+            'assets/splash.png',
+            fit: BoxFit.cover,
+          ),
+        ),
+      );
+    }
+
     if (_checking) {
       return const Scaffold(
         body: Center(child: CircularProgressIndicator()),

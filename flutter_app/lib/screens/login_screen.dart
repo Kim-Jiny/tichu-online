@@ -364,7 +364,7 @@ class _LoginScreenState extends State<LoginScreen> {
       crossAxisAlignment:
           compact ? CrossAxisAlignment.start : CrossAxisAlignment.center,
       children: [
-        Text('🐥', style: TextStyle(fontSize: compact ? 52 : 60)),
+        Image.asset('assets/dragonIcon.png', width: compact ? 72 : 80, height: compact ? 72 : 80),
         const SizedBox(height: 8),
         Text(
           'TICHU',

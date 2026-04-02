@@ -973,6 +973,13 @@ async function updateUserStats(nickname, won, isRanked = false) {
   }
 }
 
+// ELO rating calculation
+function calcElo(myRating, opponentRating, won, K = 40) {
+  const expected = 1 / (1 + Math.pow(10, (opponentRating - myRating) / 400));
+  const actual = won ? 1 : 0;
+  return Math.round(K * (actual - expected));
+}
+
 async function saveMatchResultWithStats(matchData, players) {
   const client = await pool.connect();
   try {
@@ -995,19 +1002,49 @@ async function saveMatchResultWithStats(matchData, players) {
       ]
     );
 
-    for (const player of players) {
-      if (!player.nickname || player.isBot) continue;
-      const ratingChange = player.isRanked ? (player.won ? 25 : -20) : 0;
-      const baseGoldChange = player.won ? 10 : 3;
-      const isDraw = matchData.winnerTeam === 'draw';
+    // Fetch current ratings for ELO calculation
+    const humanPlayers = players.filter(p => p.nickname && !p.isBot);
+    const ratingMap = {};
+    if (humanPlayers.length > 0) {
+      const nicknames = humanPlayers.map(p => p.nickname);
+      const ratingRes = await client.query(
+        `SELECT nickname, rating FROM tc_users WHERE nickname = ANY($1)`,
+        [nicknames]
+      );
+      for (const row of ratingRes.rows) {
+        ratingMap[row.nickname] = row.rating || 1000;
+      }
+    }
+
+    // Calculate team average ratings
+    const teamARatings = players.filter(p => p.team === 'A' && !p.isBot).map(p => ratingMap[p.nickname] || 1000);
+    const teamBRatings = players.filter(p => p.team === 'B' && !p.isBot).map(p => ratingMap[p.nickname] || 1000);
+    const teamAAvg = teamARatings.length > 0 ? teamARatings.reduce((a, b) => a + b, 0) / teamARatings.length : 1000;
+    const teamBAvg = teamBRatings.length > 0 ? teamBRatings.reduce((a, b) => a + b, 0) / teamBRatings.length : 1000;
+
+    for (const player of humanPlayers) {
       const isDeserter =
         ['leave', 'timeout'].includes(matchData.endReason || 'normal') &&
         matchData.deserterNickname === player.nickname;
-      const goldChange = (isDraw || isDeserter)
-          ? 0
-          : (player.isRanked ? baseGoldChange * 2 : baseGoldChange);
-      const expChange = player.isRanked ? (player.won ? 15 : 8) : (player.won ? 10 : 5);
-      if (player.won) {
+      const isDraw = player.isDraw === true;
+
+      if (isDraw) {
+        const expChange = 3;
+        await client.query(
+          `UPDATE tc_users
+           SET total_games = total_games + 1,
+               exp_total = exp_total + $2,
+               level = GREATEST(1, ((exp_total + $2) / 100) + 1)
+           WHERE nickname = $1`,
+          [player.nickname, expChange]
+        );
+      } else if (player.won) {
+        const myTeamAvg = player.team === 'A' ? teamAAvg : teamBAvg;
+        const oppTeamAvg = player.team === 'A' ? teamBAvg : teamAAvg;
+        const ratingChange = player.isRanked ? calcElo(myTeamAvg, oppTeamAvg, true) : 0;
+        const baseGoldChange = 10;
+        const goldChange = player.isRanked ? baseGoldChange * 2 : baseGoldChange;
+        const expChange = player.isRanked ? 15 : 10;
         await client.query(
           `UPDATE tc_users
            SET total_games = total_games + 1,
@@ -1030,6 +1067,11 @@ async function saveMatchResultWithStats(matchData, players) {
           ]
         );
       } else {
+        const myTeamAvg = player.team === 'A' ? teamAAvg : teamBAvg;
+        const oppTeamAvg = player.team === 'A' ? teamBAvg : teamAAvg;
+        const ratingChange = player.isRanked ? calcElo(myTeamAvg, oppTeamAvg, false) : 0;
+        const goldChange = isDeserter ? 0 : (player.isRanked ? 6 : 3);
+        const expChange = player.isRanked ? 8 : 5;
         await client.query(
           `UPDATE tc_users
            SET total_games = total_games + 1,
@@ -3668,30 +3710,65 @@ async function saveSKMatchResultWithStats(data) {
       );
     }
 
-    for (const p of data.players) {
-      if (!p.nickname || p.isBot) continue;
+    // Fetch current SK ratings for ELO calculation
+    const humanPlayers = data.players.filter(p => p.nickname && !p.isBot);
+    const skRatingMap = {};
+    if (humanPlayers.length > 0) {
+      const nicknames = humanPlayers.map(p => p.nickname);
+      const ratingRes = await client.query(
+        `SELECT nickname, sk_rating FROM tc_users WHERE nickname = ANY($1)`,
+        [nicknames]
+      );
+      for (const row of ratingRes.rows) {
+        skRatingMap[row.nickname] = row.sk_rating || 1000;
+      }
+    }
+
+    // Average rating of all players (including bots at 1000)
+    const allRatings = data.players.map(p => p.isBot ? 1000 : (skRatingMap[p.nickname] || 1000));
+    const totalAvg = allRatings.reduce((a, b) => a + b, 0) / allRatings.length;
+
+    for (const p of humanPlayers) {
       const won = p.isWinner === true;
-      const ratingChange = won ? 25 : -20;
-      const baseGoldReward = won ? 10 : 3;
+      const isDraw = p.isDraw === true;
       const isDeserter =
         ['leave', 'timeout'].includes(data.endReason || 'normal') &&
         data.deserterNickname === p.nickname;
-      const goldReward = isDeserter
-          ? 0
-          : (data.isRanked ? baseGoldReward * 2 : baseGoldReward);
-      const expGain = won ? 15 : 5;
-      await client.query(
-        `UPDATE tc_users SET
-          sk_total_games = sk_total_games + 1,
-          sk_wins = sk_wins + CASE WHEN $2 THEN 1 ELSE 0 END,
-          sk_losses = sk_losses + CASE WHEN $2 THEN 0 ELSE 1 END,
-          sk_rating = GREATEST(0, sk_rating + $3),
-          gold = gold + $4,
-          exp_total = exp_total + $5,
-          level = GREATEST(1, ((exp_total + $5) / 100) + 1)
-         WHERE nickname = $1`,
-        [p.nickname, won, data.isRanked ? ratingChange : 0, goldReward, expGain]
-      );
+
+      if (isDraw) {
+        const expGain = 3;
+        await client.query(
+          `UPDATE tc_users SET
+            sk_total_games = sk_total_games + 1,
+            exp_total = exp_total + $2,
+            level = GREATEST(1, ((exp_total + $2) / 100) + 1)
+           WHERE nickname = $1`,
+          [p.nickname, expGain]
+        );
+      } else {
+        const myRating = skRatingMap[p.nickname] || 1000;
+        // Compare against average of all other players
+        const othersRatings = data.players.filter(o => o.nickname !== p.nickname).map(o => o.isBot ? 1000 : (skRatingMap[o.nickname] || 1000));
+        const oppAvg = othersRatings.length > 0 ? othersRatings.reduce((a, b) => a + b, 0) / othersRatings.length : 1000;
+        const ratingChange = calcElo(myRating, oppAvg, won);
+        const baseGoldReward = won ? 10 : 3;
+        const goldReward = isDeserter
+            ? 0
+            : (data.isRanked ? baseGoldReward * 2 : baseGoldReward);
+        const expGain = won ? 15 : 5;
+        await client.query(
+          `UPDATE tc_users SET
+            sk_total_games = sk_total_games + 1,
+            sk_wins = sk_wins + CASE WHEN $2 THEN 1 ELSE 0 END,
+            sk_losses = sk_losses + CASE WHEN $2 THEN 0 ELSE 1 END,
+            sk_rating = GREATEST(0, sk_rating + $3),
+            gold = gold + $4,
+            exp_total = exp_total + $5,
+            level = GREATEST(1, ((exp_total + $5) / 100) + 1)
+           WHERE nickname = $1`,
+          [p.nickname, won, data.isRanked ? ratingChange : 0, goldReward, expGain]
+        );
+      }
     }
 
     await client.query('COMMIT');

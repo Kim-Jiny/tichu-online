@@ -209,9 +209,11 @@ class SessionService extends ChangeNotifier {
           return true;
         }
         _restoreError = result.error ?? '저장된 계정 로그인에 실패했습니다.';
+        _setRestoreFailure(_restoreError!);
+        return false;
       }
 
-      _setRestoreFailure(_restoreError ?? '자동 로그인에 실패했습니다.');
+      // No saved credentials at all — not an error, just nothing to restore
       return false;
     } catch (_) {
       _setRestoreFailure(_restoreError ?? '자동 로그인 복구 중 오류가 발생했습니다.');

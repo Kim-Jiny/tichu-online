@@ -2121,6 +2121,7 @@ function handleGameAction(ws, data) {
   if (!phaseActions.includes(data.type)) {
     clearTurnTimer(ws.roomId);
   }
+  const prevPhase = room.game.state;
 
   if (data.type === 'next_round') {
     if (room.hostId !== ws.playerId) {
@@ -2146,6 +2147,11 @@ function handleGameAction(ws, data) {
   if (!result.success) {
     sendTo(ws, { type: 'error', message: result.message });
     return;
+  }
+
+  // Clear phase timer if phase changed (e.g. bidding → playing)
+  if (room.game.state !== prevPhase && turnTimerPhases[ws.roomId]) {
+    clearTurnTimer(ws.roomId);
   }
 
   // Broadcast updated game state
@@ -2206,12 +2212,14 @@ async function saveGameResult(room) {
         ...teamAPlayers.map((pid) => ({
           nickname: playerNames[pid] || '',
           won: winnerTeam === 'A',
+          team: 'A',
           isRanked: room.isRanked,
           isBot: pid.startsWith('bot_'),
         })),
         ...teamBPlayers.map((pid) => ({
           nickname: playerNames[pid] || '',
           won: winnerTeam === 'B',
+          team: 'B',
           isRanked: room.isRanked,
           isBot: pid.startsWith('bot_'),
         })),
@@ -2229,6 +2237,7 @@ async function saveSKGameResult(room) {
     const rankings = game.getRankings();
     const isRanked = room.isRanked;
 
+    const winCutoff = Math.floor(game.playerCount / 2);
     await saveSKMatchResultWithStats({
       playerCount: game.playerCount,
       isRanked,
@@ -2238,7 +2247,7 @@ async function saveSKGameResult(room) {
         nickname: r.nickname,
         score: r.score,
         rank: r.rank,
-        isWinner: r.rank === 1,
+        isWinner: r.rank <= winCutoff,
         isBot: r.playerId.startsWith('bot_'),
       })),
     });
@@ -2404,7 +2413,7 @@ function scheduleBotActions(roomId) {
               if (r2.game && r2.game.state === 'game_end') { saveGameResult(r2); scheduleAutoReturnToRoom(roomId); }
               sendGameStateToAll(roomId);
             }
-          }, 500);
+          }, 200);
           return;
         }
         console.log(`[BOT] ${botId} action: ${action.type}`);
@@ -2501,6 +2510,11 @@ function startTurnTimer(roomId) {
   if (gameState !== 'playing') {
     clearTurnTimer(roomId);
     return;
+  }
+
+  // If a phase timer was running (e.g. bidding), clear it before setting turn timer
+  if (turnTimerPhases[roomId]) {
+    clearTurnTimer(roomId);
   }
 
   // If a turn timer is already running, keep the existing deadline
@@ -2749,6 +2763,7 @@ async function handleDesertion(roomId, playerId, reason = 'leave') {
           score: remaining[i].score,
           rank: currentRank,
           isWinner: false,
+          isDraw: true,
           isBot: remaining[i].playerId.startsWith('bot_'),
         });
       }
@@ -2758,6 +2773,7 @@ async function handleDesertion(roomId, playerId, reason = 'leave') {
         score: deserterScore,
         rank: game.playerCount,
         isWinner: false,
+        isDraw: false,
         isBot: playerId.startsWith('bot_'),
       });
 
@@ -2776,6 +2792,25 @@ async function handleDesertion(roomId, playerId, reason = 'leave') {
       const teamAPlayers = teams.teamA;
       const teamBPlayers = teams.teamB;
 
+      const statsPlayers = [
+        ...teamAPlayers.map(pid => ({
+          nickname: playerNames[pid] || '',
+          won: false,
+          isDraw: pid !== playerId,
+          team: 'A',
+          isRanked: room.isRanked,
+          isBot: pid.startsWith('bot_'),
+        })),
+        ...teamBPlayers.map(pid => ({
+          nickname: playerNames[pid] || '',
+          won: false,
+          isDraw: pid !== playerId,
+          team: 'B',
+          isRanked: room.isRanked,
+          isBot: pid.startsWith('bot_'),
+        })),
+      ];
+
       await saveMatchResultWithStats(
         {
           winnerTeam: 'draw',
@@ -2789,14 +2824,7 @@ async function handleDesertion(roomId, playerId, reason = 'leave') {
           endReason: reason,
           deserterNickname: deserterNick || null,
         },
-        [
-          {
-            nickname: deserterNick || '',
-            won: false,
-            isRanked: room.isRanked,
-            isBot: playerId.startsWith('bot_'),
-          },
-        ],
+        statsPlayers,
       );
     }
   } catch (err) {

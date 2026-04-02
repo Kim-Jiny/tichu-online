@@ -8,7 +8,7 @@ const isProduction = process.env.NODE_ENV === 'production';
 const DEFAULT_LOCAL_URL = 'postgresql://jiny@localhost:5432/minigame';
 const pool = new Pool({
   connectionString: process.env.DATABASE_URL || DEFAULT_LOCAL_URL,
-  ssl: isProduction ? { rejectUnauthorized: true } : false,
+  ssl: isProduction ? { rejectUnauthorized: false } : false,
 });
 
 // Initialize database tables (tc_ prefix for tichu)
@@ -138,6 +138,8 @@ async function initDatabase() {
     await client.query(`ALTER TABLE tc_users ADD COLUMN IF NOT EXISTS is_admin BOOLEAN DEFAULT false`);
     await client.query(`ALTER TABLE tc_users ADD COLUMN IF NOT EXISTS push_admin_inquiry BOOLEAN DEFAULT true`);
     await client.query(`ALTER TABLE tc_users ADD COLUMN IF NOT EXISTS push_admin_report BOOLEAN DEFAULT true`);
+    await client.query(`ALTER TABLE tc_users ADD COLUMN IF NOT EXISTS is_deleted BOOLEAN DEFAULT false`);
+    await client.query(`ALTER TABLE tc_users ADD COLUMN IF NOT EXISTS deleted_at TIMESTAMP`);
     await client.query(`ALTER TABLE tc_users ADD COLUMN IF NOT EXISTS device_platform VARCHAR(20)`);
     await client.query(`ALTER TABLE tc_users ADD COLUMN IF NOT EXISTS device_model VARCHAR(100)`);
     await client.query(`ALTER TABLE tc_users ADD COLUMN IF NOT EXISTS os_version VARCHAR(50)`);
@@ -150,8 +152,11 @@ async function initDatabase() {
     await client.query(`ALTER TABLE tc_users ADD COLUMN IF NOT EXISTS email VARCHAR(255)`);
     await client.query(`ALTER TABLE tc_users ALTER COLUMN password_hash DROP NOT NULL`);
     await client.query(`
-      CREATE UNIQUE INDEX IF NOT EXISTS idx_social_provider_uid
-      ON tc_users (auth_provider, provider_uid) WHERE auth_provider != 'local'
+      DROP INDEX IF EXISTS idx_social_provider_uid
+    `);
+    await client.query(`
+      CREATE UNIQUE INDEX idx_social_provider_uid
+      ON tc_users (auth_provider, provider_uid) WHERE auth_provider IS NOT NULL AND auth_provider NOT LIKE 'del_%' AND is_deleted IS NOT TRUE
     `);
 
     // Shop items table
@@ -555,7 +560,7 @@ async function loginUser(username, password) {
   const client = await pool.connect();
   try {
     const result = await client.query(
-      'SELECT id, password_hash, nickname, is_admin, push_enabled, push_friend_invite, push_admin_inquiry, push_admin_report FROM tc_users WHERE username = $1',
+      'SELECT id, password_hash, nickname, is_admin, is_deleted, push_enabled, push_friend_invite, push_admin_inquiry, push_admin_report FROM tc_users WHERE username = $1',
       [username.toLowerCase()]
     );
 
@@ -564,6 +569,11 @@ async function loginUser(username, password) {
     }
 
     const user = result.rows[0];
+
+    if (user.is_deleted) {
+      return { success: false, message: '탈퇴한 계정입니다' };
+    }
+
     const passwordMatch = await bcrypt.compare(password, user.password_hash);
 
     if (!passwordMatch) {
@@ -628,7 +638,19 @@ async function deleteUser(nickname) {
   try {
     await client.query('BEGIN');
 
-    // Delete related data in dependent tables
+    const check = await client.query('SELECT id FROM tc_users WHERE nickname = $1', [nickname]);
+    if (check.rowCount === 0) {
+      await client.query('ROLLBACK');
+      return { success: false, message: '사용자를 찾을 수 없습니다' };
+    }
+
+    // Soft delete: rename nickname, mark as deleted
+    // Keep match history, reports, inquiries for data integrity
+    const ts = Date.now().toString(36); // short timestamp (base36)
+    const suffix = `_del_${ts}`;
+    const deletedNickname = (nickname + suffix).slice(0, 50);
+
+    // Clean up personal relationship data only
     await client.query('DELETE FROM tc_blocked_users WHERE blocker_nickname = $1 OR blocked_nickname = $1', [nickname]);
     await client.query('DELETE FROM tc_friends WHERE user_nickname = $1 OR friend_nickname = $1', [nickname]);
     await client.query('DELETE FROM tc_dm_messages WHERE sender_nickname = $1 OR receiver_nickname = $1', [nickname]);
@@ -636,20 +658,32 @@ async function deleteUser(nickname) {
     await client.query('DELETE FROM tc_user_items WHERE nickname = $1', [nickname]);
     await client.query('DELETE FROM tc_ad_rewards WHERE nickname = $1', [nickname]);
     await client.query('DELETE FROM tc_season_rewards WHERE nickname = $1', [nickname]);
-    await client.query('DELETE FROM tc_season_rankings WHERE nickname = $1', [nickname]);
-    await client.query('DELETE FROM tc_gold_history WHERE nickname = $1', [nickname]);
-    await client.query('DELETE FROM tc_sk_match_players WHERE nickname = $1', [nickname]);
-    await client.query('DELETE FROM tc_reports WHERE reporter_nickname = $1 OR reported_nickname = $1', [nickname]);
-    await client.query('DELETE FROM tc_inquiries WHERE user_nickname = $1', [nickname]);
 
-    const result = await client.query(
-      'DELETE FROM tc_users WHERE nickname = $1',
-      [nickname]
+    // Rename nickname in user record and mark deleted
+    await client.query(
+      `UPDATE tc_users SET nickname = $2, is_deleted = true, deleted_at = NOW(),
+       username = SUBSTRING('del_' || username || $3 FROM 1 FOR 50),
+       password_hash = '',
+       auth_provider = CASE WHEN auth_provider IS NOT NULL THEN 'del_' || auth_provider ELSE NULL END,
+       provider_uid = CASE WHEN provider_uid IS NOT NULL THEN SUBSTRING('del_' || provider_uid || $3 FROM 1 FOR 100) ELSE NULL END,
+       fcm_token = NULL
+       WHERE nickname = $1`,
+      [nickname, deletedNickname, suffix]
     );
-    if (result.rowCount === 0) {
-      await client.query('ROLLBACK');
-      return { success: false, message: '사용자를 찾을 수 없습니다' };
-    }
+
+    // Update nickname references in records that must be preserved
+    await client.query('UPDATE tc_match_history SET player_a1 = $2 WHERE player_a1 = $1', [nickname, deletedNickname]);
+    await client.query('UPDATE tc_match_history SET player_a2 = $2 WHERE player_a2 = $1', [nickname, deletedNickname]);
+    await client.query('UPDATE tc_match_history SET player_b1 = $2 WHERE player_b1 = $1', [nickname, deletedNickname]);
+    await client.query('UPDATE tc_match_history SET player_b2 = $2 WHERE player_b2 = $1', [nickname, deletedNickname]);
+    await client.query('UPDATE tc_match_history SET deserter_nickname = $2 WHERE deserter_nickname = $1', [nickname, deletedNickname]);
+    await client.query('UPDATE tc_sk_match_players SET nickname = $2 WHERE nickname = $1', [nickname, deletedNickname]);
+    await client.query('UPDATE tc_sk_match_history SET deserter_nickname = $2 WHERE deserter_nickname = $1', [nickname, deletedNickname]);
+    await client.query('UPDATE tc_season_rankings SET nickname = $2 WHERE nickname = $1', [nickname, deletedNickname]);
+    await client.query('UPDATE tc_gold_history SET nickname = $2 WHERE nickname = $1', [nickname, deletedNickname]);
+    await client.query('UPDATE tc_reports SET reporter_nickname = $2 WHERE reporter_nickname = $1', [nickname, deletedNickname]);
+    await client.query('UPDATE tc_reports SET reported_nickname = $2 WHERE reported_nickname = $1', [nickname, deletedNickname]);
+    await client.query('UPDATE tc_inquiries SET user_nickname = $2 WHERE user_nickname = $1', [nickname, deletedNickname]);
 
     await client.query('COMMIT');
     return { success: true, message: '계정이 삭제되었습니다' };
@@ -2448,6 +2482,9 @@ async function getUsers(search = '', page = 1, limit = 20, options = {}) {
     const countParams = [];
     let paramIdx = 1;
 
+    if (!options.includeDeleted) {
+      conditions.push(`(is_deleted IS NOT TRUE)`);
+    }
     if (search) {
       conditions.push(`(nickname ILIKE $${paramIdx} OR username ILIKE $${paramIdx})`);
       countParams.push(`%${search}%`);
@@ -2949,6 +2986,7 @@ async function getRankings(limit = 50) {
           ELSE 0
         END AS win_rate
       FROM tc_users
+      WHERE is_deleted IS NOT TRUE
       ORDER BY rating DESC, wins DESC, total_games DESC, nickname ASC
       LIMIT $1
       `,
@@ -3087,13 +3125,16 @@ async function loginSocial(provider, providerUid) {
   const client = await pool.connect();
   try {
     const result = await client.query(
-      'SELECT id, nickname, is_admin, push_enabled, push_friend_invite, push_admin_inquiry, push_admin_report FROM tc_users WHERE auth_provider = $1 AND provider_uid = $2',
+      'SELECT id, nickname, is_admin, is_deleted, push_enabled, push_friend_invite, push_admin_inquiry, push_admin_report FROM tc_users WHERE auth_provider = $1 AND provider_uid = $2',
       [provider, providerUid]
     );
     if (result.rows.length === 0) {
       return { found: false };
     }
     const user = result.rows[0];
+    if (user.is_deleted) {
+      return { found: false, error: '탈퇴한 계정입니다' };
+    }
     await client.query(
       'UPDATE tc_users SET last_login = CURRENT_TIMESTAMP WHERE id = $1',
       [user.id]
@@ -3437,7 +3478,7 @@ async function searchUsers(query, requesterNickname) {
   try {
     const result = await client.query(
       `SELECT nickname FROM tc_users
-       WHERE nickname ILIKE $1 AND nickname != $2
+       WHERE nickname ILIKE $1 AND nickname != $2 AND is_deleted IS NOT TRUE
        ORDER BY nickname
        LIMIT 20`,
       [`%${query}%`, requesterNickname]
@@ -3794,7 +3835,7 @@ async function getSKRankings(limit = 50) {
               e.banner_key
        FROM tc_users u
        LEFT JOIN tc_user_equips e ON e.nickname = u.nickname
-       WHERE u.sk_total_games > 0
+       WHERE u.sk_total_games > 0 AND u.is_deleted IS NOT TRUE
        ORDER BY u.sk_rating DESC, u.sk_wins DESC
        LIMIT $1`,
       [limit]

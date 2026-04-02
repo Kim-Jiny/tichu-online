@@ -782,14 +782,20 @@ function leadTrick(state, cards, normalCards, combos) {
 
   // Prefer multi-card combos (play lowest value first)
   if (multiCardPlans.length > 0) {
-    // Sort multi-card plans: larger combos first (clears hand faster), then by lowest value
+    // Sort by lowest value first — preserve high cards, clear cheap combos
     multiCardPlans.sort((a, b) => {
-      if (b.length !== a.length) return b.length - a.length;
       return getHighestValue(a) - getHighestValue(b);
     });
-    // Play the LOWEST value combo among the largest length to preserve strong cards
-    const lowestMulti = multiCardPlans[0];
-    return { type: 'play_cards', cards: lowestMulti };
+    // Skip high-value combos (A=14, K=13): save them for later
+    // Only play A/K combos when we have few cards left
+    const safePlans = multiCardPlans.filter(p => {
+      const hv = getHighestValue(p);
+      if (hv >= 14) return cards.length <= 5; // A combo: only if few cards left
+      if (hv >= 13) return cards.length <= 7; // K combo: only if somewhat few cards
+      return true;
+    });
+    const bestPlans = safePlans.length > 0 ? safePlans : multiCardPlans;
+    return { type: 'play_cards', cards: bestPlans[0] };
   }
 
   // 6. Single card - play lowest
@@ -984,14 +990,16 @@ function handleFollowSingle(state, cards, normalCards, combos, lastValue, trickP
 function handleFollowPair(state, cards, normalCards, combos, lastValue, trickPts, minOppCards) {
   const phoenixCombos = findCombosWithPhoenix(cards);
 
-  // Regular pairs
+  // Regular pairs (sorted lowest first by findCombos)
   for (const pair of combos.pairs) {
-    if (getCardValue(pair[0]) > lastValue) {
+    const pairVal = getCardValue(pair[0]);
+    if (pairVal > lastValue) {
       // Can finish?
       if (pair.length === cards.length) return { type: 'play_cards', cards: pair };
-      // Aggressive if opponent low
-      if (minOppCards <= 3) return { type: 'play_cards', cards: pair };
-      // Normal: play lowest winning pair
+      // Save A pair unless trick is valuable or urgent
+      if (pairVal >= 14 && trickPts < 20 && cards.length > 5 && minOppCards > 3) {
+        continue;
+      }
       return { type: 'play_cards', cards: pair };
     }
   }
@@ -1014,7 +1022,12 @@ function handleFollowTriple(state, cards, normalCards, combos, lastValue, trickP
   const phoenixCombos = findCombosWithPhoenix(cards);
 
   for (const triple of combos.triples) {
-    if (getCardValue(triple[0]) > lastValue) {
+    const tripleVal = getCardValue(triple[0]);
+    if (tripleVal > lastValue) {
+      // Save A triple (value=14) unless trick has 20+ points, few cards left, or opponent almost out
+      if (tripleVal >= 14 && trickPts < 20 && cards.length > 5 && minOppCards > 3) {
+        continue;
+      }
       return { type: 'play_cards', cards: triple };
     }
   }

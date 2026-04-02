@@ -13,6 +13,7 @@ class RankingScreen extends StatefulWidget {
 
 class _RankingScreenState extends State<RankingScreen> {
   int? _selectedSeasonId;
+  String _rankingGameType = 'tichu';
   BannerAd? _bannerAd;
   bool _bannerAdLoaded = false;
 
@@ -58,7 +59,10 @@ class _RankingScreenState extends State<RankingScreen> {
                 children: [
                   _buildTopBar(context),
                   const SizedBox(height: 6),
-                  _buildSeasonSelector(game),
+                  _buildGameTypeToggle(game),
+                  const SizedBox(height: 6),
+                  if (_rankingGameType == 'tichu')
+                    _buildSeasonSelector(game),
                   const SizedBox(height: 6),
                   Expanded(
                     child: _buildBody(game),
@@ -72,6 +76,37 @@ class _RankingScreenState extends State<RankingScreen> {
                 ],
               );
             },
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildGameTypeToggle(GameService game) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16),
+      child: SizedBox(
+        width: double.infinity,
+        child: SegmentedButton<String>(
+          segments: const [
+            ButtonSegment(value: 'tichu', label: Text('티츄')),
+            ButtonSegment(value: 'skull_king', label: Text('스컬킹')),
+          ],
+          selected: {_rankingGameType},
+          onSelectionChanged: (v) {
+            setState(() {
+              _rankingGameType = v.first;
+              _selectedSeasonId = null;
+            });
+            if (_rankingGameType == 'skull_king') {
+              game.requestSKRankings();
+            } else {
+              game.requestRankings();
+            }
+          },
+          style: SegmentedButton.styleFrom(
+            backgroundColor: Colors.white.withValues(alpha: 0.7),
+            selectedBackgroundColor: Colors.white,
           ),
         ),
       ),
@@ -104,7 +139,14 @@ class _RankingScreenState extends State<RankingScreen> {
           ),
           const Spacer(),
           IconButton(
-            onPressed: () => context.read<GameService>().requestRankings(),
+            onPressed: () {
+              final game = context.read<GameService>();
+              if (_rankingGameType == 'skull_king') {
+                game.requestSKRankings();
+              } else {
+                game.requestRankings();
+              }
+            },
             icon: const Icon(Icons.refresh),
             color: const Color(0xFF8A7A72),
           ),
@@ -280,7 +322,7 @@ class _RankingScreenState extends State<RankingScreen> {
           Column(
             crossAxisAlignment: CrossAxisAlignment.end,
             children: [
-              const Text('시즌점수', style: TextStyle(fontSize: 11, color: Color(0xFF9A8E8A))),
+              Text(_rankingGameType == 'skull_king' ? '레이팅' : '시즌점수', style: const TextStyle(fontSize: 11, color: Color(0xFF9A8E8A))),
               Text(
                 '$rating',
                 style: const TextStyle(
@@ -387,9 +429,9 @@ class _RankingScreenState extends State<RankingScreen> {
             Column(
               crossAxisAlignment: CrossAxisAlignment.end,
               children: [
-                const Text(
-                  '시즌점수',
-                  style: TextStyle(fontSize: 11, color: Color(0xFF9A8E8A)),
+                Text(
+                  _rankingGameType == 'skull_king' ? '레이팅' : '시즌점수',
+                  style: const TextStyle(fontSize: 11, color: Color(0xFF9A8E8A)),
                 ),
                 Text(
                   '$rating',
@@ -511,7 +553,7 @@ class _ProfileBodyState extends State<_ProfileBody> {
         if (isLoading) {
           return const Center(child: CircularProgressIndicator());
         }
-        return Padding(
+        return SingleChildScrollView(
           padding: const EdgeInsets.fromLTRB(16, 0, 16, 20),
           child: _ProfileContent(data: profile),
         );
@@ -542,6 +584,11 @@ class _ProfileContent extends StatelessWidget {
     final seasonWins = profile['seasonWins'] ?? 0;
     final seasonLosses = profile['seasonLosses'] ?? 0;
     final seasonWinRate = profile['seasonWinRate'] ?? 0;
+    final skTotalGames = profile['skTotalGames'] ?? 0;
+    final skWins = profile['skWins'] ?? 0;
+    final skLosses = profile['skLosses'] ?? 0;
+    final skRating = profile['skRating'] ?? 1000;
+    final skWinRate = profile['skWinRate'] ?? 0;
     final level = profile['level'] ?? 1;
     final expTotal = profile['expTotal'] ?? 0;
     final gold = profile['gold'] ?? 0;
@@ -574,7 +621,7 @@ class _ProfileContent extends StatelessWidget {
         ),
         const SizedBox(height: 10),
         _ProfileSectionCard(
-          title: '전체 전적',
+          title: '티츄 전적',
           accent: const Color(0xFF5A4038),
           background: const Color(0xFFF5F5F5),
           icon: Icons.star,
@@ -583,6 +630,19 @@ class _ProfileContent extends StatelessWidget {
           chips: [
             _ProfileStatChip('전적', '$totalGames전 $wins승 $losses패'),
             _ProfileStatChip('승률', '$winRate%'),
+          ],
+        ),
+        const SizedBox(height: 10),
+        _ProfileSectionCard(
+          title: '스컬킹 전적',
+          accent: const Color(0xFF3F51B5),
+          background: const Color(0xFFF0F0FA),
+          icon: Icons.sailing,
+          iconColor: const Color(0xFF5C6BC0),
+          mainText: '$skRating',
+          chips: [
+            _ProfileStatChip('전적', '$skTotalGames전 $skWins승 $skLosses패'),
+            _ProfileStatChip('승률', '$skWinRate%'),
           ],
         ),
         const SizedBox(height: 12),
@@ -872,71 +932,105 @@ class _ProfileRecentMatches extends StatelessWidget {
           else
             Column(
               children: recentMatches.take(3).map<Widget>((match) {
-                final won = match['won'] == true;
-                final teamAScore = match['teamAScore'] ?? 0;
-                final teamBScore = match['teamBScore'] ?? 0;
-                final teamA = _formatTeam(match['playerA1'], match['playerA2']);
-                final teamB = _formatTeam(match['playerB1'], match['playerB2']);
-                final date = _formatShortDate(match['createdAt']);
-                return Padding(
-                  padding: const EdgeInsets.only(bottom: 6),
-                  child: Row(
-                    children: [
-                      Container(
-                        width: 24,
-                        height: 24,
-                        alignment: Alignment.center,
-                        decoration: BoxDecoration(
-                          color: won ? const Color(0xFF81C784) : const Color(0xFFE57373),
-                          shape: BoxShape.circle,
-                        ),
-                        child: Text(
-                          won ? 'W' : 'L',
-                          style: const TextStyle(
-                            color: Colors.white,
-                            fontSize: 11,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                      ),
-                      const SizedBox(width: 8),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              date,
-                              style: const TextStyle(
-                                fontSize: 11,
-                                color: Color(0xFF8A8A8A),
-                              ),
-                            ),
-                            const SizedBox(height: 2),
-                            Text(
-                              '$teamA : $teamB',
-                              style: const TextStyle(
-                                fontSize: 12,
-                                fontWeight: FontWeight.bold,
-                                color: Color(0xFF5A4038),
-                              ),
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                          ],
-                        ),
-                      ),
-                      Text(
-                        '$teamAScore : $teamBScore',
-                        style: const TextStyle(
-                          fontSize: 12,
-                          fontWeight: FontWeight.bold,
-                          color: Color(0xFF5A4038),
-                        ),
-                      ),
-                    ],
-                  ),
-                );
+                return _buildMatchRow(match);
               }).toList(),
             ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildMatchRow(dynamic match) {
+    final isSK = match['gameType'] == 'skull_king';
+    final isDraw = match['isDraw'] == true;
+    final isDesertionLoss = match['isDesertionLoss'] == true;
+    final won = match['won'] == true;
+    final date = _formatShortDate(match['createdAt']);
+
+    String badge;
+    Color badgeColor;
+    if (isDesertionLoss) {
+      badge = '탈';
+      badgeColor = const Color(0xFFFF8A65);
+    } else if (isDraw) {
+      badge = '무';
+      badgeColor = const Color(0xFFBDBDBD);
+    } else if (won) {
+      badge = 'W';
+      badgeColor = const Color(0xFF81C784);
+    } else {
+      badge = 'L';
+      badgeColor = const Color(0xFFE57373);
+    }
+
+    String detail;
+    String score;
+    if (isSK) {
+      final players = (match['players'] as List<dynamic>?)?.map((p) => p['nickname']?.toString() ?? '').join(', ') ?? '';
+      detail = players;
+      final rank = match['rank'] ?? '-';
+      final myScore = match['score'] ?? 0;
+      score = '$rank등 $myScore점';
+    } else {
+      final teamA = _formatTeam(match['playerA1'], match['playerA2']);
+      final teamB = _formatTeam(match['playerB1'], match['playerB2']);
+      detail = '$teamA : $teamB';
+      final teamAScore = match['teamAScore'] ?? 0;
+      final teamBScore = match['teamBScore'] ?? 0;
+      score = '$teamAScore : $teamBScore';
+    }
+
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 6),
+      child: Row(
+        children: [
+          Container(
+            width: 24,
+            height: 24,
+            alignment: Alignment.center,
+            decoration: BoxDecoration(
+              color: badgeColor,
+              shape: BoxShape.circle,
+            ),
+            child: Text(
+              badge,
+              style: const TextStyle(
+                color: Colors.white,
+                fontSize: 11,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+          ),
+          if (isSK) ...[
+            const SizedBox(width: 4),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
+              decoration: BoxDecoration(
+                color: const Color(0xFF5C6BC0),
+                borderRadius: BorderRadius.circular(4),
+              ),
+              child: const Text('SK', style: TextStyle(fontSize: 8, color: Colors.white, fontWeight: FontWeight.bold)),
+            ),
+          ],
+          const SizedBox(width: 8),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(date, style: const TextStyle(fontSize: 11, color: Color(0xFF8A8A8A))),
+                const SizedBox(height: 2),
+                Text(
+                  detail,
+                  style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Color(0xFF5A4038)),
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ],
+            ),
+          ),
+          Text(
+            score,
+            style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Color(0xFF5A4038)),
+          ),
         ],
       ),
     );
@@ -966,66 +1060,7 @@ void _showRecentMatchesDialog(BuildContext context, List<dynamic> recentMatches)
           separatorBuilder: (_, _) => const Divider(height: 16),
           itemBuilder: (_, index) {
             final match = recentMatches[index];
-            final won = match['won'] == true;
-            final teamAScore = match['teamAScore'] ?? 0;
-            final teamBScore = match['teamBScore'] ?? 0;
-            final teamA = _formatTeam(match['playerA1'], match['playerA2']);
-            final teamB = _formatTeam(match['playerB1'], match['playerB2']);
-            final date = _formatShortDateGlobal(match['createdAt']);
-            return Row(
-              children: [
-                Container(
-                  width: 24,
-                  height: 24,
-                  alignment: Alignment.center,
-                  decoration: BoxDecoration(
-                    color: won ? const Color(0xFF81C784) : const Color(0xFFE57373),
-                    shape: BoxShape.circle,
-                  ),
-                  child: Text(
-                    won ? 'W' : 'L',
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontSize: 11,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                ),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        date,
-                        style: const TextStyle(
-                          fontSize: 11,
-                          color: Color(0xFF8A8A8A),
-                        ),
-                      ),
-                      const SizedBox(height: 2),
-                      Text(
-                        '$teamA : $teamB',
-                        style: const TextStyle(
-                          fontSize: 12,
-                          fontWeight: FontWeight.bold,
-                          color: Color(0xFF5A4038),
-                        ),
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                    ],
-                  ),
-                ),
-                Text(
-                  '$teamAScore : $teamBScore',
-                  style: const TextStyle(
-                    fontSize: 12,
-                    fontWeight: FontWeight.bold,
-                    color: Color(0xFF5A4038),
-                  ),
-                ),
-              ],
-            );
+            return _buildMatchRowDialog(match);
           },
         ),
       ),
@@ -1036,6 +1071,79 @@ void _showRecentMatchesDialog(BuildContext context, List<dynamic> recentMatches)
         ),
       ],
     ),
+  );
+}
+
+Widget _buildMatchRowDialog(dynamic match) {
+  final isSK = match['gameType'] == 'skull_king';
+  final isDraw = match['isDraw'] == true;
+  final isDesertionLoss = match['isDesertionLoss'] == true;
+  final won = match['won'] == true;
+  final date = _formatShortDateGlobal(match['createdAt']);
+
+  String badge;
+  Color badgeColor;
+  if (isDesertionLoss) {
+    badge = '탈';
+    badgeColor = const Color(0xFFFF8A65);
+  } else if (isDraw) {
+    badge = '무';
+    badgeColor = const Color(0xFFBDBDBD);
+  } else if (won) {
+    badge = 'W';
+    badgeColor = const Color(0xFF81C784);
+  } else {
+    badge = 'L';
+    badgeColor = const Color(0xFFE57373);
+  }
+
+  String detail;
+  String score;
+  if (isSK) {
+    final players = (match['players'] as List<dynamic>?)?.map((p) => p['nickname']?.toString() ?? '').join(', ') ?? '';
+    detail = players;
+    final rank = match['rank'] ?? '-';
+    final myScore = match['score'] ?? 0;
+    score = '$rank등 $myScore점';
+  } else {
+    final teamA = _formatTeam(match['playerA1'], match['playerA2']);
+    final teamB = _formatTeam(match['playerB1'], match['playerB2']);
+    detail = '$teamA : $teamB';
+    final teamAScore = match['teamAScore'] ?? 0;
+    final teamBScore = match['teamBScore'] ?? 0;
+    score = '$teamAScore : $teamBScore';
+  }
+
+  return Row(
+    children: [
+      Container(
+        width: 24,
+        height: 24,
+        alignment: Alignment.center,
+        decoration: BoxDecoration(color: badgeColor, shape: BoxShape.circle),
+        child: Text(badge, style: const TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.bold)),
+      ),
+      if (isSK) ...[
+        const SizedBox(width: 4),
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
+          decoration: BoxDecoration(color: const Color(0xFF5C6BC0), borderRadius: BorderRadius.circular(4)),
+          child: const Text('SK', style: TextStyle(fontSize: 8, color: Colors.white, fontWeight: FontWeight.bold)),
+        ),
+      ],
+      const SizedBox(width: 8),
+      Expanded(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(date, style: const TextStyle(fontSize: 11, color: Color(0xFF8A8A8A))),
+            const SizedBox(height: 2),
+            Text(detail, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Color(0xFF5A4038)), overflow: TextOverflow.ellipsis),
+          ],
+        ),
+      ),
+      Text(score, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Color(0xFF5A4038))),
+    ],
   );
 }
 

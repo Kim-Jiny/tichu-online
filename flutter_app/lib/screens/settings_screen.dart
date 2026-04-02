@@ -7,6 +7,7 @@ import '../services/auth_service.dart';
 import '../services/session_service.dart';
 import '../services/ad_service.dart';
 import 'package:google_mobile_ads/google_mobile_ads.dart';
+import 'admin_center_screen.dart';
 
 class SettingsScreen extends StatefulWidget {
   const SettingsScreen({super.key});
@@ -711,8 +712,54 @@ class _SettingsScreenState extends State<SettingsScreen> {
                                   onChanged: (v) => game.setPushEnabled(v),
                                 ),
                               ),
+                              if (game.isAdminUser) ...[
+                                const Divider(height: 1, color: Color(0xFFEAE2DE)),
+                                _buildRow(
+                                  icon: Icons.support_agent,
+                                  iconColor: const Color(0xFFAB47BC),
+                                  title: '문의 알림',
+                                  subtitle: '새 문의가 들어오면 푸시를 받습니다',
+                                  trailing: Switch(
+                                    value: game.pushAdminInquiryEnabled,
+                                    onChanged: (v) => game.setAdminAlertPush(inquiry: v),
+                                  ),
+                                ),
+                                const Divider(height: 1, color: Color(0xFFEAE2DE)),
+                                _buildRow(
+                                  icon: Icons.report_gmailerrorred,
+                                  iconColor: const Color(0xFFEF5350),
+                                  title: '신고 알림',
+                                  subtitle: '새 신고가 들어오면 푸시를 받습니다',
+                                  trailing: Switch(
+                                    value: game.pushAdminReportEnabled,
+                                    onChanged: (v) => game.setAdminAlertPush(report: v),
+                                  ),
+                                ),
+                              ],
                             ],
                           ),
+                          if (game.isAdminUser) ...[
+                            const SizedBox(height: 12),
+                            _buildSection(
+                              '관리자',
+                              [
+                                _buildRow(
+                                  icon: Icons.admin_panel_settings_outlined,
+                                  iconColor: const Color(0xFF7E57C2),
+                                  title: '관리자 센터',
+                                  subtitle: '문의, 신고, 유저, 활성 유저를 확인합니다',
+                                  onTap: () {
+                                    Navigator.push(
+                                      context,
+                                      MaterialPageRoute(
+                                        builder: (_) => const AdminCenterScreen(),
+                                      ),
+                                    );
+                                  },
+                                ),
+                              ],
+                            ),
+                          ],
                           const SizedBox(height: 12),
                           _buildSection(
                             '계정',

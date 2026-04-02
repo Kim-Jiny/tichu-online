@@ -12,6 +12,8 @@ class Room {
   final bool gameInProgress;
   final int turnTimeLimit;
   final int targetScore;
+  final String gameType;
+  final int maxPlayers;
 
   Room({
     required this.id,
@@ -25,7 +27,11 @@ class Room {
     this.gameInProgress = false,
     this.turnTimeLimit = 30,
     this.targetScore = 1000,
+    this.gameType = 'tichu',
+    this.maxPlayers = 4,
   });
+
+  bool get isSkullKing => gameType == 'skull_king';
 
   factory Room.fromJson(Map<String, dynamic> json) {
     List<Player> playerList = [];
@@ -47,6 +53,8 @@ class Room {
       gameInProgress: json['gameInProgress'] ?? false,
       turnTimeLimit: json['turnTimeLimit'] ?? 30,
       targetScore: json['targetScore'] ?? 1000,
+      gameType: json['gameType'] ?? 'tichu',
+      maxPlayers: json['maxPlayers'] ?? 4,
     );
   }
 }

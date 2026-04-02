@@ -6,12 +6,13 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../models/player.dart';
 import '../models/room.dart';
 import '../models/game_state.dart';
+import '../models/sk_game_state.dart';
 import 'network_service.dart';
 import 'profile_store.dart';
 import 'restore_sync_tracker.dart';
 import 'sfx_service.dart';
 
-enum AppDestination { lobby, waitingRoom, game, spectator }
+enum AppDestination { lobby, waitingRoom, game, spectator, skGame }
 
 class GameService extends ChangeNotifier {
   final NetworkService _network;
@@ -20,10 +21,12 @@ class GameService extends ChangeNotifier {
   Timer? _dogClearTimer;
   Timer? _inquiryBannerTimer;
   Timer? _pushToggleTimer;
+  int _pushPrefsLoadVersion = 0;
   final Map<String, DateTime> _roomInviteCooldowns = {};
   DateTime? _dogDelayUntil;
   Map<String, dynamic>? _pendingGameState;
   GameStateData? _prevGameState;
+  SKGameStateData? _prevSKGameState;
   final SfxService _sfx = SfxService();
   final RestoreSyncTracker _restoreSync = RestoreSyncTracker();
 
@@ -34,12 +37,13 @@ class GameService extends ChangeNotifier {
   // Room info
   String currentRoomId = '';
   String currentRoomName = '';
-  // Fixed 4-slot system: always 4 elements, null for empty slots
+  // Dynamic slot system: maxPlayers elements, null for empty slots
   List<Player?> roomPlayers = [null, null, null, null];
   bool isHost = false;
   bool isRankedRoom = false;
   int roomTurnTimeLimit = 30;
   int roomTargetScore = 1000;
+  int roomMaxPlayers = 4;
 
   // Room list
   List<Room> roomList = [];
@@ -64,6 +68,8 @@ class GameService extends ChangeNotifier {
 
   // Game state
   GameStateData? gameState;
+  SKGameStateData? skGameState;
+  String currentGameType = 'tichu';
 
   // Error message
   String? errorMessage;
@@ -102,15 +108,20 @@ class GameService extends ChangeNotifier {
   // Shop
   int gold = 0;
   int leaveCount = 0;
+  List<Map<String, dynamic>> goldHistory = [];
   List<Map<String, dynamic>> shopItems = [];
   List<Map<String, dynamic>> inventoryItems = [];
   bool shopLoading = false;
+  bool goldHistoryLoading = false;
   bool inventoryLoading = false;
+  String? goldHistoryError;
   String? shopError;
   String? inventoryError;
   String? lastPurchaseItemKey;
   bool? lastPurchaseSuccess;
   bool lastPurchaseExtended = false;
+  String? shopActionMessage;
+  bool? shopActionSuccess;
 
   // Equipped theme
   String? equippedTheme;
@@ -133,7 +144,31 @@ class GameService extends ChangeNotifier {
   // Push settings
   bool pushEnabled = true;
   bool pushFriendInviteEnabled = true;
+  bool isAdminUser = false;
+  bool pushAdminInquiryEnabled = true;
+  bool pushAdminReportEnabled = true;
   double sfxVolume = 0.7;
+
+  // Admin
+  Map<String, dynamic>? adminDashboard;
+  bool adminDashboardLoading = false;
+  List<Map<String, dynamic>> adminUsers = [];
+  bool adminUsersLoading = false;
+  String? adminUsersError;
+  Map<String, dynamic>? adminUserDetail;
+  bool adminUserDetailLoading = false;
+  String? adminUserDetailError;
+  List<Map<String, dynamic>> adminInquiries = [];
+  bool adminInquiriesLoading = false;
+  String? adminInquiriesError;
+  List<Map<String, dynamic>> adminReports = [];
+  bool adminReportsLoading = false;
+  String? adminReportsError;
+  List<Map<String, dynamic>> adminReportGroup = [];
+  bool adminReportGroupLoading = false;
+  String? adminReportGroupError;
+  String? adminActionMessage;
+  bool? adminActionSuccess;
 
   // Nickname change
   String? nicknameChangeResult;
@@ -211,18 +246,26 @@ class GameService extends ChangeNotifier {
   bool get hasRoom => currentRoomId.isNotEmpty;
   bool get hasSpectatorRoom => isSpectator && hasRoom;
   bool get isInWaitingRoom => hasRoom && !isSpectator && !hasActiveGame;
-  bool get hasActiveGame =>
-      gameState != null &&
-      gameState!.phase.isNotEmpty &&
-      gameState!.phase != 'waiting' &&
-      gameState!.phase != 'game_end';
+  bool get hasActiveGame {
+    if (skGameState != null && skGameState!.phase.isNotEmpty && skGameState!.phase != 'game_end') {
+      return true;
+    }
+    return gameState != null &&
+        gameState!.phase.isNotEmpty &&
+        gameState!.phase != 'waiting' &&
+        gameState!.phase != 'game_end';
+  }
   bool get hasSpectatorGameState => spectatorGameState != null;
   bool get hasPendingSocialNickname => needNickname;
   Map<String, dynamic>? get profileData => _profiles.current;
   Map<String, dynamic>? profileFor(String nickname) => _profiles.profileFor(nickname);
   AppDestination get currentDestination {
-    if (isSpectator && hasRoom) return AppDestination.spectator;
+    if (isSpectator && hasRoom) {
+      if (currentGameType == 'skull_king') return AppDestination.skGame;
+      return AppDestination.spectator;
+    }
     if (!hasRoom) return AppDestination.lobby;
+    if (skGameState != null) return AppDestination.skGame;
     if (gameState != null) return AppDestination.game;
     return AppDestination.waitingRoom;
   }
@@ -323,13 +366,14 @@ class GameService extends ChangeNotifier {
         equippedTitle = data['titleKey'] as String?;
         hasTopCardCounter = data['hasTopCardCounter'] == true;
         authProvider = data['authProvider'] as String? ?? 'local';
+        isAdminUser = data['isAdmin'] == true;
+        pushEnabled = data['pushEnabled'] != false;
+        pushFriendInviteEnabled = data['pushFriendInvite'] != false;
+        pushAdminInquiryEnabled = data['pushAdminInquiry'] != false;
+        pushAdminReportEnabled = data['pushAdminReport'] != false;
         loginError = null;
         _parseMaintenanceStatus(data['maintenanceStatus'] as Map<String, dynamic>?);
-        _network.send({
-          'type': 'update_push_setting',
-          'enabled': pushEnabled,
-          'friendInvite': pushFriendInviteEnabled,
-        });
+        _savePushPrefs();
         // Async FCM token update - don't block login
         _sendFcmTokenAsync();
         notifyListeners();
@@ -337,6 +381,13 @@ class GameService extends ChangeNotifier {
 
       case 'login_error':
         loginError = data['message'] ?? '로그인 실패';
+        notifyListeners();
+        break;
+
+      case 'admin_status_changed':
+        isAdminUser = data['isAdmin'] == true;
+        pushAdminInquiryEnabled = data['pushAdminInquiry'] != false;
+        pushAdminReportEnabled = data['pushAdminReport'] != false;
         notifyListeners();
         break;
 
@@ -393,6 +444,8 @@ class GameService extends ChangeNotifier {
         isSpectator = true;
         gameState = null;
         _prevGameState = null;
+        skGameState = null;
+        _prevSKGameState = null;
         spectatorGameState = null;
         pendingCardViewRequests = {};
         approvedCardViews = {};
@@ -404,6 +457,8 @@ class GameService extends ChangeNotifier {
       case 'switched_to_player':
         isSpectator = false;
         spectatorGameState = null;
+        skGameState = null;
+        _prevSKGameState = null;
         pendingCardViewRequests = {};
         approvedCardViews = {};
         _prevGameState = null;
@@ -422,7 +477,17 @@ class GameService extends ChangeNotifier {
         if (currentRoomId.isEmpty) break; // Already left
         final state = data['state'] as Map<String, dynamic>?;
         if (state != null) {
-          spectatorGameState = state;
+          final stateGameType = state['gameType'] as String? ?? currentGameType;
+          if (stateGameType == 'skull_king') {
+            currentGameType = 'skull_king';
+            skGameState = SKGameStateData.fromJson(state);
+            spectatorGameState = null;
+            gameState = null;
+            _prevGameState = null;
+          } else {
+            spectatorGameState = state;
+            skGameState = null;
+          }
           final spectatorList = state['spectators'] as List?;
           if (spectatorList != null) {
             spectators = spectatorList.map((s) => {
@@ -492,7 +557,7 @@ class GameService extends ChangeNotifier {
         final isDuplicateLogin = kickMessage.contains('다른 기기');
         currentRoomId = '';
         currentRoomName = '';
-        roomPlayers = [null, null, null, null];
+        roomPlayers = List.filled(4, null);
         isHost = false;
         isRankedRoom = false;
         roomTurnTimeLimit = 30;
@@ -500,6 +565,10 @@ class GameService extends ChangeNotifier {
         isSpectator = false; // C10: Clear isSpectator on kick
         gameState = null;
         _prevGameState = null;
+        skGameState = null;
+        _prevSKGameState = null;
+        currentGameType = 'tichu';
+        roomMaxPlayers = 4;
         chatMessages = [];
         if (isDuplicateLogin) {
           playerId = '';
@@ -520,11 +589,12 @@ class GameService extends ChangeNotifier {
       case 'room_closed':
         currentRoomId = '';
         currentRoomName = '';
-        roomPlayers = [null, null, null, null];
+        roomPlayers = List.filled(4, null);
         isHost = false;
         isRankedRoom = false;
         roomTurnTimeLimit = 30;
         roomTargetScore = 1000;
+        roomMaxPlayers = 4;
         isSpectator = false;
         spectatorGameState = null;
         pendingCardViewRequests = {};
@@ -534,6 +604,9 @@ class GameService extends ChangeNotifier {
         spectators = [];
         gameState = null;
         _prevGameState = null;
+        skGameState = null;
+        _prevSKGameState = null;
+        currentGameType = 'tichu';
         chatMessages = [];
         desertedPlayerName = null;
         desertedReason = null;
@@ -546,14 +619,18 @@ class GameService extends ChangeNotifier {
           if (currentRoomId.isNotEmpty) {
             currentRoomName = room['name'] ?? currentRoomName;
           }
+          // Reset SK state when returning from game to room
+          currentGameType = room['gameType'] ?? 'tichu';
           final playersList = room['players'] as List?;
-          if (playersList != null && playersList.length == 4) {
-            // Parse 4-slot array with nulls
+          if (playersList != null) {
+            // Parse dynamic slot array with nulls
             roomPlayers = playersList.map((p) {
               if (p == null) return null;
               return Player.fromJson(p as Map<String, dynamic>);
             }).toList();
           }
+          currentGameType = room['gameType'] ?? 'tichu';
+          roomMaxPlayers = room['maxPlayers'] ?? 4;
           final spectatorList = room['spectators'] as List?;
           if (spectatorList != null) {
             spectators = spectatorList.map((s) => {
@@ -568,9 +645,16 @@ class GameService extends ChangeNotifier {
           roomTurnTimeLimit = room['turnTimeLimit'] ?? 30;
           roomTargetScore = room['targetScore'] ?? 1000;
           if (room['gameInProgress'] != true) {
+            pendingCardViewRequests = {};
+            approvedCardViews = {};
+            incomingCardViewRequests = [];
+            cardViewers = [];
             gameState = null;
+            skGameState = null;
             spectatorGameState = null;
             _prevGameState = null;
+            _prevSKGameState = null;
+            myTimeoutCount = 0;
           }
         }
         notifyListeners();
@@ -580,35 +664,78 @@ class GameService extends ChangeNotifier {
         if (currentRoomId.isEmpty) break; // Already left
         final state = data['state'] as Map<String, dynamic>?;
         if (state != null) {
-          final nextState = GameStateData.fromJson(state);
-          _handleSfxTransitions(_prevGameState, nextState);
-          _prevGameState = nextState;
-          // Clear desertion state when a new round/game starts
-          final phase = state['phase'] as String? ?? '';
-          if (phase != 'game_end') {
-            desertedPlayerName = null;
-            desertedReason = null;
-          }
-          // Parse card viewers
-          final viewers = state['cardViewers'] as List?;
-          if (viewers != null) {
-            cardViewers = viewers.map((v) => {
-              'id': (v['id'] ?? '').toString(),
-              'nickname': (v['nickname'] ?? '').toString(),
-            }).toList();
+          final stateGameType = state['gameType'] as String? ?? 'tichu';
+
+          if (stateGameType == 'skull_king') {
+            // Skull King game state
+            currentGameType = 'skull_king';
+            final nextSK = SKGameStateData.fromJson(state);
+            _handleSKSfxTransitions(_prevSKGameState, nextSK);
+            _prevSKGameState = nextSK;
+            skGameState = nextSK;
+            gameState = null;
+            _prevGameState = null;
+            // Clear desertion state when SK phase is not game_end
+            if (nextSK.phase != 'game_end') {
+              desertedPlayerName = null;
+              desertedReason = null;
+            }
+            final selfPlayer = nextSK.players.where((p) => p.position == 'self');
+            myTimeoutCount = selfPlayer.isNotEmpty ? selfPlayer.first.timeoutCount : 0;
+            // Parse card viewers and spectators for SK too
+            final viewers = state['cardViewers'] as List?;
+            if (viewers != null) {
+              cardViewers = viewers.map((v) => {
+                'id': (v['id'] ?? '').toString(),
+                'nickname': (v['nickname'] ?? '').toString(),
+              }).toList();
+            } else {
+              cardViewers = [];
+            }
+            final skSpectatorList = state['spectators'] as List?;
+            if (skSpectatorList != null) {
+              spectators = skSpectatorList.map((s) => {
+                'id': (s['id'] ?? '').toString(),
+                'nickname': (s['nickname'] ?? '').toString(),
+              }).toList();
+            } else {
+              spectators = [];
+            }
           } else {
-            cardViewers = [];
+            // Tichu game state
+            currentGameType = 'tichu';
+            final nextState = GameStateData.fromJson(state);
+            _handleSfxTransitions(_prevGameState, nextState);
+            _prevGameState = nextState;
+            skGameState = null;
+
+            // Clear desertion state when a new round/game starts
+            final phase = state['phase'] as String? ?? '';
+            if (phase != 'game_end') {
+              desertedPlayerName = null;
+              desertedReason = null;
+            }
+            // Parse card viewers
+            final viewers = state['cardViewers'] as List?;
+            if (viewers != null) {
+              cardViewers = viewers.map((v) => {
+                'id': (v['id'] ?? '').toString(),
+                'nickname': (v['nickname'] ?? '').toString(),
+              }).toList();
+            } else {
+              cardViewers = [];
+            }
+            final spectatorList = state['spectators'] as List?;
+            if (spectatorList != null) {
+              spectators = spectatorList.map((s) => {
+                'id': (s['id'] ?? '').toString(),
+                'nickname': (s['nickname'] ?? '').toString(),
+              }).toList();
+            } else {
+              spectators = [];
+            }
+            _applyGameStateWithDogDelay(state);
           }
-          final spectatorList = state['spectators'] as List?;
-          if (spectatorList != null) {
-            spectators = spectatorList.map((s) => {
-              'id': (s['id'] ?? '').toString(),
-              'nickname': (s['nickname'] ?? '').toString(),
-            }).toList();
-          } else {
-            spectators = [];
-          }
-          _applyGameStateWithDogDelay(state);
         }
         notifyListeners();
         break;
@@ -965,6 +1092,116 @@ class GameService extends ChangeNotifier {
         }
         notifyListeners();
         break;
+      case 'gold_history_result':
+        goldHistoryLoading = false;
+        if (data['success'] == true) {
+          final list = data['history'] as List? ?? [];
+          goldHistory = list.map((e) => Map<String, dynamic>.from(e)).toList();
+          goldHistoryError = null;
+        } else {
+          goldHistoryError = data['message'] as String? ?? '골드 내역을 불러오지 못했습니다';
+        }
+        notifyListeners();
+        break;
+      case 'admin_dashboard_result':
+        adminDashboardLoading = false;
+        if (data['success'] == true) {
+          adminDashboard = Map<String, dynamic>.from(
+            data['dashboard'] as Map? ?? const {},
+          );
+        }
+        notifyListeners();
+        break;
+      case 'admin_users_result':
+        adminUsersLoading = false;
+        if (data['success'] == true) {
+          adminUsers = (data['rows'] as List? ?? [])
+              .map((e) => Map<String, dynamic>.from(e))
+              .toList();
+          adminUsersError = null;
+        } else {
+          adminUsersError = data['message'] as String? ?? '유저 목록을 불러오지 못했습니다';
+        }
+        notifyListeners();
+        break;
+      case 'admin_user_detail_result':
+        adminUserDetailLoading = false;
+        if (data['success'] == true) {
+          adminUserDetail = Map<String, dynamic>.from(
+            data['user'] as Map? ?? const {},
+          );
+          adminUserDetailError = null;
+        } else {
+          adminUserDetailError = data['message'] as String? ?? '유저 정보를 불러오지 못했습니다';
+        }
+        notifyListeners();
+        break;
+      case 'admin_inquiries_result':
+        adminInquiriesLoading = false;
+        if (data['success'] == true) {
+          adminInquiries = (data['rows'] as List? ?? [])
+              .map((e) => Map<String, dynamic>.from(e))
+              .toList();
+          adminInquiriesError = null;
+        } else {
+          adminInquiriesError = data['message'] as String? ?? '문의 목록을 불러오지 못했습니다';
+        }
+        notifyListeners();
+        break;
+      case 'admin_reports_result':
+        adminReportsLoading = false;
+        if (data['success'] == true) {
+          adminReports = (data['rows'] as List? ?? [])
+              .map((e) => Map<String, dynamic>.from(e))
+              .toList();
+          adminReportsError = null;
+        } else {
+          adminReportsError = data['message'] as String? ?? '신고 목록을 불러오지 못했습니다';
+        }
+        notifyListeners();
+        break;
+      case 'admin_report_group_result':
+        adminReportGroupLoading = false;
+        if (data['success'] == true) {
+          adminReportGroup = (data['rows'] as List? ?? [])
+              .map((e) => Map<String, dynamic>.from(e))
+              .toList();
+          adminReportGroupError = null;
+        } else {
+          adminReportGroupError = data['message'] as String? ?? '신고 상세를 불러오지 못했습니다';
+        }
+        notifyListeners();
+        break;
+      case 'admin_set_user_result':
+      case 'admin_adjust_gold_result':
+      case 'admin_inquiry_resolve_result':
+      case 'admin_report_status_result':
+        adminActionSuccess = data['success'] == true;
+        adminActionMessage = data['message'] as String? ??
+            (adminActionSuccess == true ? '처리되었습니다' : '처리에 실패했습니다');
+        if (type == 'admin_adjust_gold_result' &&
+            adminActionSuccess == true &&
+            adminUserDetail?['nickname'] == data['nickname']) {
+          adminUserDetail = {
+            ...?adminUserDetail,
+            'gold': data['newGold'] ?? adminUserDetail?['gold'],
+          };
+        }
+        notifyListeners();
+        break;
+      case 'admin_notice':
+        final kind = data['kind']?.toString();
+        if (kind == 'inquiry') {
+          requestAdminDashboard();
+          requestAdminInquiries();
+        } else if (kind == 'report') {
+          requestAdminDashboard();
+          requestAdminReports();
+        } else {
+          requestAdminDashboard();
+        }
+        notifyListeners();
+        break;
 
       case 'shop_items_result':
         shopLoading = false;
@@ -996,6 +1233,8 @@ class GameService extends ChangeNotifier {
         // Refresh wallet/inventory after actions
         requestWallet();
         requestInventory();
+        shopActionSuccess = data['success'] == true;
+        shopActionMessage = data['message'] as String?;
         if (type == 'purchase_result') {
           lastPurchaseItemKey = data['itemKey'] as String?;
           lastPurchaseSuccess = data['success'] == true;
@@ -1013,10 +1252,6 @@ class GameService extends ChangeNotifier {
           if (titleKey != null) {
             equippedTitle = titleKey;
           }
-        }
-        if (data['success'] != true) {
-          reportResultMessage = data['message'] as String?;
-          reportResultSuccess = false;
         }
         notifyListeners();
         break;
@@ -1192,6 +1427,40 @@ class GameService extends ChangeNotifier {
     }
   }
 
+  void _handleSKSfxTransitions(SKGameStateData? prev, SKGameStateData next) {
+    if (prev == null) {
+      if (next.isMyTurn) {
+        _sfx.play('my_turn');
+      }
+      return;
+    }
+
+    // Card played: trick grew
+    if (next.currentTrick.length > prev.currentTrick.length) {
+      _sfx.play('card');
+    }
+
+    // My turn
+    if (!prev.isMyTurn && next.isMyTurn) {
+      _sfx.play('my_turn');
+    }
+
+    // Phase transitions
+    if (prev.phase != next.phase) {
+      if (next.phase == 'round_end') {
+        _sfx.play('round_end');
+      } else if (next.phase == 'game_end') {
+        // Find self and check if rank 1
+        final self = next.players.where((p) => p.position == 'self');
+        if (self.isNotEmpty) {
+          final myScore = self.first.totalScore;
+          final maxScore = next.players.map((p) => p.totalScore).reduce((a, b) => a > b ? a : b);
+          _sfx.play(myScore >= maxScore ? 'victory' : 'defeat');
+        }
+      }
+    }
+  }
+
   Future<void> _loadSfxPrefs() async {
     try {
       final prefs = await SharedPreferences.getInstance();
@@ -1324,17 +1593,20 @@ class GameService extends ChangeNotifier {
     _dogDelayUntil = null;
     _pendingGameState = null;
     _prevGameState = null;
+    _prevSKGameState = null;
     playerId = '';
     playerName = '';
     equippedTheme = null;
     equippedTitle = null;
     currentRoomId = '';
     currentRoomName = '';
-    roomPlayers = [null, null, null, null];
+    roomPlayers = List.filled(4, null);
     isHost = false;
     isRankedRoom = false;
     roomTurnTimeLimit = 30;
     roomTargetScore = 1000;
+    roomMaxPlayers = 4;
+    currentGameType = 'tichu';
     roomList = [];
     spectatableRooms = [];
     isSpectator = false;
@@ -1346,6 +1618,7 @@ class GameService extends ChangeNotifier {
     cardViewers = [];
     spectators = [];
     gameState = null;
+    skGameState = null;
     errorMessage = null;
     chatMessages = [];
     blockedUsers = {};
@@ -1373,15 +1646,20 @@ class GameService extends ChangeNotifier {
     seasons = [];
     gold = 0;
     leaveCount = 0;
+    goldHistory = [];
     shopItems = [];
     inventoryItems = [];
     shopLoading = false;
+    goldHistoryLoading = false;
     inventoryLoading = false;
+    goldHistoryError = null;
     shopError = null;
     inventoryError = null;
     lastPurchaseItemKey = null;
     lastPurchaseSuccess = null;
     lastPurchaseExtended = false;
+    shopActionMessage = null;
+    shopActionSuccess = null;
     reportResultMessage = null;
     reportResultSuccess = null;
     inquiryResultMessage = null;
@@ -1389,6 +1667,28 @@ class GameService extends ChangeNotifier {
     inquiries = [];
     inquiriesLoading = false;
     inquiriesError = null;
+    isAdminUser = false;
+    pushAdminInquiryEnabled = true;
+    pushAdminReportEnabled = true;
+    adminDashboard = null;
+    adminDashboardLoading = false;
+    adminUsers = [];
+    adminUsersLoading = false;
+    adminUsersError = null;
+    adminUserDetail = null;
+    adminUserDetailLoading = false;
+    adminUserDetailError = null;
+    adminInquiries = [];
+    adminInquiriesLoading = false;
+    adminInquiriesError = null;
+    adminReports = [];
+    adminReportsLoading = false;
+    adminReportsError = null;
+    adminReportGroup = [];
+    adminReportGroupLoading = false;
+    adminReportGroupError = null;
+    adminActionMessage = null;
+    adminActionSuccess = null;
     hasTopCardCounter = false;
     dogPlayActive = false;
     dogPlayPlayerName = '';
@@ -1425,7 +1725,12 @@ class GameService extends ChangeNotifier {
     loginError = null;
     needNickname = false;
     gameState = null;
+    skGameState = null;
     spectatorGameState = null;
+    _prevGameState = null;
+    _prevSKGameState = null;
+    currentGameType = 'tichu';
+    myTimeoutCount = 0;
   }
 
   bool consumeDuplicateLoginKick() {
@@ -1441,6 +1746,91 @@ class GameService extends ChangeNotifier {
   Future<void> deleteAccount() async {
     _network.send({'type': 'delete_account'});
     await Future<void>.delayed(const Duration(milliseconds: 150));
+  }
+
+  void setAdminAlertPush({bool? inquiry, bool? report}) {
+    final payload = <String, dynamic>{'type': 'update_push_setting'};
+    if (inquiry != null) {
+      pushAdminInquiryEnabled = inquiry;
+      payload['inquiryAlert'] = inquiry;
+    }
+    if (report != null) {
+      pushAdminReportEnabled = report;
+      payload['reportAlert'] = report;
+    }
+    notifyListeners();
+    _network.send(payload);
+  }
+
+  void requestAdminDashboard() {
+    adminDashboardLoading = true;
+    notifyListeners();
+    _network.send({'type': 'get_admin_dashboard'});
+  }
+
+  void requestAdminUsers({String search = '', int page = 1, int limit = 50}) {
+    adminUsersLoading = true;
+    adminUsersError = null;
+    notifyListeners();
+    _network.send({
+      'type': 'get_admin_users',
+      'search': search,
+      'page': page,
+      'limit': limit,
+    });
+  }
+
+  void requestAdminUserDetail(String nickname) {
+    adminUserDetailLoading = true;
+    adminUserDetailError = null;
+    notifyListeners();
+    _network.send({'type': 'get_admin_user_detail', 'nickname': nickname});
+  }
+
+  void setAdminUser(String nickname, bool isAdmin) {
+    _network.send({'type': 'set_admin_user', 'nickname': nickname, 'isAdmin': isAdmin});
+  }
+
+  void adjustAdminGold(String nickname, int amount) {
+    _network.send({'type': 'admin_adjust_gold', 'nickname': nickname, 'amount': amount});
+  }
+
+  void requestAdminInquiries({int page = 1, int limit = 50}) {
+    adminInquiriesLoading = true;
+    adminInquiriesError = null;
+    notifyListeners();
+    _network.send({'type': 'get_admin_inquiries', 'page': page, 'limit': limit});
+  }
+
+  void resolveAdminInquiry(int id, String adminNote) {
+    _network.send({'type': 'resolve_admin_inquiry', 'id': id, 'adminNote': adminNote});
+  }
+
+  void requestAdminReports({int page = 1, int limit = 50}) {
+    adminReportsLoading = true;
+    adminReportsError = null;
+    notifyListeners();
+    _network.send({'type': 'get_admin_reports', 'page': page, 'limit': limit});
+  }
+
+  void requestAdminReportGroup(String target, String roomId) {
+    adminReportGroupLoading = true;
+    adminReportGroupError = null;
+    notifyListeners();
+    _network.send({
+      'type': 'get_admin_report_group',
+      'target': target,
+      'roomId': roomId,
+    });
+  }
+
+  void updateAdminReportStatus(String target, String roomId, String status) {
+    _network.send({
+      'type': 'update_admin_report_status',
+      'target': target,
+      'roomId': roomId,
+      'status': status,
+    });
   }
 
   void requestRoomList() {
@@ -1501,21 +1891,33 @@ class GameService extends ChangeNotifier {
   }
 
   bool get hasIncomingCardViewRequests => incomingCardViewRequests.isNotEmpty;
+  bool get hasPendingCardViewRequest => pendingCardViewRequests.isNotEmpty;
+
+  void expireCardViewRequest(String playerId) {
+    if (pendingCardViewRequests.remove(playerId)) {
+      notifyListeners();
+    }
+  }
 
   Map<String, String>? get firstIncomingCardViewRequest {
     if (incomingCardViewRequests.isEmpty) return null;
     return incomingCardViewRequests.first;
   }
 
-  void createRoom(String roomName, {String password = '', bool isRanked = false, int turnTimeLimit = 30, int targetScore = 1000}) {
-    _network.send({
+  void createRoom(String roomName, {String password = '', bool isRanked = false, int turnTimeLimit = 30, int targetScore = 1000, String gameType = 'tichu', int maxPlayers = 4}) {
+    final msg = <String, dynamic>{
       'type': 'create_room',
       'roomName': roomName,
       'password': password,
       'isRanked': isRanked,
       'turnTimeLimit': turnTimeLimit,
       'targetScore': targetScore,
-    });
+    };
+    if (gameType == 'skull_king') {
+      msg['gameType'] = 'skull_king';
+      msg['maxPlayers'] = maxPlayers;
+    }
+    _network.send(msg);
   }
 
   void joinRoom(String roomId, {String password = ''}) {
@@ -1533,13 +1935,16 @@ class GameService extends ChangeNotifier {
   void _clearRoomState({bool notify = true}) {
     currentRoomId = '';
     currentRoomName = '';
-    roomPlayers = [null, null, null, null];
+    roomPlayers = List.filled(roomMaxPlayers, null);
     isHost = false;
     isRankedRoom = false;
     roomTurnTimeLimit = 30;
     roomTargetScore = 1000;
+    roomMaxPlayers = 4;
+    currentGameType = 'tichu';
     isSpectator = false;
     gameState = null;
+    skGameState = null;
     spectatorGameState = null;
     pendingCardViewRequests = {};
     approvedCardViews = {};
@@ -1569,6 +1974,17 @@ class GameService extends ChangeNotifier {
 
   void startGame() {
     _network.send({'type': 'start_game'});
+  }
+
+  // SK actions
+  void submitBid(int bid) {
+    _network.send({'type': 'submit_bid', 'bid': bid});
+  }
+
+  void playCard(String cardId, {String? tigressChoice}) {
+    final msg = <String, dynamic>{'type': 'play_card', 'cardId': cardId};
+    if (tigressChoice != null) msg['tigressChoice'] = tigressChoice;
+    _network.send(msg);
   }
 
   void playCards(List<String> cards, {String? callRank}) {
@@ -1623,7 +2039,7 @@ class GameService extends ChangeNotifier {
   }
 
   Future<bool> checkRoomAndWait({
-    Duration timeout = const Duration(seconds: 3),
+    Duration timeout = const Duration(seconds: 6),
   }) async {
     return _restoreSync.begin(
       timeout: timeout,
@@ -1657,7 +2073,7 @@ class GameService extends ChangeNotifier {
   void fallbackToLobbyAfterRestoreFailure() {
     currentRoomId = '';
     currentRoomName = '';
-    roomPlayers = [null, null, null, null];
+    roomPlayers = List.filled(4, null);
     isHost = false;
     isRankedRoom = false;
     isSpectator = false;
@@ -1668,6 +2084,7 @@ class GameService extends ChangeNotifier {
     cardViewers = [];
     gameState = null;
     _prevGameState = null;
+    _prevSKGameState = null;
     errorMessage = '방 정보를 복구하지 못해 로비로 이동했습니다.';
     notifyListeners();
   }
@@ -1687,6 +2104,13 @@ class GameService extends ChangeNotifier {
     notifyListeners();
   }
 
+  void requestSKRankings() {
+    rankingsLoading = true;
+    rankingsError = null;
+    _network.send({'type': 'get_rankings', 'gameType': 'skull_king'});
+    notifyListeners();
+  }
+
   void requestSeasons() {
     _network.send({'type': 'get_seasons'});
   }
@@ -1698,6 +2122,13 @@ class GameService extends ChangeNotifier {
 
   void requestWallet() {
     _network.send({'type': 'get_wallet'});
+  }
+
+  void requestGoldHistory({int limit = 30}) {
+    goldHistoryLoading = true;
+    goldHistoryError = null;
+    notifyListeners();
+    _network.send({'type': 'get_gold_history', 'limit': limit});
   }
 
   // 광고 보상
@@ -1764,6 +2195,11 @@ class GameService extends ChangeNotifier {
     lastPurchaseItemKey = null;
     lastPurchaseSuccess = null;
     lastPurchaseExtended = false;
+  }
+
+  void clearShopActionResult() {
+    shopActionMessage = null;
+    shopActionSuccess = null;
   }
 
   // Chat
@@ -1971,10 +2407,19 @@ class GameService extends ChangeNotifier {
   }
 
   Future<void> _loadPushPrefs() async {
+    final loadVersion = ++_pushPrefsLoadVersion;
     final prefs = await SharedPreferences.getInstance();
+    if (loadVersion != _pushPrefsLoadVersion) return;
     pushEnabled = prefs.getBool('push_enabled') ?? true;
     pushFriendInviteEnabled = prefs.getBool('push_friend_invite') ?? true;
     notifyListeners();
+  }
+
+  Future<void> _savePushPrefs() async {
+    _pushPrefsLoadVersion++;
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool('push_enabled', pushEnabled);
+    await prefs.setBool('push_friend_invite', pushFriendInviteEnabled);
   }
 
   Future<void> setPushEnabled(bool enabled) async {

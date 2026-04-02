@@ -1,5 +1,6 @@
 const TichuGame = require('./TichuGame');
 const { BotPlayer } = require('./BotPlayer');
+let SkullKingGame; // Lazy-loaded to avoid circular dependency
 
 let nextBotNum = 1;
 
@@ -10,7 +11,7 @@ const TITLE_NAMES = {
 };
 
 class GameRoom {
-  constructor(id, name, hostId, hostNickname, password = '', isRanked = false, turnTimeLimit = 30, targetScore = 1000) {
+  constructor(id, name, hostId, hostNickname, password = '', isRanked = false, turnTimeLimit = 30, targetScore = 1000, gameType = 'tichu', maxPlayers = 4) {
     this.id = id;
     this.name = name;
     this.hostId = hostId;
@@ -21,13 +22,12 @@ class GameRoom {
     this.turnTimeLimit = turnTimeLimit; // seconds
     this.targetScore = targetScore;
     this.turnDeadline = null; // epoch ms when active
-    // Fixed 4-slot system: host goes to slot 0, rest are null
-    this.players = [
-      { id: hostId, nickname: hostNickname, connected: true, ready: false },
-      null,
-      null,
-      null,
-    ];
+    this.gameType = gameType; // 'tichu' or 'skull_king'
+    this.maxPlayers = maxPlayers; // 4 for tichu, 2-6 for skull_king
+    // Dynamic slot system: host goes to slot 0, rest are null
+    this.players = Array.from({ length: this.maxPlayers }, (_, i) =>
+      i === 0 ? { id: hostId, nickname: hostNickname, connected: true, ready: false } : null
+    );
     this.spectators = []; // { id, nickname }
     this.game = null;
     // Bot tracking
@@ -36,6 +36,7 @@ class GameRoom {
     this.spectatorPermissions = {};
     // Pending requests: { playerId: [{ spectatorId, spectatorNickname }] }
     this.pendingCardRequests = {};
+    this.cardRequestTimers = {};
     // Teams: players[0] & players[2] = Team A, players[1] & players[3] = Team B
     // Chat history (최근 100개)
     this.chatHistory = [];
@@ -64,7 +65,7 @@ class GameRoom {
     if (this.isPrivate && this.password !== password) {
       return { success: false, message: 'Room password is incorrect' };
     }
-    if (this.getPlayerCount() >= 4) {
+    if (this.getPlayerCount() >= this.maxPlayers) {
       return { success: false, message: 'Room is full' };
     }
     if (this.game) {
@@ -93,6 +94,13 @@ class GameRoom {
     const removed = this.players[idx];
     this.players[idx] = null; // Set slot to null instead of splice
     this.bots.delete(playerId); // Clean up bot tracking if applicable
+    delete this.pendingCardRequests[playerId];
+    for (const timerKey of Object.keys(this.cardRequestTimers)) {
+      if (timerKey.startsWith(`${playerId}:`)) {
+        clearTimeout(this.cardRequestTimers[timerKey]);
+        delete this.cardRequestTimers[timerKey];
+      }
+    }
     console.log(`${removed.nickname} left room ${this.name}`);
     // If host left, assign new host (first non-null human player, skip bots)
     if (this.hostId === playerId) {
@@ -100,11 +108,19 @@ class GameRoom {
       if (nextHost) {
         this.hostId = nextHost.id;
         this.hostNickname = nextHost.nickname;
+      } else {
+        // No human players left - pick any remaining player (including bots)
+        const anyPlayer = this.players.find((p) => p !== null);
+        if (anyPlayer) {
+          this.hostId = anyPlayer.id;
+          this.hostNickname = anyPlayer.nickname;
+        }
       }
     }
     // If game was running and not enough players, end game
     // But preserve game if already ended (so remaining players can see results)
-    if (this.game && this.getPlayerCount() < 4 && this.game.state !== 'game_end') {
+    const minPlayersForGame = this.gameType === 'skull_king' ? 2 : this.maxPlayers;
+    if (this.game && this.getPlayerCount() < minPlayersForGame && this.game.state !== 'game_end') {
       this.game = null;
     }
   }
@@ -196,6 +212,11 @@ class GameRoom {
     if (!this.pendingCardRequests[playerId]) {
       this.pendingCardRequests[playerId] = [];
     }
+    for (const requests of Object.values(this.pendingCardRequests)) {
+      if (requests.find(r => r.spectatorId === spectatorId)) {
+        return { success: false, message: '이미 다른 플레이어의 응답을 기다리는 중입니다' };
+      }
+    }
     if (this.pendingCardRequests[playerId].find(r => r.spectatorId === spectatorId)) {
       return { success: false, message: 'Already requested' };
     }
@@ -214,6 +235,14 @@ class GameRoom {
     }
     // Remove from pending
     this.pendingCardRequests[playerId].splice(reqIdx, 1);
+    if (this.pendingCardRequests[playerId].length === 0) {
+      delete this.pendingCardRequests[playerId];
+    }
+    const timerKey = `${playerId}:${spectatorId}`;
+    if (this.cardRequestTimers[timerKey]) {
+      clearTimeout(this.cardRequestTimers[timerKey]);
+      delete this.cardRequestTimers[timerKey];
+    }
 
     if (allow) {
       // Grant permission
@@ -256,6 +285,22 @@ class GameRoom {
     return { success: true };
   }
 
+  expireCardViewRequest(playerId, spectatorId) {
+    if (!this.pendingCardRequests[playerId]) return { success: false };
+    const reqIdx = this.pendingCardRequests[playerId].findIndex(r => r.spectatorId === spectatorId);
+    if (reqIdx === -1) return { success: false };
+    this.pendingCardRequests[playerId].splice(reqIdx, 1);
+    if (this.pendingCardRequests[playerId].length === 0) {
+      delete this.pendingCardRequests[playerId];
+    }
+    const timerKey = `${playerId}:${spectatorId}`;
+    if (this.cardRequestTimers[timerKey]) {
+      clearTimeout(this.cardRequestTimers[timerKey]);
+      delete this.cardRequestTimers[timerKey];
+    }
+    return { success: true };
+  }
+
   // Clean up when spectator leaves
   removeSpectatorPermissions(spectatorId) {
     delete this.spectatorPermissions[spectatorId];
@@ -264,20 +309,29 @@ class GameRoom {
       this.pendingCardRequests[playerId] = this.pendingCardRequests[playerId].filter(
         r => r.spectatorId !== spectatorId
       );
+      if (this.pendingCardRequests[playerId].length === 0) {
+        delete this.pendingCardRequests[playerId];
+      }
+    }
+    for (const timerKey of Object.keys(this.cardRequestTimers)) {
+      if (timerKey.endsWith(`:${spectatorId}`)) {
+        clearTimeout(this.cardRequestTimers[timerKey]);
+        delete this.cardRequestTimers[timerKey];
+      }
     }
   }
 
   // --- Bot management ---
 
   addBot(targetSlot) {
-    if (this.getPlayerCount() >= 4) {
+    if (this.getPlayerCount() >= this.maxPlayers) {
       return { success: false, message: '방이 가득 찼습니다' };
     }
     if (this.game) {
       return { success: false, message: '게임 중에는 봇을 추가할 수 없습니다' };
     }
     let slot;
-    if (typeof targetSlot === 'number' && targetSlot >= 0 && targetSlot <= 3) {
+    if (typeof targetSlot === 'number' && targetSlot >= 0 && targetSlot < this.maxPlayers) {
       if (this.players[targetSlot] !== null) {
         return { success: false, message: '이미 다른 플레이어가 있는 자리입니다' };
       }
@@ -347,6 +401,12 @@ class GameRoom {
       if (nextHost) {
         this.hostId = nextHost.id;
         this.hostNickname = nextHost.nickname;
+      } else {
+        const anyPlayer = this.players.find(p => p !== null);
+        if (anyPlayer) {
+          this.hostId = anyPlayer.id;
+          this.hostNickname = anyPlayer.nickname;
+        }
       }
     }
 
@@ -359,14 +419,14 @@ class GameRoom {
     if (this.game) {
       return { success: false, message: '게임 중에는 전환할 수 없습니다' };
     }
-    if (this.getPlayerCount() >= 4) {
+    if (this.getPlayerCount() >= this.maxPlayers) {
       return { success: false, message: '방이 가득 찼습니다' };
     }
     const specIdx = this.spectators.findIndex(s => s.id === spectatorId);
     if (specIdx === -1) {
       return { success: false, message: '관전자를 찾을 수 없습니다' };
     }
-    if (typeof targetSlot !== 'number' || targetSlot < 0 || targetSlot > 3) {
+    if (typeof targetSlot !== 'number' || targetSlot < 0 || targetSlot >= this.maxPlayers) {
       return { success: false, message: '잘못된 슬롯입니다' };
     }
     if (this.players[targetSlot] !== null) {
@@ -399,7 +459,7 @@ class GameRoom {
     if (currentIndex === targetSlot) {
       return { success: true }; // Already in this slot
     }
-    if (targetSlot < 0 || targetSlot > 3) {
+    if (targetSlot < 0 || targetSlot >= this.maxPlayers) {
       return { success: false, message: '잘못된 슬롯입니다' };
     }
     // Only allow move to empty (null) slot - no swapping
@@ -414,8 +474,22 @@ class GameRoom {
   }
 
   startGame() {
-    // All 4 slots must be non-null
-    if (this.players.some((p) => p === null)) return false;
+    if (this.gameType === 'skull_king') {
+      // SK allows fewer than maxPlayers - compact null slots and randomize
+      // the actual seating order at game start.
+      const activePlayers = this.players.filter(p => p !== null);
+      if (activePlayers.length < 2) return false;
+      for (let i = activePlayers.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [activePlayers[i], activePlayers[j]] = [activePlayers[j], activePlayers[i]];
+      }
+      // Save original slot structure for restoration after game ends
+      this._preGamePlayers = this.players.slice();
+      this.players = activePlayers;
+    } else {
+      // Tichu: all slots must be non-null
+      if (this.players.some((p) => p === null)) return false;
+    }
     const playerIds = this.players.map((p) => p.id);
     if (this.isRanked) {
       // Shuffle seating order for ranked rooms
@@ -426,10 +500,19 @@ class GameRoom {
     }
     const playerNames = {};
     this.players.forEach((p) => (playerNames[p.id] = p.nickname));
-    this.game = new TichuGame(playerIds, playerNames);
-    this.game.targetScore = this.targetScore;
-    this.game.start();
-    console.log(`Game started in room ${this.name}`);
+
+    if (this.gameType === 'skull_king') {
+      if (!SkullKingGame) {
+        SkullKingGame = require('./skull_king/SkullKingGame');
+      }
+      this.game = new SkullKingGame(playerIds, playerNames);
+      this.game.start();
+    } else {
+      this.game = new TichuGame(playerIds, playerNames);
+      this.game.targetScore = this.targetScore;
+      this.game.start();
+    }
+    console.log(`${this.gameType} game started in room ${this.name}`);
     return true;
   }
 
@@ -443,15 +526,34 @@ class GameRoom {
   areAllReady() {
     // All non-null human players (except host) must be ready. Bots are always ready.
     for (const p of this.players) {
-      if (p === null) return false; // need 4 players
+      if (p === null) {
+        if (this.gameType === 'skull_king') continue; // SK allows empty slots
+        return false; // tichu needs all slots filled
+      }
       if (p.isBot) continue;
       if (p.id === this.hostId) continue; // host doesn't need to ready
       if (!p.ready) return false;
     }
+    // SK requires at least 2 players
+    if (this.gameType === 'skull_king' && this.getPlayerCount() < 2) return false;
     return true;
   }
 
   resetReady() {
+    // Restore original slot structure for SK rooms after game ends
+    if (this._preGamePlayers) {
+      // Rebuild maxPlayers-sized array with current active players in their original slots
+      const currentPlayerMap = new Map();
+      for (const p of this.players) {
+        if (p !== null) currentPlayerMap.set(p.id, p);
+      }
+      this.players = this._preGamePlayers.map(slot => {
+        if (slot === null) return null;
+        // Use current reference if player is still present, otherwise null (they left)
+        return currentPlayerMap.get(slot.id) || null;
+      });
+      this._preGamePlayers = null;
+    }
     for (const p of this.players) {
       if (p !== null) p.ready = false;
     }
@@ -463,13 +565,15 @@ class GameRoom {
       name: this.name,
       isPrivate: this.isPrivate,
       isRanked: this.isRanked,
+      gameType: this.gameType,
+      maxPlayers: this.maxPlayers,
       hostId: this.hostId,
       spectators: this.spectators.map((s) => ({
         id: s.id,
         nickname: s.nickname,
       })),
       spectatorCount: this.spectators.length,
-      // Send all 4 slots including nulls
+      // Send all slots including nulls
       players: this.players.map((p) => {
         if (p === null) return null;
         return {

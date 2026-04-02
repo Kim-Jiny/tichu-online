@@ -6,6 +6,7 @@ import 'package:kakao_flutter_sdk_user/kakao_flutter_sdk_user.dart' as kakao;
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:google_mobile_ads/google_mobile_ads.dart';
 import 'package:app_tracking_transparency/app_tracking_transparency.dart';
+import 'package:flutter/services.dart';
 import 'app_navigation.dart';
 import 'firebase_options.dart';
 import 'services/network_service.dart';
@@ -15,6 +16,7 @@ import 'screens/game_screen.dart';
 import 'screens/login_screen.dart';
 import 'screens/lobby_screen.dart';
 import 'screens/spectator_screen.dart';
+import 'screens/sk_game_screen.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -83,10 +85,82 @@ class TichuApp extends StatelessWidget {
           ),
           useMaterial3: true,
         ),
-        home: const _EntryScreen(),
+        home: const _OrientationGate(child: _EntryScreen()),
       ),
     );
   }
+}
+
+class _OrientationGate extends StatefulWidget {
+  const _OrientationGate({required this.child});
+
+  final Widget child;
+
+  @override
+  State<_OrientationGate> createState() => _OrientationGateState();
+}
+
+class _OrientationGateState extends State<_OrientationGate>
+    with WidgetsBindingObserver {
+  bool? _allowLandscape;
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addObserver(this);
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    _syncOrientationPolicy();
+  }
+
+  @override
+  void didChangeMetrics() {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) {
+        _syncOrientationPolicy();
+      }
+    });
+  }
+
+  Future<void> _syncOrientationPolicy() async {
+    final media = MediaQuery.maybeOf(context);
+    if (media == null) return;
+
+    final allowLandscape = media.size.shortestSide >= 600;
+    if (_allowLandscape == allowLandscape) return;
+    _allowLandscape = allowLandscape;
+
+    if (allowLandscape) {
+      await SystemChrome.setPreferredOrientations(const [
+        DeviceOrientation.portraitUp,
+        DeviceOrientation.portraitDown,
+        DeviceOrientation.landscapeLeft,
+        DeviceOrientation.landscapeRight,
+      ]);
+    } else {
+      await SystemChrome.setPreferredOrientations(const [
+        DeviceOrientation.portraitUp,
+      ]);
+    }
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    SystemChrome.setPreferredOrientations(const [
+      DeviceOrientation.portraitUp,
+      DeviceOrientation.portraitDown,
+      DeviceOrientation.landscapeLeft,
+      DeviceOrientation.landscapeRight,
+    ]);
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) => widget.child;
 }
 
 class _AppFlowScreen extends StatelessWidget {
@@ -108,6 +182,9 @@ class _AppFlowScreen extends StatelessWidget {
       switch (game.currentDestination) {
         case AppDestination.game:
           child = const GameScreen();
+          break;
+        case AppDestination.skGame:
+          child = const SKGameScreen();
           break;
         case AppDestination.spectator:
           child = const SpectatorScreen();
@@ -137,6 +214,8 @@ class _AppFlowScreen extends StatelessWidget {
         return 'lobby';
       case AppDestination.game:
         return 'game';
+      case AppDestination.skGame:
+        return 'skGame';
       case AppDestination.spectator:
         return 'spectator';
     }

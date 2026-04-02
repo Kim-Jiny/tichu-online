@@ -41,7 +41,9 @@ class _LoginScreenState extends State<LoginScreen> {
   void initState() {
     super.initState();
     _loadAppVersion();
-    _tryAutoLogin();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _tryAutoLogin();
+    });
   }
 
   @override

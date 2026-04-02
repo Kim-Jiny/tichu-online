@@ -35,6 +35,8 @@ class _LobbyScreenState extends State<LobbyScreen> {
   // 배너 광고
   BannerAd? _bannerAd;
   bool _bannerAdLoaded = false;
+  BannerAd? _roomBannerAd;
+  bool _roomBannerLoaded = false;
 
   @override
   void initState() {
@@ -45,6 +47,12 @@ class _LobbyScreenState extends State<LobbyScreen> {
       onAdFailedToLoad: (_, _) { if (mounted) setState(() { _bannerAd = null; _bannerAdLoaded = false; }); },
     );
     _bannerAd!.load();
+    _roomBannerAd = AdService.createBannerAd(
+      AdService.skWaitingBannerId,
+      onAdLoaded: (_) { if (mounted) setState(() => _roomBannerLoaded = true); },
+      onAdFailedToLoad: (_, __) { if (mounted) setState(() { _roomBannerAd = null; _roomBannerLoaded = false; }); },
+    );
+    _roomBannerAd!.load();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       final game = context.read<GameService>();
       game.requestRoomList();
@@ -84,6 +92,7 @@ class _LobbyScreenState extends State<LobbyScreen> {
     _chatController.dispose();
     _chatScrollController.dispose();
     _bannerAd?.dispose();
+    _roomBannerAd?.dispose();
     super.dispose();
   }
 
@@ -414,6 +423,8 @@ class _LobbyScreenState extends State<LobbyScreen> {
     bool isRanked = false;
     final timeLimitController = TextEditingController(text: '30');
     final targetScoreController = TextEditingController(text: '1000');
+    String selectedGameType = 'tichu';
+    int skMaxPlayers = 4;
     String? errorText;
     void Function(void Function())? dialogSetState;
     showDialog(
@@ -597,6 +608,78 @@ class _LobbyScreenState extends State<LobbyScreen> {
                         ],
                       ),
                       const SizedBox(height: 16),
+                      sectionTitle('게임 선택', '플레이할 게임을 선택합니다.'),
+                      const SizedBox(height: 10),
+                      SizedBox(
+                        width: double.infinity,
+                        child: SegmentedButton<String>(
+                          segments: const [
+                            ButtonSegment(value: 'tichu', label: Text('티츄'), icon: Icon(Icons.style, size: 16)),
+                            ButtonSegment(value: 'skull_king', label: Text('스컬킹'), icon: Icon(Icons.anchor, size: 16)),
+                          ],
+                          selected: {selectedGameType},
+                          onSelectionChanged: (v) => setState(() {
+                            selectedGameType = v.first;
+                            if (selectedGameType == 'skull_king') {
+                              isRanked = false;
+                            }
+                          }),
+                          style: SegmentedButton.styleFrom(
+                            selectedBackgroundColor: accent.withValues(alpha: 0.25),
+                            selectedForegroundColor: const Color(0xFF3E312A),
+                          ),
+                        ),
+                      ),
+                      if (selectedGameType == 'skull_king') ...[
+                        const SizedBox(height: 12),
+                        const Text('최대 인원', style: TextStyle(fontWeight: FontWeight.w700, fontSize: 12)),
+                        const SizedBox(height: 8),
+                        Row(
+                          children: List.generate(5, (i) {
+                            final n = i + 2;
+                            final selected = skMaxPlayers == n;
+                            return Expanded(
+                              child: Padding(
+                                padding: EdgeInsets.only(right: i < 4 ? 6 : 0),
+                                child: GestureDetector(
+                                  onTap: () => setState(() => skMaxPlayers = n),
+                                  child: AnimatedContainer(
+                                    duration: const Duration(milliseconds: 150),
+                                    padding: const EdgeInsets.symmetric(vertical: 10),
+                                    decoration: BoxDecoration(
+                                      color: selected
+                                          ? accent.withValues(alpha: 0.25)
+                                          : Colors.white,
+                                      borderRadius: BorderRadius.circular(10),
+                                      border: Border.all(
+                                        color: selected
+                                            ? accent
+                                            : const Color(0xFFE0D8D4),
+                                        width: selected ? 1.5 : 1,
+                                      ),
+                                    ),
+                                    child: Column(
+                                      children: [
+                                        Text(
+                                          '$n명',
+                                          style: TextStyle(
+                                            fontSize: 14,
+                                            fontWeight: selected ? FontWeight.bold : FontWeight.normal,
+                                            color: selected
+                                                ? const Color(0xFF3E312A)
+                                                : const Color(0xFF8A7A72),
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            );
+                          }),
+                        ),
+                      ],
+                      const SizedBox(height: 16),
                       sectionTitle('기본 정보', '먼저 방 이름과 공개 여부를 정합니다.'),
                       const SizedBox(height: 10),
                       Row(
@@ -659,7 +742,7 @@ class _LobbyScreenState extends State<LobbyScreen> {
                         ),
                       ],
                       const SizedBox(height: 16),
-                      sectionTitle('게임 설정', '턴 시간과 목표 점수를 정합니다.'),
+                      sectionTitle('게임 설정', selectedGameType == 'skull_king' ? '턴 시간을 정합니다.' : '턴 시간과 목표 점수를 정합니다.'),
                       const SizedBox(height: 10),
                       Row(
                         children: [
@@ -685,33 +768,35 @@ class _LobbyScreenState extends State<LobbyScreen> {
                               ],
                             ),
                           ),
-                          const SizedBox(width: 10),
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                const Text(
-                                  '목표 점수',
-                                  style: TextStyle(fontWeight: FontWeight.w700, fontSize: 12),
-                                ),
-                                const SizedBox(height: 6),
-                                TextField(
-                                  controller: targetScoreController,
-                                  enabled: !isRanked,
-                                  keyboardType: TextInputType.number,
-                                  inputFormatters: [
-                                    FilteringTextInputFormatter.digitsOnly,
-                                    LengthLimitingTextInputFormatter(5),
-                                  ],
-                                  textAlign: TextAlign.center,
-                                  decoration: fieldDecoration(
-                                    isRanked ? '1000 (고정)' : '100~20000',
-                                    suffixText: '점',
+                          if (selectedGameType != 'skull_king') ...[
+                            const SizedBox(width: 10),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  const Text(
+                                    '목표 점수',
+                                    style: TextStyle(fontWeight: FontWeight.w700, fontSize: 12),
                                   ),
-                                ),
-                              ],
+                                  const SizedBox(height: 6),
+                                  TextField(
+                                    controller: targetScoreController,
+                                    enabled: !isRanked,
+                                    keyboardType: TextInputType.number,
+                                    inputFormatters: [
+                                      FilteringTextInputFormatter.digitsOnly,
+                                      LengthLimitingTextInputFormatter(5),
+                                    ],
+                                    textAlign: TextAlign.center,
+                                    decoration: fieldDecoration(
+                                      isRanked ? '1000 (고정)' : '100~20000',
+                                      suffixText: '점',
+                                    ),
+                                  ),
+                                ],
+                              ),
                             ),
-                          ),
+                          ],
                         ],
                       ),
                       const SizedBox(height: 10),
@@ -788,6 +873,8 @@ class _LobbyScreenState extends State<LobbyScreen> {
                     isRanked: isRanked,
                     turnTimeLimit: turnTimeLimit,
                     targetScore: targetScore,
+                    gameType: selectedGameType,
+                    maxPlayers: selectedGameType == 'skull_king' ? skMaxPlayers : 4,
                   );
                   Navigator.pop(context);
                   setState(() => _inRoom = true);
@@ -1310,19 +1397,37 @@ class _LobbyScreenState extends State<LobbyScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(
-                      '${room.isPrivate ? '🔒 ' : ''}${room.isRanked ? '🏆 ' : ''}${room.name}',
-                      style: const TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.w500,
-                        color: Color(0xFF5A4038),
-                      ),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
+                    Row(
+                      children: [
+                        if (room.isSkullKing)
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                            margin: const EdgeInsets.only(right: 6),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFF2D2D3D),
+                              borderRadius: BorderRadius.circular(6),
+                            ),
+                            child: const Text('SK', style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: Colors.white)),
+                          ),
+                        Expanded(
+                          child: Text(
+                            '${room.isPrivate ? '🔒 ' : ''}${room.isRanked ? '🏆 ' : ''}${room.name}',
+                            style: const TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.w500,
+                              color: Color(0xFF5A4038),
+                            ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                      ],
                     ),
                     const SizedBox(height: 2),
                     Text(
-                      '${room.turnTimeLimit}초 · ${room.targetScore}점',
+                      room.isSkullKing
+                          ? '${room.turnTimeLimit}초 · ${room.playerCount}/${room.maxPlayers}명'
+                          : '${room.turnTimeLimit}초 · ${room.targetScore}점',
                       style: const TextStyle(
                         fontSize: 11,
                         color: Color(0xFF9A8A82),
@@ -1383,7 +1488,7 @@ class _LobbyScreenState extends State<LobbyScreen> {
                   borderRadius: BorderRadius.circular(12),
                 ),
                 child: Text(
-                  '${room.playerCount}/4',
+                  '${room.playerCount}/${room.maxPlayers}',
                   style: const TextStyle(
                     fontSize: 14,
                     color: Color(0xFF6A5A52),
@@ -1547,6 +1652,17 @@ class _LobbyScreenState extends State<LobbyScreen> {
                     ),
                   ),
           ),
+          if (_roomBannerAd != null && _roomBannerLoaded)
+            Padding(
+              padding: const EdgeInsets.only(bottom: 8),
+              child: Center(
+                child: SizedBox(
+                  height: _roomBannerAd!.size.height.toDouble(),
+                  width: _roomBannerAd!.size.width.toDouble(),
+                  child: AdWidget(ad: _roomBannerAd!, key: ValueKey(_roomBannerAd!.hashCode)),
+                ),
+              ),
+            ),
         ],
       ),
     );
@@ -1595,7 +1711,9 @@ class _LobbyScreenState extends State<LobbyScreen> {
                   borderRadius: BorderRadius.circular(10),
                 ),
                 child: Text(
-                  '${game.roomTurnTimeLimit}초 · ${game.roomTargetScore}점',
+                  game.currentGameType == 'skull_king'
+                      ? '${game.roomTurnTimeLimit}초 · ${game.playerCount}/${game.roomMaxPlayers}명'
+                      : '${game.roomTurnTimeLimit}초 · ${game.roomTargetScore}점',
                   style: const TextStyle(
                     fontSize: 12,
                     color: Color(0xFF8A7A72),
@@ -1606,17 +1724,17 @@ class _LobbyScreenState extends State<LobbyScreen> {
                 padding:
                     const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                 decoration: BoxDecoration(
-                  color: game.playerCount >= 4
+                  color: game.playerCount >= game.roomMaxPlayers
                       ? const Color(0xFFE8F5E9)
                       : const Color(0xFFFFF8E1),
                   borderRadius: BorderRadius.circular(12),
                 ),
                 child: Text(
-                  '${game.playerCount}/4',
+                  '${game.playerCount}/${game.roomMaxPlayers}',
                   style: TextStyle(
                     fontSize: 14,
                     fontWeight: FontWeight.bold,
-                    color: game.playerCount >= 4
+                    color: game.playerCount >= game.roomMaxPlayers
                         ? const Color(0xFF4CAF50)
                         : const Color(0xFFFF9800),
                   ),
@@ -1802,14 +1920,16 @@ class _LobbyScreenState extends State<LobbyScreen> {
                 color: const Color(0xFFFFF3E0),
                 borderRadius: BorderRadius.circular(12),
               ),
-              child: const Row(
+              child: Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  Text('🏆', style: TextStyle(fontSize: 14)),
-                  SizedBox(width: 6),
+                  const Text('🏆', style: TextStyle(fontSize: 14)),
+                  const SizedBox(width: 6),
                   Text(
-                    '랭크전 - 팀 랜덤 배정',
-                    style: TextStyle(
+                    game.currentGameType == 'skull_king'
+                        ? '랭크전 - 좌석 랜덤 배정'
+                        : '랭크전 - 팀 랜덤 배정',
+                    style: const TextStyle(
                       fontSize: 13,
                       fontWeight: FontWeight.bold,
                       color: Color(0xFFE65100),
@@ -1819,13 +1939,45 @@ class _LobbyScreenState extends State<LobbyScreen> {
               ),
             ),
             const SizedBox(height: 12),
-            for (int i = 0; i < 4; i++) ...[
+            for (int i = 0; i < game.roomPlayers.length; i++) ...[
               _buildClickablePlayerSlot(
                 game.roomPlayers[i],
                 slotIndex: i,
                 game: game,
               ),
-              if (i < 3) const SizedBox(height: 8),
+              if (i < game.roomPlayers.length - 1) const SizedBox(height: 8),
+            ],
+          ] else if (game.currentGameType == 'skull_king') ...[
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+              decoration: BoxDecoration(
+                color: const Color(0xFF2D2D3D),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const Icon(Icons.anchor, size: 14, color: Colors.white),
+                  const SizedBox(width: 6),
+                  Text(
+                    '스컬킹 · ${game.roomMaxPlayers}인',
+                    style: const TextStyle(
+                      fontSize: 13,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.white,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 12),
+            for (int i = 0; i < game.roomPlayers.length; i++) ...[
+              _buildClickablePlayerSlot(
+                game.roomPlayers[i],
+                slotIndex: i,
+                game: game,
+              ),
+              if (i < game.roomPlayers.length - 1) const SizedBox(height: 8),
             ],
           ] else ...[
             Row(
@@ -1889,7 +2041,9 @@ class _LobbyScreenState extends State<LobbyScreen> {
           ],
           const SizedBox(height: 12),
           if (game.isHost) ...[
-            if (game.playerCount >= 4)
+            if (game.currentGameType == 'skull_king'
+                ? game.playerCount >= 2
+                : game.playerCount >= game.roomMaxPlayers)
               SizedBox(
                 width: double.infinity,
                 height: 48,
@@ -2784,10 +2938,10 @@ class _LobbyScreenState extends State<LobbyScreen> {
         ),
         const SizedBox(height: 10),
         _buildProfileSectionCard(
-          title: '전체 전적',
+          title: '티츄 전적',
           accent: const Color(0xFF5A4038),
           background: const Color(0xFFF5F5F5),
-          icon: Icons.star,
+          icon: Icons.style,
           iconColor: const Color(0xFFFFB74D),
           mainText: '',
           chips: [
@@ -2795,6 +2949,25 @@ class _LobbyScreenState extends State<LobbyScreen> {
             _buildStatChip('승률', '$winRate%'),
           ],
         ),
+        const SizedBox(height: 10),
+        Builder(builder: (_) {
+          final skGames = profile['skTotalGames'] ?? 0;
+          final skWins = profile['skWins'] ?? 0;
+          final skLosses = profile['skLosses'] ?? 0;
+          final skWinRate = profile['skWinRate'] ?? 0;
+          return _buildProfileSectionCard(
+            title: '스컬킹 전적',
+            accent: const Color(0xFF3949AB),
+            background: const Color(0xFFE8EAF6),
+            icon: Icons.anchor,
+            iconColor: const Color(0xFF3949AB),
+            mainText: '',
+            chips: [
+              _buildStatChip('전적', '$skGames전 $skWins승 $skLosses패'),
+              _buildStatChip('승률', '$skWinRate%'),
+            ],
+          );
+        }),
         const SizedBox(height: 12),
         _buildRecentMatches(recentMatches, profileNickname),
       ],
@@ -3192,13 +3365,10 @@ class _LobbyScreenState extends State<LobbyScreen> {
               ],
             ),
           ),
-          content: ConstrainedBox(
-            constraints: BoxConstraints(
-              maxWidth: media.width > 700 ? 520 : media.width - 40,
-              maxHeight: media.height * 0.72,
-            ),
+          content: SizedBox(
+            width: media.width > 700 ? 520 : media.width - 40,
+            height: media.height * 0.5,
             child: ListView.separated(
-              shrinkWrap: true,
               itemCount: recentMatches.length,
               separatorBuilder: (_, _) => const SizedBox(height: 10),
               itemBuilder: (_, index) {
@@ -3218,6 +3388,9 @@ class _LobbyScreenState extends State<LobbyScreen> {
   }
 
   Widget _buildMatchRow(dynamic match, String profileNickname) {
+    final gameType = match['gameType']?.toString() ?? 'tichu';
+    final isSK = gameType == 'skull_king';
+
     final deserterNickname = match['deserterNickname']?.toString();
     final isDesertionLoss = match['isDesertionLoss'] == true ||
         (deserterNickname != null &&
@@ -3225,10 +3398,6 @@ class _LobbyScreenState extends State<LobbyScreen> {
             deserterNickname == profileNickname);
     final isDraw = match['isDraw'] == true;
     final won = !isDraw && match['won'] == true;
-    final teamAScore = match['teamAScore'] ?? 0;
-    final teamBScore = match['teamBScore'] ?? 0;
-    final teamA = _formatTeam(match['playerA1'], match['playerA2']);
-    final teamB = _formatTeam(match['playerB1'], match['playerB2']);
     final date = _formatShortDate(match['createdAt']);
     final isRanked = match['isRanked'] == true;
 
@@ -3246,6 +3415,24 @@ class _LobbyScreenState extends State<LobbyScreen> {
     } else {
       badgeColor = const Color(0xFFE57373);
       badgeText = '패';
+    }
+
+    // Score / player info
+    final String scoreText;
+    final String playerText;
+    if (isSK) {
+      final players = match['players'] as List<dynamic>? ?? [];
+      final myRank = match['myRank'] ?? '-';
+      final myScore = match['myScore'] ?? 0;
+      scoreText = '$myRank위 ($myScore점)';
+      playerText = players.map((p) => p['nickname'] ?? '?').join(', ');
+    } else {
+      final teamAScore = match['teamAScore'] ?? 0;
+      final teamBScore = match['teamBScore'] ?? 0;
+      scoreText = '$teamAScore : $teamBScore';
+      final teamA = _formatTeam(match['playerA1'], match['playerA2']);
+      final teamB = _formatTeam(match['playerB1'], match['playerB2']);
+      playerText = '$teamA : $teamB';
     }
 
     return Padding(
@@ -3287,19 +3474,23 @@ class _LobbyScreenState extends State<LobbyScreen> {
                     Container(
                       padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
                       decoration: BoxDecoration(
-                        color: isRanked
-                            ? const Color(0xFFFFF3E0)
-                            : const Color(0xFFF5F5F5),
+                        color: isSK
+                            ? const Color(0xFFE8EAF6)
+                            : isRanked
+                                ? const Color(0xFFFFF3E0)
+                                : const Color(0xFFF5F5F5),
                         borderRadius: BorderRadius.circular(6),
                       ),
                       child: Text(
-                        isRanked ? '랭크' : '일반',
+                        isSK ? 'SK' : (isRanked ? '랭크' : '일반'),
                         style: TextStyle(
                           fontSize: 9,
                           fontWeight: FontWeight.bold,
-                          color: isRanked
-                              ? const Color(0xFFE65100)
-                              : const Color(0xFF9E9E9E),
+                          color: isSK
+                              ? const Color(0xFF3949AB)
+                              : isRanked
+                                  ? const Color(0xFFE65100)
+                                  : const Color(0xFF9E9E9E),
                         ),
                       ),
                     ),
@@ -3307,7 +3498,7 @@ class _LobbyScreenState extends State<LobbyScreen> {
                 ),
                 const SizedBox(height: 2),
                 Text(
-                  '$teamA : $teamB',
+                  playerText,
                   style: const TextStyle(
                     fontSize: 12,
                     fontWeight: FontWeight.bold,
@@ -3319,7 +3510,7 @@ class _LobbyScreenState extends State<LobbyScreen> {
             ),
           ),
           Text(
-            '$teamAScore : $teamBScore',
+            scoreText,
             style: const TextStyle(
               fontSize: 12,
               fontWeight: FontWeight.bold,
@@ -3366,7 +3557,7 @@ class _LobbyScreenState extends State<LobbyScreen> {
     final isBlockedPlayer = !isEmpty && !isMySlot && !isBot && game.blockedUsers.contains(player.name);
     final isReady = !isEmpty && !isBot && !player.isHost && player.isReady;
     // Can only move to empty slots (no swapping)
-    final canMove = !isMySlot && isEmpty && myIndex != -1;
+    final canMove = game.currentGameType != 'skull_king' && !isMySlot && isEmpty && myIndex != -1;
 
     return GestureDetector(
       onTap: () {

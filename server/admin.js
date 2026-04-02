@@ -2,7 +2,8 @@ const crypto = require('crypto');
 const {
   verifyAdmin, getInquiries, getInquiryById, resolveInquiry,
   getReports, getReportGroup, updateReportGroupStatus,
-  getUsers, getUserDetail, deleteUser, getDashboardStats, setChatBan, setAdminMemo, getRecentMatches, adminAdjustGold,
+  getUsers, getUserDetail, getAdminGoldHistory, deleteUser, getDashboardStats, setChatBan, setAdminMemo, getRecentMatches, adminAdjustGold, setUserAdmin,
+  getDetailedAdminStats,
   getAllShopItemsAdmin, addShopItem, updateShopItem, deleteShopItem, getShopItemById,
   getConfig, updateConfig,
 } = require('./db/database');
@@ -47,9 +48,16 @@ function clearSessionCookie(res) {
 }
 
 function parseBody(req) {
-  return new Promise((resolve) => {
+  const MAX_BODY_SIZE = 1024 * 100; // 100KB
+  return new Promise((resolve, reject) => {
     let body = '';
-    req.on('data', chunk => body += chunk);
+    req.on('data', chunk => {
+      body += chunk;
+      if (body.length > MAX_BODY_SIZE) {
+        req.destroy();
+        reject(new Error('Request body too large'));
+      }
+    });
     req.on('end', () => {
       const params = new URLSearchParams(body);
       const result = {};
@@ -179,6 +187,7 @@ input[type="text"], input[type="password"] { width: 100%; padding: 10px; border:
 <nav class="sidebar">
   <h2>Tichu Admin</h2>
   <a href="/tc-backstage/" class="${activePage === 'home' ? 'active' : ''}" onclick="closeSidebar()">대시보드</a>
+  <a href="/tc-backstage/stats" class="${activePage === 'stats' ? 'active' : ''}" onclick="closeSidebar()">통계</a>
   <a href="/tc-backstage/inquiries" class="${activePage === 'inquiries' ? 'active' : ''}" onclick="closeSidebar()">문의</a>
   <a href="/tc-backstage/shop" class="${activePage === 'shop' ? 'active' : ''}" onclick="closeSidebar()">상점</a>
   <a href="/tc-backstage/reports" class="${activePage === 'reports' ? 'active' : ''}" onclick="closeSidebar()">신고</a>
@@ -249,6 +258,16 @@ function formatDate(d) {
   if (!d) return '-';
   const dt = new Date(d);
   return dt.toLocaleString('ko-KR', { timeZone: 'Asia/Seoul' });
+}
+
+function formatDateInput(d) {
+  if (!d) return '';
+  const dt = new Date(d);
+  if (isNaN(dt.getTime())) return '';
+  const yyyy = dt.getFullYear();
+  const mm = String(dt.getMonth() + 1).padStart(2, '0');
+  const dd = String(dt.getDate()).padStart(2, '0');
+  return `${yyyy}-${mm}-${dd}`;
 }
 
 function pagination(page, total, limit, baseUrl) {
@@ -668,6 +687,103 @@ async function handleAdminRoute(req, res, url, pathname, method, lobby, wss, mai
     return html(res, layout('대시보드', content, 'home'));
   }
 
+  if (pathname === '/tc-backstage/stats' && method === 'GET') {
+    const now = new Date();
+    const defaultTo = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59);
+    const defaultFrom = new Date(defaultTo);
+    defaultFrom.setDate(defaultFrom.getDate() - 6);
+    defaultFrom.setHours(0, 0, 0, 0);
+
+    const fromParam = url.searchParams.get('from');
+    const toParam = url.searchParams.get('to');
+    const bucket = url.searchParams.get('bucket') === 'hour' ? 'hour' : 'day';
+    const from = fromParam ? new Date(`${fromParam}T00:00:00+09:00`) : defaultFrom;
+    const to = toParam ? new Date(`${toParam}T23:59:59+09:00`) : defaultTo;
+
+    const stats = await getDetailedAdminStats(from.toISOString(), to.toISOString(), bucket);
+    const summary = stats.summary || {};
+    const gameSeries = stats.gameSeries || [];
+    const goldSeries = stats.goldSeries || [];
+    const fromValue = formatDateInput(from);
+    const toValue = formatDateInput(to);
+
+    const summaryCards = `
+      <div class="stats-grid" style="grid-template-columns:repeat(auto-fit, minmax(150px, 1fr))">
+        <div class="stat-card"><div class="label">전체 게임</div><div class="value">${summary.totalGames || 0}</div></div>
+        <div class="stat-card"><div class="label">티추</div><div class="value purple">${summary.tichuGames || 0}</div></div>
+        <div class="stat-card"><div class="label">스컬킹</div><div class="value" style="color:#009688">${summary.skullGames || 0}</div></div>
+        <div class="stat-card"><div class="label">랭크전</div><div class="value orange">${summary.rankedGames || 0}</div></div>
+        <div class="stat-card"><div class="label">획득 골드</div><div class="value green">${summary.goldEarned || 0}</div></div>
+        <div class="stat-card"><div class="label">소모 골드</div><div class="value red">${summary.goldSpent || 0}</div></div>
+        <div class="stat-card"><div class="label">순변동</div><div class="value">${summary.goldNet || 0}</div></div>
+      </div>
+    `;
+
+    const gameTable = gameSeries.length > 0
+      ? `<div class="table-wrap"><table>
+          <tr><th>${bucket === 'hour' ? '시간대' : '날짜'}</th><th>전체</th><th>티추</th><th>스컬킹</th><th>랭크전</th></tr>
+          ${gameSeries.map(row => `<tr>
+            <td>${formatDate(row.bucket_time)}</td>
+            <td>${row.total_cnt}</td>
+            <td>${row.tichu_cnt}</td>
+            <td>${row.skull_cnt}</td>
+            <td>${row.ranked_cnt}</td>
+          </tr>`).join('')}
+        </table></div>`
+      : '<div class="empty">게임 데이터가 없습니다</div>';
+
+    const goldTable = goldSeries.length > 0
+      ? `<div class="table-wrap"><table>
+          <tr><th>${bucket === 'hour' ? '시간대' : '날짜'}</th><th>획득</th><th>소모</th><th>순변동</th></tr>
+          ${goldSeries.map(row => `<tr>
+            <td>${formatDate(row.bucket_time)}</td>
+            <td style="color:#2e7d32;font-weight:600">${row.earned}</td>
+            <td style="color:#c62828;font-weight:600">${row.spent}</td>
+            <td style="font-weight:700">${row.net}</td>
+          </tr>`).join('')}
+        </table></div>`
+      : '<div class="empty">골드 데이터가 없습니다</div>';
+
+    const content = `
+      <h1 class="page-title">통계</h1>
+      <div class="card">
+        <h3>조회 조건</h3>
+        <form method="GET" action="/tc-backstage/stats" class="search-bar" style="align-items:end;flex-wrap:wrap">
+          <div style="min-width:160px">
+            <div style="font-size:12px;color:#888;margin-bottom:6px">시작일</div>
+            <input type="date" name="from" value="${escapeHtml(fromValue)}">
+          </div>
+          <div style="min-width:160px">
+            <div style="font-size:12px;color:#888;margin-bottom:6px">종료일</div>
+            <input type="date" name="to" value="${escapeHtml(toValue)}">
+          </div>
+          <div style="min-width:140px">
+            <div style="font-size:12px;color:#888;margin-bottom:6px">집계 단위</div>
+            <select name="bucket" style="padding:10px;border:1px solid #ddd;border-radius:8px;font-size:14px">
+              <option value="day"${bucket === 'day' ? ' selected' : ''}>일별</option>
+              <option value="hour"${bucket === 'hour' ? ' selected' : ''}>시간대별</option>
+            </select>
+          </div>
+          <button type="submit" class="btn btn-primary">조회</button>
+          <a href="/tc-backstage/stats" class="btn btn-secondary">초기화</a>
+        </form>
+      </div>
+
+      ${summaryCards}
+
+      <div class="card">
+        <h3>게임량 추이</h3>
+        ${gameTable}
+      </div>
+
+      <div class="card">
+        <h3>골드 획득 / 소모</h3>
+        ${goldTable}
+      </div>
+    `;
+    return html(res, layout('통계', content, 'stats'));
+  }
+
   // ===== Inquiries =====
   if (pathname === '/tc-backstage/inquiries' && method === 'GET') {
     const page = parseInt(url.searchParams.get('page') || '1');
@@ -916,12 +1032,15 @@ async function handleAdminRoute(req, res, url, pathname, method, lobby, wss, mai
     let tableContent = '';
     if (data.rows.length > 0) {
       tableContent = `<div class="table-wrap"><table>
-        <tr><th>닉네임</th><th>기기</th><th>Lv</th><th>골드</th><th>레이팅</th><th>게임</th><th>승/패</th><th>이탈</th><th>최근 접속</th><th></th></tr>
+        <tr><th>닉네임</th><th>권한</th><th>기기</th><th>Lv</th><th>골드</th><th>레이팅</th><th>게임</th><th>승/패</th><th>이탈</th><th>최근 접속</th><th></th></tr>
         ${data.rows.map(u => {
           const winRate = u.total_games > 0 ? Math.round(u.wins / u.total_games * 100) : 0;
           const leaveStyle = (u.leave_count || 0) >= 3 ? 'color:#e53935;font-weight:600' : '';
           return `<tr>
           <td><a href="/tc-backstage/users/${encodeURIComponent(u.nickname)}" style="color:#6c63ff;text-decoration:none;font-weight:600">${escapeHtml(u.nickname)}</a></td>
+          <td>
+            <span class="badge" style="background:${u.is_admin ? '#ede7f6' : '#f5f5f5'};color:${u.is_admin ? '#5e35b1' : '#888'}">${u.is_admin ? '관리자' : '일반'}</span>
+          </td>
           <td>${deviceBadge(u.device_platform)}</td>
           <td>${u.level || 1}</td>
           <td style="color:#ff9800;font-weight:600">${(u.gold || 0).toLocaleString()}
@@ -958,9 +1077,10 @@ async function handleAdminRoute(req, res, url, pathname, method, lobby, wss, mai
   const userDetailMatch = pathname.match(/^\/tc-backstage\/users\/([^/]+)$/);
   if (userDetailMatch && method === 'GET') {
     const nickname = decodeURIComponent(userDetailMatch[1]);
-    const [user, recentMatches] = await Promise.all([
+    const [user, recentMatches, goldHistory] = await Promise.all([
       getUserDetail(nickname),
       getRecentMatches(nickname, 20),
+      getAdminGoldHistory(nickname, 50),
     ]);
     if (!user) return html(res, layout('찾을 수 없음', '<div class="empty">유저를 찾을 수 없습니다</div>', 'users'), 404);
 
@@ -983,6 +1103,14 @@ async function handleAdminRoute(req, res, url, pathname, method, lobby, wss, mai
       <div class="card">
         <div class="detail-grid" style="grid-template-columns:130px 1fr">
           <div class="label">닉네임</div><div class="value" style="font-weight:600">${escapeHtml(user.nickname)}</div>
+          <div class="label">앱 관리자</div><div class="value">
+            <span class="badge" style="background:${user.is_admin ? '#ede7f6' : '#f5f5f5'};color:${user.is_admin ? '#5e35b1' : '#888'}">${user.is_admin ? '관리자' : '일반'}</span>
+            <form method="POST" action="/tc-backstage/users/${encodeURIComponent(user.nickname)}/admin" style="display:inline-flex;align-items:center;gap:6px;margin-left:12px"
+              onsubmit="return confirm('${escapeHtml(user.nickname)} 유저를 ${user.is_admin ? '관리자에서 해제' : '관리자로 지정'}하시겠습니까?')">
+              <input type="hidden" name="is_admin" value="${user.is_admin ? '0' : '1'}">
+              <button type="submit" class="btn btn-secondary" style="font-size:11px;padding:4px 10px">${user.is_admin ? '권한 해제' : '관리자 지정'}</button>
+            </form>
+          </div>
           <div class="label">계정명</div><div class="value">${escapeHtml(user.username)}</div>
           <div class="label">레벨</div><div class="value">${user.level || 1}</div>
           <div class="label">골드</div><div class="value" style="color:#ff9800;font-weight:600">${(user.gold || 0).toLocaleString()}
@@ -1015,6 +1143,35 @@ async function handleAdminRoute(req, res, url, pathname, method, lobby, wss, mai
           <div class="label">최근 IP</div><div class="value">${escapeHtml(user.last_ip || '-')}</div>
           <div class="label">FCM 토큰</div><div class="value" style="word-break:break-all;font-size:12px">${escapeHtml(user.fcm_token || '-')}</div>
         </div>
+      </div>
+
+      <div class="card">
+        <h3>골드 히스토리 <span style="font-size:13px;color:#888;font-weight:400">(${goldHistory?.history?.length || 0})</span></h3>
+        ${goldHistory?.success && goldHistory.history.length > 0 ? `
+          <div class="table-wrap"><table>
+            <tr><th>일시</th><th>유형</th><th>내용</th><th>설명</th><th>변동</th></tr>
+            ${goldHistory.history.map(item => {
+              const delta = parseInt(item.goldDelta || 0);
+              const positive = delta >= 0;
+              const sourceMap = {
+                match: '게임',
+                ad_reward: '광고',
+                season_reward: '시즌',
+                shop_purchase: '상점',
+              };
+              const sourceLabel = sourceMap[item.source] || item.source || '-';
+              return `<tr>
+                <td style="font-size:12px;color:#888">${formatDate(item.createdAt)}</td>
+                <td><span class="badge" style="background:${positive ? '#e8f5e9' : '#fff3e0'};color:${positive ? '#2e7d32' : '#ef6c00'}">${escapeHtml(sourceLabel)}</span></td>
+                <td style="font-weight:600">${escapeHtml(item.title || '-')}</td>
+                <td style="font-size:12px;color:#666">${escapeHtml(item.description || '-')}</td>
+                <td style="font-weight:700;color:${positive ? '#2e7d32' : '#ef6c00'}">${positive ? '+' : ''}${delta.toLocaleString()}</td>
+              </tr>`;
+            }).join('')}
+          </table></div>
+        ` : `
+          <div class="empty">${escapeHtml(goldHistory?.message || '표시할 골드 내역이 없습니다')}</div>
+        `}
       </div>
 
       ${user.fcm_token ? `<div class="card">
@@ -1716,9 +1873,23 @@ async function handleAdminRoute(req, res, url, pathname, method, lobby, wss, mai
     const nickname = decodeURIComponent(goldMatch[1]);
     const body = await parseBody(req);
     const amount = parseInt(body.amount);
+    const session = getSessionFromCookie(req);
     if (!isNaN(amount) && amount !== 0) {
-      await adminAdjustGold(nickname, amount);
+      await adminAdjustGold(nickname, amount, session?.username || 'admin');
     }
+    const referer = req.headers.referer || '';
+    if (referer.includes('/tc-backstage/users?') || referer.endsWith('/tc-backstage/users')) {
+      return redirect(res, referer);
+    }
+    return redirect(res, `/tc-backstage/users/${encodeURIComponent(nickname)}`);
+  }
+
+  const userAdminMatch = pathname.match(/^\/tc-backstage\/users\/([^/]+)\/admin$/);
+  if (userAdminMatch && method === 'POST') {
+    const nickname = decodeURIComponent(userAdminMatch[1]);
+    const body = await parseBody(req);
+    const isAdmin = body.is_admin === '1';
+    await setUserAdmin(nickname, isAdmin);
     const referer = req.headers.referer || '';
     if (referer.includes('/tc-backstage/users?') || referer.endsWith('/tc-backstage/users')) {
       return redirect(res, referer);

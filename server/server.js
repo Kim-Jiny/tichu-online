@@ -1,16 +1,18 @@
 const { WebSocketServer } = require('ws');
 const http = require('http');
+const serverStartedAt = new Date().toISOString();
 const LobbyManager = require('./lobby/LobbyManager');
 const GameRoom = require('./game/GameRoom');
 const { decideBotAction } = require('./game/BotPlayer');
+const { decideSKBotAction } = require('./game/skull_king/SkullKingBot');
 const {
   initDatabase, registerUser, loginUser, checkNickname, deleteUser,
   blockUser, unblockUser, getBlockedUsers, reportUser,
   addFriend, getFriends, getPendingFriendRequests,
   acceptFriendRequest, rejectFriendRequest, removeFriend,
-  saveMatchResult, updateUserStats, getUserProfile, getRecentMatches,
+  saveMatchResult, saveMatchResultWithStats, updateUserStats, getUserProfile, getRecentMatches,
   submitInquiry, getUserInquiries, markInquiriesRead, getRankings,
-  getWallet, getShopItems, getUserItems, buyItem, equipItem, useItem, changeNickname,
+  getWallet, getGoldHistory, getShopItems, getUserItems, buyItem, equipItem, useItem, changeNickname,
   incrementLeaveCount, setRankedBan, getRankedBan, setChatBan, getChatBan, grantSeasonRewards,
   getActiveSeason, createSeason, getSeasons, getConfig,
   getCurrentSeasonRankings, getSeasonRankings, resetSeasonStats,
@@ -19,6 +21,9 @@ const {
   updateDeviceInfo,
   setPushEnabled,
   setPushFriendInvite,
+  setUserAdmin,
+  setAdminAlertSettings,
+  getAdminPushRecipients,
   claimAdReward,
   searchUsers,
   sendDm,
@@ -26,6 +31,24 @@ const {
   markDmRead,
   getDmConversations,
   getTotalUnreadDmCount,
+  getInquiries,
+  getInquiryById,
+  resolveInquiry,
+  getReports,
+  getReportGroup,
+  updateReportGroupStatus,
+  getUsers,
+  getUserDetail,
+  isUserAdmin,
+  getDetailedAdminStats,
+  saveSKMatchResult, saveSKMatchResultWithStats,
+  updateSKUserStats,
+  getSKRankings,
+  getDashboardStats,
+  getAdminGoldHistory,
+  adminAdjustGold,
+  setAdminMemo,
+  getSKRecentMatches,
 } = require('./db/database');
 
 // Firebase Admin SDK initialization (optional - only if FIREBASE_SERVICE_ACCOUNT is set)
@@ -51,7 +74,11 @@ async function verifyFirebaseToken(idToken) {
     const decoded = await firebaseAdmin.auth().verifyIdToken(idToken);
     return { uid: decoded.uid, email: decoded.email || null };
   }
-  // Fallback: decode JWT without signature verification (local dev)
+  // Only allow unsigned decode in development
+  if (process.env.NODE_ENV === 'production') {
+    throw new Error('Firebase Admin SDK not configured - social login unavailable');
+  }
+  // Fallback: decode JWT without signature verification (local dev only)
   try {
     const payload = idToken.split('.')[1];
     const decoded = JSON.parse(Buffer.from(payload, 'base64url').toString());
@@ -107,6 +134,24 @@ async function sendFriendRequestPush(targetNickname, fromNickname) {
 const { handleAdminRoute } = require('./admin');
 
 const PORT = process.env.PORT || 8080;
+
+// Skull King version gating
+const SK_MIN_VERSION = '2.0.0';
+
+function compareVersions(v1, v2) {
+  // Strip build metadata (e.g. "2.0.0+15" → "2.0.0")
+  const a = (v1 || '0.0.0').split('+')[0].split('.').map(Number);
+  const b = (v2 || '0.0.0').split('+')[0].split('.').map(Number);
+  for (let i = 0; i < 3; i++) {
+    if ((a[i] || 0) > (b[i] || 0)) return 1;
+    if ((a[i] || 0) < (b[i] || 0)) return -1;
+  }
+  return 0;
+}
+
+function clientSupportsSK(ws) {
+  return compareVersions(ws.appVersion, SK_MIN_VERSION) >= 0;
+}
 
 // Maintenance config (in-memory)
 let maintenanceConfig = {
@@ -185,18 +230,20 @@ const server = http.createServer(async (req, res) => {
   }
 });
 
-const wss = new WebSocketServer({ server });
+const wss = new WebSocketServer({ server, maxPayload: 64 * 1024 }); // 64KB max message size
 const lobby = new LobbyManager();
 
 let nextPlayerId = 1;
 
 // Track nickname -> roomId for reconnection during games
 const playerSessions = new Map(); // nickname -> { roomId, disconnectedAt }
+const spectatorSessions = new Map(); // nickname -> { roomId, disconnectedAt }
 
 // Turn timer system
 const turnTimers = {};    // roomId -> setTimeout handle
 const timeoutCounts = {}; // roomId -> { playerId: count }
 const roundEndTimers = {}; // roomId -> setTimeout handle for auto next round
+const trickEndTimers = {}; // roomId -> setTimeout handle for skull king trick reveal
 const turnTimerPhases = {}; // roomId -> phase name (to prevent phase timer reset)
 const waitingRoomTimers = {}; // `${roomId}_${playerId}` -> setTimeout handle for waiting room disconnect
 
@@ -237,7 +284,17 @@ setInterval(() => {
       console.log(`Session expired for ${nickname}`);
     }
   }
+  for (const [nickname, session] of spectatorSessions) {
+    if (now - session.disconnectedAt > maxAge) {
+      spectatorSessions.delete(nickname);
+    }
+  }
 }, 5 * 60 * 1000);
+
+// Safety net for unawaited async errors
+process.on('unhandledRejection', (reason, promise) => {
+  console.error('[UNHANDLED REJECTION]', reason);
+});
 
 // Initialize database and start server
 (async () => {
@@ -285,6 +342,12 @@ wss.on('connection', (ws, req) => {
       const room = lobby.getRoom(ws.roomId);
       if (room) {
         if (ws.isSpectator) {
+          if (ws.nickname) {
+            spectatorSessions.set(ws.nickname, {
+              roomId: ws.roomId,
+              disconnectedAt: Date.now(),
+            });
+          }
           room.removeSpectator(ws.playerId);
           if (room.game) _broadcastState(ws.roomId, room);
           broadcastRoomState(ws.roomId);
@@ -348,10 +411,20 @@ function handleMessage(ws, data) {
       handleDeleteAccount(ws);
       break;
     case 'room_list':
-      sendTo(ws, { type: 'room_list', rooms: lobby.getRoomList() });
+      sendTo(ws, {
+        type: 'room_list',
+        rooms: clientSupportsSK(ws)
+          ? lobby.getRoomList()
+          : lobby.getRoomList().filter((room) => room.gameType !== 'skull_king'),
+      });
       break;
     case 'spectatable_rooms':
-      sendTo(ws, { type: 'spectatable_rooms', rooms: lobby.getSpectatableRooms() });
+      sendTo(ws, {
+        type: 'spectatable_rooms',
+        rooms: clientSupportsSK(ws)
+          ? lobby.getSpectatableRooms()
+          : lobby.getSpectatableRooms().filter((room) => room.gameType !== 'skull_king'),
+      });
       break;
     case 'create_room':
       handleCreateRoom(ws, data);
@@ -401,7 +474,7 @@ function handleMessage(ws, data) {
     case 'get_profile':
       handleGetProfile(ws, data);
       break;
-    // Game actions
+    // Game actions (Tichu)
     case 'declare_large_tichu':
     case 'pass_large_tichu':
     case 'declare_small_tichu':
@@ -411,6 +484,9 @@ function handleMessage(ws, data) {
     case 'next_round':
     case 'dragon_give':
     case 'call_rank':
+    // Game actions (Skull King)
+    case 'submit_bid':
+    case 'play_card':
       handleGameAction(ws, data);
       break;
     case 'reset_timeout':
@@ -482,6 +558,9 @@ function handleMessage(ws, data) {
     case 'get_wallet':
       handleGetWallet(ws);
       break;
+    case 'get_gold_history':
+      handleGetGoldHistory(ws, data);
+      break;
     case 'get_shop_items':
       handleGetShopItems(ws);
       break;
@@ -528,7 +607,52 @@ function handleMessage(ws, data) {
         if (data.friendInvite != null) {
           setPushFriendInvite(ws.nickname, data.friendInvite === true);
         }
+        if (ws.isAdmin === true && (data.inquiryAlert != null || data.reportAlert != null)) {
+          setAdminAlertSettings(
+            ws.nickname,
+            data.inquiryAlert != null ? data.inquiryAlert === true : ws.pushAdminInquiry !== false,
+            data.reportAlert != null ? data.reportAlert === true : ws.pushAdminReport !== false,
+          ).then((result) => {
+            if (result.success) {
+              ws.pushAdminInquiry = result.settings.pushAdminInquiry === true;
+              ws.pushAdminReport = result.settings.pushAdminReport === true;
+            }
+          });
+        }
       }
+      break;
+    case 'get_admin_dashboard':
+      handleGetAdminDashboard(ws);
+      break;
+    case 'get_admin_stats':
+      handleGetAdminStats(ws, data);
+      break;
+    case 'get_admin_users':
+      handleGetAdminUsers(ws, data);
+      break;
+    case 'get_admin_user_detail':
+      handleGetAdminUserDetail(ws, data);
+      break;
+    case 'set_admin_user':
+      handleSetAdminUser(ws, data);
+      break;
+    case 'admin_adjust_gold':
+      handleAdminAdjustGold(ws, data);
+      break;
+    case 'get_admin_inquiries':
+      handleGetAdminInquiries(ws, data);
+      break;
+    case 'resolve_admin_inquiry':
+      handleResolveAdminInquiry(ws, data);
+      break;
+    case 'get_admin_reports':
+      handleGetAdminReports(ws, data);
+      break;
+    case 'get_admin_report_group':
+      handleGetAdminReportGroup(ws, data);
+      break;
+    case 'update_admin_report_status':
+      handleUpdateAdminReportStatus(ws, data);
       break;
     case 'ad_reward':
       if (ws.nickname) {
@@ -595,10 +719,48 @@ async function handleDeleteAccount(ws) {
     sendTo(ws, { type: 'error', message: '로그인이 필요합니다' });
     return;
   }
-  const result = await deleteUser(ws.nickname);
+  const nickname = ws.nickname;
+  const playerId = ws.playerId;
+  const roomId = ws.roomId;
+  const wasSpectator = ws.isSpectator === true;
+
+  if (roomId) {
+    const room = lobby.getRoom(roomId);
+    if (room) {
+      if (wasSpectator) {
+        spectatorSessions.delete(nickname);
+        room.removeSpectator(playerId);
+        if (room.game) _broadcastState(roomId, room);
+        broadcastRoomState(roomId);
+      } else if (room.game && room.game.state !== 'game_end' && !room.game.deserted) {
+        await handleDesertion(roomId, playerId, 'leave');
+      } else {
+        const timerKey = `${roomId}_${playerId}`;
+        if (waitingRoomTimers[timerKey]) {
+          clearTimeout(waitingRoomTimers[timerKey]);
+          delete waitingRoomTimers[timerKey];
+        }
+        room.removePlayer(playerId);
+        if (room.getHumanPlayerCount() === 0) {
+          removeRoomAndNotifySpectators(roomId);
+        } else {
+          broadcastRoomState(roomId);
+        }
+      }
+      broadcastRoomList();
+    }
+    ws.roomId = null;
+    ws.isSpectator = false;
+  }
+
+  playerSessions.delete(nickname);
+  spectatorSessions.delete(nickname);
+
+  const result = await deleteUser(nickname);
   if (result.success) {
     ws.nickname = null;
     ws.playerId = null;
+    ws.userId = null;
   }
   sendTo(ws, { type: 'account_deleted', ...result });
 }
@@ -625,7 +787,12 @@ async function handleLogin(ws, data) {
       // Preemptively store session before close (close handler is async)
       if (client.roomId) {
         const oldRoom = lobby.getRoom(client.roomId);
-        if (oldRoom && oldRoom.game) {
+        if (client.isSpectator && oldRoom) {
+          oldRoom.removeSpectator(client.playerId);
+          if (oldRoom.game) _broadcastState(client.roomId, oldRoom);
+          broadcastRoomState(client.roomId);
+          broadcastRoomList();
+        } else if (oldRoom && oldRoom.game) {
           oldRoom.markPlayerDisconnected(client.playerId);
           playerSessions.set(client.nickname, {
             roomId: client.roomId,
@@ -656,6 +823,13 @@ async function handleLogin(ws, data) {
   ws.playerId = `player_${nextPlayerId++}`;
   ws.nickname = result.nickname;
   ws.userId = result.userId;
+  ws.isAdmin = result.isAdmin === true;
+  ws.pushEnabled = result.pushEnabled !== false;
+  ws.pushFriendInvite = result.pushFriendInvite !== false;
+  ws.pushAdminInquiry = result.pushAdminInquiry !== false;
+  ws.pushAdminReport = result.pushAdminReport !== false;
+  const deviceInfo = data.deviceInfo || {};
+  ws.appVersion = deviceInfo.appVersion || null;
   console.log(`Player logged in: ${ws.nickname} (${ws.playerId})`);
 
   // Notify friends of online status
@@ -664,7 +838,6 @@ async function handleLogin(ws, data) {
   await handleReconnection(ws);
 
   // Save device info (fire-and-forget)
-  const deviceInfo = data.deviceInfo || {};
   deviceInfo.lastIp = ws.clientIp;
   updateDeviceInfo(ws.nickname, deviceInfo);
 }
@@ -715,7 +888,12 @@ async function handleSocialLogin(ws, data) {
         if (client !== ws && client.nickname === result.nickname && client.readyState === client.OPEN) {
           if (client.roomId) {
             const oldRoom = lobby.getRoom(client.roomId);
-            if (oldRoom && oldRoom.game) {
+            if (client.isSpectator && oldRoom) {
+              oldRoom.removeSpectator(client.playerId);
+              if (oldRoom.game) _broadcastState(client.roomId, oldRoom);
+              broadcastRoomState(client.roomId);
+              broadcastRoomList();
+            } else if (oldRoom && oldRoom.game) {
               oldRoom.markPlayerDisconnected(client.playerId);
               playerSessions.set(client.nickname, {
                 roomId: client.roomId,
@@ -746,13 +924,19 @@ async function handleSocialLogin(ws, data) {
       ws.playerId = `player_${nextPlayerId++}`;
       ws.nickname = result.nickname;
       ws.userId = result.userId;
+      ws.isAdmin = result.isAdmin === true;
+      ws.pushEnabled = result.pushEnabled !== false;
+      ws.pushFriendInvite = result.pushFriendInvite !== false;
+      ws.pushAdminInquiry = result.pushAdminInquiry !== false;
+      ws.pushAdminReport = result.pushAdminReport !== false;
+      const socialDeviceInfo = data.deviceInfo || {};
+      ws.appVersion = socialDeviceInfo.appVersion || null;
       console.log(`Player logged in (social/${provider}): ${ws.nickname} (${ws.playerId})`);
 
       notifyFriendsOfStatusChange(ws.nickname, true);
       await handleReconnection(ws);
 
       // Save device info (fire-and-forget)
-      const socialDeviceInfo = data.deviceInfo || {};
       socialDeviceInfo.lastIp = ws.clientIp;
       updateDeviceInfo(ws.nickname, socialDeviceInfo);
     } else {
@@ -834,6 +1018,9 @@ async function handleSocialRegister(ws, data) {
     ws.playerId = `player_${nextPlayerId++}`;
     ws.nickname = result.nickname;
     ws.userId = result.userId;
+    ws.isAdmin = false;
+    ws.pushAdminInquiry = true;
+    ws.pushAdminReport = true;
     console.log(`Player registered & logged in (social/${provider}): ${ws.nickname} (${ws.playerId})`);
 
     notifyFriendsOfStatusChange(ws.nickname, true);
@@ -842,6 +1029,7 @@ async function handleSocialRegister(ws, data) {
     // Save device info (fire-and-forget)
     const regDeviceInfo = data.deviceInfo || {};
     regDeviceInfo.lastIp = ws.clientIp;
+    ws.appVersion = regDeviceInfo.appVersion || null;
     updateDeviceInfo(ws.nickname, regDeviceInfo);
   } catch (err) {
     console.error('Social register error:', err);
@@ -929,6 +1117,33 @@ async function handleReconnection(ws) {
   if (session) {
     const room = lobby.getRoom(session.roomId);
     if (room && room.game && room.canReconnect(ws.nickname)) {
+      if (room.gameType === 'skull_king' && !clientSupportsSK(ws)) {
+        playerSessions.delete(ws.nickname);
+        sendTo(ws, {
+          type: 'login_success',
+          playerId: ws.playerId,
+          nickname: ws.nickname,
+          themeKey,
+          titleKey,
+          hasTopCardCounter,
+          authProvider,
+          isAdmin: ws.isAdmin === true,
+          pushEnabled: ws.pushEnabled !== false,
+          pushFriendInvite: ws.pushFriendInvite !== false,
+          pushAdminInquiry: ws.pushAdminInquiry !== false,
+          pushAdminReport: ws.pushAdminReport !== false,
+          maintenanceStatus: getMaintenanceStatus(),
+        });
+        sendTo(ws, {
+          type: 'error',
+          message: '스컬킹을 플레이하려면 앱을 업데이트해주세요',
+        });
+        sendTo(ws, {
+          type: 'room_list',
+          rooms: lobby.getRoomList().filter((r) => r.gameType !== 'skull_king'),
+        });
+        return;
+      }
       // Reconnect to the game
       const result = room.reconnectPlayer(ws.nickname, ws.playerId);
       if (result.success) {
@@ -944,6 +1159,11 @@ async function handleReconnection(ws) {
           titleKey,
           hasTopCardCounter,
           authProvider,
+          isAdmin: ws.isAdmin === true,
+          pushEnabled: ws.pushEnabled !== false,
+          pushFriendInvite: ws.pushFriendInvite !== false,
+          pushAdminInquiry: ws.pushAdminInquiry !== false,
+          pushAdminReport: ws.pushAdminReport !== false,
           maintenanceStatus: getMaintenanceStatus(),
         });
         sendTo(ws, {
@@ -963,11 +1183,126 @@ async function handleReconnection(ws) {
     playerSessions.delete(ws.nickname);
   }
 
+  const spectatorSession = spectatorSessions.get(ws.nickname);
+  if (spectatorSession) {
+    const room = lobby.getRoom(spectatorSession.roomId);
+    if (room) {
+      if (room.gameType === 'skull_king' && !clientSupportsSK(ws)) {
+        spectatorSessions.delete(ws.nickname);
+        sendTo(ws, {
+          type: 'login_success',
+          playerId: ws.playerId,
+          nickname: ws.nickname,
+          themeKey,
+          titleKey,
+          hasTopCardCounter,
+          authProvider,
+          isAdmin: ws.isAdmin === true,
+          pushEnabled: ws.pushEnabled !== false,
+          pushFriendInvite: ws.pushFriendInvite !== false,
+          pushAdminInquiry: ws.pushAdminInquiry !== false,
+          pushAdminReport: ws.pushAdminReport !== false,
+          maintenanceStatus: getMaintenanceStatus(),
+        });
+        sendTo(ws, {
+          type: 'error',
+          message: '스컬킹 관전을 하려면 앱을 업데이트해주세요',
+        });
+        sendTo(ws, {
+          type: 'room_list',
+          rooms: lobby.getRoomList().filter((r) => r.gameType !== 'skull_king'),
+        });
+        return;
+      }
+      const result = room.addSpectator(ws.playerId, ws.nickname, '');
+      if (result.success) {
+        ws.roomId = room.id;
+        ws.isSpectator = true;
+        spectatorSessions.delete(ws.nickname);
+        console.log(`Spectator ${ws.nickname} reconnected to room ${room.name}`);
+
+        sendTo(ws, {
+          type: 'login_success',
+          playerId: ws.playerId,
+          nickname: ws.nickname,
+          themeKey,
+          titleKey,
+          hasTopCardCounter,
+          authProvider,
+          isAdmin: ws.isAdmin === true,
+          pushEnabled: ws.pushEnabled !== false,
+          pushFriendInvite: ws.pushFriendInvite !== false,
+          pushAdminInquiry: ws.pushAdminInquiry !== false,
+          pushAdminReport: ws.pushAdminReport !== false,
+          maintenanceStatus: getMaintenanceStatus(),
+        });
+        sendTo(ws, {
+          type: 'spectate_joined',
+          roomId: room.id,
+          roomName: room.name,
+        });
+        sendTo(ws, { type: 'chat_history', messages: room.getChatHistory() });
+        broadcastRoomState(room.id);
+        if (room.game) {
+          const permittedPlayers = room.getPermittedPlayers(ws.playerId);
+          const state = room.game.getStateForSpectator(permittedPlayers);
+          state.turnDeadline = room.turnDeadline;
+          state.spectators = room.spectators.map((s) => ({ id: s.id, nickname: s.nickname }));
+          state.spectatorCount = room.spectators.length;
+          sendTo(ws, { type: 'spectator_game_state', state });
+        } else {
+          sendTo(ws, { type: 'room_state', room: room.getState() });
+        }
+        broadcastRoomList();
+        return;
+      }
+    }
+    spectatorSessions.delete(ws.nickname);
+  }
+
   // Check if player was in a waiting room (no game, disconnected)
   for (const [roomId, room] of lobby.rooms) {
     if (room && !room.game) {
       const player = room.players.find(p => p !== null && p.nickname === ws.nickname && p.connected === false);
       if (player) {
+        if (room.gameType === 'skull_king' && !clientSupportsSK(ws)) {
+          const timerKey = `${roomId}_${player.id}`;
+          if (waitingRoomTimers[timerKey]) {
+            clearTimeout(waitingRoomTimers[timerKey]);
+            delete waitingRoomTimers[timerKey];
+          }
+          room.removePlayer(player.id);
+          if (room.getHumanPlayerCount() === 0) {
+            removeRoomAndNotifySpectators(roomId);
+          } else {
+            broadcastRoomState(room.id);
+          }
+          broadcastRoomList();
+          sendTo(ws, {
+            type: 'login_success',
+            playerId: ws.playerId,
+            nickname: ws.nickname,
+            themeKey,
+            titleKey,
+            hasTopCardCounter,
+            authProvider,
+            isAdmin: ws.isAdmin === true,
+            pushEnabled: ws.pushEnabled !== false,
+            pushFriendInvite: ws.pushFriendInvite !== false,
+            pushAdminInquiry: ws.pushAdminInquiry !== false,
+            pushAdminReport: ws.pushAdminReport !== false,
+            maintenanceStatus: getMaintenanceStatus(),
+          });
+          sendTo(ws, {
+            type: 'error',
+            message: '스컬킹 방에 다시 들어가려면 앱을 업데이트해주세요',
+          });
+          sendTo(ws, {
+            type: 'room_list',
+            rooms: lobby.getRoomList().filter((r) => r.gameType !== 'skull_king'),
+          });
+          return;
+        }
         // Cancel removal timer
         const timerKey = `${roomId}_${player.id}`;
         if (waitingRoomTimers[timerKey]) {
@@ -978,6 +1313,10 @@ async function handleReconnection(ws) {
         const oldId = player.id;
         player.id = ws.playerId;
         player.connected = true;
+        if (room.hostId === oldId) {
+          room.hostId = ws.playerId;
+          room.hostNickname = ws.nickname;
+        }
         ws.roomId = room.id;
 
         sendTo(ws, {
@@ -988,6 +1327,11 @@ async function handleReconnection(ws) {
           titleKey,
           hasTopCardCounter,
           authProvider,
+          isAdmin: ws.isAdmin === true,
+          pushEnabled: ws.pushEnabled !== false,
+          pushFriendInvite: ws.pushFriendInvite !== false,
+          pushAdminInquiry: ws.pushAdminInquiry !== false,
+          pushAdminReport: ws.pushAdminReport !== false,
           maintenanceStatus: getMaintenanceStatus(),
         });
         sendTo(ws, {
@@ -1010,9 +1354,19 @@ async function handleReconnection(ws) {
     titleKey,
     hasTopCardCounter,
     authProvider,
+    isAdmin: ws.isAdmin === true,
+    pushEnabled: ws.pushEnabled !== false,
+    pushFriendInvite: ws.pushFriendInvite !== false,
+    pushAdminInquiry: ws.pushAdminInquiry !== false,
+    pushAdminReport: ws.pushAdminReport !== false,
     maintenanceStatus: getMaintenanceStatus(),
   });
-  sendTo(ws, { type: 'room_list', rooms: lobby.getRoomList() });
+  sendTo(ws, {
+    type: 'room_list',
+    rooms: clientSupportsSK(ws)
+        ? lobby.getRoomList()
+        : lobby.getRoomList().filter((r) => r.gameType !== 'skull_king'),
+  });
   // Send unread DM count on login
   getTotalUnreadDmCount(ws.nickname).then(count => {
     sendTo(ws, { type: 'unread_dm_count', count });
@@ -1030,6 +1384,14 @@ function handleCreateRoom(ws, data) {
   }
   const roomName = (data.roomName || `${ws.nickname}'s Room`).trim();
   const isRanked = !!data.isRanked;
+  const gameType = data.gameType === 'skull_king' ? 'skull_king' : 'tichu';
+
+  // SK version gating
+  if (gameType === 'skull_king' && !clientSupportsSK(ws)) {
+    sendTo(ws, { type: 'error', message: '스컬킹을 플레이하려면 앱을 업데이트해주세요' });
+    return;
+  }
+
   if (isRanked && ws.authProvider === 'local') {
     sendTo(ws, { type: 'error', message: '랭크전은 소셜 연동이 필요합니다' });
     return;
@@ -1039,6 +1401,12 @@ function handleCreateRoom(ws, data) {
     : (typeof data.password === 'string' ? data.password.trim() : '');
   const turnTimeLimit = Math.min(Math.max(parseInt(data.turnTimeLimit) || 30, 10), 999);
   const targetScore = Math.min(Math.max(parseInt(data.targetScore) || 1000, 100), 20000);
+
+  let maxPlayers = 4;
+  if (gameType === 'skull_king') {
+    maxPlayers = Math.min(Math.max(parseInt(data.maxPlayers) || 4, 2), 6);
+  }
+
   const room = lobby.createRoom(
     roomName,
     ws.playerId,
@@ -1046,7 +1414,9 @@ function handleCreateRoom(ws, data) {
     password,
     isRanked,
     turnTimeLimit,
-    targetScore
+    targetScore,
+    gameType,
+    maxPlayers
   );
   ws.roomId = room.id;
   // Set title on host player
@@ -1071,6 +1441,11 @@ async function handleJoinRoom(ws, data) {
   const room = lobby.getRoom(data.roomId);
   if (!room) {
     sendTo(ws, { type: 'error', message: '방을 찾을 수 없습니다' });
+    return;
+  }
+  // SK version gating
+  if (room.gameType === 'skull_king' && !clientSupportsSK(ws)) {
+    sendTo(ws, { type: 'error', message: '스컬킹을 플레이하려면 앱을 업데이트해주세요' });
     return;
   }
   if (room.isRanked && ws.authProvider === 'local') {
@@ -1117,6 +1492,9 @@ async function handleLeaveRoom(ws) {
   const room = lobby.getRoom(ws.roomId);
   const roomId = ws.roomId;
   const wasSpectating = ws.isSpectator;
+  if (ws.nickname) {
+    spectatorSessions.delete(ws.nickname);
+  }
   ws.roomId = null;
   ws.isSpectator = false;
   if (room) {
@@ -1128,8 +1506,10 @@ async function handleLeaveRoom(ws) {
       // S6: If game is active and not already deserted, treat as desertion
       if (room.game && room.game.state !== 'game_end' && !room.game.deserted) {
         await handleDesertion(roomId, ws.playerId);
+        // handleDesertion already removes player and cleans up
+      } else {
+        room.removePlayer(ws.playerId);
       }
-      room.removePlayer(ws.playerId);
       if (room.getHumanPlayerCount() === 0) {
         removeRoomAndNotifySpectators(roomId);
       } else {
@@ -1159,6 +1539,7 @@ async function handleLeaveGame(ws) {
   // Remove from session tracking
   if (ws.nickname) {
     playerSessions.delete(ws.nickname);
+    spectatorSessions.delete(ws.nickname);
   }
 
   // S6: If game is active (not ended) and not already deserted, treat as desertion
@@ -1246,12 +1627,21 @@ function handleCheckRoom(ws) {
   sendTo(ws, { type: 'room_state', room: room.getState() });
   // S27: Also send game state if game is active
   if (room.game) {
-    const state = room.game.getStateForPlayer(ws.playerId);
-    state.turnDeadline = room.turnDeadline;
-    state.cardViewers = room.getViewersForPlayer(ws.playerId);
-    state.spectators = room.spectators.map((s) => ({ id: s.id, nickname: s.nickname }));
-    state.spectatorCount = room.spectators.length;
-    sendTo(ws, { type: 'game_state', state });
+    const spectatorList = room.spectators.map((s) => ({ id: s.id, nickname: s.nickname }));
+    if (ws.isSpectator) {
+      const state = room.game.getStateForSpectator(room.getPermittedPlayers(ws.playerId));
+      state.turnDeadline = room.turnDeadline;
+      state.spectators = spectatorList;
+      state.spectatorCount = room.spectators.length;
+      sendTo(ws, { type: 'spectator_game_state', state });
+    } else {
+      const state = room.game.getStateForPlayer(ws.playerId);
+      state.turnDeadline = room.turnDeadline;
+      state.cardViewers = room.getViewersForPlayer(ws.playerId);
+      state.spectators = spectatorList;
+      state.spectatorCount = room.spectators.length;
+      sendTo(ws, { type: 'game_state', state });
+    }
     sendTo(ws, {
       type: 'restore_complete',
       destination: ws.isSpectator ? 'spectator' : 'game',
@@ -1276,6 +1666,11 @@ function handleSpectateRoom(ws, data) {
   const room = lobby.getRoom(data.roomId);
   if (!room) {
     sendTo(ws, { type: 'error', message: '방을 찾을 수 없습니다' });
+    return;
+  }
+  // SK version gating for spectators
+  if (room.gameType === 'skull_king' && !clientSupportsSK(ws)) {
+    sendTo(ws, { type: 'error', message: '스컬킹을 관전하려면 앱을 업데이트해주세요' });
     return;
   }
   const password = typeof data.password === 'string' ? data.password.trim() : '';
@@ -1350,6 +1745,25 @@ function handleRequestCardView(ws, data) {
       spectatorNickname: ws.nickname,
     });
   }
+
+  const timerKey = `${playerId}:${ws.playerId}`;
+  room.cardRequestTimers[timerKey] = setTimeout(() => {
+    const expired = room.expireCardViewRequest(playerId, ws.playerId);
+    if (!expired.success) return;
+    const spectatorWs = findWsByPlayerId(ws.playerId);
+    if (spectatorWs) {
+      sendTo(spectatorWs, {
+        type: 'card_view_response',
+        playerId,
+        playerNickname: playerWs?.nickname || '',
+        allowed: false,
+      });
+      sendTo(spectatorWs, {
+        type: 'error',
+        message: '패 보기 요청 응답 시간이 지났습니다',
+      });
+    }
+  }, 5000);
 
   sendTo(ws, { type: 'card_view_requested', playerId });
 }
@@ -1448,13 +1862,24 @@ function handleStartGame(ws) {
   }
   const room = lobby.getRoom(ws.roomId);
   if (!room) { sendTo(ws, { type: 'room_closed' }); ws.roomId = null; return; }
+  if (room.game) {
+    sendTo(ws, { type: 'error', message: '이미 게임이 진행 중입니다' });
+    return;
+  }
   if (room.hostId !== ws.playerId) {
     sendTo(ws, { type: 'error', message: '방장만 게임을 시작할 수 있습니다' });
     return;
   }
-  if (room.getPlayerCount() < 4) {
-    sendTo(ws, { type: 'error', message: '4명이 모여야 시작할 수 있습니다' });
-    return;
+  if (room.gameType === 'skull_king') {
+    if (room.getPlayerCount() < 2) {
+      sendTo(ws, { type: 'error', message: '최소 2명이 필요합니다' });
+      return;
+    }
+  } else {
+    if (room.getPlayerCount() < room.maxPlayers) {
+      sendTo(ws, { type: 'error', message: '4명이 모여야 시작할 수 있습니다' });
+      return;
+    }
   }
   if (!room.areAllReady()) {
     broadcastGameEvent(ws.roomId, { type: 'error', message: '모든 플레이어가 준비해야 합니다' });
@@ -1509,7 +1934,7 @@ function handleChangeTeam(ws, data) {
     return;
   }
   const targetSlot = data.targetSlot;
-  if (typeof targetSlot !== 'number' || targetSlot < 0 || targetSlot > 3) {
+  if (typeof targetSlot !== 'number' || targetSlot < 0 || targetSlot >= room.maxPlayers) {
     sendTo(ws, { type: 'error', message: '잘못된 슬롯입니다' });
     return;
   }
@@ -1570,7 +1995,6 @@ function handleAddBot(ws, data) {
     sendTo(ws, { type: 'error', message: '방장만 봇을 추가할 수 있습니다' });
     return;
   }
-  // TODO: 테스트 후 복구 - 랭크전 봇 제한
   if (room.isRanked) {
     sendTo(ws, { type: 'error', message: '랭크전에서는 봇을 추가할 수 없습니다' });
     return;
@@ -1649,7 +2073,15 @@ async function handleGetProfile(ws, data) {
     return;
   }
   const profile = await getUserProfile(targetNickname);
-  const recentMatches = await getRecentMatches(targetNickname, 20);
+  const [tichuMatches, skMatches] = await Promise.all([
+    getRecentMatches(targetNickname, 20),
+    getSKRecentMatches(targetNickname, 20),
+  ]);
+  // Add gameType to tichu matches and merge with SK matches, sorted by date
+  const recentMatches = [
+    ...tichuMatches.map(m => ({ ...m, gameType: 'tichu' })),
+    ...skMatches,
+  ].sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt)).slice(0, 20);
   const isBlocked = (await getBlockedUsers(ws.nickname)).includes(targetNickname);
   sendTo(ws, {
     type: 'profile_result',
@@ -1665,6 +2097,10 @@ function handleGameAction(ws, data) {
     sendTo(ws, { type: 'error', message: '방에 참가하고 있지 않습니다' });
     return;
   }
+  if (ws.isSpectator) {
+    sendTo(ws, { type: 'error', message: '관전자는 게임 액션을 수행할 수 없습니다' });
+    return;
+  }
   const room = lobby.getRoom(ws.roomId);
   if (!room || !room.game) {
     sendTo(ws, { type: 'room_closed' });
@@ -1674,7 +2110,8 @@ function handleGameAction(ws, data) {
 
   // S7: Only clear turn timer for actions that affect turn progression
   // Don't clear for phase-wide actions (large tichu / exchange) or small tichu declaration
-  const phaseActions = ['pass_large_tichu', 'declare_large_tichu', 'exchange_cards', 'declare_small_tichu'];
+  // SK: submit_bid is a phase action (simultaneous), play_card clears timer
+  const phaseActions = ['pass_large_tichu', 'declare_large_tichu', 'exchange_cards', 'declare_small_tichu', 'submit_bid'];
   if (!phaseActions.includes(data.type)) {
     clearTurnTimer(ws.roomId);
   }
@@ -1729,6 +2166,11 @@ async function saveGameResult(room) {
     delete roundEndTimers[room.id];
   }
   delete timeoutCounts[room.id];
+
+  if (room.gameType === 'skull_king') {
+    return saveSKGameResult(room);
+  }
+
   const game = room.game;
   const totalScores = game.totalScores;
   const winnerTeam = totalScores.teamA >= totalScores.teamB ? 'A' : 'B';
@@ -1742,32 +2184,62 @@ async function saveGameResult(room) {
   const teamBPlayers = teams.teamB;
 
   try {
-    await saveMatchResult({
-      winnerTeam,
-      teamAScore: totalScores.teamA,
-      teamBScore: totalScores.teamB,
-      playerA1: playerNames[teamAPlayers[0]] || '',
-      playerA2: playerNames[teamAPlayers[1]] || '',
-      playerB1: playerNames[teamBPlayers[0]] || '',
-      playerB2: playerNames[teamBPlayers[1]] || '',
-      isRanked: room.isRanked,
-      endReason: 'normal',
-    });
-
-    // Update stats for each player (skip bots)
-    for (const pid of teamAPlayers) {
-      if (pid.startsWith('bot_')) continue;
-      const nick = playerNames[pid];
-      if (nick) await updateUserStats(nick, winnerTeam === 'A', room.isRanked);
-    }
-    for (const pid of teamBPlayers) {
-      if (pid.startsWith('bot_')) continue;
-      const nick = playerNames[pid];
-      if (nick) await updateUserStats(nick, winnerTeam === 'B', room.isRanked);
-    }
+    await saveMatchResultWithStats(
+      {
+        winnerTeam,
+        teamAScore: totalScores.teamA,
+        teamBScore: totalScores.teamB,
+        playerA1: playerNames[teamAPlayers[0]] || '',
+        playerA2: playerNames[teamAPlayers[1]] || '',
+        playerB1: playerNames[teamBPlayers[0]] || '',
+        playerB2: playerNames[teamBPlayers[1]] || '',
+        isRanked: room.isRanked,
+        endReason: 'normal',
+      },
+      [
+        ...teamAPlayers.map((pid) => ({
+          nickname: playerNames[pid] || '',
+          won: winnerTeam === 'A',
+          isRanked: room.isRanked,
+          isBot: pid.startsWith('bot_'),
+        })),
+        ...teamBPlayers.map((pid) => ({
+          nickname: playerNames[pid] || '',
+          won: winnerTeam === 'B',
+          isRanked: room.isRanked,
+          isBot: pid.startsWith('bot_'),
+        })),
+      ],
+    );
     console.log(`Match result saved for room ${room.name}`);
   } catch (err) {
     console.error('Error saving match result:', err);
+  }
+}
+
+async function saveSKGameResult(room) {
+  try {
+    const game = room.game;
+    const rankings = game.getRankings();
+    const isRanked = room.isRanked;
+
+    await saveSKMatchResultWithStats({
+      playerCount: game.playerCount,
+      isRanked,
+      endReason: 'normal',
+      deserterNickname: null,
+      players: rankings.map(r => ({
+        nickname: r.nickname,
+        score: r.score,
+        rank: r.rank,
+        isWinner: r.rank === 1,
+        isBot: r.playerId.startsWith('bot_'),
+      })),
+    });
+
+    console.log(`SK match result saved for room ${room.name}`);
+  } catch (err) {
+    console.error('Error saving SK match result:', err);
   }
 }
 
@@ -1775,16 +2247,39 @@ function sendGameStateToAll(roomId) {
   const room = lobby.getRoom(roomId);
   if (!room || !room.game) return;
 
-  // Auto next round after 3 seconds
+  if (room.game.state !== 'trick_end' && trickEndTimers[roomId]) {
+    clearTimeout(trickEndTimers[roomId]);
+    delete trickEndTimers[roomId];
+  }
+
+  if (room.gameType === 'skull_king' && room.game.state === 'trick_end') {
+    if (trickEndTimers[roomId]) clearTimeout(trickEndTimers[roomId]);
+    trickEndTimers[roomId] = setTimeout(() => {
+      delete trickEndTimers[roomId];
+      const r = lobby.getRoom(roomId);
+      if (!r || !r.game || r.game.state !== 'trick_end') return;
+      r.game.advanceAfterTrickEnd();
+      if (r.game.state === 'game_end') {
+        saveGameResult(r);
+        scheduleAutoReturnToRoom(roomId);
+      }
+      sendGameStateToAll(roomId);
+    }, 1500);
+    _broadcastState(roomId, room);
+    return;
+  }
+
+  // Auto next round after delay
   if (room.game.state === 'round_end') {
     if (roundEndTimers[roomId]) clearTimeout(roundEndTimers[roomId]);
+    const roundEndDelay = room.gameType === 'skull_king' ? 5000 : 3000;
     roundEndTimers[roomId] = setTimeout(() => {
       delete roundEndTimers[roomId];
       const r = lobby.getRoom(roomId);
       if (!r || !r.game || r.game.state !== 'round_end') return;
       r.game.nextRound();
       sendGameStateToAll(roomId);
-    }, 3000);
+    }, roundEndDelay);
     // Send state without timer for round_end
     _broadcastState(roomId, room);
     return;
@@ -1870,11 +2365,13 @@ function scheduleBotActions(roomId) {
     if (!r || !r.game) return;
 
     // Re-evaluate at execution time
+    const isSK = r.gameType === 'skull_king';
+    const decideFn = isSK ? decideSKBotAction : decideBotAction;
     for (const botId of r.getBotIds()) {
-      let action = decideBotAction(r.game, botId);
+      let action = decideFn(r.game, botId);
       if (action) {
         // Add extra delay for card play actions to feel more natural
-        const isCardPlay = action.type === 'play_cards' || action.type === 'pass';
+        const isCardPlay = action.type === 'play_cards' || action.type === 'pass' || action.type === 'play_card';
         if (isCardPlay) {
           pendingBotCheck[roomId] = true;
           setTimeout(() => {
@@ -1882,7 +2379,7 @@ function scheduleBotActions(roomId) {
             const r2 = lobby.getRoom(roomId);
             if (!r2 || !r2.game) return;
             // Re-decide in case state changed
-            let action2 = decideBotAction(r2.game, botId);
+            let action2 = decideFn(r2.game, botId);
             if (!action2) {
               // State changed (e.g. bomb interrupt) - re-schedule for other bots
               scheduleBotActions(roomId);
@@ -1980,6 +2477,23 @@ function startTurnTimer(roomId) {
     return;
   }
 
+  // SK bidding phase: simultaneous bids with double time
+  if (gameState === 'bidding' && room.gameType === 'skull_king') {
+    if (turnTimerPhases[roomId] === 'sk_bidding') return;
+    clearTurnTimer(roomId);
+    const pending = room.game.playerIds.filter(
+      pid => room.game.bids[pid] === null && !room.isBot(pid)
+    );
+    if (pending.length === 0) return;
+    const timeLimit = room.turnTimeLimit * 2 * 1000;
+    room.turnDeadline = Date.now() + timeLimit;
+    turnTimerPhases[roomId] = 'sk_bidding';
+    turnTimers[roomId] = setTimeout(() => {
+      handlePhaseTimeout(roomId, 'sk_bidding');
+    }, timeLimit);
+    return;
+  }
+
   if (gameState !== 'playing') {
     clearTurnTimer(roomId);
     return;
@@ -2049,6 +2563,18 @@ function handlePhaseTimeout(roomId, phase) {
     sendGameStateToAll(roomId);
     return;
   }
+
+  // SK bidding timeout: auto-submit bid 0
+  if (phase === 'sk_bidding' && room.game.state === 'bidding') {
+    const pending = room.game.playerIds.filter(
+      pid => room.game.bids[pid] === null
+    );
+    for (const pid of pending) {
+      room.game.handleAction(pid, { type: 'submit_bid', bid: 0 });
+    }
+    sendGameStateToAll(roomId);
+    return;
+  }
 }
 
 async function handleTurnTimeout(roomId, playerId) {
@@ -2081,32 +2607,88 @@ async function handleTurnTimeout(roomId, playerId) {
   });
 
   // Auto action
+  const runSkullKingFallback = () => {
+    if (!room.game || room.gameType !== 'skull_king') return false;
+    if (room.game.state === 'bidding' && room.game.bids?.[playerId] === null) {
+      const bidResult = room.game.handleAction(playerId, { type: 'submit_bid', bid: 0 });
+      if (bidResult?.success) {
+        if (bidResult.broadcast) broadcastGameEvent(roomId, bidResult.broadcast);
+        sendGameStateToAll(roomId);
+        return true;
+      }
+    }
+    if (room.game.state === 'playing' && room.game.currentPlayer === playerId) {
+      const legalCards = room.game.getLegalCards(playerId) || [];
+      if (legalCards.length > 0) {
+        const cardId = legalCards[Math.floor(Math.random() * legalCards.length)];
+        const action = cardId === 'sk_tigress'
+            ? {
+                type: 'play_card',
+                cardId,
+                tigressChoice: Math.random() < 0.5 ? 'pirate' : 'escape',
+              }
+            : { type: 'play_card', cardId };
+        const playResult = room.game.handleAction(playerId, action);
+        if (playResult?.success) {
+          if (playResult.broadcast) broadcastGameEvent(roomId, playResult.broadcast);
+          if (room.game && room.game.state === 'game_end') {
+            saveGameResult(room);
+            scheduleAutoReturnToRoom(roomId);
+          } else if (room.game) {
+            sendGameStateToAll(roomId);
+          }
+          return true;
+        }
+      }
+    }
+    return false;
+  };
+
   try {
     const action = room.game.getAutoTimeoutAction(playerId);
     if (action) {
       const result = room.game.handleAction(playerId, action);
       if (result && result.success) {
         if (result.broadcast) broadcastGameEvent(roomId, result.broadcast);
-        if (room.game && room.game.state === 'game_end') { saveGameResult(room); scheduleAutoReturnToRoom(roomId); }
+        if (room.game && room.game.state === 'game_end') {
+          saveGameResult(room);
+          scheduleAutoReturnToRoom(roomId);
+        } else if (room.game) {
+          sendGameStateToAll(roomId);
+        }
       } else {
         console.log(`[TIMEOUT] Auto action failed for ${nickname}: ${result?.message}`);
-        // Force play call cards to prevent game from getting stuck
-        const forceResult = room.game.forcePlayCallCards(playerId);
-        if (forceResult && forceResult.success) {
-          if (forceResult.broadcast) broadcastGameEvent(roomId, forceResult.broadcast);
-          if (room.game && room.game.state === 'game_end') { saveGameResult(room); scheduleAutoReturnToRoom(roomId); }
+        if (!runSkullKingFallback() && room.gameType !== 'skull_king') {
+          // Force play call cards to prevent game from getting stuck (Tichu only)
+          try {
+            const forceResult = room.game.forcePlayCallCards(playerId);
+            if (forceResult && forceResult.success) {
+              if (forceResult.broadcast) broadcastGameEvent(roomId, forceResult.broadcast);
+              if (room.game && room.game.state === 'game_end') {
+                saveGameResult(room);
+                scheduleAutoReturnToRoom(roomId);
+              } else if (room.game) {
+                sendGameStateToAll(roomId);
+              }
+            }
+          } catch (e) {
+            console.error(`[TIMEOUT] forcePlayCallCards failed for ${nickname}:`, e.message);
+          }
         }
       }
     } else {
       console.log(`[TIMEOUT] No auto action for ${nickname} (currentPlayer: ${room.game.currentPlayer})`);
+      runSkullKingFallback();
     }
   } catch (err) {
     console.error(`[TIMEOUT] Exception during auto action for ${nickname}:`, err);
-    // Force play call cards to prevent game from getting stuck
-    try { room.game.forcePlayCallCards(playerId); } catch (_) {}
+    if (!runSkullKingFallback() && room.gameType !== 'skull_king') {
+      // Force play call cards to prevent game from getting stuck (Tichu only)
+      try { room.game.forcePlayCallCards(playerId); } catch (_) {}
+    }
   }
 
-  // Always restart timer and broadcast state to prevent game from getting stuck
+  // Keep game progression alive after timeout handling.
   if (room.game && room.game.state === 'playing') {
     sendGameStateToAll(roomId);
   }
@@ -2146,36 +2728,73 @@ async function handleDesertion(roomId, playerId, reason = 'leave') {
     }
   }
 
-  const totalScores = game.totalScores;
-  const teams = game.teams;
-  const playerNames = game.playerNames;
-  const teamAPlayers = teams.teamA;
-  const teamBPlayers = teams.teamB;
-
-  // Desertion = draw for remaining players, loss for deserter
-  const winnerTeam = 'draw';
-
   try {
-    await saveMatchResult({
-      winnerTeam,
-      teamAScore: totalScores.teamA,
-      teamBScore: totalScores.teamB,
-      playerA1: playerNames[teamAPlayers[0]] || '',
-      playerA2: playerNames[teamAPlayers[1]] || '',
-      playerB1: playerNames[teamBPlayers[0]] || '',
-      playerB2: playerNames[teamBPlayers[1]] || '',
-      isRanked: room.isRanked,
-      endReason: reason,
-      deserterNickname: deserterNick || null,
-    });
+    if (room.gameType === 'skull_king') {
+      const deserterScore = game.totalScores[playerId] ?? 0;
+      const rankings = game.getRankings();
+      const remaining = rankings.filter((r) => r.playerId !== playerId);
+      const players = [];
 
-    // Deserter: forced loss (ranked = -20 penalty)
-    if (deserterNick && !playerId.startsWith('bot_')) {
-      await updateUserStats(deserterNick, false, room.isRanked);
+      let currentRank = 1;
+      for (let i = 0; i < remaining.length; i++) {
+        if (i > 0 && remaining[i].score < remaining[i - 1].score) {
+          currentRank = i + 1;
+        }
+        players.push({
+          nickname: remaining[i].nickname,
+          score: remaining[i].score,
+          rank: currentRank,
+          isWinner: false,
+          isBot: remaining[i].playerId.startsWith('bot_'),
+        });
+      }
+
+      players.push({
+        nickname: deserterNick || playerId,
+        score: deserterScore,
+        rank: game.playerCount,
+        isWinner: false,
+        isBot: playerId.startsWith('bot_'),
+      });
+
+      await saveSKMatchResultWithStats({
+        playerCount: game.playerCount,
+        isRanked: room.isRanked,
+        endReason: reason,
+        deserterNickname: deserterNick || null,
+        players,
+      });
+
+    } else {
+      const totalScores = game.totalScores;
+      const teams = game.teams;
+      const playerNames = game.playerNames;
+      const teamAPlayers = teams.teamA;
+      const teamBPlayers = teams.teamB;
+
+      await saveMatchResultWithStats(
+        {
+          winnerTeam: 'draw',
+          teamAScore: totalScores.teamA,
+          teamBScore: totalScores.teamB,
+          playerA1: playerNames[teamAPlayers[0]] || '',
+          playerA2: playerNames[teamAPlayers[1]] || '',
+          playerB1: playerNames[teamBPlayers[0]] || '',
+          playerB2: playerNames[teamBPlayers[1]] || '',
+          isRanked: room.isRanked,
+          endReason: reason,
+          deserterNickname: deserterNick || null,
+        },
+        [
+          {
+            nickname: deserterNick || '',
+            won: false,
+            isRanked: room.isRanked,
+            isBot: playerId.startsWith('bot_'),
+          },
+        ],
+      );
     }
-
-    // Remaining players: no stat change (draw)
-
   } catch (err) {
     console.error('Error saving desertion result:', err);
   }
@@ -2201,11 +2820,6 @@ async function handleDesertion(roomId, playerId, reason = 'leave') {
     deserterWs.roomId = null;
   }
   room.removePlayer(playerId);
-
-  // Clean up game so room shows as not in game
-  room.game = null;
-  room.resetReady();
-  clearTurnTimer(roomId);
 
   if (room.getHumanPlayerCount() === 0) {
     removeRoomAndNotifySpectators(roomId);
@@ -2282,6 +2896,10 @@ function closeRoom(roomId, messageType = 'room_closed') {
     clearTimeout(autoReturnTimers[roomId]);
     delete autoReturnTimers[roomId];
   }
+  if (trickEndTimers[roomId]) {
+    clearTimeout(trickEndTimers[roomId]);
+    delete trickEndTimers[roomId];
+  }
   if (turnTimers[roomId]) {
     clearTimeout(turnTimers[roomId]);
     delete turnTimers[roomId];
@@ -2305,9 +2923,13 @@ function removeRoomAndNotifySpectators(roomId) {
 }
 
 function broadcastRoomList() {
-  const rooms = lobby.getRoomList();
+  const allRooms = lobby.getRoomList();
   wss.clients.forEach((ws) => {
     if (ws.playerId && !ws.roomId) {
+      // Filter SK rooms for old clients
+      const rooms = clientSupportsSK(ws)
+        ? allRooms
+        : allRooms.filter(r => r.gameType !== 'skull_king');
       sendTo(ws, { type: 'room_list', rooms });
     }
   });
@@ -2343,10 +2965,23 @@ async function handleChatMessage(ws, data) {
     timestamp: Date.now(),
   };
 
+  // Get list of users who blocked the sender (to filter them out)
+  let blockedBySender = [];
+  try {
+    const { pool } = require('./db/database');
+    const { rows } = await pool.query(
+      'SELECT blocker_nickname FROM tc_blocked_users WHERE blocked_nickname = $1',
+      [ws.nickname]
+    );
+    blockedBySender = rows.map(r => r.blocker_nickname);
+  } catch (e) { /* ignore - send to all on error */ }
+
+  const blockedSet = new Set(blockedBySender);
+
   // Broadcast to all players in the room
   room.getPlayerIds().forEach(playerId => {
     const playerWs = findWsByPlayerId(playerId);
-    if (playerWs) {
+    if (playerWs && !blockedSet.has(playerWs.nickname)) {
       sendTo(playerWs, chatData);
     }
   });
@@ -2354,7 +2989,7 @@ async function handleChatMessage(ws, data) {
   // Also send to spectators
   room.getSpectatorIds().forEach(specId => {
     const specWs = findWsByPlayerId(specId);
-    if (specWs) {
+    if (specWs && !blockedSet.has(specWs.nickname)) {
       sendTo(specWs, chatData);
     }
   });
@@ -2419,10 +3054,56 @@ async function handleReportUser(ws, data) {
   }
   const result = await reportUser(ws.nickname, targetNickname, reason, ws.roomId || '', chatContext);
   sendTo(ws, { type: 'report_result', ...result });
+  if (result.success) {
+    await notifyAdminUsers(
+      'report',
+      '새 신고 접수',
+      `${ws.nickname}님이 ${targetNickname}님을 신고했습니다`,
+      { reporter: ws.nickname, target: targetNickname, roomId: ws.roomId || '' }
+    );
+  }
 }
 
 // Rankings handler
 async function handleGetRankings(ws, data) {
+  const gameType = data?.gameType || 'tichu';
+
+  // SK rankings
+  if (gameType === 'skull_king') {
+    const result = await getSKRankings(50);
+    // Calculate requester's SK rank
+    if (ws.nickname && result.success) {
+      const { pool } = require('./db/database');
+      try {
+        const myRankRes = await pool.query(
+          `SELECT COUNT(*) + 1 AS rank FROM tc_users
+           WHERE sk_rating > (SELECT sk_rating FROM tc_users WHERE nickname = $1)
+              OR (sk_rating = (SELECT sk_rating FROM tc_users WHERE nickname = $1)
+                  AND sk_wins > (SELECT sk_wins FROM tc_users WHERE nickname = $1))`,
+          [ws.nickname]
+        );
+        const myProfileRes = await pool.query(
+          `SELECT u.nickname, u.sk_rating AS rating, u.sk_wins AS wins,
+                  u.sk_losses AS losses, u.sk_total_games AS total_games,
+                  CASE WHEN u.sk_total_games > 0
+                    THEN ROUND((u.sk_wins::FLOAT / u.sk_total_games) * 100)
+                    ELSE 0 END AS win_rate,
+                  e.banner_key
+           FROM tc_users u
+           LEFT JOIN tc_user_equips e ON e.nickname = u.nickname
+           WHERE u.nickname = $1`,
+          [ws.nickname]
+        );
+        if (myProfileRes.rows.length > 0) {
+          result.myRank = parseInt(myRankRes.rows[0].rank);
+          result.myRankData = myProfileRes.rows[0];
+        }
+      } catch (_) {}
+    }
+    sendTo(ws, { type: 'rankings_result', gameType: 'skull_king', ...result });
+    return;
+  }
+
   const seasonId = data?.seasonId;
   if (seasonId) {
     const result = await getSeasonRankings(seasonId, 50);
@@ -2475,6 +3156,246 @@ async function handleGetWallet(ws) {
   }
   const result = await getWallet(ws.nickname);
   sendTo(ws, { type: 'wallet_result', ...result });
+}
+
+async function handleGetGoldHistory(ws, data) {
+  if (!ws.nickname) {
+    sendTo(ws, { type: 'gold_history_result', success: false, message: '로그인이 필요합니다' });
+    return;
+  }
+  const rawLimit = data?.limit;
+  const limit = typeof rawLimit === 'number' && rawLimit > 0
+      ? Math.min(rawLimit, 50)
+      : 30;
+  const result = await getGoldHistory(ws.nickname, limit);
+  sendTo(ws, { type: 'gold_history_result', ...result });
+}
+
+async function ensureAdmin(ws, responseType = 'admin_error') {
+  if (ws.nickname) {
+    const isAdmin = await isUserAdmin(ws.nickname);
+    ws.isAdmin = isAdmin;
+    if (isAdmin) return true;
+  }
+  sendTo(ws, { type: responseType, success: false, message: '관리자 권한이 필요합니다' });
+  return false;
+}
+
+function getActiveUsersSnapshot() {
+  const rows = [];
+  for (const client of wss.clients) {
+    if (!client.nickname || client.readyState !== client.OPEN) continue;
+    let status = 'online';
+    let roomName = null;
+    let roomId = null;
+    if (client.roomId) {
+      const room = lobby.getRoom(client.roomId);
+      roomId = client.roomId;
+      roomName = room?.name || null;
+      status = client.isSpectator ? 'spectating' : (room?.game ? 'ingame' : 'waiting');
+    }
+    rows.push({
+      nickname: client.nickname,
+      status,
+      roomId,
+      roomName,
+      isAdmin: client.isAdmin === true,
+    });
+  }
+  rows.sort((a, b) => a.nickname.localeCompare(b.nickname, 'ko'));
+  return rows;
+}
+
+async function notifyAdminUsers(kind, title, body, payload = {}) {
+  const recipients = await getAdminPushRecipients(kind);
+  for (const user of recipients) {
+    if (user.fcm_token) {
+      await sendPushNotification(user.fcm_token, title, body);
+    }
+  }
+  for (const client of wss.clients) {
+    if (client.readyState !== client.OPEN || client.isAdmin !== true) continue;
+    sendTo(client, { type: 'admin_notice', kind, title, body, ...payload });
+  }
+}
+
+async function handleGetAdminDashboard(ws) {
+  if (!await ensureAdmin(ws, 'admin_dashboard_result')) return;
+  const stats = await getDashboardStats();
+  sendTo(ws, {
+    type: 'admin_dashboard_result',
+    success: true,
+    dashboard: {
+      totalUsers: stats.totalUsers || 0,
+      pendingInquiries: stats.pendingInquiries || 0,
+      pendingReports: stats.pendingReports || 0,
+      activeUsers: getActiveUsersSnapshot().length,
+      serverStartedAt,
+    },
+  });
+}
+
+async function handleGetAdminStats(ws, data) {
+  if (!await ensureAdmin(ws, 'admin_stats_result')) return;
+  const result = await getDetailedAdminStats(
+    data?.from?.toString(),
+    data?.to?.toString(),
+    data?.bucket?.toString() === 'hour' ? 'hour' : 'day',
+  );
+  sendTo(ws, { type: 'admin_stats_result', ...result });
+}
+
+async function handleGetAdminUsers(ws, data) {
+  if (!await ensureAdmin(ws, 'admin_users_result')) return;
+  const search = (data?.search || '').toString();
+  const page = typeof data?.page === 'number' ? data.page : 1;
+  const limit = typeof data?.limit === 'number' ? Math.min(data.limit, 100) : 50;
+  const result = await getUsers(search, page, limit, { sort: data?.sort || 'login_desc' });
+  const activeMap = new Map(getActiveUsersSnapshot().map((row) => [row.nickname, row]));
+  sendTo(ws, {
+    type: 'admin_users_result',
+    success: true,
+    rows: result.rows.map((row) => ({
+      ...row,
+      isOnline: activeMap.has(row.nickname),
+      onlineStatus: activeMap.get(row.nickname)?.status || 'offline',
+      roomName: activeMap.get(row.nickname)?.roomName || null,
+    })),
+    total: result.total,
+    page: result.page,
+    limit: result.limit,
+  });
+}
+
+async function handleGetAdminUserDetail(ws, data) {
+  if (!await ensureAdmin(ws, 'admin_user_detail_result')) return;
+  const nickname = data?.nickname?.toString();
+  if (!nickname) {
+    sendTo(ws, { type: 'admin_user_detail_result', success: false, message: '닉네임이 필요합니다' });
+    return;
+  }
+  const user = await getUserDetail(nickname);
+  if (!user) {
+    sendTo(ws, { type: 'admin_user_detail_result', success: false, message: '유저를 찾을 수 없습니다' });
+    return;
+  }
+  const active = getActiveUsersSnapshot().find((row) => row.nickname === nickname) || null;
+  sendTo(ws, {
+    type: 'admin_user_detail_result',
+    success: true,
+    user: {
+      ...user,
+      isOnline: active != null,
+      onlineStatus: active?.status || 'offline',
+      roomName: active?.roomName || null,
+    },
+  });
+}
+
+async function handleSetAdminUser(ws, data) {
+  if (!await ensureAdmin(ws, 'admin_set_user_result')) return;
+  const nickname = data?.nickname?.toString();
+  const isAdmin = data?.isAdmin === true;
+  if (!nickname) {
+    sendTo(ws, { type: 'admin_set_user_result', success: false, message: '닉네임이 필요합니다' });
+    return;
+  }
+  const result = await setUserAdmin(nickname, isAdmin);
+  if (result.success) {
+    for (const client of wss.clients) {
+      if (client.nickname !== nickname) continue;
+      client.isAdmin = isAdmin;
+      const pushAdminInquiry = result.user?.push_admin_inquiry !== false;
+      const pushAdminReport = result.user?.push_admin_report !== false;
+      client.pushAdminInquiry = pushAdminInquiry;
+      client.pushAdminReport = pushAdminReport;
+      sendTo(client, {
+        type: 'admin_status_changed',
+        isAdmin,
+        pushAdminInquiry,
+        pushAdminReport,
+      });
+    }
+  }
+  sendTo(ws, { type: 'admin_set_user_result', ...result, nickname, isAdmin });
+}
+
+async function handleAdminAdjustGold(ws, data) {
+  if (!await ensureAdmin(ws, 'admin_adjust_gold_result')) return;
+  const nickname = data?.nickname?.toString();
+  const amount = parseInt(data?.amount, 10);
+  if (!nickname) {
+    sendTo(ws, { type: 'admin_adjust_gold_result', success: false, message: '닉네임이 필요합니다' });
+    return;
+  }
+  if (!Number.isFinite(amount) || amount === 0) {
+    sendTo(ws, { type: 'admin_adjust_gold_result', success: false, message: '유효한 골드 수량이 필요합니다' });
+    return;
+  }
+  const result = await adminAdjustGold(nickname, amount, ws.nickname || 'admin');
+  sendTo(ws, { type: 'admin_adjust_gold_result', ...result, nickname, amount });
+}
+
+async function handleGetAdminInquiries(ws, data) {
+  if (!await ensureAdmin(ws, 'admin_inquiries_result')) return;
+  const page = typeof data?.page === 'number' ? data.page : 1;
+  const limit = typeof data?.limit === 'number' ? Math.min(data.limit, 100) : 50;
+  const result = await getInquiries(page, limit);
+  sendTo(ws, { type: 'admin_inquiries_result', success: true, ...result });
+}
+
+async function handleResolveAdminInquiry(ws, data) {
+  if (!await ensureAdmin(ws, 'admin_inquiry_resolve_result')) return;
+  const id = parseInt(data?.id, 10);
+  if (!id) {
+    sendTo(ws, { type: 'admin_inquiry_resolve_result', success: false, message: '문의 ID가 필요합니다' });
+    return;
+  }
+  const result = await resolveInquiry(id, data?.adminNote?.toString() || '');
+  if (result && result.success && result.inquiry) {
+    const targetNickname = result.inquiry.user_nickname;
+    const user = await getUserDetail(targetNickname);
+    if (user && user.fcm_token && user.push_enabled !== false) {
+      const title = '문의 답변이 도착했어요';
+      const inquiryTitle = result.inquiry.title || '';
+      const message = inquiryTitle ? `제목: ${inquiryTitle}` : '앱에서 확인해주세요.';
+      await sendPushNotification(user.fcm_token, title, message);
+    }
+  }
+  sendTo(ws, { type: 'admin_inquiry_resolve_result', ...result });
+}
+
+async function handleGetAdminReports(ws, data) {
+  if (!await ensureAdmin(ws, 'admin_reports_result')) return;
+  const page = typeof data?.page === 'number' ? data.page : 1;
+  const limit = typeof data?.limit === 'number' ? Math.min(data.limit, 100) : 50;
+  const result = await getReports(page, limit);
+  sendTo(ws, { type: 'admin_reports_result', success: true, ...result });
+}
+
+async function handleGetAdminReportGroup(ws, data) {
+  if (!await ensureAdmin(ws, 'admin_report_group_result')) return;
+  const target = data?.target?.toString();
+  const roomId = data?.roomId?.toString() || '';
+  if (!target) {
+    sendTo(ws, { type: 'admin_report_group_result', success: false, message: '대상 유저가 필요합니다' });
+    return;
+  }
+  const rows = await getReportGroup(target, roomId);
+  sendTo(ws, { type: 'admin_report_group_result', success: true, rows, target, roomId });
+}
+
+async function handleUpdateAdminReportStatus(ws, data) {
+  if (!await ensureAdmin(ws, 'admin_report_status_result')) return;
+  const target = data?.target?.toString();
+  const roomId = data?.roomId?.toString() || '';
+  const status = data?.status?.toString() || 'reviewed';
+  if (!target) {
+    sendTo(ws, { type: 'admin_report_status_result', success: false, message: '대상 유저가 필요합니다' });
+    return;
+  }
+  const result = await updateReportGroupStatus(target, roomId, status);
+  sendTo(ws, { type: 'admin_report_status_result', ...result, target, roomId, status });
 }
 
 // Shop items handler
@@ -2572,6 +3493,14 @@ async function handleSubmitInquiry(ws, data) {
   }
   const result = await submitInquiry(ws.nickname, category, title, content);
   sendTo(ws, { type: 'inquiry_result', ...result });
+  if (result.success) {
+    await notifyAdminUsers(
+      'inquiry',
+      '새 문의 접수',
+      `${ws.nickname}님의 문의가 도착했습니다`,
+      { nickname: ws.nickname, category, title }
+    );
+  }
 }
 
 async function handleGetInquiries(ws) {

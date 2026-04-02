@@ -91,6 +91,7 @@ class _ShopScreenState extends State<ShopScreen> {
                 builder: (context, game, _) {
                   WidgetsBinding.instance.addPostFrameCallback((_) {
                     if (!mounted) return;
+                    _maybeShowShopActionResult(context, game);
                     _maybeShowPurchaseDialog(context, game);
                     _maybeShowNicknameChangeResult(context, game);
                     _maybeShowAdRewardResult(context, game);
@@ -177,14 +178,63 @@ class _ShopScreenState extends State<ShopScreen> {
       ),
       child: Row(
         children: [
-          const Icon(Icons.monetization_on, color: Color(0xFFFFB74D)),
-          const SizedBox(width: 6),
-          Text(
-            '${game.gold} 골드',
-            style: const TextStyle(
-              fontSize: 14,
-              fontWeight: FontWeight.bold,
-              color: Color(0xFF5A4038),
+          InkWell(
+            borderRadius: BorderRadius.circular(12),
+            onTap: () => _showGoldHistoryDialog(game),
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 4),
+              child: Row(
+                children: [
+                  const Icon(Icons.monetization_on, color: Color(0xFFFFB74D)),
+                  const SizedBox(width: 6),
+                  Text(
+                    '${game.gold} 골드',
+                    style: const TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.bold,
+                      color: Color(0xFF5A4038),
+                    ),
+                  ),
+                  const SizedBox(width: 4),
+                  const Icon(
+                    Icons.chevron_right,
+                    size: 18,
+                    color: Color(0xFFB89C76),
+                  ),
+                ],
+              ),
+            ),
+          ),
+          const SizedBox(width: 8),
+          InkWell(
+            borderRadius: BorderRadius.circular(12),
+            onTap: _showGoldGuideDialog,
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+              decoration: BoxDecoration(
+                color: const Color(0xFFFFF6E7),
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: const Color(0xFFF0D6A6)),
+              ),
+              child: const Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(
+                    Icons.lightbulb_outline_rounded,
+                    size: 16,
+                    color: Color(0xFFB67C1D),
+                  ),
+                  SizedBox(width: 4),
+                  Text(
+                    '획득 방법',
+                    style: TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w700,
+                      color: Color(0xFF8B6220),
+                    ),
+                  ),
+                ],
+              ),
             ),
           ),
           const Spacer(),
@@ -196,6 +246,393 @@ class _ShopScreenState extends State<ShopScreen> {
               fontSize: 12,
               color: Color(0xFF9A6A6A),
               fontWeight: FontWeight.w600,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showGoldHistoryDialog(GameService game) {
+    game.requestGoldHistory();
+    showDialog(
+      context: context,
+      builder: (dialogContext) => Dialog(
+        insetPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 420, maxHeight: 560),
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(20, 18, 20, 18),
+            child: Consumer<GameService>(
+              builder: (context, game, _) {
+                return Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        Container(
+                          width: 40,
+                          height: 40,
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFFFF3E0),
+                            borderRadius: BorderRadius.circular(14),
+                          ),
+                          child: const Icon(
+                            Icons.monetization_on,
+                            color: Color(0xFFFFB74D),
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              const Text(
+                                '골드 히스토리',
+                                style: TextStyle(
+                                  fontSize: 18,
+                                  fontWeight: FontWeight.w800,
+                                  color: Color(0xFF5A4038),
+                                ),
+                              ),
+                              const SizedBox(height: 2),
+                              Text(
+                                '현재 보유 골드 ${game.gold}',
+                                style: const TextStyle(
+                                  fontSize: 13,
+                                  color: Color(0xFF8A7A72),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        IconButton(
+                          onPressed: () => Navigator.pop(dialogContext),
+                          icon: const Icon(Icons.close),
+                          color: const Color(0xFF8A7A72),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 12),
+                    const Text(
+                      '게임 결과, 광고 보상, 상점 구매, 시즌 보상 내역을 최근 순으로 보여줍니다.',
+                      style: TextStyle(
+                        fontSize: 12,
+                        height: 1.35,
+                        color: Color(0xFF8A7A72),
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                    Expanded(
+                      child: Builder(
+                        builder: (context) {
+                          if (game.goldHistoryLoading) {
+                            return const Center(
+                              child: CircularProgressIndicator(),
+                            );
+                          }
+                          if (game.goldHistoryError != null) {
+                            return Center(
+                              child: Text(
+                                game.goldHistoryError!,
+                                textAlign: TextAlign.center,
+                                style: const TextStyle(
+                                  color: Color(0xFF8A7A72),
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                            );
+                          }
+                          if (game.goldHistory.isEmpty) {
+                            return const Center(
+                              child: Text(
+                                '표시할 골드 내역이 아직 없습니다.',
+                                style: TextStyle(
+                                  color: Color(0xFF8A7A72),
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                            );
+                          }
+
+                          return ListView.separated(
+                            itemCount: game.goldHistory.length,
+                            separatorBuilder: (_, separatorIndex) =>
+                                const SizedBox(height: 10),
+                            itemBuilder: (context, index) {
+                              final item = game.goldHistory[index];
+                              final delta = (item['goldDelta'] as num?)?.toInt() ?? 0;
+                              final positive = delta >= 0;
+                              return Container(
+                                padding: const EdgeInsets.all(14),
+                                decoration: BoxDecoration(
+                                  color: Colors.white,
+                                  borderRadius: BorderRadius.circular(16),
+                                  border: Border.all(color: const Color(0xFFE6DEDA)),
+                                ),
+                                child: Row(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Container(
+                                      width: 40,
+                                      height: 40,
+                                      decoration: BoxDecoration(
+                                        color: positive
+                                            ? const Color(0xFFE8F5E9)
+                                            : const Color(0xFFFFF3E0),
+                                        borderRadius: BorderRadius.circular(14),
+                                      ),
+                                      child: Icon(
+                                        positive ? Icons.south_west : Icons.north_east,
+                                        color: positive
+                                            ? const Color(0xFF43A047)
+                                            : const Color(0xFFFB8C00),
+                                      ),
+                                    ),
+                                    const SizedBox(width: 12),
+                                    Expanded(
+                                      child: Column(
+                                        crossAxisAlignment: CrossAxisAlignment.start,
+                                        children: [
+                                          Text(
+                                            item['title']?.toString() ?? '골드 변동',
+                                            style: const TextStyle(
+                                              fontSize: 14,
+                                              fontWeight: FontWeight.w800,
+                                              color: Color(0xFF5A4038),
+                                            ),
+                                          ),
+                                          const SizedBox(height: 3),
+                                          Text(
+                                            item['description']?.toString() ?? '',
+                                            style: const TextStyle(
+                                              fontSize: 12,
+                                              color: Color(0xFF8A7A72),
+                                            ),
+                                          ),
+                                          const SizedBox(height: 6),
+                                          Text(
+                                            _formatHistoryDate(item['createdAt']),
+                                            style: const TextStyle(
+                                              fontSize: 11,
+                                              color: Color(0xFFB0A39E),
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                    const SizedBox(width: 8),
+                                    Text(
+                                      '${positive ? '+' : ''}$delta',
+                                      style: TextStyle(
+                                        fontSize: 16,
+                                        fontWeight: FontWeight.w900,
+                                        color: positive
+                                            ? const Color(0xFF43A047)
+                                            : const Color(0xFFFB8C00),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              );
+                            },
+                          );
+                        },
+                      ),
+                    ),
+                  ],
+                );
+              },
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  void _showGoldGuideDialog() {
+    showDialog(
+      context: context,
+      builder: (dialogContext) => Dialog(
+        insetPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 28),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 420),
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(20, 18, 20, 18),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Container(
+                      width: 40,
+                      height: 40,
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFFFF3E0),
+                        borderRadius: BorderRadius.circular(14),
+                      ),
+                      child: const Icon(
+                        Icons.monetization_on,
+                        color: Color(0xFFFFB74D),
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    const Expanded(
+                      child: Text(
+                        '골드 획득 방법',
+                        style: TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.w800,
+                          color: Color(0xFF5A4038),
+                        ),
+                      ),
+                    ),
+                    IconButton(
+                      onPressed: () => Navigator.pop(dialogContext),
+                      icon: const Icon(Icons.close),
+                      color: const Color(0xFF8A7A72),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 12),
+                const Text(
+                  '골드는 게임 플레이와 보상으로 얻을 수 있고, 상점에서 아이템 구매에 사용됩니다.',
+                  style: TextStyle(
+                    fontSize: 13,
+                    height: 1.4,
+                    color: Color(0xFF8A7A72),
+                  ),
+                ),
+                const SizedBox(height: 16),
+                _buildGoldGuideItem(
+                  title: '일반전 승리',
+                  value: '+10 골드',
+                  description: '티추와 스컬킹 일반전 승리 시 기본 보상을 받습니다.',
+                  color: const Color(0xFFE8F5E9),
+                  accent: const Color(0xFF43A047),
+                  icon: Icons.emoji_events_outlined,
+                ),
+                const SizedBox(height: 10),
+                _buildGoldGuideItem(
+                  title: '일반전 패배',
+                  value: '+3 골드',
+                  description: '패배해도 기본 참가 보상을 받을 수 있습니다.',
+                  color: const Color(0xFFE3F2FD),
+                  accent: const Color(0xFF1E88E5),
+                  icon: Icons.sports_esports_outlined,
+                ),
+                const SizedBox(height: 10),
+                _buildGoldGuideItem(
+                  title: '랭킹전 승리',
+                  value: '+20 골드',
+                  description: '랭킹전은 일반전 대비 2배 골드를 지급합니다.',
+                  color: const Color(0xFFFFF8E1),
+                  accent: const Color(0xFFF9A825),
+                  icon: Icons.military_tech_outlined,
+                ),
+                const SizedBox(height: 10),
+                _buildGoldGuideItem(
+                  title: '랭킹전 패배',
+                  value: '+6 골드',
+                  description: '랭킹전 패배 보상도 일반전 대비 2배입니다.',
+                  color: const Color(0xFFFFF3E0),
+                  accent: const Color(0xFFEF6C00),
+                  icon: Icons.shield_outlined,
+                ),
+                const SizedBox(height: 10),
+                _buildGoldGuideItem(
+                  title: '광고 보상',
+                  value: '+50 골드',
+                  description: '광고 시청으로 하루 최대 5번까지 추가 골드를 받을 수 있습니다.',
+                  color: const Color(0xFFFFF3E0),
+                  accent: const Color(0xFFFB8C00),
+                  icon: Icons.ondemand_video_outlined,
+                ),
+                const SizedBox(height: 10),
+                _buildGoldGuideItem(
+                  title: '시즌 보상',
+                  value: '추가 지급',
+                  description: '시즌 순위에 따라 시즌 종료 시 추가 골드가 지급됩니다.',
+                  color: const Color(0xFFF3E5F5),
+                  accent: const Color(0xFF8E24AA),
+                  icon: Icons.workspace_premium_outlined,
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildGoldGuideItem({
+    required String title,
+    required String value,
+    required String description,
+    required Color color,
+    required Color accent,
+    required IconData icon,
+  }) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: const Color(0xFFE6DEDA)),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Container(
+            width: 42,
+            height: 42,
+            decoration: BoxDecoration(
+              color: color,
+              borderRadius: BorderRadius.circular(14),
+            ),
+            child: Icon(icon, color: accent),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Expanded(
+                      child: Text(
+                        title,
+                        style: const TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w800,
+                          color: Color(0xFF5A4038),
+                        ),
+                      ),
+                    ),
+                    Text(
+                      value,
+                      style: TextStyle(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w900,
+                        color: accent,
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  description,
+                  style: const TextStyle(
+                    fontSize: 12,
+                    height: 1.35,
+                    color: Color(0xFF8A7A72),
+                  ),
+                ),
+              ],
             ),
           ),
         ],
@@ -961,6 +1398,19 @@ class _ShopScreenState extends State<ShopScreen> {
     }
   }
 
+  void _maybeShowShopActionResult(BuildContext context, GameService game) {
+    if (game.shopActionMessage == null) return;
+    final ok = game.shopActionSuccess == true;
+    final msg = game.shopActionMessage!;
+    game.clearShopActionResult();
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(msg),
+        backgroundColor: ok ? const Color(0xFF66BB6A) : const Color(0xFFEF5350),
+      ),
+    );
+  }
+
   void _showItemDetailDialog(BuildContext context, Map<String, dynamic> item) {
     final name = item['name']?.toString() ?? '';
     final price = item['price'] ?? 0;
@@ -1158,6 +1608,20 @@ class _ShopScreenState extends State<ShopScreen> {
     }
   }
 
+  String _formatHistoryDate(dynamic value) {
+    if (value == null) return '';
+    try {
+      final dt = DateTime.parse(value.toString()).toLocal();
+      final mm = dt.month.toString().padLeft(2, '0');
+      final dd = dt.day.toString().padLeft(2, '0');
+      final hh = dt.hour.toString().padLeft(2, '0');
+      final min = dt.minute.toString().padLeft(2, '0');
+      return '${dt.year}.$mm.$dd $hh:$min';
+    } catch (_) {
+      return value.toString();
+    }
+  }
+
   Widget _buildAdRewardButton(GameService game) {
     final canWatch = _todayAdCount < AdService.maxDailyRewards;
     return Container(
@@ -1192,10 +1656,10 @@ class _ShopScreenState extends State<ShopScreen> {
                     },
                   );
                   ad.show(
-                    onUserEarnedReward: (ad, reward) {
-                      AdService.incrementRewardCount();
+                    onUserEarnedReward: (ad, reward) async {
+                      await AdService.incrementRewardCount();
                       game.claimAdReward();
-                      _loadAdCount();
+                      await _loadAdCount();
                       if (mounted) setState(() => _adLoading = false);
                     },
                   );

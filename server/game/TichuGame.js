@@ -630,6 +630,7 @@ class TichuGame {
       this.dragonPending = true;
       this.dragonDecider = winner;
       this.pendingTrickCards = allTrickCards;
+      this.currentPlayer = winner; // Dragon decider's turn to choose
       // Don't clear trick yet; wait for dragon_give
       this.currentTrick = [];
       this.passCount = 0;
@@ -998,6 +999,7 @@ class TichuGame {
         finishPosition: this.finishOrder.indexOf(pid) + 1 || 0,
         hasSmallTichu: this.smallTichuDeclarations.includes(pid),
         hasLargeTichu: this.largeTichuDeclarations.includes(pid),
+        hasExchanged: !!this.exchangeDone[pid],
       });
     }
 
@@ -1068,6 +1070,7 @@ class TichuGame {
         finishPosition: this.finishOrder.indexOf(pid) + 1 || 0,
         hasSmallTichu: this.smallTichuDeclarations.includes(pid),
         hasLargeTichu: this.largeTichuDeclarations.includes(pid),
+        hasExchanged: !!this.exchangeDone[pid],
         team: this.teams.teamA.includes(pid) ? 'A' : 'B',
       };
     });

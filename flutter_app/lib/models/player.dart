@@ -5,6 +5,7 @@ class Player {
   final int cardCount;
   final bool hasSmallTichu;
   final bool hasLargeTichu;
+  final bool hasExchanged;
   final bool hasFinished;
   final int finishPosition;
   final bool isHost;
@@ -21,6 +22,7 @@ class Player {
     this.cardCount = 0,
     this.hasSmallTichu = false,
     this.hasLargeTichu = false,
+    this.hasExchanged = false,
     this.hasFinished = false,
     this.finishPosition = 0,
     this.isHost = false,
@@ -39,6 +41,7 @@ class Player {
       cardCount: json['cardCount'] ?? 0,
       hasSmallTichu: json['hasSmallTichu'] ?? false,
       hasLargeTichu: json['hasLargeTichu'] ?? false,
+      hasExchanged: json['hasExchanged'] ?? false,
       hasFinished: json['hasFinished'] ?? false,
       finishPosition: json['finishPosition'] ?? 0,
       isHost: json['isHost'] ?? false,

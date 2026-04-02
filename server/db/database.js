@@ -8,7 +8,7 @@ const isProduction = process.env.NODE_ENV === 'production';
 const DEFAULT_LOCAL_URL = 'postgresql://jiny@localhost:5432/minigame';
 const pool = new Pool({
   connectionString: process.env.DATABASE_URL || DEFAULT_LOCAL_URL,
-  ssl: isProduction ? { rejectUnauthorized: false } : false,
+  ssl: isProduction ? { rejectUnauthorized: true } : false,
 });
 
 // Initialize database tables (tc_ prefix for tichu)
@@ -135,6 +135,9 @@ async function initDatabase() {
     await client.query(`ALTER TABLE tc_users ADD COLUMN IF NOT EXISTS fcm_token TEXT`);
     await client.query(`ALTER TABLE tc_users ADD COLUMN IF NOT EXISTS push_enabled BOOLEAN DEFAULT true`);
     await client.query(`ALTER TABLE tc_users ADD COLUMN IF NOT EXISTS push_friend_invite BOOLEAN DEFAULT true`);
+    await client.query(`ALTER TABLE tc_users ADD COLUMN IF NOT EXISTS is_admin BOOLEAN DEFAULT false`);
+    await client.query(`ALTER TABLE tc_users ADD COLUMN IF NOT EXISTS push_admin_inquiry BOOLEAN DEFAULT true`);
+    await client.query(`ALTER TABLE tc_users ADD COLUMN IF NOT EXISTS push_admin_report BOOLEAN DEFAULT true`);
     await client.query(`ALTER TABLE tc_users ADD COLUMN IF NOT EXISTS device_platform VARCHAR(20)`);
     await client.query(`ALTER TABLE tc_users ADD COLUMN IF NOT EXISTS device_model VARCHAR(100)`);
     await client.query(`ALTER TABLE tc_users ADD COLUMN IF NOT EXISTS os_version VARCHAR(50)`);
@@ -416,6 +419,18 @@ async function initDatabase() {
       )
     `);
 
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS tc_gold_history (
+        id SERIAL PRIMARY KEY,
+        nickname VARCHAR(50) NOT NULL,
+        gold_delta INT NOT NULL,
+        source VARCHAR(30) NOT NULL,
+        title VARCHAR(100) NOT NULL,
+        description TEXT,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      )
+    `);
+
     // DM messages table
     await client.query(`
       CREATE TABLE IF NOT EXISTS tc_dm_messages (
@@ -435,6 +450,37 @@ async function initDatabase() {
       CREATE INDEX IF NOT EXISTS idx_dm_unread
       ON tc_dm_messages (receiver_nickname, read_at) WHERE read_at IS NULL
     `);
+
+    // ===== Skull King Tables =====
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS tc_sk_match_history (
+        id SERIAL PRIMARY KEY,
+        player_count INT NOT NULL,
+        is_ranked BOOLEAN DEFAULT FALSE,
+        end_reason VARCHAR(20) DEFAULT 'normal',
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      )
+    `);
+
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS tc_sk_match_players (
+        id SERIAL PRIMARY KEY,
+        match_id INT NOT NULL REFERENCES tc_sk_match_history(id),
+        nickname VARCHAR(50) NOT NULL,
+        score INT NOT NULL,
+        rank INT NOT NULL,
+        is_winner BOOLEAN DEFAULT FALSE,
+        is_bot BOOLEAN DEFAULT FALSE
+      )
+    `);
+
+    await client.query(`ALTER TABLE tc_sk_match_history ADD COLUMN IF NOT EXISTS deserter_nickname VARCHAR(50)`);
+
+    // SK user stats columns
+    await client.query(`ALTER TABLE tc_users ADD COLUMN IF NOT EXISTS sk_total_games INT DEFAULT 0`);
+    await client.query(`ALTER TABLE tc_users ADD COLUMN IF NOT EXISTS sk_wins INT DEFAULT 0`);
+    await client.query(`ALTER TABLE tc_users ADD COLUMN IF NOT EXISTS sk_losses INT DEFAULT 0`);
+    await client.query(`ALTER TABLE tc_users ADD COLUMN IF NOT EXISTS sk_rating INT DEFAULT 1000`);
 
     console.log('Database initialized (tc_ tables)');
   } catch (err) {
@@ -509,7 +555,7 @@ async function loginUser(username, password) {
   const client = await pool.connect();
   try {
     const result = await client.query(
-      'SELECT id, password_hash, nickname FROM tc_users WHERE username = $1',
+      'SELECT id, password_hash, nickname, is_admin, push_enabled, push_friend_invite, push_admin_inquiry, push_admin_report FROM tc_users WHERE username = $1',
       [username.toLowerCase()]
     );
 
@@ -534,6 +580,11 @@ async function loginUser(username, password) {
       success: true,
       userId: user.id,
       nickname: user.nickname,
+      isAdmin: user.is_admin === true,
+      pushEnabled: user.push_enabled !== false,
+      pushFriendInvite: user.push_friend_invite !== false,
+      pushAdminInquiry: user.push_admin_inquiry !== false,
+      pushAdminReport: user.push_admin_report !== false,
     };
   } catch (err) {
     console.error('Login error:', err);
@@ -575,15 +626,35 @@ async function deleteUser(nickname) {
 
   const client = await pool.connect();
   try {
+    await client.query('BEGIN');
+
+    // Delete related data in dependent tables
+    await client.query('DELETE FROM tc_blocked_users WHERE blocker_nickname = $1 OR blocked_nickname = $1', [nickname]);
+    await client.query('DELETE FROM tc_friends WHERE user_nickname = $1 OR friend_nickname = $1', [nickname]);
+    await client.query('DELETE FROM tc_dm_messages WHERE sender_nickname = $1 OR receiver_nickname = $1', [nickname]);
+    await client.query('DELETE FROM tc_user_equips WHERE nickname = $1', [nickname]);
+    await client.query('DELETE FROM tc_user_items WHERE nickname = $1', [nickname]);
+    await client.query('DELETE FROM tc_ad_rewards WHERE nickname = $1', [nickname]);
+    await client.query('DELETE FROM tc_season_rewards WHERE nickname = $1', [nickname]);
+    await client.query('DELETE FROM tc_season_rankings WHERE nickname = $1', [nickname]);
+    await client.query('DELETE FROM tc_gold_history WHERE nickname = $1', [nickname]);
+    await client.query('DELETE FROM tc_sk_match_players WHERE nickname = $1', [nickname]);
+    await client.query('DELETE FROM tc_reports WHERE reporter_nickname = $1 OR reported_nickname = $1', [nickname]);
+    await client.query('DELETE FROM tc_inquiries WHERE user_nickname = $1', [nickname]);
+
     const result = await client.query(
       'DELETE FROM tc_users WHERE nickname = $1',
       [nickname]
     );
     if (result.rowCount === 0) {
+      await client.query('ROLLBACK');
       return { success: false, message: '사용자를 찾을 수 없습니다' };
     }
+
+    await client.query('COMMIT');
     return { success: true, message: '계정이 삭제되었습니다' };
   } catch (err) {
+    await client.query('ROLLBACK');
     console.error('Delete user error:', err);
     return { success: false, message: '계정 삭제 중 오류가 발생했습니다' };
   } finally {
@@ -902,6 +973,98 @@ async function updateUserStats(nickname, won, isRanked = false) {
   }
 }
 
+async function saveMatchResultWithStats(matchData, players) {
+  const client = await pool.connect();
+  try {
+    await client.query('BEGIN');
+    await client.query(
+      `INSERT INTO tc_match_history
+       (winner_team, team_a_score, team_b_score, player_a1, player_a2, player_b1, player_b2, is_ranked, end_reason, deserter_nickname)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)`,
+      [
+        matchData.winnerTeam,
+        matchData.teamAScore,
+        matchData.teamBScore,
+        matchData.playerA1,
+        matchData.playerA2,
+        matchData.playerB1,
+        matchData.playerB2,
+        matchData.isRanked || false,
+        matchData.endReason || 'normal',
+        matchData.deserterNickname || null,
+      ]
+    );
+
+    for (const player of players) {
+      if (!player.nickname || player.isBot) continue;
+      const ratingChange = player.isRanked ? (player.won ? 25 : -20) : 0;
+      const baseGoldChange = player.won ? 10 : 3;
+      const isDraw = matchData.winnerTeam === 'draw';
+      const isDeserter =
+        ['leave', 'timeout'].includes(matchData.endReason || 'normal') &&
+        matchData.deserterNickname === player.nickname;
+      const goldChange = (isDraw || isDeserter)
+          ? 0
+          : (player.isRanked ? baseGoldChange * 2 : baseGoldChange);
+      const expChange = player.isRanked ? (player.won ? 15 : 8) : (player.won ? 10 : 5);
+      if (player.won) {
+        await client.query(
+          `UPDATE tc_users
+           SET total_games = total_games + 1,
+               wins = wins + 1,
+               rating = GREATEST(0, rating + $2),
+               gold = gold + $3,
+               season_games = season_games + $4,
+               season_wins = season_wins + $4,
+               season_rating = GREATEST(0, season_rating + $5),
+               exp_total = exp_total + $6,
+               level = GREATEST(1, ((exp_total + $6) / 100) + 1)
+           WHERE nickname = $1`,
+          [
+            player.nickname,
+            ratingChange,
+            goldChange,
+            player.isRanked ? 1 : 0,
+            player.isRanked ? ratingChange : 0,
+            expChange,
+          ]
+        );
+      } else {
+        await client.query(
+          `UPDATE tc_users
+           SET total_games = total_games + 1,
+               losses = losses + 1,
+               rating = GREATEST(0, rating + $2),
+               gold = gold + $3,
+               season_games = season_games + $4,
+               season_losses = season_losses + $4,
+               season_rating = GREATEST(0, season_rating + $5),
+               exp_total = exp_total + $6,
+               level = GREATEST(1, ((exp_total + $6) / 100) + 1)
+           WHERE nickname = $1`,
+          [
+            player.nickname,
+            ratingChange,
+            goldChange,
+            player.isRanked ? 1 : 0,
+            player.isRanked ? ratingChange : 0,
+            expChange,
+          ]
+        );
+      }
+    }
+
+    await client.query('COMMIT');
+    return { success: true };
+  } catch (err) {
+    await client.query('ROLLBACK');
+    console.error('saveMatchResultWithStats error:', err);
+    return { success: false, message: err.message };
+  } finally {
+    client.release();
+  }
+}
+
 // Get user profile
 async function getUserProfile(nickname) {
   const client = await pool.connect();
@@ -910,6 +1073,7 @@ async function getUserProfile(nickname) {
       `SELECT u.nickname, u.total_games, u.wins, u.losses, u.rating, u.gold, u.leave_count,
               u.season_rating, u.season_games, u.season_wins, u.season_losses,
               u.exp_total, u.level, u.created_at,
+              u.sk_total_games, u.sk_wins, u.sk_losses, u.sk_rating,
               e.banner_key, e.theme_key, e.title_key
        FROM tc_users u
        LEFT JOIN tc_user_equips e ON e.nickname = u.nickname
@@ -944,6 +1108,10 @@ async function getUserProfile(nickname) {
     );
     const hasTopCardCounter = topCardRes.rows.length > 0;
 
+    const skWinRate = user.sk_total_games > 0
+      ? Math.round((user.sk_wins / user.sk_total_games) * 100)
+      : 0;
+
     return {
       nickname: user.nickname,
       totalGames: user.total_games,
@@ -966,6 +1134,11 @@ async function getUserProfile(nickname) {
       titleKey: user.title_key,
       createdAt: user.created_at,
       hasTopCardCounter,
+      skTotalGames: user.sk_total_games,
+      skWins: user.sk_wins,
+      skLosses: user.sk_losses,
+      skRating: user.sk_rating,
+      skWinRate,
     };
   } catch (err) {
     console.error('Get user profile error:', err);
@@ -1037,7 +1210,135 @@ async function getWallet(nickname) {
   }
 }
 
-// Ad reward claim (max 5 per day, 10 gold each)
+async function getGoldHistory(nickname, limit = 30) {
+  const client = await pool.connect();
+  try {
+    const result = await client.query(
+      `
+      SELECT *
+      FROM (
+        SELECT
+          mh.created_at,
+          CASE
+            WHEN mh.end_reason IN ('leave', 'timeout') AND mh.deserter_nickname = $1 THEN 0
+            WHEN mh.end_reason IN ('leave', 'timeout') THEN 0
+            WHEN (
+              (mh.winner_team = 'A' AND $1 IN (mh.player_a1, mh.player_a2)) OR
+              (mh.winner_team = 'B' AND $1 IN (mh.player_b1, mh.player_b2))
+            ) THEN CASE WHEN mh.is_ranked THEN 20 ELSE 10 END
+            WHEN mh.winner_team = 'draw' THEN 0
+            ELSE CASE WHEN mh.is_ranked THEN 6 ELSE 3 END
+          END AS gold_delta,
+          'match' AS source,
+          CASE
+            WHEN mh.end_reason IN ('leave', 'timeout') AND mh.deserter_nickname = $1 THEN '탈주 패배'
+            WHEN (
+              (mh.winner_team = 'A' AND $1 IN (mh.player_a1, mh.player_a2)) OR
+              (mh.winner_team = 'B' AND $1 IN (mh.player_b1, mh.player_b2))
+            ) THEN CASE WHEN mh.is_ranked THEN '랭크전 승리' ELSE '일반전 승리' END
+            WHEN mh.winner_team = 'draw' THEN '무승부 종료'
+            ELSE CASE WHEN mh.is_ranked THEN '랭크전 패배' ELSE '일반전 패배' END
+          END AS title,
+          CONCAT('최종 점수 ', COALESCE(mh.team_a_score, 0), ' : ', COALESCE(mh.team_b_score, 0)) AS description
+        FROM tc_match_history mh
+        WHERE $1 IN (mh.player_a1, mh.player_a2, mh.player_b1, mh.player_b2)
+
+        UNION ALL
+
+        SELECT
+          ar.claimed_at AS created_at,
+          50 AS gold_delta,
+          'ad_reward' AS source,
+          '광고 보상' AS title,
+          '광고 시청 보상' AS description
+        FROM tc_ad_rewards ar
+        WHERE ar.nickname = $1
+
+        UNION ALL
+
+        SELECT
+          sr.created_at,
+          sr.gold_reward AS gold_delta,
+          'season_reward' AS source,
+          '시즌 보상' AS title,
+          CONCAT('시즌 ', sr.rank, '위 보상') AS description
+        FROM tc_season_rewards sr
+        WHERE sr.nickname = $1
+
+        UNION ALL
+
+        SELECT
+          h.created_at,
+          CASE
+            WHEN h.end_reason IN ('leave', 'timeout') AND h.deserter_nickname = $1 THEN 0
+            WHEN p.is_winner THEN CASE WHEN h.is_ranked THEN 20 ELSE 10 END
+            ELSE CASE WHEN h.is_ranked THEN 6 ELSE 3 END
+          END AS gold_delta,
+          'sk_match' AS source,
+          CASE
+            WHEN h.end_reason IN ('leave', 'timeout') AND h.deserter_nickname = $1 THEN '스컬킹 탈주 패배'
+            WHEN p.is_winner THEN CASE WHEN h.is_ranked THEN '스컬킹 랭크전 승리' ELSE '스컬킹 일반전 승리' END
+            ELSE CASE WHEN h.is_ranked THEN '스컬킹 랭크전 패배' ELSE '스컬킹 일반전 패배' END
+          END AS title,
+          CONCAT('순위 ', p.rank, '위 / 점수 ', p.score) AS description
+        FROM tc_sk_match_players p
+        JOIN tc_sk_match_history h ON h.id = p.match_id
+        WHERE p.nickname = $1
+
+        UNION ALL
+
+        SELECT
+          ui.acquired_at AS created_at,
+          -si.price AS gold_delta,
+          'shop_purchase' AS source,
+          si.name AS title,
+          '상점 구매' AS description
+        FROM tc_user_items ui
+        JOIN tc_shop_items si ON si.item_key = ui.item_key
+        WHERE ui.nickname = $1
+          AND ui.source = 'shop'
+
+        UNION ALL
+
+        SELECT
+          gh.created_at,
+          gh.gold_delta,
+          gh.source,
+          gh.title,
+          gh.description
+        FROM tc_gold_history gh
+        WHERE gh.nickname = $1
+      ) history
+      WHERE history.gold_delta <> 0
+      ORDER BY history.created_at DESC
+      LIMIT $2
+      `,
+      [nickname, limit]
+    );
+
+    return {
+      success: true,
+      history: result.rows.map((row) => ({
+        createdAt: row.created_at,
+        goldDelta: parseInt(row.gold_delta, 10) || 0,
+        source: row.source,
+        title: row.title,
+        description: row.description,
+      })),
+    };
+  } catch (err) {
+    console.error('Get gold history error:', err);
+    return { success: false, message: '골드 내역을 불러오지 못했습니다' };
+  } finally {
+    client.release();
+  }
+}
+
+async function getAdminGoldHistory(nickname, limit = 50) {
+  return getGoldHistory(nickname, limit);
+}
+
+// Ad reward claim (max 5 per day, 50 gold each)
 async function claimAdReward(nickname) {
   const client = await pool.connect();
   try {
@@ -1161,7 +1462,7 @@ async function buyItem(nickname, itemKey) {
     }
 
     const walletRes = await client.query(
-      `SELECT gold FROM tc_users WHERE nickname = $1`,
+      `SELECT gold FROM tc_users WHERE nickname = $1 FOR UPDATE`,
       [nickname]
     );
     if (walletRes.rows.length === 0) {
@@ -1504,6 +1805,48 @@ async function changeNickname(oldNickname, newNickname) {
     );
     await client.query(
       `UPDATE tc_match_history SET player_b2 = $2 WHERE player_b2 = $1`,
+      [oldNickname, trimmed]
+    );
+
+    // Update nickname in tc_match_history deserter_nickname
+    await client.query(
+      `UPDATE tc_match_history SET deserter_nickname = $2 WHERE deserter_nickname = $1`,
+      [oldNickname, trimmed]
+    );
+
+    // Update nickname in tc_sk_match_players
+    await client.query(
+      `UPDATE tc_sk_match_players SET nickname = $2 WHERE nickname = $1`,
+      [oldNickname, trimmed]
+    );
+
+    // Update nickname in tc_sk_match_history deserter_nickname
+    await client.query(
+      `UPDATE tc_sk_match_history SET deserter_nickname = $2 WHERE deserter_nickname = $1`,
+      [oldNickname, trimmed]
+    );
+
+    // Update nickname in tc_ad_rewards
+    await client.query(
+      `UPDATE tc_ad_rewards SET nickname = $2 WHERE nickname = $1`,
+      [oldNickname, trimmed]
+    );
+
+    // Update nickname in tc_season_rewards
+    await client.query(
+      `UPDATE tc_season_rewards SET nickname = $2 WHERE nickname = $1`,
+      [oldNickname, trimmed]
+    );
+
+    // Update nickname in tc_gold_history
+    await client.query(
+      `UPDATE tc_gold_history SET nickname = $2 WHERE nickname = $1`,
+      [oldNickname, trimmed]
+    );
+
+    // Update nickname in tc_season_rankings
+    await client.query(
+      `UPDATE tc_season_rankings SET nickname = $2 WHERE nickname = $1`,
       [oldNickname, trimmed]
     );
 
@@ -2105,7 +2448,7 @@ async function getUsers(search = '', page = 1, limit = 20, options = {}) {
     const total = parseInt(countResult.rows[0].count);
 
     const dataParams = [...countParams, limit, offset];
-    const dataQuery = `SELECT id, username, nickname, total_games, wins, losses, rating, gold, level, leave_count, season_rating, created_at, last_login, device_platform
+    const dataQuery = `SELECT id, username, nickname, total_games, wins, losses, rating, gold, level, leave_count, season_rating, created_at, last_login, device_platform, is_admin
                    FROM tc_users ${whereClause}
                    ORDER BY ${orderBy} LIMIT $${paramIdx} OFFSET $${paramIdx + 1}`;
     const result = await client.query(dataQuery, dataParams);
@@ -2124,7 +2467,7 @@ async function getUserDetail(nickname) {
   try {
     const userResult = await client.query(
       `SELECT id, username, nickname, total_games, wins, losses, rating, created_at, last_login, chat_ban_until, leave_count, gold, level, season_rating, admin_memo,
-              fcm_token, push_enabled, device_platform, device_model, os_version, app_version, last_ip
+              fcm_token, push_enabled, push_admin_inquiry, push_admin_report, is_admin, device_platform, device_model, os_version, app_version, last_ip
        FROM tc_users WHERE nickname = $1`,
       [nickname]
     );
@@ -2299,6 +2642,216 @@ async function getDashboardStats() {
   }
 }
 
+async function getDetailedAdminStats(dateFrom, dateTo, bucket = 'day') {
+  const client = await pool.connect();
+  const groupUnit = bucket === 'hour' ? 'hour' : 'day';
+  const from = dateFrom || new Date(Date.now() - 6 * 24 * 60 * 60 * 1000).toISOString();
+  const to = dateTo || new Date().toISOString();
+  try {
+    const gameSeries = await client.query(`
+      WITH tichu AS (
+        SELECT DATE_TRUNC('${groupUnit}', created_at) AS bucket_time,
+               COUNT(*) AS total_cnt,
+               COUNT(*) FILTER (WHERE is_ranked = TRUE) AS ranked_cnt
+        FROM tc_match_history
+        WHERE created_at >= $1 AND created_at < $2
+        GROUP BY 1
+      ),
+      skull AS (
+        SELECT DATE_TRUNC('${groupUnit}', created_at) AS bucket_time,
+               COUNT(*) AS total_cnt,
+               COUNT(*) FILTER (WHERE is_ranked = TRUE) AS ranked_cnt
+        FROM tc_sk_match_history
+        WHERE created_at >= $1 AND created_at < $2
+        GROUP BY 1
+      ),
+      buckets AS (
+        SELECT bucket_time FROM tichu
+        UNION
+        SELECT bucket_time FROM skull
+      )
+      SELECT b.bucket_time,
+             COALESCE(tichu.total_cnt, 0) AS tichu_cnt,
+             COALESCE(skull.total_cnt, 0) AS skull_cnt,
+             COALESCE(tichu.total_cnt, 0) + COALESCE(skull.total_cnt, 0) AS total_cnt,
+             COALESCE(tichu.ranked_cnt, 0) + COALESCE(skull.ranked_cnt, 0) AS ranked_cnt
+      FROM buckets b
+      LEFT JOIN tichu ON tichu.bucket_time = b.bucket_time
+      LEFT JOIN skull ON skull.bucket_time = b.bucket_time
+      ORDER BY b.bucket_time ASC
+    `, [from, to]);
+
+    const goldSeries = await client.query(`
+      WITH gold_events AS (
+        SELECT DATE_TRUNC('${groupUnit}', mh.created_at) AS bucket_time,
+               CASE
+                 WHEN mh.winner_team = 'draw' THEN 0
+                 WHEN mh.end_reason IN ('leave', 'timeout') AND mh.deserter_nickname = p.nickname THEN 0
+                 WHEN (
+                   (p.team_code = 'A' AND mh.winner_team = 'A') OR
+                   (p.team_code = 'B' AND mh.winner_team = 'B')
+                 ) THEN CASE WHEN mh.is_ranked THEN 20 ELSE 10 END
+                 ELSE CASE WHEN mh.is_ranked THEN 6 ELSE 3 END
+               END AS gold_delta
+        FROM tc_match_history mh
+        CROSS JOIN LATERAL (
+          VALUES
+            (mh.player_a1, 'A'),
+            (mh.player_a2, 'A'),
+            (mh.player_b1, 'B'),
+            (mh.player_b2, 'B')
+        ) AS p(nickname, team_code)
+        WHERE mh.created_at >= $1 AND mh.created_at < $2
+          AND p.nickname IS NOT NULL
+          AND EXISTS (SELECT 1 FROM tc_users u WHERE u.nickname = p.nickname)
+
+        UNION ALL
+
+        SELECT DATE_TRUNC('${groupUnit}', h.created_at) AS bucket_time,
+               CASE
+                 WHEN h.end_reason IN ('leave', 'timeout') AND h.deserter_nickname = p.nickname THEN 0
+                 WHEN p.is_winner THEN CASE WHEN h.is_ranked THEN 20 ELSE 10 END
+                 ELSE CASE WHEN h.is_ranked THEN 6 ELSE 3 END
+               END AS gold_delta
+        FROM tc_sk_match_history h
+        JOIN tc_sk_match_players p ON p.match_id = h.id
+        WHERE h.created_at >= $1 AND h.created_at < $2
+          AND p.is_bot = FALSE
+
+        UNION ALL
+
+        SELECT DATE_TRUNC('${groupUnit}', claimed_at) AS bucket_time,
+               50 AS gold_delta
+        FROM tc_ad_rewards
+        WHERE claimed_at >= $1 AND claimed_at < $2
+
+        UNION ALL
+
+        SELECT DATE_TRUNC('${groupUnit}', ui.acquired_at) AS bucket_time,
+               -COALESCE(si.price, 0) AS gold_delta
+        FROM tc_user_items ui
+        LEFT JOIN tc_shop_items si ON si.item_key = ui.item_key
+        WHERE ui.source = 'shop'
+          AND ui.acquired_at >= $1 AND ui.acquired_at < $2
+
+        UNION ALL
+
+        SELECT DATE_TRUNC('${groupUnit}', gh.created_at) AS bucket_time,
+               gh.gold_delta
+        FROM tc_gold_history gh
+        WHERE gh.created_at >= $1 AND gh.created_at < $2
+      )
+      SELECT bucket_time,
+             COALESCE(SUM(CASE WHEN gold_delta > 0 THEN gold_delta ELSE 0 END), 0) AS earned,
+             COALESCE(SUM(CASE WHEN gold_delta < 0 THEN -gold_delta ELSE 0 END), 0) AS spent,
+             COALESCE(SUM(gold_delta), 0) AS net
+      FROM gold_events
+      GROUP BY bucket_time
+      ORDER BY bucket_time ASC
+    `, [from, to]);
+
+    const gameSummary = await client.query(`
+      SELECT
+        (SELECT COUNT(*) FROM tc_match_history WHERE created_at >= $1 AND created_at < $2) AS tichu_games,
+        (SELECT COUNT(*) FROM tc_sk_match_history WHERE created_at >= $1 AND created_at < $2) AS skull_games,
+        (SELECT COUNT(*) FROM tc_match_history WHERE created_at >= $1 AND created_at < $2 AND is_ranked = TRUE) +
+        (SELECT COUNT(*) FROM tc_sk_match_history WHERE created_at >= $1 AND created_at < $2 AND is_ranked = TRUE) AS ranked_games
+    `, [from, to]);
+
+    const goldSummary = await client.query(`
+      WITH gold_events AS (
+        SELECT CASE
+                 WHEN mh.winner_team = 'draw' THEN 0
+                 WHEN mh.end_reason IN ('leave', 'timeout') AND mh.deserter_nickname = p.nickname THEN 0
+                 WHEN (
+                   (p.team_code = 'A' AND mh.winner_team = 'A') OR
+                   (p.team_code = 'B' AND mh.winner_team = 'B')
+                 ) THEN CASE WHEN mh.is_ranked THEN 20 ELSE 10 END
+                 ELSE CASE WHEN mh.is_ranked THEN 6 ELSE 3 END
+               END AS gold_delta
+        FROM tc_match_history mh
+        CROSS JOIN LATERAL (
+          VALUES
+            (mh.player_a1, 'A'),
+            (mh.player_a2, 'A'),
+            (mh.player_b1, 'B'),
+            (mh.player_b2, 'B')
+        ) AS p(nickname, team_code)
+        WHERE mh.created_at >= $1 AND mh.created_at < $2
+          AND p.nickname IS NOT NULL
+          AND EXISTS (SELECT 1 FROM tc_users u WHERE u.nickname = p.nickname)
+
+        UNION ALL
+
+        SELECT CASE
+                 WHEN h.end_reason IN ('leave', 'timeout') AND h.deserter_nickname = p.nickname THEN 0
+                 WHEN p.is_winner THEN CASE WHEN h.is_ranked THEN 20 ELSE 10 END
+                 ELSE CASE WHEN h.is_ranked THEN 6 ELSE 3 END
+               END AS gold_delta
+        FROM tc_sk_match_history h
+        JOIN tc_sk_match_players p ON p.match_id = h.id
+        WHERE h.created_at >= $1 AND h.created_at < $2
+          AND p.is_bot = FALSE
+
+        UNION ALL
+
+        SELECT 50 AS gold_delta
+        FROM tc_ad_rewards
+        WHERE claimed_at >= $1 AND claimed_at < $2
+
+        UNION ALL
+
+        SELECT -COALESCE(si.price, 0) AS gold_delta
+        FROM tc_user_items ui
+        LEFT JOIN tc_shop_items si ON si.item_key = ui.item_key
+        WHERE ui.source = 'shop'
+          AND ui.acquired_at >= $1 AND ui.acquired_at < $2
+
+        UNION ALL
+
+        SELECT gh.gold_delta
+        FROM tc_gold_history gh
+        WHERE gh.created_at >= $1 AND gh.created_at < $2
+      )
+      SELECT
+        COALESCE(SUM(CASE WHEN gold_delta > 0 THEN gold_delta ELSE 0 END), 0) AS earned,
+        COALESCE(SUM(CASE WHEN gold_delta < 0 THEN -gold_delta ELSE 0 END), 0) AS spent,
+        COALESCE(SUM(gold_delta), 0) AS net
+      FROM gold_events
+    `, [from, to]);
+
+    const summaryRow = gameSummary.rows[0] || {};
+    const goldRow = goldSummary.rows[0] || {};
+    return {
+      success: true,
+      summary: {
+        totalGames: (parseInt(summaryRow.tichu_games || 0, 10) + parseInt(summaryRow.skull_games || 0, 10)),
+        tichuGames: parseInt(summaryRow.tichu_games || 0, 10),
+        skullGames: parseInt(summaryRow.skull_games || 0, 10),
+        rankedGames: parseInt(summaryRow.ranked_games || 0, 10),
+        goldEarned: parseInt(goldRow.earned || 0, 10),
+        goldSpent: parseInt(goldRow.spent || 0, 10),
+        goldNet: parseInt(goldRow.net || 0, 10),
+      },
+      gameSeries: gameSeries.rows,
+      goldSeries: goldSeries.rows,
+      range: { from, to, bucket: groupUnit },
+    };
+  } catch (err) {
+    console.error('Get detailed admin stats error:', err);
+    return {
+      success: false,
+      message: '상세 통계를 불러오지 못했습니다',
+      summary: {},
+      gameSeries: [],
+      goldSeries: [],
+      range: { from, to, bucket: groupUnit },
+    };
+  } finally {
+    client.release();
+  }
+}
+
 // Verify admin credentials
 async function verifyAdmin(username, password) {
   const client = await pool.connect();
@@ -2315,6 +2868,23 @@ async function verifyAdmin(username, password) {
   } catch (err) {
     console.error('Verify admin error:', err);
     return null;
+  } finally {
+    client.release();
+  }
+}
+
+async function isUserAdmin(nickname) {
+  const client = await pool.connect();
+  try {
+    const result = await client.query(
+      'SELECT is_admin FROM tc_users WHERE nickname = $1',
+      [nickname]
+    );
+    if (result.rows.length === 0) return false;
+    return result.rows[0].is_admin === true;
+  } catch (err) {
+    console.error('Is user admin error:', err);
+    return false;
   } finally {
     client.release();
   }
@@ -2475,7 +3045,7 @@ async function loginSocial(provider, providerUid) {
   const client = await pool.connect();
   try {
     const result = await client.query(
-      'SELECT id, nickname FROM tc_users WHERE auth_provider = $1 AND provider_uid = $2',
+      'SELECT id, nickname, is_admin, push_enabled, push_friend_invite, push_admin_inquiry, push_admin_report FROM tc_users WHERE auth_provider = $1 AND provider_uid = $2',
       [provider, providerUid]
     );
     if (result.rows.length === 0) {
@@ -2486,7 +3056,16 @@ async function loginSocial(provider, providerUid) {
       'UPDATE tc_users SET last_login = CURRENT_TIMESTAMP WHERE id = $1',
       [user.id]
     );
-    return { found: true, userId: user.id, nickname: user.nickname };
+    return {
+      found: true,
+      userId: user.id,
+      nickname: user.nickname,
+      isAdmin: user.is_admin === true,
+      pushEnabled: user.push_enabled !== false,
+      pushFriendInvite: user.push_friend_invite !== false,
+      pushAdminInquiry: user.push_admin_inquiry !== false,
+      pushAdminReport: user.push_admin_report !== false,
+    };
   } catch (err) {
     console.error('Social login error:', err);
     return { found: false, error: '소셜 로그인 중 오류가 발생했습니다' };
@@ -2675,17 +3254,106 @@ async function setPushFriendInvite(nickname, enabled) {
   }
 }
 
-// Admin: adjust user gold (positive = add, negative = deduct)
-async function adminAdjustGold(nickname, amount) {
+async function setUserAdmin(nickname, isAdmin) {
   const client = await pool.connect();
   try {
+    const result = await client.query(
+      `UPDATE tc_users
+       SET is_admin = $2
+       WHERE nickname = $1
+       RETURNING nickname, is_admin, push_admin_inquiry, push_admin_report`,
+      [nickname, isAdmin]
+    );
+    if (result.rows.length === 0) {
+      return { success: false, message: '사용자를 찾을 수 없습니다' };
+    }
+    return { success: true, user: result.rows[0] };
+  } catch (err) {
+    console.error('Set user admin error:', err);
+    return { success: false, message: '관리자 권한 설정에 실패했습니다' };
+  } finally {
+    client.release();
+  }
+}
+
+async function setAdminAlertSettings(nickname, inquiryEnabled, reportEnabled) {
+  const client = await pool.connect();
+  try {
+    const result = await client.query(
+      `UPDATE tc_users
+       SET push_admin_inquiry = $2,
+           push_admin_report = $3
+       WHERE nickname = $1
+       RETURNING push_admin_inquiry, push_admin_report`,
+      [nickname, inquiryEnabled, reportEnabled]
+    );
+    if (result.rows.length === 0) {
+      return { success: false, message: '사용자를 찾을 수 없습니다' };
+    }
+    return {
+      success: true,
+      settings: {
+        pushAdminInquiry: result.rows[0].push_admin_inquiry !== false,
+        pushAdminReport: result.rows[0].push_admin_report !== false,
+      },
+    };
+  } catch (err) {
+    console.error('Set admin alert settings error:', err);
+    return { success: false, message: '관리자 알림 설정 저장에 실패했습니다' };
+  } finally {
+    client.release();
+  }
+}
+
+async function getAdminPushRecipients(kind) {
+  const client = await pool.connect();
+  try {
+    const column = kind === 'report' ? 'push_admin_report' : 'push_admin_inquiry';
+    const result = await client.query(
+      `SELECT nickname, fcm_token
+       FROM tc_users
+       WHERE is_admin = TRUE
+         AND push_enabled = TRUE
+         AND ${column} = TRUE
+         AND fcm_token IS NOT NULL
+         AND fcm_token != ''`
+    );
+    return result.rows;
+  } catch (err) {
+    console.error('Get admin push recipients error:', err);
+    return [];
+  } finally {
+    client.release();
+  }
+}
+
+// Admin: adjust user gold (positive = add, negative = deduct)
+async function adminAdjustGold(nickname, amount, adminActor = 'admin') {
+  const client = await pool.connect();
+  try {
+    await client.query('BEGIN');
     const result = await client.query(
       `UPDATE tc_users SET gold = GREATEST(0, gold + $2) WHERE nickname = $1 RETURNING gold`,
       [nickname, amount]
     );
-    if (result.rows.length === 0) return { success: false, message: 'User not found' };
+    if (result.rows.length === 0) {
+      await client.query('ROLLBACK');
+      return { success: false, message: 'User not found' };
+    }
+    await client.query(
+      `INSERT INTO tc_gold_history (nickname, gold_delta, source, title, description)
+       VALUES ($1, $2, 'admin_adjust', $3, $4)`,
+      [
+        nickname,
+        amount,
+        amount >= 0 ? '관리자 지급' : '관리자 차감',
+        `${adminActor}에 의한 관리자 ${amount >= 0 ? '지급' : '차감'}`,
+      ]
+    );
+    await client.query('COMMIT');
     return { success: true, newGold: result.rows[0].gold };
   } catch (err) {
+    await client.query('ROLLBACK');
     console.error('Admin adjust gold error:', err);
     return { success: false, message: err.message };
   } finally {
@@ -2868,6 +3536,201 @@ async function getTotalUnreadDmCount(nickname) {
   }
 }
 
+// ===== Skull King DB Functions =====
+
+async function getSKRecentMatches(nickname, limit = 20) {
+  const client = await pool.connect();
+  try {
+    const result = await client.query(
+      `SELECT h.id, h.player_count, h.is_ranked, h.end_reason, h.deserter_nickname, h.created_at,
+              p.score, p.rank, p.is_winner
+       FROM tc_sk_match_players p
+       JOIN tc_sk_match_history h ON h.id = p.match_id
+       WHERE p.nickname = $1
+       ORDER BY h.created_at DESC
+       LIMIT $2`,
+      [nickname, limit]
+    );
+    // For each match, get all players
+    const matches = [];
+    for (const row of result.rows) {
+      const players = await client.query(
+        `SELECT nickname, score, rank, is_winner, is_bot
+         FROM tc_sk_match_players WHERE match_id = $1 ORDER BY rank`,
+        [row.id]
+      );
+      const deserterNickname = row.deserter_nickname || null;
+      const isDesertionLoss = deserterNickname === nickname;
+      const isDraw = deserterNickname != null && deserterNickname !== nickname;
+      matches.push({
+        id: row.id,
+        gameType: 'skull_king',
+        won: isDraw ? false : row.is_winner,
+        isDraw,
+        isDesertionLoss,
+        deserterNickname,
+        myScore: row.score,
+        myRank: row.rank,
+        playerCount: row.player_count,
+        isRanked: row.is_ranked,
+        endReason: row.end_reason || 'normal',
+        players: players.rows.map(p => ({
+          nickname: p.nickname,
+          score: p.score,
+          rank: p.rank,
+          isWinner: p.is_winner,
+          isBot: p.is_bot,
+        })),
+        createdAt: row.created_at,
+      });
+    }
+    return matches;
+  } catch (err) {
+    console.error('getSKRecentMatches error:', err);
+    return [];
+  } finally {
+    client.release();
+  }
+}
+
+async function saveSKMatchResult(data) {
+  const client = await pool.connect();
+  try {
+    await client.query('BEGIN');
+    const matchRes = await client.query(
+      `INSERT INTO tc_sk_match_history (player_count, is_ranked, end_reason, deserter_nickname)
+       VALUES ($1, $2, $3, $4) RETURNING id`,
+      [data.playerCount, data.isRanked, data.endReason || 'normal', data.deserterNickname || null]
+    );
+    const matchId = matchRes.rows[0].id;
+
+    for (const p of data.players) {
+      await client.query(
+        `INSERT INTO tc_sk_match_players (match_id, nickname, score, rank, is_winner, is_bot)
+         VALUES ($1, $2, $3, $4, $5, $6)`,
+        [matchId, p.nickname, p.score, p.rank, p.isWinner, p.isBot]
+      );
+    }
+    await client.query('COMMIT');
+    return { success: true, matchId };
+  } catch (err) {
+    await client.query('ROLLBACK');
+    console.error('saveSKMatchResult error:', err);
+    return { success: false, message: err.message };
+  } finally {
+    client.release();
+  }
+}
+
+async function updateSKUserStats(nickname, won, isRanked) {
+  const client = await pool.connect();
+  try {
+    const ratingChange = won ? 25 : -20;
+    const goldReward = won ? 10 : 3;
+    const expGain = won ? 15 : 5;
+    await client.query(
+      `UPDATE tc_users SET
+        sk_total_games = sk_total_games + 1,
+        sk_wins = sk_wins + CASE WHEN $2 THEN 1 ELSE 0 END,
+        sk_losses = sk_losses + CASE WHEN $2 THEN 0 ELSE 1 END,
+        sk_rating = GREATEST(0, sk_rating + $3),
+        gold = gold + $4,
+        exp_total = exp_total + $5,
+        level = GREATEST(1, ((exp_total + $5) / 100) + 1)
+       WHERE nickname = $1`,
+      [nickname, won, isRanked ? ratingChange : 0, goldReward, expGain]
+    );
+    return { success: true };
+  } catch (err) {
+    console.error('updateSKUserStats error:', err);
+    return { success: false, message: err.message };
+  } finally {
+    client.release();
+  }
+}
+
+async function saveSKMatchResultWithStats(data) {
+  const client = await pool.connect();
+  try {
+    await client.query('BEGIN');
+    const matchRes = await client.query(
+      `INSERT INTO tc_sk_match_history (player_count, is_ranked, end_reason, deserter_nickname)
+       VALUES ($1, $2, $3, $4) RETURNING id`,
+      [data.playerCount, data.isRanked, data.endReason || 'normal', data.deserterNickname || null]
+    );
+    const matchId = matchRes.rows[0].id;
+
+    for (const p of data.players) {
+      await client.query(
+        `INSERT INTO tc_sk_match_players (match_id, nickname, score, rank, is_winner, is_bot)
+         VALUES ($1, $2, $3, $4, $5, $6)`,
+        [matchId, p.nickname, p.score, p.rank, p.isWinner, p.isBot]
+      );
+    }
+
+    for (const p of data.players) {
+      if (!p.nickname || p.isBot) continue;
+      const won = p.isWinner === true;
+      const ratingChange = won ? 25 : -20;
+      const baseGoldReward = won ? 10 : 3;
+      const isDeserter =
+        ['leave', 'timeout'].includes(data.endReason || 'normal') &&
+        data.deserterNickname === p.nickname;
+      const goldReward = isDeserter
+          ? 0
+          : (data.isRanked ? baseGoldReward * 2 : baseGoldReward);
+      const expGain = won ? 15 : 5;
+      await client.query(
+        `UPDATE tc_users SET
+          sk_total_games = sk_total_games + 1,
+          sk_wins = sk_wins + CASE WHEN $2 THEN 1 ELSE 0 END,
+          sk_losses = sk_losses + CASE WHEN $2 THEN 0 ELSE 1 END,
+          sk_rating = GREATEST(0, sk_rating + $3),
+          gold = gold + $4,
+          exp_total = exp_total + $5,
+          level = GREATEST(1, ((exp_total + $5) / 100) + 1)
+         WHERE nickname = $1`,
+        [p.nickname, won, data.isRanked ? ratingChange : 0, goldReward, expGain]
+      );
+    }
+
+    await client.query('COMMIT');
+    return { success: true, matchId };
+  } catch (err) {
+    await client.query('ROLLBACK');
+    console.error('saveSKMatchResultWithStats error:', err);
+    return { success: false, message: err.message };
+  } finally {
+    client.release();
+  }
+}
+
+async function getSKRankings(limit = 50) {
+  const client = await pool.connect();
+  try {
+    const res = await client.query(
+      `SELECT u.nickname, u.sk_rating AS rating, u.sk_wins AS wins,
+              u.sk_losses AS losses, u.sk_total_games AS total_games,
+              CASE WHEN u.sk_total_games > 0
+                THEN ROUND((u.sk_wins::FLOAT / u.sk_total_games) * 100)
+                ELSE 0 END AS win_rate,
+              e.banner_key
+       FROM tc_users u
+       LEFT JOIN tc_user_equips e ON e.nickname = u.nickname
+       WHERE u.sk_total_games > 0
+       ORDER BY u.sk_rating DESC, u.sk_wins DESC
+       LIMIT $1`,
+      [limit]
+    );
+    return { success: true, rankings: res.rows };
+  } catch (err) {
+    console.error('getSKRankings error:', err);
+    return { success: false, rankings: [] };
+  } finally {
+    client.release();
+  }
+}
+
 module.exports = {
   initDatabase,
   registerUser,
@@ -2885,10 +3748,13 @@ module.exports = {
   rejectFriendRequest,
   removeFriend,
   saveMatchResult,
+  saveMatchResultWithStats,
   updateUserStats,
   getUserProfile,
   getRecentMatches,
   getWallet,
+  getGoldHistory,
+  getAdminGoldHistory,
   getShopItems,
   getUserItems,
   buyItem,
@@ -2920,8 +3786,10 @@ module.exports = {
   getUsers,
   getUserDetail,
   getDashboardStats,
+  getDetailedAdminStats,
   getRankings,
   verifyAdmin,
+  isUserAdmin,
   getAllShopItemsAdmin,
   addShopItem,
   updateShopItem,
@@ -2935,6 +3803,9 @@ module.exports = {
   updateDeviceInfo,
   setPushEnabled,
   setPushFriendInvite,
+  setUserAdmin,
+  setAdminAlertSettings,
+  getAdminPushRecipients,
   getConfig,
   updateConfig,
   adminAdjustGold,
@@ -2945,5 +3816,10 @@ module.exports = {
   markDmRead,
   getDmConversations,
   getTotalUnreadDmCount,
+  getSKRecentMatches,
+  saveSKMatchResult,
+  saveSKMatchResultWithStats,
+  updateSKUserStats,
+  getSKRankings,
   pool,
 };

@@ -20,6 +20,10 @@ class AdService {
       ? _testBannerId
       : (Platform.isIOS ? 'ca-app-pub-2707874353926722/4685849144' : 'ca-app-pub-2707874353926722/4486805490');
 
+  static String get skWaitingBannerId => _useTestAds
+      ? _testBannerId
+      : (Platform.isIOS ? 'ca-app-pub-2707874353926722/7335043650' : 'ca-app-pub-2707874353926722/4010771110');
+
   // --- 보상형 광고 ID ---
   static String get rewardedAdId => _useTestAds
       ? _testRewardedId

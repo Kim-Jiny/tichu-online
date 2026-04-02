@@ -326,13 +326,17 @@ class SessionService extends ChangeNotifier {
 
   Future<void> _refreshPostLoginData() async {
     _setRestorePhase(RestorePhase.restoringRoomState);
-    var restored = await _game.checkRoomAndWait(
-      timeout: const Duration(seconds: 6),
-    );
-    if (!restored && _network.isConnected) {
-      restored = await _game.checkRoomAndWait(
-        timeout: const Duration(seconds: 6),
-      );
+    var restored = false;
+    const restoreTimeouts = <Duration>[
+      Duration(seconds: 8),
+      Duration(seconds: 8),
+      Duration(seconds: 5),
+    ];
+    for (final timeout in restoreTimeouts) {
+      restored = await _game.checkRoomAndWait(timeout: timeout);
+      if (restored || !_network.isConnected) {
+        break;
+      }
     }
     if (!restored) {
       _game.fallbackToLobbyAfterRestoreFailure();

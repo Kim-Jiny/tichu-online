@@ -7,9 +7,9 @@ class LobbyManager {
     this.rooms = new Map();
   }
 
-  createRoom(name, hostId, hostNickname, password = '', isRanked = false, turnTimeLimit = 30, targetScore = 1000) {
+  createRoom(name, hostId, hostNickname, password = '', isRanked = false, turnTimeLimit = 30, targetScore = 1000, gameType = 'tichu', maxPlayers = 4) {
     const roomId = `room_${nextRoomId++}`;
-    const room = new GameRoom(roomId, name, hostId, hostNickname, password, isRanked, turnTimeLimit, targetScore);
+    const room = new GameRoom(roomId, name, hostId, hostNickname, password, isRanked, turnTimeLimit, targetScore, gameType, maxPlayers);
     this.rooms.set(roomId, room);
     console.log(`Room created: ${name} (${roomId}) by ${hostNickname}`);
     return room;
@@ -31,7 +31,8 @@ class LobbyManager {
         id: room.id,
         name: room.name,
         playerCount: room.getPlayerCount(),
-        maxPlayers: 4,
+        maxPlayers: room.maxPlayers,
+        gameType: room.gameType,
         hostName: room.hostNickname,
         isPrivate: room.isPrivate,
         isRanked: room.isRanked,
@@ -52,9 +53,11 @@ class LobbyManager {
           id: room.id,
           name: room.name,
           playerCount: room.getPlayerCount(),
+          maxPlayers: room.maxPlayers,
           spectatorCount: room.spectators.length,
           hostName: room.hostNickname,
           isRanked: room.isRanked,
+          gameType: room.gameType,
           gameInProgress: true,
         });
       }

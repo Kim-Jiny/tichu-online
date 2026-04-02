@@ -664,26 +664,16 @@ async function deleteUser(nickname) {
       `UPDATE tc_users SET nickname = $2, is_deleted = true, deleted_at = NOW(),
        username = SUBSTRING('del_' || username || $3 FROM 1 FOR 50),
        password_hash = '',
-       auth_provider = CASE WHEN auth_provider IS NOT NULL THEN 'del_' || auth_provider ELSE NULL END,
+       auth_provider = CASE WHEN auth_provider IS NOT NULL THEN SUBSTRING('del_' || auth_provider FROM 1 FOR 20) ELSE NULL END,
        provider_uid = CASE WHEN provider_uid IS NOT NULL THEN SUBSTRING('del_' || provider_uid || $3 FROM 1 FOR 100) ELSE NULL END,
        fcm_token = NULL
        WHERE nickname = $1`,
       [nickname, deletedNickname, suffix]
     );
 
-    // Update nickname references in records that must be preserved
-    await client.query('UPDATE tc_match_history SET player_a1 = $2 WHERE player_a1 = $1', [nickname, deletedNickname]);
-    await client.query('UPDATE tc_match_history SET player_a2 = $2 WHERE player_a2 = $1', [nickname, deletedNickname]);
-    await client.query('UPDATE tc_match_history SET player_b1 = $2 WHERE player_b1 = $1', [nickname, deletedNickname]);
-    await client.query('UPDATE tc_match_history SET player_b2 = $2 WHERE player_b2 = $1', [nickname, deletedNickname]);
-    await client.query('UPDATE tc_match_history SET deserter_nickname = $2 WHERE deserter_nickname = $1', [nickname, deletedNickname]);
-    await client.query('UPDATE tc_sk_match_players SET nickname = $2 WHERE nickname = $1', [nickname, deletedNickname]);
-    await client.query('UPDATE tc_sk_match_history SET deserter_nickname = $2 WHERE deserter_nickname = $1', [nickname, deletedNickname]);
-    await client.query('UPDATE tc_season_rankings SET nickname = $2 WHERE nickname = $1', [nickname, deletedNickname]);
-    await client.query('UPDATE tc_gold_history SET nickname = $2 WHERE nickname = $1', [nickname, deletedNickname]);
-    await client.query('UPDATE tc_reports SET reporter_nickname = $2 WHERE reporter_nickname = $1', [nickname, deletedNickname]);
-    await client.query('UPDATE tc_reports SET reported_nickname = $2 WHERE reported_nickname = $1', [nickname, deletedNickname]);
-    await client.query('UPDATE tc_inquiries SET user_nickname = $2 WHERE user_nickname = $1', [nickname, deletedNickname]);
+    // Preserved records keep the ORIGINAL nickname for clean display:
+    // tc_match_history, tc_sk_match_players, tc_sk_match_history,
+    // tc_season_rankings, tc_gold_history, tc_reports, tc_inquiries
 
     await client.query('COMMIT');
     return { success: true, message: '계정이 삭제되었습니다' };
@@ -2482,9 +2472,6 @@ async function getUsers(search = '', page = 1, limit = 20, options = {}) {
     const countParams = [];
     let paramIdx = 1;
 
-    if (!options.includeDeleted) {
-      conditions.push(`(is_deleted IS NOT TRUE)`);
-    }
     if (search) {
       conditions.push(`(nickname ILIKE $${paramIdx} OR username ILIKE $${paramIdx})`);
       countParams.push(`%${search}%`);
@@ -2527,7 +2514,7 @@ async function getUsers(search = '', page = 1, limit = 20, options = {}) {
     const total = parseInt(countResult.rows[0].count);
 
     const dataParams = [...countParams, limit, offset];
-    const dataQuery = `SELECT id, username, nickname, total_games, wins, losses, rating, gold, level, leave_count, season_rating, created_at, last_login, device_platform, is_admin
+    const dataQuery = `SELECT id, username, nickname, total_games, wins, losses, rating, gold, level, leave_count, season_rating, created_at, last_login, device_platform, is_admin, is_deleted
                    FROM tc_users ${whereClause}
                    ORDER BY ${orderBy} LIMIT $${paramIdx} OFFSET $${paramIdx + 1}`;
     const result = await client.query(dataQuery, dataParams);
@@ -2546,7 +2533,7 @@ async function getUserDetail(nickname) {
   try {
     const userResult = await client.query(
       `SELECT id, username, nickname, total_games, wins, losses, rating, created_at, last_login, chat_ban_until, leave_count, gold, level, season_rating, admin_memo,
-              fcm_token, push_enabled, push_admin_inquiry, push_admin_report, is_admin, device_platform, device_model, os_version, app_version, last_ip
+              fcm_token, push_enabled, push_admin_inquiry, push_admin_report, is_admin, is_deleted, deleted_at, device_platform, device_model, os_version, app_version, last_ip
        FROM tc_users WHERE nickname = $1`,
       [nickname]
     );
@@ -2587,7 +2574,7 @@ async function getDashboardStats() {
   const client = await pool.connect();
   try {
     // Basic counts
-    const totalUsers = await client.query('SELECT COUNT(*) FROM tc_users');
+    const totalUsers = await client.query('SELECT COUNT(*) FROM tc_users WHERE is_deleted IS NOT TRUE');
     const pendingInquiries = await client.query(`SELECT COUNT(*) FROM tc_inquiries WHERE status = 'pending'`);
     const pendingReports = await client.query(`SELECT COUNT(*) FROM tc_reports WHERE status = 'pending'`);
     const todayGames = await client.query(
@@ -2599,15 +2586,15 @@ async function getDashboardStats() {
 
     // New users today
     const newUsersToday = await client.query(
-      `SELECT COUNT(*) FROM tc_users WHERE created_at >= CURRENT_DATE`
+      `SELECT COUNT(*) FROM tc_users WHERE created_at >= CURRENT_DATE AND is_deleted IS NOT TRUE`
     );
 
     // Active users (logged in within 24h / 7d)
     const activeUsers24h = await client.query(
-      `SELECT COUNT(*) FROM tc_users WHERE last_login >= NOW() - INTERVAL '24 hours'`
+      `SELECT COUNT(*) FROM tc_users WHERE last_login >= NOW() - INTERVAL '24 hours' AND is_deleted IS NOT TRUE`
     );
     const activeUsers7d = await client.query(
-      `SELECT COUNT(*) FROM tc_users WHERE last_login >= NOW() - INTERVAL '7 days'`
+      `SELECT COUNT(*) FROM tc_users WHERE last_login >= NOW() - INTERVAL '7 days' AND is_deleted IS NOT TRUE`
     );
 
     // Total matches + ranked matches
@@ -2630,7 +2617,7 @@ async function getDashboardStats() {
     const dailySignups = await client.query(`
       SELECT DATE(created_at) as day, COUNT(*) as cnt
       FROM tc_users
-      WHERE created_at >= CURRENT_DATE - INTERVAL '6 days'
+      WHERE created_at >= CURRENT_DATE - INTERVAL '6 days' AND is_deleted IS NOT TRUE
       GROUP BY DATE(created_at)
       ORDER BY day
     `);
@@ -2638,13 +2625,13 @@ async function getDashboardStats() {
     // Top 10 players by rating
     const topPlayers = await client.query(`
       SELECT nickname, rating, wins, losses, total_games, season_rating, level
-      FROM tc_users ORDER BY rating DESC LIMIT 10
+      FROM tc_users WHERE is_deleted IS NOT TRUE ORDER BY rating DESC LIMIT 10
     `);
 
     // Gold economy
     const goldStats = await client.query(`
       SELECT SUM(gold) as total_gold, AVG(gold) as avg_gold, MAX(gold) as max_gold
-      FROM tc_users
+      FROM tc_users WHERE is_deleted IS NOT TRUE
     `);
 
     // Shop revenue (total items purchased)
@@ -2658,7 +2645,7 @@ async function getDashboardStats() {
     const leaveStats = await client.query(`
       SELECT SUM(leave_count) as total_leaves,
              COUNT(CASE WHEN leave_count >= 3 THEN 1 END) as problem_users
-      FROM tc_users
+      FROM tc_users WHERE is_deleted IS NOT TRUE
     `);
 
     // Report stats (last 30 days)

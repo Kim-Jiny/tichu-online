@@ -1042,7 +1042,7 @@ async function handleAdminRoute(req, res, url, pathname, method, lobby, wss, mai
           return `<tr>
           <td><a href="/tc-backstage/users/${encodeURIComponent(u.nickname)}" style="color:#6c63ff;text-decoration:none;font-weight:600">${escapeHtml(u.nickname)}</a></td>
           <td>
-            <span class="badge" style="background:${u.is_admin ? '#ede7f6' : '#f5f5f5'};color:${u.is_admin ? '#5e35b1' : '#888'}">${u.is_admin ? '관리자' : '일반'}</span>
+            ${u.is_deleted ? '<span class="badge" style="background:#ffebee;color:#c62828">탈퇴</span>' : `<span class="badge" style="background:${u.is_admin ? '#ede7f6' : '#f5f5f5'};color:${u.is_admin ? '#5e35b1' : '#888'}">${u.is_admin ? '관리자' : '일반'}</span>`}
           </td>
           <td>${deviceBadge(u.device_platform)}</td>
           <td>${u.level || 1}</td>
@@ -1105,7 +1105,8 @@ async function handleAdminRoute(req, res, url, pathname, method, lobby, wss, mai
       <h1 class="page-title">유저: ${escapeHtml(user.nickname)}</h1>
       <div class="card">
         <div class="detail-grid" style="grid-template-columns:130px 1fr">
-          <div class="label">닉네임</div><div class="value" style="font-weight:600">${escapeHtml(user.nickname)}</div>
+          <div class="label">닉네임</div><div class="value" style="font-weight:600">${escapeHtml(user.nickname)}${user.is_deleted ? ' <span class="badge" style="background:#ffebee;color:#c62828">탈퇴</span>' : ''}</div>
+          ${user.is_deleted ? `<div class="label">탈퇴일</div><div class="value" style="color:#c62828">${formatDate(user.deleted_at)}</div>` : ''}
           <div class="label">앱 관리자</div><div class="value">
             <span class="badge" style="background:${user.is_admin ? '#ede7f6' : '#f5f5f5'};color:${user.is_admin ? '#5e35b1' : '#888'}">${user.is_admin ? '관리자' : '일반'}</span>
             <form method="POST" action="/tc-backstage/users/${encodeURIComponent(user.nickname)}/admin" style="display:inline-flex;align-items:center;gap:6px;margin-left:12px"

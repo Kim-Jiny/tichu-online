@@ -763,6 +763,9 @@ async function handleDeleteAccount(ws) {
     ws.userId = null;
   }
   sendTo(ws, { type: 'account_deleted', ...result });
+  if (result.success) {
+    setTimeout(() => { try { ws.close(); } catch (_) {} }, 500);
+  }
 }
 
 async function handleLogin(ws, data) {

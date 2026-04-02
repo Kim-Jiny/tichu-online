@@ -105,6 +105,7 @@ class _LoginScreenState extends State<LoginScreen> {
   }
 
   Future<void> _login() async {
+    FocusScope.of(context).unfocus();
     final username = _usernameController.text.trim();
     final password = _passwordController.text;
 
@@ -848,6 +849,7 @@ class _RegisterDialogState extends State<RegisterDialog> {
   }
 
   Future<void> _register() async {
+    FocusScope.of(context).unfocus();
     final username = _usernameController.text.trim();
     final password = _passwordController.text;
     final confirmPassword = _confirmPasswordController.text;

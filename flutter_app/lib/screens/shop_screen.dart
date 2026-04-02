@@ -454,113 +454,120 @@ class _ShopScreenState extends State<ShopScreen> {
   void _showGoldGuideDialog() {
     showDialog(
       context: context,
-      builder: (dialogContext) => Dialog(
-        insetPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 28),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
-        child: ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: 420),
-          child: Padding(
-            padding: const EdgeInsets.fromLTRB(20, 18, 20, 18),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
+      builder: (dialogContext) => LayoutBuilder(
+        builder: (context, constraints) => Dialog(
+          insetPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 28),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+          child: ConstrainedBox(
+            constraints: BoxConstraints(
+              maxWidth: 420,
+              maxHeight: constraints.maxHeight * 0.8,
+            ),
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(20, 18, 20, 18),
+              child: SingleChildScrollView(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Container(
-                      width: 40,
-                      height: 40,
-                      decoration: BoxDecoration(
-                        color: const Color(0xFFFFF3E0),
-                        borderRadius: BorderRadius.circular(14),
-                      ),
-                      child: const Icon(
-                        Icons.monetization_on,
-                        color: Color(0xFFFFB74D),
-                      ),
-                    ),
-                    const SizedBox(width: 12),
-                    const Expanded(
-                      child: Text(
-                        '골드 획득 방법',
-                        style: TextStyle(
-                          fontSize: 18,
-                          fontWeight: FontWeight.w800,
-                          color: Color(0xFF5A4038),
+                    Row(
+                      children: [
+                        Container(
+                          width: 40,
+                          height: 40,
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFFFF3E0),
+                            borderRadius: BorderRadius.circular(14),
+                          ),
+                          child: const Icon(
+                            Icons.monetization_on,
+                            color: Color(0xFFFFB74D),
+                          ),
                         ),
+                        const SizedBox(width: 12),
+                        const Expanded(
+                          child: Text(
+                            '골드 획득 방법',
+                            style: TextStyle(
+                              fontSize: 18,
+                              fontWeight: FontWeight.w800,
+                              color: Color(0xFF5A4038),
+                            ),
+                          ),
+                        ),
+                        IconButton(
+                          onPressed: () => Navigator.pop(dialogContext),
+                          icon: const Icon(Icons.close),
+                          color: const Color(0xFF8A7A72),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 12),
+                    const Text(
+                      '골드는 게임 플레이와 보상으로 얻을 수 있고, 상점에서 아이템 구매에 사용됩니다.',
+                      style: TextStyle(
+                        fontSize: 13,
+                        height: 1.4,
+                        color: Color(0xFF8A7A72),
                       ),
                     ),
-                    IconButton(
-                      onPressed: () => Navigator.pop(dialogContext),
-                      icon: const Icon(Icons.close),
-                      color: const Color(0xFF8A7A72),
+                    const SizedBox(height: 16),
+                    _buildGoldGuideItem(
+                      title: '일반전 승리',
+                      value: '+10 골드',
+                      description: '티추와 스컬킹 일반전 승리 시 기본 보상을 받습니다.',
+                      color: const Color(0xFFE8F5E9),
+                      accent: const Color(0xFF43A047),
+                      icon: Icons.emoji_events_outlined,
+                    ),
+                    const SizedBox(height: 10),
+                    _buildGoldGuideItem(
+                      title: '일반전 패배',
+                      value: '+3 골드',
+                      description: '패배해도 기본 참가 보상을 받을 수 있습니다.',
+                      color: const Color(0xFFE3F2FD),
+                      accent: const Color(0xFF1E88E5),
+                      icon: Icons.sports_esports_outlined,
+                    ),
+                    const SizedBox(height: 10),
+                    _buildGoldGuideItem(
+                      title: '랭킹전 승리',
+                      value: '+20 골드',
+                      description: '랭킹전은 일반전 대비 2배 골드를 지급합니다.',
+                      color: const Color(0xFFFFF8E1),
+                      accent: const Color(0xFFF9A825),
+                      icon: Icons.military_tech_outlined,
+                    ),
+                    const SizedBox(height: 10),
+                    _buildGoldGuideItem(
+                      title: '랭킹전 패배',
+                      value: '+6 골드',
+                      description: '랭킹전 패배 보상도 일반전 대비 2배입니다.',
+                      color: const Color(0xFFFFF3E0),
+                      accent: const Color(0xFFEF6C00),
+                      icon: Icons.shield_outlined,
+                    ),
+                    const SizedBox(height: 10),
+                    _buildGoldGuideItem(
+                      title: '광고 보상',
+                      value: '+50 골드',
+                      description: '광고 시청으로 하루 최대 5번까지 추가 골드를 받을 수 있습니다.',
+                      color: const Color(0xFFFFF3E0),
+                      accent: const Color(0xFFFB8C00),
+                      icon: Icons.ondemand_video_outlined,
+                    ),
+                    const SizedBox(height: 10),
+                    _buildGoldGuideItem(
+                      title: '시즌 보상',
+                      value: '추가 지급',
+                      description: '시즌 순위에 따라 시즌 종료 시 추가 골드가 지급됩니다.',
+                      color: const Color(0xFFF3E5F5),
+                      accent: const Color(0xFF8E24AA),
+                      icon: Icons.workspace_premium_outlined,
                     ),
                   ],
                 ),
-                const SizedBox(height: 12),
-                const Text(
-                  '골드는 게임 플레이와 보상으로 얻을 수 있고, 상점에서 아이템 구매에 사용됩니다.',
-                  style: TextStyle(
-                    fontSize: 13,
-                    height: 1.4,
-                    color: Color(0xFF8A7A72),
-                  ),
-                ),
-                const SizedBox(height: 16),
-                _buildGoldGuideItem(
-                  title: '일반전 승리',
-                  value: '+10 골드',
-                  description: '티추와 스컬킹 일반전 승리 시 기본 보상을 받습니다.',
-                  color: const Color(0xFFE8F5E9),
-                  accent: const Color(0xFF43A047),
-                  icon: Icons.emoji_events_outlined,
-                ),
-                const SizedBox(height: 10),
-                _buildGoldGuideItem(
-                  title: '일반전 패배',
-                  value: '+3 골드',
-                  description: '패배해도 기본 참가 보상을 받을 수 있습니다.',
-                  color: const Color(0xFFE3F2FD),
-                  accent: const Color(0xFF1E88E5),
-                  icon: Icons.sports_esports_outlined,
-                ),
-                const SizedBox(height: 10),
-                _buildGoldGuideItem(
-                  title: '랭킹전 승리',
-                  value: '+20 골드',
-                  description: '랭킹전은 일반전 대비 2배 골드를 지급합니다.',
-                  color: const Color(0xFFFFF8E1),
-                  accent: const Color(0xFFF9A825),
-                  icon: Icons.military_tech_outlined,
-                ),
-                const SizedBox(height: 10),
-                _buildGoldGuideItem(
-                  title: '랭킹전 패배',
-                  value: '+6 골드',
-                  description: '랭킹전 패배 보상도 일반전 대비 2배입니다.',
-                  color: const Color(0xFFFFF3E0),
-                  accent: const Color(0xFFEF6C00),
-                  icon: Icons.shield_outlined,
-                ),
-                const SizedBox(height: 10),
-                _buildGoldGuideItem(
-                  title: '광고 보상',
-                  value: '+50 골드',
-                  description: '광고 시청으로 하루 최대 5번까지 추가 골드를 받을 수 있습니다.',
-                  color: const Color(0xFFFFF3E0),
-                  accent: const Color(0xFFFB8C00),
-                  icon: Icons.ondemand_video_outlined,
-                ),
-                const SizedBox(height: 10),
-                _buildGoldGuideItem(
-                  title: '시즌 보상',
-                  value: '추가 지급',
-                  description: '시즌 순위에 따라 시즌 종료 시 추가 골드가 지급됩니다.',
-                  color: const Color(0xFFF3E5F5),
-                  accent: const Color(0xFF8E24AA),
-                  icon: Icons.workspace_premium_outlined,
-                ),
-              ],
+              ),
             ),
           ),
         ),

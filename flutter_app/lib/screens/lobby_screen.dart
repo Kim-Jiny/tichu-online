@@ -1426,7 +1426,7 @@ class _LobbyScreenState extends State<LobbyScreen> {
                     const SizedBox(height: 2),
                     Text(
                       room.isSkullKing
-                          ? '${room.turnTimeLimit}초 · ${room.playerCount}/${room.maxPlayers}명'
+                          ? '${room.turnTimeLimit}초'
                           : '${room.turnTimeLimit}초 · ${room.targetScore}점',
                       style: const TextStyle(
                         fontSize: 11,

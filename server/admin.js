@@ -1,4 +1,5 @@
 const crypto = require('crypto');
+const serverStartedAt = new Date();
 const {
   verifyAdmin, getInquiries, getInquiryById, resolveInquiry,
   getReports, getReportGroup, updateReportGroupStatus,
@@ -473,6 +474,7 @@ async function handleAdminRoute(req, res, url, pathname, method, lobby, wss, mai
     const problemUsers = parseInt(stats.leaveStats?.problem_users) || 0;
     const reports30d = parseInt(stats.reportStats30d?.total_reports) || 0;
     const uniqueReported30d = parseInt(stats.reportStats30d?.unique_reported) || 0;
+    const serverStartedAtText = formatDate(serverStartedAt);
 
     // Recent matches table
     let matchesTable = '';
@@ -561,6 +563,7 @@ async function handleAdminRoute(req, res, url, pathname, method, lobby, wss, mai
         <a href="/tc-backstage/online?filter=ingame" class="stat-card" style="border-left:4px solid #4caf50;text-decoration:none;cursor:pointer"><div class="label">게임 중</div><div class="value green">${gamingRooms}</div></a>
         <a href="/tc-backstage/online?filter=waiting" class="stat-card" style="border-left:4px solid #ff9800;text-decoration:none;cursor:pointer"><div class="label">대기 중</div><div class="value orange">${waitingRooms}</div></a>
         <a href="/tc-backstage/online?filter=spectators" class="stat-card" style="border-left:4px solid #42a5f5;text-decoration:none;cursor:pointer"><div class="label">관전 중</div><div class="value" style="color:#42a5f5">${totalSpectators}</div></a>
+        <div class="stat-card" style="border-left:4px solid #26a69a"><div class="label">최근 서버 시작</div><div class="value" style="font-size:18px;color:#26a69a">${serverStartedAtText}</div></div>
       </div>
 
       <div style="margin:20px 0 8px;font-size:13px;color:#888">유저 & 매치 현황</div>

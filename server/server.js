@@ -1500,7 +1500,9 @@ async function handleLeaveRoom(ws) {
   if (room) {
     if (wasSpectating) {
       room.removeSpectator(ws.playerId);
-      if (room.game) _broadcastState(roomId, room);
+      if (room.game) {
+        _broadcastState(roomId, room);
+      }
       broadcastRoomState(roomId);
     } else {
       // S6: If game is active and not already deserted, treat as desertion
@@ -1522,6 +1524,10 @@ async function handleLeaveRoom(ws) {
 }
 
 async function handleLeaveGame(ws) {
+  // Spectators should use leave_room, but handle gracefully
+  if (ws.isSpectator) {
+    return handleLeaveRoom(ws);
+  }
   if (!ws.roomId) {
     sendTo(ws, { type: 'room_left' });
     return;
@@ -2246,7 +2252,6 @@ async function saveSKGameResult(room) {
 function sendGameStateToAll(roomId) {
   const room = lobby.getRoom(roomId);
   if (!room || !room.game) return;
-
   if (room.game.state !== 'trick_end' && trickEndTimers[roomId]) {
     clearTimeout(trickEndTimers[roomId]);
     delete trickEndTimers[roomId];
@@ -2322,7 +2327,6 @@ function _broadcastState(roomId, room) {
       state.cardViewers = room.getViewersForPlayer(player.id);
       state.spectators = spectatorList;
       state.spectatorCount = spectatorList.length;
-      console.log(`[DEBUG] Sending game_state to ${player.nickname}: phase=${state.phase}, cards=${state.myCards?.length || 0}`);
       sendTo(ws, { type: 'game_state', state });
     }
   }

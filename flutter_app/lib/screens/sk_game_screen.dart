@@ -742,7 +742,7 @@ class _SKGameScreenState extends State<SKGameScreen> {
             icon: Icons.exit_to_app,
             active: false,
             iconColor: const Color(0xFFFFC4C4),
-            onTap: () => _showExitConfirmDialog(game),
+            onTap: () => game.leaveRoom(),
           ),
         ],
       ),
@@ -750,9 +750,11 @@ class _SKGameScreenState extends State<SKGameScreen> {
   }
 
   Widget _buildSpectatorScoreboard(SKGameStateData state, GameService game) {
+    final n = state.players.length;
+    final horizontalPad = n <= 3 ? (MediaQuery.of(context).size.width - n * 110) / 2 : 6.0;
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 6),
-      margin: const EdgeInsets.only(bottom: 28),
+      padding: EdgeInsets.symmetric(horizontal: horizontalPad.clamp(6.0, double.infinity), vertical: 6),
+      margin: const EdgeInsets.only(bottom: 36),
       child: Row(
         children: state.players.map((p) {
           final isCurrentTurn = p.id == state.currentPlayer;
@@ -766,199 +768,197 @@ class _SKGameScreenState extends State<SKGameScreen> {
               state.phase == 'trick_end' && state.lastTrickWinner == p.id;
           return Expanded(
             child: GestureDetector(
-              onTap: () {
-                if (isApproved) {
-                  // Already approved — just switch view
-                  setState(() => _viewingPlayerId = p.id);
-                } else if (isPending) {
-                  // Already waiting for this player — do nothing
-                } else {
-                  // Send new request (replaces any existing pending)
-                  _cardViewRequestTimer?.cancel();
-                  game.requestCardView(p.id);
-                  setState(() => _viewingPlayerId = p.id);
-                  _cardViewRequestTimer = Timer(const Duration(seconds: 5), () {
-                    if (!mounted) return;
-                    game.expireCardViewRequest(p.id);
-                  });
-                }
-              },
-              child: Stack(
-                clipBehavior: Clip.none,
-                children: [
-                  AnimatedContainer(
-                    duration: const Duration(milliseconds: 200),
-                    margin: const EdgeInsets.symmetric(horizontal: 2),
-                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 6),
-                    decoration: BoxDecoration(
-                      color: isViewing
-                          ? const Color(0xFFE3EFFF)
-                          : isCurrentTurn
-                              ? const Color(0xFFFFF2B3)
-                              : Colors.white.withValues(alpha: 0.7),
-                      borderRadius: BorderRadius.circular(12),
-                      border: isViewing
-                          ? Border.all(color: const Color(0xFF64B5F6), width: 2)
-                          : isCurrentTurn
-                              ? Border.all(color: const Color(0xFFE6C86A), width: 2)
-                              : Border.all(color: const Color(0xFFE0D8D4)),
-                    ),
-                    child: Opacity(
-                      opacity: p.connected ? 1.0 : 0.45,
-                      child: Column(
-                        children: [
-                          Row(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            mainAxisSize: MainAxisSize.min,
+                  onTap: () {
+                    if (isApproved) {
+                      setState(() => _viewingPlayerId = p.id);
+                    } else if (isPending) {
+                      // do nothing
+                    } else {
+                      _cardViewRequestTimer?.cancel();
+                      game.requestCardView(p.id);
+                      setState(() => _viewingPlayerId = p.id);
+                      _cardViewRequestTimer = Timer(const Duration(seconds: 5), () {
+                        if (!mounted) return;
+                        game.expireCardViewRequest(p.id);
+                      });
+                    }
+                  },
+                  child: Stack(
+                    clipBehavior: Clip.none,
+                    children: [
+                      AnimatedContainer(
+                        duration: const Duration(milliseconds: 200),
+                        margin: const EdgeInsets.symmetric(horizontal: 2),
+                        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 6),
+                        decoration: BoxDecoration(
+                          color: isViewing
+                              ? const Color(0xFFE3EFFF)
+                              : isCurrentTurn
+                                  ? const Color(0xFFFFF2B3)
+                                  : Colors.white.withValues(alpha: 0.7),
+                          borderRadius: BorderRadius.circular(12),
+                          border: isViewing
+                              ? Border.all(color: const Color(0xFF64B5F6), width: 2)
+                              : isCurrentTurn
+                                  ? Border.all(color: const Color(0xFFE6C86A), width: 2)
+                                  : Border.all(color: const Color(0xFFE0D8D4)),
+                        ),
+                        child: Opacity(
+                          opacity: p.connected ? 1.0 : 0.45,
+                          child: Column(
                             children: [
-                              if (isCurrentTurn)
-                                Container(
-                                  width: 6,
-                                  height: 6,
-                                  margin: const EdgeInsets.only(right: 4),
-                                  decoration: const BoxDecoration(
-                                    color: Color(0xFFE6A800),
-                                    shape: BoxShape.circle,
+                              Row(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  if (isCurrentTurn)
+                                    Container(
+                                      width: 6,
+                                      height: 6,
+                                      margin: const EdgeInsets.only(right: 4),
+                                      decoration: const BoxDecoration(
+                                        color: Color(0xFFE6A800),
+                                        shape: BoxShape.circle,
+                                      ),
+                                    ),
+                                  Flexible(
+                                    child: Text(
+                                      p.name,
+                                      style: const TextStyle(
+                                        color: Color(0xFF5A4038),
+                                        fontSize: 11,
+                                        fontWeight: FontWeight.w600,
+                                      ),
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
                                   ),
-                                ),
-                              Flexible(
-                                child: Text(
-                                  p.name,
-                                  style: const TextStyle(
-                                    color: Color(0xFF5A4038),
-                                    fontSize: 11,
-                                    fontWeight: FontWeight.w600,
-                                  ),
-                                  maxLines: 1,
-                                  overflow: TextOverflow.ellipsis,
-                                ),
+                                ],
                               ),
-                            ],
-                          ),
-                          const SizedBox(height: 2),
-                          Text(
-                            '${p.totalScore}',
-                            style: const TextStyle(
-                              color: Color(0xFF5A4038),
-                              fontSize: 15,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                          if (p.timeoutCount > 0)
-                            Container(
-                              margin: const EdgeInsets.only(top: 3),
-                              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
-                              decoration: BoxDecoration(
-                                color: const Color(0xFFFFF3E0),
-                                borderRadius: BorderRadius.circular(8),
-                                border: Border.all(color: const Color(0xFFFFB74D)),
-                              ),
-                              child: Text(
-                                '⏱ ${p.timeoutCount}/3',
+                              const SizedBox(height: 2),
+                              Text(
+                                '${p.totalScore}',
                                 style: const TextStyle(
-                                  color: Color(0xFFE65100),
-                                  fontSize: 10,
-                                  fontWeight: FontWeight.w800,
-                                ),
-                              ),
-                            ),
-                          if (p.hasBid && p.bid != null)
-                            Container(
-                              margin: const EdgeInsets.only(top: 2),
-                              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
-                              decoration: BoxDecoration(
-                                color: p.tricks == p.bid
-                                    ? const Color(0xFFE8F5E9)
-                                    : p.tricks > p.bid!
-                                        ? const Color(0xFFFFF3E0)
-                                        : const Color(0xFFF5F5F5),
-                                borderRadius: BorderRadius.circular(8),
-                              ),
-                              child: Text(
-                                '${p.tricks}/${p.bid}',
-                                style: TextStyle(
-                                  color: p.tricks == p.bid
-                                      ? const Color(0xFF4CAF50)
-                                      : p.tricks > p.bid!
-                                          ? const Color(0xFFE65100)
-                                          : const Color(0xFF8A7A72),
-                                  fontSize: 11,
+                                  color: Color(0xFF5A4038),
+                                  fontSize: 15,
                                   fontWeight: FontWeight.bold,
                                 ),
                               ),
-                            )
-                          else if (p.hasBid && p.bid == null)
-                            Container(
-                              margin: const EdgeInsets.only(top: 2),
-                              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
-                              decoration: BoxDecoration(
-                                color: const Color(0xFFF0EBF8),
-                                borderRadius: BorderRadius.circular(8),
-                              ),
-                              child: const Icon(Icons.check, size: 12, color: Color(0xFF7A6A95)),
+                              if (p.timeoutCount > 0)
+                                Container(
+                                  margin: const EdgeInsets.only(top: 3),
+                                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
+                                  decoration: BoxDecoration(
+                                    color: const Color(0xFFFFF3E0),
+                                    borderRadius: BorderRadius.circular(8),
+                                    border: Border.all(color: const Color(0xFFFFB74D)),
+                                  ),
+                                  child: Text(
+                                    '⏱ ${p.timeoutCount}/3',
+                                    style: const TextStyle(
+                                      color: Color(0xFFE65100),
+                                      fontSize: 10,
+                                      fontWeight: FontWeight.w800,
+                                    ),
+                                  ),
+                                ),
+                              if (p.hasBid && p.bid != null)
+                                Container(
+                                  margin: const EdgeInsets.only(top: 2),
+                                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
+                                  decoration: BoxDecoration(
+                                    color: p.tricks == p.bid
+                                        ? const Color(0xFFE8F5E9)
+                                        : p.tricks > p.bid!
+                                            ? const Color(0xFFFFF3E0)
+                                            : const Color(0xFFF5F5F5),
+                                    borderRadius: BorderRadius.circular(8),
+                                  ),
+                                  child: Text(
+                                    '${p.tricks}/${p.bid}',
+                                    style: TextStyle(
+                                      color: p.tricks == p.bid
+                                          ? const Color(0xFF4CAF50)
+                                          : p.tricks > p.bid!
+                                              ? const Color(0xFFE65100)
+                                              : const Color(0xFF8A7A72),
+                                      fontSize: 11,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
+                                )
+                              else if (p.hasBid && p.bid == null)
+                                Container(
+                                  margin: const EdgeInsets.only(top: 2),
+                                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
+                                  decoration: BoxDecoration(
+                                    color: const Color(0xFFF0EBF8),
+                                    borderRadius: BorderRadius.circular(8),
+                                  ),
+                                  child: const Icon(Icons.check, size: 12, color: Color(0xFF7A6A95)),
+                                ),
+                            ],
+                          ),
+                        ),
+                      ),
+                      if (isPending)
+                        Positioned(
+                          right: 2,
+                          top: -4,
+                          child: Container(
+                            padding: const EdgeInsets.all(2),
+                            decoration: BoxDecoration(
+                              color: Colors.white,
+                              shape: BoxShape.circle,
+                              border: Border.all(color: const Color(0xFFE0D8D4)),
                             ),
-                        ],
-                      ),
-                    ),
+                            child: const Icon(Icons.schedule, size: 12, color: Color(0xFFFFB74D)),
+                          ),
+                        )
+                      else if (isApproved)
+                        Positioned(
+                          right: 2,
+                          top: -4,
+                          child: Container(
+                            padding: const EdgeInsets.all(2),
+                            decoration: BoxDecoration(
+                              color: Colors.white,
+                              shape: BoxShape.circle,
+                              border: Border.all(color: const Color(0xFF64B5F6)),
+                            ),
+                            child: const Icon(Icons.visibility, size: 12, color: Color(0xFF64B5F6)),
+                          ),
+                        )
+                      else
+                        Positioned(
+                          right: 2,
+                          top: -4,
+                          child: Container(
+                            padding: const EdgeInsets.all(2),
+                            decoration: BoxDecoration(
+                              color: Colors.white,
+                              shape: BoxShape.circle,
+                              border: Border.all(color: const Color(0xFFE0D8D4)),
+                            ),
+                            child: Icon(Icons.visibility_outlined, size: 12, color: const Color(0xFF8A7A72).withValues(alpha: 0.6)),
+                          ),
+                        ),
+                      if (trickPlay != null)
+                        Positioned(
+                          left: 0,
+                          right: 0,
+                          bottom: -30,
+                          child: Center(
+                            child: _buildPlayedCardBadge(
+                              trickPlay,
+                              highlighted: isTrickWinner,
+                            ),
+                          ),
+                        ),
+                    ],
                   ),
-                  if (isPending)
-                    Positioned(
-                      right: 0,
-                      top: -4,
-                      child: Container(
-                        padding: const EdgeInsets.all(2),
-                        decoration: BoxDecoration(
-                          color: Colors.white,
-                          shape: BoxShape.circle,
-                          border: Border.all(color: const Color(0xFFE0D8D4)),
-                        ),
-                        child: const Icon(Icons.schedule, size: 12, color: Color(0xFFFFB74D)),
-                      ),
-                    )
-                  else if (isApproved)
-                    Positioned(
-                      right: 0,
-                      top: -4,
-                      child: Container(
-                        padding: const EdgeInsets.all(2),
-                        decoration: BoxDecoration(
-                          color: Colors.white,
-                          shape: BoxShape.circle,
-                          border: Border.all(color: const Color(0xFF64B5F6)),
-                        ),
-                        child: const Icon(Icons.visibility, size: 12, color: Color(0xFF64B5F6)),
-                      ),
-                    )
-                  else
-                    Positioned(
-                      right: 0,
-                      top: -4,
-                      child: Container(
-                        padding: const EdgeInsets.all(2),
-                        decoration: BoxDecoration(
-                          color: Colors.white,
-                          shape: BoxShape.circle,
-                          border: Border.all(color: const Color(0xFFE0D8D4)),
-                        ),
-                        child: Icon(Icons.visibility_outlined, size: 12, color: const Color(0xFF8A7A72).withValues(alpha: 0.6)),
-                      ),
-                    ),
-                  if (trickPlay != null)
-                    Positioned(
-                      left: 0,
-                      right: 0,
-                      bottom: -30,
-                      child: Center(
-                        child: _buildPlayedCardBadge(
-                          trickPlay,
-                          highlighted: isTrickWinner,
-                        ),
-                      ),
-                    ),
-                ],
-              ),
-            ),
-          );
+                ),
+              );
         }).toList(),
       ),
     );
@@ -1266,9 +1266,11 @@ class _SKGameScreenState extends State<SKGameScreen> {
 
   // ── Scoreboard ──
   Widget _buildScoreboard(SKGameStateData state, GameService game) {
+    final n = state.players.length;
+    final horizontalPad = n <= 3 ? (MediaQuery.of(context).size.width - n * 110) / 2 : 6.0;
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 6),
-      margin: const EdgeInsets.only(bottom: 28),
+      padding: EdgeInsets.symmetric(horizontal: horizontalPad.clamp(6.0, double.infinity), vertical: 6),
+      margin: const EdgeInsets.only(bottom: 36),
       child: Row(
         children: state.players.map((p) {
           final isCurrentTurn = p.id == state.currentPlayer;
@@ -1280,139 +1282,139 @@ class _SKGameScreenState extends State<SKGameScreen> {
               state.phase == 'trick_end' && state.lastTrickWinner == p.id;
           return Expanded(
             child: GestureDetector(
-              onTap: isSelf ? null : () => _showPlayerProfileDialog(p.name, game),
-              child: Stack(
-                clipBehavior: Clip.none,
-                children: [
-                  AnimatedContainer(
-                    duration: const Duration(milliseconds: 200),
-                    margin: const EdgeInsets.symmetric(horizontal: 2),
-                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 6),
-                    decoration: BoxDecoration(
-                      color: isSelf
-                          ? Colors.white.withValues(alpha: 0.95)
-                          : isCurrentTurn
-                              ? const Color(0xFFFFF2B3)
-                              : Colors.white.withValues(alpha: 0.7),
-                      borderRadius: BorderRadius.circular(12),
-                      border: isCurrentTurn
-                          ? Border.all(color: const Color(0xFFE6C86A), width: 2)
-                          : Border.all(color: const Color(0xFFE0D8D4)),
-                      boxShadow: isSelf
-                          ? [BoxShadow(color: Colors.black.withValues(alpha: 0.08), blurRadius: 4)]
-                          : null,
-                    ),
-                    child: Column(
-                      children: [
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          mainAxisSize: MainAxisSize.min,
+                  onTap: isSelf ? null : () => _showPlayerProfileDialog(p.name, game),
+                  child: Stack(
+                    clipBehavior: Clip.none,
+                    children: [
+                      AnimatedContainer(
+                        duration: const Duration(milliseconds: 200),
+                        margin: const EdgeInsets.symmetric(horizontal: 2),
+                        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 6),
+                        decoration: BoxDecoration(
+                          color: isSelf
+                              ? Colors.white.withValues(alpha: 0.95)
+                              : isCurrentTurn
+                                  ? const Color(0xFFFFF2B3)
+                                  : Colors.white.withValues(alpha: 0.7),
+                          borderRadius: BorderRadius.circular(12),
+                          border: isCurrentTurn
+                              ? Border.all(color: const Color(0xFFE6C86A), width: 2)
+                              : Border.all(color: const Color(0xFFE0D8D4)),
+                          boxShadow: isSelf
+                              ? [BoxShadow(color: Colors.black.withValues(alpha: 0.08), blurRadius: 4)]
+                              : null,
+                        ),
+                        child: Column(
                           children: [
-                            if (isCurrentTurn)
-                              Container(
-                                width: 6,
-                                height: 6,
-                                margin: const EdgeInsets.only(right: 4),
-                                decoration: const BoxDecoration(
-                                  color: Color(0xFFE6A800),
-                                  shape: BoxShape.circle,
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                if (isCurrentTurn)
+                                  Container(
+                                    width: 6,
+                                    height: 6,
+                                    margin: const EdgeInsets.only(right: 4),
+                                    decoration: const BoxDecoration(
+                                      color: Color(0xFFE6A800),
+                                      shape: BoxShape.circle,
+                                    ),
+                                  ),
+                                Flexible(
+                                  child: Text(
+                                    p.name,
+                                    style: TextStyle(
+                                      color: const Color(0xFF5A4038),
+                                      fontSize: 11,
+                                      fontWeight: isSelf ? FontWeight.w800 : FontWeight.w600,
+                                    ),
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
                                 ),
-                              ),
-                            Flexible(
-                              child: Text(
-                                p.name,
-                                style: TextStyle(
-                                  color: const Color(0xFF5A4038),
-                                  fontSize: 11,
-                                  fontWeight: isSelf ? FontWeight.w800 : FontWeight.w600,
-                                ),
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                              ),
+                              ],
                             ),
-                          ],
-                        ),
-                        const SizedBox(height: 2),
-                        Text(
-                          '${p.totalScore}',
-                          style: const TextStyle(
-                            color: Color(0xFF5A4038),
-                            fontSize: 15,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                        if (p.timeoutCount > 0)
-                          Container(
-                            margin: const EdgeInsets.only(top: 3),
-                            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
-                            decoration: BoxDecoration(
-                              color: const Color(0xFFFFF3E0),
-                              borderRadius: BorderRadius.circular(8),
-                              border: Border.all(color: const Color(0xFFFFB74D)),
-                            ),
-                            child: Text(
-                              '⏱ ${p.timeoutCount}/3',
+                            const SizedBox(height: 2),
+                            Text(
+                              '${p.totalScore}',
                               style: const TextStyle(
-                                color: Color(0xFFE65100),
-                                fontSize: 10,
-                                fontWeight: FontWeight.w800,
-                              ),
-                            ),
-                          ),
-                        if (p.hasBid && p.bid != null)
-                          Container(
-                            margin: const EdgeInsets.only(top: 2),
-                            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
-                            decoration: BoxDecoration(
-                              color: p.tricks == p.bid
-                                  ? const Color(0xFFE8F5E9)
-                                  : p.tricks > p.bid!
-                                      ? const Color(0xFFFFF3E0)
-                                      : const Color(0xFFF5F5F5),
-                              borderRadius: BorderRadius.circular(8),
-                            ),
-                            child: Text(
-                              '${p.tricks}/${p.bid}',
-                              style: TextStyle(
-                                color: p.tricks == p.bid
-                                    ? const Color(0xFF4CAF50)
-                                    : p.tricks > p.bid!
-                                        ? const Color(0xFFE65100)
-                                        : const Color(0xFF8A7A72),
-                                fontSize: 11,
+                                color: Color(0xFF5A4038),
+                                fontSize: 15,
                                 fontWeight: FontWeight.bold,
                               ),
                             ),
-                          )
-                        else if (p.hasBid && p.bid == null)
-                          Container(
-                            margin: const EdgeInsets.only(top: 2),
-                            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
-                            decoration: BoxDecoration(
-                              color: const Color(0xFFF0EBF8),
-                              borderRadius: BorderRadius.circular(8),
-                            ),
-                            child: const Icon(Icons.check, size: 12, color: Color(0xFF7A6A95)),
-                          ),
-                      ],
-                    ),
-                  ),
-                  if (trickPlay != null)
-                    Positioned(
-                      left: 0,
-                      right: 0,
-                      bottom: -30,
-                      child: Center(
-                        child: _buildPlayedCardBadge(
-                          trickPlay,
-                          highlighted: isTrickWinner,
+                            if (p.timeoutCount > 0)
+                              Container(
+                                margin: const EdgeInsets.only(top: 3),
+                                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
+                                decoration: BoxDecoration(
+                                  color: const Color(0xFFFFF3E0),
+                                  borderRadius: BorderRadius.circular(8),
+                                  border: Border.all(color: const Color(0xFFFFB74D)),
+                                ),
+                                child: Text(
+                                  '⏱ ${p.timeoutCount}/3',
+                                  style: const TextStyle(
+                                    color: Color(0xFFE65100),
+                                    fontSize: 10,
+                                    fontWeight: FontWeight.w800,
+                                  ),
+                                ),
+                              ),
+                            if (p.hasBid && p.bid != null)
+                              Container(
+                                margin: const EdgeInsets.only(top: 2),
+                                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
+                                decoration: BoxDecoration(
+                                  color: p.tricks == p.bid
+                                      ? const Color(0xFFE8F5E9)
+                                      : p.tricks > p.bid!
+                                          ? const Color(0xFFFFF3E0)
+                                          : const Color(0xFFF5F5F5),
+                                  borderRadius: BorderRadius.circular(8),
+                                ),
+                                child: Text(
+                                  '${p.tricks}/${p.bid}',
+                                  style: TextStyle(
+                                    color: p.tricks == p.bid
+                                        ? const Color(0xFF4CAF50)
+                                        : p.tricks > p.bid!
+                                            ? const Color(0xFFE65100)
+                                            : const Color(0xFF8A7A72),
+                                    fontSize: 11,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                              )
+                            else if (p.hasBid && p.bid == null)
+                              Container(
+                                margin: const EdgeInsets.only(top: 2),
+                                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
+                                decoration: BoxDecoration(
+                                  color: const Color(0xFFF0EBF8),
+                                  borderRadius: BorderRadius.circular(8),
+                                ),
+                                child: const Icon(Icons.check, size: 12, color: Color(0xFF7A6A95)),
+                              ),
+                          ],
                         ),
                       ),
-                    ),
-                ],
-              ),
-            ),
-          );
+                      if (trickPlay != null)
+                        Positioned(
+                          left: 0,
+                          right: 0,
+                          bottom: -30,
+                          child: Center(
+                            child: _buildPlayedCardBadge(
+                              trickPlay,
+                              highlighted: isTrickWinner,
+                            ),
+                          ),
+                        ),
+                    ],
+                  ),
+                ),
+              );
         }).toList(),
       ),
     );

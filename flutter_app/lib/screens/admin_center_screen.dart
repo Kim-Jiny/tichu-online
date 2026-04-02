@@ -143,13 +143,11 @@ class _AdminCenterScreenState extends State<AdminCenterScreen> {
 
   Widget _buildDashboard(GameService game) {
     final dash = game.adminDashboard ?? const <String, dynamic>{};
-    final serverStartedAt = _formatServerStartedAt(dash['serverStartedAt']?.toString());
     final List<({String label, String value, Color color, IconData icon})> cards = [
       ('활성 유저', '${dash['activeUsers'] ?? 0}', const Color(0xFF42A5F5), Icons.wifi_tethering),
       ('미처리 문의', '${dash['pendingInquiries'] ?? 0}', const Color(0xFFAB47BC), Icons.mail_outline),
       ('미처리 신고', '${dash['pendingReports'] ?? 0}', const Color(0xFFEF5350), Icons.report_outlined),
       ('전체 유저', '${dash['totalUsers'] ?? 0}', const Color(0xFFFFA726), Icons.groups_2_outlined),
-      ('최근 시작', serverStartedAt, const Color(0xFF26A69A), Icons.schedule),
     ].map((item) => (label: item.$1, value: item.$2, color: item.$3, icon: item.$4)).toList();
     return Container(
       height: 112,
@@ -768,17 +766,6 @@ class _AdminCenterScreenState extends State<AdminCenterScreen> {
       default:
         return const Color(0xFF8A7A72);
     }
-  }
-
-  String _formatServerStartedAt(String? raw) {
-    if (raw == null || raw.isEmpty) return '-';
-    final parsed = DateTime.tryParse(raw)?.toLocal();
-    if (parsed == null) return '-';
-    final month = parsed.month.toString().padLeft(2, '0');
-    final day = parsed.day.toString().padLeft(2, '0');
-    final hour = parsed.hour.toString().padLeft(2, '0');
-    final minute = parsed.minute.toString().padLeft(2, '0');
-    return '$month/$day $hour:$minute';
   }
 
 }

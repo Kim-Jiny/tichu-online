@@ -1046,7 +1046,7 @@ class _GameScreenState extends State<GameScreen> {
     _scrollChatToBottom();
   }
 
-  void _showPlayerProfileDialog(String nickname, GameService game) {
+  void _showPlayerProfileDialog(String nickname, GameService game, {bool isBot = false}) {
     game.requestProfile(nickname);
 
     showDialog(
@@ -1116,6 +1116,7 @@ class _GameScreenState extends State<GameScreen> {
                       ],
                     ),
                     if (!isMe) ...[
+                      if (!isBot) ...[
                       const SizedBox(height: 12),
                       Wrap(
                         spacing: 8,
@@ -1179,6 +1180,7 @@ class _GameScreenState extends State<GameScreen> {
                           ),
                         ],
                       ),
+                      ],
                     ],
                   ],
                 ),
@@ -2654,7 +2656,7 @@ class _GameScreenState extends State<GameScreen> {
       child: Column(
         children: [
           GestureDetector(
-            onTap: partner != null ? () => _showPlayerProfileDialog(partner.name, game) : null,
+            onTap: partner != null ? () => _showPlayerProfileDialog(partner.name, game, isBot: partner.id.startsWith('bot_')) : null,
             child: _buildTurnName(
               name: partner?.name ?? '파트너',
               isTurn: isPartnerTurn,
@@ -2702,7 +2704,7 @@ class _GameScreenState extends State<GameScreen> {
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
               GestureDetector(
-                onTap: left != null ? () => _showPlayerProfileDialog(left.name, game) : null,
+                onTap: left != null ? () => _showPlayerProfileDialog(left.name, game, isBot: left.id.startsWith('bot_')) : null,
                 child: _buildTurnName(
                   name: left?.name ?? '좌측',
                   isTurn: isLeftTurn,
@@ -2742,7 +2744,7 @@ class _GameScreenState extends State<GameScreen> {
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
               GestureDetector(
-                onTap: right != null ? () => _showPlayerProfileDialog(right.name, game) : null,
+                onTap: right != null ? () => _showPlayerProfileDialog(right.name, game, isBot: right.id.startsWith('bot_')) : null,
                 child: _buildTurnName(
                   name: right?.name ?? '우측',
                   isTurn: isRightTurn,

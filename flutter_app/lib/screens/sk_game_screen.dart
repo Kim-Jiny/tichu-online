@@ -1292,7 +1292,7 @@ class _SKGameScreenState extends State<SKGameScreen> {
               state.phase == 'trick_end' && state.lastTrickWinner == p.id;
           return Expanded(
             child: GestureDetector(
-                  onTap: isSelf ? null : () => _showPlayerProfileDialog(p.name, game),
+                  onTap: isSelf ? null : () => _showPlayerProfileDialog(p.name, game, isBot: p.id.startsWith('bot_')),
                   child: SizedBox(
                     width: double.infinity,
                     child: Stack(
@@ -2905,7 +2905,7 @@ class _SKGameScreenState extends State<SKGameScreen> {
   }
 
   // ── Player Profile Dialog (same pattern as Tichu) ──
-  void _showPlayerProfileDialog(String nickname, GameService game) {
+  void _showPlayerProfileDialog(String nickname, GameService game, {bool isBot = false}) {
     game.requestProfile(nickname);
 
     showDialog(
@@ -2974,59 +2974,60 @@ class _SKGameScreenState extends State<SKGameScreen> {
                       ],
                     ),
                     const SizedBox(height: 12),
-                    Wrap(
-                      spacing: 8,
-                      runSpacing: 8,
-                      children: [
-                        if (game.friends.contains(nickname))
+                    if (!isBot)
+                      Wrap(
+                        spacing: 8,
+                        runSpacing: 8,
+                        children: [
+                          if (game.friends.contains(nickname))
+                            _buildProfileIconButton(
+                              icon: Icons.check,
+                              color: const Color(0xFFBDBDBD),
+                              tooltip: '이미 친구',
+                              onTap: () {},
+                            )
+                          else if (game.sentFriendRequests.contains(nickname))
+                            _buildProfileIconButton(
+                              icon: Icons.hourglass_top,
+                              color: const Color(0xFFBDBDBD),
+                              tooltip: '요청중',
+                              onTap: () {},
+                            )
+                          else
+                            _buildProfileIconButton(
+                              icon: Icons.person_add,
+                              color: const Color(0xFF81C784),
+                              tooltip: '친구 추가',
+                              onTap: () {
+                                game.addFriendAction(nickname);
+                                Navigator.pop(ctx);
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  const SnackBar(content: Text('친구 요청을 보냈습니다')),
+                                );
+                              },
+                            ),
                           _buildProfileIconButton(
-                            icon: Icons.check,
-                            color: const Color(0xFFBDBDBD),
-                            tooltip: '이미 친구',
-                            onTap: () {},
-                          )
-                        else if (game.sentFriendRequests.contains(nickname))
-                          _buildProfileIconButton(
-                            icon: Icons.hourglass_top,
-                            color: const Color(0xFFBDBDBD),
-                            tooltip: '요청중',
-                            onTap: () {},
-                          )
-                        else
-                          _buildProfileIconButton(
-                            icon: Icons.person_add,
-                            color: const Color(0xFF81C784),
-                            tooltip: '친구 추가',
+                            icon: isBlockedUser ? Icons.block : Icons.shield_outlined,
+                            color: isBlockedUser
+                                ? const Color(0xFF64B5F6)
+                                : const Color(0xFFFF8A65),
+                            tooltip: isBlockedUser ? '차단 해제' : '차단하기',
                             onTap: () {
-                              game.addFriendAction(nickname);
-                              Navigator.pop(ctx);
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                const SnackBar(content: Text('친구 요청을 보냈습니다')),
-                              );
+                              if (isBlockedUser) {
+                                game.unblockUserAction(nickname);
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  const SnackBar(content: Text('차단이 해제되었습니다')),
+                                );
+                              } else {
+                                game.blockUserAction(nickname);
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  const SnackBar(content: Text('차단되었습니다')),
+                                );
+                              }
                             },
                           ),
-                        _buildProfileIconButton(
-                          icon: isBlockedUser ? Icons.block : Icons.shield_outlined,
-                          color: isBlockedUser
-                              ? const Color(0xFF64B5F6)
-                              : const Color(0xFFFF8A65),
-                          tooltip: isBlockedUser ? '차단 해제' : '차단하기',
-                          onTap: () {
-                            if (isBlockedUser) {
-                              game.unblockUserAction(nickname);
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                const SnackBar(content: Text('차단이 해제되었습니다')),
-                              );
-                            } else {
-                              game.blockUserAction(nickname);
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                const SnackBar(content: Text('차단되었습니다')),
-                              );
-                            }
-                          },
-                        ),
-                      ],
-                    ),
+                        ],
+                      ),
                   ],
                 ),
               ),

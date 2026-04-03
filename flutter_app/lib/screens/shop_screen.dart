@@ -952,8 +952,10 @@ class _ShopScreenState extends State<ShopScreen> {
     final name = item['name']?.toString() ?? '';
     final category = item['category']?.toString() ?? '';
     final isActive = item['is_active'] == true;
+    final itemKey = item['item_key']?.toString() ?? '';
     final effectType = item['effect_type']?.toString() ?? '';
-    final isConsumable = effectType == 'leave_count_reduce' || category == 'utility';
+    final isPassiveUtility = itemKey.startsWith('top_card_counter');
+    final isConsumable = category == 'utility' && !isPassiveUtility;
     final expiresAt = item['expires_at'];
     final expiresText = expiresAt != null ? _formatExpire(expiresAt) : null;
 
@@ -984,16 +986,16 @@ class _ShopScreenState extends State<ShopScreen> {
                         ),
                       ),
                     ),
-                    if (isActive)
+                    if (isActive || isPassiveUtility)
                       Container(
                         padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
                         decoration: BoxDecoration(
                           color: const Color(0xFFDDECF7),
                           borderRadius: BorderRadius.circular(10),
                         ),
-                        child: const Text(
-                          '사용중',
-                          style: TextStyle(fontSize: 11, color: Color(0xFF3E6D8E)),
+                        child: Text(
+                          isPassiveUtility ? '활성화됨' : '사용중',
+                          style: const TextStyle(fontSize: 11, color: Color(0xFF3E6D8E)),
                         ),
                       ),
                   ],
@@ -1007,33 +1009,36 @@ class _ShopScreenState extends State<ShopScreen> {
             ),
           ),
           const SizedBox(width: 8),
-          SizedBox(
-            height: 28,
-            child: ElevatedButton(
-              onPressed: () {
-                final key = item['item_key']?.toString() ?? '';
-                if (effectType == 'nickname_change') {
-                  _showNicknameChangeDialog(context, game);
-                } else if (isConsumable) {
-                  game.useItem(key);
-                } else {
-                  game.equipItem(key);
-                }
-              },
-              style: ElevatedButton.styleFrom(
-                backgroundColor: isConsumable ? const Color(0xFFFFCC80) : const Color(0xFFB3E5FC),
-                foregroundColor: const Color(0xFF5A4038),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),
+          if (isPassiveUtility)
+            const SizedBox(width: 60)
+          else
+            SizedBox(
+              height: 28,
+              child: ElevatedButton(
+                onPressed: () {
+                  final key = item['item_key']?.toString() ?? '';
+                  if (effectType == 'nickname_change') {
+                    _showNicknameChangeDialog(context, game);
+                  } else if (isConsumable) {
+                    game.useItem(key);
+                  } else {
+                    game.equipItem(key);
+                  }
+                },
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: isConsumable ? const Color(0xFFFFCC80) : const Color(0xFFB3E5FC),
+                  foregroundColor: const Color(0xFF5A4038),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  padding: const EdgeInsets.symmetric(horizontal: 12),
                 ),
-                padding: const EdgeInsets.symmetric(horizontal: 12),
-              ),
-              child: Text(
-                isConsumable ? '사용' : '장착',
-                style: const TextStyle(fontSize: 12),
+                child: Text(
+                  isConsumable ? '사용' : '장착',
+                  style: const TextStyle(fontSize: 12),
+                ),
               ),
             ),
-          ),
         ],
       ),
     );
@@ -1166,6 +1171,153 @@ class _ShopScreenState extends State<ShopScreen> {
           'iconColor': const Color(0xFFFFA000),
           'gradient': [const Color(0xFFFFF8E1), const Color(0xFFFFECB3)],
           'borderColor': const Color(0xFFFFD54F),
+        };
+      case 'title_dragon':
+        return {
+          'icon': Icons.local_fire_department,
+          'iconColor': const Color(0xFFD32F2F),
+          'gradient': [const Color(0xFFFFEBEE), const Color(0xFFFFCDD2)],
+          'borderColor': const Color(0xFFEF9A9A),
+        };
+      case 'title_phoenix':
+        return {
+          'icon': Icons.local_fire_department,
+          'iconColor': const Color(0xFFFF6F00),
+          'gradient': [const Color(0xFFFFF3E0), const Color(0xFFFFE0B2)],
+          'borderColor': const Color(0xFFFFCC80),
+        };
+      case 'title_pirate':
+        return {
+          'icon': Icons.anchor,
+          'iconColor': const Color(0xFF37474F),
+          'gradient': [const Color(0xFFECEFF1), const Color(0xFFCFD8DC)],
+          'borderColor': const Color(0xFF90A4AE),
+        };
+      case 'title_tactician':
+        return {
+          'icon': Icons.psychology,
+          'iconColor': const Color(0xFF00695C),
+          'gradient': [const Color(0xFFE0F2F1), const Color(0xFFB2DFDB)],
+          'borderColor': const Color(0xFF80CBC4),
+        };
+      case 'title_lucky':
+        return {
+          'icon': Icons.star,
+          'iconColor': const Color(0xFFFFD600),
+          'gradient': [const Color(0xFFFFFDE7), const Color(0xFFFFF9C4)],
+          'borderColor': const Color(0xFFFFF176),
+        };
+      case 'title_bluffer':
+        return {
+          'icon': Icons.theater_comedy,
+          'iconColor': const Color(0xFF6A1B9A),
+          'gradient': [const Color(0xFFF3E5F5), const Color(0xFFE1BEE7)],
+          'borderColor': const Color(0xFFCE93D8),
+        };
+      case 'title_ace':
+        return {
+          'icon': Icons.military_tech,
+          'iconColor': const Color(0xFFC62828),
+          'gradient': [const Color(0xFFFFEBEE), const Color(0xFFFFCDD2)],
+          'borderColor': const Color(0xFFEF9A9A),
+        };
+      case 'title_king':
+        return {
+          'icon': Icons.workspace_premium,
+          'iconColor': const Color(0xFFFF8F00),
+          'gradient': [const Color(0xFFFFF8E1), const Color(0xFFFFE082)],
+          'borderColor': const Color(0xFFFFD54F),
+        };
+      case 'title_rookie':
+        return {
+          'icon': Icons.emoji_nature,
+          'iconColor': const Color(0xFF66BB6A),
+          'gradient': [const Color(0xFFE8F5E9), const Color(0xFFC8E6C9)],
+          'borderColor': const Color(0xFFA5D6A7),
+        };
+      case 'title_veteran':
+        return {
+          'icon': Icons.security,
+          'iconColor': const Color(0xFF1565C0),
+          'gradient': [const Color(0xFFE3F2FD), const Color(0xFFBBDEFB)],
+          'borderColor': const Color(0xFF90CAF9),
+        };
+      case 'title_sensitive':
+        return {
+          'icon': Icons.sentiment_very_dissatisfied,
+          'iconColor': const Color(0xFFE91E63),
+          'gradient': [const Color(0xFFFCE4EC), const Color(0xFFF8BBD0)],
+          'borderColor': const Color(0xFFF48FB1),
+        };
+      case 'title_shadow':
+        return {
+          'icon': Icons.visibility_off,
+          'iconColor': const Color(0xFF424242),
+          'gradient': [const Color(0xFFF5F5F5), const Color(0xFFE0E0E0)],
+          'borderColor': const Color(0xFFBDBDBD),
+        };
+      case 'title_flame':
+        return {
+          'icon': Icons.whatshot,
+          'iconColor': const Color(0xFFFF5722),
+          'gradient': [const Color(0xFFFBE9E7), const Color(0xFFFFCCBC)],
+          'borderColor': const Color(0xFFFF8A65),
+        };
+      case 'title_ice':
+        return {
+          'icon': Icons.ac_unit,
+          'iconColor': const Color(0xFF0288D1),
+          'gradient': [const Color(0xFFE1F5FE), const Color(0xFFB3E5FC)],
+          'borderColor': const Color(0xFF81D4FA),
+        };
+      case 'title_crown':
+        return {
+          'icon': Icons.diamond,
+          'iconColor': const Color(0xFFE65100),
+          'gradient': [const Color(0xFFFFF3E0), const Color(0xFFFFE0B2)],
+          'borderColor': const Color(0xFFFFB74D),
+        };
+      case 'title_diamond':
+        return {
+          'icon': Icons.diamond,
+          'iconColor': const Color(0xFF00BCD4),
+          'gradient': [const Color(0xFFE0F7FA), const Color(0xFFB2EBF2)],
+          'borderColor': const Color(0xFF80DEEA),
+        };
+      case 'title_ghost':
+        return {
+          'icon': Icons.blur_on,
+          'iconColor': const Color(0xFF78909C),
+          'gradient': [const Color(0xFFECEFF1), const Color(0xFFCFD8DC)],
+          'borderColor': const Color(0xFFB0BEC5),
+        };
+      case 'title_thunder':
+        return {
+          'icon': Icons.bolt,
+          'iconColor': const Color(0xFFFFAB00),
+          'gradient': [const Color(0xFFFFF8E1), const Color(0xFFFFECB3)],
+          'borderColor': const Color(0xFFFFD54F),
+        };
+      case 'title_topcard':
+        return {
+          'icon': Icons.style,
+          'iconColor': const Color(0xFF00897B),
+          'gradient': [const Color(0xFFE0F2F1), const Color(0xFFB2DFDB)],
+          'borderColor': const Color(0xFF80CBC4),
+        };
+      case 'title_legend':
+        return {
+          'icon': Icons.auto_awesome,
+          'iconColor': const Color(0xFFFF6D00),
+          'gradient': [const Color(0xFFFFF3E0), const Color(0xFFFFE0B2)],
+          'borderColor': const Color(0xFFFFAB40),
+        };
+      case 'title_boomer':
+        return {
+          'icon': Icons.elderly,
+          'iconColor': const Color(0xFF795548),
+          'gradient': [const Color(0xFFEFEBE9), const Color(0xFFD7CCC8)],
+          'borderColor': const Color(0xFFBCAAA4),
         };
       // Themes
       case 'theme_cotton':
@@ -1366,9 +1518,8 @@ class _ShopScreenState extends State<ShopScreen> {
 
     final name = item['name']?.toString() ?? '';
     final category = item['category']?.toString() ?? '';
-    final isConsumable = category == 'utility' ||
-        (item['effect_type']?.toString() ?? '') == 'leave_count_reduce';
-    final isBanner = category == 'banner';
+    final isPassiveUtility = itemKey.startsWith('top_card_counter');
+    final isConsumable = category == 'utility' && !isPassiveUtility;
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
@@ -1377,10 +1528,10 @@ class _ShopScreenState extends State<ShopScreen> {
         content: Text(
           extended
               ? '$name 기간이 연장되었어요.'
-              : isBanner
-                  ? '구매가 완료되었습니다.\n배너가 적용되었습니다.'
-                  : isConsumable
-                      ? '구매가 완료되었습니다.\n인벤토리에서 사용해주세요.'
+              : isConsumable
+                  ? '구매가 완료되었습니다.\n인벤토리에서 사용해주세요.'
+                  : isPassiveUtility
+                      ? '구매가 완료되었습니다.\n구매 즉시 자동 활성화됩니다.'
                       : '구매가 완료되었습니다.\n바로 장착하시겠어요?',
         ),
         actions: [
@@ -1388,7 +1539,7 @@ class _ShopScreenState extends State<ShopScreen> {
             onPressed: () => Navigator.pop(ctx),
             child: const Text('닫기'),
           ),
-          if (!extended && !isConsumable && !isBanner)
+          if (!extended && !isConsumable && !isPassiveUtility)
             ElevatedButton(
               onPressed: () {
                 Navigator.pop(ctx);
@@ -1399,10 +1550,6 @@ class _ShopScreenState extends State<ShopScreen> {
         ],
       ),
     );
-
-    if (!extended && isBanner) {
-      game.equipItem(itemKey);
-    }
   }
 
   void _maybeShowShopActionResult(BuildContext context, GameService game) {

@@ -1993,8 +1993,8 @@ class _LobbyScreenState extends State<LobbyScreen> {
                   const SizedBox(width: 6),
                   Text(
                     game.currentGameType == 'skull_king'
-                        ? '랭크전 - 좌석 랜덤 배정'
-                        : '랭크전 - 팀 랜덤 배정',
+                        ? '스컬킹 - 랭크전'
+                        : '티츄 - 랭크전',
                     style: const TextStyle(
                       fontSize: 13,
                       fontWeight: FontWeight.bold,

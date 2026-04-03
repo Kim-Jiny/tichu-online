@@ -3053,7 +3053,7 @@ class _LobbyScreenState extends State<LobbyScreen> {
         if (selectedTab == 'tichu') ...[
           _buildProfileSectionCard(
             title: '시즌 랭킹전',
-            accent: const Color(0xFF6C63FF),
+            accent: const Color(0xFF3A3058),
             background: const Color(0xFFF6F4FA),
             icon: Icons.emoji_events,
             iconColor: const Color(0xFFFFD54F),

@@ -1615,7 +1615,7 @@ class _SpectatorScreenState extends State<SpectatorScreen> {
             borderRadius: BorderRadius.circular(12),
           ),
           child: Text(
-            '새 트릭 시작',
+            '새 판 시작',
             style: TextStyle(
               color: const Color(0xFF9A8E8A),
               fontSize: compact ? 12 : 14,

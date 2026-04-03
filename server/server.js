@@ -1108,8 +1108,10 @@ async function handleReconnection(ws) {
   const profile = await getUserProfile(ws.nickname);
   const themeKey = profile?.themeKey || null;
   const titleKey = profile?.titleKey || null;
+  const titleName = profile?.titleName || null;
   const hasTopCardCounter = profile?.hasTopCardCounter || false;
   ws.titleKey = titleKey;
+  ws.titleName = titleName;
 
   const socialInfo = await getLinkedSocial(ws.userId);
   const authProvider = socialInfo?.provider || 'local';
@@ -1425,6 +1427,7 @@ function handleCreateRoom(ws, data) {
   // Set title on host player
   if (ws.titleKey) {
     room.players[0].titleKey = ws.titleKey;
+    room.players[0].titleName = ws.titleName;
   }
 
   sendTo(ws, { type: 'room_joined', roomId: room.id, roomName: room.name });
@@ -1473,7 +1476,10 @@ async function handleJoinRoom(ws, data) {
   // Set title on joined player
   if (ws.titleKey) {
     const p = room.players.find(p => p !== null && p.id === ws.playerId);
-    if (p) p.titleKey = ws.titleKey;
+    if (p) {
+      p.titleKey = ws.titleKey;
+      p.titleName = ws.titleName;
+    }
   }
   sendTo(ws, { type: 'room_joined', roomId: room.id, roomName: room.name });
   // 채팅 히스토리 전송
@@ -1584,13 +1590,10 @@ function handleReturnToRoom(ws) {
     sendTo(ws, { type: 'room_closed' });
     return;
   }
-  // Only host can return to room (S1)
-  if (room.hostId !== ws.playerId) {
-    sendTo(ws, { type: 'error', message: '방장만 대기실로 돌아갈 수 있습니다' });
-    return;
-  }
+  // Already in lobby (auto-return or another player already triggered it)
+  if (!room.game) return;
   // Only allow when game has ended
-  if (room.game && room.game.state !== 'game_end') {
+  if (room.game.state !== 'game_end') {
     sendTo(ws, { type: 'error', message: '게임이 아직 진행 중입니다' });
     return;
   }
@@ -2063,7 +2066,10 @@ function handleSwitchToPlayer(ws, data) {
   // Set title on player slot
   if (ws.titleKey) {
     const p = room.players[targetSlot];
-    if (p) p.titleKey = ws.titleKey;
+    if (p) {
+      p.titleKey = ws.titleKey;
+      p.titleName = ws.titleName;
+    }
   }
   sendTo(ws, { type: 'switched_to_player', roomId: room.id, roomName: room.name });
   broadcastRoomState(ws.roomId);
@@ -2082,15 +2088,7 @@ async function handleGetProfile(ws, data) {
     return;
   }
   const profile = await getUserProfile(targetNickname);
-  const [tichuMatches, skMatches] = await Promise.all([
-    getRecentMatches(targetNickname, 20),
-    getSKRecentMatches(targetNickname, 20),
-  ]);
-  // Add gameType to tichu matches and merge with SK matches, sorted by date
-  const recentMatches = [
-    ...tichuMatches.map(m => ({ ...m, gameType: 'tichu' })),
-    ...skMatches,
-  ].sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt)).slice(0, 20);
+  const recentMatches = await getRecentMatches(targetNickname, 20);
   const isBlocked = (await getBlockedUsers(ws.nickname)).includes(targetNickname);
   sendTo(ws, {
     type: 'profile_result',
@@ -3472,12 +3470,16 @@ async function handleEquipItem(ws, data) {
   if (result.success && result.category === 'title') {
     result.titleKey = itemKey;
     ws.titleKey = itemKey;
+    ws.titleName = result.itemName || null;
     // Update room player data if in a room
     if (ws.roomId) {
       const room = lobby.getRoom(ws.roomId);
       if (room) {
         const p = room.players.find(p => p !== null && p.id === ws.playerId);
-        if (p) p.titleKey = itemKey;
+        if (p) {
+          p.titleKey = itemKey;
+          p.titleName = ws.titleName;
+        }
         broadcastRoomState(ws.roomId);
       }
     }

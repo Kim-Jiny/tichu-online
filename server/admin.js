@@ -3,7 +3,7 @@ const serverStartedAt = new Date();
 const {
   verifyAdmin, getInquiries, getInquiryById, resolveInquiry,
   getReports, getReportGroup, updateReportGroupStatus,
-  getUsers, getUserDetail, getAdminGoldHistory, deleteUser, getDashboardStats, setChatBan, setAdminMemo, getRecentMatches, adminAdjustGold, setUserAdmin,
+  getUsers, getUserDetail, getAdminGoldHistory, getAdminPurchaseHistory, deleteUser, getDashboardStats, setChatBan, setAdminMemo, getRecentMatches, adminAdjustGold, setUserAdmin,
   getDetailedAdminStats,
   getAllShopItemsAdmin, addShopItem, updateShopItem, deleteShopItem, getShopItemById,
   getConfig, updateConfig,
@@ -35,11 +35,12 @@ function getSessionFromCookie(req) {
     sessions.delete(token);
     return null;
   }
-  return session;
+  return { token, session };
 }
 
 function setSessionCookie(res, token) {
-  const flags = `HttpOnly; SameSite=Strict; Path=/tc-backstage${isProduction ? '; Secure' : ''}`;
+  const expires = new Date(Date.now() + SESSION_MAX_AGE).toUTCString();
+  const flags = `HttpOnly; SameSite=Strict; Path=/tc-backstage; Max-Age=${Math.floor(SESSION_MAX_AGE / 1000)}; Expires=${expires}${isProduction ? '; Secure' : ''}`;
   res.setHeader('Set-Cookie', `tc_admin_session=${token}; ${flags}`);
 }
 
@@ -91,33 +92,124 @@ function layout(title, content, activePage = '') {
 <title>${title} - Tichu Admin</title>
 <style>
 * { margin: 0; padding: 0; box-sizing: border-box; }
-body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #f0f2f5; color: #1a1a2e; display: flex; min-height: 100vh; }
-.sidebar { width: 220px; background: #1a1a2e; color: #e0e0e0; padding: 20px 0; position: fixed; height: 100vh; overflow-y: auto; z-index: 100; transition: transform 0.3s ease; }
-.sidebar h2 { padding: 0 20px 20px; font-size: 18px; color: #fff; border-bottom: 1px solid #2a2a4e; margin-bottom: 10px; }
-.sidebar a { display: block; padding: 12px 20px; color: #b0b0c8; text-decoration: none; font-size: 14px; transition: all 0.2s; }
-.sidebar a:hover { background: #2a2a4e; color: #fff; }
-.sidebar a.active { background: #2a2a4e; color: #6c63ff; border-left: 3px solid #6c63ff; }
-.sidebar .logout { margin-top: 20px; border-top: 1px solid #2a2a4e; padding-top: 10px; }
+:root {
+  --bg: #f4f1ea;
+  --surface: rgba(255,255,255,0.92);
+  --surface-strong: #ffffff;
+  --line: rgba(32, 28, 22, 0.08);
+  --text: #1f2328;
+  --muted: #6c727f;
+  --brand: #0f6c5c;
+  --brand-soft: #d9eee7;
+  --accent: #d88c38;
+  --danger: #c0563f;
+  --warning: #c67b2b;
+  --shadow: 0 18px 40px rgba(34, 29, 21, 0.08);
+}
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  background:
+    radial-gradient(circle at top right, rgba(216,140,56,0.12), transparent 28%),
+    radial-gradient(circle at top left, rgba(15,108,92,0.12), transparent 30%),
+    linear-gradient(180deg, #f7f4ee 0%, #f1ede6 100%);
+  color: var(--text);
+  display: flex;
+  min-height: 100vh;
+}
+.sidebar {
+  width: 248px;
+  background: linear-gradient(180deg, #17352f 0%, #102923 100%);
+  color: #e7efe9;
+  padding: 24px 0;
+  position: fixed;
+  height: 100vh;
+  overflow-y: auto;
+  z-index: 100;
+  transition: transform 0.3s ease;
+  box-shadow: 10px 0 30px rgba(16, 41, 35, 0.16);
+}
+.sidebar h2 { padding: 0 22px 18px; font-size: 18px; color: #fff; border-bottom: 1px solid rgba(255,255,255,0.08); margin-bottom: 12px; letter-spacing: 0.01em; }
+.sidebar a { display: block; padding: 13px 22px; color: rgba(231,239,233,0.75); text-decoration: none; font-size: 14px; transition: all 0.2s; border-left: 3px solid transparent; }
+.sidebar a:hover { background: rgba(255,255,255,0.06); color: #fff; }
+.sidebar a.active { background: rgba(255,255,255,0.08); color: #fff; border-left-color: #dcb46a; }
+.sidebar .logout { margin-top: 20px; border-top: 1px solid rgba(255,255,255,0.08); padding-top: 10px; }
 .sidebar .logout a { color: #e57373; }
-.menu-toggle { display: none; position: fixed; top: 12px; left: 12px; z-index: 200; background: #1a1a2e; color: #fff; border: none; border-radius: 8px; width: 40px; height: 40px; font-size: 22px; cursor: pointer; align-items: center; justify-content: center; box-shadow: 0 2px 8px rgba(0,0,0,0.2); }
+.menu-toggle { display: none; position: fixed; top: 12px; left: 12px; z-index: 200; background: #17352f; color: #fff; border: none; border-radius: 12px; width: 42px; height: 42px; font-size: 22px; cursor: pointer; align-items: center; justify-content: center; box-shadow: 0 8px 24px rgba(16,41,35,0.22); }
 .sidebar-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 90; }
-.main { margin-left: 220px; flex: 1; padding: 24px; min-height: 100vh; }
-.page-title { font-size: 24px; font-weight: 700; margin-bottom: 20px; color: #1a1a2e; }
+.main { margin-left: 248px; flex: 1; padding: 28px; min-height: 100vh; }
+.page-shell { max-width: 1480px; margin: 0 auto; }
+.page-header { display: flex; justify-content: space-between; align-items: flex-start; gap: 16px; margin-bottom: 18px; }
+.page-title { font-size: 30px; font-weight: 800; margin-bottom: 8px; color: var(--text); letter-spacing: -0.02em; }
+.page-subtitle { font-size: 14px; line-height: 1.6; color: var(--muted); max-width: 760px; }
+.header-actions { display: flex; gap: 10px; flex-wrap: wrap; justify-content: flex-end; }
 .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 16px; margin-bottom: 24px; }
-.stat-card { background: #fff; border-radius: 12px; padding: 20px; box-shadow: 0 2px 8px rgba(0,0,0,0.06); }
-.stat-card .label { font-size: 13px; color: #888; margin-bottom: 4px; }
-.stat-card .value { font-size: 28px; font-weight: 700; color: #1a1a2e; }
-.stat-card .value.purple { color: #6c63ff; }
-.stat-card .value.green { color: #4caf50; }
-.stat-card .value.orange { color: #ff9800; }
-.stat-card .value.red { color: #e53935; }
-.card { background: #fff; border-radius: 12px; padding: 20px; box-shadow: 0 2px 8px rgba(0,0,0,0.06); margin-bottom: 20px; }
-.card h3 { font-size: 16px; margin-bottom: 16px; color: #1a1a2e; }
+.stat-card {
+  background: linear-gradient(180deg, rgba(255,255,255,0.98), rgba(255,255,255,0.9));
+  border: 1px solid var(--line);
+  border-radius: 18px;
+  padding: 20px;
+  box-shadow: var(--shadow);
+  position: relative;
+  overflow: hidden;
+}
+.stat-card::after {
+  content: "";
+  position: absolute;
+  inset: auto -20px -28px auto;
+  width: 88px;
+  height: 88px;
+  border-radius: 999px;
+  background: rgba(15,108,92,0.06);
+}
+.stat-card .label { font-size: 12px; color: var(--muted); margin-bottom: 6px; text-transform: uppercase; letter-spacing: 0.08em; }
+.stat-card .value { font-size: 30px; font-weight: 800; color: var(--text); letter-spacing: -0.03em; }
+.stat-card .value.purple { color: #5f62d6; }
+.stat-card .value.green { color: #2e8b57; }
+.stat-card .value.orange { color: var(--warning); }
+.stat-card .value.red { color: var(--danger); }
+.card {
+  background: linear-gradient(180deg, rgba(255,255,255,0.96), rgba(255,255,255,0.9));
+  border-radius: 20px;
+  padding: 22px;
+  border: 1px solid var(--line);
+  box-shadow: var(--shadow);
+  margin-bottom: 20px;
+}
+.card h3 { font-size: 18px; margin-bottom: 16px; color: var(--text); letter-spacing: -0.01em; }
+.hero-card {
+  background: linear-gradient(135deg, #17352f 0%, #1d4a41 60%, #24584d 100%);
+  color: #fff;
+  border-radius: 22px;
+  padding: 24px;
+  margin-bottom: 22px;
+  box-shadow: 0 24px 50px rgba(23, 53, 47, 0.24);
+}
+.hero-card .eyebrow { font-size: 12px; text-transform: uppercase; letter-spacing: 0.12em; color: rgba(255,255,255,0.72); margin-bottom: 8px; }
+.hero-card .headline { font-size: 30px; font-weight: 800; line-height: 1.18; max-width: 760px; letter-spacing: -0.03em; }
+.hero-card .sub { margin-top: 10px; color: rgba(255,255,255,0.78); font-size: 14px; line-height: 1.6; }
+.hero-meta { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 12px; margin-top: 20px; }
+.hero-meta .item { background: rgba(255,255,255,0.09); border: 1px solid rgba(255,255,255,0.08); border-radius: 16px; padding: 14px 16px; backdrop-filter: blur(8px); }
+.hero-meta .item .k { font-size: 12px; color: rgba(255,255,255,0.7); margin-bottom: 6px; text-transform: uppercase; letter-spacing: 0.06em; }
+.hero-meta .item .v { font-size: 22px; font-weight: 800; }
+.summary-strip { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 12px; margin-bottom: 20px; }
+.summary-item { background: rgba(255,255,255,0.72); border: 1px solid var(--line); border-radius: 16px; padding: 16px 18px; }
+.summary-item .k { font-size: 12px; color: var(--muted); margin-bottom: 6px; text-transform: uppercase; letter-spacing: 0.06em; }
+.summary-item .v { font-size: 24px; font-weight: 800; letter-spacing: -0.02em; color: var(--text); }
+.summary-item .meta { margin-top: 6px; font-size: 12px; color: var(--muted); line-height: 1.5; }
+.section-label { font-size: 12px; color: var(--muted); margin-bottom: 10px; text-transform: uppercase; letter-spacing: 0.08em; }
+.kpi-note { font-size: 12px; color: var(--muted); margin-top: 6px; line-height: 1.5; }
+.metric-inline { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 10px 0; border-bottom: 1px dashed rgba(32,28,22,0.08); }
+.metric-inline:last-child { border-bottom: none; padding-bottom: 0; }
+.metric-inline .name { font-size: 13px; color: var(--muted); }
+.metric-inline .num { font-weight: 700; font-size: 15px; color: var(--text); }
+.card-actions { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 14px; }
 .table-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; }
-table { width: 100%; border-collapse: collapse; }
-th { text-align: left; padding: 10px 12px; background: #f8f9fa; color: #666; font-size: 13px; font-weight: 600; border-bottom: 2px solid #e0e0e0; white-space: nowrap; }
-td { padding: 10px 12px; border-bottom: 1px solid #f0f0f0; font-size: 14px; }
-tr:hover td { background: #f8f9fa; }
+table { width: 100%; border-collapse: separate; border-spacing: 0; }
+th { text-align: left; padding: 12px 14px; background: #f6f3ec; color: var(--muted); font-size: 12px; font-weight: 700; border-bottom: 1px solid #e6dfd2; white-space: nowrap; text-transform: uppercase; letter-spacing: 0.05em; }
+th:first-child { border-top-left-radius: 14px; }
+th:last-child { border-top-right-radius: 14px; }
+td { padding: 12px 14px; border-bottom: 1px solid #f0ebe2; font-size: 14px; vertical-align: top; }
+tr:hover td { background: rgba(15,108,92,0.04); }
 .badge { display: inline-block; padding: 3px 10px; border-radius: 12px; font-size: 12px; font-weight: 600; white-space: nowrap; }
 .badge-pending { background: #fff3e0; color: #e65100; }
 .badge-resolved { background: #e8f5e9; color: #2e7d32; }
@@ -125,32 +217,49 @@ tr:hover td { background: #f8f9fa; }
 .badge-bug { background: #ffebee; color: #c62828; }
 .badge-suggestion { background: #e8eaf6; color: #283593; }
 .badge-other { background: #f3e5f5; color: #6a1b9a; }
-.btn { display: inline-block; padding: 8px 16px; border-radius: 8px; font-size: 14px; font-weight: 600; border: none; cursor: pointer; text-decoration: none; transition: all 0.2s; }
-.btn-primary { background: #6c63ff; color: #fff; }
-.btn-primary:hover { background: #5a52e0; }
+.btn { display: inline-block; padding: 9px 16px; border-radius: 12px; font-size: 13px; font-weight: 700; border: none; cursor: pointer; text-decoration: none; transition: all 0.2s; }
+.btn-primary { background: var(--brand); color: #fff; }
+.btn-primary:hover { background: #0c594b; }
 .btn-danger { background: #e53935; color: #fff; }
 .btn-danger:hover { background: #c62828; }
 .btn-success { background: #4caf50; color: #fff; }
 .btn-success:hover { background: #388e3c; }
-.btn-secondary { background: #e0e0e0; color: #333; }
-.btn-secondary:hover { background: #bdbdbd; }
+.btn-secondary { background: #ece5d8; color: #3d403f; }
+.btn-secondary:hover { background: #e0d5c2; }
 .detail-grid { display: grid; grid-template-columns: 120px 1fr; gap: 8px 16px; margin-bottom: 16px; }
-.detail-grid .label { color: #888; font-size: 13px; font-weight: 600; }
+.detail-grid .label { color: var(--muted); font-size: 13px; font-weight: 700; }
 .detail-grid .value { font-size: 14px; word-break: break-word; }
-textarea { width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 8px; font-size: 14px; resize: vertical; font-family: inherit; }
-input[type="text"], input[type="password"] { width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 8px; font-size: 14px; font-family: inherit; }
+textarea, select, input[type="date"], input[type="datetime-local"], input[type="number"] {
+  width: 100%;
+  padding: 10px 12px;
+  border: 1px solid #dad3c7;
+  border-radius: 12px;
+  font-size: 14px;
+  font-family: inherit;
+  background: rgba(255,255,255,0.92);
+  color: var(--text);
+}
+input[type="text"], input[type="password"] { width: 100%; padding: 10px 12px; border: 1px solid #dad3c7; border-radius: 12px; font-size: 14px; font-family: inherit; background: rgba(255,255,255,0.92); color: var(--text); }
 .search-bar { display: flex; gap: 8px; margin-bottom: 16px; }
 .search-bar input { flex: 1; }
 .pagination { display: flex; gap: 8px; margin-top: 16px; justify-content: center; flex-wrap: wrap; }
-.pagination a { padding: 6px 12px; border-radius: 6px; background: #e0e0e0; color: #333; text-decoration: none; font-size: 13px; }
-.pagination a.active { background: #6c63ff; color: #fff; }
-.chat-log { max-height: 400px; overflow-y: auto; background: #f8f9fa; border-radius: 8px; padding: 12px; margin: 12px 0; }
+.pagination a { padding: 7px 12px; border-radius: 10px; background: #ece5d8; color: #333; text-decoration: none; font-size: 13px; }
+.pagination a.active { background: var(--brand); color: #fff; }
+.chat-log { max-height: 400px; overflow-y: auto; background: #f7f4ee; border-radius: 14px; padding: 12px; margin: 12px 0; border: 1px solid #ebe3d7; }
 .chat-msg { padding: 6px 0; border-bottom: 1px solid #eee; font-size: 13px; }
-.chat-msg .sender { font-weight: 600; color: #1a1a2e; }
+.chat-msg .sender { font-weight: 700; color: var(--text); }
 .chat-msg .text { color: #555; }
-.empty { text-align: center; padding: 40px; color: #999; font-size: 15px; }
+.empty { text-align: center; padding: 40px; color: var(--muted); font-size: 15px; }
 .grid-2col { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 20px; }
 .form-grid { display: grid; grid-template-columns: 140px 1fr; gap: 12px 16px; align-items: center; max-width: 600px; }
+.muted { color: var(--muted); }
+.mono { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; }
+.table-meta { display: flex; justify-content: space-between; align-items: center; gap: 12px; margin-bottom: 14px; flex-wrap: wrap; }
+.progress { height: 8px; border-radius: 999px; background: #ece6dc; overflow: hidden; }
+.progress > span { display: block; height: 100%; border-radius: inherit; background: linear-gradient(90deg, var(--brand), #2f9b83); }
+.split-stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 14px; }
+.soft-panel { background: #f7f3ea; border-radius: 16px; padding: 16px; border: 1px solid #ebe4d8; }
+.soft-panel h4 { font-size: 14px; margin-bottom: 10px; color: var(--text); }
 
 @media (max-width: 768px) {
   .menu-toggle { display: flex; }
@@ -158,11 +267,14 @@ input[type="text"], input[type="password"] { width: 100%; padding: 10px; border:
   .sidebar.open { transform: translateX(0); }
   .sidebar-overlay.open { display: block; }
   .main { margin-left: 0; padding: 16px; padding-top: 60px; }
-  .page-title { font-size: 20px; }
+  .page-header { flex-direction: column; }
+  .page-title { font-size: 24px; }
+  .hero-card .headline { font-size: 24px; }
   .stats-grid { grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 10px; }
   .stat-card { padding: 14px; }
   .stat-card .value { font-size: 22px; }
   .card { padding: 14px; }
+  .summary-strip { grid-template-columns: 1fr 1fr; }
   .grid-2col { grid-template-columns: 1fr; }
   .detail-grid { grid-template-columns: 100px 1fr; gap: 6px 12px; }
   .form-grid { grid-template-columns: 1fr; max-width: 100%; }
@@ -175,8 +287,10 @@ input[type="text"], input[type="password"] { width: 100%; padding: 10px; border:
 }
 @media (max-width: 480px) {
   .stats-grid { grid-template-columns: 1fr 1fr; gap: 8px; }
+  .summary-strip { grid-template-columns: 1fr; }
   .stat-card { padding: 10px; }
   .stat-card .value { font-size: 18px; }
+  .hero-meta { grid-template-columns: 1fr 1fr; }
   .detail-grid { grid-template-columns: 1fr; }
   .detail-grid .label { margin-top: 8px; }
 }
@@ -200,7 +314,9 @@ input[type="text"], input[type="password"] { width: 100%; padding: 10px; border:
   </div>
 </nav>
 <main class="main">
+<div class="page-shell">
 ${content}
+</div>
 </main>
 <script>function closeSidebar(){document.querySelector('.sidebar').classList.remove('open');document.querySelector('.sidebar-overlay').classList.remove('open')}</script>
 </body>
@@ -286,6 +402,46 @@ function pagination(page, total, limit, baseUrl) {
 function escapeHtml(str) {
   if (!str) return '';
   return String(str).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+}
+
+function formatNumber(value) {
+  const num = Number(value || 0);
+  return Number.isFinite(num) ? num.toLocaleString('ko-KR') : '0';
+}
+
+function formatPercent(value, digits = 0) {
+  const num = Number(value || 0);
+  return `${num.toFixed(digits)}%`;
+}
+
+function pageHeader(title, subtitle = '', actions = '') {
+  return `
+    <div class="page-header">
+      <div>
+        <h1 class="page-title">${title}</h1>
+        ${subtitle ? `<div class="page-subtitle">${subtitle}</div>` : ''}
+      </div>
+      ${actions ? `<div class="header-actions">${actions}</div>` : ''}
+    </div>
+  `;
+}
+
+function summaryStrip(items) {
+  return `
+    <div class="summary-strip">
+      ${items.map(item => `
+        <div class="summary-item">
+          <div class="k">${escapeHtml(item.label)}</div>
+          <div class="v"${item.valueColor ? ` style="color:${item.valueColor}"` : ''}>${item.value}</div>
+          ${item.meta ? `<div class="meta">${item.meta}</div>` : ''}
+        </div>
+      `).join('')}
+    </div>
+  `;
+}
+
+function metricLine(name, value) {
+  return `<div class="metric-inline"><span class="name">${escapeHtml(name)}</span><span class="num">${value}</span></div>`;
 }
 
 // ===== Shop form helpers =====
@@ -397,10 +553,12 @@ async function handleAdminRoute(req, res, url, pathname, method, lobby, wss, mai
   }
 
   // All other routes require auth
-  const session = getSessionFromCookie(req);
-  if (!session) {
+  const sessionInfo = getSessionFromCookie(req);
+  if (!sessionInfo) {
     return redirect(res, '/tc-backstage/login');
   }
+  sessionInfo.session.createdAt = Date.now();
+  setSessionCookie(res, sessionInfo.token);
 
   // Dashboard home
   if (pathname === '/tc-backstage/' || pathname === '/tc-backstage') {
@@ -422,11 +580,15 @@ async function handleAdminRoute(req, res, url, pathname, method, lobby, wss, mai
     const gamesByDay = {};
     const rankedByDay = {};
     const signupsByDay = {};
-    for (const d of last7) { gamesByDay[d] = 0; rankedByDay[d] = 0; signupsByDay[d] = 0; }
+    const tichuByDay = {};
+    const skByDay = {};
+    for (const d of last7) { gamesByDay[d] = 0; rankedByDay[d] = 0; signupsByDay[d] = 0; tichuByDay[d] = 0; skByDay[d] = 0; }
     for (const r of stats.dailyGames) {
       const d = new Date(r.day).toISOString().split('T')[0];
       gamesByDay[d] = parseInt(r.cnt) || 0;
       rankedByDay[d] = parseInt(r.ranked_cnt) || 0;
+      tichuByDay[d] = parseInt(r.tichu_cnt) || 0;
+      skByDay[d] = parseInt(r.sk_cnt) || 0;
     }
     for (const r of stats.dailySignups) {
       const d = new Date(r.day).toISOString().split('T')[0];
@@ -434,6 +596,8 @@ async function handleAdminRoute(req, res, url, pathname, method, lobby, wss, mai
     }
     const chartLabels = last7.map(d => d.slice(5)); // MM-DD
     const chartGames = last7.map(d => gamesByDay[d]);
+    const chartTichu = last7.map(d => tichuByDay[d]);
+    const chartSK = last7.map(d => skByDay[d]);
     const chartRanked = last7.map(d => rankedByDay[d]);
     const chartSignups = last7.map(d => signupsByDay[d]);
     const adRewardsByDay = {};
@@ -459,6 +623,24 @@ async function handleAdminRoute(req, res, url, pathname, method, lobby, wss, mai
         }).join('')}
       </div>`;
     }
+    function stackedBar(tichuVals, skVals, max, label) {
+      return `<div style="display:flex;align-items:flex-end;gap:6px;height:80px;padding:8px 0">
+        ${tichuVals.map((t, i) => {
+          const s = skVals[i];
+          const total = t + s;
+          const ht = Math.max(t / max * 60, t > 0 ? 2 : 0);
+          const hs = Math.max(s / max * 60, s > 0 ? 2 : 0);
+          return `<div style="display:flex;flex-direction:column;align-items:center;flex:1;gap:2px">
+            <span style="font-size:10px;color:#666">${total}</span>
+            <div style="width:100%;max-width:28px;display:flex;flex-direction:column-reverse">
+              ${t > 0 ? `<div style="height:${ht}px;background:#6c63ff;border-radius:${s > 0 ? '0' : '4px 4px'} 0 0;transition:height 0.3s" title="티츄 ${t}"></div>` : ''}
+              ${s > 0 ? `<div style="height:${hs}px;background:#ff7043;border-radius:4px 4px ${t > 0 ? '0 0' : '0 0'};transition:height 0.3s" title="SK ${s}"></div>` : ''}
+            </div>
+            <span style="font-size:9px;color:#aaa">${label[i]}</span>
+          </div>`;
+        }).join('')}
+      </div>`;
+    }
 
     // Gold economy
     const totalGold = parseInt(stats.goldStats?.total_gold) || 0;
@@ -475,13 +657,36 @@ async function handleAdminRoute(req, res, url, pathname, method, lobby, wss, mai
     const reports30d = parseInt(stats.reportStats30d?.total_reports) || 0;
     const uniqueReported30d = parseInt(stats.reportStats30d?.unique_reported) || 0;
     const serverStartedAtText = formatDate(serverStartedAt);
+    const activeRatio24h = stats.totalUsers > 0 ? (stats.activeUsers24h / stats.totalUsers) * 100 : 0;
+    const rankedShareToday = stats.todayGames > 0 ? (stats.rankedMatchesToday / stats.todayGames) * 100 : 0;
+    const avgSpectatorsPerRoom = activeRooms > 0 ? totalSpectators / activeRooms : 0;
+    const issueLoad = stats.totalUsers > 0 ? ((stats.pendingInquiries + stats.pendingReports) / stats.totalUsers) * 100 : 0;
 
     // Recent matches table
     let matchesTable = '';
     if (stats.recentMatches.length > 0) {
       matchesTable = `<div class="table-wrap"><table>
-        <tr><th>ID</th><th>결과</th><th>점수</th><th>팀 A</th><th>팀 B</th><th>유형</th><th>종료</th><th>날짜</th></tr>
+        <tr><th>ID</th><th>게임</th><th>결과</th><th>점수/플레이어</th><th>유형</th><th>종료</th><th>날짜</th></tr>
         ${stats.recentMatches.map(m => {
+          const endReason = m.end_reason || 'normal';
+          let endBadge = '<span class="badge" style="background:#e8f5e9;color:#2e7d32">정상</span>';
+          if (endReason === 'leave') {
+            endBadge = `<span class="badge" style="background:#fce4ec;color:#c62828">이탈</span>${m.deserter_nickname ? `<br><span style="font-size:11px;color:#c62828">${escapeHtml(m.deserter_nickname)}</span>` : ''}`;
+          } else if (endReason === 'timeout') {
+            endBadge = `<span class="badge" style="background:#fff8e1;color:#f57f17">시간초과</span>${m.deserter_nickname ? `<br><span style="font-size:11px;color:#f57f17">${escapeHtml(m.deserter_nickname)}</span>` : ''}`;
+          }
+          const rankedBadge = m.is_ranked ? '<span class="badge" style="background:#fff3e0;color:#e65100">랭크</span>' : '<span class="badge" style="background:#f5f5f5;color:#999">일반</span>';
+          if (m.game_type === 'skull_king') {
+            return `<tr>
+            <td>${m.id}</td>
+            <td><span class="badge" style="background:#ff7043;color:#fff">SK</span></td>
+            <td><span class="badge" style="background:#fff3e0;color:#e65100">${m.player_a2 || '?'}인</span></td>
+            <td colspan="1" style="font-size:12px">${m.player_a1 ? escapeHtml(m.player_a1) : '-'}</td>
+            <td>${rankedBadge}</td>
+            <td>${endBadge}</td>
+            <td style="font-size:12px;color:#888">${formatDate(m.created_at)}</td>
+          </tr>`;
+          }
           const isDraw = m.team_a_score === m.team_b_score;
           const winBadge = isDraw
             ? '<span class="badge" style="background:#f5f5f5;color:#888">무승부</span>'
@@ -490,20 +695,12 @@ async function handleAdminRoute(req, res, url, pathname, method, lobby, wss, mai
               : '<span class="badge" style="background:#e3f2fd;color:#1565c0">B 승</span>';
           const aStyle = !isDraw && m.winner_team === 'A' ? 'font-weight:700;color:#c62828' : '';
           const bStyle = !isDraw && m.winner_team === 'B' ? 'font-weight:700;color:#1565c0' : '';
-          const endReason = m.end_reason || 'normal';
-          let endBadge = '<span class="badge" style="background:#e8f5e9;color:#2e7d32">정상</span>';
-          if (endReason === 'leave') {
-            endBadge = `<span class="badge" style="background:#fce4ec;color:#c62828">이탈</span>${m.deserter_nickname ? `<br><span style="font-size:11px;color:#c62828">${escapeHtml(m.deserter_nickname)}</span>` : ''}`;
-          } else if (endReason === 'timeout') {
-            endBadge = `<span class="badge" style="background:#fff8e1;color:#f57f17">시간초과</span>${m.deserter_nickname ? `<br><span style="font-size:11px;color:#f57f17">${escapeHtml(m.deserter_nickname)}</span>` : ''}`;
-          }
           return `<tr>
           <td>${m.id}</td>
+          <td><span class="badge" style="background:#6c63ff;color:#fff">티츄</span></td>
           <td>${winBadge}</td>
-          <td style="font-weight:600"><span style="${aStyle}">${m.team_a_score}</span> : <span style="${bStyle}">${m.team_b_score}</span></td>
-          <td style="${aStyle}">${escapeHtml(m.player_a1)}, ${escapeHtml(m.player_a2)}</td>
-          <td style="${bStyle}">${escapeHtml(m.player_b1)}, ${escapeHtml(m.player_b2)}</td>
-          <td>${m.is_ranked ? '<span class="badge" style="background:#fff3e0;color:#e65100">랭크</span>' : '<span class="badge" style="background:#f5f5f5;color:#999">일반</span>'}</td>
+          <td style="font-size:12px"><span style="${aStyle}">${m.team_a_score}</span> : <span style="${bStyle}">${m.team_b_score}</span><br><span style="${aStyle}">${escapeHtml(m.player_a1)}, ${escapeHtml(m.player_a2)}</span> vs <span style="${bStyle}">${escapeHtml(m.player_b1)}, ${escapeHtml(m.player_b2)}</span></td>
+          <td>${rankedBadge}</td>
           <td>${endBadge}</td>
           <td style="font-size:12px;color:#888">${formatDate(m.created_at)}</td>
         </tr>`;
@@ -555,34 +752,60 @@ async function handleAdminRoute(req, res, url, pathname, method, lobby, wss, mai
     }
 
     const content = `
-      <h1 class="page-title">대시보드</h1>
+      ${pageHeader(
+        '대시보드',
+        '실시간 운영 상태와 최근 7일 흐름을 한 화면에서 확인할 수 있도록 재구성했습니다. 급한 이슈, 활성도, 경제 지표를 먼저 보고 상세 표로 내려가는 구조입니다.',
+        `
+          <a href="/tc-backstage/inquiries" class="btn btn-secondary">문의 확인</a>
+          <a href="/tc-backstage/reports" class="btn btn-secondary">신고 확인</a>
+          <a href="/tc-backstage/users" class="btn btn-primary">유저 관리</a>
+        `
+      )}
 
-      <div style="margin-bottom:8px;font-size:13px;color:#888">실시간 서버 상태</div>
-      <div class="stats-grid" style="grid-template-columns:repeat(auto-fit, minmax(150px, 1fr))">
-        <a href="/tc-backstage/online?filter=connected" class="stat-card" style="border-left:4px solid #6c63ff;text-decoration:none;cursor:pointer"><div class="label">접속 중</div><div class="value purple">${connectedUsers}</div></a>
-        <a href="/tc-backstage/online?filter=ingame" class="stat-card" style="border-left:4px solid #4caf50;text-decoration:none;cursor:pointer"><div class="label">게임 중</div><div class="value green">${gamingRooms}</div></a>
-        <a href="/tc-backstage/online?filter=waiting" class="stat-card" style="border-left:4px solid #ff9800;text-decoration:none;cursor:pointer"><div class="label">대기 중</div><div class="value orange">${waitingRooms}</div></a>
-        <a href="/tc-backstage/online?filter=spectators" class="stat-card" style="border-left:4px solid #42a5f5;text-decoration:none;cursor:pointer"><div class="label">관전 중</div><div class="value" style="color:#42a5f5">${totalSpectators}</div></a>
-        <div class="stat-card" style="border-left:4px solid #26a69a"><div class="label">최근 서버 시작</div><div class="value" style="font-size:18px;color:#26a69a">${serverStartedAtText}</div></div>
+      <div class="hero-card">
+        <div class="eyebrow">Operations Snapshot</div>
+        <div class="headline">지금은 ${connectedUsers}명이 접속 중이고, ${stats.todayGames}개의 게임이 오늘 생성되었습니다.</div>
+        <div class="sub">운영 우선순위는 미처리 문의 ${stats.pendingInquiries}건, 신고 ${stats.pendingReports}건, 그리고 최근 30일 기준 문제 유저 ${uniqueReported30d}명입니다.</div>
+        <div class="hero-meta">
+          <div class="item"><div class="k">서버 시작</div><div class="v" style="font-size:18px">${serverStartedAtText}</div></div>
+          <div class="item"><div class="k">활성 방</div><div class="v">${activeRooms}</div></div>
+          <div class="item"><div class="k">신규 가입</div><div class="v">+${stats.newUsersToday}</div></div>
+          <div class="item"><div class="k">랭크 비중</div><div class="v">${formatPercent(rankedShareToday)}</div></div>
+        </div>
       </div>
 
-      <div style="margin:20px 0 8px;font-size:13px;color:#888">유저 & 매치 현황</div>
-      <div class="stats-grid" style="grid-template-columns:repeat(auto-fit, minmax(150px, 1fr))">
-        <div class="stat-card"><div class="label">전체 유저</div><div class="value">${stats.totalUsers}</div><div style="font-size:12px;color:#4caf50;margin-top:4px">+${stats.newUsersToday} 오늘</div></div>
-        <div class="stat-card"><div class="label">활성 (24시간)</div><div class="value">${stats.activeUsers24h}</div></div>
-        <div class="stat-card"><div class="label">활성 (7일)</div><div class="value">${stats.activeUsers7d}</div></div>
-        <div class="stat-card"><div class="label">총 매치</div><div class="value">${stats.totalMatches}</div></div>
-        <div class="stat-card"><div class="label">오늘 게임</div><div class="value green">${stats.todayGames}</div><div style="font-size:12px;color:#e65100;margin-top:4px">${stats.rankedMatchesToday} 랭크</div></div>
-        <div class="stat-card"><div class="label">미처리 문의</div><div class="value orange">${stats.pendingInquiries}</div></div>
-        <div class="stat-card"><div class="label">미처리 신고</div><div class="value red">${stats.pendingReports}</div></div>
+      ${summaryStrip([
+        { label: '24시간 활성률', value: formatPercent(activeRatio24h), meta: `${formatNumber(stats.activeUsers24h)} / ${formatNumber(stats.totalUsers)} 유저` },
+        { label: '대기 이슈 밀도', value: formatPercent(issueLoad, 1), meta: `문의 ${formatNumber(stats.pendingInquiries)}건 · 신고 ${formatNumber(stats.pendingReports)}건`, valueColor: issueLoad > 5 ? '#c0563f' : '#1f2328' },
+        { label: '관전 집중도', value: formatPercent(avgSpectatorsPerRoom * 100 / 4, 0), meta: `방당 평균 ${avgSpectatorsPerRoom.toFixed(1)}명 관전` },
+        { label: '광고 참여자', value: formatNumber(adTodayUsers), meta: `오늘 ${formatNumber(adTodayClaims)}회 시청` }
+      ])}
+
+      <div class="section-label">실시간 서버 상태</div>
+      <div class="stats-grid" style="grid-template-columns:repeat(auto-fit, minmax(170px, 1fr))">
+        <a href="/tc-backstage/online?filter=connected" class="stat-card" style="text-decoration:none;cursor:pointer"><div class="label">접속 중</div><div class="value purple">${formatNumber(connectedUsers)}</div><div class="kpi-note">소켓 연결 기준 현재 세션</div></a>
+        <a href="/tc-backstage/online?filter=ingame" class="stat-card" style="text-decoration:none;cursor:pointer"><div class="label">게임 중 방</div><div class="value green">${formatNumber(gamingRooms)}</div><div class="kpi-note">${formatNumber(activeRooms)}개 활성 방 중 진행 중</div></a>
+        <a href="/tc-backstage/online?filter=waiting" class="stat-card" style="text-decoration:none;cursor:pointer"><div class="label">대기 방</div><div class="value orange">${formatNumber(waitingRooms)}</div><div class="kpi-note">매칭 전 또는 준비 단계</div></a>
+        <a href="/tc-backstage/online?filter=spectators" class="stat-card" style="text-decoration:none;cursor:pointer"><div class="label">관전 유저</div><div class="value" style="color:#2878b8">${formatNumber(totalSpectators)}</div><div class="kpi-note">방당 평균 ${avgSpectatorsPerRoom.toFixed(1)}명</div></a>
+      </div>
+
+      <div class="section-label">유저와 매치 현황</div>
+      <div class="stats-grid" style="grid-template-columns:repeat(auto-fit, minmax(170px, 1fr))">
+        <div class="stat-card"><div class="label">전체 유저</div><div class="value">${formatNumber(stats.totalUsers)}</div><div class="kpi-note">오늘 +${formatNumber(stats.newUsersToday)} 가입</div></div>
+        <div class="stat-card"><div class="label">활성 (24시간)</div><div class="value">${formatNumber(stats.activeUsers24h)}</div><div class="kpi-note">7일 활성 ${formatNumber(stats.activeUsers7d)}명</div></div>
+        <div class="stat-card"><div class="label">총 매치</div><div class="value">${formatNumber(stats.totalMatches)}</div><div class="kpi-note">오늘 게임 ${formatNumber(stats.todayGames)}회</div></div>
+        <div class="stat-card"><div class="label">오늘 게임</div><div class="value green">${formatNumber(stats.todayGames)}</div><div class="kpi-note"><span style="color:#5f62d6">${formatNumber(stats.todayTichuGames)} 티츄</span> · <span style="color:#ff7043">${formatNumber(stats.todaySKGames)} SK</span></div></div>
+        <div class="stat-card"><div class="label">미처리 문의</div><div class="value orange">${formatNumber(stats.pendingInquiries)}</div><div class="kpi-note">사용자 응답 대기 포함</div></div>
+        <div class="stat-card"><div class="label">미처리 신고</div><div class="value red">${formatNumber(stats.pendingReports)}</div><div class="kpi-note">최근 30일 ${formatNumber(reports30d)}건 누적</div></div>
       </div>
 
       <div class="grid-2col">
         <div class="card">
           <h3>일별 게임 (7일)</h3>
-          ${miniBar(chartGames, maxGames, '#6c63ff', chartLabels)}
+          ${stackedBar(chartTichu, chartSK, maxGames, chartLabels)}
           <div style="margin-top:4px;font-size:11px;color:#888">
-            <span style="display:inline-block;width:10px;height:10px;background:#6c63ff;border-radius:2px;margin-right:4px"></span>전체
+            <span style="display:inline-block;width:10px;height:10px;background:#6c63ff;border-radius:2px;margin-right:4px"></span>티츄
+            <span style="display:inline-block;width:10px;height:10px;background:#ff7043;border-radius:2px;margin:0 4px 0 8px"></span>SK
           </div>
           <div style="margin-top:8px">
             <h3 style="font-size:14px">일별 랭크</h3>
@@ -598,45 +821,16 @@ async function handleAdminRoute(req, res, url, pathname, method, lobby, wss, mai
       <div class="grid-2col">
         <div class="card">
           <h3>경제</h3>
-          <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
-            <div style="background:#f8f9fa;border-radius:10px;padding:14px;text-align:center">
-              <div style="font-size:12px;color:#888">총 골드</div>
-              <div style="font-size:20px;font-weight:700;color:#ff9800">${totalGold.toLocaleString()}</div>
-            </div>
-            <div style="background:#f8f9fa;border-radius:10px;padding:14px;text-align:center">
-              <div style="font-size:12px;color:#888">평균 골드</div>
-              <div style="font-size:20px;font-weight:700;color:#5A4038">${avgGold.toLocaleString()}</div>
-            </div>
-            <div style="background:#f8f9fa;border-radius:10px;padding:14px;text-align:center">
-              <div style="font-size:12px;color:#888">최대 골드</div>
-              <div style="font-size:20px;font-weight:700;color:#e65100">${maxGold.toLocaleString()}</div>
-            </div>
-            <div style="background:#f8f9fa;border-radius:10px;padding:14px;text-align:center">
-              <div style="font-size:12px;color:#888">상점 구매</div>
-              <div style="font-size:20px;font-weight:700;color:#6c63ff">${totalPurchased}</div>
-              <div style="font-size:11px;color:#888">${uniqueBuyers}명 구매</div>
-            </div>
+          <div class="split-stats">
+            <div class="soft-panel"><h4>보유 자산</h4>${metricLine('총 골드', `<span style="color:#d07a16">${formatNumber(totalGold)}</span>`)}${metricLine('평균 골드', formatNumber(avgGold))}${metricLine('최대 보유', `<span style="color:#b35b19">${formatNumber(maxGold)}</span>`)}</div>
+            <div class="soft-panel"><h4>구매 전환</h4>${metricLine('상점 구매', formatNumber(totalPurchased))}${metricLine('구매 유저', formatNumber(uniqueBuyers))}${metricLine('유저당 구매', uniqueBuyers > 0 ? (totalPurchased / uniqueBuyers).toFixed(1) : '0')}</div>
           </div>
         </div>
         <div class="card">
           <h3>건강도</h3>
-          <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
-            <div style="background:#f8f9fa;border-radius:10px;padding:14px;text-align:center">
-              <div style="font-size:12px;color:#888">총 이탈</div>
-              <div style="font-size:20px;font-weight:700;color:#e57373">${totalLeaves}</div>
-            </div>
-            <div style="background:#f8f9fa;border-radius:10px;padding:14px;text-align:center">
-              <div style="font-size:12px;color:#888">이탈자 (3회+)</div>
-              <div style="font-size:20px;font-weight:700;color:#c62828">${problemUsers}</div>
-            </div>
-            <div style="background:#f8f9fa;border-radius:10px;padding:14px;text-align:center">
-              <div style="font-size:12px;color:#888">신고 (30일)</div>
-              <div style="font-size:20px;font-weight:700;color:#ff9800">${reports30d}</div>
-            </div>
-            <div style="background:#f8f9fa;border-radius:10px;padding:14px;text-align:center">
-              <div style="font-size:12px;color:#888">피신고 유저</div>
-              <div style="font-size:20px;font-weight:700;color:#e65100">${uniqueReported30d}</div>
-            </div>
+          <div class="split-stats">
+            <div class="soft-panel"><h4>플레이 이탈</h4>${metricLine('총 이탈', `<span style="color:#c0563f">${formatNumber(totalLeaves)}</span>`)}${metricLine('3회 이상 유저', `<span style="color:#a13a2f">${formatNumber(problemUsers)}</span>`)}${metricLine('고위험 비율', stats.totalUsers > 0 ? formatPercent((problemUsers / stats.totalUsers) * 100, 1) : '0%')}</div>
+            <div class="soft-panel"><h4>신고 추세</h4>${metricLine('30일 신고', formatNumber(reports30d))}${metricLine('피신고 유저', formatNumber(uniqueReported30d))}${metricLine('유저당 평균', uniqueReported30d > 0 ? (reports30d / uniqueReported30d).toFixed(1) : '0')}</div>
           </div>
         </div>
       </div>
@@ -644,25 +838,9 @@ async function handleAdminRoute(req, res, url, pathname, method, lobby, wss, mai
       <div class="grid-2col">
         <div class="card">
           <h3>광고 보상</h3>
-          <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
-            <div style="background:#f8f9fa;border-radius:10px;padding:14px;text-align:center">
-              <div style="font-size:12px;color:#888">오늘 시청</div>
-              <div style="font-size:20px;font-weight:700;color:#43a047">${adTodayClaims}</div>
-              <div style="font-size:11px;color:#888">${adTodayUsers}명</div>
-            </div>
-            <div style="background:#f8f9fa;border-radius:10px;padding:14px;text-align:center">
-              <div style="font-size:12px;color:#888">총 시청</div>
-              <div style="font-size:20px;font-weight:700;color:#2e7d32">${adTotalClaims.toLocaleString()}</div>
-              <div style="font-size:11px;color:#888">${adUniqueUsers}명</div>
-            </div>
-            <div style="background:#f8f9fa;border-radius:10px;padding:14px;text-align:center">
-              <div style="font-size:12px;color:#888">오늘 지급 골드</div>
-              <div style="font-size:20px;font-weight:700;color:#ff9800">${(adTodayClaims * 50).toLocaleString()}</div>
-            </div>
-            <div style="background:#f8f9fa;border-radius:10px;padding:14px;text-align:center">
-              <div style="font-size:12px;color:#888">총 지급 골드</div>
-              <div style="font-size:20px;font-weight:700;color:#e65100">${(adTotalClaims * 50).toLocaleString()}</div>
-            </div>
+          <div class="split-stats">
+            <div class="soft-panel"><h4>오늘</h4>${metricLine('시청 횟수', `<span style="color:#2e8b57">${formatNumber(adTodayClaims)}</span>`)}${metricLine('참여 유저', formatNumber(adTodayUsers))}${metricLine('지급 골드', `<span style="color:#d07a16">${formatNumber(adTodayClaims * 50)}</span>`)}</div>
+            <div class="soft-panel"><h4>누적</h4>${metricLine('총 시청', `<span style="color:#256b43">${formatNumber(adTotalClaims)}</span>`)}${metricLine('누적 참여 유저', formatNumber(adUniqueUsers))}${metricLine('총 지급 골드', `<span style="color:#b35b19">${formatNumber(adTotalClaims * 50)}</span>`)}</div>
           </div>
         </div>
         <div class="card">
@@ -673,6 +851,10 @@ async function handleAdminRoute(req, res, url, pathname, method, lobby, wss, mai
 
       <div class="card">
         <h3>활성 방 <span style="font-size:13px;color:#888;font-weight:400">(${activeRooms})</span></h3>
+        <div class="table-meta">
+          <div class="muted">진행 중 방, 대기 방, 랭크 여부와 관전 수를 함께 표시합니다.</div>
+          <a href="/tc-backstage/online?filter=connected" class="btn btn-secondary">접속 유저 보기</a>
+        </div>
         ${roomsTable}
       </div>
 
@@ -707,20 +889,22 @@ async function handleAdminRoute(req, res, url, pathname, method, lobby, wss, mai
     const summary = stats.summary || {};
     const gameSeries = stats.gameSeries || [];
     const goldSeries = stats.goldSeries || [];
+    const shopSalesSeries = stats.shopSalesSeries || [];
+    const topShopItems = stats.topShopItems || [];
     const fromValue = formatDateInput(from);
     const toValue = formatDateInput(to);
 
-    const summaryCards = `
-      <div class="stats-grid" style="grid-template-columns:repeat(auto-fit, minmax(150px, 1fr))">
-        <div class="stat-card"><div class="label">전체 게임</div><div class="value">${summary.totalGames || 0}</div></div>
-        <div class="stat-card"><div class="label">티추</div><div class="value purple">${summary.tichuGames || 0}</div></div>
-        <div class="stat-card"><div class="label">스컬킹</div><div class="value" style="color:#009688">${summary.skullGames || 0}</div></div>
-        <div class="stat-card"><div class="label">랭크전</div><div class="value orange">${summary.rankedGames || 0}</div></div>
-        <div class="stat-card"><div class="label">획득 골드</div><div class="value green">${summary.goldEarned || 0}</div></div>
-        <div class="stat-card"><div class="label">소모 골드</div><div class="value red">${summary.goldSpent || 0}</div></div>
-        <div class="stat-card"><div class="label">순변동</div><div class="value">${summary.goldNet || 0}</div></div>
-      </div>
-    `;
+    const summaryCards = summaryStrip([
+      { label: '전체 게임', value: formatNumber(summary.totalGames || 0), meta: `${fromValue} ~ ${toValue}` },
+      { label: '티츄', value: formatNumber(summary.tichuGames || 0), valueColor: '#5f62d6', meta: summary.totalGames ? formatPercent((summary.tichuGames || 0) * 100 / summary.totalGames, 1) : '0%' },
+      { label: '스컬킹', value: formatNumber(summary.skullGames || 0), valueColor: '#138072', meta: summary.totalGames ? formatPercent((summary.skullGames || 0) * 100 / summary.totalGames, 1) : '0%' },
+      { label: '랭크전', value: formatNumber(summary.rankedGames || 0), valueColor: '#c67b2b', meta: summary.totalGames ? formatPercent((summary.rankedGames || 0) * 100 / summary.totalGames, 1) : '0%' },
+      { label: '획득 골드', value: formatNumber(summary.goldEarned || 0), valueColor: '#2e8b57' },
+      { label: '소모 골드', value: formatNumber(summary.goldSpent || 0), valueColor: '#c0563f' },
+      { label: '순변동', value: formatNumber(summary.goldNet || 0), valueColor: (summary.goldNet || 0) >= 0 ? '#1f2328' : '#c0563f' },
+      { label: '상점 구매', value: formatNumber(summary.shopPurchases || 0), meta: `구매자 ${formatNumber(summary.shopBuyers || 0)}명` },
+      { label: '상점 지출', value: formatNumber(summary.shopGoldSpent || 0), valueColor: '#b35b19', meta: `판매 아이템 ${formatNumber(summary.shopUniqueItems || 0)}종` }
+    ]);
 
     const gameTable = gameSeries.length > 0
       ? `<div class="table-wrap"><table>
@@ -747,8 +931,70 @@ async function handleAdminRoute(req, res, url, pathname, method, lobby, wss, mai
         </table></div>`
       : '<div class="empty">골드 데이터가 없습니다</div>';
 
+    const shopSalesTable = shopSalesSeries.length > 0
+      ? `<div class="table-wrap"><table>
+          <tr><th>${bucket === 'hour' ? '시간대' : '날짜'}</th><th>판매 수</th><th>구매자</th><th>지출 골드</th></tr>
+          ${shopSalesSeries.map(row => `<tr>
+            <td>${formatDate(row.bucket_time)}</td>
+            <td style="font-weight:700">${formatNumber(row.purchase_count)}</td>
+            <td>${formatNumber(row.buyer_count)}</td>
+            <td style="color:#b35b19;font-weight:700">${formatNumber(row.gold_spent)}</td>
+          </tr>`).join('')}
+        </table></div>`
+      : '<div class="empty">상점 판매 데이터가 없습니다</div>';
+
+    const topShopItemsTable = topShopItems.length > 0
+      ? `<div class="table-wrap"><table>
+          <tr><th>아이템</th><th>분류</th><th>판매 수</th><th>구매자</th><th>지출 골드</th><th>최근 판매</th></tr>
+          ${topShopItems.map(item => `<tr>
+            <td>
+              <div style="font-weight:700">${escapeHtml(item.item_name)}</div>
+              <div class="muted mono" style="font-size:11px">${escapeHtml(item.item_key)}</div>
+            </td>
+            <td>${escapeHtml(item.category || '-')}</td>
+            <td style="font-weight:700">${formatNumber(item.purchase_count)}</td>
+            <td>${formatNumber(item.buyer_count)}</td>
+            <td style="color:#b35b19;font-weight:700">${formatNumber(item.gold_spent)}</td>
+            <td style="font-size:12px;color:#888">${formatDate(item.last_sold_at)}</td>
+          </tr>`).join('')}
+        </table></div>`
+      : '<div class="empty">팔린 아이템이 없습니다</div>';
+
+    // Prepare chart data as JSON
+    const gameChartLabels = gameSeries.map(r => {
+      const d = new Date(r.bucket_time);
+      return bucket === 'hour'
+        ? `${String(d.getMonth()+1).padStart(2,'0')}/${String(d.getDate()).padStart(2,'0')} ${String(d.getHours()).padStart(2,'0')}시`
+        : `${String(d.getMonth()+1).padStart(2,'0')}/${String(d.getDate()).padStart(2,'0')}`;
+    });
+    const gameChartTichu = gameSeries.map(r => parseInt(r.tichu_cnt) || 0);
+    const gameChartSK = gameSeries.map(r => parseInt(r.skull_cnt) || 0);
+    const gameChartRanked = gameSeries.map(r => parseInt(r.ranked_cnt) || 0);
+    const gameChartTotal = gameSeries.map(r => parseInt(r.total_cnt) || 0);
+
+    const goldChartLabels = goldSeries.map(r => {
+      const d = new Date(r.bucket_time);
+      return bucket === 'hour'
+        ? `${String(d.getMonth()+1).padStart(2,'0')}/${String(d.getDate()).padStart(2,'0')} ${String(d.getHours()).padStart(2,'0')}시`
+        : `${String(d.getMonth()+1).padStart(2,'0')}/${String(d.getDate()).padStart(2,'0')}`;
+    });
+    const goldChartEarned = goldSeries.map(r => parseInt(r.earned) || 0);
+    const goldChartSpent = goldSeries.map(r => parseInt(r.spent) || 0);
+    const goldChartNet = goldSeries.map(r => parseInt(r.net) || 0);
+
+    const shopChartLabels = shopSalesSeries.map(r => {
+      const d = new Date(r.bucket_time);
+      return bucket === 'hour'
+        ? `${String(d.getMonth()+1).padStart(2,'0')}/${String(d.getDate()).padStart(2,'0')} ${String(d.getHours()).padStart(2,'0')}시`
+        : `${String(d.getMonth()+1).padStart(2,'0')}/${String(d.getDate()).padStart(2,'0')}`;
+    });
+    const shopChartPurchases = shopSalesSeries.map(r => parseInt(r.purchase_count) || 0);
+    const shopChartBuyers = shopSalesSeries.map(r => parseInt(r.buyer_count) || 0);
+    const shopChartGoldSpent = shopSalesSeries.map(r => parseInt(r.gold_spent) || 0);
+
     const content = `
-      <h1 class="page-title">통계</h1>
+      <script src="https://cdn.jsdelivr.net/npm/chart.js@4/dist/chart.umd.min.js"></script>
+      ${pageHeader('통계', '기간별 게임량, 골드 흐름, 그리고 상점 판매 추이까지 함께 볼 수 있게 확장했습니다. 이제 어떤 아이템이 언제 팔렸는지도 여기서 바로 확인할 수 있습니다.')}
       <div class="card">
         <h3>조회 조건</h3>
         <form method="GET" action="/tc-backstage/stats" class="search-bar" style="align-items:end;flex-wrap:wrap">
@@ -774,15 +1020,254 @@ async function handleAdminRoute(req, res, url, pathname, method, lobby, wss, mai
 
       ${summaryCards}
 
-      <div class="card">
-        <h3>게임량 추이</h3>
-        ${gameTable}
+      <div class="grid-2col">
+        <div class="card">
+          <h3>게임량 추이</h3>
+          <div style="position:relative;height:300px"><canvas id="gameChart"></canvas></div>
+        </div>
+        <div class="card">
+          <h3>게임 비율</h3>
+          <div style="position:relative;height:300px;display:flex;align-items:center;justify-content:center"><canvas id="gamePieChart"></canvas></div>
+        </div>
       </div>
 
       <div class="card">
         <h3>골드 획득 / 소모</h3>
-        ${goldTable}
+        <div style="position:relative;height:300px"><canvas id="goldChart"></canvas></div>
       </div>
+
+      <div class="grid-2col">
+        <div class="card">
+          <h3>상점 판매 추이</h3>
+          <div style="position:relative;height:300px"><canvas id="shopSalesChart"></canvas></div>
+        </div>
+        <div class="card">
+          <h3>베스트셀러 아이템</h3>
+          ${topShopItemsTable}
+        </div>
+      </div>
+
+      <div class="grid-2col">
+        <div class="card">
+          <h3>게임량 상세</h3>
+          ${gameTable}
+        </div>
+        <div class="card">
+          <h3>골드 상세</h3>
+          ${goldTable}
+        </div>
+      </div>
+
+      <div class="card">
+        <h3>상점 판매 상세</h3>
+        ${shopSalesTable}
+      </div>
+
+      <script>
+      (function() {
+        const tooltipStyle = {
+          backgroundColor: 'rgba(26,26,46,0.9)',
+          titleFont: { size: 13 },
+          bodyFont: { size: 12 },
+          padding: 10,
+          cornerRadius: 8,
+        };
+
+        // Game chart - stacked bar
+        new Chart(document.getElementById('gameChart'), {
+          type: 'bar',
+          data: {
+            labels: ${JSON.stringify(gameChartLabels)},
+            datasets: [
+              {
+                label: '티츄',
+                data: ${JSON.stringify(gameChartTichu)},
+                backgroundColor: 'rgba(108,99,255,0.8)',
+                borderRadius: 4,
+                borderSkipped: false,
+              },
+              {
+                label: '스컬킹',
+                data: ${JSON.stringify(gameChartSK)},
+                backgroundColor: 'rgba(255,112,67,0.8)',
+                borderRadius: 4,
+                borderSkipped: false,
+              },
+              {
+                label: '랭크전',
+                data: ${JSON.stringify(gameChartRanked)},
+                type: 'line',
+                borderColor: '#e65100',
+                backgroundColor: 'rgba(230,81,0,0.1)',
+                borderWidth: 2,
+                pointRadius: 4,
+                pointBackgroundColor: '#e65100',
+                tension: 0.3,
+                yAxisID: 'y',
+              }
+            ]
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            interaction: { mode: 'index', intersect: false },
+            plugins: {
+              tooltip: tooltipStyle,
+              legend: { position: 'top', labels: { usePointStyle: true, padding: 16 } },
+            },
+            scales: {
+              x: { stacked: true, grid: { display: false } },
+              y: {
+                stacked: true,
+                beginAtZero: true,
+                ticks: { precision: 0 },
+                grid: { color: 'rgba(0,0,0,0.05)' },
+              },
+            },
+          }
+        });
+
+        // Game pie chart
+        const totalTichu = ${JSON.stringify(gameChartTichu)}.reduce((a,b) => a+b, 0);
+        const totalSK = ${JSON.stringify(gameChartSK)}.reduce((a,b) => a+b, 0);
+        new Chart(document.getElementById('gamePieChart'), {
+          type: 'doughnut',
+          data: {
+            labels: ['티츄 (' + totalTichu + ')', '스컬킹 (' + totalSK + ')'],
+            datasets: [{
+              data: [totalTichu, totalSK],
+              backgroundColor: ['rgba(108,99,255,0.85)', 'rgba(255,112,67,0.85)'],
+              borderWidth: 0,
+              hoverOffset: 8,
+            }]
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            cutout: '55%',
+            plugins: {
+              tooltip: tooltipStyle,
+              legend: { position: 'bottom', labels: { usePointStyle: true, padding: 16, font: { size: 13 } } },
+            },
+          }
+        });
+
+        // Gold chart - bar + line
+        new Chart(document.getElementById('goldChart'), {
+          type: 'bar',
+          data: {
+            labels: ${JSON.stringify(goldChartLabels)},
+            datasets: [
+              {
+                label: '획득',
+                data: ${JSON.stringify(goldChartEarned)},
+                backgroundColor: 'rgba(76,175,80,0.7)',
+                borderRadius: 4,
+                borderSkipped: false,
+              },
+              {
+                label: '소모',
+                data: ${JSON.stringify(goldChartSpent)},
+                backgroundColor: 'rgba(229,57,53,0.7)',
+                borderRadius: 4,
+                borderSkipped: false,
+              },
+              {
+                label: '순변동',
+                data: ${JSON.stringify(goldChartNet)},
+                type: 'line',
+                borderColor: '#1565c0',
+                backgroundColor: 'rgba(21,101,192,0.1)',
+                borderWidth: 2,
+                pointRadius: 4,
+                pointBackgroundColor: '#1565c0',
+                tension: 0.3,
+                fill: true,
+              }
+            ]
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            interaction: { mode: 'index', intersect: false },
+            plugins: {
+              tooltip: tooltipStyle,
+              legend: { position: 'top', labels: { usePointStyle: true, padding: 16 } },
+            },
+            scales: {
+              x: { grid: { display: false } },
+              y: {
+                beginAtZero: true,
+                ticks: { precision: 0 },
+                grid: { color: 'rgba(0,0,0,0.05)' },
+              },
+            },
+          }
+        });
+
+        new Chart(document.getElementById('shopSalesChart'), {
+          type: 'bar',
+          data: {
+            labels: ${JSON.stringify(shopChartLabels)},
+            datasets: [
+              {
+                label: '판매 수',
+                data: ${JSON.stringify(shopChartPurchases)},
+                backgroundColor: 'rgba(216,140,56,0.75)',
+                borderRadius: 4,
+                borderSkipped: false,
+              },
+              {
+                label: '구매자 수',
+                data: ${JSON.stringify(shopChartBuyers)},
+                type: 'line',
+                borderColor: '#0f6c5c',
+                backgroundColor: 'rgba(15,108,92,0.12)',
+                borderWidth: 2,
+                pointRadius: 4,
+                pointBackgroundColor: '#0f6c5c',
+                tension: 0.3,
+              },
+              {
+                label: '지출 골드',
+                data: ${JSON.stringify(shopChartGoldSpent)},
+                type: 'line',
+                borderColor: '#7f4b14',
+                backgroundColor: 'rgba(127,75,20,0.12)',
+                borderWidth: 2,
+                pointRadius: 4,
+                pointBackgroundColor: '#7f4b14',
+                tension: 0.3,
+                yAxisID: 'y1',
+              }
+            ]
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            interaction: { mode: 'index', intersect: false },
+            plugins: {
+              tooltip: tooltipStyle,
+              legend: { position: 'top', labels: { usePointStyle: true, padding: 16 } },
+            },
+            scales: {
+              x: { grid: { display: false } },
+              y: {
+                beginAtZero: true,
+                ticks: { precision: 0 },
+                grid: { color: 'rgba(0,0,0,0.05)' },
+              },
+              y1: {
+                beginAtZero: true,
+                position: 'right',
+                ticks: { precision: 0 },
+                grid: { drawOnChartArea: false },
+              },
+            },
+          }
+        });
+      })();
+      </script>
     `;
     return html(res, layout('통계', content, 'stats'));
   }
@@ -791,6 +1276,10 @@ async function handleAdminRoute(req, res, url, pathname, method, lobby, wss, mai
   if (pathname === '/tc-backstage/inquiries' && method === 'GET') {
     const page = parseInt(url.searchParams.get('page') || '1');
     const data = await getInquiries(page, 20);
+    const pendingCount = data.rows.filter(r => r.status === 'pending').length;
+    const resolvedCount = data.rows.filter(r => r.status === 'resolved').length;
+    const bugCount = data.rows.filter(r => r.category === 'bug').length;
+    const suggestionCount = data.rows.filter(r => r.category === 'suggestion').length;
 
     let tableContent = '';
     if (data.rows.length > 0) {
@@ -812,7 +1301,13 @@ async function handleAdminRoute(req, res, url, pathname, method, lobby, wss, mai
     }
 
     const content = `
-      <h1 class="page-title">문의</h1>
+      ${pageHeader('문의', '최근 접수된 문의를 우선순위 중심으로 살펴볼 수 있도록 상태와 카테고리 분포를 먼저 보여줍니다.')}
+      ${summaryStrip([
+        { label: '현재 페이지 건수', value: formatNumber(data.rows.length), meta: `전체 ${formatNumber(data.total)}건` },
+        { label: '대기', value: formatNumber(pendingCount), valueColor: '#c67b2b', meta: '즉시 확인 필요' },
+        { label: '처리 완료', value: formatNumber(resolvedCount), valueColor: '#2e8b57' },
+        { label: '버그 문의', value: formatNumber(bugCount), meta: `건의 ${formatNumber(suggestionCount)}건` }
+      ])}
       <div class="card">${tableContent}</div>
     `;
     return html(res, layout('문의', content, 'inquiries'));
@@ -870,6 +1365,10 @@ async function handleAdminRoute(req, res, url, pathname, method, lobby, wss, mai
   if (pathname === '/tc-backstage/reports' && method === 'GET') {
     const page = parseInt(url.searchParams.get('page') || '1');
     const data = await getReports(page, 20);
+    const pendingGroups = data.rows.filter(r => r.group_status === 'pending').length;
+    const reviewedGroups = data.rows.filter(r => r.group_status === 'reviewed').length;
+    const totalReportsInPage = data.rows.reduce((sum, r) => sum + (parseInt(r.report_count) || 0), 0);
+    const repeatedTargets = data.rows.filter(r => (parseInt(r.report_count) || 0) >= 2).length;
 
     let tableContent = '';
     if (data.rows.length > 0) {
@@ -899,7 +1398,13 @@ async function handleAdminRoute(req, res, url, pathname, method, lobby, wss, mai
     }
 
     const content = `
-      <h1 class="page-title">신고</h1>
+      ${pageHeader('신고', '신고는 대상 유저와 방 기준으로 묶어서 보여주며, 반복 신고와 대기 상태를 먼저 파악할 수 있게 구성했습니다.')}
+      ${summaryStrip([
+        { label: '그룹 수', value: formatNumber(data.rows.length), meta: `전체 ${formatNumber(data.total)}그룹` },
+        { label: '대기 그룹', value: formatNumber(pendingGroups), valueColor: '#c0563f' },
+        { label: '검토 중', value: formatNumber(reviewedGroups), valueColor: '#2878b8' },
+        { label: '중복 신고 대상', value: formatNumber(repeatedTargets), meta: `현재 페이지 신고 합계 ${formatNumber(totalReportsInPage)}건` }
+      ])}
       <div class="card">${tableContent}</div>
     `;
     return html(res, layout('신고', content, 'reports'));
@@ -993,6 +1498,10 @@ async function handleAdminRoute(req, res, url, pathname, method, lobby, wss, mai
     const minGames = url.searchParams.get('minGames') || '';
     const minLeaves = url.searchParams.get('minLeaves') || '';
     const data = await getUsers(search, page, 20, { sort, minRating, minGames, minLeaves });
+    const adminCount = data.rows.filter(u => u.is_admin && !u.is_deleted).length;
+    const deletedCount = data.rows.filter(u => u.is_deleted).length;
+    const highRiskUsers = data.rows.filter(u => (u.leave_count || 0) >= 3).length;
+    const avgRating = data.rows.length > 0 ? Math.round(data.rows.reduce((sum, u) => sum + (parseInt(u.rating) || 0), 0) / data.rows.length) : 0;
 
     // Build query string for pagination links
     const qs = new URLSearchParams();
@@ -1035,7 +1544,7 @@ async function handleAdminRoute(req, res, url, pathname, method, lobby, wss, mai
     let tableContent = '';
     if (data.rows.length > 0) {
       tableContent = `<div class="table-wrap"><table>
-        <tr><th>닉네임</th><th>권한</th><th>기기</th><th>Lv</th><th>골드</th><th>레이팅</th><th>게임</th><th>승/패</th><th>이탈</th><th>최근 접속</th><th></th></tr>
+        <tr><th>닉네임</th><th>권한</th><th>기기</th><th>앱 버전</th><th>Lv</th><th>골드</th><th>레이팅</th><th>게임</th><th>승/패</th><th>이탈</th><th>최근 접속</th><th></th></tr>
         ${data.rows.map(u => {
           const winRate = u.total_games > 0 ? Math.round(u.wins / u.total_games * 100) : 0;
           const leaveStyle = (u.leave_count || 0) >= 3 ? 'color:#e53935;font-weight:600' : '';
@@ -1045,6 +1554,7 @@ async function handleAdminRoute(req, res, url, pathname, method, lobby, wss, mai
             ${u.is_deleted ? '<span class="badge" style="background:#ffebee;color:#c62828">탈퇴</span>' : `<span class="badge" style="background:${u.is_admin ? '#ede7f6' : '#f5f5f5'};color:${u.is_admin ? '#5e35b1' : '#888'}">${u.is_admin ? '관리자' : '일반'}</span>`}
           </td>
           <td>${deviceBadge(u.device_platform)}</td>
+          <td style="font-size:12px;color:#666">${escapeHtml(u.app_version || '-')}</td>
           <td>${u.level || 1}</td>
           <td style="color:#ff9800;font-weight:600">${(u.gold || 0).toLocaleString()}
             <form method="POST" action="/tc-backstage/users/${encodeURIComponent(u.nickname)}/gold" style="display:inline-flex;gap:2px;margin-left:4px;vertical-align:middle">
@@ -1067,7 +1577,17 @@ async function handleAdminRoute(req, res, url, pathname, method, lobby, wss, mai
     }
 
     const content = `
-      <h1 class="page-title">유저 <span style="font-size:14px;color:#888;font-weight:400">(${data.total.toLocaleString()}명)</span></h1>
+      ${pageHeader(
+        '유저',
+        '검색, 정렬, 최소 조건 필터를 유지하면서 현재 페이지의 상태 분포를 바로 읽을 수 있게 정리했습니다.',
+        `<span class="btn btn-secondary" style="cursor:default">총 ${formatNumber(data.total)}명</span>`
+      )}
+      ${summaryStrip([
+        { label: '현재 페이지', value: formatNumber(data.rows.length), meta: search ? `검색어: ${escapeHtml(search)}` : '필터 결과' },
+        { label: '관리자', value: formatNumber(adminCount), valueColor: '#5e35b1' },
+        { label: '탈퇴 계정', value: formatNumber(deletedCount), valueColor: '#c0563f' },
+        { label: '주의 유저', value: formatNumber(highRiskUsers), meta: `평균 레이팅 ${formatNumber(avgRating)}` }
+      ])}
       <div class="card">
         ${searchForm}
         ${tableContent}
@@ -1080,14 +1600,22 @@ async function handleAdminRoute(req, res, url, pathname, method, lobby, wss, mai
   const userDetailMatch = pathname.match(/^\/tc-backstage\/users\/([^/]+)$/);
   if (userDetailMatch && method === 'GET') {
     const nickname = decodeURIComponent(userDetailMatch[1]);
-    const [user, recentMatches, goldHistory] = await Promise.all([
+    const [user, recentMatches, goldHistory, purchaseHistory] = await Promise.all([
       getUserDetail(nickname),
       getRecentMatches(nickname, 20),
       getAdminGoldHistory(nickname, 50),
+      getAdminPurchaseHistory(nickname, 30),
     ]);
     if (!user) return html(res, layout('찾을 수 없음', '<div class="empty">유저를 찾을 수 없습니다</div>', 'users'), 404);
 
     const winRate = user.total_games > 0 ? Math.round((user.wins / user.total_games) * 100) : 0;
+    const purchaseSummary = purchaseHistory?.summary || {
+      totalSpent: 0,
+      totalPurchases: 0,
+      permanentCount: 0,
+      temporaryCount: 0,
+      activeCount: 0,
+    };
 
     // Chat ban status
     let chatBanHtml = '<span style="color:#4caf50;font-weight:600">없음</span>';
@@ -1102,7 +1630,13 @@ async function handleAdminRoute(req, res, url, pathname, method, lobby, wss, mai
     }
 
     const content = `
-      <h1 class="page-title">유저: ${escapeHtml(user.nickname)}</h1>
+      ${pageHeader('유저 상세', '플레이 기록, 골드 흐름, 실제 구매 아이템까지 한 페이지에서 확인할 수 있게 구성했습니다.')}
+      ${summaryStrip([
+        { label: '현재 골드', value: formatNumber(user.gold || 0), valueColor: '#d07a16', meta: `레벨 ${formatNumber(user.level || 1)}` },
+        { label: '누적 구매', value: formatNumber(purchaseSummary.totalPurchases), meta: `총 ${formatNumber(purchaseSummary.totalSpent)} 골드 사용` },
+        { label: '영구 / 기간제', value: `${formatNumber(purchaseSummary.permanentCount)} / ${formatNumber(purchaseSummary.temporaryCount)}`, meta: `활성 ${formatNumber(purchaseSummary.activeCount)}개` },
+        { label: '전적', value: `${formatNumber(user.wins)}승`, meta: `${formatNumber(user.losses)}패 · 승률 ${formatPercent(winRate)}` }
+      ])}
       <div class="card">
         <div class="detail-grid" style="grid-template-columns:130px 1fr">
           <div class="label">닉네임</div><div class="value" style="font-weight:600">${escapeHtml(user.nickname)}${user.is_deleted ? ' <span class="badge" style="background:#ffebee;color:#c62828">탈퇴</span>' : ''}</div>
@@ -1178,6 +1712,42 @@ async function handleAdminRoute(req, res, url, pathname, method, lobby, wss, mai
         `}
       </div>
 
+      <div class="card">
+        <h3>상점 구매 내역 <span style="font-size:13px;color:#888;font-weight:400">(${purchaseHistory?.purchases?.length || 0})</span></h3>
+        ${purchaseHistory?.success && purchaseHistory.purchases.length > 0 ? `
+          <div class="table-wrap"><table>
+            <tr><th>구매일</th><th>아이템</th><th>분류</th><th>가격</th><th>구분</th><th>상태</th><th>만료</th></tr>
+            ${purchaseHistory.purchases.map(item => {
+              const categoryColors = {
+                banner: '#e3f2fd;color:#1565c0',
+                title: '#fff3e0;color:#e65100',
+                theme: '#e8eaf6;color:#283593',
+                utility: '#fce4ec;color:#880e4f',
+                card_skin: '#f1f8e9;color:#33691e',
+              };
+              const statusBadge = item.isActive
+                ? '<span class="badge" style="background:#e8f5e9;color:#2e7d32">활성</span>'
+                : '<span class="badge" style="background:#f5f5f5;color:#777">비활성</span>';
+              const typeLabel = item.isPermanent ? '영구' : `${item.durationDays || '-'}일`;
+              return `<tr>
+                <td style="font-size:12px;color:#888">${formatDate(item.acquiredAt)}</td>
+                <td>
+                  <div style="font-weight:700">${escapeHtml(item.name)}</div>
+                  <div class="muted mono" style="font-size:11px">${escapeHtml(item.itemKey)}</div>
+                </td>
+                <td><span class="badge" style="background:${categoryColors[item.category] || '#f5f5f5;color:#333'}">${escapeHtml(item.category)}</span>${item.isSeason ? ' <span class="badge" style="background:#e8f5e9;color:#2e7d32">시즌</span>' : ''}</td>
+                <td style="font-weight:700;color:#d07a16">${formatNumber(item.price)}</td>
+                <td>${typeLabel}</td>
+                <td>${statusBadge}</td>
+                <td style="font-size:12px;color:#888">${item.expiresAt ? formatDate(item.expiresAt) : '-'}</td>
+              </tr>`;
+            }).join('')}
+          </table></div>
+        ` : `
+          <div class="empty">${escapeHtml(purchaseHistory?.message || '상점 구매 내역이 없습니다')}</div>
+        `}
+      </div>
+
       ${user.fcm_token ? `<div class="card">
         <h3>푸시 알림</h3>
         ${url.searchParams.get('push') === 'ok' ? '<div style="color:#4caf50;margin-bottom:12px;font-weight:600">푸시 전송 완료</div>' : ''}
@@ -1219,27 +1789,39 @@ async function handleAdminRoute(req, res, url, pathname, method, lobby, wss, mai
       <div class="card">
         <h3>최근 매치 <span style="font-size:13px;color:#888;font-weight:400">(${recentMatches.length})</span></h3>
         ${recentMatches.length > 0 ? `<div class="table-wrap"><table>
-          <tr><th>ID</th><th>결과</th><th>점수</th><th>팀 A</th><th>팀 B</th><th>유형</th><th>종료</th><th>날짜</th></tr>
+          <tr><th>ID</th><th>게임</th><th>결과</th><th>점수/플레이어</th><th>유형</th><th>종료</th><th>날짜</th></tr>
           ${recentMatches.map(m => {
             const resultBadge = m.isDraw
               ? '<span class="badge" style="background:#f5f5f5;color:#888">무승부</span>'
               : m.won
                 ? '<span class="badge" style="background:#e8f5e9;color:#2e7d32">승</span>'
                 : '<span class="badge" style="background:#ffebee;color:#c62828">패</span>';
-            const myTeamStyle = m.myTeam === 'A' ? 'font-weight:700;color:#c62828' : 'font-weight:700;color:#1565c0';
             let endBadge = '<span class="badge" style="background:#e8f5e9;color:#2e7d32">정상</span>';
             if (m.endReason === 'leave') {
               endBadge = '<span class="badge" style="background:#fce4ec;color:#c62828">이탈</span>' + (m.deserterNickname ? '<br><span style="font-size:11px;color:#c62828">' + escapeHtml(m.deserterNickname) + '</span>' : '');
             } else if (m.endReason === 'timeout') {
               endBadge = '<span class="badge" style="background:#fff8e1;color:#f57f17">시간초과</span>' + (m.deserterNickname ? '<br><span style="font-size:11px;color:#f57f17">' + escapeHtml(m.deserterNickname) + '</span>' : '');
             }
+            const rankedBadge = m.isRanked ? '<span class="badge" style="background:#fff3e0;color:#e65100">랭크</span>' : '<span class="badge" style="background:#f5f5f5;color:#999">일반</span>';
+            if (m.gameType === 'skull_king') {
+              const playersText = m.players ? m.players.map(p => escapeHtml(p.nickname) + '(' + p.score + '점 #' + p.rank + ')').join(', ') : '-';
+              return `<tr>
+              <td>${m.id}</td>
+              <td><span class="badge" style="background:#ff7043;color:#fff">SK</span></td>
+              <td>${resultBadge} <span style="font-size:11px;color:#888">#${m.myRank} (${m.myScore}점)</span></td>
+              <td style="font-size:12px">${playersText}</td>
+              <td>${rankedBadge}</td>
+              <td>${endBadge}</td>
+              <td style="font-size:12px;color:#888">${formatDate(m.createdAt)}</td>
+            </tr>`;
+            }
+            const myTeamStyle = m.myTeam === 'A' ? 'font-weight:700;color:#c62828' : 'font-weight:700;color:#1565c0';
             return `<tr>
               <td>${m.id}</td>
+              <td><span class="badge" style="background:#6c63ff;color:#fff">티츄</span></td>
               <td>${resultBadge}</td>
-              <td style="font-weight:600">${m.teamAScore} : ${m.teamBScore}</td>
-              <td style="${m.myTeam === 'A' ? myTeamStyle : ''}">${escapeHtml(m.playerA1)}, ${escapeHtml(m.playerA2)}</td>
-              <td style="${m.myTeam === 'B' ? myTeamStyle : ''}">${escapeHtml(m.playerB1)}, ${escapeHtml(m.playerB2)}</td>
-              <td>${m.isRanked ? '<span class="badge" style="background:#fff3e0;color:#e65100">랭크</span>' : '<span class="badge" style="background:#f5f5f5;color:#999">일반</span>'}</td>
+              <td style="font-size:12px"><span style="${m.myTeam === 'A' ? myTeamStyle : ''}">${escapeHtml(m.playerA1)}, ${escapeHtml(m.playerA2)}</span> <span style="font-weight:600">${m.teamAScore}:${m.teamBScore}</span> <span style="${m.myTeam === 'B' ? myTeamStyle : ''}">${escapeHtml(m.playerB1)}, ${escapeHtml(m.playerB2)}</span></td>
+              <td>${rankedBadge}</td>
               <td>${endBadge}</td>
               <td style="font-size:12px;color:#888">${formatDate(m.createdAt)}</td>
             </tr>`;
@@ -1329,6 +1911,15 @@ async function handleAdminRoute(req, res, url, pathname, method, lobby, wss, mai
       return `<span class="badge" style="background:${colors[cat] || '#f5f5f5;color:#333'}">${escapeHtml(cat)}</span>`;
     }
 
+    const activeItems = items.filter(item => {
+      const start = item.sale_start ? new Date(item.sale_start) : null;
+      const end = item.sale_end ? new Date(item.sale_end) : null;
+      return (!start || start <= now) && (!end || end >= now);
+    }).length;
+    const seasonalItems = items.filter(item => item.is_season).length;
+    const purchasableItems = items.filter(item => item.is_purchasable).length;
+    const avgPrice = items.length > 0 ? Math.round(items.reduce((sum, item) => sum + (parseInt(item.price) || 0), 0) / items.length) : 0;
+
     let tableContent = '';
     if (items.length > 0) {
       tableContent = `<div class="table-wrap"><table>
@@ -1350,8 +1941,17 @@ async function handleAdminRoute(req, res, url, pathname, method, lobby, wss, mai
     }
 
     const content = `
-      <h1 class="page-title">상점 아이템</h1>
-      <div style="margin-bottom:16px"><a href="/tc-backstage/shop/add" class="btn btn-primary">+ 아이템 추가</a></div>
+      ${pageHeader(
+        '상점 아이템',
+        '판매 상태, 시즌 여부, 가격대를 빠르게 훑을 수 있도록 요약을 먼저 배치했습니다.',
+        `<a href="/tc-backstage/shop/add" class="btn btn-primary">+ 아이템 추가</a>`
+      )}
+      ${summaryStrip([
+        { label: '전체 아이템', value: formatNumber(items.length) },
+        { label: '판매 가능', value: formatNumber(purchasableItems), valueColor: '#2e8b57', meta: `현재 판매중 ${formatNumber(activeItems)}개` },
+        { label: '시즌 아이템', value: formatNumber(seasonalItems), valueColor: '#2878b8' },
+        { label: '평균 가격', value: formatNumber(avgPrice), meta: '골드 기준' }
+      ])}
       <div class="card">${tableContent}</div>
     `;
     return html(res, layout('상점', content, 'shop'));
@@ -1877,9 +2477,8 @@ async function handleAdminRoute(req, res, url, pathname, method, lobby, wss, mai
     const nickname = decodeURIComponent(goldMatch[1]);
     const body = await parseBody(req);
     const amount = parseInt(body.amount);
-    const session = getSessionFromCookie(req);
     if (!isNaN(amount) && amount !== 0) {
-      await adminAdjustGold(nickname, amount, session?.username || 'admin');
+      await adminAdjustGold(nickname, amount, sessionInfo.session.username || 'admin');
     }
     const referer = req.headers.referer || '';
     if (referer.includes('/tc-backstage/users?') || referer.endsWith('/tc-backstage/users')) {

@@ -590,7 +590,7 @@ class _SKGameScreenState extends State<SKGameScreen> {
                 const Icon(Icons.anchor, size: 14, color: Color(0xFF5A4038)),
                 const SizedBox(width: 5),
                 Text(
-                  'R${state.round}/${state.totalRounds}  T${state.trickNumber}',
+                  '${state.round}라운드 ${state.trickNumber}번째',
                   style: const TextStyle(
                     fontSize: 13,
                     fontWeight: FontWeight.bold,
@@ -697,7 +697,7 @@ class _SKGameScreenState extends State<SKGameScreen> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  'Round ${state.round}/${state.totalRounds} · Trick ${state.trickNumber}',
+                  '${state.round}라운드 ${state.trickNumber}번째',
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   style: TextStyle(
@@ -2178,7 +2178,7 @@ class _SKGameScreenState extends State<SKGameScreen> {
           mainAxisSize: MainAxisSize.min,
           children: [
             Text(
-              '승리예측: ${selfPlayer.bid}트릭',
+              '승리예측: ${selfPlayer.bid}승',
               style: const TextStyle(
                 fontSize: 16,
                 fontWeight: FontWeight.bold,
@@ -2222,7 +2222,7 @@ class _SKGameScreenState extends State<SKGameScreen> {
               ),
             ),
           Text(
-            '이번 라운드에서 몇 트릭을 가져갈지 예측해보세요',
+            '이번 라운드에서 몇 번 승리할지 예측해보세요',
             style: TextStyle(
               color: Color(0xFF5A4038),
               fontSize: isLandscape ? 13 : 14,
@@ -2271,7 +2271,7 @@ class _SKGameScreenState extends State<SKGameScreen> {
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
               ),
               child: Text(
-                _selectedBid != null ? '${_selectedBid!}트릭 예측' : '숫자를 선택하세요',
+                _selectedBid != null ? '${_selectedBid!}승 예측' : '숫자를 선택하세요',
                 style: TextStyle(
                   fontWeight: FontWeight.bold,
                   fontSize: isLandscape ? 14 : 15,

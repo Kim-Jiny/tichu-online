@@ -406,17 +406,25 @@ class _LobbyScreenState extends State<LobbyScreen> {
     );
   }
 
-  String _generateRandomRoomName() {
-    final adjectives = ['즐거운', '신나는', '열정의', '화끈한', '행운의', '전설의', '최강', '무적'];
-    final nouns = ['티츄방', '카드판', '승부', '한판', '게임', '대결', '도전', '파티'];
+  String _generateRandomRoomName({String gameType = 'tichu'}) {
     final random = DateTime.now().millisecondsSinceEpoch;
-    final adj = adjectives[random % adjectives.length];
-    final noun = nouns[(random ~/ 8) % nouns.length];
-    return '$adj $noun';
+    if (gameType == 'skull_king') {
+      final adjectives = ['무시무시한', '전설의', '무적의', '잔혹한', '탐욕의', '최강', '폭풍의', '대담한'];
+      final nouns = ['해적선', '보물섬', '항해', '약탈', '선장', '해전', '모험', '크라켄'];
+      final adj = adjectives[random % adjectives.length];
+      final noun = nouns[(random ~/ 8) % nouns.length];
+      return '$adj $noun';
+    } else {
+      final adjectives = ['즐거운', '신나는', '열정의', '화끈한', '행운의', '전설의', '최강', '무적'];
+      final nouns = ['티츄방', '카드판', '승부', '한판', '게임', '대결', '도전', '파티'];
+      final adj = adjectives[random % adjectives.length];
+      final noun = nouns[(random ~/ 8) % nouns.length];
+      return '$adj $noun';
+    }
   }
 
   void _showCreateRoomDialog() {
-    final randomName = _generateRandomRoomName();
+    String randomName = _generateRandomRoomName();
     final controller = TextEditingController();
     final passwordController = TextEditingController();
     bool isPrivate = false;
@@ -620,6 +628,10 @@ class _LobbyScreenState extends State<LobbyScreen> {
                           selected: {selectedGameType},
                           onSelectionChanged: (v) => setState(() {
                             selectedGameType = v.first;
+                            randomName = _generateRandomRoomName(gameType: selectedGameType);
+                            if (controller.text.isEmpty) {
+                              controller.clear();
+                            }
                             if (selectedGameType == 'skull_king') {
                               isRanked = false;
                             }
@@ -690,7 +702,10 @@ class _LobbyScreenState extends State<LobbyScreen> {
                           ),
                           const Spacer(),
                           TextButton.icon(
-                            onPressed: () => setState(() => controller.text = randomName),
+                            onPressed: () => setState(() {
+                              randomName = _generateRandomRoomName(gameType: selectedGameType);
+                              controller.text = randomName;
+                            }),
                             style: TextButton.styleFrom(
                               padding: const EdgeInsets.symmetric(horizontal: 8),
                               minimumSize: const Size(0, 28),
@@ -1362,8 +1377,40 @@ class _LobbyScreenState extends State<LobbyScreen> {
 
   Widget _buildRoomItem(Room room) {
     final isInProgress = room.gameInProgress;
+    final isSK = room.isSkullKing;
+
+    // Game type colors
+    final Color bgColor;
+    final Color borderColor;
+    final Color stripColor;
+    final Color badgeBgColor;
+    final Color badgeTextColor;
+    final String badgeText;
+    final Color nameColor;
+    final Color subTextColor;
+
+    if (isSK) {
+      bgColor = isInProgress ? const Color(0xFFE0E4EF) : const Color(0xFFECEFF6);
+      borderColor = isInProgress ? const Color(0xFFB0B8D0) : const Color(0xFFC0C8DD);
+      stripColor = const Color(0xFF2D2D3D);
+      badgeBgColor = const Color(0xFF2D2D3D);
+      badgeTextColor = const Color(0xFFFFD54F);
+      badgeText = '☠️ SK';
+      nameColor = const Color(0xFF2D2D3D);
+      subTextColor = const Color(0xFF7A7A90);
+    } else {
+      bgColor = isInProgress ? const Color(0xFFEDE8F8) : const Color(0xFFF6F4FA);
+      borderColor = isInProgress ? const Color(0xFFC4BBE0) : const Color(0xFFD8D0E8);
+      stripColor = const Color(0xFF6C63FF);
+      badgeBgColor = const Color(0xFF6C63FF);
+      badgeTextColor = Colors.white;
+      badgeText = '티츄';
+      nameColor = const Color(0xFF3A3058);
+      subTextColor = const Color(0xFF8A80A0);
+    }
+
     return Material(
-      color: isInProgress ? const Color(0xFFE8E0F8) : const Color(0xFFFAF6F4),
+      color: bgColor,
       borderRadius: BorderRadius.circular(16),
       child: InkWell(
         onTap: () {
@@ -1384,75 +1431,88 @@ class _LobbyScreenState extends State<LobbyScreen> {
         },
         borderRadius: BorderRadius.circular(16),
         child: Container(
-          padding: const EdgeInsets.all(16),
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(16),
-            border: Border.all(
-              color: isInProgress ? const Color(0xFFD0C8E8) : const Color(0xFFDDD0CC),
-            ),
+            border: Border.all(color: borderColor),
           ),
           child: Row(
             children: [
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      children: [
-                        if (room.isSkullKing)
-                          Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                            margin: const EdgeInsets.only(right: 6),
-                            decoration: BoxDecoration(
-                              color: const Color(0xFF2D2D3D),
-                              borderRadius: BorderRadius.circular(6),
-                            ),
-                            child: const Text('SK', style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: Colors.white)),
-                          ),
-                        Expanded(
-                          child: Text(
-                            '${room.isPrivate ? '🔒 ' : ''}${room.isRanked ? '🏆 ' : ''}${room.name}',
-                            style: const TextStyle(
-                              fontSize: 16,
-                              fontWeight: FontWeight.w500,
-                              color: Color(0xFF5A4038),
-                            ),
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 2),
-                    Text(
-                      room.isSkullKing
-                          ? '${room.turnTimeLimit}초'
-                          : '${room.turnTimeLimit}초 · ${room.targetScore}점',
-                      style: const TextStyle(
-                        fontSize: 11,
-                        color: Color(0xFF9A8A82),
-                      ),
-                    ),
-                  ],
+              // Left color strip
+              Container(
+                width: 6,
+                height: 64,
+                decoration: BoxDecoration(
+                  color: stripColor,
+                  borderRadius: const BorderRadius.only(
+                    topLeft: Radius.circular(16),
+                    bottomLeft: Radius.circular(16),
+                  ),
                 ),
               ),
+              Expanded(
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(12, 14, 16, 14),
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Row(
+                              children: [
+                                Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
+                                  margin: const EdgeInsets.only(right: 8),
+                                  decoration: BoxDecoration(
+                                    color: badgeBgColor,
+                                    borderRadius: BorderRadius.circular(8),
+                                  ),
+                                  child: Text(badgeText, style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: badgeTextColor)),
+                                ),
+                                Expanded(
+                                  child: Text(
+                                    '${room.isPrivate ? '🔒 ' : ''}${room.isRanked ? '🏆 ' : ''}${room.name}',
+                                    style: TextStyle(
+                                      fontSize: 16,
+                                      fontWeight: FontWeight.w500,
+                                      color: nameColor,
+                                    ),
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 2),
+                            Text(
+                              isSK
+                                  ? '${room.turnTimeLimit}초'
+                                  : '${room.turnTimeLimit}초 · ${room.targetScore}점',
+                              style: TextStyle(
+                                fontSize: 11,
+                                color: subTextColor,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
               if (isInProgress)
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
                   margin: const EdgeInsets.only(right: 8),
                   decoration: BoxDecoration(
-                    color: const Color(0xFFD8CCF6),
+                    color: isSK ? const Color(0xFFCCD0DD) : const Color(0xFFD8CCF6),
                     borderRadius: BorderRadius.circular(12),
                   ),
                   child: Row(
                     children: [
-                      const Icon(Icons.visibility, size: 14, color: Color(0xFF4A4080)),
+                      Icon(Icons.visibility, size: 14, color: isSK ? const Color(0xFF3A3A50) : const Color(0xFF6C63FF)),
                       const SizedBox(width: 4),
                       Text(
                         '게임중 ${room.spectatorCount}',
-                        style: const TextStyle(
+                        style: TextStyle(
                           fontSize: 12,
-                          color: Color(0xFF4A4080),
+                          color: isSK ? const Color(0xFF3A3A50) : const Color(0xFF6C63FF),
                           fontWeight: FontWeight.bold,
                         ),
                       ),
@@ -1468,13 +1528,13 @@ class _LobbyScreenState extends State<LobbyScreen> {
                     padding: const EdgeInsets.all(8),
                     margin: const EdgeInsets.only(right: 8),
                     decoration: BoxDecoration(
-                      color: const Color(0xFFE8E0F8),
+                      color: isSK ? const Color(0xFFD8DAE4) : const Color(0xFFE0D8F4),
                       borderRadius: BorderRadius.circular(12),
                     ),
-                    child: const Icon(
+                    child: Icon(
                       Icons.visibility,
                       size: 18,
-                      color: Color(0xFF4A4080),
+                      color: isSK ? const Color(0xFF3A3A50) : const Color(0xFF6C63FF),
                     ),
                   ),
                 ),
@@ -1484,14 +1544,20 @@ class _LobbyScreenState extends State<LobbyScreen> {
                   vertical: 6,
                 ),
                 decoration: BoxDecoration(
-                  color: isInProgress ? const Color(0xFFEDE6FF) : const Color(0xFFE8E0DC),
+                  color: isInProgress
+                      ? (isSK ? const Color(0xFFD4D8E4) : const Color(0xFFD4CCF0))
+                      : (isSK ? const Color(0xFFD8DAE4) : const Color(0xFFE0D8F4)),
                   borderRadius: BorderRadius.circular(12),
                 ),
                 child: Text(
                   '${room.playerCount}/${room.maxPlayers}',
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontSize: 14,
-                    color: Color(0xFF6A5A52),
+                    color: isSK ? const Color(0xFF3A3A50) : const Color(0xFF4A4070),
+                  ),
+                ),
+              ),
+                    ],
                   ),
                 ),
               ),
@@ -3656,7 +3722,7 @@ class _LobbyScreenState extends State<LobbyScreen> {
             Expanded(
               child: Column(
                 mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.start,
+                crossAxisAlignment: player != null ? CrossAxisAlignment.start : CrossAxisAlignment.center,
                 children: [
                   if (player != null && player.titleName != null)
                     Padding(
@@ -3682,9 +3748,7 @@ class _LobbyScreenState extends State<LobbyScreen> {
                         ],
                       ),
                     ),
-                  Align(
-                    alignment: Alignment.center,
-                    child: Text(
+                  Text(
                       player?.name ?? '[빈 자리]',
                       style: TextStyle(
                         fontSize: 16,
@@ -3700,7 +3764,6 @@ class _LobbyScreenState extends State<LobbyScreen> {
                         fontWeight: isMySlot ? FontWeight.bold : FontWeight.normal,
                       ),
                       overflow: TextOverflow.ellipsis,
-                    ),
                   ),
                 ],
               ),
@@ -3762,6 +3825,27 @@ class _LobbyScreenState extends State<LobbyScreen> {
       case 'title_sweet': return Icons.cake;
       case 'title_steady': return Icons.shield;
       case 'title_flash_30d': return Icons.flash_on;
+      case 'title_dragon': return Icons.local_fire_department;
+      case 'title_phoenix': return Icons.local_fire_department;
+      case 'title_pirate': return Icons.anchor;
+      case 'title_tactician': return Icons.psychology;
+      case 'title_lucky': return Icons.star;
+      case 'title_bluffer': return Icons.theater_comedy;
+      case 'title_ace': return Icons.military_tech;
+      case 'title_king': return Icons.workspace_premium;
+      case 'title_rookie': return Icons.emoji_nature;
+      case 'title_veteran': return Icons.security;
+      case 'title_sensitive': return Icons.sentiment_very_dissatisfied;
+      case 'title_shadow': return Icons.visibility_off;
+      case 'title_flame': return Icons.whatshot;
+      case 'title_ice': return Icons.ac_unit;
+      case 'title_crown': return Icons.diamond;
+      case 'title_diamond': return Icons.diamond;
+      case 'title_ghost': return Icons.blur_on;
+      case 'title_thunder': return Icons.bolt;
+      case 'title_topcard': return Icons.style;
+      case 'title_legend': return Icons.auto_awesome;
+      case 'title_boomer': return Icons.elderly;
       default: return Icons.star;
     }
   }
@@ -3771,6 +3855,27 @@ class _LobbyScreenState extends State<LobbyScreen> {
       case 'title_sweet': return const Color(0xFFEC407A);
       case 'title_steady': return const Color(0xFF5C6BC0);
       case 'title_flash_30d': return const Color(0xFFFFA000);
+      case 'title_dragon': return const Color(0xFFD32F2F);
+      case 'title_phoenix': return const Color(0xFFFF6F00);
+      case 'title_pirate': return const Color(0xFF37474F);
+      case 'title_tactician': return const Color(0xFF00695C);
+      case 'title_lucky': return const Color(0xFFFFD600);
+      case 'title_bluffer': return const Color(0xFF6A1B9A);
+      case 'title_ace': return const Color(0xFFC62828);
+      case 'title_king': return const Color(0xFFFF8F00);
+      case 'title_rookie': return const Color(0xFF66BB6A);
+      case 'title_veteran': return const Color(0xFF1565C0);
+      case 'title_sensitive': return const Color(0xFFE91E63);
+      case 'title_shadow': return const Color(0xFF424242);
+      case 'title_flame': return const Color(0xFFFF5722);
+      case 'title_ice': return const Color(0xFF0288D1);
+      case 'title_crown': return const Color(0xFFE65100);
+      case 'title_diamond': return const Color(0xFF00BCD4);
+      case 'title_ghost': return const Color(0xFF78909C);
+      case 'title_thunder': return const Color(0xFFFFAB00);
+      case 'title_topcard': return const Color(0xFF00897B);
+      case 'title_legend': return const Color(0xFFFF6D00);
+      case 'title_boomer': return const Color(0xFF795548);
       default: return const Color(0xFF7E57C2);
     }
   }

@@ -4,11 +4,6 @@ let SkullKingGame; // Lazy-loaded to avoid circular dependency
 
 let nextBotNum = 1;
 
-const TITLE_NAMES = {
-  'title_sweet': '달콤한 플레이어',
-  'title_steady': '꾸준한 승부사',
-  'title_flash_30d': '스피드 러너',
-};
 
 class GameRoom {
   constructor(id, name, hostId, hostNickname, password = '', isRanked = false, turnTimeLimit = 30, targetScore = 1000, gameType = 'tichu', maxPlayers = 4) {
@@ -584,7 +579,7 @@ class GameRoom {
           isBot: !!p.isBot,
           isReady: !!p.isBot || !!p.ready,
           titleKey: p.titleKey || null,
-          titleName: TITLE_NAMES[p.titleKey] || null,
+          titleName: p.titleName || null,
         };
       }),
       gameInProgress: !!this.game,

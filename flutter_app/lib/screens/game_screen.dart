@@ -787,7 +787,7 @@ class _GameScreenState extends State<GameScreen> {
           scale: _moreOpen ? 1 : 0.95,
           duration: const Duration(milliseconds: 160),
           child: Container(
-            width: hasViewers ? 190 : 150,
+            width: hasViewers ? 150 : 110,
             padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
             decoration: BoxDecoration(
               color: Colors.white.withValues(alpha: 0.97),
@@ -803,7 +803,6 @@ class _GameScreenState extends State<GameScreen> {
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                _buildSpectatorButton(game),
                 if (hasViewers) _buildViewersButton(game),
                 _buildSoundButton(game),
                 _buildMenuButton(game),
@@ -2665,6 +2664,7 @@ class _GameScreenState extends State<GameScreen> {
               connected: partner?.connected ?? true,
               timeoutCount: partner?.timeoutCount ?? 0,
               teamLabel: _teamForPosition(state, 'partner'),
+              isMyTeam: true,
             ),
           ),
           const SizedBox(height: 3),
@@ -2714,6 +2714,7 @@ class _GameScreenState extends State<GameScreen> {
                   connected: left?.connected ?? true,
                   timeoutCount: left?.timeoutCount ?? 0,
                   teamLabel: _teamForPosition(state, 'left'),
+                  isMyTeam: false,
                 ),
               ),
               Text(
@@ -2754,6 +2755,7 @@ class _GameScreenState extends State<GameScreen> {
                   connected: right?.connected ?? true,
                   timeoutCount: right?.timeoutCount ?? 0,
                   teamLabel: _teamForPosition(state, 'right'),
+                  isMyTeam: false,
                 ),
               ),
               Text(
@@ -2950,6 +2952,8 @@ class _GameScreenState extends State<GameScreen> {
             Row(
               mainAxisSize: MainAxisSize.min,
               children: [
+                _buildSpectatorButton(game),
+                const SizedBox(width: 6),
                 _buildChatButton(game),
                 const SizedBox(width: 6),
                 _buildMoreButton(game),
@@ -2979,6 +2983,8 @@ class _GameScreenState extends State<GameScreen> {
                 child: Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
+                    _buildSpectatorButton(game),
+                    const SizedBox(width: 6),
                     _buildChatButton(game),
                     const SizedBox(width: 6),
                     _buildMoreButton(game),
@@ -3015,7 +3021,7 @@ class _GameScreenState extends State<GameScreen> {
       child: Container(
         margin: compact
             ? EdgeInsets.zero
-            : EdgeInsets.only(left: 10 * _s, bottom: 2 * _s),
+            : EdgeInsets.only(bottom: 2 * _s),
         padding: EdgeInsets.symmetric(horizontal: horizontal, vertical: vertical),
         decoration: BoxDecoration(
           color: const Color(0xFFF8F4F0),
@@ -3045,8 +3051,13 @@ class _GameScreenState extends State<GameScreen> {
   Widget _buildScoreBar(GameStateData state) {
     final teamA = state.totalScores['teamA'] ?? 0;
     final teamB = state.totalScores['teamB'] ?? 0;
-    final aLeading = teamA > teamB;
-    final bLeading = teamB > teamA;
+    final myTeam = state.myTeam;
+    final myScore = myTeam == 'A' ? teamA : teamB;
+    final enemyScore = myTeam == 'A' ? teamB : teamA;
+    final myLeading = myScore > enemyScore;
+    final enemyLeading = enemyScore > myScore;
+    const myColor = Color(0xFF4A90D9);
+    const enemyColor = Color(0xFFD24B4B);
 
     return GestureDetector(
       onTap: () => _showScoreHistoryDialog(state),
@@ -3061,20 +3072,20 @@ class _GameScreenState extends State<GameScreen> {
           mainAxisSize: MainAxisSize.min,
           children: [
             Text(
-              'A',
+              myTeam,
               style: TextStyle(
                 fontSize: 10 * _s,
                 fontWeight: FontWeight.bold,
-                color: aLeading ? const Color(0xFF4A90D9) : const Color(0xFF8A7A72),
+                color: myLeading ? myColor : const Color(0xFF8A7A72),
               ),
             ),
             SizedBox(width: 3 * _s),
             Text(
-              '$teamA',
+              '$myScore',
               style: TextStyle(
                 fontSize: 14 * _s,
                 fontWeight: FontWeight.bold,
-                color: aLeading ? const Color(0xFF4A90D9) : const Color(0xFF5A4038),
+                color: myLeading ? myColor : const Color(0xFF5A4038),
               ),
             ),
             Padding(
@@ -3089,20 +3100,20 @@ class _GameScreenState extends State<GameScreen> {
               ),
             ),
             Text(
-              '$teamB',
+              '$enemyScore',
               style: TextStyle(
                 fontSize: 14 * _s,
                 fontWeight: FontWeight.bold,
-                color: bLeading ? const Color(0xFFD24B4B) : const Color(0xFF5A4038),
+                color: enemyLeading ? enemyColor : const Color(0xFF5A4038),
               ),
             ),
             SizedBox(width: 3 * _s),
             Text(
-              'B',
+              myTeam == 'A' ? 'B' : 'A',
               style: TextStyle(
                 fontSize: 10 * _s,
                 fontWeight: FontWeight.bold,
-                color: bLeading ? const Color(0xFFD24B4B) : const Color(0xFF8A7A72),
+                color: enemyLeading ? enemyColor : const Color(0xFF8A7A72),
               ),
             ),
             SizedBox(width: 4 * _s),
@@ -3115,8 +3126,13 @@ class _GameScreenState extends State<GameScreen> {
 
   void _showScoreHistoryDialog(GameStateData state) {
     final history = state.scoreHistory;
-    final teamA = state.totalScores['teamA'] ?? 0;
-    final teamB = state.totalScores['teamB'] ?? 0;
+    final tA = state.totalScores['teamA'] ?? 0;
+    final tB = state.totalScores['teamB'] ?? 0;
+    final myTeam = state.myTeam;
+    final myTotal = myTeam == 'A' ? tA : tB;
+    final enemyTotal = myTeam == 'A' ? tB : tA;
+    final myLabel = myTeam;
+    final enemyLabel = myTeam == 'A' ? 'B' : 'A';
 
     showDialog(
       context: context,
@@ -3184,19 +3200,19 @@ class _GameScreenState extends State<GameScreen> {
                   children: [
                     Expanded(
                       child: _buildScoreHistoryTotalCard(
-                        label: 'TEAM A',
-                        score: teamA,
-                        color: const Color(0xFF6A9BD1),
-                        leading: teamA >= teamB,
+                        label: 'TEAM $myLabel',
+                        score: myTotal,
+                        color: const Color(0xFF4A90D9),
+                        leading: myTotal >= enemyTotal,
                       ),
                     ),
                     const SizedBox(width: 10),
                     Expanded(
                       child: _buildScoreHistoryTotalCard(
-                        label: 'TEAM B',
-                        score: teamB,
-                        color: const Color(0xFFF5B8C0),
-                        leading: teamB >= teamA,
+                        label: 'TEAM $enemyLabel',
+                        score: enemyTotal,
+                        color: const Color(0xFFD24B4B),
+                        leading: enemyTotal >= myTotal,
                       ),
                     ),
                   ],
@@ -3229,10 +3245,12 @@ class _GameScreenState extends State<GameScreen> {
                       itemBuilder: (_, i) {
                         final r = history[i];
                         final round = r['round'] ?? i + 1;
-                        final rA = r['teamA'] ?? 0;
-                        final rB = r['teamB'] ?? 0;
-                        final aWon = rA > rB;
-                        final bWon = rB > rA;
+                        final rawA = r['teamA'] ?? 0;
+                        final rawB = r['teamB'] ?? 0;
+                        final rMy = myTeam == 'A' ? rawA : rawB;
+                        final rEnemy = myTeam == 'A' ? rawB : rawA;
+                        final myWon = rMy > rEnemy;
+                        final enemyWon = rEnemy > rMy;
                         return Container(
                           padding: const EdgeInsets.symmetric(
                             horizontal: 14,
@@ -3265,19 +3283,19 @@ class _GameScreenState extends State<GameScreen> {
                               const SizedBox(width: 12),
                               Expanded(
                                 child: _buildScoreHistoryDelta(
-                                  label: 'A',
-                                  score: rA,
-                                  color: const Color(0xFF6A9BD1),
-                                  highlighted: aWon,
+                                  label: myLabel,
+                                  score: rMy,
+                                  color: const Color(0xFF4A90D9),
+                                  highlighted: myWon,
                                 ),
                               ),
                               const SizedBox(width: 10),
                               Expanded(
                                 child: _buildScoreHistoryDelta(
-                                  label: 'B',
-                                  score: rB,
-                                  color: const Color(0xFFF29AA7),
-                                  highlighted: bWon,
+                                  label: enemyLabel,
+                                  score: rEnemy,
+                                  color: const Color(0xFFD24B4B),
+                                  highlighted: enemyWon,
                                 ),
                               ),
                             ],
@@ -3599,14 +3617,10 @@ class _GameScreenState extends State<GameScreen> {
                 margin: EdgeInsets.only(right: 4 * _s),
                 padding: EdgeInsets.symmetric(horizontal: 3 * _s, vertical: 1),
                 decoration: BoxDecoration(
-                  color: state.myTeam == 'A'
-                      ? const Color(0xFFE3F0FF)
-                      : const Color(0xFFFFE8EC),
+                  color: const Color(0xFFE3F0FF),
                   borderRadius: BorderRadius.circular(6),
                   border: Border.all(
-                    color: state.myTeam == 'A'
-                        ? const Color(0xFF4A90D9)
-                        : const Color(0xFFD24B4B),
+                    color: const Color(0xFF4A90D9),
                     width: 0.5,
                   ),
                 ),
@@ -3615,9 +3629,7 @@ class _GameScreenState extends State<GameScreen> {
                   style: TextStyle(
                     fontSize: 8 * _s,
                     fontWeight: FontWeight.bold,
-                    color: state.myTeam == 'A'
-                        ? const Color(0xFF4A90D9)
-                        : const Color(0xFFD24B4B),
+                    color: const Color(0xFF4A90D9),
                   ),
                 ),
               ),
@@ -4117,7 +4129,10 @@ class _GameScreenState extends State<GameScreen> {
     if (isGameEnd) {
       final teamA = state.totalScores['teamA'] ?? 0;
       final teamB = state.totalScores['teamB'] ?? 0;
-      title = teamA > teamB ? '팀A 승리!' : '팀B 승리!';
+      final myTeam = state.myTeam;
+      final myScore = myTeam == 'A' ? teamA : teamB;
+      final enemyScore = myTeam == 'A' ? teamB : teamA;
+      title = myScore > enemyScore ? '우리 팀 승리!' : (myScore < enemyScore ? '상대 팀 승리!' : '무승부!');
     }
 
     // C8: Only request profile once to prevent rebuild loop
@@ -4143,14 +4158,25 @@ class _GameScreenState extends State<GameScreen> {
             ),
           ),
           const SizedBox(height: 12),
-          if (state.lastRoundScores.isNotEmpty)
-            Text(
-              '이번 라운드: 팀A ${state.lastRoundScores['teamA']} | 팀B ${state.lastRoundScores['teamB']}',
+          if (state.lastRoundScores.isNotEmpty) ...[
+            Text.rich(
+              TextSpan(children: [
+                const TextSpan(text: '이번 라운드: '),
+                TextSpan(text: '${state.myTeam == 'A' ? state.lastRoundScores['teamA'] : state.lastRoundScores['teamB']}', style: const TextStyle(color: Color(0xFF4A90D9), fontWeight: FontWeight.bold)),
+                const TextSpan(text: ' : '),
+                TextSpan(text: '${state.myTeam == 'A' ? state.lastRoundScores['teamB'] : state.lastRoundScores['teamA']}', style: const TextStyle(color: Color(0xFFD24B4B), fontWeight: FontWeight.bold)),
+              ]),
               style: const TextStyle(fontSize: 14),
             ),
+          ],
           const SizedBox(height: 8),
-          Text(
-            '총점: 팀A ${state.totalScores['teamA']} | 팀B ${state.totalScores['teamB']}',
+          Text.rich(
+            TextSpan(children: [
+              const TextSpan(text: '총점: '),
+              TextSpan(text: '${state.myTeam == 'A' ? state.totalScores['teamA'] : state.totalScores['teamB']}', style: const TextStyle(color: Color(0xFF4A90D9), fontWeight: FontWeight.bold)),
+              const TextSpan(text: ' : '),
+              TextSpan(text: '${state.myTeam == 'A' ? state.totalScores['teamB'] : state.totalScores['teamA']}', style: const TextStyle(color: Color(0xFFD24B4B), fontWeight: FontWeight.bold)),
+            ]),
             style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
           ),
           if (isGameEnd && game.isRankedRoom) ...[
@@ -4509,6 +4535,7 @@ class _GameScreenState extends State<GameScreen> {
     bool connected = true,
     int timeoutCount = 0,
     String? teamLabel,
+    bool isMyTeam = false,
   }) {
     final maxLen = _maxNameLen;
     final displayName = name.length > maxLen ? '${name.substring(0, maxLen)}..' : name;
@@ -4561,12 +4588,12 @@ class _GameScreenState extends State<GameScreen> {
                     margin: EdgeInsets.only(right: 4 * s),
                     padding: EdgeInsets.symmetric(horizontal: 3 * s, vertical: 1),
                     decoration: BoxDecoration(
-                      color: teamLabel == 'A'
+                      color: isMyTeam
                           ? const Color(0xFFE3F0FF)
                           : const Color(0xFFFFE8EC),
                       borderRadius: BorderRadius.circular(6),
                       border: Border.all(
-                        color: teamLabel == 'A'
+                        color: isMyTeam
                             ? const Color(0xFF4A90D9)
                             : const Color(0xFFD24B4B),
                         width: 0.5,
@@ -4577,7 +4604,7 @@ class _GameScreenState extends State<GameScreen> {
                       style: TextStyle(
                         fontSize: 8 * s,
                         fontWeight: FontWeight.bold,
-                        color: teamLabel == 'A'
+                        color: isMyTeam
                             ? const Color(0xFF4A90D9)
                             : const Color(0xFFD24B4B),
                       ),

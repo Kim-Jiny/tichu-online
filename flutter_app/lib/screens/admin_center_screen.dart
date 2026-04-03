@@ -360,6 +360,10 @@ class _AdminCenterScreenState extends State<AdminCenterScreen> {
                   itemBuilder: (context, index) {
                     final item = game.adminUsers[index];
                     final online = item['isOnline'] == true;
+                    final platform = _platformLabel(item['device_platform']?.toString());
+                    final appVersion = item['app_version']?.toString().trim();
+                    final statusText = online ? '온라인' : '오프라인';
+                    final roomName = item['roomName']?.toString();
                     return Material(
                       color: Colors.white.withValues(alpha: 0.94),
                       borderRadius: BorderRadius.circular(18),
@@ -367,60 +371,64 @@ class _AdminCenterScreenState extends State<AdminCenterScreen> {
                         borderRadius: BorderRadius.circular(18),
                         onTap: () => _showUserDetail(item['nickname']?.toString() ?? ''),
                         child: Padding(
-                          padding: const EdgeInsets.all(14),
+                          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 11),
                           child: Row(
                             children: [
-                              CircleAvatar(
-                                backgroundColor: online
-                                    ? const Color(0xFFE8F5E9)
-                                    : const Color(0xFFF3E5F5),
-                                child: Icon(
-                                  online ? Icons.wifi : Icons.person_outline,
-                                  color: online ? const Color(0xFF43A047) : const Color(0xFF8A7A72),
-                                ),
-                              ),
-                              const SizedBox(width: 12),
                               Expanded(
                                 child: Column(
                                   crossAxisAlignment: CrossAxisAlignment.start,
+                                  mainAxisSize: MainAxisSize.min,
                                   children: [
-                                    Row(
+                                    Wrap(
+                                      spacing: 8,
+                                      runSpacing: 6,
+                                      crossAxisAlignment: WrapCrossAlignment.center,
                                       children: [
-                                        Expanded(
-                                          child: Text(
-                                            item['nickname']?.toString() ?? '-',
+                                        if (platform != null)
+                                          Text(
+                                            platform,
                                             style: const TextStyle(
-                                              fontSize: 15,
+                                              fontSize: 12,
                                               fontWeight: FontWeight.w800,
-                                              color: _inkColor,
+                                              color: Color(0xFF1565C0),
                                             ),
+                                          ),
+                                        Text(
+                                          item['nickname']?.toString() ?? '-',
+                                          style: const TextStyle(
+                                            fontSize: 15,
+                                            fontWeight: FontWeight.w800,
+                                            color: _inkColor,
                                           ),
                                         ),
                                         if (item['is_admin'] == true)
                                           const Padding(
-                                            padding: EdgeInsets.only(left: 8),
+                                            padding: EdgeInsets.only(left: 2),
                                             child: Icon(
                                               Icons.verified,
                                               color: Color(0xFF7E57C2),
                                               size: 18,
                                             ),
                                           ),
+                                        _buildStatusChip(
+                                          statusText,
+                                          _statusColor(online ? 'online' : 'offline'),
+                                        ),
                                       ],
                                     ),
-                                    const SizedBox(height: 6),
-                                    Text(
-                                      item['username']?.toString() ?? '-',
-                                      style: const TextStyle(
-                                        fontSize: 13,
-                                        color: _mutedColor,
-                                        fontWeight: FontWeight.w600,
+                                    if ((appVersion != null && appVersion.isNotEmpty) || (roomName != null && roomName.isNotEmpty))
+                                      Padding(
+                                        padding: const EdgeInsets.only(top: 4),
+                                        child: Text(
+                                          [
+                                            if (appVersion != null && appVersion.isNotEmpty) 'v$appVersion',
+                                            if (roomName != null && roomName.isNotEmpty) roomName,
+                                          ].join(' · '),
+                                          maxLines: 1,
+                                          overflow: TextOverflow.ellipsis,
+                                          style: const TextStyle(fontSize: 12, color: _mutedColor),
+                                        ),
                                       ),
-                                    ),
-                                    const SizedBox(height: 4),
-                                    Text(
-                                      '${item['onlineStatus'] ?? 'offline'}${item['roomName'] != null ? ' · ${item['roomName']}' : ''}',
-                                      style: const TextStyle(fontSize: 12, color: _mutedColor),
-                                    ),
                                   ],
                                 ),
                               ),
@@ -752,6 +760,17 @@ class _AdminCenterScreenState extends State<AdminCenterScreen> {
         ),
       ),
     );
+  }
+
+  String? _platformLabel(String? raw) {
+    switch (raw?.toLowerCase()) {
+      case 'ios':
+        return 'iOS';
+      case 'android':
+        return 'AOS';
+      default:
+        return null;
+    }
   }
 
   Color _statusColor(String? status) {

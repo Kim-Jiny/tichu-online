@@ -382,26 +382,47 @@ async function initDatabase() {
       INSERT INTO tc_shop_items
         (item_key, name, category, price, is_season, is_permanent, duration_days, is_purchasable, effect_type, effect_value, metadata)
       VALUES
-        ('banner_pastel', '파스텔 배너', 'banner', 300, FALSE, TRUE, NULL, TRUE, NULL, NULL, '{}'::jsonb),
-        ('banner_blossom', '블라썸 배너', 'banner', 280, FALSE, TRUE, NULL, TRUE, NULL, NULL, '{}'::jsonb),
-        ('banner_mint', '민트 배너', 'banner', 260, FALSE, TRUE, NULL, TRUE, NULL, NULL, '{}'::jsonb),
-        ('banner_sunset_7d', '노을 배너(7일)', 'banner', 120, FALSE, FALSE, 7, TRUE, NULL, NULL, '{}'::jsonb),
-        ('title_sweet', '달콤한 플레이어', 'title', 200, FALSE, TRUE, NULL, TRUE, NULL, NULL, '{}'::jsonb),
-        ('title_steady', '꾸준한 승부사', 'title', 240, FALSE, TRUE, NULL, TRUE, NULL, NULL, '{}'::jsonb),
-        ('title_flash_30d', '스피드 러너(30일)', 'title', 180, FALSE, FALSE, 30, TRUE, NULL, NULL, '{}'::jsonb),
-        ('theme_cotton', '코튼 테마', 'theme', 500, FALSE, TRUE, NULL, TRUE, NULL, NULL, '{"includesCardSkin": true}'::jsonb),
-        ('theme_sky', '스카이 테마', 'theme', 550, FALSE, TRUE, NULL, TRUE, NULL, NULL, '{"includesCardSkin": true}'::jsonb),
-        ('theme_mocha_30d', '모카 테마(30일)', 'theme', 300, FALSE, FALSE, 30, TRUE, NULL, NULL, '{"includesCardSkin": true}'::jsonb),
-        ('theme_lavender', '라벤더 테마', 'theme', 500, FALSE, TRUE, NULL, TRUE, NULL, NULL, '{"includesCardSkin": true}'::jsonb),
-        ('theme_cherry', '체리블라썸 테마', 'theme', 550, FALSE, TRUE, NULL, TRUE, NULL, NULL, '{"includesCardSkin": true}'::jsonb),
-        ('theme_midnight', '미드나잇 테마', 'theme', 600, FALSE, TRUE, NULL, TRUE, NULL, NULL, '{"includesCardSkin": true}'::jsonb),
-        ('theme_sunset', '선셋 테마', 'theme', 500, FALSE, TRUE, NULL, TRUE, NULL, NULL, '{"includesCardSkin": true}'::jsonb),
-        ('theme_forest', '포레스트 테마', 'theme', 520, FALSE, TRUE, NULL, TRUE, NULL, NULL, '{"includesCardSkin": true}'::jsonb),
-        ('theme_rose', '로즈골드 테마', 'theme', 550, FALSE, TRUE, NULL, TRUE, NULL, NULL, '{"includesCardSkin": true}'::jsonb),
-        ('theme_ocean', '오션 테마', 'theme', 500, FALSE, TRUE, NULL, TRUE, NULL, NULL, '{"includesCardSkin": true}'::jsonb),
-        ('theme_aurora', '오로라 테마', 'theme', 600, FALSE, TRUE, NULL, TRUE, NULL, NULL, '{"includesCardSkin": true}'::jsonb),
-        ('theme_mintchoco_30d', '민트초코 테마(30일)', 'theme', 300, FALSE, FALSE, 30, TRUE, NULL, NULL, '{"includesCardSkin": true}'::jsonb),
-        ('theme_peach_30d', '피치 테마(30일)', 'theme', 280, FALSE, FALSE, 30, TRUE, NULL, NULL, '{"includesCardSkin": true}'::jsonb),
+        ('banner_pastel', '파스텔 배너', 'banner', 300, FALSE, FALSE, 30, TRUE, NULL, NULL, '{}'::jsonb),
+        ('banner_blossom', '블라썸 배너', 'banner', 280, FALSE, FALSE, 30, TRUE, NULL, NULL, '{}'::jsonb),
+        ('banner_mint', '민트 배너', 'banner', 260, FALSE, FALSE, 30, TRUE, NULL, NULL, '{}'::jsonb),
+        ('banner_sunset_7d', '노을 배너', 'banner', 120, FALSE, FALSE, 30, TRUE, NULL, NULL, '{}'::jsonb),
+        ('title_sweet', '존맛탱', 'title', 200, FALSE, FALSE, 10, TRUE, NULL, NULL, '{}'::jsonb),
+        ('title_steady', '찐고수', 'title', 240, FALSE, FALSE, 10, TRUE, NULL, NULL, '{}'::jsonb),
+        ('title_flash_30d', '광속러', 'title', 180, FALSE, FALSE, 10, TRUE, NULL, NULL, '{}'::jsonb),
+        ('title_dragon', '갓벽한', 'title', 300, FALSE, FALSE, 10, TRUE, NULL, NULL, '{}'::jsonb),
+        ('title_phoenix', '불죽러', 'title', 300, FALSE, FALSE, 10, TRUE, NULL, NULL, '{}'::jsonb),
+        ('title_pirate', '야르', 'title', 280, FALSE, FALSE, 10, TRUE, NULL, NULL, '{}'::jsonb),
+        ('title_tactician', '뇌섹러', 'title', 320, FALSE, FALSE, 10, TRUE, NULL, NULL, '{}'::jsonb),
+        ('title_lucky', '럭키비키', 'title', 200, FALSE, FALSE, 10, TRUE, NULL, NULL, '{}'::jsonb),
+        ('title_bluffer', '쿨쿨잠', 'title', 260, FALSE, FALSE, 10, TRUE, NULL, NULL, '{}'::jsonb),
+        ('title_ace', '존잘러', 'title', 280, FALSE, FALSE, 10, TRUE, NULL, NULL, '{}'::jsonb),
+        ('title_king', '킹왕짱', 'title', 350, FALSE, FALSE, 10, TRUE, NULL, NULL, '{}'::jsonb),
+        ('title_rookie', '뉴비임', 'title', 150, FALSE, FALSE, 10, TRUE, NULL, NULL, '{}'::jsonb),
+        ('title_veteran', '만렙러', 'title', 300, FALSE, FALSE, 10, TRUE, NULL, NULL, '{}'::jsonb),
+        ('title_sensitive', '예민해', 'title', 280, FALSE, FALSE, 10, TRUE, NULL, NULL, '{}'::jsonb),
+        ('title_shadow', '숨쉬듯이', 'title', 260, FALSE, FALSE, 10, TRUE, NULL, NULL, '{}'::jsonb),
+        ('title_flame', '존버왕', 'title', 240, FALSE, FALSE, 10, TRUE, NULL, NULL, '{}'::jsonb),
+        ('title_ice', '갓생러', 'title', 240, FALSE, FALSE, 10, TRUE, NULL, NULL, '{}'::jsonb),
+        ('title_crown', '레게노', 'title', 400, FALSE, FALSE, 10, TRUE, NULL, NULL, '{}'::jsonb),
+        ('title_diamond', '개꿀', 'title', 350, FALSE, FALSE, 10, TRUE, NULL, NULL, '{}'::jsonb),
+        ('title_ghost', '투명드래곤', 'title', 220, FALSE, FALSE, 10, TRUE, NULL, NULL, '{}'::jsonb),
+        ('title_thunder', '겜잘알', 'title', 180, FALSE, FALSE, 10, TRUE, NULL, NULL, '{}'::jsonb),
+        ('title_topcard', '그게탑패', 'title', 280, FALSE, FALSE, 10, TRUE, NULL, NULL, '{}'::jsonb),
+        ('title_legend', '찐레전드', 'title', 500, FALSE, FALSE, 10, TRUE, NULL, NULL, '{}'::jsonb),
+        ('title_boomer', '꼰대', 'title', 260, FALSE, FALSE, 10, TRUE, NULL, NULL, '{}'::jsonb),
+        ('theme_cotton', '코튼 테마', 'theme', 500, FALSE, FALSE, 30, TRUE, NULL, NULL, '{"includesCardSkin": true}'::jsonb),
+        ('theme_sky', '스카이 테마', 'theme', 550, FALSE, FALSE, 30, TRUE, NULL, NULL, '{"includesCardSkin": true}'::jsonb),
+        ('theme_mocha_30d', '모카 테마', 'theme', 300, FALSE, FALSE, 30, TRUE, NULL, NULL, '{"includesCardSkin": true}'::jsonb),
+        ('theme_lavender', '라벤더 테마', 'theme', 500, FALSE, FALSE, 30, TRUE, NULL, NULL, '{"includesCardSkin": true}'::jsonb),
+        ('theme_cherry', '체리블라썸 테마', 'theme', 550, FALSE, FALSE, 30, TRUE, NULL, NULL, '{"includesCardSkin": true}'::jsonb),
+        ('theme_midnight', '미드나잇 테마', 'theme', 600, FALSE, FALSE, 30, TRUE, NULL, NULL, '{"includesCardSkin": true}'::jsonb),
+        ('theme_sunset', '선셋 테마', 'theme', 500, FALSE, FALSE, 30, TRUE, NULL, NULL, '{"includesCardSkin": true}'::jsonb),
+        ('theme_forest', '포레스트 테마', 'theme', 520, FALSE, FALSE, 30, TRUE, NULL, NULL, '{"includesCardSkin": true}'::jsonb),
+        ('theme_rose', '로즈골드 테마', 'theme', 550, FALSE, FALSE, 30, TRUE, NULL, NULL, '{"includesCardSkin": true}'::jsonb),
+        ('theme_ocean', '오션 테마', 'theme', 500, FALSE, FALSE, 30, TRUE, NULL, NULL, '{"includesCardSkin": true}'::jsonb),
+        ('theme_aurora', '오로라 테마', 'theme', 600, FALSE, FALSE, 30, TRUE, NULL, NULL, '{"includesCardSkin": true}'::jsonb),
+        ('theme_mintchoco_30d', '민트초코 테마', 'theme', 300, FALSE, FALSE, 30, TRUE, NULL, NULL, '{"includesCardSkin": true}'::jsonb),
+        ('theme_peach_30d', '피치 테마', 'theme', 280, FALSE, FALSE, 30, TRUE, NULL, NULL, '{"includesCardSkin": true}'::jsonb),
         ('leave_reduce_1', '탈주 카운트 -1', 'utility', 150, FALSE, TRUE, NULL, TRUE, 'leave_count_reduce', 1, '{}'::jsonb),
         ('leave_reduce_3', '탈주 카운트 -3', 'utility', 400, FALSE, TRUE, NULL, TRUE, 'leave_count_reduce', 3, '{}'::jsonb),
         ('nickname_change', '닉네임 변경권', 'utility', 500, FALSE, TRUE, NULL, TRUE, 'nickname_change', NULL, '{}'::jsonb),
@@ -411,7 +432,11 @@ async function initDatabase() {
         ('banner_season_gold', '시즌 골드 배너', 'banner', 0, TRUE, FALSE, 30, FALSE, NULL, NULL, '{}'::jsonb),
         ('banner_season_silver', '시즌 실버 배너', 'banner', 0, TRUE, FALSE, 30, FALSE, NULL, NULL, '{}'::jsonb),
         ('banner_season_bronze', '시즌 브론즈 배너', 'banner', 0, TRUE, FALSE, 30, FALSE, NULL, NULL, '{}'::jsonb)
-      ON CONFLICT (item_key) DO NOTHING
+      ON CONFLICT (item_key) DO UPDATE SET
+        name = EXCLUDED.name,
+        price = EXCLUDED.price,
+        is_permanent = EXCLUDED.is_permanent,
+        duration_days = EXCLUDED.duration_days
       `
     );
 
@@ -1140,9 +1165,11 @@ async function getUserProfile(nickname) {
               u.season_rating, u.season_games, u.season_wins, u.season_losses,
               u.exp_total, u.level, u.created_at,
               u.sk_total_games, u.sk_wins, u.sk_losses, u.sk_rating,
-              e.banner_key, e.theme_key, e.title_key
+              e.banner_key, e.theme_key, e.title_key,
+              si.name AS title_name
        FROM tc_users u
        LEFT JOIN tc_user_equips e ON e.nickname = u.nickname
+       LEFT JOIN tc_shop_items si ON si.item_key = e.title_key
        WHERE u.nickname = $1`,
       [nickname]
     );
@@ -1198,6 +1225,7 @@ async function getUserProfile(nickname) {
       bannerKey: user.banner_key,
       themeKey: user.theme_key,
       titleKey: user.title_key,
+      titleName: user.title_name || null,
       createdAt: user.created_at,
       hasTopCardCounter,
       skTotalGames: user.sk_total_games,
@@ -1218,20 +1246,22 @@ async function getUserProfile(nickname) {
 async function getRecentMatches(nickname, limit = 5) {
   const client = await pool.connect();
   try {
-    const result = await client.query(
-      `SELECT * FROM tc_match_history
+    // Tichu matches
+    const tichuResult = await client.query(
+      `SELECT *, 'tichu'::text as game_type FROM tc_match_history
        WHERE player_a1 = $1 OR player_a2 = $1 OR player_b1 = $1 OR player_b2 = $1
        ORDER BY created_at DESC
        LIMIT $2`,
       [nickname, limit]
     );
-    return result.rows.map(row => {
+    const tichuMatches = tichuResult.rows.map(row => {
       const isTeamA = row.player_a1 === nickname || row.player_a2 === nickname;
       const isDraw = row.winner_team === 'draw';
       const won = !isDraw && ((isTeamA && row.winner_team === 'A') || (!isTeamA && row.winner_team === 'B'));
       const deserterNickname = row.deserter_nickname || null;
       return {
         id: row.id,
+        gameType: 'tichu',
         won,
         isDraw,
         isDesertionLoss: deserterNickname === nickname,
@@ -1248,6 +1278,52 @@ async function getRecentMatches(nickname, limit = 5) {
         createdAt: row.created_at,
       };
     });
+
+    // Skull King matches
+    const skResult = await client.query(
+      `SELECT h.*, p.score as my_score, p.rank as my_rank, p.is_winner as my_winner
+       FROM tc_sk_match_history h
+       JOIN tc_sk_match_players p ON p.match_id = h.id AND p.nickname = $1
+       ORDER BY h.created_at DESC
+       LIMIT $2`,
+      [nickname, limit]
+    );
+    const skMatches = [];
+    for (const row of skResult.rows) {
+      const playersRes = await client.query(
+        `SELECT nickname, score, rank, is_winner, is_bot FROM tc_sk_match_players WHERE match_id = $1 ORDER BY rank`,
+        [row.id]
+      );
+      const deserterNickname = row.deserter_nickname || null;
+      const isDesertionLoss = deserterNickname === nickname;
+      const isDraw = deserterNickname != null && deserterNickname !== nickname;
+      skMatches.push({
+        id: row.id,
+        gameType: 'skull_king',
+        won: isDraw ? false : row.my_winner,
+        isDraw,
+        isDesertionLoss,
+        deserterNickname,
+        myScore: row.my_score,
+        myRank: row.my_rank,
+        playerCount: row.player_count,
+        isRanked: row.is_ranked,
+        endReason: row.end_reason || 'normal',
+        players: playersRes.rows.map(p => ({
+          nickname: p.nickname,
+          score: p.score,
+          rank: p.rank,
+          isWinner: p.is_winner,
+          isBot: p.is_bot,
+        })),
+        createdAt: row.created_at,
+      });
+    }
+
+    // Merge and sort by date
+    const all = [...tichuMatches, ...skMatches];
+    all.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+    return all.slice(0, limit);
   } catch (err) {
     console.error('Get recent matches error:', err);
     return [];
@@ -1402,6 +1478,74 @@ async function getGoldHistory(nickname, limit = 30) {
 
 async function getAdminGoldHistory(nickname, limit = 50) {
   return getGoldHistory(nickname, limit);
+}
+
+async function getAdminPurchaseHistory(nickname, limit = 30) {
+  const client = await pool.connect();
+  try {
+    const result = await client.query(
+      `
+      SELECT
+        ui.item_key,
+        ui.acquired_at,
+        ui.expires_at,
+        ui.is_active,
+        ui.source,
+        si.name,
+        si.category,
+        si.price,
+        si.is_permanent,
+        si.duration_days,
+        si.is_season
+      FROM tc_user_items ui
+      JOIN tc_shop_items si ON si.item_key = ui.item_key
+      WHERE ui.nickname = $1
+        AND ui.source = 'shop'
+      ORDER BY ui.acquired_at DESC
+      LIMIT $2
+      `,
+      [nickname, limit]
+    );
+
+    const rows = result.rows;
+    const summary = rows.reduce((acc, row) => {
+      acc.totalSpent += parseInt(row.price, 10) || 0;
+      acc.totalPurchases += 1;
+      if (row.is_permanent) acc.permanentCount += 1;
+      if (!row.is_permanent) acc.temporaryCount += 1;
+      if (row.is_active) acc.activeCount += 1;
+      return acc;
+    }, {
+      totalSpent: 0,
+      totalPurchases: 0,
+      permanentCount: 0,
+      temporaryCount: 0,
+      activeCount: 0,
+    });
+
+    return {
+      success: true,
+      summary,
+      purchases: rows.map((row) => ({
+        itemKey: row.item_key,
+        acquiredAt: row.acquired_at,
+        expiresAt: row.expires_at,
+        isActive: row.is_active,
+        source: row.source,
+        name: row.name,
+        category: row.category,
+        price: parseInt(row.price, 10) || 0,
+        isPermanent: row.is_permanent,
+        durationDays: row.duration_days,
+        isSeason: row.is_season,
+      })),
+    };
+  } catch (err) {
+    console.error('Get admin purchase history error:', err);
+    return { success: false, message: '구매 내역을 불러오지 못했습니다', summary: null, purchases: [] };
+  } finally {
+    client.release();
+  }
 }
 
 // Ad reward claim (max 5 per day, 50 gold each)
@@ -1621,13 +1765,14 @@ async function equipItem(nickname, itemKey) {
   try {
     await cleanupExpiredItems(client, nickname);
     const itemRes = await client.query(
-      `SELECT category FROM tc_shop_items WHERE item_key = $1`,
+      `SELECT category, name FROM tc_shop_items WHERE item_key = $1`,
       [itemKey]
     );
     if (itemRes.rows.length === 0) {
       return { success: false, message: '아이템을 찾을 수 없습니다' };
     }
     const category = itemRes.rows[0].category;
+    const itemName = itemRes.rows[0].name;
 
     const owned = await client.query(
       `SELECT 1 FROM tc_user_items
@@ -1674,7 +1819,7 @@ async function equipItem(nickname, itemKey) {
       [nickname, itemKey]
     );
 
-    return { success: true, category };
+    return { success: true, category, itemName };
   } catch (err) {
     console.error('Equip item error:', err);
     return { success: false, message: '아이템 장착 중 오류가 발생했습니다' };
@@ -2514,7 +2659,7 @@ async function getUsers(search = '', page = 1, limit = 20, options = {}) {
     const total = parseInt(countResult.rows[0].count);
 
     const dataParams = [...countParams, limit, offset];
-    const dataQuery = `SELECT id, username, nickname, total_games, wins, losses, rating, gold, level, leave_count, season_rating, created_at, last_login, device_platform, is_admin, is_deleted
+    const dataQuery = `SELECT id, username, nickname, total_games, wins, losses, rating, gold, level, leave_count, season_rating, created_at, last_login, device_platform, app_version, is_admin, is_deleted
                    FROM tc_users ${whereClause}
                    ORDER BY ${orderBy} LIMIT $${paramIdx} OFFSET $${paramIdx + 1}`;
     const result = await client.query(dataQuery, dataParams);
@@ -2577,12 +2722,23 @@ async function getDashboardStats() {
     const totalUsers = await client.query('SELECT COUNT(*) FROM tc_users WHERE is_deleted IS NOT TRUE');
     const pendingInquiries = await client.query(`SELECT COUNT(*) FROM tc_inquiries WHERE status = 'pending'`);
     const pendingReports = await client.query(`SELECT COUNT(*) FROM tc_reports WHERE status = 'pending'`);
-    const todayGames = await client.query(
-      `SELECT COUNT(*) FROM tc_match_history WHERE created_at >= CURRENT_DATE`
-    );
-    const recentMatches = await client.query(
-      'SELECT * FROM tc_match_history ORDER BY created_at DESC LIMIT 10'
-    );
+    const todayGames = await client.query(`
+      SELECT
+        (SELECT COUNT(*) FROM tc_match_history WHERE created_at >= CURRENT_DATE) as tichu,
+        (SELECT COUNT(*) FROM tc_sk_match_history WHERE created_at >= CURRENT_DATE) as sk
+    `);
+    const recentMatches = await client.query(`
+      (SELECT id, 'tichu'::text as game_type, winner_team, team_a_score, team_b_score,
+        player_a1, player_a2, player_b1, player_b2, is_ranked, end_reason, deserter_nickname, created_at
+       FROM tc_match_history ORDER BY created_at DESC LIMIT 10)
+      UNION ALL
+      (SELECT h.id, 'skull_king'::text as game_type, NULL as winner_team, NULL::int as team_a_score, NULL::int as team_b_score,
+        (SELECT string_agg(p.nickname || '(' || p.score || '점)', ', ' ORDER BY p.rank) FROM tc_sk_match_players p WHERE p.match_id = h.id) as player_a1,
+        h.player_count::text as player_a2, NULL as player_b1, NULL as player_b2,
+        h.is_ranked, h.end_reason, h.deserter_nickname, h.created_at
+       FROM tc_sk_match_history h ORDER BY h.created_at DESC LIMIT 10)
+      ORDER BY created_at DESC LIMIT 10
+    `);
 
     // New users today
     const newUsersToday = await client.query(
@@ -2597,20 +2753,31 @@ async function getDashboardStats() {
       `SELECT COUNT(*) FROM tc_users WHERE last_login >= NOW() - INTERVAL '7 days' AND is_deleted IS NOT TRUE`
     );
 
-    // Total matches + ranked matches
-    const totalMatches = await client.query('SELECT COUNT(*) FROM tc_match_history');
+    // Total matches + ranked matches (tichu + skull king)
+    const totalMatches = await client.query(
+      `SELECT (SELECT COUNT(*) FROM tc_match_history) + (SELECT COUNT(*) FROM tc_sk_match_history) as count`
+    );
     const rankedMatchesToday = await client.query(
-      `SELECT COUNT(*) FROM tc_match_history WHERE created_at >= CURRENT_DATE AND is_ranked = true`
+      `SELECT (SELECT COUNT(*) FROM tc_match_history WHERE created_at >= CURRENT_DATE AND is_ranked = true) + (SELECT COUNT(*) FROM tc_sk_match_history WHERE created_at >= CURRENT_DATE AND is_ranked = true) as count`
     );
 
-    // Games per day (last 7 days)
+    // Games per day (last 7 days) - tichu + skull king combined
     const dailyGames = await client.query(`
-      SELECT DATE(created_at) as day, COUNT(*) as cnt,
-             SUM(CASE WHEN is_ranked THEN 1 ELSE 0 END) as ranked_cnt
-      FROM tc_match_history
-      WHERE created_at >= CURRENT_DATE - INTERVAL '6 days'
-      GROUP BY DATE(created_at)
-      ORDER BY day
+      SELECT day, SUM(cnt) as cnt, SUM(ranked_cnt) as ranked_cnt, SUM(tichu_cnt) as tichu_cnt, SUM(sk_cnt) as sk_cnt FROM (
+        SELECT DATE(created_at) as day, COUNT(*) as cnt,
+               SUM(CASE WHEN is_ranked THEN 1 ELSE 0 END) as ranked_cnt,
+               COUNT(*) as tichu_cnt, 0::bigint as sk_cnt
+        FROM tc_match_history
+        WHERE created_at >= CURRENT_DATE - INTERVAL '6 days'
+        GROUP BY DATE(created_at)
+        UNION ALL
+        SELECT DATE(created_at) as day, COUNT(*) as cnt,
+               SUM(CASE WHEN is_ranked THEN 1 ELSE 0 END) as ranked_cnt,
+               0::bigint as tichu_cnt, COUNT(*) as sk_cnt
+        FROM tc_sk_match_history
+        WHERE created_at >= CURRENT_DATE - INTERVAL '6 days'
+        GROUP BY DATE(created_at)
+      ) combined GROUP BY day ORDER BY day
     `);
 
     // New users per day (last 7 days)
@@ -2677,7 +2844,9 @@ async function getDashboardStats() {
       totalUsers: parseInt(totalUsers.rows[0].count),
       pendingInquiries: parseInt(pendingInquiries.rows[0].count),
       pendingReports: parseInt(pendingReports.rows[0].count),
-      todayGames: parseInt(todayGames.rows[0].count),
+      todayGames: parseInt(todayGames.rows[0].tichu) + parseInt(todayGames.rows[0].sk),
+      todayTichuGames: parseInt(todayGames.rows[0].tichu),
+      todaySKGames: parseInt(todayGames.rows[0].sk),
       recentMatches: recentMatches.rows,
       newUsersToday: parseInt(newUsersToday.rows[0].count),
       activeUsers24h: parseInt(activeUsers24h.rows[0].count),
@@ -2697,7 +2866,7 @@ async function getDashboardStats() {
   } catch (err) {
     console.error('Get dashboard stats error:', err);
     return {
-      totalUsers: 0, pendingInquiries: 0, pendingReports: 0, todayGames: 0,
+      totalUsers: 0, pendingInquiries: 0, pendingReports: 0, todayGames: 0, todayTichuGames: 0, todaySKGames: 0,
       recentMatches: [], newUsersToday: 0, activeUsers24h: 0, activeUsers7d: 0,
       totalMatches: 0, rankedMatchesToday: 0, dailyGames: [], dailySignups: [],
       topPlayers: [], goldStats: {}, shopStats: {}, leaveStats: {}, reportStats30d: {},
@@ -2816,12 +2985,57 @@ async function getDetailedAdminStats(dateFrom, dateTo, bucket = 'day') {
       ORDER BY bucket_time ASC
     `, [from, to]);
 
+    const shopSalesSeries = await client.query(`
+      SELECT
+        DATE_TRUNC('${groupUnit}', ui.acquired_at) AS bucket_time,
+        COUNT(*) AS purchase_count,
+        COUNT(DISTINCT ui.nickname) AS buyer_count,
+        COALESCE(SUM(si.price), 0) AS gold_spent
+      FROM tc_user_items ui
+      LEFT JOIN tc_shop_items si ON si.item_key = ui.item_key
+      WHERE ui.source = 'shop'
+        AND ui.acquired_at >= $1 AND ui.acquired_at < $2
+      GROUP BY 1
+      ORDER BY 1 ASC
+    `, [from, to]);
+
+    const topShopItems = await client.query(`
+      SELECT
+        ui.item_key,
+        COALESCE(si.name, ui.item_key) AS item_name,
+        COALESCE(si.category, '-') AS category,
+        COUNT(*) AS purchase_count,
+        COUNT(DISTINCT ui.nickname) AS buyer_count,
+        COALESCE(SUM(si.price), 0) AS gold_spent,
+        MIN(ui.acquired_at) AS first_sold_at,
+        MAX(ui.acquired_at) AS last_sold_at
+      FROM tc_user_items ui
+      LEFT JOIN tc_shop_items si ON si.item_key = ui.item_key
+      WHERE ui.source = 'shop'
+        AND ui.acquired_at >= $1 AND ui.acquired_at < $2
+      GROUP BY ui.item_key, si.name, si.category
+      ORDER BY purchase_count DESC, gold_spent DESC, item_name ASC
+      LIMIT 15
+    `, [from, to]);
+
     const gameSummary = await client.query(`
       SELECT
         (SELECT COUNT(*) FROM tc_match_history WHERE created_at >= $1 AND created_at < $2) AS tichu_games,
         (SELECT COUNT(*) FROM tc_sk_match_history WHERE created_at >= $1 AND created_at < $2) AS skull_games,
         (SELECT COUNT(*) FROM tc_match_history WHERE created_at >= $1 AND created_at < $2 AND is_ranked = TRUE) +
         (SELECT COUNT(*) FROM tc_sk_match_history WHERE created_at >= $1 AND created_at < $2 AND is_ranked = TRUE) AS ranked_games
+    `, [from, to]);
+
+    const shopSummary = await client.query(`
+      SELECT
+        COUNT(*) AS total_purchases,
+        COUNT(DISTINCT ui.nickname) AS unique_buyers,
+        COALESCE(SUM(si.price), 0) AS total_gold_spent,
+        COUNT(DISTINCT ui.item_key) AS unique_items_sold
+      FROM tc_user_items ui
+      LEFT JOIN tc_shop_items si ON si.item_key = ui.item_key
+      WHERE ui.source = 'shop'
+        AND ui.acquired_at >= $1 AND ui.acquired_at < $2
     `, [from, to]);
 
     const goldSummary = await client.query(`
@@ -2888,6 +3102,7 @@ async function getDetailedAdminStats(dateFrom, dateTo, bucket = 'day') {
 
     const summaryRow = gameSummary.rows[0] || {};
     const goldRow = goldSummary.rows[0] || {};
+    const shopRow = shopSummary.rows[0] || {};
     return {
       success: true,
       summary: {
@@ -2898,9 +3113,15 @@ async function getDetailedAdminStats(dateFrom, dateTo, bucket = 'day') {
         goldEarned: parseInt(goldRow.earned || 0, 10),
         goldSpent: parseInt(goldRow.spent || 0, 10),
         goldNet: parseInt(goldRow.net || 0, 10),
+        shopPurchases: parseInt(shopRow.total_purchases || 0, 10),
+        shopBuyers: parseInt(shopRow.unique_buyers || 0, 10),
+        shopGoldSpent: parseInt(shopRow.total_gold_spent || 0, 10),
+        shopUniqueItems: parseInt(shopRow.unique_items_sold || 0, 10),
       },
       gameSeries: gameSeries.rows,
       goldSeries: goldSeries.rows,
+      shopSalesSeries: shopSalesSeries.rows,
+      topShopItems: topShopItems.rows,
       range: { from, to, bucket: groupUnit },
     };
   } catch (err) {
@@ -2911,6 +3132,8 @@ async function getDetailedAdminStats(dateFrom, dateTo, bucket = 'day') {
       summary: {},
       gameSeries: [],
       goldSeries: [],
+      shopSalesSeries: [],
+      topShopItems: [],
       range: { from, to, bucket: groupUnit },
     };
   } finally {
@@ -3860,6 +4083,7 @@ module.exports = {
   getWallet,
   getGoldHistory,
   getAdminGoldHistory,
+  getAdminPurchaseHistory,
   getShopItems,
   getUserItems,
   buyItem,

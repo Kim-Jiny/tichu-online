@@ -2805,6 +2805,7 @@ class _LobbyScreenState extends State<LobbyScreen> {
     showDialog(
       context: context,
       builder: (ctx) {
+        String profileGameTab = 'tichu';
         return StatefulBuilder(
           builder: (ctx, setDialogState) {
             return Consumer<GameService>(
@@ -2941,7 +2942,11 @@ class _LobbyScreenState extends State<LobbyScreen> {
                             maxHeight: 560,
                           ),
                           child: SingleChildScrollView(
-                            child: _buildProfileContent(profile, game),
+                            child: _buildProfileContent(
+                              profile, game,
+                              selectedTab: profileGameTab,
+                              onTabChanged: (tab) => setDialogState(() => profileGameTab = tab),
+                            ),
                           ),
                         ),
                   actions: [
@@ -2959,7 +2964,10 @@ class _LobbyScreenState extends State<LobbyScreen> {
     );
   }
 
-  Widget _buildProfileContent(Map<String, dynamic> data, GameService game) {
+  Widget _buildProfileContent(Map<String, dynamic> data, GameService game, {
+    required String selectedTab,
+    required ValueChanged<String> onTabChanged,
+  }) {
     final profile = data['profile'] as Map<String, dynamic>?;
     final nickname = data['nickname'] as String? ?? '';
 
@@ -2981,7 +2989,20 @@ class _LobbyScreenState extends State<LobbyScreen> {
     final leaveCount = profile['leaveCount'] ?? 0;
     final reportCount = profile['reportCount'] ?? 0;
     final bannerKey = profile['bannerKey']?.toString();
+    final skGames = profile['skTotalGames'] ?? 0;
+    final skWins = profile['skWins'] ?? 0;
+    final skLosses = profile['skLosses'] ?? 0;
+    final skWinRate = profile['skWinRate'] ?? 0;
+    final skSeasonRating = profile['skSeasonRating'] ?? 1000;
+    final skSeasonGames = profile['skSeasonGames'] ?? 0;
+    final skSeasonWins = profile['skSeasonWins'] ?? 0;
+    final skSeasonLosses = profile['skSeasonLosses'] ?? 0;
+    final skSeasonWinRate = profile['skSeasonWinRate'] ?? 0;
     final recentMatches = data['recentMatches'] as List<dynamic>? ?? [];
+    final filteredMatches = recentMatches.where((m) {
+      final gameType = m['gameType']?.toString() ?? 'tichu';
+      return gameType == selectedTab;
+    }).toList();
     final profileNickname = data['nickname']?.toString() ?? nickname;
     return Column(
       mainAxisSize: MainAxisSize.min,
@@ -2990,52 +3011,100 @@ class _LobbyScreenState extends State<LobbyScreen> {
         const SizedBox(height: 8),
         _buildMannerLeaveRow(reportCount: reportCount as int, leaveCount: leaveCount as int),
         const SizedBox(height: 10),
-        _buildProfileSectionCard(
-          title: '시즌 랭킹전',
-          accent: const Color(0xFF7A6A95),
-          background: const Color(0xFFF6F3FA),
-          icon: Icons.emoji_events,
-          iconColor: const Color(0xFFFFD54F),
-          mainText: '$seasonRating',
-          chips: [
-            _buildStatChip('전적', '$seasonGames전 $seasonWins승 $seasonLosses패'),
-            _buildStatChip('승률', '$seasonWinRate%'),
-          ],
+        // Game tab toggle
+        SizedBox(
+          width: double.infinity,
+          child: SegmentedButton<String>(
+            segments: const [
+              ButtonSegment(value: 'tichu', label: Text('티츄', style: TextStyle(fontSize: 13))),
+              ButtonSegment(value: 'skull_king', label: Text('스컬킹', style: TextStyle(fontSize: 13))),
+            ],
+            selected: {selectedTab},
+            onSelectionChanged: (s) => onTabChanged(s.first),
+            style: ButtonStyle(
+              tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+              visualDensity: VisualDensity.compact,
+              backgroundColor: WidgetStateProperty.resolveWith((states) {
+                if (states.contains(WidgetState.selected)) {
+                  return selectedTab == 'tichu'
+                      ? const Color(0xFF6C63FF)
+                      : const Color(0xFF2D2D3D);
+                }
+                return Colors.white;
+              }),
+              foregroundColor: WidgetStateProperty.resolveWith((states) {
+                if (states.contains(WidgetState.selected)) {
+                  return selectedTab == 'tichu'
+                      ? Colors.white
+                      : const Color(0xFFFFD54F);
+                }
+                return const Color(0xFF6A6A6A);
+              }),
+              shape: WidgetStateProperty.all(
+                RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              ),
+              side: WidgetStateProperty.all(
+                const BorderSide(color: Color(0xFFE0D8D4)),
+              ),
+            ),
+          ),
         ),
         const SizedBox(height: 10),
-        _buildProfileSectionCard(
-          title: '티츄 전적',
-          accent: const Color(0xFF5A4038),
-          background: const Color(0xFFF5F5F5),
-          icon: Icons.style,
-          iconColor: const Color(0xFFFFB74D),
-          mainText: '',
-          chips: [
-            _buildStatChip('전적', '$totalGames전 $wins승 $losses패'),
-            _buildStatChip('승률', '$winRate%'),
-          ],
-        ),
-        const SizedBox(height: 10),
-        Builder(builder: (_) {
-          final skGames = profile['skTotalGames'] ?? 0;
-          final skWins = profile['skWins'] ?? 0;
-          final skLosses = profile['skLosses'] ?? 0;
-          final skWinRate = profile['skWinRate'] ?? 0;
-          return _buildProfileSectionCard(
+        if (selectedTab == 'tichu') ...[
+          _buildProfileSectionCard(
+            title: '시즌 랭킹전',
+            accent: const Color(0xFF6C63FF),
+            background: const Color(0xFFF6F4FA),
+            icon: Icons.emoji_events,
+            iconColor: const Color(0xFFFFD54F),
+            mainText: '$seasonRating',
+            chips: [
+              _buildStatChip('전적', '$seasonGames전 $seasonWins승 $seasonLosses패'),
+              _buildStatChip('승률', '$seasonWinRate%'),
+            ],
+          ),
+          const SizedBox(height: 10),
+          _buildProfileSectionCard(
+            title: '티츄 전적',
+            accent: const Color(0xFF3A3058),
+            background: const Color(0xFFF6F4FA),
+            icon: Icons.style,
+            iconColor: const Color(0xFF6C63FF),
+            mainText: '',
+            chips: [
+              _buildStatChip('전적', '$totalGames전 $wins승 $losses패'),
+              _buildStatChip('승률', '$winRate%'),
+            ],
+          ),
+        ] else ...[
+          _buildProfileSectionCard(
+            title: '시즌 랭킹전',
+            accent: const Color(0xFF2D2D3D),
+            background: const Color(0xFFECEFF6),
+            icon: Icons.emoji_events,
+            iconColor: const Color(0xFFFFD54F),
+            mainText: '$skSeasonRating',
+            chips: [
+              _buildStatChip('전적', '$skSeasonGames전 $skSeasonWins승 $skSeasonLosses패'),
+              _buildStatChip('승률', '$skSeasonWinRate%'),
+            ],
+          ),
+          const SizedBox(height: 10),
+          _buildProfileSectionCard(
             title: '스컬킹 전적',
-            accent: const Color(0xFF3949AB),
-            background: const Color(0xFFE8EAF6),
+            accent: const Color(0xFF2D2D3D),
+            background: const Color(0xFFECEFF6),
             icon: Icons.anchor,
-            iconColor: const Color(0xFF3949AB),
+            iconColor: const Color(0xFF2D2D3D),
             mainText: '',
             chips: [
               _buildStatChip('전적', '$skGames전 $skWins승 $skLosses패'),
               _buildStatChip('승률', '$skWinRate%'),
             ],
-          );
-        }),
+          ),
+        ],
         const SizedBox(height: 12),
-        _buildRecentMatches(recentMatches, profileNickname),
+        _buildRecentMatches(filteredMatches, profileNickname),
       ],
     );
   }
@@ -3722,7 +3791,7 @@ class _LobbyScreenState extends State<LobbyScreen> {
             Expanded(
               child: Column(
                 mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: player != null ? CrossAxisAlignment.start : CrossAxisAlignment.center,
+                crossAxisAlignment: CrossAxisAlignment.center,
                 children: [
                   if (player != null && player.titleName != null)
                     Padding(

@@ -512,6 +512,12 @@ async function initDatabase() {
     await client.query(`ALTER TABLE tc_users ADD COLUMN IF NOT EXISTS sk_losses INT DEFAULT 0`);
     await client.query(`ALTER TABLE tc_users ADD COLUMN IF NOT EXISTS sk_rating INT DEFAULT 1000`);
 
+    // SK season stats columns
+    await client.query(`ALTER TABLE tc_users ADD COLUMN IF NOT EXISTS sk_season_rating INT DEFAULT 1000`);
+    await client.query(`ALTER TABLE tc_users ADD COLUMN IF NOT EXISTS sk_season_games INT DEFAULT 0`);
+    await client.query(`ALTER TABLE tc_users ADD COLUMN IF NOT EXISTS sk_season_wins INT DEFAULT 0`);
+    await client.query(`ALTER TABLE tc_users ADD COLUMN IF NOT EXISTS sk_season_losses INT DEFAULT 0`);
+
     console.log('Database initialized (tc_ tables)');
   } catch (err) {
     console.error('Database initialization error:', err);
@@ -1165,6 +1171,7 @@ async function getUserProfile(nickname) {
               u.season_rating, u.season_games, u.season_wins, u.season_losses,
               u.exp_total, u.level, u.created_at,
               u.sk_total_games, u.sk_wins, u.sk_losses, u.sk_rating,
+              u.sk_season_rating, u.sk_season_games, u.sk_season_wins, u.sk_season_losses,
               e.banner_key, e.theme_key, e.title_key,
               si.name AS title_name
        FROM tc_users u
@@ -1204,6 +1211,9 @@ async function getUserProfile(nickname) {
     const skWinRate = user.sk_total_games > 0
       ? Math.round((user.sk_wins / user.sk_total_games) * 100)
       : 0;
+    const skSeasonWinRate = user.sk_season_games > 0
+      ? Math.round((user.sk_season_wins / user.sk_season_games) * 100)
+      : 0;
 
     return {
       nickname: user.nickname,
@@ -1233,6 +1243,11 @@ async function getUserProfile(nickname) {
       skLosses: user.sk_losses,
       skRating: user.sk_rating,
       skWinRate,
+      skSeasonRating: user.sk_season_rating,
+      skSeasonGames: user.sk_season_games,
+      skSeasonWins: user.sk_season_wins,
+      skSeasonLosses: user.sk_season_losses,
+      skSeasonWinRate,
     };
   } catch (err) {
     console.error('Get user profile error:', err);
@@ -1875,7 +1890,8 @@ async function useItem(nickname, itemKey) {
       );
     } else if (effectType === 'season_stats_reset') {
       await client.query(
-        `UPDATE tc_users SET season_games = 0, season_wins = 0, season_losses = 0
+        `UPDATE tc_users SET season_games = 0, season_wins = 0, season_losses = 0,
+           sk_season_games = 0, sk_season_wins = 0, sk_season_losses = 0
          WHERE nickname = $1`,
         [nickname]
       );
@@ -2319,7 +2335,11 @@ async function resetSeasonStats() {
        SET season_rating = 1000,
            season_games = 0,
            season_wins = 0,
-           season_losses = 0`
+           season_losses = 0,
+           sk_season_rating = 1000,
+           sk_season_games = 0,
+           sk_season_wins = 0,
+           sk_season_losses = 0`
     );
     return { success: true };
   } catch (err) {
@@ -3927,11 +3947,15 @@ async function updateSKUserStats(nickname, won, isRanked) {
         sk_wins = sk_wins + CASE WHEN $2 THEN 1 ELSE 0 END,
         sk_losses = sk_losses + CASE WHEN $2 THEN 0 ELSE 1 END,
         sk_rating = GREATEST(0, sk_rating + $3),
+        sk_season_games = sk_season_games + CASE WHEN $6 THEN 1 ELSE 0 END,
+        sk_season_wins = sk_season_wins + CASE WHEN $6 AND $2 THEN 1 ELSE 0 END,
+        sk_season_losses = sk_season_losses + CASE WHEN $6 AND NOT $2 THEN 1 ELSE 0 END,
+        sk_season_rating = GREATEST(0, sk_season_rating + $3),
         gold = gold + $4,
         exp_total = exp_total + $5,
         level = GREATEST(1, ((exp_total + $5) / 100) + 1)
        WHERE nickname = $1`,
-      [nickname, won, isRanked ? ratingChange : 0, goldReward, expGain]
+      [nickname, won, isRanked ? ratingChange : 0, goldReward, expGain, isRanked]
     );
     return { success: true };
   } catch (err) {
@@ -3991,10 +4015,11 @@ async function saveSKMatchResultWithStats(data) {
         await client.query(
           `UPDATE tc_users SET
             sk_total_games = sk_total_games + 1,
+            sk_season_games = sk_season_games + CASE WHEN $3 THEN 1 ELSE 0 END,
             exp_total = exp_total + $2,
             level = GREATEST(1, ((exp_total + $2) / 100) + 1)
            WHERE nickname = $1`,
-          [p.nickname, expGain]
+          [p.nickname, expGain, data.isRanked]
         );
       } else {
         const myRating = skRatingMap[p.nickname] || 1000;
@@ -4013,11 +4038,15 @@ async function saveSKMatchResultWithStats(data) {
             sk_wins = sk_wins + CASE WHEN $2 THEN 1 ELSE 0 END,
             sk_losses = sk_losses + CASE WHEN $2 THEN 0 ELSE 1 END,
             sk_rating = GREATEST(0, sk_rating + $3),
+            sk_season_games = sk_season_games + CASE WHEN $6 THEN 1 ELSE 0 END,
+            sk_season_wins = sk_season_wins + CASE WHEN $6 AND $2 THEN 1 ELSE 0 END,
+            sk_season_losses = sk_season_losses + CASE WHEN $6 AND NOT $2 THEN 1 ELSE 0 END,
+            sk_season_rating = GREATEST(0, sk_season_rating + $3),
             gold = gold + $4,
             exp_total = exp_total + $5,
             level = GREATEST(1, ((exp_total + $5) / 100) + 1)
            WHERE nickname = $1`,
-          [p.nickname, won, data.isRanked ? ratingChange : 0, goldReward, expGain]
+          [p.nickname, won, data.isRanked ? ratingChange : 0, goldReward, expGain, data.isRanked]
         );
       }
     }

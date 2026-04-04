@@ -486,11 +486,17 @@ class GameRoom {
       if (this.players.some((p) => p === null)) return false;
     }
     const playerIds = this.players.map((p) => p.id);
-    if (this.isRanked) {
-      // Shuffle seating order for ranked rooms
+    if (this.gameType === 'skull_king' || this.isRanked) {
+      // SK or ranked: fully shuffle all seats
       for (let i = playerIds.length - 1; i > 0; i--) {
         const j = Math.floor(Math.random() * (i + 1));
         [playerIds[i], playerIds[j]] = [playerIds[j], playerIds[i]];
+      }
+    } else {
+      // Tichu normal: keep teams (0,2 vs 1,3) but randomly swap which team sits where
+      if (Math.random() < 0.5) {
+        [playerIds[0], playerIds[1]] = [playerIds[1], playerIds[0]];
+        [playerIds[2], playerIds[3]] = [playerIds[3], playerIds[2]];
       }
     }
     const playerNames = {};

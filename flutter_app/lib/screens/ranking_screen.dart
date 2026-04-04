@@ -61,8 +61,7 @@ class _RankingScreenState extends State<RankingScreen> {
                   const SizedBox(height: 6),
                   _buildGameTypeToggle(game),
                   const SizedBox(height: 6),
-                  if (_rankingGameType == 'tichu')
-                    _buildSeasonSelector(game),
+                  _buildSeasonSelector(game),
                   const SizedBox(height: 6),
                   Expanded(
                     child: _buildBody(game),
@@ -192,11 +191,19 @@ class _RankingScreenState extends State<RankingScreen> {
                 onChanged: (value) {
                   if (value == null) return;
                   setState(() => _selectedSeasonId = value);
-                  if (seasons.firstWhere((s) => s['id'] == value)['status'] ==
-                      'active') {
-                    game.requestRankings();
+                  final isActive = seasons.firstWhere((s) => s['id'] == value)['status'] == 'active';
+                  if (_rankingGameType == 'skull_king') {
+                    if (isActive) {
+                      game.requestSKRankings();
+                    } else {
+                      game.requestSKRankingsForSeason(value);
+                    }
                   } else {
-                    game.requestRankingsForSeason(value);
+                    if (isActive) {
+                      game.requestRankings();
+                    } else {
+                      game.requestRankingsForSeason(value);
+                    }
                   }
                 },
               ),
@@ -322,7 +329,7 @@ class _RankingScreenState extends State<RankingScreen> {
           Column(
             crossAxisAlignment: CrossAxisAlignment.end,
             children: [
-              Text(_rankingGameType == 'skull_king' ? '레이팅' : '시즌점수', style: const TextStyle(fontSize: 11, color: Color(0xFF9A8E8A))),
+              Text('시즌점수', style: const TextStyle(fontSize: 11, color: Color(0xFF9A8E8A))),
               Text(
                 '$rating',
                 style: const TextStyle(
@@ -430,7 +437,7 @@ class _RankingScreenState extends State<RankingScreen> {
               crossAxisAlignment: CrossAxisAlignment.end,
               children: [
                 Text(
-                  _rankingGameType == 'skull_king' ? '레이팅' : '시즌점수',
+                  '시즌점수',
                   style: const TextStyle(fontSize: 11, color: Color(0xFF9A8E8A)),
                 ),
                 Text(
@@ -589,6 +596,11 @@ class _ProfileContent extends StatelessWidget {
     final skLosses = profile['skLosses'] ?? 0;
     final skRating = profile['skRating'] ?? 1000;
     final skWinRate = profile['skWinRate'] ?? 0;
+    final skSeasonRating = profile['skSeasonRating'] ?? 1000;
+    final skSeasonGames = profile['skSeasonGames'] ?? 0;
+    final skSeasonWins = profile['skSeasonWins'] ?? 0;
+    final skSeasonLosses = profile['skSeasonLosses'] ?? 0;
+    final skSeasonWinRate = profile['skSeasonWinRate'] ?? 0;
     final level = profile['level'] ?? 1;
     final expTotal = profile['expTotal'] ?? 0;
     final gold = profile['gold'] ?? 0;
@@ -608,7 +620,7 @@ class _ProfileContent extends StatelessWidget {
         _ProfileMiniStatRow(gold: gold, leaveCount: leaveCount),
         const SizedBox(height: 10),
         _ProfileSectionCard(
-          title: '시즌 랭킹전',
+          title: '티츄 시즌 랭킹전',
           accent: const Color(0xFF7A6A95),
           background: const Color(0xFFF6F3FA),
           icon: Icons.emoji_events,
@@ -634,12 +646,25 @@ class _ProfileContent extends StatelessWidget {
         ),
         const SizedBox(height: 10),
         _ProfileSectionCard(
+          title: '스컬킹 시즌 랭킹전',
+          accent: const Color(0xFF2D2D3D),
+          background: const Color(0xFFECEFF6),
+          icon: Icons.emoji_events,
+          iconColor: const Color(0xFFFFD54F),
+          mainText: '$skSeasonRating',
+          chips: [
+            _ProfileStatChip('전적', '$skSeasonGames전 $skSeasonWins승 $skSeasonLosses패'),
+            _ProfileStatChip('승률', '$skSeasonWinRate%'),
+          ],
+        ),
+        const SizedBox(height: 10),
+        _ProfileSectionCard(
           title: '스컬킹 전적',
           accent: const Color(0xFF3F51B5),
           background: const Color(0xFFF0F0FA),
           icon: Icons.sailing,
           iconColor: const Color(0xFF5C6BC0),
-          mainText: '$skRating',
+          mainText: '',
           chips: [
             _ProfileStatChip('전적', '$skTotalGames전 $skWins승 $skLosses패'),
             _ProfileStatChip('승률', '$skWinRate%'),

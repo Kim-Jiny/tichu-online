@@ -1593,6 +1593,22 @@ class _SKGameScreenState extends State<SKGameScreen> {
                   ),
                   const SizedBox(width: 8),
                   Expanded(
+                    child: ElevatedButton(
+                      onPressed: () => game.respondCardViewRequest(spectatorId, true),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: const Color(0xFF6A9BD1),
+                        foregroundColor: Colors.white,
+                        padding: const EdgeInsets.symmetric(vertical: 10),
+                      ),
+                      child: const Text('허가'),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 8),
+              Row(
+                children: [
+                  Expanded(
                     child: OutlinedButton(
                       onPressed: game.rejectAllCardViewRequests,
                       style: OutlinedButton.styleFrom(
@@ -1605,14 +1621,17 @@ class _SKGameScreenState extends State<SKGameScreen> {
                   ),
                   const SizedBox(width: 8),
                   Expanded(
-                    child: ElevatedButton(
-                      onPressed: () => game.respondCardViewRequest(spectatorId, true),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: const Color(0xFF6A9BD1),
-                        foregroundColor: Colors.white,
+                    child: OutlinedButton(
+                      onPressed: () {
+                        game.respondCardViewRequest(spectatorId, true);
+                        game.setAutoAcceptCardView(true);
+                      },
+                      style: OutlinedButton.styleFrom(
+                        foregroundColor: const Color(0xFF4CAF50),
+                        side: const BorderSide(color: Color(0xFF4CAF50)),
                         padding: const EdgeInsets.symmetric(vertical: 10),
                       ),
-                      child: const Text('허가'),
+                      child: const Text('항상승인', style: TextStyle(fontSize: 13)),
                     ),
                   ),
                 ],

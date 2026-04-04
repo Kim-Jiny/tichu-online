@@ -2298,6 +2298,22 @@ class _GameScreenState extends State<GameScreen> {
                 ),
                 const SizedBox(width: 8),
                 Expanded(
+                  child: ElevatedButton(
+                    onPressed: () => game.respondCardViewRequest(spectatorId, true),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: const Color(0xFF6A9BD1),
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(vertical: 10),
+                    ),
+                    child: const Text('허가'),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 8),
+            Row(
+              children: [
+                Expanded(
                   child: OutlinedButton(
                     onPressed: () {
                       game.rejectAllCardViewRequests();
@@ -2312,14 +2328,17 @@ class _GameScreenState extends State<GameScreen> {
                 ),
                 const SizedBox(width: 8),
                 Expanded(
-                  child: ElevatedButton(
-                    onPressed: () => game.respondCardViewRequest(spectatorId, true),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: const Color(0xFF6A9BD1),
-                      foregroundColor: Colors.white,
+                  child: OutlinedButton(
+                    onPressed: () {
+                      game.respondCardViewRequest(spectatorId, true);
+                      game.setAutoAcceptCardView(true);
+                    },
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: const Color(0xFF4CAF50),
+                      side: const BorderSide(color: Color(0xFF4CAF50)),
                       padding: const EdgeInsets.symmetric(vertical: 10),
                     ),
-                    child: const Text('허가'),
+                    child: const Text('항상승인', style: TextStyle(fontSize: 13)),
                   ),
                 ),
               ],
@@ -2514,37 +2533,75 @@ class _GameScreenState extends State<GameScreen> {
           if (!game.isSpectator)
             StatefulBuilder(
               builder: (context, setDialogState) {
-                return GestureDetector(
-                  onTap: () {
-                    game.setAutoRejectCardView(!game.autoRejectCardView);
-                    setDialogState(() {});
-                  },
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                    decoration: BoxDecoration(
-                      color: game.autoRejectCardView ? const Color(0xFFFFEBEE) : const Color(0xFFF5F5F5),
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Icon(
-                          game.autoRejectCardView ? Icons.block : Icons.block_outlined,
-                          size: 16,
-                          color: game.autoRejectCardView ? const Color(0xFFE53935) : const Color(0xFF999999),
+                return Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    GestureDetector(
+                      onTap: () {
+                        game.setAutoAcceptCardView(!game.autoAcceptCardView);
+                        setDialogState(() {});
+                      },
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                        decoration: BoxDecoration(
+                          color: game.autoAcceptCardView ? const Color(0xFFE8F5E9) : const Color(0xFFF5F5F5),
+                          borderRadius: BorderRadius.circular(8),
                         ),
-                        const SizedBox(width: 4),
-                        Text(
-                          '패보기 항상거절',
-                          style: TextStyle(
-                            fontSize: 12,
-                            fontWeight: FontWeight.bold,
-                            color: game.autoRejectCardView ? const Color(0xFFE53935) : const Color(0xFF999999),
-                          ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(
+                              game.autoAcceptCardView ? Icons.check_circle : Icons.check_circle_outline,
+                              size: 16,
+                              color: game.autoAcceptCardView ? const Color(0xFF4CAF50) : const Color(0xFF999999),
+                            ),
+                            const SizedBox(width: 4),
+                            Text(
+                              '항상승인',
+                              style: TextStyle(
+                                fontSize: 12,
+                                fontWeight: FontWeight.bold,
+                                color: game.autoAcceptCardView ? const Color(0xFF4CAF50) : const Color(0xFF999999),
+                              ),
+                            ),
+                          ],
                         ),
-                      ],
+                      ),
                     ),
-                  ),
+                    const SizedBox(width: 6),
+                    GestureDetector(
+                      onTap: () {
+                        game.setAutoRejectCardView(!game.autoRejectCardView);
+                        setDialogState(() {});
+                      },
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                        decoration: BoxDecoration(
+                          color: game.autoRejectCardView ? const Color(0xFFFFEBEE) : const Color(0xFFF5F5F5),
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(
+                              game.autoRejectCardView ? Icons.block : Icons.block_outlined,
+                              size: 16,
+                              color: game.autoRejectCardView ? const Color(0xFFE53935) : const Color(0xFF999999),
+                            ),
+                            const SizedBox(width: 4),
+                            Text(
+                              '항상거절',
+                              style: TextStyle(
+                                fontSize: 12,
+                                fontWeight: FontWeight.bold,
+                                color: game.autoRejectCardView ? const Color(0xFFE53935) : const Color(0xFF999999),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ],
                 );
               },
             ),

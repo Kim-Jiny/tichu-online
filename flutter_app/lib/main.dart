@@ -7,6 +7,9 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:google_mobile_ads/google_mobile_ads.dart';
 import 'package:app_tracking_transparency/app_tracking_transparency.dart';
 import 'package:flutter/services.dart';
+import 'package:package_info_plus/package_info_plus.dart';
+import 'package:url_launcher/url_launcher.dart';
+import 'dart:io' show Platform;
 import 'app_navigation.dart';
 import 'firebase_options.dart';
 import 'services/network_service.dart';
@@ -238,6 +241,8 @@ class _EntryScreenState extends State<_EntryScreen> {
   String? _eulaText;
   GameService? _gameService;
   bool _eulaListenerAttached = false;
+  bool _forceUpdate = false;
+  bool _forceUpdateListenerAttached = false;
 
   @override
   void initState() {
@@ -280,6 +285,7 @@ class _EntryScreenState extends State<_EntryScreen> {
         _eulaAccepted = true;
         _checking = false;
       });
+      _startForceUpdateCheck();
       return;
     }
     // Need to show EULA — connect and fetch
@@ -335,11 +341,33 @@ class _EntryScreenState extends State<_EntryScreen> {
     setState(() {
       _eulaAccepted = true;
     });
+    _startForceUpdateCheck();
+  }
+
+  void _startForceUpdateCheck() {
+    _gameService ??= context.read<GameService>();
+    final game = _gameService!;
+    // If minVersion already available (from EULA fetch), check immediately
+    if (game.minVersion != null && game.minVersion!.isNotEmpty) {
+      _checkForceUpdate(game.minVersion!);
+    } else {
+      _attachForceUpdateListener();
+      // If EULA was already accepted, we need to fetch app_config ourselves
+      final network = context.read<NetworkService>();
+      if (network.isConnected) {
+        game.requestAppConfig();
+      } else {
+        network.connect().then((_) {
+          if (mounted) game.requestAppConfig();
+        }).catchError((_) {});
+      }
+    }
   }
 
   @override
   void dispose() {
     _detachEulaListener();
+    _detachForceUpdateListener();
     super.dispose();
   }
 
@@ -353,6 +381,57 @@ class _EntryScreenState extends State<_EntryScreen> {
     if (!_eulaListenerAttached) return;
     _gameService?.removeListener(_onEulaReceived);
     _eulaListenerAttached = false;
+  }
+
+  void _attachForceUpdateListener() {
+    if (_forceUpdateListenerAttached) return;
+    _gameService?.addListener(_onForceUpdateCheck);
+    _forceUpdateListenerAttached = true;
+  }
+
+  void _detachForceUpdateListener() {
+    if (!_forceUpdateListenerAttached) return;
+    _gameService?.removeListener(_onForceUpdateCheck);
+    _forceUpdateListenerAttached = false;
+  }
+
+  void _onForceUpdateCheck() {
+    final game = _gameService;
+    if (game == null || game.minVersion == null || game.minVersion!.isEmpty) return;
+    _detachForceUpdateListener();
+    _checkForceUpdate(game.minVersion!);
+  }
+
+  Future<void> _checkForceUpdate(String minVersion) async {
+    try {
+      final info = await PackageInfo.fromPlatform();
+      if (_compareVersions(info.version, minVersion) < 0) {
+        if (mounted) setState(() => _forceUpdate = true);
+      }
+    } catch (_) {}
+  }
+
+  /// Returns negative if a < b, 0 if equal, positive if a > b
+  int _compareVersions(String a, String b) {
+    final partsA = a.split('.').map((e) => int.tryParse(e) ?? 0).toList();
+    final partsB = b.split('.').map((e) => int.tryParse(e) ?? 0).toList();
+    final len = partsA.length > partsB.length ? partsA.length : partsB.length;
+    for (int i = 0; i < len; i++) {
+      final va = i < partsA.length ? partsA[i] : 0;
+      final vb = i < partsB.length ? partsB[i] : 0;
+      if (va != vb) return va - vb;
+    }
+    return 0;
+  }
+
+  Future<void> _openStore() async {
+    final uri = Uri.parse(Platform.isIOS
+        ? 'https://apps.apple.com/app/tichu-online/id6759035151'
+        : 'https://play.google.com/store/apps/details?id=com.jiny.tichuOnline');
+    if (!await launchUrl(uri, mode: LaunchMode.externalApplication)) {
+      // fallback: try without mode
+      await launchUrl(uri);
+    }
   }
 
   @override
@@ -372,6 +451,50 @@ class _EntryScreenState extends State<_EntryScreen> {
     if (_checking) {
       return const Scaffold(
         body: Center(child: CircularProgressIndicator()),
+      );
+    }
+
+    if (_eulaAccepted && _forceUpdate) {
+      return Scaffold(
+        body: Center(
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 32),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(20),
+                  child: Image.asset('assets/icon.png', width: 80, height: 80),
+                ),
+                const SizedBox(height: 24),
+                const Text(
+                  '업데이트가 필요합니다',
+                  style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                ),
+                const SizedBox(height: 12),
+                const Text(
+                  '새로운 버전이 출시되었습니다.\n원활한 이용을 위해 업데이트해주세요.',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(fontSize: 14, color: Colors.grey, height: 1.5),
+                ),
+                const SizedBox(height: 28),
+                SizedBox(
+                  width: double.infinity,
+                  height: 48,
+                  child: ElevatedButton(
+                    onPressed: _openStore,
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: const Color(0xFF7E57C2),
+                      foregroundColor: Colors.white,
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                    ),
+                    child: const Text('업데이트', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
       );
     }
 

@@ -44,6 +44,8 @@ const {
   saveSKMatchResult, saveSKMatchResultWithStats,
   updateSKUserStats,
   getSKRankings,
+  getCurrentSKSeasonRankings,
+  getSKSeasonRankings,
   getDashboardStats,
   getAdminGoldHistory,
   adminAdjustGold,
@@ -696,10 +698,11 @@ async function handleGetAppConfig(ws) {
   try {
     const eulaContent = await getConfig('eula_content');
     const privacyPolicy = await getConfig('privacy_policy');
-    sendTo(ws, { type: 'app_config', eulaContent: eulaContent || '', privacyPolicy: privacyPolicy || '' });
+    const minVersion = await getConfig('min_version');
+    sendTo(ws, { type: 'app_config', eulaContent: eulaContent || '', privacyPolicy: privacyPolicy || '', minVersion: minVersion || '' });
   } catch (err) {
     console.error('get_app_config error:', err);
-    sendTo(ws, { type: 'app_config', eulaContent: '', privacyPolicy: '' });
+    sendTo(ws, { type: 'app_config', eulaContent: '', privacyPolicy: '', minVersion: '' });
   }
 }
 
@@ -3103,23 +3106,29 @@ async function handleGetRankings(ws, data) {
 
   // SK rankings
   if (gameType === 'skull_king') {
-    const result = await getSKRankings(50);
-    // Calculate requester's SK rank
-    if (ws.nickname && result.success) {
+    const seasonId = data?.seasonId;
+    let result;
+    if (seasonId) {
+      result = await getSKSeasonRankings(seasonId, 50);
+    } else {
+      result = await getCurrentSKSeasonRankings(50);
+    }
+    // Calculate requester's SK season rank
+    if (ws.nickname && result.success && !seasonId) {
       const { pool } = require('./db/database');
       try {
         const myRankRes = await pool.query(
           `SELECT COUNT(*) + 1 AS rank FROM tc_users
-           WHERE sk_rating > (SELECT sk_rating FROM tc_users WHERE nickname = $1)
-              OR (sk_rating = (SELECT sk_rating FROM tc_users WHERE nickname = $1)
-                  AND sk_wins > (SELECT sk_wins FROM tc_users WHERE nickname = $1))`,
+           WHERE (sk_season_rating > (SELECT sk_season_rating FROM tc_users WHERE nickname = $1))
+              OR (sk_season_rating = (SELECT sk_season_rating FROM tc_users WHERE nickname = $1)
+                  AND sk_season_wins > (SELECT sk_season_wins FROM tc_users WHERE nickname = $1))`,
           [ws.nickname]
         );
         const myProfileRes = await pool.query(
-          `SELECT u.nickname, u.sk_rating AS rating, u.sk_wins AS wins,
-                  u.sk_losses AS losses, u.sk_total_games AS total_games,
-                  CASE WHEN u.sk_total_games > 0
-                    THEN ROUND((u.sk_wins::FLOAT / u.sk_total_games) * 100)
+          `SELECT u.nickname, u.sk_season_rating AS rating, u.sk_season_wins AS wins,
+                  u.sk_season_losses AS losses, u.sk_season_games AS total_games,
+                  CASE WHEN u.sk_season_games > 0
+                    THEN ROUND((u.sk_season_wins::FLOAT / u.sk_season_games) * 100)
                     ELSE 0 END AS win_rate,
                   e.banner_key
            FROM tc_users u

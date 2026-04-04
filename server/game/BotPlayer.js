@@ -720,6 +720,29 @@ function leadTrick(state, cards, normalCards, combos) {
 
   const partnerTichu = partner && !partner.hasFinished && (partner.hasSmallTichu || partner.hasLargeTichu);
 
+  // 0. 1v1 endgame: opponent has 1 card left — play multi-card combos first, then singles high-to-low
+  const activeOpponents = opponents.filter(o => !o.hasFinished);
+  const partnerFinished = !partner || partner.hasFinished;
+  if (partnerFinished && activeOpponents.length === 1 && activeOpponents[0].cardCount === 1) {
+    // Play any multi-card combo first (opponent can't follow)
+    const bombSet = new Set(combos.bombs.flat());
+    const multiPlans = plans.filter(p =>
+      p.length >= 2 && !p.includes('special_dog') && !p.includes('special_bird') &&
+      !(p.length === 4 && p.every(c => bombSet.has(c)))
+    );
+    if (multiPlans.length > 0) {
+      // Play the largest combo to clear the most cards
+      multiPlans.sort((a, b) => b.length - a.length);
+      return { type: 'play_cards', cards: multiPlans[0] };
+    }
+    // Only singles left — play highest first to secure tricks
+    const playable = cards.filter(c => c !== 'special_dog');
+    if (playable.length > 0) {
+      playable.sort((a, b) => getCardValue(b) - getCardValue(a));
+      return { type: 'play_cards', cards: [playable[0]] };
+    }
+  }
+
   // 1. Bird: try to include in a straight first
   if (cards.includes('special_bird')) {
     const birdStraight = findStraightIncludingBird(cards);

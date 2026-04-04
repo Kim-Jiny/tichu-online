@@ -451,7 +451,8 @@ function formatDatetimeLocal(d) {
   const dt = new Date(d);
   if (isNaN(dt.getTime())) return '';
   const pad = n => String(n).padStart(2, '0');
-  return `${dt.getFullYear()}-${pad(dt.getMonth() + 1)}-${pad(dt.getDate())}T${pad(dt.getHours())}:${pad(dt.getMinutes())}`;
+  const kr = new Date(dt.toLocaleString('en-US', { timeZone: 'Asia/Seoul' }));
+  return `${kr.getFullYear()}-${pad(kr.getMonth() + 1)}-${pad(kr.getDate())}T${pad(kr.getHours())}:${pad(kr.getMinutes())}`;
 }
 
 function shopForm(action, values, isEdit = false) {
@@ -961,8 +962,9 @@ async function handleAdminRoute(req, res, url, pathname, method, lobby, wss, mai
       : '<div class="empty">팔린 아이템이 없습니다</div>';
 
     // Prepare chart data as JSON
+    const toKST = (d) => new Date(new Date(d).toLocaleString('en-US', { timeZone: 'Asia/Seoul' }));
     const gameChartLabels = gameSeries.map(r => {
-      const d = new Date(r.bucket_time);
+      const d = toKST(r.bucket_time);
       return bucket === 'hour'
         ? `${String(d.getMonth()+1).padStart(2,'0')}/${String(d.getDate()).padStart(2,'0')} ${String(d.getHours()).padStart(2,'0')}시`
         : `${String(d.getMonth()+1).padStart(2,'0')}/${String(d.getDate()).padStart(2,'0')}`;
@@ -973,7 +975,7 @@ async function handleAdminRoute(req, res, url, pathname, method, lobby, wss, mai
     const gameChartTotal = gameSeries.map(r => parseInt(r.total_cnt) || 0);
 
     const goldChartLabels = goldSeries.map(r => {
-      const d = new Date(r.bucket_time);
+      const d = toKST(r.bucket_time);
       return bucket === 'hour'
         ? `${String(d.getMonth()+1).padStart(2,'0')}/${String(d.getDate()).padStart(2,'0')} ${String(d.getHours()).padStart(2,'0')}시`
         : `${String(d.getMonth()+1).padStart(2,'0')}/${String(d.getDate()).padStart(2,'0')}`;
@@ -983,7 +985,7 @@ async function handleAdminRoute(req, res, url, pathname, method, lobby, wss, mai
     const goldChartNet = goldSeries.map(r => parseInt(r.net) || 0);
 
     const shopChartLabels = shopSalesSeries.map(r => {
-      const d = new Date(r.bucket_time);
+      const d = toKST(r.bucket_time);
       return bucket === 'hour'
         ? `${String(d.getMonth()+1).padStart(2,'0')}/${String(d.getDate()).padStart(2,'0')} ${String(d.getHours()).padStart(2,'0')}시`
         : `${String(d.getMonth()+1).padStart(2,'0')}/${String(d.getDate()).padStart(2,'0')}`;
@@ -2108,11 +2110,20 @@ async function handleAdminRoute(req, res, url, pathname, method, lobby, wss, mai
   if (pathname === '/tc-backstage/settings' && method === 'GET') {
     const eulaContent = await getConfig('eula_content') || '';
     const privacyPolicy = await getConfig('privacy_policy') || '';
+    const minVersion = await getConfig('min_version') || '';
     const saved = url.searchParams.get('saved');
 
     const content = `
       <h1 class="page-title">설정</h1>
       ${saved ? '<div style="color:#4caf50;margin-bottom:12px;font-weight:600">저장되었습니다.</div>' : ''}
+      <div class="card">
+        <h3>강제 업데이트 최소 버전</h3>
+        <p style="font-size:13px;color:#888;margin-bottom:8px">이 버전 미만의 앱은 강제 업데이트 팝업이 표시됩니다. (예: 2.0.1)</p>
+        <form method="POST" action="/tc-backstage/settings/min-version" style="display:flex;align-items:center;gap:8px">
+          <input type="text" name="min_version" value="${escapeHtml(minVersion)}" placeholder="예: 2.0.1" style="width:200px;padding:8px 12px;border:1px solid #ddd;border-radius:8px;font-size:14px">
+          <button type="submit" class="btn btn-primary">저장</button>
+        </form>
+      </div>
       <div class="card">
         <h3>EULA / 이용약관</h3>
         <form method="POST" action="/tc-backstage/settings/eula">
@@ -2129,6 +2140,12 @@ async function handleAdminRoute(req, res, url, pathname, method, lobby, wss, mai
       </div>
     `;
     return html(res, layout('설정', content, 'settings'));
+  }
+
+  if (pathname === '/tc-backstage/settings/min-version' && method === 'POST') {
+    const body = await parseBody(req);
+    await updateConfig('min_version', (body.min_version || '').trim());
+    return redirect(res, '/tc-backstage/settings?saved=1');
   }
 
   if (pathname === '/tc-backstage/settings/eula' && method === 'POST') {

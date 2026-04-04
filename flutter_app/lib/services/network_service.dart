@@ -4,8 +4,9 @@ import 'package:flutter/foundation.dart';
 import 'package:web_socket_channel/web_socket_channel.dart';
 
 class NetworkService extends ChangeNotifier {
+  static const _debugIp = String.fromEnvironment('DEBUG_SERVER_IP', defaultValue: '127.0.0.1');
   static String get defaultUrl =>
-      kDebugMode ? 'ws://172.30.1.99:8080' : 'wss://tichu.jiny.shop';
+      kDebugMode ? 'ws://$_debugIp:8080' : 'wss://tichu.jiny.shop';
 
   WebSocketChannel? _channel;
   StreamSubscription? _subscription;

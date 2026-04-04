@@ -59,6 +59,7 @@ class GameService extends ChangeNotifier {
   // Incoming card view requests (for players)
   List<Map<String, String>> incomingCardViewRequests = []; // [{spectatorId, spectatorNickname}]
   bool autoRejectCardView = false; // 패 보기 요청 항상 거절
+  bool autoAcceptCardView = false; // 패 보기 요청 항상 승인
 
   // Spectators currently viewing my cards
   List<Map<String, String>> cardViewers = []; // [{id, nickname}]
@@ -203,9 +204,10 @@ class GameService extends ChangeNotifier {
   // Dragon given
   String? dragonGivenMessage; // "OO이(가) OO에게 용을 줬습니다"
 
-  // App config (EULA, Privacy Policy)
+  // App config (EULA, Privacy Policy, Force Update)
   String? eulaContent;
   String? privacyPolicy;
+  String? minVersion;
 
   // Maintenance
   bool isUnderMaintenance = false;
@@ -533,8 +535,9 @@ class GameService extends ChangeNotifier {
         final spectatorNickname = data['spectatorNickname'] as String?;
         if (spectatorId != null && spectatorNickname != null) {
           if (autoRejectCardView) {
-            // Auto-reject
             respondCardViewRequest(spectatorId, false);
+          } else if (autoAcceptCardView) {
+            respondCardViewRequest(spectatorId, true);
           } else {
             // Remove duplicate if exists
             incomingCardViewRequests.removeWhere((r) => r['spectatorId'] == spectatorId);
@@ -1339,6 +1342,7 @@ class GameService extends ChangeNotifier {
       case 'app_config':
         eulaContent = data['eulaContent'] as String? ?? '';
         privacyPolicy = data['privacyPolicy'] as String? ?? '';
+        minVersion = data['minVersion'] as String? ?? '';
         notifyListeners();
         break;
     }
@@ -1642,6 +1646,7 @@ class GameService extends ChangeNotifier {
     adRewardResult = null;
     adRewardSuccess = null;
     autoRejectCardView = false;
+    autoAcceptCardView = false;
     myRankData = null;
     seasons = [];
     gold = 0;
@@ -1881,12 +1886,21 @@ class GameService extends ChangeNotifier {
     }
     incomingCardViewRequests.clear();
     autoRejectCardView = true;
+    autoAcceptCardView = false;
     notifyListeners();
   }
 
   void setAutoRejectCardView(bool value) {
     if (autoRejectCardView == value) return;
     autoRejectCardView = value;
+    if (value) autoAcceptCardView = false;
+    notifyListeners();
+  }
+
+  void setAutoAcceptCardView(bool value) {
+    if (autoAcceptCardView == value) return;
+    autoAcceptCardView = value;
+    if (value) autoRejectCardView = false;
     notifyListeners();
   }
 
@@ -1950,6 +1964,7 @@ class GameService extends ChangeNotifier {
     approvedCardViews = {};
     incomingCardViewRequests = [];
     autoRejectCardView = false;
+    autoAcceptCardView = false;
     cardViewers = [];
     spectators = [];
     chatMessages = [];
@@ -2108,6 +2123,13 @@ class GameService extends ChangeNotifier {
     rankingsLoading = true;
     rankingsError = null;
     _network.send({'type': 'get_rankings', 'gameType': 'skull_king'});
+    notifyListeners();
+  }
+
+  void requestSKRankingsForSeason(int seasonId) {
+    rankingsLoading = true;
+    rankingsError = null;
+    _network.send({'type': 'get_rankings', 'gameType': 'skull_king', 'seasonId': seasonId});
     notifyListeners();
   }
 

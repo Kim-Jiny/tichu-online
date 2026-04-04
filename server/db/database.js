@@ -518,6 +518,21 @@ async function initDatabase() {
     await client.query(`ALTER TABLE tc_users ADD COLUMN IF NOT EXISTS sk_season_wins INT DEFAULT 0`);
     await client.query(`ALTER TABLE tc_users ADD COLUMN IF NOT EXISTS sk_season_losses INT DEFAULT 0`);
 
+    // Add game_type to season rankings for SK support
+    await client.query(`ALTER TABLE tc_season_rankings ADD COLUMN IF NOT EXISTS game_type VARCHAR(20) DEFAULT 'tichu'`);
+    // Drop old unique constraint and add new one with game_type
+    await client.query(`
+      DO $$ BEGIN
+        IF EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'tc_season_rankings_season_id_rank_key') THEN
+          ALTER TABLE tc_season_rankings DROP CONSTRAINT tc_season_rankings_season_id_rank_key;
+        END IF;
+      END $$
+    `);
+    await client.query(`
+      CREATE UNIQUE INDEX IF NOT EXISTS tc_season_rankings_season_game_rank_idx
+      ON tc_season_rankings (season_id, game_type, rank)
+    `);
+
     console.log('Database initialized (tc_ tables)');
   } catch (err) {
     console.error('Database initialization error:', err);
@@ -2400,9 +2415,31 @@ async function grantSeasonRewards(seasonId) {
     for (let i = 0; i < topFull.length; i++) {
       const u = topFull[i];
       await client.query(
-        `INSERT INTO tc_season_rankings (season_id, rank, nickname, rating, wins, losses, total_games)
-         VALUES ($1, $2, $3, $4, $5, $6, $7)
-         ON CONFLICT (season_id, rank) DO NOTHING`,
+        `INSERT INTO tc_season_rankings (season_id, rank, nickname, rating, wins, losses, total_games, game_type)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, 'tichu')
+         ON CONFLICT DO NOTHING`,
+        [seasonId, i + 1, u.nickname, u.rating, u.wins, u.losses, u.total_games]
+      );
+    }
+
+    // Save SK season rankings
+    const skTopRes = await client.query(
+      `SELECT nickname,
+             sk_season_rating AS rating,
+             sk_season_wins AS wins,
+             sk_season_losses AS losses,
+             sk_season_games AS total_games
+      FROM tc_users
+      WHERE sk_season_games > 0 AND is_deleted IS NOT TRUE
+      ORDER BY sk_season_rating DESC, sk_season_wins DESC, sk_season_games DESC, nickname ASC
+      LIMIT 100`
+    );
+    for (let i = 0; i < skTopRes.rows.length; i++) {
+      const u = skTopRes.rows[i];
+      await client.query(
+        `INSERT INTO tc_season_rankings (season_id, rank, nickname, rating, wins, losses, total_games, game_type)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, 'skull_king')
+         ON CONFLICT DO NOTHING`,
         [seasonId, i + 1, u.nickname, u.rating, u.wins, u.losses, u.total_games]
       );
     }
@@ -4088,6 +4125,58 @@ async function getSKRankings(limit = 50) {
   }
 }
 
+async function getCurrentSKSeasonRankings(limit = 50) {
+  const client = await pool.connect();
+  try {
+    const res = await client.query(
+      `SELECT u.nickname, u.sk_season_rating AS rating,
+              u.sk_season_wins AS wins, u.sk_season_losses AS losses,
+              u.sk_season_games AS total_games,
+              CASE WHEN u.sk_season_games > 0
+                THEN ROUND((u.sk_season_wins::FLOAT / u.sk_season_games) * 100)
+                ELSE 0 END AS win_rate,
+              e.banner_key
+       FROM tc_users u
+       LEFT JOIN tc_user_equips e ON e.nickname = u.nickname
+       WHERE u.is_deleted IS NOT TRUE
+       ORDER BY u.sk_season_rating DESC, u.sk_season_wins DESC, u.sk_season_games DESC, u.nickname ASC
+       LIMIT $1`,
+      [limit]
+    );
+    return { success: true, rankings: res.rows };
+  } catch (err) {
+    console.error('getCurrentSKSeasonRankings error:', err);
+    return { success: false, rankings: [] };
+  } finally {
+    client.release();
+  }
+}
+
+async function getSKSeasonRankings(seasonId, limit = 50) {
+  const client = await pool.connect();
+  try {
+    const res = await client.query(
+      `SELECT r.nickname, r.rating, r.wins, r.losses, r.total_games,
+              CASE WHEN r.total_games > 0
+                THEN ROUND((r.wins::FLOAT / r.total_games) * 100)
+                ELSE 0 END AS win_rate,
+              e.banner_key
+       FROM tc_season_rankings r
+       LEFT JOIN tc_user_equips e ON e.nickname = r.nickname
+       WHERE r.season_id = $1 AND r.game_type = 'skull_king'
+       ORDER BY r.rank ASC
+       LIMIT $2`,
+      [seasonId, limit]
+    );
+    return { success: true, rankings: res.rows };
+  } catch (err) {
+    console.error('getSKSeasonRankings error:', err);
+    return { success: false, rankings: [] };
+  } finally {
+    client.release();
+  }
+}
+
 module.exports = {
   initDatabase,
   registerUser,
@@ -4179,5 +4268,7 @@ module.exports = {
   saveSKMatchResultWithStats,
   updateSKUserStats,
   getSKRankings,
+  getCurrentSKSeasonRankings,
+  getSKSeasonRankings,
   pool,
 };

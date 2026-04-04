@@ -500,9 +500,41 @@ class TichuGame {
 
     this.removeCardsFromHand(playerId, ['special_dog']);
 
+    const result = {
+      success: true,
+      broadcast: {
+        type: 'dog_played',
+        player: playerId,
+        playerName: this.playerNames[playerId],
+        nextPlayer: null,
+      },
+    };
+
     // Check if player finished (Dog was their last card)
     if (this.hands[playerId].length === 0 && !this.finishOrder.includes(playerId)) {
       this.finishOrder.push(playerId);
+      result.broadcast.playerFinished = true;
+      result.broadcast.finishPosition = this.finishOrder.length;
+
+      // Check for 1-2 finish (same team finishes 1st and 2nd)
+      if (this.finishOrder.length === 2) {
+        const first = this.finishOrder[0];
+        const second = this.finishOrder[1];
+        const firstTeam = this.teams.teamA.includes(first) ? 'teamA' : 'teamB';
+        const secondTeam = this.teams.teamA.includes(second) ? 'teamA' : 'teamB';
+        if (firstTeam === secondTeam) {
+          result.broadcast.oneTwoFinish = true;
+          result.broadcast.winningTeam = firstTeam;
+          this.endRound();
+          return result;
+        }
+      }
+
+      // Check if round is over (3 players finished)
+      if (this.finishOrder.length >= 3) {
+        this.endRound();
+        return result;
+      }
     }
 
     // Dog passes lead to partner
@@ -516,16 +548,9 @@ class TichuGame {
       this.currentPlayer = partner;
     }
     this.trickStarter = this.currentPlayer;
+    result.broadcast.nextPlayer = this.currentPlayer;
 
-    return {
-      success: true,
-      broadcast: {
-        type: 'dog_played',
-        player: playerId,
-        playerName: this.playerNames[playerId],
-        nextPlayer: this.currentPlayer,
-      },
-    };
+    return result;
   }
 
   handlePass(playerId) {

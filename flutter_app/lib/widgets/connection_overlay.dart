@@ -16,6 +16,7 @@ class ConnectionOverlay extends StatefulWidget {
 class _ConnectionOverlayState extends State<ConnectionOverlay>
     with WidgetsBindingObserver {
   static bool _globalReconnecting = false;
+  static int _reconnectAttemptId = 0;
 
   bool _inForeground = true;
   NetworkService? _networkService;
@@ -85,23 +86,32 @@ class _ConnectionOverlayState extends State<ConnectionOverlay>
   Future<void> _startReconnect() async {
     if (_globalReconnecting) return;
     _globalReconnecting = true;
+    final myAttemptId = ++_reconnectAttemptId;
 
     try {
       final session = context.read<SessionService>();
       final success = await session.reconnectAndRestore()
           .timeout(const Duration(seconds: 30), onTimeout: () => false);
 
+      // If a newer attempt was started (e.g. timeout triggered _goToLogin then retry),
+      // this zombie result should be ignored
+      if (myAttemptId != _reconnectAttemptId) return;
       if (!mounted) return;
       if (!success) {
         _goToLogin();
       }
     } finally {
-      _globalReconnecting = false;
+      if (myAttemptId == _reconnectAttemptId) {
+        _globalReconnecting = false;
+      }
     }
   }
 
   void _goToLogin() {
     if (!mounted) return;
+    // Invalidate any in-flight zombie reconnection
+    ++_reconnectAttemptId;
+    _globalReconnecting = false;
     context.read<SessionService>().resetToLoginState(suppressAutoRestore: true);
   }
 

@@ -451,6 +451,17 @@ class TichuGame {
     this.passCount = 0;
     this.currentPlayer = playerId;
 
+    // Check call fulfillment
+    if (this.callRank) {
+      const hasWishRank = cardIds.some((c) => {
+        const v = getCardValue(c);
+        return v.toString() === this.callRank || this.getRankName(v) === this.callRank;
+      });
+      if (hasWishRank) {
+        this.callRank = null;
+      }
+    }
+
     const result = {
       success: true,
       broadcast: {
@@ -638,8 +649,24 @@ class TichuGame {
       this.finishOrder.push(playerId);
       broadcast.finished = true;
       broadcast.finishPosition = this.finishOrder.length;
-      const endResult = this.checkRoundEnd();
-      if (endResult) return { success: true, broadcast, endResult };
+
+      // Check for 1-2 finish
+      if (this.finishOrder.length === 2) {
+        const first = this.finishOrder[0];
+        const second = this.finishOrder[1];
+        const firstTeam = this.teams.teamA.includes(first) ? 'teamA' : 'teamB';
+        const secondTeam = this.teams.teamA.includes(second) ? 'teamA' : 'teamB';
+        if (firstTeam === secondTeam) {
+          broadcast.oneTwoFinish = true;
+          broadcast.winningTeam = firstTeam;
+          this.endRound();
+          return { success: true, broadcast };
+        }
+      }
+      if (this.finishOrder.length >= 3) {
+        this.endRound();
+        return { success: true, broadcast };
+      }
     }
 
     this.advanceTurn();

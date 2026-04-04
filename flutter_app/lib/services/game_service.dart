@@ -1962,7 +1962,9 @@ class GameService extends ChangeNotifier {
     currentGameType = 'tichu';
     isSpectator = false;
     gameState = null;
+    _prevGameState = null;
     skGameState = null;
+    _prevSKGameState = null;
     spectatorGameState = null;
     pendingCardViewRequests = {};
     approvedCardViews = {};
@@ -2406,6 +2408,7 @@ class GameService extends ChangeNotifier {
       if (Platform.isIOS) {
         String? apns;
         for (int i = 0; i < 30; i++) {
+          if (_disposed) return;
           apns = await messaging.getAPNSToken();
           debugPrint('[FCM] APNs attempt $i: ${apns != null ? "OK" : "null"}');
           if (apns != null) break;
@@ -2435,7 +2438,7 @@ class GameService extends ChangeNotifier {
   Future<void> _loadPushPrefs() async {
     final loadVersion = ++_pushPrefsLoadVersion;
     final prefs = await SharedPreferences.getInstance();
-    if (loadVersion != _pushPrefsLoadVersion) return;
+    if (loadVersion != _pushPrefsLoadVersion || _disposed) return;
     pushEnabled = prefs.getBool('push_enabled') ?? true;
     pushFriendInviteEnabled = prefs.getBool('push_friend_invite') ?? true;
     notifyListeners();

@@ -436,7 +436,7 @@ function findCombos(cards) {
     }
   }
 
-  // Steps (consecutive pairs)
+  // Steps (consecutive pairs) - generate all valid sub-lengths
   if (result.pairs.length >= 2) {
     const pairValues = result.pairs.map(p => getCardValue(p[0])).sort((a, b) => a - b);
     let runStart = 0;
@@ -444,13 +444,17 @@ function findCombos(cards) {
       if (i === pairValues.length || pairValues[i] !== pairValues[i - 1] + 1) {
         const runLen = i - runStart;
         if (runLen >= 2) {
-          const stepCards = [];
-          for (let j = runStart; j < i; j++) {
-            const pv = pairValues[j];
-            const group = byValue[pv];
-            stepCards.push(group[0], group[1]);
+          for (let len = 2; len <= runLen; len++) {
+            for (let start = runStart; start + len <= i; start++) {
+              const stepCards = [];
+              for (let j = start; j < start + len; j++) {
+                const pv = pairValues[j];
+                const group = byValue[pv];
+                stepCards.push(group[0], group[1]);
+              }
+              result.steps.push(stepCards);
+            }
           }
-          result.steps.push(stepCards);
         }
         runStart = i;
       }

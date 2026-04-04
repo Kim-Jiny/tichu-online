@@ -377,10 +377,17 @@ function formatDate(d) {
   return dt.toLocaleString('ko-KR', { timeZone: 'Asia/Seoul' });
 }
 
+function toKSTDate(d) {
+  if (!d) return null;
+  const dt = new Date(d);
+  if (isNaN(dt.getTime())) return null;
+  return new Date(dt.toLocaleString('en-US', { timeZone: 'Asia/Seoul' }));
+}
+
 function formatDateInput(d) {
   if (!d) return '';
-  const dt = new Date(d);
-  if (isNaN(dt.getTime())) return '';
+  const dt = toKSTDate(d);
+  if (!dt || isNaN(dt.getTime())) return '';
   const yyyy = dt.getFullYear();
   const mm = String(dt.getMonth() + 1).padStart(2, '0');
   const dd = String(dt.getDate()).padStart(2, '0');
@@ -874,11 +881,10 @@ async function handleAdminRoute(req, res, url, pathname, method, lobby, wss, mai
   }
 
   if (pathname === '/tc-backstage/stats' && method === 'GET') {
-    const now = new Date();
-    const defaultTo = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59);
-    const defaultFrom = new Date(defaultTo);
-    defaultFrom.setDate(defaultFrom.getDate() - 6);
-    defaultFrom.setHours(0, 0, 0, 0);
+    const todayKST = formatDateInput(new Date());
+    const defaultTo = new Date(`${todayKST}T23:59:59+09:00`);
+    const defaultFromValue = formatDateInput(new Date(defaultTo.getTime() - (6 * 24 * 60 * 60 * 1000)));
+    const defaultFrom = new Date(`${defaultFromValue}T00:00:00+09:00`);
 
     const fromParam = url.searchParams.get('from');
     const toParam = url.searchParams.get('to');

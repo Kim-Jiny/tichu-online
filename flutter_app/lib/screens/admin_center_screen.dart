@@ -37,6 +37,7 @@ class _AdminCenterScreenState extends State<AdminCenterScreen> {
   @override
   Widget build(BuildContext context) {
     final themeColors = context.watch<GameService>().themeGradient;
+    final isCompact = MediaQuery.sizeOf(context).width < 600;
     return DefaultTabController(
       length: 3,
       child: Scaffold(
@@ -73,19 +74,21 @@ class _AdminCenterScreenState extends State<AdminCenterScreen> {
 
                 return Column(
                   children: [
-                    _buildTopBar(context),
-                    _buildDashboard(game),
+                    _buildTopBar(context, isCompact),
+                    _buildDashboard(game, isCompact),
                     Container(
-                      margin: const EdgeInsets.symmetric(horizontal: 16),
+                      margin: EdgeInsets.symmetric(horizontal: isCompact ? 12 : 16),
                       decoration: BoxDecoration(
                         color: Colors.white.withValues(alpha: 0.94),
                         borderRadius: BorderRadius.circular(14),
                       ),
-                      child: const TabBar(
-                        labelColor: Color(0xFF5A4038),
-                        unselectedLabelColor: Color(0xFF9A8E8A),
-                        indicatorColor: Color(0xFFB9A8A1),
-                        tabs: [
+                      child: TabBar(
+                        isScrollable: isCompact,
+                        tabAlignment: isCompact ? TabAlignment.start : TabAlignment.fill,
+                        labelColor: const Color(0xFF5A4038),
+                        unselectedLabelColor: const Color(0xFF9A8E8A),
+                        indicatorColor: const Color(0xFFB9A8A1),
+                        tabs: const [
                           Tab(text: '문의'),
                           Tab(text: '신고'),
                           Tab(text: '유저'),
@@ -96,9 +99,9 @@ class _AdminCenterScreenState extends State<AdminCenterScreen> {
                     Expanded(
                       child: TabBarView(
                         children: [
-                          _buildInquiriesTab(game),
-                          _buildReportsTab(game),
-                          _buildUsersTab(game),
+                          _buildInquiriesTab(game, isCompact),
+                          _buildReportsTab(game, isCompact),
+                          _buildUsersTab(game, isCompact),
                         ],
                       ),
                     ),
@@ -112,10 +115,10 @@ class _AdminCenterScreenState extends State<AdminCenterScreen> {
     );
   }
 
-  Widget _buildTopBar(BuildContext context) {
+  Widget _buildTopBar(BuildContext context, bool isCompact) {
     return Container(
-      margin: const EdgeInsets.all(16),
-      padding: const EdgeInsets.all(12),
+      margin: EdgeInsets.all(isCompact ? 12 : 16),
+      padding: EdgeInsets.all(isCompact ? 8 : 12),
       decoration: BoxDecoration(
         color: Colors.white.withValues(alpha: 0.95),
         borderRadius: BorderRadius.circular(18),
@@ -126,14 +129,19 @@ class _AdminCenterScreenState extends State<AdminCenterScreen> {
             onPressed: () => Navigator.pop(context),
             icon: const Icon(Icons.arrow_back),
             color: const Color(0xFF8A7A72),
+            visualDensity: isCompact ? VisualDensity.compact : VisualDensity.standard,
           ),
-          const SizedBox(width: 4),
-          const Text(
-            '관리자 센터',
-            style: TextStyle(
-              fontSize: 20,
-              fontWeight: FontWeight.bold,
-              color: Color(0xFF5A4038),
+          SizedBox(width: isCompact ? 2 : 4),
+          Expanded(
+            child: Text(
+              '관리자 센터',
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: TextStyle(
+                fontSize: isCompact ? 18 : 20,
+                fontWeight: FontWeight.bold,
+                color: const Color(0xFF5A4038),
+              ),
             ),
           ),
         ],
@@ -141,7 +149,7 @@ class _AdminCenterScreenState extends State<AdminCenterScreen> {
     );
   }
 
-  Widget _buildDashboard(GameService game) {
+  Widget _buildDashboard(GameService game, bool isCompact) {
     final dash = game.adminDashboard ?? const <String, dynamic>{};
     final List<({String label, String value, Color color, IconData icon})> cards = [
       ('활성 유저', '${dash['activeUsers'] ?? 0}', const Color(0xFF42A5F5), Icons.wifi_tethering),
@@ -150,8 +158,8 @@ class _AdminCenterScreenState extends State<AdminCenterScreen> {
       ('전체 유저', '${dash['totalUsers'] ?? 0}', const Color(0xFFFFA726), Icons.groups_2_outlined),
     ].map((item) => (label: item.$1, value: item.$2, color: item.$3, icon: item.$4)).toList();
     return Container(
-      height: 112,
-      margin: const EdgeInsets.symmetric(horizontal: 16),
+      height: isCompact ? 104 : 112,
+      margin: EdgeInsets.symmetric(horizontal: isCompact ? 12 : 16),
       child: ListView.separated(
         scrollDirection: Axis.horizontal,
         itemCount: cards.length,
@@ -159,8 +167,8 @@ class _AdminCenterScreenState extends State<AdminCenterScreen> {
         itemBuilder: (context, index) {
           final item = cards[index];
           return Container(
-            width: 132,
-            padding: const EdgeInsets.all(14),
+            width: isCompact ? 116 : 132,
+            padding: EdgeInsets.all(isCompact ? 12 : 14),
             decoration: BoxDecoration(
               color: Colors.white.withValues(alpha: 0.95),
               borderRadius: BorderRadius.circular(18),
@@ -173,16 +181,16 @@ class _AdminCenterScreenState extends State<AdminCenterScreen> {
                 Text(
                   item.value,
                   style: TextStyle(
-                    fontSize: 22,
+                    fontSize: isCompact ? 20 : 22,
                     fontWeight: FontWeight.w900,
                     color: item.color,
                   ),
                 ),
                 Text(
                   item.label,
-                  style: const TextStyle(
-                    fontSize: 12,
-                    color: Color(0xFF8A7A72),
+                  style: TextStyle(
+                    fontSize: isCompact ? 11 : 12,
+                    color: const Color(0xFF8A7A72),
                     fontWeight: FontWeight.w600,
                   ),
                 ),
@@ -194,7 +202,7 @@ class _AdminCenterScreenState extends State<AdminCenterScreen> {
     );
   }
 
-  Widget _buildInquiriesTab(GameService game) {
+  Widget _buildInquiriesTab(GameService game, bool isCompact) {
     if (game.adminInquiriesLoading) {
       return const Center(child: CircularProgressIndicator());
     }
@@ -202,11 +210,12 @@ class _AdminCenterScreenState extends State<AdminCenterScreen> {
       return Center(child: Text(game.adminInquiriesError!));
     }
     return ListView.separated(
-      padding: const EdgeInsets.fromLTRB(16, 6, 16, 16),
+      padding: EdgeInsets.fromLTRB(isCompact ? 12 : 16, 6, isCompact ? 12 : 16, 16),
       itemCount: game.adminInquiries.length,
       separatorBuilder: (context, separatorIndex) => const SizedBox(height: 10),
       itemBuilder: (context, index) {
         final item = game.adminInquiries[index];
+        final status = item['status']?.toString() ?? '-';
         return Material(
           color: Colors.white.withValues(alpha: 0.94),
           borderRadius: BorderRadius.circular(18),
@@ -218,21 +227,33 @@ class _AdminCenterScreenState extends State<AdminCenterScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Row(
-                    children: [
-                      Expanded(
-                        child: Text(
-                          item['title']?.toString() ?? '-',
-                          style: const TextStyle(
-                            fontSize: 15,
-                            fontWeight: FontWeight.w800,
-                            color: _inkColor,
+                  if (isCompact) ...[
+                    Text(
+                      item['title']?.toString() ?? '-',
+                      style: const TextStyle(
+                        fontSize: 15,
+                        fontWeight: FontWeight.w800,
+                        color: _inkColor,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    _buildStatusChip(status, _statusColor(status)),
+                  ] else
+                    Row(
+                      children: [
+                        Expanded(
+                          child: Text(
+                            item['title']?.toString() ?? '-',
+                            style: const TextStyle(
+                              fontSize: 15,
+                              fontWeight: FontWeight.w800,
+                              color: _inkColor,
+                            ),
                           ),
                         ),
-                      ),
-                      _buildStatusChip(item['status']?.toString() ?? '-', _statusColor(item['status']?.toString())),
-                    ],
-                  ),
+                        _buildStatusChip(status, _statusColor(status)),
+                      ],
+                    ),
                   const SizedBox(height: 8),
                   Text(
                     '${item['user_nickname'] ?? '-'} · ${item['category'] ?? '-'}',
@@ -251,7 +272,7 @@ class _AdminCenterScreenState extends State<AdminCenterScreen> {
     );
   }
 
-  Widget _buildReportsTab(GameService game) {
+  Widget _buildReportsTab(GameService game, bool isCompact) {
     if (game.adminReportsLoading) {
       return const Center(child: CircularProgressIndicator());
     }
@@ -259,11 +280,12 @@ class _AdminCenterScreenState extends State<AdminCenterScreen> {
       return Center(child: Text(game.adminReportsError!));
     }
     return ListView.separated(
-      padding: const EdgeInsets.fromLTRB(16, 6, 16, 16),
+      padding: EdgeInsets.fromLTRB(isCompact ? 12 : 16, 6, isCompact ? 12 : 16, 16),
       itemCount: game.adminReports.length,
       separatorBuilder: (context, separatorIndex) => const SizedBox(height: 10),
       itemBuilder: (context, index) {
         final item = game.adminReports[index];
+        final status = item['group_status']?.toString() ?? '-';
         return Material(
           color: Colors.white.withValues(alpha: 0.94),
           borderRadius: BorderRadius.circular(18),
@@ -278,24 +300,33 @@ class _AdminCenterScreenState extends State<AdminCenterScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Row(
-                    children: [
-                      Expanded(
-                        child: Text(
-                          item['reported_nickname']?.toString() ?? '-',
-                          style: const TextStyle(
-                            fontSize: 15,
-                            fontWeight: FontWeight.w800,
-                            color: _inkColor,
+                  if (isCompact) ...[
+                    Text(
+                      item['reported_nickname']?.toString() ?? '-',
+                      style: const TextStyle(
+                        fontSize: 15,
+                        fontWeight: FontWeight.w800,
+                        color: _inkColor,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    _buildStatusChip(status, _statusColor(status)),
+                  ] else
+                    Row(
+                      children: [
+                        Expanded(
+                          child: Text(
+                            item['reported_nickname']?.toString() ?? '-',
+                            style: const TextStyle(
+                              fontSize: 15,
+                              fontWeight: FontWeight.w800,
+                              color: _inkColor,
+                            ),
                           ),
                         ),
-                      ),
-                      _buildStatusChip(
-                        item['group_status']?.toString() ?? '-',
-                        _statusColor(item['group_status']?.toString()),
-                      ),
-                    ],
-                  ),
+                        _buildStatusChip(status, _statusColor(status)),
+                      ],
+                    ),
                   const SizedBox(height: 8),
                   Text(
                     '신고 ${item['report_count'] ?? 0}건 · 방 ${item['room_id'] ?? '-'}',
@@ -314,46 +345,77 @@ class _AdminCenterScreenState extends State<AdminCenterScreen> {
     );
   }
 
-  Widget _buildUsersTab(GameService game) {
+  Widget _buildUsersTab(GameService game, bool isCompact) {
     return Column(
       children: [
         Padding(
-          padding: const EdgeInsets.fromLTRB(16, 6, 16, 10),
-          child: Row(
-            children: [
-              Expanded(
-                child: TextField(
-                  controller: _searchController,
-                  decoration: InputDecoration(
-                    hintText: '닉네임 또는 계정명 검색',
-                    prefixIcon: const Icon(Icons.search, color: _mutedColor),
-                    filled: true,
-                    fillColor: Colors.white.withValues(alpha: 0.94),
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(14),
-                      borderSide: BorderSide.none,
+          padding: EdgeInsets.fromLTRB(isCompact ? 12 : 16, 6, isCompact ? 12 : 16, 10),
+          child: isCompact
+              ? Column(
+                  children: [
+                    TextField(
+                      controller: _searchController,
+                      decoration: InputDecoration(
+                        hintText: '닉네임 또는 계정명 검색',
+                        prefixIcon: const Icon(Icons.search, color: _mutedColor),
+                        filled: true,
+                        fillColor: Colors.white.withValues(alpha: 0.94),
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(14),
+                          borderSide: BorderSide.none,
+                        ),
+                        contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                      ),
+                      onSubmitted: (_) => game.requestAdminUsers(search: _searchController.text.trim()),
                     ),
-                    contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-                  ),
-                  onSubmitted: (_) => game.requestAdminUsers(search: _searchController.text.trim()),
+                    const SizedBox(height: 8),
+                    SizedBox(
+                      width: double.infinity,
+                      child: FilledButton(
+                        onPressed: () => game.requestAdminUsers(search: _searchController.text.trim()),
+                        style: FilledButton.styleFrom(
+                          backgroundColor: const Color(0xFF8A7A72),
+                        ),
+                        child: const Text('검색'),
+                      ),
+                    ),
+                  ],
+                )
+              : Row(
+                  children: [
+                    Expanded(
+                      child: TextField(
+                        controller: _searchController,
+                        decoration: InputDecoration(
+                          hintText: '닉네임 또는 계정명 검색',
+                          prefixIcon: const Icon(Icons.search, color: _mutedColor),
+                          filled: true,
+                          fillColor: Colors.white.withValues(alpha: 0.94),
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(14),
+                            borderSide: BorderSide.none,
+                          ),
+                          contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                        ),
+                        onSubmitted: (_) => game.requestAdminUsers(search: _searchController.text.trim()),
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    FilledButton(
+                      onPressed: () => game.requestAdminUsers(search: _searchController.text.trim()),
+                      style: FilledButton.styleFrom(
+                        backgroundColor: const Color(0xFF8A7A72),
+                      ),
+                      child: const Text('검색'),
+                    ),
+                  ],
                 ),
-              ),
-              const SizedBox(width: 8),
-              FilledButton(
-                onPressed: () => game.requestAdminUsers(search: _searchController.text.trim()),
-                style: FilledButton.styleFrom(
-                  backgroundColor: const Color(0xFF8A7A72),
-                ),
-                child: const Text('검색'),
-              ),
-            ],
-          ),
         ),
         Expanded(
           child: game.adminUsersLoading
               ? const Center(child: CircularProgressIndicator())
               : ListView.separated(
-                  padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+                  padding: EdgeInsets.fromLTRB(isCompact ? 12 : 16, 0, isCompact ? 12 : 16, 16),
                   itemCount: game.adminUsers.length,
                   separatorBuilder: (context, separatorIndex) =>
                       const SizedBox(height: 10),
@@ -456,7 +518,7 @@ class _AdminCenterScreenState extends State<AdminCenterScreen> {
       builder: (ctx) => AlertDialog(
         title: Text('문의 #${item['id']}'),
         content: SizedBox(
-          width: 420,
+          width: _dialogWidth(ctx, 420),
           child: SingleChildScrollView(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -506,7 +568,7 @@ class _AdminCenterScreenState extends State<AdminCenterScreen> {
       builder: (ctx) => AlertDialog(
         title: Text('$target 신고'),
         content: SizedBox(
-          width: 440,
+          width: _dialogWidth(ctx, 440),
           child: Consumer<GameService>(
             builder: (context, game, _) {
               if (game.adminReportGroupLoading) {
@@ -574,7 +636,7 @@ class _AdminCenterScreenState extends State<AdminCenterScreen> {
         builder: (ctx, setState) => AlertDialog(
           title: Text(nickname),
           content: SizedBox(
-            width: 420,
+            width: _dialogWidth(ctx, 420),
             child: Consumer<GameService>(
               builder: (context, game, _) {
                 if (game.adminUserDetailLoading || game.adminUserDetail?['nickname'] != nickname) {
@@ -631,42 +693,54 @@ class _AdminCenterScreenState extends State<AdminCenterScreen> {
                                   .toList(),
                             ),
                             const SizedBox(height: 10),
-                            Row(
-                              children: [
-                                Expanded(
-                                  child: OutlinedButton.icon(
-                                    onPressed: () {
-                                      final amount = int.tryParse(goldController.text.trim());
-                                      if (amount == null || amount <= 0) {
-                                        setState(() => goldError = '1 이상의 숫자를 입력하세요');
-                                        return;
-                                      }
-                                      setState(() => goldError = null);
-                                      game.adjustAdminGold(nickname, amount);
-                                      goldController.clear();
-                                    },
-                                    icon: const Icon(Icons.add_circle_outline),
-                                    label: const Text('지급'),
-                                  ),
-                                ),
-                                const SizedBox(width: 10),
-                                Expanded(
-                                  child: FilledButton.tonalIcon(
-                                    onPressed: () {
-                                      final amount = int.tryParse(goldController.text.trim());
-                                      if (amount == null || amount <= 0) {
-                                        setState(() => goldError = '1 이상의 숫자를 입력하세요');
-                                        return;
-                                      }
-                                      setState(() => goldError = null);
-                                      game.adjustAdminGold(nickname, -amount);
-                                      goldController.clear();
-                                    },
-                                    icon: const Icon(Icons.remove_circle_outline),
-                                    label: const Text('차감'),
-                                  ),
-                                ),
-                              ],
+                            LayoutBuilder(
+                              builder: (context, constraints) {
+                                final isNarrow = constraints.maxWidth < 340;
+                                final grantButton = OutlinedButton.icon(
+                                  onPressed: () {
+                                    final amount = int.tryParse(goldController.text.trim());
+                                    if (amount == null || amount <= 0) {
+                                      setState(() => goldError = '1 이상의 숫자를 입력하세요');
+                                      return;
+                                    }
+                                    setState(() => goldError = null);
+                                    game.adjustAdminGold(nickname, amount);
+                                    goldController.clear();
+                                  },
+                                  icon: const Icon(Icons.add_circle_outline),
+                                  label: const Text('지급'),
+                                );
+                                final deductButton = FilledButton.tonalIcon(
+                                  onPressed: () {
+                                    final amount = int.tryParse(goldController.text.trim());
+                                    if (amount == null || amount <= 0) {
+                                      setState(() => goldError = '1 이상의 숫자를 입력하세요');
+                                      return;
+                                    }
+                                    setState(() => goldError = null);
+                                    game.adjustAdminGold(nickname, -amount);
+                                    goldController.clear();
+                                  },
+                                  icon: const Icon(Icons.remove_circle_outline),
+                                  label: const Text('차감'),
+                                );
+                                if (isNarrow) {
+                                  return Column(
+                                    children: [
+                                      SizedBox(width: double.infinity, child: grantButton),
+                                      const SizedBox(height: 8),
+                                      SizedBox(width: double.infinity, child: deductButton),
+                                    ],
+                                  );
+                                }
+                                return Row(
+                                  children: [
+                                    Expanded(child: grantButton),
+                                    const SizedBox(width: 10),
+                                    Expanded(child: deductButton),
+                                  ],
+                                );
+                              },
                             ),
                           ],
                         ),
@@ -760,6 +834,11 @@ class _AdminCenterScreenState extends State<AdminCenterScreen> {
         ),
       ),
     );
+  }
+
+  double _dialogWidth(BuildContext context, double maxWidth) {
+    final screenWidth = MediaQuery.sizeOf(context).width;
+    return screenWidth < 520 ? screenWidth - 48 : maxWidth;
   }
 
   String? _platformLabel(String? raw) {

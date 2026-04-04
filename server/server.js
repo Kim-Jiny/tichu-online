@@ -3119,9 +3119,10 @@ async function handleGetRankings(ws, data) {
       try {
         const myRankRes = await pool.query(
           `SELECT COUNT(*) + 1 AS rank FROM tc_users
-           WHERE (sk_season_rating > (SELECT sk_season_rating FROM tc_users WHERE nickname = $1))
+           WHERE is_deleted IS NOT TRUE AND sk_season_games > 0
+             AND ((sk_season_rating > (SELECT sk_season_rating FROM tc_users WHERE nickname = $1))
               OR (sk_season_rating = (SELECT sk_season_rating FROM tc_users WHERE nickname = $1)
-                  AND sk_season_wins > (SELECT sk_season_wins FROM tc_users WHERE nickname = $1))`,
+                  AND sk_season_wins > (SELECT sk_season_wins FROM tc_users WHERE nickname = $1)))`,
           [ws.nickname]
         );
         const myProfileRes = await pool.query(

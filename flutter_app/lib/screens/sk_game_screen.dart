@@ -560,6 +560,81 @@ class _SKGameScreenState extends State<SKGameScreen> {
                 ),
               ),
         actions: [
+          if (!game.isSpectator)
+            StatefulBuilder(
+              builder: (context, setDialogState) {
+                return Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    GestureDetector(
+                      onTap: () {
+                        game.setAutoAcceptCardView(!game.autoAcceptCardView);
+                        setDialogState(() {});
+                      },
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                        decoration: BoxDecoration(
+                          color: game.autoAcceptCardView ? const Color(0xFFE8F5E9) : const Color(0xFFF5F5F5),
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(
+                              game.autoAcceptCardView ? Icons.check_circle : Icons.check_circle_outline,
+                              size: 16,
+                              color: game.autoAcceptCardView ? const Color(0xFF4CAF50) : const Color(0xFF999999),
+                            ),
+                            const SizedBox(width: 4),
+                            Text(
+                              '항상승인',
+                              style: TextStyle(
+                                fontSize: 12,
+                                fontWeight: FontWeight.bold,
+                                color: game.autoAcceptCardView ? const Color(0xFF4CAF50) : const Color(0xFF999999),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 6),
+                    GestureDetector(
+                      onTap: () {
+                        game.setAutoRejectCardView(!game.autoRejectCardView);
+                        setDialogState(() {});
+                      },
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                        decoration: BoxDecoration(
+                          color: game.autoRejectCardView ? const Color(0xFFFFEBEE) : const Color(0xFFF5F5F5),
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(
+                              game.autoRejectCardView ? Icons.block : Icons.block_outlined,
+                              size: 16,
+                              color: game.autoRejectCardView ? const Color(0xFFE53935) : const Color(0xFF999999),
+                            ),
+                            const SizedBox(width: 4),
+                            Text(
+                              '항상거절',
+                              style: TextStyle(
+                                fontSize: 12,
+                                fontWeight: FontWeight.bold,
+                                color: game.autoRejectCardView ? const Color(0xFFE53935) : const Color(0xFF999999),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ],
+                );
+              },
+            ),
           TextButton(
             onPressed: () => Navigator.pop(ctx),
             child: const Text('닫기'),

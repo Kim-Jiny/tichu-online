@@ -2327,7 +2327,7 @@ async function getSeasonRankings(seasonId, limit = 50) {
              e.banner_key
       FROM tc_season_rankings r
       LEFT JOIN tc_user_equips e ON e.nickname = r.nickname
-      WHERE r.season_id = $1
+      WHERE r.season_id = $1 AND r.game_type = 'tichu'
       ORDER BY r.rank ASC
       LIMIT $2
       `,

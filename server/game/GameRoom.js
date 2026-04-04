@@ -470,14 +470,9 @@ class GameRoom {
 
   startGame() {
     if (this.gameType === 'skull_king') {
-      // SK allows fewer than maxPlayers - compact null slots and randomize
-      // the actual seating order at game start.
+      // SK allows fewer than maxPlayers - compact null slots
       const activePlayers = this.players.filter(p => p !== null);
       if (activePlayers.length < 2) return false;
-      for (let i = activePlayers.length - 1; i > 0; i--) {
-        const j = Math.floor(Math.random() * (i + 1));
-        [activePlayers[i], activePlayers[j]] = [activePlayers[j], activePlayers[i]];
-      }
       // Save original slot structure for restoration after game ends
       this._preGamePlayers = this.players.slice();
       this.players = activePlayers;

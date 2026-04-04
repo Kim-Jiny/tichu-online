@@ -565,7 +565,7 @@ class GameService extends ChangeNotifier {
         isRankedRoom = false;
         roomTurnTimeLimit = 30;
         roomTargetScore = 1000;
-        isSpectator = false; // C10: Clear isSpectator on kick
+        isSpectator = false;
         gameState = null;
         _prevGameState = null;
         skGameState = null;
@@ -573,6 +573,8 @@ class GameService extends ChangeNotifier {
         currentGameType = 'tichu';
         roomMaxPlayers = 4;
         chatMessages = [];
+        autoRejectCardView = false;
+        autoAcceptCardView = false;
         if (isDuplicateLogin) {
           playerId = '';
           playerName = '';
@@ -613,6 +615,8 @@ class GameService extends ChangeNotifier {
         chatMessages = [];
         desertedPlayerName = null;
         desertedReason = null;
+        autoRejectCardView = false;
+        autoAcceptCardView = false;
         notifyListeners();
         break;
 

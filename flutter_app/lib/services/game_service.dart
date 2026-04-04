@@ -560,7 +560,7 @@ class GameService extends ChangeNotifier {
         final isDuplicateLogin = kickMessage.contains('다른 기기');
         currentRoomId = '';
         currentRoomName = '';
-        roomPlayers = List.filled(4, null);
+        roomPlayers = List.filled(roomMaxPlayers, null);
         isHost = false;
         isRankedRoom = false;
         roomTurnTimeLimit = 30;
@@ -594,7 +594,7 @@ class GameService extends ChangeNotifier {
       case 'room_closed':
         currentRoomId = '';
         currentRoomName = '';
-        roomPlayers = List.filled(4, null);
+        roomPlayers = List.filled(roomMaxPlayers, null);
         isHost = false;
         isRankedRoom = false;
         roomTurnTimeLimit = 30;

@@ -81,6 +81,11 @@ class _GameScreenState extends State<GameScreen> {
   Future<void> _recoverRoomState() async {
     if (_waitingForRoomRecovery) return;
     _waitingForRoomRecovery = true;
+    // Clear stale UI state from previous connection
+    _selectedCards.clear();
+    _exchangeAssignments.clear();
+    _exchangeGiven.clear();
+    _exchangeSubmitted = false;
     await context.read<GameService>().checkRoomAndWait();
     if (!mounted) return;
     setState(() {

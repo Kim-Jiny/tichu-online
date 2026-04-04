@@ -255,7 +255,11 @@ function seasonNameFromDate(date) {
   return `${y}-${m} 시즌`;
 }
 
+let _seasonCycleRunning = false;
 async function ensureSeasonCycle() {
+  if (_seasonCycleRunning) return;
+  _seasonCycleRunning = true;
+  try {
   const now = new Date();
   const active = await getActiveSeason();
 
@@ -274,6 +278,9 @@ async function ensureSeasonCycle() {
   const startAt = new Date(now.getFullYear(), now.getMonth(), 1, 0, 0, 0);
   const endAt = new Date(now.getFullYear(), now.getMonth() + 1, 1, 0, 0, 0);
   await createSeason(seasonNameFromDate(startAt), startAt, endAt);
+  } finally {
+    _seasonCycleRunning = false;
+  }
 }
 
 // Clean up old sessions every 5 minutes
@@ -322,6 +329,7 @@ wss.on('connection', (ws, req) => {
 
   console.log('New connection established');
 
+  ws._messageQueue = Promise.resolve();
   ws.on('message', (raw) => {
     let data;
     try {
@@ -331,7 +339,10 @@ wss.on('connection', (ws, req) => {
       return;
     }
 
-    handleMessage(ws, data);
+    // Queue messages per-client to prevent async handler interleaving
+    ws._messageQueue = ws._messageQueue.then(() => handleMessage(ws, data)).catch(err => {
+      console.error('Message handler error:', err);
+    });
   });
 
   ws.on('close', () => {
@@ -398,19 +409,19 @@ wss.on('connection', (ws, req) => {
   });
 });
 
-function handleMessage(ws, data) {
+async function handleMessage(ws, data) {
   switch (data.type) {
     case 'register':
-      handleRegister(ws, data);
+      await handleRegister(ws, data);
       break;
     case 'login':
-      handleLogin(ws, data);
+      await handleLogin(ws, data);
       break;
     case 'check_nickname':
-      handleCheckNickname(ws, data);
+      await handleCheckNickname(ws, data);
       break;
     case 'delete_account':
-      handleDeleteAccount(ws);
+      await handleDeleteAccount(ws);
       break;
     case 'room_list':
       sendTo(ws, {
@@ -432,13 +443,13 @@ function handleMessage(ws, data) {
       handleCreateRoom(ws, data);
       break;
     case 'join_room':
-      handleJoinRoom(ws, data);
+      await handleJoinRoom(ws, data);
       break;
     case 'leave_room':
-      handleLeaveRoom(ws);
+      await handleLeaveRoom(ws);
       break;
     case 'leave_game':
-      handleLeaveGame(ws);
+      await handleLeaveGame(ws);
       break;
     case 'change_room_name':
       handleChangeRoomName(ws, data);
@@ -474,7 +485,7 @@ function handleMessage(ws, data) {
       handleSwitchToPlayer(ws, data);
       break;
     case 'get_profile':
-      handleGetProfile(ws, data);
+      await handleGetProfile(ws, data);
       break;
     // Game actions (Tichu)
     case 'declare_large_tichu':
@@ -506,95 +517,95 @@ function handleMessage(ws, data) {
       break;
     // Chat
     case 'chat_message':
-      handleChatMessage(ws, data);
+      await handleChatMessage(ws, data);
       break;
     // User actions
     case 'block_user':
-      handleBlockUser(ws, data);
+      await handleBlockUser(ws, data);
       break;
     case 'unblock_user':
-      handleUnblockUser(ws, data);
+      await handleUnblockUser(ws, data);
       break;
     case 'get_blocked_users':
-      handleGetBlockedUsers(ws);
+      await handleGetBlockedUsers(ws);
       break;
     case 'report_user':
-      handleReportUser(ws, data);
+      await handleReportUser(ws, data);
       break;
     case 'submit_inquiry':
-      handleSubmitInquiry(ws, data);
+      await handleSubmitInquiry(ws, data);
       break;
     case 'get_inquiries':
-      handleGetInquiries(ws);
+      await handleGetInquiries(ws);
       break;
     case 'mark_inquiries_read':
-      handleMarkInquiriesRead(ws);
+      await handleMarkInquiriesRead(ws);
       break;
     case 'add_friend':
-      handleAddFriend(ws, data);
+      await handleAddFriend(ws, data);
       break;
     case 'get_friends':
-      handleGetFriends(ws);
+      await handleGetFriends(ws);
       break;
     case 'get_pending_friend_requests':
-      handleGetPendingFriendRequests(ws);
+      await handleGetPendingFriendRequests(ws);
       break;
     case 'accept_friend_request':
-      handleAcceptFriendRequest(ws, data);
+      await handleAcceptFriendRequest(ws, data);
       break;
     case 'reject_friend_request':
-      handleRejectFriendRequest(ws, data);
+      await handleRejectFriendRequest(ws, data);
       break;
     case 'remove_friend':
-      handleRemoveFriend(ws, data);
+      await handleRemoveFriend(ws, data);
       break;
     case 'invite_to_room':
       handleInviteToRoom(ws, data);
       break;
     case 'get_rankings':
-      handleGetRankings(ws, data);
+      await handleGetRankings(ws, data);
       break;
     case 'get_seasons':
-      handleGetSeasons(ws);
+      await handleGetSeasons(ws);
       break;
     case 'get_wallet':
-      handleGetWallet(ws);
+      await handleGetWallet(ws);
       break;
     case 'get_gold_history':
-      handleGetGoldHistory(ws, data);
+      await handleGetGoldHistory(ws, data);
       break;
     case 'get_shop_items':
-      handleGetShopItems(ws);
+      await handleGetShopItems(ws);
       break;
     case 'get_inventory':
-      handleGetInventory(ws);
+      await handleGetInventory(ws);
       break;
     case 'buy_item':
-      handleBuyItem(ws, data);
+      await handleBuyItem(ws, data);
       break;
     case 'equip_item':
-      handleEquipItem(ws, data);
+      await handleEquipItem(ws, data);
       break;
     case 'use_item':
-      handleUseItem(ws, data);
+      await handleUseItem(ws, data);
       break;
     case 'change_nickname':
-      handleChangeNickname(ws, data);
+      await handleChangeNickname(ws, data);
       break;
     case 'social_login':
-      handleSocialLogin(ws, data);
+      await handleSocialLogin(ws, data);
       break;
     case 'social_register':
-      handleSocialRegister(ws, data);
+      await handleSocialRegister(ws, data);
       break;
     case 'social_link':
-      handleSocialLink(ws, data);
+      await handleSocialLink(ws, data);
       break;
     case 'social_unlink':
-      handleSocialUnlink(ws);
+      await handleSocialUnlink(ws);
       break;
     case 'get_linked_social':
-      handleGetLinkedSocial(ws);
+      await handleGetLinkedSocial(ws);
       break;
     case 'update_fcm_token':
       if (ws.nickname && data.fcmToken) {
@@ -610,84 +621,84 @@ function handleMessage(ws, data) {
           setPushFriendInvite(ws.nickname, data.friendInvite === true);
         }
         if (ws.isAdmin === true && (data.inquiryAlert != null || data.reportAlert != null)) {
-          setAdminAlertSettings(
+          const alertResult = await setAdminAlertSettings(
             ws.nickname,
             data.inquiryAlert != null ? data.inquiryAlert === true : ws.pushAdminInquiry !== false,
             data.reportAlert != null ? data.reportAlert === true : ws.pushAdminReport !== false,
-          ).then((result) => {
-            if (result.success) {
-              ws.pushAdminInquiry = result.settings.pushAdminInquiry === true;
-              ws.pushAdminReport = result.settings.pushAdminReport === true;
-            }
-          });
+          );
+          if (alertResult.success) {
+            ws.pushAdminInquiry = alertResult.settings.pushAdminInquiry === true;
+            ws.pushAdminReport = alertResult.settings.pushAdminReport === true;
+          }
         }
       }
       break;
     case 'get_admin_dashboard':
-      handleGetAdminDashboard(ws);
+      await handleGetAdminDashboard(ws);
       break;
     case 'get_admin_stats':
-      handleGetAdminStats(ws, data);
+      await handleGetAdminStats(ws, data);
       break;
     case 'get_admin_users':
-      handleGetAdminUsers(ws, data);
+      await handleGetAdminUsers(ws, data);
       break;
     case 'get_admin_user_detail':
-      handleGetAdminUserDetail(ws, data);
+      await handleGetAdminUserDetail(ws, data);
       break;
     case 'set_admin_user':
-      handleSetAdminUser(ws, data);
+      await handleSetAdminUser(ws, data);
       break;
     case 'admin_adjust_gold':
-      handleAdminAdjustGold(ws, data);
+      await handleAdminAdjustGold(ws, data);
       break;
     case 'get_admin_inquiries':
-      handleGetAdminInquiries(ws, data);
+      await handleGetAdminInquiries(ws, data);
       break;
     case 'resolve_admin_inquiry':
-      handleResolveAdminInquiry(ws, data);
+      await handleResolveAdminInquiry(ws, data);
       break;
     case 'get_admin_reports':
-      handleGetAdminReports(ws, data);
+      await handleGetAdminReports(ws, data);
       break;
     case 'get_admin_report_group':
-      handleGetAdminReportGroup(ws, data);
+      await handleGetAdminReportGroup(ws, data);
       break;
     case 'update_admin_report_status':
-      handleUpdateAdminReportStatus(ws, data);
+      await handleUpdateAdminReportStatus(ws, data);
       break;
     case 'ad_reward':
       if (ws.nickname) {
-        claimAdReward(ws.nickname).then(result => {
-          sendTo(ws, { type: 'ad_reward_result', ...result });
-        }).catch(err => {
+        try {
+          const adResult = await claimAdReward(ws.nickname);
+          sendTo(ws, { type: 'ad_reward_result', ...adResult });
+        } catch (err) {
           sendTo(ws, { type: 'ad_reward_result', success: false, message: '보상 지급에 실패했습니다' });
-        });
+        }
       }
       break;
     case 'get_maintenance_status':
       sendTo(ws, { type: 'maintenance_status', ...getMaintenanceStatus() });
       break;
     case 'get_app_config':
-      handleGetAppConfig(ws);
+      await handleGetAppConfig(ws);
       break;
     case 'search_users':
-      handleSearchUsers(ws, data);
+      await handleSearchUsers(ws, data);
       break;
     case 'send_dm':
-      handleSendDm(ws, data);
+      await handleSendDm(ws, data);
       break;
     case 'get_dm_history':
-      handleGetDmHistory(ws, data);
+      await handleGetDmHistory(ws, data);
       break;
     case 'mark_dm_read':
-      handleMarkDmRead(ws, data);
+      await handleMarkDmRead(ws, data);
       break;
     case 'get_dm_conversations':
-      handleGetDmConversations(ws);
+      await handleGetDmConversations(ws);
       break;
     case 'get_unread_dm_count':
-      handleGetUnreadDmCount(ws);
+      await handleGetUnreadDmCount(ws);
       break;
     default:
       sendTo(ws, { type: 'error', message: `알 수 없는 메시지: ${data.type}` });

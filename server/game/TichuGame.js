@@ -500,6 +500,11 @@ class TichuGame {
 
     this.removeCardsFromHand(playerId, ['special_dog']);
 
+    // Check if player finished (Dog was their last card)
+    if (this.hands[playerId].length === 0 && !this.finishOrder.includes(playerId)) {
+      this.finishOrder.push(playerId);
+    }
+
     // Dog passes lead to partner
     const partnerIdx = (this.playerIds.indexOf(playerId) + 2) % 4;
     const partner = this.playerIds[partnerIdx];

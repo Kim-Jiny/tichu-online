@@ -88,7 +88,8 @@ class _ConnectionOverlayState extends State<ConnectionOverlay>
 
     try {
       final session = context.read<SessionService>();
-      final success = await session.reconnectAndRestore();
+      final success = await session.reconnectAndRestore()
+          .timeout(const Duration(seconds: 30), onTimeout: () => false);
 
       if (!mounted) return;
       if (!success) {

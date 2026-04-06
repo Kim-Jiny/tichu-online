@@ -51,6 +51,7 @@ const {
   adminAdjustGold,
   setAdminMemo,
   getSKRecentMatches,
+  getPublishedNotices,
 } = require('./db/database');
 
 // Firebase Admin SDK initialization (optional - only if FIREBASE_SERVICE_ACCOUNT is set)
@@ -540,6 +541,9 @@ async function handleMessage(ws, data) {
       break;
     case 'mark_inquiries_read':
       await handleMarkInquiriesRead(ws);
+      break;
+    case 'get_notices':
+      await handleGetNotices(ws);
       break;
     case 'add_friend':
       await handleAddFriend(ws, data);
@@ -3613,6 +3617,11 @@ async function handleMarkInquiriesRead(ws) {
   await markInquiriesRead(ws.nickname);
   const result = await getUserInquiries(ws.nickname);
   sendTo(ws, { type: 'inquiries_result', ...result });
+}
+
+async function handleGetNotices(ws) {
+  const result = await getPublishedNotices();
+  sendTo(ws, { type: 'notices_result', ...result });
 }
 
 // Add friend handler

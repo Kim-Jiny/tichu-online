@@ -533,6 +533,21 @@ async function initDatabase() {
       ON tc_season_rankings (season_id, game_type, rank)
     `);
 
+    // Notices table
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS tc_notices (
+        id SERIAL PRIMARY KEY,
+        category VARCHAR(20) DEFAULT 'general',
+        title VARCHAR(200) NOT NULL,
+        content TEXT NOT NULL,
+        is_pinned BOOLEAN DEFAULT FALSE,
+        status VARCHAR(20) DEFAULT 'draft',
+        published_at TIMESTAMP,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      )
+    `);
+
     console.log('Database initialized (tc_ tables)');
   } catch (err) {
     console.error('Database initialization error:', err);
@@ -4378,6 +4393,112 @@ async function getSKSeasonRankings(seasonId, limit = 50) {
   }
 }
 
+// ===== Notices CRUD =====
+
+async function getPublishedNotices() {
+  const client = await pool.connect();
+  try {
+    const res = await client.query(
+      `SELECT id, category, title, content, is_pinned, published_at
+       FROM tc_notices
+       WHERE status = 'published'
+       ORDER BY is_pinned DESC, published_at DESC
+       LIMIT 50`
+    );
+    return { success: true, notices: res.rows };
+  } catch (err) {
+    console.error('getPublishedNotices error:', err);
+    return { success: false, notices: [] };
+  } finally {
+    client.release();
+  }
+}
+
+async function getNotices(page = 1, limit = 20) {
+  const client = await pool.connect();
+  try {
+    const offset = (page - 1) * limit;
+    const countRes = await client.query('SELECT COUNT(*) FROM tc_notices');
+    const total = parseInt(countRes.rows[0].count);
+    const res = await client.query(
+      `SELECT * FROM tc_notices ORDER BY is_pinned DESC, created_at DESC LIMIT $1 OFFSET $2`,
+      [limit, offset]
+    );
+    return { rows: res.rows, total, page, limit };
+  } catch (err) {
+    console.error('getNotices error:', err);
+    return { rows: [], total: 0, page, limit };
+  } finally {
+    client.release();
+  }
+}
+
+async function getNoticeById(id) {
+  const client = await pool.connect();
+  try {
+    const res = await client.query('SELECT * FROM tc_notices WHERE id = $1', [id]);
+    return res.rows[0] || null;
+  } catch (err) {
+    console.error('getNoticeById error:', err);
+    return null;
+  } finally {
+    client.release();
+  }
+}
+
+async function createNotice(category, title, content, isPinned, status) {
+  const client = await pool.connect();
+  try {
+    const publishedAt = status === 'published' ? new Date() : null;
+    const res = await client.query(
+      `INSERT INTO tc_notices (category, title, content, is_pinned, status, published_at)
+       VALUES ($1, $2, $3, $4, $5, $6) RETURNING id`,
+      [category, title, content, isPinned, status, publishedAt]
+    );
+    return { success: true, id: res.rows[0].id };
+  } catch (err) {
+    console.error('createNotice error:', err);
+    return { success: false };
+  } finally {
+    client.release();
+  }
+}
+
+async function updateNotice(id, category, title, content, isPinned, status) {
+  const client = await pool.connect();
+  try {
+    const existing = await client.query('SELECT status, published_at FROM tc_notices WHERE id = $1', [id]);
+    if (existing.rows.length === 0) return { success: false };
+    const oldStatus = existing.rows[0].status;
+    const oldPublishedAt = existing.rows[0].published_at;
+    const publishedAt = (status === 'published' && oldStatus !== 'published') ? new Date() : oldPublishedAt;
+    await client.query(
+      `UPDATE tc_notices SET category=$1, title=$2, content=$3, is_pinned=$4, status=$5, published_at=$6, updated_at=NOW()
+       WHERE id=$7`,
+      [category, title, content, isPinned, status, publishedAt, id]
+    );
+    return { success: true };
+  } catch (err) {
+    console.error('updateNotice error:', err);
+    return { success: false };
+  } finally {
+    client.release();
+  }
+}
+
+async function deleteNotice(id) {
+  const client = await pool.connect();
+  try {
+    await client.query('DELETE FROM tc_notices WHERE id = $1', [id]);
+    return { success: true };
+  } catch (err) {
+    console.error('deleteNotice error:', err);
+    return { success: false };
+  } finally {
+    client.release();
+  }
+}
+
 module.exports = {
   initDatabase,
   registerUser,
@@ -4472,5 +4593,11 @@ module.exports = {
   getSKRankings,
   getCurrentSKSeasonRankings,
   getSKSeasonRankings,
+  getPublishedNotices,
+  getNotices,
+  getNoticeById,
+  createNotice,
+  updateNotice,
+  deleteNotice,
   pool,
 };

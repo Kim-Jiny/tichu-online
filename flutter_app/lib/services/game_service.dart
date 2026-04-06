@@ -142,6 +142,11 @@ class GameService extends ChangeNotifier {
   String? inquiriesError;
   String? inquiryBannerMessage;
 
+  // Notices
+  List<Map<String, dynamic>> notices = [];
+  bool noticesLoading = false;
+  String? noticesError;
+
   // Push settings
   bool pushEnabled = true;
   bool pushFriendInviteEnabled = true;
@@ -1285,6 +1290,21 @@ class GameService extends ChangeNotifier {
         notifyListeners();
         break;
 
+      case 'notices_result':
+        noticesLoading = false;
+        if (data['success'] == true) {
+          notices = (data['notices'] as List?)
+                  ?.map((e) => (e as Map).cast<String, dynamic>())
+                  .toList() ??
+              [];
+          noticesError = null;
+        } else {
+          noticesError = data['message'] as String? ?? '공지사항을 불러오지 못했습니다';
+          notices = [];
+        }
+        notifyListeners();
+        break;
+
       case 'maintenance_status':
         _parseMaintenanceStatus(data);
         notifyListeners();
@@ -2396,6 +2416,13 @@ class GameService extends ChangeNotifier {
     inquiriesError = null;
     notifyListeners();
     _network.send({'type': 'get_inquiries'});
+  }
+
+  void requestNotices() {
+    noticesLoading = true;
+    noticesError = null;
+    notifyListeners();
+    _network.send({'type': 'get_notices'});
   }
 
   // Send FCM token to server asynchronously after login

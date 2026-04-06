@@ -83,6 +83,236 @@ class _SettingsScreenState extends State<SettingsScreen> {
     game.deleteAccount().whenComplete(_logout);
   }
 
+  String _noticeCategoryLabel(dynamic value) {
+    switch (value?.toString()) {
+      case 'release': return '릴리즈';
+      case 'update': return '업데이트';
+      case 'preview': return '업데이트 예고';
+      case 'general': return '공지';
+      default: return '공지';
+    }
+  }
+
+  Color _noticeCategoryBgColor(dynamic value) {
+    switch (value?.toString()) {
+      case 'release': return const Color(0xFFE3F2FD);
+      case 'update': return const Color(0xFFE8F5E9);
+      case 'preview': return const Color(0xFFFFF3E0);
+      case 'general': return const Color(0xFFECEFF1);
+      default: return const Color(0xFFECEFF1);
+    }
+  }
+
+  Color _noticeCategoryTextColor(dynamic value) {
+    switch (value?.toString()) {
+      case 'release': return const Color(0xFF1565C0);
+      case 'update': return const Color(0xFF2E7D32);
+      case 'preview': return const Color(0xFFE65100);
+      case 'general': return const Color(0xFF546E7A);
+      default: return const Color(0xFF546E7A);
+    }
+  }
+
+  void _showNoticesDialog() {
+    final game = context.read<GameService>();
+    game.requestNotices();
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: const Row(
+          children: [
+            Icon(Icons.campaign, color: Color(0xFF42A5F5)),
+            SizedBox(width: 8),
+            Text('공지사항'),
+          ],
+        ),
+        content: SizedBox(
+          width: double.maxFinite,
+          child: Consumer<GameService>(
+            builder: (context, game, _) {
+              if (game.noticesLoading) {
+                return const SizedBox(
+                  height: 160,
+                  child: Center(child: CircularProgressIndicator()),
+                );
+              }
+              if (game.noticesError != null) {
+                return SizedBox(
+                  height: 160,
+                  child: Center(
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text(
+                          game.noticesError!,
+                          style: const TextStyle(color: Color(0xFFCC6666)),
+                          textAlign: TextAlign.center,
+                        ),
+                        const SizedBox(height: 10),
+                        TextButton(
+                          onPressed: () => game.requestNotices(),
+                          child: const Text('다시 시도'),
+                        ),
+                      ],
+                    ),
+                  ),
+                );
+              }
+              if (game.notices.isEmpty) {
+                return const SizedBox(
+                  height: 140,
+                  child: Center(
+                    child: Text(
+                      '등록된 공지사항이 없습니다',
+                      style: TextStyle(color: Color(0xFF9A8E8A)),
+                    ),
+                  ),
+                );
+              }
+              return SizedBox(
+                height: 360,
+                child: ListView.separated(
+                  itemCount: game.notices.length,
+                  separatorBuilder: (_, __) => const SizedBox(height: 8),
+                  itemBuilder: (context, index) {
+                    final item = game.notices[index];
+                    final title = item['title']?.toString() ?? '';
+                    final category = item['category']?.toString() ?? 'general';
+                    final isPinned = item['is_pinned'] == true;
+                    final publishedAt = _formatShortDate(item['published_at']);
+                    return InkWell(
+                      onTap: () => _showNoticeDetailDialog(item),
+                      borderRadius: BorderRadius.circular(12),
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(color: const Color(0xFFE0D8D4)),
+                        ),
+                        child: Row(
+                          children: [
+                            if (isPinned)
+                              const Padding(
+                                padding: EdgeInsets.only(right: 6),
+                                child: Icon(Icons.push_pin, size: 16, color: Color(0xFFFF8F00)),
+                              ),
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                              decoration: BoxDecoration(
+                                color: _noticeCategoryBgColor(category),
+                                borderRadius: BorderRadius.circular(8),
+                              ),
+                              child: Text(
+                                _noticeCategoryLabel(category),
+                                style: TextStyle(
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.w600,
+                                  color: _noticeCategoryTextColor(category),
+                                ),
+                              ),
+                            ),
+                            const SizedBox(width: 8),
+                            Expanded(
+                              child: Text(
+                                title,
+                                style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w500),
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ),
+                            const SizedBox(width: 6),
+                            Text(
+                              publishedAt,
+                              style: const TextStyle(fontSize: 11, color: Color(0xFF9A8E8A)),
+                            ),
+                            const SizedBox(width: 4),
+                            const Icon(Icons.chevron_right, size: 18, color: Color(0xFFB0A8A4)),
+                          ],
+                        ),
+                      ),
+                    );
+                  },
+                ),
+              );
+            },
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('닫기'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showNoticeDetailDialog(Map<String, dynamic> item) {
+    final title = item['title']?.toString() ?? '';
+    final content = item['content']?.toString() ?? '';
+    final category = item['category']?.toString() ?? 'general';
+    final publishedAt = _formatShortDate(item['published_at']);
+
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+              decoration: BoxDecoration(
+                color: _noticeCategoryBgColor(category),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Text(
+                _noticeCategoryLabel(category),
+                style: TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w600,
+                  color: _noticeCategoryTextColor(category),
+                ),
+              ),
+            ),
+            const SizedBox(width: 8),
+            Expanded(
+              child: Text(
+                title,
+                style: const TextStyle(fontSize: 16),
+              ),
+            ),
+          ],
+        ),
+        content: SingleChildScrollView(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                publishedAt,
+                style: const TextStyle(fontSize: 12, color: Color(0xFF9A8E8A)),
+              ),
+              const SizedBox(height: 12),
+              const Divider(height: 1),
+              const SizedBox(height: 12),
+              Text(
+                content,
+                style: const TextStyle(fontSize: 14, height: 1.6),
+              ),
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('닫기'),
+          ),
+        ],
+      ),
+    );
+  }
+
   void _showInquiryDialog() {
     final titleController = TextEditingController();
     final contentController = TextEditingController();
@@ -814,6 +1044,19 @@ class _SettingsScreenState extends State<SettingsScreen> {
                                 iconColor: const Color(0xFF8A7A72),
                                 title: '개인정보처리방침',
                                 onTap: () => _showTextViewDialog('개인정보처리방침', game.privacyPolicy),
+                                trailing: const Icon(Icons.chevron_right, color: Color(0xFFB0A8A4)),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 12),
+                          _buildSection(
+                            '공지사항',
+                            [
+                              _buildRow(
+                                icon: Icons.campaign,
+                                iconColor: const Color(0xFF42A5F5),
+                                title: '공지사항',
+                                onTap: _showNoticesDialog,
                                 trailing: const Icon(Icons.chevron_right, color: Color(0xFFB0A8A4)),
                               ),
                             ],

@@ -7,6 +7,7 @@ const {
   getDetailedAdminStats,
   getAllShopItemsAdmin, addShopItem, updateShopItem, deleteShopItem, getShopItemById,
   getConfig, updateConfig,
+  getNotices, getNoticeById, createNotice, updateNotice, deleteNotice,
 } = require('./db/database');
 
 // In-memory session store: token -> { username, createdAt }
@@ -307,6 +308,7 @@ input[type="text"], input[type="password"] { width: 100%; padding: 10px 12px; bo
   <a href="/tc-backstage/shop" class="${activePage === 'shop' ? 'active' : ''}" onclick="closeSidebar()">상점</a>
   <a href="/tc-backstage/reports" class="${activePage === 'reports' ? 'active' : ''}" onclick="closeSidebar()">신고</a>
   <a href="/tc-backstage/users" class="${activePage === 'users' ? 'active' : ''}" onclick="closeSidebar()">유저</a>
+  <a href="/tc-backstage/notices" class="${activePage === 'notices' ? 'active' : ''}" onclick="closeSidebar()">공지사항</a>
   <a href="/tc-backstage/maintenance" class="${activePage === 'maintenance' ? 'active' : ''}" onclick="closeSidebar()">점검</a>
   <a href="/tc-backstage/settings" class="${activePage === 'settings' ? 'active' : ''}" onclick="closeSidebar()">설정</a>
   <div class="logout">
@@ -2661,6 +2663,149 @@ async function handleAdminRoute(req, res, url, pathname, method, lobby, wss, mai
       return redirect(res, referer);
     }
     return redirect(res, `/tc-backstage/users/${encodeURIComponent(nickname)}`);
+  }
+
+  // ===== Notices =====
+  function noticeCategoryBadge(cat) {
+    const map = { release: '릴리즈', update: '업데이트', preview: '업데이트 예고', general: '공지' };
+    const colorMap = { release: '#1565c0', update: '#2e7d32', preview: '#e65100', general: '#546e7a' };
+    const bgMap = { release: '#e3f2fd', update: '#e8f5e9', preview: '#fff3e0', general: '#eceff1' };
+    return `<span class="badge" style="background:${bgMap[cat] || bgMap.general};color:${colorMap[cat] || colorMap.general}">${map[cat] || cat}</span>`;
+  }
+
+  function noticeStatusBadge(status) {
+    if (status === 'published') return '<span class="badge" style="background:#e8f5e9;color:#2e7d32">게시중</span>';
+    return '<span class="badge" style="background:#fff8e1;color:#f57f17">임시저장</span>';
+  }
+
+  function noticeFormHtml(notice = null) {
+    const cat = notice?.category || 'general';
+    const title = escapeHtml(notice?.title || '');
+    const content = escapeHtml(notice?.content || '');
+    const isPinned = notice?.is_pinned ? 'checked' : '';
+    const status = notice?.status || 'draft';
+    return `
+      <div class="card">
+        <div style="display:grid;gap:14px">
+          <div>
+            <label style="font-weight:600;display:block;margin-bottom:4px">카테고리</label>
+            <select name="category" style="padding:8px 12px;border:1px solid var(--line);border-radius:8px;width:100%">
+              <option value="general" ${cat === 'general' ? 'selected' : ''}>공지</option>
+              <option value="release" ${cat === 'release' ? 'selected' : ''}>릴리즈</option>
+              <option value="update" ${cat === 'update' ? 'selected' : ''}>업데이트</option>
+              <option value="preview" ${cat === 'preview' ? 'selected' : ''}>업데이트 예고</option>
+            </select>
+          </div>
+          <div>
+            <label style="font-weight:600;display:block;margin-bottom:4px">제목</label>
+            <input type="text" name="title" value="${title}" placeholder="제목 입력" style="padding:8px 12px;border:1px solid var(--line);border-radius:8px;width:100%">
+          </div>
+          <div>
+            <label style="font-weight:600;display:block;margin-bottom:4px">내용</label>
+            <textarea name="content" rows="8" placeholder="내용 입력" style="padding:8px 12px;border:1px solid var(--line);border-radius:8px;width:100%">${content}</textarea>
+          </div>
+          <div style="display:flex;gap:16px;align-items:center">
+            <label><input type="checkbox" name="is_pinned" value="1" ${isPinned}> 상단 고정</label>
+            <select name="status" style="padding:8px 12px;border:1px solid var(--line);border-radius:8px">
+              <option value="draft" ${status === 'draft' ? 'selected' : ''}>임시저장</option>
+              <option value="published" ${status === 'published' ? 'selected' : ''}>게시</option>
+            </select>
+          </div>
+          <div><button type="submit" class="btn btn-primary">${notice ? '수정' : '등록'}</button></div>
+        </div>
+      </div>`;
+  }
+
+  if (pathname === '/tc-backstage/notices' && method === 'GET') {
+    const page = parseInt(url.searchParams.get('page') || '1');
+    const data = await getNotices(page, 20);
+    const publishedCount = data.rows.filter(r => r.status === 'published').length;
+    const draftCount = data.rows.filter(r => r.status === 'draft').length;
+    const pinnedCount = data.rows.filter(r => r.is_pinned).length;
+
+    let tableContent = '';
+    if (data.rows.length > 0) {
+      tableContent = `<div class="table-wrap"><table>
+        <tr><th>ID</th><th>카테고리</th><th>제목</th><th>상태</th><th>고정</th><th>날짜</th><th></th></tr>
+        ${data.rows.map(r => `<tr>
+          <td>${r.id}</td>
+          <td>${noticeCategoryBadge(r.category)}</td>
+          <td>${escapeHtml(r.title)}</td>
+          <td>${noticeStatusBadge(r.status)}</td>
+          <td>${r.is_pinned ? '📌' : ''}</td>
+          <td>${formatDate(r.published_at || r.created_at)}</td>
+          <td>
+            <a href="/tc-backstage/notices/${r.id}/edit" class="btn btn-secondary">수정</a>
+            <form method="POST" action="/tc-backstage/notices/${r.id}/delete" style="display:inline" onsubmit="return confirm('삭제하시겠습니까?')">
+              <button type="submit" class="btn" style="background:#ffebee;color:#c62828">삭제</button>
+            </form>
+          </td>
+        </tr>`).join('')}
+      </table></div>
+      ${pagination(data.page, data.total, data.limit, '/tc-backstage/notices')}`;
+    } else {
+      tableContent = '<div class="empty">공지사항 없음</div>';
+    }
+
+    const content = `
+      ${pageHeader('공지사항', '앱 내 공지사항을 관리합니다. 게시 상태인 공지만 앱에 노출됩니다.', '<a href="/tc-backstage/notices/new" class="btn btn-primary">새 공지 작성</a>')}
+      ${summaryStrip([
+        { label: '전체', value: formatNumber(data.total) },
+        { label: '게시중', value: formatNumber(publishedCount), valueColor: '#2e7d32' },
+        { label: '임시저장', value: formatNumber(draftCount), valueColor: '#f57f17' },
+        { label: '고정', value: formatNumber(pinnedCount) }
+      ])}
+      <div class="card">${tableContent}</div>
+    `;
+    return html(res, layout('공지사항', content, 'notices'));
+  }
+
+  // New notice form
+  if (pathname === '/tc-backstage/notices/new' && method === 'GET') {
+    const content = `
+      ${pageHeader('새 공지 작성')}
+      <form method="POST" action="/tc-backstage/notices/new">
+        ${noticeFormHtml()}
+      </form>
+      <a href="/tc-backstage/notices" class="btn btn-secondary" style="margin-top:12px">목록으로</a>
+    `;
+    return html(res, layout('새 공지', content, 'notices'));
+  }
+
+  // Create notice
+  if (pathname === '/tc-backstage/notices/new' && method === 'POST') {
+    const body = await parseBody(req);
+    await createNotice(body.category || 'general', body.title || '', body.content || '', body.is_pinned === '1', body.status || 'draft');
+    return redirect(res, '/tc-backstage/notices');
+  }
+
+  // Edit notice form
+  const noticeEditMatch = pathname.match(/^\/tc-backstage\/notices\/(\d+)\/edit$/);
+  if (noticeEditMatch && method === 'GET') {
+    const notice = await getNoticeById(parseInt(noticeEditMatch[1]));
+    if (!notice) return html(res, layout('찾을 수 없음', '<div class="empty">공지를 찾을 수 없습니다</div>', 'notices'), 404);
+    const content = `
+      ${pageHeader('공지 수정')}
+      <form method="POST" action="/tc-backstage/notices/${notice.id}/edit">
+        ${noticeFormHtml(notice)}
+      </form>
+      <a href="/tc-backstage/notices" class="btn btn-secondary" style="margin-top:12px">목록으로</a>
+    `;
+    return html(res, layout('공지 수정', content, 'notices'));
+  }
+
+  // Update notice
+  if (noticeEditMatch && method === 'POST') {
+    const body = await parseBody(req);
+    await updateNotice(parseInt(noticeEditMatch[1]), body.category || 'general', body.title || '', body.content || '', body.is_pinned === '1', body.status || 'draft');
+    return redirect(res, '/tc-backstage/notices');
+  }
+
+  // Delete notice
+  const noticeDeleteMatch = pathname.match(/^\/tc-backstage\/notices\/(\d+)\/delete$/);
+  if (noticeDeleteMatch && method === 'POST') {
+    await deleteNotice(parseInt(noticeDeleteMatch[1]));
+    return redirect(res, '/tc-backstage/notices');
   }
 
   // 404

@@ -2128,7 +2128,7 @@ class GameService extends ChangeNotifier {
   void requestSKRankings() {
     rankingsLoading = true;
     rankingsError = null;
-    _network.send({'type': 'get_rankings', 'gameType': 'skull_king'});
+    _network.send({'type': 'get_rankings', 'gameType': 'skull_king', 'seasonId': 'current'});
     notifyListeners();
   }
 

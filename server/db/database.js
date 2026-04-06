@@ -2300,6 +2300,7 @@ async function getCurrentSeasonRankings(limit = 50) {
              e.banner_key
       FROM tc_users u
       LEFT JOIN tc_user_equips e ON e.nickname = u.nickname
+      WHERE u.is_deleted IS NOT TRUE AND u.season_games > 0
       ORDER BY u.season_rating DESC, u.season_wins DESC, u.season_games DESC, u.nickname ASC
       LIMIT $1
       `,
@@ -2386,8 +2387,9 @@ async function grantSeasonRewards(seasonId) {
 
     const topRes = await client.query(
       `
-      SELECT nickname, rating
+      SELECT nickname, season_rating AS rating
       FROM tc_users
+      WHERE season_games > 0 AND is_deleted IS NOT TRUE
       ORDER BY season_rating DESC, season_wins DESC, season_games DESC, nickname ASC
       LIMIT 3
       `
@@ -2407,6 +2409,7 @@ async function grantSeasonRewards(seasonId) {
              season_losses AS losses,
              season_games AS total_games
       FROM tc_users
+      WHERE season_games > 0 AND is_deleted IS NOT TRUE
       ORDER BY season_rating DESC, season_wins DESC, season_games DESC, nickname ASC
       LIMIT 100
       `
@@ -4138,7 +4141,7 @@ async function getCurrentSKSeasonRankings(limit = 50) {
               e.banner_key
        FROM tc_users u
        LEFT JOIN tc_user_equips e ON e.nickname = u.nickname
-       WHERE u.is_deleted IS NOT TRUE
+       WHERE u.is_deleted IS NOT TRUE AND u.sk_season_games > 0
        ORDER BY u.sk_season_rating DESC, u.sk_season_wins DESC, u.sk_season_games DESC, u.nickname ASC
        LIMIT $1`,
       [limit]

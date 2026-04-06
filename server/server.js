@@ -3119,13 +3119,50 @@ async function handleGetRankings(ws, data) {
   if (gameType === 'skull_king') {
     const seasonId = data?.seasonId;
     let result;
-    if (seasonId) {
-      result = await getSKSeasonRankings(seasonId, 50);
-    } else {
+    let isSeason = false;
+    if (seasonId === 'current') {
+      // Explicitly request current season rankings
       result = await getCurrentSKSeasonRankings(50);
+      isSeason = true;
+    } else if (seasonId) {
+      result = await getSKSeasonRankings(seasonId, 50);
+      isSeason = true;
+    } else {
+      // No seasonId: return all-time SK rankings (backward compatible)
+      result = await getSKRankings(50);
+    }
+    // Calculate requester's SK rank
+    if (ws.nickname && result.success && !seasonId) {
+      const { pool } = require('./db/database');
+      try {
+        const myRankRes = await pool.query(
+          `SELECT COUNT(*) + 1 AS rank FROM tc_users
+           WHERE is_deleted IS NOT TRUE AND sk_total_games > 0
+             AND ((sk_rating > (SELECT sk_rating FROM tc_users WHERE nickname = $1))
+              OR (sk_rating = (SELECT sk_rating FROM tc_users WHERE nickname = $1)
+                  AND sk_wins > (SELECT sk_wins FROM tc_users WHERE nickname = $1)))`,
+          [ws.nickname]
+        );
+        const myProfileRes = await pool.query(
+          `SELECT u.nickname, u.sk_rating AS rating, u.sk_wins AS wins,
+                  u.sk_losses AS losses, u.sk_total_games AS total_games,
+                  CASE WHEN u.sk_total_games > 0
+                    THEN ROUND((u.sk_wins::FLOAT / u.sk_total_games) * 100)
+                    ELSE 0 END AS win_rate,
+                  e.banner_key
+           FROM tc_users u
+           LEFT JOIN tc_user_equips e ON e.nickname = u.nickname
+           WHERE u.nickname = $1`,
+          [ws.nickname]
+        );
+        if (myProfileRes.rows.length > 0) {
+          result.myRank = parseInt(myRankRes.rows[0].rank);
+          result.myRankData = myProfileRes.rows[0];
+        }
+      } catch (_) {}
     }
     // Calculate requester's SK season rank
-    if (ws.nickname && result.success && !seasonId) {
+    if (ws.nickname && result.success && isSeason && seasonId === 'current') {
       const { pool } = require('./db/database');
       try {
         const myRankRes = await pool.query(

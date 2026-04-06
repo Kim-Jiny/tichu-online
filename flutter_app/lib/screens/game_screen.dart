@@ -1273,7 +1273,7 @@ class _GameScreenState extends State<GameScreen> {
         _buildMannerLeaveRow(reportCount: reportCount as int, leaveCount: leaveCount as int),
         const SizedBox(height: 10),
         _buildProfileSectionCard(
-          title: '시즌 랭킹전',
+          title: '티츄 시즌 랭킹전',
           accent: const Color(0xFF7A6A95),
           background: const Color(0xFFF6F3FA),
           icon: Icons.emoji_events,

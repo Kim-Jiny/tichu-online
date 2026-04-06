@@ -1395,7 +1395,7 @@ class _LobbyScreenState extends State<LobbyScreen> {
       stripColor = const Color(0xFF2D2D3D);
       badgeBgColor = const Color(0xFF2D2D3D);
       badgeTextColor = const Color(0xFFFFD54F);
-      badgeText = '☠️ SK';
+      badgeText = '☠️ 스컬킹';
       nameColor = const Color(0xFF2D2D3D);
       subTextColor = const Color(0xFF7A7A90);
     } else {
@@ -3052,7 +3052,7 @@ class _LobbyScreenState extends State<LobbyScreen> {
         const SizedBox(height: 10),
         if (selectedTab == 'tichu') ...[
           _buildProfileSectionCard(
-            title: '시즌 랭킹전',
+            title: '티츄 시즌 랭킹전',
             accent: const Color(0xFF3A3058),
             background: const Color(0xFFF6F4FA),
             icon: Icons.emoji_events,
@@ -3078,7 +3078,7 @@ class _LobbyScreenState extends State<LobbyScreen> {
           ),
         ] else ...[
           _buildProfileSectionCard(
-            title: '시즌 랭킹전',
+            title: '스컬킹 시즌 랭킹전',
             accent: const Color(0xFF2D2D3D),
             background: const Color(0xFFECEFF6),
             icon: Icons.emoji_events,
@@ -3617,7 +3617,7 @@ class _LobbyScreenState extends State<LobbyScreen> {
                         borderRadius: BorderRadius.circular(6),
                       ),
                       child: Text(
-                        isSK ? 'SK' : (isRanked ? '랭크' : '일반'),
+                        isSK ? '스컬킹' : (isRanked ? '랭크' : '일반'),
                         style: TextStyle(
                           fontSize: 9,
                           fontWeight: FontWeight.bold,

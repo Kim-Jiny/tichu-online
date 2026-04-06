@@ -2697,6 +2697,16 @@ async function getUsers(search = '', page = 1, limit = 20, options = {}) {
       countParams.push(parseInt(options.minLeaves));
       paramIdx++;
     }
+    if (options.platform && ['ios', 'android'].includes(String(options.platform).toLowerCase())) {
+      conditions.push(`LOWER(device_platform) = $${paramIdx}`);
+      countParams.push(String(options.platform).toLowerCase());
+      paramIdx++;
+    }
+    if (options.ipQuery) {
+      conditions.push(`last_ip ILIKE $${paramIdx}`);
+      countParams.push(`%${options.ipQuery}%`);
+      paramIdx++;
+    }
 
     const whereClause = conditions.length > 0 ? `WHERE ${conditions.join(' AND ')}` : '';
 
@@ -2719,7 +2729,7 @@ async function getUsers(search = '', page = 1, limit = 20, options = {}) {
     const total = parseInt(countResult.rows[0].count);
 
     const dataParams = [...countParams, limit, offset];
-    const dataQuery = `SELECT id, username, nickname, total_games, wins, losses, rating, gold, level, leave_count, season_rating, created_at, last_login, device_platform, app_version, is_admin, is_deleted
+    const dataQuery = `SELECT id, username, nickname, total_games, wins, losses, rating, gold, level, leave_count, season_rating, created_at, last_login, device_platform, app_version, last_ip, is_admin, is_deleted
                    FROM tc_users ${whereClause}
                    ORDER BY ${orderBy} LIMIT $${paramIdx} OFFSET $${paramIdx + 1}`;
     const result = await client.query(dataQuery, dataParams);
@@ -2937,27 +2947,93 @@ async function getDashboardStats() {
   }
 }
 
-async function getDetailedAdminStats(dateFrom, dateTo, bucket = 'day') {
+async function getAdminRecentMatches(page = 1, limit = 30) {
+  const client = await pool.connect();
+  try {
+    const safePage = Math.max(1, parseInt(page, 10) || 1);
+    const safeLimit = Math.min(100, Math.max(1, parseInt(limit, 10) || 30));
+    const offset = (safePage - 1) * safeLimit;
+
+    const countResult = await client.query(
+      `SELECT
+         (SELECT COUNT(*) FROM tc_match_history) +
+         (SELECT COUNT(*) FROM tc_sk_match_history) AS total`
+    );
+
+    const result = await client.query(
+      `SELECT * FROM (
+        SELECT id, 'tichu'::text AS game_type, winner_team, team_a_score, team_b_score,
+               player_a1, player_a2, player_b1, player_b2,
+               is_ranked, end_reason, deserter_nickname, created_at
+        FROM tc_match_history
+        UNION ALL
+        SELECT h.id, 'skull_king'::text AS game_type, NULL AS winner_team, NULL::int AS team_a_score, NULL::int AS team_b_score,
+               (SELECT string_agg(p.nickname || '(' || p.score || '점)', ', ' ORDER BY p.rank) FROM tc_sk_match_players p WHERE p.match_id = h.id) AS player_a1,
+               h.player_count::text AS player_a2, NULL AS player_b1, NULL AS player_b2,
+               h.is_ranked, h.end_reason, h.deserter_nickname, h.created_at
+        FROM tc_sk_match_history h
+      ) matches
+      ORDER BY created_at DESC
+      LIMIT $1 OFFSET $2`,
+      [safeLimit, offset]
+    );
+
+    return {
+      rows: result.rows,
+      total: parseInt(countResult.rows[0].total, 10) || 0,
+      page: safePage,
+      limit: safeLimit,
+    };
+  } catch (err) {
+    console.error('Get admin recent matches error:', err);
+    return { rows: [], total: 0, page, limit };
+  } finally {
+    client.release();
+  }
+}
+
+async function getDetailedAdminStats(dateFrom, dateTo, bucket = 'day', options = {}) {
   const client = await pool.connect();
   const groupUnit = bucket === 'hour' ? 'hour' : 'day';
   const from = dateFrom || new Date(Date.now() - 6 * 24 * 60 * 60 * 1000).toISOString();
   const to = dateTo || new Date().toISOString();
+  const platform = ['ios', 'android'].includes(String(options.platform || '').toLowerCase())
+    ? String(options.platform).toLowerCase()
+    : '';
   try {
     const gameSeries = await client.query(`
       WITH tichu AS (
         SELECT DATE_TRUNC('${groupUnit}', created_at) AS bucket_time,
-               COUNT(*) AS total_cnt,
-               COUNT(*) FILTER (WHERE is_ranked = TRUE) AS ranked_cnt
-        FROM tc_match_history
-        WHERE created_at >= $1 AND created_at < $2
+               COUNT(DISTINCT mh.id) AS total_cnt,
+               COUNT(DISTINCT mh.id) FILTER (WHERE mh.is_ranked = TRUE) AS ranked_cnt
+        FROM tc_match_history mh
+        WHERE mh.created_at >= $1 AND mh.created_at < $2
+          AND (
+            $3 = '' OR EXISTS (
+              SELECT 1
+              FROM tc_users u
+              WHERE LOWER(u.device_platform) = $3
+                AND u.nickname IN (mh.player_a1, mh.player_a2, mh.player_b1, mh.player_b2)
+            )
+          )
         GROUP BY 1
       ),
       skull AS (
-        SELECT DATE_TRUNC('${groupUnit}', created_at) AS bucket_time,
-               COUNT(*) AS total_cnt,
-               COUNT(*) FILTER (WHERE is_ranked = TRUE) AS ranked_cnt
-        FROM tc_sk_match_history
-        WHERE created_at >= $1 AND created_at < $2
+        SELECT DATE_TRUNC('${groupUnit}', h.created_at) AS bucket_time,
+               COUNT(DISTINCT h.id) AS total_cnt,
+               COUNT(DISTINCT h.id) FILTER (WHERE h.is_ranked = TRUE) AS ranked_cnt
+        FROM tc_sk_match_history h
+        WHERE h.created_at >= $1 AND h.created_at < $2
+          AND (
+            $3 = '' OR EXISTS (
+              SELECT 1
+              FROM tc_sk_match_players p
+              JOIN tc_users u ON u.nickname = p.nickname
+              WHERE p.match_id = h.id
+                AND p.is_bot = FALSE
+                AND LOWER(u.device_platform) = $3
+            )
+          )
         GROUP BY 1
       ),
       buckets AS (
@@ -2974,7 +3050,7 @@ async function getDetailedAdminStats(dateFrom, dateTo, bucket = 'day') {
       LEFT JOIN tichu ON tichu.bucket_time = b.bucket_time
       LEFT JOIN skull ON skull.bucket_time = b.bucket_time
       ORDER BY b.bucket_time ASC
-    `, [from, to]);
+    `, [from, to, platform]);
 
     const goldSeries = await client.query(`
       WITH gold_events AS (
@@ -2998,7 +3074,11 @@ async function getDetailedAdminStats(dateFrom, dateTo, bucket = 'day') {
         ) AS p(nickname, team_code)
         WHERE mh.created_at >= $1 AND mh.created_at < $2
           AND p.nickname IS NOT NULL
-          AND EXISTS (SELECT 1 FROM tc_users u WHERE u.nickname = p.nickname)
+          AND EXISTS (
+            SELECT 1 FROM tc_users u
+            WHERE u.nickname = p.nickname
+              AND ($3 = '' OR LOWER(u.device_platform) = $3)
+          )
 
         UNION ALL
 
@@ -3012,13 +3092,20 @@ async function getDetailedAdminStats(dateFrom, dateTo, bucket = 'day') {
         JOIN tc_sk_match_players p ON p.match_id = h.id
         WHERE h.created_at >= $1 AND h.created_at < $2
           AND p.is_bot = FALSE
+          AND EXISTS (
+            SELECT 1 FROM tc_users u
+            WHERE u.nickname = p.nickname
+              AND ($3 = '' OR LOWER(u.device_platform) = $3)
+          )
 
         UNION ALL
 
-        SELECT DATE_TRUNC('${groupUnit}', claimed_at) AS bucket_time,
+        SELECT DATE_TRUNC('${groupUnit}', ar.claimed_at) AS bucket_time,
                50 AS gold_delta
-        FROM tc_ad_rewards
-        WHERE claimed_at >= $1 AND claimed_at < $2
+        FROM tc_ad_rewards ar
+        JOIN tc_users u ON u.nickname = ar.nickname
+        WHERE ar.claimed_at >= $1 AND ar.claimed_at < $2
+          AND ($3 = '' OR LOWER(u.device_platform) = $3)
 
         UNION ALL
 
@@ -3026,15 +3113,19 @@ async function getDetailedAdminStats(dateFrom, dateTo, bucket = 'day') {
                -COALESCE(si.price, 0) AS gold_delta
         FROM tc_user_items ui
         LEFT JOIN tc_shop_items si ON si.item_key = ui.item_key
+        JOIN tc_users u ON u.nickname = ui.nickname
         WHERE ui.source = 'shop'
           AND ui.acquired_at >= $1 AND ui.acquired_at < $2
+          AND ($3 = '' OR LOWER(u.device_platform) = $3)
 
         UNION ALL
 
         SELECT DATE_TRUNC('${groupUnit}', gh.created_at) AS bucket_time,
                gh.gold_delta
         FROM tc_gold_history gh
+        JOIN tc_users u ON u.nickname = gh.nickname
         WHERE gh.created_at >= $1 AND gh.created_at < $2
+          AND ($3 = '' OR LOWER(u.device_platform) = $3)
       )
       SELECT bucket_time,
              COALESCE(SUM(CASE WHEN gold_delta > 0 THEN gold_delta ELSE 0 END), 0) AS earned,
@@ -3043,7 +3134,7 @@ async function getDetailedAdminStats(dateFrom, dateTo, bucket = 'day') {
       FROM gold_events
       GROUP BY bucket_time
       ORDER BY bucket_time ASC
-    `, [from, to]);
+    `, [from, to, platform]);
 
     const shopSalesSeries = await client.query(`
       SELECT
@@ -3053,11 +3144,13 @@ async function getDetailedAdminStats(dateFrom, dateTo, bucket = 'day') {
         COALESCE(SUM(si.price), 0) AS gold_spent
       FROM tc_user_items ui
       LEFT JOIN tc_shop_items si ON si.item_key = ui.item_key
+      JOIN tc_users u ON u.nickname = ui.nickname
       WHERE ui.source = 'shop'
         AND ui.acquired_at >= $1 AND ui.acquired_at < $2
+        AND ($3 = '' OR LOWER(u.device_platform) = $3)
       GROUP BY 1
       ORDER BY 1 ASC
-    `, [from, to]);
+    `, [from, to, platform]);
 
     const topShopItems = await client.query(`
       SELECT
@@ -3071,20 +3164,88 @@ async function getDetailedAdminStats(dateFrom, dateTo, bucket = 'day') {
         MAX(ui.acquired_at) AS last_sold_at
       FROM tc_user_items ui
       LEFT JOIN tc_shop_items si ON si.item_key = ui.item_key
+      JOIN tc_users u ON u.nickname = ui.nickname
       WHERE ui.source = 'shop'
         AND ui.acquired_at >= $1 AND ui.acquired_at < $2
+        AND ($3 = '' OR LOWER(u.device_platform) = $3)
       GROUP BY ui.item_key, si.name, si.category
       ORDER BY purchase_count DESC, gold_spent DESC, item_name ASC
       LIMIT 15
-    `, [from, to]);
+    `, [from, to, platform]);
+
+    const signupSeries = await client.query(`
+      SELECT
+        DATE_TRUNC('${groupUnit}', created_at) AS bucket_time,
+        COUNT(*) AS total_cnt,
+        COUNT(*) FILTER (WHERE LOWER(device_platform) = 'ios') AS ios_cnt,
+        COUNT(*) FILTER (WHERE LOWER(device_platform) = 'android') AS android_cnt
+      FROM tc_users
+      WHERE created_at >= $1 AND created_at < $2
+        AND is_deleted IS NOT TRUE
+        AND ($3 = '' OR LOWER(device_platform) = $3)
+      GROUP BY 1
+      ORDER BY 1 ASC
+    `, [from, to, platform]);
 
     const gameSummary = await client.query(`
       SELECT
-        (SELECT COUNT(*) FROM tc_match_history WHERE created_at >= $1 AND created_at < $2) AS tichu_games,
-        (SELECT COUNT(*) FROM tc_sk_match_history WHERE created_at >= $1 AND created_at < $2) AS skull_games,
-        (SELECT COUNT(*) FROM tc_match_history WHERE created_at >= $1 AND created_at < $2 AND is_ranked = TRUE) +
-        (SELECT COUNT(*) FROM tc_sk_match_history WHERE created_at >= $1 AND created_at < $2 AND is_ranked = TRUE) AS ranked_games
-    `, [from, to]);
+        (
+          SELECT COUNT(*)
+          FROM tc_match_history mh
+          WHERE mh.created_at >= $1 AND mh.created_at < $2
+            AND (
+              $3 = '' OR EXISTS (
+                SELECT 1 FROM tc_users u
+                WHERE LOWER(u.device_platform) = $3
+                  AND u.nickname IN (mh.player_a1, mh.player_a2, mh.player_b1, mh.player_b2)
+              )
+            )
+        ) AS tichu_games,
+        (
+          SELECT COUNT(*)
+          FROM tc_sk_match_history h
+          WHERE h.created_at >= $1 AND h.created_at < $2
+            AND (
+              $3 = '' OR EXISTS (
+                SELECT 1
+                FROM tc_sk_match_players p
+                JOIN tc_users u ON u.nickname = p.nickname
+                WHERE p.match_id = h.id
+                  AND p.is_bot = FALSE
+                  AND LOWER(u.device_platform) = $3
+              )
+            )
+        ) AS skull_games,
+        (
+          SELECT COUNT(*)
+          FROM tc_match_history mh
+          WHERE mh.created_at >= $1 AND mh.created_at < $2
+            AND mh.is_ranked = TRUE
+            AND (
+              $3 = '' OR EXISTS (
+                SELECT 1 FROM tc_users u
+                WHERE LOWER(u.device_platform) = $3
+                  AND u.nickname IN (mh.player_a1, mh.player_a2, mh.player_b1, mh.player_b2)
+              )
+            )
+        ) +
+        (
+          SELECT COUNT(*)
+          FROM tc_sk_match_history h
+          WHERE h.created_at >= $1 AND h.created_at < $2
+            AND h.is_ranked = TRUE
+            AND (
+              $3 = '' OR EXISTS (
+                SELECT 1
+                FROM tc_sk_match_players p
+                JOIN tc_users u ON u.nickname = p.nickname
+                WHERE p.match_id = h.id
+                  AND p.is_bot = FALSE
+                  AND LOWER(u.device_platform) = $3
+              )
+            )
+        ) AS ranked_games
+    `, [from, to, platform]);
 
     const shopSummary = await client.query(`
       SELECT
@@ -3094,9 +3255,11 @@ async function getDetailedAdminStats(dateFrom, dateTo, bucket = 'day') {
         COUNT(DISTINCT ui.item_key) AS unique_items_sold
       FROM tc_user_items ui
       LEFT JOIN tc_shop_items si ON si.item_key = ui.item_key
+      JOIN tc_users u ON u.nickname = ui.nickname
       WHERE ui.source = 'shop'
         AND ui.acquired_at >= $1 AND ui.acquired_at < $2
-    `, [from, to]);
+        AND ($3 = '' OR LOWER(u.device_platform) = $3)
+    `, [from, to, platform]);
 
     const goldSummary = await client.query(`
       WITH gold_events AS (
@@ -3119,7 +3282,11 @@ async function getDetailedAdminStats(dateFrom, dateTo, bucket = 'day') {
         ) AS p(nickname, team_code)
         WHERE mh.created_at >= $1 AND mh.created_at < $2
           AND p.nickname IS NOT NULL
-          AND EXISTS (SELECT 1 FROM tc_users u WHERE u.nickname = p.nickname)
+          AND EXISTS (
+            SELECT 1 FROM tc_users u
+            WHERE u.nickname = p.nickname
+              AND ($3 = '' OR LOWER(u.device_platform) = $3)
+          )
 
         UNION ALL
 
@@ -3132,37 +3299,63 @@ async function getDetailedAdminStats(dateFrom, dateTo, bucket = 'day') {
         JOIN tc_sk_match_players p ON p.match_id = h.id
         WHERE h.created_at >= $1 AND h.created_at < $2
           AND p.is_bot = FALSE
+          AND EXISTS (
+            SELECT 1 FROM tc_users u
+            WHERE u.nickname = p.nickname
+              AND ($3 = '' OR LOWER(u.device_platform) = $3)
+          )
 
         UNION ALL
 
         SELECT 50 AS gold_delta
-        FROM tc_ad_rewards
-        WHERE claimed_at >= $1 AND claimed_at < $2
+        FROM tc_ad_rewards ar
+        JOIN tc_users u ON u.nickname = ar.nickname
+        WHERE ar.claimed_at >= $1 AND ar.claimed_at < $2
+          AND ($3 = '' OR LOWER(u.device_platform) = $3)
 
         UNION ALL
 
         SELECT -COALESCE(si.price, 0) AS gold_delta
         FROM tc_user_items ui
         LEFT JOIN tc_shop_items si ON si.item_key = ui.item_key
+        JOIN tc_users u ON u.nickname = ui.nickname
         WHERE ui.source = 'shop'
           AND ui.acquired_at >= $1 AND ui.acquired_at < $2
+          AND ($3 = '' OR LOWER(u.device_platform) = $3)
 
         UNION ALL
 
         SELECT gh.gold_delta
         FROM tc_gold_history gh
         WHERE gh.created_at >= $1 AND gh.created_at < $2
+          AND EXISTS (
+            SELECT 1 FROM tc_users u
+            WHERE u.nickname = gh.nickname
+              AND ($3 = '' OR LOWER(u.device_platform) = $3)
+          )
       )
       SELECT
         COALESCE(SUM(CASE WHEN gold_delta > 0 THEN gold_delta ELSE 0 END), 0) AS earned,
         COALESCE(SUM(CASE WHEN gold_delta < 0 THEN -gold_delta ELSE 0 END), 0) AS spent,
         COALESCE(SUM(gold_delta), 0) AS net
       FROM gold_events
-    `, [from, to]);
+    `, [from, to, platform]);
+
+    const signupSummary = await client.query(`
+      SELECT
+        COUNT(*) AS total_signups,
+        COUNT(*) FILTER (WHERE LOWER(device_platform) = 'ios') AS ios_signups,
+        COUNT(*) FILTER (WHERE LOWER(device_platform) = 'android') AS android_signups
+      FROM tc_users
+      WHERE created_at >= $1 AND created_at < $2
+        AND is_deleted IS NOT TRUE
+        AND ($3 = '' OR LOWER(device_platform) = $3)
+    `, [from, to, platform]);
 
     const summaryRow = gameSummary.rows[0] || {};
     const goldRow = goldSummary.rows[0] || {};
     const shopRow = shopSummary.rows[0] || {};
+    const signupRow = signupSummary.rows[0] || {};
     return {
       success: true,
       summary: {
@@ -3170,6 +3363,9 @@ async function getDetailedAdminStats(dateFrom, dateTo, bucket = 'day') {
         tichuGames: parseInt(summaryRow.tichu_games || 0, 10),
         skullGames: parseInt(summaryRow.skull_games || 0, 10),
         rankedGames: parseInt(summaryRow.ranked_games || 0, 10),
+        totalSignups: parseInt(signupRow.total_signups || 0, 10),
+        iosSignups: parseInt(signupRow.ios_signups || 0, 10),
+        androidSignups: parseInt(signupRow.android_signups || 0, 10),
         goldEarned: parseInt(goldRow.earned || 0, 10),
         goldSpent: parseInt(goldRow.spent || 0, 10),
         goldNet: parseInt(goldRow.net || 0, 10),
@@ -3179,10 +3375,11 @@ async function getDetailedAdminStats(dateFrom, dateTo, bucket = 'day') {
         shopUniqueItems: parseInt(shopRow.unique_items_sold || 0, 10),
       },
       gameSeries: gameSeries.rows,
+      signupSeries: signupSeries.rows,
       goldSeries: goldSeries.rows,
       shopSalesSeries: shopSalesSeries.rows,
       topShopItems: topShopItems.rows,
-      range: { from, to, bucket: groupUnit },
+      range: { from, to, bucket: groupUnit, platform },
     };
   } catch (err) {
     console.error('Get detailed admin stats error:', err);
@@ -3191,10 +3388,11 @@ async function getDetailedAdminStats(dateFrom, dateTo, bucket = 'day') {
       message: '상세 통계를 불러오지 못했습니다',
       summary: {},
       gameSeries: [],
+      signupSeries: [],
       goldSeries: [],
       shopSalesSeries: [],
       topShopItems: [],
-      range: { from, to, bucket: groupUnit },
+      range: { from, to, bucket: groupUnit, platform },
     };
   } finally {
     client.release();
@@ -4236,6 +4434,7 @@ module.exports = {
   getUsers,
   getUserDetail,
   getDashboardStats,
+  getAdminRecentMatches,
   getDetailedAdminStats,
   getRankings,
   verifyAdmin,

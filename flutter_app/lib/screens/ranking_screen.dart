@@ -993,8 +993,8 @@ class _ProfileRecentMatches extends StatelessWidget {
     if (isSK) {
       final players = (match['players'] as List<dynamic>?)?.map((p) => p['nickname']?.toString() ?? '').join(', ') ?? '';
       detail = players;
-      final rank = match['rank'] ?? '-';
-      final myScore = match['score'] ?? 0;
+      final rank = match['myRank'] ?? '-';
+      final myScore = match['myScore'] ?? 0;
       score = '$rank등 $myScore점';
     } else {
       final teamA = _formatTeam(match['playerA1'], match['playerA2']);
@@ -1127,8 +1127,8 @@ Widget _buildMatchRowDialog(dynamic match) {
   if (isSK) {
     final players = (match['players'] as List<dynamic>?)?.map((p) => p['nickname']?.toString() ?? '').join(', ') ?? '';
     detail = players;
-    final rank = match['rank'] ?? '-';
-    final myScore = match['score'] ?? 0;
+    final rank = match['myRank'] ?? '-';
+    final myScore = match['myScore'] ?? 0;
     score = '$rank등 $myScore점';
   } else {
     final teamA = _formatTeam(match['playerA1'], match['playerA2']);

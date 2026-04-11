@@ -995,6 +995,15 @@ class _SettingsScreenState extends State<SettingsScreen> {
                             '계정',
                             [
                               _buildRow(
+                                icon: Icons.person,
+                                iconColor: const Color(0xFF64B5F6),
+                                title: '내 프로필',
+                                subtitle: '레벨, 전적, 최근 매치 보기',
+                                onTap: () => Navigator.pop(context, 'show_profile'),
+                                trailing: const Icon(Icons.chevron_right, color: Color(0xFFB0A8A4)),
+                              ),
+                              const Divider(height: 1, color: Color(0xFFEAE2DE)),
+                              _buildRow(
                                 icon: Icons.account_circle,
                                 iconColor: const Color(0xFF64B5F6),
                                 title: '닉네임',

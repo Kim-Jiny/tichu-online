@@ -2300,6 +2300,9 @@ function sendGameStateToAll(roomId) {
 
   if (room.gameType === 'skull_king' && room.game.state === 'trick_end') {
     if (trickEndTimers[roomId]) clearTimeout(trickEndTimers[roomId]);
+    // Voided tricks (Kraken / White Whale) need a longer display window so
+    // players can actually read the "트릭 무효" banner and effect reason.
+    const trickEndDelay = room.game.lastTrickVoided ? 2500 : 1500;
     trickEndTimers[roomId] = setTimeout(() => {
       delete trickEndTimers[roomId];
       const r = lobby.getRoom(roomId);
@@ -2310,7 +2313,7 @@ function sendGameStateToAll(roomId) {
         scheduleAutoReturnToRoom(roomId);
       }
       sendGameStateToAll(roomId);
-    }, 1500);
+    }, trickEndDelay);
     _broadcastState(roomId, room);
     return;
   }

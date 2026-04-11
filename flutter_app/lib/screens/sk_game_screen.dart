@@ -2274,7 +2274,7 @@ class _SKGameScreenState extends State<SKGameScreen> {
               ),
               const SizedBox(height: 4),
               Text(
-                '$winnerName 다음 리드',
+                '$winnerName 선 플레이어',
                 style: TextStyle(
                   fontSize: 10,
                   color: Colors.white.withValues(alpha: 0.75),

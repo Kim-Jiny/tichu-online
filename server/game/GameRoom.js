@@ -6,7 +6,7 @@ let nextBotNum = 1;
 
 
 class GameRoom {
-  constructor(id, name, hostId, hostNickname, password = '', isRanked = false, turnTimeLimit = 30, targetScore = 1000, gameType = 'tichu', maxPlayers = 4) {
+  constructor(id, name, hostId, hostNickname, password = '', isRanked = false, turnTimeLimit = 30, targetScore = 1000, gameType = 'tichu', maxPlayers = 4, skExpansions = []) {
     this.id = id;
     this.name = name;
     this.hostId = hostId;
@@ -19,6 +19,9 @@ class GameRoom {
     this.turnDeadline = null; // epoch ms when active
     this.gameType = gameType; // 'tichu' or 'skull_king'
     this.maxPlayers = maxPlayers; // 4 for tichu, 2-6 for skull_king
+    // Enabled Skull King expansions (only meaningful when gameType === 'skull_king').
+    // Subset of ['kraken', 'white_whale', 'loot'].
+    this.skExpansions = Array.isArray(skExpansions) ? skExpansions.slice() : [];
     // Dynamic slot system: host goes to slot 0, rest are null
     this.players = Array.from({ length: this.maxPlayers }, (_, i) =>
       i === 0 ? { id: hostId, nickname: hostNickname, connected: true, ready: false } : null
@@ -501,7 +504,7 @@ class GameRoom {
       if (!SkullKingGame) {
         SkullKingGame = require('./skull_king/SkullKingGame');
       }
-      this.game = new SkullKingGame(playerIds, playerNames);
+      this.game = new SkullKingGame(playerIds, playerNames, { expansions: this.skExpansions });
       this.game.start();
     } else {
       this.game = new TichuGame(playerIds, playerNames);
@@ -586,6 +589,7 @@ class GameRoom {
       gameInProgress: !!this.game,
       turnTimeLimit: this.turnTimeLimit,
       targetScore: this.targetScore,
+      skExpansions: [...this.skExpansions],
     };
   }
 

@@ -1,6 +1,10 @@
 /**
- * Skull King Deck - 66 cards total
- * 52 numbered (4 suits x 13 ranks) + 5 Escape + 4 Pirate + 2 Mermaid + 1 Skull King + 3 Tigress
+ * Skull King Deck - 67 cards base (expansions add more)
+ * Base: 52 numbered (4 suits x 13 ranks) + 5 Escape + 4 Pirate + 2 Mermaid + 1 Skull King + 3 Tigress
+ * Expansions (optional):
+ *   - 'kraken': +1 Kraken (voids trick)
+ *   - 'white_whale': +1 White Whale (nullifies special card effects)
+ *   - 'loot': +2 Loot (bonus points for trick winner + loot player)
  */
 
 const SK_SUITS = ['yellow', 'green', 'purple', 'black']; // black is trump
@@ -19,12 +23,19 @@ const CARD_TYPE = {
   MERMAID: 'mermaid',
   SKULL_KING: 'skull_king',
   TIGRESS: 'tigress',
+  KRAKEN: 'kraken',
+  WHITE_WHALE: 'white_whale',
+  LOOT: 'loot',
 };
 
-function createDeck() {
-  const deck = [];
+// Known expansion ids
+const SK_EXPANSIONS = ['kraken', 'white_whale', 'loot'];
 
-  // 56 numbered cards (4 suits x 14 ranks)
+function createDeck(expansions = []) {
+  const deck = [];
+  const expansionSet = new Set(Array.isArray(expansions) ? expansions : []);
+
+  // 52 numbered cards (4 suits x 13 ranks)
   for (const suit of SK_SUITS) {
     for (const rank of SK_RANKS) {
       deck.push({
@@ -60,6 +71,25 @@ function createDeck() {
     deck.push({ id: `sk_tigress_${i}`, suit: 'special', rank: 'tigress', value: 0, type: CARD_TYPE.TIGRESS });
   }
 
+  // --- Expansions ---
+
+  // Kraken expansion: 1 Kraken (voids the trick)
+  if (expansionSet.has('kraken')) {
+    deck.push({ id: 'sk_kraken', suit: 'special', rank: 'kraken', value: 0, type: CARD_TYPE.KRAKEN });
+  }
+
+  // White Whale expansion: 1 White Whale (nullifies special card effects)
+  if (expansionSet.has('white_whale')) {
+    deck.push({ id: 'sk_white_whale', suit: 'special', rank: 'white_whale', value: 0, type: CARD_TYPE.WHITE_WHALE });
+  }
+
+  // Loot expansion: 2 Loot (bonus points when trick is won)
+  if (expansionSet.has('loot')) {
+    for (let i = 1; i <= 2; i++) {
+      deck.push({ id: `sk_loot_${i}`, suit: 'special', rank: 'loot', value: 0, type: CARD_TYPE.LOOT });
+    }
+  }
+
   return deck;
 }
 
@@ -90,6 +120,12 @@ function getCardInfo(cardId) {
   if (cardId === 'sk_skull_king') {
     return { type: CARD_TYPE.SKULL_KING, suit: 'special', rank: 'skull_king', value: 0 };
   }
+  if (cardId === 'sk_kraken') {
+    return { type: CARD_TYPE.KRAKEN, suit: 'special', rank: 'kraken', value: 0 };
+  }
+  if (cardId === 'sk_white_whale') {
+    return { type: CARD_TYPE.WHITE_WHALE, suit: 'special', rank: 'white_whale', value: 0 };
+  }
   if (cardId.startsWith('sk_tigress')) {
     return { type: CARD_TYPE.TIGRESS, suit: 'special', rank: 'tigress', value: 0 };
   }
@@ -102,12 +138,19 @@ function getCardInfo(cardId) {
   if (cardId.startsWith('sk_mermaid_')) {
     return { type: CARD_TYPE.MERMAID, suit: 'special', rank: 'mermaid', value: 0 };
   }
-  // Numbered card: sk_{suit}_{rank}
+  if (cardId.startsWith('sk_loot_')) {
+    return { type: CARD_TYPE.LOOT, suit: 'special', rank: 'loot', value: 0 };
+  }
+  // Numbered card: sk_{suit}_{rank} — strictly validated against known suits
+  // and ranks. This also prevents mis-parsing of 3-part expansion ids like
+  // `sk_white_whale` if the explicit checks above are ever reordered.
   const parts = cardId.split('_');
-  if (parts.length === 3 && parts[0] === 'sk') {
+  if (parts.length === 3 && parts[0] === 'sk'
+      && SK_SUITS.includes(parts[1])
+      && SK_RANK_VALUES[parts[2]] !== undefined) {
     const suit = parts[1];
     const rank = parts[2];
-    return { type: CARD_TYPE.NUMBER, suit, rank, value: SK_RANK_VALUES[rank] || 0 };
+    return { type: CARD_TYPE.NUMBER, suit, rank, value: SK_RANK_VALUES[rank] };
   }
   return null;
 }
@@ -115,11 +158,14 @@ function getCardInfo(cardId) {
 function sortCards(cards) {
   const typeOrder = {
     [CARD_TYPE.ESCAPE]: 0,
+    [CARD_TYPE.LOOT]: 0.5,
     [CARD_TYPE.NUMBER]: 1,
     [CARD_TYPE.PIRATE]: 2,
     [CARD_TYPE.TIGRESS]: 3,
     [CARD_TYPE.MERMAID]: 4,
     [CARD_TYPE.SKULL_KING]: 5,
+    [CARD_TYPE.WHITE_WHALE]: 6,
+    [CARD_TYPE.KRAKEN]: 7,
   };
   const suitOrder = { yellow: 0, green: 1, purple: 2, black: 3 };
 
@@ -141,6 +187,6 @@ function sortCards(cards) {
 }
 
 module.exports = {
-  SK_SUITS, SK_RANKS, SK_RANK_VALUES, CARD_TYPE,
+  SK_SUITS, SK_RANKS, SK_RANK_VALUES, CARD_TYPE, SK_EXPANSIONS,
   createDeck, shuffle, deal, getCardInfo, sortCards,
 };

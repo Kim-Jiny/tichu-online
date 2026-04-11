@@ -1942,7 +1942,7 @@ class GameService extends ChangeNotifier {
     return incomingCardViewRequests.first;
   }
 
-  void createRoom(String roomName, {String password = '', bool isRanked = false, int turnTimeLimit = 30, int targetScore = 1000, String gameType = 'tichu', int maxPlayers = 4}) {
+  void createRoom(String roomName, {String password = '', bool isRanked = false, int turnTimeLimit = 30, int targetScore = 1000, String gameType = 'tichu', int maxPlayers = 4, List<String> skExpansions = const []}) {
     final msg = <String, dynamic>{
       'type': 'create_room',
       'roomName': roomName,
@@ -1954,6 +1954,7 @@ class GameService extends ChangeNotifier {
     if (gameType == 'skull_king') {
       msg['gameType'] = 'skull_king';
       msg['maxPlayers'] = maxPlayers;
+      msg['skExpansions'] = skExpansions;
     }
     _network.send(msg);
   }

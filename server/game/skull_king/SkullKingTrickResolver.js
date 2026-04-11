@@ -1,10 +1,21 @@
 /**
  * Skull King Trick Resolver
  *
- * Hierarchy: Mermaid > Skull King > Pirate > Number (trump=black > lead suit)
+ * Base hierarchy: Mermaid > Skull King > Pirate > Number (trump=black > lead suit)
  * Special: Mermaid captures SK (+50 bonus), SK captures pirate (+30/pirate)
  * All escape → lead player wins
  * Tigress: played as pirate or escape
+ *
+ * Expansions:
+ * - Kraken: voids the trick entirely. No winner, no bonus, no trick count.
+ *   The player who would have won without the Kraken still leads the next trick.
+ * - White Whale: nullifies every special card effect in the trick. Only number
+ *   cards count, and the highest value wins regardless of suit (trump loses its
+ *   privilege). If no numbers were played, the trick is voided.
+ * - Loot: does not affect trick resolution — handled in SkullKingGame.completeTrick.
+ *
+ * Precedence when both Kraken and White Whale are in the same trick: Kraken wins
+ * (the trick is voided).
  */
 
 const { CARD_TYPE, getCardInfo } = require('./SkullKingDeck');
@@ -12,7 +23,10 @@ const { CARD_TYPE, getCardInfo } = require('./SkullKingDeck');
 /**
  * Resolve a trick and determine winner + bonus
  * @param {Array} trickPlays - [{playerId, cardId, tigressChoice?}] in play order
- * @returns {{ winnerId, bonus, bonusDetail }}
+ * @returns {{ winnerId, bonus, bonusDetail, voided }}
+ *   - voided=true: trick is discarded (Kraken, or White Whale with no numbers).
+ *     winnerId is still set to the "would-have-won" player so they lead next trick,
+ *     but the game engine must NOT increment tricks/bonus for them.
  */
 function resolveTrick(trickPlays) {
   if (!trickPlays || trickPlays.length === 0) return null;
@@ -33,6 +47,63 @@ function resolveTrick(trickPlays) {
     };
   });
 
+  // ── Expansion: Kraken ─────────────────────────────────────────────────────
+  // Kraken voids the trick. To determine the next-trick leader, resolve the
+  // trick as if the Kraken weren't played.
+  const hasKraken = resolved.some(r => r.effectiveType === CARD_TYPE.KRAKEN);
+  if (hasKraken) {
+    const withoutKraken = trickPlays.filter(p => {
+      const info = getCardInfo(p.cardId);
+      return info && info.type !== CARD_TYPE.KRAKEN;
+    });
+    let nextLeaderId;
+    if (withoutKraken.length === 0) {
+      // Only a Kraken was played (shouldn't really happen with ≥2 players, but safe)
+      nextLeaderId = resolved[0].playerId;
+    } else {
+      const inner = resolveTrick(withoutKraken);
+      nextLeaderId = inner ? inner.winnerId : resolved[0].playerId;
+    }
+    return {
+      winnerId: nextLeaderId,
+      bonus: 0,
+      bonusDetail: [{ type: 'kraken_void' }],
+      voided: true,
+    };
+  }
+
+  // ── Expansion: White Whale ────────────────────────────────────────────────
+  // White Whale nullifies all special card effects. Only number cards count,
+  // and the highest value wins regardless of suit. If no numbers were played,
+  // the trick is voided (the Whale player leads next).
+  const hasWhiteWhale = resolved.some(r => r.effectiveType === CARD_TYPE.WHITE_WHALE);
+  if (hasWhiteWhale) {
+    const numbered = resolved.filter(r => r.effectiveType === CARD_TYPE.NUMBER);
+    if (numbered.length === 0) {
+      // No numbers to compare — trick voided. Whale player leads next.
+      const whalePlay = resolved.find(r => r.effectiveType === CARD_TYPE.WHITE_WHALE);
+      return {
+        winnerId: whalePlay.playerId,
+        bonus: 0,
+        bonusDetail: [{ type: 'white_whale_void' }],
+        voided: true,
+      };
+    }
+    // Highest value wins; ties broken by play order (earlier wins).
+    let winner = numbered[0];
+    for (let i = 1; i < numbered.length; i++) {
+      if (numbered[i].value > winner.value) winner = numbered[i];
+    }
+    return {
+      winnerId: winner.playerId,
+      bonus: 0,
+      bonusDetail: [{ type: 'white_whale_nullify' }],
+      voided: false,
+    };
+  }
+
+  // ── Base game resolution ─────────────────────────────────────────────────
+
   // Determine lead suit (first numbered card's suit)
   let leadSuit = null;
   for (const r of resolved) {
@@ -42,10 +113,13 @@ function resolveTrick(trickPlays) {
     }
   }
 
-  // Check if all are escapes
-  const allEscape = resolved.every(r => r.effectiveType === CARD_TYPE.ESCAPE);
-  if (allEscape) {
-    return { winnerId: resolved[0].playerId, bonus: 0, bonusDetail: [] };
+  // Check if all are escapes (loot is not an escape — if only escapes/loot,
+  // loot acts as a non-winner and lead player still wins)
+  const allEscapeLike = resolved.every(r =>
+    r.effectiveType === CARD_TYPE.ESCAPE || r.effectiveType === CARD_TYPE.LOOT
+  );
+  if (allEscapeLike) {
+    return { winnerId: resolved[0].playerId, bonus: 0, bonusDetail: [], voided: false };
   }
 
   // Check for special card interactions
@@ -81,7 +155,7 @@ function resolveTrick(trickPlays) {
     const mermaidPlay = resolved.find(r => r.effectiveType === CARD_TYPE.MERMAID);
     winnerId = mermaidPlay.playerId;
   } else {
-    // Only numbered cards (and escapes)
+    // Only numbered cards (and escapes/loot)
     // Highest trump (black) wins, else highest of lead suit
     const numbered = resolved.filter(r => r.effectiveType === CARD_TYPE.NUMBER);
     const trumpCards = numbered.filter(r => r.suit === 'black');
@@ -100,7 +174,7 @@ function resolveTrick(trickPlays) {
     }
   }
 
-  return { winnerId, bonus, bonusDetail };
+  return { winnerId, bonus, bonusDetail, voided: false };
 }
 
 module.exports = { resolveTrick };

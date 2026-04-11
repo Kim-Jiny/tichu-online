@@ -14,6 +14,9 @@ class Room {
   final int targetScore;
   final String gameType;
   final int maxPlayers;
+  /// Enabled Skull King expansions — only meaningful when [gameType] is
+  /// `skull_king`. Subset of `['kraken', 'white_whale', 'loot']`.
+  final List<String> skExpansions;
 
   Room({
     required this.id,
@@ -29,6 +32,7 @@ class Room {
     this.targetScore = 1000,
     this.gameType = 'tichu',
     this.maxPlayers = 4,
+    this.skExpansions = const [],
   });
 
   bool get isSkullKing => gameType == 'skull_king';
@@ -39,6 +43,13 @@ class Room {
       playerList = (json['players'] as List)
           .map((p) => Player.fromJson(p))
           .toList();
+    }
+
+    List<String> expansions = const [];
+    if (json['skExpansions'] is List) {
+      expansions = (json['skExpansions'] as List)
+          .whereType<String>()
+          .toList(growable: false);
     }
 
     return Room(
@@ -55,6 +66,7 @@ class Room {
       targetScore: json['targetScore'] ?? 1000,
       gameType: json['gameType'] ?? 'tichu',
       maxPlayers: json['maxPlayers'] ?? 4,
+      skExpansions: expansions,
     );
   }
 }

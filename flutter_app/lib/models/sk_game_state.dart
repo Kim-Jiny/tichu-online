@@ -85,9 +85,13 @@ class SKGameStateData {
   final String? lastTrickWinner;
   final int lastTrickBonus;
   final List<Map<String, dynamic>> lastTrickBonusDetail;
+  final bool lastTrickVoided;
   final String? trickStarter;
   final String? roundStarter;
   final int? turnDeadline;
+  /// Enabled Skull King expansions for this game.
+  /// Subset of `['kraken', 'white_whale', 'loot']`.
+  final List<String> expansions;
 
   SKGameStateData({
     this.phase = '',
@@ -106,9 +110,11 @@ class SKGameStateData {
     this.lastTrickWinner,
     this.lastTrickBonus = 0,
     this.lastTrickBonusDetail = const [],
+    this.lastTrickVoided = false,
     this.trickStarter,
     this.roundStarter,
     this.turnDeadline,
+    this.expansions = const [],
   });
 
   factory SKGameStateData.fromJson(Map<String, dynamic> json) {
@@ -154,6 +160,13 @@ class SKGameStateData {
           .toList();
     }
 
+    List<String> expansions = const [];
+    if (json['expansions'] is List) {
+      expansions = (json['expansions'] as List)
+          .whereType<String>()
+          .toList(growable: false);
+    }
+
     return SKGameStateData(
       phase: json['phase'] ?? '',
       round: json['round'] ?? 0,
@@ -171,9 +184,11 @@ class SKGameStateData {
       lastTrickWinner: json['lastTrickWinner'],
       lastTrickBonus: json['lastTrickBonus'] ?? 0,
       lastTrickBonusDetail: bonusDetail,
+      lastTrickVoided: json['lastTrickVoided'] == true,
       trickStarter: json['trickStarter'],
       roundStarter: json['roundStarter'],
       turnDeadline: json['turnDeadline'] as int?,
+      expansions: expansions,
     );
   }
 }

@@ -2215,6 +2215,78 @@ class _SKGameScreenState extends State<SKGameScreen> {
         .name;
     final bonus = state.lastTrickBonus;
 
+    // Parse bonusDetail to detect expansion effects
+    final detail = state.lastTrickBonusDetail;
+    String? voidReason;
+    String? whaleNullifyLabel;
+    int lootBonusPoints = 0;
+    for (final entry in detail) {
+      final type = entry['type'];
+      if (type == 'kraken_void') {
+        voidReason = '🐙 크라켄 발동';
+      } else if (type == 'white_whale_void') {
+        voidReason = '🐋 화이트웨일 발동';
+      } else if (type == 'white_whale_nullify') {
+        whaleNullifyLabel = '🐋 화이트웨일 · 특수카드 무력화';
+      } else if (type == 'loot_bonus') {
+        lootBonusPoints = (entry['winnerPoints'] as num?)?.toInt() ?? 0;
+      }
+    }
+    final isVoided = state.lastTrickVoided;
+    final isKraken = voidReason?.contains('크라켄') ?? false;
+
+    // Voided trick → distinct banner
+    if (isVoided && state.phase == 'trick_end') {
+      final Color bgColor = isKraken
+          ? const Color(0xFF2B1E3F).withValues(alpha: 0.92)
+          : const Color(0xFF3A6B8F).withValues(alpha: 0.92);
+      return Center(
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+          decoration: BoxDecoration(
+            color: bgColor,
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(
+              color: const Color(0xFFFFD54F).withValues(alpha: 0.6),
+              width: 1.5,
+            ),
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Text(
+                '트릭 무효',
+                style: TextStyle(
+                  fontSize: 15,
+                  fontWeight: FontWeight.w900,
+                  color: Color(0xFFFFD54F),
+                  letterSpacing: 0.5,
+                ),
+              ),
+              const SizedBox(height: 4),
+              Text(
+                voidReason ?? '',
+                style: const TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w700,
+                  color: Colors.white,
+                ),
+              ),
+              const SizedBox(height: 4),
+              Text(
+                '$winnerName 다음 리드',
+                style: TextStyle(
+                  fontSize: 10,
+                  color: Colors.white.withValues(alpha: 0.75),
+                ),
+              ),
+              _buildCenterTimerBadge(state),
+            ],
+          ),
+        ),
+      );
+    }
+
     return Center(
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
@@ -2233,10 +2305,23 @@ class _SKGameScreenState extends State<SKGameScreen> {
                 color: Color(0xFF5A4038),
               ),
             ),
-            if (bonus > 0) ...[
+            if (whaleNullifyLabel != null && state.phase == 'trick_end') ...[
               const SizedBox(height: 4),
               Text(
-                '보너스 +$bonus',
+                whaleNullifyLabel,
+                style: const TextStyle(
+                  fontSize: 11,
+                  fontWeight: FontWeight.w700,
+                  color: Color(0xFF3A6B8F),
+                ),
+              ),
+            ],
+            if (state.phase == 'trick_end' && bonus > 0) ...[
+              const SizedBox(height: 4),
+              Text(
+                lootBonusPoints > 0
+                    ? '보너스 +$bonus (💰 +$lootBonusPoints)'
+                    : '보너스 +$bonus',
                 style: const TextStyle(
                   fontSize: 12,
                   fontWeight: FontWeight.w700,
@@ -3339,6 +3424,9 @@ class _SKGameScreenState extends State<SKGameScreen> {
     'mermaid': 'assets/cards/sk_mermaid.png',
     'escape': 'assets/cards/sk_escape.png',
     'tigress': 'assets/cards/sk_tigress.png',
+    'kraken': 'assets/cards/sk_kraken.png',
+    'white_whale': 'assets/cards/sk_white_whale.png',
+    'loot': 'assets/cards/sk_loot.png',
   };
   static const _specialLabels = {
     'skull_king': 'SKULL\nKING',
@@ -3346,6 +3434,9 @@ class _SKGameScreenState extends State<SKGameScreen> {
     'mermaid': 'MERMAID',
     'escape': 'ESCAPE',
     'tigress': 'TIGRESS',
+    'kraken': 'KRAKEN',
+    'white_whale': 'WHITE\nWHALE',
+    'loot': 'LOOT',
   };
   static const _specialBgColors = {
     'skull_king': Color(0xFF1A1A1A),
@@ -3353,6 +3444,9 @@ class _SKGameScreenState extends State<SKGameScreen> {
     'mermaid': Color(0xFF0D5E7A),
     'escape': Color(0xFF757575),
     'tigress': Color(0xFF5E35B1),
+    'kraken': Color(0xFF2B1E3F),
+    'white_whale': Color(0xFF3A6B8F),
+    'loot': Color(0xFF8B6F22),
   };
 
   Widget _buildCard(String cardId, {double size = 60, bool highlighted = false}) {
@@ -3502,6 +3596,8 @@ class _SKGameScreenState extends State<SKGameScreen> {
 
   _CardInfo _parseCardId(String cardId) {
     if (cardId == 'sk_skull_king') return _CardInfo(type: 'skull_king');
+    if (cardId == 'sk_kraken') return _CardInfo(type: 'kraken');
+    if (cardId == 'sk_white_whale') return _CardInfo(type: 'white_whale');
     if (cardId.startsWith('sk_tigress')) return _CardInfo(type: 'tigress');
     if (cardId == 'sk_escape') return _CardInfo(type: 'escape');
     if (cardId == 'sk_pirate') return _CardInfo(type: 'pirate');
@@ -3514,6 +3610,9 @@ class _SKGameScreenState extends State<SKGameScreen> {
     }
     if (cardId.startsWith('sk_mermaid_')) {
       return _CardInfo(type: 'mermaid', number: cardId.split('_').last);
+    }
+    if (cardId.startsWith('sk_loot_')) {
+      return _CardInfo(type: 'loot', number: cardId.split('_').last);
     }
     final parts = cardId.split('_');
     if (parts.length == 3) {

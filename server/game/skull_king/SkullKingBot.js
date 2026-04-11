@@ -37,6 +37,9 @@ function decideBid(game, botId) {
       estimatedTricks += 0.7;
     } else if (info.type === CARD_TYPE.TIGRESS) {
       estimatedTricks += 0.5;
+    } else if (info.type === CARD_TYPE.WHITE_WHALE) {
+      // Whale can steal a trick with a high number in hand, but unpredictable
+      estimatedTricks += 0.2;
     } else if (info.type === CARD_TYPE.NUMBER) {
       if (info.suit === 'black' && info.value >= 10) {
         estimatedTricks += 0.7;
@@ -46,7 +49,7 @@ function decideBid(game, botId) {
         estimatedTricks += 0.3;
       }
     }
-    // Escapes and low cards contribute 0
+    // Escapes, low cards, Kraken, and Loot contribute 0 to trick count
   }
 
   const bid = Math.round(estimatedTricks);
@@ -97,11 +100,20 @@ function decideLeadCard(legalCards, tricksNeeded, tricksRemaining) {
     if (numbers.length > 0) return makePlayAction(numbers[0].id, numbers[0].info);
   } else if (tricksNeeded <= 0) {
     // Already met or exceeded bid: play weak
+    const loot = infos.find(c => c.info.type === CARD_TYPE.LOOT);
+    if (loot) return makePlayAction(loot.id, loot.info);
+
     const escapes = infos.filter(c => c.info.type === CARD_TYPE.ESCAPE);
     if (escapes.length > 0) return makePlayAction(escapes[0].id, escapes[0].info);
 
+    const kraken = infos.find(c => c.info.type === CARD_TYPE.KRAKEN);
+    if (kraken) return makePlayAction(kraken.id, kraken.info);
+
     const tigress = infos.find(c => c.info.type === CARD_TYPE.TIGRESS);
     if (tigress) return makePlayAction(tigress.id, tigress.info, 'escape');
+
+    const whale = infos.find(c => c.info.type === CARD_TYPE.WHITE_WHALE);
+    if (whale) return makePlayAction(whale.id, whale.info);
 
     // Lowest number
     const numbers = infos
@@ -154,12 +166,33 @@ function decideFollowCard(game, botId, legalCards, tricksNeeded) {
     return false;
   };
 
+  // High-stakes trick: SK + pirate (+30/pirate) or SK + mermaid (+50) is on the
+  // table. Voiding this with a Kraken is strictly better than a normal dump
+  // because it denies opponents the bonus too.
+  const highStakesTrick = (hasSK && hasPirate) || (hasSK && hasMermaid);
+
   // Helper: play weak card to dump the trick (highest loser first)
   const playWeak = () => {
+    // Kraken stake-block: if we don't need the trick and a big-bonus play is
+    // forming, void it instead of quietly dumping an escape.
+    if (highStakesTrick) {
+      const krakenBlock = infos.find(c => c.info.type === CARD_TYPE.KRAKEN);
+      if (krakenBlock) return makePlayAction(krakenBlock.id, krakenBlock.info);
+    }
+    // Loot never wins a trick → safest dump, and if we still win the trick
+    // it grants a bonus to us.
+    const loot = infos.find(c => c.info.type === CARD_TYPE.LOOT);
+    if (loot) return makePlayAction(loot.id, loot.info);
     const escapes = infos.filter(c => c.info.type === CARD_TYPE.ESCAPE);
     if (escapes.length > 0) return makePlayAction(escapes[0].id, escapes[0].info);
+    // Kraken voids the trick → great dump when we don't want any trick
+    const kraken = infos.find(c => c.info.type === CARD_TYPE.KRAKEN);
+    if (kraken) return makePlayAction(kraken.id, kraken.info);
     const tigress = infos.find(c => c.info.type === CARD_TYPE.TIGRESS);
     if (tigress) return makePlayAction(tigress.id, tigress.info, 'escape');
+    // White Whale is volatile: if we have a weak hand it's often a dump too
+    const whale = infos.find(c => c.info.type === CARD_TYPE.WHITE_WHALE);
+    if (whale) return makePlayAction(whale.id, whale.info);
     const numbers = infos.filter(c => c.info.type === CARD_TYPE.NUMBER);
     if (numbers.length === 0) return null;
     // If special cards are winning, all numbers lose → play highest
@@ -268,7 +301,15 @@ function decideFollowCard(game, botId, legalCards, tricksNeeded) {
       });
     if (numbers.length > 0) return makePlayAction(numbers[0].id, numbers[0].info);
   } else {
-    // Don't want more tricks: dump weak
+    // Don't want more tricks: dump weak.
+    // Kraken stake-block: if a big-bonus special trick (SK+pirate or SK+mermaid)
+    // is forming, voiding it with a Kraken is strictly better than any normal
+    // dump because the opponent is denied the bonus too. Fire this before
+    // playSafeLosingDump which would otherwise spend a high trump as "safe".
+    if (highStakesTrick) {
+      const krakenBlock = infos.find(c => c.info.type === CARD_TYPE.KRAKEN);
+      if (krakenBlock) return makePlayAction(krakenBlock.id, krakenBlock.info);
+    }
     const safeDump = playSafeLosingDump();
     if (safeDump) return safeDump;
     const weak = playWeak();

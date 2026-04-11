@@ -6,19 +6,24 @@
  * 2-6 players, individual play (no teams)
  */
 
-const { createDeck, deal, getCardInfo, sortCards, CARD_TYPE } = require('./SkullKingDeck');
+const { createDeck, deal, getCardInfo, sortCards, CARD_TYPE, SK_EXPANSIONS } = require('./SkullKingDeck');
 const { resolveTrick } = require('./SkullKingTrickResolver');
 const { calculateRoundScore } = require('./SkullKingScoreCalc');
 
 const TOTAL_ROUNDS = 10;
+const LOOT_BONUS_POINTS = 20;
 
 class SkullKingGame {
-  constructor(playerIds, playerNames) {
+  constructor(playerIds, playerNames, options = {}) {
     this.playerIds = playerIds;
     this.playerNames = playerNames;
     this.playerCount = playerIds.length;
     this.gameType = 'skull_king';
     this.initialDealerIndex = 0;
+
+    // Enabled expansions: subset of SK_EXPANSIONS ['kraken', 'white_whale', 'loot']
+    const requested = Array.isArray(options.expansions) ? options.expansions : [];
+    this.expansions = SK_EXPANSIONS.filter(x => requested.includes(x));
 
     this.state = 'waiting';
     this.round = 0;
@@ -47,6 +52,7 @@ class SkullKingGame {
     this.lastTrickWinner = null;
     this.lastTrickBonus = 0;
     this.lastTrickBonusDetail = [];
+    this.lastTrickVoided = false;
     this.nextPhaseAfterTrickEnd = null;
 
     this.resultSaved = false;
@@ -67,7 +73,7 @@ class SkullKingGame {
     const prevRoundWinner = this.lastTrickWinner;
 
     // Deal cards: round N → N cards per player
-    const deck = createDeck();
+    const deck = createDeck(this.expansions);
     const hands = deal(deck, this.playerCount, this.round);
 
     this.hands = {};
@@ -88,6 +94,7 @@ class SkullKingGame {
     this.lastTrickWinner = prevRoundWinner;
     this.lastTrickBonus = 0;
     this.lastTrickBonusDetail = [];
+    this.lastTrickVoided = false;
     this.nextPhaseAfterTrickEnd = null;
 
     this.state = 'bidding';
@@ -136,6 +143,11 @@ class SkullKingGame {
     this.trickNumber++;
     this.currentTrick = [];
     this.nextPhaseAfterTrickEnd = null;
+    // Clear stale trick-end fields so a new trick can't accidentally leak the
+    // previous trick's void/bonus state if the UI ever stops gating by phase.
+    this.lastTrickVoided = false;
+    this.lastTrickBonus = 0;
+    this.lastTrickBonusDetail = [];
 
     if (this.trickNumber === 1) {
       // Standard Skull King: dealer rotates each round and the player to the
@@ -173,6 +185,9 @@ class SkullKingGame {
 
     // Validate tigress choice
     const cardInfo = getCardInfo(cardId);
+    if (!cardInfo) {
+      return { success: false, message: '유효하지 않은 카드입니다' };
+    }
     if (cardInfo.type === CARD_TYPE.TIGRESS) {
       if (!tigressChoice || (tigressChoice !== 'pirate' && tigressChoice !== 'escape')) {
         return { success: false, message: 'Tigress 선택이 필요합니다 (pirate/escape)' };
@@ -200,12 +215,45 @@ class SkullKingGame {
   completeTrick() {
     const result = resolveTrick(this.currentTrick);
 
-    this.lastTrickWinner = result.winnerId;
-    this.lastTrickBonus = result.bonus;
-    this.lastTrickBonusDetail = result.bonusDetail;
+    // winnerId is always set — even on voided tricks (Kraken / Whale with no
+    // numbers) it represents who leads the next trick. For voided tricks we
+    // must NOT increment the trick count or award bonuses.
+    const voided = !!result.voided;
 
-    this.tricks[result.winnerId]++;
-    this.bonuses[result.winnerId] += result.bonus;
+    this.lastTrickWinner = result.winnerId;
+    this.lastTrickBonus = voided ? 0 : result.bonus;
+    this.lastTrickBonusDetail = [...(result.bonusDetail || [])];
+    this.lastTrickVoided = voided;
+
+    if (!voided) {
+      this.tricks[result.winnerId]++;
+      this.bonuses[result.winnerId] += result.bonus;
+
+      // Loot bonus: +20 per Loot card in the trick to the trick winner, plus
+      // +20 to each player who played a Loot card. Both subject to bid-met
+      // rule at round end (handled by SkullKingScoreCalc via this.bonuses).
+      const lootPlayers = [];
+      for (const play of this.currentTrick) {
+        const info = getCardInfo(play.cardId);
+        if (info && info.type === CARD_TYPE.LOOT) {
+          lootPlayers.push(play.playerId);
+        }
+      }
+      if (lootPlayers.length > 0) {
+        const winnerLoot = LOOT_BONUS_POINTS * lootPlayers.length;
+        this.bonuses[result.winnerId] += winnerLoot;
+        for (const lootPid of lootPlayers) {
+          this.bonuses[lootPid] += LOOT_BONUS_POINTS;
+        }
+        this.lastTrickBonus += winnerLoot;
+        this.lastTrickBonusDetail.push({
+          type: 'loot_bonus',
+          count: lootPlayers.length,
+          winnerPoints: winnerLoot,
+          playerPoints: LOOT_BONUS_POINTS,
+        });
+      }
+    }
 
     this.state = 'trick_end';
 
@@ -374,8 +422,10 @@ class SkullKingGame {
       lastTrickWinner: this.lastTrickWinner,
       lastTrickBonus: this.lastTrickBonus,
       lastTrickBonusDetail: this.lastTrickBonusDetail,
+      lastTrickVoided: this.lastTrickVoided,
       trickStarter: this.trickStarter,
       roundStarter: this._getRoundStarter(),
+      expansions: [...this.expansions],
     };
   }
 
@@ -414,8 +464,10 @@ class SkullKingGame {
       lastTrickWinner: this.lastTrickWinner,
       lastTrickBonus: this.lastTrickBonus,
       lastTrickBonusDetail: this.lastTrickBonusDetail,
+      lastTrickVoided: this.lastTrickVoided,
       trickStarter: this.trickStarter,
       roundStarter: this._getRoundStarter(),
+      expansions: [...this.expansions],
     };
   }
 

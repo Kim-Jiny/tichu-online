@@ -433,6 +433,7 @@ class _LobbyScreenState extends State<LobbyScreen> {
     final targetScoreController = TextEditingController(text: '1000');
     String selectedGameType = 'tichu';
     int skMaxPlayers = 4;
+    final Set<String> skExpansionsSelected = <String>{};
     String? errorText;
     void Function(void Function())? dialogSetState;
     showDialog(
@@ -690,6 +691,84 @@ class _LobbyScreenState extends State<LobbyScreen> {
                             );
                           }),
                         ),
+                        const SizedBox(height: 14),
+                        const Text('확장팩 (선택)', style: TextStyle(fontWeight: FontWeight.w700, fontSize: 12)),
+                        const SizedBox(height: 2),
+                        const Text(
+                          '기본 룰 카드에 특수 카드를 추가합니다. 중복 선택 가능.',
+                          style: TextStyle(fontSize: 10, color: Color(0xFF7E7069)),
+                        ),
+                        const SizedBox(height: 8),
+                        Row(
+                          children: [
+                            for (final entry in const [
+                              ['kraken', '크라켄', '트릭 무효화'],
+                              ['white_whale', '화이트웨일', '특수카드 무력화'],
+                              ['loot', '보물', '보너스 점수'],
+                            ])
+                              Expanded(
+                                child: Padding(
+                                  padding: EdgeInsets.only(
+                                    right: entry[0] == 'loot' ? 0 : 6,
+                                  ),
+                                  child: GestureDetector(
+                                    onTap: () => setState(() {
+                                      if (skExpansionsSelected.contains(entry[0])) {
+                                        skExpansionsSelected.remove(entry[0]);
+                                      } else {
+                                        skExpansionsSelected.add(entry[0]);
+                                      }
+                                    }),
+                                    child: AnimatedContainer(
+                                      duration: const Duration(milliseconds: 150),
+                                      padding: const EdgeInsets.symmetric(
+                                          vertical: 10, horizontal: 6),
+                                      decoration: BoxDecoration(
+                                        color: skExpansionsSelected.contains(entry[0])
+                                            ? accent.withValues(alpha: 0.25)
+                                            : Colors.white,
+                                        borderRadius: BorderRadius.circular(10),
+                                        border: Border.all(
+                                          color: skExpansionsSelected.contains(entry[0])
+                                              ? accent
+                                              : const Color(0xFFE0D8D4),
+                                          width: skExpansionsSelected.contains(entry[0]) ? 1.5 : 1,
+                                        ),
+                                      ),
+                                      child: Column(
+                                        crossAxisAlignment: CrossAxisAlignment.center,
+                                        children: [
+                                          Text(
+                                            entry[1],
+                                            style: TextStyle(
+                                              fontSize: 13,
+                                              fontWeight: skExpansionsSelected.contains(entry[0])
+                                                  ? FontWeight.bold
+                                                  : FontWeight.w600,
+                                              color: skExpansionsSelected.contains(entry[0])
+                                                  ? const Color(0xFF3E312A)
+                                                  : const Color(0xFF8A7A72),
+                                            ),
+                                          ),
+                                          const SizedBox(height: 2),
+                                          Text(
+                                            entry[2],
+                                            style: TextStyle(
+                                              fontSize: 9,
+                                              color: skExpansionsSelected.contains(entry[0])
+                                                  ? const Color(0xFF5F4E46)
+                                                  : const Color(0xFFAAA09C),
+                                            ),
+                                            textAlign: TextAlign.center,
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                              ),
+                          ],
+                        ),
                       ],
                       const SizedBox(height: 16),
                       sectionTitle('기본 정보', '먼저 방 이름과 공개 여부를 정합니다.'),
@@ -890,6 +969,9 @@ class _LobbyScreenState extends State<LobbyScreen> {
                     targetScore: targetScore,
                     gameType: selectedGameType,
                     maxPlayers: selectedGameType == 'skull_king' ? skMaxPlayers : 4,
+                    skExpansions: selectedGameType == 'skull_king'
+                        ? skExpansionsSelected.toList()
+                        : const [],
                   );
                   Navigator.pop(context);
                   setState(() => _inRoom = true);
@@ -1375,6 +1457,19 @@ class _LobbyScreenState extends State<LobbyScreen> {
     );
   }
 
+  String _skExpansionShortLabel(String expansionId) {
+    switch (expansionId) {
+      case 'kraken':
+        return '크라켄';
+      case 'white_whale':
+        return '웨일';
+      case 'loot':
+        return '보물';
+      default:
+        return expansionId;
+    }
+  }
+
   Widget _buildRoomItem(Room room) {
     final isInProgress = room.gameInProgress;
     final isSK = room.isSkullKing;
@@ -1484,14 +1579,48 @@ class _LobbyScreenState extends State<LobbyScreen> {
                               ],
                             ),
                             const SizedBox(height: 2),
-                            Text(
-                              isSK
-                                  ? '${room.turnTimeLimit}초'
-                                  : '${room.turnTimeLimit}초 · ${room.targetScore}점',
-                              style: TextStyle(
-                                fontSize: 11,
-                                color: subTextColor,
-                              ),
+                            Row(
+                              children: [
+                                Text(
+                                  isSK
+                                      ? '${room.turnTimeLimit}초'
+                                      : '${room.turnTimeLimit}초 · ${room.targetScore}점',
+                                  style: TextStyle(
+                                    fontSize: 11,
+                                    color: subTextColor,
+                                  ),
+                                ),
+                                if (isSK && room.skExpansions.isNotEmpty) ...[
+                                  const SizedBox(width: 6),
+                                  for (final exp in room.skExpansions)
+                                    Padding(
+                                      padding: const EdgeInsets.only(right: 4),
+                                      child: Container(
+                                        padding: const EdgeInsets.symmetric(
+                                          horizontal: 6,
+                                          vertical: 2,
+                                        ),
+                                        decoration: BoxDecoration(
+                                          color: const Color(0xFF2D2D3D),
+                                          borderRadius: BorderRadius.circular(6),
+                                          border: Border.all(
+                                            color: const Color(0xFFFFD54F).withValues(alpha: 0.5),
+                                            width: 0.8,
+                                          ),
+                                        ),
+                                        child: Text(
+                                          _skExpansionShortLabel(exp),
+                                          style: const TextStyle(
+                                            fontSize: 9,
+                                            color: Color(0xFFFFD54F),
+                                            fontWeight: FontWeight.bold,
+                                            height: 1.0,
+                                          ),
+                                        ),
+                                      ),
+                                    ),
+                                ],
+                              ],
                             ),
                           ],
                         ),

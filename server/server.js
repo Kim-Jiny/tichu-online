@@ -1426,8 +1426,20 @@ function handleCreateRoom(ws, data) {
   const targetScore = Math.min(Math.max(parseInt(data.targetScore) || 1000, 100), 20000);
 
   let maxPlayers = 4;
+  let skExpansions = [];
   if (gameType === 'skull_king') {
     maxPlayers = Math.min(Math.max(parseInt(data.maxPlayers) || 4, 2), 6);
+    // Validate skExpansions: accept only known ids, dedupe, cap to 3
+    const allowed = new Set(['kraken', 'white_whale', 'loot']);
+    if (Array.isArray(data.skExpansions)) {
+      const seen = new Set();
+      for (const x of data.skExpansions) {
+        if (typeof x === 'string' && allowed.has(x) && !seen.has(x)) {
+          seen.add(x);
+          skExpansions.push(x);
+        }
+      }
+    }
   }
 
   const room = lobby.createRoom(
@@ -1439,7 +1451,8 @@ function handleCreateRoom(ws, data) {
     turnTimeLimit,
     targetScore,
     gameType,
-    maxPlayers
+    maxPlayers,
+    skExpansions
   );
   ws.roomId = room.id;
   // Set title on host player

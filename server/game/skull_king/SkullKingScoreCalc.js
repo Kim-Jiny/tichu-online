@@ -1,17 +1,23 @@
 /**
  * Skull King Score Calculator
  *
- * bid = 0 && success: +10 * roundNumber
- * bid = 0 && fail:    -10 * roundNumber
- * bid > 0 && success: +20 * bid + bonus (bonus ONLY on exact match)
+ * bid = 0 && success: +10 * roundNumber + bonus
+ * bid = 0 && fail:    -10 * roundNumber (no bonus)
+ * bid > 0 && success: +20 * bid + bonus
  * bid > 0 && fail:    -10 * |tricks - bid| (no bonus)
+ *
+ * Bonus is awarded whenever the bid is met exactly. In the base game the
+ * only bonus sources (mermaid captures SK, SK captures pirate) require
+ * winning a trick so bid=0 always had bonus=0. With the Loot expansion a
+ * player can accrue bonus (+20) without winning a trick — that bonus is
+ * realised on bid=0 success too.
  */
 
 function calculateRoundScore(bid, actualTricks, roundNumber, bonus = 0) {
   if (bid === 0) {
     if (actualTricks === 0) {
-      // bid=0 success: no bonus applies
-      return 10 * roundNumber;
+      // bid=0 success: base +10 * round, plus any bonus (e.g. Loot).
+      return 10 * roundNumber + bonus;
     } else {
       return -10 * roundNumber;
     }

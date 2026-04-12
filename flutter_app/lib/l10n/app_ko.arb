@@ -1,0 +1,38 @@
+{
+  "@@locale": "ko",
+
+  "appTitle": "Tichu Online",
+
+  "languageAuto": "자동 (시스템 언어)",
+  "languageEnglish": "English",
+  "languageKorean": "한국어",
+  "languageGerman": "Deutsch",
+
+  "settingsTitle": "설정",
+  "settingsLanguage": "언어",
+  "settingsAppInfo": "앱 정보",
+  "settingsAppVersion": "앱 버전",
+  "settingsNotLatestVersion": "최신 버전이 아닙니다",
+  "settingsUpdate": "업데이트",
+  "settingsLogout": "로그아웃",
+  "settingsDeleteAccount": "회원탈퇴",
+  "settingsDeleteAccountConfirm": "정말 탈퇴하시겠습니까?\n모든 데이터가 삭제됩니다.",
+  "settingsNickname": "닉네임",
+  "settingsSocialLink": "소셜 연동",
+  "settingsTermsOfService": "이용약관",
+  "settingsPrivacyPolicy": "개인정보처리방침",
+  "settingsNotices": "공지사항",
+  "settingsMyProfile": "내 프로필",
+  "settingsTheme": "테마",
+  "settingsSound": "사운드",
+  "settingsAdminCenter": "관리자 센터",
+
+  "commonOk": "확인",
+  "commonCancel": "취소",
+  "commonSave": "저장",
+  "commonClose": "닫기",
+  "commonDelete": "삭제",
+  "commonConfirm": "확인",
+  "commonLink": "연동",
+  "commonError": "오류"
+}

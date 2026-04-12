@@ -12,9 +12,11 @@ import 'package:url_launcher/url_launcher.dart';
 import 'dart:io' show Platform;
 import 'app_navigation.dart';
 import 'firebase_options.dart';
+import 'l10n/app_localizations.dart';
 import 'services/network_service.dart';
 import 'services/game_service.dart';
 import 'services/session_service.dart';
+import 'services/locale_service.dart';
 import 'screens/game_screen.dart';
 import 'screens/login_screen.dart';
 import 'screens/lobby_screen.dart';
@@ -52,6 +54,11 @@ class TichuApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MultiProvider(
       providers: [
+        ChangeNotifierProvider(create: (_) {
+          final localeService = LocaleService();
+          localeService.loadSaved();
+          return localeService;
+        }),
         ChangeNotifierProvider(create: (_) => NetworkService()),
         ChangeNotifierProxyProvider<NetworkService, GameService>(
           create: (context) => GameService(context.read<NetworkService>()),
@@ -65,30 +72,45 @@ class TichuApp extends StatelessWidget {
           ),
         ),
       ],
-      child: MaterialApp(
-        navigatorKey: appNavigatorKey,
-        title: 'Tichu Online',
-        debugShowCheckedModeBanner: false,
-        builder: (context, child) {
-          final media = MediaQuery.of(context);
-          final platform = Theme.of(context).platform;
-          final currentScale = media.textScaler.scale(1.0);
-          final adjustedScale = platform == TargetPlatform.android
-              ? (currentScale * 0.92).clamp(0.9, 1.0)
-              : currentScale;
-          return MediaQuery(
-            data: media.copyWith(textScaler: TextScaler.linear(adjustedScale)),
-            child: child ?? const SizedBox.shrink(),
-          );
-        },
-        theme: ThemeData(
-          colorScheme: ColorScheme.fromSeed(
-            seedColor: const Color(0xFFF28C26),
-            brightness: Brightness.light,
+      child: Consumer<LocaleService>(
+        builder: (context, localeService, _) => MaterialApp(
+          navigatorKey: appNavigatorKey,
+          title: 'Tichu Online',
+          debugShowCheckedModeBanner: false,
+          localizationsDelegates: L10n.localizationsDelegates,
+          supportedLocales: L10n.supportedLocales,
+          locale: localeService.userSelectedLocale,
+          localeResolutionCallback: (deviceLocale, supportedLocales) {
+            if (deviceLocale != null) {
+              for (final supported in supportedLocales) {
+                if (supported.languageCode == deviceLocale.languageCode) {
+                  return supported;
+                }
+              }
+            }
+            return const Locale('en');
+          },
+          builder: (context, child) {
+            final media = MediaQuery.of(context);
+            final platform = Theme.of(context).platform;
+            final currentScale = media.textScaler.scale(1.0);
+            final adjustedScale = platform == TargetPlatform.android
+                ? (currentScale * 0.92).clamp(0.9, 1.0)
+                : currentScale;
+            return MediaQuery(
+              data: media.copyWith(textScaler: TextScaler.linear(adjustedScale)),
+              child: child ?? const SizedBox.shrink(),
+            );
+          },
+          theme: ThemeData(
+            colorScheme: ColorScheme.fromSeed(
+              seedColor: const Color(0xFFF28C26),
+              brightness: Brightness.light,
+            ),
+            useMaterial3: true,
           ),
-          useMaterial3: true,
+          home: const _OrientationGate(child: _EntryScreen()),
         ),
-        home: const _OrientationGate(child: _EntryScreen()),
       ),
     );
   }

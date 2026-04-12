@@ -2196,6 +2196,10 @@ class GameService extends ChangeNotifier {
     _network.send({'type': 'get_app_config'});
   }
 
+  void sendLocale(String languageCode) {
+    _network.send({'type': 'set_locale', 'locale': languageCode});
+  }
+
   void requestWallet() {
     _network.send({'type': 'get_wallet'});
   }

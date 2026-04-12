@@ -3,9 +3,11 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 import 'package:url_launcher/url_launcher.dart';
+import '../l10n/app_localizations.dart';
 import '../services/game_service.dart';
 import '../services/auth_service.dart';
 import '../services/session_service.dart';
+import '../services/locale_service.dart';
 import '../services/ad_service.dart';
 import 'package:google_mobile_ads/google_mobile_ads.dart';
 import 'admin_center_screen.dart';
@@ -71,6 +73,58 @@ class _SettingsScreenState extends State<SettingsScreen> {
     if (_appVersion.isEmpty) return false;
     if (latestVersion == null || latestVersion.isEmpty) return false;
     return _compareVersions(_appVersion, latestVersion) < 0;
+  }
+
+  String _localeDisplayName(L10n l10n, Locale locale) {
+    switch (locale.languageCode) {
+      case 'en': return l10n.languageEnglish;
+      case 'ko': return l10n.languageKorean;
+      case 'de': return l10n.languageGerman;
+      default: return locale.languageCode;
+    }
+  }
+
+  void _showLanguageDialog(BuildContext ctx, LocaleService localeService, L10n l10n) {
+    showDialog(
+      context: ctx,
+      builder: (dialogCtx) => SimpleDialog(
+        title: Text(l10n.settingsLanguage),
+        children: [
+          _languageOption(dialogCtx, localeService, null, l10n.languageAuto),
+          _languageOption(dialogCtx, localeService, const Locale('en'), 'English'),
+          _languageOption(dialogCtx, localeService, const Locale('ko'), '한국어'),
+          _languageOption(dialogCtx, localeService, const Locale('de'), 'Deutsch'),
+        ],
+      ),
+    );
+  }
+
+  Widget _languageOption(BuildContext dialogCtx, LocaleService localeService, Locale? locale, String label) {
+    final isSelected = localeService.userSelectedLocale == locale;
+    return SimpleDialogOption(
+      onPressed: () {
+        localeService.setLocale(locale);
+        final effectiveCode = (locale ?? localeService.effectiveLocale).languageCode;
+        context.read<GameService>().sendLocale(effectiveCode);
+        Navigator.pop(dialogCtx);
+      },
+      child: Row(
+        children: [
+          Expanded(
+            child: Text(
+              label,
+              style: TextStyle(
+                fontSize: 15,
+                fontWeight: isSelected ? FontWeight.w700 : FontWeight.normal,
+                color: isSelected ? const Color(0xFF42A5F5) : const Color(0xFF3E312A),
+              ),
+            ),
+          ),
+          if (isSelected)
+            const Icon(Icons.check, color: Color(0xFF42A5F5), size: 20),
+        ],
+      ),
+    );
   }
 
   Future<void> _openStore() async {
@@ -1070,78 +1124,106 @@ class _SettingsScreenState extends State<SettingsScreen> {
                             ],
                           ),
                           const SizedBox(height: 12),
-                          _buildSection(
-                            '앱 정보',
-                            [
-                              Builder(
-                                builder: (context) {
-                                  final outdated = _isOutdated(game.latestVersion);
-                                  return _buildRow(
-                                    icon: Icons.info_outline,
-                                    iconColor: outdated
-                                        ? const Color(0xFFE53935)
-                                        : const Color(0xFF7E57C2),
-                                    title: '앱 버전',
-                                    subtitle: _appVersion.isEmpty
-                                        ? '-'
-                                        : (outdated
-                                            ? '$_appVersion · 최신 버전이 아닙니다'
-                                            : _appVersion),
-                                    trailing: outdated
-                                        ? ElevatedButton(
-                                            onPressed: _openStore,
-                                            style: ElevatedButton.styleFrom(
-                                              backgroundColor: const Color(0xFFE53935),
-                                              foregroundColor: Colors.white,
-                                              elevation: 0,
-                                              padding: const EdgeInsets.symmetric(
-                                                horizontal: 14,
-                                                vertical: 6,
-                                              ),
-                                              minimumSize: const Size(0, 32),
-                                              tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                                              shape: RoundedRectangleBorder(
-                                                borderRadius: BorderRadius.circular(10),
-                                              ),
-                                            ),
-                                            child: const Text(
-                                              '업데이트',
-                                              style: TextStyle(
-                                                fontSize: 12,
-                                                fontWeight: FontWeight.w700,
-                                              ),
-                                            ),
-                                          )
-                                        : null,
-                                  );
-                                },
-                              ),
-                              const Divider(height: 1, color: Color(0xFFEAE2DE)),
-                              _buildRow(
-                                icon: Icons.description_outlined,
-                                iconColor: const Color(0xFF8A7A72),
-                                title: '이용약관',
-                                onTap: () => _showTextViewDialog('이용약관', game.eulaContent),
-                                trailing: const Icon(Icons.chevron_right, color: Color(0xFFB0A8A4)),
-                              ),
-                              const Divider(height: 1, color: Color(0xFFEAE2DE)),
-                              _buildRow(
-                                icon: Icons.privacy_tip_outlined,
-                                iconColor: const Color(0xFF8A7A72),
-                                title: '개인정보처리방침',
-                                onTap: () => _showTextViewDialog('개인정보처리방침', game.privacyPolicy),
-                                trailing: const Icon(Icons.chevron_right, color: Color(0xFFB0A8A4)),
-                              ),
-                            ],
+                          Builder(
+                            builder: (context) {
+                              final l10n = L10n.of(context);
+                              final localeService = context.watch<LocaleService>();
+                              final currentLabel = localeService.userSelectedLocale == null
+                                  ? l10n.languageAuto
+                                  : _localeDisplayName(l10n, localeService.userSelectedLocale!);
+                              return _buildSection(
+                                l10n.settingsLanguage,
+                                [
+                                  _buildRow(
+                                    icon: Icons.language,
+                                    iconColor: const Color(0xFF42A5F5),
+                                    title: l10n.settingsLanguage,
+                                    subtitle: currentLabel,
+                                    onTap: () => _showLanguageDialog(context, localeService, l10n),
+                                    trailing: const Icon(Icons.chevron_right, color: Color(0xFFB0A8A4)),
+                                  ),
+                                ],
+                              );
+                            },
+                          ),
+                          const SizedBox(height: 12),
+                          Builder(
+                            builder: (context) {
+                              final l10n = L10n.of(context);
+                              return _buildSection(
+                                l10n.settingsAppInfo,
+                                [
+                                  Builder(
+                                    builder: (context) {
+                                      final outdated = _isOutdated(game.latestVersion);
+                                      return _buildRow(
+                                        icon: Icons.info_outline,
+                                        iconColor: outdated
+                                            ? const Color(0xFFE53935)
+                                            : const Color(0xFF7E57C2),
+                                        title: l10n.settingsAppVersion,
+                                        subtitle: _appVersion.isEmpty
+                                            ? '-'
+                                            : (outdated
+                                                ? '$_appVersion · ${l10n.settingsNotLatestVersion}'
+                                                : _appVersion),
+                                        trailing: outdated
+                                            ? ElevatedButton(
+                                                onPressed: _openStore,
+                                                style: ElevatedButton.styleFrom(
+                                                  backgroundColor: const Color(0xFFE53935),
+                                                  foregroundColor: Colors.white,
+                                                  elevation: 0,
+                                                  padding: const EdgeInsets.symmetric(
+                                                    horizontal: 14,
+                                                    vertical: 6,
+                                                  ),
+                                                  minimumSize: const Size(0, 32),
+                                                  tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                                                  shape: RoundedRectangleBorder(
+                                                    borderRadius: BorderRadius.circular(10),
+                                                  ),
+                                                ),
+                                                child: Text(
+                                                  l10n.settingsUpdate,
+                                                  style: const TextStyle(
+                                                    fontSize: 12,
+                                                    fontWeight: FontWeight.w700,
+                                                  ),
+                                                ),
+                                              )
+                                            : null,
+                                      );
+                                    },
+                                  ),
+                                  const Divider(height: 1, color: Color(0xFFEAE2DE)),
+                                  _buildRow(
+                                    icon: Icons.description_outlined,
+                                    iconColor: const Color(0xFF8A7A72),
+                                    title: l10n.settingsTermsOfService,
+                                    onTap: () => _showTextViewDialog(l10n.settingsTermsOfService, game.eulaContent),
+                                    trailing: const Icon(Icons.chevron_right, color: Color(0xFFB0A8A4)),
+                                  ),
+                                  const Divider(height: 1, color: Color(0xFFEAE2DE)),
+                                  _buildRow(
+                                    icon: Icons.privacy_tip_outlined,
+                                    iconColor: const Color(0xFF8A7A72),
+                                    title: l10n.settingsPrivacyPolicy,
+                                    onTap: () => _showTextViewDialog(l10n.settingsPrivacyPolicy, game.privacyPolicy),
+                                    trailing: const Icon(Icons.chevron_right, color: Color(0xFFB0A8A4)),
+                                  ),
+                                ],
+                              );
+                            },
                           ),
                           const SizedBox(height: 12),
                           _buildSection(
-                            '공지사항',
+                            L10n.of(context).settingsNotices,
                             [
                               _buildRow(
                                 icon: Icons.campaign,
                                 iconColor: const Color(0xFF42A5F5),
-                                title: '공지사항',
+                                title: L10n.of(context).settingsNotices,
                                 onTap: _showNoticesDialog,
                                 trailing: Row(
                                   mainAxisSize: MainAxisSize.min,

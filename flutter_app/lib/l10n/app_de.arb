@@ -1,0 +1,38 @@
+{
+  "@@locale": "de",
+
+  "appTitle": "Tichu Online",
+
+  "languageAuto": "Automatisch (Systemsprache)",
+  "languageEnglish": "English",
+  "languageKorean": "Koreanisch",
+  "languageGerman": "Deutsch",
+
+  "settingsTitle": "Einstellungen",
+  "settingsLanguage": "Sprache",
+  "settingsAppInfo": "App-Info",
+  "settingsAppVersion": "App-Version",
+  "settingsNotLatestVersion": "Nicht die neueste Version",
+  "settingsUpdate": "Aktualisieren",
+  "settingsLogout": "Abmelden",
+  "settingsDeleteAccount": "Konto löschen",
+  "settingsDeleteAccountConfirm": "Möchten Sie Ihr Konto wirklich löschen?\nAlle Daten werden dauerhaft gelöscht.",
+  "settingsNickname": "Spitzname",
+  "settingsSocialLink": "Social-Verknüpfung",
+  "settingsTermsOfService": "Nutzungsbedingungen",
+  "settingsPrivacyPolicy": "Datenschutzrichtlinie",
+  "settingsNotices": "Mitteilungen",
+  "settingsMyProfile": "Mein Profil",
+  "settingsTheme": "Design",
+  "settingsSound": "Ton",
+  "settingsAdminCenter": "Admin-Center",
+
+  "commonOk": "OK",
+  "commonCancel": "Abbrechen",
+  "commonSave": "Speichern",
+  "commonClose": "Schließen",
+  "commonDelete": "Löschen",
+  "commonConfirm": "Bestätigen",
+  "commonLink": "Verknüpfen",
+  "commonError": "Fehler"
+}

@@ -260,7 +260,10 @@ class SessionService extends ChangeNotifier {
 
   Future<Map<String, String?>?> _collectDeviceInfo() async {
     try {
-      return await DeviceInfoService.collectDeviceInfo(includeFcmToken: false);
+      final prefs = await SharedPreferences.getInstance();
+      final savedLocale = prefs.getString('user_selected_locale');
+      final locale = savedLocale ?? PlatformDispatcher.instance.locale.languageCode;
+      return await DeviceInfoService.collectDeviceInfo(includeFcmToken: false, locale: locale);
     } catch (_) {
       return null;
     }

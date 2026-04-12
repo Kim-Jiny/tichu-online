@@ -5,7 +5,7 @@ import 'package:package_info_plus/package_info_plus.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 
 class DeviceInfoService {
-  static Future<Map<String, String?>> collectDeviceInfo({bool includeFcmToken = true}) async {
+  static Future<Map<String, String?>> collectDeviceInfo({bool includeFcmToken = true, String? locale}) async {
     String? fcmToken;
     String? devicePlatform;
     String? deviceModel;
@@ -68,6 +68,7 @@ class DeviceInfoService {
       'deviceModel': deviceModel,
       'osVersion': osVersion,
       'appVersion': appVersion,
+      'locale': locale,
     };
   }
 }

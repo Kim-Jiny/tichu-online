@@ -245,7 +245,7 @@
   "lobbyExpKrakenShort": "Kraken",
   "lobbyExpWhaleShort": "Whale",
   "lobbyExpLootShort": "Loot",
-  "lobbyInProgress": "In game {count}",
+  "lobbyInProgress": "Spectating {count}",
   "@lobbyInProgress": {
     "placeholders": {
       "count": { "type": "int" }
@@ -638,7 +638,7 @@
     }
   },
 
-  "gameSparrowCall": "Sparrow Call",
+  "gameSparrowCall": "Mahjong Call",
   "gameSelectNumberToCall": "Select a number to call",
   "gameNoCall": "No Call",
   "gameCancelPickAnother": "Cancel and pick another card",
@@ -857,7 +857,7 @@
   "gameRankGold": "Gold",
   "gameRankSilver": "Silver",
   "gameRankBronze": "Bronze",
-  "gameFinishPosition": "{position}st!",
+  "gameFinishPosition": "Place {position}!",
   "@gameFinishPosition": {
     "placeholders": {
       "position": { "type": "int" }

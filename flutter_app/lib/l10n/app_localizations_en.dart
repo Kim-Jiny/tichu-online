@@ -1,0 +1,2926 @@
+// ignore: unused_import
+import 'package:intl/intl.dart' as intl;
+import 'app_localizations.dart';
+
+// ignore_for_file: type=lint
+
+/// The translations for English (`en`).
+class L10nEn extends L10n {
+  L10nEn([String locale = 'en']) : super(locale);
+
+  @override
+  String get appTitle => 'Tichu Online';
+
+  @override
+  String get languageAuto => 'Auto (System)';
+
+  @override
+  String get languageEnglish => 'English';
+
+  @override
+  String get languageKorean => 'Korean';
+
+  @override
+  String get languageGerman => 'German';
+
+  @override
+  String get settingsTitle => 'Settings';
+
+  @override
+  String get settingsLanguage => 'Language';
+
+  @override
+  String get settingsAppInfo => 'App Info';
+
+  @override
+  String get settingsAppVersion => 'App Version';
+
+  @override
+  String get settingsNotLatestVersion => 'Not the latest version';
+
+  @override
+  String get settingsUpdate => 'Update';
+
+  @override
+  String get settingsLogout => 'Logout';
+
+  @override
+  String get settingsDeleteAccount => 'Delete Account';
+
+  @override
+  String get settingsDeleteAccountConfirm =>
+      'Are you sure you want to delete your account?\nAll data will be permanently deleted.';
+
+  @override
+  String get settingsNickname => 'Nickname';
+
+  @override
+  String get settingsSocialLink => 'Social Link';
+
+  @override
+  String get settingsTermsOfService => 'Terms of Service';
+
+  @override
+  String get settingsPrivacyPolicy => 'Privacy Policy';
+
+  @override
+  String get settingsNotices => 'Notices';
+
+  @override
+  String get settingsMyProfile => 'My Profile';
+
+  @override
+  String get settingsTheme => 'Theme';
+
+  @override
+  String get settingsSound => 'Sound';
+
+  @override
+  String get settingsAdminCenter => 'Admin Center';
+
+  @override
+  String get commonOk => 'OK';
+
+  @override
+  String get commonCancel => 'Cancel';
+
+  @override
+  String get commonSave => 'Save';
+
+  @override
+  String get commonClose => 'Close';
+
+  @override
+  String get commonDelete => 'Delete';
+
+  @override
+  String get commonConfirm => 'Confirm';
+
+  @override
+  String get commonLink => 'Link';
+
+  @override
+  String get commonError => 'Error';
+
+  @override
+  String get settingsHeaderTitle => 'Settings';
+
+  @override
+  String get settingsNotificationsSection => 'Notifications';
+
+  @override
+  String get settingsPushNotifications => 'Push Notifications';
+
+  @override
+  String get settingsPushNotificationsDesc =>
+      'Turn all notifications on or off';
+
+  @override
+  String get settingsInquiryNotifications => 'Inquiry Notifications';
+
+  @override
+  String get settingsInquiryNotificationsDesc =>
+      'Receive push when a new inquiry arrives';
+
+  @override
+  String get settingsReportNotifications => 'Report Notifications';
+
+  @override
+  String get settingsReportNotificationsDesc =>
+      'Receive push when a new report arrives';
+
+  @override
+  String get settingsAdminSection => 'Admin';
+
+  @override
+  String get settingsAdminCenterDesc =>
+      'View inquiries, reports, users, and active users';
+
+  @override
+  String get settingsAccountSection => 'Account';
+
+  @override
+  String get settingsProfileSubtitle =>
+      'View level, record, and recent matches';
+
+  @override
+  String settingsSocialLinked(String provider) {
+    return '$provider linked';
+  }
+
+  @override
+  String get settingsNoLinkedAccount =>
+      'No linked account (ranked play unavailable)';
+
+  @override
+  String get settingsInquirySection => 'Inquiry';
+
+  @override
+  String get settingsSubmitInquiry => 'Submit Inquiry';
+
+  @override
+  String get settingsInquiryHistory => 'Inquiry History';
+
+  @override
+  String get settingsAccountManagement => 'Account Management';
+
+  @override
+  String get settingsDeleteAccountWithdraw => 'Withdraw';
+
+  @override
+  String get settingsLinkComplete => 'Linking completed';
+
+  @override
+  String settingsLinkFailed(String error) {
+    return 'Linking failed: $error';
+  }
+
+  @override
+  String get noticeTitle => 'Notices';
+
+  @override
+  String get noticeEmpty => 'No notices available';
+
+  @override
+  String get noticeRetry => 'Retry';
+
+  @override
+  String get noticeCategoryRelease => 'Release';
+
+  @override
+  String get noticeCategoryUpdate => 'Update';
+
+  @override
+  String get noticeCategoryPreview => 'Update Preview';
+
+  @override
+  String get noticeCategoryGeneral => 'Notice';
+
+  @override
+  String get inquiryTitle => 'Submit Inquiry';
+
+  @override
+  String get inquiryCategory => 'Category';
+
+  @override
+  String get inquiryCategoryBug => 'Bug Report';
+
+  @override
+  String get inquiryCategorySuggestion => 'Suggestion';
+
+  @override
+  String get inquiryCategoryOther => 'Other';
+
+  @override
+  String get inquiryFieldTitle => 'Title';
+
+  @override
+  String get inquiryFieldTitleHint => 'Enter a title';
+
+  @override
+  String get inquiryFieldContent => 'Content';
+
+  @override
+  String get inquiryFieldContentHint => 'Enter the details';
+
+  @override
+  String get inquirySubmit => 'Submit';
+
+  @override
+  String get inquirySubmitted => 'Your inquiry has been submitted';
+
+  @override
+  String get inquiryHistoryTitle => 'Inquiry History';
+
+  @override
+  String get inquiryEmpty => 'No inquiries found';
+
+  @override
+  String get inquiryStatusResolved => 'Resolved';
+
+  @override
+  String get inquiryStatusPending => 'Pending';
+
+  @override
+  String get inquiryAnswerLabel => 'Answer';
+
+  @override
+  String inquiryAnswerDate(String date) {
+    return 'Answered on: $date';
+  }
+
+  @override
+  String get inquiryNoAnswer => 'No answer has been registered yet.';
+
+  @override
+  String get linkDialogTitle => 'Link Social Account';
+
+  @override
+  String get linkDialogContent => 'Select a social account to link';
+
+  @override
+  String get textViewLoadFailed => 'Failed to load content.';
+
+  @override
+  String get loginEnterUsername => 'Please enter your username';
+
+  @override
+  String get loginEnterPassword => 'Please enter your password';
+
+  @override
+  String get loginFailed => 'Login failed';
+
+  @override
+  String loginSocialFailed(String error) {
+    return 'Social login failed: $error';
+  }
+
+  @override
+  String get loginSocialFailedGeneric => 'Social login failed';
+
+  @override
+  String get loginSubtitle => 'Team card game';
+
+  @override
+  String get loginTagline =>
+      'Quickly reconnect and\njump right back into the game.';
+
+  @override
+  String get loginUsernameHint => 'Username';
+
+  @override
+  String get loginPasswordHint => 'Password';
+
+  @override
+  String get loginButton => 'Login';
+
+  @override
+  String get loginRegisterButton => 'Register';
+
+  @override
+  String get loginQuickLogin => 'Quick login';
+
+  @override
+  String get loginAutoLoginFailed => 'Auto login failed';
+
+  @override
+  String get loginCheckSavedInfo => 'Please check your saved login info.';
+
+  @override
+  String get loginRetry => 'Retry';
+
+  @override
+  String get loginManual => 'Login manually';
+
+  @override
+  String get loginAutoLoggingIn => 'Auto logging in...';
+
+  @override
+  String get loginLoggingIn => 'Logging in...';
+
+  @override
+  String get loginVerifyingAccount => 'Verifying account info.';
+
+  @override
+  String get loginRegistrationComplete =>
+      'Registration complete. Please log in.';
+
+  @override
+  String get loginNicknameEmpty => 'Please enter a nickname';
+
+  @override
+  String get loginNicknameLength => 'Nickname must be 2-10 characters';
+
+  @override
+  String get loginNicknameNoSpaces => 'Nickname cannot contain spaces';
+
+  @override
+  String get loginServerUnavailable => 'Cannot connect to the server.';
+
+  @override
+  String get loginServerNoResponse =>
+      'No response from server. Please try again.';
+
+  @override
+  String get loginUsernameMinLength => 'Username must be at least 2 characters';
+
+  @override
+  String get loginUsernameNoSpaces => 'Username cannot contain spaces';
+
+  @override
+  String get loginPasswordMinLength => 'Password must be at least 4 characters';
+
+  @override
+  String get loginPasswordMismatch => 'Passwords do not match';
+
+  @override
+  String get loginNicknameCheckRequired => 'Please check nickname availability';
+
+  @override
+  String get loginServerTimeout => 'Server response timed out';
+
+  @override
+  String get loginRegisterTitle => 'Register';
+
+  @override
+  String get loginUsernameLabel => 'Username';
+
+  @override
+  String get loginUsernameHintRegister => '2+ characters, no spaces';
+
+  @override
+  String get loginPasswordLabel => 'Password';
+
+  @override
+  String get loginPasswordHintRegister => '4+ characters';
+
+  @override
+  String get loginConfirmPasswordLabel => 'Confirm Password';
+
+  @override
+  String get loginConfirmPasswordHint => 'Re-enter your password';
+
+  @override
+  String get loginSubmitRegister => 'Sign Up';
+
+  @override
+  String get loginNicknameLabel => 'Nickname';
+
+  @override
+  String get loginNicknameHint => '2-10 characters, no spaces';
+
+  @override
+  String get loginCheckAvailability => 'Check';
+
+  @override
+  String get loginSetNicknameTitle => 'Set Nickname';
+
+  @override
+  String get loginSetNicknameDesc => 'Choose a nickname to use in the game';
+
+  @override
+  String get loginGetStarted => 'Get Started';
+
+  @override
+  String get lobbyRoomInviteTitle => 'Room Invite';
+
+  @override
+  String lobbyRoomInviteMessage(String nickname) {
+    return '$nickname invited you to a room!';
+  }
+
+  @override
+  String get lobbyDecline => 'Decline';
+
+  @override
+  String get lobbyJoin => 'Join';
+
+  @override
+  String get lobbyInviteFriendsTitle => 'Invite Friends';
+
+  @override
+  String get lobbyNoOnlineFriends => 'No online friends available to invite';
+
+  @override
+  String lobbyInviteSent(String nickname) {
+    return 'Invitation sent to $nickname';
+  }
+
+  @override
+  String get lobbyInvite => 'Invite';
+
+  @override
+  String get lobbySpectatorListTitle => 'Spectator List';
+
+  @override
+  String get lobbyNoSpectators => 'No one is spectating';
+
+  @override
+  String get lobbyRoomSettingsTitle => 'Room Settings';
+
+  @override
+  String get lobbyEnterRoomTitle => 'Enter a room title';
+
+  @override
+  String get lobbyChange => 'Change';
+
+  @override
+  String get lobbyCreateRoom => 'Create Room';
+
+  @override
+  String get lobbyCreateRoomSubtitle =>
+      'Set a room title and rules, and the waiting room opens right away.';
+
+  @override
+  String get lobbySelectGame => 'Select Game';
+
+  @override
+  String get lobbySelectGameDesc => 'Choose the game to play.';
+
+  @override
+  String get lobbyTichu => 'Tichu';
+
+  @override
+  String get lobbySkullKing => 'Skull King';
+
+  @override
+  String get lobbyMaxPlayers => 'Max Players';
+
+  @override
+  String lobbyPlayerCount(int count) {
+    return '${count}P';
+  }
+
+  @override
+  String get lobbyExpansionOptional => 'Expansions (Optional)';
+
+  @override
+  String get lobbyExpansionDesc =>
+      'Add special cards to the base rules. Multiple selections allowed.';
+
+  @override
+  String get lobbyExpKraken => 'Kraken';
+
+  @override
+  String get lobbyExpKrakenDesc => 'Void a trick';
+
+  @override
+  String get lobbyExpWhiteWhale => 'White Whale';
+
+  @override
+  String get lobbyExpWhiteWhaleDesc => 'Neutralize special cards';
+
+  @override
+  String get lobbyExpLoot => 'Loot';
+
+  @override
+  String get lobbyExpLootDesc => 'Bonus points';
+
+  @override
+  String get lobbyBasicInfo => 'Basic Info';
+
+  @override
+  String get lobbyBasicInfoDesc => 'Set the room name and visibility.';
+
+  @override
+  String get lobbyRoomName => 'Room Name';
+
+  @override
+  String get lobbyRandom => 'Random';
+
+  @override
+  String get lobbyPrivateRoom => 'Private Room';
+
+  @override
+  String get lobbyPrivateRoomDescRanked =>
+      'Cannot create a private room in ranked play.';
+
+  @override
+  String get lobbyPrivateRoomDesc =>
+      'Only invited players or those with the password can join.';
+
+  @override
+  String get lobbyPasswordHint => 'Password (4+ characters)';
+
+  @override
+  String get lobbyRanked => 'Ranked';
+
+  @override
+  String get lobbyRankedDesc =>
+      'Score is fixed at 1000 and private settings are automatically disabled.';
+
+  @override
+  String get lobbyGameSettings => 'Game Settings';
+
+  @override
+  String get lobbyGameSettingsDescSk => 'Set the turn time.';
+
+  @override
+  String get lobbyGameSettingsDescTichu =>
+      'Set the turn time and target score.';
+
+  @override
+  String get lobbyTimeLimit => 'Time Limit';
+
+  @override
+  String get lobbySuffixSeconds => 'sec';
+
+  @override
+  String get lobbyTargetScore => 'Target Score';
+
+  @override
+  String get lobbySuffixPoints => 'pts';
+
+  @override
+  String get lobbyTimeLimitRange => '10–999';
+
+  @override
+  String get lobbyTargetScoreRange => '100–20000';
+
+  @override
+  String get lobbyTargetScoreFixed => '1000 (fixed)';
+
+  @override
+  String get lobbyRankedFixedScoreInfo =>
+      'Ranked play uses a fixed target score of 1000.';
+
+  @override
+  String get lobbyNormalSettingsInfo =>
+      'Time limit: 10–999 sec, target score: 100–20000 pts.';
+
+  @override
+  String get lobbyEnterRoomName => 'Please enter a room name.';
+
+  @override
+  String get lobbyPasswordTooShort => 'Password must be at least 4 characters.';
+
+  @override
+  String get lobbyDuplicateLoginKicked =>
+      'You were logged out because another device logged in';
+
+  @override
+  String get lobbyRoomListTitle => 'Game Room List';
+
+  @override
+  String get lobbyEmptyRoomList => 'No rooms yet!\nWhy not create one?';
+
+  @override
+  String get lobbySkullKingBadge => 'Skull King';
+
+  @override
+  String get lobbyTichuBadge => 'Tichu';
+
+  @override
+  String lobbyRoomTimeSec(int seconds) {
+    return '${seconds}s';
+  }
+
+  @override
+  String lobbyRoomTimeAndScore(int seconds, int score) {
+    return '${seconds}s · ${score}pts';
+  }
+
+  @override
+  String get lobbyExpKrakenShort => 'Kraken';
+
+  @override
+  String get lobbyExpWhaleShort => 'Whale';
+
+  @override
+  String get lobbyExpLootShort => 'Loot';
+
+  @override
+  String lobbyInProgress(int count) {
+    return 'Spectating $count';
+  }
+
+  @override
+  String get lobbySocialLinkRequired => 'Social Link Required';
+
+  @override
+  String get lobbySocialLinkRequiredDesc =>
+      'Ranked play requires a linked social account.\nGo to Settings > Social Link to link your Google or Kakao account.';
+
+  @override
+  String get lobbyJoinPrivateRoom => 'Join Private Room';
+
+  @override
+  String get lobbyEnter => 'Enter';
+
+  @override
+  String get lobbySpectatePrivateRoom => 'Spectate Private Room';
+
+  @override
+  String get lobbySpectate => 'Spectate';
+
+  @override
+  String get lobbyPassword => 'Password';
+
+  @override
+  String get lobbyMessageHint => 'Type a message...';
+
+  @override
+  String get lobbyChat => 'Chat';
+
+  @override
+  String get lobbyViewProfile => 'View Profile';
+
+  @override
+  String get lobbyAddFriend => 'Add Friend';
+
+  @override
+  String get lobbyUnblock => 'Unblock';
+
+  @override
+  String get lobbyBlock => 'Block';
+
+  @override
+  String get lobbyUnblocked => 'User has been unblocked';
+
+  @override
+  String get lobbyBlocked => 'User has been blocked';
+
+  @override
+  String get lobbyFriendRequestSent => 'Friend request sent';
+
+  @override
+  String get lobbyReport => 'Report';
+
+  @override
+  String get lobbyWaitingRoomTools => 'Waiting Room Tools';
+
+  @override
+  String get lobbyWaitingRoomToolsDesc =>
+      'Features not directly related to game preparation can be found here.';
+
+  @override
+  String get lobbyFriendsDm => 'Friends / DM';
+
+  @override
+  String lobbyUnreadDmCount(int count) {
+    return 'You have $count unread requests and DMs.';
+  }
+
+  @override
+  String get lobbyFriendsDmDesc =>
+      'View your friends list and DM conversations.';
+
+  @override
+  String lobbyCurrentSpectators(int count) {
+    return 'View $count current spectators.';
+  }
+
+  @override
+  String get lobbyMore => 'More';
+
+  @override
+  String get lobbyRoomSettings => 'Settings';
+
+  @override
+  String get lobbySkullKingRanked => 'Skull King - Ranked';
+
+  @override
+  String get lobbyTichuRanked => 'Tichu - Ranked';
+
+  @override
+  String lobbySkullKingPlayers(int count) {
+    return 'Skull King · ${count}P';
+  }
+
+  @override
+  String get lobbyStartGame => 'Start Game';
+
+  @override
+  String get lobbyReady => 'Ready';
+
+  @override
+  String get lobbyReadyDone => 'Ready!';
+
+  @override
+  String lobbyReportTitle(String nickname) {
+    return 'Report $nickname';
+  }
+
+  @override
+  String get lobbyReportWarning =>
+      'Reports are reviewed by the moderation team.\nFalse reports may result in penalties.';
+
+  @override
+  String get lobbySelectReason => 'Select Reason';
+
+  @override
+  String get lobbyReportDetailHint => 'Enter details (optional)';
+
+  @override
+  String get lobbyReportReasonAbuse => 'Abuse/Insults';
+
+  @override
+  String get lobbyReportReasonSpam => 'Spam/Flooding';
+
+  @override
+  String get lobbyReportReasonNickname => 'Inappropriate Nickname';
+
+  @override
+  String get lobbyReportReasonGameplay => 'Gameplay Disruption';
+
+  @override
+  String get lobbyReportReasonOther => 'Other';
+
+  @override
+  String get lobbyProfileNotFound => 'Profile not found';
+
+  @override
+  String get lobbyMyProfile => 'My Profile';
+
+  @override
+  String get lobbyPlayerProfile => 'Player Profile';
+
+  @override
+  String get lobbyAlreadyFriend => 'Already friends';
+
+  @override
+  String get lobbyRequestPending => 'Request pending';
+
+  @override
+  String get lobbyTichuSeasonRanked => 'Tichu Season Ranked';
+
+  @override
+  String get lobbySkullKingSeasonRanked => 'Skull King Season Ranked';
+
+  @override
+  String get lobbyTichuRecord => 'Tichu Record';
+
+  @override
+  String get lobbySkullKingRecord => 'Skull King Record';
+
+  @override
+  String get lobbyStatRecord => 'Record';
+
+  @override
+  String get lobbyStatWinRate => 'Win Rate';
+
+  @override
+  String lobbyRecordFormat(int games, int wins, int losses) {
+    return '${games}G ${wins}W ${losses}L';
+  }
+
+  @override
+  String lobbyRecentMatches(int count) {
+    return 'Recent Matches ($count)';
+  }
+
+  @override
+  String get lobbyRecentMatchesTitle => 'Recent Matches';
+
+  @override
+  String lobbyRecentMatchesDesc(int count) {
+    return 'View results of the last $count matches.';
+  }
+
+  @override
+  String get lobbySeeMore => 'See More';
+
+  @override
+  String get lobbyNoRecentMatches => 'No recent matches';
+
+  @override
+  String get lobbyMatchDesertion => 'D';
+
+  @override
+  String get lobbyMatchDraw => 'D';
+
+  @override
+  String get lobbyMatchWin => 'W';
+
+  @override
+  String get lobbyMatchLoss => 'L';
+
+  @override
+  String get lobbyMatchTypeSkullKing => 'Skull King';
+
+  @override
+  String get lobbyMatchTypeRanked => 'Ranked';
+
+  @override
+  String get lobbyMatchTypeNormal => 'Normal';
+
+  @override
+  String lobbyRankAndScore(String rank, int score) {
+    return '#$rank (${score}pts)';
+  }
+
+  @override
+  String get lobbyMannerGood => 'Good';
+
+  @override
+  String get lobbyMannerNormal => 'Normal';
+
+  @override
+  String get lobbyMannerBad => 'Bad';
+
+  @override
+  String get lobbyMannerVeryBad => 'Very Bad';
+
+  @override
+  String get lobbyMannerWorst => 'Terrible';
+
+  @override
+  String lobbyManner(String label) {
+    return 'Manner $label';
+  }
+
+  @override
+  String lobbyDesertions(int count) {
+    return 'Desertions $count';
+  }
+
+  @override
+  String get lobbyKick => 'Kick';
+
+  @override
+  String lobbyKickConfirm(String playerName) {
+    return 'Kick $playerName?';
+  }
+
+  @override
+  String get lobbyHost => 'Host';
+
+  @override
+  String get lobbyBot => 'Bot';
+
+  @override
+  String get lobbyEmptySlot => '[Empty]';
+
+  @override
+  String get lobbyMaintenanceDefault => 'Server maintenance scheduled';
+
+  @override
+  String lobbyRoomInfoSk(int seconds, int players, int maxPlayers) {
+    return '${seconds}s · $players/${maxPlayers}P';
+  }
+
+  @override
+  String lobbyRoomInfoTichu(int seconds, int score) {
+    return '${seconds}s · ${score}pts';
+  }
+
+  @override
+  String get lobbyRandomAdjTichu1 => 'Joyful';
+
+  @override
+  String get lobbyRandomAdjTichu2 => 'Exciting';
+
+  @override
+  String get lobbyRandomAdjTichu3 => 'Passionate';
+
+  @override
+  String get lobbyRandomAdjTichu4 => 'Fiery';
+
+  @override
+  String get lobbyRandomAdjTichu5 => 'Lucky';
+
+  @override
+  String get lobbyRandomAdjTichu6 => 'Legendary';
+
+  @override
+  String get lobbyRandomAdjTichu7 => 'Supreme';
+
+  @override
+  String get lobbyRandomAdjTichu8 => 'Invincible';
+
+  @override
+  String get lobbyRandomNounTichu1 => 'Tichu Room';
+
+  @override
+  String get lobbyRandomNounTichu2 => 'Card Game';
+
+  @override
+  String get lobbyRandomNounTichu3 => 'Showdown';
+
+  @override
+  String get lobbyRandomNounTichu4 => 'Round';
+
+  @override
+  String get lobbyRandomNounTichu5 => 'Game';
+
+  @override
+  String get lobbyRandomNounTichu6 => 'Battle';
+
+  @override
+  String get lobbyRandomNounTichu7 => 'Challenge';
+
+  @override
+  String get lobbyRandomNounTichu8 => 'Party';
+
+  @override
+  String get lobbyRandomAdjSk1 => 'Fearsome';
+
+  @override
+  String get lobbyRandomAdjSk2 => 'Legendary';
+
+  @override
+  String get lobbyRandomAdjSk3 => 'Invincible';
+
+  @override
+  String get lobbyRandomAdjSk4 => 'Ruthless';
+
+  @override
+  String get lobbyRandomAdjSk5 => 'Greedy';
+
+  @override
+  String get lobbyRandomAdjSk6 => 'Supreme';
+
+  @override
+  String get lobbyRandomAdjSk7 => 'Stormy';
+
+  @override
+  String get lobbyRandomAdjSk8 => 'Bold';
+
+  @override
+  String get lobbyRandomNounSk1 => 'Pirate Ship';
+
+  @override
+  String get lobbyRandomNounSk2 => 'Treasure Island';
+
+  @override
+  String get lobbyRandomNounSk3 => 'Voyage';
+
+  @override
+  String get lobbyRandomNounSk4 => 'Plunder';
+
+  @override
+  String get lobbyRandomNounSk5 => 'Captain';
+
+  @override
+  String get lobbyRandomNounSk6 => 'Sea Battle';
+
+  @override
+  String get lobbyRandomNounSk7 => 'Adventure';
+
+  @override
+  String get lobbyRandomNounSk8 => 'Kraken';
+
+  @override
+  String get skGameRecoveringGame => 'Recovering game...';
+
+  @override
+  String get skGameCheckingState => 'Checking game state...';
+
+  @override
+  String get skGameReloadingRoom => 'Reloading room info...';
+
+  @override
+  String get skGameLoadingState => 'Loading game state...';
+
+  @override
+  String get skGameSpectatorWaitingTitle =>
+      'Spectating Skull King Waiting Room';
+
+  @override
+  String get skGameSpectatorWaitingDesc =>
+      'Viewing the room before the game starts. The spectator screen will load automatically once the game begins.';
+
+  @override
+  String get skGameHost => 'Host';
+
+  @override
+  String get skGameReady => 'Ready';
+
+  @override
+  String get skGameWaiting => 'Waiting';
+
+  @override
+  String get skGameSpectatorStandby => 'Spectator Standby';
+
+  @override
+  String get skGameSpectatorListTitle => 'Spectator List';
+
+  @override
+  String get skGameNoSpectators => 'No one is spectating';
+
+  @override
+  String get skGameAlwaysAccept => 'Always Accept';
+
+  @override
+  String get skGameAlwaysReject => 'Always Reject';
+
+  @override
+  String skGameRoundTrick(int round, int trick) {
+    return 'Round $round Trick $trick';
+  }
+
+  @override
+  String get skGameSpectating => 'Spectating';
+
+  @override
+  String skGameBiddingInProgress(String name) {
+    return 'Bidding in progress · Leader: $name';
+  }
+
+  @override
+  String skGamePlayerTurn(String name) {
+    return '$name\'s turn';
+  }
+
+  @override
+  String get skGameLeaveTitle => 'Leave Game';
+
+  @override
+  String get skGameLeaveConfirm => 'Are you sure you want to leave the game?';
+
+  @override
+  String get skGameLeaveButton => 'Leave';
+
+  @override
+  String skGameLeaderLabel(String name) {
+    return 'Leader: $name';
+  }
+
+  @override
+  String get skGameMyTurn => 'My Turn';
+
+  @override
+  String skGameWaitingFor(String name) {
+    return 'Waiting for $name';
+  }
+
+  @override
+  String skGameSecondsShort(int seconds) {
+    return '${seconds}s';
+  }
+
+  @override
+  String get skGameTapToRequestCards =>
+      'Tap a profile above to request to view their hand';
+
+  @override
+  String skGameRequestingCardView(String name) {
+    return 'Requesting to view $name\'s hand...';
+  }
+
+  @override
+  String skGamePlayerHand(String name) {
+    return '$name\'s hand';
+  }
+
+  @override
+  String get skGameNoCards => 'No cards';
+
+  @override
+  String skGameCardViewRejected(String name) {
+    return '$name declined the request. Tap another player.';
+  }
+
+  @override
+  String skGameTimeout(String name) {
+    return '$name timed out!';
+  }
+
+  @override
+  String skGameDesertionTimeout(String name) {
+    return '$name deserted! (3 timeouts)';
+  }
+
+  @override
+  String skGameDesertionLeave(String name) {
+    return '$name left the game';
+  }
+
+  @override
+  String skGameCardViewRequest(String name) {
+    return '$name is requesting to view your hand';
+  }
+
+  @override
+  String get skGameReject => 'Reject';
+
+  @override
+  String get skGameAllow => 'Allow';
+
+  @override
+  String get skGameChat => 'Chat';
+
+  @override
+  String get skGameMessageHint => 'Type a message...';
+
+  @override
+  String get skGameViewingMyHand => 'Viewing my hand';
+
+  @override
+  String get skGameNoViewers => 'No one is watching';
+
+  @override
+  String get skGameViewProfile => 'View Profile';
+
+  @override
+  String get skGameBlock => 'Block';
+
+  @override
+  String get skGameUnblock => 'Unblock';
+
+  @override
+  String get skGameScoreHistory => 'Score History';
+
+  @override
+  String get skGameBiddingPhase => 'Bidding...';
+
+  @override
+  String get skGamePlayCard => 'Play a card';
+
+  @override
+  String get skGameKrakenActivated => '🐙 Kraken activated';
+
+  @override
+  String get skGameWhiteWhaleActivated => '🐋 White Whale activated';
+
+  @override
+  String get skGameWhiteWhaleNullify =>
+      '🐋 White Whale · Special cards nullified';
+
+  @override
+  String get skGameTrickVoided => 'Trick Voided';
+
+  @override
+  String skGameLeadPlayer(String name) {
+    return '$name leads next';
+  }
+
+  @override
+  String skGameTrickWinner(String name) {
+    return '$name wins';
+  }
+
+  @override
+  String get skGameCheckingCards => 'Checking cards...';
+
+  @override
+  String skGameBonusWithLoot(int bonus, int loot) {
+    return 'Bonus +$bonus (💰 +$loot)';
+  }
+
+  @override
+  String skGameBonus(int bonus) {
+    return 'Bonus +$bonus';
+  }
+
+  @override
+  String skGameBidDone(int bid) {
+    return 'Bid: $bid wins';
+  }
+
+  @override
+  String get skGameWaitingOthers => 'Waiting for other players...';
+
+  @override
+  String get skGameBidPrompt =>
+      'Predict how many tricks you will win this round';
+
+  @override
+  String skGameBidSubmit(int bid) {
+    return 'Bid $bid wins';
+  }
+
+  @override
+  String get skGameSelectNumber => 'Select a number';
+
+  @override
+  String get skGamePlayCardButton => 'Play Card';
+
+  @override
+  String get skGameSelectCard => 'Select a card';
+
+  @override
+  String get skGameReset => 'Reset';
+
+  @override
+  String get skGameTigressEscape => 'Escape';
+
+  @override
+  String get skGameTigressPirate => 'Pirate';
+
+  @override
+  String skGameRoundResult(int round) {
+    return 'Round $round Results';
+  }
+
+  @override
+  String get skGameBidTricks => 'Bid/Won';
+
+  @override
+  String get skGameBonusHeader => 'Bonus';
+
+  @override
+  String get skGameScoreHeader => 'Score';
+
+  @override
+  String get skGameNextRoundPreparing => 'Preparing next round...';
+
+  @override
+  String get skGameGameOver => 'Game Over';
+
+  @override
+  String skGameAutoReturnCountdown(int seconds) {
+    return 'Returning to waiting room in ${seconds}s';
+  }
+
+  @override
+  String get skGameReturningToRoom => 'Returning to waiting room...';
+
+  @override
+  String get skGamePlayerProfile => 'Player Profile';
+
+  @override
+  String get skGameAlreadyFriend => 'Already friends';
+
+  @override
+  String get skGameRequestPending => 'Request pending';
+
+  @override
+  String get skGameAddFriend => 'Add Friend';
+
+  @override
+  String get skGameFriendRequestSent => 'Friend request sent';
+
+  @override
+  String get skGameBlockUser => 'Block';
+
+  @override
+  String get skGameUnblockUser => 'Unblock';
+
+  @override
+  String get skGameUserBlocked => 'User has been blocked';
+
+  @override
+  String get skGameUserUnblocked => 'User has been unblocked';
+
+  @override
+  String get skGameProfileNotFound => 'Profile not found';
+
+  @override
+  String get skGameTichuRecord => 'Tichu Record';
+
+  @override
+  String get skGameSkullKingRecord => 'Skull King Record';
+
+  @override
+  String get skGameStatRecord => 'Record';
+
+  @override
+  String get skGameStatWinRate => 'Win Rate';
+
+  @override
+  String skGameRecordFormat(int games, int wins, int losses) {
+    return '${games}G ${wins}W ${losses}L';
+  }
+
+  @override
+  String get gameSparrowCall => 'Mahjong Call';
+
+  @override
+  String get gameSelectNumberToCall => 'Select a number to call';
+
+  @override
+  String get gameNoCall => 'No Call';
+
+  @override
+  String get gameCancelPickAnother => 'Cancel and pick another card';
+
+  @override
+  String get gameRestoringGame => 'Restoring game...';
+
+  @override
+  String get gameCheckingState => 'Checking game state...';
+
+  @override
+  String get gameRecheckingRoomState => 'Re-checking current room state.';
+
+  @override
+  String get gameReloadingRoom => 'Reloading room info...';
+
+  @override
+  String get gameWaitForRestore =>
+      'Please wait while restoring to the current game state.';
+
+  @override
+  String get gamePreparingScreen => 'Preparing game screen...';
+
+  @override
+  String get gameAdjustingScreen => 'Adjusting screen transition state.';
+
+  @override
+  String get gameTransitioningScreen => 'Transitioning game screen...';
+
+  @override
+  String get gameRecheckingDestination =>
+      'Re-checking current destination state.';
+
+  @override
+  String get gameSoundEffects => 'Sound Effects';
+
+  @override
+  String get gameChat => 'Chat';
+
+  @override
+  String get gameMessageHint => 'Type a message...';
+
+  @override
+  String get gameMyProfile => 'My Profile';
+
+  @override
+  String get gamePlayerProfile => 'Player Profile';
+
+  @override
+  String get gameAlreadyFriend => 'Already friends';
+
+  @override
+  String get gameRequestPending => 'Request pending';
+
+  @override
+  String get gameAddFriend => 'Add Friend';
+
+  @override
+  String get gameFriendRequestSent => 'Friend request sent';
+
+  @override
+  String get gameUnblock => 'Unblock';
+
+  @override
+  String get gameBlock => 'Block';
+
+  @override
+  String get gameUnblocked => 'User has been unblocked';
+
+  @override
+  String get gameBlocked => 'User has been blocked';
+
+  @override
+  String get gameReport => 'Report';
+
+  @override
+  String get gameClose => 'Close';
+
+  @override
+  String get gameProfileNotFound => 'Profile not found';
+
+  @override
+  String get gameTichuSeasonRanked => 'Tichu Season Ranked';
+
+  @override
+  String get gameStatRecord => 'Record';
+
+  @override
+  String get gameStatWinRate => 'Win Rate';
+
+  @override
+  String get gameOverallRecord => 'Overall Record';
+
+  @override
+  String gameRecordFormat(int games, int wins, int losses) {
+    return '${games}G ${wins}W ${losses}L';
+  }
+
+  @override
+  String get gameMannerGood => 'Good';
+
+  @override
+  String get gameMannerNormal => 'Normal';
+
+  @override
+  String get gameMannerBad => 'Bad';
+
+  @override
+  String get gameMannerVeryBad => 'Very Bad';
+
+  @override
+  String get gameMannerWorst => 'Terrible';
+
+  @override
+  String gameManner(String label) {
+    return 'Manner $label';
+  }
+
+  @override
+  String gameDesertions(int count) {
+    return 'Desertions $count';
+  }
+
+  @override
+  String get gameRecentMatchesTitle => 'Recent Matches';
+
+  @override
+  String gameRecentMatchesDesc(int count) {
+    return 'View results of the last $count matches.';
+  }
+
+  @override
+  String get gameRecentMatchesThree => 'Recent Matches (3)';
+
+  @override
+  String get gameSeeMore => 'See More';
+
+  @override
+  String get gameNoRecentMatches => 'No recent matches';
+
+  @override
+  String get gameMatchDesertion => 'D';
+
+  @override
+  String get gameMatchDraw => 'D';
+
+  @override
+  String get gameMatchWin => 'W';
+
+  @override
+  String get gameMatchLoss => 'L';
+
+  @override
+  String get gameMatchTypeRanked => 'Ranked';
+
+  @override
+  String get gameMatchTypeNormal => 'Normal';
+
+  @override
+  String get gameViewProfile => 'View Profile';
+
+  @override
+  String get gameCancel => 'Cancel';
+
+  @override
+  String get gameReportReasonAbuse => 'Abuse/Insults';
+
+  @override
+  String get gameReportReasonSpam => 'Spam/Flooding';
+
+  @override
+  String get gameReportReasonNickname => 'Inappropriate Nickname';
+
+  @override
+  String get gameReportReasonGameplay => 'Gameplay Disruption';
+
+  @override
+  String get gameReportReasonOther => 'Other';
+
+  @override
+  String gameReportTitle(String nickname) {
+    return 'Report $nickname';
+  }
+
+  @override
+  String get gameReportWarning =>
+      'Reports are reviewed by the moderation team.\nFalse reports may result in penalties.';
+
+  @override
+  String get gameSelectReason => 'Select Reason';
+
+  @override
+  String get gameReportDetailHint => 'Enter details (optional)';
+
+  @override
+  String get gameReportSubmit => 'Report';
+
+  @override
+  String get gameLeaveTitle => 'Leave Game';
+
+  @override
+  String get gameLeaveConfirm =>
+      'Are you sure you want to leave?\nLeaving mid-game harms your team.';
+
+  @override
+  String get gameLeave => 'Leave';
+
+  @override
+  String get gameCallError => 'You must play the called number first!';
+
+  @override
+  String gameTimeout(String playerName) {
+    return '$playerName timed out!';
+  }
+
+  @override
+  String gameDesertionTimeout(String playerName) {
+    return '$playerName deserted! (3 timeouts)';
+  }
+
+  @override
+  String gameDesertionLeave(String playerName) {
+    return '$playerName has left the game';
+  }
+
+  @override
+  String get gameSpectator => 'Spectator';
+
+  @override
+  String gameCardViewRequest(String nickname) {
+    return '$nickname is requesting to view your cards';
+  }
+
+  @override
+  String get gameReject => 'Reject';
+
+  @override
+  String get gameAllow => 'Allow';
+
+  @override
+  String get gameAlwaysReject => 'Always Reject';
+
+  @override
+  String get gameAlwaysAllow => 'Always Allow';
+
+  @override
+  String get gameSpectatorList => 'Spectator List';
+
+  @override
+  String get gameNoSpectators => 'No one is spectating';
+
+  @override
+  String get gameViewingMyCards => 'Viewing my cards';
+
+  @override
+  String get gameNoViewers => 'No one is viewing';
+
+  @override
+  String get gamePartner => 'Partner';
+
+  @override
+  String get gameLeftPlayer => 'Left';
+
+  @override
+  String get gameRightPlayer => 'Right';
+
+  @override
+  String get gameMyTurn => 'My Turn!';
+
+  @override
+  String gamePlayerTurn(String name) {
+    return '$name\'s turn';
+  }
+
+  @override
+  String gameCall(String rank) {
+    return 'Call $rank';
+  }
+
+  @override
+  String get gameMyTurnShort => 'My Turn';
+
+  @override
+  String gamePlayerTurnShort(String name) {
+    return '$name Turn';
+  }
+
+  @override
+  String gamePlayerWaiting(String name) {
+    return '$name Waiting';
+  }
+
+  @override
+  String gameTimerLabel(String turnLabel, int seconds) {
+    return '$turnLabel ${seconds}s';
+  }
+
+  @override
+  String get gameScoreHistory => 'Score History';
+
+  @override
+  String get gameScoreHistorySubtitle =>
+      'Round-by-round scores and current totals';
+
+  @override
+  String get gameNoCompletedRounds => 'No completed rounds yet';
+
+  @override
+  String gameTeamLabel(String label) {
+    return 'Team $label';
+  }
+
+  @override
+  String gameDogPlayedBy(String name) {
+    return '$name played the Dog';
+  }
+
+  @override
+  String get gameDogPlayed => 'The Dog was played';
+
+  @override
+  String get gamePlayedCards => '\'s play';
+
+  @override
+  String get gamePlay => 'Play';
+
+  @override
+  String get gamePass => 'Pass';
+
+  @override
+  String get gameLargeTichuQuestion => 'Large Tichu?';
+
+  @override
+  String get gameDeclare => 'Declare!';
+
+  @override
+  String get gameSmallTichuDeclare => 'Declare Small Tichu';
+
+  @override
+  String get gameSmallTichuConfirmTitle => 'Declare Small Tichu';
+
+  @override
+  String get gameSmallTichuConfirmContent =>
+      'Declare Small Tichu?\n+100 points on success, -100 on failure';
+
+  @override
+  String get gameDeclareButton => 'Declare';
+
+  @override
+  String get gameSelectRecipient => 'Select who to give card to';
+
+  @override
+  String gameSelectExchangeCard(int count) {
+    return 'Select card to exchange ($count/3)';
+  }
+
+  @override
+  String get gameReset => 'Reset';
+
+  @override
+  String get gameExchangeComplete => 'Exchange Done';
+
+  @override
+  String get gameDragonQuestion =>
+      'Who would you like to give the Dragon trick to?';
+
+  @override
+  String get gameSelectCallRank => 'Select a number to call';
+
+  @override
+  String get gameGameEnd => 'Game Over!';
+
+  @override
+  String get gameRoundEnd => 'Round Over!';
+
+  @override
+  String get gameMyTeamWin => 'Our Team Wins!';
+
+  @override
+  String get gameEnemyTeamWin => 'Opponent Wins!';
+
+  @override
+  String get gameDraw => 'Draw!';
+
+  @override
+  String get gameThisRound => 'This round: ';
+
+  @override
+  String get gameTotalScore => 'Total: ';
+
+  @override
+  String get gameAutoReturnLobby => 'Returning to lobby in 3 seconds...';
+
+  @override
+  String get gameAutoNextRound => 'Auto-continuing in 3 seconds...';
+
+  @override
+  String gameRankedScore(int score) {
+    return 'Ranked Score $score';
+  }
+
+  @override
+  String get gameRankDiamond => 'Diamond';
+
+  @override
+  String get gameRankGold => 'Gold';
+
+  @override
+  String get gameRankSilver => 'Silver';
+
+  @override
+  String get gameRankBronze => 'Bronze';
+
+  @override
+  String gameFinishPosition(int position) {
+    return 'Place $position!';
+  }
+
+  @override
+  String gameCardCount(int count) {
+    return '$count cards';
+  }
+
+  @override
+  String get gamePhaseLargeTichu => 'Large Tichu Declaration';
+
+  @override
+  String get gamePhaseDealing => 'Dealing Cards';
+
+  @override
+  String get gamePhaseExchange => 'Card Exchange';
+
+  @override
+  String get gamePhasePlaying => 'Game in Progress';
+
+  @override
+  String get gamePhaseRoundEnd => 'Round Over';
+
+  @override
+  String get gamePhaseGameEnd => 'Game Over';
+
+  @override
+  String get gameReceivedCards => 'Received Cards';
+
+  @override
+  String get gameBadgeLarge => 'Large';
+
+  @override
+  String get gameBadgeSmall => 'Small';
+
+  @override
+  String get gameNotAfk => 'Not AFK';
+
+  @override
+  String get spectatorRecovering => 'Recovering spectator view...';
+
+  @override
+  String get spectatorTransitioning => 'Transitioning spectator view...';
+
+  @override
+  String get spectatorRecheckingState => 'Rechecking current spectator state.';
+
+  @override
+  String get spectatorWatching => 'Spectating';
+
+  @override
+  String get spectatorWaitingForGame => 'Waiting for game to start...';
+
+  @override
+  String get spectatorSit => 'Sit';
+
+  @override
+  String get spectatorHost => 'Host';
+
+  @override
+  String get spectatorReady => 'Ready';
+
+  @override
+  String get spectatorWaiting => 'Waiting';
+
+  @override
+  String spectatorTeamWin(String team) {
+    return 'Team $team wins!';
+  }
+
+  @override
+  String get spectatorDraw => 'Draw!';
+
+  @override
+  String spectatorTeamScores(int scoreA, int scoreB) {
+    return 'Team A: $scoreA | Team B: $scoreB';
+  }
+
+  @override
+  String get spectatorAutoReturn => 'Moving to waiting room in 3s...';
+
+  @override
+  String get spectatorPhaseLargeTichu => 'Large Tichu';
+
+  @override
+  String get spectatorPhaseCardExchange => 'Card Exchange';
+
+  @override
+  String get spectatorPhasePlaying => 'Playing';
+
+  @override
+  String get spectatorPhaseRoundEnd => 'Round Over';
+
+  @override
+  String get spectatorPhaseGameEnd => 'Game Over';
+
+  @override
+  String get spectatorFinished => 'Done';
+
+  @override
+  String spectatorRequesting(int count) {
+    return 'Requesting... ($count cards)';
+  }
+
+  @override
+  String spectatorRequestCardView(int count) {
+    return 'View hand ($count cards)';
+  }
+
+  @override
+  String get spectatorSoundEffects => 'Sound Effects';
+
+  @override
+  String get spectatorListTitle => 'Spectator List';
+
+  @override
+  String get spectatorNoSpectators => 'No spectators';
+
+  @override
+  String get spectatorClose => 'Close';
+
+  @override
+  String get spectatorChat => 'Chat';
+
+  @override
+  String get spectatorMessageHint => 'Type a message...';
+
+  @override
+  String get spectatorNewTrick => 'New trick';
+
+  @override
+  String spectatorPlayedCards(String name) {
+    return '$name\'s play';
+  }
+
+  @override
+  String get rulesTitle => 'Game Rules';
+
+  @override
+  String get rulesTabTichu => 'Tichu';
+
+  @override
+  String get rulesTabSkullKing => 'Skull King';
+
+  @override
+  String get rulesTichuGoalTitle => 'Game Objective';
+
+  @override
+  String get rulesTichuGoalBody =>
+      'A trick-taking game for 4 players in 2 teams (partners sit across from each other). The first team to reach the target score wins.';
+
+  @override
+  String get rulesTichuCardCompositionTitle =>
+      'Card Composition (56 cards total)';
+
+  @override
+  String get rulesTichuNumberCards => 'Number Cards (2 – A)';
+
+  @override
+  String get rulesTichuNumberCardsSub => '4 suits × 13 cards';
+
+  @override
+  String get rulesTichuMahjong => 'Mahjong';
+
+  @override
+  String get rulesTichuMahjongSub => 'Card that starts the game';
+
+  @override
+  String get rulesTichuDog => 'Dog';
+
+  @override
+  String get rulesTichuDogSub => 'Passes the lead to your partner';
+
+  @override
+  String get rulesTichuPhoenix => 'Phoenix';
+
+  @override
+  String get rulesTichuPhoenixSub => 'Wild card (-25 points)';
+
+  @override
+  String get rulesTichuDragon => 'Dragon';
+
+  @override
+  String get rulesTichuDragonSub => 'Strongest card (+25 points)';
+
+  @override
+  String get rulesTichuSpecialTitle => 'Special Card Rules';
+
+  @override
+  String get rulesTichuSpecialMahjongTitle => 'Mahjong';
+
+  @override
+  String get rulesTichuSpecialMahjongLine1 =>
+      'The player holding this card leads the very first trick.';
+
+  @override
+  String get rulesTichuSpecialMahjongLine2 =>
+      'When playing the Mahjong, you may declare a number (2–14). The next player must include that number in their combination if they have it (ignored if they don\'t).';
+
+  @override
+  String get rulesTichuSpecialDogTitle => 'Dog';
+
+  @override
+  String get rulesTichuSpecialDogLine1 =>
+      'Can only be played when leading. Immediately passes the lead to your partner.';
+
+  @override
+  String get rulesTichuSpecialDogLine2 => 'Worth 0 points in scoring.';
+
+  @override
+  String get rulesTichuSpecialPhoenixTitle => 'Phoenix';
+
+  @override
+  String get rulesTichuSpecialPhoenixLine1 =>
+      'When played as a single, it counts as the previous card\'s value + 0.5. However, it cannot beat the Dragon.';
+
+  @override
+  String get rulesTichuSpecialPhoenixLine2 =>
+      'In combinations (Pair/Triple/Full House/Straight, etc.) it can substitute for any number.';
+
+  @override
+  String get rulesTichuSpecialPhoenixLine3 =>
+      'Worth -25 points, so taking it is a disadvantage.';
+
+  @override
+  String get rulesTichuSpecialDragonTitle => 'Dragon';
+
+  @override
+  String get rulesTichuSpecialDragonLine1 =>
+      'The strongest card; can only be played as a single.';
+
+  @override
+  String get rulesTichuSpecialDragonLine2 =>
+      'Worth +25 points, but the trick won with the Dragon must be given to one opponent.';
+
+  @override
+  String get rulesTichuDeclarationTitle => 'Tichu Declaration';
+
+  @override
+  String get rulesTichuDeclarationBody =>
+      'A Tichu declaration is a bet that you will be the first to empty your hand this round. Success earns bonus points for your team; failure deducts points.';
+
+  @override
+  String get rulesTichuLargeTichu => 'Large Tichu';
+
+  @override
+  String get rulesTichuLargeTichuWhen =>
+      'Declared after receiving only the first 8 cards (before seeing the remaining 6)';
+
+  @override
+  String get rulesTichuSmallTichu => 'Small Tichu';
+
+  @override
+  String get rulesTichuSmallTichuWhen =>
+      'Declared after receiving all 14 cards, but before playing any card';
+
+  @override
+  String rulesTichuDeclSuccess(String points) {
+    return 'Success $points';
+  }
+
+  @override
+  String rulesTichuDeclFail(String points) {
+    return 'Fail $points';
+  }
+
+  @override
+  String get rulesTichuFlowTitle => 'Turn Sequence';
+
+  @override
+  String get rulesTichuFlowBody =>
+      '1. All players receive 8 cards each.\n2. After viewing 8 cards, you may declare Large Tichu.\n3. The remaining 6 cards are dealt, totaling 14.\n4. Each player passes 1 card to each of the other 3 players.\n5. After the exchange, before playing any card, you may declare Small Tichu.\n6. The player holding the Mahjong leads the first trick.';
+
+  @override
+  String get rulesTichuPlayTitle => 'Play Rules';
+
+  @override
+  String get rulesTichuPlayBody =>
+      '• You can only play the same type of combination as the leading play, but higher. (e.g., a higher single over a single, a higher pair over a pair)\n• Available combinations:\n   - Single (1 card)\n   - Pair (2 cards of the same number)\n   - Triple (3 cards of the same number)\n   - Full House (Triple + Pair)\n   - Straight (5+ consecutive numbers)\n   - Consecutive Pairs (2+ consecutive pairs = 4+ cards)\n• You may pass on your turn if you cannot or do not want to play.';
+
+  @override
+  String get rulesTichuBombTitle => 'Bomb';
+
+  @override
+  String get rulesTichuBombBody =>
+      'A Bomb can be played at any time, even out of turn, and beats any combination.\n\n• Four-of-a-Kind Bomb: 4 cards of the same number (e.g., 7♠ 7♥ 7♦ 7♣)\n• Straight Flush Bomb: 5+ consecutive cards of the same suit\n\nBomb hierarchy:\n  Straight Flush > Four-of-a-Kind\n  Same type: higher number / longer straight wins';
+
+  @override
+  String get rulesTichuScoringTitle => 'Scoring';
+
+  @override
+  String get rulesTichuScoringBody =>
+      'Card points:\n• 5: 5 points\n• 10, K: 10 points\n• Dragon: +25 points / Phoenix: -25 points\n• All other cards: 0 points\n\nRound settlement:\n• The player who finishes 1st takes all trick points collected by the last-place (4th) player.\n• Cards remaining in the last player\'s hand go to the opposing team.\n• If both partners on one team finish 1st and 2nd (\"Double Victory\"), that round ends immediately — the winning team gets +200 points (no trick point calculation).\n• Tichu declaration success/failure bonuses are added on top.';
+
+  @override
+  String get rulesTichuWinTitle => 'Victory Condition';
+
+  @override
+  String get rulesTichuWinBody =>
+      'The first team to reach the target score (default 1000 points) set when creating the room wins. Ranked games use a fixed target of 1000 points.';
+
+  @override
+  String get rulesSkGoalTitle => 'Game Objective';
+
+  @override
+  String get rulesSkGoalBody =>
+      'A trick-taking game for 2–6 players (free-for-all). Over 10 rounds, you must accurately predict the number of tricks you will win each round to score points.';
+
+  @override
+  String get rulesSkCardCompositionTitle => 'Card Composition (67 base cards)';
+
+  @override
+  String get rulesSkNumberCards => 'Number Cards (1 – 13)';
+
+  @override
+  String get rulesSkNumberCardsSub =>
+      '4 suits × 13 cards (Yellow / Green / Purple / Black)';
+
+  @override
+  String get rulesSkEscape => 'Escape';
+
+  @override
+  String get rulesSkEscapeSub => 'Never wins a trick';
+
+  @override
+  String get rulesSkPirate => 'Pirate';
+
+  @override
+  String get rulesSkPirateSub => 'Beats all number cards';
+
+  @override
+  String get rulesSkMermaid => 'Mermaid';
+
+  @override
+  String get rulesSkMermaidSub => 'Captures Skull King (+50 bonus)';
+
+  @override
+  String get rulesSkSkullKing => 'Skull King';
+
+  @override
+  String get rulesSkSkullKingSub => 'Beats Pirates (+30 bonus per Pirate)';
+
+  @override
+  String get rulesSkTigress => 'Tigress';
+
+  @override
+  String get rulesSkTigressSub => 'Choose to play as Pirate or Escape';
+
+  @override
+  String get rulesSkIncludedByDefault => 'Included by default';
+
+  @override
+  String rulesSkCardCount(int count) {
+    return '$count cards';
+  }
+
+  @override
+  String get rulesSkTrumpTitle => 'Black suit = Trump';
+
+  @override
+  String get rulesSkTrumpBody =>
+      'Black number cards beat all other suit number cards regardless of number. However, you must follow the lead suit (the suit of the first number card) if you can, and may only play black when you have no cards of the led suit.';
+
+  @override
+  String get rulesSkSpecialTitle => 'Special Card Rules';
+
+  @override
+  String get rulesSkSpecialEscapeTitle => 'Escape';
+
+  @override
+  String get rulesSkSpecialEscapeLine1 =>
+      'Never wins a trick. Can be played at any time regardless of suit following.';
+
+  @override
+  String get rulesSkSpecialEscapeLine2 =>
+      'If all players play only Escapes, the lead player takes the trick.';
+
+  @override
+  String get rulesSkSpecialPirateTitle => 'Pirate';
+
+  @override
+  String get rulesSkSpecialPirateLine1 =>
+      'Beats all number cards (including black trumps). If multiple Pirates appear in one trick, the first one played wins.';
+
+  @override
+  String get rulesSkSpecialPirateLine2 =>
+      'Beats Mermaids but loses to Skull King.';
+
+  @override
+  String get rulesSkSpecialMermaidTitle => 'Mermaid';
+
+  @override
+  String get rulesSkSpecialMermaidLine1 =>
+      'Loses to Pirates but captures and beats Skull King.';
+
+  @override
+  String get rulesSkSpecialMermaidLine2 =>
+      'When a Mermaid captures Skull King, the trick winner gets +50 bonus.';
+
+  @override
+  String get rulesSkSpecialMermaidLine3 =>
+      'If only Mermaids are present (no Pirates/Skull King), they beat number cards.';
+
+  @override
+  String get rulesSkSpecialSkullKingTitle => 'Skull King';
+
+  @override
+  String get rulesSkSpecialSkullKingLine1 =>
+      'Beats Pirates — +30 bonus per Pirate defeated.';
+
+  @override
+  String get rulesSkSpecialSkullKingLine2 =>
+      'However, loses to Mermaids (gets captured).';
+
+  @override
+  String get rulesSkSpecialTigressTitle => 'Tigress — 3 cards by default';
+
+  @override
+  String get rulesSkSpecialTigressLine1 =>
+      'When playing, choose either Pirate or Escape.';
+
+  @override
+  String get rulesSkSpecialTigressLine2 =>
+      'Tigress played as Pirate works identically to a Pirate, including the Skull King\'s +30 bonus.';
+
+  @override
+  String get rulesSkSpecialTigressLine3 =>
+      'Tigress played as Escape works identically to an Escape and never wins a trick.';
+
+  @override
+  String get rulesSkSpecialTigressLine4 =>
+      'A Tigress played as Pirate/Escape shows a purple check mark in the top-left corner to distinguish it from regular Pirate/Escape cards.';
+
+  @override
+  String get rulesSkTigressPreviewTitle => 'In-game display example';
+
+  @override
+  String get rulesSkTigressChoiceEscape => 'Played as Escape';
+
+  @override
+  String get rulesSkTigressChoicePirate => 'Played as Pirate';
+
+  @override
+  String get rulesSkFlowTitle => 'Turn Sequence';
+
+  @override
+  String get rulesSkFlowBody =>
+      '1. In Round N, each player receives N cards. (Rounds 1–10)\n2. All players simultaneously predict (bid) the number of tricks they will win.\n3. Starting from the lead player, cards are played following suit-following rules.\n4. After each round, scores are calculated based on bid success/failure.';
+
+  @override
+  String get rulesSkScoringTitle => 'Scoring';
+
+  @override
+  String get rulesSkScoringBody =>
+      '• Bid 0 success (0 tricks won): +10 × round number\n• Bid 0 failure: -10 × round number\n• Bid N success (exactly N tricks won): +20 × N + bonus\n• Bid N failure: -10 × |difference| (no bonus)\n• Bonuses are only awarded when the bid is exact.';
+
+  @override
+  String get rulesSkExample1Title => 'Example 1. Simple bid success';
+
+  @override
+  String get rulesSkExample1Setup =>
+      'Round 3 · Bid 2 · 2 tricks won · No bonus';
+
+  @override
+  String get rulesSkExample1Calc => '20 × 2 = 40';
+
+  @override
+  String get rulesSkExample1Result => '+40 pts';
+
+  @override
+  String get rulesSkExample2Title => 'Example 2. Bid 0 success';
+
+  @override
+  String get rulesSkExample2Setup => 'Round 5 · Bid 0 · 0 tricks won';
+
+  @override
+  String get rulesSkExample2Calc => '10 × 5 = 50';
+
+  @override
+  String get rulesSkExample2Result => '+50 pts';
+
+  @override
+  String get rulesSkExample3Title => 'Example 3. Bid failure';
+
+  @override
+  String get rulesSkExample3Setup =>
+      'Round 5 · Bid 3 · 1 trick won (difference 2)';
+
+  @override
+  String get rulesSkExample3Calc => '-10 × 2 = -20';
+
+  @override
+  String get rulesSkExample3Result => '-20 pts';
+
+  @override
+  String get rulesSkExample4Title => 'Example 4. Skull King captures 2 Pirates';
+
+  @override
+  String get rulesSkExample4Setup =>
+      'Round 3 · Bid 2 · 2 tricks won · Bonus +60 (2 Pirates × 30)';
+
+  @override
+  String get rulesSkExample4Calc => '(20 × 2) + 60 = 100';
+
+  @override
+  String get rulesSkExample4Result => '+100 pts';
+
+  @override
+  String get rulesSkExample5Title => 'Example 5. Mermaid captures Skull King';
+
+  @override
+  String get rulesSkExample5Setup =>
+      'Round 4 · Bid 1 · 1 trick won · Bonus +50 (Mermaid × SK)';
+
+  @override
+  String get rulesSkExample5Calc => '(20 × 1) + 50 = 70';
+
+  @override
+  String get rulesSkExample5Result => '+70 pts';
+
+  @override
+  String get rulesSkExample6Title => 'Example 6. Bid 0 failure (took a trick)';
+
+  @override
+  String get rulesSkExample6Setup => 'Round 7 · Bid 0 · 1 trick won';
+
+  @override
+  String get rulesSkExample6Calc => '-10 × 7 = -70';
+
+  @override
+  String get rulesSkExample6Result => '-70 pts';
+
+  @override
+  String get rulesSkWinTitle => 'Victory Condition';
+
+  @override
+  String get rulesSkWinBody =>
+      'After all 10 rounds, the player with the highest cumulative score wins.';
+
+  @override
+  String get rulesSkExpansionTitle => 'Expansions (Optional)';
+
+  @override
+  String get rulesSkExpansionBody =>
+      'Each expansion can be individually selected when creating a room. Expansion cards are shuffled into the base deck.';
+
+  @override
+  String get rulesSkExpKraken => '🐙 Kraken';
+
+  @override
+  String get rulesSkExpKrakenDesc =>
+      'A trick containing the Kraken is voided. No one wins the trick and no bonuses are awarded. The player who would have won without the Kraken leads the next trick.';
+
+  @override
+  String get rulesSkExpWhiteWhale => '🐋 White Whale';
+
+  @override
+  String get rulesSkExpWhiteWhaleDesc =>
+      'Neutralizes all special card effects. Only number cards are compared in the trick, and the highest number wins regardless of suit. If no number cards are present, the trick is voided.';
+
+  @override
+  String get rulesSkExpLoot => '💰 Loot';
+
+  @override
+  String get rulesSkExpLootDesc =>
+      'The trick winner earns +20 bonus per Loot card in the trick, and each player who played a Loot card also earns +20 as their own bonus. (Only awarded on bid success)';
+
+  @override
+  String get friendsTitle => 'Friends';
+
+  @override
+  String get friendsTabFriends => 'Friends';
+
+  @override
+  String get friendsTabSearch => 'Search';
+
+  @override
+  String get friendsTabRequests => 'Requests';
+
+  @override
+  String get friendsEmptyList =>
+      'No friends yet!\nSearch and add friends from the Search tab.';
+
+  @override
+  String friendsStatusPlayingInRoom(String roomName) {
+    return 'Playing in $roomName';
+  }
+
+  @override
+  String get friendsStatusOnline => 'Online';
+
+  @override
+  String get friendsStatusOffline => 'Offline';
+
+  @override
+  String get friendsRestrictedDuringGame => 'Restricted during game';
+
+  @override
+  String get friendsDmBlockedDuringGame => 'Cannot enter DM chat during a game';
+
+  @override
+  String get friendsInvited => 'Invited';
+
+  @override
+  String get friendsInvite => 'Invite';
+
+  @override
+  String friendsInviteSent(String nickname) {
+    return 'Sent an invite to $nickname';
+  }
+
+  @override
+  String get friendsJoinRoom => 'Join';
+
+  @override
+  String get friendsSpectateRoom => 'Spectate';
+
+  @override
+  String get friendsSearchHint => 'Search by nickname';
+
+  @override
+  String get friendsSearchPrompt => 'Enter a nickname to search';
+
+  @override
+  String get friendsSearchNoResults => 'No results found';
+
+  @override
+  String get friendsStatusFriend => 'Friend';
+
+  @override
+  String get friendsRequestReceived => 'Request received';
+
+  @override
+  String get friendsRequestSent => 'Request sent';
+
+  @override
+  String friendsRequestSentSnackbar(String nickname) {
+    return 'Sent a friend request to $nickname';
+  }
+
+  @override
+  String get friendsAddFriend => 'Add Friend';
+
+  @override
+  String get friendsNoRequests => 'No pending requests';
+
+  @override
+  String friendsAccepted(String nickname) {
+    return 'You are now friends with $nickname';
+  }
+
+  @override
+  String get friendsAccept => 'Accept';
+
+  @override
+  String get friendsReject => 'Reject';
+
+  @override
+  String get friendsDmEmpty => 'No messages.\nSend the first message!';
+
+  @override
+  String get friendsDmInputHint => 'Enter a message';
+
+  @override
+  String get friendsRemoveTitle => 'Remove Friend';
+
+  @override
+  String friendsRemoveConfirm(String nickname) {
+    return 'Remove $nickname from your friends list?';
+  }
+
+  @override
+  String friendsRemoved(String nickname) {
+    return 'Removed $nickname from your friends list';
+  }
+
+  @override
+  String get rankingTitle => 'Rankings';
+
+  @override
+  String get rankingTichu => 'Tichu';
+
+  @override
+  String get rankingSkullKing => 'Skull King';
+
+  @override
+  String get rankingNoData => 'No ranking data available';
+
+  @override
+  String rankingRecordWithWinRate(
+    int total,
+    int wins,
+    int losses,
+    int winRate,
+  ) {
+    return 'Record ${total}G ${wins}W ${losses}L · Win rate $winRate%';
+  }
+
+  @override
+  String get rankingSeasonScore => 'Season Score';
+
+  @override
+  String get rankingProfileNotFound => 'Profile not found';
+
+  @override
+  String get rankingTichuSeasonRanked => 'Tichu Season Ranked';
+
+  @override
+  String get rankingTichuRecord => 'Tichu Record';
+
+  @override
+  String get rankingSkullKingSeasonRanked => 'Skull King Season Ranked';
+
+  @override
+  String get rankingSkullKingRecord => 'Skull King Record';
+
+  @override
+  String get rankingStatRecord => 'Record';
+
+  @override
+  String get rankingStatWinRate => 'Win Rate';
+
+  @override
+  String rankingRecordFormat(int games, int wins, int losses) {
+    return '${games}G ${wins}W ${losses}L';
+  }
+
+  @override
+  String rankingGold(int gold) {
+    return '$gold Gold';
+  }
+
+  @override
+  String rankingDesertions(int count) {
+    return 'Desertions $count';
+  }
+
+  @override
+  String get rankingRecentMatchesHeader => 'Recent Matches (3)';
+
+  @override
+  String get rankingSeeMore => 'See More';
+
+  @override
+  String get rankingNoRecentMatches => 'No recent matches';
+
+  @override
+  String get rankingBadgeDesertion => 'D';
+
+  @override
+  String get rankingBadgeDraw => 'D';
+
+  @override
+  String rankingSkRankScore(String rank, int score) {
+    return '#$rank ${score}pts';
+  }
+
+  @override
+  String get rankingRecentMatchesTitle => 'Recent Matches';
+
+  @override
+  String get shopTitle => 'Shop';
+
+  @override
+  String shopGoldAmount(int gold) {
+    return '$gold Gold';
+  }
+
+  @override
+  String get shopHowToEarn => 'How to Earn';
+
+  @override
+  String shopDesertionCount(int count) {
+    return 'Left $count';
+  }
+
+  @override
+  String get shopGoldHistory => 'Gold History';
+
+  @override
+  String shopGoldCurrent(int gold) {
+    return 'Current gold: $gold';
+  }
+
+  @override
+  String get shopGoldHistoryDesc =>
+      'Shows game results, ad rewards, shop purchases, and season rewards in recent order.';
+
+  @override
+  String get shopGoldHistoryEmpty => 'No gold history to display yet.';
+
+  @override
+  String get shopGoldChangeFallback => 'Gold change';
+
+  @override
+  String get shopGoldGuideTitle => 'How to Earn Gold';
+
+  @override
+  String get shopGoldGuideDesc =>
+      'Gold can be earned through gameplay and rewards, and is used to purchase items in the shop.';
+
+  @override
+  String get shopGuideNormalWin => 'Normal Win';
+
+  @override
+  String get shopGuideNormalWinValue => '+10 Gold';
+
+  @override
+  String get shopGuideNormalWinDesc =>
+      'Earn a base reward for winning a normal Tichu or Skull King game.';
+
+  @override
+  String get shopGuideNormalLoss => 'Normal Loss';
+
+  @override
+  String get shopGuideNormalLossValue => '+3 Gold';
+
+  @override
+  String get shopGuideNormalLossDesc =>
+      'You still earn a participation reward even if you lose.';
+
+  @override
+  String get shopGuideRankedWin => 'Ranked Win';
+
+  @override
+  String get shopGuideRankedWinValue => '+20 Gold';
+
+  @override
+  String get shopGuideRankedWinDesc =>
+      'Ranked games award 2x gold compared to normal games.';
+
+  @override
+  String get shopGuideRankedLoss => 'Ranked Loss';
+
+  @override
+  String get shopGuideRankedLossValue => '+6 Gold';
+
+  @override
+  String get shopGuideRankedLossDesc =>
+      'Ranked loss rewards are also 2x compared to normal games.';
+
+  @override
+  String get shopGuideAdReward => 'Ad Reward';
+
+  @override
+  String get shopGuideAdRewardValue => '+50 Gold';
+
+  @override
+  String get shopGuideAdRewardDesc =>
+      'Watch ads to earn bonus gold up to 5 times per day.';
+
+  @override
+  String get shopGuideSeasonReward => 'Season Reward';
+
+  @override
+  String get shopGuideSeasonRewardValue => 'Extra';
+
+  @override
+  String get shopGuideSeasonRewardDesc =>
+      'Bonus gold is awarded at the end of the season based on your ranking.';
+
+  @override
+  String get shopTabShop => 'Shop';
+
+  @override
+  String get shopTabInventory => 'Inventory';
+
+  @override
+  String get shopNoItems => 'No shop items available';
+
+  @override
+  String get shopCategoryBanner => 'Banner';
+
+  @override
+  String get shopCategoryTitle => 'Title';
+
+  @override
+  String get shopCategoryTheme => 'Theme';
+
+  @override
+  String get shopCategoryUtil => 'Utility';
+
+  @override
+  String get shopCategorySeason => 'Season';
+
+  @override
+  String get shopItemEmpty => 'No items';
+
+  @override
+  String get shopItemOwned => 'Owned';
+
+  @override
+  String get shopButtonExtend => 'Extend';
+
+  @override
+  String get shopButtonPurchase => 'Purchase';
+
+  @override
+  String get shopExtendTitle => 'Extend Duration';
+
+  @override
+  String shopExtendConfirm(String name, int days, int price) {
+    return 'You already own this item.\nExtend $name by $days days?\n\nCost: $price Gold';
+  }
+
+  @override
+  String get shopExtendAction => 'Extend';
+
+  @override
+  String get shopNoInventoryItems => 'No items in inventory';
+
+  @override
+  String get shopStatusActivated => 'Activated';
+
+  @override
+  String get shopStatusInUse => 'In Use';
+
+  @override
+  String get shopPermanentOwned => 'Permanent';
+
+  @override
+  String get shopButtonUse => 'Use';
+
+  @override
+  String get shopButtonEquip => 'Equip';
+
+  @override
+  String get shopTagSeason => 'Season Item';
+
+  @override
+  String get shopTagPermanent => 'Permanent';
+
+  @override
+  String shopTagDuration(int days) {
+    return '${days}d duration';
+  }
+
+  @override
+  String get shopTagDurationOnly => 'Limited';
+
+  @override
+  String shopExpireDate(String date) {
+    return 'Expires: $date';
+  }
+
+  @override
+  String get shopExpireSoon => 'Expiring soon';
+
+  @override
+  String get shopPurchaseComplete => 'Purchase Complete';
+
+  @override
+  String get shopExtendComplete => 'Extension Complete';
+
+  @override
+  String shopExtendDone(String name) {
+    return '$name duration has been extended.';
+  }
+
+  @override
+  String get shopPurchaseDoneConsumable =>
+      'Purchase complete.\nPlease use it from your inventory.';
+
+  @override
+  String get shopPurchaseDonePassive =>
+      'Purchase complete.\nAutomatically activated upon purchase.';
+
+  @override
+  String get shopPurchaseDoneEquip =>
+      'Purchase complete.\nWould you like to equip it now?';
+
+  @override
+  String get shopEquipNow => 'Equip';
+
+  @override
+  String get shopDetailCategoryBanner => 'Banner';
+
+  @override
+  String get shopDetailCategoryTitle => 'Title';
+
+  @override
+  String get shopDetailCategoryThemeSkin => 'Theme / Card Skin';
+
+  @override
+  String get shopDetailCategoryUtility => 'Utility';
+
+  @override
+  String get shopDetailCategoryItem => 'Item';
+
+  @override
+  String get shopDetailNormalItem => 'Normal Item';
+
+  @override
+  String get shopDetailPermanent => 'Permanent';
+
+  @override
+  String shopDetailDuration(int days) {
+    return '${days}d duration';
+  }
+
+  @override
+  String get shopEffectNicknameChange => 'Effect: 1 nickname change';
+
+  @override
+  String shopEffectLeaveReduce(String value) {
+    return 'Effect: Desertions -$value';
+  }
+
+  @override
+  String get shopEffectStatsReset =>
+      'Effect: Reset all stats (wins/losses/games)';
+
+  @override
+  String get shopEffectSeasonStatsReset =>
+      'Effect: Reset ranked stats (wins/losses/games)';
+
+  @override
+  String shopPriceGold(int price) {
+    return '$price Gold';
+  }
+
+  @override
+  String get shopNicknameChangeTitle => 'Change Nickname';
+
+  @override
+  String get shopNicknameChangeDesc =>
+      'Enter your new nickname.\n(2-10 characters, no spaces)';
+
+  @override
+  String get shopNicknameChangeHint => 'New nickname';
+
+  @override
+  String get shopNicknameChangeValidation => 'Nickname must be 2-10 characters';
+
+  @override
+  String get shopNicknameChangeButton => 'Change';
+
+  @override
+  String get shopAdCannotShow => 'Unable to show the ad';
+
+  @override
+  String shopAdWatchForGold(int current, int max) {
+    return 'Watch ad for 50 Gold ($current/$max)';
+  }
+
+  @override
+  String get shopAdRewardDone => 'Daily ad rewards complete';
+
+  @override
+  String get appForceUpdateTitle => 'Update Required';
+
+  @override
+  String get appForceUpdateBody =>
+      'A new version has been released.\nPlease update to continue using the app.';
+
+  @override
+  String get appForceUpdateButton => 'Update';
+
+  @override
+  String get appEulaSubtitle => 'Terms of Service';
+
+  @override
+  String get appEulaLoadFailed =>
+      'Unable to load Terms of Service. Please check your network connection.';
+
+  @override
+  String get appEulaAgree => 'I agree to the Terms of Service';
+
+  @override
+  String get appEulaStart => 'Get Started';
+
+  @override
+  String get serviceRestoreRefreshingSocial => 'Verifying social login info...';
+
+  @override
+  String get serviceRestoreSocialLogin => 'Logging in with social account...';
+
+  @override
+  String get serviceRestoreLocalLogin => 'Logging in with saved account...';
+
+  @override
+  String get serviceRestoreRoomState => 'Restoring room info...';
+
+  @override
+  String get serviceRestoreLoadingLobby => 'Loading lobby data...';
+
+  @override
+  String get serviceRestoreAutoLoginFailed => 'Auto login failed.';
+
+  @override
+  String get serviceRestoreConnecting => 'Connecting...';
+
+  @override
+  String get serviceRestoreNeedsNickname => 'A nickname needs to be set.';
+
+  @override
+  String get serviceRestoreSocialFailed => 'Social login restoration failed.';
+
+  @override
+  String get serviceRestoreSocialTokenExpired =>
+      'Social login info needs to be re-verified.';
+
+  @override
+  String get serviceRestoreLocalFailed => 'Saved account login failed.';
+
+  @override
+  String get serviceRestoreAutoError => 'An error occurred during auto login.';
+
+  @override
+  String get serviceServerTimeout => 'Server response timed out';
+
+  @override
+  String get serviceKicked => 'You have been kicked';
+
+  @override
+  String get serviceRankingsLoadFailed => 'Failed to load rankings';
+
+  @override
+  String get serviceGoldHistoryLoadFailed => 'Failed to load gold history';
+
+  @override
+  String get serviceAdminUsersLoadFailed => 'Failed to load user list';
+
+  @override
+  String get serviceAdminUserDetailLoadFailed => 'Failed to load user details';
+
+  @override
+  String get serviceAdminInquiriesLoadFailed => 'Failed to load inquiry list';
+
+  @override
+  String get serviceAdminReportsLoadFailed => 'Failed to load report list';
+
+  @override
+  String get serviceAdminReportGroupLoadFailed =>
+      'Failed to load report details';
+
+  @override
+  String get serviceAdminActionSuccess => 'Action completed';
+
+  @override
+  String get serviceAdminActionFailed => 'Action failed';
+
+  @override
+  String get serviceShopLoadFailed => 'Failed to load shop data';
+
+  @override
+  String get serviceInventoryLoadFailed => 'Failed to load inventory';
+
+  @override
+  String get serviceInquiriesLoadFailed => 'Failed to load inquiry history';
+
+  @override
+  String get serviceNoticesLoadFailed => 'Failed to load notices';
+
+  @override
+  String get serviceNicknameChanged => 'Nickname has been changed';
+
+  @override
+  String get serviceNicknameChangeFailed => 'Nickname change failed';
+
+  @override
+  String get serviceRewardFailed => 'Failed to grant reward';
+
+  @override
+  String get serviceRoomRestoreFallback =>
+      'Could not restore room info. Returning to lobby.';
+
+  @override
+  String get serviceInviteInGame => 'Cannot send room invites during a game';
+
+  @override
+  String get serviceInviteCooldown =>
+      'Invite already sent. Please try again shortly';
+
+  @override
+  String get serviceAdShowFailed => 'Unable to show the ad';
+
+  @override
+  String get serviceAdLoadFailed => 'Unable to load the ad';
+
+  @override
+  String serviceInquiryReply(String title) {
+    return 'Inquiry reply received: $title';
+  }
+
+  @override
+  String get serviceInquiryDefault => 'Inquiry';
+
+  @override
+  String serviceChatBanned(String remaining) {
+    return 'Chat restricted ($remaining remaining)';
+  }
+
+  @override
+  String serviceChatBanHoursMinutes(int hours, int minutes) {
+    return '${hours}h ${minutes}m';
+  }
+
+  @override
+  String serviceChatBanMinutes(int minutes) {
+    return '${minutes}m';
+  }
+
+  @override
+  String serviceAdRewardSuccess(int remaining) {
+    return 'Received 50 Gold! (Remaining: $remaining)';
+  }
+}

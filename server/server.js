@@ -135,13 +135,14 @@ async function sendFriendRequestPush(targetNickname, fromNickname) {
 }
 
 const { handleAdminRoute } = require('./admin');
+const { t } = require('./i18n');
 
 const PORT = process.env.PORT || 8080;
 
 // Skull King version gating
 const SK_MIN_VERSION = '2.0.0';
 const SK_EXPANSION_MIN_VERSION = '2.1.0';
-const SK_EXPANSION_UPDATE_MESSAGE = '확장팩 방에 입장하려면 앱을 최신 버전으로 업데이트해주세요';
+// SK_EXPANSION_UPDATE_MESSAGE removed – now uses t(locale, 'sk_expansion_update_required')
 
 function compareVersions(v1, v2) {
   // Strip build metadata (e.g. "2.0.0+15" → "2.0.0")
@@ -175,9 +176,9 @@ function clientCanAccessRoom(ws, room) {
   return true;
 }
 
-function roomAccessUpdateMessage(room, action = '입장') {
-  if (roomHasSKExpansions(room)) return SK_EXPANSION_UPDATE_MESSAGE;
-  return `스컬킹을 ${action}하려면 앱을 업데이트해주세요`;
+function roomAccessUpdateMessage(locale, room, action = 'join') {
+  if (roomHasSKExpansions(room)) return t(locale, 'sk_expansion_update_required');
+  return t(locale, 'sk_update_' + action);
 }
 
 function filterRoomsForClient(ws, rooms) {
@@ -364,7 +365,7 @@ wss.on('connection', (ws, req) => {
     try {
       data = JSON.parse(raw.toString());
     } catch (e) {
-      sendTo(ws, { type: 'error', message: '잘못된 데이터 형식입니다' });
+      sendTo(ws, { type: 'error', message: t(ws.locale, 'invalid_data') });
       return;
     }
 
@@ -700,7 +701,7 @@ async function handleMessage(ws, data) {
           const adResult = await claimAdReward(ws.nickname);
           sendTo(ws, { type: 'ad_reward_result', ...adResult });
         } catch (err) {
-          sendTo(ws, { type: 'ad_reward_result', success: false, message: '보상 지급에 실패했습니다' });
+          sendTo(ws, { type: 'ad_reward_result', success: false, message: t(ws.locale, 'reward_failed') });
         }
       }
       break;
@@ -728,8 +729,13 @@ async function handleMessage(ws, data) {
     case 'get_unread_dm_count':
       await handleGetUnreadDmCount(ws);
       break;
+    case 'set_locale':
+      if (typeof data.locale === 'string' && ['en', 'ko', 'de'].includes(data.locale)) {
+        ws.locale = data.locale;
+      }
+      break;
     default:
-      sendTo(ws, { type: 'error', message: `알 수 없는 메시지: ${data.type}` });
+      sendTo(ws, { type: 'error', message: t(ws.locale, 'unknown_message', { type: data.type }) });
   }
 }
 
@@ -765,7 +771,7 @@ async function handleCheckNickname(ws, data) {
 
 async function handleDeleteAccount(ws) {
   if (!ws.nickname) {
-    sendTo(ws, { type: 'error', message: '로그인이 필요합니다' });
+    sendTo(ws, { type: 'error', message: t(ws.locale, 'login_required') });
     return;
   }
   const nickname = ws.nickname;
@@ -829,7 +835,7 @@ async function handleLogin(ws, data) {
   // Block login during maintenance
   const mStatus = getMaintenanceStatus();
   if (mStatus.maintenance) {
-    sendTo(ws, { type: 'login_error', message: mStatus.message || '서버 점검 중입니다' });
+    sendTo(ws, { type: 'login_error', message: mStatus.message || t(ws.locale, 'maintenance') });
     return;
   }
 
@@ -866,7 +872,7 @@ async function handleLogin(ws, data) {
           broadcastRoomList();
         }
       }
-      sendTo(client, { type: 'kicked', message: '다른 기기에서 로그인되었습니다' });
+      sendTo(client, { type: 'kicked', message: t(client.locale, 'duplicate_login') });
       client.roomId = null; // Prevent close handler from double-processing
       client.close();
     }
@@ -882,6 +888,7 @@ async function handleLogin(ws, data) {
   ws.pushAdminReport = result.pushAdminReport !== false;
   const deviceInfo = data.deviceInfo || {};
   ws.appVersion = deviceInfo.appVersion || null;
+  ws.locale = deviceInfo.locale || null;
   console.log(`Player logged in: ${ws.nickname} (${ws.playerId})`);
 
   // Notify friends of online status
@@ -897,7 +904,7 @@ async function handleLogin(ws, data) {
 async function handleSocialLogin(ws, data) {
   const { provider, token } = data;
   if (!provider || !token) {
-    sendTo(ws, { type: 'login_error', message: '잘못된 요청입니다' });
+    sendTo(ws, { type: 'login_error', message: t(ws.locale, 'invalid_request') });
     return;
   }
 
@@ -914,7 +921,7 @@ async function handleSocialLogin(ws, data) {
     // Block login during maintenance
     const mStatus = getMaintenanceStatus();
     if (mStatus.maintenance) {
-      sendTo(ws, { type: 'login_error', message: mStatus.message || '서버 점검 중입니다' });
+      sendTo(ws, { type: 'login_error', message: mStatus.message || t(ws.locale, 'maintenance') });
       return;
     }
 
@@ -967,7 +974,7 @@ async function handleSocialLogin(ws, data) {
               broadcastRoomList();
             }
           }
-          sendTo(client, { type: 'kicked', message: '다른 기기에서 로그인되었습니다' });
+          sendTo(client, { type: 'kicked', message: t(client.locale, 'duplicate_login') });
           client.roomId = null;
           client.close();
         }
@@ -983,6 +990,7 @@ async function handleSocialLogin(ws, data) {
       ws.pushAdminReport = result.pushAdminReport !== false;
       const socialDeviceInfo = data.deviceInfo || {};
       ws.appVersion = socialDeviceInfo.appVersion || null;
+      ws.locale = socialDeviceInfo.locale || null;
       console.log(`Player logged in (social/${provider}): ${ws.nickname} (${ws.playerId})`);
 
       notifyFriendsOfStatusChange(ws.nickname, true);
@@ -997,14 +1005,14 @@ async function handleSocialLogin(ws, data) {
     }
   } catch (err) {
     console.error('Social login error:', err);
-    sendTo(ws, { type: 'login_error', message: '소셜 로그인에 실패했습니다' });
+    sendTo(ws, { type: 'login_error', message: t(ws.locale, 'social_login_failed') });
   }
 }
 
 async function handleSocialRegister(ws, data) {
   const { provider, token, nickname, existingUser } = data;
   if (!provider || !token || !nickname) {
-    sendTo(ws, { type: 'login_error', message: '잘못된 요청입니다' });
+    sendTo(ws, { type: 'login_error', message: t(ws.locale, 'invalid_request') });
     return;
   }
 
@@ -1020,7 +1028,7 @@ async function handleSocialRegister(ws, data) {
     // Block during maintenance
     const mStatus = getMaintenanceStatus();
     if (mStatus.maintenance) {
-      sendTo(ws, { type: 'login_error', message: mStatus.message || '서버 점검 중입니다' });
+      sendTo(ws, { type: 'login_error', message: mStatus.message || t(ws.locale, 'maintenance') });
       return;
     }
 
@@ -1036,7 +1044,7 @@ async function handleSocialRegister(ws, data) {
           [nickname.trim()]
         );
         if (dupCheck.rows.length > 0) {
-          sendTo(ws, { type: 'login_error', message: '이미 사용중인 닉네임입니다' });
+          sendTo(ws, { type: 'login_error', message: t(ws.locale, 'nickname_taken') });
           return;
         }
         // Find user by provider + uid
@@ -1045,7 +1053,7 @@ async function handleSocialRegister(ws, data) {
           [provider, verified.uid]
         );
         if (userRes.rows.length === 0) {
-          sendTo(ws, { type: 'login_error', message: '사용자를 찾을 수 없습니다' });
+          sendTo(ws, { type: 'login_error', message: t(ws.locale, 'user_not_found') });
           return;
         }
         const userId = userRes.rows[0].id;
@@ -1075,6 +1083,7 @@ async function handleSocialRegister(ws, data) {
     ws.pushAdminReport = true;
     const regDeviceInfo = data.deviceInfo || {};
     ws.appVersion = regDeviceInfo.appVersion || null;
+    ws.locale = regDeviceInfo.locale || null;
     console.log(`Player registered & logged in (social/${provider}): ${ws.nickname} (${ws.playerId})`);
 
     notifyFriendsOfStatusChange(ws.nickname, true);
@@ -1085,18 +1094,18 @@ async function handleSocialRegister(ws, data) {
     updateDeviceInfo(ws.nickname, regDeviceInfo);
   } catch (err) {
     console.error('Social register error:', err);
-    sendTo(ws, { type: 'login_error', message: '소셜 회원가입에 실패했습니다' });
+    sendTo(ws, { type: 'login_error', message: t(ws.locale, 'social_register_failed') });
   }
 }
 
 async function handleSocialLink(ws, data) {
   if (!ws.userId) {
-    sendTo(ws, { type: 'social_link_result', success: false, message: '로그인이 필요합니다' });
+    sendTo(ws, { type: 'social_link_result', success: false, message: t(ws.locale, 'login_required') });
     return;
   }
   const { provider, token } = data;
   if (!provider || !token) {
-    sendTo(ws, { type: 'social_link_result', success: false, message: '잘못된 요청입니다' });
+    sendTo(ws, { type: 'social_link_result', success: false, message: t(ws.locale, 'invalid_request') });
     return;
   }
 
@@ -1115,13 +1124,13 @@ async function handleSocialLink(ws, data) {
     sendTo(ws, { type: 'social_link_result', success: result.success, message: result.message, provider: result.provider });
   } catch (err) {
     console.error('Social link error:', err);
-    sendTo(ws, { type: 'social_link_result', success: false, message: '소셜 연동에 실패했습니다' });
+    sendTo(ws, { type: 'social_link_result', success: false, message: t(ws.locale, 'social_link_failed') });
   }
 }
 
 async function handleSocialUnlink(ws) {
   if (!ws.userId) {
-    sendTo(ws, { type: 'social_unlink_result', success: false, message: '로그인이 필요합니다' });
+    sendTo(ws, { type: 'social_unlink_result', success: false, message: t(ws.locale, 'login_required') });
     return;
   }
 
@@ -1133,7 +1142,7 @@ async function handleSocialUnlink(ws) {
     sendTo(ws, { type: 'social_unlink_result', success: result.success, message: result.message });
   } catch (err) {
     console.error('Social unlink error:', err);
-    sendTo(ws, { type: 'social_unlink_result', success: false, message: '연동 해제에 실패했습니다' });
+    sendTo(ws, { type: 'social_unlink_result', success: false, message: t(ws.locale, 'social_unlink_failed') });
   }
 }
 
@@ -1190,7 +1199,7 @@ async function handleReconnection(ws) {
         });
         sendTo(ws, {
           type: 'error',
-          message: roomAccessUpdateMessage(room, '플레이'),
+          message: roomAccessUpdateMessage(ws.locale, room, 'play'),
         });
         sendTo(ws, {
           type: 'room_list',
@@ -1260,7 +1269,7 @@ async function handleReconnection(ws) {
         });
         sendTo(ws, {
           type: 'error',
-          message: roomAccessUpdateMessage(room, '관전'),
+          message: roomAccessUpdateMessage(ws.locale, room, 'spectate'),
         });
         sendTo(ws, {
           type: 'room_list',
@@ -1349,7 +1358,7 @@ async function handleReconnection(ws) {
           });
           sendTo(ws, {
             type: 'error',
-            message: roomAccessUpdateMessage(room, '입장'),
+            message: roomAccessUpdateMessage(ws.locale, room, 'join'),
           });
           sendTo(ws, {
             type: 'room_list',
@@ -1427,11 +1436,11 @@ async function handleReconnection(ws) {
 
 function handleCreateRoom(ws, data) {
   if (!ws.playerId) {
-    sendTo(ws, { type: 'error', message: '로그인이 필요합니다' });
+    sendTo(ws, { type: 'error', message: t(ws.locale, 'login_required') });
     return;
   }
   if (ws.roomId) {
-    sendTo(ws, { type: 'error', message: '이미 방에 참가 중입니다' });
+    sendTo(ws, { type: 'error', message: t(ws.locale, 'already_in_room') });
     return;
   }
   const roomName = (data.roomName || `${ws.nickname}'s Room`).trim();
@@ -1440,12 +1449,12 @@ function handleCreateRoom(ws, data) {
 
   // SK version gating
   if (gameType === 'skull_king' && !clientSupportsSK(ws)) {
-    sendTo(ws, { type: 'error', message: '스컬킹을 플레이하려면 앱을 업데이트해주세요' });
+    sendTo(ws, { type: 'error', message: t(ws.locale, 'sk_update_required') });
     return;
   }
 
   if (isRanked && ws.authProvider === 'local') {
-    sendTo(ws, { type: 'error', message: '랭크전은 소셜 연동이 필요합니다' });
+    sendTo(ws, { type: 'error', message: t(ws.locale, 'ranked_social_required') });
     return;
   }
   const password = isRanked
@@ -1470,7 +1479,7 @@ function handleCreateRoom(ws, data) {
       }
     }
     if (skExpansions.length > 0 && !clientSupportsSKExpansions(ws)) {
-      sendTo(ws, { type: 'error', message: SK_EXPANSION_UPDATE_MESSAGE });
+      sendTo(ws, { type: 'error', message: t(ws.locale, 'sk_expansion_update_required') });
       return;
     }
   }
@@ -1501,32 +1510,32 @@ function handleCreateRoom(ws, data) {
 
 async function handleJoinRoom(ws, data) {
   if (!ws.playerId) {
-    sendTo(ws, { type: 'error', message: '로그인이 필요합니다' });
+    sendTo(ws, { type: 'error', message: t(ws.locale, 'login_required') });
     return;
   }
   if (ws.roomId) {
-    sendTo(ws, { type: 'error', message: '이미 방에 참가 중입니다' });
+    sendTo(ws, { type: 'error', message: t(ws.locale, 'already_in_room') });
     return;
   }
   const room = lobby.getRoom(data.roomId);
   if (!room) {
-    sendTo(ws, { type: 'error', message: '방을 찾을 수 없습니다' });
+    sendTo(ws, { type: 'error', message: t(ws.locale, 'room_not_found') });
     return;
   }
   // SK version gating
   if (!clientCanAccessRoom(ws, room)) {
-    sendTo(ws, { type: 'error', message: roomAccessUpdateMessage(room, '플레이') });
+    sendTo(ws, { type: 'error', message: roomAccessUpdateMessage(ws.locale, room, 'play') });
     return;
   }
   if (room.isRanked && ws.authProvider === 'local') {
-    sendTo(ws, { type: 'error', message: '랭크전은 소셜 연동이 필요합니다' });
+    sendTo(ws, { type: 'error', message: t(ws.locale, 'ranked_social_required') });
     return;
   }
   // Ranked ban check
   if (room.isRanked && ws.nickname) {
     const banMinutes = await getRankedBan(ws.nickname);
     if (banMinutes) {
-      sendTo(ws, { type: 'error', message: `탈주로 인해 ${banMinutes}분 동안 랭킹전이 제한됩니다` });
+      sendTo(ws, { type: 'error', message: t(ws.locale, 'ranked_ban', { minutes: banMinutes }) });
       return;
     }
   }
@@ -1645,7 +1654,7 @@ async function handleLeaveGame(ws) {
 
 function handleReturnToRoom(ws) {
   if (!ws.roomId) {
-    sendTo(ws, { type: 'error', message: '방에 참가하고 있지 않습니다' });
+    sendTo(ws, { type: 'error', message: t(ws.locale, 'not_in_room') });
     return;
   }
   const room = lobby.getRoom(ws.roomId);
@@ -1658,7 +1667,7 @@ function handleReturnToRoom(ws) {
   if (!room.game) return;
   // Only allow when game has ended
   if (room.game.state !== 'game_end') {
-    sendTo(ws, { type: 'error', message: '게임이 아직 진행 중입니다' });
+    sendTo(ws, { type: 'error', message: t(ws.locale, 'game_still_in_progress') });
     return;
   }
   // Clear the game and reset ready states
@@ -1732,21 +1741,21 @@ function handleCheckRoom(ws) {
 
 function handleSpectateRoom(ws, data) {
   if (!ws.playerId) {
-    sendTo(ws, { type: 'error', message: '로그인이 필요합니다' });
+    sendTo(ws, { type: 'error', message: t(ws.locale, 'login_required') });
     return;
   }
   if (ws.roomId) {
-    sendTo(ws, { type: 'error', message: '이미 방에 참가 중입니다' });
+    sendTo(ws, { type: 'error', message: t(ws.locale, 'already_in_room') });
     return;
   }
   const room = lobby.getRoom(data.roomId);
   if (!room) {
-    sendTo(ws, { type: 'error', message: '방을 찾을 수 없습니다' });
+    sendTo(ws, { type: 'error', message: t(ws.locale, 'room_not_found') });
     return;
   }
   // SK version gating for spectators
   if (!clientCanAccessRoom(ws, room)) {
-    sendTo(ws, { type: 'error', message: roomAccessUpdateMessage(room, '관전') });
+    sendTo(ws, { type: 'error', message: roomAccessUpdateMessage(ws.locale, room, 'spectate') });
     return;
   }
   const password = typeof data.password === 'string' ? data.password.trim() : '';
@@ -1779,7 +1788,7 @@ function handleSpectateRoom(ws, data) {
 
 function handleRequestCardView(ws, data) {
   if (!ws.roomId || !ws.isSpectator) {
-    sendTo(ws, { type: 'error', message: '관전 중이 아닙니다' });
+    sendTo(ws, { type: 'error', message: t(ws.locale, 'not_spectating') });
     return;
   }
   const room = lobby.getRoom(ws.roomId);
@@ -1836,7 +1845,7 @@ function handleRequestCardView(ws, data) {
       });
       sendTo(spectatorWs, {
         type: 'error',
-        message: '패 보기 요청 응답 시간이 지났습니다',
+        message: t(ws.locale, 'card_view_timeout'),
       });
     }
   }, 5000);
@@ -1846,7 +1855,7 @@ function handleRequestCardView(ws, data) {
 
 function handleRespondCardView(ws, data) {
   if (!ws.roomId) {
-    sendTo(ws, { type: 'error', message: '방에 참가하고 있지 않습니다' });
+    sendTo(ws, { type: 'error', message: t(ws.locale, 'not_in_room') });
     return;
   }
   const room = lobby.getRoom(ws.roomId);
@@ -1894,7 +1903,7 @@ function handleRespondCardView(ws, data) {
 
 function handleRevokeCardView(ws, data) {
   if (!ws.roomId) {
-    sendTo(ws, { type: 'error', message: '방에 참가하고 있지 않습니다' });
+    sendTo(ws, { type: 'error', message: t(ws.locale, 'not_in_room') });
     return;
   }
   const room = lobby.getRoom(ws.roomId);
@@ -1903,7 +1912,7 @@ function handleRevokeCardView(ws, data) {
   const spectatorId = data.spectatorId;
   const result = room.revokeCardView(ws.playerId, spectatorId);
   if (!result.success) {
-    sendTo(ws, { type: 'error', message: '취소에 실패했습니다' });
+    sendTo(ws, { type: 'error', message: t(ws.locale, 'revoke_failed') });
     return;
   }
 
@@ -1933,32 +1942,32 @@ function handleToggleReady(ws) {
 
 function handleStartGame(ws) {
   if (!ws.roomId) {
-    sendTo(ws, { type: 'error', message: '방에 참가하고 있지 않습니다' });
+    sendTo(ws, { type: 'error', message: t(ws.locale, 'not_in_room') });
     return;
   }
   const room = lobby.getRoom(ws.roomId);
   if (!room) { sendTo(ws, { type: 'room_closed' }); ws.roomId = null; return; }
   if (room.game) {
-    sendTo(ws, { type: 'error', message: '이미 게임이 진행 중입니다' });
+    sendTo(ws, { type: 'error', message: t(ws.locale, 'game_already_in_progress') });
     return;
   }
   if (room.hostId !== ws.playerId) {
-    sendTo(ws, { type: 'error', message: '방장만 게임을 시작할 수 있습니다' });
+    sendTo(ws, { type: 'error', message: t(ws.locale, 'host_only_start') });
     return;
   }
   if (room.gameType === 'skull_king') {
     if (room.getPlayerCount() < 2) {
-      sendTo(ws, { type: 'error', message: '최소 2명이 필요합니다' });
+      sendTo(ws, { type: 'error', message: t(ws.locale, 'min_players_required') });
       return;
     }
   } else {
     if (room.getPlayerCount() < room.maxPlayers) {
-      sendTo(ws, { type: 'error', message: '4명이 모여야 시작할 수 있습니다' });
+      sendTo(ws, { type: 'error', message: t(ws.locale, 'four_players_required') });
       return;
     }
   }
   if (!room.areAllReady()) {
-    broadcastGameEvent(ws.roomId, { type: 'error', message: '모든 플레이어가 준비해야 합니다' });
+    broadcastGameEvent(ws.roomId, { type: 'error', message: t(ws.locale, 'all_players_must_ready') });
     return;
   }
   room.resetReady();
@@ -1971,21 +1980,21 @@ function handleStartGame(ws) {
 
 function handleChangeRoomName(ws, data) {
   if (!ws.roomId) {
-    sendTo(ws, { type: 'error', message: '방에 참가하고 있지 않습니다' });
+    sendTo(ws, { type: 'error', message: t(ws.locale, 'not_in_room') });
     return;
   }
   const room = lobby.getRoom(ws.roomId);
   if (!room) {
-    sendTo(ws, { type: 'error', message: '방을 찾을 수 없습니다' });
+    sendTo(ws, { type: 'error', message: t(ws.locale, 'room_not_found') });
     return;
   }
   if (room.hostId !== ws.playerId) {
-    sendTo(ws, { type: 'error', message: '방장만 변경할 수 있습니다' });
+    sendTo(ws, { type: 'error', message: t(ws.locale, 'host_only_change') });
     return;
   }
   const rawName = typeof data.roomName === 'string' ? data.roomName.trim() : '';
   if (!rawName) {
-    sendTo(ws, { type: 'error', message: '방 제목을 입력해주세요' });
+    sendTo(ws, { type: 'error', message: t(ws.locale, 'room_name_required') });
     return;
   }
   const newName = rawName.slice(0, 20);
@@ -1996,22 +2005,22 @@ function handleChangeRoomName(ws, data) {
 
 function handleChangeTeam(ws, data) {
   if (!ws.roomId) {
-    sendTo(ws, { type: 'error', message: '방에 참가하고 있지 않습니다' });
+    sendTo(ws, { type: 'error', message: t(ws.locale, 'not_in_room') });
     return;
   }
   const room = lobby.getRoom(ws.roomId);
   if (!room) { sendTo(ws, { type: 'room_closed' }); ws.roomId = null; return; }
   if (room.isRanked) {
-    sendTo(ws, { type: 'error', message: '랭크전에서는 팀을 변경할 수 없습니다' });
+    sendTo(ws, { type: 'error', message: t(ws.locale, 'no_team_change_ranked') });
     return;
   }
   if (room.game) {
-    sendTo(ws, { type: 'error', message: '게임 중에는 팀을 변경할 수 없습니다' });
+    sendTo(ws, { type: 'error', message: t(ws.locale, 'no_team_change_in_game') });
     return;
   }
   const targetSlot = data.targetSlot;
   if (typeof targetSlot !== 'number' || targetSlot < 0 || targetSlot >= room.maxPlayers) {
-    sendTo(ws, { type: 'error', message: '잘못된 슬롯입니다' });
+    sendTo(ws, { type: 'error', message: t(ws.locale, 'invalid_slot') });
     return;
   }
   const result = room.movePlayerToSlot(ws.playerId, targetSlot);
@@ -2025,33 +2034,33 @@ function handleChangeTeam(ws, data) {
 // Kick player handler (host only, not during game)
 function handleKickPlayer(ws, data) {
   if (!ws.roomId) {
-    sendTo(ws, { type: 'error', message: '방에 참가하고 있지 않습니다' });
+    sendTo(ws, { type: 'error', message: t(ws.locale, 'not_in_room') });
     return;
   }
   const room = lobby.getRoom(ws.roomId);
   if (!room) { sendTo(ws, { type: 'room_closed' }); ws.roomId = null; return; }
   if (room.hostId !== ws.playerId) {
-    sendTo(ws, { type: 'error', message: '방장만 강퇴할 수 있습니다' });
+    sendTo(ws, { type: 'error', message: t(ws.locale, 'host_only_kick') });
     return;
   }
   if (room.game) {
-    sendTo(ws, { type: 'error', message: '게임 중에는 강퇴할 수 없습니다' });
+    sendTo(ws, { type: 'error', message: t(ws.locale, 'no_kick_in_game') });
     return;
   }
   const targetPlayerId = data.playerId;
   if (!targetPlayerId || targetPlayerId === ws.playerId) {
-    sendTo(ws, { type: 'error', message: '자신을 강퇴할 수 없습니다' });
+    sendTo(ws, { type: 'error', message: t(ws.locale, 'cannot_kick_self') });
     return;
   }
   // Check if target is in the room
   if (!room.players.some(p => p !== null && p.id === targetPlayerId)) {
-    sendTo(ws, { type: 'error', message: '플레이어를 찾을 수 없습니다' });
+    sendTo(ws, { type: 'error', message: t(ws.locale, 'player_not_found') });
     return;
   }
   // Send kicked message to target before removing
   const targetWs = findWsByPlayerId(targetPlayerId);
   if (targetWs) {
-    sendTo(targetWs, { type: 'kicked', message: '방장에 의해 강퇴되었습니다' });
+    sendTo(targetWs, { type: 'kicked', message: t(targetWs.locale, 'kicked_by_host') });
     targetWs.roomId = null;
   }
   room.removePlayer(targetPlayerId);
@@ -2062,17 +2071,17 @@ function handleKickPlayer(ws, data) {
 // Add bot handler (host only)
 function handleAddBot(ws, data) {
   if (!ws.roomId) {
-    sendTo(ws, { type: 'error', message: '방에 참가하고 있지 않습니다' });
+    sendTo(ws, { type: 'error', message: t(ws.locale, 'not_in_room') });
     return;
   }
   const room = lobby.getRoom(ws.roomId);
   if (!room) { sendTo(ws, { type: 'room_closed' }); ws.roomId = null; return; }
   if (room.hostId !== ws.playerId) {
-    sendTo(ws, { type: 'error', message: '방장만 봇을 추가할 수 있습니다' });
+    sendTo(ws, { type: 'error', message: t(ws.locale, 'host_only_add_bot') });
     return;
   }
   if (room.isRanked) {
-    sendTo(ws, { type: 'error', message: '랭크전에서는 봇을 추가할 수 없습니다' });
+    sendTo(ws, { type: 'error', message: t(ws.locale, 'no_bot_in_ranked') });
     return;
   }
   const targetSlot = typeof data.targetSlot === 'number' ? data.targetSlot : undefined;
@@ -2088,7 +2097,7 @@ function handleAddBot(ws, data) {
 // Switch to spectator handler
 function handleSwitchToSpectator(ws) {
   if (!ws.roomId || ws.isSpectator) {
-    sendTo(ws, { type: 'error', message: '플레이어로 방에 참가하고 있지 않습니다' });
+    sendTo(ws, { type: 'error', message: t(ws.locale, 'not_player_in_room') });
     return;
   }
   const room = lobby.getRoom(ws.roomId);
@@ -2107,22 +2116,22 @@ function handleSwitchToSpectator(ws) {
 // Switch to player handler
 function handleSwitchToPlayer(ws, data) {
   if (!ws.roomId || !ws.isSpectator) {
-    sendTo(ws, { type: 'error', message: '관전 중이 아닙니다' });
+    sendTo(ws, { type: 'error', message: t(ws.locale, 'not_spectating') });
     return;
   }
   const room = lobby.getRoom(ws.roomId);
   if (!room) { sendTo(ws, { type: 'room_closed' }); ws.roomId = null; return; }
   if (!clientCanAccessRoom(ws, room)) {
-    sendTo(ws, { type: 'error', message: roomAccessUpdateMessage(room, '입장') });
+    sendTo(ws, { type: 'error', message: roomAccessUpdateMessage(ws.locale, room, 'join') });
     return;
   }
   if (room.isRanked && ws.authProvider === 'local') {
-    sendTo(ws, { type: 'error', message: '랭크전은 소셜 연동이 필요합니다' });
+    sendTo(ws, { type: 'error', message: t(ws.locale, 'ranked_social_required') });
     return;
   }
   const targetSlot = data.targetSlot;
   if (typeof targetSlot !== 'number') {
-    sendTo(ws, { type: 'error', message: '잘못된 슬롯입니다' });
+    sendTo(ws, { type: 'error', message: t(ws.locale, 'invalid_slot') });
     return;
   }
   const result = room.switchToPlayer(ws.playerId, ws.nickname, targetSlot);
@@ -2147,12 +2156,12 @@ function handleSwitchToPlayer(ws, data) {
 // Get user profile handler
 async function handleGetProfile(ws, data) {
   if (!ws.nickname) {
-    sendTo(ws, { type: 'error', message: '로그인이 필요합니다' });
+    sendTo(ws, { type: 'error', message: t(ws.locale, 'login_required') });
     return;
   }
   const targetNickname = data.nickname;
   if (!targetNickname) {
-    sendTo(ws, { type: 'error', message: '닉네임이 필요합니다' });
+    sendTo(ws, { type: 'error', message: t(ws.locale, 'nickname_required') });
     return;
   }
   const profile = await getUserProfile(targetNickname);
@@ -2169,11 +2178,11 @@ async function handleGetProfile(ws, data) {
 
 function handleGameAction(ws, data) {
   if (!ws.roomId) {
-    sendTo(ws, { type: 'error', message: '방에 참가하고 있지 않습니다' });
+    sendTo(ws, { type: 'error', message: t(ws.locale, 'not_in_room') });
     return;
   }
   if (ws.isSpectator) {
-    sendTo(ws, { type: 'error', message: '관전자는 게임 액션을 수행할 수 없습니다' });
+    sendTo(ws, { type: 'error', message: t(ws.locale, 'spectator_no_action') });
     return;
   }
   const room = lobby.getRoom(ws.roomId);
@@ -2194,7 +2203,7 @@ function handleGameAction(ws, data) {
 
   if (data.type === 'next_round') {
     if (room.hostId !== ws.playerId) {
-      sendTo(ws, { type: 'error', message: '방장만 다음 라운드를 시작할 수 있습니다' });
+      sendTo(ws, { type: 'error', message: t(ws.locale, 'host_only_next_round') });
       return;
     }
     // Reset timeout counts for new round (keys are nicknames)
@@ -3040,7 +3049,7 @@ function broadcastRoomList() {
 // Chat message handler
 async function handleChatMessage(ws, data) {
   if (!ws.roomId || !ws.nickname) {
-    sendTo(ws, { type: 'error', message: '방에 참가하고 있지 않습니다' });
+    sendTo(ws, { type: 'error', message: t(ws.locale, 'not_in_room') });
     return;
   }
   const room = lobby.getRoom(ws.roomId);
@@ -3100,12 +3109,12 @@ async function handleChatMessage(ws, data) {
 // Block user handler
 async function handleBlockUser(ws, data) {
   if (!ws.nickname) {
-    sendTo(ws, { type: 'error', message: '로그인이 필요합니다' });
+    sendTo(ws, { type: 'error', message: t(ws.locale, 'login_required') });
     return;
   }
   const targetNickname = data.nickname;
   if (!targetNickname || targetNickname === ws.nickname) {
-    sendTo(ws, { type: 'error', message: '차단할 수 없습니다' });
+    sendTo(ws, { type: 'error', message: t(ws.locale, 'cannot_block') });
     return;
   }
   const result = await blockUser(ws.nickname, targetNickname);
@@ -3115,7 +3124,7 @@ async function handleBlockUser(ws, data) {
 // Unblock user handler
 async function handleUnblockUser(ws, data) {
   if (!ws.nickname) {
-    sendTo(ws, { type: 'error', message: '로그인이 필요합니다' });
+    sendTo(ws, { type: 'error', message: t(ws.locale, 'login_required') });
     return;
   }
   const targetNickname = data.nickname;
@@ -3137,13 +3146,13 @@ async function handleGetBlockedUsers(ws) {
 // Report user handler
 async function handleReportUser(ws, data) {
   if (!ws.nickname) {
-    sendTo(ws, { type: 'error', message: '로그인이 필요합니다' });
+    sendTo(ws, { type: 'error', message: t(ws.locale, 'login_required') });
     return;
   }
   const targetNickname = data.nickname;
   const reason = data.reason || '';
   if (!targetNickname || targetNickname === ws.nickname) {
-    sendTo(ws, { type: 'error', message: '신고할 수 없습니다' });
+    sendTo(ws, { type: 'error', message: t(ws.locale, 'cannot_report') });
     return;
   }
   // 채팅 컨텍스트 가져오기
@@ -3298,7 +3307,7 @@ async function handleGetSeasons(ws) {
 // Wallet handler
 async function handleGetWallet(ws) {
   if (!ws.nickname) {
-    sendTo(ws, { type: 'wallet_result', success: false, message: '로그인이 필요합니다' });
+    sendTo(ws, { type: 'wallet_result', success: false, message: t(ws.locale, 'login_required') });
     return;
   }
   const result = await getWallet(ws.nickname);
@@ -3307,7 +3316,7 @@ async function handleGetWallet(ws) {
 
 async function handleGetGoldHistory(ws, data) {
   if (!ws.nickname) {
-    sendTo(ws, { type: 'gold_history_result', success: false, message: '로그인이 필요합니다' });
+    sendTo(ws, { type: 'gold_history_result', success: false, message: t(ws.locale, 'login_required') });
     return;
   }
   const rawLimit = data?.limit;
@@ -3324,7 +3333,7 @@ async function ensureAdmin(ws, responseType = 'admin_error') {
     ws.isAdmin = isAdmin;
     if (isAdmin) return true;
   }
-  sendTo(ws, { type: responseType, success: false, message: '관리자 권한이 필요합니다' });
+  sendTo(ws, { type: responseType, success: false, message: t(ws.locale, 'admin_required') });
   return false;
 }
 
@@ -3418,12 +3427,12 @@ async function handleGetAdminUserDetail(ws, data) {
   if (!await ensureAdmin(ws, 'admin_user_detail_result')) return;
   const nickname = data?.nickname?.toString();
   if (!nickname) {
-    sendTo(ws, { type: 'admin_user_detail_result', success: false, message: '닉네임이 필요합니다' });
+    sendTo(ws, { type: 'admin_user_detail_result', success: false, message: t(ws.locale, 'nickname_required') });
     return;
   }
   const user = await getUserDetail(nickname);
   if (!user) {
-    sendTo(ws, { type: 'admin_user_detail_result', success: false, message: '유저를 찾을 수 없습니다' });
+    sendTo(ws, { type: 'admin_user_detail_result', success: false, message: t(ws.locale, 'admin_user_not_found') });
     return;
   }
   const active = getActiveUsersSnapshot().find((row) => row.nickname === nickname) || null;
@@ -3444,7 +3453,7 @@ async function handleSetAdminUser(ws, data) {
   const nickname = data?.nickname?.toString();
   const isAdmin = data?.isAdmin === true;
   if (!nickname) {
-    sendTo(ws, { type: 'admin_set_user_result', success: false, message: '닉네임이 필요합니다' });
+    sendTo(ws, { type: 'admin_set_user_result', success: false, message: t(ws.locale, 'nickname_required') });
     return;
   }
   const result = await setUserAdmin(nickname, isAdmin);
@@ -3472,11 +3481,11 @@ async function handleAdminAdjustGold(ws, data) {
   const nickname = data?.nickname?.toString();
   const amount = parseInt(data?.amount, 10);
   if (!nickname) {
-    sendTo(ws, { type: 'admin_adjust_gold_result', success: false, message: '닉네임이 필요합니다' });
+    sendTo(ws, { type: 'admin_adjust_gold_result', success: false, message: t(ws.locale, 'nickname_required') });
     return;
   }
   if (!Number.isFinite(amount) || amount === 0) {
-    sendTo(ws, { type: 'admin_adjust_gold_result', success: false, message: '유효한 골드 수량이 필요합니다' });
+    sendTo(ws, { type: 'admin_adjust_gold_result', success: false, message: t(ws.locale, 'gold_invalid_amount') });
     return;
   }
   const result = await adminAdjustGold(nickname, amount, ws.nickname || 'admin');
@@ -3495,7 +3504,7 @@ async function handleResolveAdminInquiry(ws, data) {
   if (!await ensureAdmin(ws, 'admin_inquiry_resolve_result')) return;
   const id = parseInt(data?.id, 10);
   if (!id) {
-    sendTo(ws, { type: 'admin_inquiry_resolve_result', success: false, message: '문의 ID가 필요합니다' });
+    sendTo(ws, { type: 'admin_inquiry_resolve_result', success: false, message: t(ws.locale, 'inquiry_id_required') });
     return;
   }
   const result = await resolveInquiry(id, data?.adminNote?.toString() || '');
@@ -3525,7 +3534,7 @@ async function handleGetAdminReportGroup(ws, data) {
   const target = data?.target?.toString();
   const roomId = data?.roomId?.toString() || '';
   if (!target) {
-    sendTo(ws, { type: 'admin_report_group_result', success: false, message: '대상 유저가 필요합니다' });
+    sendTo(ws, { type: 'admin_report_group_result', success: false, message: t(ws.locale, 'admin_target_required') });
     return;
   }
   const rows = await getReportGroup(target, roomId);
@@ -3538,7 +3547,7 @@ async function handleUpdateAdminReportStatus(ws, data) {
   const roomId = data?.roomId?.toString() || '';
   const status = data?.status?.toString() || 'reviewed';
   if (!target) {
-    sendTo(ws, { type: 'admin_report_status_result', success: false, message: '대상 유저가 필요합니다' });
+    sendTo(ws, { type: 'admin_report_status_result', success: false, message: t(ws.locale, 'admin_target_required') });
     return;
   }
   const result = await updateReportGroupStatus(target, roomId, status);
@@ -3554,7 +3563,7 @@ async function handleGetShopItems(ws) {
 // Inventory handler
 async function handleGetInventory(ws) {
   if (!ws.nickname) {
-    sendTo(ws, { type: 'inventory_result', success: false, message: '로그인이 필요합니다' });
+    sendTo(ws, { type: 'inventory_result', success: false, message: t(ws.locale, 'login_required') });
     return;
   }
   const result = await getUserItems(ws.nickname);
@@ -3563,7 +3572,7 @@ async function handleGetInventory(ws) {
 
 async function handleBuyItem(ws, data) {
   if (!ws.nickname) {
-    sendTo(ws, { type: 'purchase_result', success: false, message: '로그인이 필요합니다' });
+    sendTo(ws, { type: 'purchase_result', success: false, message: t(ws.locale, 'login_required') });
     return;
   }
   const itemKey = data.itemKey;
@@ -3573,7 +3582,7 @@ async function handleBuyItem(ws, data) {
 
 async function handleEquipItem(ws, data) {
   if (!ws.nickname) {
-    sendTo(ws, { type: 'equip_result', success: false, message: '로그인이 필요합니다' });
+    sendTo(ws, { type: 'equip_result', success: false, message: t(ws.locale, 'login_required') });
     return;
   }
   const itemKey = data.itemKey;
@@ -3603,7 +3612,7 @@ async function handleEquipItem(ws, data) {
 
 async function handleUseItem(ws, data) {
   if (!ws.nickname) {
-    sendTo(ws, { type: 'use_item_result', success: false, message: '로그인이 필요합니다' });
+    sendTo(ws, { type: 'use_item_result', success: false, message: t(ws.locale, 'login_required') });
     return;
   }
   const itemKey = data.itemKey;
@@ -3613,11 +3622,11 @@ async function handleUseItem(ws, data) {
 
 async function handleChangeNickname(ws, data) {
   if (!ws.nickname) {
-    sendTo(ws, { type: 'change_nickname_result', success: false, message: '로그인이 필요합니다' });
+    sendTo(ws, { type: 'change_nickname_result', success: false, message: t(ws.locale, 'login_required') });
     return;
   }
   if (ws.roomId) {
-    sendTo(ws, { type: 'change_nickname_result', success: false, message: '게임 중에는 닉네임을 변경할 수 없습니다' });
+    sendTo(ws, { type: 'change_nickname_result', success: false, message: t(ws.locale, 'no_nickname_change_in_game') });
     return;
   }
   const result = await changeNickname(ws.nickname, data.newNickname);
@@ -3630,16 +3639,16 @@ async function handleChangeNickname(ws, data) {
 // Submit inquiry handler
 async function handleSubmitInquiry(ws, data) {
   if (!ws.nickname) {
-    sendTo(ws, { type: 'error', message: '로그인이 필요합니다' });
+    sendTo(ws, { type: 'error', message: t(ws.locale, 'login_required') });
     return;
   }
   const { category, title, content } = data;
   if (!category || !title || !content) {
-    sendTo(ws, { type: 'inquiry_result', success: false, message: '모든 항목을 입력해주세요' });
+    sendTo(ws, { type: 'inquiry_result', success: false, message: t(ws.locale, 'inquiry_fill_all') });
     return;
   }
   if (!['bug', 'suggestion', 'other'].includes(category)) {
-    sendTo(ws, { type: 'inquiry_result', success: false, message: '올바른 카테고리를 선택해주세요' });
+    sendTo(ws, { type: 'inquiry_result', success: false, message: t(ws.locale, 'inquiry_invalid_category') });
     return;
   }
   const result = await submitInquiry(ws.nickname, category, title, content);
@@ -3656,7 +3665,7 @@ async function handleSubmitInquiry(ws, data) {
 
 async function handleGetInquiries(ws) {
   if (!ws.nickname) {
-    sendTo(ws, { type: 'inquiries_result', success: false, message: '로그인이 필요합니다', inquiries: [] });
+    sendTo(ws, { type: 'inquiries_result', success: false, message: t(ws.locale, 'login_required'), inquiries: [] });
     return;
   }
   const result = await getUserInquiries(ws.nickname);
@@ -3678,12 +3687,12 @@ async function handleGetNotices(ws) {
 // Add friend handler
 async function handleAddFriend(ws, data) {
   if (!ws.nickname) {
-    sendTo(ws, { type: 'error', message: '로그인이 필요합니다' });
+    sendTo(ws, { type: 'error', message: t(ws.locale, 'login_required') });
     return;
   }
   const targetNickname = data.nickname;
   if (!targetNickname || targetNickname === ws.nickname) {
-    sendTo(ws, { type: 'error', message: '친구 추가할 수 없습니다' });
+    sendTo(ws, { type: 'error', message: t(ws.locale, 'cannot_add_friend') });
     return;
   }
   const result = await addFriend(ws.nickname, targetNickname);
@@ -3754,7 +3763,7 @@ async function handleGetPendingFriendRequests(ws) {
 // Accept friend request handler
 async function handleAcceptFriendRequest(ws, data) {
   if (!ws.nickname) {
-    sendTo(ws, { type: 'error', message: '로그인이 필요합니다' });
+    sendTo(ws, { type: 'error', message: t(ws.locale, 'login_required') });
     return;
   }
   const nickname = data.nickname;
@@ -3773,7 +3782,7 @@ async function handleAcceptFriendRequest(ws, data) {
 // Reject friend request handler
 async function handleRejectFriendRequest(ws, data) {
   if (!ws.nickname) {
-    sendTo(ws, { type: 'error', message: '로그인이 필요합니다' });
+    sendTo(ws, { type: 'error', message: t(ws.locale, 'login_required') });
     return;
   }
   const nickname = data.nickname;
@@ -3785,7 +3794,7 @@ async function handleRejectFriendRequest(ws, data) {
 // Remove friend handler
 async function handleRemoveFriend(ws, data) {
   if (!ws.nickname) {
-    sendTo(ws, { type: 'error', message: '로그인이 필요합니다' });
+    sendTo(ws, { type: 'error', message: t(ws.locale, 'login_required') });
     return;
   }
   const nickname = data.nickname;
@@ -3838,36 +3847,36 @@ async function handleSearchUsers(ws, data) {
 
 async function handleSendDm(ws, data) {
   if (!ws.nickname) {
-    sendTo(ws, { type: 'dm_error', message: '로그인이 필요합니다' });
+    sendTo(ws, { type: 'dm_error', message: t(ws.locale, 'login_required') });
     return;
   }
   const targetNickname = data.nickname;
   const message = (data.message || '').trim();
   if (!targetNickname || !message) {
-    sendTo(ws, { type: 'dm_error', message: '메시지를 입력해주세요' });
+    sendTo(ws, { type: 'dm_error', message: t(ws.locale, 'dm_enter_message') });
     return;
   }
   if (message.length > 500) {
-    sendTo(ws, { type: 'dm_error', message: '메시지는 500자 이내로 입력해주세요' });
+    sendTo(ws, { type: 'dm_error', message: t(ws.locale, 'dm_max_length') });
     return;
   }
   // Check friendship
   const friendsList = await getFriends(ws.nickname);
   if (!friendsList.includes(targetNickname)) {
-    sendTo(ws, { type: 'dm_error', message: '친구에게만 DM을 보낼 수 있습니다' });
+    sendTo(ws, { type: 'dm_error', message: t(ws.locale, 'dm_friends_only') });
     return;
   }
   // Check blocked
   const blockedList = await getBlockedUsers(ws.nickname);
   const blockedByTarget = await getBlockedUsers(targetNickname);
   if (blockedList.includes(targetNickname) || blockedByTarget.includes(ws.nickname)) {
-    sendTo(ws, { type: 'dm_error', message: '차단된 사용자에게 DM을 보낼 수 없습니다' });
+    sendTo(ws, { type: 'dm_error', message: t(ws.locale, 'dm_blocked') });
     return;
   }
   // Check chat ban
   const chatBan = await getChatBan(ws.nickname);
   if (chatBan) {
-    sendTo(ws, { type: 'dm_error', message: '채팅 금지 상태입니다' });
+    sendTo(ws, { type: 'dm_error', message: t(ws.locale, 'chat_banned') });
     return;
   }
   const result = await sendDm(ws.nickname, targetNickname, message);
@@ -3923,34 +3932,34 @@ async function handleGetUnreadDmCount(ws) {
 // Invite to room handler
 function handleInviteToRoom(ws, data) {
   if (!ws.nickname) {
-    sendTo(ws, { type: 'invite_result', success: false, message: '로그인이 필요합니다' });
+    sendTo(ws, { type: 'invite_result', success: false, message: t(ws.locale, 'login_required') });
     return;
   }
   if (!ws.roomId) {
-    sendTo(ws, { type: 'invite_result', success: false, message: '방에 입장한 상태가 아닙니다' });
+    sendTo(ws, { type: 'invite_result', success: false, message: t(ws.locale, 'not_in_room_for_invite') });
     return;
   }
   const targetNickname = data.nickname;
   if (!targetNickname) {
-    sendTo(ws, { type: 'invite_result', success: false, message: '초대할 대상이 없습니다' });
+    sendTo(ws, { type: 'invite_result', success: false, message: t(ws.locale, 'invite_no_target') });
     return;
   }
   const targetWs = findWsByNickname(targetNickname);
   if (!targetWs) {
-    sendTo(ws, { type: 'invite_result', success: false, message: '상대방이 오프라인입니다' });
+    sendTo(ws, { type: 'invite_result', success: false, message: t(ws.locale, 'dm_offline') });
     return;
   }
   if (targetWs.roomId) {
-    sendTo(ws, { type: 'invite_result', success: false, message: '상대방이 이미 방에 있습니다' });
+    sendTo(ws, { type: 'invite_result', success: false, message: t(ws.locale, 'invite_target_in_room') });
     return;
   }
   const room = lobby.getRoom(ws.roomId);
   if (!room) {
-    sendTo(ws, { type: 'invite_result', success: false, message: '방을 찾을 수 없습니다' });
+    sendTo(ws, { type: 'invite_result', success: false, message: t(ws.locale, 'room_not_found') });
     return;
   }
   if (room.game) {
-    sendTo(ws, { type: 'invite_result', success: false, message: '게임 진행 중에는 초대를 보낼 수 없습니다' });
+    sendTo(ws, { type: 'invite_result', success: false, message: t(ws.locale, 'invite_in_game') });
     return;
   }
   const inviteKey = `${ws.nickname}->${targetNickname}`;
@@ -3962,7 +3971,7 @@ function handleInviteToRoom(ws, data) {
   }
   const lastInviteAt = recentRoomInvites.get(inviteKey) || 0;
   if (now - lastInviteAt < 10000) {
-    sendTo(ws, { type: 'invite_result', success: false, message: '이미 초대를 보냈습니다. 잠시 후 다시 시도해주세요' });
+    sendTo(ws, { type: 'invite_result', success: false, message: t(ws.locale, 'invite_cooldown') });
     return;
   }
   recentRoomInvites.set(inviteKey, now);
@@ -3974,7 +3983,7 @@ function handleInviteToRoom(ws, data) {
     isRanked: room.isRanked,
     password: room.password || '',
   });
-  sendTo(ws, { type: 'invite_result', success: true, message: '초대를 보냈습니다' });
+  sendTo(ws, { type: 'invite_result', success: true, message: t(ws.locale, 'invite_sent') });
 }
 
 function findWsByPlayerId(playerId) {

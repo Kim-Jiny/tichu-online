@@ -34,5 +34,74 @@
   "commonDelete": "Delete",
   "commonConfirm": "Confirm",
   "commonLink": "Link",
-  "commonError": "Error"
+  "commonError": "Error",
+
+  "settingsHeaderTitle": "Settings",
+  "settingsNotificationsSection": "Notifications",
+  "settingsPushNotifications": "Push Notifications",
+  "settingsPushNotificationsDesc": "Turn all notifications on or off",
+  "settingsInquiryNotifications": "Inquiry Notifications",
+  "settingsInquiryNotificationsDesc": "Receive push when a new inquiry arrives",
+  "settingsReportNotifications": "Report Notifications",
+  "settingsReportNotificationsDesc": "Receive push when a new report arrives",
+  "settingsAdminSection": "Admin",
+  "settingsAdminCenterDesc": "View inquiries, reports, users, and active users",
+  "settingsAccountSection": "Account",
+  "settingsProfileSubtitle": "View level, record, and recent matches",
+  "settingsSocialLinked": "{provider} linked",
+  "@settingsSocialLinked": {
+    "placeholders": {
+      "provider": { "type": "String" }
+    }
+  },
+  "settingsNoLinkedAccount": "No linked account (ranked play unavailable)",
+  "settingsInquirySection": "Inquiry",
+  "settingsSubmitInquiry": "Submit Inquiry",
+  "settingsInquiryHistory": "Inquiry History",
+  "settingsAccountManagement": "Account Management",
+  "settingsDeleteAccountWithdraw": "Withdraw",
+  "settingsLinkComplete": "Linking completed",
+  "settingsLinkFailed": "Linking failed: {error}",
+  "@settingsLinkFailed": {
+    "placeholders": {
+      "error": { "type": "String" }
+    }
+  },
+
+  "noticeTitle": "Notices",
+  "noticeEmpty": "No notices available",
+  "noticeRetry": "Retry",
+  "noticeCategoryRelease": "Release",
+  "noticeCategoryUpdate": "Update",
+  "noticeCategoryPreview": "Update Preview",
+  "noticeCategoryGeneral": "Notice",
+
+  "inquiryTitle": "Submit Inquiry",
+  "inquiryCategory": "Category",
+  "inquiryCategoryBug": "Bug Report",
+  "inquiryCategorySuggestion": "Suggestion",
+  "inquiryCategoryOther": "Other",
+  "inquiryFieldTitle": "Title",
+  "inquiryFieldTitleHint": "Enter a title",
+  "inquiryFieldContent": "Content",
+  "inquiryFieldContentHint": "Enter the details",
+  "inquirySubmit": "Submit",
+  "inquirySubmitted": "Your inquiry has been submitted",
+  "inquiryHistoryTitle": "Inquiry History",
+  "inquiryEmpty": "No inquiries found",
+  "inquiryStatusResolved": "Resolved",
+  "inquiryStatusPending": "Pending",
+  "inquiryAnswerLabel": "Answer",
+  "inquiryAnswerDate": "Answered on: {date}",
+  "@inquiryAnswerDate": {
+    "placeholders": {
+      "date": { "type": "String" }
+    }
+  },
+  "inquiryNoAnswer": "No answer has been registered yet.",
+
+  "linkDialogTitle": "Link Social Account",
+  "linkDialogContent": "Select a social account to link",
+
+  "textViewLoadFailed": "Failed to load content."
 }

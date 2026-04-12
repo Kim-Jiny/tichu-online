@@ -140,27 +140,28 @@ class _SettingsScreenState extends State<SettingsScreen> {
   }
 
   void _showDeleteAccountDialog() {
+    final l10n = L10n.of(context);
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
+      builder: (dialogCtx) => AlertDialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        title: const Text('회원탈퇴'),
-        content: const Text('정말 탈퇴하시겠습니까?\n모든 데이터가 삭제됩니다.'),
+        title: Text(l10n.settingsDeleteAccount),
+        content: Text(l10n.settingsDeleteAccountConfirm),
         actions: [
           TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('취소'),
+            onPressed: () => Navigator.pop(dialogCtx),
+            child: Text(l10n.commonCancel),
           ),
           ElevatedButton(
             onPressed: () {
-              Navigator.pop(context);
+              Navigator.pop(dialogCtx);
               _deleteAccount();
             },
             style: ElevatedButton.styleFrom(
               backgroundColor: const Color(0xFFC62828),
               foregroundColor: Colors.white,
             ),
-            child: const Text('탈퇴'),
+            child: Text(l10n.settingsDeleteAccountWithdraw),
           ),
         ],
       ),
@@ -172,13 +173,13 @@ class _SettingsScreenState extends State<SettingsScreen> {
     game.deleteAccount().whenComplete(_logout);
   }
 
-  String _noticeCategoryLabel(dynamic value) {
+  String _noticeCategoryLabel(L10n l10n, dynamic value) {
     switch (value?.toString()) {
-      case 'release': return '릴리즈';
-      case 'update': return '업데이트';
-      case 'preview': return '업데이트 예고';
-      case 'general': return '공지';
-      default: return '공지';
+      case 'release': return l10n.noticeCategoryRelease;
+      case 'update': return l10n.noticeCategoryUpdate;
+      case 'preview': return l10n.noticeCategoryPreview;
+      case 'general': return l10n.noticeCategoryGeneral;
+      default: return l10n.noticeCategoryGeneral;
     }
   }
 
@@ -204,6 +205,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
   void _showNoticesDialog() {
     final game = context.read<GameService>();
+    final l10n = L10n.of(context);
     // Mark all (existing + freshly fetched) notices as read — opening the
     // dialog counts as "seeing" them, which clears the red badges.
     game.markCurrentNoticesAsRead();
@@ -212,11 +214,11 @@ class _SettingsScreenState extends State<SettingsScreen> {
       context: context,
       builder: (ctx) => AlertDialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        title: const Row(
+        title: Row(
           children: [
-            Icon(Icons.campaign, color: Color(0xFF42A5F5)),
-            SizedBox(width: 8),
-            Text('공지사항'),
+            const Icon(Icons.campaign, color: Color(0xFF42A5F5)),
+            const SizedBox(width: 8),
+            Text(l10n.noticeTitle),
           ],
         ),
         content: SizedBox(
@@ -244,7 +246,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                         const SizedBox(height: 10),
                         TextButton(
                           onPressed: () => game.requestNotices(),
-                          child: const Text('다시 시도'),
+                          child: Text(l10n.noticeRetry),
                         ),
                       ],
                     ),
@@ -252,12 +254,12 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 );
               }
               if (game.notices.isEmpty) {
-                return const SizedBox(
+                return SizedBox(
                   height: 140,
                   child: Center(
                     child: Text(
-                      '등록된 공지사항이 없습니다',
-                      style: TextStyle(color: Color(0xFF9A8E8A)),
+                      l10n.noticeEmpty,
+                      style: const TextStyle(color: Color(0xFF9A8E8A)),
                     ),
                   ),
                 );
@@ -297,7 +299,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                                 borderRadius: BorderRadius.circular(8),
                               ),
                               child: Text(
-                                _noticeCategoryLabel(category),
+                                _noticeCategoryLabel(l10n, category),
                                 style: TextStyle(
                                   fontSize: 11,
                                   fontWeight: FontWeight.w600,
@@ -333,7 +335,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx),
-            child: const Text('닫기'),
+            child: Text(l10n.commonClose),
           ),
         ],
       ),
@@ -341,6 +343,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
   }
 
   void _showNoticeDetailDialog(Map<String, dynamic> item) {
+    final l10n = L10n.of(context);
     final title = item['title']?.toString() ?? '';
     final content = item['content']?.toString() ?? '';
     final category = item['category']?.toString() ?? 'general';
@@ -359,7 +362,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 borderRadius: BorderRadius.circular(8),
               ),
               child: Text(
-                _noticeCategoryLabel(category),
+                _noticeCategoryLabel(l10n, category),
                 style: TextStyle(
                   fontSize: 12,
                   fontWeight: FontWeight.w600,
@@ -398,7 +401,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx),
-            child: const Text('닫기'),
+            child: Text(l10n.commonClose),
           ),
         ],
       ),
@@ -406,20 +409,21 @@ class _SettingsScreenState extends State<SettingsScreen> {
   }
 
   void _showInquiryDialog() {
+    final l10n = L10n.of(context);
     final titleController = TextEditingController();
     final contentController = TextEditingController();
     String selectedCategory = 'bug';
 
     showDialog(
       context: context,
-      builder: (context) => StatefulBuilder(
-        builder: (context, setState) => AlertDialog(
+      builder: (dialogCtx) => StatefulBuilder(
+        builder: (dialogCtx, setState) => AlertDialog(
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-          title: const Row(
+          title: Row(
             children: [
-              Icon(Icons.help_outline, color: Color(0xFFBA68C8)),
-              SizedBox(width: 8),
-              Text('문의하기'),
+              const Icon(Icons.help_outline, color: Color(0xFFBA68C8)),
+              const SizedBox(width: 8),
+              Text(l10n.inquiryTitle),
             ],
           ),
           content: SingleChildScrollView(
@@ -427,13 +431,13 @@ class _SettingsScreenState extends State<SettingsScreen> {
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text('카테고리', style: TextStyle(fontSize: 13, color: Color(0xFF8A8A8A))),
+                Text(l10n.inquiryCategory, style: const TextStyle(fontSize: 13, color: Color(0xFF8A8A8A))),
                 const SizedBox(height: 6),
                 Wrap(
                   spacing: 8,
                   children: [
                     ChoiceChip(
-                      label: const Text('버그 신고'),
+                      label: Text(l10n.inquiryCategoryBug),
                       selected: selectedCategory == 'bug',
                       onSelected: (_) => setState(() => selectedCategory = 'bug'),
                       selectedColor: const Color(0xFFEDE7F6),
@@ -445,7 +449,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                       ),
                     ),
                     ChoiceChip(
-                      label: const Text('건의사항'),
+                      label: Text(l10n.inquiryCategorySuggestion),
                       selected: selectedCategory == 'suggestion',
                       onSelected: (_) => setState(() => selectedCategory = 'suggestion'),
                       selectedColor: const Color(0xFFEDE7F6),
@@ -457,7 +461,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                       ),
                     ),
                     ChoiceChip(
-                      label: const Text('기타'),
+                      label: Text(l10n.inquiryCategoryOther),
                       selected: selectedCategory == 'other',
                       onSelected: (_) => setState(() => selectedCategory = 'other'),
                       selectedColor: const Color(0xFFEDE7F6),
@@ -471,12 +475,12 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   ],
                 ),
                 const SizedBox(height: 12),
-                const Text('제목', style: TextStyle(fontSize: 13, color: Color(0xFF8A8A8A))),
+                Text(l10n.inquiryFieldTitle, style: const TextStyle(fontSize: 13, color: Color(0xFF8A8A8A))),
                 const SizedBox(height: 4),
                 TextField(
                   controller: titleController,
                   decoration: InputDecoration(
-                    hintText: '제목을 입력해주세요',
+                    hintText: l10n.inquiryFieldTitleHint,
                     border: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(12),
                     ),
@@ -484,13 +488,13 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   ),
                 ),
                 const SizedBox(height: 12),
-                const Text('내용', style: TextStyle(fontSize: 13, color: Color(0xFF8A8A8A))),
+                Text(l10n.inquiryFieldContent, style: const TextStyle(fontSize: 13, color: Color(0xFF8A8A8A))),
                 const SizedBox(height: 4),
                 TextField(
                   controller: contentController,
                   maxLines: 5,
                   decoration: InputDecoration(
-                    hintText: '내용을 입력해주세요',
+                    hintText: l10n.inquiryFieldContentHint,
                     border: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(12),
                     ),
@@ -502,19 +506,19 @@ class _SettingsScreenState extends State<SettingsScreen> {
           ),
           actions: [
             TextButton(
-              onPressed: () => Navigator.pop(context),
-              child: const Text('취소'),
+              onPressed: () => Navigator.pop(dialogCtx),
+              child: Text(l10n.commonCancel),
             ),
             ElevatedButton(
               onPressed: () {
                 final title = titleController.text.trim();
                 final content = contentController.text.trim();
                 if (title.isEmpty || content.isEmpty) return;
-                final game = context.read<GameService>();
+                final game = dialogCtx.read<GameService>();
                 game.submitInquiry(selectedCategory, title, content);
-                Navigator.pop(context);
+                Navigator.pop(dialogCtx);
                 ScaffoldMessenger.of(this.context).showSnackBar(
-                  const SnackBar(content: Text('문의가 접수되었습니다')),
+                  SnackBar(content: Text(l10n.inquirySubmitted)),
                 );
               },
               style: ElevatedButton.styleFrom(
@@ -524,7 +528,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   borderRadius: BorderRadius.circular(12),
                 ),
               ),
-              child: const Text('제출'),
+              child: Text(l10n.inquirySubmit),
             ),
           ],
         ),
@@ -534,16 +538,17 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
   void _showInquiryHistoryDialog() {
     final game = context.read<GameService>();
+    final l10n = L10n.of(context);
     game.markInquiriesRead();
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        title: const Row(
+        title: Row(
           children: [
-            Icon(Icons.mark_email_read, color: Color(0xFF1E88E5)),
-            SizedBox(width: 8),
-            Text('문의 내역'),
+            const Icon(Icons.mark_email_read, color: Color(0xFF1E88E5)),
+            const SizedBox(width: 8),
+            Text(l10n.inquiryHistoryTitle),
           ],
         ),
         content: SizedBox(
@@ -571,7 +576,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                         const SizedBox(height: 10),
                         TextButton(
                           onPressed: () => game.requestInquiries(),
-                          child: const Text('다시 시도'),
+                          child: Text(l10n.noticeRetry),
                         ),
                       ],
                     ),
@@ -579,12 +584,12 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 );
               }
               if (game.inquiries.isEmpty) {
-                return const SizedBox(
+                return SizedBox(
                   height: 140,
                   child: Center(
                     child: Text(
-                      '등록된 문의가 없습니다',
-                      style: TextStyle(color: Color(0xFF9A8E8A)),
+                      l10n.inquiryEmpty,
+                      style: const TextStyle(color: Color(0xFF9A8E8A)),
                     ),
                   ),
                 );
@@ -597,7 +602,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   itemBuilder: (context, index) {
                     final item = game.inquiries[index];
                     final title = item['title']?.toString() ?? '';
-                    final category = _inquiryCategoryLabel(item['category']);
+                    final category = _inquiryCategoryLabel(l10n, item['category']);
                     final status = item['status']?.toString() ?? 'pending';
                     final createdAt = _formatShortDate(item['created_at']);
                     final isResolved = status == 'resolved';
@@ -622,7 +627,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                                 borderRadius: BorderRadius.circular(10),
                               ),
                               child: Text(
-                                isResolved ? '답변완료' : '대기중',
+                                isResolved ? l10n.inquiryStatusResolved : l10n.inquiryStatusPending,
                                 style: TextStyle(
                                   fontSize: 11,
                                   fontWeight: FontWeight.bold,
@@ -671,7 +676,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx),
-            child: const Text('닫기'),
+            child: Text(l10n.commonClose),
           ),
         ],
       ),
@@ -679,11 +684,12 @@ class _SettingsScreenState extends State<SettingsScreen> {
   }
 
   void _showInquiryDetailDialog(Map<String, dynamic> item) {
+    final l10n = L10n.of(context);
     final title = item['title']?.toString() ?? '';
     final content = item['content']?.toString() ?? '';
     final adminNote = item['admin_note']?.toString() ?? '';
     final status = item['status']?.toString() ?? 'pending';
-    final category = _inquiryCategoryLabel(item['category']);
+    final category = _inquiryCategoryLabel(l10n, item['category']);
     final createdAt = _formatShortDate(item['created_at']);
     final resolvedAt = _formatShortDate(item['resolved_at']);
 
@@ -707,9 +713,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
               ),
               const SizedBox(height: 16),
               if (status == 'resolved' && adminNote.isNotEmpty) ...[
-                const Text(
-                  '답변',
-                  style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Color(0xFF4CAF50)),
+                Text(
+                  l10n.inquiryAnswerLabel,
+                  style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Color(0xFF4CAF50)),
                 ),
                 const SizedBox(height: 6),
                 Text(
@@ -718,13 +724,13 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 ),
                 const SizedBox(height: 8),
                 Text(
-                  '답변일: $resolvedAt',
+                  l10n.inquiryAnswerDate(resolvedAt),
                   style: const TextStyle(fontSize: 11, color: Color(0xFF8A7A72)),
                 ),
               ] else if (status != 'resolved') ...[
-                const Text(
-                  '아직 답변이 등록되지 않았습니다.',
-                  style: TextStyle(fontSize: 12, color: Color(0xFF9A8E8A)),
+                Text(
+                  l10n.inquiryNoAnswer,
+                  style: const TextStyle(fontSize: 12, color: Color(0xFF9A8E8A)),
                 ),
               ],
             ],
@@ -733,7 +739,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx),
-            child: const Text('닫기'),
+            child: Text(l10n.commonClose),
           ),
         ],
       ),
@@ -749,21 +755,22 @@ class _SettingsScreenState extends State<SettingsScreen> {
     }
   }
 
-  String _inquiryCategoryLabel(dynamic value) {
+  String _inquiryCategoryLabel(L10n l10n, dynamic value) {
     switch (value?.toString()) {
       case 'bug':
-        return '버그 신고';
+        return l10n.inquiryCategoryBug;
       case 'suggestion':
-        return '건의사항';
+        return l10n.inquiryCategorySuggestion;
       case 'other':
-        return '기타';
+        return l10n.inquiryCategoryOther;
       default:
-        return '기타';
+        return l10n.inquiryCategoryOther;
     }
   }
 
-  void _showTextViewDialog(String title, String? content) {
+  void _showTextViewDialog(String title, String? content, {bool isTermsOfService = false}) {
     final game = context.read<GameService>();
+    final l10n = L10n.of(context);
     if (content == null || content.isEmpty) {
       // Fetch from server if not loaded yet
       game.requestAppConfig();
@@ -778,13 +785,13 @@ class _SettingsScreenState extends State<SettingsScreen> {
           height: 400,
           child: Consumer<GameService>(
             builder: (context, game, _) {
-              final text = title == '이용약관' ? game.eulaContent : game.privacyPolicy;
+              final text = isTermsOfService ? game.eulaContent : game.privacyPolicy;
               if (text == null) {
                 return const Center(child: CircularProgressIndicator());
               }
               if (text.isEmpty) {
-                return const Center(
-                  child: Text('내용을 불러올 수 없습니다.', style: TextStyle(color: Color(0xFF9A8E8A))),
+                return Center(
+                  child: Text(l10n.textViewLoadFailed, style: const TextStyle(color: Color(0xFF9A8E8A))),
                 );
               }
               return SingleChildScrollView(
@@ -799,7 +806,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx),
-            child: const Text('닫기'),
+            child: Text(l10n.commonClose),
           ),
         ],
       ),
@@ -807,12 +814,13 @@ class _SettingsScreenState extends State<SettingsScreen> {
   }
 
   void _showLinkDialog() {
+    final l10n = L10n.of(context);
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        title: const Text('소셜 계정 연동'),
-        content: const Text('연동할 소셜 계정을 선택하세요'),
+        title: Text(l10n.linkDialogTitle),
+        content: Text(l10n.linkDialogContent),
         actions: [
           TextButton(
             onPressed: () async {
@@ -825,7 +833,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
               } catch (e) {
                 if (mounted) {
                   ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(content: Text('연동 실패: $e')),
+                    SnackBar(content: Text(l10n.settingsLinkFailed(e.toString()))),
                   );
                 }
               }
@@ -843,7 +851,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 } catch (e) {
                   if (mounted) {
                     ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(content: Text('연동 실패: $e')),
+                      SnackBar(content: Text(l10n.settingsLinkFailed(e.toString()))),
                     );
                   }
                 }
@@ -860,7 +868,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
               } catch (e) {
                 if (mounted) {
                   ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(content: Text('연동 실패: $e')),
+                    SnackBar(content: Text(l10n.settingsLinkFailed(e.toString()))),
                   );
                 }
               }
@@ -869,7 +877,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
           ),
           TextButton(
             onPressed: () => Navigator.pop(ctx),
-            child: const Text('취소'),
+            child: Text(l10n.commonCancel),
           ),
         ],
       ),
@@ -960,6 +968,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = L10n.of(context);
     final themeColors = context.watch<GameService>().themeGradient;
     return Scaffold(
       body: Container(
@@ -982,7 +991,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   game.socialLinkResultMessage = null;
                   ScaffoldMessenger.of(context).showSnackBar(
                     SnackBar(
-                      content: Text(success ? '연동이 완료되었습니다' : message),
+                      content: Text(success ? l10n.settingsLinkComplete : message),
                       backgroundColor: success ? Colors.green : Colors.red,
                     ),
                   );
@@ -1005,9 +1014,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
                           color: const Color(0xFF8A7A72),
                         ),
                         const SizedBox(width: 4),
-                        const Text(
-                          '설정',
-                          style: TextStyle(
+                        Text(
+                          l10n.settingsHeaderTitle,
+                          style: const TextStyle(
                             fontSize: 20,
                             fontWeight: FontWeight.bold,
                             color: Color(0xFF5A4038),
@@ -1022,13 +1031,13 @@ class _SettingsScreenState extends State<SettingsScreen> {
                       child: Column(
                         children: [
                           _buildSection(
-                            '알림',
+                            l10n.settingsNotificationsSection,
                             [
                               _buildRow(
                                 icon: Icons.notifications,
                                 iconColor: const Color(0xFF64B5F6),
-                                title: '푸시 알림',
-                                subtitle: '전체 알림을 켜고 끕니다',
+                                title: l10n.settingsPushNotifications,
+                                subtitle: l10n.settingsPushNotificationsDesc,
                                 trailing: Switch(
                                   value: game.pushEnabled,
                                   onChanged: (v) => game.setPushEnabled(v),
@@ -1039,8 +1048,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
                                 _buildRow(
                                   icon: Icons.support_agent,
                                   iconColor: const Color(0xFFAB47BC),
-                                  title: '문의 알림',
-                                  subtitle: '새 문의가 들어오면 푸시를 받습니다',
+                                  title: l10n.settingsInquiryNotifications,
+                                  subtitle: l10n.settingsInquiryNotificationsDesc,
                                   trailing: Switch(
                                     value: game.pushAdminInquiryEnabled,
                                     onChanged: (v) => game.setAdminAlertPush(inquiry: v),
@@ -1050,8 +1059,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
                                 _buildRow(
                                   icon: Icons.report_gmailerrorred,
                                   iconColor: const Color(0xFFEF5350),
-                                  title: '신고 알림',
-                                  subtitle: '새 신고가 들어오면 푸시를 받습니다',
+                                  title: l10n.settingsReportNotifications,
+                                  subtitle: l10n.settingsReportNotificationsDesc,
                                   trailing: Switch(
                                     value: game.pushAdminReportEnabled,
                                     onChanged: (v) => game.setAdminAlertPush(report: v),
@@ -1063,13 +1072,13 @@ class _SettingsScreenState extends State<SettingsScreen> {
                           if (game.isAdminUser) ...[
                             const SizedBox(height: 12),
                             _buildSection(
-                              '관리자',
+                              l10n.settingsAdminSection,
                               [
                                 _buildRow(
                                   icon: Icons.admin_panel_settings_outlined,
                                   iconColor: const Color(0xFF7E57C2),
-                                  title: '관리자 센터',
-                                  subtitle: '문의, 신고, 유저, 활성 유저를 확인합니다',
+                                  title: l10n.settingsAdminCenter,
+                                  subtitle: l10n.settingsAdminCenterDesc,
                                   onTap: () {
                                     Navigator.push(
                                       context,
@@ -1084,13 +1093,13 @@ class _SettingsScreenState extends State<SettingsScreen> {
                           ],
                           const SizedBox(height: 12),
                           _buildSection(
-                            '계정',
+                            l10n.settingsAccountSection,
                             [
                               _buildRow(
                                 icon: Icons.person,
                                 iconColor: const Color(0xFF64B5F6),
-                                title: '내 프로필',
-                                subtitle: '레벨, 전적, 최근 매치 보기',
+                                title: l10n.settingsMyProfile,
+                                subtitle: l10n.settingsProfileSubtitle,
                                 onTap: widget.onShowMyProfile == null
                                     ? null
                                     : () => widget.onShowMyProfile!(context),
@@ -1100,24 +1109,24 @@ class _SettingsScreenState extends State<SettingsScreen> {
                               _buildRow(
                                 icon: Icons.account_circle,
                                 iconColor: const Color(0xFF64B5F6),
-                                title: '닉네임',
+                                title: l10n.settingsNickname,
                                 subtitle: game.playerName,
                               ),
                               const Divider(height: 1, color: Color(0xFFEAE2DE)),
                               _buildRow(
                                 icon: Icons.link,
                                 iconColor: const Color(0xFF7E57C2),
-                                title: '소셜 연동',
+                                title: l10n.settingsSocialLink,
                                 subtitle: game.authProvider != 'local'
-                                    ? '${game.authProvider.toUpperCase()} 연동됨'
+                                    ? l10n.settingsSocialLinked(game.authProvider.toUpperCase())
                                     : (game.linkedSocialProvider != null && game.linkedSocialProvider != 'local')
-                                        ? '${game.linkedSocialProvider!.toUpperCase()} 연동됨'
-                                        : '연동된 계정 없음 (랭크전 이용 불가)',
+                                        ? l10n.settingsSocialLinked(game.linkedSocialProvider!.toUpperCase())
+                                        : l10n.settingsNoLinkedAccount,
                                 trailing: game.authProvider == 'local' &&
                                         (game.linkedSocialProvider == null || game.linkedSocialProvider == 'local')
                                     ? TextButton(
                                         onPressed: () => _showLinkDialog(),
-                                        child: const Text('연동', style: TextStyle(color: Color(0xFF7E57C2), fontSize: 12)),
+                                        child: Text(l10n.commonLink, style: const TextStyle(color: Color(0xFF7E57C2), fontSize: 12)),
                                       )
                                     : null,
                               ),
@@ -1201,7 +1210,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                                     icon: Icons.description_outlined,
                                     iconColor: const Color(0xFF8A7A72),
                                     title: l10n.settingsTermsOfService,
-                                    onTap: () => _showTextViewDialog(l10n.settingsTermsOfService, game.eulaContent),
+                                    onTap: () => _showTextViewDialog(l10n.settingsTermsOfService, game.eulaContent, isTermsOfService: true),
                                     trailing: const Icon(Icons.chevron_right, color: Color(0xFFB0A8A4)),
                                   ),
                                   const Divider(height: 1, color: Color(0xFFEAE2DE)),
@@ -1268,12 +1277,12 @@ class _SettingsScreenState extends State<SettingsScreen> {
                           ),
                           const SizedBox(height: 12),
                           _buildSection(
-                            '문의',
+                            l10n.settingsInquirySection,
                             [
                               _buildRow(
                                 icon: Icons.help_outline,
                                 iconColor: const Color(0xFFBA68C8),
-                                title: '문의하기',
+                                title: l10n.settingsSubmitInquiry,
                                 onTap: _showInquiryDialog,
                                 trailing: const Icon(Icons.chevron_right, color: Color(0xFFB0A8A4)),
                               ),
@@ -1281,7 +1290,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                               _buildRow(
                                 icon: Icons.mark_email_read,
                                 iconColor: const Color(0xFF1E88E5),
-                                title: '문의 내역',
+                                title: l10n.settingsInquiryHistory,
                                 onTap: _showInquiryHistoryDialog,
                                 trailing: const Icon(Icons.chevron_right, color: Color(0xFFB0A8A4)),
                               ),
@@ -1289,12 +1298,12 @@ class _SettingsScreenState extends State<SettingsScreen> {
                           ),
                           const SizedBox(height: 12),
                           _buildSection(
-                            '계정 관리',
+                            l10n.settingsAccountManagement,
                             [
                               _buildRow(
                                 icon: Icons.logout,
                                 iconColor: const Color(0xFF8A7A72),
-                                title: '로그아웃',
+                                title: l10n.settingsLogout,
                                 onTap: _logout,
                                 trailing: const Icon(Icons.chevron_right, color: Color(0xFFB0A8A4)),
                               ),
@@ -1302,7 +1311,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                               _buildRow(
                                 icon: Icons.delete_forever,
                                 iconColor: const Color(0xFFC62828),
-                                title: '회원탈퇴',
+                                title: l10n.settingsDeleteAccount,
                                 onTap: _showDeleteAccountDialog,
                                 trailing: const Icon(Icons.chevron_right, color: Color(0xFFB0A8A4)),
                               ),

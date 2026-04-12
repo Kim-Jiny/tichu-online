@@ -934,5 +934,166 @@
     "placeholders": {
       "name": { "type": "String" }
     }
-  }
+  },
+
+  "rulesTitle": "Game Rules",
+  "rulesTabTichu": "Tichu",
+  "rulesTabSkullKing": "Skull King",
+
+  "rulesTichuGoalTitle": "Game Objective",
+  "rulesTichuGoalBody": "A trick-taking game for 4 players in 2 teams (partners sit across from each other). The first team to reach the target score wins.",
+
+  "rulesTichuCardCompositionTitle": "Card Composition (56 cards total)",
+  "rulesTichuNumberCards": "Number Cards (2 – A)",
+  "rulesTichuNumberCardsSub": "4 suits × 13 cards",
+  "rulesTichuMahjong": "Mahjong",
+  "rulesTichuMahjongSub": "Card that starts the game",
+  "rulesTichuDog": "Dog",
+  "rulesTichuDogSub": "Passes the lead to your partner",
+  "rulesTichuPhoenix": "Phoenix",
+  "rulesTichuPhoenixSub": "Wild card (-25 points)",
+  "rulesTichuDragon": "Dragon",
+  "rulesTichuDragonSub": "Strongest card (+25 points)",
+
+  "rulesTichuSpecialTitle": "Special Card Rules",
+  "rulesTichuSpecialMahjongTitle": "Mahjong",
+  "rulesTichuSpecialMahjongLine1": "The player holding this card leads the very first trick.",
+  "rulesTichuSpecialMahjongLine2": "When playing the Mahjong, you may declare a number (2–14). The next player must include that number in their combination if they have it (ignored if they don't).",
+  "rulesTichuSpecialDogTitle": "Dog",
+  "rulesTichuSpecialDogLine1": "Can only be played when leading. Immediately passes the lead to your partner.",
+  "rulesTichuSpecialDogLine2": "Worth 0 points in scoring.",
+  "rulesTichuSpecialPhoenixTitle": "Phoenix",
+  "rulesTichuSpecialPhoenixLine1": "When played as a single, it counts as the previous card's value + 0.5. However, it cannot beat the Dragon.",
+  "rulesTichuSpecialPhoenixLine2": "In combinations (Pair/Triple/Full House/Straight, etc.) it can substitute for any number.",
+  "rulesTichuSpecialPhoenixLine3": "Worth -25 points, so taking it is a disadvantage.",
+  "rulesTichuSpecialDragonTitle": "Dragon",
+  "rulesTichuSpecialDragonLine1": "The strongest card; can only be played as a single.",
+  "rulesTichuSpecialDragonLine2": "Worth +25 points, but the trick won with the Dragon must be given to one opponent.",
+
+  "rulesTichuDeclarationTitle": "Tichu Declaration",
+  "rulesTichuDeclarationBody": "A Tichu declaration is a bet that you will be the first to empty your hand this round. Success earns bonus points for your team; failure deducts points.",
+  "rulesTichuLargeTichu": "Large Tichu",
+  "rulesTichuLargeTichuWhen": "Declared after receiving only the first 8 cards (before seeing the remaining 6)",
+  "rulesTichuSmallTichu": "Small Tichu",
+  "rulesTichuSmallTichuWhen": "Declared after receiving all 14 cards, but before playing any card",
+  "rulesTichuDeclSuccess": "Success {points}",
+  "@rulesTichuDeclSuccess": {
+    "placeholders": {
+      "points": { "type": "String" }
+    }
+  },
+  "rulesTichuDeclFail": "Fail {points}",
+  "@rulesTichuDeclFail": {
+    "placeholders": {
+      "points": { "type": "String" }
+    }
+  },
+
+  "rulesTichuFlowTitle": "Turn Sequence",
+  "rulesTichuFlowBody": "1. All players receive 8 cards each.\n2. After viewing 8 cards, you may declare Large Tichu.\n3. The remaining 6 cards are dealt, totaling 14.\n4. Each player passes 1 card to each of the other 3 players.\n5. After the exchange, before playing any card, you may declare Small Tichu.\n6. The player holding the Mahjong leads the first trick.",
+
+  "rulesTichuPlayTitle": "Play Rules",
+  "rulesTichuPlayBody": "• You can only play the same type of combination as the leading play, but higher. (e.g., a higher single over a single, a higher pair over a pair)\n• Available combinations:\n   - Single (1 card)\n   - Pair (2 cards of the same number)\n   - Triple (3 cards of the same number)\n   - Full House (Triple + Pair)\n   - Straight (5+ consecutive numbers)\n   - Consecutive Pairs (2+ consecutive pairs = 4+ cards)\n• You may pass on your turn if you cannot or do not want to play.",
+
+  "rulesTichuBombTitle": "Bomb",
+  "rulesTichuBombBody": "A Bomb can be played at any time, even out of turn, and beats any combination.\n\n• Four-of-a-Kind Bomb: 4 cards of the same number (e.g., 7♠ 7♥ 7♦ 7♣)\n• Straight Flush Bomb: 5+ consecutive cards of the same suit\n\nBomb hierarchy:\n  Straight Flush > Four-of-a-Kind\n  Same type: higher number / longer straight wins",
+
+  "rulesTichuScoringTitle": "Scoring",
+  "rulesTichuScoringBody": "Card points:\n• 5: 5 points\n• 10, K: 10 points\n• Dragon: +25 points / Phoenix: -25 points\n• All other cards: 0 points\n\nRound settlement:\n• The player who finishes 1st takes all trick points collected by the last-place (4th) player.\n• Cards remaining in the last player's hand go to the opposing team.\n• If both partners on one team finish 1st and 2nd (\"Double Victory\"), that round ends immediately — the winning team gets +200 points (no trick point calculation).\n• Tichu declaration success/failure bonuses are added on top.",
+
+  "rulesTichuWinTitle": "Victory Condition",
+  "rulesTichuWinBody": "The first team to reach the target score (default 1000 points) set when creating the room wins. Ranked games use a fixed target of 1000 points.",
+
+  "rulesSkGoalTitle": "Game Objective",
+  "rulesSkGoalBody": "A trick-taking game for 2–6 players (free-for-all). Over 10 rounds, you must accurately predict the number of tricks you will win each round to score points.",
+
+  "rulesSkCardCompositionTitle": "Card Composition (67 base cards)",
+  "rulesSkNumberCards": "Number Cards (1 – 13)",
+  "rulesSkNumberCardsSub": "4 suits × 13 cards (Yellow / Green / Purple / Black)",
+  "rulesSkEscape": "Escape",
+  "rulesSkEscapeSub": "Never wins a trick",
+  "rulesSkPirate": "Pirate",
+  "rulesSkPirateSub": "Beats all number cards",
+  "rulesSkMermaid": "Mermaid",
+  "rulesSkMermaidSub": "Captures Skull King (+50 bonus)",
+  "rulesSkSkullKing": "Skull King",
+  "rulesSkSkullKingSub": "Beats Pirates (+30 bonus per Pirate)",
+  "rulesSkTigress": "Tigress",
+  "rulesSkTigressSub": "Choose to play as Pirate or Escape",
+  "rulesSkIncludedByDefault": "Included by default",
+  "rulesSkCardCount": "{count} cards",
+  "@rulesSkCardCount": {
+    "placeholders": {
+      "count": { "type": "int" }
+    }
+  },
+
+  "rulesSkTrumpTitle": "Black suit = Trump",
+  "rulesSkTrumpBody": "Black number cards beat all other suit number cards regardless of number. However, you must follow the lead suit (the suit of the first number card) if you can, and may only play black when you have no cards of the led suit.",
+
+  "rulesSkSpecialTitle": "Special Card Rules",
+  "rulesSkSpecialEscapeTitle": "Escape",
+  "rulesSkSpecialEscapeLine1": "Never wins a trick. Can be played at any time regardless of suit following.",
+  "rulesSkSpecialEscapeLine2": "If all players play only Escapes, the lead player takes the trick.",
+  "rulesSkSpecialPirateTitle": "Pirate",
+  "rulesSkSpecialPirateLine1": "Beats all number cards (including black trumps). If multiple Pirates appear in one trick, the first one played wins.",
+  "rulesSkSpecialPirateLine2": "Beats Mermaids but loses to Skull King.",
+  "rulesSkSpecialMermaidTitle": "Mermaid",
+  "rulesSkSpecialMermaidLine1": "Loses to Pirates but captures and beats Skull King.",
+  "rulesSkSpecialMermaidLine2": "When a Mermaid captures Skull King, the trick winner gets +50 bonus.",
+  "rulesSkSpecialMermaidLine3": "If only Mermaids are present (no Pirates/Skull King), they beat number cards.",
+  "rulesSkSpecialSkullKingTitle": "Skull King",
+  "rulesSkSpecialSkullKingLine1": "Beats Pirates — +30 bonus per Pirate defeated.",
+  "rulesSkSpecialSkullKingLine2": "However, loses to Mermaids (gets captured).",
+  "rulesSkSpecialTigressTitle": "Tigress — 3 cards by default",
+  "rulesSkSpecialTigressLine1": "When playing, choose either Pirate or Escape.",
+  "rulesSkSpecialTigressLine2": "Tigress played as Pirate works identically to a Pirate, including the Skull King's +30 bonus.",
+  "rulesSkSpecialTigressLine3": "Tigress played as Escape works identically to an Escape and never wins a trick.",
+  "rulesSkSpecialTigressLine4": "A Tigress played as Pirate/Escape shows a purple check mark in the top-left corner to distinguish it from regular Pirate/Escape cards.",
+  "rulesSkTigressPreviewTitle": "In-game display example",
+  "rulesSkTigressChoiceEscape": "Played as Escape",
+  "rulesSkTigressChoicePirate": "Played as Pirate",
+
+  "rulesSkFlowTitle": "Turn Sequence",
+  "rulesSkFlowBody": "1. In Round N, each player receives N cards. (Rounds 1–10)\n2. All players simultaneously predict (bid) the number of tricks they will win.\n3. Starting from the lead player, cards are played following suit-following rules.\n4. After each round, scores are calculated based on bid success/failure.",
+
+  "rulesSkScoringTitle": "Scoring",
+  "rulesSkScoringBody": "• Bid 0 success (0 tricks won): +10 × round number\n• Bid 0 failure: -10 × round number\n• Bid N success (exactly N tricks won): +20 × N + bonus\n• Bid N failure: -10 × |difference| (no bonus)\n• Bonuses are only awarded when the bid is exact.",
+
+  "rulesSkExample1Title": "Example 1. Simple bid success",
+  "rulesSkExample1Setup": "Round 3 · Bid 2 · 2 tricks won · No bonus",
+  "rulesSkExample1Calc": "20 × 2 = 40",
+  "rulesSkExample1Result": "+40 pts",
+  "rulesSkExample2Title": "Example 2. Bid 0 success",
+  "rulesSkExample2Setup": "Round 5 · Bid 0 · 0 tricks won",
+  "rulesSkExample2Calc": "10 × 5 = 50",
+  "rulesSkExample2Result": "+50 pts",
+  "rulesSkExample3Title": "Example 3. Bid failure",
+  "rulesSkExample3Setup": "Round 5 · Bid 3 · 1 trick won (difference 2)",
+  "rulesSkExample3Calc": "-10 × 2 = -20",
+  "rulesSkExample3Result": "-20 pts",
+  "rulesSkExample4Title": "Example 4. Skull King captures 2 Pirates",
+  "rulesSkExample4Setup": "Round 3 · Bid 2 · 2 tricks won · Bonus +60 (2 Pirates × 30)",
+  "rulesSkExample4Calc": "(20 × 2) + 60 = 100",
+  "rulesSkExample4Result": "+100 pts",
+  "rulesSkExample5Title": "Example 5. Mermaid captures Skull King",
+  "rulesSkExample5Setup": "Round 4 · Bid 1 · 1 trick won · Bonus +50 (Mermaid × SK)",
+  "rulesSkExample5Calc": "(20 × 1) + 50 = 70",
+  "rulesSkExample5Result": "+70 pts",
+  "rulesSkExample6Title": "Example 6. Bid 0 failure (took a trick)",
+  "rulesSkExample6Setup": "Round 7 · Bid 0 · 1 trick won",
+  "rulesSkExample6Calc": "-10 × 7 = -70",
+  "rulesSkExample6Result": "-70 pts",
+
+  "rulesSkWinTitle": "Victory Condition",
+  "rulesSkWinBody": "After all 10 rounds, the player with the highest cumulative score wins.",
+
+  "rulesSkExpansionTitle": "Expansions (Optional)",
+  "rulesSkExpansionBody": "Each expansion can be individually selected when creating a room. Expansion cards are shuffled into the base deck.",
+  "rulesSkExpKraken": "\uD83D\uDC19 Kraken",
+  "rulesSkExpKrakenDesc": "A trick containing the Kraken is voided. No one wins the trick and no bonuses are awarded. The player who would have won without the Kraken leads the next trick.",
+  "rulesSkExpWhiteWhale": "\uD83D\uDC0B White Whale",
+  "rulesSkExpWhiteWhaleDesc": "Neutralizes all special card effects. Only number cards are compared in the trick, and the highest number wins regardless of suit. If no number cards are present, the trick is voided.",
+  "rulesSkExpLoot": "\uD83D\uDCB0 Loot",
+  "rulesSkExpLootDesc": "The trick winner earns +20 bonus per Loot card in the trick, and each player who played a Loot card also earns +20 as their own bonus. (Only awarded on bid success)"
 }

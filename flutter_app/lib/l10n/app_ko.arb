@@ -539,5 +539,61 @@
   "gameReceivedCards": "받은 카드",
   "gameBadgeLarge": "라지",
   "gameBadgeSmall": "스몰",
-  "gameNotAfk": "잠수아님"
+  "gameNotAfk": "잠수아님",
+
+  "spectatorRecovering": "관전 복구 중...",
+  "spectatorTransitioning": "관전 화면 전환 중...",
+  "spectatorRecheckingState": "현재 관전 상태를 다시 확인하고 있습니다.",
+  "spectatorWatching": "관전중",
+  "spectatorWaitingForGame": "게임 시작 대기 중...",
+  "spectatorSit": "착석",
+  "spectatorHost": "방장",
+  "spectatorReady": "준비완료",
+  "spectatorWaiting": "대기중",
+  "spectatorTeamWin": "Team {team} 승리!",
+  "@spectatorTeamWin": {
+    "placeholders": {
+      "team": { "type": "String" }
+    }
+  },
+  "spectatorDraw": "무승부!",
+  "spectatorTeamScores": "Team A: {scoreA} | Team B: {scoreB}",
+  "@spectatorTeamScores": {
+    "placeholders": {
+      "scoreA": { "type": "int" },
+      "scoreB": { "type": "int" }
+    }
+  },
+  "spectatorAutoReturn": "3초 후 대기실로 이동...",
+  "spectatorPhaseLargeTichu": "라지 티츄",
+  "spectatorPhaseCardExchange": "카드 교환",
+  "spectatorPhasePlaying": "플레이 중",
+  "spectatorPhaseRoundEnd": "라운드 종료",
+  "spectatorPhaseGameEnd": "게임 종료",
+  "spectatorFinished": "완료",
+  "spectatorRequesting": "요청중... ({count}장)",
+  "@spectatorRequesting": {
+    "placeholders": {
+      "count": { "type": "int" }
+    }
+  },
+  "spectatorRequestCardView": "패 보기 요청 ({count}장)",
+  "@spectatorRequestCardView": {
+    "placeholders": {
+      "count": { "type": "int" }
+    }
+  },
+  "spectatorSoundEffects": "효과음",
+  "spectatorListTitle": "관전자 목록",
+  "spectatorNoSpectators": "관전자가 없습니다",
+  "spectatorClose": "닫기",
+  "spectatorChat": "채팅",
+  "spectatorMessageHint": "메시지 입력...",
+  "spectatorNewTrick": "새 판 시작",
+  "spectatorPlayedCards": "{name}가 낸 패",
+  "@spectatorPlayedCards": {
+    "placeholders": {
+      "name": { "type": "String" }
+    }
+  }
 }

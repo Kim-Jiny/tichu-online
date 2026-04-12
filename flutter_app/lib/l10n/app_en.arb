@@ -878,5 +878,61 @@
   "gameReceivedCards": "Received Cards",
   "gameBadgeLarge": "Large",
   "gameBadgeSmall": "Small",
-  "gameNotAfk": "Not AFK"
+  "gameNotAfk": "Not AFK",
+
+  "spectatorRecovering": "Recovering spectator view...",
+  "spectatorTransitioning": "Transitioning spectator view...",
+  "spectatorRecheckingState": "Rechecking current spectator state.",
+  "spectatorWatching": "Spectating",
+  "spectatorWaitingForGame": "Waiting for game to start...",
+  "spectatorSit": "Sit",
+  "spectatorHost": "Host",
+  "spectatorReady": "Ready",
+  "spectatorWaiting": "Waiting",
+  "spectatorTeamWin": "Team {team} wins!",
+  "@spectatorTeamWin": {
+    "placeholders": {
+      "team": { "type": "String" }
+    }
+  },
+  "spectatorDraw": "Draw!",
+  "spectatorTeamScores": "Team A: {scoreA} | Team B: {scoreB}",
+  "@spectatorTeamScores": {
+    "placeholders": {
+      "scoreA": { "type": "int" },
+      "scoreB": { "type": "int" }
+    }
+  },
+  "spectatorAutoReturn": "Moving to waiting room in 3s...",
+  "spectatorPhaseLargeTichu": "Large Tichu",
+  "spectatorPhaseCardExchange": "Card Exchange",
+  "spectatorPhasePlaying": "Playing",
+  "spectatorPhaseRoundEnd": "Round Over",
+  "spectatorPhaseGameEnd": "Game Over",
+  "spectatorFinished": "Done",
+  "spectatorRequesting": "Requesting... ({count} cards)",
+  "@spectatorRequesting": {
+    "placeholders": {
+      "count": { "type": "int" }
+    }
+  },
+  "spectatorRequestCardView": "View hand ({count} cards)",
+  "@spectatorRequestCardView": {
+    "placeholders": {
+      "count": { "type": "int" }
+    }
+  },
+  "spectatorSoundEffects": "Sound Effects",
+  "spectatorListTitle": "Spectator List",
+  "spectatorNoSpectators": "No spectators",
+  "spectatorClose": "Close",
+  "spectatorChat": "Chat",
+  "spectatorMessageHint": "Type a message...",
+  "spectatorNewTrick": "New trick",
+  "spectatorPlayedCards": "{name}'s play",
+  "@spectatorPlayedCards": {
+    "placeholders": {
+      "name": { "type": "String" }
+    }
+  }
 }

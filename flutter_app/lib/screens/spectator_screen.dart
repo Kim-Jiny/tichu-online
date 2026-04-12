@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import '../l10n/app_localizations.dart';
 import '../models/player.dart';
 import '../services/game_service.dart';
 import '../services/session_service.dart';
@@ -110,7 +111,7 @@ class _SpectatorScreenState extends State<SpectatorScreen> {
             builder: (context, game, _) {
               if (session.isRestoring) {
                 return _buildRecoveryLoading(
-                  title: '관전 복구 중...',
+                  title: L10n.of(context).spectatorRecovering,
                   subtitle: session.restoreStatusMessage,
                 );
               }
@@ -121,8 +122,8 @@ class _SpectatorScreenState extends State<SpectatorScreen> {
                   _isLeaving = true;
                 }
                 return _buildRecoveryLoading(
-                  title: '관전 화면 전환 중...',
-                  subtitle: '현재 관전 상태를 다시 확인하고 있습니다.',
+                  title: L10n.of(context).spectatorTransitioning,
+                  subtitle: L10n.of(context).spectatorRecheckingState,
                 );
               }
               if (_isLeaving) {
@@ -177,14 +178,14 @@ class _SpectatorScreenState extends State<SpectatorScreen> {
                       color: const Color(0xFFE8E0F8),
                       borderRadius: BorderRadius.circular(12),
                     ),
-                    child: const Row(
+                    child: Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        Icon(Icons.visibility, size: 14, color: Color(0xFF4A4080)),
-                        SizedBox(width: 4),
+                        const Icon(Icons.visibility, size: 14, color: Color(0xFF4A4080)),
+                        const SizedBox(width: 4),
                         Text(
-                          '관전중',
-                          style: TextStyle(
+                          L10n.of(context).spectatorWatching,
+                          style: const TextStyle(
                             fontSize: 12,
                             fontWeight: FontWeight.bold,
                             color: Color(0xFF4A4080),
@@ -294,9 +295,9 @@ class _SpectatorScreenState extends State<SpectatorScreen> {
                         ],
                         SizedBox(height: isLandscape ? 20 : 28),
                         // Waiting text
-                        const Text(
-                          '게임 시작 대기 중...',
-                          style: TextStyle(
+                        Text(
+                          L10n.of(context).spectatorWaitingForGame,
+                          style: const TextStyle(
                             color: Color(0xFF8A8A8A),
                             fontSize: 15,
                           ),
@@ -401,7 +402,7 @@ class _SpectatorScreenState extends State<SpectatorScreen> {
           ),
           const SizedBox(height: 8),
           Text(
-            isEmpty ? '착석' : name,
+            isEmpty ? L10n.of(context).spectatorSit : name,
             style: TextStyle(
               color: isEmpty ? const Color(0xFF9AA7B0) : const Color(0xFF5A4038),
               fontSize: 12,
@@ -412,7 +413,7 @@ class _SpectatorScreenState extends State<SpectatorScreen> {
           if (!isEmpty) ...[
             const SizedBox(height: 4),
             Text(
-              isHost ? '방장' : (isReady ? '준비완료' : '대기중'),
+              isHost ? L10n.of(context).spectatorHost : (isReady ? L10n.of(context).spectatorReady : L10n.of(context).spectatorWaiting),
               style: TextStyle(
                 color: isHost
                     ? const Color(0xFFE6A800)
@@ -673,7 +674,8 @@ class _SpectatorScreenState extends State<SpectatorScreen> {
   Widget _buildGameEndOverlay(GameService game, Map<String, dynamic> scores) {
     final teamA = scores['teamA'] ?? 0;
     final teamB = scores['teamB'] ?? 0;
-    final winnerText = teamA > teamB ? 'Team A 승리!' : teamB > teamA ? 'Team B 승리!' : '무승부!';
+    final l10n = L10n.of(context);
+    final winnerText = teamA > teamB ? l10n.spectatorTeamWin('A') : teamB > teamA ? l10n.spectatorTeamWin('B') : l10n.spectatorDraw;
 
     return Container(
       color: Colors.black54,
@@ -698,7 +700,7 @@ class _SpectatorScreenState extends State<SpectatorScreen> {
               ),
               const SizedBox(height: 12),
               Text(
-                'Team A: $teamA | Team B: $teamB',
+                l10n.spectatorTeamScores(teamA as int, teamB as int),
                 style: const TextStyle(
                   fontSize: 16,
                   fontWeight: FontWeight.bold,
@@ -706,9 +708,9 @@ class _SpectatorScreenState extends State<SpectatorScreen> {
                 ),
               ),
               const SizedBox(height: 12),
-              const Text(
-                '3초 후 대기실로 이동...',
-                style: TextStyle(fontSize: 12, color: Color(0xFF8A7A72)),
+              Text(
+                l10n.spectatorAutoReturn,
+                style: const TextStyle(fontSize: 12, color: Color(0xFF8A7A72)),
               ),
             ],
           ),
@@ -764,14 +766,14 @@ class _SpectatorScreenState extends State<SpectatorScreen> {
                     color: const Color(0xFFE8E0F8),
                     borderRadius: BorderRadius.circular(10),
                   ),
-                  child: const Row(
+                  child: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      Icon(Icons.visibility, size: 12, color: Color(0xFF4A4080)),
-                      SizedBox(width: 3),
+                      const Icon(Icons.visibility, size: 12, color: Color(0xFF4A4080)),
+                      const SizedBox(width: 3),
                       Text(
-                        '관전중',
-                        style: TextStyle(
+                        L10n.of(context).spectatorWatching,
+                        style: const TextStyle(
                           fontSize: 11,
                           fontWeight: FontWeight.bold,
                           color: Color(0xFF4A4080),
@@ -831,14 +833,14 @@ class _SpectatorScreenState extends State<SpectatorScreen> {
                         color: const Color(0xFFE8E0F8),
                         borderRadius: BorderRadius.circular(12),
                       ),
-                      child: const Row(
+                      child: Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          Icon(Icons.visibility, size: 14, color: Color(0xFF4A4080)),
-                          SizedBox(width: 4),
+                          const Icon(Icons.visibility, size: 14, color: Color(0xFF4A4080)),
+                          const SizedBox(width: 4),
                           Text(
-                            '관전중',
-                            style: TextStyle(
+                            L10n.of(context).spectatorWatching,
+                            style: const TextStyle(
                               fontSize: 12,
                               fontWeight: FontWeight.bold,
                               color: Color(0xFF4A4080),
@@ -909,17 +911,18 @@ class _SpectatorScreenState extends State<SpectatorScreen> {
   }
 
   String _getPhaseText(String phase) {
+    final l10n = L10n.of(context);
     switch (phase) {
       case 'large_tichu_phase':
-        return '라지 티츄';
+        return l10n.spectatorPhaseLargeTichu;
       case 'card_exchange':
-        return '카드 교환';
+        return l10n.spectatorPhaseCardExchange;
       case 'playing':
-        return '플레이 중';
+        return l10n.spectatorPhasePlaying;
       case 'round_end':
-        return '라운드 종료';
+        return l10n.spectatorPhaseRoundEnd;
       case 'game_end':
-        return '게임 종료';
+        return l10n.spectatorPhaseGameEnd;
       default:
         return phase;
     }
@@ -1048,7 +1051,7 @@ class _SpectatorScreenState extends State<SpectatorScreen> {
             Padding(
               padding: EdgeInsets.all(compact ? 6 : 8),
               child: Text(
-                '완료',
+                L10n.of(context).spectatorFinished,
                 style: TextStyle(
                   color: const Color(0xFF9A8E8A),
                   fontSize: compact ? 9 : 10,
@@ -1151,7 +1154,7 @@ class _SpectatorScreenState extends State<SpectatorScreen> {
             ),
             SizedBox(height: compact ? 3 : 4),
             Text(
-              '요청중... ($cardCount장)',
+              L10n.of(context).spectatorRequesting(cardCount),
               style: TextStyle(
                 color: const Color(0xFFB58343),
                 fontSize: compact ? 9 : 10,
@@ -1184,7 +1187,7 @@ class _SpectatorScreenState extends State<SpectatorScreen> {
             ),
             SizedBox(height: compact ? 1 : 2),
             Text(
-              '패 보기 요청 ($cardCount장)',
+              L10n.of(context).spectatorRequestCardView(cardCount),
               style: TextStyle(
                 color: const Color(0xFF4F88C8),
                 fontSize: compact ? 9 : 10,
@@ -1270,9 +1273,9 @@ class _SpectatorScreenState extends State<SpectatorScreen> {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text(
-              '효과음',
-              style: TextStyle(
+            Text(
+              L10n.of(context).spectatorSoundEffects,
+              style: const TextStyle(
                 fontSize: 12,
                 fontWeight: FontWeight.bold,
                 color: Color(0xFF5A4038),
@@ -1342,20 +1345,20 @@ class _SpectatorScreenState extends State<SpectatorScreen> {
       context: context,
       builder: (ctx) => AlertDialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        title: const Row(
+        title: Row(
           children: [
-            Icon(Icons.people_alt, color: Color(0xFF5A4038)),
-            SizedBox(width: 8),
-            Text('관전자 목록'),
+            const Icon(Icons.people_alt, color: Color(0xFF5A4038)),
+            const SizedBox(width: 8),
+            Text(L10n.of(context).spectatorListTitle),
           ],
         ),
         content: spectators.isEmpty
-            ? const SizedBox(
+            ? SizedBox(
                 height: 60,
                 child: Center(
                   child: Text(
-                    '관전자가 없습니다',
-                    style: TextStyle(color: Color(0xFF9A8E8A)),
+                    L10n.of(context).spectatorNoSpectators,
+                    style: const TextStyle(color: Color(0xFF9A8E8A)),
                   ),
                 ),
               )
@@ -1380,7 +1383,7 @@ class _SpectatorScreenState extends State<SpectatorScreen> {
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx),
-            child: const Text('닫기'),
+            child: Text(L10n.of(context).spectatorClose),
           ),
         ],
       ),
@@ -1458,9 +1461,9 @@ class _SpectatorScreenState extends State<SpectatorScreen> {
               ),
               child: Row(
                 children: [
-                  const Text(
-                    '채팅',
-                    style: TextStyle(
+                  Text(
+                    L10n.of(context).spectatorChat,
+                    style: const TextStyle(
                       color: Colors.white,
                       fontWeight: FontWeight.bold,
                       fontSize: 16,
@@ -1506,10 +1509,10 @@ class _SpectatorScreenState extends State<SpectatorScreen> {
                   Expanded(
                     child: TextField(
                       controller: _chatController,
-                      decoration: const InputDecoration(
-                        hintText: '메시지 입력...',
+                      decoration: InputDecoration(
+                        hintText: L10n.of(context).spectatorMessageHint,
                         border: InputBorder.none,
-                        contentPadding: EdgeInsets.symmetric(horizontal: 12),
+                        contentPadding: const EdgeInsets.symmetric(horizontal: 12),
                       ),
                       style: const TextStyle(fontSize: 14),
                       onSubmitted: (_) => _sendChatMessage(game),
@@ -1615,7 +1618,7 @@ class _SpectatorScreenState extends State<SpectatorScreen> {
             borderRadius: BorderRadius.circular(12),
           ),
           child: Text(
-            '새 판 시작',
+            L10n.of(context).spectatorNewTrick,
             style: TextStyle(
               color: const Color(0xFF9A8E8A),
               fontSize: compact ? 12 : 14,
@@ -1650,28 +1653,17 @@ class _SpectatorScreenState extends State<SpectatorScreen> {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Text.rich(
-              TextSpan(
-                children: [
-                  TextSpan(
-                    text: playerName.length > 8 ? '${playerName.substring(0, 8)}..' : playerName,
-                    style: TextStyle(
-                      fontSize: compact ? 12 : 14,
-                      fontWeight: FontWeight.bold,
-                      color: nameColor,
-                    ),
-                  ),
-                  TextSpan(
-                    text: '가 낸 패',
-                    style: TextStyle(
-                      fontSize: compact ? 11 : 12,
-                      color: const Color(0xFF8A7A72),
-                    ),
-                  ),
-                ],
+            Text(
+              L10n.of(context).spectatorPlayedCards(
+                playerName.length > 8 ? '${playerName.substring(0, 8)}..' : playerName,
               ),
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
+              style: TextStyle(
+                fontSize: compact ? 12 : 14,
+                fontWeight: FontWeight.bold,
+                color: nameColor,
+              ),
             ),
             SizedBox(height: compact ? 4 : 6),
             _buildOverlappedCards(

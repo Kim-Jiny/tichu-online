@@ -539,5 +539,61 @@
   "gameReceivedCards": "Erhaltene Karten",
   "gameBadgeLarge": "Large",
   "gameBadgeSmall": "Small",
-  "gameNotAfk": "Nicht AFK"
+  "gameNotAfk": "Nicht AFK",
+
+  "spectatorRecovering": "Zuschaueransicht wird wiederhergestellt...",
+  "spectatorTransitioning": "Zuschaueransicht wird gewechselt...",
+  "spectatorRecheckingState": "Aktueller Zuschauerstatus wird erneut geprüft.",
+  "spectatorWatching": "Zuschauer",
+  "spectatorWaitingForGame": "Warten auf Spielstart...",
+  "spectatorSit": "Sitzen",
+  "spectatorHost": "Gastgeber",
+  "spectatorReady": "Bereit",
+  "spectatorWaiting": "Wartend",
+  "spectatorTeamWin": "Team {team} gewinnt!",
+  "@spectatorTeamWin": {
+    "placeholders": {
+      "team": { "type": "String" }
+    }
+  },
+  "spectatorDraw": "Unentschieden!",
+  "spectatorTeamScores": "Team A: {scoreA} | Team B: {scoreB}",
+  "@spectatorTeamScores": {
+    "placeholders": {
+      "scoreA": { "type": "int" },
+      "scoreB": { "type": "int" }
+    }
+  },
+  "spectatorAutoReturn": "In 3 Sekunden zurück zum Warteraum...",
+  "spectatorPhaseLargeTichu": "Large Tichu",
+  "spectatorPhaseCardExchange": "Kartentausch",
+  "spectatorPhasePlaying": "Spiel läuft",
+  "spectatorPhaseRoundEnd": "Runde beendet",
+  "spectatorPhaseGameEnd": "Spiel beendet",
+  "spectatorFinished": "Fertig",
+  "spectatorRequesting": "Anfrage... ({count} Karten)",
+  "@spectatorRequesting": {
+    "placeholders": {
+      "count": { "type": "int" }
+    }
+  },
+  "spectatorRequestCardView": "Hand ansehen ({count} Karten)",
+  "@spectatorRequestCardView": {
+    "placeholders": {
+      "count": { "type": "int" }
+    }
+  },
+  "spectatorSoundEffects": "Soundeffekte",
+  "spectatorListTitle": "Zuschauerliste",
+  "spectatorNoSpectators": "Keine Zuschauer",
+  "spectatorClose": "Schließen",
+  "spectatorChat": "Chat",
+  "spectatorMessageHint": "Nachricht eingeben...",
+  "spectatorNewTrick": "Neuer Stich",
+  "spectatorPlayedCards": "{name}s Karten",
+  "@spectatorPlayedCards": {
+    "placeholders": {
+      "name": { "type": "String" }
+    }
+  }
 }

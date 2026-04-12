@@ -154,5 +154,284 @@
   "loginCheckAvailability": "Check",
   "loginSetNicknameTitle": "Set Nickname",
   "loginSetNicknameDesc": "Choose a nickname to use in the game",
-  "loginGetStarted": "Get Started"
+  "loginGetStarted": "Get Started",
+
+  "lobbyRoomInviteTitle": "Room Invite",
+  "lobbyRoomInviteMessage": "{nickname} invited you to a room!",
+  "@lobbyRoomInviteMessage": {
+    "placeholders": {
+      "nickname": { "type": "String" }
+    }
+  },
+  "lobbyDecline": "Decline",
+  "lobbyJoin": "Join",
+  "lobbyInviteFriendsTitle": "Invite Friends",
+  "lobbyNoOnlineFriends": "No online friends available to invite",
+  "lobbyInviteSent": "Invitation sent to {nickname}",
+  "@lobbyInviteSent": {
+    "placeholders": {
+      "nickname": { "type": "String" }
+    }
+  },
+  "lobbyInvite": "Invite",
+  "lobbySpectatorListTitle": "Spectator List",
+  "lobbyNoSpectators": "No one is spectating",
+  "lobbyRoomSettingsTitle": "Room Settings",
+  "lobbyEnterRoomTitle": "Enter a room title",
+  "lobbyChange": "Change",
+  "lobbyCreateRoom": "Create Room",
+  "lobbyCreateRoomSubtitle": "Set a room title and rules, and the waiting room opens right away.",
+  "lobbySelectGame": "Select Game",
+  "lobbySelectGameDesc": "Choose the game to play.",
+  "lobbyTichu": "Tichu",
+  "lobbySkullKing": "Skull King",
+  "lobbyMaxPlayers": "Max Players",
+  "lobbyPlayerCount": "{count}P",
+  "@lobbyPlayerCount": {
+    "placeholders": {
+      "count": { "type": "int" }
+    }
+  },
+  "lobbyExpansionOptional": "Expansions (Optional)",
+  "lobbyExpansionDesc": "Add special cards to the base rules. Multiple selections allowed.",
+  "lobbyExpKraken": "Kraken",
+  "lobbyExpKrakenDesc": "Void a trick",
+  "lobbyExpWhiteWhale": "White Whale",
+  "lobbyExpWhiteWhaleDesc": "Neutralize special cards",
+  "lobbyExpLoot": "Loot",
+  "lobbyExpLootDesc": "Bonus points",
+  "lobbyBasicInfo": "Basic Info",
+  "lobbyBasicInfoDesc": "Set the room name and visibility.",
+  "lobbyRoomName": "Room Name",
+  "lobbyRandom": "Random",
+  "lobbyPrivateRoom": "Private Room",
+  "lobbyPrivateRoomDescRanked": "Cannot create a private room in ranked play.",
+  "lobbyPrivateRoomDesc": "Only invited players or those with the password can join.",
+  "lobbyPasswordHint": "Password (4+ characters)",
+  "lobbyRanked": "Ranked",
+  "lobbyRankedDesc": "Score is fixed at 1000 and private settings are automatically disabled.",
+  "lobbyGameSettings": "Game Settings",
+  "lobbyGameSettingsDescSk": "Set the turn time.",
+  "lobbyGameSettingsDescTichu": "Set the turn time and target score.",
+  "lobbyTimeLimit": "Time Limit",
+  "lobbySuffixSeconds": "sec",
+  "lobbyTargetScore": "Target Score",
+  "lobbySuffixPoints": "pts",
+  "lobbyTimeLimitRange": "10–999",
+  "lobbyTargetScoreRange": "100–20000",
+  "lobbyTargetScoreFixed": "1000 (fixed)",
+  "lobbyRankedFixedScoreInfo": "Ranked play uses a fixed target score of 1000.",
+  "lobbyNormalSettingsInfo": "Time limit: 10–999 sec, target score: 100–20000 pts.",
+  "lobbyEnterRoomName": "Please enter a room name.",
+  "lobbyPasswordTooShort": "Password must be at least 4 characters.",
+  "lobbyDuplicateLoginKicked": "You were logged out because another device logged in",
+  "lobbyRoomListTitle": "Game Room List",
+  "lobbyEmptyRoomList": "No rooms yet!\nWhy not create one?",
+  "lobbySkullKingBadge": "Skull King",
+  "lobbyTichuBadge": "Tichu",
+  "lobbyRoomTimeSec": "{seconds}s",
+  "@lobbyRoomTimeSec": {
+    "placeholders": {
+      "seconds": { "type": "int" }
+    }
+  },
+  "lobbyRoomTimeAndScore": "{seconds}s · {score}pts",
+  "@lobbyRoomTimeAndScore": {
+    "placeholders": {
+      "seconds": { "type": "int" },
+      "score": { "type": "int" }
+    }
+  },
+  "lobbyExpKrakenShort": "Kraken",
+  "lobbyExpWhaleShort": "Whale",
+  "lobbyExpLootShort": "Loot",
+  "lobbyInProgress": "In game {count}",
+  "@lobbyInProgress": {
+    "placeholders": {
+      "count": { "type": "int" }
+    }
+  },
+  "lobbySocialLinkRequired": "Social Link Required",
+  "lobbySocialLinkRequiredDesc": "Ranked play requires a linked social account.\nGo to Settings > Social Link to link your Google or Kakao account.",
+  "lobbyJoinPrivateRoom": "Join Private Room",
+  "lobbyEnter": "Enter",
+  "lobbySpectatePrivateRoom": "Spectate Private Room",
+  "lobbySpectate": "Spectate",
+  "lobbyPassword": "Password",
+  "lobbyMessageHint": "Type a message...",
+  "lobbyChat": "Chat",
+  "lobbyViewProfile": "View Profile",
+  "lobbyAddFriend": "Add Friend",
+  "lobbyUnblock": "Unblock",
+  "lobbyBlock": "Block",
+  "lobbyUnblocked": "User has been unblocked",
+  "lobbyBlocked": "User has been blocked",
+  "lobbyFriendRequestSent": "Friend request sent",
+  "lobbyReport": "Report",
+  "lobbyWaitingRoomTools": "Waiting Room Tools",
+  "lobbyWaitingRoomToolsDesc": "Features not directly related to game preparation can be found here.",
+  "lobbyFriendsDm": "Friends / DM",
+  "lobbyUnreadDmCount": "You have {count} unread requests and DMs.",
+  "@lobbyUnreadDmCount": {
+    "placeholders": {
+      "count": { "type": "int" }
+    }
+  },
+  "lobbyFriendsDmDesc": "View your friends list and DM conversations.",
+  "lobbyCurrentSpectators": "View {count} current spectators.",
+  "@lobbyCurrentSpectators": {
+    "placeholders": {
+      "count": { "type": "int" }
+    }
+  },
+  "lobbyMore": "More",
+  "lobbyRoomSettings": "Settings",
+  "lobbySkullKingRanked": "Skull King - Ranked",
+  "lobbyTichuRanked": "Tichu - Ranked",
+  "lobbySkullKingPlayers": "Skull King · {count}P",
+  "@lobbySkullKingPlayers": {
+    "placeholders": {
+      "count": { "type": "int" }
+    }
+  },
+  "lobbyStartGame": "Start Game",
+  "lobbyReady": "Ready",
+  "lobbyReadyDone": "Ready!",
+  "lobbyReportTitle": "Report {nickname}",
+  "@lobbyReportTitle": {
+    "placeholders": {
+      "nickname": { "type": "String" }
+    }
+  },
+  "lobbyReportWarning": "Reports are reviewed by the moderation team.\nFalse reports may result in penalties.",
+  "lobbySelectReason": "Select Reason",
+  "lobbyReportDetailHint": "Enter details (optional)",
+  "lobbyReportReasonAbuse": "Abuse/Insults",
+  "lobbyReportReasonSpam": "Spam/Flooding",
+  "lobbyReportReasonNickname": "Inappropriate Nickname",
+  "lobbyReportReasonGameplay": "Gameplay Disruption",
+  "lobbyReportReasonOther": "Other",
+  "lobbyProfileNotFound": "Profile not found",
+  "lobbyMyProfile": "My Profile",
+  "lobbyPlayerProfile": "Player Profile",
+  "lobbyAlreadyFriend": "Already friends",
+  "lobbyRequestPending": "Request pending",
+  "lobbyTichuSeasonRanked": "Tichu Season Ranked",
+  "lobbySkullKingSeasonRanked": "Skull King Season Ranked",
+  "lobbyTichuRecord": "Tichu Record",
+  "lobbySkullKingRecord": "Skull King Record",
+  "lobbyStatRecord": "Record",
+  "lobbyStatWinRate": "Win Rate",
+  "lobbyRecordFormat": "{games}G {wins}W {losses}L",
+  "@lobbyRecordFormat": {
+    "placeholders": {
+      "games": { "type": "int" },
+      "wins": { "type": "int" },
+      "losses": { "type": "int" }
+    }
+  },
+  "lobbyRecentMatches": "Recent Matches ({count})",
+  "@lobbyRecentMatches": {
+    "placeholders": {
+      "count": { "type": "int" }
+    }
+  },
+  "lobbyRecentMatchesTitle": "Recent Matches",
+  "lobbyRecentMatchesDesc": "View results of the last {count} matches.",
+  "@lobbyRecentMatchesDesc": {
+    "placeholders": {
+      "count": { "type": "int" }
+    }
+  },
+  "lobbySeeMore": "See More",
+  "lobbyNoRecentMatches": "No recent matches",
+  "lobbyMatchDesertion": "D",
+  "lobbyMatchDraw": "D",
+  "lobbyMatchWin": "W",
+  "lobbyMatchLoss": "L",
+  "lobbyMatchTypeSkullKing": "Skull King",
+  "lobbyMatchTypeRanked": "Ranked",
+  "lobbyMatchTypeNormal": "Normal",
+  "lobbyRankAndScore": "#{rank} ({score}pts)",
+  "@lobbyRankAndScore": {
+    "placeholders": {
+      "rank": { "type": "String" },
+      "score": { "type": "int" }
+    }
+  },
+  "lobbyMannerGood": "Good",
+  "lobbyMannerNormal": "Normal",
+  "lobbyMannerBad": "Bad",
+  "lobbyMannerVeryBad": "Very Bad",
+  "lobbyMannerWorst": "Terrible",
+  "lobbyManner": "Manner {label}",
+  "@lobbyManner": {
+    "placeholders": {
+      "label": { "type": "String" }
+    }
+  },
+  "lobbyDesertions": "Desertions {count}",
+  "@lobbyDesertions": {
+    "placeholders": {
+      "count": { "type": "int" }
+    }
+  },
+  "lobbyKick": "Kick",
+  "lobbyKickConfirm": "Kick {playerName}?",
+  "@lobbyKickConfirm": {
+    "placeholders": {
+      "playerName": { "type": "String" }
+    }
+  },
+  "lobbyHost": "Host",
+  "lobbyBot": "Bot",
+  "lobbyEmptySlot": "[Empty]",
+  "lobbyMaintenanceDefault": "Server maintenance scheduled",
+  "lobbyRoomInfoSk": "{seconds}s · {players}/{maxPlayers}P",
+  "@lobbyRoomInfoSk": {
+    "placeholders": {
+      "seconds": { "type": "int" },
+      "players": { "type": "int" },
+      "maxPlayers": { "type": "int" }
+    }
+  },
+  "lobbyRoomInfoTichu": "{seconds}s · {score}pts",
+  "@lobbyRoomInfoTichu": {
+    "placeholders": {
+      "seconds": { "type": "int" },
+      "score": { "type": "int" }
+    }
+  },
+  "lobbyRandomAdjTichu1": "Joyful",
+  "lobbyRandomAdjTichu2": "Exciting",
+  "lobbyRandomAdjTichu3": "Passionate",
+  "lobbyRandomAdjTichu4": "Fiery",
+  "lobbyRandomAdjTichu5": "Lucky",
+  "lobbyRandomAdjTichu6": "Legendary",
+  "lobbyRandomAdjTichu7": "Supreme",
+  "lobbyRandomAdjTichu8": "Invincible",
+  "lobbyRandomNounTichu1": "Tichu Room",
+  "lobbyRandomNounTichu2": "Card Game",
+  "lobbyRandomNounTichu3": "Showdown",
+  "lobbyRandomNounTichu4": "Round",
+  "lobbyRandomNounTichu5": "Game",
+  "lobbyRandomNounTichu6": "Battle",
+  "lobbyRandomNounTichu7": "Challenge",
+  "lobbyRandomNounTichu8": "Party",
+  "lobbyRandomAdjSk1": "Fearsome",
+  "lobbyRandomAdjSk2": "Legendary",
+  "lobbyRandomAdjSk3": "Invincible",
+  "lobbyRandomAdjSk4": "Ruthless",
+  "lobbyRandomAdjSk5": "Greedy",
+  "lobbyRandomAdjSk6": "Supreme",
+  "lobbyRandomAdjSk7": "Stormy",
+  "lobbyRandomAdjSk8": "Bold",
+  "lobbyRandomNounSk1": "Pirate Ship",
+  "lobbyRandomNounSk2": "Treasure Island",
+  "lobbyRandomNounSk3": "Voyage",
+  "lobbyRandomNounSk4": "Plunder",
+  "lobbyRandomNounSk5": "Captain",
+  "lobbyRandomNounSk6": "Sea Battle",
+  "lobbyRandomNounSk7": "Adventure",
+  "lobbyRandomNounSk8": "Kraken"
 }

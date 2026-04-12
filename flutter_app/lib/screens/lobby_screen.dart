@@ -2,6 +2,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
+import '../l10n/app_localizations.dart';
 import '../services/game_service.dart';
 import '../services/network_service.dart';
 import '../services/session_service.dart';
@@ -101,23 +102,24 @@ class _LobbyScreenState extends State<LobbyScreen> {
     final fromNickname = invite['fromNickname'] as String? ?? '';
     final roomName = invite['roomName'] as String? ?? '';
     final isRanked = invite['isRanked'] == true;
+    final l10n = L10n.of(context);
 
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        title: const Row(
+        title: Row(
           children: [
-            Icon(Icons.mail, color: Color(0xFF7E57C2)),
-            SizedBox(width: 8),
-            Text('방 초대'),
+            const Icon(Icons.mail, color: Color(0xFF7E57C2)),
+            const SizedBox(width: 8),
+            Text(l10n.lobbyRoomInviteTitle),
           ],
         ),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
             Text(
-              '$fromNickname님이 방에 초대했습니다!',
+              l10n.lobbyRoomInviteMessage(fromNickname),
               style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w600),
             ),
             const SizedBox(height: 8),
@@ -148,7 +150,7 @@ class _LobbyScreenState extends State<LobbyScreen> {
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx),
-            child: const Text('거절'),
+            child: Text(l10n.lobbyDecline),
           ),
           ElevatedButton(
             onPressed: () {
@@ -161,7 +163,7 @@ class _LobbyScreenState extends State<LobbyScreen> {
               foregroundColor: Colors.white,
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
             ),
-            child: const Text('참여'),
+            child: Text(l10n.lobbyJoin),
           ),
         ],
       ),
@@ -170,6 +172,7 @@ class _LobbyScreenState extends State<LobbyScreen> {
 
   void _showInviteFriendsDialog(GameService game) {
     game.requestFriends();
+    final l10n = L10n.of(context);
     showDialog(
       context: context,
       builder: (ctx) => Consumer<GameService>(
@@ -179,20 +182,20 @@ class _LobbyScreenState extends State<LobbyScreen> {
               .toList();
           return AlertDialog(
             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-            title: const Row(
+            title: Row(
               children: [
-                Icon(Icons.person_add, color: Color(0xFF7E57C2)),
-                SizedBox(width: 8),
-                Text('친구 초대'),
+                const Icon(Icons.person_add, color: Color(0xFF7E57C2)),
+                const SizedBox(width: 8),
+                Text(l10n.lobbyInviteFriendsTitle),
               ],
             ),
             content: onlineFriends.isEmpty
-                ? const SizedBox(
+                ? SizedBox(
                     height: 60,
                     child: Center(
                       child: Text(
-                        '초대 가능한 온라인 친구가 없습니다',
-                        style: TextStyle(color: Color(0xFF9A8E8A)),
+                        l10n.lobbyNoOnlineFriends,
+                        style: const TextStyle(color: Color(0xFF9A8E8A)),
                       ),
                     ),
                   )
@@ -238,7 +241,7 @@ class _LobbyScreenState extends State<LobbyScreen> {
                                   game.inviteToRoom(nickname);
                                   Navigator.pop(ctx);
                                   ScaffoldMessenger.of(this.context).showSnackBar(
-                                    SnackBar(content: Text('$nickname님에게 초대를 보냈습니다')),
+                                    SnackBar(content: Text(l10n.lobbyInviteSent(nickname))),
                                   );
                                 },
                                 child: Container(
@@ -247,9 +250,9 @@ class _LobbyScreenState extends State<LobbyScreen> {
                                     color: const Color(0xFF7E57C2),
                                     borderRadius: BorderRadius.circular(8),
                                   ),
-                                  child: const Text(
-                                    '초대',
-                                    style: TextStyle(
+                                  child: Text(
+                                    l10n.lobbyInvite,
+                                    style: const TextStyle(
                                       fontSize: 12,
                                       fontWeight: FontWeight.bold,
                                       color: Colors.white,
@@ -266,7 +269,7 @@ class _LobbyScreenState extends State<LobbyScreen> {
             actions: [
               TextButton(
                 onPressed: () => Navigator.pop(ctx),
-                child: const Text('닫기'),
+                child: Text(l10n.commonClose),
               ),
             ],
           );
@@ -277,24 +280,25 @@ class _LobbyScreenState extends State<LobbyScreen> {
 
   void _showSpectatorListDialog(GameService game) {
     final spectators = game.spectators;
+    final l10n = L10n.of(context);
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        title: const Row(
+        title: Row(
           children: [
-            Icon(Icons.visibility, color: Color(0xFF4A4080)),
-            SizedBox(width: 8),
-            Text('관전자 목록'),
+            const Icon(Icons.visibility, color: Color(0xFF4A4080)),
+            const SizedBox(width: 8),
+            Text(l10n.lobbySpectatorListTitle),
           ],
         ),
         content: spectators.isEmpty
-            ? const SizedBox(
+            ? SizedBox(
                 height: 60,
                 child: Center(
                   child: Text(
-                    '관전 중인 사람이 없습니다',
-                    style: TextStyle(color: Color(0xFF9A8E8A)),
+                    l10n.lobbyNoSpectators,
+                    style: const TextStyle(color: Color(0xFF9A8E8A)),
                   ),
                 ),
               )
@@ -337,7 +341,7 @@ class _LobbyScreenState extends State<LobbyScreen> {
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx),
-            child: const Text('닫기'),
+            child: Text(l10n.commonClose),
           ),
         ],
       ),
@@ -346,29 +350,30 @@ class _LobbyScreenState extends State<LobbyScreen> {
 
   void _showRoomSettingsDialog(GameService game) {
     final controller = TextEditingController(text: game.currentRoomName);
+    final l10n = L10n.of(context);
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        title: const Row(
+        title: Row(
           children: [
-            Icon(Icons.settings, color: Color(0xFF1E88E5)),
-            SizedBox(width: 8),
-            Text('방 설정'),
+            const Icon(Icons.settings, color: Color(0xFF1E88E5)),
+            const SizedBox(width: 8),
+            Text(l10n.lobbyRoomSettingsTitle),
           ],
         ),
         content: TextField(
           controller: controller,
           maxLength: 20,
           decoration: InputDecoration(
-            hintText: '방 제목을 입력하세요',
+            hintText: l10n.lobbyEnterRoomTitle,
             border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
           ),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx),
-            child: const Text('취소'),
+            child: Text(l10n.commonCancel),
           ),
           ElevatedButton(
             onPressed: () {
@@ -377,7 +382,7 @@ class _LobbyScreenState extends State<LobbyScreen> {
               game.changeRoomName(name);
               Navigator.pop(ctx);
             },
-            child: const Text('변경'),
+            child: Text(l10n.lobbyChange),
           ),
         ],
       ),
@@ -402,17 +407,18 @@ class _LobbyScreenState extends State<LobbyScreen> {
     );
   }
 
-  String _generateRandomRoomName({String gameType = 'tichu'}) {
+  String _generateRandomRoomName({String gameType = 'tichu', L10n? l10n}) {
     final random = DateTime.now().millisecondsSinceEpoch;
+    final l = l10n ?? L10n.of(context);
     if (gameType == 'skull_king') {
-      final adjectives = ['무시무시한', '전설의', '무적의', '잔혹한', '탐욕의', '최강', '폭풍의', '대담한'];
-      final nouns = ['해적선', '보물섬', '항해', '약탈', '선장', '해전', '모험', '크라켄'];
+      final adjectives = [l.lobbyRandomAdjSk1, l.lobbyRandomAdjSk2, l.lobbyRandomAdjSk3, l.lobbyRandomAdjSk4, l.lobbyRandomAdjSk5, l.lobbyRandomAdjSk6, l.lobbyRandomAdjSk7, l.lobbyRandomAdjSk8];
+      final nouns = [l.lobbyRandomNounSk1, l.lobbyRandomNounSk2, l.lobbyRandomNounSk3, l.lobbyRandomNounSk4, l.lobbyRandomNounSk5, l.lobbyRandomNounSk6, l.lobbyRandomNounSk7, l.lobbyRandomNounSk8];
       final adj = adjectives[random % adjectives.length];
       final noun = nouns[(random ~/ 8) % nouns.length];
       return '$adj $noun';
     } else {
-      final adjectives = ['즐거운', '신나는', '열정의', '화끈한', '행운의', '전설의', '최강', '무적'];
-      final nouns = ['티츄방', '카드판', '승부', '한판', '게임', '대결', '도전', '파티'];
+      final adjectives = [l.lobbyRandomAdjTichu1, l.lobbyRandomAdjTichu2, l.lobbyRandomAdjTichu3, l.lobbyRandomAdjTichu4, l.lobbyRandomAdjTichu5, l.lobbyRandomAdjTichu6, l.lobbyRandomAdjTichu7, l.lobbyRandomAdjTichu8];
+      final nouns = [l.lobbyRandomNounTichu1, l.lobbyRandomNounTichu2, l.lobbyRandomNounTichu3, l.lobbyRandomNounTichu4, l.lobbyRandomNounTichu5, l.lobbyRandomNounTichu6, l.lobbyRandomNounTichu7, l.lobbyRandomNounTichu8];
       final adj = adjectives[random % adjectives.length];
       final noun = nouns[(random ~/ 8) % nouns.length];
       return '$adj $noun';
@@ -420,7 +426,8 @@ class _LobbyScreenState extends State<LobbyScreen> {
   }
 
   void _showCreateRoomDialog() {
-    String randomName = _generateRandomRoomName();
+    final l10n = L10n.of(context);
+    String randomName = _generateRandomRoomName(l10n: l10n);
     final controller = TextEditingController();
     final passwordController = TextEditingController();
     bool isPrivate = false;
@@ -587,22 +594,22 @@ class _LobbyScreenState extends State<LobbyScreen> {
                             ),
                           ),
                           const SizedBox(width: 12),
-                          const Expanded(
+                          Expanded(
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
                                 Text(
-                                  '새 방 만들기',
-                                  style: TextStyle(
+                                  l10n.lobbyCreateRoom,
+                                  style: const TextStyle(
                                     fontSize: 18,
                                     fontWeight: FontWeight.w800,
                                     color: Color(0xFF2F241F),
                                   ),
                                 ),
-                                SizedBox(height: 2),
+                                const SizedBox(height: 2),
                                 Text(
-                                  '방 제목과 규칙을 정하면 바로 대기실이 열립니다.',
-                                  style: TextStyle(
+                                  l10n.lobbyCreateRoomSubtitle,
+                                  style: const TextStyle(
                                     fontSize: 12,
                                     color: Color(0xFF695D57),
                                   ),
@@ -613,19 +620,19 @@ class _LobbyScreenState extends State<LobbyScreen> {
                         ],
                       ),
                       const SizedBox(height: 16),
-                      sectionTitle('게임 선택', '플레이할 게임을 선택합니다.'),
+                      sectionTitle(l10n.lobbySelectGame, l10n.lobbySelectGameDesc),
                       const SizedBox(height: 10),
                       SizedBox(
                         width: double.infinity,
                         child: SegmentedButton<String>(
-                          segments: const [
-                            ButtonSegment(value: 'tichu', label: Text('티츄'), icon: Icon(Icons.style, size: 16)),
-                            ButtonSegment(value: 'skull_king', label: Text('스컬킹'), icon: Icon(Icons.anchor, size: 16)),
+                          segments: [
+                            ButtonSegment(value: 'tichu', label: Text(l10n.lobbyTichu), icon: const Icon(Icons.style, size: 16)),
+                            ButtonSegment(value: 'skull_king', label: Text(l10n.lobbySkullKing), icon: const Icon(Icons.anchor, size: 16)),
                           ],
                           selected: {selectedGameType},
                           onSelectionChanged: (v) => setState(() {
                             selectedGameType = v.first;
-                            randomName = _generateRandomRoomName(gameType: selectedGameType);
+                            randomName = _generateRandomRoomName(gameType: selectedGameType, l10n: l10n);
                             if (controller.text.isEmpty) {
                               controller.clear();
                             }
@@ -641,7 +648,7 @@ class _LobbyScreenState extends State<LobbyScreen> {
                       ),
                       if (selectedGameType == 'skull_king') ...[
                         const SizedBox(height: 12),
-                        const Text('최대 인원', style: TextStyle(fontWeight: FontWeight.w700, fontSize: 12)),
+                        Text(l10n.lobbyMaxPlayers, style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 12)),
                         const SizedBox(height: 8),
                         Row(
                           children: List.generate(5, (i) {
@@ -670,7 +677,7 @@ class _LobbyScreenState extends State<LobbyScreen> {
                                     child: Column(
                                       children: [
                                         Text(
-                                          '$n명',
+                                          l10n.lobbyPlayerCount(n),
                                           style: TextStyle(
                                             fontSize: 14,
                                             fontWeight: selected ? FontWeight.bold : FontWeight.normal,
@@ -688,19 +695,19 @@ class _LobbyScreenState extends State<LobbyScreen> {
                           }),
                         ),
                         const SizedBox(height: 14),
-                        const Text('확장팩 (선택)', style: TextStyle(fontWeight: FontWeight.w700, fontSize: 12)),
+                        Text(l10n.lobbyExpansionOptional, style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 12)),
                         const SizedBox(height: 2),
-                        const Text(
-                          '기본 룰 카드에 특수 카드를 추가합니다. 중복 선택 가능.',
-                          style: TextStyle(fontSize: 10, color: Color(0xFF7E7069)),
+                        Text(
+                          l10n.lobbyExpansionDesc,
+                          style: const TextStyle(fontSize: 10, color: Color(0xFF7E7069)),
                         ),
                         const SizedBox(height: 8),
                         Row(
                           children: [
-                            for (final entry in const [
-                              ['kraken', '크라켄', '트릭 무효화'],
-                              ['white_whale', '화이트웨일', '특수카드 무력화'],
-                              ['loot', '보물', '보너스 점수'],
+                            for (final entry in [
+                              ['kraken', l10n.lobbyExpKraken, l10n.lobbyExpKrakenDesc],
+                              ['white_whale', l10n.lobbyExpWhiteWhale, l10n.lobbyExpWhiteWhaleDesc],
+                              ['loot', l10n.lobbyExpLoot, l10n.lobbyExpLootDesc],
                             ])
                               Expanded(
                                 child: Padding(
@@ -767,18 +774,18 @@ class _LobbyScreenState extends State<LobbyScreen> {
                         ),
                       ],
                       const SizedBox(height: 16),
-                      sectionTitle('기본 정보', '먼저 방 이름과 공개 여부를 정합니다.'),
+                      sectionTitle(l10n.lobbyBasicInfo, l10n.lobbyBasicInfoDesc),
                       const SizedBox(height: 10),
                       Row(
                         children: [
-                          const Text(
-                            '방 이름',
-                            style: TextStyle(fontWeight: FontWeight.w700, fontSize: 12),
+                          Text(
+                            l10n.lobbyRoomName,
+                            style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 12),
                           ),
                           const Spacer(),
                           TextButton.icon(
                             onPressed: () => setState(() {
-                              randomName = _generateRandomRoomName(gameType: selectedGameType);
+                              randomName = _generateRandomRoomName(gameType: selectedGameType, l10n: l10n);
                               controller.text = randomName;
                             }),
                             style: TextButton.styleFrom(
@@ -788,7 +795,7 @@ class _LobbyScreenState extends State<LobbyScreen> {
                               foregroundColor: accent,
                             ),
                             icon: const Icon(Icons.casino_outlined, size: 16),
-                            label: const Text('랜덤'),
+                            label: Text(l10n.lobbyRandom),
                           ),
                         ],
                       ),
@@ -799,10 +806,10 @@ class _LobbyScreenState extends State<LobbyScreen> {
                       ),
                       const SizedBox(height: 12),
                       optionCard(
-                        title: '비공개 방',
+                        title: l10n.lobbyPrivateRoom,
                         description: isRanked
-                            ? '랭크전에서는 비공개 방을 만들 수 없습니다.'
-                            : '초대한 사람이나 비밀번호를 아는 사람만 들어올 수 있습니다.',
+                            ? l10n.lobbyPrivateRoomDescRanked
+                            : l10n.lobbyPrivateRoomDesc,
                         value: isPrivate,
                         enabled: !isRanked,
                         onChanged: (v) => setState(() => isPrivate = v),
@@ -812,14 +819,14 @@ class _LobbyScreenState extends State<LobbyScreen> {
                         TextField(
                           controller: passwordController,
                           obscureText: true,
-                          decoration: fieldDecoration('비밀번호 (4자 이상)'),
+                          decoration: fieldDecoration(l10n.lobbyPasswordHint),
                         ),
                       ],
                       if (context.read<GameService>().authProvider != 'local') ...[
                         const SizedBox(height: 12),
                         optionCard(
-                          title: '랭크전',
-                          description: '점수는 1000점 고정이며 비공개 설정은 자동으로 꺼집니다.',
+                          title: l10n.lobbyRanked,
+                          description: l10n.lobbyRankedDesc,
                           value: isRanked,
                           onChanged: (v) => setState(() {
                             isRanked = v;
@@ -832,7 +839,7 @@ class _LobbyScreenState extends State<LobbyScreen> {
                         ),
                       ],
                       const SizedBox(height: 16),
-                      sectionTitle('게임 설정', selectedGameType == 'skull_king' ? '턴 시간을 정합니다.' : '턴 시간과 목표 점수를 정합니다.'),
+                      sectionTitle(l10n.lobbyGameSettings, selectedGameType == 'skull_king' ? l10n.lobbyGameSettingsDescSk : l10n.lobbyGameSettingsDescTichu),
                       const SizedBox(height: 10),
                       Row(
                         children: [
@@ -840,9 +847,9 @@ class _LobbyScreenState extends State<LobbyScreen> {
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                const Text(
-                                  '시간 제한',
-                                  style: TextStyle(fontWeight: FontWeight.w700, fontSize: 12),
+                                Text(
+                                  l10n.lobbyTimeLimit,
+                                  style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 12),
                                 ),
                                 const SizedBox(height: 6),
                                 TextField(
@@ -853,7 +860,7 @@ class _LobbyScreenState extends State<LobbyScreen> {
                                     LengthLimitingTextInputFormatter(3),
                                   ],
                                   textAlign: TextAlign.center,
-                                  decoration: fieldDecoration('10~999', suffixText: '초'),
+                                  decoration: fieldDecoration(l10n.lobbyTimeLimitRange, suffixText: l10n.lobbySuffixSeconds),
                                 ),
                               ],
                             ),
@@ -864,9 +871,9 @@ class _LobbyScreenState extends State<LobbyScreen> {
                               child: Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
-                                  const Text(
-                                    '목표 점수',
-                                    style: TextStyle(fontWeight: FontWeight.w700, fontSize: 12),
+                                  Text(
+                                    l10n.lobbyTargetScore,
+                                    style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 12),
                                   ),
                                   const SizedBox(height: 6),
                                   TextField(
@@ -879,8 +886,8 @@ class _LobbyScreenState extends State<LobbyScreen> {
                                     ],
                                     textAlign: TextAlign.center,
                                     decoration: fieldDecoration(
-                                      isRanked ? '1000 (고정)' : '100~20000',
-                                      suffixText: '점',
+                                      isRanked ? l10n.lobbyTargetScoreFixed : l10n.lobbyTargetScoreRange,
+                                      suffixText: l10n.lobbySuffixPoints,
                                     ),
                                   ),
                                 ],
@@ -899,8 +906,8 @@ class _LobbyScreenState extends State<LobbyScreen> {
                         ),
                         child: Text(
                           isRanked
-                              ? '랭크전은 목표 점수 1000점으로 고정됩니다.'
-                              : '시간 제한은 10~999초, 목표 점수는 100~20000점까지 설정할 수 있습니다.',
+                              ? l10n.lobbyRankedFixedScoreInfo
+                              : l10n.lobbyNormalSettingsInfo,
                           style: const TextStyle(
                             fontSize: 11,
                             color: Color(0xFF6D615B),
@@ -935,7 +942,7 @@ class _LobbyScreenState extends State<LobbyScreen> {
             actions: [
               TextButton(
                 onPressed: () => Navigator.pop(context),
-                child: const Text('취소'),
+                child: Text(l10n.commonCancel),
               ),
               ElevatedButton.icon(
                 onPressed: () {
@@ -944,11 +951,11 @@ class _LobbyScreenState extends State<LobbyScreen> {
                       : controller.text.trim();
                   final password = passwordController.text.trim();
                   if (name.isEmpty) {
-                    dialogSetState?.call(() => errorText = '방 이름을 입력해주세요.');
+                    dialogSetState?.call(() => errorText = l10n.lobbyEnterRoomName);
                     return;
                   }
                   if (isPrivate && password.length < 4) {
-                    dialogSetState?.call(() => errorText = '비밀번호는 4자 이상이어야 합니다.');
+                    dialogSetState?.call(() => errorText = l10n.lobbyPasswordTooShort);
                     return;
                   }
                   final turnTimeLimit =
@@ -982,7 +989,7 @@ class _LobbyScreenState extends State<LobbyScreen> {
                   padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
                 ),
                 icon: const Icon(Icons.check_circle_outline, size: 18),
-                label: const Text('방 만들기'),
+                label: Text(l10n.lobbyCreateRoom),
               ),
             ],
           );
@@ -1021,8 +1028,8 @@ class _LobbyScreenState extends State<LobbyScreen> {
                   await session.logout();
                   if (!mounted) return;
                   messenger.showSnackBar(
-                    const SnackBar(
-                      content: Text('다른 기기에서 로그인되어 로그아웃되었습니다'),
+                    SnackBar(
+                      content: Text(L10n.of(context).lobbyDuplicateLoginKicked),
                       backgroundColor: Colors.red,
                     ),
                   );
@@ -1342,7 +1349,7 @@ class _LobbyScreenState extends State<LobbyScreen> {
                 Text(
                   game.maintenanceMessage.isNotEmpty
                       ? game.maintenanceMessage
-                      : '서버 점검 예정',
+                      : L10n.of(context).lobbyMaintenanceDefault,
                   style: const TextStyle(
                     color: Color(0xFFE65100),
                     fontSize: 13,
@@ -1418,9 +1425,9 @@ class _LobbyScreenState extends State<LobbyScreen> {
         children: [
           Row(
             children: [
-              const Text(
-                '게임 방 리스트',
-                style: TextStyle(
+              Text(
+                L10n.of(context).lobbyRoomListTitle,
+                style: const TextStyle(
                   fontSize: 16,
                   color: Color(0xFF8A7A72),
                 ),
@@ -1455,9 +1462,9 @@ class _LobbyScreenState extends State<LobbyScreen> {
                 ),
                 elevation: 0,
               ),
-              child: const Text(
-                '새 방 만들기',
-                style: TextStyle(
+              child: Text(
+                L10n.of(context).lobbyCreateRoom,
+                style: const TextStyle(
                   fontSize: 16,
                   fontWeight: FontWeight.bold,
                 ),
@@ -1473,11 +1480,11 @@ class _LobbyScreenState extends State<LobbyScreen> {
   // removed separate spectate list; in-progress rooms are shown inline
 
   Widget _buildEmptyRoomList() {
-    return const Center(
+    return Center(
       child: Text(
-        '방이 없어요!\n지금 바로 만들어볼까요?',
+        L10n.of(context).lobbyEmptyRoomList,
         textAlign: TextAlign.center,
-        style: TextStyle(
+        style: const TextStyle(
           fontSize: 16,
           color: Color(0xFF9A8E8A),
         ),
@@ -1496,14 +1503,14 @@ class _LobbyScreenState extends State<LobbyScreen> {
     );
   }
 
-  String _skExpansionShortLabel(String expansionId) {
+  String _skExpansionShortLabel(String expansionId, L10n l10n) {
     switch (expansionId) {
       case 'kraken':
-        return '크라켄';
+        return l10n.lobbyExpKrakenShort;
       case 'white_whale':
-        return '웨일';
+        return l10n.lobbyExpWhaleShort;
       case 'loot':
-        return '보물';
+        return l10n.lobbyExpLootShort;
       default:
         return expansionId;
     }
@@ -1512,6 +1519,7 @@ class _LobbyScreenState extends State<LobbyScreen> {
   Widget _buildRoomItem(Room room) {
     final isInProgress = room.gameInProgress;
     final isSK = room.isSkullKing;
+    final l10n = L10n.of(context);
 
     // Game type colors
     final Color bgColor;
@@ -1529,7 +1537,7 @@ class _LobbyScreenState extends State<LobbyScreen> {
       stripColor = const Color(0xFF2D2D3D);
       badgeBgColor = const Color(0xFF2D2D3D);
       badgeTextColor = const Color(0xFFFFD54F);
-      badgeText = '☠️ 스컬킹';
+      badgeText = '☠️ ${l10n.lobbySkullKingBadge}';
       nameColor = const Color(0xFF2D2D3D);
       subTextColor = const Color(0xFF7A7A90);
     } else {
@@ -1538,7 +1546,7 @@ class _LobbyScreenState extends State<LobbyScreen> {
       stripColor = const Color(0xFF6C63FF);
       badgeBgColor = const Color(0xFF6C63FF);
       badgeTextColor = Colors.white;
-      badgeText = '티츄';
+      badgeText = l10n.lobbyTichuBadge;
       nameColor = const Color(0xFF3A3058);
       subTextColor = const Color(0xFF8A80A0);
     }
@@ -1622,8 +1630,8 @@ class _LobbyScreenState extends State<LobbyScreen> {
                               children: [
                                 Text(
                                   isSK
-                                      ? '${room.turnTimeLimit}초'
-                                      : '${room.turnTimeLimit}초 · ${room.targetScore}점',
+                                      ? l10n.lobbyRoomTimeSec(room.turnTimeLimit)
+                                      : l10n.lobbyRoomTimeAndScore(room.turnTimeLimit, room.targetScore),
                                   style: TextStyle(
                                     fontSize: 11,
                                     color: subTextColor,
@@ -1648,7 +1656,7 @@ class _LobbyScreenState extends State<LobbyScreen> {
                                           ),
                                         ),
                                         child: Text(
-                                          _skExpansionShortLabel(exp),
+                                          _skExpansionShortLabel(exp, l10n),
                                           style: const TextStyle(
                                             fontSize: 9,
                                             color: Color(0xFFFFD54F),
@@ -1677,7 +1685,7 @@ class _LobbyScreenState extends State<LobbyScreen> {
                       Icon(Icons.visibility, size: 14, color: isSK ? const Color(0xFF3A3A50) : const Color(0xFF6C63FF)),
                       const SizedBox(width: 4),
                       Text(
-                        '게임중 ${room.spectatorCount}',
+                        l10n.lobbyInProgress(room.spectatorCount),
                         style: TextStyle(
                           fontSize: 12,
                           color: isSK ? const Color(0xFF3A3A50) : const Color(0xFF6C63FF),
@@ -1737,25 +1745,26 @@ class _LobbyScreenState extends State<LobbyScreen> {
   }
 
   void _showRankedSocialRequiredDialog() {
+    final l10n = L10n.of(context);
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
+      builder: (ctx) => AlertDialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: const Row(
+        title: Row(
           children: [
-            Icon(Icons.lock, color: Color(0xFFF2A65A), size: 22),
-            SizedBox(width: 8),
-            Text('소셜 연동 필요', style: TextStyle(fontSize: 16)),
+            const Icon(Icons.lock, color: Color(0xFFF2A65A), size: 22),
+            const SizedBox(width: 8),
+            Text(l10n.lobbySocialLinkRequired, style: const TextStyle(fontSize: 16)),
           ],
         ),
-        content: const Text(
-          '랭크전은 소셜 계정 연동이 필요합니다.\n설정 > 소셜 연동에서 Google 또는 Kakao 계정을 연동해주세요.',
-          style: TextStyle(fontSize: 14, color: Color(0xFF5A4038)),
+        content: Text(
+          l10n.lobbySocialLinkRequiredDesc,
+          style: const TextStyle(fontSize: 14, color: Color(0xFF5A4038)),
         ),
         actions: [
           TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('확인'),
+            onPressed: () => Navigator.pop(ctx),
+            child: Text(l10n.commonOk),
           ),
         ],
       ),
@@ -1763,9 +1772,10 @@ class _LobbyScreenState extends State<LobbyScreen> {
   }
 
   void _showJoinPrivateRoomDialog(Room room) {
+    final l10n = L10n.of(context);
     _showPasswordDialog(
-      title: '비공개 방 입장',
-      buttonText: '입장',
+      title: l10n.lobbyJoinPrivateRoom,
+      buttonText: l10n.lobbyEnter,
       onSubmit: (password) {
         context.read<GameService>().joinRoom(room.id, password: password);
         setState(() => _inRoom = true);
@@ -1775,9 +1785,10 @@ class _LobbyScreenState extends State<LobbyScreen> {
 
   void _spectateWithPasswordCheck(Room room) {
     if (room.isPrivate) {
+      final l10n = L10n.of(context);
       _showPasswordDialog(
-        title: '비공개 방 관전',
-        buttonText: '관전',
+        title: l10n.lobbySpectatePrivateRoom,
+        buttonText: l10n.lobbySpectate,
         onSubmit: (password) {
           context.read<GameService>().spectateRoom(room.id, password: password);
         },
@@ -1793,27 +1804,28 @@ class _LobbyScreenState extends State<LobbyScreen> {
     required void Function(String password) onSubmit,
   }) {
     final controller = TextEditingController();
+    final l10n = L10n.of(context);
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
+      builder: (ctx) => AlertDialog(
         title: Text(title),
         content: TextField(
           controller: controller,
-          decoration: const InputDecoration(
-            hintText: '비밀번호',
+          decoration: InputDecoration(
+            hintText: l10n.lobbyPassword,
           ),
           obscureText: true,
         ),
         actions: [
           TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('취소'),
+            onPressed: () => Navigator.pop(ctx),
+            child: Text(l10n.commonCancel),
           ),
           ElevatedButton(
             onPressed: () {
               final password = controller.text.trim();
               if (password.isEmpty) return;
-              Navigator.pop(context);
+              Navigator.pop(ctx);
               onSubmit(password);
             },
             child: Text(buttonText),
@@ -1946,8 +1958,8 @@ class _LobbyScreenState extends State<LobbyScreen> {
                 ),
                 child: Text(
                   game.currentGameType == 'skull_king'
-                      ? '${game.roomTurnTimeLimit}초 · ${game.playerCount}/${game.roomMaxPlayers}명'
-                      : '${game.roomTurnTimeLimit}초 · ${game.roomTargetScore}점',
+                      ? L10n.of(context).lobbyRoomInfoSk(game.roomTurnTimeLimit, game.playerCount, game.roomMaxPlayers)
+                      : L10n.of(context).lobbyRoomInfoTichu(game.roomTurnTimeLimit, game.roomTargetScore),
                   style: const TextStyle(
                     fontSize: 12,
                     color: Color(0xFF8A7A72),
@@ -1992,18 +2004,18 @@ class _LobbyScreenState extends State<LobbyScreen> {
                       color: const Color(0xFFF3E5F5),
                       borderRadius: BorderRadius.circular(12),
                     ),
-                    child: const Row(
+                    child: Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        Icon(
+                        const Icon(
                           Icons.person_add,
                           size: 14,
                           color: Color(0xFF7E57C2),
                         ),
-                        SizedBox(width: 4),
+                        const SizedBox(width: 4),
                         Text(
-                          '초대',
-                          style: TextStyle(
+                          L10n.of(context).lobbyInvite,
+                          style: const TextStyle(
                             fontSize: 12,
                             fontWeight: FontWeight.bold,
                             color: Color(0xFF7E57C2),
@@ -2022,14 +2034,14 @@ class _LobbyScreenState extends State<LobbyScreen> {
                       color: const Color(0xFFE8E0F8),
                       borderRadius: BorderRadius.circular(12),
                     ),
-                    child: const Row(
+                    child: Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        Icon(Icons.visibility, size: 14, color: Color(0xFF4A4080)),
-                        SizedBox(width: 4),
+                        const Icon(Icons.visibility, size: 14, color: Color(0xFF4A4080)),
+                        const SizedBox(width: 4),
                         Text(
-                          '관전',
-                          style: TextStyle(
+                          L10n.of(context).lobbySpectate,
+                          style: const TextStyle(
                             fontSize: 12,
                             fontWeight: FontWeight.bold,
                             color: Color(0xFF4A4080),
@@ -2051,14 +2063,14 @@ class _LobbyScreenState extends State<LobbyScreen> {
                           color: const Color(0xFFF6F3F2),
                           borderRadius: BorderRadius.circular(12),
                         ),
-                        child: const Row(
+                        child: Row(
                           mainAxisSize: MainAxisSize.min,
                           children: [
-                            Icon(Icons.more_horiz, size: 14, color: Color(0xFF8A7A72)),
-                            SizedBox(width: 4),
+                            const Icon(Icons.more_horiz, size: 14, color: Color(0xFF8A7A72)),
+                            const SizedBox(width: 4),
                             Text(
-                              '더보기',
-                              style: TextStyle(
+                              L10n.of(context).lobbyMore,
+                              style: const TextStyle(
                                 fontSize: 12,
                                 fontWeight: FontWeight.w700,
                                 color: Color(0xFF8A7A72),
@@ -2106,14 +2118,14 @@ class _LobbyScreenState extends State<LobbyScreen> {
                         color: const Color(0xFFE3F2FD),
                         borderRadius: BorderRadius.circular(12),
                       ),
-                      child: const Row(
+                      child: Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          Icon(Icons.settings, size: 14, color: Color(0xFF1E88E5)),
-                          SizedBox(width: 4),
+                          const Icon(Icons.settings, size: 14, color: Color(0xFF1E88E5)),
+                          const SizedBox(width: 4),
                           Text(
-                            '방설정',
-                            style: TextStyle(
+                            L10n.of(context).lobbyRoomSettings,
+                            style: const TextStyle(
                               fontSize: 12,
                               fontWeight: FontWeight.bold,
                               color: Color(0xFF1E88E5),
@@ -2161,8 +2173,8 @@ class _LobbyScreenState extends State<LobbyScreen> {
                   const SizedBox(width: 6),
                   Text(
                     game.currentGameType == 'skull_king'
-                        ? '스컬킹 - 랭크전'
-                        : '티츄 - 랭크전',
+                        ? L10n.of(context).lobbySkullKingRanked
+                        : L10n.of(context).lobbyTichuRanked,
                     style: const TextStyle(
                       fontSize: 13,
                       fontWeight: FontWeight.bold,
@@ -2194,7 +2206,7 @@ class _LobbyScreenState extends State<LobbyScreen> {
                   const Icon(Icons.anchor, size: 14, color: Colors.white),
                   const SizedBox(width: 6),
                   Text(
-                    '스컬킹 · ${game.roomMaxPlayers}인',
+                    L10n.of(context).lobbySkullKingPlayers(game.roomMaxPlayers),
                     style: const TextStyle(
                       fontSize: 13,
                       fontWeight: FontWeight.bold,
@@ -2291,9 +2303,9 @@ class _LobbyScreenState extends State<LobbyScreen> {
                     ),
                     elevation: 0,
                   ),
-                  child: const Text(
-                    '게임 시작',
-                    style: TextStyle(
+                  child: Text(
+                    L10n.of(context).lobbyStartGame,
+                    style: const TextStyle(
                       fontSize: 15,
                       fontWeight: FontWeight.bold,
                     ),
@@ -2319,7 +2331,7 @@ class _LobbyScreenState extends State<LobbyScreen> {
                   elevation: 0,
                 ),
                 child: Text(
-                  _isMyReady(game) ? '준비 완료!' : '준비',
+                  _isMyReady(game) ? L10n.of(context).lobbyReadyDone : L10n.of(context).lobbyReady,
                   style: const TextStyle(
                     fontSize: 15,
                     fontWeight: FontWeight.bold,
@@ -2378,13 +2390,13 @@ class _LobbyScreenState extends State<LobbyScreen> {
                 topRight: Radius.circular(11),
               ),
             ),
-            child: const Row(
+            child: Row(
               children: [
-                Icon(Icons.chat_bubble_outline, size: 16, color: Color(0xFF6A5A52)),
-                SizedBox(width: 6),
+                const Icon(Icons.chat_bubble_outline, size: 16, color: Color(0xFF6A5A52)),
+                const SizedBox(width: 6),
                 Text(
-                  '채팅',
-                  style: TextStyle(
+                  L10n.of(context).lobbyChat,
+                  style: const TextStyle(
                     fontSize: 13,
                     fontWeight: FontWeight.bold,
                     color: Color(0xFF6A5A52),
@@ -2423,9 +2435,9 @@ class _LobbyScreenState extends State<LobbyScreen> {
                 Expanded(
                   child: TextField(
                     controller: _chatController,
-                    decoration: const InputDecoration(
-                      hintText: '메시지 입력...',
-                      hintStyle: TextStyle(fontSize: 13, color: Color(0xFFAA9A92)),
+                    decoration: InputDecoration(
+                      hintText: L10n.of(context).lobbyMessageHint,
+                      hintStyle: const TextStyle(fontSize: 13, color: Color(0xFFAA9A92)),
                       border: InputBorder.none,
                       contentPadding: EdgeInsets.symmetric(horizontal: 12),
                       isDense: true,
@@ -2535,6 +2547,7 @@ class _LobbyScreenState extends State<LobbyScreen> {
 
   void _showUserActionSheet(String nickname, GameService game) {
     final isBlockedUser = game.isBlocked(nickname);
+    final l10n = L10n.of(context);
 
     showModalBottomSheet(
       context: context,
@@ -2557,7 +2570,7 @@ class _LobbyScreenState extends State<LobbyScreen> {
             const SizedBox(height: 20),
             _buildUserActionBtn(
               icon: Icons.person_search,
-              label: '프로필 보기',
+              label: l10n.lobbyViewProfile,
               color: const Color(0xFF64B5F6),
               onTap: () {
                 Navigator.pop(ctx);
@@ -2567,32 +2580,32 @@ class _LobbyScreenState extends State<LobbyScreen> {
             const SizedBox(height: 10),
             _buildUserActionBtn(
               icon: Icons.person_add,
-              label: '친구 추가',
+              label: l10n.lobbyAddFriend,
               color: const Color(0xFF81C784),
               onTap: () {
                 Navigator.pop(ctx);
                 game.addFriendAction(nickname);
                 ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('친구 요청을 보냈습니다')),
+                  SnackBar(content: Text(l10n.lobbyFriendRequestSent)),
                 );
               },
             ),
             const SizedBox(height: 10),
             _buildUserActionBtn(
               icon: isBlockedUser ? Icons.check_circle : Icons.block,
-              label: isBlockedUser ? '차단 해제' : '차단하기',
+              label: isBlockedUser ? l10n.lobbyUnblock : l10n.lobbyBlock,
               color: isBlockedUser ? const Color(0xFF64B5F6) : const Color(0xFFFF8A65),
               onTap: () {
                 Navigator.pop(ctx);
                 if (isBlockedUser) {
                   game.unblockUserAction(nickname);
                   ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('차단이 해제되었습니다')),
+                    SnackBar(content: Text(l10n.lobbyUnblocked)),
                   );
                 } else {
                   game.blockUserAction(nickname);
                   ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('차단되었습니다')),
+                    SnackBar(content: Text(l10n.lobbyBlocked)),
                   );
                 }
               },
@@ -2600,7 +2613,7 @@ class _LobbyScreenState extends State<LobbyScreen> {
             const SizedBox(height: 10),
             _buildUserActionBtn(
               icon: Icons.flag,
-              label: '신고하기',
+              label: l10n.lobbyReport,
               color: const Color(0xFFE57373),
               onTap: () {
                 Navigator.pop(ctx);
@@ -2610,7 +2623,7 @@ class _LobbyScreenState extends State<LobbyScreen> {
             const SizedBox(height: 10),
             TextButton(
               onPressed: () => Navigator.pop(ctx),
-              child: const Text('취소'),
+              child: Text(l10n.commonCancel),
             ),
           ],
         ),
@@ -2619,6 +2632,7 @@ class _LobbyScreenState extends State<LobbyScreen> {
   }
 
   void _showRoomUtilitySheet(GameService game) {
+    final l10n = L10n.of(context);
     final unreadCount = game.pendingFriendRequestCount + game.totalUnreadDmCount;
     showModalBottomSheet(
       context: context,
@@ -2644,18 +2658,18 @@ class _LobbyScreenState extends State<LobbyScreen> {
                 ),
               ),
               const SizedBox(height: 16),
-              const Text(
-                '대기실 도구',
-                style: TextStyle(
+              Text(
+                l10n.lobbyWaitingRoomTools,
+                style: const TextStyle(
                   fontSize: 18,
                   fontWeight: FontWeight.w800,
                   color: Color(0xFF4E342E),
                 ),
               ),
               const SizedBox(height: 6),
-              const Text(
-                '게임 준비와 직접 관련 없는 기능은 여기에서 확인할 수 있어요.',
-                style: TextStyle(
+              Text(
+                l10n.lobbyWaitingRoomToolsDesc,
+                style: const TextStyle(
                   fontSize: 13,
                   height: 1.35,
                   color: Color(0xFF8A7A72),
@@ -2701,17 +2715,17 @@ class _LobbyScreenState extends State<LobbyScreen> {
                       ),
                   ],
                 ),
-                title: const Text(
-                  '친구 / DM',
-                  style: TextStyle(
+                title: Text(
+                  l10n.lobbyFriendsDm,
+                  style: const TextStyle(
                     fontWeight: FontWeight.w700,
                     color: Color(0xFF4E342E),
                   ),
                 ),
                 subtitle: Text(
                   unreadCount > 0
-                      ? '읽지 않은 요청과 DM이 $unreadCount개 있어요.'
-                      : '친구 목록과 DM 대화를 확인할 수 있어요.',
+                      ? l10n.lobbyUnreadDmCount(unreadCount)
+                      : l10n.lobbyFriendsDmDesc,
                   style: const TextStyle(
                     color: Color(0xFF8A7A72),
                   ),
@@ -2739,15 +2753,15 @@ class _LobbyScreenState extends State<LobbyScreen> {
                     color: Color(0xFF8A7A72),
                   ),
                 ),
-                title: const Text(
-                  '관전자 목록',
-                  style: TextStyle(
+                title: Text(
+                  l10n.lobbySpectatorListTitle,
+                  style: const TextStyle(
                     fontWeight: FontWeight.w700,
                     color: Color(0xFF4E342E),
                   ),
                 ),
                 subtitle: Text(
-                  '현재 관전자 ${game.spectators.length}명을 확인할 수 있어요.',
+                  l10n.lobbyCurrentSpectators(game.spectators.length),
                   style: const TextStyle(
                     color: Color(0xFF8A7A72),
                   ),
@@ -2791,12 +2805,13 @@ class _LobbyScreenState extends State<LobbyScreen> {
 
   void _showReportUserDialog(String nickname, GameService game) {
     final reasonController = TextEditingController();
+    final l10n = L10n.of(context);
     final reasons = [
-      '욕설/비방',
-      '도배/스팸',
-      '부적절한 닉네임',
-      '게임 방해',
-      '기타',
+      l10n.lobbyReportReasonAbuse,
+      l10n.lobbyReportReasonSpam,
+      l10n.lobbyReportReasonNickname,
+      l10n.lobbyReportReasonGameplay,
+      l10n.lobbyReportReasonOther,
     ];
     String? selectedReason;
 
@@ -2812,7 +2827,7 @@ class _LobbyScreenState extends State<LobbyScreen> {
                 const SizedBox(width: 8),
                 Expanded(
                   child: Text(
-                    '$nickname 신고',
+                    l10n.lobbyReportTitle(nickname),
                     style: const TextStyle(fontWeight: FontWeight.bold),
                     overflow: TextOverflow.ellipsis,
                   ),
@@ -2830,8 +2845,8 @@ class _LobbyScreenState extends State<LobbyScreen> {
                     borderRadius: BorderRadius.circular(12),
                     border: Border.all(color: const Color(0xFFF0C7C7)),
                   ),
-                  child: const Text(
-                    '신고는 운영팀이 확인합니다.\n허위 신고는 제재될 수 있어요.',
+                  child: Text(
+                    l10n.lobbyReportWarning,
                     style: TextStyle(
                       fontSize: 12,
                       color: Color(0xFF9A4A4A),
@@ -2843,7 +2858,7 @@ class _LobbyScreenState extends State<LobbyScreen> {
                 Align(
                   alignment: Alignment.centerLeft,
                   child: Text(
-                    '사유 선택',
+                    l10n.lobbySelectReason,
                     style: TextStyle(
                       fontSize: 12,
                       fontWeight: FontWeight.bold,
@@ -2892,7 +2907,7 @@ class _LobbyScreenState extends State<LobbyScreen> {
                   controller: reasonController,
                   maxLines: 3,
                   decoration: InputDecoration(
-                    hintText: '상세 사유를 입력해주세요 (선택)',
+                    hintText: l10n.lobbyReportDetailHint,
                     filled: true,
                     fillColor: const Color(0xFFF7F2F0),
                     border: OutlineInputBorder(
@@ -2914,7 +2929,7 @@ class _LobbyScreenState extends State<LobbyScreen> {
             actions: [
               TextButton(
                 onPressed: () => Navigator.pop(ctx),
-                child: const Text('취소'),
+                child: Text(l10n.commonCancel),
               ),
               ElevatedButton(
                 onPressed: selectedReason == null
@@ -2957,7 +2972,7 @@ class _LobbyScreenState extends State<LobbyScreen> {
                   backgroundColor: const Color(0xFFE57373),
                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                 ),
-                child: const Text('신고하기'),
+                child: Text(l10n.lobbyReport),
               ),
             ],
           );
@@ -2972,6 +2987,7 @@ class _LobbyScreenState extends State<LobbyScreen> {
   // to the lobby state's own context.
   void _showUserProfileDialog(String nickname, GameService game, {BuildContext? dialogContext}) {
     game.requestProfile(nickname);
+    final l10n = L10n.of(dialogContext ?? context);
 
     showDialog(
       context: dialogContext ?? context,
@@ -3031,7 +3047,7 @@ class _LobbyScreenState extends State<LobbyScreen> {
                                   ),
                                   const SizedBox(height: 2),
                                   Text(
-                                    isMe ? '내 프로필' : '플레이어 프로필',
+                                    isMe ? l10n.lobbyMyProfile : l10n.lobbyPlayerProfile,
                                     style: const TextStyle(
                                       fontSize: 12,
                                       color: Color(0xFF84766E),
@@ -3052,26 +3068,26 @@ class _LobbyScreenState extends State<LobbyScreen> {
                                 _buildTitleIconButton(
                                   icon: Icons.check,
                                   color: const Color(0xFFBDBDBD),
-                                  tooltip: '이미 친구',
+                                  tooltip: l10n.lobbyAlreadyFriend,
                                   onTap: () {},
                                 )
                               else if (game.sentFriendRequests.contains(nickname))
                                 _buildTitleIconButton(
                                   icon: Icons.hourglass_top,
                                   color: const Color(0xFFBDBDBD),
-                                  tooltip: '요청중',
+                                  tooltip: l10n.lobbyRequestPending,
                                   onTap: () {},
                                 )
                               else
                                 _buildTitleIconButton(
                                   icon: Icons.person_add,
                                   color: const Color(0xFF81C784),
-                                  tooltip: '친구 추가',
+                                  tooltip: l10n.lobbyAddFriend,
                                   onTap: () {
                                     game.addFriendAction(nickname);
                                     Navigator.pop(ctx);
                                     ScaffoldMessenger.of(context).showSnackBar(
-                                      const SnackBar(content: Text('친구 요청을 보냈습니다')),
+                                      SnackBar(content: Text(l10n.lobbyFriendRequestSent)),
                                     );
                                   },
                                 ),
@@ -3080,17 +3096,17 @@ class _LobbyScreenState extends State<LobbyScreen> {
                                 color: isBlockedUser
                                     ? const Color(0xFF64B5F6)
                                     : const Color(0xFFFF8A65),
-                                tooltip: isBlockedUser ? '차단 해제' : '차단하기',
+                                tooltip: isBlockedUser ? l10n.lobbyUnblock : l10n.lobbyBlock,
                                 onTap: () {
                                   if (isBlockedUser) {
                                     game.unblockUserAction(nickname);
                                     ScaffoldMessenger.of(context).showSnackBar(
-                                      const SnackBar(content: Text('차단이 해제되었습니다')),
+                                      SnackBar(content: Text(l10n.lobbyUnblocked)),
                                     );
                                   } else {
                                     game.blockUserAction(nickname);
                                     ScaffoldMessenger.of(context).showSnackBar(
-                                      const SnackBar(content: Text('차단되었습니다')),
+                                      SnackBar(content: Text(l10n.lobbyBlocked)),
                                     );
                                   }
                                 },
@@ -3123,7 +3139,7 @@ class _LobbyScreenState extends State<LobbyScreen> {
                   actions: [
                     TextButton(
                       onPressed: () => Navigator.pop(ctx),
-                      child: const Text('닫기'),
+                      child: Text(l10n.commonClose),
                     ),
                   ],
                 );
@@ -3142,8 +3158,9 @@ class _LobbyScreenState extends State<LobbyScreen> {
     final profile = data['profile'] as Map<String, dynamic>?;
     final nickname = data['nickname'] as String? ?? '';
 
+    final l10n = L10n.of(context);
     if (profile == null) {
-      return const Text('프로필을 찾을 수 없습니다');
+      return Text(l10n.lobbyProfileNotFound);
     }
 
     final totalGames = profile['totalGames'] ?? 0;
@@ -3186,9 +3203,9 @@ class _LobbyScreenState extends State<LobbyScreen> {
         SizedBox(
           width: double.infinity,
           child: SegmentedButton<String>(
-            segments: const [
-              ButtonSegment(value: 'tichu', label: Text('티츄', style: TextStyle(fontSize: 13))),
-              ButtonSegment(value: 'skull_king', label: Text('스컬킹', style: TextStyle(fontSize: 13))),
+            segments: [
+              ButtonSegment(value: 'tichu', label: Text(l10n.lobbyTichu, style: const TextStyle(fontSize: 13))),
+              ButtonSegment(value: 'skull_king', label: Text(l10n.lobbySkullKing, style: const TextStyle(fontSize: 13))),
             ],
             selected: {selectedTab},
             onSelectionChanged: (s) => onTabChanged(s.first),
@@ -3223,54 +3240,54 @@ class _LobbyScreenState extends State<LobbyScreen> {
         const SizedBox(height: 10),
         if (selectedTab == 'tichu') ...[
           _buildProfileSectionCard(
-            title: '티츄 시즌 랭킹전',
+            title: l10n.lobbyTichuSeasonRanked,
             accent: const Color(0xFF3A3058),
             background: const Color(0xFFF6F4FA),
             icon: Icons.emoji_events,
             iconColor: const Color(0xFFFFD54F),
             mainText: '$seasonRating',
             chips: [
-              _buildStatChip('전적', '$seasonGames전 $seasonWins승 $seasonLosses패'),
-              _buildStatChip('승률', '$seasonWinRate%'),
+              _buildStatChip(l10n.lobbyStatRecord, l10n.lobbyRecordFormat(seasonGames as int, seasonWins as int, seasonLosses as int)),
+              _buildStatChip(l10n.lobbyStatWinRate, '$seasonWinRate%'),
             ],
           ),
           const SizedBox(height: 10),
           _buildProfileSectionCard(
-            title: '티츄 전적',
+            title: l10n.lobbyTichuRecord,
             accent: const Color(0xFF3A3058),
             background: const Color(0xFFF6F4FA),
             icon: Icons.style,
             iconColor: const Color(0xFF6C63FF),
             mainText: '',
             chips: [
-              _buildStatChip('전적', '$totalGames전 $wins승 $losses패'),
-              _buildStatChip('승률', '$winRate%'),
+              _buildStatChip(l10n.lobbyStatRecord, l10n.lobbyRecordFormat(totalGames as int, wins as int, losses as int)),
+              _buildStatChip(l10n.lobbyStatWinRate, '$winRate%'),
             ],
           ),
         ] else ...[
           _buildProfileSectionCard(
-            title: '스컬킹 시즌 랭킹전',
+            title: l10n.lobbySkullKingSeasonRanked,
             accent: const Color(0xFF2D2D3D),
             background: const Color(0xFFECEFF6),
             icon: Icons.emoji_events,
             iconColor: const Color(0xFFFFD54F),
             mainText: '$skSeasonRating',
             chips: [
-              _buildStatChip('전적', '$skSeasonGames전 $skSeasonWins승 $skSeasonLosses패'),
-              _buildStatChip('승률', '$skSeasonWinRate%'),
+              _buildStatChip(l10n.lobbyStatRecord, l10n.lobbyRecordFormat(skSeasonGames as int, skSeasonWins as int, skSeasonLosses as int)),
+              _buildStatChip(l10n.lobbyStatWinRate, '$skSeasonWinRate%'),
             ],
           ),
           const SizedBox(height: 10),
           _buildProfileSectionCard(
-            title: '스컬킹 전적',
+            title: l10n.lobbySkullKingRecord,
             accent: const Color(0xFF2D2D3D),
             background: const Color(0xFFECEFF6),
             icon: Icons.anchor,
             iconColor: const Color(0xFF2D2D3D),
             mainText: '',
             chips: [
-              _buildStatChip('전적', '$skGames전 $skWins승 $skLosses패'),
-              _buildStatChip('승률', '$skWinRate%'),
+              _buildStatChip(l10n.lobbyStatRecord, l10n.lobbyRecordFormat(skGames as int, skWins as int, skLosses as int)),
+              _buildStatChip(l10n.lobbyStatWinRate, '$skWinRate%'),
             ],
           ),
         ],
@@ -3459,12 +3476,12 @@ class _LobbyScreenState extends State<LobbyScreen> {
     );
   }
 
-  static String _mannerLabel(int reportCount) {
-    if (reportCount <= 1) return '좋음';
-    if (reportCount <= 3) return '보통';
-    if (reportCount <= 6) return '나쁨';
-    if (reportCount <= 10) return '아주 나쁨';
-    return '최악';
+  static String _mannerLabel(int reportCount, L10n l10n) {
+    if (reportCount <= 1) return l10n.lobbyMannerGood;
+    if (reportCount <= 3) return l10n.lobbyMannerNormal;
+    if (reportCount <= 6) return l10n.lobbyMannerBad;
+    if (reportCount <= 10) return l10n.lobbyMannerVeryBad;
+    return l10n.lobbyMannerWorst;
   }
 
   static Color _mannerColor(int reportCount) {
@@ -3483,7 +3500,8 @@ class _LobbyScreenState extends State<LobbyScreen> {
   }
 
   Widget _buildMannerLeaveRow({required int reportCount, required int leaveCount}) {
-    final label = _mannerLabel(reportCount);
+    final l10n = L10n.of(context);
+    final label = _mannerLabel(reportCount, l10n);
     final color = _mannerColor(reportCount);
     final icon = _mannerIcon(reportCount);
     return Row(
@@ -3502,7 +3520,7 @@ class _LobbyScreenState extends State<LobbyScreen> {
                 Icon(icon, color: color, size: 16),
                 const SizedBox(width: 6),
                 Text(
-                  '매너 $label',
+                  l10n.lobbyManner(label),
                   style: TextStyle(
                     fontSize: 12,
                     fontWeight: FontWeight.bold,
@@ -3529,7 +3547,7 @@ class _LobbyScreenState extends State<LobbyScreen> {
                     color: Color(0xFFE57373), size: 16),
                 const SizedBox(width: 6),
                 Text(
-                  '탈주 $leaveCount',
+                  l10n.lobbyDesertions(leaveCount),
                   style: const TextStyle(
                     fontSize: 12,
                     fontWeight: FontWeight.bold,
@@ -3590,24 +3608,24 @@ class _LobbyScreenState extends State<LobbyScreen> {
         children: [
           Row(
             children: [
-              const Text(
-                '최근 전적 (3)',
-                style: TextStyle(fontSize: 12, color: Color(0xFF8A8A8A)),
+              Text(
+                L10n.of(context).lobbyRecentMatches(3),
+                style: const TextStyle(fontSize: 12, color: Color(0xFF8A8A8A)),
               ),
               const Spacer(),
               if (recentMatches.length > 3)
                 TextButton(
                   onPressed: () =>
                       _showRecentMatchesDialog(recentMatches, profileNickname),
-                  child: const Text('더보기'),
+                  child: Text(L10n.of(context).lobbySeeMore),
                 ),
             ],
           ),
           const SizedBox(height: 8),
           if (recentMatches.isEmpty)
-            const Text(
-              '최근 전적이 없습니다',
-              style: TextStyle(fontSize: 12, color: Color(0xFF9A8E8A)),
+            Text(
+              L10n.of(context).lobbyNoRecentMatches,
+              style: const TextStyle(fontSize: 12, color: Color(0xFF9A8E8A)),
             )
           else
             Column(
@@ -3624,6 +3642,7 @@ class _LobbyScreenState extends State<LobbyScreen> {
     List<dynamic> recentMatches,
     String profileNickname,
   ) {
+    final l10n = L10n.of(context);
     showDialog(
       context: context,
       builder: (ctx) {
@@ -3649,9 +3668,9 @@ class _LobbyScreenState extends State<LobbyScreen> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      const Text(
-                        '최근 전적',
-                        style: TextStyle(
+                      Text(
+                        l10n.lobbyRecentMatchesTitle,
+                        style: const TextStyle(
                           fontSize: 17,
                           fontWeight: FontWeight.w800,
                           color: Color(0xFF3E312A),
@@ -3659,7 +3678,7 @@ class _LobbyScreenState extends State<LobbyScreen> {
                       ),
                       const SizedBox(height: 2),
                       Text(
-                        '최근 ${recentMatches.length}경기 결과를 확인할 수 있습니다.',
+                        l10n.lobbyRecentMatchesDesc(recentMatches.length),
                         style: const TextStyle(
                           fontSize: 12,
                           color: Color(0xFF84766E),
@@ -3685,7 +3704,7 @@ class _LobbyScreenState extends State<LobbyScreen> {
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(ctx),
-              child: const Text('닫기'),
+              child: Text(l10n.commonClose),
             ),
           ],
         );
@@ -3696,6 +3715,7 @@ class _LobbyScreenState extends State<LobbyScreen> {
   Widget _buildMatchRow(dynamic match, String profileNickname) {
     final gameType = match['gameType']?.toString() ?? 'tichu';
     final isSK = gameType == 'skull_king';
+    final l10n = L10n.of(context);
 
     final deserterNickname = match['deserterNickname']?.toString();
     final isDesertionLoss = match['isDesertionLoss'] == true ||
@@ -3711,16 +3731,16 @@ class _LobbyScreenState extends State<LobbyScreen> {
     final String badgeText;
     if (isDesertionLoss) {
       badgeColor = const Color(0xFFFFB74D);
-      badgeText = '탈';
+      badgeText = l10n.lobbyMatchDesertion;
     } else if (isDraw) {
       badgeColor = const Color(0xFFBDBDBD);
-      badgeText = '무';
+      badgeText = l10n.lobbyMatchDraw;
     } else if (won) {
       badgeColor = const Color(0xFF81C784);
-      badgeText = '승';
+      badgeText = l10n.lobbyMatchWin;
     } else {
       badgeColor = const Color(0xFFE57373);
-      badgeText = '패';
+      badgeText = l10n.lobbyMatchLoss;
     }
 
     // Score / player info
@@ -3730,7 +3750,7 @@ class _LobbyScreenState extends State<LobbyScreen> {
       final players = match['players'] as List<dynamic>? ?? [];
       final myRank = match['myRank'] ?? '-';
       final myScore = match['myScore'] ?? 0;
-      scoreText = '$myRank위 ($myScore점)';
+      scoreText = l10n.lobbyRankAndScore(myRank.toString(), myScore as int);
       playerText = players.map((p) => p['nickname'] ?? '?').join(', ');
     } else {
       final teamAScore = match['teamAScore'] ?? 0;
@@ -3788,7 +3808,7 @@ class _LobbyScreenState extends State<LobbyScreen> {
                         borderRadius: BorderRadius.circular(6),
                       ),
                       child: Text(
-                        isSK ? '스컬킹' : (isRanked ? '랭크' : '일반'),
+                        isSK ? l10n.lobbyMatchTypeSkullKing : (isRanked ? l10n.lobbyMatchTypeRanked : l10n.lobbyMatchTypeNormal),
                         style: TextStyle(
                           fontSize: 9,
                           fontWeight: FontWeight.bold,
@@ -3920,9 +3940,9 @@ class _LobbyScreenState extends State<LobbyScreen> {
                   color: const Color(0xFFFFE082),
                   borderRadius: BorderRadius.circular(8),
                 ),
-                child: const Text(
-                  '방장',
-                  style: TextStyle(
+                child: Text(
+                  L10n.of(context).lobbyHost,
+                  style: const TextStyle(
                     fontSize: 10,
                     fontWeight: FontWeight.bold,
                     color: Color(0xFF8D6E00),
@@ -3989,7 +4009,7 @@ class _LobbyScreenState extends State<LobbyScreen> {
                       ),
                     ),
                   Text(
-                      player?.name ?? '[빈 자리]',
+                      player?.name ?? L10n.of(context).lobbyEmptySlot,
                       style: TextStyle(
                         fontSize: 16,
                         color: isBot
@@ -4018,14 +4038,14 @@ class _LobbyScreenState extends State<LobbyScreen> {
                     color: const Color(0xFFE8EAF6),
                     borderRadius: BorderRadius.circular(8),
                   ),
-                  child: const Row(
+                  child: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      Icon(Icons.smart_toy, size: 14, color: Color(0xFF3949AB)),
-                      SizedBox(width: 4),
+                      const Icon(Icons.smart_toy, size: 14, color: Color(0xFF3949AB)),
+                      const SizedBox(width: 4),
                       Text(
-                        '봇',
-                        style: TextStyle(
+                        L10n.of(context).lobbyBot,
+                        style: const TextStyle(
                           fontSize: 11,
                           fontWeight: FontWeight.bold,
                           color: Color(0xFF3949AB),
@@ -4121,16 +4141,17 @@ class _LobbyScreenState extends State<LobbyScreen> {
   }
 
   void _showKickConfirmDialog(String playerName, String playerId, GameService game) {
+    final l10n = L10n.of(context);
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: const Text('강퇴'),
-        content: Text('$playerName 님을 강퇴하시겠습니까?'),
+        title: Text(l10n.lobbyKick),
+        content: Text(l10n.lobbyKickConfirm(playerName)),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx),
-            child: const Text('취소'),
+            child: Text(l10n.commonCancel),
           ),
           ElevatedButton(
             onPressed: () {
@@ -4141,7 +4162,7 @@ class _LobbyScreenState extends State<LobbyScreen> {
               backgroundColor: const Color(0xFFC62828),
               foregroundColor: Colors.white,
             ),
-            child: const Text('강퇴'),
+            child: Text(l10n.lobbyKick),
           ),
         ],
       ),

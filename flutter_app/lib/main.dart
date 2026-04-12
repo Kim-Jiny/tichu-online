@@ -489,15 +489,15 @@ class _EntryScreenState extends State<_EntryScreen> {
                   child: Image.asset('assets/icon.png', width: 80, height: 80),
                 ),
                 const SizedBox(height: 24),
-                const Text(
-                  '업데이트가 필요합니다',
-                  style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                Text(
+                  L10n.of(context).appForceUpdateTitle,
+                  style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
                 ),
                 const SizedBox(height: 12),
-                const Text(
-                  '새로운 버전이 출시되었습니다.\n원활한 이용을 위해 업데이트해주세요.',
+                Text(
+                  L10n.of(context).appForceUpdateBody,
                   textAlign: TextAlign.center,
-                  style: TextStyle(fontSize: 14, color: Colors.grey, height: 1.5),
+                  style: const TextStyle(fontSize: 14, color: Colors.grey, height: 1.5),
                 ),
                 const SizedBox(height: 28),
                 SizedBox(
@@ -510,7 +510,7 @@ class _EntryScreenState extends State<_EntryScreen> {
                       foregroundColor: Colors.white,
                       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                     ),
-                    child: const Text('업데이트', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+                    child: Text(L10n.of(context).appForceUpdateButton, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
                   ),
                 ),
               ],
@@ -549,9 +549,9 @@ class _EntryScreenState extends State<_EntryScreen> {
                 ),
               ),
               const SizedBox(height: 4),
-              const Text(
-                '이용약관',
-                style: TextStyle(
+              Text(
+                L10n.of(context).appEulaSubtitle,
+                style: const TextStyle(
                   fontSize: 14,
                   color: Colors.grey,
                 ),
@@ -571,7 +571,7 @@ class _EntryScreenState extends State<_EntryScreen> {
                       ? const Center(child: CircularProgressIndicator())
                       : SingleChildScrollView(
                           child: Text(
-                            _eulaText ?? '이용약관을 불러올 수 없습니다. 네트워크 연결을 확인해주세요.',
+                            _eulaText ?? L10n.of(context).appEulaLoadFailed,
                             style: const TextStyle(
                               fontSize: 13,
                               height: 1.6,
@@ -597,9 +597,9 @@ class _EntryScreenState extends State<_EntryScreen> {
                       ),
                     ),
                     const SizedBox(width: 8),
-                    const Text(
-                      '이용약관에 동의합니다',
-                      style: TextStyle(fontSize: 15),
+                    Text(
+                      L10n.of(context).appEulaAgree,
+                      style: const TextStyle(fontSize: 15),
                     ),
                   ],
                 ),
@@ -619,9 +619,9 @@ class _EntryScreenState extends State<_EntryScreen> {
                       borderRadius: BorderRadius.circular(12),
                     ),
                   ),
-                  child: const Text(
-                    '시작하기',
-                    style: TextStyle(
+                  child: Text(
+                    L10n.of(context).appEulaStart,
+                    style: const TextStyle(
                       fontSize: 16,
                       fontWeight: FontWeight.bold,
                     ),

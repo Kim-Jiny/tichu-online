@@ -9,6 +9,7 @@ import '../models/player.dart';
 import '../widgets/playing_card.dart';
 import '../widgets/connection_overlay.dart';
 import '../l10n/app_localizations.dart';
+import '../l10n/l10n_helpers.dart';
 
 class GameScreen extends StatefulWidget {
   const GameScreen({super.key});
@@ -404,7 +405,7 @@ class _GameScreenState extends State<GameScreen> {
                   return _buildRecoveryLoading(
                     title: session.isRestoring ? l10n.gameRestoringGame : l10n.gameCheckingState,
                     subtitle: session.isRestoring
-                        ? session.restoreStatusMessage
+                        ? localizeRestorePhase(session, l10n)
                         : l10n.gameRecheckingRoomState,
                   );
                 }
@@ -934,7 +935,11 @@ class _GameScreenState extends State<GameScreen> {
                 itemBuilder: (context, index) {
                   final msg = game.chatMessages[index];
                   final sender = msg['sender'] as String? ?? '';
-                  final message = msg['message'] as String? ?? '';
+                  String message = msg['message'] as String? ?? '';
+                  if (message == 'chat_banned') {
+                    final mins = msg['remainingMinutes'] as int? ?? 0;
+                    message = localizeChatBanned(mins, L10n.of(context));
+                  }
                   final isMe = sender == game.playerName;
                   final isBlocked = game.isBlocked(sender);
 
@@ -2124,11 +2129,10 @@ class _GameScreenState extends State<GameScreen> {
   }
 
   Widget _buildErrorBanner(String message) {
-    // 콜 관련 에러인지 확인
-    final isCallError = message.contains('Call') || message.contains('콜');
+    final isCallError = message.contains('Call');
     final displayMessage = isCallError
         ? L10n.of(context).gameCallError
-        : message;
+        : localizeServiceMessage(message, L10n.of(context));
 
     return Positioned(
       bottom: 200,

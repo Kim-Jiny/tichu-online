@@ -408,7 +408,7 @@ class GameService extends ChangeNotifier {
         break;
 
       case 'login_error':
-        loginError = data['message'] ?? '로그인 실패';
+        loginError = data['message'] ?? 'login_failed';
         notifyListeners();
         break;
 
@@ -582,8 +582,8 @@ class GameService extends ChangeNotifier {
         break;
 
       case 'kicked':
-        final kickMessage = data['message'] as String? ?? '강퇴되었습니다';
-        final isDuplicateLogin = kickMessage.contains('다른 기기');
+        final kickMessage = data['message'] as String? ?? 'kicked';
+        final isDuplicateLogin = kickMessage.contains('다른 기기') || kickMessage.contains('duplicate');
         currentRoomId = '';
         currentRoomName = '';
         roomPlayers = List.filled(roomMaxPlayers, null);
@@ -850,12 +850,11 @@ class GameService extends ChangeNotifier {
 
       case 'chat_banned':
         final mins = data['remainingMinutes'] ?? 0;
-        final hours = mins ~/ 60;
-        final display = hours > 0 ? '$hours시간 ${mins % 60}분' : '$mins분';
         chatMessages.add({
           'sender': '',
           'senderId': '',
-          'message': '채팅이 제한되었습니다 ($display 남음)',
+          'message': 'chat_banned',
+          'remainingMinutes': mins,
           'timestamp': DateTime.now().millisecondsSinceEpoch,
           'isSystem': true,
         });
@@ -1105,7 +1104,7 @@ class GameService extends ChangeNotifier {
               ? Map<String, dynamic>.from(data['myRankData'] as Map)
               : null;
         } else {
-          rankingsError = data['message'] as String? ?? '랭킹을 불러오지 못했습니다';
+          rankingsError = data['message'] as String? ?? 'rankings_load_failed';
         }
         notifyListeners();
         break;
@@ -1132,7 +1131,7 @@ class GameService extends ChangeNotifier {
           goldHistory = list.map((e) => Map<String, dynamic>.from(e)).toList();
           goldHistoryError = null;
         } else {
-          goldHistoryError = data['message'] as String? ?? '골드 내역을 불러오지 못했습니다';
+          goldHistoryError = data['message'] as String? ?? 'gold_history_load_failed';
         }
         notifyListeners();
         break;
@@ -1153,7 +1152,7 @@ class GameService extends ChangeNotifier {
               .toList();
           adminUsersError = null;
         } else {
-          adminUsersError = data['message'] as String? ?? '유저 목록을 불러오지 못했습니다';
+          adminUsersError = data['message'] as String? ?? 'admin_users_load_failed';
         }
         notifyListeners();
         break;
@@ -1165,7 +1164,7 @@ class GameService extends ChangeNotifier {
           );
           adminUserDetailError = null;
         } else {
-          adminUserDetailError = data['message'] as String? ?? '유저 정보를 불러오지 못했습니다';
+          adminUserDetailError = data['message'] as String? ?? 'admin_user_detail_load_failed';
         }
         notifyListeners();
         break;
@@ -1177,7 +1176,7 @@ class GameService extends ChangeNotifier {
               .toList();
           adminInquiriesError = null;
         } else {
-          adminInquiriesError = data['message'] as String? ?? '문의 목록을 불러오지 못했습니다';
+          adminInquiriesError = data['message'] as String? ?? 'admin_inquiries_load_failed';
         }
         notifyListeners();
         break;
@@ -1189,7 +1188,7 @@ class GameService extends ChangeNotifier {
               .toList();
           adminReportsError = null;
         } else {
-          adminReportsError = data['message'] as String? ?? '신고 목록을 불러오지 못했습니다';
+          adminReportsError = data['message'] as String? ?? 'admin_reports_load_failed';
         }
         notifyListeners();
         break;
@@ -1201,7 +1200,7 @@ class GameService extends ChangeNotifier {
               .toList();
           adminReportGroupError = null;
         } else {
-          adminReportGroupError = data['message'] as String? ?? '신고 상세를 불러오지 못했습니다';
+          adminReportGroupError = data['message'] as String? ?? 'admin_report_group_load_failed';
         }
         notifyListeners();
         break;
@@ -1211,7 +1210,7 @@ class GameService extends ChangeNotifier {
       case 'admin_report_status_result':
         adminActionSuccess = data['success'] == true;
         adminActionMessage = data['message'] as String? ??
-            (adminActionSuccess == true ? '처리되었습니다' : '처리에 실패했습니다');
+            (adminActionSuccess == true ? 'admin_action_success' : 'admin_action_failed');
         if (type == 'admin_adjust_gold_result' &&
             adminActionSuccess == true &&
             adminUserDetail?['nickname'] == data['nickname']) {
@@ -1243,7 +1242,7 @@ class GameService extends ChangeNotifier {
           shopItems = list.map((e) => Map<String, dynamic>.from(e)).toList();
           shopError = null;
         } else {
-          shopError = data['message'] as String? ?? '상점 정보를 불러오지 못했습니다';
+          shopError = data['message'] as String? ?? 'shop_load_failed';
         }
         notifyListeners();
         break;
@@ -1255,7 +1254,7 @@ class GameService extends ChangeNotifier {
           inventoryItems = list.map((e) => Map<String, dynamic>.from(e)).toList();
           inventoryError = null;
         } else {
-          inventoryError = data['message'] as String? ?? '인벤토리를 불러오지 못했습니다';
+          inventoryError = data['message'] as String? ?? 'inventory_load_failed';
         }
         notifyListeners();
         break;
@@ -1305,7 +1304,7 @@ class GameService extends ChangeNotifier {
           inquiriesError = null;
           _maybeShowInquiryBanner();
         } else {
-          inquiriesError = data['message'] as String? ?? '문의 내역을 불러오지 못했습니다';
+          inquiriesError = data['message'] as String? ?? 'inquiries_load_failed';
           inquiries = [];
         }
         notifyListeners();
@@ -1324,7 +1323,7 @@ class GameService extends ChangeNotifier {
             markCurrentNoticesAsRead();
           }
         } else {
-          noticesError = data['message'] as String? ?? '공지사항을 불러오지 못했습니다';
+          noticesError = data['message'] as String? ?? 'notices_load_failed';
           notices = [];
           _pendingNoticeMarkRead = false;
         }
@@ -1340,10 +1339,10 @@ class GameService extends ChangeNotifier {
         if (data['success'] == true) {
           final nn = data['newNickname'] as String? ?? '';
           if (nn.isNotEmpty) playerName = nn;
-          nicknameChangeResult = '닉네임이 변경되었습니다';
+          nicknameChangeResult = 'nickname_changed';
           nicknameChangeSuccess = true;
         } else {
-          nicknameChangeResult = data['message'] as String? ?? '닉네임 변경에 실패했습니다';
+          nicknameChangeResult = data['message'] as String? ?? 'nickname_change_failed';
           nicknameChangeSuccess = false;
         }
         requestWallet();
@@ -1355,9 +1354,10 @@ class GameService extends ChangeNotifier {
         adRewardSuccess = data['success'] == true;
         if (adRewardSuccess!) {
           gold = (data['gold'] as num?)?.toInt() ?? gold;
-          adRewardResult = '50골드를 받았습니다! (남은 횟수: ${data['remaining'] ?? 0})';
+          adRewardRemaining = (data['remaining'] as num?)?.toInt() ?? 0;
+          adRewardResult = 'ad_reward_success';
         } else {
-          adRewardResult = data['message'] as String? ?? '보상 지급에 실패했습니다';
+          adRewardResult = data['message'] as String? ?? 'reward_failed';
         }
         notifyListeners();
         break;
@@ -2154,7 +2154,7 @@ class GameService extends ChangeNotifier {
     gameState = null;
     _prevGameState = null;
     _prevSKGameState = null;
-    errorMessage = '방 정보를 복구하지 못해 로비로 이동했습니다.';
+    errorMessage = 'room_restore_fallback';
     notifyListeners();
   }
 
@@ -2214,6 +2214,7 @@ class GameService extends ChangeNotifier {
   // 광고 보상
   String? adRewardResult;
   bool? adRewardSuccess;
+  int adRewardRemaining = 0;
 
   void claimAdReward() {
     _network.send({'type': 'ad_reward'});
@@ -2343,11 +2344,11 @@ class GameService extends ChangeNotifier {
 
   void inviteToRoom(String nickname) {
     if (!isInWaitingRoom) {
-      errorMessage = '게임 진행 중에는 방 초대를 보낼 수 없습니다';
+      errorMessage = 'invite_in_game';
       notifyListeners();
       Future.delayed(const Duration(seconds: 3), () {
         if (_disposed) return;
-        if (errorMessage == '게임 진행 중에는 방 초대를 보낼 수 없습니다') {
+        if (errorMessage == 'invite_in_game') {
           errorMessage = null;
           notifyListeners();
         }
@@ -2355,11 +2356,11 @@ class GameService extends ChangeNotifier {
       return;
     }
     if (isRoomInvitePending(nickname)) {
-      errorMessage = '이미 초대를 보냈습니다. 잠시 후 다시 시도해주세요';
+      errorMessage = 'invite_cooldown';
       notifyListeners();
       Future.delayed(const Duration(seconds: 3), () {
         if (_disposed) return;
-        if (errorMessage == '이미 초대를 보냈습니다. 잠시 후 다시 시도해주세요') {
+        if (errorMessage == 'invite_cooldown') {
           errorMessage = null;
           notifyListeners();
         }
@@ -2592,8 +2593,8 @@ class GameService extends ChangeNotifier {
       final userRead = item['user_read'] == true;
       if (id <= 0) continue;
       if (status == 'resolved' && adminNote.isNotEmpty && !userRead) {
-        final title = item['title']?.toString() ?? '문의';
-        inquiryBannerMessage = '문의 답변이 도착했어요: $title';
+        final title = item['title']?.toString() ?? '';
+        inquiryBannerMessage = 'inquiry_reply:$title';
         _inquiryBannerTimer?.cancel();
         _inquiryBannerTimer = Timer(const Duration(seconds: 4), () {
           if (_disposed) return;

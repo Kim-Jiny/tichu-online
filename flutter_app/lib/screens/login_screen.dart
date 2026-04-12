@@ -9,6 +9,7 @@ import '../services/game_service.dart';
 import '../services/auth_service.dart';
 import '../services/session_service.dart';
 import '../l10n/app_localizations.dart';
+import '../l10n/l10n_helpers.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -674,7 +675,7 @@ class _LoginScreenState extends State<LoginScreen> {
           ),
           const SizedBox(height: 6),
           Text(
-            session.restoreError ?? l10n.loginCheckSavedInfo,
+            localizeRestoreError(session.restoreErrorRaw, l10n) ?? l10n.loginCheckSavedInfo,
             style: const TextStyle(
               fontSize: 13,
               color: Color(0xFF7A4B1F),
@@ -735,7 +736,7 @@ class _LoginScreenState extends State<LoginScreen> {
               const SizedBox(height: 8),
               Text(
                 session.isRestoring
-                    ? session.restoreStatusMessage
+                    ? localizeRestorePhase(session, l10n)
                     : l10n.loginVerifyingAccount,
                 textAlign: TextAlign.center,
                 style: const TextStyle(

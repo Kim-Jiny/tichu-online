@@ -9,6 +9,7 @@ import '../models/sk_game_state.dart';
 import '../models/player.dart';
 import '../widgets/connection_overlay.dart';
 import '../l10n/app_localizations.dart';
+import '../l10n/l10n_helpers.dart';
 
 class SKGameScreen extends StatefulWidget {
   const SKGameScreen({super.key});
@@ -1577,7 +1578,7 @@ class _SKGameScreenState extends State<SKGameScreen> {
             const SizedBox(width: 8),
             Expanded(
               child: Text(
-                message,
+                localizeServiceMessage(message, L10n.of(context)),
                 style: const TextStyle(color: Color(0xFFCC4444), fontWeight: FontWeight.bold, fontSize: 14),
               ),
             ),
@@ -1826,7 +1827,11 @@ class _SKGameScreenState extends State<SKGameScreen> {
                   itemBuilder: (context, index) {
                     final msg = game.chatMessages[index];
                     final sender = msg['sender'] as String? ?? '';
-                    final message = msg['message'] as String? ?? '';
+                    String message = msg['message'] as String? ?? '';
+                    if (message == 'chat_banned') {
+                      final mins = msg['remainingMinutes'] as int? ?? 0;
+                      message = localizeChatBanned(mins, L10n.of(context));
+                    }
                     final isMe = sender == game.playerName;
                     final isBlocked = sender.isNotEmpty && game.isBlocked(sender);
 

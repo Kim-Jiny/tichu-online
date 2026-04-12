@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import '../l10n/app_localizations.dart';
+import '../l10n/l10n_helpers.dart';
 import '../services/game_service.dart';
 
 class AdminCenterScreen extends StatefulWidget {
@@ -56,7 +58,7 @@ class _AdminCenterScreenState extends State<AdminCenterScreen> {
                   if (!mounted) return;
                   if (game.adminActionSuccess != null) {
                     final success = game.adminActionSuccess == true;
-                    final message = game.adminActionMessage ?? (success ? '처리되었습니다' : '실패했습니다');
+                    final message = localizeServiceMessage(game.adminActionMessage ?? (success ? 'admin_action_success' : 'admin_action_failed'), L10n.of(context));
                     game.adminActionSuccess = null;
                     game.adminActionMessage = null;
                     ScaffoldMessenger.of(context).showSnackBar(
@@ -207,7 +209,7 @@ class _AdminCenterScreenState extends State<AdminCenterScreen> {
       return const Center(child: CircularProgressIndicator());
     }
     if (game.adminInquiriesError != null) {
-      return Center(child: Text(game.adminInquiriesError!));
+      return Center(child: Text(localizeServiceMessage(game.adminInquiriesError!, L10n.of(context))));
     }
     return ListView.separated(
       padding: EdgeInsets.fromLTRB(isCompact ? 12 : 16, 6, isCompact ? 12 : 16, 16),
@@ -277,7 +279,7 @@ class _AdminCenterScreenState extends State<AdminCenterScreen> {
       return const Center(child: CircularProgressIndicator());
     }
     if (game.adminReportsError != null) {
-      return Center(child: Text(game.adminReportsError!));
+      return Center(child: Text(localizeServiceMessage(game.adminReportsError!, L10n.of(context))));
     }
     return ListView.separated(
       padding: EdgeInsets.fromLTRB(isCompact ? 12 : 16, 6, isCompact ? 12 : 16, 16),

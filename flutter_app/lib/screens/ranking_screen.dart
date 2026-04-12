@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:google_mobile_ads/google_mobile_ads.dart';
 import '../l10n/app_localizations.dart';
+import '../l10n/l10n_helpers.dart';
 import '../services/game_service.dart';
 import '../services/ad_service.dart';
 
@@ -222,7 +223,7 @@ class _RankingScreenState extends State<RankingScreen> {
     if (game.rankingsError != null) {
       return Center(
         child: Text(
-          game.rankingsError!,
+          localizeServiceMessage(game.rankingsError!, L10n.of(context)),
           style: const TextStyle(color: Color(0xFFCC6666)),
         ),
       );

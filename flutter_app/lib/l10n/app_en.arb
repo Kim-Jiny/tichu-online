@@ -1356,5 +1356,81 @@
       "max": { "type": "int" }
     }
   },
-  "shopAdRewardDone": "Daily ad rewards complete"
+  "shopAdRewardDone": "Daily ad rewards complete",
+
+  "appForceUpdateTitle": "Update Required",
+  "appForceUpdateBody": "A new version has been released.\nPlease update to continue using the app.",
+  "appForceUpdateButton": "Update",
+  "appEulaSubtitle": "Terms of Service",
+  "appEulaLoadFailed": "Unable to load Terms of Service. Please check your network connection.",
+  "appEulaAgree": "I agree to the Terms of Service",
+  "appEulaStart": "Get Started",
+
+  "serviceRestoreRefreshingSocial": "Verifying social login info...",
+  "serviceRestoreSocialLogin": "Logging in with social account...",
+  "serviceRestoreLocalLogin": "Logging in with saved account...",
+  "serviceRestoreRoomState": "Restoring room info...",
+  "serviceRestoreLoadingLobby": "Loading lobby data...",
+  "serviceRestoreAutoLoginFailed": "Auto login failed.",
+  "serviceRestoreConnecting": "Connecting...",
+  "serviceRestoreNeedsNickname": "A nickname needs to be set.",
+  "serviceRestoreSocialFailed": "Social login restoration failed.",
+  "serviceRestoreSocialTokenExpired": "Social login info needs to be re-verified.",
+  "serviceRestoreLocalFailed": "Saved account login failed.",
+  "serviceRestoreAutoError": "An error occurred during auto login.",
+  "serviceServerTimeout": "Server response timed out",
+  "serviceKicked": "You have been kicked",
+  "serviceRankingsLoadFailed": "Failed to load rankings",
+  "serviceGoldHistoryLoadFailed": "Failed to load gold history",
+  "serviceAdminUsersLoadFailed": "Failed to load user list",
+  "serviceAdminUserDetailLoadFailed": "Failed to load user details",
+  "serviceAdminInquiriesLoadFailed": "Failed to load inquiry list",
+  "serviceAdminReportsLoadFailed": "Failed to load report list",
+  "serviceAdminReportGroupLoadFailed": "Failed to load report details",
+  "serviceAdminActionSuccess": "Action completed",
+  "serviceAdminActionFailed": "Action failed",
+  "serviceShopLoadFailed": "Failed to load shop data",
+  "serviceInventoryLoadFailed": "Failed to load inventory",
+  "serviceInquiriesLoadFailed": "Failed to load inquiry history",
+  "serviceNoticesLoadFailed": "Failed to load notices",
+  "serviceNicknameChanged": "Nickname has been changed",
+  "serviceNicknameChangeFailed": "Nickname change failed",
+  "serviceRewardFailed": "Failed to grant reward",
+  "serviceRoomRestoreFallback": "Could not restore room info. Returning to lobby.",
+  "serviceInviteInGame": "Cannot send room invites during a game",
+  "serviceInviteCooldown": "Invite already sent. Please try again shortly",
+  "serviceAdShowFailed": "Unable to show the ad",
+  "serviceAdLoadFailed": "Unable to load the ad",
+  "serviceInquiryReply": "Inquiry reply received: {title}",
+  "@serviceInquiryReply": {
+    "placeholders": {
+      "title": { "type": "String" }
+    }
+  },
+  "serviceInquiryDefault": "Inquiry",
+  "serviceChatBanned": "Chat restricted ({remaining} remaining)",
+  "@serviceChatBanned": {
+    "placeholders": {
+      "remaining": { "type": "String" }
+    }
+  },
+  "serviceChatBanHoursMinutes": "{hours}h {minutes}m",
+  "@serviceChatBanHoursMinutes": {
+    "placeholders": {
+      "hours": { "type": "int" },
+      "minutes": { "type": "int" }
+    }
+  },
+  "serviceChatBanMinutes": "{minutes}m",
+  "@serviceChatBanMinutes": {
+    "placeholders": {
+      "minutes": { "type": "int" }
+    }
+  },
+  "serviceAdRewardSuccess": "Received 50 Gold! (Remaining: {remaining})",
+  "@serviceAdRewardSuccess": {
+    "placeholders": {
+      "remaining": { "type": "int" }
+    }
+  }
 }

@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import '../l10n/app_localizations.dart';
+import '../l10n/l10n_helpers.dart';
 import '../services/game_service.dart';
 import '../services/network_service.dart';
 import '../services/session_service.dart';
@@ -1387,7 +1388,7 @@ class _LobbyScreenState extends State<LobbyScreen> {
           const SizedBox(width: 10),
           Expanded(
             child: Text(
-              game.inquiryBannerMessage ?? '',
+              localizeInquiryBanner(game.inquiryBannerMessage, L10n.of(context)),
               style: const TextStyle(
                 color: Color(0xFF1E88E5),
                 fontSize: 13,
@@ -1857,7 +1858,7 @@ class _LobbyScreenState extends State<LobbyScreen> {
                   const SizedBox(width: 8),
                   Expanded(
                     child: Text(
-                      game.errorMessage!,
+                      localizeServiceMessage(game.errorMessage!, L10n.of(context)),
                       style: const TextStyle(color: Color(0xFFC62828), fontSize: 13),
                     ),
                   ),
@@ -2414,7 +2415,11 @@ class _LobbyScreenState extends State<LobbyScreen> {
               itemBuilder: (context, index) {
                 final msg = game.chatMessages[index];
                 final sender = msg['sender'] as String? ?? '';
-                final message = msg['message'] as String? ?? '';
+                String message = msg['message'] as String? ?? '';
+                if (message == 'chat_banned') {
+                  final mins = msg['remainingMinutes'] as int? ?? 0;
+                  message = localizeChatBanned(mins, L10n.of(context));
+                }
                 final isMe = sender == game.playerName;
                 final isBlockedUser = game.isBlocked(sender);
 

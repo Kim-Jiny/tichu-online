@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:google_mobile_ads/google_mobile_ads.dart';
 import '../l10n/app_localizations.dart';
+import '../l10n/l10n_helpers.dart';
 import '../services/game_service.dart';
 import '../services/ad_service.dart';
 
@@ -336,7 +337,7 @@ class _ShopScreenState extends State<ShopScreen> {
                           if (game.goldHistoryError != null) {
                             return Center(
                               child: Text(
-                                game.goldHistoryError!,
+                                localizeServiceMessage(game.goldHistoryError!, L10n.of(context)),
                                 textAlign: TextAlign.center,
                                 style: const TextStyle(
                                   color: Color(0xFF8A7A72),
@@ -674,7 +675,7 @@ class _ShopScreenState extends State<ShopScreen> {
     if (game.shopError != null) {
       return Center(
         child: Text(
-          game.shopError!,
+          localizeServiceMessage(game.shopError!, L10n.of(context)),
           style: const TextStyle(color: Color(0xFFCC6666)),
         ),
       );
@@ -885,7 +886,7 @@ class _ShopScreenState extends State<ShopScreen> {
     if (game.inventoryError != null) {
       return Center(
         child: Text(
-          game.inventoryError!,
+          localizeServiceMessage(game.inventoryError!, L10n.of(context)),
           style: const TextStyle(color: Color(0xFFCC6666)),
         ),
       );
@@ -1505,7 +1506,7 @@ class _ShopScreenState extends State<ShopScreen> {
     game.nicknameChangeSuccess = null;
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        content: Text(msg),
+        content: Text(localizeServiceMessage(msg, L10n.of(context))),
         backgroundColor: ok ? const Color(0xFF66BB6A) : const Color(0xFFEF5350),
       ),
     );
@@ -1861,9 +1862,13 @@ class _ShopScreenState extends State<ShopScreen> {
     game.adRewardResult = null;
     final success = game.adRewardSuccess == true;
     game.adRewardSuccess = null;
+    final l10n = L10n.of(context);
+    final displayMsg = (msg == 'ad_reward_success')
+        ? localizeAdRewardSuccess(game.adRewardRemaining, l10n)
+        : localizeServiceMessage(msg, l10n);
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        content: Text(msg),
+        content: Text(displayMsg),
         backgroundColor: success ? Colors.green : Colors.red,
       ),
     );

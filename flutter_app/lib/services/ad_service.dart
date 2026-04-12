@@ -102,7 +102,7 @@ class AdService {
             onAdDismissedFullScreenContent: (ad) => ad.dispose(),
             onAdFailedToShowFullScreenContent: (ad, error) {
               ad.dispose();
-              onError('광고를 표시할 수 없습니다');
+              onError('ad_show_failed');
             },
           );
           ad.show(
@@ -112,7 +112,7 @@ class AdService {
           );
         },
         onAdFailedToLoad: (error) {
-          onError('광고를 불러올 수 없습니다');
+          onError('ad_load_failed');
         },
       ),
     );

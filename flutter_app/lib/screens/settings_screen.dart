@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../l10n/app_localizations.dart';
+import '../l10n/l10n_helpers.dart';
 import '../services/game_service.dart';
 import '../services/auth_service.dart';
 import '../services/session_service.dart';
@@ -239,7 +240,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                       mainAxisSize: MainAxisSize.min,
                       children: [
                         Text(
-                          game.noticesError!,
+                          localizeServiceMessage(game.noticesError!, L10n.of(context)),
                           style: const TextStyle(color: Color(0xFFCC6666)),
                           textAlign: TextAlign.center,
                         ),
@@ -569,7 +570,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                       mainAxisSize: MainAxisSize.min,
                       children: [
                         Text(
-                          game.inquiriesError!,
+                          localizeServiceMessage(game.inquiriesError!, L10n.of(context)),
                           style: const TextStyle(color: Color(0xFFCC6666)),
                           textAlign: TextAlign.center,
                         ),

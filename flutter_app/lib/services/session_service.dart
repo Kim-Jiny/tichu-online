@@ -48,24 +48,9 @@ class SessionService extends ChangeNotifier {
   RestorePhase get restorePhase => _restorePhase;
   String? get restoreError => _restoreError;
   bool get hasRestoreError => _restoreError != null;
-  String get restoreStatusMessage {
-    switch (_restorePhase) {
-      case RestorePhase.refreshingSocialToken:
-        return '소셜 로그인 정보를 확인하는 중...';
-      case RestorePhase.restoringSocialSession:
-        return '소셜 계정으로 로그인하는 중...';
-      case RestorePhase.restoringLocalSession:
-        return '저장된 계정으로 로그인하는 중...';
-      case RestorePhase.restoringRoomState:
-        return '방 정보를 복구하는 중...';
-      case RestorePhase.loadingLobbyData:
-        return '대기실 정보를 불러오는 중...';
-      case RestorePhase.failed:
-        return _restoreError ?? '자동 로그인에 실패했습니다.';
-      case RestorePhase.idle:
-        return '연결 중...';
-    }
-  }
+  /// Returns the raw restore error string (may be a server message or a key).
+  /// Widgets should prefer mapping [restorePhase] via l10n.
+  String? get restoreErrorRaw => _restoreError;
 
   bool consumeAutoRestoreSuppression() {
     if (!_skipNextAutoRestore) return false;
@@ -183,14 +168,14 @@ class SessionService extends ChangeNotifier {
             return true;
           }
           if (result.status == SessionAuthStatus.needsNickname) {
-            _setRestoreFailure('추가 닉네임 설정이 필요합니다.');
+            _setRestoreFailure('needs_nickname');
             return false;
           }
-          _restoreError = result.error ?? '소셜 로그인 복구에 실패했습니다.';
+          _restoreError = result.error ?? 'social_restore_failed';
         } else {
-          _restoreError = '소셜 로그인 정보를 다시 확인해야 합니다.';
+          _restoreError = 'social_token_expired';
         }
-        _setRestoreFailure(_restoreError ?? '소셜 로그인 복구에 실패했습니다.');
+        _setRestoreFailure(_restoreError ?? 'social_restore_failed');
         return false;
       }
 
@@ -208,7 +193,7 @@ class SessionService extends ChangeNotifier {
           await _refreshPostLoginData();
           return true;
         }
-        _restoreError = result.error ?? '저장된 계정 로그인에 실패했습니다.';
+        _restoreError = result.error ?? 'local_restore_failed';
         _setRestoreFailure(_restoreError!);
         return false;
       }
@@ -216,7 +201,7 @@ class SessionService extends ChangeNotifier {
       // No saved credentials at all — not an error, just nothing to restore
       return false;
     } catch (_) {
-      _setRestoreFailure(_restoreError ?? '자동 로그인 복구 중 오류가 발생했습니다.');
+      _setRestoreFailure(_restoreError ?? 'auto_restore_error');
       return false;
     } finally {
       _setRestoring(false);
@@ -323,7 +308,7 @@ class SessionService extends ChangeNotifier {
       }
       return result;
     } catch (_) {
-      return const SessionAuthResult.failed('서버 응답 시간 초과');
+      return const SessionAuthResult.failed('server_timeout');
     } finally {
       _game.removeListener(listener);
     }

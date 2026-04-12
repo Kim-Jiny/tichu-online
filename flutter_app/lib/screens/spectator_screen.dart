@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../l10n/app_localizations.dart';
+import '../l10n/l10n_helpers.dart';
 import '../models/player.dart';
 import '../services/game_service.dart';
 import '../services/session_service.dart';
@@ -112,7 +113,7 @@ class _SpectatorScreenState extends State<SpectatorScreen> {
               if (session.isRestoring) {
                 return _buildRecoveryLoading(
                   title: L10n.of(context).spectatorRecovering,
-                  subtitle: session.restoreStatusMessage,
+                  subtitle: localizeRestorePhase(session, L10n.of(context)),
                 );
               }
 
@@ -1486,7 +1487,11 @@ class _SpectatorScreenState extends State<SpectatorScreen> {
                 itemBuilder: (context, index) {
                   final msg = game.chatMessages[index];
                   final sender = msg['sender'] as String? ?? '';
-                  final message = msg['message'] as String? ?? '';
+                  String message = msg['message'] as String? ?? '';
+                  if (message == 'chat_banned') {
+                    final mins = msg['remainingMinutes'] as int? ?? 0;
+                    message = localizeChatBanned(mins, L10n.of(context));
+                  }
                   final isMe = sender == game.playerName;
                   final isBlocked = game.isBlocked(sender);
 

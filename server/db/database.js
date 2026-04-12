@@ -2890,8 +2890,8 @@ async function getDashboardStats() {
 
     // Top 10 players by rating
     const topPlayers = await client.query(`
-      SELECT nickname, rating, wins, losses, total_games, season_rating, level
-      FROM tc_users WHERE is_deleted IS NOT TRUE ORDER BY rating DESC LIMIT 10
+      SELECT nickname, rating, wins, losses, total_games, season_rating, season_games, level
+      FROM tc_users WHERE is_deleted IS NOT TRUE ORDER BY rating DESC, season_games DESC LIMIT 10
     `);
 
     // Gold economy

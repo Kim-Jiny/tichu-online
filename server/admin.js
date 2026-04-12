@@ -730,7 +730,7 @@ async function handleAdminRoute(req, res, url, pathname, method, lobby, wss, mai
     let topPlayersTable = '';
     if (stats.topPlayers.length > 0) {
       topPlayersTable = `<div class="table-wrap"><table>
-        <tr><th>#</th><th>닉네임</th><th>레이팅</th><th>시즌</th><th>승/패</th><th>게임</th><th>Lv</th></tr>
+        <tr><th>#</th><th>닉네임</th><th>레이팅</th><th>시즌</th><th>승/패</th><th>게임</th><th>시즌판수</th><th>Lv</th></tr>
         ${stats.topPlayers.map((p, i) => {
           const medal = i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : `${i + 1}`;
           const winRate = p.total_games > 0 ? Math.round(p.wins / p.total_games * 100) : 0;
@@ -741,6 +741,7 @@ async function handleAdminRoute(req, res, url, pathname, method, lobby, wss, mai
             <td>${p.season_rating}</td>
             <td>${p.wins}승 / ${p.losses}패 <span style="color:#888;font-size:12px">(${winRate}%)</span></td>
             <td>${p.total_games}</td>
+            <td>${p.season_games || 0}</td>
             <td>${p.level}</td>
           </tr>`;
         }).join('')}

@@ -146,6 +146,23 @@ class GameService extends ChangeNotifier {
   List<Map<String, dynamic>> notices = [];
   bool noticesLoading = false;
   String? noticesError;
+  // Set of notice IDs the user has already seen. Persisted locally —
+  // there is no server-side read tracking for notices.
+  final Set<int> _readNoticeIds = <int>{};
+  static const String _readNoticesPrefsKey = 'read_notice_ids';
+  // Set to true by requestNotices(markReadOnReceive: true) so the next
+  // notices_result response automatically marks everything seen.
+  bool _pendingNoticeMarkRead = false;
+
+  /// Count of notices the user hasn't opened yet.
+  int get unreadNoticeCount {
+    int count = 0;
+    for (final n in notices) {
+      final id = n['id'];
+      if (id is int && !_readNoticeIds.contains(id)) count++;
+    }
+    return count;
+  }
 
   // Push settings
   bool pushEnabled = true;
@@ -213,6 +230,7 @@ class GameService extends ChangeNotifier {
   String? eulaContent;
   String? privacyPolicy;
   String? minVersion;
+  String? latestVersion;
 
   // Maintenance
   bool isUnderMaintenance = false;
@@ -244,6 +262,7 @@ class GameService extends ChangeNotifier {
     });
     _loadPushPrefs();
     _loadSfxPrefs();
+    _loadReadNoticeIds();
   }
 
   // Helper: count of non-null players
@@ -383,6 +402,8 @@ class GameService extends ChangeNotifier {
         _savePushPrefs();
         // Async FCM token update - don't block login
         _sendFcmTokenAsync();
+        // Prefetch notices so the unread badge is accurate immediately.
+        requestNotices();
         notifyListeners();
         break;
 
@@ -1298,9 +1319,14 @@ class GameService extends ChangeNotifier {
                   .toList() ??
               [];
           noticesError = null;
+          if (_pendingNoticeMarkRead) {
+            _pendingNoticeMarkRead = false;
+            markCurrentNoticesAsRead();
+          }
         } else {
           noticesError = data['message'] as String? ?? '공지사항을 불러오지 못했습니다';
           notices = [];
+          _pendingNoticeMarkRead = false;
         }
         notifyListeners();
         break;
@@ -1367,6 +1393,7 @@ class GameService extends ChangeNotifier {
         eulaContent = data['eulaContent'] as String? ?? '';
         privacyPolicy = data['privacyPolicy'] as String? ?? '';
         minVersion = data['minVersion'] as String? ?? '';
+        latestVersion = data['latestVersion'] as String? ?? '';
         notifyListeners();
         break;
     }
@@ -2419,11 +2446,52 @@ class GameService extends ChangeNotifier {
     _network.send({'type': 'get_inquiries'});
   }
 
-  void requestNotices() {
+  void requestNotices({bool markReadOnReceive = false}) {
+    if (markReadOnReceive) _pendingNoticeMarkRead = true;
     noticesLoading = true;
     noticesError = null;
     notifyListeners();
     _network.send({'type': 'get_notices'});
+  }
+
+  /// Load the persisted set of read notice IDs from SharedPreferences.
+  Future<void> _loadReadNoticeIds() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final list = prefs.getStringList(_readNoticesPrefsKey) ?? const [];
+      _readNoticeIds.addAll(
+        list.map(int.tryParse).whereType<int>(),
+      );
+      if (_disposed) return;
+      notifyListeners();
+    } catch (_) {
+      // Best-effort; ignore prefs errors.
+    }
+  }
+
+  /// Mark every currently-known notice as read and persist the set.
+  void markCurrentNoticesAsRead() {
+    bool changed = false;
+    for (final n in notices) {
+      final id = n['id'];
+      if (id is int && _readNoticeIds.add(id)) changed = true;
+    }
+    if (changed) {
+      notifyListeners();
+      _saveReadNoticeIds();
+    }
+  }
+
+  Future<void> _saveReadNoticeIds() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setStringList(
+        _readNoticesPrefsKey,
+        _readNoticeIds.map((i) => i.toString()).toList(),
+      );
+    } catch (_) {
+      // Best-effort; ignore prefs errors.
+    }
   }
 
   // Send FCM token to server asynchronously after login

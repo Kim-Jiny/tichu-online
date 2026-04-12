@@ -575,6 +575,13 @@ async function registerUser(username, password, nickname) {
   if (!nickname || nickname.trim().length < 1) {
     return { success: false, message: '닉네임을 입력해주세요' };
   }
+  const trimmedNickname = nickname.trim();
+  if (trimmedNickname.length < 2 || trimmedNickname.length > 10) {
+    return { success: false, message: '닉네임은 2~10자여야 합니다' };
+  }
+  if (/\s/.test(trimmedNickname)) {
+    return { success: false, message: '닉네임에 공백을 사용할 수 없습니다' };
+  }
 
   const client = await pool.connect();
   try {
@@ -590,7 +597,7 @@ async function registerUser(username, password, nickname) {
     // Check if nickname exists
     const nicknameCheck = await client.query(
       'SELECT id FROM tc_users WHERE nickname = $1',
-      [nickname.trim()]
+      [trimmedNickname]
     );
     if (nicknameCheck.rows.length > 0) {
       return { success: false, message: '이미 사용중인 닉네임입니다' };
@@ -600,7 +607,7 @@ async function registerUser(username, password, nickname) {
     const passwordHash = await bcrypt.hash(password, SALT_ROUNDS);
     await client.query(
       'INSERT INTO tc_users (username, password_hash, nickname) VALUES ($1, $2, $3)',
-      [username.toLowerCase(), passwordHash, nickname.trim()]
+      [username.toLowerCase(), passwordHash, trimmedNickname]
     );
 
     return { success: true, message: '회원가입이 완료되었습니다' };
@@ -670,12 +677,19 @@ async function checkNickname(nickname) {
   if (!nickname || nickname.trim().length < 1) {
     return { available: false, message: '닉네임을 입력해주세요' };
   }
+  const trimmedNickname = nickname.trim();
+  if (trimmedNickname.length < 2 || trimmedNickname.length > 10) {
+    return { available: false, message: '닉네임은 2~10자여야 합니다' };
+  }
+  if (/\s/.test(trimmedNickname)) {
+    return { available: false, message: '닉네임에 공백을 사용할 수 없습니다' };
+  }
 
   const client = await pool.connect();
   try {
     const result = await client.query(
       'SELECT id FROM tc_users WHERE nickname = $1',
-      [nickname.trim()]
+      [trimmedNickname]
     );
     return {
       available: result.rows.length === 0,
@@ -3645,13 +3659,20 @@ async function registerSocial(provider, providerUid, email, nickname) {
   if (!nickname || nickname.trim().length < 1) {
     return { success: false, message: '닉네임을 입력해주세요' };
   }
+  const trimmedNickname = nickname.trim();
+  if (trimmedNickname.length < 2 || trimmedNickname.length > 10) {
+    return { success: false, message: '닉네임은 2~10자여야 합니다' };
+  }
+  if (/\s/.test(trimmedNickname)) {
+    return { success: false, message: '닉네임에 공백을 사용할 수 없습니다' };
+  }
 
   const client = await pool.connect();
   try {
     // Check nickname duplicate
     const nicknameCheck = await client.query(
       'SELECT id FROM tc_users WHERE nickname = $1',
-      [nickname.trim()]
+      [trimmedNickname]
     );
     if (nicknameCheck.rows.length > 0) {
       return { success: false, message: '이미 사용중인 닉네임입니다' };
@@ -3672,10 +3693,10 @@ async function registerSocial(provider, providerUid, email, nickname) {
     const result = await client.query(
       `INSERT INTO tc_users (username, password_hash, nickname, auth_provider, provider_uid, email)
        VALUES ($1, NULL, $2, $3, $4, $5) RETURNING id`,
-      [username, nickname.trim(), provider, providerUid, email || null]
+      [username, trimmedNickname, provider, providerUid, email || null]
     );
 
-    return { success: true, userId: result.rows[0].id, nickname: nickname.trim() };
+    return { success: true, userId: result.rows[0].id, nickname: trimmedNickname };
   } catch (err) {
     console.error('Social register error:', err);
     return { success: false, message: '소셜 회원가입 중 오류가 발생했습니다' };

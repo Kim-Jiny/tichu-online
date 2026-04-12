@@ -60,6 +60,7 @@ class LobbyManager {
           isRanked: room.isRanked,
           gameType: room.gameType,
           gameInProgress: true,
+          skExpansions: [...(room.skExpansions || [])],
         });
       }
     }

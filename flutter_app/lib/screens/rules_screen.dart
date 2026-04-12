@@ -513,7 +513,11 @@ class _RulesScreenState extends State<RulesScreen> {
                   '카드를 낼 때 해적 또는 도주 중 하나를 선택합니다.',
                   '해적으로 낸 티그리스는 해적과 동일하게 작동하며 '
                   '스컬킹에게 +30 보너스도 포함됩니다.',
+                  '도주로 낸 티그리스는 도주와 동일하게 작동하며 트릭을 이기지 않습니다.',
+                  '해적/도주로 낸 티그리스는 카드 좌상단에 보라색 체크 마크가 '
+                  '표시되어 일반 해적/도주 카드와 구분됩니다.',
                 ],
+                extra: _TigressDisplayPreview(),
               ),
             ],
           ),
@@ -923,11 +927,13 @@ class _SpecialRule extends StatelessWidget {
   final String emoji;
   final String title;
   final List<String> lines;
+  final Widget? extra;
 
   const _SpecialRule({
     required this.emoji,
     required this.title,
     required this.lines,
+    this.extra,
   });
 
   @override
@@ -970,8 +976,113 @@ class _SpecialRule extends StatelessWidget {
               ),
             ),
           ],
+          if (extra != null) ...[const SizedBox(height: 8), extra!],
         ],
       ),
+    );
+  }
+}
+
+class _TigressDisplayPreview extends StatelessWidget {
+  const _TigressDisplayPreview();
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(10),
+      decoration: BoxDecoration(
+        color: const Color(0xFF5E35B1).withValues(alpha: 0.06),
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(
+          color: const Color(0xFF5E35B1).withValues(alpha: 0.22),
+        ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: const [
+          Text(
+            '게임 중 표시 예시',
+            style: TextStyle(
+              fontSize: 11,
+              fontWeight: FontWeight.w800,
+              color: Color(0xFF4A327E),
+            ),
+          ),
+          SizedBox(height: 8),
+          Row(
+            children: [
+              _TigressChoiceCard(
+                assetPath: 'assets/cards/sk_escape.png',
+                label: '도주 선택',
+              ),
+              SizedBox(width: 12),
+              _TigressChoiceCard(
+                assetPath: 'assets/cards/sk_pirate.png',
+                label: '해적 선택',
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _TigressChoiceCard extends StatelessWidget {
+  final String assetPath;
+  final String label;
+
+  const _TigressChoiceCard({required this.assetPath, required this.label});
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Stack(
+          clipBehavior: Clip.none,
+          children: [
+            ClipRRect(
+              borderRadius: BorderRadius.circular(4),
+              child: Image.asset(
+                assetPath,
+                width: 36,
+                height: 50,
+                fit: BoxFit.cover,
+                errorBuilder: (_, _, _) => Container(
+                  width: 36,
+                  height: 50,
+                  color: const Color(0xFFEDE7F6),
+                ),
+              ),
+            ),
+            Positioned(
+              left: -4,
+              top: -4,
+              child: Container(
+                width: 16,
+                height: 16,
+                decoration: BoxDecoration(
+                  color: const Color(0xFF5E35B1),
+                  shape: BoxShape.circle,
+                  border: Border.all(color: Colors.white, width: 1.2),
+                ),
+                child: const Icon(Icons.check, size: 10, color: Colors.white),
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(width: 6),
+        Text(
+          label,
+          style: const TextStyle(
+            fontSize: 11,
+            fontWeight: FontWeight.w700,
+            color: Color(0xFF5A4038),
+          ),
+        ),
+      ],
     );
   }
 }

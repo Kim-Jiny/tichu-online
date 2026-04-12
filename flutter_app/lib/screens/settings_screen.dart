@@ -2,6 +2,7 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:package_info_plus/package_info_plus.dart';
+import 'package:url_launcher/url_launcher.dart';
 import '../services/game_service.dart';
 import '../services/auth_service.dart';
 import '../services/session_service.dart';
@@ -10,7 +11,12 @@ import 'package:google_mobile_ads/google_mobile_ads.dart';
 import 'admin_center_screen.dart';
 
 class SettingsScreen extends StatefulWidget {
-  const SettingsScreen({super.key});
+  /// Callback invoked when the user taps "내 프로필". The callback receives
+  /// the Settings screen's own [BuildContext] so it can open the profile
+  /// dialog on top of Settings rather than popping back to the lobby.
+  final void Function(BuildContext settingsContext)? onShowMyProfile;
+
+  const SettingsScreen({super.key, this.onShowMyProfile});
 
   @override
   State<SettingsScreen> createState() => _SettingsScreenState();
@@ -45,6 +51,35 @@ class _SettingsScreenState extends State<SettingsScreen> {
       if (!mounted) return;
       setState(() => _appVersion = info.version);
     } catch (_) {}
+  }
+
+  /// Returns negative if a < b, 0 if equal, positive if a > b.
+  /// Accepts "2.1.0" or "2.1.0+18" — build metadata after '+' is ignored.
+  int _compareVersions(String a, String b) {
+    final partsA = a.split('+').first.split('.').map((e) => int.tryParse(e) ?? 0).toList();
+    final partsB = b.split('+').first.split('.').map((e) => int.tryParse(e) ?? 0).toList();
+    final len = partsA.length > partsB.length ? partsA.length : partsB.length;
+    for (int i = 0; i < len; i++) {
+      final va = i < partsA.length ? partsA[i] : 0;
+      final vb = i < partsB.length ? partsB[i] : 0;
+      if (va != vb) return va - vb;
+    }
+    return 0;
+  }
+
+  bool _isOutdated(String? latestVersion) {
+    if (_appVersion.isEmpty) return false;
+    if (latestVersion == null || latestVersion.isEmpty) return false;
+    return _compareVersions(_appVersion, latestVersion) < 0;
+  }
+
+  Future<void> _openStore() async {
+    final uri = Uri.parse(Platform.isIOS
+        ? 'https://apps.apple.com/app/tichu-online/id6759035151'
+        : 'https://play.google.com/store/apps/details?id=com.jiny.tichuOnline');
+    if (!await launchUrl(uri, mode: LaunchMode.externalApplication)) {
+      await launchUrl(uri);
+    }
   }
   void _logout() async {
     await context.read<SessionService>().logout();
@@ -115,7 +150,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
   void _showNoticesDialog() {
     final game = context.read<GameService>();
-    game.requestNotices();
+    // Mark all (existing + freshly fetched) notices as read — opening the
+    // dialog counts as "seeing" them, which clears the red badges.
+    game.markCurrentNoticesAsRead();
+    game.requestNotices(markReadOnReceive: true);
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
@@ -999,7 +1037,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
                                 iconColor: const Color(0xFF64B5F6),
                                 title: '내 프로필',
                                 subtitle: '레벨, 전적, 최근 매치 보기',
-                                onTap: () => Navigator.pop(context, 'show_profile'),
+                                onTap: widget.onShowMyProfile == null
+                                    ? null
+                                    : () => widget.onShowMyProfile!(context),
                                 trailing: const Icon(Icons.chevron_right, color: Color(0xFFB0A8A4)),
                               ),
                               const Divider(height: 1, color: Color(0xFFEAE2DE)),
@@ -1033,11 +1073,48 @@ class _SettingsScreenState extends State<SettingsScreen> {
                           _buildSection(
                             '앱 정보',
                             [
-                              _buildRow(
-                                icon: Icons.info_outline,
-                                iconColor: const Color(0xFF7E57C2),
-                                title: '앱 버전',
-                                subtitle: _appVersion.isEmpty ? '-' : _appVersion,
+                              Builder(
+                                builder: (context) {
+                                  final outdated = _isOutdated(game.latestVersion);
+                                  return _buildRow(
+                                    icon: Icons.info_outline,
+                                    iconColor: outdated
+                                        ? const Color(0xFFE53935)
+                                        : const Color(0xFF7E57C2),
+                                    title: '앱 버전',
+                                    subtitle: _appVersion.isEmpty
+                                        ? '-'
+                                        : (outdated
+                                            ? '$_appVersion · 최신 버전이 아닙니다'
+                                            : _appVersion),
+                                    trailing: outdated
+                                        ? ElevatedButton(
+                                            onPressed: _openStore,
+                                            style: ElevatedButton.styleFrom(
+                                              backgroundColor: const Color(0xFFE53935),
+                                              foregroundColor: Colors.white,
+                                              elevation: 0,
+                                              padding: const EdgeInsets.symmetric(
+                                                horizontal: 14,
+                                                vertical: 6,
+                                              ),
+                                              minimumSize: const Size(0, 32),
+                                              tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                                              shape: RoundedRectangleBorder(
+                                                borderRadius: BorderRadius.circular(10),
+                                              ),
+                                            ),
+                                            child: const Text(
+                                              '업데이트',
+                                              style: TextStyle(
+                                                fontSize: 12,
+                                                fontWeight: FontWeight.w700,
+                                              ),
+                                            ),
+                                          )
+                                        : null,
+                                  );
+                                },
                               ),
                               const Divider(height: 1, color: Color(0xFFEAE2DE)),
                               _buildRow(
@@ -1066,7 +1143,44 @@ class _SettingsScreenState extends State<SettingsScreen> {
                                 iconColor: const Color(0xFF42A5F5),
                                 title: '공지사항',
                                 onTap: _showNoticesDialog,
-                                trailing: const Icon(Icons.chevron_right, color: Color(0xFFB0A8A4)),
+                                trailing: Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    if (game.unreadNoticeCount > 0)
+                                      Container(
+                                        margin: const EdgeInsets.only(right: 8),
+                                        padding: const EdgeInsets.symmetric(
+                                          horizontal: 7,
+                                          vertical: 2,
+                                        ),
+                                        decoration: const BoxDecoration(
+                                          color: Color(0xFFE53935),
+                                          borderRadius: BorderRadius.all(
+                                            Radius.circular(999),
+                                          ),
+                                        ),
+                                        constraints: const BoxConstraints(
+                                          minWidth: 18,
+                                          minHeight: 18,
+                                        ),
+                                        child: Text(
+                                          game.unreadNoticeCount > 9
+                                              ? '9+'
+                                              : '${game.unreadNoticeCount}',
+                                          style: const TextStyle(
+                                            color: Colors.white,
+                                            fontSize: 10,
+                                            fontWeight: FontWeight.w800,
+                                          ),
+                                          textAlign: TextAlign.center,
+                                        ),
+                                      ),
+                                    const Icon(
+                                      Icons.chevron_right,
+                                      color: Color(0xFFB0A8A4),
+                                    ),
+                                  ],
+                                ),
                               ),
                             ],
                           ),

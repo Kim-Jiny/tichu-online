@@ -384,11 +384,6 @@ class _LobbyScreenState extends State<LobbyScreen> {
     );
   }
 
-  void _showProfileDialog() {
-    final game = context.read<GameService>();
-    _showUserProfileDialog(game.playerName, game);
-  }
-
   Widget _buildIconButton({
     required IconData icon,
     required Color color,
@@ -1267,19 +1262,53 @@ class _LobbyScreenState extends State<LobbyScreen> {
           );
         },
       ),
-      _buildIconButton(
-        icon: Icons.settings,
-        color: const Color(0xFF9E9E9E),
-        onTap: () async {
-          final result = await Navigator.push<String>(
-            context,
-            MaterialPageRoute(builder: (_) => const SettingsScreen()),
-          );
-          if (!mounted) return;
-          if (result == 'show_profile') {
-            _showProfileDialog();
-          }
-        },
+      Stack(
+        clipBehavior: Clip.none,
+        children: [
+          _buildIconButton(
+            icon: Icons.settings,
+            color: const Color(0xFF9E9E9E),
+            onTap: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (_) => SettingsScreen(
+                    onShowMyProfile: (settingsCtx) {
+                      final game = context.read<GameService>();
+                      _showUserProfileDialog(
+                        game.playerName,
+                        game,
+                        dialogContext: settingsCtx,
+                      );
+                    },
+                  ),
+                ),
+              );
+            },
+          ),
+          if (game.unreadNoticeCount > 0)
+            Positioned(
+              right: -4,
+              top: -4,
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 2),
+                decoration: const BoxDecoration(
+                  color: Color(0xFFE53935),
+                  borderRadius: BorderRadius.all(Radius.circular(999)),
+                ),
+                constraints: const BoxConstraints(minWidth: 16, minHeight: 16),
+                child: Text(
+                  game.unreadNoticeCount > 9 ? '9+' : '${game.unreadNoticeCount}',
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 9,
+                    fontWeight: FontWeight.w800,
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+              ),
+            ),
+        ],
       ),
     ];
   }
@@ -2937,12 +2966,15 @@ class _LobbyScreenState extends State<LobbyScreen> {
     );
   }
 
-  // Show user profile dialog with stats
-  void _showUserProfileDialog(String nickname, GameService game) {
+  // Show user profile dialog with stats.
+  // [dialogContext] lets callers (e.g. the Settings screen) open the dialog
+  // on top of their own route instead of the lobby — the default falls back
+  // to the lobby state's own context.
+  void _showUserProfileDialog(String nickname, GameService game, {BuildContext? dialogContext}) {
     game.requestProfile(nickname);
 
     showDialog(
-      context: context,
+      context: dialogContext ?? context,
       builder: (ctx) {
         String profileGameTab = 'tichu';
         return StatefulBuilder(

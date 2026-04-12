@@ -140,6 +140,8 @@ const PORT = process.env.PORT || 8080;
 
 // Skull King version gating
 const SK_MIN_VERSION = '2.0.0';
+const SK_EXPANSION_MIN_VERSION = '2.1.0';
+const SK_EXPANSION_UPDATE_MESSAGE = '확장팩 방에 입장하려면 앱을 최신 버전으로 업데이트해주세요';
 
 function compareVersions(v1, v2) {
   // Strip build metadata (e.g. "2.0.0+15" → "2.0.0")
@@ -154,6 +156,32 @@ function compareVersions(v1, v2) {
 
 function clientSupportsSK(ws) {
   return compareVersions(ws.appVersion, SK_MIN_VERSION) >= 0;
+}
+
+function clientSupportsSKExpansions(ws) {
+  return compareVersions(ws.appVersion, SK_EXPANSION_MIN_VERSION) >= 0;
+}
+
+function roomHasSKExpansions(room) {
+  return room && room.gameType === 'skull_king'
+    && Array.isArray(room.skExpansions)
+    && room.skExpansions.length > 0;
+}
+
+function clientCanAccessRoom(ws, room) {
+  if (!room || room.gameType !== 'skull_king') return true;
+  if (!clientSupportsSK(ws)) return false;
+  if (roomHasSKExpansions(room) && !clientSupportsSKExpansions(ws)) return false;
+  return true;
+}
+
+function roomAccessUpdateMessage(room, action = '입장') {
+  if (roomHasSKExpansions(room)) return SK_EXPANSION_UPDATE_MESSAGE;
+  return `스컬킹을 ${action}하려면 앱을 업데이트해주세요`;
+}
+
+function filterRoomsForClient(ws, rooms) {
+  return rooms.filter((room) => clientCanAccessRoom(ws, room));
 }
 
 // Maintenance config (in-memory)
@@ -427,17 +455,13 @@ async function handleMessage(ws, data) {
     case 'room_list':
       sendTo(ws, {
         type: 'room_list',
-        rooms: clientSupportsSK(ws)
-          ? lobby.getRoomList()
-          : lobby.getRoomList().filter((room) => room.gameType !== 'skull_king'),
+        rooms: filterRoomsForClient(ws, lobby.getRoomList()),
       });
       break;
     case 'spectatable_rooms':
       sendTo(ws, {
         type: 'spectatable_rooms',
-        rooms: clientSupportsSK(ws)
-          ? lobby.getSpectatableRooms()
-          : lobby.getSpectatableRooms().filter((room) => room.gameType !== 'skull_king'),
+        rooms: filterRoomsForClient(ws, lobby.getSpectatableRooms()),
       });
       break;
     case 'create_room':
@@ -714,10 +738,17 @@ async function handleGetAppConfig(ws) {
     const eulaContent = await getConfig('eula_content');
     const privacyPolicy = await getConfig('privacy_policy');
     const minVersion = await getConfig('min_version');
-    sendTo(ws, { type: 'app_config', eulaContent: eulaContent || '', privacyPolicy: privacyPolicy || '', minVersion: minVersion || '' });
+    const latestVersion = await getConfig('latest_version');
+    sendTo(ws, {
+      type: 'app_config',
+      eulaContent: eulaContent || '',
+      privacyPolicy: privacyPolicy || '',
+      minVersion: minVersion || '',
+      latestVersion: latestVersion || '',
+    });
   } catch (err) {
     console.error('get_app_config error:', err);
-    sendTo(ws, { type: 'app_config', eulaContent: '', privacyPolicy: '', minVersion: '' });
+    sendTo(ws, { type: 'app_config', eulaContent: '', privacyPolicy: '', minVersion: '', latestVersion: '' });
   }
 }
 
@@ -1042,15 +1073,15 @@ async function handleSocialRegister(ws, data) {
     ws.isAdmin = false;
     ws.pushAdminInquiry = true;
     ws.pushAdminReport = true;
+    const regDeviceInfo = data.deviceInfo || {};
+    ws.appVersion = regDeviceInfo.appVersion || null;
     console.log(`Player registered & logged in (social/${provider}): ${ws.nickname} (${ws.playerId})`);
 
     notifyFriendsOfStatusChange(ws.nickname, true);
     await handleReconnection(ws);
 
     // Save device info (fire-and-forget)
-    const regDeviceInfo = data.deviceInfo || {};
     regDeviceInfo.lastIp = ws.clientIp;
-    ws.appVersion = regDeviceInfo.appVersion || null;
     updateDeviceInfo(ws.nickname, regDeviceInfo);
   } catch (err) {
     console.error('Social register error:', err);
@@ -1140,7 +1171,7 @@ async function handleReconnection(ws) {
   if (session) {
     const room = lobby.getRoom(session.roomId);
     if (room && room.game && room.canReconnect(ws.nickname)) {
-      if (room.gameType === 'skull_king' && !clientSupportsSK(ws)) {
+      if (!clientCanAccessRoom(ws, room)) {
         playerSessions.delete(ws.nickname);
         sendTo(ws, {
           type: 'login_success',
@@ -1159,11 +1190,11 @@ async function handleReconnection(ws) {
         });
         sendTo(ws, {
           type: 'error',
-          message: '스컬킹을 플레이하려면 앱을 업데이트해주세요',
+          message: roomAccessUpdateMessage(room, '플레이'),
         });
         sendTo(ws, {
           type: 'room_list',
-          rooms: lobby.getRoomList().filter((r) => r.gameType !== 'skull_king'),
+          rooms: filterRoomsForClient(ws, lobby.getRoomList()),
         });
         return;
       }
@@ -1210,7 +1241,7 @@ async function handleReconnection(ws) {
   if (spectatorSession) {
     const room = lobby.getRoom(spectatorSession.roomId);
     if (room) {
-      if (room.gameType === 'skull_king' && !clientSupportsSK(ws)) {
+      if (!clientCanAccessRoom(ws, room)) {
         spectatorSessions.delete(ws.nickname);
         sendTo(ws, {
           type: 'login_success',
@@ -1229,11 +1260,11 @@ async function handleReconnection(ws) {
         });
         sendTo(ws, {
           type: 'error',
-          message: '스컬킹 관전을 하려면 앱을 업데이트해주세요',
+          message: roomAccessUpdateMessage(room, '관전'),
         });
         sendTo(ws, {
           type: 'room_list',
-          rooms: lobby.getRoomList().filter((r) => r.gameType !== 'skull_king'),
+          rooms: filterRoomsForClient(ws, lobby.getRoomList()),
         });
         return;
       }
@@ -1288,7 +1319,7 @@ async function handleReconnection(ws) {
     if (room && !room.game) {
       const player = room.players.find(p => p !== null && p.nickname === ws.nickname && p.connected === false);
       if (player) {
-        if (room.gameType === 'skull_king' && !clientSupportsSK(ws)) {
+        if (!clientCanAccessRoom(ws, room)) {
           const timerKey = `${roomId}_${player.id}`;
           if (waitingRoomTimers[timerKey]) {
             clearTimeout(waitingRoomTimers[timerKey]);
@@ -1318,11 +1349,11 @@ async function handleReconnection(ws) {
           });
           sendTo(ws, {
             type: 'error',
-            message: '스컬킹 방에 다시 들어가려면 앱을 업데이트해주세요',
+            message: roomAccessUpdateMessage(room, '입장'),
           });
           sendTo(ws, {
             type: 'room_list',
-            rooms: lobby.getRoomList().filter((r) => r.gameType !== 'skull_king'),
+            rooms: filterRoomsForClient(ws, lobby.getRoomList()),
           });
           return;
         }
@@ -1386,9 +1417,7 @@ async function handleReconnection(ws) {
   });
   sendTo(ws, {
     type: 'room_list',
-    rooms: clientSupportsSK(ws)
-        ? lobby.getRoomList()
-        : lobby.getRoomList().filter((r) => r.gameType !== 'skull_king'),
+    rooms: filterRoomsForClient(ws, lobby.getRoomList()),
   });
   // Send unread DM count on login
   getTotalUnreadDmCount(ws.nickname).then(count => {
@@ -1440,6 +1469,10 @@ function handleCreateRoom(ws, data) {
         }
       }
     }
+    if (skExpansions.length > 0 && !clientSupportsSKExpansions(ws)) {
+      sendTo(ws, { type: 'error', message: SK_EXPANSION_UPDATE_MESSAGE });
+      return;
+    }
   }
 
   const room = lobby.createRoom(
@@ -1481,8 +1514,8 @@ async function handleJoinRoom(ws, data) {
     return;
   }
   // SK version gating
-  if (room.gameType === 'skull_king' && !clientSupportsSK(ws)) {
-    sendTo(ws, { type: 'error', message: '스컬킹을 플레이하려면 앱을 업데이트해주세요' });
+  if (!clientCanAccessRoom(ws, room)) {
+    sendTo(ws, { type: 'error', message: roomAccessUpdateMessage(room, '플레이') });
     return;
   }
   if (room.isRanked && ws.authProvider === 'local') {
@@ -1712,8 +1745,8 @@ function handleSpectateRoom(ws, data) {
     return;
   }
   // SK version gating for spectators
-  if (room.gameType === 'skull_king' && !clientSupportsSK(ws)) {
-    sendTo(ws, { type: 'error', message: '스컬킹을 관전하려면 앱을 업데이트해주세요' });
+  if (!clientCanAccessRoom(ws, room)) {
+    sendTo(ws, { type: 'error', message: roomAccessUpdateMessage(room, '관전') });
     return;
   }
   const password = typeof data.password === 'string' ? data.password.trim() : '';
@@ -2079,6 +2112,10 @@ function handleSwitchToPlayer(ws, data) {
   }
   const room = lobby.getRoom(ws.roomId);
   if (!room) { sendTo(ws, { type: 'room_closed' }); ws.roomId = null; return; }
+  if (!clientCanAccessRoom(ws, room)) {
+    sendTo(ws, { type: 'error', message: roomAccessUpdateMessage(room, '입장') });
+    return;
+  }
   if (room.isRanked && ws.authProvider === 'local') {
     sendTo(ws, { type: 'error', message: '랭크전은 소셜 연동이 필요합니다' });
     return;
@@ -2993,10 +3030,8 @@ function broadcastRoomList() {
   const allRooms = lobby.getRoomList();
   wss.clients.forEach((ws) => {
     if (ws.playerId && !ws.roomId) {
-      // Filter SK rooms for old clients
-      const rooms = clientSupportsSK(ws)
-        ? allRooms
-        : allRooms.filter(r => r.gameType !== 'skull_king');
+      // Filter SK / SK-expansion rooms for old clients.
+      const rooms = filterRoomsForClient(ws, allRooms);
       sendTo(ws, { type: 'room_list', rooms });
     }
   });

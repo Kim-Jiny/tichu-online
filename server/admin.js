@@ -2259,6 +2259,7 @@ async function handleAdminRoute(req, res, url, pathname, method, lobby, wss, mai
     const eulaContent = await getConfig('eula_content') || '';
     const privacyPolicy = await getConfig('privacy_policy') || '';
     const minVersion = await getConfig('min_version') || '';
+    const latestVersion = await getConfig('latest_version') || '';
     const saved = url.searchParams.get('saved');
 
     const content = `
@@ -2269,6 +2270,14 @@ async function handleAdminRoute(req, res, url, pathname, method, lobby, wss, mai
         <p style="font-size:13px;color:#888;margin-bottom:8px">이 버전 미만의 앱은 강제 업데이트 팝업이 표시됩니다. (예: 2.0.1)</p>
         <form method="POST" action="/tc-backstage/settings/min-version" style="display:flex;align-items:center;gap:8px">
           <input type="text" name="min_version" value="${escapeHtml(minVersion)}" placeholder="예: 2.0.1" style="width:200px;padding:8px 12px;border:1px solid #ddd;border-radius:8px;font-size:14px">
+          <button type="submit" class="btn btn-primary">저장</button>
+        </form>
+      </div>
+      <div class="card">
+        <h3>최신 버전 (소프트 업데이트)</h3>
+        <p style="font-size:13px;color:#888;margin-bottom:8px">이 버전 미만의 앱은 설정 화면에 "최신 버전이 아닙니다" 안내와 스토어 이동 버튼이 표시됩니다. 강제 업데이트는 아닙니다. (예: 2.1.0)</p>
+        <form method="POST" action="/tc-backstage/settings/latest-version" style="display:flex;align-items:center;gap:8px">
+          <input type="text" name="latest_version" value="${escapeHtml(latestVersion)}" placeholder="예: 2.1.0" style="width:200px;padding:8px 12px;border:1px solid #ddd;border-radius:8px;font-size:14px">
           <button type="submit" class="btn btn-primary">저장</button>
         </form>
       </div>
@@ -2293,6 +2302,12 @@ async function handleAdminRoute(req, res, url, pathname, method, lobby, wss, mai
   if (pathname === '/tc-backstage/settings/min-version' && method === 'POST') {
     const body = await parseBody(req);
     await updateConfig('min_version', (body.min_version || '').trim());
+    return redirect(res, '/tc-backstage/settings?saved=1');
+  }
+
+  if (pathname === '/tc-backstage/settings/latest-version' && method === 'POST') {
+    const body = await parseBody(req);
+    await updateConfig('latest_version', (body.latest_version || '').trim());
     return redirect(res, '/tc-backstage/settings?saved=1');
   }
 

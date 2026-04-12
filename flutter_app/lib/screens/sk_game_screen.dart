@@ -1513,12 +1513,49 @@ class _SKGameScreenState extends State<SKGameScreen> {
     SKTrickPlay play, {
     required bool highlighted,
   }) {
+    final isTigressChoice =
+        play.tigressChoice == 'pirate' || play.tigressChoice == 'escape';
     final displayCardId = play.tigressChoice == 'pirate'
         ? 'sk_pirate'
         : play.tigressChoice == 'escape'
             ? 'sk_escape'
             : play.cardId;
-    return _buildCard(displayCardId, size: 72, highlighted: highlighted);
+    final card = _buildCard(displayCardId, size: 72, highlighted: highlighted);
+    if (!isTigressChoice) return card;
+    // Overlay a small check-mark badge in the top-left corner so players can
+    // tell that this pirate/escape is actually a Tigress that was played as
+    // the chosen form.
+    return Stack(
+      clipBehavior: Clip.none,
+      children: [
+        card,
+        Positioned(
+          left: -4,
+          top: -4,
+          child: Container(
+            width: 20,
+            height: 20,
+            decoration: BoxDecoration(
+              color: const Color(0xFF5E35B1),
+              shape: BoxShape.circle,
+              border: Border.all(color: Colors.white, width: 1.5),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: 0.35),
+                  blurRadius: 2,
+                  offset: const Offset(0, 1),
+                ),
+              ],
+            ),
+            child: const Icon(
+              Icons.check,
+              size: 13,
+              color: Colors.white,
+            ),
+          ),
+        ),
+      ],
+    );
   }
 
   Widget _buildSKErrorBanner(String message) {
@@ -3548,7 +3585,15 @@ class _SKGameScreenState extends State<SKGameScreen> {
 
     // ── Special card: image with fallback ──
     final bgColor = _specialBgColors[info.type] ?? const Color(0xFF424242);
-    final assetPath = _specialAssets[info.type];
+    // Pirates use per-card artwork (sk_pirate1..4.png) so each of the 4
+    // pirates looks distinct. Non-pirate specials (and pirate with no number)
+    // fall back to the default asset from _specialAssets.
+    String? assetPath;
+    if (info.type == 'pirate' && info.number.isNotEmpty) {
+      assetPath = 'assets/cards/sk_pirate${info.number}.png';
+    } else {
+      assetPath = _specialAssets[info.type];
+    }
     final fallbackLabel = _specialLabels[info.type] ?? '?';
 
     return Container(

@@ -83,7 +83,9 @@ class _LoginScreenState extends State<LoginScreen> {
     if (!mounted) return;
     final savedUsername = prefs.getString('saved_username');
     final savedPassword = prefs.getString('saved_password');
-    if (savedUsername != null && savedPassword != null && savedUsername.isNotEmpty) {
+    if (savedUsername != null &&
+        savedPassword != null &&
+        savedUsername.isNotEmpty) {
       _usernameController.text = savedUsername;
       _passwordController.text = savedPassword;
     }
@@ -275,96 +277,109 @@ class _LoginScreenState extends State<LoginScreen> {
     return PopScope(
       canPop: false,
       child: GestureDetector(
-      onTap: () => FocusScope.of(context).unfocus(),
-      child: Scaffold(
-        body: Stack(
-          children: [
-            Container(
-            decoration: const BoxDecoration(
-              gradient: LinearGradient(
-                begin: Alignment.topCenter,
-                end: Alignment.bottomCenter,
-                colors: [
-                  Color(0xFFF8F4F6),
-                  Color(0xFFF0E8F0),
-                  Color(0xFFE8F0F8),
-                ],
-              ),
-            ),
-            child: SafeArea(
-              child: LayoutBuilder(
-                builder: (context, constraints) {
-                  final isLandscape =
-                      constraints.maxWidth > constraints.maxHeight;
-                  final horizontalPadding = isLandscape ? 32.0 : 24.0;
-                  return Center(
-                    child: SingleChildScrollView(
-                      padding: EdgeInsets.all(horizontalPadding),
-                      child: ConstrainedBox(
-                        constraints: BoxConstraints(
-                          maxWidth: isLandscape ? 960 : 460,
+        onTap: () => FocusScope.of(context).unfocus(),
+        child: Scaffold(
+          body: Stack(
+            children: [
+              Container(
+                decoration: const BoxDecoration(
+                  gradient: LinearGradient(
+                    begin: Alignment.topCenter,
+                    end: Alignment.bottomCenter,
+                    colors: [
+                      Color(0xFFF8F4F6),
+                      Color(0xFFF0E8F0),
+                      Color(0xFFE8F0F8),
+                    ],
+                  ),
+                ),
+                child: SafeArea(
+                  child: LayoutBuilder(
+                    builder: (context, constraints) {
+                      final isLandscape =
+                          constraints.maxWidth > constraints.maxHeight;
+                      final horizontalPadding = isLandscape ? 32.0 : 24.0;
+                      return Center(
+                        child: SingleChildScrollView(
+                          padding: EdgeInsets.all(horizontalPadding),
+                          child: ConstrainedBox(
+                            constraints: BoxConstraints(
+                              maxWidth: isLandscape ? 960 : 460,
+                            ),
+                            child: isLandscape
+                                ? Row(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.center,
+                                    children: [
+                                      Expanded(
+                                        child: Padding(
+                                          padding: const EdgeInsets.only(
+                                            right: 28,
+                                          ),
+                                          child: _buildBrandSection(
+                                            compact: true,
+                                          ),
+                                        ),
+                                      ),
+                                      Expanded(
+                                        child: _buildLoginCard(
+                                          session,
+                                          compact: true,
+                                        ),
+                                      ),
+                                    ],
+                                  )
+                                : Column(
+                                    mainAxisAlignment: MainAxisAlignment.center,
+                                    children: [
+                                      _buildBrandSection(compact: false),
+                                      const SizedBox(height: 48),
+                                      _buildLoginCard(session, compact: false),
+                                    ],
+                                  ),
+                          ),
                         ),
-                        child: isLandscape
-                            ? Row(
-                                crossAxisAlignment: CrossAxisAlignment.center,
-                                children: [
-                                  Expanded(
-                                    child: Padding(
-                                      padding: const EdgeInsets.only(right: 28),
-                                      child: _buildBrandSection(compact: true),
-                                    ),
-                                  ),
-                                  Expanded(
-                                    child: _buildLoginCard(session, compact: true),
-                                  ),
-                                ],
-                              )
-                            : Column(
-                                mainAxisAlignment: MainAxisAlignment.center,
-                                children: [
-                                  _buildBrandSection(compact: false),
-                                  const SizedBox(height: 48),
-                                  _buildLoginCard(session, compact: false),
-                                ],
-                              ),
-                      ),
-                    ),
-                  );
-                },
-              ),
-            ),
-          ),
-          // Version display at bottom right
-          Positioned(
-            bottom: 16,
-            right: 16,
-            child: SafeArea(
-              child: Text(
-                _appVersion.isEmpty ? 'v-' : 'v$_appVersion',
-                style: TextStyle(
-                  color: const Color(0xFFB0A8A4).withValues(alpha: 0.8),
-                  fontSize: 12,
+                      );
+                    },
+                  ),
                 ),
               ),
-            ),
+              // Version display at bottom right
+              Positioned(
+                bottom: 16,
+                right: 16,
+                child: SafeArea(
+                  child: Text(
+                    _appVersion.isEmpty ? 'v-' : 'v$_appVersion',
+                    style: TextStyle(
+                      color: const Color(0xFFB0A8A4).withValues(alpha: 0.8),
+                      fontSize: 12,
+                    ),
+                  ),
+                ),
+              ),
+              if (_isConnecting) _buildConnectingOverlay(session),
+              if (_showRegister) _buildRegisterDialog(),
+              if (_showSocialNickname) _buildSocialNicknameDialog(),
+            ],
           ),
-          if (_isConnecting) _buildConnectingOverlay(session),
-          if (_showRegister) _buildRegisterDialog(),
-          if (_showSocialNickname) _buildSocialNicknameDialog(),
-        ],
+        ),
       ),
-    ),
-    ),
     );
   }
 
   Widget _buildBrandSection({required bool compact}) {
     return Column(
       mainAxisAlignment: MainAxisAlignment.center,
-      crossAxisAlignment:
-          compact ? CrossAxisAlignment.start : CrossAxisAlignment.center,
+      crossAxisAlignment: compact
+          ? CrossAxisAlignment.start
+          : CrossAxisAlignment.center,
       children: [
-        Image.asset('assets/dragonIcon.png', width: compact ? 72 : 80, height: compact ? 72 : 80),
+        Image.asset(
+          'assets/dragonIcon.png',
+          width: compact ? 72 : 80,
+          height: compact ? 72 : 80,
+        ),
         const SizedBox(height: 8),
         Text(
           'TICHU',
@@ -464,10 +479,7 @@ class _LoginScreenState extends State<LoginScreen> {
             onPressed: _showRegisterDialog,
             child: const Text(
               '회원가입',
-              style: TextStyle(
-                color: Color(0xFF8A7A72),
-                fontSize: 16,
-              ),
+              style: TextStyle(color: Color(0xFF8A7A72), fontSize: 16),
             ),
           ),
           if (_error != null) ...[
@@ -504,10 +516,7 @@ class _LoginScreenState extends State<LoginScreen> {
             else
               Text(
                 _error!,
-                style: const TextStyle(
-                  color: Colors.red,
-                  fontSize: 14,
-                ),
+                style: const TextStyle(color: Colors.red, fontSize: 14),
                 textAlign: TextAlign.center,
               ),
           ],
@@ -552,11 +561,7 @@ class _LoginScreenState extends State<LoginScreen> {
                 _buildSocialButton(
                   onTap: () => _handleSocialSignIn('apple'),
                   backgroundColor: Colors.black,
-                  child: const Icon(
-                    Icons.apple,
-                    color: Colors.white,
-                    size: 30,
-                  ),
+                  child: const Icon(Icons.apple, color: Colors.white, size: 30),
                 ),
               _buildSocialButton(
                 onTap: () => _handleSocialSignIn('kakao'),
@@ -594,7 +599,10 @@ class _LoginScreenState extends State<LoginScreen> {
           borderRadius: BorderRadius.circular(16),
           borderSide: BorderSide.none,
         ),
-        contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+        contentPadding: const EdgeInsets.symmetric(
+          horizontal: 20,
+          vertical: 16,
+        ),
       ),
     );
   }
@@ -681,7 +689,8 @@ class _LoginScreenState extends State<LoginScreen> {
               TextButton(
                 onPressed: _isConnecting
                     ? null
-                    : () => context.read<SessionService>().clearRestoreFeedback(),
+                    : () =>
+                          context.read<SessionService>().clearRestoreFeedback(),
                 child: const Text('직접 로그인'),
               ),
             ],
@@ -804,6 +813,14 @@ class _RegisterDialogState extends State<RegisterDialog> {
       setState(() => _nicknameStatus = '닉네임을 입력해주세요');
       return;
     }
+    if (nickname.length < 2 || nickname.length > 10) {
+      setState(() => _nicknameStatus = '닉네임은 2~10자여야 합니다');
+      return;
+    }
+    if (nickname.contains(RegExp(r'\s'))) {
+      setState(() => _nicknameStatus = '닉네임에 공백을 사용할 수 없습니다');
+      return;
+    }
     setState(() => _nicknameChecking = true);
 
     try {
@@ -836,6 +853,7 @@ class _RegisterDialogState extends State<RegisterDialog> {
         });
       }
     }
+
     timeout = Timer(const Duration(seconds: 5), () {
       game.removeListener(listener);
       if (!mounted) return;
@@ -874,6 +892,14 @@ class _RegisterDialogState extends State<RegisterDialog> {
     }
     if (nickname.isEmpty) {
       setState(() => _error = '닉네임을 입력해주세요');
+      return;
+    }
+    if (nickname.length < 2 || nickname.length > 10) {
+      setState(() => _error = '닉네임은 2~10자여야 합니다');
+      return;
+    }
+    if (nickname.contains(RegExp(r'\s'))) {
+      setState(() => _error = '닉네임에 공백을 사용할 수 없습니다');
       return;
     }
     if (!_nicknameChecked || !_nicknameAvailable) {
@@ -940,100 +966,100 @@ class _RegisterDialogState extends State<RegisterDialog> {
           child: SingleChildScrollView(
             padding: const EdgeInsets.all(24),
             child: Container(
-            padding: const EdgeInsets.all(24),
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(24),
-            ),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    const Text(
-                      '회원가입',
-                      style: TextStyle(
-                        fontSize: 24,
-                        fontWeight: FontWeight.bold,
-                        color: Color(0xFF5A4038),
+              padding: const EdgeInsets.all(24),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(24),
+              ),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      const Text(
+                        '회원가입',
+                        style: TextStyle(
+                          fontSize: 24,
+                          fontWeight: FontWeight.bold,
+                          color: Color(0xFF5A4038),
+                        ),
                       ),
+                      IconButton(
+                        onPressed: widget.onClose,
+                        icon: const Icon(Icons.close),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 24),
+                  _buildInputField(
+                    controller: _usernameController,
+                    label: '아이디',
+                    hint: '2글자 이상, 공백 불가',
+                    icon: Icons.person_outline,
+                  ),
+                  const SizedBox(height: 16),
+                  _buildInputField(
+                    controller: _passwordController,
+                    label: '비밀번호',
+                    hint: '4글자 이상',
+                    icon: Icons.lock_outline,
+                    obscure: true,
+                  ),
+                  const SizedBox(height: 16),
+                  _buildInputField(
+                    controller: _confirmPasswordController,
+                    label: '비밀번호 확인',
+                    hint: '비밀번호를 다시 입력',
+                    icon: Icons.lock_outline,
+                    obscure: true,
+                  ),
+                  const SizedBox(height: 16),
+                  _buildNicknameField(),
+                  const SizedBox(height: 24),
+                  SizedBox(
+                    width: double.infinity,
+                    height: 56,
+                    child: ElevatedButton(
+                      onPressed: _isLoading ? null : _register,
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: const Color(0xFF5A9E6F),
+                        foregroundColor: Colors.white,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(16),
+                        ),
+                      ),
+                      child: _isLoading
+                          ? const SizedBox(
+                              width: 24,
+                              height: 24,
+                              child: CircularProgressIndicator(
+                                color: Colors.white,
+                                strokeWidth: 2,
+                              ),
+                            )
+                          : const Text(
+                              '가입하기',
+                              style: TextStyle(
+                                fontSize: 18,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
                     ),
-                    IconButton(
-                      onPressed: widget.onClose,
-                      icon: const Icon(Icons.close),
+                  ),
+                  if (_error != null) ...[
+                    const SizedBox(height: 16),
+                    Text(
+                      _error!,
+                      style: const TextStyle(color: Colors.red, fontSize: 14),
+                      textAlign: TextAlign.center,
                     ),
                   ],
-                ),
-                const SizedBox(height: 24),
-                _buildInputField(
-                  controller: _usernameController,
-                  label: '아이디',
-                  hint: '2글자 이상, 공백 불가',
-                  icon: Icons.person_outline,
-                ),
-                const SizedBox(height: 16),
-                _buildInputField(
-                  controller: _passwordController,
-                  label: '비밀번호',
-                  hint: '4글자 이상',
-                  icon: Icons.lock_outline,
-                  obscure: true,
-                ),
-                const SizedBox(height: 16),
-                _buildInputField(
-                  controller: _confirmPasswordController,
-                  label: '비밀번호 확인',
-                  hint: '비밀번호를 다시 입력',
-                  icon: Icons.lock_outline,
-                  obscure: true,
-                ),
-                const SizedBox(height: 16),
-                _buildNicknameField(),
-                const SizedBox(height: 24),
-                SizedBox(
-                  width: double.infinity,
-                  height: 56,
-                  child: ElevatedButton(
-                    onPressed: _isLoading ? null : _register,
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: const Color(0xFF5A9E6F),
-                      foregroundColor: Colors.white,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(16),
-                      ),
-                    ),
-                    child: _isLoading
-                        ? const SizedBox(
-                            width: 24,
-                            height: 24,
-                            child: CircularProgressIndicator(
-                              color: Colors.white,
-                              strokeWidth: 2,
-                            ),
-                          )
-                        : const Text(
-                            '가입하기',
-                            style: TextStyle(
-                              fontSize: 18,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                  ),
-                ),
-                if (_error != null) ...[
-                  const SizedBox(height: 16),
-                  Text(
-                    _error!,
-                    style: const TextStyle(color: Colors.red, fontSize: 14),
-                    textAlign: TextAlign.center,
-                  ),
                 ],
-              ],
+              ),
             ),
           ),
         ),
-      ),
       ),
     );
   }
@@ -1070,7 +1096,10 @@ class _RegisterDialogState extends State<RegisterDialog> {
               borderRadius: BorderRadius.circular(12),
               borderSide: BorderSide.none,
             ),
-            contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+            contentPadding: const EdgeInsets.symmetric(
+              horizontal: 16,
+              vertical: 14,
+            ),
           ),
         ),
       ],
@@ -1096,20 +1125,32 @@ class _RegisterDialogState extends State<RegisterDialog> {
               child: TextField(
                 controller: _nicknameController,
                 onChanged: _onNicknameChanged,
+                maxLength: 10,
                 decoration: InputDecoration(
-                  hintText: '게임에서 표시될 이름',
-                  hintStyle: const TextStyle(color: Color(0xFFAA9A92), fontSize: 14),
-                  prefixIcon: const Icon(Icons.badge_outlined, color: Color(0xFFAA9A92)),
+                  hintText: '2~10자, 공백 불가',
+                  hintStyle: const TextStyle(
+                    color: Color(0xFFAA9A92),
+                    fontSize: 14,
+                  ),
+                  prefixIcon: const Icon(
+                    Icons.badge_outlined,
+                    color: Color(0xFFAA9A92),
+                  ),
                   filled: true,
                   fillColor: const Color(0xFFF8F4F2),
                   border: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(12),
                     borderSide: BorderSide.none,
                   ),
-                  contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                  contentPadding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 14,
+                  ),
                   suffixIcon: _nicknameChecked
                       ? Icon(
-                          _nicknameAvailable ? Icons.check_circle : Icons.cancel,
+                          _nicknameAvailable
+                              ? Icons.check_circle
+                              : Icons.cancel,
                           color: _nicknameAvailable ? Colors.green : Colors.red,
                         )
                       : null,
@@ -1124,11 +1165,20 @@ class _RegisterDialogState extends State<RegisterDialog> {
                 style: ElevatedButton.styleFrom(
                   backgroundColor: const Color(0xFF8B7355),
                   foregroundColor: Colors.white,
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
                   padding: const EdgeInsets.symmetric(horizontal: 14),
                 ),
                 child: _nicknameChecking
-                    ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+                    ? const SizedBox(
+                        width: 18,
+                        height: 18,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          color: Colors.white,
+                        ),
+                      )
                     : const Text('중복확인', style: TextStyle(fontSize: 13)),
               ),
             ),
@@ -1194,6 +1244,14 @@ class _SocialNicknameDialogState extends State<SocialNicknameDialog> {
       setState(() => _nicknameStatus = '닉네임을 입력해주세요');
       return;
     }
+    if (nickname.length < 2 || nickname.length > 10) {
+      setState(() => _nicknameStatus = '닉네임은 2~10자여야 합니다');
+      return;
+    }
+    if (nickname.contains(RegExp(r'\s'))) {
+      setState(() => _nicknameStatus = '닉네임에 공백을 사용할 수 없습니다');
+      return;
+    }
     setState(() => _nicknameChecking = true);
 
     try {
@@ -1226,6 +1284,7 @@ class _SocialNicknameDialogState extends State<SocialNicknameDialog> {
         });
       }
     }
+
     timeout = Timer(const Duration(seconds: 5), () {
       game.removeListener(listener);
       if (!mounted) return;
@@ -1242,6 +1301,14 @@ class _SocialNicknameDialogState extends State<SocialNicknameDialog> {
     final nickname = _nicknameController.text.trim();
     if (nickname.isEmpty) {
       setState(() => _error = '닉네임을 입력해주세요');
+      return;
+    }
+    if (nickname.length < 2 || nickname.length > 10) {
+      setState(() => _error = '닉네임은 2~10자여야 합니다');
+      return;
+    }
+    if (nickname.contains(RegExp(r'\s'))) {
+      setState(() => _error = '닉네임에 공백을 사용할 수 없습니다');
       return;
     }
     if (!_nicknameChecked || !_nicknameAvailable) {
@@ -1304,21 +1371,35 @@ class _SocialNicknameDialogState extends State<SocialNicknameDialog> {
                         child: TextField(
                           controller: _nicknameController,
                           onChanged: _onNicknameChanged,
+                          maxLength: 10,
                           decoration: InputDecoration(
-                            hintText: '닉네임',
-                            hintStyle: const TextStyle(color: Color(0xFFAA9A92), fontSize: 14),
-                            prefixIcon: const Icon(Icons.badge_outlined, color: Color(0xFFAA9A92)),
+                            hintText: '2~10자, 공백 불가',
+                            hintStyle: const TextStyle(
+                              color: Color(0xFFAA9A92),
+                              fontSize: 14,
+                            ),
+                            prefixIcon: const Icon(
+                              Icons.badge_outlined,
+                              color: Color(0xFFAA9A92),
+                            ),
                             filled: true,
                             fillColor: const Color(0xFFF8F4F2),
                             border: OutlineInputBorder(
                               borderRadius: BorderRadius.circular(12),
                               borderSide: BorderSide.none,
                             ),
-                            contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                            contentPadding: const EdgeInsets.symmetric(
+                              horizontal: 16,
+                              vertical: 14,
+                            ),
                             suffixIcon: _nicknameChecked
                                 ? Icon(
-                                    _nicknameAvailable ? Icons.check_circle : Icons.cancel,
-                                    color: _nicknameAvailable ? Colors.green : Colors.red,
+                                    _nicknameAvailable
+                                        ? Icons.check_circle
+                                        : Icons.cancel,
+                                    color: _nicknameAvailable
+                                        ? Colors.green
+                                        : Colors.red,
                                   )
                                 : null,
                           ),
@@ -1332,12 +1413,24 @@ class _SocialNicknameDialogState extends State<SocialNicknameDialog> {
                           style: ElevatedButton.styleFrom(
                             backgroundColor: const Color(0xFF8B7355),
                             foregroundColor: Colors.white,
-                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
                             padding: const EdgeInsets.symmetric(horizontal: 14),
                           ),
                           child: _nicknameChecking
-                              ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
-                              : const Text('중복확인', style: TextStyle(fontSize: 13)),
+                              ? const SizedBox(
+                                  width: 18,
+                                  height: 18,
+                                  child: CircularProgressIndicator(
+                                    strokeWidth: 2,
+                                    color: Colors.white,
+                                  ),
+                                )
+                              : const Text(
+                                  '중복확인',
+                                  style: TextStyle(fontSize: 13),
+                                ),
                         ),
                       ),
                     ],

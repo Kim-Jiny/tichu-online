@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:google_mobile_ads/google_mobile_ads.dart';
+import '../l10n/app_localizations.dart';
 import '../services/game_service.dart';
 import '../services/ad_service.dart';
 
@@ -144,9 +145,9 @@ class _ShopScreenState extends State<ShopScreen> {
             color: const Color(0xFF8A7A72),
           ),
           const SizedBox(width: 4),
-          const Text(
-            '상점',
-            style: TextStyle(
+          Text(
+            L10n.of(context).shopTitle,
+            style: const TextStyle(
               fontSize: 20,
               fontWeight: FontWeight.bold,
               color: Color(0xFF5A4038),
@@ -188,7 +189,7 @@ class _ShopScreenState extends State<ShopScreen> {
                   const Icon(Icons.monetization_on, color: Color(0xFFFFB74D)),
                   const SizedBox(width: 6),
                   Text(
-                    '${game.gold} 골드',
+                    L10n.of(context).shopGoldAmount(game.gold),
                     style: const TextStyle(
                       fontSize: 14,
                       fontWeight: FontWeight.bold,
@@ -216,18 +217,18 @@ class _ShopScreenState extends State<ShopScreen> {
                 borderRadius: BorderRadius.circular(12),
                 border: Border.all(color: const Color(0xFFF0D6A6)),
               ),
-              child: const Row(
+              child: Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  Icon(
+                  const Icon(
                     Icons.lightbulb_outline_rounded,
                     size: 16,
                     color: Color(0xFFB67C1D),
                   ),
-                  SizedBox(width: 4),
+                  const SizedBox(width: 4),
                   Text(
-                    '획득 방법',
-                    style: TextStyle(
+                    L10n.of(context).shopHowToEarn,
+                    style: const TextStyle(
                       fontSize: 12,
                       fontWeight: FontWeight.w700,
                       color: Color(0xFF8B6220),
@@ -241,7 +242,7 @@ class _ShopScreenState extends State<ShopScreen> {
           const Icon(Icons.warning_amber_rounded, color: Color(0xFFE57373), size: 18),
           const SizedBox(width: 4),
           Text(
-            '탈주 ${game.leaveCount}',
+            L10n.of(context).shopDesertionCount(game.leaveCount),
             style: const TextStyle(
               fontSize: 12,
               color: Color(0xFF9A6A6A),
@@ -288,9 +289,9 @@ class _ShopScreenState extends State<ShopScreen> {
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              const Text(
-                                '골드 히스토리',
-                                style: TextStyle(
+                              Text(
+                                L10n.of(context).shopGoldHistory,
+                                style: const TextStyle(
                                   fontSize: 18,
                                   fontWeight: FontWeight.w800,
                                   color: Color(0xFF5A4038),
@@ -298,7 +299,7 @@ class _ShopScreenState extends State<ShopScreen> {
                               ),
                               const SizedBox(height: 2),
                               Text(
-                                '현재 보유 골드 ${game.gold}',
+                                L10n.of(context).shopGoldCurrent(game.gold),
                                 style: const TextStyle(
                                   fontSize: 13,
                                   color: Color(0xFF8A7A72),
@@ -315,9 +316,9 @@ class _ShopScreenState extends State<ShopScreen> {
                       ],
                     ),
                     const SizedBox(height: 12),
-                    const Text(
-                      '게임 결과, 광고 보상, 상점 구매, 시즌 보상 내역을 최근 순으로 보여줍니다.',
-                      style: TextStyle(
+                    Text(
+                      L10n.of(context).shopGoldHistoryDesc,
+                      style: const TextStyle(
                         fontSize: 12,
                         height: 1.35,
                         color: Color(0xFF8A7A72),
@@ -345,10 +346,10 @@ class _ShopScreenState extends State<ShopScreen> {
                             );
                           }
                           if (game.goldHistory.isEmpty) {
-                            return const Center(
+                            return Center(
                               child: Text(
-                                '표시할 골드 내역이 아직 없습니다.',
-                                style: TextStyle(
+                                L10n.of(context).shopGoldHistoryEmpty,
+                                style: const TextStyle(
                                   color: Color(0xFF8A7A72),
                                   fontWeight: FontWeight.w600,
                                 ),
@@ -396,7 +397,7 @@ class _ShopScreenState extends State<ShopScreen> {
                                         crossAxisAlignment: CrossAxisAlignment.start,
                                         children: [
                                           Text(
-                                            item['title']?.toString() ?? '골드 변동',
+                                            item['title']?.toString() ?? L10n.of(context).shopGoldChangeFallback,
                                             style: const TextStyle(
                                               fontSize: 14,
                                               fontWeight: FontWeight.w800,
@@ -485,10 +486,10 @@ class _ShopScreenState extends State<ShopScreen> {
                           ),
                         ),
                         const SizedBox(width: 12),
-                        const Expanded(
+                        Expanded(
                           child: Text(
-                            '골드 획득 방법',
-                            style: TextStyle(
+                            L10n.of(context).shopGoldGuideTitle,
+                            style: const TextStyle(
                               fontSize: 18,
                               fontWeight: FontWeight.w800,
                               color: Color(0xFF5A4038),
@@ -503,9 +504,9 @@ class _ShopScreenState extends State<ShopScreen> {
                       ],
                     ),
                     const SizedBox(height: 12),
-                    const Text(
-                      '골드는 게임 플레이와 보상으로 얻을 수 있고, 상점에서 아이템 구매에 사용됩니다.',
-                      style: TextStyle(
+                    Text(
+                      L10n.of(context).shopGoldGuideDesc,
+                      style: const TextStyle(
                         fontSize: 13,
                         height: 1.4,
                         color: Color(0xFF8A7A72),
@@ -513,54 +514,54 @@ class _ShopScreenState extends State<ShopScreen> {
                     ),
                     const SizedBox(height: 16),
                     _buildGoldGuideItem(
-                      title: '일반전 승리',
-                      value: '+10 골드',
-                      description: '티추와 스컬킹 일반전 승리 시 기본 보상을 받습니다.',
+                      title: L10n.of(context).shopGuideNormalWin,
+                      value: L10n.of(context).shopGuideNormalWinValue,
+                      description: L10n.of(context).shopGuideNormalWinDesc,
                       color: const Color(0xFFE8F5E9),
                       accent: const Color(0xFF43A047),
                       icon: Icons.emoji_events_outlined,
                     ),
                     const SizedBox(height: 10),
                     _buildGoldGuideItem(
-                      title: '일반전 패배',
-                      value: '+3 골드',
-                      description: '패배해도 기본 참가 보상을 받을 수 있습니다.',
+                      title: L10n.of(context).shopGuideNormalLoss,
+                      value: L10n.of(context).shopGuideNormalLossValue,
+                      description: L10n.of(context).shopGuideNormalLossDesc,
                       color: const Color(0xFFE3F2FD),
                       accent: const Color(0xFF1E88E5),
                       icon: Icons.sports_esports_outlined,
                     ),
                     const SizedBox(height: 10),
                     _buildGoldGuideItem(
-                      title: '랭킹전 승리',
-                      value: '+20 골드',
-                      description: '랭킹전은 일반전 대비 2배 골드를 지급합니다.',
+                      title: L10n.of(context).shopGuideRankedWin,
+                      value: L10n.of(context).shopGuideRankedWinValue,
+                      description: L10n.of(context).shopGuideRankedWinDesc,
                       color: const Color(0xFFFFF8E1),
                       accent: const Color(0xFFF9A825),
                       icon: Icons.military_tech_outlined,
                     ),
                     const SizedBox(height: 10),
                     _buildGoldGuideItem(
-                      title: '랭킹전 패배',
-                      value: '+6 골드',
-                      description: '랭킹전 패배 보상도 일반전 대비 2배입니다.',
+                      title: L10n.of(context).shopGuideRankedLoss,
+                      value: L10n.of(context).shopGuideRankedLossValue,
+                      description: L10n.of(context).shopGuideRankedLossDesc,
                       color: const Color(0xFFFFF3E0),
                       accent: const Color(0xFFEF6C00),
                       icon: Icons.shield_outlined,
                     ),
                     const SizedBox(height: 10),
                     _buildGoldGuideItem(
-                      title: '광고 보상',
-                      value: '+50 골드',
-                      description: '광고 시청으로 하루 최대 5번까지 추가 골드를 받을 수 있습니다.',
+                      title: L10n.of(context).shopGuideAdReward,
+                      value: L10n.of(context).shopGuideAdRewardValue,
+                      description: L10n.of(context).shopGuideAdRewardDesc,
                       color: const Color(0xFFFFF3E0),
                       accent: const Color(0xFFFB8C00),
                       icon: Icons.ondemand_video_outlined,
                     ),
                     const SizedBox(height: 10),
                     _buildGoldGuideItem(
-                      title: '시즌 보상',
-                      value: '추가 지급',
-                      description: '시즌 순위에 따라 시즌 종료 시 추가 골드가 지급됩니다.',
+                      title: L10n.of(context).shopGuideSeasonReward,
+                      value: L10n.of(context).shopGuideSeasonRewardValue,
+                      description: L10n.of(context).shopGuideSeasonRewardDesc,
                       color: const Color(0xFFF3E5F5),
                       accent: const Color(0xFF8E24AA),
                       icon: Icons.workspace_premium_outlined,
@@ -654,13 +655,13 @@ class _ShopScreenState extends State<ShopScreen> {
         color: Colors.white.withValues(alpha: 0.95),
         borderRadius: BorderRadius.circular(14),
       ),
-      child: const TabBar(
-        labelColor: Color(0xFF5A4038),
-        unselectedLabelColor: Color(0xFF9A8E8A),
-        indicatorColor: Color(0xFFB9A8A1),
+      child: TabBar(
+        labelColor: const Color(0xFF5A4038),
+        unselectedLabelColor: const Color(0xFF9A8E8A),
+        indicatorColor: const Color(0xFFB9A8A1),
         tabs: [
-          Tab(text: '상점'),
-          Tab(text: '인벤토리'),
+          Tab(text: L10n.of(context).shopTabShop),
+          Tab(text: L10n.of(context).shopTabInventory),
         ],
       ),
     );
@@ -679,10 +680,10 @@ class _ShopScreenState extends State<ShopScreen> {
       );
     }
     if (game.shopItems.isEmpty) {
-      return const Center(
+      return Center(
         child: Text(
-          '상점 아이템이 없어요',
-          style: TextStyle(color: Color(0xFF9A8E8A)),
+          L10n.of(context).shopNoItems,
+          style: const TextStyle(color: Color(0xFF9A8E8A)),
         ),
       );
     }
@@ -692,9 +693,12 @@ class _ShopScreenState extends State<ShopScreen> {
       child: Column(
         children: [
           const SizedBox(height: 8),
-          _buildCategoryTabs(
-            const ['배너', '칭호', '테마', '유틸'],
-          ),
+          _buildCategoryTabs([
+            L10n.of(context).shopCategoryBanner,
+            L10n.of(context).shopCategoryTitle,
+            L10n.of(context).shopCategoryTheme,
+            L10n.of(context).shopCategoryUtil,
+          ]),
           Expanded(
             child: TabBarView(
               children: [
@@ -716,10 +720,10 @@ class _ShopScreenState extends State<ShopScreen> {
     List<Map<String, dynamic>> items,
   ) {
     if (items.isEmpty) {
-      return const Center(
+      return Center(
         child: Text(
-          '아이템이 없어요',
-          style: TextStyle(color: Color(0xFF9A8E8A)),
+          L10n.of(context).shopItemEmpty,
+          style: const TextStyle(color: Color(0xFF9A8E8A)),
         ),
       );
     }
@@ -774,7 +778,7 @@ class _ShopScreenState extends State<ShopScreen> {
                   ),
                   const SizedBox(height: 4),
                   Text(
-                    _buildItemTag(isSeason, isPermanent, durationDays),
+                    _buildItemTag(context, isSeason, isPermanent, durationDays),
                     style: const TextStyle(fontSize: 12, color: Color(0xFF8A7A72)),
                   ),
                 ],
@@ -788,9 +792,9 @@ class _ShopScreenState extends State<ShopScreen> {
                   color: const Color(0xFFEDE7F6),
                   borderRadius: BorderRadius.circular(12),
                 ),
-                child: const Text(
-                  '보유중',
-                  style: TextStyle(fontSize: 12, color: Color(0xFF7E57C2), fontWeight: FontWeight.w600),
+                child: Text(
+                  L10n.of(context).shopItemOwned,
+                  style: const TextStyle(fontSize: 12, color: Color(0xFF7E57C2), fontWeight: FontWeight.w600),
                 ),
               )
             else
@@ -832,7 +836,7 @@ class _ShopScreenState extends State<ShopScreen> {
                         ),
                         padding: const EdgeInsets.symmetric(horizontal: 12),
                       ),
-                      child: Text(owned ? '연장' : '구매', style: const TextStyle(fontSize: 12)),
+                      child: Text(owned ? L10n.of(context).shopButtonExtend : L10n.of(context).shopButtonPurchase, style: const TextStyle(fontSize: 12)),
                     ),
                   ),
                 ],
@@ -853,21 +857,21 @@ class _ShopScreenState extends State<ShopScreen> {
       context: context,
       builder: (ctx) => AlertDialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: const Text('기간 연장'),
+        title: Text(L10n.of(context).shopExtendTitle),
         content: Text(
-          '이미 보유하고 있는 아이템입니다.\n$name의 기간을 $durationDays일 연장하시겠습니까?\n\n비용: $price 골드',
+          L10n.of(context).shopExtendConfirm(name, durationDays as int, price as int),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx),
-            child: const Text('취소'),
+            child: Text(L10n.of(context).commonCancel),
           ),
           ElevatedButton(
             onPressed: () {
               Navigator.pop(ctx);
               game.buyItem(itemKey);
             },
-            child: const Text('연장하기'),
+            child: Text(L10n.of(context).shopExtendAction),
           ),
         ],
       ),
@@ -887,10 +891,10 @@ class _ShopScreenState extends State<ShopScreen> {
       );
     }
     if (game.inventoryItems.isEmpty) {
-      return const Center(
+      return Center(
         child: Text(
-          '보유한 아이템이 없어요',
-          style: TextStyle(color: Color(0xFF9A8E8A)),
+          L10n.of(context).shopNoInventoryItems,
+          style: const TextStyle(color: Color(0xFF9A8E8A)),
         ),
       );
     }
@@ -909,9 +913,13 @@ class _ShopScreenState extends State<ShopScreen> {
           return Column(
             children: [
               const SizedBox(height: 8),
-              _buildCategoryTabs(
-                const ['배너', '칭호', '테마', '유틸', '시즌'],
-              ),
+              _buildCategoryTabs([
+                L10n.of(context).shopCategoryBanner,
+                L10n.of(context).shopCategoryTitle,
+                L10n.of(context).shopCategoryTheme,
+                L10n.of(context).shopCategoryUtil,
+                L10n.of(context).shopCategorySeason,
+              ]),
               Expanded(
                 child: TabBarView(
                   children: [
@@ -932,10 +940,10 @@ class _ShopScreenState extends State<ShopScreen> {
 
   Widget _buildInventoryList(List<Map<String, dynamic>> items) {
     if (items.isEmpty) {
-      return const Center(
+      return Center(
         child: Text(
-          '아이템이 없어요',
-          style: TextStyle(color: Color(0xFF9A8E8A)),
+          L10n.of(context).shopItemEmpty,
+          style: const TextStyle(color: Color(0xFF9A8E8A)),
         ),
       );
     }
@@ -957,7 +965,7 @@ class _ShopScreenState extends State<ShopScreen> {
     final isPassiveUtility = itemKey.startsWith('top_card_counter');
     final isConsumable = category == 'utility' && !isPassiveUtility;
     final expiresAt = item['expires_at'];
-    final expiresText = expiresAt != null ? _formatExpire(expiresAt) : null;
+    final expiresText = expiresAt != null ? _formatExpire(context, expiresAt) : null;
 
     return Container(
       padding: const EdgeInsets.all(14),
@@ -994,7 +1002,7 @@ class _ShopScreenState extends State<ShopScreen> {
                           borderRadius: BorderRadius.circular(10),
                         ),
                         child: Text(
-                          isPassiveUtility ? '활성화됨' : '사용중',
+                          isPassiveUtility ? L10n.of(context).shopStatusActivated : L10n.of(context).shopStatusInUse,
                           style: const TextStyle(fontSize: 11, color: Color(0xFF3E6D8E)),
                         ),
                       ),
@@ -1002,7 +1010,7 @@ class _ShopScreenState extends State<ShopScreen> {
                 ),
                 const SizedBox(height: 4),
                 Text(
-                  expiresText ?? '영구 보유',
+                  expiresText ?? L10n.of(context).shopPermanentOwned,
                   style: const TextStyle(fontSize: 12, color: Color(0xFF8A7A72)),
                 ),
               ],
@@ -1034,7 +1042,7 @@ class _ShopScreenState extends State<ShopScreen> {
                   padding: const EdgeInsets.symmetric(horizontal: 12),
                 ),
                 child: Text(
-                  isConsumable ? '사용' : '장착',
+                  isConsumable ? L10n.of(context).shopButtonUse : L10n.of(context).shopButtonEquip,
                   style: const TextStyle(fontSize: 12),
                 ),
               ),
@@ -1524,20 +1532,20 @@ class _ShopScreenState extends State<ShopScreen> {
       context: context,
       builder: (ctx) => AlertDialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: Text(extended ? '기간 연장 완료' : '구매 완료'),
+        title: Text(extended ? L10n.of(context).shopExtendComplete : L10n.of(context).shopPurchaseComplete),
         content: Text(
           extended
-              ? '$name 기간이 연장되었어요.'
+              ? L10n.of(context).shopExtendDone(name)
               : isConsumable
-                  ? '구매가 완료되었습니다.\n인벤토리에서 사용해주세요.'
+                  ? L10n.of(context).shopPurchaseDoneConsumable
                   : isPassiveUtility
-                      ? '구매가 완료되었습니다.\n구매 즉시 자동 활성화됩니다.'
-                      : '구매가 완료되었습니다.\n바로 장착하시겠어요?',
+                      ? L10n.of(context).shopPurchaseDonePassive
+                      : L10n.of(context).shopPurchaseDoneEquip,
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx),
-            child: const Text('닫기'),
+            child: Text(L10n.of(context).commonClose),
           ),
           if (!extended && !isConsumable && !isPassiveUtility)
             ElevatedButton(
@@ -1545,7 +1553,7 @@ class _ShopScreenState extends State<ShopScreen> {
                 Navigator.pop(ctx);
                 game.equipItem(itemKey);
               },
-              child: const Text('장착하기'),
+              child: Text(L10n.of(context).shopEquipNow),
             ),
         ],
       ),
@@ -1575,19 +1583,20 @@ class _ShopScreenState extends State<ShopScreen> {
     final effectType = item['effect_type']?.toString() ?? '';
     final effectValue = item['effect_value'];
 
+    final l10n = L10n.of(context);
     final info = <String>[
-      _categoryLabel(category),
-      isSeason ? '시즌 아이템' : '일반 아이템',
-      isPermanent ? '영구' : '기간제 ${durationDays ?? '-'}일',
+      _categoryLabel(context, category),
+      isSeason ? l10n.shopTagSeason : l10n.shopDetailNormalItem,
+      isPermanent ? l10n.shopDetailPermanent : (durationDays != null ? l10n.shopDetailDuration(durationDays as int) : l10n.shopTagDurationOnly),
     ];
     if (effectType == 'nickname_change') {
-      info.add('효과: 닉네임 1회 변경');
+      info.add(l10n.shopEffectNicknameChange);
     } else if (effectType == 'leave_count_reduce') {
-      info.add('효과: 탈주 -${effectValue ?? 1}');
+      info.add(l10n.shopEffectLeaveReduce('${effectValue ?? 1}'));
     } else if (effectType == 'stats_reset') {
-      info.add('효과: 전체 전적(승/패/판수) 초기화');
+      info.add(l10n.shopEffectStatsReset);
     } else if (effectType == 'season_stats_reset') {
-      info.add('효과: 랭킹 전적(승/패/판수) 초기화');
+      info.add(l10n.shopEffectSeasonStatsReset);
     }
 
     showDialog(
@@ -1620,7 +1629,7 @@ class _ShopScreenState extends State<ShopScreen> {
             ),
             const SizedBox(height: 6),
             Text(
-              '$price 골드',
+              l10n.shopPriceGold(price as int),
               style: const TextStyle(
                 fontSize: 13,
                 fontWeight: FontWeight.bold,
@@ -1632,7 +1641,7 @@ class _ShopScreenState extends State<ShopScreen> {
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx),
-            child: const Text('닫기'),
+            child: Text(l10n.commonClose),
           ),
         ],
       ),
@@ -1645,22 +1654,22 @@ class _ShopScreenState extends State<ShopScreen> {
       context: context,
       builder: (ctx) => AlertDialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: const Text('닉네임 변경'),
+        title: Text(L10n.of(context).shopNicknameChangeTitle),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Text(
-              '새로운 닉네임을 입력해주세요.\n(2~10자, 공백 불가)',
-              style: TextStyle(fontSize: 13, color: Color(0xFF6A5A52)),
+            Text(
+              L10n.of(context).shopNicknameChangeDesc,
+              style: const TextStyle(fontSize: 13, color: Color(0xFF6A5A52)),
             ),
             const SizedBox(height: 12),
             TextField(
               controller: controller,
               maxLength: 10,
-              decoration: const InputDecoration(
-                hintText: '새 닉네임',
-                border: OutlineInputBorder(),
-                contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+              decoration: InputDecoration(
+                hintText: L10n.of(context).shopNicknameChangeHint,
+                border: const OutlineInputBorder(),
+                contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
               ),
             ),
           ],
@@ -1668,39 +1677,40 @@ class _ShopScreenState extends State<ShopScreen> {
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx),
-            child: const Text('취소'),
+            child: Text(L10n.of(context).commonCancel),
           ),
           ElevatedButton(
             onPressed: () {
               final nick = controller.text.trim();
               if (nick.length < 2 || nick.length > 10) {
                 ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('닉네임은 2~10자여야 합니다')),
+                  SnackBar(content: Text(L10n.of(context).shopNicknameChangeValidation)),
                 );
                 return;
               }
               Navigator.pop(ctx);
               game.changeNickname(nick);
             },
-            child: const Text('변경'),
+            child: Text(L10n.of(context).shopNicknameChangeButton),
           ),
         ],
       ),
     );
   }
 
-  String _categoryLabel(String category) {
+  String _categoryLabel(BuildContext context, String category) {
+    final l10n = L10n.of(context);
     switch (category) {
       case 'banner':
-        return '배너';
+        return l10n.shopDetailCategoryBanner;
       case 'title':
-        return '칭호';
+        return l10n.shopDetailCategoryTitle;
       case 'theme':
-        return '테마/카드 스킨';
+        return l10n.shopDetailCategoryThemeSkin;
       case 'utility':
-        return '유틸리티';
+        return l10n.shopDetailCategoryUtility;
       default:
-        return '아이템';
+        return l10n.shopDetailCategoryItem;
     }
   }
 
@@ -1740,25 +1750,26 @@ class _ShopScreenState extends State<ShopScreen> {
     return items.where((i) => (i['category']?.toString() ?? '') == category).toList();
   }
 
-  String _buildItemTag(bool isSeason, bool isPermanent, dynamic durationDays) {
+  String _buildItemTag(BuildContext context, bool isSeason, bool isPermanent, dynamic durationDays) {
+    final l10n = L10n.of(context);
     if (isSeason) {
-      return '시즌 아이템';
+      return l10n.shopTagSeason;
     }
     if (isPermanent) {
-      return '영구';
+      return l10n.shopTagPermanent;
     }
     if (durationDays != null) {
-      return '기간제 $durationDays일';
+      return l10n.shopTagDuration(durationDays as int);
     }
-    return '기간제';
+    return l10n.shopTagDurationOnly;
   }
 
-  String _formatExpire(dynamic value) {
+  String _formatExpire(BuildContext context, dynamic value) {
     try {
       final dt = DateTime.parse(value.toString()).toLocal();
-      return '만료: ${dt.year}.${dt.month}.${dt.day}';
+      return L10n.of(context).shopExpireDate('${dt.year}.${dt.month}.${dt.day}');
     } catch (_) {
-      return '만료 예정';
+      return L10n.of(context).shopExpireSoon;
     }
   }
 
@@ -1803,7 +1814,7 @@ class _ShopScreenState extends State<ShopScreen> {
                       if (mounted) {
                         setState(() => _adLoading = false);
                         ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(content: Text('광고를 표시할 수 없습니다')),
+                          SnackBar(content: Text(L10n.of(context).shopAdCannotShow)),
                         );
                       }
                       _preloadRewardedAd();
@@ -1828,8 +1839,8 @@ class _ShopScreenState extends State<ShopScreen> {
               : const Icon(Icons.play_circle_fill, size: 20),
           label: Text(
             canWatch
-                ? '광고 보고 50골드 받기 ($_todayAdCount/${AdService.maxDailyRewards})'
-                : '오늘의 광고 보상 완료',
+                ? L10n.of(context).shopAdWatchForGold(_todayAdCount, AdService.maxDailyRewards)
+                : L10n.of(context).shopAdRewardDone,
             style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
           ),
           style: ElevatedButton.styleFrom(

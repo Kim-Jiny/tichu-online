@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import '../l10n/app_localizations.dart';
 import '../services/game_service.dart';
 import 'ranking_screen.dart';
 
@@ -93,7 +94,7 @@ class _FriendsScreenState extends State<FriendsScreen> with TickerProviderStateM
         final messenger = ScaffoldMessenger.of(context);
         messenger.hideCurrentSnackBar();
         messenger.showSnackBar(
-          const SnackBar(content: Text('게임 중에는 DM 채팅방에 들어갈 수 없습니다')),
+          SnackBar(content: Text(L10n.of(context).friendsDmBlockedDuringGame)),
         );
       }
       return;
@@ -187,9 +188,9 @@ class _FriendsScreenState extends State<FriendsScreen> with TickerProviderStateM
             ),
           ),
           const SizedBox(width: 12),
-          const Text(
-            '친구',
-            style: TextStyle(
+          Text(
+            L10n.of(context).friendsTitle,
+            style: const TextStyle(
               fontSize: 20,
               fontWeight: FontWeight.bold,
               color: Color(0xFF5A4038),
@@ -239,7 +240,7 @@ class _FriendsScreenState extends State<FriendsScreen> with TickerProviderStateM
                 child: Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    const Text('친구'),
+                    Text(L10n.of(context).friendsTabFriends),
                     if (game.totalUnreadDmCount > 0) ...[
                       const SizedBox(width: 4),
                       Container(
@@ -257,12 +258,12 @@ class _FriendsScreenState extends State<FriendsScreen> with TickerProviderStateM
                   ],
                 ),
               ),
-              const Tab(text: '검색'),
+              Tab(text: L10n.of(context).friendsTabSearch),
               Tab(
                 child: Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    const Text('요청'),
+                    Text(L10n.of(context).friendsTabRequests),
                     if (game.pendingFriendRequestCount > 0) ...[
                       const SizedBox(width: 4),
                       Container(
@@ -307,16 +308,16 @@ class _FriendsScreenState extends State<FriendsScreen> with TickerProviderStateM
         }
 
         if (sorted.isEmpty) {
-          return const Center(
+          return Center(
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                Icon(Icons.people_outline, size: 48, color: Color(0xFFBDBDBD)),
-                SizedBox(height: 12),
+                const Icon(Icons.people_outline, size: 48, color: Color(0xFFBDBDBD)),
+                const SizedBox(height: 12),
                 Text(
-                  '친구가 없어요!\n검색 탭에서 친구를 추가해보세요.',
+                  L10n.of(context).friendsEmptyList,
                   textAlign: TextAlign.center,
-                  style: TextStyle(fontSize: 14, color: Color(0xFF9A8E8A)),
+                  style: const TextStyle(fontSize: 14, color: Color(0xFF9A8E8A)),
                 ),
               ],
             ),
@@ -334,13 +335,14 @@ class _FriendsScreenState extends State<FriendsScreen> with TickerProviderStateM
             final roomName = friend['roomName'] as String?;
             final unread = unreadMap[nickname] ?? 0;
 
+            final l10n = L10n.of(context);
             String statusText;
             if (isOnline && roomName != null && roomName.isNotEmpty) {
-              statusText = '$roomName에서 게임중';
+              statusText = l10n.friendsStatusPlayingInRoom(roomName);
             } else if (isOnline) {
-              statusText = '온라인';
+              statusText = l10n.friendsStatusOnline;
             } else {
-              statusText = '오프라인';
+              statusText = l10n.friendsStatusOffline;
             }
 
             return GestureDetector(
@@ -406,9 +408,9 @@ class _FriendsScreenState extends State<FriendsScreen> with TickerProviderStateM
                                     color: const Color(0xFFFFF3E0),
                                     borderRadius: BorderRadius.circular(10),
                                   ),
-                                  child: const Text(
-                                    '게임 중 제한',
-                                    style: TextStyle(
+                                  child: Text(
+                                    l10n.friendsRestrictedDuringGame,
+                                    style: const TextStyle(
                                       fontSize: 10,
                                       color: Color(0xFFE65100),
                                       fontWeight: FontWeight.bold,
@@ -433,21 +435,21 @@ class _FriendsScreenState extends State<FriendsScreen> with TickerProviderStateM
                     if (isOnline && friend['roomId'] == null && game.isInWaitingRoom)
                       game.isRoomInvitePending(nickname)
                           ? _buildActionChip(
-                              '초대됨',
+                              l10n.friendsInvited,
                               Icons.schedule,
                               const Color(0xFF8A8A8A),
                               const Color(0xFFF1F1F1),
                               () {},
                             )
                           : _buildActionChip(
-                              '초대',
+                              l10n.friendsInvite,
                               Icons.send,
                               const Color(0xFF1976D2),
                               const Color(0xFFE3F2FD),
                               () {
                                 game.inviteToRoom(nickname);
                                 ScaffoldMessenger.of(context).showSnackBar(
-                                  SnackBar(content: Text('$nickname님에게 초대를 보냈습니다')),
+                                  SnackBar(content: Text(l10n.friendsInviteSent(nickname))),
                                 );
                               },
                             ),
@@ -523,8 +525,9 @@ class _FriendsScreenState extends State<FriendsScreen> with TickerProviderStateM
     final roomPassword = friend['roomPassword'] as String? ?? '';
     final canJoin = !roomInGame && roomPlayerCount < 4;
 
+    final l10n = L10n.of(context);
     return _buildActionChip(
-      canJoin ? '입장' : '관전',
+      canJoin ? l10n.friendsJoinRoom : l10n.friendsSpectateRoom,
       canJoin ? Icons.login : Icons.visibility,
       canJoin ? const Color(0xFF388E3C) : const Color(0xFFE65100),
       canJoin ? const Color(0xFFE8F5E9) : const Color(0xFFFFF3E0),
@@ -551,7 +554,7 @@ class _FriendsScreenState extends State<FriendsScreen> with TickerProviderStateM
                 controller: _searchController,
                 onChanged: _onSearchChanged,
                 decoration: InputDecoration(
-                  hintText: '닉네임으로 검색',
+                  hintText: L10n.of(context).friendsSearchHint,
                   hintStyle: const TextStyle(color: Color(0xFFBDBDBD), fontSize: 14),
                   prefixIcon: const Icon(Icons.search, color: Color(0xFF8A7A72)),
                   suffixIcon: _searchController.text.isNotEmpty
@@ -577,7 +580,7 @@ class _FriendsScreenState extends State<FriendsScreen> with TickerProviderStateM
               child: game.searchResults.isEmpty
                   ? Center(
                       child: Text(
-                        _searchController.text.isEmpty ? '닉네임을 입력하여 검색하세요' : '검색 결과가 없습니다',
+                        _searchController.text.isEmpty ? L10n.of(context).friendsSearchPrompt : L10n.of(context).friendsSearchNoResults,
                         style: const TextStyle(fontSize: 14, color: Color(0xFF9A8E8A)),
                       ),
                     )
@@ -638,6 +641,7 @@ class _FriendsScreenState extends State<FriendsScreen> with TickerProviderStateM
   }
 
   Widget _buildFriendStatusButton(String nickname, String status, GameService game) {
+    final l10n = L10n.of(context);
     switch (status) {
       case 'friend':
         return Container(
@@ -646,12 +650,12 @@ class _FriendsScreenState extends State<FriendsScreen> with TickerProviderStateM
             color: const Color(0xFFE8F5E9),
             borderRadius: BorderRadius.circular(8),
           ),
-          child: const Row(
+          child: Row(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Icon(Icons.check, size: 14, color: Color(0xFF4CAF50)),
-              SizedBox(width: 4),
-              Text('친구', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Color(0xFF4CAF50))),
+              const Icon(Icons.check, size: 14, color: Color(0xFF4CAF50)),
+              const SizedBox(width: 4),
+              Text(l10n.friendsStatusFriend, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Color(0xFF4CAF50))),
             ],
           ),
         );
@@ -662,7 +666,7 @@ class _FriendsScreenState extends State<FriendsScreen> with TickerProviderStateM
             color: const Color(0xFFFFF3E0),
             borderRadius: BorderRadius.circular(8),
           ),
-          child: const Text('요청 받음', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Color(0xFFE65100))),
+          child: Text(l10n.friendsRequestReceived, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Color(0xFFE65100))),
         );
       case 'pending_outgoing':
         return Container(
@@ -671,14 +675,14 @@ class _FriendsScreenState extends State<FriendsScreen> with TickerProviderStateM
             color: const Color(0xFFE3F2FD),
             borderRadius: BorderRadius.circular(8),
           ),
-          child: const Text('요청 보냄', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Color(0xFF1976D2))),
+          child: Text(l10n.friendsRequestSent, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Color(0xFF1976D2))),
         );
       default:
         return GestureDetector(
           onTap: () {
             game.addFriendAction(nickname);
             ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(content: Text('$nickname님에게 친구 요청을 보냈습니다')),
+              SnackBar(content: Text(l10n.friendsRequestSentSnackbar(nickname))),
             );
           },
           child: Container(
@@ -687,12 +691,12 @@ class _FriendsScreenState extends State<FriendsScreen> with TickerProviderStateM
               color: const Color(0xFF7E57C2),
               borderRadius: BorderRadius.circular(8),
             ),
-            child: const Row(
+            child: Row(
               mainAxisSize: MainAxisSize.min,
               children: [
-                Icon(Icons.person_add, size: 14, color: Colors.white),
-                SizedBox(width: 4),
-                Text('친구 추가', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.white)),
+                const Icon(Icons.person_add, size: 14, color: Colors.white),
+                const SizedBox(width: 4),
+                Text(l10n.friendsAddFriend, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.white)),
               ],
             ),
           ),
@@ -705,15 +709,15 @@ class _FriendsScreenState extends State<FriendsScreen> with TickerProviderStateM
     return Consumer<GameService>(
       builder: (context, game, _) {
         if (game.pendingFriendRequests.isEmpty) {
-          return const Center(
+          return Center(
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                Icon(Icons.mail_outline, size: 48, color: Color(0xFFBDBDBD)),
-                SizedBox(height: 12),
+                const Icon(Icons.mail_outline, size: 48, color: Color(0xFFBDBDBD)),
+                const SizedBox(height: 12),
                 Text(
-                  '받은 요청이 없습니다',
-                  style: TextStyle(fontSize: 14, color: Color(0xFF9A8E8A)),
+                  L10n.of(context).friendsNoRequests,
+                  style: const TextStyle(fontSize: 14, color: Color(0xFF9A8E8A)),
                 ),
               ],
             ),
@@ -759,7 +763,7 @@ class _FriendsScreenState extends State<FriendsScreen> with TickerProviderStateM
                     onTap: () {
                       game.acceptFriendRequest(nickname);
                       ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(content: Text('$nickname님과 친구가 되었습니다')),
+                        SnackBar(content: Text(L10n.of(context).friendsAccepted(nickname))),
                       );
                     },
                     child: Container(
@@ -768,9 +772,9 @@ class _FriendsScreenState extends State<FriendsScreen> with TickerProviderStateM
                         color: const Color(0xFF81C784),
                         borderRadius: BorderRadius.circular(8),
                       ),
-                      child: const Text(
-                        '수락',
-                        style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.white),
+                      child: Text(
+                        L10n.of(context).friendsAccept,
+                        style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.white),
                       ),
                     ),
                   ),
@@ -785,9 +789,9 @@ class _FriendsScreenState extends State<FriendsScreen> with TickerProviderStateM
                         color: const Color(0xFFE57373),
                         borderRadius: BorderRadius.circular(8),
                       ),
-                      child: const Text(
-                        '거절',
-                        style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.white),
+                      child: Text(
+                        L10n.of(context).friendsReject,
+                        style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.white),
                       ),
                     ),
                   ),
@@ -851,11 +855,11 @@ class _FriendsScreenState extends State<FriendsScreen> with TickerProviderStateM
                   builder: (context, game, _) {
                     final messages = game.dmMessages[_dmChatPartner] ?? [];
                     if (messages.isEmpty) {
-                      return const Center(
+                      return Center(
                         child: Text(
-                          '메시지가 없습니다.\n첫 메시지를 보내보세요!',
+                          L10n.of(context).friendsDmEmpty,
                           textAlign: TextAlign.center,
-                          style: TextStyle(fontSize: 14, color: Color(0xFF9A8E8A)),
+                          style: const TextStyle(fontSize: 14, color: Color(0xFF9A8E8A)),
                         ),
                       );
                     }
@@ -900,7 +904,7 @@ class _FriendsScreenState extends State<FriendsScreen> with TickerProviderStateM
                         maxLines: 3,
                         minLines: 1,
                         decoration: InputDecoration(
-                          hintText: '메시지를 입력하세요',
+                          hintText: L10n.of(context).friendsDmInputHint,
                           hintStyle: const TextStyle(color: Color(0xFFBDBDBD), fontSize: 14),
                           counterText: '',
                           filled: true,
@@ -997,30 +1001,31 @@ class _FriendsScreenState extends State<FriendsScreen> with TickerProviderStateM
   }
 
   void _showRemoveFriendConfirmation(String nickname, GameService game) {
+    final l10n = L10n.of(context);
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: const Text('친구 삭제'),
-        content: Text('$nickname님을 친구 목록에서 삭제하시겠습니까?'),
+        title: Text(l10n.friendsRemoveTitle),
+        content: Text(l10n.friendsRemoveConfirm(nickname)),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx),
-            child: const Text('취소'),
+            child: Text(l10n.commonCancel),
           ),
           ElevatedButton(
             onPressed: () {
               Navigator.pop(ctx);
               game.removeFriendAction(nickname);
               ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(content: Text('$nickname님을 친구 목록에서 삭제했습니다')),
+                SnackBar(content: Text(l10n.friendsRemoved(nickname))),
               );
             },
             style: ElevatedButton.styleFrom(
               backgroundColor: const Color(0xFFE57373),
               foregroundColor: Colors.white,
             ),
-            child: const Text('삭제'),
+            child: Text(l10n.commonDelete),
           ),
         ],
       ),

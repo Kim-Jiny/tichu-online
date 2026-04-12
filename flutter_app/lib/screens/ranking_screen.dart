@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:google_mobile_ads/google_mobile_ads.dart';
+import '../l10n/app_localizations.dart';
 import '../services/game_service.dart';
 import '../services/ad_service.dart';
 
@@ -87,9 +88,9 @@ class _RankingScreenState extends State<RankingScreen> {
       child: SizedBox(
         width: double.infinity,
         child: SegmentedButton<String>(
-          segments: const [
-            ButtonSegment(value: 'tichu', label: Text('티츄')),
-            ButtonSegment(value: 'skull_king', label: Text('스컬킹')),
+          segments: [
+            ButtonSegment(value: 'tichu', label: Text(L10n.of(context).rankingTichu)),
+            ButtonSegment(value: 'skull_king', label: Text(L10n.of(context).rankingSkullKing)),
           ],
           selected: {_rankingGameType},
           onSelectionChanged: (v) {
@@ -128,9 +129,9 @@ class _RankingScreenState extends State<RankingScreen> {
             color: const Color(0xFF8A7A72),
           ),
           const SizedBox(width: 4),
-          const Text(
-            '랭킹',
-            style: TextStyle(
+          Text(
+            L10n.of(context).rankingTitle,
+            style: const TextStyle(
               fontSize: 20,
               fontWeight: FontWeight.bold,
               color: Color(0xFF5A4038),
@@ -227,10 +228,10 @@ class _RankingScreenState extends State<RankingScreen> {
       );
     }
     if (game.rankings.isEmpty) {
-      return const Center(
+      return Center(
         child: Text(
-          '랭킹 데이터가 없어요',
-          style: TextStyle(color: Color(0xFF9A8E8A)),
+          L10n.of(context).rankingNoData,
+          style: const TextStyle(color: Color(0xFF9A8E8A)),
         ),
       );
     }
@@ -320,7 +321,7 @@ class _RankingScreenState extends State<RankingScreen> {
                 ),
                 const SizedBox(height: 4),
                 Text(
-                  '전적 $total전 $wins승 $losses패 · 승률 $winRate%',
+                  L10n.of(context).rankingRecordWithWinRate(total, wins, losses, winRate),
                   style: const TextStyle(fontSize: 12, color: Color(0xFF8A7A72)),
                 ),
               ],
@@ -329,7 +330,7 @@ class _RankingScreenState extends State<RankingScreen> {
           Column(
             crossAxisAlignment: CrossAxisAlignment.end,
             children: [
-              Text('시즌점수', style: const TextStyle(fontSize: 11, color: Color(0xFF9A8E8A))),
+              Text(L10n.of(context).rankingSeasonScore, style: const TextStyle(fontSize: 11, color: Color(0xFF9A8E8A))),
               Text(
                 '$rating',
                 style: const TextStyle(
@@ -423,7 +424,7 @@ class _RankingScreenState extends State<RankingScreen> {
                   ),
                   const SizedBox(height: 4),
                   Text(
-                    '전적 $total전 $wins승 $losses패 · 승률 $winRate%',
+                    L10n.of(context).rankingRecordWithWinRate(total, wins, losses, winRate),
                     style: const TextStyle(
                       fontSize: 12,
                       color: Color(0xFF8A7A72),
@@ -437,7 +438,7 @@ class _RankingScreenState extends State<RankingScreen> {
               crossAxisAlignment: CrossAxisAlignment.end,
               children: [
                 Text(
-                  '시즌점수',
+                  L10n.of(context).rankingSeasonScore,
                   style: const TextStyle(fontSize: 11, color: Color(0xFF9A8E8A)),
                 ),
                 Text(
@@ -578,9 +579,10 @@ class _ProfileContent extends StatelessWidget {
   Widget build(BuildContext context) {
     final profile = data['profile'] as Map<String, dynamic>?;
     if (profile == null) {
-      return const Center(child: Text('프로필을 찾을 수 없습니다'));
+      return Center(child: Text(L10n.of(context).rankingProfileNotFound));
     }
 
+    final l10n = L10n.of(context);
     final nickname = data['nickname'] as String? ?? '';
     final totalGames = profile['totalGames'] ?? 0;
     final wins = profile['wins'] ?? 0;
@@ -620,54 +622,54 @@ class _ProfileContent extends StatelessWidget {
         _ProfileMiniStatRow(gold: gold, leaveCount: leaveCount),
         const SizedBox(height: 10),
         _ProfileSectionCard(
-          title: '티츄 시즌 랭킹전',
+          title: l10n.rankingTichuSeasonRanked,
           accent: const Color(0xFF7A6A95),
           background: const Color(0xFFF6F3FA),
           icon: Icons.emoji_events,
           iconColor: const Color(0xFFFFD54F),
           mainText: '$seasonRating',
           chips: [
-            _ProfileStatChip('전적', '$seasonGames전 $seasonWins승 $seasonLosses패'),
-            _ProfileStatChip('승률', '$seasonWinRate%'),
+            _ProfileStatChip(l10n.rankingStatRecord, l10n.rankingRecordFormat(seasonGames, seasonWins, seasonLosses)),
+            _ProfileStatChip(l10n.rankingStatWinRate, '$seasonWinRate%'),
           ],
         ),
         const SizedBox(height: 10),
         _ProfileSectionCard(
-          title: '티츄 전적',
+          title: l10n.rankingTichuRecord,
           accent: const Color(0xFF5A4038),
           background: const Color(0xFFF5F5F5),
           icon: Icons.star,
           iconColor: const Color(0xFFFFB74D),
           mainText: '',
           chips: [
-            _ProfileStatChip('전적', '$totalGames전 $wins승 $losses패'),
-            _ProfileStatChip('승률', '$winRate%'),
+            _ProfileStatChip(l10n.rankingStatRecord, l10n.rankingRecordFormat(totalGames, wins, losses)),
+            _ProfileStatChip(l10n.rankingStatWinRate, '$winRate%'),
           ],
         ),
         const SizedBox(height: 10),
         _ProfileSectionCard(
-          title: '스컬킹 시즌 랭킹전',
+          title: l10n.rankingSkullKingSeasonRanked,
           accent: const Color(0xFF2D2D3D),
           background: const Color(0xFFECEFF6),
           icon: Icons.emoji_events,
           iconColor: const Color(0xFFFFD54F),
           mainText: '$skSeasonRating',
           chips: [
-            _ProfileStatChip('전적', '$skSeasonGames전 $skSeasonWins승 $skSeasonLosses패'),
-            _ProfileStatChip('승률', '$skSeasonWinRate%'),
+            _ProfileStatChip(l10n.rankingStatRecord, l10n.rankingRecordFormat(skSeasonGames, skSeasonWins, skSeasonLosses)),
+            _ProfileStatChip(l10n.rankingStatWinRate, '$skSeasonWinRate%'),
           ],
         ),
         const SizedBox(height: 10),
         _ProfileSectionCard(
-          title: '스컬킹 전적',
+          title: l10n.rankingSkullKingRecord,
           accent: const Color(0xFF3F51B5),
           background: const Color(0xFFF0F0FA),
           icon: Icons.sailing,
           iconColor: const Color(0xFF5C6BC0),
           mainText: '',
           chips: [
-            _ProfileStatChip('전적', '$skTotalGames전 $skWins승 $skLosses패'),
-            _ProfileStatChip('승률', '$skWinRate%'),
+            _ProfileStatChip(l10n.rankingStatRecord, l10n.rankingRecordFormat(skTotalGames, skWins, skLosses)),
+            _ProfileStatChip(l10n.rankingStatWinRate, '$skWinRate%'),
           ],
         ),
         const SizedBox(height: 12),
@@ -936,28 +938,28 @@ class _ProfileRecentMatches extends StatelessWidget {
         children: [
           Row(
             children: [
-              const Text(
-                '최근 전적 (3)',
-                style: TextStyle(fontSize: 12, color: Color(0xFF8A8A8A)),
+              Text(
+                L10n.of(context).rankingRecentMatchesHeader,
+                style: const TextStyle(fontSize: 12, color: Color(0xFF8A8A8A)),
               ),
               const Spacer(),
               if (recentMatches.length > 3)
                 TextButton(
                   onPressed: () => _showRecentMatchesDialog(context, recentMatches),
-                  child: const Text('더보기'),
+                  child: Text(L10n.of(context).rankingSeeMore),
                 ),
             ],
           ),
           const SizedBox(height: 8),
           if (recentMatches.isEmpty)
-            const Text(
-              '최근 전적이 없습니다',
-              style: TextStyle(fontSize: 12, color: Color(0xFF9A8E8A)),
+            Text(
+              L10n.of(context).rankingNoRecentMatches,
+              style: const TextStyle(fontSize: 12, color: Color(0xFF9A8E8A)),
             )
           else
             Column(
               children: recentMatches.take(3).map<Widget>((match) {
-                return _buildMatchRow(match);
+                return _buildMatchRow(context, match);
               }).toList(),
             ),
         ],
@@ -965,7 +967,8 @@ class _ProfileRecentMatches extends StatelessWidget {
     );
   }
 
-  Widget _buildMatchRow(dynamic match) {
+  Widget _buildMatchRow(BuildContext context, dynamic match) {
+    final l10n = L10n.of(context);
     final isSK = match['gameType'] == 'skull_king';
     final isDraw = match['isDraw'] == true;
     final isDesertionLoss = match['isDesertionLoss'] == true;
@@ -975,10 +978,10 @@ class _ProfileRecentMatches extends StatelessWidget {
     String badge;
     Color badgeColor;
     if (isDesertionLoss) {
-      badge = '탈';
+      badge = l10n.rankingBadgeDesertion;
       badgeColor = const Color(0xFFFF8A65);
     } else if (isDraw) {
-      badge = '무';
+      badge = l10n.rankingBadgeDraw;
       badgeColor = const Color(0xFFBDBDBD);
     } else if (won) {
       badge = 'W';
@@ -995,7 +998,7 @@ class _ProfileRecentMatches extends StatelessWidget {
       detail = players;
       final rank = match['myRank'] ?? '-';
       final myScore = match['myScore'] ?? 0;
-      score = '$rank등 $myScore점';
+      score = l10n.rankingSkRankScore(rank.toString(), myScore);
     } else {
       final teamA = _formatTeam(match['playerA1'], match['playerA2']);
       final teamB = _formatTeam(match['playerB1'], match['playerB2']);
@@ -1072,11 +1075,12 @@ class _ProfileRecentMatches extends StatelessWidget {
 }
 
 void _showRecentMatchesDialog(BuildContext context, List<dynamic> recentMatches) {
+  final l10n = L10n.of(context);
   showDialog(
     context: context,
     builder: (ctx) => AlertDialog(
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-      title: const Text('최근 전적'),
+      title: Text(l10n.rankingRecentMatchesTitle),
       content: SizedBox(
         width: double.maxFinite,
         height: 320,
@@ -1085,21 +1089,21 @@ void _showRecentMatchesDialog(BuildContext context, List<dynamic> recentMatches)
           separatorBuilder: (_, _) => const Divider(height: 16),
           itemBuilder: (_, index) {
             final match = recentMatches[index];
-            return _buildMatchRowDialog(match);
+            return _buildMatchRowDialog(l10n, match);
           },
         ),
       ),
       actions: [
         TextButton(
           onPressed: () => Navigator.pop(ctx),
-          child: const Text('닫기'),
+          child: Text(l10n.commonClose),
         ),
       ],
     ),
   );
 }
 
-Widget _buildMatchRowDialog(dynamic match) {
+Widget _buildMatchRowDialog(L10n l10n, dynamic match) {
   final isSK = match['gameType'] == 'skull_king';
   final isDraw = match['isDraw'] == true;
   final isDesertionLoss = match['isDesertionLoss'] == true;
@@ -1109,10 +1113,10 @@ Widget _buildMatchRowDialog(dynamic match) {
   String badge;
   Color badgeColor;
   if (isDesertionLoss) {
-    badge = '탈';
+    badge = l10n.rankingBadgeDesertion;
     badgeColor = const Color(0xFFFF8A65);
   } else if (isDraw) {
-    badge = '무';
+    badge = l10n.rankingBadgeDraw;
     badgeColor = const Color(0xFFBDBDBD);
   } else if (won) {
     badge = 'W';
@@ -1129,7 +1133,7 @@ Widget _buildMatchRowDialog(dynamic match) {
     detail = players;
     final rank = match['myRank'] ?? '-';
     final myScore = match['myScore'] ?? 0;
-    score = '$rank등 $myScore점';
+    score = l10n.rankingSkRankScore(rank.toString(), myScore);
   } else {
     final teamA = _formatTeam(match['playerA1'], match['playerA2']);
     final teamB = _formatTeam(match['playerB1'], match['playerB2']);
@@ -1211,7 +1215,7 @@ class _ProfileMiniStatRow extends StatelessWidget {
                 const Icon(Icons.monetization_on, color: Color(0xFFFFB74D), size: 16),
                 const SizedBox(width: 6),
                 Text(
-                  '$gold 골드',
+                  L10n.of(context).rankingGold(gold),
                   style: const TextStyle(
                     fontSize: 12,
                     fontWeight: FontWeight.bold,
@@ -1238,7 +1242,7 @@ class _ProfileMiniStatRow extends StatelessWidget {
                     color: Color(0xFFE57373), size: 16),
                 const SizedBox(width: 6),
                 Text(
-                  '탈주 $leaveCount',
+                  L10n.of(context).rankingDesertions(leaveCount),
                   style: const TextStyle(
                     fontSize: 12,
                     fontWeight: FontWeight.bold,

@@ -1095,5 +1095,266 @@
   "rulesSkExpWhiteWhale": "\uD83D\uDC0B White Whale",
   "rulesSkExpWhiteWhaleDesc": "Neutralizes all special card effects. Only number cards are compared in the trick, and the highest number wins regardless of suit. If no number cards are present, the trick is voided.",
   "rulesSkExpLoot": "\uD83D\uDCB0 Loot",
-  "rulesSkExpLootDesc": "The trick winner earns +20 bonus per Loot card in the trick, and each player who played a Loot card also earns +20 as their own bonus. (Only awarded on bid success)"
+  "rulesSkExpLootDesc": "The trick winner earns +20 bonus per Loot card in the trick, and each player who played a Loot card also earns +20 as their own bonus. (Only awarded on bid success)",
+
+  "friendsTitle": "Friends",
+  "friendsTabFriends": "Friends",
+  "friendsTabSearch": "Search",
+  "friendsTabRequests": "Requests",
+  "friendsEmptyList": "No friends yet!\nSearch and add friends from the Search tab.",
+  "friendsStatusPlayingInRoom": "Playing in {roomName}",
+  "@friendsStatusPlayingInRoom": {
+    "placeholders": {
+      "roomName": { "type": "String" }
+    }
+  },
+  "friendsStatusOnline": "Online",
+  "friendsStatusOffline": "Offline",
+  "friendsRestrictedDuringGame": "Restricted during game",
+  "friendsDmBlockedDuringGame": "Cannot enter DM chat during a game",
+  "friendsInvited": "Invited",
+  "friendsInvite": "Invite",
+  "friendsInviteSent": "Sent an invite to {nickname}",
+  "@friendsInviteSent": {
+    "placeholders": {
+      "nickname": { "type": "String" }
+    }
+  },
+  "friendsJoinRoom": "Join",
+  "friendsSpectateRoom": "Spectate",
+  "friendsSearchHint": "Search by nickname",
+  "friendsSearchPrompt": "Enter a nickname to search",
+  "friendsSearchNoResults": "No results found",
+  "friendsStatusFriend": "Friend",
+  "friendsRequestReceived": "Request received",
+  "friendsRequestSent": "Request sent",
+  "friendsRequestSentSnackbar": "Sent a friend request to {nickname}",
+  "@friendsRequestSentSnackbar": {
+    "placeholders": {
+      "nickname": { "type": "String" }
+    }
+  },
+  "friendsAddFriend": "Add Friend",
+  "friendsNoRequests": "No pending requests",
+  "friendsAccepted": "You are now friends with {nickname}",
+  "@friendsAccepted": {
+    "placeholders": {
+      "nickname": { "type": "String" }
+    }
+  },
+  "friendsAccept": "Accept",
+  "friendsReject": "Reject",
+  "friendsDmEmpty": "No messages.\nSend the first message!",
+  "friendsDmInputHint": "Enter a message",
+  "friendsRemoveTitle": "Remove Friend",
+  "friendsRemoveConfirm": "Remove {nickname} from your friends list?",
+  "@friendsRemoveConfirm": {
+    "placeholders": {
+      "nickname": { "type": "String" }
+    }
+  },
+  "friendsRemoved": "Removed {nickname} from your friends list",
+  "@friendsRemoved": {
+    "placeholders": {
+      "nickname": { "type": "String" }
+    }
+  },
+
+  "rankingTitle": "Rankings",
+  "rankingTichu": "Tichu",
+  "rankingSkullKing": "Skull King",
+  "rankingNoData": "No ranking data available",
+  "rankingRecordWithWinRate": "Record {total}G {wins}W {losses}L · Win rate {winRate}%",
+  "@rankingRecordWithWinRate": {
+    "placeholders": {
+      "total": { "type": "int" },
+      "wins": { "type": "int" },
+      "losses": { "type": "int" },
+      "winRate": { "type": "int" }
+    }
+  },
+  "rankingSeasonScore": "Season Score",
+  "rankingProfileNotFound": "Profile not found",
+  "rankingTichuSeasonRanked": "Tichu Season Ranked",
+  "rankingTichuRecord": "Tichu Record",
+  "rankingSkullKingSeasonRanked": "Skull King Season Ranked",
+  "rankingSkullKingRecord": "Skull King Record",
+  "rankingStatRecord": "Record",
+  "rankingStatWinRate": "Win Rate",
+  "rankingRecordFormat": "{games}G {wins}W {losses}L",
+  "@rankingRecordFormat": {
+    "placeholders": {
+      "games": { "type": "int" },
+      "wins": { "type": "int" },
+      "losses": { "type": "int" }
+    }
+  },
+  "rankingGold": "{gold} Gold",
+  "@rankingGold": {
+    "placeholders": {
+      "gold": { "type": "int" }
+    }
+  },
+  "rankingDesertions": "Desertions {count}",
+  "@rankingDesertions": {
+    "placeholders": {
+      "count": { "type": "int" }
+    }
+  },
+  "rankingRecentMatchesHeader": "Recent Matches (3)",
+  "rankingSeeMore": "See More",
+  "rankingNoRecentMatches": "No recent matches",
+  "rankingBadgeDesertion": "D",
+  "rankingBadgeDraw": "D",
+  "rankingSkRankScore": "#{rank} {score}pts",
+  "@rankingSkRankScore": {
+    "placeholders": {
+      "rank": { "type": "String" },
+      "score": { "type": "int" }
+    }
+  },
+  "rankingRecentMatchesTitle": "Recent Matches",
+
+  "shopTitle": "Shop",
+  "shopGoldAmount": "{gold} Gold",
+  "@shopGoldAmount": {
+    "placeholders": {
+      "gold": { "type": "int" }
+    }
+  },
+  "shopHowToEarn": "How to Earn",
+  "shopDesertionCount": "Left {count}",
+  "@shopDesertionCount": {
+    "placeholders": {
+      "count": { "type": "int" }
+    }
+  },
+  "shopGoldHistory": "Gold History",
+  "shopGoldCurrent": "Current gold: {gold}",
+  "@shopGoldCurrent": {
+    "placeholders": {
+      "gold": { "type": "int" }
+    }
+  },
+  "shopGoldHistoryDesc": "Shows game results, ad rewards, shop purchases, and season rewards in recent order.",
+  "shopGoldHistoryEmpty": "No gold history to display yet.",
+  "shopGoldChangeFallback": "Gold change",
+  "shopGoldGuideTitle": "How to Earn Gold",
+  "shopGoldGuideDesc": "Gold can be earned through gameplay and rewards, and is used to purchase items in the shop.",
+  "shopGuideNormalWin": "Normal Win",
+  "shopGuideNormalWinValue": "+10 Gold",
+  "shopGuideNormalWinDesc": "Earn a base reward for winning a normal Tichu or Skull King game.",
+  "shopGuideNormalLoss": "Normal Loss",
+  "shopGuideNormalLossValue": "+3 Gold",
+  "shopGuideNormalLossDesc": "You still earn a participation reward even if you lose.",
+  "shopGuideRankedWin": "Ranked Win",
+  "shopGuideRankedWinValue": "+20 Gold",
+  "shopGuideRankedWinDesc": "Ranked games award 2x gold compared to normal games.",
+  "shopGuideRankedLoss": "Ranked Loss",
+  "shopGuideRankedLossValue": "+6 Gold",
+  "shopGuideRankedLossDesc": "Ranked loss rewards are also 2x compared to normal games.",
+  "shopGuideAdReward": "Ad Reward",
+  "shopGuideAdRewardValue": "+50 Gold",
+  "shopGuideAdRewardDesc": "Watch ads to earn bonus gold up to 5 times per day.",
+  "shopGuideSeasonReward": "Season Reward",
+  "shopGuideSeasonRewardValue": "Extra",
+  "shopGuideSeasonRewardDesc": "Bonus gold is awarded at the end of the season based on your ranking.",
+  "shopTabShop": "Shop",
+  "shopTabInventory": "Inventory",
+  "shopNoItems": "No shop items available",
+  "shopCategoryBanner": "Banner",
+  "shopCategoryTitle": "Title",
+  "shopCategoryTheme": "Theme",
+  "shopCategoryUtil": "Utility",
+  "shopCategorySeason": "Season",
+  "shopItemEmpty": "No items",
+  "shopItemOwned": "Owned",
+  "shopButtonExtend": "Extend",
+  "shopButtonPurchase": "Purchase",
+  "shopExtendTitle": "Extend Duration",
+  "shopExtendConfirm": "You already own this item.\nExtend {name} by {days} days?\n\nCost: {price} Gold",
+  "@shopExtendConfirm": {
+    "placeholders": {
+      "name": { "type": "String" },
+      "days": { "type": "int" },
+      "price": { "type": "int" }
+    }
+  },
+  "shopExtendAction": "Extend",
+  "shopNoInventoryItems": "No items in inventory",
+  "shopStatusActivated": "Activated",
+  "shopStatusInUse": "In Use",
+  "shopPermanentOwned": "Permanent",
+  "shopButtonUse": "Use",
+  "shopButtonEquip": "Equip",
+  "shopTagSeason": "Season Item",
+  "shopTagPermanent": "Permanent",
+  "shopTagDuration": "{days}d duration",
+  "@shopTagDuration": {
+    "placeholders": {
+      "days": { "type": "int" }
+    }
+  },
+  "shopTagDurationOnly": "Limited",
+  "shopExpireDate": "Expires: {date}",
+  "@shopExpireDate": {
+    "placeholders": {
+      "date": { "type": "String" }
+    }
+  },
+  "shopExpireSoon": "Expiring soon",
+  "shopPurchaseComplete": "Purchase Complete",
+  "shopExtendComplete": "Extension Complete",
+  "shopExtendDone": "{name} duration has been extended.",
+  "@shopExtendDone": {
+    "placeholders": {
+      "name": { "type": "String" }
+    }
+  },
+  "shopPurchaseDoneConsumable": "Purchase complete.\nPlease use it from your inventory.",
+  "shopPurchaseDonePassive": "Purchase complete.\nAutomatically activated upon purchase.",
+  "shopPurchaseDoneEquip": "Purchase complete.\nWould you like to equip it now?",
+  "shopEquipNow": "Equip",
+  "shopDetailCategoryBanner": "Banner",
+  "shopDetailCategoryTitle": "Title",
+  "shopDetailCategoryThemeSkin": "Theme / Card Skin",
+  "shopDetailCategoryUtility": "Utility",
+  "shopDetailCategoryItem": "Item",
+  "shopDetailNormalItem": "Normal Item",
+  "shopDetailPermanent": "Permanent",
+  "shopDetailDuration": "{days}d duration",
+  "@shopDetailDuration": {
+    "placeholders": {
+      "days": { "type": "int" }
+    }
+  },
+  "shopEffectNicknameChange": "Effect: 1 nickname change",
+  "shopEffectLeaveReduce": "Effect: Desertions -{value}",
+  "@shopEffectLeaveReduce": {
+    "placeholders": {
+      "value": { "type": "String" }
+    }
+  },
+  "shopEffectStatsReset": "Effect: Reset all stats (wins/losses/games)",
+  "shopEffectSeasonStatsReset": "Effect: Reset ranked stats (wins/losses/games)",
+  "shopPriceGold": "{price} Gold",
+  "@shopPriceGold": {
+    "placeholders": {
+      "price": { "type": "int" }
+    }
+  },
+  "shopNicknameChangeTitle": "Change Nickname",
+  "shopNicknameChangeDesc": "Enter your new nickname.\n(2-10 characters, no spaces)",
+  "shopNicknameChangeHint": "New nickname",
+  "shopNicknameChangeValidation": "Nickname must be 2-10 characters",
+  "shopNicknameChangeButton": "Change",
+  "shopAdCannotShow": "Unable to show the ad",
+  "shopAdWatchForGold": "Watch ad for 50 Gold ({current}/{max})",
+  "@shopAdWatchForGold": {
+    "placeholders": {
+      "current": { "type": "int" },
+      "max": { "type": "int" }
+    }
+  },
+  "shopAdRewardDone": "Daily ad rewards complete"
 }

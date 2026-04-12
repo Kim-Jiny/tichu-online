@@ -8,6 +8,7 @@ import '../services/network_service.dart';
 import '../services/game_service.dart';
 import '../services/auth_service.dart';
 import '../services/session_service.dart';
+import '../l10n/app_localizations.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -111,12 +112,13 @@ class _LoginScreenState extends State<LoginScreen> {
     final username = _usernameController.text.trim();
     final password = _passwordController.text;
 
+    final l10n = L10n.of(context);
     if (username.isEmpty) {
-      setState(() => _error = '아이디를 입력하세요');
+      setState(() => _error = l10n.loginEnterUsername);
       return;
     }
     if (password.isEmpty) {
-      setState(() => _error = '비밀번호를 입력하세요');
+      setState(() => _error = l10n.loginEnterPassword);
       return;
     }
 
@@ -140,7 +142,7 @@ class _LoginScreenState extends State<LoginScreen> {
         setState(() => _isConnecting = false);
       } else {
         setState(() {
-          _error = result.error ?? '로그인 실패';
+          _error = result.error ?? l10n.loginFailed;
           _isConnecting = false;
         });
       }
@@ -153,6 +155,7 @@ class _LoginScreenState extends State<LoginScreen> {
   }
 
   Future<void> _handleSocialSignIn(String providerName) async {
+    final l10n = L10n.of(context);
     setState(() {
       _isConnecting = true;
       _error = null;
@@ -187,13 +190,14 @@ class _LoginScreenState extends State<LoginScreen> {
       await _socialLogin(result.provider, result.token);
     } catch (e) {
       setState(() {
-        _error = '소셜 로그인 실패: $e';
+        _error = l10n.loginSocialFailed('$e');
         _isConnecting = false;
       });
     }
   }
 
   Future<void> _socialLogin(String provider, String token) async {
+    final l10n = L10n.of(context);
     setState(() {
       _isConnecting = true;
       _error = null;
@@ -218,7 +222,7 @@ class _LoginScreenState extends State<LoginScreen> {
         });
       } else {
         setState(() {
-          _error = result.error ?? '소셜 로그인 실패';
+          _error = result.error ?? l10n.loginSocialFailedGeneric;
           _isConnecting = false;
         });
       }
@@ -233,6 +237,7 @@ class _LoginScreenState extends State<LoginScreen> {
   Future<void> _onSocialNicknameSubmitted(String nickname) async {
     if (_socialProvider == null || _socialToken == null) return;
 
+    final l10n = L10n.of(context);
     setState(() {
       _isConnecting = true;
       _showSocialNickname = false;
@@ -255,7 +260,7 @@ class _LoginScreenState extends State<LoginScreen> {
         setState(() => _isConnecting = false);
       } else {
         setState(() {
-          _error = result.error ?? '로그인 실패';
+          _error = result.error ?? l10n.loginFailed;
           _isConnecting = false;
         });
       }
@@ -369,6 +374,7 @@ class _LoginScreenState extends State<LoginScreen> {
   }
 
   Widget _buildBrandSection({required bool compact}) {
+    final l10n = L10n.of(context);
     return Column(
       mainAxisAlignment: MainAxisAlignment.center,
       crossAxisAlignment: compact
@@ -392,7 +398,7 @@ class _LoginScreenState extends State<LoginScreen> {
         ),
         const SizedBox(height: 4),
         Text(
-          '팀 카드게임',
+          l10n.loginSubtitle,
           style: TextStyle(
             fontSize: compact ? 15 : 16,
             color: const Color(0xFF8A7A72),
@@ -400,9 +406,9 @@ class _LoginScreenState extends State<LoginScreen> {
         ),
         if (compact) ...[
           const SizedBox(height: 16),
-          const Text(
-            '빠르게 다시 접속하고,\n불필요한 화면 왕복 없이 바로 게임으로 돌아가세요.',
-            style: TextStyle(
+          Text(
+            l10n.loginTagline,
+            style: const TextStyle(
               fontSize: 14,
               height: 1.5,
               color: Color(0xFF8A7A72),
@@ -414,6 +420,7 @@ class _LoginScreenState extends State<LoginScreen> {
   }
 
   Widget _buildLoginCard(SessionService session, {required bool compact}) {
+    final l10n = L10n.of(context);
     final cardPadding = compact ? 20.0 : 24.0;
     final socialSpacing = compact ? 12.0 : 16.0;
     final loginButtonHeight = compact ? 52.0 : 56.0;
@@ -435,14 +442,14 @@ class _LoginScreenState extends State<LoginScreen> {
         children: [
           _buildTextField(
             controller: _usernameController,
-            hint: '아이디',
+            hint: l10n.loginUsernameHint,
             icon: Icons.person_outline,
             fontSize: compact ? 16 : 18,
           ),
           const SizedBox(height: 12),
           _buildTextField(
             controller: _passwordController,
-            hint: '비밀번호',
+            hint: l10n.loginPasswordHint,
             icon: Icons.lock_outline,
             obscure: true,
             fontSize: compact ? 16 : 18,
@@ -466,7 +473,7 @@ class _LoginScreenState extends State<LoginScreen> {
                 elevation: 0,
               ),
               child: Text(
-                '로그인',
+                l10n.loginButton,
                 style: TextStyle(
                   fontSize: compact ? 16 : 18,
                   fontWeight: FontWeight.bold,
@@ -477,9 +484,9 @@ class _LoginScreenState extends State<LoginScreen> {
           const SizedBox(height: 12),
           TextButton(
             onPressed: _showRegisterDialog,
-            child: const Text(
-              '회원가입',
-              style: TextStyle(color: Color(0xFF8A7A72), fontSize: 16),
+            child: Text(
+              l10n.loginRegisterButton,
+              style: const TextStyle(color: Color(0xFF8A7A72), fontSize: 16),
             ),
           ),
           if (_error != null) ...[
@@ -528,11 +535,11 @@ class _LoginScreenState extends State<LoginScreen> {
                   color: const Color(0xFFD9CCC8).withValues(alpha: 0.5),
                 ),
               ),
-              const Padding(
-                padding: EdgeInsets.symmetric(horizontal: 12),
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 12),
                 child: Text(
-                  '간편 로그인',
-                  style: TextStyle(color: Color(0xFFAA9A92), fontSize: 13),
+                  l10n.loginQuickLogin,
+                  style: const TextStyle(color: Color(0xFFAA9A92), fontSize: 13),
                 ),
               ),
               Expanded(
@@ -645,6 +652,7 @@ class _LoginScreenState extends State<LoginScreen> {
   }
 
   Widget _buildAutoLoginNotice(SessionService session) {
+    final l10n = L10n.of(context);
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(16),
@@ -656,9 +664,9 @@ class _LoginScreenState extends State<LoginScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text(
-            '자동 로그인에 실패했습니다',
-            style: TextStyle(
+          Text(
+            l10n.loginAutoLoginFailed,
+            style: const TextStyle(
               fontSize: 14,
               fontWeight: FontWeight.w700,
               color: Color(0xFF7A4B1F),
@@ -666,7 +674,7 @@ class _LoginScreenState extends State<LoginScreen> {
           ),
           const SizedBox(height: 6),
           Text(
-            session.restoreError ?? '저장된 로그인 정보를 다시 확인해주세요.',
+            session.restoreError ?? l10n.loginCheckSavedInfo,
             style: const TextStyle(
               fontSize: 13,
               color: Color(0xFF7A4B1F),
@@ -683,7 +691,7 @@ class _LoginScreenState extends State<LoginScreen> {
                   foregroundColor: Colors.white,
                   elevation: 0,
                 ),
-                child: const Text('다시 시도'),
+                child: Text(l10n.loginRetry),
               ),
               const SizedBox(width: 10),
               TextButton(
@@ -691,7 +699,7 @@ class _LoginScreenState extends State<LoginScreen> {
                     ? null
                     : () =>
                           context.read<SessionService>().clearRestoreFeedback(),
-                child: const Text('직접 로그인'),
+                child: Text(l10n.loginManual),
               ),
             ],
           ),
@@ -701,6 +709,7 @@ class _LoginScreenState extends State<LoginScreen> {
   }
 
   Widget _buildConnectingOverlay(SessionService session) {
+    final l10n = L10n.of(context);
     return Container(
       color: Colors.black54,
       child: Center(
@@ -716,7 +725,7 @@ class _LoginScreenState extends State<LoginScreen> {
               const CircularProgressIndicator(color: Color(0xFFF28C26)),
               const SizedBox(height: 20),
               Text(
-                session.isRestoring ? '자동 로그인 중...' : '로그인 중...',
+                session.isRestoring ? l10n.loginAutoLoggingIn : l10n.loginLoggingIn,
                 style: const TextStyle(
                   fontSize: 16,
                   fontWeight: FontWeight.bold,
@@ -727,7 +736,7 @@ class _LoginScreenState extends State<LoginScreen> {
               Text(
                 session.isRestoring
                     ? session.restoreStatusMessage
-                    : '계정 정보를 확인하고 있습니다.',
+                    : l10n.loginVerifyingAccount,
                 textAlign: TextAlign.center,
                 style: const TextStyle(
                   fontSize: 13,
@@ -749,8 +758,8 @@ class _LoginScreenState extends State<LoginScreen> {
       onSuccess: () {
         setState(() => _showRegister = false);
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('회원가입이 완료되었습니다. 로그인해주세요.'),
+          SnackBar(
+            content: Text(L10n.of(context).loginRegistrationComplete),
             backgroundColor: Colors.green,
           ),
         );
@@ -808,17 +817,18 @@ class _RegisterDialogState extends State<RegisterDialog> {
   }
 
   Future<void> _checkNickname() async {
+    final l10n = L10n.of(context);
     final nickname = _nicknameController.text.trim();
     if (nickname.isEmpty) {
-      setState(() => _nicknameStatus = '닉네임을 입력해주세요');
+      setState(() => _nicknameStatus = l10n.loginNicknameEmpty);
       return;
     }
     if (nickname.length < 2 || nickname.length > 10) {
-      setState(() => _nicknameStatus = '닉네임은 2~10자여야 합니다');
+      setState(() => _nicknameStatus = l10n.loginNicknameLength);
       return;
     }
     if (nickname.contains(RegExp(r'\s'))) {
-      setState(() => _nicknameStatus = '닉네임에 공백을 사용할 수 없습니다');
+      setState(() => _nicknameStatus = l10n.loginNicknameNoSpaces);
       return;
     }
     setState(() => _nicknameChecking = true);
@@ -832,7 +842,7 @@ class _RegisterDialogState extends State<RegisterDialog> {
       if (!mounted) return;
       setState(() {
         _nicknameChecking = false;
-        _nicknameStatus = '서버에 연결할 수 없습니다.';
+        _nicknameStatus = l10n.loginServerUnavailable;
       });
       return;
     }
@@ -859,7 +869,7 @@ class _RegisterDialogState extends State<RegisterDialog> {
       if (!mounted) return;
       setState(() {
         _nicknameChecking = false;
-        _nicknameStatus = '서버 응답이 없습니다. 다시 시도해주세요.';
+        _nicknameStatus = l10n.loginServerNoResponse;
       });
     });
     game.addListener(listener);
@@ -868,6 +878,7 @@ class _RegisterDialogState extends State<RegisterDialog> {
 
   Future<void> _register() async {
     FocusScope.of(context).unfocus();
+    final l10n = L10n.of(context);
     final username = _usernameController.text.trim();
     final password = _passwordController.text;
     final confirmPassword = _confirmPasswordController.text;
@@ -875,35 +886,35 @@ class _RegisterDialogState extends State<RegisterDialog> {
 
     // Validate
     if (username.length < 2) {
-      setState(() => _error = '아이디는 2글자 이상이어야 합니다');
+      setState(() => _error = l10n.loginUsernameMinLength);
       return;
     }
     if (username.contains(' ')) {
-      setState(() => _error = '아이디에 공백을 사용할 수 없습니다');
+      setState(() => _error = l10n.loginUsernameNoSpaces);
       return;
     }
     if (password.length < 4) {
-      setState(() => _error = '비밀번호는 4글자 이상이어야 합니다');
+      setState(() => _error = l10n.loginPasswordMinLength);
       return;
     }
     if (password != confirmPassword) {
-      setState(() => _error = '비밀번호가 일치하지 않습니다');
+      setState(() => _error = l10n.loginPasswordMismatch);
       return;
     }
     if (nickname.isEmpty) {
-      setState(() => _error = '닉네임을 입력해주세요');
+      setState(() => _error = l10n.loginNicknameEmpty);
       return;
     }
     if (nickname.length < 2 || nickname.length > 10) {
-      setState(() => _error = '닉네임은 2~10자여야 합니다');
+      setState(() => _error = l10n.loginNicknameLength);
       return;
     }
     if (nickname.contains(RegExp(r'\s'))) {
-      setState(() => _error = '닉네임에 공백을 사용할 수 없습니다');
+      setState(() => _error = l10n.loginNicknameNoSpaces);
       return;
     }
     if (!_nicknameChecked || !_nicknameAvailable) {
-      setState(() => _error = '닉네임 중복확인을 해주세요');
+      setState(() => _error = l10n.loginNicknameCheckRequired);
       return;
     }
 
@@ -945,7 +956,7 @@ class _RegisterDialogState extends State<RegisterDialog> {
       }
 
       setState(() {
-        _error = '서버 응답 시간 초과';
+        _error = l10n.loginServerTimeout;
         _isLoading = false;
       });
     } catch (e) {
@@ -958,6 +969,7 @@ class _RegisterDialogState extends State<RegisterDialog> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = L10n.of(context);
     return GestureDetector(
       onTap: () => FocusScope.of(context).unfocus(),
       child: Container(
@@ -977,9 +989,9 @@ class _RegisterDialogState extends State<RegisterDialog> {
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      const Text(
-                        '회원가입',
-                        style: TextStyle(
+                      Text(
+                        l10n.loginRegisterTitle,
+                        style: const TextStyle(
                           fontSize: 24,
                           fontWeight: FontWeight.bold,
                           color: Color(0xFF5A4038),
@@ -994,23 +1006,23 @@ class _RegisterDialogState extends State<RegisterDialog> {
                   const SizedBox(height: 24),
                   _buildInputField(
                     controller: _usernameController,
-                    label: '아이디',
-                    hint: '2글자 이상, 공백 불가',
+                    label: l10n.loginUsernameLabel,
+                    hint: l10n.loginUsernameHintRegister,
                     icon: Icons.person_outline,
                   ),
                   const SizedBox(height: 16),
                   _buildInputField(
                     controller: _passwordController,
-                    label: '비밀번호',
-                    hint: '4글자 이상',
+                    label: l10n.loginPasswordLabel,
+                    hint: l10n.loginPasswordHintRegister,
                     icon: Icons.lock_outline,
                     obscure: true,
                   ),
                   const SizedBox(height: 16),
                   _buildInputField(
                     controller: _confirmPasswordController,
-                    label: '비밀번호 확인',
-                    hint: '비밀번호를 다시 입력',
+                    label: l10n.loginConfirmPasswordLabel,
+                    hint: l10n.loginConfirmPasswordHint,
                     icon: Icons.lock_outline,
                     obscure: true,
                   ),
@@ -1038,9 +1050,9 @@ class _RegisterDialogState extends State<RegisterDialog> {
                                 strokeWidth: 2,
                               ),
                             )
-                          : const Text(
-                              '가입하기',
-                              style: TextStyle(
+                          : Text(
+                              l10n.loginSubmitRegister,
+                              style: const TextStyle(
                                 fontSize: 18,
                                 fontWeight: FontWeight.bold,
                               ),
@@ -1107,12 +1119,13 @@ class _RegisterDialogState extends State<RegisterDialog> {
   }
 
   Widget _buildNicknameField() {
+    final l10n = L10n.of(context);
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Text(
-          '닉네임',
-          style: TextStyle(
+        Text(
+          l10n.loginNicknameLabel,
+          style: const TextStyle(
             fontSize: 14,
             fontWeight: FontWeight.bold,
             color: Color(0xFF5A4038),
@@ -1127,7 +1140,7 @@ class _RegisterDialogState extends State<RegisterDialog> {
                 onChanged: _onNicknameChanged,
                 maxLength: 10,
                 decoration: InputDecoration(
-                  hintText: '2~10자, 공백 불가',
+                  hintText: l10n.loginNicknameHint,
                   hintStyle: const TextStyle(
                     color: Color(0xFFAA9A92),
                     fontSize: 14,
@@ -1179,7 +1192,7 @@ class _RegisterDialogState extends State<RegisterDialog> {
                           color: Colors.white,
                         ),
                       )
-                    : const Text('중복확인', style: TextStyle(fontSize: 13)),
+                    : Text(l10n.loginCheckAvailability, style: const TextStyle(fontSize: 13)),
               ),
             ),
           ],
@@ -1239,17 +1252,18 @@ class _SocialNicknameDialogState extends State<SocialNicknameDialog> {
   }
 
   Future<void> _checkNickname() async {
+    final l10n = L10n.of(context);
     final nickname = _nicknameController.text.trim();
     if (nickname.isEmpty) {
-      setState(() => _nicknameStatus = '닉네임을 입력해주세요');
+      setState(() => _nicknameStatus = l10n.loginNicknameEmpty);
       return;
     }
     if (nickname.length < 2 || nickname.length > 10) {
-      setState(() => _nicknameStatus = '닉네임은 2~10자여야 합니다');
+      setState(() => _nicknameStatus = l10n.loginNicknameLength);
       return;
     }
     if (nickname.contains(RegExp(r'\s'))) {
-      setState(() => _nicknameStatus = '닉네임에 공백을 사용할 수 없습니다');
+      setState(() => _nicknameStatus = l10n.loginNicknameNoSpaces);
       return;
     }
     setState(() => _nicknameChecking = true);
@@ -1263,7 +1277,7 @@ class _SocialNicknameDialogState extends State<SocialNicknameDialog> {
       if (!mounted) return;
       setState(() {
         _nicknameChecking = false;
-        _nicknameStatus = '서버에 연결할 수 없습니다.';
+        _nicknameStatus = l10n.loginServerUnavailable;
       });
       return;
     }
@@ -1290,7 +1304,7 @@ class _SocialNicknameDialogState extends State<SocialNicknameDialog> {
       if (!mounted) return;
       setState(() {
         _nicknameChecking = false;
-        _nicknameStatus = '서버 응답이 없습니다. 다시 시도해주세요.';
+        _nicknameStatus = l10n.loginServerNoResponse;
       });
     });
     game.addListener(listener);
@@ -1298,21 +1312,22 @@ class _SocialNicknameDialogState extends State<SocialNicknameDialog> {
   }
 
   Future<void> _submit() async {
+    final l10n = L10n.of(context);
     final nickname = _nicknameController.text.trim();
     if (nickname.isEmpty) {
-      setState(() => _error = '닉네임을 입력해주세요');
+      setState(() => _error = l10n.loginNicknameEmpty);
       return;
     }
     if (nickname.length < 2 || nickname.length > 10) {
-      setState(() => _error = '닉네임은 2~10자여야 합니다');
+      setState(() => _error = l10n.loginNicknameLength);
       return;
     }
     if (nickname.contains(RegExp(r'\s'))) {
-      setState(() => _error = '닉네임에 공백을 사용할 수 없습니다');
+      setState(() => _error = l10n.loginNicknameNoSpaces);
       return;
     }
     if (!_nicknameChecked || !_nicknameAvailable) {
-      setState(() => _error = '닉네임 중복확인을 해주세요');
+      setState(() => _error = l10n.loginNicknameCheckRequired);
       return;
     }
 
@@ -1326,6 +1341,7 @@ class _SocialNicknameDialogState extends State<SocialNicknameDialog> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = L10n.of(context);
     return GestureDetector(
       onTap: () => FocusScope.of(context).unfocus(),
       child: Container(
@@ -1345,9 +1361,9 @@ class _SocialNicknameDialogState extends State<SocialNicknameDialog> {
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      const Text(
-                        '닉네임 설정',
-                        style: TextStyle(
+                      Text(
+                        l10n.loginSetNicknameTitle,
+                        style: const TextStyle(
                           fontSize: 24,
                           fontWeight: FontWeight.bold,
                           color: Color(0xFF5A4038),
@@ -1360,9 +1376,9 @@ class _SocialNicknameDialogState extends State<SocialNicknameDialog> {
                     ],
                   ),
                   const SizedBox(height: 8),
-                  const Text(
-                    '게임에서 사용할 닉네임을 설정해주세요',
-                    style: TextStyle(color: Color(0xFF8A7A72), fontSize: 14),
+                  Text(
+                    l10n.loginSetNicknameDesc,
+                    style: const TextStyle(color: Color(0xFF8A7A72), fontSize: 14),
                   ),
                   const SizedBox(height: 24),
                   Row(
@@ -1373,7 +1389,7 @@ class _SocialNicknameDialogState extends State<SocialNicknameDialog> {
                           onChanged: _onNicknameChanged,
                           maxLength: 10,
                           decoration: InputDecoration(
-                            hintText: '2~10자, 공백 불가',
+                            hintText: l10n.loginNicknameHint,
                             hintStyle: const TextStyle(
                               color: Color(0xFFAA9A92),
                               fontSize: 14,
@@ -1427,9 +1443,9 @@ class _SocialNicknameDialogState extends State<SocialNicknameDialog> {
                                     color: Colors.white,
                                   ),
                                 )
-                              : const Text(
-                                  '중복확인',
-                                  style: TextStyle(fontSize: 13),
+                              : Text(
+                                  l10n.loginCheckAvailability,
+                                  style: const TextStyle(fontSize: 13),
                                 ),
                         ),
                       ),
@@ -1470,9 +1486,9 @@ class _SocialNicknameDialogState extends State<SocialNicknameDialog> {
                                 strokeWidth: 2,
                               ),
                             )
-                          : const Text(
-                              '시작하기',
-                              style: TextStyle(
+                          : Text(
+                              l10n.loginGetStarted,
+                              style: const TextStyle(
                                 fontSize: 18,
                                 fontWeight: FontWeight.bold,
                               ),

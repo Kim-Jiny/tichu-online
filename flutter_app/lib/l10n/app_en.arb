@@ -433,5 +433,450 @@
   "lobbyRandomNounSk5": "Captain",
   "lobbyRandomNounSk6": "Sea Battle",
   "lobbyRandomNounSk7": "Adventure",
-  "lobbyRandomNounSk8": "Kraken"
+  "lobbyRandomNounSk8": "Kraken",
+
+  "skGameRecoveringGame": "Recovering game...",
+  "skGameCheckingState": "Checking game state...",
+  "skGameReloadingRoom": "Reloading room info...",
+  "skGameLoadingState": "Loading game state...",
+  "skGameSpectatorWaitingTitle": "Spectating Skull King Waiting Room",
+  "skGameSpectatorWaitingDesc": "Viewing the room before the game starts. The spectator screen will load automatically once the game begins.",
+  "skGameHost": "Host",
+  "skGameReady": "Ready",
+  "skGameWaiting": "Waiting",
+  "skGameSpectatorStandby": "Spectator Standby",
+  "skGameSpectatorListTitle": "Spectator List",
+  "skGameNoSpectators": "No one is spectating",
+  "skGameAlwaysAccept": "Always Accept",
+  "skGameAlwaysReject": "Always Reject",
+  "skGameRoundTrick": "Round {round} Trick {trick}",
+  "@skGameRoundTrick": {
+    "placeholders": {
+      "round": { "type": "int" },
+      "trick": { "type": "int" }
+    }
+  },
+  "skGameSpectating": "Spectating",
+  "skGameBiddingInProgress": "Bidding in progress \u00b7 Leader: {name}",
+  "@skGameBiddingInProgress": {
+    "placeholders": {
+      "name": { "type": "String" }
+    }
+  },
+  "skGamePlayerTurn": "{name}'s turn",
+  "@skGamePlayerTurn": {
+    "placeholders": {
+      "name": { "type": "String" }
+    }
+  },
+  "skGameLeaveTitle": "Leave Game",
+  "skGameLeaveConfirm": "Are you sure you want to leave the game?",
+  "skGameLeaveButton": "Leave",
+  "skGameLeaderLabel": "Leader: {name}",
+  "@skGameLeaderLabel": {
+    "placeholders": {
+      "name": { "type": "String" }
+    }
+  },
+  "skGameMyTurn": "My Turn",
+  "skGameWaitingFor": "Waiting for {name}",
+  "@skGameWaitingFor": {
+    "placeholders": {
+      "name": { "type": "String" }
+    }
+  },
+  "skGameSecondsShort": "{seconds}s",
+  "@skGameSecondsShort": {
+    "placeholders": {
+      "seconds": { "type": "int" }
+    }
+  },
+  "skGameTapToRequestCards": "Tap a profile above to request to view their hand",
+  "skGameRequestingCardView": "Requesting to view {name}'s hand...",
+  "@skGameRequestingCardView": {
+    "placeholders": {
+      "name": { "type": "String" }
+    }
+  },
+  "skGamePlayerHand": "{name}'s hand",
+  "@skGamePlayerHand": {
+    "placeholders": {
+      "name": { "type": "String" }
+    }
+  },
+  "skGameNoCards": "No cards",
+  "skGameCardViewRejected": "{name} declined the request. Tap another player.",
+  "@skGameCardViewRejected": {
+    "placeholders": {
+      "name": { "type": "String" }
+    }
+  },
+  "skGameTimeout": "{name} timed out!",
+  "@skGameTimeout": {
+    "placeholders": {
+      "name": { "type": "String" }
+    }
+  },
+  "skGameDesertionTimeout": "{name} deserted! (3 timeouts)",
+  "@skGameDesertionTimeout": {
+    "placeholders": {
+      "name": { "type": "String" }
+    }
+  },
+  "skGameDesertionLeave": "{name} left the game",
+  "@skGameDesertionLeave": {
+    "placeholders": {
+      "name": { "type": "String" }
+    }
+  },
+  "skGameCardViewRequest": "{name} is requesting to view your hand",
+  "@skGameCardViewRequest": {
+    "placeholders": {
+      "name": { "type": "String" }
+    }
+  },
+  "skGameReject": "Reject",
+  "skGameAllow": "Allow",
+  "skGameChat": "Chat",
+  "skGameMessageHint": "Type a message...",
+  "skGameViewingMyHand": "Viewing my hand",
+  "skGameNoViewers": "No one is watching",
+  "skGameViewProfile": "View Profile",
+  "skGameBlock": "Block",
+  "skGameUnblock": "Unblock",
+  "skGameScoreHistory": "Score History",
+  "skGameBiddingPhase": "Bidding...",
+  "skGamePlayCard": "Play a card",
+  "skGameKrakenActivated": "\uD83D\uDC19 Kraken activated",
+  "skGameWhiteWhaleActivated": "\uD83D\uDC0B White Whale activated",
+  "skGameWhiteWhaleNullify": "\uD83D\uDC0B White Whale \u00b7 Special cards nullified",
+  "skGameTrickVoided": "Trick Voided",
+  "skGameLeadPlayer": "{name} leads next",
+  "@skGameLeadPlayer": {
+    "placeholders": {
+      "name": { "type": "String" }
+    }
+  },
+  "skGameTrickWinner": "{name} wins",
+  "@skGameTrickWinner": {
+    "placeholders": {
+      "name": { "type": "String" }
+    }
+  },
+  "skGameCheckingCards": "Checking cards...",
+  "skGameBonusWithLoot": "Bonus +{bonus} (\uD83D\uDCB0 +{loot})",
+  "@skGameBonusWithLoot": {
+    "placeholders": {
+      "bonus": { "type": "int" },
+      "loot": { "type": "int" }
+    }
+  },
+  "skGameBonus": "Bonus +{bonus}",
+  "@skGameBonus": {
+    "placeholders": {
+      "bonus": { "type": "int" }
+    }
+  },
+  "skGameBidDone": "Bid: {bid} wins",
+  "@skGameBidDone": {
+    "placeholders": {
+      "bid": { "type": "int" }
+    }
+  },
+  "skGameWaitingOthers": "Waiting for other players...",
+  "skGameBidPrompt": "Predict how many tricks you will win this round",
+  "skGameBidSubmit": "Bid {bid} wins",
+  "@skGameBidSubmit": {
+    "placeholders": {
+      "bid": { "type": "int" }
+    }
+  },
+  "skGameSelectNumber": "Select a number",
+  "skGamePlayCardButton": "Play Card",
+  "skGameSelectCard": "Select a card",
+  "skGameReset": "Reset",
+  "skGameTigressEscape": "Escape",
+  "skGameTigressPirate": "Pirate",
+  "skGameRoundResult": "Round {round} Results",
+  "@skGameRoundResult": {
+    "placeholders": {
+      "round": { "type": "int" }
+    }
+  },
+  "skGameBidTricks": "Bid/Won",
+  "skGameBonusHeader": "Bonus",
+  "skGameScoreHeader": "Score",
+  "skGameNextRoundPreparing": "Preparing next round...",
+  "skGameGameOver": "Game Over",
+  "skGameAutoReturnCountdown": "Returning to waiting room in {seconds}s",
+  "@skGameAutoReturnCountdown": {
+    "placeholders": {
+      "seconds": { "type": "int" }
+    }
+  },
+  "skGameReturningToRoom": "Returning to waiting room...",
+  "skGamePlayerProfile": "Player Profile",
+  "skGameAlreadyFriend": "Already friends",
+  "skGameRequestPending": "Request pending",
+  "skGameAddFriend": "Add Friend",
+  "skGameFriendRequestSent": "Friend request sent",
+  "skGameBlockUser": "Block",
+  "skGameUnblockUser": "Unblock",
+  "skGameUserBlocked": "User has been blocked",
+  "skGameUserUnblocked": "User has been unblocked",
+  "skGameProfileNotFound": "Profile not found",
+  "skGameTichuRecord": "Tichu Record",
+  "skGameSkullKingRecord": "Skull King Record",
+  "skGameStatRecord": "Record",
+  "skGameStatWinRate": "Win Rate",
+  "skGameRecordFormat": "{games}G {wins}W {losses}L",
+  "@skGameRecordFormat": {
+    "placeholders": {
+      "games": { "type": "int" },
+      "wins": { "type": "int" },
+      "losses": { "type": "int" }
+    }
+  },
+
+  "gameSparrowCall": "Sparrow Call",
+  "gameSelectNumberToCall": "Select a number to call",
+  "gameNoCall": "No Call",
+  "gameCancelPickAnother": "Cancel and pick another card",
+  "gameRestoringGame": "Restoring game...",
+  "gameCheckingState": "Checking game state...",
+  "gameRecheckingRoomState": "Re-checking current room state.",
+  "gameReloadingRoom": "Reloading room info...",
+  "gameWaitForRestore": "Please wait while restoring to the current game state.",
+  "gamePreparingScreen": "Preparing game screen...",
+  "gameAdjustingScreen": "Adjusting screen transition state.",
+  "gameTransitioningScreen": "Transitioning game screen...",
+  "gameRecheckingDestination": "Re-checking current destination state.",
+  "gameSoundEffects": "Sound Effects",
+  "gameChat": "Chat",
+  "gameMessageHint": "Type a message...",
+  "gameMyProfile": "My Profile",
+  "gamePlayerProfile": "Player Profile",
+  "gameAlreadyFriend": "Already friends",
+  "gameRequestPending": "Request pending",
+  "gameAddFriend": "Add Friend",
+  "gameFriendRequestSent": "Friend request sent",
+  "gameUnblock": "Unblock",
+  "gameBlock": "Block",
+  "gameUnblocked": "User has been unblocked",
+  "gameBlocked": "User has been blocked",
+  "gameReport": "Report",
+  "gameClose": "Close",
+  "gameProfileNotFound": "Profile not found",
+  "gameTichuSeasonRanked": "Tichu Season Ranked",
+  "gameStatRecord": "Record",
+  "gameStatWinRate": "Win Rate",
+  "gameOverallRecord": "Overall Record",
+  "gameRecordFormat": "{games}G {wins}W {losses}L",
+  "@gameRecordFormat": {
+    "placeholders": {
+      "games": { "type": "int" },
+      "wins": { "type": "int" },
+      "losses": { "type": "int" }
+    }
+  },
+  "gameMannerGood": "Good",
+  "gameMannerNormal": "Normal",
+  "gameMannerBad": "Bad",
+  "gameMannerVeryBad": "Very Bad",
+  "gameMannerWorst": "Terrible",
+  "gameManner": "Manner {label}",
+  "@gameManner": {
+    "placeholders": {
+      "label": { "type": "String" }
+    }
+  },
+  "gameDesertions": "Desertions {count}",
+  "@gameDesertions": {
+    "placeholders": {
+      "count": { "type": "int" }
+    }
+  },
+  "gameRecentMatchesTitle": "Recent Matches",
+  "gameRecentMatchesDesc": "View results of the last {count} matches.",
+  "@gameRecentMatchesDesc": {
+    "placeholders": {
+      "count": { "type": "int" }
+    }
+  },
+  "gameRecentMatchesThree": "Recent Matches (3)",
+  "gameSeeMore": "See More",
+  "gameNoRecentMatches": "No recent matches",
+  "gameMatchDesertion": "D",
+  "gameMatchDraw": "D",
+  "gameMatchWin": "W",
+  "gameMatchLoss": "L",
+  "gameMatchTypeRanked": "Ranked",
+  "gameMatchTypeNormal": "Normal",
+  "gameViewProfile": "View Profile",
+  "gameCancel": "Cancel",
+  "gameReportReasonAbuse": "Abuse/Insults",
+  "gameReportReasonSpam": "Spam/Flooding",
+  "gameReportReasonNickname": "Inappropriate Nickname",
+  "gameReportReasonGameplay": "Gameplay Disruption",
+  "gameReportReasonOther": "Other",
+  "gameReportTitle": "Report {nickname}",
+  "@gameReportTitle": {
+    "placeholders": {
+      "nickname": { "type": "String" }
+    }
+  },
+  "gameReportWarning": "Reports are reviewed by the moderation team.\nFalse reports may result in penalties.",
+  "gameSelectReason": "Select Reason",
+  "gameReportDetailHint": "Enter details (optional)",
+  "gameReportSubmit": "Report",
+  "gameLeaveTitle": "Leave Game",
+  "gameLeaveConfirm": "Are you sure you want to leave?\nLeaving mid-game harms your team.",
+  "gameLeave": "Leave",
+  "gameCallError": "You must play the called number first!",
+  "gameTimeout": "{playerName} timed out!",
+  "@gameTimeout": {
+    "placeholders": {
+      "playerName": { "type": "String" }
+    }
+  },
+  "gameDesertionTimeout": "{playerName} deserted! (3 timeouts)",
+  "@gameDesertionTimeout": {
+    "placeholders": {
+      "playerName": { "type": "String" }
+    }
+  },
+  "gameDesertionLeave": "{playerName} has left the game",
+  "@gameDesertionLeave": {
+    "placeholders": {
+      "playerName": { "type": "String" }
+    }
+  },
+  "gameSpectator": "Spectator",
+  "gameCardViewRequest": "{nickname} is requesting to view your cards",
+  "@gameCardViewRequest": {
+    "placeholders": {
+      "nickname": { "type": "String" }
+    }
+  },
+  "gameReject": "Reject",
+  "gameAllow": "Allow",
+  "gameAlwaysReject": "Always Reject",
+  "gameAlwaysAllow": "Always Allow",
+  "gameSpectatorList": "Spectator List",
+  "gameNoSpectators": "No one is spectating",
+  "gameViewingMyCards": "Viewing my cards",
+  "gameNoViewers": "No one is viewing",
+  "gamePartner": "Partner",
+  "gameLeftPlayer": "Left",
+  "gameRightPlayer": "Right",
+  "gameMyTurn": "My Turn!",
+  "gamePlayerTurn": "{name}'s turn",
+  "@gamePlayerTurn": {
+    "placeholders": {
+      "name": { "type": "String" }
+    }
+  },
+  "gameCall": "Call {rank}",
+  "@gameCall": {
+    "placeholders": {
+      "rank": { "type": "String" }
+    }
+  },
+  "gameMyTurnShort": "My Turn",
+  "gamePlayerTurnShort": "{name} Turn",
+  "@gamePlayerTurnShort": {
+    "placeholders": {
+      "name": { "type": "String" }
+    }
+  },
+  "gamePlayerWaiting": "{name} Waiting",
+  "@gamePlayerWaiting": {
+    "placeholders": {
+      "name": { "type": "String" }
+    }
+  },
+  "gameTimerLabel": "{turnLabel} {seconds}s",
+  "@gameTimerLabel": {
+    "placeholders": {
+      "turnLabel": { "type": "String" },
+      "seconds": { "type": "int" }
+    }
+  },
+  "gameScoreHistory": "Score History",
+  "gameScoreHistorySubtitle": "Round-by-round scores and current totals",
+  "gameNoCompletedRounds": "No completed rounds yet",
+  "gameTeamLabel": "Team {label}",
+  "@gameTeamLabel": {
+    "placeholders": {
+      "label": { "type": "String" }
+    }
+  },
+  "gameDogPlayedBy": "{name} played the Dog",
+  "@gameDogPlayedBy": {
+    "placeholders": {
+      "name": { "type": "String" }
+    }
+  },
+  "gameDogPlayed": "The Dog was played",
+  "gamePlayedCards": "'s play",
+  "gamePlay": "Play",
+  "gamePass": "Pass",
+  "gameLargeTichuQuestion": "Large Tichu?",
+  "gameDeclare": "Declare!",
+  "gameSmallTichuDeclare": "Declare Small Tichu",
+  "gameSmallTichuConfirmTitle": "Declare Small Tichu",
+  "gameSmallTichuConfirmContent": "Declare Small Tichu?\n+100 points on success, -100 on failure",
+  "gameDeclareButton": "Declare",
+  "gameSelectRecipient": "Select who to give card to",
+  "gameSelectExchangeCard": "Select card to exchange ({count}/3)",
+  "@gameSelectExchangeCard": {
+    "placeholders": {
+      "count": { "type": "int" }
+    }
+  },
+  "gameReset": "Reset",
+  "gameExchangeComplete": "Exchange Done",
+  "gameDragonQuestion": "Who would you like to give the Dragon trick to?",
+  "gameSelectCallRank": "Select a number to call",
+  "gameGameEnd": "Game Over!",
+  "gameRoundEnd": "Round Over!",
+  "gameMyTeamWin": "Our Team Wins!",
+  "gameEnemyTeamWin": "Opponent Wins!",
+  "gameDraw": "Draw!",
+  "gameThisRound": "This round: ",
+  "gameTotalScore": "Total: ",
+  "gameAutoReturnLobby": "Returning to lobby in 3 seconds...",
+  "gameAutoNextRound": "Auto-continuing in 3 seconds...",
+  "gameRankedScore": "Ranked Score {score}",
+  "@gameRankedScore": {
+    "placeholders": {
+      "score": { "type": "int" }
+    }
+  },
+  "gameRankDiamond": "Diamond",
+  "gameRankGold": "Gold",
+  "gameRankSilver": "Silver",
+  "gameRankBronze": "Bronze",
+  "gameFinishPosition": "{position}st!",
+  "@gameFinishPosition": {
+    "placeholders": {
+      "position": { "type": "int" }
+    }
+  },
+  "gameCardCount": "{count} cards",
+  "@gameCardCount": {
+    "placeholders": {
+      "count": { "type": "int" }
+    }
+  },
+  "gamePhaseLargeTichu": "Large Tichu Declaration",
+  "gamePhaseDealing": "Dealing Cards",
+  "gamePhaseExchange": "Card Exchange",
+  "gamePhasePlaying": "Game in Progress",
+  "gamePhaseRoundEnd": "Round Over",
+  "gamePhaseGameEnd": "Game Over",
+  "gameReceivedCards": "Received Cards",
+  "gameBadgeLarge": "Large",
+  "gameBadgeSmall": "Small",
+  "gameNotAfk": "Not AFK"
 }

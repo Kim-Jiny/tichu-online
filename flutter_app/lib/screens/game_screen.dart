@@ -8,6 +8,7 @@ import '../models/game_state.dart';
 import '../models/player.dart';
 import '../widgets/playing_card.dart';
 import '../widgets/connection_overlay.dart';
+import '../l10n/app_localizations.dart';
 
 class GameScreen extends StatefulWidget {
   const GameScreen({super.key});
@@ -237,13 +238,13 @@ class _GameScreenState extends State<GameScreen> {
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
           titlePadding: const EdgeInsets.fromLTRB(20, 18, 20, 0),
           contentPadding: const EdgeInsets.fromLTRB(20, 14, 20, 12),
-          title: const Row(
+          title: Row(
             children: [
-              Text('🐦', style: TextStyle(fontSize: 20)),
-              SizedBox(width: 8),
+              const Text('🐦', style: TextStyle(fontSize: 20)),
+              const SizedBox(width: 8),
               Text(
-                '참새 콜',
-                style: TextStyle(
+                L10n.of(context).gameSparrowCall,
+                style: const TextStyle(
                   fontSize: 17,
                   fontWeight: FontWeight.w800,
                   color: Color(0xFF3E312A),
@@ -264,10 +265,10 @@ class _GameScreenState extends State<GameScreen> {
                     borderRadius: BorderRadius.circular(14),
                     border: Border.all(color: const Color(0xFFE7DBD4)),
                   ),
-                  child: const Text(
-                    '부를 숫자를 선택하세요',
+                  child: Text(
+                    L10n.of(context).gameSelectNumberToCall,
                     textAlign: TextAlign.center,
-                    style: TextStyle(
+                    style: const TextStyle(
                       fontSize: 13,
                       fontWeight: FontWeight.w600,
                       color: Color(0xFF6A5A52),
@@ -300,7 +301,7 @@ class _GameScreenState extends State<GameScreen> {
                       ),
                     ),
                     icon: const Icon(Icons.remove_circle_outline, size: 18),
-                    label: const Text('콜 안함'),
+                    label: Text(L10n.of(context).gameNoCall),
                   ),
                 ),
                 const SizedBox(height: 6),
@@ -314,7 +315,7 @@ class _GameScreenState extends State<GameScreen> {
                     style: TextButton.styleFrom(
                       foregroundColor: const Color(0xFF6A5A52),
                     ),
-                    child: const Text('취소하고 다른 카드 고르기'),
+                    child: Text(L10n.of(context).gameCancelPickAnother),
                   ),
                 ),
               ],
@@ -399,11 +400,12 @@ class _GameScreenState extends State<GameScreen> {
               child: Consumer<GameService>(
               builder: (context, game, _) {
                 if (session.isRestoring || _waitingForRoomRecovery) {
+                  final l10n = L10n.of(context);
                   return _buildRecoveryLoading(
-                    title: session.isRestoring ? '게임 복구 중...' : '게임 상태 확인 중...',
+                    title: session.isRestoring ? l10n.gameRestoringGame : l10n.gameCheckingState,
                     subtitle: session.isRestoring
                         ? session.restoreStatusMessage
-                        : '현재 방 상태를 다시 확인하고 있습니다.',
+                        : l10n.gameRecheckingRoomState,
                   );
                 }
 
@@ -416,22 +418,22 @@ class _GameScreenState extends State<GameScreen> {
                       }
                     });
                     return _buildRecoveryLoading(
-                      title: '방 정보를 다시 불러오는 중...',
-                      subtitle: '잠시만 기다리면 현재 게임 상태로 복구됩니다.',
+                      title: L10n.of(context).gameReloadingRoom,
+                      subtitle: L10n.of(context).gameWaitForRestore,
                     );
                   }
 
                   return _buildRecoveryLoading(
-                    title: '게임 화면 준비 중...',
-                    subtitle: '화면 전환 상태를 다시 맞추고 있습니다.',
+                    title: L10n.of(context).gamePreparingScreen,
+                    subtitle: L10n.of(context).gameAdjustingScreen,
                   );
                 }
 
                 final destination = game.currentDestination;
                 if (destination != AppDestination.game) {
                   return _buildRecoveryLoading(
-                    title: '게임 화면 전환 중...',
-                    subtitle: '현재 목적지 상태를 다시 확인하고 있습니다.',
+                    title: L10n.of(context).gameTransitioningScreen,
+                    subtitle: L10n.of(context).gameRecheckingDestination,
                   );
                 }
 
@@ -841,9 +843,9 @@ class _GameScreenState extends State<GameScreen> {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text(
-              '효과음',
-              style: TextStyle(
+            Text(
+              L10n.of(context).gameSoundEffects,
+              style: const TextStyle(
                 fontSize: 12,
                 fontWeight: FontWeight.bold,
                 color: Color(0xFF5A4038),
@@ -907,9 +909,9 @@ class _GameScreenState extends State<GameScreen> {
               ),
               child: Row(
                 children: [
-                  const Text(
-                    '채팅',
-                    style: TextStyle(
+                  Text(
+                    L10n.of(context).gameChat,
+                    style: const TextStyle(
                       color: Colors.white,
                       fontWeight: FontWeight.bold,
                       fontSize: 16,
@@ -955,10 +957,10 @@ class _GameScreenState extends State<GameScreen> {
                   Expanded(
                     child: TextField(
                       controller: _chatController,
-                      decoration: const InputDecoration(
-                        hintText: '메시지 입력...',
+                      decoration: InputDecoration(
+                        hintText: L10n.of(context).gameMessageHint,
                         border: InputBorder.none,
-                        contentPadding: EdgeInsets.symmetric(horizontal: 12),
+                        contentPadding: const EdgeInsets.symmetric(horizontal: 12),
                       ),
                       style: const TextStyle(fontSize: 14),
                       onSubmitted: (_) => _sendChatMessage(game),
@@ -1108,7 +1110,7 @@ class _GameScreenState extends State<GameScreen> {
                               ),
                               const SizedBox(height: 2),
                               Text(
-                                isMe ? '내 프로필' : '플레이어 프로필',
+                                isMe ? L10n.of(context).gameMyProfile : L10n.of(context).gamePlayerProfile,
                                 style: const TextStyle(
                                   fontSize: 12,
                                   color: Color(0xFF84766E),
@@ -1130,26 +1132,26 @@ class _GameScreenState extends State<GameScreen> {
                             _buildProfileIconButton(
                               icon: Icons.check,
                               color: const Color(0xFFBDBDBD),
-                              tooltip: '이미 친구',
+                              tooltip: L10n.of(context).gameAlreadyFriend,
                               onTap: () {},
                             )
                           else if (game.sentFriendRequests.contains(nickname))
                             _buildProfileIconButton(
                               icon: Icons.hourglass_top,
                               color: const Color(0xFFBDBDBD),
-                              tooltip: '요청중',
+                              tooltip: L10n.of(context).gameRequestPending,
                               onTap: () {},
                             )
                           else
                             _buildProfileIconButton(
                               icon: Icons.person_add,
                               color: const Color(0xFF81C784),
-                              tooltip: '친구 추가',
+                              tooltip: L10n.of(context).gameAddFriend,
                               onTap: () {
                                 game.addFriendAction(nickname);
                                 Navigator.pop(ctx);
                                 ScaffoldMessenger.of(context).showSnackBar(
-                                  const SnackBar(content: Text('친구 요청을 보냈습니다')),
+                                  SnackBar(content: Text(L10n.of(context).gameFriendRequestSent)),
                                 );
                               },
                             ),
@@ -1158,17 +1160,17 @@ class _GameScreenState extends State<GameScreen> {
                             color: isBlockedUser
                                 ? const Color(0xFF64B5F6)
                                 : const Color(0xFFFF8A65),
-                            tooltip: isBlockedUser ? '차단 해제' : '차단하기',
+                            tooltip: isBlockedUser ? L10n.of(context).gameUnblock : L10n.of(context).gameBlock,
                             onTap: () {
                               if (isBlockedUser) {
                                 game.unblockUserAction(nickname);
                                 ScaffoldMessenger.of(context).showSnackBar(
-                                  const SnackBar(content: Text('차단이 해제되었습니다')),
+                                  SnackBar(content: Text(L10n.of(context).gameUnblocked)),
                                 );
                               } else {
                                 game.blockUserAction(nickname);
                                 ScaffoldMessenger.of(context).showSnackBar(
-                                  const SnackBar(content: Text('차단되었습니다')),
+                                  SnackBar(content: Text(L10n.of(context).gameBlocked)),
                                 );
                               }
                             },
@@ -1176,7 +1178,7 @@ class _GameScreenState extends State<GameScreen> {
                           _buildProfileIconButton(
                             icon: Icons.flag,
                             color: const Color(0xFFE57373),
-                            tooltip: '신고하기',
+                            tooltip: L10n.of(context).gameReport,
                             onTap: () {
                               Navigator.pop(ctx);
                               _showReportDialog(nickname, game);
@@ -1207,7 +1209,7 @@ class _GameScreenState extends State<GameScreen> {
               actions: [
                 TextButton(
                   onPressed: () => Navigator.pop(ctx),
-                  child: const Text('닫기'),
+                  child: Text(L10n.of(context).gameClose),
                 ),
               ],
             );
@@ -1245,7 +1247,7 @@ class _GameScreenState extends State<GameScreen> {
   Widget _buildPlayerProfileContent(Map<String, dynamic> data) {
     final profile = data['profile'] as Map<String, dynamic>?;
     if (profile == null) {
-      return const Text('프로필을 찾을 수 없습니다');
+      return Text(L10n.of(context).gameProfileNotFound);
     }
 
     final totalGames = profile['totalGames'] ?? 0;
@@ -1273,28 +1275,28 @@ class _GameScreenState extends State<GameScreen> {
         _buildMannerLeaveRow(reportCount: reportCount as int, leaveCount: leaveCount as int),
         const SizedBox(height: 10),
         _buildProfileSectionCard(
-          title: '티츄 시즌 랭킹전',
+          title: L10n.of(context).gameTichuSeasonRanked,
           accent: const Color(0xFF7A6A95),
           background: const Color(0xFFF6F3FA),
           icon: Icons.emoji_events,
           iconColor: const Color(0xFFFFD54F),
           mainText: '$seasonRating',
           chips: [
-            _buildStatChip('전적', '$seasonGames전 $seasonWins승 $seasonLosses패'),
-            _buildStatChip('승률', '$seasonWinRate%'),
+            _buildStatChip(L10n.of(context).gameStatRecord, L10n.of(context).gameRecordFormat(seasonGames as int, seasonWins as int, seasonLosses as int)),
+            _buildStatChip(L10n.of(context).gameStatWinRate, '$seasonWinRate%'),
           ],
         ),
         const SizedBox(height: 10),
         _buildProfileSectionCard(
-          title: '전체 전적',
+          title: L10n.of(context).gameOverallRecord,
           accent: const Color(0xFF5A4038),
           background: const Color(0xFFF5F5F5),
           icon: Icons.star,
           iconColor: const Color(0xFFFFB74D),
           mainText: '',
           chips: [
-            _buildStatChip('전적', '$totalGames전 $wins승 $losses패'),
-            _buildStatChip('승률', '$winRate%'),
+            _buildStatChip(L10n.of(context).gameStatRecord, L10n.of(context).gameRecordFormat(totalGames as int, wins as int, losses as int)),
+            _buildStatChip(L10n.of(context).gameStatWinRate, '$winRate%'),
           ],
         ),
         const SizedBox(height: 12),
@@ -1318,12 +1320,13 @@ class _GameScreenState extends State<GameScreen> {
     }
   }
 
-  static String _mannerLabel(int reportCount) {
-    if (reportCount <= 1) return '좋음';
-    if (reportCount <= 3) return '보통';
-    if (reportCount <= 6) return '나쁨';
-    if (reportCount <= 10) return '아주 나쁨';
-    return '최악';
+  String _mannerLabel(int reportCount) {
+    final l10n = L10n.of(context);
+    if (reportCount <= 1) return l10n.gameMannerGood;
+    if (reportCount <= 3) return l10n.gameMannerNormal;
+    if (reportCount <= 6) return l10n.gameMannerBad;
+    if (reportCount <= 10) return l10n.gameMannerVeryBad;
+    return l10n.gameMannerWorst;
   }
 
   static Color _mannerColor(int reportCount) {
@@ -1361,7 +1364,7 @@ class _GameScreenState extends State<GameScreen> {
                 Icon(icon, color: color, size: 16),
                 const SizedBox(width: 6),
                 Text(
-                  '매너 $label',
+                  L10n.of(context).gameManner(label),
                   style: TextStyle(
                     fontSize: 12,
                     fontWeight: FontWeight.bold,
@@ -1388,7 +1391,7 @@ class _GameScreenState extends State<GameScreen> {
                     color: Color(0xFFE57373), size: 16),
                 const SizedBox(width: 6),
                 Text(
-                  '탈주 $leaveCount',
+                  L10n.of(context).gameDesertions(leaveCount),
                   style: const TextStyle(
                     fontSize: 12,
                     fontWeight: FontWeight.bold,
@@ -1432,9 +1435,9 @@ class _GameScreenState extends State<GameScreen> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      const Text(
-                        '최근 전적',
-                        style: TextStyle(
+                      Text(
+                        L10n.of(context).gameRecentMatchesTitle,
+                        style: const TextStyle(
                           fontSize: 17,
                           fontWeight: FontWeight.w800,
                           color: Color(0xFF3E312A),
@@ -1442,7 +1445,7 @@ class _GameScreenState extends State<GameScreen> {
                       ),
                       const SizedBox(height: 2),
                       Text(
-                        '최근 ${recentMatches.length}경기 결과를 확인할 수 있습니다.',
+                        L10n.of(context).gameRecentMatchesDesc(recentMatches.length),
                         style: const TextStyle(
                           fontSize: 12,
                           color: Color(0xFF84766E),
@@ -1470,7 +1473,7 @@ class _GameScreenState extends State<GameScreen> {
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(ctx),
-              child: const Text('닫기'),
+              child: Text(L10n.of(context).gameClose),
             ),
           ],
         );
@@ -1648,24 +1651,24 @@ class _GameScreenState extends State<GameScreen> {
         children: [
           Row(
             children: [
-              const Text(
-                '최근 전적 (3)',
-                style: TextStyle(fontSize: 12, color: Color(0xFF8A8A8A)),
+              Text(
+                L10n.of(context).gameRecentMatchesThree,
+                style: const TextStyle(fontSize: 12, color: Color(0xFF8A8A8A)),
               ),
               const Spacer(),
               if (recentMatches.length > 3)
                 TextButton(
                   onPressed: () =>
                       _showRecentMatchesDialog(recentMatches, profileNickname),
-                  child: const Text('더보기'),
+                  child: Text(L10n.of(context).gameSeeMore),
                 ),
             ],
           ),
           const SizedBox(height: 8),
           if (recentMatches.isEmpty)
-            const Text(
-              '최근 전적이 없습니다',
-              style: TextStyle(fontSize: 12, color: Color(0xFF9A8E8A)),
+            Text(
+              L10n.of(context).gameNoRecentMatches,
+              style: const TextStyle(fontSize: 12, color: Color(0xFF9A8E8A)),
             )
           else
             Column(
@@ -1693,20 +1696,21 @@ class _GameScreenState extends State<GameScreen> {
     final date = _formatShortDate(match['createdAt']);
     final isRanked = match['isRanked'] == true;
 
+    final l10n = L10n.of(context);
     final Color badgeColor;
     final String badgeText;
     if (isDesertionLoss) {
       badgeColor = const Color(0xFFFFB74D);
-      badgeText = '탈';
+      badgeText = l10n.gameMatchDesertion;
     } else if (isDraw) {
       badgeColor = const Color(0xFFBDBDBD);
-      badgeText = '무';
+      badgeText = l10n.gameMatchDraw;
     } else if (won) {
       badgeColor = const Color(0xFF81C784);
-      badgeText = '승';
+      badgeText = l10n.gameMatchWin;
     } else {
       badgeColor = const Color(0xFFE57373);
-      badgeText = '패';
+      badgeText = l10n.gameMatchLoss;
     }
 
     return Padding(
@@ -1754,7 +1758,7 @@ class _GameScreenState extends State<GameScreen> {
                         borderRadius: BorderRadius.circular(6),
                       ),
                       child: Text(
-                        isRanked ? '랭크' : '일반',
+                        isRanked ? l10n.gameMatchTypeRanked : l10n.gameMatchTypeNormal,
                         style: TextStyle(
                           fontSize: 9,
                           fontWeight: FontWeight.bold,
@@ -1816,7 +1820,7 @@ class _GameScreenState extends State<GameScreen> {
             const SizedBox(height: 20),
             _buildActionButton(
               icon: Icons.person_search,
-              label: '프로필 보기',
+              label: L10n.of(context).gameViewProfile,
               color: const Color(0xFF64B5F6),
               onTap: () {
                 Navigator.pop(context);
@@ -1826,32 +1830,32 @@ class _GameScreenState extends State<GameScreen> {
             const SizedBox(height: 10),
             _buildActionButton(
               icon: Icons.person_add,
-              label: '친구 추가',
+              label: L10n.of(context).gameAddFriend,
               color: const Color(0xFF81C784),
               onTap: () {
                 Navigator.pop(context);
                 game.addFriendAction(nickname);
                 ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('친구 요청을 보냈습니다')),
+                  SnackBar(content: Text(L10n.of(context).gameFriendRequestSent)),
                 );
               },
             ),
             const SizedBox(height: 10),
             _buildActionButton(
               icon: isBlocked ? Icons.check_circle : Icons.block,
-              label: isBlocked ? '차단 해제' : '차단하기',
+              label: isBlocked ? L10n.of(context).gameUnblock : L10n.of(context).gameBlock,
               color: isBlocked ? const Color(0xFF64B5F6) : const Color(0xFFFF8A65),
               onTap: () {
                 Navigator.pop(context);
                 if (isBlocked) {
                   game.unblockUserAction(nickname);
                   ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('차단이 해제되었습니다')),
+                    SnackBar(content: Text(L10n.of(context).gameUnblocked)),
                   );
                 } else {
                   game.blockUserAction(nickname);
                   ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('차단되었습니다')),
+                    SnackBar(content: Text(L10n.of(context).gameBlocked)),
                   );
                 }
               },
@@ -1859,7 +1863,7 @@ class _GameScreenState extends State<GameScreen> {
             const SizedBox(height: 10),
             _buildActionButton(
               icon: Icons.flag,
-              label: '신고하기',
+              label: L10n.of(context).gameReport,
               color: const Color(0xFFE57373),
               onTap: () {
                 Navigator.pop(context);
@@ -1869,7 +1873,7 @@ class _GameScreenState extends State<GameScreen> {
             const SizedBox(height: 10),
             TextButton(
               onPressed: () => Navigator.pop(context),
-              child: const Text('취소'),
+              child: Text(L10n.of(context).gameCancel),
             ),
           ],
         ),
@@ -1903,12 +1907,13 @@ class _GameScreenState extends State<GameScreen> {
 
   void _showReportDialog(String nickname, GameService game) {
     final reasonController = TextEditingController();
+    final l10n = L10n.of(context);
     final reasons = [
-      '욕설/비방',
-      '도배/스팸',
-      '부적절한 닉네임',
-      '게임 방해',
-      '기타',
+      l10n.gameReportReasonAbuse,
+      l10n.gameReportReasonSpam,
+      l10n.gameReportReasonNickname,
+      l10n.gameReportReasonGameplay,
+      l10n.gameReportReasonOther,
     ];
     String? selectedReason;
 
@@ -1929,7 +1934,7 @@ class _GameScreenState extends State<GameScreen> {
                 const SizedBox(width: 8),
                 Expanded(
                   child: Text(
-                    '$nickname 신고',
+                    L10n.of(context).gameReportTitle(nickname),
                     style: const TextStyle(fontWeight: FontWeight.bold),
                     overflow: TextOverflow.ellipsis,
                   ),
@@ -1953,9 +1958,9 @@ class _GameScreenState extends State<GameScreen> {
                         borderRadius: BorderRadius.circular(12),
                         border: Border.all(color: const Color(0xFFF0C7C7)),
                       ),
-                      child: const Text(
-                        '신고는 운영팀이 확인합니다.\n허위 신고는 제재될 수 있어요.',
-                        style: TextStyle(
+                      child: Text(
+                        L10n.of(context).gameReportWarning,
+                        style: const TextStyle(
                           fontSize: 12,
                           color: Color(0xFF9A4A4A),
                           height: 1.4,
@@ -1966,7 +1971,7 @@ class _GameScreenState extends State<GameScreen> {
                     Align(
                       alignment: Alignment.centerLeft,
                       child: Text(
-                        '사유 선택',
+                        L10n.of(context).gameSelectReason,
                         style: TextStyle(
                           fontSize: 12,
                           fontWeight: FontWeight.bold,
@@ -2016,7 +2021,7 @@ class _GameScreenState extends State<GameScreen> {
                       controller: reasonController,
                       maxLines: 3,
                       decoration: InputDecoration(
-                        hintText: '상세 사유를 입력해주세요 (선택)',
+                        hintText: L10n.of(context).gameReportDetailHint,
                         filled: true,
                         fillColor: const Color(0xFFF7F2F0),
                         border: OutlineInputBorder(
@@ -2040,7 +2045,7 @@ class _GameScreenState extends State<GameScreen> {
             actions: [
               TextButton(
                 onPressed: () => Navigator.pop(ctx),
-                child: const Text('취소'),
+                child: Text(L10n.of(context).gameCancel),
               ),
               ElevatedButton(
                 onPressed: selectedReason == null
@@ -2084,7 +2089,7 @@ class _GameScreenState extends State<GameScreen> {
                   backgroundColor: const Color(0xFFE57373),
                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                 ),
-                child: const Text('신고하기'),
+                child: Text(L10n.of(context).gameReportSubmit),
               ),
             ],
           ),
@@ -2098,12 +2103,12 @@ class _GameScreenState extends State<GameScreen> {
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('게임 나가기'),
-        content: const Text('정말 게임을 나가시겠습니까?\n게임 중 나가면 팀에 피해가 됩니다.'),
+        title: Text(L10n.of(context).gameLeaveTitle),
+        content: Text(L10n.of(context).gameLeaveConfirm),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx),
-            child: const Text('취소'),
+            child: Text(L10n.of(context).gameCancel),
           ),
           TextButton(
             onPressed: () {
@@ -2111,7 +2116,7 @@ class _GameScreenState extends State<GameScreen> {
               game.leaveGame();
             },
             style: TextButton.styleFrom(foregroundColor: Colors.red),
-            child: const Text('나가기'),
+            child: Text(L10n.of(context).gameLeave),
           ),
         ],
       ),
@@ -2122,7 +2127,7 @@ class _GameScreenState extends State<GameScreen> {
     // 콜 관련 에러인지 확인
     final isCallError = message.contains('Call') || message.contains('콜');
     final displayMessage = isCallError
-        ? '콜된 숫자를 먼저 내야 합니다!'
+        ? L10n.of(context).gameCallError
         : message;
 
     return Positioned(
@@ -2188,7 +2193,7 @@ class _GameScreenState extends State<GameScreen> {
             const SizedBox(width: 8),
             Expanded(
               child: Text(
-                '$playerName 시간 초과!',
+                L10n.of(context).gameTimeout(playerName),
                 style: const TextStyle(
                   color: Color(0xFFE65100),
                   fontWeight: FontWeight.bold,
@@ -2228,8 +2233,8 @@ class _GameScreenState extends State<GameScreen> {
             Expanded(
               child: Text(
                 reason == 'timeout'
-                    ? '$playerName 탈주! (시간 초과 3회)'
-                    : '$playerName 님이 게임을 떠났습니다',
+                    ? L10n.of(context).gameDesertionTimeout(playerName)
+                    : L10n.of(context).gameDesertionLeave(playerName),
                 style: const TextStyle(
                   color: Color(0xFFCC4444),
                   fontWeight: FontWeight.bold,
@@ -2248,7 +2253,7 @@ class _GameScreenState extends State<GameScreen> {
     if (request == null) {
       return const SizedBox.shrink();
     }
-    final spectatorNickname = request['spectatorNickname'] ?? '관전자';
+    final spectatorNickname = request['spectatorNickname'] ?? L10n.of(context).gameSpectator;
     final spectatorId = request['spectatorId'] ?? '';
 
     return Positioned(
@@ -2277,7 +2282,7 @@ class _GameScreenState extends State<GameScreen> {
                 const SizedBox(width: 8),
                 Expanded(
                   child: Text(
-                    '$spectatorNickname님이 패 보기를 요청했습니다',
+                    L10n.of(context).gameCardViewRequest(spectatorNickname),
                     style: const TextStyle(
                       fontSize: 14,
                       fontWeight: FontWeight.bold,
@@ -2298,7 +2303,7 @@ class _GameScreenState extends State<GameScreen> {
                       side: const BorderSide(color: Color(0xFFCC6666)),
                       padding: const EdgeInsets.symmetric(vertical: 10),
                     ),
-                    child: const Text('거부'),
+                    child: Text(L10n.of(context).gameReject),
                   ),
                 ),
                 const SizedBox(width: 8),
@@ -2310,7 +2315,7 @@ class _GameScreenState extends State<GameScreen> {
                       foregroundColor: Colors.white,
                       padding: const EdgeInsets.symmetric(vertical: 10),
                     ),
-                    child: const Text('허가'),
+                    child: Text(L10n.of(context).gameAllow),
                   ),
                 ),
               ],
@@ -2328,7 +2333,7 @@ class _GameScreenState extends State<GameScreen> {
                       side: const BorderSide(color: Color(0xFFCCCCCC)),
                       padding: const EdgeInsets.symmetric(vertical: 10),
                     ),
-                    child: const Text('항상거절', style: TextStyle(fontSize: 13)),
+                    child: Text(L10n.of(context).gameAlwaysReject, style: const TextStyle(fontSize: 13)),
                   ),
                 ),
                 const SizedBox(width: 8),
@@ -2343,7 +2348,7 @@ class _GameScreenState extends State<GameScreen> {
                       side: const BorderSide(color: Color(0xFF4CAF50)),
                       padding: const EdgeInsets.symmetric(vertical: 10),
                     ),
-                    child: const Text('항상승인', style: TextStyle(fontSize: 13)),
+                    child: Text(L10n.of(context).gameAlwaysAllow, style: const TextStyle(fontSize: 13)),
                   ),
                 ),
               ],
@@ -2481,20 +2486,20 @@ class _GameScreenState extends State<GameScreen> {
       context: context,
       builder: (ctx) => AlertDialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        title: const Row(
+        title: Row(
           children: [
-            Icon(Icons.people_alt, color: Color(0xFF5A4038)),
-            SizedBox(width: 8),
-            Text('관전자 목록'),
+            const Icon(Icons.people_alt, color: Color(0xFF5A4038)),
+            const SizedBox(width: 8),
+            Text(L10n.of(context).gameSpectatorList),
           ],
         ),
         content: spectators.isEmpty
-            ? const SizedBox(
+            ? SizedBox(
                 height: 60,
                 child: Center(
                   child: Text(
-                    '관전 중인 사람이 없습니다',
-                    style: TextStyle(color: Color(0xFF9A8E8A)),
+                    L10n.of(context).gameNoSpectators,
+                    style: const TextStyle(color: Color(0xFF9A8E8A)),
                   ),
                 ),
               )
@@ -2562,7 +2567,7 @@ class _GameScreenState extends State<GameScreen> {
                             ),
                             const SizedBox(width: 4),
                             Text(
-                              '항상승인',
+                              L10n.of(context).gameAlwaysAllow,
                               style: TextStyle(
                                 fontSize: 12,
                                 fontWeight: FontWeight.bold,
@@ -2595,7 +2600,7 @@ class _GameScreenState extends State<GameScreen> {
                             ),
                             const SizedBox(width: 4),
                             Text(
-                              '항상거절',
+                              L10n.of(context).gameAlwaysReject,
                               style: TextStyle(
                                 fontSize: 12,
                                 fontWeight: FontWeight.bold,
@@ -2612,7 +2617,7 @@ class _GameScreenState extends State<GameScreen> {
             ),
           TextButton(
             onPressed: () => Navigator.pop(ctx),
-            child: const Text('닫기'),
+            child: Text(L10n.of(context).gameClose),
           ),
         ],
       ),
@@ -2645,10 +2650,10 @@ class _GameScreenState extends State<GameScreen> {
               children: [
                 const Icon(Icons.visibility, size: 16, color: Color(0xFF5A4038)),
                 const SizedBox(width: 6),
-                const Expanded(
+                Expanded(
                   child: Text(
-                    '내 패를 보는 중',
-                    style: TextStyle(
+                    L10n.of(context).gameViewingMyCards,
+                    style: const TextStyle(
                       fontSize: 13,
                       fontWeight: FontWeight.bold,
                       color: Color(0xFF5A4038),
@@ -2663,9 +2668,9 @@ class _GameScreenState extends State<GameScreen> {
             ),
             const SizedBox(height: 8),
             if (game.cardViewers.isEmpty)
-              const Text(
-                '보고 있는 사람 없음',
-                style: TextStyle(fontSize: 12, color: Color(0xFF999999)),
+              Text(
+                L10n.of(context).gameNoViewers,
+                style: const TextStyle(fontSize: 12, color: Color(0xFF999999)),
               )
             else
               ...game.cardViewers.map((viewer) {
@@ -2719,7 +2724,7 @@ class _GameScreenState extends State<GameScreen> {
           GestureDetector(
             onTap: partner != null ? () => _showPlayerProfileDialog(partner.name, game, isBot: partner.id.startsWith('bot_')) : null,
             child: _buildTurnName(
-              name: partner?.name ?? '파트너',
+              name: partner?.name ?? L10n.of(context).gamePartner,
               isTurn: isPartnerTurn,
               badge: _tichuBadgeForPlayer(partner),
               exchangeDone: state.phase == 'card_exchange' && (partner?.hasExchanged ?? false),
@@ -2768,7 +2773,7 @@ class _GameScreenState extends State<GameScreen> {
               GestureDetector(
                 onTap: left != null ? () => _showPlayerProfileDialog(left.name, game, isBot: left.id.startsWith('bot_')) : null,
                 child: _buildTurnName(
-                  name: left?.name ?? '좌측',
+                  name: left?.name ?? L10n.of(context).gameLeftPlayer,
                   isTurn: isLeftTurn,
                   fontSize: 11,
                   badge: _tichuBadgeForPlayer(left),
@@ -2809,7 +2814,7 @@ class _GameScreenState extends State<GameScreen> {
               GestureDetector(
                 onTap: right != null ? () => _showPlayerProfileDialog(right.name, game, isBot: right.id.startsWith('bot_')) : null,
                 child: _buildTurnName(
-                  name: right?.name ?? '우측',
+                  name: right?.name ?? L10n.of(context).gameRightPlayer,
                   isTurn: isRightTurn,
                   fontSize: 11,
                   badge: _tichuBadgeForPlayer(right),
@@ -2867,7 +2872,7 @@ class _GameScreenState extends State<GameScreen> {
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   Text(
-                    state.isMyTurn ? '내 턴!' : '${_getCurrentPlayerName(state)}의 턴',
+                    state.isMyTurn ? L10n.of(context).gameMyTurn : L10n.of(context).gamePlayerTurn(_getCurrentPlayerName(state)),
                     style: TextStyle(
                       fontSize: 11,
                       color: state.isMyTurn
@@ -2900,7 +2905,7 @@ class _GameScreenState extends State<GameScreen> {
                     ),
                     const SizedBox(width: 4),
                     Text(
-                      '콜 ${state.callRank}',
+                      L10n.of(context).gameCall(state.callRank!),
                       style: const TextStyle(
                         fontSize: 16,
                         fontWeight: FontWeight.bold,
@@ -2936,9 +2941,10 @@ class _GameScreenState extends State<GameScreen> {
     final compactPlayerName = currentPlayerName.length > 4
         ? '${currentPlayerName.substring(0, 4)}…'
         : currentPlayerName;
+    final l10n = L10n.of(context);
     final turnLabel = state.isMyTurn
-        ? (isLandscape ? '내 턴' : '내 턴')
-        : (isLandscape ? '$compactPlayerName 턴' : '$currentPlayerName 대기');
+        ? l10n.gameMyTurnShort
+        : (isLandscape ? l10n.gamePlayerTurnShort(compactPlayerName) : l10n.gamePlayerWaiting(currentPlayerName));
     final timerFontSize = isLandscape ? 11.5 * _s : 13 * _s;
     final timerIconSize = isLandscape ? 12.5 * _s : 14 * _s;
     final timerPadding = isLandscape
@@ -2972,7 +2978,7 @@ class _GameScreenState extends State<GameScreen> {
                 SizedBox(width: 5 * _s),
                 Flexible(
                   child: Text(
-                    '$turnLabel $_remainingSeconds초',
+                    l10n.gameTimerLabel(turnLabel, _remainingSeconds),
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                     softWrap: false,
@@ -3230,23 +3236,23 @@ class _GameScreenState extends State<GameScreen> {
                         ),
                       ),
                       const SizedBox(width: 12),
-                      const Expanded(
+                      Expanded(
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           mainAxisSize: MainAxisSize.min,
                           children: [
                             Text(
-                              '점수 기록',
-                              style: TextStyle(
+                              L10n.of(context).gameScoreHistory,
+                              style: const TextStyle(
                                 fontSize: 16,
                                 fontWeight: FontWeight.bold,
                                 color: Color(0xFF5A4038),
                               ),
                             ),
-                            SizedBox(height: 2),
+                            const SizedBox(height: 2),
                             Text(
-                              '라운드별 점수 변화와 현재 합계',
-                              style: TextStyle(
+                              L10n.of(context).gameScoreHistorySubtitle,
+                              style: const TextStyle(
                                 fontSize: 12,
                                 color: Color(0xFF8A7A72),
                               ),
@@ -3289,10 +3295,10 @@ class _GameScreenState extends State<GameScreen> {
                       borderRadius: BorderRadius.circular(16),
                       border: Border.all(color: const Color(0xFFE8DDD7)),
                     ),
-                    child: const Text(
-                      '아직 완료된 라운드가 없습니다',
+                    child: Text(
+                      L10n.of(context).gameNoCompletedRounds,
                       textAlign: TextAlign.center,
-                      style: TextStyle(
+                      style: const TextStyle(
                         fontSize: 13,
                         color: Color(0xFF8A7A72),
                       ),
@@ -3377,7 +3383,7 @@ class _GameScreenState extends State<GameScreen> {
                         borderRadius: BorderRadius.circular(14),
                       ),
                     ),
-                    child: const Text('닫기'),
+                    child: Text(L10n.of(context).gameClose),
                   ),
                 ),
               ],
@@ -3442,7 +3448,7 @@ class _GameScreenState extends State<GameScreen> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            '팀 $label',
+            L10n.of(context).gameTeamLabel(label),
             style: TextStyle(
               fontSize: 11,
               fontWeight: FontWeight.w600,
@@ -3475,8 +3481,8 @@ class _GameScreenState extends State<GameScreen> {
         children: [
           Text(
             playerName.isNotEmpty
-                ? '${playerName.length > 8 ? '${playerName.substring(0, 8)}..' : playerName}가 개를 냈어'
-                : '개가 나왔어',
+                ? L10n.of(context).gameDogPlayedBy(playerName.length > 8 ? '${playerName.substring(0, 8)}..' : playerName)
+                : L10n.of(context).gameDogPlayed,
             style: const TextStyle(
               fontSize: 11,
               color: Color(0xFF8A7A72),
@@ -3529,9 +3535,9 @@ class _GameScreenState extends State<GameScreen> {
                     color: isMyTeam ? const Color(0xFF4A90D9) : const Color(0xFFD94A5A),
                   ),
                 ),
-                const TextSpan(
-                  text: '가 낸 패',
-                  style: TextStyle(
+                TextSpan(
+                  text: L10n.of(context).gamePlayedCards,
+                  style: const TextStyle(
                     fontSize: 12,
                     color: Color(0xFF8A7A72),
                   ),
@@ -3717,7 +3723,7 @@ class _GameScreenState extends State<GameScreen> {
                     border: Border.all(color: const Color(0xFFE6C86A)),
                   ),
                   child: Text(
-                    '내 턴!',
+                    L10n.of(context).gameMyTurn,
                     style: TextStyle(
                       fontSize: 11 * _s,
                       fontWeight: FontWeight.bold,
@@ -3753,9 +3759,9 @@ class _GameScreenState extends State<GameScreen> {
                           ),
                         ),
                         const SizedBox(width: 4),
-                        const Text(
-                          '잠수아님',
-                          style: TextStyle(
+                        Text(
+                          L10n.of(context).gameNotAfk,
+                          style: const TextStyle(
                             fontSize: 11,
                             color: Color(0xFFE65100),
                           ),
@@ -3800,7 +3806,7 @@ class _GameScreenState extends State<GameScreen> {
                     borderRadius: BorderRadius.circular(16),
                   ),
                 ),
-                child: const Text('내기'),
+                child: Text(L10n.of(context).gamePlay),
               ),
               const SizedBox(width: 12),
               ElevatedButton(
@@ -3822,7 +3828,7 @@ class _GameScreenState extends State<GameScreen> {
                     borderRadius: BorderRadius.circular(16),
                   ),
                 ),
-                child: const Text('패스'),
+                child: Text(L10n.of(context).gamePass),
               ),
             ],
           ),
@@ -3854,9 +3860,9 @@ class _GameScreenState extends State<GameScreen> {
           mainAxisAlignment: MainAxisAlignment.center,
           crossAxisAlignment: CrossAxisAlignment.center,
           children: [
-            const Text(
-              '라지티츄?',
-              style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+            Text(
+              L10n.of(context).gameLargeTichuQuestion,
+              style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
             ),
             const SizedBox(width: 12),
             ElevatedButton(
@@ -3865,7 +3871,7 @@ class _GameScreenState extends State<GameScreen> {
                 backgroundColor: const Color(0xFFFFD700),
                 padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
               ),
-              child: const Text('선언!'),
+              child: Text(L10n.of(context).gameDeclare),
             ),
             const SizedBox(width: 12),
             OutlinedButton(
@@ -3873,7 +3879,7 @@ class _GameScreenState extends State<GameScreen> {
               style: OutlinedButton.styleFrom(
                 padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
               ),
-              child: const Text('패스'),
+              child: Text(L10n.of(context).gamePass),
             ),
           ],
         ),
@@ -3889,19 +3895,19 @@ class _GameScreenState extends State<GameScreen> {
           showDialog(
             context: context,
             builder: (ctx) => AlertDialog(
-              title: const Text('스몰티츄 선언'),
-              content: const Text('스몰티츄를 선언하시겠습니까?\n성공 시 +100점, 실패 시 -100점'),
+              title: Text(L10n.of(context).gameSmallTichuConfirmTitle),
+              content: Text(L10n.of(context).gameSmallTichuConfirmContent),
               actions: [
                 TextButton(
                   onPressed: () => Navigator.of(ctx).pop(),
-                  child: const Text('취소'),
+                  child: Text(L10n.of(context).gameCancel),
                 ),
                 ElevatedButton(
                   onPressed: () {
                     Navigator.of(ctx).pop();
                     game.declareSmallTichu();
                   },
-                  child: const Text('선언'),
+                  child: Text(L10n.of(context).gameDeclareButton),
                 ),
               ],
             ),
@@ -3915,7 +3921,7 @@ class _GameScreenState extends State<GameScreen> {
             borderRadius: BorderRadius.circular(12),
           ),
         ),
-        child: const Text('스몰티츄 선언', style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold)),
+        child: Text(L10n.of(context).gameSmallTichuDeclare, style: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold)),
       ),
     );
   }
@@ -3949,7 +3955,7 @@ class _GameScreenState extends State<GameScreen> {
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
               Text(
-                selectedCard != null ? '카드를 줄 상대 선택' : '교환할 카드 선택 ($assignedCount/3)',
+                selectedCard != null ? L10n.of(context).gameSelectRecipient : L10n.of(context).gameSelectExchangeCard(assignedCount),
                 style: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold),
               ),
               if (_exchangeAssignments.isNotEmpty) ...[
@@ -3968,7 +3974,7 @@ class _GameScreenState extends State<GameScreen> {
                       minimumSize: Size.zero,
                       tapTargetSize: MaterialTapTargetSize.shrinkWrap,
                     ),
-                    child: const Text('초기화', style: TextStyle(fontSize: 12)),
+                    child: Text(L10n.of(context).gameReset, style: const TextStyle(fontSize: 12)),
                   ),
                 ),
               ],
@@ -4001,7 +4007,7 @@ class _GameScreenState extends State<GameScreen> {
                     minimumSize: Size.zero,
                     tapTargetSize: MaterialTapTargetSize.shrinkWrap,
                   ),
-                  child: const Text('교환 완료', style: TextStyle(fontSize: 12)),
+                  child: Text(L10n.of(context).gameExchangeComplete, style: const TextStyle(fontSize: 12)),
                 ),
               ),
             ],
@@ -4012,9 +4018,9 @@ class _GameScreenState extends State<GameScreen> {
             spacing: 8,
             runSpacing: 8,
             children: [
-              _buildExchangeButton('left', left?.name ?? '좌측', selectedCard),
-              _buildExchangeButton('partner', partner?.name ?? '파트너', selectedCard),
-              _buildExchangeButton('right', right?.name ?? '우측', selectedCard),
+              _buildExchangeButton('left', left?.name ?? L10n.of(context).gameLeftPlayer, selectedCard),
+              _buildExchangeButton('partner', partner?.name ?? L10n.of(context).gamePartner, selectedCard),
+              _buildExchangeButton('right', right?.name ?? L10n.of(context).gameRightPlayer, selectedCard),
             ],
           ),
         ],
@@ -4084,15 +4090,15 @@ class _GameScreenState extends State<GameScreen> {
   Widget _buildDragonDialog(GameStateData state, GameService game) {
     final left = _firstWhereOrNull(state.players, (p) => p.position == 'left');
     final right = _firstWhereOrNull(state.players, (p) => p.position == 'right');
-    final leftName = left?.name ?? '좌측';
-    final rightName = right?.name ?? '우측';
+    final leftName = left?.name ?? L10n.of(context).gameLeftPlayer;
+    final rightName = right?.name ?? L10n.of(context).gameRightPlayer;
     return _buildDialog(
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          const Text(
-            '용 트릭을 누구에게 주시겠습니까?',
-            style: TextStyle(fontSize: 16),
+          Text(
+            L10n.of(context).gameDragonQuestion,
+            style: const TextStyle(fontSize: 16),
             textAlign: TextAlign.center,
           ),
           const SizedBox(height: 20),
@@ -4150,9 +4156,9 @@ class _GameScreenState extends State<GameScreen> {
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          const Text(
-            '콜할 숫자를 선택하세요',
-            style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+          Text(
+            L10n.of(context).gameSelectCallRank,
+            style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
             textAlign: TextAlign.center,
           ),
           const SizedBox(height: 16),
@@ -4177,7 +4183,7 @@ class _GameScreenState extends State<GameScreen> {
             style: OutlinedButton.styleFrom(
               minimumSize: const Size(120, 40),
             ),
-            child: const Text('콜 안함'),
+            child: Text(L10n.of(context).gameNoCall),
           ),
         ],
       ),
@@ -4186,7 +4192,8 @@ class _GameScreenState extends State<GameScreen> {
 
   Widget _buildRoundEndDialog(GameStateData state, GameService game) {
     final isGameEnd = state.phase == 'game_end';
-    String title = isGameEnd ? '게임 종료!' : '라운드 종료!';
+    final l10n = L10n.of(context);
+    String title = isGameEnd ? l10n.gameGameEnd : l10n.gameRoundEnd;
 
     if (isGameEnd) {
       final teamA = state.totalScores['teamA'] ?? 0;
@@ -4194,7 +4201,7 @@ class _GameScreenState extends State<GameScreen> {
       final myTeam = state.myTeam;
       final myScore = myTeam == 'A' ? teamA : teamB;
       final enemyScore = myTeam == 'A' ? teamB : teamA;
-      title = myScore > enemyScore ? '우리 팀 승리!' : (myScore < enemyScore ? '상대 팀 승리!' : '무승부!');
+      title = myScore > enemyScore ? l10n.gameMyTeamWin : (myScore < enemyScore ? l10n.gameEnemyTeamWin : l10n.gameDraw);
     }
 
     // C8: Only request profile once to prevent rebuild loop
@@ -4223,7 +4230,7 @@ class _GameScreenState extends State<GameScreen> {
           if (state.lastRoundScores.isNotEmpty) ...[
             Text.rich(
               TextSpan(children: [
-                const TextSpan(text: '이번 라운드: '),
+                TextSpan(text: l10n.gameThisRound),
                 TextSpan(text: '${state.myTeam == 'A' ? state.lastRoundScores['teamA'] : state.lastRoundScores['teamB']}', style: const TextStyle(color: Color(0xFF4A90D9), fontWeight: FontWeight.bold)),
                 const TextSpan(text: ' : '),
                 TextSpan(text: '${state.myTeam == 'A' ? state.lastRoundScores['teamB'] : state.lastRoundScores['teamA']}', style: const TextStyle(color: Color(0xFFD24B4B), fontWeight: FontWeight.bold)),
@@ -4234,7 +4241,7 @@ class _GameScreenState extends State<GameScreen> {
           const SizedBox(height: 8),
           Text.rich(
             TextSpan(children: [
-              const TextSpan(text: '총점: '),
+              TextSpan(text: l10n.gameTotalScore),
               TextSpan(text: '${state.myTeam == 'A' ? state.totalScores['teamA'] : state.totalScores['teamB']}', style: const TextStyle(color: Color(0xFF4A90D9), fontWeight: FontWeight.bold)),
               const TextSpan(text: ' : '),
               TextSpan(text: '${state.myTeam == 'A' ? state.totalScores['teamB'] : state.totalScores['teamA']}', style: const TextStyle(color: Color(0xFFD24B4B), fontWeight: FontWeight.bold)),
@@ -4247,7 +4254,7 @@ class _GameScreenState extends State<GameScreen> {
           ],
           const SizedBox(height: 12),
           Text(
-            isGameEnd ? '3초 후 대기실로 이동...' : '3초 후 자동 진행...',
+            isGameEnd ? l10n.gameAutoReturnLobby : l10n.gameAutoNextRound,
             style: const TextStyle(fontSize: 12, color: Color(0xFF8A7A72)),
           ),
         ],
@@ -4283,7 +4290,7 @@ class _GameScreenState extends State<GameScreen> {
           _rankBadge(tier),
           const SizedBox(width: 10),
           Text(
-            '랭크전 점수 $seasonRating',
+            L10n.of(context).gameRankedScore(seasonRating as int),
             style: const TextStyle(
               fontSize: 14,
               fontWeight: FontWeight.bold,
@@ -4303,15 +4310,16 @@ class _GameScreenState extends State<GameScreen> {
   }
 
   Widget _rankBadge(_RankTier tier) {
+    final l10n = L10n.of(context);
     switch (tier) {
       case _RankTier.diamond:
-        return _rankPill('다이아', const Color(0xFF69B7FF), Icons.diamond_outlined);
+        return _rankPill(l10n.gameRankDiamond, const Color(0xFF69B7FF), Icons.diamond_outlined);
       case _RankTier.gold:
-        return _rankPill('골드', const Color(0xFFFFD54F), Icons.emoji_events);
+        return _rankPill(l10n.gameRankGold, const Color(0xFFFFD54F), Icons.emoji_events);
       case _RankTier.silver:
-        return _rankPill('실버', const Color(0xFFB0BEC5), Icons.emoji_events);
+        return _rankPill(l10n.gameRankSilver, const Color(0xFFB0BEC5), Icons.emoji_events);
       case _RankTier.bronze:
-        return _rankPill('브론즈', const Color(0xFFC58B6B), Icons.emoji_events);
+        return _rankPill(l10n.gameRankBronze, const Color(0xFFC58B6B), Icons.emoji_events);
     }
   }
 
@@ -4355,25 +4363,26 @@ class _GameScreenState extends State<GameScreen> {
 
   String _getPlayerInfo(Player? player) {
     if (player == null) return '';
-    if (player.hasFinished) return '${player.finishPosition}등!';
+    if (player.hasFinished) return L10n.of(context).gameFinishPosition(player.finishPosition);
 
-    return '${player.cardCount}장';
+    return L10n.of(context).gameCardCount(player.cardCount);
   }
 
   String _getPhaseName(String phase) {
+    final l10n = L10n.of(context);
     switch (phase) {
       case 'large_tichu_phase':
-        return '라지티츄 선언';
+        return l10n.gamePhaseLargeTichu;
       case 'dealing_remaining_6':
-        return '카드 분배 중';
+        return l10n.gamePhaseDealing;
       case 'card_exchange':
-        return '카드 교환';
+        return l10n.gamePhaseExchange;
       case 'playing':
-        return '게임 진행 중';
+        return l10n.gamePhasePlaying;
       case 'round_end':
-        return '라운드 종료';
+        return l10n.gamePhaseRoundEnd;
       case 'game_end':
-        return '게임 종료';
+        return l10n.gamePhaseGameEnd;
       default:
         return phase;
     }
@@ -4519,9 +4528,9 @@ class _GameScreenState extends State<GameScreen> {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              const Text(
-                '받은 카드',
-                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+              Text(
+                L10n.of(context).gameReceivedCards,
+                style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
               ),
               const SizedBox(height: 12),
               _buildExchangeSummaryRowLine([
@@ -4536,7 +4545,7 @@ class _GameScreenState extends State<GameScreen> {
                   backgroundColor: const Color(0xFFE8E0DC),
                   foregroundColor: const Color(0xFF6A5A52),
                 ),
-                child: const Text('닫기'),
+                child: Text(L10n.of(context).gameClose),
               ),
             ],
           ),
@@ -4725,7 +4734,7 @@ class _GameScreenState extends State<GameScreen> {
     if (player == null) return null;
     if (player.hasLargeTichu) {
       return _tichuBadge(
-        label: '라지',
+        label: L10n.of(context).gameBadgeLarge,
         bg: const Color(0xFFFF4444),
         fg: Colors.white,
         border: const Color(0xFFCC0000),
@@ -4733,7 +4742,7 @@ class _GameScreenState extends State<GameScreen> {
     }
     if (player.hasSmallTichu) {
       return _tichuBadge(
-        label: '스몰',
+        label: L10n.of(context).gameBadgeSmall,
         bg: const Color(0xFF2979FF),
         fg: Colors.white,
         border: const Color(0xFF1565C0),

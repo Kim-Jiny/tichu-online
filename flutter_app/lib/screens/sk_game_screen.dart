@@ -8,6 +8,7 @@ import '../services/session_service.dart';
 import '../models/sk_game_state.dart';
 import '../models/player.dart';
 import '../widgets/connection_overlay.dart';
+import '../l10n/app_localizations.dart';
 
 class SKGameScreen extends StatefulWidget {
   const SKGameScreen({super.key});
@@ -168,7 +169,7 @@ class _SKGameScreenState extends State<SKGameScreen> {
                 builder: (context, game, _) {
                   if (session.isRestoring || _waitingForRoomRecovery) {
                     return _buildRecoveryLoading(
-                      title: session.isRestoring ? '게임 복구 중...' : '게임 상태 확인 중...',
+                      title: session.isRestoring ? L10n.of(context).skGameRecoveringGame : L10n.of(context).skGameCheckingState,
                     );
                   }
 
@@ -182,9 +183,9 @@ class _SKGameScreenState extends State<SKGameScreen> {
                       WidgetsBinding.instance.addPostFrameCallback((_) {
                         if (mounted) _recoverRoomState();
                       });
-                      return _buildRecoveryLoading(title: '방 정보를 다시 불러오는 중...');
+                      return _buildRecoveryLoading(title: L10n.of(context).skGameReloadingRoom);
                     }
-                    return _buildRecoveryLoading(title: '게임 상태를 불러오는 중...');
+                    return _buildRecoveryLoading(title: L10n.of(context).skGameLoadingState);
                   }
 
                   _syncGameEndCountdown(state.phase);
@@ -326,9 +327,9 @@ class _SKGameScreenState extends State<SKGameScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Text(
-                      '스컬킹 대기실 관전',
-                      style: TextStyle(
+                    Text(
+                      L10n.of(context).skGameSpectatorWaitingTitle,
+                      style: const TextStyle(
                         color: Color(0xFF3E312A),
                         fontSize: 18,
                         fontWeight: FontWeight.w900,
@@ -336,7 +337,7 @@ class _SKGameScreenState extends State<SKGameScreen> {
                     ),
                     const SizedBox(height: 6),
                     Text(
-                      '게임 시작 전 방 상태를 보고 있습니다. 시작되면 관전 화면으로 자동 전환됩니다.',
+                      L10n.of(context).skGameSpectatorWaitingDesc,
                       style: TextStyle(
                         color: const Color(0xFF6A5A52).withValues(alpha: 0.92),
                         fontSize: 13,
@@ -403,7 +404,7 @@ class _SKGameScreenState extends State<SKGameScreen> {
                                           ),
                                           const SizedBox(height: 2),
                                           Text(
-                                            p.isHost ? '방장' : (p.isReady ? '준비 완료' : '대기 중'),
+                                            p.isHost ? L10n.of(context).skGameHost : (p.isReady ? L10n.of(context).skGameReady : L10n.of(context).skGameWaiting),
                                             maxLines: 1,
                                             overflow: TextOverflow.ellipsis,
                                             style: TextStyle(
@@ -453,9 +454,9 @@ class _SKGameScreenState extends State<SKGameScreen> {
               color: Colors.white.withValues(alpha: 0.12),
               borderRadius: BorderRadius.circular(999),
             ),
-            child: const Text(
-              '관전 대기',
-              style: TextStyle(
+            child: Text(
+              L10n.of(context).skGameSpectatorStandby,
+              style: const TextStyle(
                 color: Colors.white,
                 fontSize: 12,
                 fontWeight: FontWeight.w800,
@@ -506,20 +507,20 @@ class _SKGameScreenState extends State<SKGameScreen> {
       context: context,
       builder: (ctx) => AlertDialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        title: const Row(
+        title: Row(
           children: [
-            Icon(Icons.people_alt, color: Color(0xFF5A4038)),
-            SizedBox(width: 8),
-            Text('관전자 목록'),
+            const Icon(Icons.people_alt, color: Color(0xFF5A4038)),
+            const SizedBox(width: 8),
+            Text(L10n.of(context).skGameSpectatorListTitle),
           ],
         ),
         content: spectators.isEmpty
-            ? const SizedBox(
+            ? SizedBox(
                 height: 60,
                 child: Center(
                   child: Text(
-                    '관전 중인 사람이 없습니다',
-                    style: TextStyle(color: Color(0xFF9A8E8A)),
+                    L10n.of(context).skGameNoSpectators,
+                    style: const TextStyle(color: Color(0xFF9A8E8A)),
                   ),
                 ),
               )
@@ -587,7 +588,7 @@ class _SKGameScreenState extends State<SKGameScreen> {
                             ),
                             const SizedBox(width: 4),
                             Text(
-                              '항상승인',
+                              L10n.of(context).skGameAlwaysAccept,
                               style: TextStyle(
                                 fontSize: 12,
                                 fontWeight: FontWeight.bold,
@@ -620,7 +621,7 @@ class _SKGameScreenState extends State<SKGameScreen> {
                             ),
                             const SizedBox(width: 4),
                             Text(
-                              '항상거절',
+                              L10n.of(context).skGameAlwaysReject,
                               style: TextStyle(
                                 fontSize: 12,
                                 fontWeight: FontWeight.bold,
@@ -637,7 +638,7 @@ class _SKGameScreenState extends State<SKGameScreen> {
             ),
           TextButton(
             onPressed: () => Navigator.pop(ctx),
-            child: const Text('닫기'),
+            child: Text(L10n.of(context).commonClose),
           ),
         ],
       ),
@@ -665,7 +666,7 @@ class _SKGameScreenState extends State<SKGameScreen> {
                 const Icon(Icons.anchor, size: 14, color: Color(0xFF5A4038)),
                 const SizedBox(width: 5),
                 Text(
-                  '${state.round}라운드 ${state.trickNumber}번째',
+                  L10n.of(context).skGameRoundTrick(state.round, state.trickNumber),
                   style: const TextStyle(
                     fontSize: 13,
                     fontWeight: FontWeight.bold,
@@ -750,14 +751,14 @@ class _SKGameScreenState extends State<SKGameScreen> {
               borderRadius: BorderRadius.circular(999),
               border: Border.all(color: Colors.white.withValues(alpha: 0.14)),
             ),
-            child: const Row(
+            child: Row(
               mainAxisSize: MainAxisSize.min,
               children: [
-                Icon(Icons.visibility_rounded, size: 14, color: Colors.white),
-                SizedBox(width: 5),
+                const Icon(Icons.visibility_rounded, size: 14, color: Colors.white),
+                const SizedBox(width: 5),
                 Text(
-                  '관전',
-                  style: TextStyle(
+                  L10n.of(context).skGameSpectating,
+                  style: const TextStyle(
                     color: Colors.white,
                     fontSize: 12,
                     fontWeight: FontWeight.w800,
@@ -772,7 +773,7 @@ class _SKGameScreenState extends State<SKGameScreen> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  '${state.round}라운드 ${state.trickNumber}번째',
+                  L10n.of(context).skGameRoundTrick(state.round, state.trickNumber),
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   style: TextStyle(
@@ -784,8 +785,8 @@ class _SKGameScreenState extends State<SKGameScreen> {
                 const SizedBox(height: 2),
                 Text(
                   state.phase == 'bidding'
-                      ? '승리예측 진행 중 · 선: $currentPlayerName'
-                      : '$currentPlayerName 차례',
+                      ? L10n.of(context).skGameBiddingInProgress(currentPlayerName)
+                      : L10n.of(context).skGamePlayerTurn(currentPlayerName),
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   style: TextStyle(
@@ -1069,10 +1070,10 @@ class _SKGameScreenState extends State<SKGameScreen> {
           borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
           border: const Border(top: BorderSide(color: Color(0xFFE0D8D4))),
         ),
-        child: const Text(
-          '상단 프로필을 탭하여 패 보기를 요청하세요',
+        child: Text(
+          L10n.of(context).skGameTapToRequestCards,
           textAlign: TextAlign.center,
-          style: TextStyle(
+          style: const TextStyle(
             color: Color(0xFF8A7A72),
             fontSize: 13,
             fontWeight: FontWeight.w600,
@@ -1100,7 +1101,7 @@ class _SKGameScreenState extends State<SKGameScreen> {
             ),
             const SizedBox(width: 8),
             Text(
-              '${viewingPlayer.name}에게 패 보기 요청 중...',
+              L10n.of(context).skGameRequestingCardView(viewingPlayer.name),
               style: const TextStyle(
                 color: Color(0xFF8A7A72),
                 fontSize: 13,
@@ -1127,7 +1128,7 @@ class _SKGameScreenState extends State<SKGameScreen> {
             Padding(
               padding: const EdgeInsets.only(bottom: 4),
               child: Text(
-                '${viewingPlayer.name}의 패',
+                L10n.of(context).skGamePlayerHand(viewingPlayer.name),
                 style: const TextStyle(
                   color: Color(0xFF5A4038),
                   fontSize: 13,
@@ -1136,11 +1137,11 @@ class _SKGameScreenState extends State<SKGameScreen> {
               ),
             ),
             if (viewingPlayer.cards.isEmpty)
-              const Padding(
-                padding: EdgeInsets.symmetric(vertical: 8),
+              Padding(
+                padding: const EdgeInsets.symmetric(vertical: 8),
                 child: Text(
-                  '카드 없음',
-                  style: TextStyle(color: Color(0xFF8A7A72), fontSize: 12),
+                  L10n.of(context).skGameNoCards,
+                  style: const TextStyle(color: Color(0xFF8A7A72), fontSize: 12),
                 ),
               )
             else
@@ -1162,7 +1163,7 @@ class _SKGameScreenState extends State<SKGameScreen> {
         border: const Border(top: BorderSide(color: Color(0xFFE0D8D4))),
       ),
       child: Text(
-        '${viewingPlayer.name}이(가) 요청을 거절했습니다. 다른 플레이어를 탭하세요.',
+        L10n.of(context).skGameCardViewRejected(viewingPlayer.name),
         textAlign: TextAlign.center,
         style: const TextStyle(
           color: Color(0xFF8A7A72),
@@ -1184,8 +1185,8 @@ class _SKGameScreenState extends State<SKGameScreen> {
         ? '${currentPlayerName.substring(0, 8)}…'
         : currentPlayerName;
     final turnLabel = state.phase == 'bidding'
-        ? '선: $displayName'
-        : state.isMyTurn ? '내 턴' : '$displayName 대기';
+        ? L10n.of(context).skGameLeaderLabel(displayName)
+        : state.isMyTurn ? L10n.of(context).skGameMyTurn : L10n.of(context).skGameWaitingFor(displayName);
 
     return ConstrainedBox(
       constraints: const BoxConstraints(maxWidth: 220),
@@ -1231,7 +1232,7 @@ class _SKGameScreenState extends State<SKGameScreen> {
             ),
             const SizedBox(width: 4),
             Text(
-              '$_remainingSeconds초',
+              L10n.of(context).skGameSecondsShort(_remainingSeconds),
               style: TextStyle(
                 fontSize: 13,
                 fontWeight: FontWeight.w800,
@@ -1315,22 +1316,22 @@ class _SKGameScreenState extends State<SKGameScreen> {
       builder: (ctx) => AlertDialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
         backgroundColor: const Color(0xFFF8F4F1),
-        title: const Text(
-          '게임 나가기',
-          style: TextStyle(
+        title: Text(
+          L10n.of(context).skGameLeaveTitle,
+          style: const TextStyle(
             fontSize: 17,
             fontWeight: FontWeight.w800,
             color: Color(0xFF3E312A),
           ),
         ),
-        content: const Text(
-          '정말 게임에서 나가시겠습니까?',
-          style: TextStyle(fontSize: 14, color: Color(0xFF6A5A52)),
+        content: Text(
+          L10n.of(context).skGameLeaveConfirm,
+          style: const TextStyle(fontSize: 14, color: Color(0xFF6A5A52)),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx),
-            child: const Text('취소'),
+            child: Text(L10n.of(context).commonCancel),
           ),
           ElevatedButton(
             onPressed: () {
@@ -1342,7 +1343,7 @@ class _SKGameScreenState extends State<SKGameScreen> {
               foregroundColor: Colors.white,
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
             ),
-            child: const Text('나가기'),
+            child: Text(L10n.of(context).skGameLeaveButton),
           ),
         ],
       ),
@@ -1604,7 +1605,7 @@ class _SKGameScreenState extends State<SKGameScreen> {
             const SizedBox(width: 8),
             Expanded(
               child: Text(
-                '$playerName 시간 초과!',
+                L10n.of(context).skGameTimeout(playerName),
                 style: const TextStyle(color: Color(0xFFE65100), fontWeight: FontWeight.bold, fontSize: 14),
               ),
             ),
@@ -1633,8 +1634,8 @@ class _SKGameScreenState extends State<SKGameScreen> {
             Expanded(
               child: Text(
                 reason == 'timeout'
-                    ? '$playerName 탈주! (시간 초과 3회)'
-                    : '$playerName 님이 게임을 떠났습니다',
+                    ? L10n.of(context).skGameDesertionTimeout(playerName)
+                    : L10n.of(context).skGameDesertionLeave(playerName),
                 style: const TextStyle(color: Color(0xFFCC4444), fontWeight: FontWeight.bold, fontSize: 14),
               ),
             ),
@@ -1679,7 +1680,7 @@ class _SKGameScreenState extends State<SKGameScreen> {
                   const SizedBox(width: 8),
                   Expanded(
                     child: Text(
-                      '$spectatorNickname님이 패 보기를 요청했습니다',
+                      L10n.of(context).skGameCardViewRequest(spectatorNickname),
                       style: const TextStyle(
                         fontSize: 14,
                         fontWeight: FontWeight.bold,
@@ -1700,7 +1701,7 @@ class _SKGameScreenState extends State<SKGameScreen> {
                         side: const BorderSide(color: Color(0xFFCC6666)),
                         padding: const EdgeInsets.symmetric(vertical: 10),
                       ),
-                      child: const Text('거부'),
+                      child: Text(L10n.of(context).skGameReject),
                     ),
                   ),
                   const SizedBox(width: 8),
@@ -1712,7 +1713,7 @@ class _SKGameScreenState extends State<SKGameScreen> {
                         foregroundColor: Colors.white,
                         padding: const EdgeInsets.symmetric(vertical: 10),
                       ),
-                      child: const Text('허가'),
+                      child: Text(L10n.of(context).skGameAllow),
                     ),
                   ),
                 ],
@@ -1728,7 +1729,7 @@ class _SKGameScreenState extends State<SKGameScreen> {
                         side: const BorderSide(color: Color(0xFFCCCCCC)),
                         padding: const EdgeInsets.symmetric(vertical: 10),
                       ),
-                      child: const Text('항상거절', style: TextStyle(fontSize: 13)),
+                      child: Text(L10n.of(context).skGameAlwaysReject, style: const TextStyle(fontSize: 13)),
                     ),
                   ),
                   const SizedBox(width: 8),
@@ -1743,7 +1744,7 @@ class _SKGameScreenState extends State<SKGameScreen> {
                         side: const BorderSide(color: Color(0xFF4CAF50)),
                         padding: const EdgeInsets.symmetric(vertical: 10),
                       ),
-                      child: const Text('항상승인', style: TextStyle(fontSize: 13)),
+                      child: Text(L10n.of(context).skGameAlwaysAccept, style: const TextStyle(fontSize: 13)),
                     ),
                   ),
                 ],
@@ -1801,9 +1802,9 @@ class _SKGameScreenState extends State<SKGameScreen> {
                 ),
                 child: Row(
                   children: [
-                    const Text(
-                      '채팅',
-                      style: TextStyle(
+                    Text(
+                      L10n.of(context).skGameChat,
+                      style: const TextStyle(
                         color: Colors.white,
                         fontWeight: FontWeight.bold,
                         fontSize: 16,
@@ -1846,8 +1847,8 @@ class _SKGameScreenState extends State<SKGameScreen> {
                     Expanded(
                       child: TextField(
                         controller: _chatController,
-                        decoration: const InputDecoration(
-                          hintText: '메시지 입력...',
+                        decoration: InputDecoration(
+                          hintText: L10n.of(context).skGameMessageHint,
                           border: InputBorder.none,
                           contentPadding: EdgeInsets.symmetric(horizontal: 12),
                         ),
@@ -1894,10 +1895,10 @@ class _SKGameScreenState extends State<SKGameScreen> {
               children: [
                 const Icon(Icons.visibility, size: 16, color: Color(0xFF5A4038)),
                 const SizedBox(width: 6),
-                const Expanded(
+                Expanded(
                   child: Text(
-                    '내 패를 보는 중',
-                    style: TextStyle(
+                    L10n.of(context).skGameViewingMyHand,
+                    style: const TextStyle(
                       fontSize: 13,
                       fontWeight: FontWeight.bold,
                       color: Color(0xFF5A4038),
@@ -1912,9 +1913,9 @@ class _SKGameScreenState extends State<SKGameScreen> {
             ),
             const SizedBox(height: 8),
             if (game.cardViewers.isEmpty)
-              const Text(
-                '보고 있는 사람 없음',
-                style: TextStyle(fontSize: 12, color: Color(0xFF999999)),
+              Text(
+                L10n.of(context).skGameNoViewers,
+                style: const TextStyle(fontSize: 12, color: Color(0xFF999999)),
               )
             else
               ...game.cardViewers.map((viewer) {
@@ -2036,7 +2037,7 @@ class _SKGameScreenState extends State<SKGameScreen> {
               const SizedBox(height: 14),
               ListTile(
                 leading: const Icon(Icons.account_circle_outlined),
-                title: const Text('프로필 보기'),
+                title: Text(L10n.of(context).skGameViewProfile),
                 onTap: () {
                   Navigator.pop(ctx);
                   _showPlayerProfileDialog(nickname, game);
@@ -2047,7 +2048,7 @@ class _SKGameScreenState extends State<SKGameScreen> {
                   isBlocked ? Icons.lock_open_rounded : Icons.block_outlined,
                   color: isBlocked ? const Color(0xFF4CAF50) : const Color(0xFFE53935),
                 ),
-                title: Text(isBlocked ? '차단 해제' : '차단하기'),
+                title: Text(isBlocked ? L10n.of(context).skGameUnblock : L10n.of(context).skGameBlock),
                 onTap: () {
                   Navigator.pop(ctx);
                   if (isBlocked) {
@@ -2080,9 +2081,9 @@ class _SKGameScreenState extends State<SKGameScreen> {
               borderRadius: BorderRadius.circular(18),
               border: Border.all(color: const Color(0xFFE8DDD8)),
             ),
-            child: const Text(
-              '점수 히스토리',
-              style: TextStyle(
+            child: Text(
+              L10n.of(context).skGameScoreHistory,
+              style: const TextStyle(
                 fontSize: 18,
                 fontWeight: FontWeight.w800,
                 color: Color(0xFF3E312A),
@@ -2207,7 +2208,7 @@ class _SKGameScreenState extends State<SKGameScreen> {
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(ctx),
-              child: const Text('닫기'),
+              child: Text(L10n.of(context).commonClose),
             ),
           ],
         );
@@ -2232,7 +2233,7 @@ class _SKGameScreenState extends State<SKGameScreen> {
               const Icon(Icons.anchor, size: 20, color: Color(0xFF8A7A72)),
               const SizedBox(height: 4),
               Text(
-                state.phase == 'bidding' ? '승리예측 중...' : '카드를 내주세요',
+                state.phase == 'bidding' ? L10n.of(context).skGameBiddingPhase : L10n.of(context).skGamePlayCard,
                 style: const TextStyle(
                   fontSize: 13,
                   fontWeight: FontWeight.bold,
@@ -2257,20 +2258,21 @@ class _SKGameScreenState extends State<SKGameScreen> {
     String? voidReason;
     String? whaleNullifyLabel;
     int lootBonusPoints = 0;
+    bool isKraken = false;
     for (final entry in detail) {
       final type = entry['type'];
       if (type == 'kraken_void') {
-        voidReason = '🐙 크라켄 발동';
+        voidReason = L10n.of(context).skGameKrakenActivated;
+        isKraken = true;
       } else if (type == 'white_whale_void') {
-        voidReason = '🐋 화이트웨일 발동';
+        voidReason = L10n.of(context).skGameWhiteWhaleActivated;
       } else if (type == 'white_whale_nullify') {
-        whaleNullifyLabel = '🐋 화이트웨일 · 특수카드 무력화';
+        whaleNullifyLabel = L10n.of(context).skGameWhiteWhaleNullify;
       } else if (type == 'loot_bonus') {
         lootBonusPoints = (entry['winnerPoints'] as num?)?.toInt() ?? 0;
       }
     }
     final isVoided = state.lastTrickVoided;
-    final isKraken = voidReason?.contains('크라켄') ?? false;
 
     // Voided trick → distinct banner
     if (isVoided && state.phase == 'trick_end') {
@@ -2291,9 +2293,9 @@ class _SKGameScreenState extends State<SKGameScreen> {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              const Text(
-                '트릭 무효',
-                style: TextStyle(
+              Text(
+                L10n.of(context).skGameTrickVoided,
+                style: const TextStyle(
                   fontSize: 15,
                   fontWeight: FontWeight.w900,
                   color: Color(0xFFFFD54F),
@@ -2311,7 +2313,7 @@ class _SKGameScreenState extends State<SKGameScreen> {
               ),
               const SizedBox(height: 4),
               Text(
-                '$winnerName 선 플레이어',
+                L10n.of(context).skGameLeadPlayer(winnerName),
                 style: TextStyle(
                   fontSize: 10,
                   color: Colors.white.withValues(alpha: 0.75),
@@ -2335,7 +2337,7 @@ class _SKGameScreenState extends State<SKGameScreen> {
           mainAxisSize: MainAxisSize.min,
           children: [
             Text(
-              state.phase == 'trick_end' ? '$winnerName 승리' : '카드 확인 중...',
+              state.phase == 'trick_end' ? L10n.of(context).skGameTrickWinner(winnerName) : L10n.of(context).skGameCheckingCards,
               style: const TextStyle(
                 fontSize: 14,
                 fontWeight: FontWeight.w800,
@@ -2357,8 +2359,8 @@ class _SKGameScreenState extends State<SKGameScreen> {
               const SizedBox(height: 4),
               Text(
                 lootBonusPoints > 0
-                    ? '보너스 +$bonus (💰 +$lootBonusPoints)'
-                    : '보너스 +$bonus',
+                    ? L10n.of(context).skGameBonusWithLoot(bonus, lootBonusPoints)
+                    : L10n.of(context).skGameBonus(bonus),
                 style: const TextStyle(
                   fontSize: 12,
                   fontWeight: FontWeight.w700,
@@ -2394,7 +2396,7 @@ class _SKGameScreenState extends State<SKGameScreen> {
           mainAxisSize: MainAxisSize.min,
           children: [
             Text(
-              '승리예측: ${selfPlayer.bid}승',
+              L10n.of(context).skGameBidDone(selfPlayer.bid ?? 0),
               style: const TextStyle(
                 fontSize: 16,
                 fontWeight: FontWeight.bold,
@@ -2402,9 +2404,9 @@ class _SKGameScreenState extends State<SKGameScreen> {
               ),
             ),
             const SizedBox(height: 4),
-            const Text(
-              '다른 플레이어 대기 중...',
-              style: TextStyle(fontSize: 12, color: Color(0xFF8A7A72)),
+            Text(
+              L10n.of(context).skGameWaitingOthers,
+              style: const TextStyle(fontSize: 12, color: Color(0xFF8A7A72)),
             ),
           ],
         ),
@@ -2438,9 +2440,9 @@ class _SKGameScreenState extends State<SKGameScreen> {
               ),
             ),
           Text(
-            '이번 라운드에서 몇 번 승리할지 예측해보세요',
+            L10n.of(context).skGameBidPrompt,
             style: TextStyle(
-              color: Color(0xFF5A4038),
+              color: const Color(0xFF5A4038),
               fontSize: isLandscape ? 13 : 14,
               fontWeight: FontWeight.w800,
             ),
@@ -2487,7 +2489,7 @@ class _SKGameScreenState extends State<SKGameScreen> {
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
               ),
               child: Text(
-                _selectedBid != null ? '${_selectedBid!}승 예측' : '숫자를 선택하세요',
+                _selectedBid != null ? L10n.of(context).skGameBidSubmit(_selectedBid!) : L10n.of(context).skGameSelectNumber,
                 style: TextStyle(
                   fontWeight: FontWeight.bold,
                   fontSize: isLandscape ? 14 : 15,
@@ -2555,7 +2557,7 @@ class _SKGameScreenState extends State<SKGameScreen> {
                   ),
                   icon: const Icon(Icons.play_arrow, size: 20),
                   label: Text(
-                    '카드 내기',
+                    L10n.of(context).skGamePlayCardButton,
                     style: TextStyle(
                       fontWeight: FontWeight.bold,
                       fontSize: isLandscape ? 14 : 15,
@@ -2568,9 +2570,9 @@ class _SKGameScreenState extends State<SKGameScreen> {
             Padding(
               padding: const EdgeInsets.only(bottom: 8),
               child: Text(
-                '카드를 선택하세요',
+                L10n.of(context).skGameSelectCard,
                 style: TextStyle(
-                  color: Color(0xFF5A4038),
+                  color: const Color(0xFF5A4038),
                   fontSize: isLandscape ? 13 : 14,
                   fontWeight: FontWeight.bold,
                 ),
@@ -2620,9 +2622,9 @@ class _SKGameScreenState extends State<SKGameScreen> {
               ),
             ),
             const SizedBox(width: 4),
-            const Text(
-              '초기화',
-              style: TextStyle(
+            Text(
+              L10n.of(context).skGameReset,
+              style: const TextStyle(
                 fontSize: 11,
                 color: Color(0xFFE65100),
                 fontWeight: FontWeight.w700,
@@ -2780,9 +2782,9 @@ class _SKGameScreenState extends State<SKGameScreen> {
                           children: [
                             _buildCard('sk_escape', size: 80, highlighted: false),
                             const SizedBox(height: 8),
-                            const Text(
-                              '백기',
-                              style: TextStyle(
+                            Text(
+                              L10n.of(context).skGameTigressEscape,
+                              style: const TextStyle(
                                 fontSize: 14,
                                 fontWeight: FontWeight.w700,
                                 color: Color(0xFF6A5A52),
@@ -2812,9 +2814,9 @@ class _SKGameScreenState extends State<SKGameScreen> {
                           children: [
                             _buildCard('sk_pirate', size: 80, highlighted: false),
                             const SizedBox(height: 8),
-                            const Text(
-                              '해적',
-                              style: TextStyle(
+                            Text(
+                              L10n.of(context).skGameTigressPirate,
+                              style: const TextStyle(
                                 fontSize: 14,
                                 fontWeight: FontWeight.w700,
                                 color: Color(0xFFD24B4B),
@@ -2868,7 +2870,7 @@ class _SKGameScreenState extends State<SKGameScreen> {
               border: Border.all(color: const Color(0xFFE7DBD4)),
             ),
             child: Text(
-              'Round ${state.round} 결과',
+              L10n.of(context).skGameRoundResult(state.round),
               style: TextStyle(
                 color: Color(0xFF5A4038),
                 fontSize: isLandscape ? 14 : 16,
@@ -2883,12 +2885,12 @@ class _SKGameScreenState extends State<SKGameScreen> {
               const Expanded(flex: 3, child: Text('', style: TextStyle(fontSize: 11))),
               Expanded(
                 flex: 2,
-                child: Text('예측/획득', textAlign: TextAlign.center,
+                child: Text(L10n.of(context).skGameBidTricks, textAlign: TextAlign.center,
                     style: TextStyle(fontSize: isLandscape ? 9 : 10, color: const Color(0xFF8A7A72), fontWeight: FontWeight.bold)),
               ),
-              SizedBox(width: isLandscape ? 34 : 40, child: Text('보너스', textAlign: TextAlign.center,
+              SizedBox(width: isLandscape ? 34 : 40, child: Text(L10n.of(context).skGameBonusHeader, textAlign: TextAlign.center,
                   style: TextStyle(fontSize: isLandscape ? 9 : 10, color: const Color(0xFF8A7A72), fontWeight: FontWeight.bold))),
-              SizedBox(width: isLandscape ? 44 : 50, child: Text('점수', textAlign: TextAlign.end,
+              SizedBox(width: isLandscape ? 44 : 50, child: Text(L10n.of(context).skGameScoreHeader, textAlign: TextAlign.end,
                   style: TextStyle(fontSize: isLandscape ? 9 : 10, color: const Color(0xFF8A7A72), fontWeight: FontWeight.bold))),
             ],
           ),
@@ -2983,7 +2985,7 @@ class _SKGameScreenState extends State<SKGameScreen> {
             }),
           SizedBox(height: isLandscape ? 6 : 8),
           Text(
-            '다음 라운드 준비 중...',
+            L10n.of(context).skGameNextRoundPreparing,
             style: TextStyle(color: const Color(0xFF8A7A72), fontSize: isLandscape ? 11 : 12),
           ),
             ],
@@ -3016,9 +3018,9 @@ class _SKGameScreenState extends State<SKGameScreen> {
               borderRadius: BorderRadius.circular(12),
               border: Border.all(color: const Color(0xFFE7DBD4)),
             ),
-            child: const Text(
-              '게임 종료',
-              style: TextStyle(
+            child: Text(
+              L10n.of(context).skGameGameOver,
+              style: const TextStyle(
                 color: Color(0xFF5A4038),
                 fontSize: 18,
                 fontWeight: FontWeight.w800,
@@ -3105,8 +3107,8 @@ class _SKGameScreenState extends State<SKGameScreen> {
             ),
             child: Text(
               _gameEndCountdown > 0
-                  ? '$_gameEndCountdown초 후 자동으로 대기실로 돌아갑니다'
-                  : '대기실로 이동 중...',
+                  ? L10n.of(context).skGameAutoReturnCountdown(_gameEndCountdown)
+                  : L10n.of(context).skGameReturningToRoom,
               textAlign: TextAlign.center,
               style: const TextStyle(
                 color: Color(0xFF355D89),
@@ -3177,9 +3179,9 @@ class _SKGameScreenState extends State<SKGameScreen> {
                                 overflow: TextOverflow.ellipsis,
                               ),
                               const SizedBox(height: 2),
-                              const Text(
-                                '플레이어 프로필',
-                                style: TextStyle(
+                              Text(
+                                L10n.of(context).skGamePlayerProfile,
+                                style: const TextStyle(
                                   fontSize: 12,
                                   color: Color(0xFF84766E),
                                 ),
@@ -3199,26 +3201,26 @@ class _SKGameScreenState extends State<SKGameScreen> {
                             _buildProfileIconButton(
                               icon: Icons.check,
                               color: const Color(0xFFBDBDBD),
-                              tooltip: '이미 친구',
+                              tooltip: L10n.of(context).skGameAlreadyFriend,
                               onTap: () {},
                             )
                           else if (game.sentFriendRequests.contains(nickname))
                             _buildProfileIconButton(
                               icon: Icons.hourglass_top,
                               color: const Color(0xFFBDBDBD),
-                              tooltip: '요청중',
+                              tooltip: L10n.of(context).skGameRequestPending,
                               onTap: () {},
                             )
                           else
                             _buildProfileIconButton(
                               icon: Icons.person_add,
                               color: const Color(0xFF81C784),
-                              tooltip: '친구 추가',
+                              tooltip: L10n.of(context).skGameAddFriend,
                               onTap: () {
                                 game.addFriendAction(nickname);
                                 Navigator.pop(ctx);
                                 ScaffoldMessenger.of(context).showSnackBar(
-                                  const SnackBar(content: Text('친구 요청을 보냈습니다')),
+                                  SnackBar(content: Text(L10n.of(context).skGameFriendRequestSent)),
                                 );
                               },
                             ),
@@ -3227,17 +3229,17 @@ class _SKGameScreenState extends State<SKGameScreen> {
                             color: isBlockedUser
                                 ? const Color(0xFF64B5F6)
                                 : const Color(0xFFFF8A65),
-                            tooltip: isBlockedUser ? '차단 해제' : '차단하기',
+                            tooltip: isBlockedUser ? L10n.of(context).skGameUnblockUser : L10n.of(context).skGameBlockUser,
                             onTap: () {
                               if (isBlockedUser) {
                                 game.unblockUserAction(nickname);
                                 ScaffoldMessenger.of(context).showSnackBar(
-                                  const SnackBar(content: Text('차단이 해제되었습니다')),
+                                  SnackBar(content: Text(L10n.of(context).skGameUserUnblocked)),
                                 );
                               } else {
                                 game.blockUserAction(nickname);
                                 ScaffoldMessenger.of(context).showSnackBar(
-                                  const SnackBar(content: Text('차단되었습니다')),
+                                  SnackBar(content: Text(L10n.of(context).skGameUserBlocked)),
                                 );
                               }
                             },
@@ -3262,7 +3264,7 @@ class _SKGameScreenState extends State<SKGameScreen> {
               actions: [
                 TextButton(
                   onPressed: () => Navigator.pop(ctx),
-                  child: const Text('닫기'),
+                  child: Text(L10n.of(context).commonClose),
                 ),
               ],
             );
@@ -3275,8 +3277,8 @@ class _SKGameScreenState extends State<SKGameScreen> {
   Widget _buildProfileContent(Map<String, dynamic> data) {
     final profile = data['profile'] as Map<String, dynamic>?;
     if (profile == null) {
-      return const Text('프로필을 찾을 수 없습니다',
-          style: TextStyle(color: Color(0xFF8A7A72)));
+      return Text(L10n.of(context).skGameProfileNotFound,
+          style: const TextStyle(color: Color(0xFF8A7A72)));
     }
 
     final totalGames = profile['totalGames'] ?? 0;
@@ -3312,7 +3314,7 @@ class _SKGameScreenState extends State<SKGameScreen> {
         const SizedBox(height: 10),
         // Tichu Stats
         _buildStatsCard(
-          title: '티츄 전적',
+          title: L10n.of(context).skGameTichuRecord,
           icon: Icons.style,
           iconColor: const Color(0xFFFFB74D),
           bgColor: const Color(0xFFF5F5F5),
@@ -3329,7 +3331,7 @@ class _SKGameScreenState extends State<SKGameScreen> {
           final skLosses = profile['skLosses'] ?? 0;
           final skWinRate = profile['skWinRate'] ?? 0;
           return _buildStatsCard(
-            title: '스컬킹 전적',
+            title: L10n.of(context).skGameSkullKingRecord,
             icon: Icons.anchor,
             iconColor: const Color(0xFF3949AB),
             bgColor: const Color(0xFFE8EAF6),
@@ -3380,8 +3382,8 @@ class _SKGameScreenState extends State<SKGameScreen> {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceEvenly,
             children: [
-              _buildStatChip('전적', '$games전 $wins승 $losses패'),
-              _buildStatChip('승률', '$winRate%'),
+              _buildStatChip(L10n.of(context).skGameStatRecord, L10n.of(context).skGameRecordFormat(games, wins, losses)),
+              _buildStatChip(L10n.of(context).skGameStatWinRate, '$winRate%'),
             ],
           ),
         ],

@@ -14,7 +14,7 @@ const {
   submitInquiry, getUserInquiries, markInquiriesRead, getRankings,
   getWallet, getGoldHistory, getShopItems, getUserItems, buyItem, equipItem, useItem, changeNickname,
   incrementLeaveCount, setRankedBan, getRankedBan, setChatBan, getChatBan, grantSeasonRewards,
-  getActiveSeason, createSeason, getSeasons, getConfig,
+  getActiveSeason, createSeason, getSeasons, getConfig, getLocalizedConfig,
   getCurrentSeasonRankings, getSeasonRankings, resetSeasonStats,
   loginSocial, registerSocial,
   linkSocial, unlinkSocial, getLinkedSocial,
@@ -118,24 +118,42 @@ async function sendPushNotification(fcmToken, title, body) {
   }
 }
 
+const { handleAdminRoute } = require('./admin');
+const { t } = require('./i18n');
+
 async function sendFriendRequestPush(targetNickname, fromNickname) {
   try {
     const { pool } = require('./db/database');
     const res = await pool.query(
-      'SELECT fcm_token, push_enabled, push_friend_invite FROM tc_users WHERE nickname = $1',
+      'SELECT fcm_token, push_enabled, push_friend_invite, locale FROM tc_users WHERE nickname = $1',
       [targetNickname]
     );
     if (res.rows.length === 0) return;
     const user = res.rows[0];
     if (!user.fcm_token || user.push_enabled === false || user.push_friend_invite === false) return;
-    await sendPushNotification(user.fcm_token, 'Tichu Online', `${fromNickname}님이 친구 요청을 보냈습니다`);
+    const body = t(user.locale, 'push_friend_request_body', { nickname: fromNickname });
+    await sendPushNotification(user.fcm_token, 'Tichu Online', body);
   } catch (err) {
     console.error('Friend request push error:', err.message);
   }
 }
 
-const { handleAdminRoute } = require('./admin');
-const { t } = require('./i18n');
+// Translate a handler result's message.
+// - messageKey present → locale-aware translation (missing key falls back to
+//   the locale's generic_error, never cross-falls to ko for non-ko clients)
+// - raw message present → return as-is (legacy Korean strings). Old clients
+//   with no locale get Korean either way; new clients see Korean until the
+//   legacy path is migrated to messageKey.
+// - neither present → locale-aware generic_error
+function resultMessage(result, locale) {
+  if (result && result.messageKey) {
+    return t(locale, result.messageKey, result.messageParams);
+  }
+  if (result && result.message) {
+    return result.message;
+  }
+  return t(locale, 'generic_error');
+}
 
 const PORT = process.env.PORT || 8080;
 
@@ -741,8 +759,8 @@ async function handleMessage(ws, data) {
 
 async function handleGetAppConfig(ws) {
   try {
-    const eulaContent = await getConfig('eula_content');
-    const privacyPolicy = await getConfig('privacy_policy');
+    const eulaContent = await getLocalizedConfig('eula_content', ws.locale);
+    const privacyPolicy = await getLocalizedConfig('privacy_policy', ws.locale);
     const minVersion = await getConfig('min_version');
     const latestVersion = await getConfig('latest_version');
     sendTo(ws, {
@@ -761,12 +779,20 @@ async function handleGetAppConfig(ws) {
 async function handleRegister(ws, data) {
   const { username, password, nickname } = data;
   const result = await registerUser(username, password, nickname);
-  sendTo(ws, { type: 'register_result', ...result });
+  sendTo(ws, {
+    type: 'register_result',
+    success: result.success,
+    message: resultMessage(result, ws.locale),
+  });
 }
 
 async function handleCheckNickname(ws, data) {
   const result = await checkNickname(data.nickname);
-  sendTo(ws, { type: 'nickname_check_result', ...result });
+  sendTo(ws, {
+    type: 'nickname_check_result',
+    available: result.available,
+    message: resultMessage(result, ws.locale),
+  });
 }
 
 async function handleDeleteAccount(ws) {
@@ -817,7 +843,11 @@ async function handleDeleteAccount(ws) {
     ws.playerId = null;
     ws.userId = null;
   }
-  sendTo(ws, { type: 'account_deleted', ...result });
+  sendTo(ws, {
+    type: 'account_deleted',
+    success: result.success,
+    message: resultMessage(result, ws.locale),
+  });
   if (result.success) {
     setTimeout(() => { try { ws.close(); } catch (_) {} }, 500);
   }
@@ -828,7 +858,7 @@ async function handleLogin(ws, data) {
   const result = await loginUser(username, password);
 
   if (!result.success) {
-    sendTo(ws, { type: 'login_error', message: result.message });
+    sendTo(ws, { type: 'login_error', message: resultMessage(result, ws.locale) });
     return;
   }
 
@@ -1070,7 +1100,7 @@ async function handleSocialRegister(ws, data) {
     }
 
     if (!result.success) {
-      sendTo(ws, { type: 'login_error', message: result.message });
+      sendTo(ws, { type: 'login_error', message: resultMessage(result, ws.locale) });
       return;
     }
 
@@ -1121,7 +1151,7 @@ async function handleSocialLink(ws, data) {
     if (result.success && result.provider) {
       ws.authProvider = result.provider;
     }
-    sendTo(ws, { type: 'social_link_result', success: result.success, message: result.message, provider: result.provider });
+    sendTo(ws, { type: 'social_link_result', success: result.success, message: resultMessage(result, ws.locale), provider: result.provider });
   } catch (err) {
     console.error('Social link error:', err);
     sendTo(ws, { type: 'social_link_result', success: false, message: t(ws.locale, 'social_link_failed') });
@@ -1139,7 +1169,7 @@ async function handleSocialUnlink(ws) {
     if (result.success) {
       ws.authProvider = 'local';
     }
-    sendTo(ws, { type: 'social_unlink_result', success: result.success, message: result.message });
+    sendTo(ws, { type: 'social_unlink_result', success: result.success, message: resultMessage(result, ws.locale) });
   } catch (err) {
     console.error('Social unlink error:', err);
     sendTo(ws, { type: 'social_unlink_result', success: false, message: t(ws.locale, 'social_unlink_failed') });
@@ -1542,7 +1572,7 @@ async function handleJoinRoom(ws, data) {
   const password = typeof data.password === 'string' ? data.password.trim() : '';
   const result = room.addPlayer(ws.playerId, ws.nickname, password);
   if (!result.success) {
-    sendTo(ws, { type: 'error', message: result.message });
+    sendTo(ws, { type: 'error', message: resultMessage(result, ws.locale) });
     return;
   }
   ws.roomId = room.id;
@@ -1761,7 +1791,7 @@ function handleSpectateRoom(ws, data) {
   const password = typeof data.password === 'string' ? data.password.trim() : '';
   const result = room.addSpectator(ws.playerId, ws.nickname, password);
   if (!result.success) {
-    sendTo(ws, { type: 'error', message: result.message });
+    sendTo(ws, { type: 'error', message: resultMessage(result, ws.locale) });
     return;
   }
   ws.roomId = room.id;
@@ -1797,7 +1827,7 @@ function handleRequestCardView(ws, data) {
   const playerId = data.playerId;
   const result = room.requestCardView(ws.playerId, ws.nickname, playerId);
   if (!result.success) {
-    sendTo(ws, { type: 'error', message: result.message });
+    sendTo(ws, { type: 'error', message: resultMessage(result, ws.locale) });
     return;
   }
 
@@ -1866,7 +1896,7 @@ function handleRespondCardView(ws, data) {
 
   const result = room.respondCardViewRequest(ws.playerId, spectatorId, allow);
   if (!result.success) {
-    sendTo(ws, { type: 'error', message: result.message });
+    sendTo(ws, { type: 'error', message: resultMessage(result, ws.locale) });
     return;
   }
 
@@ -2025,7 +2055,7 @@ function handleChangeTeam(ws, data) {
   }
   const result = room.movePlayerToSlot(ws.playerId, targetSlot);
   if (!result.success) {
-    sendTo(ws, { type: 'error', message: result.message });
+    sendTo(ws, { type: 'error', message: resultMessage(result, ws.locale) });
     return;
   }
   broadcastRoomState(ws.roomId);
@@ -2085,9 +2115,9 @@ function handleAddBot(ws, data) {
     return;
   }
   const targetSlot = typeof data.targetSlot === 'number' ? data.targetSlot : undefined;
-  const result = room.addBot(targetSlot);
+  const result = room.addBot(targetSlot, ws.locale);
   if (!result.success) {
-    sendTo(ws, { type: 'error', message: result.message });
+    sendTo(ws, { type: 'error', message: resultMessage(result, ws.locale) });
     return;
   }
   broadcastRoomState(ws.roomId);
@@ -2104,7 +2134,7 @@ function handleSwitchToSpectator(ws) {
   if (!room) { sendTo(ws, { type: 'room_closed' }); ws.roomId = null; return; }
   const result = room.switchToSpectator(ws.playerId);
   if (!result.success) {
-    sendTo(ws, { type: 'error', message: result.message });
+    sendTo(ws, { type: 'error', message: resultMessage(result, ws.locale) });
     return;
   }
   ws.isSpectator = true;
@@ -2136,7 +2166,7 @@ function handleSwitchToPlayer(ws, data) {
   }
   const result = room.switchToPlayer(ws.playerId, ws.nickname, targetSlot);
   if (!result.success) {
-    sendTo(ws, { type: 'error', message: result.message });
+    sendTo(ws, { type: 'error', message: resultMessage(result, ws.locale) });
     return;
   }
   ws.isSpectator = false;
@@ -2214,7 +2244,7 @@ function handleGameAction(ws, data) {
     }
     const result = room.game.handleAction(ws.playerId, data);
     if (!result.success) {
-      sendTo(ws, { type: 'error', message: result.message });
+      sendTo(ws, { type: 'error', message: resultMessage(result, ws.locale) });
       return;
     }
     sendGameStateToAll(ws.roomId);
@@ -2223,7 +2253,7 @@ function handleGameAction(ws, data) {
 
   const result = room.game.handleAction(ws.playerId, data);
   if (!result.success) {
-    sendTo(ws, { type: 'error', message: result.message });
+    sendTo(ws, { type: 'error', message: resultMessage(result, ws.locale) });
     return;
   }
 
@@ -2482,7 +2512,7 @@ function scheduleBotActions(roomId) {
             console.log(`[BOT] ${botId} action: ${action2.type}`);
             let result2 = r2.game.handleAction(botId, action2);
             if (result2 && !result2.success && r2.game) {
-              console.log(`[BOT] ${botId} action failed: ${result2.message}, trying fallback`);
+              console.log(`[BOT] ${botId} action failed: ${result2.messageKey || result2.message}, trying fallback`);
               const fallback2 = r2.game.getAutoTimeoutAction(botId);
               if (fallback2) {
                 console.log(`[BOT] ${botId} fallback: ${fallback2.type}`);
@@ -2501,7 +2531,7 @@ function scheduleBotActions(roomId) {
         let result = r.game.handleAction(botId, action);
         // If bot's action failed (e.g. call obligation), use server's auto-action as fallback
         if (result && !result.success && r.game) {
-          console.log(`[BOT] ${botId} action failed: ${result.message}, trying fallback`);
+          console.log(`[BOT] ${botId} action failed: ${result.messageKey || result.message}, trying fallback`);
           const fallback = r.game.getAutoTimeoutAction(botId);
           if (fallback) {
             console.log(`[BOT] ${botId} fallback: ${fallback.type}`);
@@ -2927,8 +2957,8 @@ async function handleDesertion(roomId, playerId, reason = 'leave') {
   const deserterWs = findWsByPlayerId(playerId);
   if (deserterWs) {
     const kickMessage = reason === 'timeout'
-      ? '시간 초과 3회로 퇴장되었습니다'
-      : '게임에서 나가 패배 처리되었습니다';
+      ? t(deserterWs.locale, 'kicked_timeout_3x')
+      : t(deserterWs.locale, 'kicked_desertion');
     sendTo(deserterWs, { type: 'kicked', message: kickMessage });
     deserterWs.roomId = null;
   }
@@ -3164,7 +3194,11 @@ async function handleReportUser(ws, data) {
     }
   }
   const result = await reportUser(ws.nickname, targetNickname, reason, ws.roomId || '', chatContext);
-  sendTo(ws, { type: 'report_result', ...result });
+  sendTo(ws, {
+    type: 'report_result',
+    success: result.success,
+    message: resultMessage(result, ws.locale),
+  });
   if (result.success) {
     await notifyAdminUsers(
       'report',
@@ -3512,9 +3546,11 @@ async function handleResolveAdminInquiry(ws, data) {
     const targetNickname = result.inquiry.user_nickname;
     const user = await getUserDetail(targetNickname);
     if (user && user.fcm_token && user.push_enabled !== false) {
-      const title = '문의 답변이 도착했어요';
+      const title = t(user.locale, 'push_inquiry_reply_title');
       const inquiryTitle = result.inquiry.title || '';
-      const message = inquiryTitle ? `제목: ${inquiryTitle}` : '앱에서 확인해주세요.';
+      const message = inquiryTitle
+        ? t(user.locale, 'push_inquiry_reply_body_with_title', { title: inquiryTitle })
+        : t(user.locale, 'push_inquiry_reply_body');
       await sendPushNotification(user.fcm_token, title, message);
     }
   }
@@ -3696,20 +3732,25 @@ async function handleAddFriend(ws, data) {
     return;
   }
   const result = await addFriend(ws.nickname, targetNickname);
-  sendTo(ws, { type: 'friend_result', ...result });
+  sendTo(ws, {
+    type: 'friend_result',
+    success: result.success,
+    autoAccepted: result.autoAccepted,
+    message: resultMessage(result, ws.locale),
+  });
   // Real-time notification to target
   if (result.success) {
     const targetWs = findWsByNickname(targetNickname);
     if (targetWs) {
-      if (result.message === '친구가 되었습니다') {
+      if (result.autoAccepted) {
         // Auto-accepted (they had sent us a request) — notify both
         sendTo(targetWs, { type: 'friend_request_accepted', nickname: ws.nickname });
       } else {
         sendTo(targetWs, { type: 'friend_request_received', fromNickname: ws.nickname });
       }
     }
-    // Push notification for friend request (offline or online)
-    if (result.message !== '친구가 되었습니다') {
+    // Push notification only for new requests (skip auto-accept)
+    if (!result.autoAccepted) {
       sendFriendRequestPush(targetNickname, ws.nickname);
     }
   }
@@ -3881,7 +3922,7 @@ async function handleSendDm(ws, data) {
   }
   const result = await sendDm(ws.nickname, targetNickname, message);
   if (!result.success) {
-    sendTo(ws, { type: 'dm_error', message: result.message });
+    sendTo(ws, { type: 'dm_error', message: resultMessage(result, ws.locale) });
     return;
   }
   const dmMsg = {

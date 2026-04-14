@@ -109,23 +109,23 @@ class SkullKingGame {
       case 'next_round':
         return this.handleNextRound();
       default:
-        return { success: false, message: `Unknown action: ${data.type}` };
+        return { success: false, messageKey: 'game_unknown_action', messageParams: { type: data.type } };
     }
   }
 
   handleSubmitBid(playerId, bid) {
     if (this.state !== 'bidding') {
-      return { success: false, message: '비딩 페이즈가 아닙니다' };
+      return { success: false, messageKey: 'sk_not_bidding_phase' };
     }
     if (!this.playerIds.includes(playerId)) {
-      return { success: false, message: '플레이어를 찾을 수 없습니다' };
+      return { success: false, messageKey: 'player_not_found' };
     }
     if (this.bids[playerId] !== null) {
-      return { success: false, message: '이미 비드를 제출했습니다' };
+      return { success: false, messageKey: 'sk_bid_already_submitted' };
     }
     const bidNum = parseInt(bid);
     if (isNaN(bidNum) || bidNum < 0 || bidNum > this.round) {
-      return { success: false, message: `비드는 0~${this.round} 사이여야 합니다` };
+      return { success: false, messageKey: 'sk_bid_range', messageParams: { max: this.round } };
     }
 
     this.bids[playerId] = bidNum;
@@ -165,32 +165,32 @@ class SkullKingGame {
 
   handlePlayCard(playerId, cardId, tigressChoice) {
     if (this.state !== 'playing') {
-      return { success: false, message: '플레이 페이즈가 아닙니다' };
+      return { success: false, messageKey: 'sk_not_play_phase' };
     }
     if (playerId !== this.currentPlayer) {
-      return { success: false, message: '당신의 차례가 아닙니다' };
+      return { success: false, messageKey: 'sk_not_your_turn' };
     }
 
     // Validate card in hand
     const hand = this.hands[playerId];
     if (!hand || !hand.includes(cardId)) {
-      return { success: false, message: '손에 없는 카드입니다' };
+      return { success: false, messageKey: 'sk_card_not_in_hand' };
     }
 
     // Check suit following
     const legalCards = this.getLegalCards(playerId);
     if (!legalCards.includes(cardId)) {
-      return { success: false, message: '수트 팔로잉 규칙을 위반했습니다' };
+      return { success: false, messageKey: 'sk_suit_follow_violated' };
     }
 
     // Validate tigress choice
     const cardInfo = getCardInfo(cardId);
     if (!cardInfo) {
-      return { success: false, message: '유효하지 않은 카드입니다' };
+      return { success: false, messageKey: 'sk_invalid_card' };
     }
     if (cardInfo.type === CARD_TYPE.TIGRESS) {
       if (!tigressChoice || (tigressChoice !== 'pirate' && tigressChoice !== 'escape')) {
-        return { success: false, message: 'Tigress 선택이 필요합니다 (pirate/escape)' };
+        return { success: false, messageKey: 'sk_tigress_choice_required' };
       }
     }
 
@@ -310,7 +310,7 @@ class SkullKingGame {
 
   handleNextRound() {
     if (this.state !== 'round_end') {
-      return { success: false, message: '라운드 종료 상태가 아닙니다' };
+      return { success: false, messageKey: 'sk_not_round_end' };
     }
     this.startNextRound();
     return { success: true };

@@ -145,6 +145,7 @@ async function initDatabase() {
     await client.query(`ALTER TABLE tc_users ADD COLUMN IF NOT EXISTS os_version VARCHAR(50)`);
     await client.query(`ALTER TABLE tc_users ADD COLUMN IF NOT EXISTS app_version VARCHAR(50)`);
     await client.query(`ALTER TABLE tc_users ADD COLUMN IF NOT EXISTS last_ip VARCHAR(45)`);
+    await client.query(`ALTER TABLE tc_users ADD COLUMN IF NOT EXISTS locale VARCHAR(5)`);
 
     // Social login columns
     await client.query(`ALTER TABLE tc_users ADD COLUMN IF NOT EXISTS auth_provider VARCHAR(20) DEFAULT 'local'`);
@@ -355,6 +356,21 @@ async function initDatabase() {
       ON CONFLICT (key) DO NOTHING
     `);
 
+    // Migrate legacy Korean-only EULA/privacy into locale-suffixed keys.
+    // The legacy key (eula_content / privacy_policy) is preserved as the
+    // last-resort fallback. Admin fills in _en and _de via backstage; _ko
+    // seeds from the legacy Korean content so it shows up ready to edit.
+    await client.query(`
+      INSERT INTO tc_config (key, value)
+      SELECT 'eula_content_ko', value FROM tc_config WHERE key = 'eula_content'
+      ON CONFLICT (key) DO NOTHING
+    `);
+    await client.query(`
+      INSERT INTO tc_config (key, value)
+      SELECT 'privacy_policy_ko', value FROM tc_config WHERE key = 'privacy_policy'
+      ON CONFLICT (key) DO NOTHING
+    `);
+
     // Admin accounts table
     await client.query(`
       CREATE TABLE IF NOT EXISTS admin_accounts (
@@ -560,27 +576,27 @@ async function initDatabase() {
 async function registerUser(username, password, nickname) {
   // Validate username
   if (!username || username.length < 2) {
-    return { success: false, message: '아이디는 2글자 이상이어야 합니다' };
+    return { success: false, messageKey: 'db_username_too_short' };
   }
   if (/\s/.test(username)) {
-    return { success: false, message: '아이디에 공백을 사용할 수 없습니다' };
+    return { success: false, messageKey: 'db_username_no_space' };
   }
 
   // Validate password
   if (!password || password.length < 4) {
-    return { success: false, message: '비밀번호는 4글자 이상이어야 합니다' };
+    return { success: false, messageKey: 'db_password_too_short' };
   }
 
   // Validate nickname
   if (!nickname || nickname.trim().length < 1) {
-    return { success: false, message: '닉네임을 입력해주세요' };
+    return { success: false, messageKey: 'db_nickname_required' };
   }
   const trimmedNickname = nickname.trim();
   if (trimmedNickname.length < 2 || trimmedNickname.length > 10) {
-    return { success: false, message: '닉네임은 2~10자여야 합니다' };
+    return { success: false, messageKey: 'db_nickname_length' };
   }
   if (/\s/.test(trimmedNickname)) {
-    return { success: false, message: '닉네임에 공백을 사용할 수 없습니다' };
+    return { success: false, messageKey: 'db_nickname_no_space' };
   }
 
   const client = await pool.connect();
@@ -591,7 +607,7 @@ async function registerUser(username, password, nickname) {
       [username.toLowerCase()]
     );
     if (usernameCheck.rows.length > 0) {
-      return { success: false, message: '이미 사용중인 아이디입니다' };
+      return { success: false, messageKey: 'db_username_taken' };
     }
 
     // Check if nickname exists
@@ -600,7 +616,7 @@ async function registerUser(username, password, nickname) {
       [trimmedNickname]
     );
     if (nicknameCheck.rows.length > 0) {
-      return { success: false, message: '이미 사용중인 닉네임입니다' };
+      return { success: false, messageKey: 'db_nickname_taken' };
     }
 
     // Hash password and insert
@@ -610,10 +626,10 @@ async function registerUser(username, password, nickname) {
       [username.toLowerCase(), passwordHash, trimmedNickname]
     );
 
-    return { success: true, message: '회원가입이 완료되었습니다' };
+    return { success: true, messageKey: 'db_register_success' };
   } catch (err) {
     console.error('Registration error:', err);
-    return { success: false, message: '회원가입 중 오류가 발생했습니다' };
+    return { success: false, messageKey: 'db_register_error' };
   } finally {
     client.release();
   }
@@ -622,7 +638,7 @@ async function registerUser(username, password, nickname) {
 // Login user
 async function loginUser(username, password) {
   if (!username || !password) {
-    return { success: false, message: '아이디와 비밀번호를 입력해주세요' };
+    return { success: false, messageKey: 'db_login_required_fields' };
   }
 
   const client = await pool.connect();
@@ -633,19 +649,19 @@ async function loginUser(username, password) {
     );
 
     if (result.rows.length === 0) {
-      return { success: false, message: '존재하지 않는 아이디입니다' };
+      return { success: false, messageKey: 'db_username_not_found' };
     }
 
     const user = result.rows[0];
 
     if (user.is_deleted) {
-      return { success: false, message: '탈퇴한 계정입니다' };
+      return { success: false, messageKey: 'db_account_deleted' };
     }
 
     const passwordMatch = await bcrypt.compare(password, user.password_hash);
 
     if (!passwordMatch) {
-      return { success: false, message: '비밀번호가 일치하지 않습니다' };
+      return { success: false, messageKey: 'db_wrong_password' };
     }
 
     // Update last login
@@ -666,7 +682,7 @@ async function loginUser(username, password) {
     };
   } catch (err) {
     console.error('Login error:', err);
-    return { success: false, message: '로그인 중 오류가 발생했습니다' };
+    return { success: false, messageKey: 'db_login_error' };
   } finally {
     client.release();
   }
@@ -675,14 +691,14 @@ async function loginUser(username, password) {
 // Check if nickname is available
 async function checkNickname(nickname) {
   if (!nickname || nickname.trim().length < 1) {
-    return { available: false, message: '닉네임을 입력해주세요' };
+    return { available: false, messageKey: 'db_nickname_required' };
   }
   const trimmedNickname = nickname.trim();
   if (trimmedNickname.length < 2 || trimmedNickname.length > 10) {
-    return { available: false, message: '닉네임은 2~10자여야 합니다' };
+    return { available: false, messageKey: 'db_nickname_length' };
   }
   if (/\s/.test(trimmedNickname)) {
-    return { available: false, message: '닉네임에 공백을 사용할 수 없습니다' };
+    return { available: false, messageKey: 'db_nickname_no_space' };
   }
 
   const client = await pool.connect();
@@ -691,13 +707,14 @@ async function checkNickname(nickname) {
       'SELECT id FROM tc_users WHERE nickname = $1',
       [trimmedNickname]
     );
+    const available = result.rows.length === 0;
     return {
-      available: result.rows.length === 0,
-      message: result.rows.length === 0 ? '사용 가능한 닉네임입니다' : '이미 사용중인 닉네임입니다',
+      available,
+      messageKey: available ? 'db_nickname_available' : 'db_nickname_taken',
     };
   } catch (err) {
     console.error('Nickname check error:', err);
-    return { available: false, message: '확인 중 오류가 발생했습니다' };
+    return { available: false, messageKey: 'db_nickname_check_error' };
   } finally {
     client.release();
   }
@@ -706,7 +723,7 @@ async function checkNickname(nickname) {
 // Delete user account
 async function deleteUser(nickname) {
   if (!nickname) {
-    return { success: false, message: '닉네임이 필요합니다' };
+    return { success: false, messageKey: 'db_nickname_needed' };
   }
 
   const client = await pool.connect();
@@ -716,7 +733,7 @@ async function deleteUser(nickname) {
     const check = await client.query('SELECT id FROM tc_users WHERE nickname = $1', [nickname]);
     if (check.rowCount === 0) {
       await client.query('ROLLBACK');
-      return { success: false, message: '사용자를 찾을 수 없습니다' };
+      return { success: false, messageKey: 'db_user_not_found' };
     }
 
     // Soft delete: rename nickname, mark as deleted
@@ -751,11 +768,11 @@ async function deleteUser(nickname) {
     // tc_season_rankings, tc_gold_history, tc_reports, tc_inquiries
 
     await client.query('COMMIT');
-    return { success: true, message: '계정이 삭제되었습니다' };
+    return { success: true, messageKey: 'db_account_deleted_success' };
   } catch (err) {
     await client.query('ROLLBACK');
     console.error('Delete user error:', err);
-    return { success: false, message: '계정 삭제 중 오류가 발생했습니다' };
+    return { success: false, messageKey: 'db_delete_account_error' };
   } finally {
     client.release();
   }
@@ -822,7 +839,7 @@ async function reportUser(reporterNickname, reportedNickname, reason, roomId, ch
       [reporterNickname, reportedNickname, roomId, reason]
     );
     if (existing.rows.length > 0) {
-      return { success: false, message: '이미 동일한 사유로 신고한 유저입니다' };
+      return { success: false, messageKey: 'db_report_duplicate' };
     }
 
     const chatContextJson = JSON.stringify(chatContext);
@@ -830,10 +847,10 @@ async function reportUser(reporterNickname, reportedNickname, reason, roomId, ch
       'INSERT INTO tc_reports (reporter_nickname, reported_nickname, reason, room_id, chat_context) VALUES ($1, $2, $3, $4, $5)',
       [reporterNickname, reportedNickname, reason, roomId, chatContextJson]
     );
-    return { success: true, message: '신고가 접수되었습니다' };
+    return { success: true, messageKey: 'db_report_success' };
   } catch (err) {
     console.error('Report user error:', err);
-    return { success: false, message: '신고 접수에 실패했습니다' };
+    return { success: false, messageKey: 'db_report_failed' };
   } finally {
     client.release();
   }
@@ -852,7 +869,7 @@ async function addFriend(userNickname, friendNickname) {
     if (existing.rows.length > 0) {
       const row = existing.rows[0];
       if (row.status === 'accepted') {
-        return { success: false, message: '이미 친구입니다' };
+        return { success: false, messageKey: 'db_already_friend' };
       }
       // If they sent us a request, accept it
       if (row.user_nickname === friendNickname && row.status === 'pending') {
@@ -860,19 +877,19 @@ async function addFriend(userNickname, friendNickname) {
           'UPDATE tc_friends SET status = $1 WHERE id = $2',
           ['accepted', row.id]
         );
-        return { success: true, message: '친구가 되었습니다' };
+        return { success: true, messageKey: 'db_now_friends', autoAccepted: true };
       }
-      return { success: false, message: '이미 친구 요청을 보냈습니다' };
+      return { success: false, messageKey: 'db_friend_request_already_sent' };
     }
 
     await client.query(
       'INSERT INTO tc_friends (user_nickname, friend_nickname, status) VALUES ($1, $2, $3)',
       [userNickname, friendNickname, 'pending']
     );
-    return { success: true, message: '친구 요청을 보냈습니다' };
+    return { success: true, messageKey: 'db_friend_request_sent', autoAccepted: false };
   } catch (err) {
     console.error('Add friend error:', err);
-    return { success: false, message: '친구 추가에 실패했습니다' };
+    return { success: false, messageKey: 'db_add_friend_failed' };
   } finally {
     client.release();
   }
@@ -909,12 +926,12 @@ async function acceptFriendRequest(userNickname, friendNickname) {
       [userNickname, friendNickname]
     );
     if (result.rowCount === 0) {
-      return { success: false, message: '요청을 찾을 수 없습니다' };
+      return { success: false, messageKey: 'db_friend_request_not_found' };
     }
-    return { success: true, message: '친구가 되었습니다' };
+    return { success: true, messageKey: 'db_now_friends' };
   } catch (err) {
     console.error('Accept friend request error:', err);
-    return { success: false, message: '요청 수락에 실패했습니다' };
+    return { success: false, messageKey: 'db_friend_accept_failed' };
   } finally {
     client.release();
   }
@@ -930,12 +947,12 @@ async function rejectFriendRequest(userNickname, friendNickname) {
       [userNickname, friendNickname]
     );
     if (result.rowCount === 0) {
-      return { success: false, message: '요청을 찾을 수 없습니다' };
+      return { success: false, messageKey: 'db_friend_request_not_found' };
     }
-    return { success: true, message: '요청을 거절했습니다' };
+    return { success: true, messageKey: 'db_friend_rejected' };
   } catch (err) {
     console.error('Reject friend request error:', err);
-    return { success: false, message: '요청 거절에 실패했습니다' };
+    return { success: false, messageKey: 'db_friend_reject_failed' };
   } finally {
     client.release();
   }
@@ -952,12 +969,12 @@ async function removeFriend(userNickname, friendNickname) {
       [userNickname, friendNickname]
     );
     if (result.rowCount === 0) {
-      return { success: false, message: '친구를 찾을 수 없습니다' };
+      return { success: false, messageKey: 'db_friend_not_found' };
     }
-    return { success: true, message: '친구를 삭제했습니다' };
+    return { success: true, messageKey: 'db_friend_removed' };
   } catch (err) {
     console.error('Remove friend error:', err);
-    return { success: false, message: '친구 삭제에 실패했습니다' };
+    return { success: false, messageKey: 'db_friend_remove_failed' };
   } finally {
     client.release();
   }
@@ -1400,12 +1417,12 @@ async function getWallet(nickname) {
       [nickname]
     );
     if (result.rows.length === 0) {
-      return { success: false, message: '사용자를 찾을 수 없습니다' };
+      return { success: false, messageKey: 'db_user_not_found' };
     }
     return { success: true, wallet: result.rows[0] };
   } catch (err) {
     console.error('Get wallet error:', err);
-    return { success: false, message: '지갑 정보를 가져오지 못했습니다' };
+    return { success: false, messageKey: 'db_wallet_fetch_failed' };
   } finally {
     client.release();
   }
@@ -1529,7 +1546,7 @@ async function getGoldHistory(nickname, limit = 30) {
     };
   } catch (err) {
     console.error('Get gold history error:', err);
-    return { success: false, message: '골드 내역을 불러오지 못했습니다' };
+    return { success: false, messageKey: 'db_gold_history_failed' };
   } finally {
     client.release();
   }
@@ -1601,7 +1618,7 @@ async function getAdminPurchaseHistory(nickname, limit = 30) {
     };
   } catch (err) {
     console.error('Get admin purchase history error:', err);
-    return { success: false, message: '구매 내역을 불러오지 못했습니다', summary: null, purchases: [] };
+    return { success: false, messageKey: 'db_purchase_history_failed', summary: null, purchases: [] };
   } finally {
     client.release();
   }
@@ -1621,7 +1638,7 @@ async function claimAdReward(nickname) {
     const todayCount = parseInt(countResult.rows[0].cnt, 10);
     if (todayCount >= 5) {
       await client.query('ROLLBACK');
-      return { success: false, message: '오늘의 광고 보상을 모두 받았습니다', remaining: 0 };
+      return { success: false, messageKey: 'db_ad_reward_exhausted', remaining: 0 };
     }
     // Grant 50 gold
     await client.query(
@@ -1644,7 +1661,7 @@ async function claimAdReward(nickname) {
   } catch (err) {
     await client.query('ROLLBACK');
     console.error('Claim ad reward error:', err);
-    return { success: false, message: '보상 지급에 실패했습니다' };
+    return { success: false, messageKey: 'db_reward_grant_failed' };
   } finally {
     client.release();
   }
@@ -1668,7 +1685,7 @@ async function getShopItems() {
     return { success: true, items: result.rows };
   } catch (err) {
     console.error('Get shop items error:', err);
-    return { success: false, message: '상점 정보를 가져오지 못했습니다' };
+    return { success: false, messageKey: 'db_shop_fetch_failed' };
   } finally {
     client.release();
   }
@@ -1704,7 +1721,7 @@ async function getUserItems(nickname) {
     return { success: true, items: result.rows };
   } catch (err) {
     console.error('Get user items error:', err);
-    return { success: false, message: '인벤토리를 불러오지 못했습니다' };
+    return { success: false, messageKey: 'db_inventory_fetch_failed' };
   } finally {
     client.release();
   }
@@ -1722,12 +1739,12 @@ async function buyItem(nickname, itemKey) {
     );
     if (itemRes.rows.length === 0) {
       await client.query('ROLLBACK');
-      return { success: false, message: '아이템을 찾을 수 없습니다' };
+      return { success: false, messageKey: 'db_item_not_found' };
     }
     const item = itemRes.rows[0];
     if (!item.is_purchasable) {
       await client.query('ROLLBACK');
-      return { success: false, message: '구매할 수 없는 아이템입니다' };
+      return { success: false, messageKey: 'db_item_not_purchasable' };
     }
 
     const walletRes = await client.query(
@@ -1736,12 +1753,12 @@ async function buyItem(nickname, itemKey) {
     );
     if (walletRes.rows.length === 0) {
       await client.query('ROLLBACK');
-      return { success: false, message: '사용자를 찾을 수 없습니다' };
+      return { success: false, messageKey: 'db_user_not_found' };
     }
     const gold = walletRes.rows[0].gold || 0;
     if (gold < item.price) {
       await client.query('ROLLBACK');
-      return { success: false, message: '골드가 부족합니다' };
+      return { success: false, messageKey: 'db_insufficient_gold' };
     }
 
     // Prevent duplicate ownership / extend duration for temp items
@@ -1752,7 +1769,7 @@ async function buyItem(nickname, itemKey) {
       );
       if (owned.rows.length > 0) {
         await client.query('ROLLBACK');
-        return { success: false, message: '이미 보유한 아이템입니다' };
+        return { success: false, messageKey: 'db_item_already_owned' };
       }
     } else {
       const ownedActive = await client.query(
@@ -1765,7 +1782,7 @@ async function buyItem(nickname, itemKey) {
       if (ownedActive.rows.length > 0) {
         if (!item.duration_days) {
           await client.query('ROLLBACK');
-          return { success: false, message: '기간 정보를 찾을 수 없습니다' };
+          return { success: false, messageKey: 'db_duration_not_found' };
         }
         await client.query(
           `
@@ -1812,7 +1829,7 @@ async function buyItem(nickname, itemKey) {
   } catch (err) {
     await client.query('ROLLBACK');
     console.error('Buy item error:', err);
-    return { success: false, message: '구매 중 오류가 발생했습니다' };
+    return { success: false, messageKey: 'db_purchase_error' };
   } finally {
     client.release();
   }
@@ -1828,7 +1845,7 @@ async function equipItem(nickname, itemKey) {
       [itemKey]
     );
     if (itemRes.rows.length === 0) {
-      return { success: false, message: '아이템을 찾을 수 없습니다' };
+      return { success: false, messageKey: 'db_item_not_found' };
     }
     const category = itemRes.rows[0].category;
     const itemName = itemRes.rows[0].name;
@@ -1841,7 +1858,7 @@ async function equipItem(nickname, itemKey) {
       [nickname, itemKey]
     );
     if (owned.rows.length === 0) {
-      return { success: false, message: '보유하지 않은 아이템입니다' };
+      return { success: false, messageKey: 'db_item_not_owned' };
     }
 
     const fieldMap = {
@@ -1852,7 +1869,7 @@ async function equipItem(nickname, itemKey) {
     };
     const field = fieldMap[category];
     if (!field) {
-      return { success: false, message: '장착할 수 없는 아이템입니다' };
+      return { success: false, messageKey: 'db_item_not_equippable' };
     }
 
     await client.query(
@@ -1881,7 +1898,7 @@ async function equipItem(nickname, itemKey) {
     return { success: true, category, itemName };
   } catch (err) {
     console.error('Equip item error:', err);
-    return { success: false, message: '아이템 장착 중 오류가 발생했습니다' };
+    return { success: false, messageKey: 'db_equip_error' };
   } finally {
     client.release();
   }
@@ -1899,13 +1916,13 @@ async function useItem(nickname, itemKey) {
     );
     if (itemRes.rows.length === 0) {
       await client.query('ROLLBACK');
-      return { success: false, message: '아이템을 찾을 수 없습니다' };
+      return { success: false, messageKey: 'db_item_not_found' };
     }
     const { effect_type: effectType, effect_value: effectValue } = itemRes.rows[0];
     const allowedEffects = ['leave_count_reduce', 'stats_reset', 'season_stats_reset'];
     if (!allowedEffects.includes(effectType)) {
       await client.query('ROLLBACK');
-      return { success: false, message: '사용할 수 없는 아이템입니다' };
+      return { success: false, messageKey: 'db_item_not_usable' };
     }
 
     const owned = await client.query(
@@ -1917,7 +1934,7 @@ async function useItem(nickname, itemKey) {
     );
     if (owned.rows.length === 0) {
       await client.query('ROLLBACK');
-      return { success: false, message: '보유하지 않은 아이템입니다' };
+      return { success: false, messageKey: 'db_item_not_owned' };
     }
 
     if (effectType === 'leave_count_reduce') {
@@ -1951,7 +1968,7 @@ async function useItem(nickname, itemKey) {
   } catch (err) {
     await client.query('ROLLBACK');
     console.error('Use item error:', err);
-    return { success: false, message: '아이템 사용 중 오류가 발생했습니다' };
+    return { success: false, messageKey: 'db_use_item_error' };
   } finally {
     client.release();
   }
@@ -1960,14 +1977,14 @@ async function useItem(nickname, itemKey) {
 // Change nickname using nickname_change item
 async function changeNickname(oldNickname, newNickname) {
   if (!newNickname || typeof newNickname !== 'string') {
-    return { success: false, message: '닉네임을 입력해주세요' };
+    return { success: false, messageKey: 'db_nickname_required' };
   }
   const trimmed = newNickname.trim();
   if (trimmed.length < 2 || trimmed.length > 10) {
-    return { success: false, message: '닉네임은 2~10자여야 합니다' };
+    return { success: false, messageKey: 'db_nickname_length' };
   }
   if (/\s/.test(trimmed)) {
-    return { success: false, message: '닉네임에 공백을 사용할 수 없습니다' };
+    return { success: false, messageKey: 'db_nickname_no_space' };
   }
 
   const client = await pool.connect();
@@ -1981,7 +1998,7 @@ async function changeNickname(oldNickname, newNickname) {
     );
     if (dupCheck.rows.length > 0) {
       await client.query('ROLLBACK');
-      return { success: false, message: '이미 사용 중인 닉네임입니다' };
+      return { success: false, messageKey: 'db_nickname_taken' };
     }
 
     // Check ownership of nickname_change item
@@ -1994,7 +2011,7 @@ async function changeNickname(oldNickname, newNickname) {
     );
     if (owned.rows.length === 0) {
       await client.query('ROLLBACK');
-      return { success: false, message: '닉네임 변경권을 보유하고 있지 않습니다' };
+      return { success: false, messageKey: 'db_no_nickname_change_ticket' };
     }
 
     // Update nickname in tc_users
@@ -2132,7 +2149,7 @@ async function changeNickname(oldNickname, newNickname) {
   } catch (err) {
     await client.query('ROLLBACK');
     console.error('Change nickname error:', err);
-    return { success: false, message: '닉네임 변경 중 오류가 발생했습니다' };
+    return { success: false, messageKey: 'db_nickname_change_error' };
   } finally {
     client.release();
   }
@@ -2306,7 +2323,7 @@ async function getSeasons() {
     return { success: true, seasons: result.rows };
   } catch (err) {
     console.error('Get seasons error:', err);
-    return { success: false, message: '시즌 목록을 가져오지 못했습니다' };
+    return { success: false, messageKey: 'db_season_list_failed' };
   } finally {
     client.release();
   }
@@ -2338,7 +2355,7 @@ async function getCurrentSeasonRankings(limit = 50) {
     return { success: true, rankings: result.rows };
   } catch (err) {
     console.error('Get current season rankings error:', err);
-    return { success: false, message: '시즌 랭킹을 가져오지 못했습니다' };
+    return { success: false, messageKey: 'db_season_rankings_failed' };
   } finally {
     client.release();
   }
@@ -2366,7 +2383,7 @@ async function getSeasonRankings(seasonId, limit = 50) {
     return { success: true, rankings: result.rows };
   } catch (err) {
     console.error('Get season rankings error:', err);
-    return { success: false, message: '시즌 랭킹을 가져오지 못했습니다' };
+    return { success: false, messageKey: 'db_season_rankings_failed' };
   } finally {
     client.release();
   }
@@ -2407,11 +2424,11 @@ async function grantSeasonRewards(seasonId) {
     );
     if (seasonRes.rows.length === 0) {
       await client.query('ROLLBACK');
-      return { success: false, message: '시즌을 찾을 수 없습니다' };
+      return { success: false, messageKey: 'db_season_not_found' };
     }
     if (seasonRes.rows[0].status === 'closed') {
       await client.query('ROLLBACK');
-      return { success: false, message: '이미 종료된 시즌입니다' };
+      return { success: false, messageKey: 'db_season_already_ended' };
     }
 
     const topRes = await client.query(
@@ -2509,7 +2526,7 @@ async function grantSeasonRewards(seasonId) {
   } catch (err) {
     await client.query('ROLLBACK');
     console.error('Grant season rewards error:', err);
-    return { success: false, message: '시즌 보상 지급 실패' };
+    return { success: false, messageKey: 'db_season_reward_failed' };
   } finally {
     client.release();
   }
@@ -2523,10 +2540,10 @@ async function submitInquiry(nickname, category, title, content) {
       'INSERT INTO tc_inquiries (user_nickname, category, title, content) VALUES ($1, $2, $3, $4)',
       [nickname, category, title, content]
     );
-    return { success: true, message: '문의가 접수되었습니다' };
+    return { success: true, messageKey: 'db_inquiry_submitted' };
   } catch (err) {
     console.error('Submit inquiry error:', err);
-    return { success: false, message: '문의 접수에 실패했습니다' };
+    return { success: false, messageKey: 'db_inquiry_submit_failed' };
   } finally {
     client.release();
   }
@@ -2547,7 +2564,7 @@ async function getUserInquiries(nickname, limit = 30) {
     return { success: true, inquiries: result.rows };
   } catch (err) {
     console.error('Get user inquiries error:', err);
-    return { success: false, message: '문의 내역을 불러오지 못했습니다', inquiries: [] };
+    return { success: false, messageKey: 'db_inquiry_list_failed', inquiries: [] };
   } finally {
     client.release();
   }
@@ -2777,7 +2794,7 @@ async function getUserDetail(nickname) {
   try {
     const userResult = await client.query(
       `SELECT id, username, nickname, total_games, wins, losses, rating, created_at, last_login, chat_ban_until, leave_count, gold, level, season_rating, admin_memo,
-              fcm_token, push_enabled, push_admin_inquiry, push_admin_report, is_admin, is_deleted, deleted_at, device_platform, device_model, os_version, app_version, last_ip
+              fcm_token, push_enabled, push_admin_inquiry, push_admin_report, is_admin, is_deleted, deleted_at, device_platform, device_model, os_version, app_version, last_ip, locale
        FROM tc_users WHERE nickname = $1`,
       [nickname]
     );
@@ -3414,7 +3431,7 @@ async function getDetailedAdminStats(dateFrom, dateTo, bucket = 'day', options =
     console.error('Get detailed admin stats error:', err);
     return {
       success: false,
-      message: '상세 통계를 불러오지 못했습니다',
+      messageKey: 'db_stats_failed',
       summary: {},
       gameSeries: [],
       signupSeries: [],
@@ -3492,7 +3509,7 @@ async function getRankings(limit = 50) {
     return { success: true, rankings: result.rows };
   } catch (err) {
     console.error('Get rankings error:', err);
-    return { success: false, message: '랭킹 정보를 가져오지 못했습니다' };
+    return { success: false, messageKey: 'db_rankings_failed' };
   } finally {
     client.release();
   }
@@ -3537,9 +3554,9 @@ async function addShopItem(data) {
   } catch (err) {
     console.error('Add shop item error:', err);
     if (err.code === '23505') {
-      return { success: false, message: '이미 존재하는 item_key입니다' };
+      return { success: false, messageKey: 'db_item_key_exists' };
     }
-    return { success: false, message: '아이템 추가에 실패했습니다' };
+    return { success: false, messageKey: 'db_item_add_failed' };
   } finally {
     client.release();
   }
@@ -3565,12 +3582,12 @@ async function updateShopItem(id, data) {
       ]
     );
     if (result.rows.length === 0) {
-      return { success: false, message: '아이템을 찾을 수 없습니다' };
+      return { success: false, messageKey: 'db_item_not_found' };
     }
     return { success: true, item: result.rows[0] };
   } catch (err) {
     console.error('Update shop item error:', err);
-    return { success: false, message: '아이템 수정에 실패했습니다' };
+    return { success: false, messageKey: 'db_item_update_failed' };
   } finally {
     client.release();
   }
@@ -3585,7 +3602,7 @@ async function deleteShopItem(id) {
     const itemRes = await client.query('SELECT item_key FROM tc_shop_items WHERE id = $1', [id]);
     if (itemRes.rows.length === 0) {
       await client.query('ROLLBACK');
-      return { success: false, message: '아이템을 찾을 수 없습니다' };
+      return { success: false, messageKey: 'db_item_not_found' };
     }
     const itemKey = itemRes.rows[0].item_key;
     // Delete related user items
@@ -3597,7 +3614,7 @@ async function deleteShopItem(id) {
   } catch (err) {
     await client.query('ROLLBACK');
     console.error('Delete shop item error:', err);
-    return { success: false, message: '아이템 삭제에 실패했습니다' };
+    return { success: false, messageKey: 'db_item_delete_failed' };
   } finally {
     client.release();
   }
@@ -3630,7 +3647,7 @@ async function loginSocial(provider, providerUid) {
     }
     const user = result.rows[0];
     if (user.is_deleted) {
-      return { found: false, error: '탈퇴한 계정입니다' };
+      return { found: false, errorKey: 'db_account_deleted' };
     }
     await client.query(
       'UPDATE tc_users SET last_login = CURRENT_TIMESTAMP WHERE id = $1',
@@ -3648,7 +3665,7 @@ async function loginSocial(provider, providerUid) {
     };
   } catch (err) {
     console.error('Social login error:', err);
-    return { found: false, error: '소셜 로그인 중 오류가 발생했습니다' };
+    return { found: false, errorKey: 'db_social_login_error' };
   } finally {
     client.release();
   }
@@ -3657,14 +3674,14 @@ async function loginSocial(provider, providerUid) {
 // Social register: create user with provider info
 async function registerSocial(provider, providerUid, email, nickname) {
   if (!nickname || nickname.trim().length < 1) {
-    return { success: false, message: '닉네임을 입력해주세요' };
+    return { success: false, messageKey: 'db_nickname_required' };
   }
   const trimmedNickname = nickname.trim();
   if (trimmedNickname.length < 2 || trimmedNickname.length > 10) {
-    return { success: false, message: '닉네임은 2~10자여야 합니다' };
+    return { success: false, messageKey: 'db_nickname_length' };
   }
   if (/\s/.test(trimmedNickname)) {
-    return { success: false, message: '닉네임에 공백을 사용할 수 없습니다' };
+    return { success: false, messageKey: 'db_nickname_no_space' };
   }
 
   const client = await pool.connect();
@@ -3675,7 +3692,7 @@ async function registerSocial(provider, providerUid, email, nickname) {
       [trimmedNickname]
     );
     if (nicknameCheck.rows.length > 0) {
-      return { success: false, message: '이미 사용중인 닉네임입니다' };
+      return { success: false, messageKey: 'db_nickname_taken' };
     }
 
     // Check provider_uid duplicate
@@ -3684,7 +3701,7 @@ async function registerSocial(provider, providerUid, email, nickname) {
       [provider, providerUid]
     );
     if (providerCheck.rows.length > 0) {
-      return { success: false, message: '이미 가입된 소셜 계정입니다' };
+      return { success: false, messageKey: 'db_social_account_exists' };
     }
 
     // Auto-generate username
@@ -3699,7 +3716,7 @@ async function registerSocial(provider, providerUid, email, nickname) {
     return { success: true, userId: result.rows[0].id, nickname: trimmedNickname };
   } catch (err) {
     console.error('Social register error:', err);
-    return { success: false, message: '소셜 회원가입 중 오류가 발생했습니다' };
+    return { success: false, messageKey: 'db_social_register_error' };
   } finally {
     client.release();
   }
@@ -3715,7 +3732,7 @@ async function linkSocial(userId, provider, providerUid, email) {
       [provider, providerUid]
     );
     if (existing.rows.length > 0 && existing.rows[0].id !== userId) {
-      return { success: false, message: '이미 해당계정이 존재합니다' };
+      return { success: false, messageKey: 'db_social_account_taken' };
     }
 
     await client.query(
@@ -3725,7 +3742,7 @@ async function linkSocial(userId, provider, providerUid, email) {
     return { success: true, provider };
   } catch (err) {
     console.error('Link social error:', err);
-    return { success: false, message: '소셜 연동 중 오류가 발생했습니다' };
+    return { success: false, messageKey: 'db_social_link_error' };
   } finally {
     client.release();
   }
@@ -3740,10 +3757,10 @@ async function unlinkSocial(userId) {
       [userId]
     );
     if (userRes.rows.length === 0) {
-      return { success: false, message: '사용자를 찾을 수 없습니다' };
+      return { success: false, messageKey: 'db_user_not_found' };
     }
     if (!userRes.rows[0].password_hash) {
-      return { success: false, message: '비밀번호가 설정되지 않아 연동을 해제할 수 없습니다' };
+      return { success: false, messageKey: 'db_password_not_set' };
     }
 
     await client.query(
@@ -3753,7 +3770,7 @@ async function unlinkSocial(userId) {
     return { success: true };
   } catch (err) {
     console.error('Unlink social error:', err);
-    return { success: false, message: '연동 해제 중 오류가 발생했습니다' };
+    return { success: false, messageKey: 'db_social_unlink_error' };
   } finally {
     client.release();
   }
@@ -3790,7 +3807,8 @@ async function updateDeviceInfo(nickname, deviceInfo) {
            device_model = COALESCE($4, device_model),
            os_version = COALESCE($5, os_version),
            app_version = COALESCE($6, app_version),
-           last_ip = COALESCE($7, last_ip)
+           last_ip = COALESCE($7, last_ip),
+           locale = COALESCE($8, locale)
        WHERE nickname = $1`,
       [
         nickname,
@@ -3800,6 +3818,7 @@ async function updateDeviceInfo(nickname, deviceInfo) {
         deviceInfo.osVersion || null,
         deviceInfo.appVersion || null,
         deviceInfo.lastIp || null,
+        deviceInfo.locale || null,
       ]
     );
   } catch (err) {
@@ -3819,7 +3838,7 @@ async function setPushEnabled(nickname, enabled) {
     return { success: true };
   } catch (err) {
     console.error('Set push enabled error:', err);
-    return { success: false, message: '푸시 설정 저장에 실패했습니다' };
+    return { success: false, messageKey: 'db_push_setting_save_failed' };
   } finally {
     client.release();
   }
@@ -3835,7 +3854,7 @@ async function setPushFriendInvite(nickname, enabled) {
     return { success: true };
   } catch (err) {
     console.error('Set push friend invite error:', err);
-    return { success: false, message: '푸시 설정 저장에 실패했습니다' };
+    return { success: false, messageKey: 'db_push_setting_save_failed' };
   } finally {
     client.release();
   }
@@ -3852,12 +3871,12 @@ async function setUserAdmin(nickname, isAdmin) {
       [nickname, isAdmin]
     );
     if (result.rows.length === 0) {
-      return { success: false, message: '사용자를 찾을 수 없습니다' };
+      return { success: false, messageKey: 'db_user_not_found' };
     }
     return { success: true, user: result.rows[0] };
   } catch (err) {
     console.error('Set user admin error:', err);
-    return { success: false, message: '관리자 권한 설정에 실패했습니다' };
+    return { success: false, messageKey: 'db_admin_set_failed' };
   } finally {
     client.release();
   }
@@ -3875,7 +3894,7 @@ async function setAdminAlertSettings(nickname, inquiryEnabled, reportEnabled) {
       [nickname, inquiryEnabled, reportEnabled]
     );
     if (result.rows.length === 0) {
-      return { success: false, message: '사용자를 찾을 수 없습니다' };
+      return { success: false, messageKey: 'db_user_not_found' };
     }
     return {
       success: true,
@@ -3886,7 +3905,7 @@ async function setAdminAlertSettings(nickname, inquiryEnabled, reportEnabled) {
     };
   } catch (err) {
     console.error('Set admin alert settings error:', err);
-    return { success: false, message: '관리자 알림 설정 저장에 실패했습니다' };
+    return { success: false, messageKey: 'db_admin_notify_save_failed' };
   } finally {
     client.release();
   }
@@ -3958,6 +3977,30 @@ async function getConfig(key) {
   }
 }
 
+// Fetch a locale-aware config value (EULA / privacy policy).
+// Rule:
+//   - ko client → Korean
+//   - de client → German
+//   - any other known locale (en, fr, ja, ...) → English
+//   - locale null/undefined (legacy clients that never sent locale) → Korean
+//     (preserves pre-i18n behavior; these are overwhelmingly KR users).
+// If the chosen version is empty, falls back through en → ko → legacy key.
+async function getLocalizedConfig(baseKey, locale) {
+  let primary;
+  if (locale === 'ko' || locale === 'de') primary = locale;
+  else if (!locale) primary = 'ko';
+  else primary = 'en';
+  const candidates = [`${baseKey}_${primary}`];
+  if (primary !== 'en') candidates.push(`${baseKey}_en`);
+  if (primary !== 'ko') candidates.push(`${baseKey}_ko`);
+  candidates.push(baseKey);
+  for (const key of candidates) {
+    const val = await getConfig(key);
+    if (val) return val;
+  }
+  return null;
+}
+
 async function updateConfig(key, value) {
   const client = await pool.connect();
   try {
@@ -4008,7 +4051,7 @@ async function sendDm(sender, receiver, message) {
     return { success: true, id: result.rows[0].id, createdAt: result.rows[0].created_at };
   } catch (err) {
     console.error('Send DM error:', err);
-    return { success: false, message: 'DM 전송 실패' };
+    return { success: false, messageKey: 'db_dm_send_failed' };
   } finally {
     client.release();
   }
@@ -4598,6 +4641,7 @@ module.exports = {
   setAdminAlertSettings,
   getAdminPushRecipients,
   getConfig,
+  getLocalizedConfig,
   updateConfig,
   adminAdjustGold,
   claimAdReward,

@@ -2257,11 +2257,36 @@ async function handleAdminRoute(req, res, url, pathname, method, lobby, wss, mai
 
   // ===== Settings =====
   if (pathname === '/tc-backstage/settings' && method === 'GET') {
-    const eulaContent = await getConfig('eula_content') || '';
-    const privacyPolicy = await getConfig('privacy_policy') || '';
+    const [eulaKo, eulaEn, eulaDe] = await Promise.all([
+      getConfig('eula_content_ko'), getConfig('eula_content_en'), getConfig('eula_content_de'),
+    ]);
+    const [privacyKo, privacyEn, privacyDe] = await Promise.all([
+      getConfig('privacy_policy_ko'), getConfig('privacy_policy_en'), getConfig('privacy_policy_de'),
+    ]);
     const minVersion = await getConfig('min_version') || '';
     const latestVersion = await getConfig('latest_version') || '';
     const saved = url.searchParams.get('saved');
+
+    const langTabs = (baseId, values) => {
+      const langs = [
+        { code: 'ko', label: '한국어' },
+        { code: 'en', label: 'English' },
+        { code: 'de', label: 'Deutsch' },
+      ];
+      const tabButtons = langs.map((l, i) => `
+        <button type="button" class="lang-tab ${i === 0 ? 'active' : ''}" data-target="${baseId}-${l.code}"
+          style="padding:6px 14px;border:1px solid #ddd;background:${i === 0 ? '#6c63ff' : '#fff'};color:${i === 0 ? '#fff' : '#333'};border-radius:6px;cursor:pointer;font-size:13px">
+          ${l.label}
+        </button>`).join('');
+      const tabPanels = langs.map((l, i) => `
+        <div id="${baseId}-${l.code}" class="lang-panel" style="display:${i === 0 ? 'block' : 'none'}">
+          <textarea name="${baseId}_${l.code}" rows="20" style="font-size:13px;line-height:1.6">${escapeHtml(values[l.code] || '')}</textarea>
+        </div>`).join('');
+      return `
+        <div style="display:flex;gap:6px;margin-bottom:10px">${tabButtons}</div>
+        ${tabPanels}
+      `;
+    };
 
     const content = `
       <h1 class="page-title">설정</h1>
@@ -2284,18 +2309,40 @@ async function handleAdminRoute(req, res, url, pathname, method, lobby, wss, mai
       </div>
       <div class="card">
         <h3>EULA / 이용약관</h3>
-        <form method="POST" action="/tc-backstage/settings/eula">
-          <textarea name="eula_content" rows="20" style="font-size:13px;line-height:1.6">${escapeHtml(eulaContent)}</textarea>
+        <p style="font-size:13px;color:#888;margin-bottom:8px">ko/de 사용자는 해당 언어를 받습니다. 그 외 모든 locale은 English 버전을 받습니다.</p>
+        <form method="POST" action="/tc-backstage/settings/eula" data-tabs-form>
+          ${langTabs('eula_content', { ko: eulaKo, en: eulaEn, de: eulaDe })}
           <div style="margin-top:12px"><button type="submit" class="btn btn-primary">저장</button></div>
         </form>
       </div>
       <div class="card">
         <h3>개인정보처리방침</h3>
-        <form method="POST" action="/tc-backstage/settings/privacy">
-          <textarea name="privacy_policy" rows="20" style="font-size:13px;line-height:1.6">${escapeHtml(privacyPolicy)}</textarea>
+        <p style="font-size:13px;color:#888;margin-bottom:8px">ko/de 사용자는 해당 언어를 받습니다. 그 외 모든 locale은 English 버전을 받습니다.</p>
+        <form method="POST" action="/tc-backstage/settings/privacy" data-tabs-form>
+          ${langTabs('privacy_policy', { ko: privacyKo, en: privacyEn, de: privacyDe })}
           <div style="margin-top:12px"><button type="submit" class="btn btn-primary">저장</button></div>
         </form>
       </div>
+      <script>
+        document.querySelectorAll('[data-tabs-form]').forEach(form => {
+          form.querySelectorAll('.lang-tab').forEach(btn => {
+            btn.addEventListener('click', () => {
+              const targetId = btn.dataset.target;
+              form.querySelectorAll('.lang-tab').forEach(b => {
+                b.classList.remove('active');
+                b.style.background = '#fff';
+                b.style.color = '#333';
+              });
+              btn.classList.add('active');
+              btn.style.background = '#6c63ff';
+              btn.style.color = '#fff';
+              form.querySelectorAll('.lang-panel').forEach(p => {
+                p.style.display = p.id === targetId ? 'block' : 'none';
+              });
+            });
+          });
+        });
+      </script>
     `;
     return html(res, layout('설정', content, 'settings'));
   }
@@ -2314,13 +2361,21 @@ async function handleAdminRoute(req, res, url, pathname, method, lobby, wss, mai
 
   if (pathname === '/tc-backstage/settings/eula' && method === 'POST') {
     const body = await parseBody(req);
-    await updateConfig('eula_content', body.eula_content || '');
+    await Promise.all([
+      updateConfig('eula_content_ko', body.eula_content_ko || ''),
+      updateConfig('eula_content_en', body.eula_content_en || ''),
+      updateConfig('eula_content_de', body.eula_content_de || ''),
+    ]);
     return redirect(res, '/tc-backstage/settings?saved=1');
   }
 
   if (pathname === '/tc-backstage/settings/privacy' && method === 'POST') {
     const body = await parseBody(req);
-    await updateConfig('privacy_policy', body.privacy_policy || '');
+    await Promise.all([
+      updateConfig('privacy_policy_ko', body.privacy_policy_ko || ''),
+      updateConfig('privacy_policy_en', body.privacy_policy_en || ''),
+      updateConfig('privacy_policy_de', body.privacy_policy_de || ''),
+    ]);
     return redirect(res, '/tc-backstage/settings?saved=1');
   }
 

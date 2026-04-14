@@ -167,7 +167,7 @@ class GameRoom {
 
   addSpectator(odId, nickname, password = '') {
     if (this.isPrivate && this.password !== password) {
-      return { success: false, message: '비밀번호가 틀렸습니다' };
+      return { success: false, messageKey: 'room_wrong_password' };
     }
     if (this.spectators.find((s) => s.id === odId)) {
       return { success: false, message: 'Already spectating' };
@@ -212,7 +212,7 @@ class GameRoom {
     }
     for (const requests of Object.values(this.pendingCardRequests)) {
       if (requests.find(r => r.spectatorId === spectatorId)) {
-        return { success: false, message: '이미 다른 플레이어의 응답을 기다리는 중입니다' };
+        return { success: false, messageKey: 'room_waiting_other_response' };
       }
     }
     if (this.pendingCardRequests[playerId].find(r => r.spectatorId === spectatorId)) {
@@ -321,27 +321,28 @@ class GameRoom {
 
   // --- Bot management ---
 
-  addBot(targetSlot) {
+  addBot(targetSlot, locale) {
     if (this.getPlayerCount() >= this.maxPlayers) {
-      return { success: false, message: '방이 가득 찼습니다' };
+      return { success: false, messageKey: 'room_full' };
     }
     if (this.game) {
-      return { success: false, message: '게임 중에는 봇을 추가할 수 없습니다' };
+      return { success: false, messageKey: 'room_no_bot_in_game' };
     }
     let slot;
     if (typeof targetSlot === 'number' && targetSlot >= 0 && targetSlot < this.maxPlayers) {
       if (this.players[targetSlot] !== null) {
-        return { success: false, message: '이미 다른 플레이어가 있는 자리입니다' };
+        return { success: false, messageKey: 'room_slot_taken' };
       }
       slot = targetSlot;
     } else {
       slot = this.players.indexOf(null);
     }
     if (slot === -1) {
-      return { success: false, message: '빈 자리가 없습니다' };
+      return { success: false, messageKey: 'room_no_empty_slot' };
     }
     const botId = `bot_${nextBotNum++}`;
-    const botNickname = `봇 ${this.bots.size + 1}`;
+    const { t } = require('../i18n');
+    const botNickname = t(locale, 'bot_nickname', { number: this.bots.size + 1 });
     const bot = new BotPlayer(botId, botNickname);
     this.bots.set(botId, bot);
     this.players[slot] = { id: botId, nickname: botNickname, connected: true, isBot: true, ready: true };
@@ -378,11 +379,11 @@ class GameRoom {
   // Switch a player to spectator mode
   switchToSpectator(playerId) {
     if (this.game) {
-      return { success: false, message: '게임 중에는 전환할 수 없습니다' };
+      return { success: false, messageKey: 'room_no_switch_in_game' };
     }
     const idx = this.players.findIndex(p => p !== null && p.id === playerId);
     if (idx === -1) {
-      return { success: false, message: '플레이어를 찾을 수 없습니다' };
+      return { success: false, messageKey: 'player_not_found' };
     }
     const player = this.players[idx];
     const nickname = player.nickname;
@@ -415,20 +416,20 @@ class GameRoom {
   // Switch a spectator to player mode
   switchToPlayer(spectatorId, nickname, targetSlot) {
     if (this.game) {
-      return { success: false, message: '게임 중에는 전환할 수 없습니다' };
+      return { success: false, messageKey: 'room_no_switch_in_game' };
     }
     if (this.getPlayerCount() >= this.maxPlayers) {
-      return { success: false, message: '방이 가득 찼습니다' };
+      return { success: false, messageKey: 'room_full' };
     }
     const specIdx = this.spectators.findIndex(s => s.id === spectatorId);
     if (specIdx === -1) {
-      return { success: false, message: '관전자를 찾을 수 없습니다' };
+      return { success: false, messageKey: 'room_spectator_not_found' };
     }
     if (typeof targetSlot !== 'number' || targetSlot < 0 || targetSlot >= this.maxPlayers) {
-      return { success: false, message: '잘못된 슬롯입니다' };
+      return { success: false, messageKey: 'invalid_slot' };
     }
     if (this.players[targetSlot] !== null) {
-      return { success: false, message: '이미 다른 플레이어가 있는 자리입니다' };
+      return { success: false, messageKey: 'room_slot_taken' };
     }
 
     // Remove from spectators
@@ -452,17 +453,17 @@ class GameRoom {
   movePlayerToSlot(playerId, targetSlot) {
     const currentIndex = this.players.findIndex((p) => p !== null && p.id === playerId);
     if (currentIndex === -1) {
-      return { success: false, message: '플레이어를 찾을 수 없습니다' };
+      return { success: false, messageKey: 'player_not_found' };
     }
     if (currentIndex === targetSlot) {
       return { success: true }; // Already in this slot
     }
     if (targetSlot < 0 || targetSlot >= this.maxPlayers) {
-      return { success: false, message: '잘못된 슬롯입니다' };
+      return { success: false, messageKey: 'invalid_slot' };
     }
     // Only allow move to empty (null) slot - no swapping
     if (this.players[targetSlot] !== null) {
-      return { success: false, message: '이미 다른 플레이어가 있는 자리입니다' };
+      return { success: false, messageKey: 'room_slot_taken' };
     }
     // Move player to target slot
     this.players[targetSlot] = this.players[currentIndex];

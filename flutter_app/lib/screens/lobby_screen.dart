@@ -629,6 +629,7 @@ class _LobbyScreenState extends State<LobbyScreen> {
                           segments: [
                             ButtonSegment(value: 'tichu', label: Text(l10n.lobbyTichu), icon: const Icon(Icons.style, size: 16)),
                             ButtonSegment(value: 'skull_king', label: Text(l10n.lobbySkullKing), icon: const Icon(Icons.anchor, size: 16)),
+                            ButtonSegment(value: 'love_letter', label: Text(l10n.lobbyLoveLetter), icon: const Icon(Icons.favorite, size: 16)),
                           ],
                           selected: {selectedGameType},
                           onSelectionChanged: (v) => setState(() {
@@ -637,7 +638,7 @@ class _LobbyScreenState extends State<LobbyScreen> {
                             if (controller.text.isEmpty) {
                               controller.clear();
                             }
-                            if (selectedGameType == 'skull_king') {
+                            if (selectedGameType == 'skull_king' || selectedGameType == 'love_letter') {
                               isRanked = false;
                             }
                           }),
@@ -774,6 +775,55 @@ class _LobbyScreenState extends State<LobbyScreen> {
                           ],
                         ),
                       ],
+                      if (selectedGameType == 'love_letter') ...[
+                        const SizedBox(height: 12),
+                        Text(l10n.lobbyMaxPlayers, style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 12)),
+                        const SizedBox(height: 8),
+                        Row(
+                          children: List.generate(3, (i) {
+                            final n = i + 2;
+                            final selected = skMaxPlayers == n;
+                            return Expanded(
+                              child: Padding(
+                                padding: EdgeInsets.only(right: i < 2 ? 6 : 0),
+                                child: GestureDetector(
+                                  onTap: () => setState(() => skMaxPlayers = n),
+                                  child: AnimatedContainer(
+                                    duration: const Duration(milliseconds: 150),
+                                    padding: const EdgeInsets.symmetric(vertical: 10),
+                                    decoration: BoxDecoration(
+                                      color: selected
+                                          ? accent.withValues(alpha: 0.25)
+                                          : Colors.white,
+                                      borderRadius: BorderRadius.circular(10),
+                                      border: Border.all(
+                                        color: selected
+                                            ? accent
+                                            : const Color(0xFFE0D8D4),
+                                        width: selected ? 1.5 : 1,
+                                      ),
+                                    ),
+                                    child: Column(
+                                      children: [
+                                        Text(
+                                          l10n.lobbyPlayerCount(n),
+                                          style: TextStyle(
+                                            fontSize: 14,
+                                            fontWeight: selected ? FontWeight.bold : FontWeight.normal,
+                                            color: selected
+                                                ? const Color(0xFF3E312A)
+                                                : const Color(0xFF8A7A72),
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            );
+                          }),
+                        ),
+                      ],
                       const SizedBox(height: 16),
                       sectionTitle(l10n.lobbyBasicInfo, l10n.lobbyBasicInfoDesc),
                       const SizedBox(height: 10),
@@ -840,7 +890,7 @@ class _LobbyScreenState extends State<LobbyScreen> {
                         ),
                       ],
                       const SizedBox(height: 16),
-                      sectionTitle(l10n.lobbyGameSettings, selectedGameType == 'skull_king' ? l10n.lobbyGameSettingsDescSk : l10n.lobbyGameSettingsDescTichu),
+                      sectionTitle(l10n.lobbyGameSettings, selectedGameType == 'tichu' ? l10n.lobbyGameSettingsDescTichu : l10n.lobbyGameSettingsDescSk),
                       const SizedBox(height: 10),
                       Row(
                         children: [
@@ -866,7 +916,7 @@ class _LobbyScreenState extends State<LobbyScreen> {
                               ],
                             ),
                           ),
-                          if (selectedGameType != 'skull_king') ...[
+                          if (selectedGameType == 'tichu') ...[
                             const SizedBox(width: 10),
                             Expanded(
                               child: Column(
@@ -972,7 +1022,7 @@ class _LobbyScreenState extends State<LobbyScreen> {
                     turnTimeLimit: turnTimeLimit,
                     targetScore: targetScore,
                     gameType: selectedGameType,
-                    maxPlayers: selectedGameType == 'skull_king' ? skMaxPlayers : 4,
+                    maxPlayers: (selectedGameType == 'skull_king' || selectedGameType == 'love_letter') ? skMaxPlayers : 4,
                     skExpansions: selectedGameType == 'skull_king'
                         ? skExpansionsSelected.toList()
                         : const [],
@@ -1520,6 +1570,7 @@ class _LobbyScreenState extends State<LobbyScreen> {
   Widget _buildRoomItem(Room room) {
     final isInProgress = room.gameInProgress;
     final isSK = room.isSkullKing;
+    final isLL = room.gameType == 'love_letter';
     final l10n = L10n.of(context);
 
     // Game type colors
@@ -1532,7 +1583,16 @@ class _LobbyScreenState extends State<LobbyScreen> {
     final Color nameColor;
     final Color subTextColor;
 
-    if (isSK) {
+    if (isLL) {
+      bgColor = isInProgress ? const Color(0xFFF8E0E0) : const Color(0xFFFAF0F0);
+      borderColor = isInProgress ? const Color(0xFFD0A0A0) : const Color(0xFFDDC0C0);
+      stripColor = const Color(0xFF8B1A1A);
+      badgeBgColor = const Color(0xFF8B1A1A);
+      badgeTextColor = const Color(0xFFFFB6C1);
+      badgeText = '💌 ${l10n.lobbyLoveLetterBadge}';
+      nameColor = const Color(0xFF5A2020);
+      subTextColor = const Color(0xFF906060);
+    } else if (isSK) {
       bgColor = isInProgress ? const Color(0xFFE0E4EF) : const Color(0xFFECEFF6);
       borderColor = isInProgress ? const Color(0xFFB0B8D0) : const Color(0xFFC0C8DD);
       stripColor = const Color(0xFF2D2D3D);
@@ -2194,20 +2254,22 @@ class _LobbyScreenState extends State<LobbyScreen> {
               ),
               if (i < game.roomPlayers.length - 1) const SizedBox(height: 8),
             ],
-          ] else if (game.currentGameType == 'skull_king') ...[
+          ] else if (game.currentGameType == 'skull_king' || game.currentGameType == 'love_letter') ...[
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
               decoration: BoxDecoration(
-                color: const Color(0xFF2D2D3D),
+                color: game.currentGameType == 'love_letter' ? const Color(0xFF8B1A1A) : const Color(0xFF2D2D3D),
                 borderRadius: BorderRadius.circular(12),
               ),
               child: Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  const Icon(Icons.anchor, size: 14, color: Colors.white),
+                  Icon(game.currentGameType == 'love_letter' ? Icons.favorite : Icons.anchor, size: 14, color: Colors.white),
                   const SizedBox(width: 6),
                   Text(
-                    L10n.of(context).lobbySkullKingPlayers(game.roomMaxPlayers),
+                    game.currentGameType == 'love_letter'
+                        ? L10n.of(context).lobbyLoveLetterPlayers(game.roomMaxPlayers)
+                        : L10n.of(context).lobbySkullKingPlayers(game.roomMaxPlayers),
                     style: const TextStyle(
                       fontSize: 13,
                       fontWeight: FontWeight.bold,

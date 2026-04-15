@@ -22,6 +22,7 @@ import 'screens/login_screen.dart';
 import 'screens/lobby_screen.dart';
 import 'screens/spectator_screen.dart';
 import 'screens/sk_game_screen.dart';
+import 'screens/ll_game_screen.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -211,6 +212,9 @@ class _AppFlowScreen extends StatelessWidget {
         case AppDestination.skGame:
           child = const SKGameScreen();
           break;
+        case AppDestination.llGame:
+          child = const LLGameScreen();
+          break;
         case AppDestination.spectator:
           child = const SpectatorScreen();
           break;
@@ -241,6 +245,8 @@ class _AppFlowScreen extends StatelessWidget {
         return 'game';
       case AppDestination.skGame:
         return 'skGame';
+      case AppDestination.llGame:
+        return 'llGame';
       case AppDestination.spectator:
         return 'spectator';
     }

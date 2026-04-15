@@ -2923,4 +2923,162 @@ class L10nEn extends L10n {
   String serviceAdRewardSuccess(int remaining) {
     return 'Received 50 Gold! (Remaining: $remaining)';
   }
+
+  @override
+  String get lobbyLoveLetter => 'Love Letter';
+
+  @override
+  String get lobbyLoveLetterBadge => 'Love Letter';
+
+  @override
+  String lobbyLoveLetterPlayers(int count) {
+    return 'Love Letter · ${count}P';
+  }
+
+  @override
+  String get llRound => 'Round';
+
+  @override
+  String get llPlay => 'Play';
+
+  @override
+  String get llConfirm => 'Confirm';
+
+  @override
+  String get llOk => 'OK';
+
+  @override
+  String get llRoundEnd => 'Round Over';
+
+  @override
+  String get llRoundWinner => 'Round Winner';
+
+  @override
+  String get llNextRoundAuto => 'Next round starting soon...';
+
+  @override
+  String get llGameEnd => 'Game Over';
+
+  @override
+  String get llWins => 'Wins';
+
+  @override
+  String get llReturnIn => 'Returning in';
+
+  @override
+  String get llGuardSelectTarget => 'Guard: Select a target and guess a card';
+
+  @override
+  String get llGuardGuessCard => 'Guess which card they hold:';
+
+  @override
+  String get llSelectTargetFor => 'Select target for:';
+
+  @override
+  String llGuardEffect(String name) {
+    return '$name is using Guard...';
+  }
+
+  @override
+  String llSpyEffect(String name) {
+    return '$name is using Spy...';
+  }
+
+  @override
+  String llBaronEffect(String name) {
+    return '$name is using Baron...';
+  }
+
+  @override
+  String llPrinceEffect(String name) {
+    return '$name is using Prince...';
+  }
+
+  @override
+  String llKingEffect(String name) {
+    return '$name is using King...';
+  }
+
+  @override
+  String llGuardCorrect(String actor, String target) {
+    return '$actor guessed $target\'s card correctly! Eliminated!';
+  }
+
+  @override
+  String llGuardWrong(String actor, String target) {
+    return '$actor guessed wrong about $target';
+  }
+
+  @override
+  String llSpyReveal(String target) {
+    return '$target\'s card:';
+  }
+
+  @override
+  String llSpySawYour(String actor) {
+    return '$actor saw your card';
+  }
+
+  @override
+  String llSpyPeeked(String actor, String target) {
+    return '$actor peeked at $target\'s card';
+  }
+
+  @override
+  String llBaronTie(String actor, String target) {
+    return '$actor and $target tied';
+  }
+
+  @override
+  String llBaronLose(String loser) {
+    return '$loser was eliminated by Baron comparison';
+  }
+
+  @override
+  String llPrinceEliminated(String target) {
+    return '$target was forced to discard Princess! Eliminated!';
+  }
+
+  @override
+  String llPrinceDiscard(String target) {
+    return '$target discarded and drew a new card';
+  }
+
+  @override
+  String llKingSwap(String actor, String target) {
+    return '$actor and $target swapped hands';
+  }
+
+  @override
+  String get llEliminated => 'OUT';
+
+  @override
+  String get llSetAsideFaceUp => 'Set aside (face-up)';
+
+  @override
+  String get llPlayed => 'Played:';
+
+  @override
+  String get llCardGuard => 'Guard';
+
+  @override
+  String get llCardSpy => 'Spy';
+
+  @override
+  String get llCardBaron => 'Baron';
+
+  @override
+  String get llCardHandmaid => 'Handmaid';
+
+  @override
+  String get llCardPrince => 'Prince';
+
+  @override
+  String get llCardKing => 'King';
+
+  @override
+  String get llCardCountess => 'Countess';
+
+  @override
+  String get llCardPrincess => 'Princess';
 }

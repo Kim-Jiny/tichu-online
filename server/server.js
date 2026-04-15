@@ -5,6 +5,7 @@ const LobbyManager = require('./lobby/LobbyManager');
 const GameRoom = require('./game/GameRoom');
 const { decideBotAction } = require('./game/BotPlayer');
 const { decideSKBotAction } = require('./game/skull_king/SkullKingBot');
+const { decideLLBotAction } = require('./game/love_letter/LoveLetterBot');
 const {
   initDatabase, registerUser, loginUser, checkNickname, deleteUser,
   blockUser, unblockUser, getBlockedUsers, reportUser,
@@ -160,6 +161,8 @@ const PORT = process.env.PORT || 8080;
 // Skull King version gating
 const SK_MIN_VERSION = '2.0.0';
 const SK_EXPANSION_MIN_VERSION = '2.1.0';
+// Love Letter version gating
+const LL_MIN_VERSION = '2.2.0';
 // SK_EXPANSION_UPDATE_MESSAGE removed – now uses t(locale, 'sk_expansion_update_required')
 
 function compareVersions(v1, v2) {
@@ -187,14 +190,21 @@ function roomHasSKExpansions(room) {
     && room.skExpansions.length > 0;
 }
 
+function clientSupportsLL(ws) {
+  return compareVersions(ws.appVersion, LL_MIN_VERSION) >= 0;
+}
+
 function clientCanAccessRoom(ws, room) {
-  if (!room || room.gameType !== 'skull_king') return true;
+  if (!room) return true;
+  if (room.gameType === 'love_letter') return clientSupportsLL(ws);
+  if (room.gameType !== 'skull_king') return true;
   if (!clientSupportsSK(ws)) return false;
   if (roomHasSKExpansions(room) && !clientSupportsSKExpansions(ws)) return false;
   return true;
 }
 
 function roomAccessUpdateMessage(locale, room, action = 'join') {
+  if (room && room.gameType === 'love_letter') return t(locale, 'll_update_required');
   if (roomHasSKExpansions(room)) return t(locale, 'sk_expansion_update_required');
   return t(locale, 'sk_update_' + action);
 }
@@ -544,6 +554,10 @@ async function handleMessage(ws, data) {
     // Game actions (Skull King)
     case 'submit_bid':
     case 'play_card':
+    // Game actions (Love Letter)
+    case 'select_target':
+    case 'guard_guess':
+    case 'effect_ack':
       handleGameAction(ws, data);
       break;
     case 'reset_timeout':
@@ -1475,11 +1489,16 @@ function handleCreateRoom(ws, data) {
   }
   const roomName = (data.roomName || `${ws.nickname}'s Room`).trim();
   const isRanked = !!data.isRanked;
-  const gameType = data.gameType === 'skull_king' ? 'skull_king' : 'tichu';
+  const gameType = data.gameType === 'skull_king' ? 'skull_king'
+    : data.gameType === 'love_letter' ? 'love_letter' : 'tichu';
 
-  // SK version gating
+  // Version gating
   if (gameType === 'skull_king' && !clientSupportsSK(ws)) {
     sendTo(ws, { type: 'error', message: t(ws.locale, 'sk_update_required') });
+    return;
+  }
+  if (gameType === 'love_letter' && !clientSupportsLL(ws)) {
+    sendTo(ws, { type: 'error', message: t(ws.locale, 'll_update_required') });
     return;
   }
 
@@ -1495,7 +1514,9 @@ function handleCreateRoom(ws, data) {
 
   let maxPlayers = 4;
   let skExpansions = [];
-  if (gameType === 'skull_king') {
+  if (gameType === 'love_letter') {
+    maxPlayers = Math.min(Math.max(parseInt(data.maxPlayers) || 4, 2), 4);
+  } else if (gameType === 'skull_king') {
     maxPlayers = Math.min(Math.max(parseInt(data.maxPlayers) || 4, 2), 6);
     // Validate skExpansions: accept only known ids, dedupe, cap to 3
     const allowed = new Set(['kraken', 'white_whale', 'loot']);
@@ -1985,7 +2006,7 @@ function handleStartGame(ws) {
     sendTo(ws, { type: 'error', message: t(ws.locale, 'host_only_start') });
     return;
   }
-  if (room.gameType === 'skull_king') {
+  if (room.gameType === 'skull_king' || room.gameType === 'love_letter') {
     if (room.getPlayerCount() < 2) {
       sendTo(ws, { type: 'error', message: t(ws.locale, 'min_players_required') });
       return;
@@ -2225,7 +2246,7 @@ function handleGameAction(ws, data) {
   // S7: Only clear turn timer for actions that affect turn progression
   // Don't clear for phase-wide actions (large tichu / exchange) or small tichu declaration
   // SK: submit_bid is a phase action (simultaneous), play_card clears timer
-  const phaseActions = ['pass_large_tichu', 'declare_large_tichu', 'exchange_cards', 'declare_small_tichu', 'submit_bid'];
+  const phaseActions = ['pass_large_tichu', 'declare_large_tichu', 'exchange_cards', 'declare_small_tichu', 'submit_bid', 'effect_ack', 'select_target', 'guard_guess'];
   if (!phaseActions.includes(data.type)) {
     clearTurnTimer(ws.roomId);
   }
@@ -2289,6 +2310,11 @@ async function saveGameResult(room) {
 
   if (room.gameType === 'skull_king') {
     return saveSKGameResult(room);
+  }
+
+  // Love Letter: no separate DB save for now (uses SK format)
+  if (room.gameType === 'love_letter') {
+    return saveLLGameResult(room);
   }
 
   const game = room.game;
@@ -2366,12 +2392,45 @@ async function saveSKGameResult(room) {
   }
 }
 
+async function saveLLGameResult(room) {
+  try {
+    const game = room.game;
+    const rankings = game.getRankings();
+    console.log(`LL match result for room ${room.name}: ${rankings.map(r => `${r.nickname}=${r.score}`).join(', ')}`);
+    // TODO: Add LL-specific DB save when LL rankings/stats are implemented
+  } catch (err) {
+    console.error('Error saving LL match result:', err);
+  }
+}
+
 function sendGameStateToAll(roomId) {
   const room = lobby.getRoom(roomId);
   if (!room || !room.game) return;
   if (room.game.state !== 'trick_end' && trickEndTimers[roomId]) {
     clearTimeout(trickEndTimers[roomId]);
     delete trickEndTimers[roomId];
+  }
+
+  // Love Letter: auto-advance effect_resolve after resolved effects
+  if (room.gameType === 'love_letter' && room.game.state === 'effect_resolve'
+      && room.game.pendingEffect && room.game.pendingEffect.resolved) {
+    if (trickEndTimers[roomId]) clearTimeout(trickEndTimers[roomId]);
+    trickEndTimers[roomId] = setTimeout(() => {
+      delete trickEndTimers[roomId];
+      const r = lobby.getRoom(roomId);
+      if (!r || !r.game || r.game.state !== 'effect_resolve') return;
+      if (!r.game.pendingEffect || !r.game.pendingEffect.resolved) return;
+      // Auto-ack on behalf of the acting player
+      const actingPlayer = r.game.pendingEffect.playerId;
+      r.game.handleAction(actingPlayer, { type: 'effect_ack' });
+      if (r.game.state === 'game_end') {
+        saveGameResult(r);
+        scheduleAutoReturnToRoom(roomId);
+      }
+      sendGameStateToAll(roomId);
+    }, 2500);
+    _broadcastState(roomId, room);
+    return;
   }
 
   if (room.gameType === 'skull_king' && room.game.state === 'trick_end') {
@@ -2397,7 +2456,7 @@ function sendGameStateToAll(roomId) {
   // Auto next round after delay
   if (room.game.state === 'round_end') {
     if (roundEndTimers[roomId]) clearTimeout(roundEndTimers[roomId]);
-    const roundEndDelay = room.gameType === 'skull_king' ? 5000 : 3000;
+    const roundEndDelay = room.gameType === 'skull_king' ? 5000 : room.gameType === 'love_letter' ? 4000 : 3000;
     roundEndTimers[roomId] = setTimeout(() => {
       delete roundEndTimers[roomId];
       const r = lobby.getRoom(roomId);
@@ -2490,7 +2549,8 @@ function scheduleBotActions(roomId) {
 
     // Re-evaluate at execution time
     const isSK = r.gameType === 'skull_king';
-    const decideFn = isSK ? decideSKBotAction : decideBotAction;
+    const isLL = r.gameType === 'love_letter';
+    const decideFn = isLL ? decideLLBotAction : isSK ? decideSKBotAction : decideBotAction;
     for (const botId of r.getBotIds()) {
       let action = decideFn(r.game, botId);
       if (action) {
@@ -2615,6 +2675,22 @@ function startTurnTimer(roomId) {
     turnTimers[roomId] = setTimeout(() => {
       handlePhaseTimeout(roomId, 'sk_bidding');
     }, timeLimit);
+    return;
+  }
+
+  // Love Letter: also set timer during effect_resolve (target/guess selection)
+  if (room.gameType === 'love_letter' && gameState === 'effect_resolve') {
+    if (turnTimers[roomId]) return; // Already has a timer
+    const eff = room.game.pendingEffect;
+    if (eff && !eff.resolved) {
+      const targetPlayer = eff.playerId;
+      if (!targetPlayer || room.isBot(targetPlayer)) return;
+      const timeLimit = room.turnTimeLimit * 1000;
+      room.turnDeadline = Date.now() + timeLimit;
+      turnTimers[roomId] = setTimeout(() => {
+        handleTurnTimeout(roomId, targetPlayer);
+      }, timeLimit);
+    }
     return;
   }
 
@@ -2787,7 +2863,7 @@ async function handleTurnTimeout(roomId, playerId) {
         }
       } else {
         console.log(`[TIMEOUT] Auto action failed for ${nickname}: ${result?.message}`);
-        if (!runSkullKingFallback() && room.gameType !== 'skull_king') {
+        if (!runSkullKingFallback() && room.gameType === 'tichu') {
           // Force play call cards to prevent game from getting stuck (Tichu only)
           try {
             const forceResult = room.game.forcePlayCallCards(playerId);
@@ -2811,7 +2887,7 @@ async function handleTurnTimeout(roomId, playerId) {
     }
   } catch (err) {
     console.error(`[TIMEOUT] Exception during auto action for ${nickname}:`, err);
-    if (!runSkullKingFallback() && room.gameType !== 'skull_king') {
+    if (!runSkullKingFallback() && room.gameType === 'tichu') {
       // Force play call cards to prevent game from getting stuck (Tichu only)
       try { room.game.forcePlayCallCards(playerId); } catch (_) {}
     }
@@ -2858,7 +2934,10 @@ async function handleDesertion(roomId, playerId, reason = 'leave') {
   }
 
   try {
-    if (room.gameType === 'skull_king') {
+    if (room.gameType === 'love_letter') {
+      // Love Letter: just log (no ranked stats yet)
+      console.log(`LL desertion in room ${room.name} by ${deserterNick}`);
+    } else if (room.gameType === 'skull_king') {
       const deserterScore = game.totalScores[playerId] ?? 0;
       const rankings = game.getRankings();
       const remaining = rankings.filter((r) => r.playerId !== playerId);

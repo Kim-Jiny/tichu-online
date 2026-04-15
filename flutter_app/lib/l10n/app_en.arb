@@ -1432,5 +1432,72 @@
     "placeholders": {
       "remaining": { "type": "int" }
     }
-  }
+  },
+
+  "lobbyLoveLetter": "Love Letter",
+  "lobbyLoveLetterBadge": "Love Letter",
+  "lobbyLoveLetterPlayers": "Love Letter · {count}P",
+  "@lobbyLoveLetterPlayers": {
+    "placeholders": {
+      "count": { "type": "int" }
+    }
+  },
+
+  "llRound": "Round",
+  "llPlay": "Play",
+  "llConfirm": "Confirm",
+  "llOk": "OK",
+  "llRoundEnd": "Round Over",
+  "llRoundWinner": "Round Winner",
+  "llNextRoundAuto": "Next round starting soon...",
+  "llGameEnd": "Game Over",
+  "llWins": "Wins",
+  "llReturnIn": "Returning in",
+
+  "llGuardSelectTarget": "Guard: Select a target and guess a card",
+  "llGuardGuessCard": "Guess which card they hold:",
+  "llSelectTargetFor": "Select target for:",
+
+  "llGuardEffect": "{name} is using Guard...",
+  "@llGuardEffect": { "placeholders": { "name": { "type": "String" } } },
+  "llSpyEffect": "{name} is using Spy...",
+  "@llSpyEffect": { "placeholders": { "name": { "type": "String" } } },
+  "llBaronEffect": "{name} is using Baron...",
+  "@llBaronEffect": { "placeholders": { "name": { "type": "String" } } },
+  "llPrinceEffect": "{name} is using Prince...",
+  "@llPrinceEffect": { "placeholders": { "name": { "type": "String" } } },
+  "llKingEffect": "{name} is using King...",
+  "@llKingEffect": { "placeholders": { "name": { "type": "String" } } },
+
+  "llGuardCorrect": "{actor} guessed {target}'s card correctly! Eliminated!",
+  "@llGuardCorrect": { "placeholders": { "actor": { "type": "String" }, "target": { "type": "String" } } },
+  "llGuardWrong": "{actor} guessed wrong about {target}",
+  "@llGuardWrong": { "placeholders": { "actor": { "type": "String" }, "target": { "type": "String" } } },
+  "llSpyReveal": "{target}'s card:",
+  "@llSpyReveal": { "placeholders": { "target": { "type": "String" } } },
+  "llSpySawYour": "{actor} saw your card",
+  "@llSpySawYour": { "placeholders": { "actor": { "type": "String" } } },
+  "llSpyPeeked": "{actor} peeked at {target}'s card",
+  "@llSpyPeeked": { "placeholders": { "actor": { "type": "String" }, "target": { "type": "String" } } },
+  "llBaronTie": "{actor} and {target} tied",
+  "@llBaronTie": { "placeholders": { "actor": { "type": "String" }, "target": { "type": "String" } } },
+  "llBaronLose": "{loser} was eliminated by Baron comparison",
+  "@llBaronLose": { "placeholders": { "loser": { "type": "String" } } },
+  "llPrinceEliminated": "{target} was forced to discard Princess! Eliminated!",
+  "@llPrinceEliminated": { "placeholders": { "target": { "type": "String" } } },
+  "llPrinceDiscard": "{target} discarded and drew a new card",
+  "@llPrinceDiscard": { "placeholders": { "target": { "type": "String" } } },
+  "llKingSwap": "{actor} and {target} swapped hands",
+  "@llKingSwap": { "placeholders": { "actor": { "type": "String" }, "target": { "type": "String" } } },
+  "llEliminated": "OUT",
+  "llSetAsideFaceUp": "Set aside (face-up)",
+  "llPlayed": "Played:",
+  "llCardGuard": "Guard",
+  "llCardSpy": "Spy",
+  "llCardBaron": "Baron",
+  "llCardHandmaid": "Handmaid",
+  "llCardPrince": "Prince",
+  "llCardKing": "King",
+  "llCardCountess": "Countess",
+  "llCardPrincess": "Princess"
 }

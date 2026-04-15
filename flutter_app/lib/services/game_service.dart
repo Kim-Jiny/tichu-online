@@ -7,12 +7,13 @@ import '../models/player.dart';
 import '../models/room.dart';
 import '../models/game_state.dart';
 import '../models/sk_game_state.dart';
+import '../models/ll_game_state.dart';
 import 'network_service.dart';
 import 'profile_store.dart';
 import 'restore_sync_tracker.dart';
 import 'sfx_service.dart';
 
-enum AppDestination { lobby, waitingRoom, game, spectator, skGame }
+enum AppDestination { lobby, waitingRoom, game, spectator, skGame, llGame }
 
 class GameService extends ChangeNotifier {
   final NetworkService _network;
@@ -70,6 +71,7 @@ class GameService extends ChangeNotifier {
   // Game state
   GameStateData? gameState;
   SKGameStateData? skGameState;
+  LLGameStateData? llGameState;
   String currentGameType = 'tichu';
 
   // Error message
@@ -276,6 +278,9 @@ class GameService extends ChangeNotifier {
     if (skGameState != null && skGameState!.phase.isNotEmpty && skGameState!.phase != 'game_end') {
       return true;
     }
+    if (llGameState != null && llGameState!.phase.isNotEmpty && llGameState!.phase != 'game_end') {
+      return true;
+    }
     return gameState != null &&
         gameState!.phase.isNotEmpty &&
         gameState!.phase != 'waiting' &&
@@ -288,9 +293,11 @@ class GameService extends ChangeNotifier {
   AppDestination get currentDestination {
     if (isSpectator && hasRoom) {
       if (currentGameType == 'skull_king') return AppDestination.skGame;
+      if (currentGameType == 'love_letter') return AppDestination.llGame;
       return AppDestination.spectator;
     }
     if (!hasRoom) return AppDestination.lobby;
+    if (llGameState != null) return AppDestination.llGame;
     if (skGameState != null) return AppDestination.skGame;
     if (gameState != null) return AppDestination.game;
     return AppDestination.waitingRoom;
@@ -474,6 +481,7 @@ class GameService extends ChangeNotifier {
         _prevGameState = null;
         skGameState = null;
         _prevSKGameState = null;
+        llGameState = null;
         spectatorGameState = null;
         pendingCardViewRequests = {};
         approvedCardViews = {};
@@ -487,6 +495,7 @@ class GameService extends ChangeNotifier {
         spectatorGameState = null;
         skGameState = null;
         _prevSKGameState = null;
+        llGameState = null;
         pendingCardViewRequests = {};
         approvedCardViews = {};
         _prevGameState = null;
@@ -511,10 +520,20 @@ class GameService extends ChangeNotifier {
             skGameState = SKGameStateData.fromJson(state);
             spectatorGameState = null;
             gameState = null;
+            llGameState = null;
             _prevGameState = null;
+          } else if (stateGameType == 'love_letter') {
+            currentGameType = 'love_letter';
+            llGameState = LLGameStateData.fromJson(state);
+            spectatorGameState = null;
+            gameState = null;
+            skGameState = null;
+            _prevGameState = null;
+            _prevSKGameState = null;
           } else {
             spectatorGameState = state;
             skGameState = null;
+            llGameState = null;
           }
           final spectatorList = state['spectators'] as List?;
           if (spectatorList != null) {
@@ -596,6 +615,7 @@ class GameService extends ChangeNotifier {
         _prevGameState = null;
         skGameState = null;
         _prevSKGameState = null;
+        llGameState = null;
         currentGameType = 'tichu';
         roomMaxPlayers = 4;
         chatMessages = [];
@@ -637,6 +657,7 @@ class GameService extends ChangeNotifier {
         _prevGameState = null;
         skGameState = null;
         _prevSKGameState = null;
+        llGameState = null;
         currentGameType = 'tichu';
         chatMessages = [];
         desertedPlayerName = null;
@@ -684,6 +705,7 @@ class GameService extends ChangeNotifier {
             cardViewers = [];
             gameState = null;
             skGameState = null;
+            llGameState = null;
             spectatorGameState = null;
             _prevGameState = null;
             _prevSKGameState = null;
@@ -707,6 +729,7 @@ class GameService extends ChangeNotifier {
             _prevSKGameState = nextSK;
             skGameState = nextSK;
             gameState = null;
+            llGameState = null;
             _prevGameState = null;
             // Clear desertion state when SK phase is not game_end
             if (nextSK.phase != 'game_end') {
@@ -728,6 +751,39 @@ class GameService extends ChangeNotifier {
             final skSpectatorList = state['spectators'] as List?;
             if (skSpectatorList != null) {
               spectators = skSpectatorList.map((s) => {
+                'id': (s['id'] ?? '').toString(),
+                'nickname': (s['nickname'] ?? '').toString(),
+              }).toList();
+            } else {
+              spectators = [];
+            }
+          } else if (stateGameType == 'love_letter') {
+            // Love Letter game state
+            currentGameType = 'love_letter';
+            final nextLL = LLGameStateData.fromJson(state);
+            llGameState = nextLL;
+            gameState = null;
+            skGameState = null;
+            _prevGameState = null;
+            _prevSKGameState = null;
+            if (nextLL.phase != 'game_end') {
+              desertedPlayerName = null;
+              desertedReason = null;
+            }
+            final selfPlayer = nextLL.players.where((p) => p.position == 'self');
+            myTimeoutCount = selfPlayer.isNotEmpty ? selfPlayer.first.timeoutCount : 0;
+            final viewers = state['cardViewers'] as List?;
+            if (viewers != null) {
+              cardViewers = viewers.map((v) => {
+                'id': (v['id'] ?? '').toString(),
+                'nickname': (v['nickname'] ?? '').toString(),
+              }).toList();
+            } else {
+              cardViewers = [];
+            }
+            final llSpectatorList = state['spectators'] as List?;
+            if (llSpectatorList != null) {
+              spectators = llSpectatorList.map((s) => {
                 'id': (s['id'] ?? '').toString(),
                 'nickname': (s['nickname'] ?? '').toString(),
               }).toList();
@@ -1982,6 +2038,9 @@ class GameService extends ChangeNotifier {
       msg['gameType'] = 'skull_king';
       msg['maxPlayers'] = maxPlayers;
       msg['skExpansions'] = skExpansions;
+    } else if (gameType == 'love_letter') {
+      msg['gameType'] = 'love_letter';
+      msg['maxPlayers'] = maxPlayers;
     }
     _network.send(msg);
   }
@@ -2013,6 +2072,7 @@ class GameService extends ChangeNotifier {
     _prevGameState = null;
     skGameState = null;
     _prevSKGameState = null;
+    llGameState = null;
     spectatorGameState = null;
     pendingCardViewRequests = {};
     approvedCardViews = {};
@@ -2054,6 +2114,27 @@ class GameService extends ChangeNotifier {
     final msg = <String, dynamic>{'type': 'play_card', 'cardId': cardId};
     if (tigressChoice != null) msg['tigressChoice'] = tigressChoice;
     _network.send(msg);
+  }
+
+  // LL actions
+  void llPlayCard(String cardId) {
+    _network.send({'type': 'play_card', 'cardId': cardId});
+  }
+
+  void llSelectTarget(String targetId) {
+    _network.send({'type': 'select_target', 'targetId': targetId});
+  }
+
+  void llGuardGuess(String targetId, String guess) {
+    _network.send({
+      'type': 'guard_guess',
+      'targetId': targetId,
+      'guess': guess,
+    });
+  }
+
+  void llEffectAck() {
+    _network.send({'type': 'effect_ack'});
   }
 
   void playCards(List<String> cards, {String? callRank}) {

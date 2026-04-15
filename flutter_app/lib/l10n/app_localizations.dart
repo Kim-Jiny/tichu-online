@@ -5318,6 +5318,258 @@ abstract class L10n {
   /// In en, this message translates to:
   /// **'Received 50 Gold! (Remaining: {remaining})'**
   String serviceAdRewardSuccess(int remaining);
+
+  /// No description provided for @lobbyLoveLetter.
+  ///
+  /// In en, this message translates to:
+  /// **'Love Letter'**
+  String get lobbyLoveLetter;
+
+  /// No description provided for @lobbyLoveLetterBadge.
+  ///
+  /// In en, this message translates to:
+  /// **'Love Letter'**
+  String get lobbyLoveLetterBadge;
+
+  /// No description provided for @lobbyLoveLetterPlayers.
+  ///
+  /// In en, this message translates to:
+  /// **'Love Letter · {count}P'**
+  String lobbyLoveLetterPlayers(int count);
+
+  /// No description provided for @llRound.
+  ///
+  /// In en, this message translates to:
+  /// **'Round'**
+  String get llRound;
+
+  /// No description provided for @llPlay.
+  ///
+  /// In en, this message translates to:
+  /// **'Play'**
+  String get llPlay;
+
+  /// No description provided for @llConfirm.
+  ///
+  /// In en, this message translates to:
+  /// **'Confirm'**
+  String get llConfirm;
+
+  /// No description provided for @llOk.
+  ///
+  /// In en, this message translates to:
+  /// **'OK'**
+  String get llOk;
+
+  /// No description provided for @llRoundEnd.
+  ///
+  /// In en, this message translates to:
+  /// **'Round Over'**
+  String get llRoundEnd;
+
+  /// No description provided for @llRoundWinner.
+  ///
+  /// In en, this message translates to:
+  /// **'Round Winner'**
+  String get llRoundWinner;
+
+  /// No description provided for @llNextRoundAuto.
+  ///
+  /// In en, this message translates to:
+  /// **'Next round starting soon...'**
+  String get llNextRoundAuto;
+
+  /// No description provided for @llGameEnd.
+  ///
+  /// In en, this message translates to:
+  /// **'Game Over'**
+  String get llGameEnd;
+
+  /// No description provided for @llWins.
+  ///
+  /// In en, this message translates to:
+  /// **'Wins'**
+  String get llWins;
+
+  /// No description provided for @llReturnIn.
+  ///
+  /// In en, this message translates to:
+  /// **'Returning in'**
+  String get llReturnIn;
+
+  /// No description provided for @llGuardSelectTarget.
+  ///
+  /// In en, this message translates to:
+  /// **'Guard: Select a target and guess a card'**
+  String get llGuardSelectTarget;
+
+  /// No description provided for @llGuardGuessCard.
+  ///
+  /// In en, this message translates to:
+  /// **'Guess which card they hold:'**
+  String get llGuardGuessCard;
+
+  /// No description provided for @llSelectTargetFor.
+  ///
+  /// In en, this message translates to:
+  /// **'Select target for:'**
+  String get llSelectTargetFor;
+
+  /// No description provided for @llGuardEffect.
+  ///
+  /// In en, this message translates to:
+  /// **'{name} is using Guard...'**
+  String llGuardEffect(String name);
+
+  /// No description provided for @llSpyEffect.
+  ///
+  /// In en, this message translates to:
+  /// **'{name} is using Spy...'**
+  String llSpyEffect(String name);
+
+  /// No description provided for @llBaronEffect.
+  ///
+  /// In en, this message translates to:
+  /// **'{name} is using Baron...'**
+  String llBaronEffect(String name);
+
+  /// No description provided for @llPrinceEffect.
+  ///
+  /// In en, this message translates to:
+  /// **'{name} is using Prince...'**
+  String llPrinceEffect(String name);
+
+  /// No description provided for @llKingEffect.
+  ///
+  /// In en, this message translates to:
+  /// **'{name} is using King...'**
+  String llKingEffect(String name);
+
+  /// No description provided for @llGuardCorrect.
+  ///
+  /// In en, this message translates to:
+  /// **'{actor} guessed {target}\'s card correctly! Eliminated!'**
+  String llGuardCorrect(String actor, String target);
+
+  /// No description provided for @llGuardWrong.
+  ///
+  /// In en, this message translates to:
+  /// **'{actor} guessed wrong about {target}'**
+  String llGuardWrong(String actor, String target);
+
+  /// No description provided for @llSpyReveal.
+  ///
+  /// In en, this message translates to:
+  /// **'{target}\'s card:'**
+  String llSpyReveal(String target);
+
+  /// No description provided for @llSpySawYour.
+  ///
+  /// In en, this message translates to:
+  /// **'{actor} saw your card'**
+  String llSpySawYour(String actor);
+
+  /// No description provided for @llSpyPeeked.
+  ///
+  /// In en, this message translates to:
+  /// **'{actor} peeked at {target}\'s card'**
+  String llSpyPeeked(String actor, String target);
+
+  /// No description provided for @llBaronTie.
+  ///
+  /// In en, this message translates to:
+  /// **'{actor} and {target} tied'**
+  String llBaronTie(String actor, String target);
+
+  /// No description provided for @llBaronLose.
+  ///
+  /// In en, this message translates to:
+  /// **'{loser} was eliminated by Baron comparison'**
+  String llBaronLose(String loser);
+
+  /// No description provided for @llPrinceEliminated.
+  ///
+  /// In en, this message translates to:
+  /// **'{target} was forced to discard Princess! Eliminated!'**
+  String llPrinceEliminated(String target);
+
+  /// No description provided for @llPrinceDiscard.
+  ///
+  /// In en, this message translates to:
+  /// **'{target} discarded and drew a new card'**
+  String llPrinceDiscard(String target);
+
+  /// No description provided for @llKingSwap.
+  ///
+  /// In en, this message translates to:
+  /// **'{actor} and {target} swapped hands'**
+  String llKingSwap(String actor, String target);
+
+  /// No description provided for @llEliminated.
+  ///
+  /// In en, this message translates to:
+  /// **'OUT'**
+  String get llEliminated;
+
+  /// No description provided for @llSetAsideFaceUp.
+  ///
+  /// In en, this message translates to:
+  /// **'Set aside (face-up)'**
+  String get llSetAsideFaceUp;
+
+  /// No description provided for @llPlayed.
+  ///
+  /// In en, this message translates to:
+  /// **'Played:'**
+  String get llPlayed;
+
+  /// No description provided for @llCardGuard.
+  ///
+  /// In en, this message translates to:
+  /// **'Guard'**
+  String get llCardGuard;
+
+  /// No description provided for @llCardSpy.
+  ///
+  /// In en, this message translates to:
+  /// **'Spy'**
+  String get llCardSpy;
+
+  /// No description provided for @llCardBaron.
+  ///
+  /// In en, this message translates to:
+  /// **'Baron'**
+  String get llCardBaron;
+
+  /// No description provided for @llCardHandmaid.
+  ///
+  /// In en, this message translates to:
+  /// **'Handmaid'**
+  String get llCardHandmaid;
+
+  /// No description provided for @llCardPrince.
+  ///
+  /// In en, this message translates to:
+  /// **'Prince'**
+  String get llCardPrince;
+
+  /// No description provided for @llCardKing.
+  ///
+  /// In en, this message translates to:
+  /// **'King'**
+  String get llCardKing;
+
+  /// No description provided for @llCardCountess.
+  ///
+  /// In en, this message translates to:
+  /// **'Countess'**
+  String get llCardCountess;
+
+  /// No description provided for @llCardPrincess.
+  ///
+  /// In en, this message translates to:
+  /// **'Princess'**
+  String get llCardPrincess;
 }
 
 class _L10nDelegate extends LocalizationsDelegate<L10n> {

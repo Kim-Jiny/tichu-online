@@ -2853,4 +2853,162 @@ class L10nKo extends L10n {
   String serviceAdRewardSuccess(int remaining) {
     return '50골드를 받았습니다! (남은 횟수: $remaining)';
   }
+
+  @override
+  String get lobbyLoveLetter => '러브레터';
+
+  @override
+  String get lobbyLoveLetterBadge => '러브레터';
+
+  @override
+  String lobbyLoveLetterPlayers(int count) {
+    return '러브레터 · $count인';
+  }
+
+  @override
+  String get llRound => '라운드';
+
+  @override
+  String get llPlay => '플레이';
+
+  @override
+  String get llConfirm => '확인';
+
+  @override
+  String get llOk => '확인';
+
+  @override
+  String get llRoundEnd => '라운드 종료';
+
+  @override
+  String get llRoundWinner => '라운드 승자';
+
+  @override
+  String get llNextRoundAuto => '잠시 후 다음 라운드가 시작됩니다...';
+
+  @override
+  String get llGameEnd => '게임 종료';
+
+  @override
+  String get llWins => '승리';
+
+  @override
+  String get llReturnIn => '돌아가기';
+
+  @override
+  String get llGuardSelectTarget => 'Guard: 대상과 카드를 선택하세요';
+
+  @override
+  String get llGuardGuessCard => '어떤 카드를 가지고 있는지 추측하세요:';
+
+  @override
+  String get llSelectTargetFor => '대상 선택:';
+
+  @override
+  String llGuardEffect(String name) {
+    return '$name이(가) Guard를 사용합니다...';
+  }
+
+  @override
+  String llSpyEffect(String name) {
+    return '$name이(가) Spy를 사용합니다...';
+  }
+
+  @override
+  String llBaronEffect(String name) {
+    return '$name이(가) Baron을 사용합니다...';
+  }
+
+  @override
+  String llPrinceEffect(String name) {
+    return '$name이(가) Prince를 사용합니다...';
+  }
+
+  @override
+  String llKingEffect(String name) {
+    return '$name이(가) King을 사용합니다...';
+  }
+
+  @override
+  String llGuardCorrect(String actor, String target) {
+    return '$actor이(가) $target의 카드를 맞혔습니다! 탈락!';
+  }
+
+  @override
+  String llGuardWrong(String actor, String target) {
+    return '$actor이(가) $target의 카드를 틀렸습니다';
+  }
+
+  @override
+  String llSpyReveal(String target) {
+    return '$target의 카드:';
+  }
+
+  @override
+  String llSpySawYour(String actor) {
+    return '$actor이(가) 당신의 카드를 확인했습니다';
+  }
+
+  @override
+  String llSpyPeeked(String actor, String target) {
+    return '$actor이(가) $target의 카드를 확인했습니다';
+  }
+
+  @override
+  String llBaronTie(String actor, String target) {
+    return '$actor과(와) $target이(가) 동점입니다';
+  }
+
+  @override
+  String llBaronLose(String loser) {
+    return '$loser이(가) Baron 비교에서 탈락했습니다';
+  }
+
+  @override
+  String llPrinceEliminated(String target) {
+    return '$target이(가) Princess를 버려 탈락했습니다!';
+  }
+
+  @override
+  String llPrinceDiscard(String target) {
+    return '$target이(가) 카드를 버리고 새 카드를 뽑았습니다';
+  }
+
+  @override
+  String llKingSwap(String actor, String target) {
+    return '$actor과(와) $target이(가) 카드를 교환했습니다';
+  }
+
+  @override
+  String get llEliminated => '탈락';
+
+  @override
+  String get llSetAsideFaceUp => '공개 제외 카드';
+
+  @override
+  String get llPlayed => '사용한 카드:';
+
+  @override
+  String get llCardGuard => '가드';
+
+  @override
+  String get llCardSpy => '스파이';
+
+  @override
+  String get llCardBaron => '남작';
+
+  @override
+  String get llCardHandmaid => '시녀';
+
+  @override
+  String get llCardPrince => '왕자';
+
+  @override
+  String get llCardKing => '왕';
+
+  @override
+  String get llCardCountess => '백작부인';
+
+  @override
+  String get llCardPrincess => '공주';
 }

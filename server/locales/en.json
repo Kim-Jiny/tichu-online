@@ -207,5 +207,21 @@
   "sk_suit_follow_violated": "You must follow suit",
   "sk_invalid_card": "Invalid card",
   "sk_tigress_choice_required": "Tigress choice required (pirate/escape)",
-  "sk_not_round_end": "Not in the round-end state"
+  "sk_not_round_end": "Not in the round-end state",
+
+  "ll_update_required": "Please update the app to play Love Letter",
+  "ll_not_play_phase": "Not in the play phase",
+  "ll_not_your_turn": "It's not your turn",
+  "ll_eliminated": "You are already eliminated",
+  "ll_card_not_in_hand": "Card not in your hand",
+  "ll_invalid_card": "Invalid card",
+  "ll_countess_forced": "You must play the Countess when holding King or Prince",
+  "ll_no_pending_effect": "No pending effect to resolve",
+  "ll_no_target_needed": "No target selection needed",
+  "ll_invalid_target": "Invalid target",
+  "ll_not_guard_effect": "Not a Guard effect",
+  "ll_invalid_guess": "Invalid guess (cannot guess Guard)",
+  "ll_effect_not_resolved": "Effect not yet resolved",
+  "ll_not_round_end": "Not in the round-end state",
+  "ll_invalid_effect": "Invalid effect"
 }

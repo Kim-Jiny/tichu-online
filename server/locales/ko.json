@@ -207,5 +207,21 @@
   "sk_suit_follow_violated": "수트 팔로잉 규칙을 위반했습니다",
   "sk_invalid_card": "유효하지 않은 카드입니다",
   "sk_tigress_choice_required": "Tigress 선택이 필요합니다 (pirate/escape)",
-  "sk_not_round_end": "라운드 종료 상태가 아닙니다"
+  "sk_not_round_end": "라운드 종료 상태가 아닙니다",
+
+  "ll_update_required": "러브레터를 플레이하려면 앱을 업데이트해 주세요",
+  "ll_not_play_phase": "플레이 페이즈가 아닙니다",
+  "ll_not_your_turn": "당신의 차례가 아닙니다",
+  "ll_eliminated": "이미 탈락했습니다",
+  "ll_card_not_in_hand": "손에 없는 카드입니다",
+  "ll_invalid_card": "유효하지 않은 카드입니다",
+  "ll_countess_forced": "King 또는 Prince와 함께 들고 있으면 Countess를 내야 합니다",
+  "ll_no_pending_effect": "처리 중인 효과가 없습니다",
+  "ll_no_target_needed": "타겟 선택이 필요하지 않습니다",
+  "ll_invalid_target": "유효하지 않은 타겟입니다",
+  "ll_not_guard_effect": "Guard 효과가 아닙니다",
+  "ll_invalid_guess": "유효하지 않은 추측입니다 (Guard는 추측할 수 없습니다)",
+  "ll_effect_not_resolved": "효과가 아직 해결되지 않았습니다",
+  "ll_not_round_end": "라운드 종료 상태가 아닙니다",
+  "ll_invalid_effect": "유효하지 않은 효과입니다"
 }

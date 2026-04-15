@@ -571,13 +571,60 @@ class _ProfileBodyState extends State<_ProfileBody> {
   }
 }
 
-class _ProfileContent extends StatelessWidget {
+class _ProfileContent extends StatefulWidget {
   const _ProfileContent({required this.data});
 
   final Map<String, dynamic> data;
 
   @override
+  State<_ProfileContent> createState() => _ProfileContentState();
+}
+
+class _ProfileContentState extends State<_ProfileContent> {
+  String _selectedGame = 'tichu';
+
+  void _showGameSelector() {
+    final l10n = L10n.of(context);
+    showModalBottomSheet(
+      context: context,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+      ),
+      builder: (ctx) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const SizedBox(height: 8),
+            Container(width: 36, height: 4, decoration: BoxDecoration(color: Colors.grey[300], borderRadius: BorderRadius.circular(2))),
+            const SizedBox(height: 12),
+            ListTile(
+              leading: const Text('🎴', style: TextStyle(fontSize: 20)),
+              title: Text(l10n.rankingTichu),
+              trailing: _selectedGame == 'tichu' ? const Icon(Icons.check, color: Color(0xFF7E57C2)) : null,
+              onTap: () { Navigator.pop(ctx); setState(() => _selectedGame = 'tichu'); },
+            ),
+            ListTile(
+              leading: const Text('⚓', style: TextStyle(fontSize: 20)),
+              title: Text(l10n.rankingSkullKing),
+              trailing: _selectedGame == 'skull_king' ? const Icon(Icons.check, color: Color(0xFF2D2D3D)) : null,
+              onTap: () { Navigator.pop(ctx); setState(() => _selectedGame = 'skull_king'); },
+            ),
+            ListTile(
+              leading: const Text('❤️', style: TextStyle(fontSize: 20)),
+              title: Text(l10n.lobbyLoveLetter),
+              trailing: _selectedGame == 'love_letter' ? const Icon(Icons.check, color: Color(0xFFE91E63)) : null,
+              onTap: () { Navigator.pop(ctx); setState(() => _selectedGame = 'love_letter'); },
+            ),
+            const SizedBox(height: 8),
+          ],
+        ),
+      ),
+    );
+  }
+
+  @override
   Widget build(BuildContext context) {
+    final data = widget.data;
     final profile = data['profile'] as Map<String, dynamic>?;
     if (profile == null) {
       return Center(child: Text(L10n.of(context).rankingProfileNotFound));
@@ -597,7 +644,6 @@ class _ProfileContent extends StatelessWidget {
     final skTotalGames = profile['skTotalGames'] ?? 0;
     final skWins = profile['skWins'] ?? 0;
     final skLosses = profile['skLosses'] ?? 0;
-    final skRating = profile['skRating'] ?? 1000;
     final skWinRate = profile['skWinRate'] ?? 0;
     final skSeasonRating = profile['skSeasonRating'] ?? 1000;
     final skSeasonGames = profile['skSeasonGames'] ?? 0;
@@ -610,6 +656,35 @@ class _ProfileContent extends StatelessWidget {
     final leaveCount = profile['leaveCount'] ?? 0;
     final bannerKey = profile['bannerKey']?.toString();
     final recentMatches = data['recentMatches'] as List<dynamic>? ?? [];
+    final filteredMatches = recentMatches.where((m) {
+      final gameType = m['gameType']?.toString() ?? 'tichu';
+      return gameType == _selectedGame;
+    }).toList();
+
+    // Game selector button config
+    String gameLabel;
+    String gameEmoji;
+    Color gameBgColor;
+    Color gameFgColor;
+    switch (_selectedGame) {
+      case 'skull_king':
+        gameLabel = l10n.rankingSkullKing;
+        gameEmoji = '⚓';
+        gameBgColor = const Color(0xFF2D2D3D);
+        gameFgColor = const Color(0xFFFFD54F);
+        break;
+      case 'love_letter':
+        gameLabel = l10n.lobbyLoveLetter;
+        gameEmoji = '❤️';
+        gameBgColor = const Color(0xFFE91E63);
+        gameFgColor = Colors.white;
+        break;
+      default:
+        gameLabel = l10n.rankingTichu;
+        gameEmoji = '🎴';
+        gameBgColor = const Color(0xFF7E57C2);
+        gameFgColor = Colors.white;
+    }
 
     return Column(
       children: [
@@ -622,59 +697,107 @@ class _ProfileContent extends StatelessWidget {
         const SizedBox(height: 8),
         _ProfileMiniStatRow(gold: gold, leaveCount: leaveCount),
         const SizedBox(height: 10),
-        _ProfileSectionCard(
-          title: l10n.rankingTichuSeasonRanked,
-          accent: const Color(0xFF7A6A95),
-          background: const Color(0xFFF6F3FA),
-          icon: Icons.emoji_events,
-          iconColor: const Color(0xFFFFD54F),
-          mainText: '$seasonRating',
-          chips: [
-            _ProfileStatChip(l10n.rankingStatRecord, l10n.rankingRecordFormat(seasonGames, seasonWins, seasonLosses)),
-            _ProfileStatChip(l10n.rankingStatWinRate, '$seasonWinRate%'),
-          ],
+        // Game selector button
+        InkWell(
+          onTap: _showGameSelector,
+          borderRadius: BorderRadius.circular(12),
+          child: Container(
+            width: double.infinity,
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+            decoration: BoxDecoration(
+              color: gameBgColor,
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Row(
+              children: [
+                Text(gameEmoji, style: const TextStyle(fontSize: 18)),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    gameLabel,
+                    style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: gameFgColor),
+                  ),
+                ),
+                Icon(Icons.arrow_drop_down, color: gameFgColor),
+              ],
+            ),
+          ),
         ),
         const SizedBox(height: 10),
-        _ProfileSectionCard(
-          title: l10n.rankingTichuRecord,
-          accent: const Color(0xFF5A4038),
-          background: const Color(0xFFF5F5F5),
-          icon: Icons.star,
-          iconColor: const Color(0xFFFFB74D),
-          mainText: '',
-          chips: [
-            _ProfileStatChip(l10n.rankingStatRecord, l10n.rankingRecordFormat(totalGames, wins, losses)),
-            _ProfileStatChip(l10n.rankingStatWinRate, '$winRate%'),
-          ],
-        ),
-        const SizedBox(height: 10),
-        _ProfileSectionCard(
-          title: l10n.rankingSkullKingSeasonRanked,
-          accent: const Color(0xFF2D2D3D),
-          background: const Color(0xFFECEFF6),
-          icon: Icons.emoji_events,
-          iconColor: const Color(0xFFFFD54F),
-          mainText: '$skSeasonRating',
-          chips: [
-            _ProfileStatChip(l10n.rankingStatRecord, l10n.rankingRecordFormat(skSeasonGames, skSeasonWins, skSeasonLosses)),
-            _ProfileStatChip(l10n.rankingStatWinRate, '$skSeasonWinRate%'),
-          ],
-        ),
-        const SizedBox(height: 10),
-        _ProfileSectionCard(
-          title: l10n.rankingSkullKingRecord,
-          accent: const Color(0xFF3F51B5),
-          background: const Color(0xFFF0F0FA),
-          icon: Icons.sailing,
-          iconColor: const Color(0xFF5C6BC0),
-          mainText: '',
-          chips: [
-            _ProfileStatChip(l10n.rankingStatRecord, l10n.rankingRecordFormat(skTotalGames, skWins, skLosses)),
-            _ProfileStatChip(l10n.rankingStatWinRate, '$skWinRate%'),
-          ],
-        ),
+        if (_selectedGame == 'tichu') ...[
+          _ProfileSectionCard(
+            title: l10n.rankingTichuSeasonRanked,
+            accent: const Color(0xFF7A6A95),
+            background: const Color(0xFFF6F3FA),
+            icon: Icons.emoji_events,
+            iconColor: const Color(0xFFFFD54F),
+            mainText: '$seasonRating',
+            chips: [
+              _ProfileStatChip(l10n.rankingStatRecord, l10n.rankingRecordFormat(seasonGames, seasonWins, seasonLosses)),
+              _ProfileStatChip(l10n.rankingStatWinRate, '$seasonWinRate%'),
+            ],
+          ),
+          const SizedBox(height: 10),
+          _ProfileSectionCard(
+            title: l10n.rankingTichuRecord,
+            accent: const Color(0xFF5A4038),
+            background: const Color(0xFFF5F5F5),
+            icon: Icons.star,
+            iconColor: const Color(0xFFFFB74D),
+            mainText: '',
+            chips: [
+              _ProfileStatChip(l10n.rankingStatRecord, l10n.rankingRecordFormat(totalGames, wins, losses)),
+              _ProfileStatChip(l10n.rankingStatWinRate, '$winRate%'),
+            ],
+          ),
+        ] else if (_selectedGame == 'skull_king') ...[
+          _ProfileSectionCard(
+            title: l10n.rankingSkullKingSeasonRanked,
+            accent: const Color(0xFF2D2D3D),
+            background: const Color(0xFFECEFF6),
+            icon: Icons.emoji_events,
+            iconColor: const Color(0xFFFFD54F),
+            mainText: '$skSeasonRating',
+            chips: [
+              _ProfileStatChip(l10n.rankingStatRecord, l10n.rankingRecordFormat(skSeasonGames, skSeasonWins, skSeasonLosses)),
+              _ProfileStatChip(l10n.rankingStatWinRate, '$skSeasonWinRate%'),
+            ],
+          ),
+          const SizedBox(height: 10),
+          _ProfileSectionCard(
+            title: l10n.rankingSkullKingRecord,
+            accent: const Color(0xFF3F51B5),
+            background: const Color(0xFFF0F0FA),
+            icon: Icons.sailing,
+            iconColor: const Color(0xFF5C6BC0),
+            mainText: '',
+            chips: [
+              _ProfileStatChip(l10n.rankingStatRecord, l10n.rankingRecordFormat(skTotalGames, skWins, skLosses)),
+              _ProfileStatChip(l10n.rankingStatWinRate, '$skWinRate%'),
+            ],
+          ),
+        ] else ...[
+          Builder(builder: (_) {
+            final llTotalGames = profile['llTotalGames'] ?? 0;
+            final llWins = profile['llWins'] ?? 0;
+            final llLosses = profile['llLosses'] ?? 0;
+            final llWinRate = profile['llWinRate'] ?? 0;
+            return _ProfileSectionCard(
+              title: l10n.rankingLoveLetterRecord,
+              accent: const Color(0xFFAD1457),
+              background: const Color(0xFFFCE4EC),
+              icon: Icons.favorite,
+              iconColor: const Color(0xFFE91E63),
+              mainText: '',
+              chips: [
+                _ProfileStatChip(l10n.rankingStatRecord, l10n.rankingRecordFormat(llTotalGames, llWins, llLosses)),
+                _ProfileStatChip(l10n.rankingStatWinRate, '$llWinRate%'),
+              ],
+            );
+          }),
+        ],
         const SizedBox(height: 12),
-        _ProfileRecentMatches(recentMatches: recentMatches),
+        _ProfileRecentMatches(recentMatches: filteredMatches),
       ],
     );
   }
@@ -970,7 +1093,9 @@ class _ProfileRecentMatches extends StatelessWidget {
 
   Widget _buildMatchRow(BuildContext context, dynamic match) {
     final l10n = L10n.of(context);
-    final isSK = match['gameType'] == 'skull_king';
+    final gameType = match['gameType']?.toString() ?? 'tichu';
+    final isSK = gameType == 'skull_king';
+    final isLL = gameType == 'love_letter';
     final isDraw = match['isDraw'] == true;
     final isDesertionLoss = match['isDesertionLoss'] == true;
     final won = match['won'] == true;
@@ -994,7 +1119,7 @@ class _ProfileRecentMatches extends StatelessWidget {
 
     String detail;
     String score;
-    if (isSK) {
+    if (isSK || isLL) {
       final players = (match['players'] as List<dynamic>?)?.map((p) => p['nickname']?.toString() ?? '').join(', ') ?? '';
       detail = players;
       final rank = match['myRank'] ?? '-';
@@ -1030,15 +1155,15 @@ class _ProfileRecentMatches extends StatelessWidget {
               ),
             ),
           ),
-          if (isSK) ...[
+          if (isSK || isLL) ...[
             const SizedBox(width: 4),
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
               decoration: BoxDecoration(
-                color: const Color(0xFF5C6BC0),
+                color: isSK ? const Color(0xFF5C6BC0) : const Color(0xFFE91E63),
                 borderRadius: BorderRadius.circular(4),
               ),
-              child: const Text('SK', style: TextStyle(fontSize: 8, color: Colors.white, fontWeight: FontWeight.bold)),
+              child: Text(isSK ? 'SK' : 'LL', style: const TextStyle(fontSize: 8, color: Colors.white, fontWeight: FontWeight.bold)),
             ),
           ],
           const SizedBox(width: 8),
@@ -1105,7 +1230,9 @@ void _showRecentMatchesDialog(BuildContext context, List<dynamic> recentMatches)
 }
 
 Widget _buildMatchRowDialog(L10n l10n, dynamic match) {
-  final isSK = match['gameType'] == 'skull_king';
+  final gameType = match['gameType']?.toString() ?? 'tichu';
+  final isSK = gameType == 'skull_king';
+  final isLL = gameType == 'love_letter';
   final isDraw = match['isDraw'] == true;
   final isDesertionLoss = match['isDesertionLoss'] == true;
   final won = match['won'] == true;
@@ -1129,7 +1256,7 @@ Widget _buildMatchRowDialog(L10n l10n, dynamic match) {
 
   String detail;
   String score;
-  if (isSK) {
+  if (isSK || isLL) {
     final players = (match['players'] as List<dynamic>?)?.map((p) => p['nickname']?.toString() ?? '').join(', ') ?? '';
     detail = players;
     final rank = match['myRank'] ?? '-';
@@ -1153,12 +1280,12 @@ Widget _buildMatchRowDialog(L10n l10n, dynamic match) {
         decoration: BoxDecoration(color: badgeColor, shape: BoxShape.circle),
         child: Text(badge, style: const TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.bold)),
       ),
-      if (isSK) ...[
+      if (isSK || isLL) ...[
         const SizedBox(width: 4),
         Container(
           padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
-          decoration: BoxDecoration(color: const Color(0xFF5C6BC0), borderRadius: BorderRadius.circular(4)),
-          child: const Text('SK', style: TextStyle(fontSize: 8, color: Colors.white, fontWeight: FontWeight.bold)),
+          decoration: BoxDecoration(color: isSK ? const Color(0xFF5C6BC0) : const Color(0xFFE91E63), borderRadius: BorderRadius.circular(4)),
+          child: Text(isSK ? 'SK' : 'LL', style: const TextStyle(fontSize: 8, color: Colors.white, fontWeight: FontWeight.bold)),
         ),
       ],
       const SizedBox(width: 8),

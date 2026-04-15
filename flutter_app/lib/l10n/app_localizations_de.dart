@@ -784,6 +784,9 @@ class L10nDe extends L10n {
   String get lobbySkullKingRecord => 'Skull King Statistik';
 
   @override
+  String get lobbyLoveLetterRecord => 'Love Letter Statistik';
+
+  @override
   String get lobbyStatRecord => 'Bilanz';
 
   @override
@@ -827,6 +830,9 @@ class L10nDe extends L10n {
 
   @override
   String get lobbyMatchTypeSkullKing => 'Skull King';
+
+  @override
+  String get lobbyMatchTypeLoveLetter => 'Love Letter';
 
   @override
   String get lobbyMatchTypeRanked => 'Rangliste';
@@ -1290,6 +1296,9 @@ class L10nDe extends L10n {
 
   @override
   String get skGameSkullKingRecord => 'Skull King Statistik';
+
+  @override
+  String get skGameLoveLetterRecord => 'Love Letter Statistik';
 
   @override
   String get skGameStatRecord => 'Bilanz';
@@ -1872,6 +1881,9 @@ class L10nDe extends L10n {
   String get rulesTabSkullKing => 'Skull King';
 
   @override
+  String get rulesTabLoveLetter => 'Love Letter';
+
+  @override
   String get rulesTichuGoalTitle => 'Spielziel';
 
   @override
@@ -2295,6 +2307,157 @@ class L10nDe extends L10n {
       'Der Stichgewinner erhält +20 Bonus pro Loot-Karte im Stich, und jeder Spieler, der eine Loot-Karte gespielt hat, erhält ebenfalls +20 als eigenen Bonus. (Nur bei Bid-Erfolg)';
 
   @override
+  String get rulesLlGoalTitle => 'Spielziel';
+
+  @override
+  String get rulesLlGoalBody =>
+      'Ein Kartenspiel für 2–4 Spieler. Pro Runde gewinnt der letzte verbliebene Spieler oder der Spieler mit der höchsten Karte, wenn das Deck aufgebraucht ist, ein Token. Der erste Spieler, der genügend Token sammelt, gewinnt.';
+
+  @override
+  String get rulesLlCardCompositionTitle => 'Kartenzusammensetzung (16 Karten)';
+
+  @override
+  String get rulesLlGuard => 'Wache (Guard)';
+
+  @override
+  String get rulesLlGuardSub =>
+      'Rate die Karte eines Gegners, um ihn zu eliminieren';
+
+  @override
+  String get rulesLlSpy => 'Spion (Spy)';
+
+  @override
+  String get rulesLlSpySub => 'Sieh dir heimlich die Karte eines Gegners an';
+
+  @override
+  String get rulesLlBaron => 'Baron';
+
+  @override
+  String get rulesLlBaronSub =>
+      'Kartenvergleich; niedrigere Karte wird eliminiert';
+
+  @override
+  String get rulesLlHandmaid => 'Zofe (Handmaid)';
+
+  @override
+  String get rulesLlHandmaidSub =>
+      'Bis zum nächsten Zug vor Effekten geschützt';
+
+  @override
+  String get rulesLlPrince => 'Prinz (Prince)';
+
+  @override
+  String get rulesLlPrinceSub => 'Zwinge einen Spieler, seine Karte abzuwerfen';
+
+  @override
+  String get rulesLlKing => 'König (King)';
+
+  @override
+  String get rulesLlKingSub => 'Tausche Karten mit einem Gegner';
+
+  @override
+  String get rulesLlCountess => 'Gräfin (Countess)';
+
+  @override
+  String get rulesLlCountessSub =>
+      'Muss gespielt werden, wenn König oder Prinz gehalten wird';
+
+  @override
+  String get rulesLlPrincess => 'Prinzessin (Princess)';
+
+  @override
+  String get rulesLlPrincessSub => 'Eliminiert, wenn gespielt oder abgeworfen';
+
+  @override
+  String get rulesLlCardEffectsTitle => 'Detaillierte Karteneffekte';
+
+  @override
+  String get rulesLlEffectGuardTitle => 'Wache (1)';
+
+  @override
+  String get rulesLlEffectGuardLine1 =>
+      'Nenne einen Spieler und rate eine Nicht-Wache-Karte, die er haben könnte.';
+
+  @override
+  String get rulesLlEffectGuardLine2 =>
+      'Bei richtigem Tipp wird dieser Spieler eliminiert.';
+
+  @override
+  String get rulesLlEffectSpyTitle => 'Spion (2)';
+
+  @override
+  String get rulesLlEffectSpyLine1 =>
+      'Wähle einen Spieler und sieh dir heimlich seine Handkarte an.';
+
+  @override
+  String get rulesLlEffectBaronTitle => 'Baron (3)';
+
+  @override
+  String get rulesLlEffectBaronLine1 =>
+      'Wähle einen Spieler und vergleicht eure Handkarten privat.';
+
+  @override
+  String get rulesLlEffectBaronLine2 =>
+      'Der Spieler mit der niedrigeren Karte wird eliminiert. Bei Gleichstand passiert nichts.';
+
+  @override
+  String get rulesLlEffectHandmaidTitle => 'Zofe (4)';
+
+  @override
+  String get rulesLlEffectHandmaidLine1 =>
+      'Bis zu deinem nächsten Zug kannst du nicht als Ziel eines Karteneffekts gewählt werden.';
+
+  @override
+  String get rulesLlEffectPrinceTitle => 'Prinz (5)';
+
+  @override
+  String get rulesLlEffectPrinceLine1 =>
+      'Wähle einen Spieler (auch dich selbst), der seine Handkarte abwerfen und eine neue ziehen muss.';
+
+  @override
+  String get rulesLlEffectPrinceLine2 =>
+      'Wenn die Prinzessin abgeworfen wird, ist dieser Spieler eliminiert.';
+
+  @override
+  String get rulesLlEffectKingTitle => 'König (6)';
+
+  @override
+  String get rulesLlEffectKingLine1 =>
+      'Wähle einen Spieler und tauscht eure Handkarten.';
+
+  @override
+  String get rulesLlEffectCountessTitle => 'Gräfin (7)';
+
+  @override
+  String get rulesLlEffectCountessLine1 =>
+      'Wenn du den König (6) oder Prinzen (5) zusammen mit der Gräfin hältst, musst du die Gräfin spielen.';
+
+  @override
+  String get rulesLlEffectCountessLine2 =>
+      'Ansonsten kann sie frei gespielt werden und hat keinen Effekt.';
+
+  @override
+  String get rulesLlEffectPrincessTitle => 'Prinzessin (8)';
+
+  @override
+  String get rulesLlEffectPrincessLine1 =>
+      'Wenn diese Karte aus irgendeinem Grund gespielt oder abgeworfen wird, bist du sofort eliminiert.';
+
+  @override
+  String get rulesLlFlowTitle => 'Spielablauf';
+
+  @override
+  String get rulesLlFlowBody =>
+      '1. Entferne 1 Karte verdeckt aus dem Deck. (Bei 2 Spielern werden 3 zusätzliche Karten offen entfernt.)\n2. Teile jedem Spieler 1 Karte aus.\n3. Ziehe in deinem Zug 1 Karte vom Deck und spiele dann 1 deiner 2 Karten aus, um ihren Effekt auszulösen.\n4. Nach dem Effekt geht der Zug an den nächsten Spieler.\n5. Die Runde endet, wenn nur 1 Spieler übrig ist oder das Deck leer ist.';
+
+  @override
+  String get rulesLlWinTitle => 'Siegbedingung';
+
+  @override
+  String get rulesLlWinBody =>
+      'Am Ende der Runde gewinnt der überlebende Spieler mit der höchsten Karte (bei Gleichstand entscheidet die Gesamtkartensumme) ein Token.\n\nBenötigte Token zum Sieg:\n• 2 Spieler: 7 Token\n• 3 Spieler: 5 Token\n• 4 Spieler: 4 Token';
+
+  @override
   String get friendsTitle => 'Freunde';
 
   @override
@@ -2443,6 +2606,9 @@ class L10nDe extends L10n {
 
   @override
   String get rankingSkullKingRecord => 'Skull King Statistik';
+
+  @override
+  String get rankingLoveLetterRecord => 'Love Letter Statistik';
 
   @override
   String get rankingStatRecord => 'Bilanz';
@@ -3110,4 +3276,53 @@ class L10nDe extends L10n {
 
   @override
   String get llCardPrincess => 'Princess';
+
+  @override
+  String get llCardGuideTitle => 'Kartenübersicht';
+
+  @override
+  String get llDescGuard =>
+      '1 · Wache: Nenne einen Spieler und rate seine Karte. Richtig = eliminiert!';
+
+  @override
+  String get llDescSpy =>
+      '2 · Spion: Sieh dir heimlich die Karte eines Spielers an.';
+
+  @override
+  String get llDescBaron =>
+      '3 · Baron: Vergleiche Karten mit einem Spieler. Niedrigere Karte wird eliminiert!';
+
+  @override
+  String get llDescHandmaid =>
+      '4 · Zofe: Bis zu deinem nächsten Zug vor allen Effekten geschützt.';
+
+  @override
+  String get llDescPrince =>
+      '5 · Prinz: Zwinge einen Spieler, seine Karte abzuwerfen. Prinzessin = eliminiert!';
+
+  @override
+  String get llDescKing =>
+      '6 · König: Tausche Karten mit einem anderen Spieler.';
+
+  @override
+  String get llDescCountess =>
+      '7 · Gräfin: Muss gespielt werden, wenn du König oder Prinz hältst.';
+
+  @override
+  String get llDescPrincess =>
+      '8 · Prinzessin: Wenn du diese Karte spielst, bist du eliminiert!';
+
+  @override
+  String get maintenanceTitle => 'Serverwartung';
+
+  @override
+  String maintenanceCountdown(String time) {
+    return 'Verbleibend: $time';
+  }
+
+  @override
+  String get maintenanceRetry => 'Erneut versuchen';
+
+  @override
+  String get maintenanceEnded => 'Wartung beendet, Neuverbindung...';
 }

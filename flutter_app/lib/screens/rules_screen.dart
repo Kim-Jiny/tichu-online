@@ -76,23 +76,32 @@ class _RulesScreenState extends State<RulesScreen> {
                         label: Text(L10n.of(context).rulesTabSkullKing),
                         icon: const Icon(Icons.anchor, size: 16),
                       ),
+                      ButtonSegment(
+                        value: 'love_letter',
+                        label: Text(L10n.of(context).rulesTabLoveLetter),
+                        icon: const Icon(Icons.favorite, size: 16),
+                      ),
                     ],
                     selected: {_selectedGame},
                     onSelectionChanged: (s) => setState(() => _selectedGame = s.first),
                     style: ButtonStyle(
                       backgroundColor: WidgetStateProperty.resolveWith((states) {
                         if (states.contains(WidgetState.selected)) {
-                          return _selectedGame == 'tichu'
-                              ? const Color(0xFF6C63FF)
-                              : const Color(0xFF2D2D3D);
+                          return switch (_selectedGame) {
+                            'tichu' => const Color(0xFF6C63FF),
+                            'skull_king' => const Color(0xFF2D2D3D),
+                            'love_letter' => const Color(0xFFE91E63),
+                            _ => const Color(0xFF6C63FF),
+                          };
                         }
                         return Colors.white;
                       }),
                       foregroundColor: WidgetStateProperty.resolveWith((states) {
                         if (states.contains(WidgetState.selected)) {
-                          return _selectedGame == 'tichu'
-                              ? Colors.white
-                              : const Color(0xFFFFD54F);
+                          return switch (_selectedGame) {
+                            'skull_king' => const Color(0xFFFFD54F),
+                            _ => Colors.white,
+                          };
                         }
                         return const Color(0xFF6A6A6A);
                       }),
@@ -110,9 +119,12 @@ class _RulesScreenState extends State<RulesScreen> {
               Expanded(
                 child: SingleChildScrollView(
                   padding: const EdgeInsets.fromLTRB(16, 0, 16, 24),
-                  child: _selectedGame == 'tichu'
-                      ? _buildTichuRules()
-                      : _buildSkullKingRules(),
+                  child: switch (_selectedGame) {
+                    'tichu' => _buildTichuRules(),
+                    'skull_king' => _buildSkullKingRules(),
+                    'love_letter' => _buildLoveLetterRules(),
+                    _ => _buildTichuRules(),
+                  },
                 ),
               ),
             ],
@@ -592,6 +604,186 @@ class _RulesScreenState extends State<RulesScreen> {
                 color: const Color(0xFF8B6F22),
               ),
             ],
+          ),
+        ),
+      ],
+    );
+  }
+
+  // ─── LOVE LETTER ──────────────────────────────────────────────────────────
+
+  Widget _buildLoveLetterRules() {
+    const llAccent = Color(0xFFE91E63);
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        _section(
+          icon: Icons.flag,
+          iconColor: llAccent,
+          title: L10n.of(context).rulesLlGoalTitle,
+          child: Text(
+            L10n.of(context).rulesLlGoalBody,
+            style: _bodyStyle,
+          ),
+        ),
+        _section(
+          icon: Icons.style,
+          iconColor: llAccent,
+          title: L10n.of(context).rulesLlCardCompositionTitle,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              _CardCountRow(
+                label: L10n.of(context).rulesLlGuard,
+                sub: L10n.of(context).rulesLlGuardSub,
+                count: 5,
+                leading: _cardAsset('assets/cards/ll_Guard.png'),
+              ),
+              const _Divider(),
+              _CardCountRow(
+                label: L10n.of(context).rulesLlSpy,
+                sub: L10n.of(context).rulesLlSpySub,
+                count: 2,
+                leading: _cardAsset('assets/cards/ll_Spy.png'),
+              ),
+              const _Divider(),
+              _CardCountRow(
+                label: L10n.of(context).rulesLlBaron,
+                sub: L10n.of(context).rulesLlBaronSub,
+                count: 2,
+                leading: _cardAsset('assets/cards/ll_Baron.png'),
+              ),
+              const _Divider(),
+              _CardCountRow(
+                label: L10n.of(context).rulesLlHandmaid,
+                sub: L10n.of(context).rulesLlHandmaidSub,
+                count: 2,
+                leading: _cardAsset('assets/cards/ll_Handmaid.png'),
+              ),
+              const _Divider(),
+              _CardCountRow(
+                label: L10n.of(context).rulesLlPrince,
+                sub: L10n.of(context).rulesLlPrinceSub,
+                count: 2,
+                leading: _cardAsset('assets/cards/ll_Prince.png'),
+              ),
+              const _Divider(),
+              _CardCountRow(
+                label: L10n.of(context).rulesLlKing,
+                sub: L10n.of(context).rulesLlKingSub,
+                count: 1,
+                leading: _cardAsset('assets/cards/ll_King.png'),
+              ),
+              const _Divider(),
+              _CardCountRow(
+                label: L10n.of(context).rulesLlCountess,
+                sub: L10n.of(context).rulesLlCountessSub,
+                count: 1,
+                leading: _cardAsset('assets/cards/ll_Countess.png'),
+              ),
+              const _Divider(),
+              _CardCountRow(
+                label: L10n.of(context).rulesLlPrincess,
+                sub: L10n.of(context).rulesLlPrincessSub,
+                count: 1,
+                leading: _cardAsset('assets/cards/ll_Princess.png'),
+              ),
+            ],
+          ),
+        ),
+        _section(
+          icon: Icons.auto_awesome,
+          iconColor: llAccent,
+          title: L10n.of(context).rulesLlCardEffectsTitle,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              _SpecialRule(
+                emoji: '\u{1F6E1}\u{FE0F}',
+                title: L10n.of(context).rulesLlEffectGuardTitle,
+                lines: [
+                  L10n.of(context).rulesLlEffectGuardLine1,
+                  L10n.of(context).rulesLlEffectGuardLine2,
+                ],
+              ),
+              const SizedBox(height: 10),
+              _SpecialRule(
+                emoji: '\u{1F50D}',
+                title: L10n.of(context).rulesLlEffectSpyTitle,
+                lines: [
+                  L10n.of(context).rulesLlEffectSpyLine1,
+                ],
+              ),
+              const SizedBox(height: 10),
+              _SpecialRule(
+                emoji: '\u{2694}\u{FE0F}',
+                title: L10n.of(context).rulesLlEffectBaronTitle,
+                lines: [
+                  L10n.of(context).rulesLlEffectBaronLine1,
+                  L10n.of(context).rulesLlEffectBaronLine2,
+                ],
+              ),
+              const SizedBox(height: 10),
+              _SpecialRule(
+                emoji: '\u{1F9D1}\u{200D}\u{1F91D}\u{200D}\u{1F9D1}',
+                title: L10n.of(context).rulesLlEffectHandmaidTitle,
+                lines: [
+                  L10n.of(context).rulesLlEffectHandmaidLine1,
+                ],
+              ),
+              const SizedBox(height: 10),
+              _SpecialRule(
+                emoji: '\u{1F451}',
+                title: L10n.of(context).rulesLlEffectPrinceTitle,
+                lines: [
+                  L10n.of(context).rulesLlEffectPrinceLine1,
+                  L10n.of(context).rulesLlEffectPrinceLine2,
+                ],
+              ),
+              const SizedBox(height: 10),
+              _SpecialRule(
+                emoji: '\u{1F934}',
+                title: L10n.of(context).rulesLlEffectKingTitle,
+                lines: [
+                  L10n.of(context).rulesLlEffectKingLine1,
+                ],
+              ),
+              const SizedBox(height: 10),
+              _SpecialRule(
+                emoji: '\u{1F483}',
+                title: L10n.of(context).rulesLlEffectCountessTitle,
+                lines: [
+                  L10n.of(context).rulesLlEffectCountessLine1,
+                  L10n.of(context).rulesLlEffectCountessLine2,
+                ],
+              ),
+              const SizedBox(height: 10),
+              _SpecialRule(
+                emoji: '\u{1F478}',
+                title: L10n.of(context).rulesLlEffectPrincessTitle,
+                lines: [
+                  L10n.of(context).rulesLlEffectPrincessLine1,
+                ],
+              ),
+            ],
+          ),
+        ),
+        _section(
+          icon: Icons.format_list_numbered,
+          iconColor: llAccent,
+          title: L10n.of(context).rulesLlFlowTitle,
+          child: Text(
+            L10n.of(context).rulesLlFlowBody,
+            style: _bodyStyle,
+          ),
+        ),
+        _section(
+          icon: Icons.emoji_events,
+          iconColor: llAccent,
+          title: L10n.of(context).rulesLlWinTitle,
+          child: Text(
+            L10n.of(context).rulesLlWinBody,
+            style: _bodyStyle,
           ),
         ),
       ],

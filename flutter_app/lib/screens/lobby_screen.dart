@@ -623,30 +623,59 @@ class _LobbyScreenState extends State<LobbyScreen> {
                       const SizedBox(height: 16),
                       sectionTitle(l10n.lobbySelectGame, l10n.lobbySelectGameDesc),
                       const SizedBox(height: 10),
-                      SizedBox(
-                        width: double.infinity,
-                        child: SegmentedButton<String>(
-                          segments: [
-                            ButtonSegment(value: 'tichu', label: Text(l10n.lobbyTichu), icon: const Icon(Icons.style, size: 16)),
-                            ButtonSegment(value: 'skull_king', label: Text(l10n.lobbySkullKing), icon: const Icon(Icons.anchor, size: 16)),
-                            ButtonSegment(value: 'love_letter', label: Text(l10n.lobbyLoveLetter), icon: const Icon(Icons.favorite, size: 16)),
-                          ],
-                          selected: {selectedGameType},
-                          onSelectionChanged: (v) => setState(() {
-                            selectedGameType = v.first;
-                            randomName = _generateRandomRoomName(gameType: selectedGameType, l10n: l10n);
-                            if (controller.text.isEmpty) {
-                              controller.clear();
-                            }
-                            if (selectedGameType == 'skull_king' || selectedGameType == 'love_letter') {
-                              isRanked = false;
-                            }
-                          }),
-                          style: SegmentedButton.styleFrom(
-                            selectedBackgroundColor: accent.withValues(alpha: 0.25),
-                            selectedForegroundColor: const Color(0xFF3E312A),
-                          ),
-                        ),
+                      Wrap(
+                        spacing: 8,
+                        runSpacing: 8,
+                        children: [
+                          for (final entry in [
+                            ('tichu', l10n.lobbyTichu, Icons.style),
+                            ('skull_king', l10n.lobbySkullKing, Icons.anchor),
+                            ('love_letter', l10n.lobbyLoveLetter, Icons.favorite),
+                          ])
+                            GestureDetector(
+                              onTap: () => setState(() {
+                                selectedGameType = entry.$1;
+                                randomName = _generateRandomRoomName(gameType: selectedGameType, l10n: l10n);
+                                if (controller.text.isEmpty) {
+                                  controller.clear();
+                                }
+                                if (selectedGameType == 'skull_king' || selectedGameType == 'love_letter') {
+                                  isRanked = false;
+                                }
+                              }),
+                              child: AnimatedContainer(
+                                duration: const Duration(milliseconds: 150),
+                                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                                decoration: BoxDecoration(
+                                  color: selectedGameType == entry.$1
+                                      ? accent.withValues(alpha: 0.25)
+                                      : Colors.white.withValues(alpha: 0.72),
+                                  borderRadius: BorderRadius.circular(12),
+                                  border: Border.all(
+                                    color: selectedGameType == entry.$1
+                                        ? accent
+                                        : const Color(0xFFE0D8D4),
+                                    width: selectedGameType == entry.$1 ? 1.5 : 1,
+                                  ),
+                                ),
+                                child: Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    Icon(entry.$3, size: 16, color: const Color(0xFF3E312A)),
+                                    const SizedBox(width: 6),
+                                    Text(
+                                      entry.$2,
+                                      style: TextStyle(
+                                        fontSize: 13,
+                                        fontWeight: selectedGameType == entry.$1 ? FontWeight.bold : FontWeight.w500,
+                                        color: const Color(0xFF3E312A),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ),
+                        ],
                       ),
                       if (selectedGameType == 'skull_king') ...[
                         const SizedBox(height: 12),
@@ -1903,6 +1932,10 @@ class _LobbyScreenState extends State<LobbyScreen> {
         children: [
           _buildRoomHeader(game, isLandscape: isLandscape),
 
+          // Maintenance notice banner (in waiting room)
+          if (game.hasMaintenanceNotice)
+            _buildMaintenanceBanner(game),
+
           // Error message banner
           if (game.errorMessage != null)
             Container(
@@ -2018,7 +2051,7 @@ class _LobbyScreenState extends State<LobbyScreen> {
                   borderRadius: BorderRadius.circular(10),
                 ),
                 child: Text(
-                  game.currentGameType == 'skull_king'
+                  game.currentGameType == 'skull_king' || game.currentGameType == 'love_letter'
                       ? L10n.of(context).lobbyRoomInfoSk(game.roomTurnTimeLimit, game.playerCount, game.roomMaxPlayers)
                       : L10n.of(context).lobbyRoomInfoTichu(game.roomTurnTimeLimit, game.roomTargetScore),
                   style: const TextStyle(
@@ -3198,6 +3231,7 @@ class _LobbyScreenState extends State<LobbyScreen> {
                           child: SingleChildScrollView(
                             child: _buildProfileContent(
                               profile, game,
+                              dialogContext: ctx,
                               selectedTab: profileGameTab,
                               onTabChanged: (tab) => setDialogState(() => profileGameTab = tab),
                             ),
@@ -3219,6 +3253,7 @@ class _LobbyScreenState extends State<LobbyScreen> {
   }
 
   Widget _buildProfileContent(Map<String, dynamic> data, GameService game, {
+    required BuildContext dialogContext,
     required String selectedTab,
     required ValueChanged<String> onTabChanged,
   }) {
@@ -3253,6 +3288,10 @@ class _LobbyScreenState extends State<LobbyScreen> {
     final skSeasonWins = profile['skSeasonWins'] ?? 0;
     final skSeasonLosses = profile['skSeasonLosses'] ?? 0;
     final skSeasonWinRate = profile['skSeasonWinRate'] ?? 0;
+    final llGames = profile['llTotalGames'] ?? 0;
+    final llWins = profile['llWins'] ?? 0;
+    final llLosses = profile['llLosses'] ?? 0;
+    final llWinRate = profile['llWinRate'] ?? 0;
     final recentMatches = data['recentMatches'] as List<dynamic>? ?? [];
     final filteredMatches = recentMatches.where((m) {
       final gameType = m['gameType']?.toString() ?? 'tichu';
@@ -3266,44 +3305,93 @@ class _LobbyScreenState extends State<LobbyScreen> {
         const SizedBox(height: 8),
         _buildMannerLeaveRow(reportCount: reportCount as int, leaveCount: leaveCount as int),
         const SizedBox(height: 10),
-        // Game tab toggle
-        SizedBox(
-          width: double.infinity,
-          child: SegmentedButton<String>(
-            segments: [
-              ButtonSegment(value: 'tichu', label: Text(l10n.lobbyTichu, style: const TextStyle(fontSize: 13))),
-              ButtonSegment(value: 'skull_king', label: Text(l10n.lobbySkullKing, style: const TextStyle(fontSize: 13))),
-            ],
-            selected: {selectedTab},
-            onSelectionChanged: (s) => onTabChanged(s.first),
-            style: ButtonStyle(
-              tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-              visualDensity: VisualDensity.compact,
-              backgroundColor: WidgetStateProperty.resolveWith((states) {
-                if (states.contains(WidgetState.selected)) {
-                  return selectedTab == 'tichu'
-                      ? const Color(0xFF6C63FF)
-                      : const Color(0xFF2D2D3D);
-                }
-                return Colors.white;
-              }),
-              foregroundColor: WidgetStateProperty.resolveWith((states) {
-                if (states.contains(WidgetState.selected)) {
-                  return selectedTab == 'tichu'
-                      ? Colors.white
-                      : const Color(0xFFFFD54F);
-                }
-                return const Color(0xFF6A6A6A);
-              }),
-              shape: WidgetStateProperty.all(
-                RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        // Game selector button
+        Builder(builder: (_) {
+          String gameLabel;
+          String gameEmoji;
+          Color gameBgColor;
+          Color gameFgColor;
+          switch (selectedTab) {
+            case 'skull_king':
+              gameLabel = l10n.lobbySkullKing;
+              gameEmoji = '⚓';
+              gameBgColor = const Color(0xFF2D2D3D);
+              gameFgColor = const Color(0xFFFFD54F);
+              break;
+            case 'love_letter':
+              gameLabel = l10n.lobbyLoveLetter;
+              gameEmoji = '❤️';
+              gameBgColor = const Color(0xFFE91E63);
+              gameFgColor = Colors.white;
+              break;
+            default:
+              gameLabel = l10n.lobbyTichu;
+              gameEmoji = '🎴';
+              gameBgColor = const Color(0xFF7E57C2);
+              gameFgColor = Colors.white;
+          }
+          return InkWell(
+            onTap: () {
+              showModalBottomSheet(
+                context: dialogContext,
+                shape: const RoundedRectangleBorder(
+                  borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+                ),
+                builder: (bCtx) => SafeArea(
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const SizedBox(height: 8),
+                      Container(width: 36, height: 4, decoration: BoxDecoration(color: Colors.grey[300], borderRadius: BorderRadius.circular(2))),
+                      const SizedBox(height: 12),
+                      ListTile(
+                        leading: const Text('🎴', style: TextStyle(fontSize: 20)),
+                        title: Text(l10n.lobbyTichu),
+                        trailing: selectedTab == 'tichu' ? const Icon(Icons.check, color: Color(0xFF7E57C2)) : null,
+                        onTap: () { Navigator.pop(bCtx); onTabChanged('tichu'); },
+                      ),
+                      ListTile(
+                        leading: const Text('⚓', style: TextStyle(fontSize: 20)),
+                        title: Text(l10n.lobbySkullKing),
+                        trailing: selectedTab == 'skull_king' ? const Icon(Icons.check, color: Color(0xFF2D2D3D)) : null,
+                        onTap: () { Navigator.pop(bCtx); onTabChanged('skull_king'); },
+                      ),
+                      ListTile(
+                        leading: const Text('❤️', style: TextStyle(fontSize: 20)),
+                        title: Text(l10n.lobbyLoveLetter),
+                        trailing: selectedTab == 'love_letter' ? const Icon(Icons.check, color: Color(0xFFE91E63)) : null,
+                        onTap: () { Navigator.pop(bCtx); onTabChanged('love_letter'); },
+                      ),
+                      const SizedBox(height: 8),
+                    ],
+                  ),
+                ),
+              );
+            },
+            borderRadius: BorderRadius.circular(12),
+            child: Container(
+              width: double.infinity,
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+              decoration: BoxDecoration(
+                color: gameBgColor,
+                borderRadius: BorderRadius.circular(12),
               ),
-              side: WidgetStateProperty.all(
-                const BorderSide(color: Color(0xFFE0D8D4)),
+              child: Row(
+                children: [
+                  Text(gameEmoji, style: const TextStyle(fontSize: 18)),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      gameLabel,
+                      style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: gameFgColor),
+                    ),
+                  ),
+                  Icon(Icons.arrow_drop_down, color: gameFgColor),
+                ],
               ),
             ),
-          ),
-        ),
+          );
+        }),
         const SizedBox(height: 10),
         if (selectedTab == 'tichu') ...[
           _buildProfileSectionCard(
@@ -3331,7 +3419,7 @@ class _LobbyScreenState extends State<LobbyScreen> {
               _buildStatChip(l10n.lobbyStatWinRate, '$winRate%'),
             ],
           ),
-        ] else ...[
+        ] else if (selectedTab == 'skull_king') ...[
           _buildProfileSectionCard(
             title: l10n.lobbySkullKingSeasonRanked,
             accent: const Color(0xFF2D2D3D),
@@ -3355,6 +3443,19 @@ class _LobbyScreenState extends State<LobbyScreen> {
             chips: [
               _buildStatChip(l10n.lobbyStatRecord, l10n.lobbyRecordFormat(skGames as int, skWins as int, skLosses as int)),
               _buildStatChip(l10n.lobbyStatWinRate, '$skWinRate%'),
+            ],
+          ),
+        ] else ...[
+          _buildProfileSectionCard(
+            title: l10n.lobbyLoveLetterRecord,
+            accent: const Color(0xFFAD1457),
+            background: const Color(0xFFFCE4EC),
+            icon: Icons.favorite,
+            iconColor: const Color(0xFFE91E63),
+            mainText: '',
+            chips: [
+              _buildStatChip(l10n.lobbyStatRecord, l10n.lobbyRecordFormat(llGames as int, llWins as int, llLosses as int)),
+              _buildStatChip(l10n.lobbyStatWinRate, '$llWinRate%'),
             ],
           ),
         ],
@@ -3782,6 +3883,7 @@ class _LobbyScreenState extends State<LobbyScreen> {
   Widget _buildMatchRow(dynamic match, String profileNickname) {
     final gameType = match['gameType']?.toString() ?? 'tichu';
     final isSK = gameType == 'skull_king';
+    final isLL = gameType == 'love_letter';
     final l10n = L10n.of(context);
 
     final deserterNickname = match['deserterNickname']?.toString();
@@ -3813,7 +3915,7 @@ class _LobbyScreenState extends State<LobbyScreen> {
     // Score / player info
     final String scoreText;
     final String playerText;
-    if (isSK) {
+    if (isSK || isLL) {
       final players = match['players'] as List<dynamic>? ?? [];
       final myRank = match['myRank'] ?? '-';
       final myScore = match['myScore'] ?? 0;
@@ -3869,21 +3971,25 @@ class _LobbyScreenState extends State<LobbyScreen> {
                       decoration: BoxDecoration(
                         color: isSK
                             ? const Color(0xFFE8EAF6)
-                            : isRanked
-                                ? const Color(0xFFFFF3E0)
-                                : const Color(0xFFF5F5F5),
+                            : isLL
+                                ? const Color(0xFFFCE4EC)
+                                : isRanked
+                                    ? const Color(0xFFFFF3E0)
+                                    : const Color(0xFFF5F5F5),
                         borderRadius: BorderRadius.circular(6),
                       ),
                       child: Text(
-                        isSK ? l10n.lobbyMatchTypeSkullKing : (isRanked ? l10n.lobbyMatchTypeRanked : l10n.lobbyMatchTypeNormal),
+                        isSK ? l10n.lobbyMatchTypeSkullKing : isLL ? l10n.lobbyMatchTypeLoveLetter : (isRanked ? l10n.lobbyMatchTypeRanked : l10n.lobbyMatchTypeNormal),
                         style: TextStyle(
                           fontSize: 9,
                           fontWeight: FontWeight.bold,
                           color: isSK
                               ? const Color(0xFF3949AB)
-                              : isRanked
-                                  ? const Color(0xFFE65100)
-                                  : const Color(0xFF9E9E9E),
+                              : isLL
+                                  ? const Color(0xFFAD1457)
+                                  : isRanked
+                                      ? const Color(0xFFE65100)
+                                      : const Color(0xFF9E9E9E),
                         ),
                       ),
                     ),

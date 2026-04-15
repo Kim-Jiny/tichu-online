@@ -55,7 +55,7 @@ class LoveLetterCard extends StatelessWidget {
     'princess': 'Princess',
   };
 
-  static String? _getCardType(String cardId) {
+  static String? getCardType(String cardId) {
     if (!cardId.startsWith('ll_')) return null;
     final rest = cardId.substring(3);
     // Handle cards with numeric suffix like ll_guard_1
@@ -66,7 +66,7 @@ class LoveLetterCard extends StatelessWidget {
   }
 
   static String _getAssetPath(String cardId) {
-    final type = _getCardType(cardId);
+    final type = getCardType(cardId);
     if (type == null) return '';
     // Capitalize first letter for asset name
     final name = type[0].toUpperCase() + type.substring(1);
@@ -103,12 +103,10 @@ class LoveLetterCard extends StatelessWidget {
       );
     }
 
-    final type = _getCardType(cardId);
+    final type = getCardType(cardId);
     if (type == null) return const SizedBox.shrink();
 
     final color = cardColors[type] ?? Colors.grey;
-    final value = cardValues[type] ?? 0;
-    final name = cardNames[type] ?? '';
     final assetPath = _getAssetPath(cardId);
 
     return Container(
@@ -125,52 +123,14 @@ class LoveLetterCard extends StatelessWidget {
       ),
       child: ClipRRect(
         borderRadius: BorderRadius.circular(7),
-        child: Column(
-          children: [
-            // Value number header
-            Container(
-              width: double.infinity,
-              color: color,
-              padding: EdgeInsets.symmetric(vertical: compact ? 1 : 2),
-              child: Text(
-                '$value',
-                textAlign: TextAlign.center,
-                style: TextStyle(
-                  color: type == 'princess' ? Colors.black87 : Colors.white,
-                  fontSize: compact ? 11 : 14,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-            ),
-            // Card image
-            Expanded(
-              child: Padding(
-                padding: const EdgeInsets.all(2),
-                child: Image.asset(
-                  assetPath,
-                  fit: BoxFit.contain,
-                  errorBuilder: (_, e, s) => Center(
-                    child: Icon(Icons.favorite, color: color, size: compact ? 16 : 24),
-                  ),
-                ),
-              ),
-            ),
-            // Card name
-            Container(
-              width: double.infinity,
-              color: color.withValues(alpha: 0.15),
-              padding: EdgeInsets.symmetric(vertical: compact ? 1 : 2),
-              child: Text(
-                name,
-                textAlign: TextAlign.center,
-                style: TextStyle(
-                  color: color,
-                  fontSize: compact ? 8 : 10,
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
-            ),
-          ],
+        child: Image.asset(
+          assetPath,
+          fit: BoxFit.cover,
+          width: double.infinity,
+          height: double.infinity,
+          errorBuilder: (_, e, s) => Center(
+            child: Icon(Icons.favorite, color: color, size: compact ? 16 : 24),
+          ),
         ),
       ),
     );

@@ -23,6 +23,7 @@ import 'screens/lobby_screen.dart';
 import 'screens/spectator_screen.dart';
 import 'screens/sk_game_screen.dart';
 import 'screens/ll_game_screen.dart';
+import 'screens/maintenance_screen.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -203,7 +204,15 @@ class _AppFlowScreen extends StatelessWidget {
         body: Center(child: CircularProgressIndicator()),
       );
     } else if (!game.isLoggedIn) {
-      child = const LoginScreen();
+      child = game.isInKnownMaintenanceWindow
+          ? const MaintenanceScreen()
+          : const LoginScreen();
+    } else if (game.isUnderMaintenance) {
+      // Server broadcast maintenance while logged in — kick to maintenance screen
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        session.resetToLoginState(suppressAutoRestore: true);
+      });
+      child = const MaintenanceScreen();
     } else {
       switch (game.currentDestination) {
         case AppDestination.game:
@@ -229,7 +238,7 @@ class _AppFlowScreen extends StatelessWidget {
       duration: const Duration(milliseconds: 180),
       child: KeyedSubtree(
         key: ValueKey(
-          '${game.isLoggedIn}-${_flowKeyForDestination(game.currentDestination)}',
+          '${game.isLoggedIn}-${(!game.isLoggedIn && game.isInKnownMaintenanceWindow) || game.isUnderMaintenance ? 'maintenance' : _flowKeyForDestination(game.currentDestination)}',
         ),
         child: child,
       ),

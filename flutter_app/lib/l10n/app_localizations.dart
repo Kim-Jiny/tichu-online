@@ -1527,6 +1527,12 @@ abstract class L10n {
   /// **'Skull King Record'**
   String get lobbySkullKingRecord;
 
+  /// No description provided for @lobbyLoveLetterRecord.
+  ///
+  /// In en, this message translates to:
+  /// **'Love Letter Record'**
+  String get lobbyLoveLetterRecord;
+
   /// No description provided for @lobbyStatRecord.
   ///
   /// In en, this message translates to:
@@ -1604,6 +1610,12 @@ abstract class L10n {
   /// In en, this message translates to:
   /// **'Skull King'**
   String get lobbyMatchTypeSkullKing;
+
+  /// No description provided for @lobbyMatchTypeLoveLetter.
+  ///
+  /// In en, this message translates to:
+  /// **'Love Letter'**
+  String get lobbyMatchTypeLoveLetter;
 
   /// No description provided for @lobbyMatchTypeRanked.
   ///
@@ -2414,6 +2426,12 @@ abstract class L10n {
   /// In en, this message translates to:
   /// **'Skull King Record'**
   String get skGameSkullKingRecord;
+
+  /// No description provided for @skGameLoveLetterRecord.
+  ///
+  /// In en, this message translates to:
+  /// **'Love Letter Record'**
+  String get skGameLoveLetterRecord;
 
   /// No description provided for @skGameStatRecord.
   ///
@@ -3453,6 +3471,12 @@ abstract class L10n {
   /// **'Skull King'**
   String get rulesTabSkullKing;
 
+  /// No description provided for @rulesTabLoveLetter.
+  ///
+  /// In en, this message translates to:
+  /// **'Love Letter'**
+  String get rulesTabLoveLetter;
+
   /// No description provided for @rulesTichuGoalTitle.
   ///
   /// In en, this message translates to:
@@ -4197,6 +4221,270 @@ abstract class L10n {
   /// **'The trick winner earns +20 bonus per Loot card in the trick, and each player who played a Loot card also earns +20 as their own bonus. (Only awarded on bid success)'**
   String get rulesSkExpLootDesc;
 
+  /// No description provided for @rulesLlGoalTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Game Objective'**
+  String get rulesLlGoalTitle;
+
+  /// No description provided for @rulesLlGoalBody.
+  ///
+  /// In en, this message translates to:
+  /// **'A card game for 2–4 players. Each round, the last player standing or the player with the highest card when the deck runs out wins a token. The first player to collect enough tokens wins the game.'**
+  String get rulesLlGoalBody;
+
+  /// No description provided for @rulesLlCardCompositionTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Card Composition (16 cards total)'**
+  String get rulesLlCardCompositionTitle;
+
+  /// No description provided for @rulesLlGuard.
+  ///
+  /// In en, this message translates to:
+  /// **'Guard'**
+  String get rulesLlGuard;
+
+  /// No description provided for @rulesLlGuardSub.
+  ///
+  /// In en, this message translates to:
+  /// **'Guess an opponent\'s card to eliminate them'**
+  String get rulesLlGuardSub;
+
+  /// No description provided for @rulesLlSpy.
+  ///
+  /// In en, this message translates to:
+  /// **'Spy'**
+  String get rulesLlSpy;
+
+  /// No description provided for @rulesLlSpySub.
+  ///
+  /// In en, this message translates to:
+  /// **'Secretly view an opponent\'s card'**
+  String get rulesLlSpySub;
+
+  /// No description provided for @rulesLlBaron.
+  ///
+  /// In en, this message translates to:
+  /// **'Baron'**
+  String get rulesLlBaron;
+
+  /// No description provided for @rulesLlBaronSub.
+  ///
+  /// In en, this message translates to:
+  /// **'Compare cards; lower card is eliminated'**
+  String get rulesLlBaronSub;
+
+  /// No description provided for @rulesLlHandmaid.
+  ///
+  /// In en, this message translates to:
+  /// **'Handmaid'**
+  String get rulesLlHandmaid;
+
+  /// No description provided for @rulesLlHandmaidSub.
+  ///
+  /// In en, this message translates to:
+  /// **'Protected from effects until next turn'**
+  String get rulesLlHandmaidSub;
+
+  /// No description provided for @rulesLlPrince.
+  ///
+  /// In en, this message translates to:
+  /// **'Prince'**
+  String get rulesLlPrince;
+
+  /// No description provided for @rulesLlPrinceSub.
+  ///
+  /// In en, this message translates to:
+  /// **'Force a player to discard their card'**
+  String get rulesLlPrinceSub;
+
+  /// No description provided for @rulesLlKing.
+  ///
+  /// In en, this message translates to:
+  /// **'King'**
+  String get rulesLlKing;
+
+  /// No description provided for @rulesLlKingSub.
+  ///
+  /// In en, this message translates to:
+  /// **'Swap cards with another player'**
+  String get rulesLlKingSub;
+
+  /// No description provided for @rulesLlCountess.
+  ///
+  /// In en, this message translates to:
+  /// **'Countess'**
+  String get rulesLlCountess;
+
+  /// No description provided for @rulesLlCountessSub.
+  ///
+  /// In en, this message translates to:
+  /// **'Must be played if holding King or Prince'**
+  String get rulesLlCountessSub;
+
+  /// No description provided for @rulesLlPrincess.
+  ///
+  /// In en, this message translates to:
+  /// **'Princess'**
+  String get rulesLlPrincess;
+
+  /// No description provided for @rulesLlPrincessSub.
+  ///
+  /// In en, this message translates to:
+  /// **'Eliminated if played or discarded'**
+  String get rulesLlPrincessSub;
+
+  /// No description provided for @rulesLlCardEffectsTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Detailed Card Effects'**
+  String get rulesLlCardEffectsTitle;
+
+  /// No description provided for @rulesLlEffectGuardTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Guard (1)'**
+  String get rulesLlEffectGuardTitle;
+
+  /// No description provided for @rulesLlEffectGuardLine1.
+  ///
+  /// In en, this message translates to:
+  /// **'Name a player and guess a non-Guard card they might hold.'**
+  String get rulesLlEffectGuardLine1;
+
+  /// No description provided for @rulesLlEffectGuardLine2.
+  ///
+  /// In en, this message translates to:
+  /// **'If correct, that player is eliminated from the round.'**
+  String get rulesLlEffectGuardLine2;
+
+  /// No description provided for @rulesLlEffectSpyTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Spy (2)'**
+  String get rulesLlEffectSpyTitle;
+
+  /// No description provided for @rulesLlEffectSpyLine1.
+  ///
+  /// In en, this message translates to:
+  /// **'Choose a player and secretly look at their hand card.'**
+  String get rulesLlEffectSpyLine1;
+
+  /// No description provided for @rulesLlEffectBaronTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Baron (3)'**
+  String get rulesLlEffectBaronTitle;
+
+  /// No description provided for @rulesLlEffectBaronLine1.
+  ///
+  /// In en, this message translates to:
+  /// **'Choose a player and privately compare hand cards.'**
+  String get rulesLlEffectBaronLine1;
+
+  /// No description provided for @rulesLlEffectBaronLine2.
+  ///
+  /// In en, this message translates to:
+  /// **'The player with the lower card is eliminated. Ties have no effect.'**
+  String get rulesLlEffectBaronLine2;
+
+  /// No description provided for @rulesLlEffectHandmaidTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Handmaid (4)'**
+  String get rulesLlEffectHandmaidTitle;
+
+  /// No description provided for @rulesLlEffectHandmaidLine1.
+  ///
+  /// In en, this message translates to:
+  /// **'Until your next turn, you cannot be chosen as the target of any card effect.'**
+  String get rulesLlEffectHandmaidLine1;
+
+  /// No description provided for @rulesLlEffectPrinceTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Prince (5)'**
+  String get rulesLlEffectPrinceTitle;
+
+  /// No description provided for @rulesLlEffectPrinceLine1.
+  ///
+  /// In en, this message translates to:
+  /// **'Choose any player (including yourself) to discard their hand and draw a new card.'**
+  String get rulesLlEffectPrinceLine1;
+
+  /// No description provided for @rulesLlEffectPrinceLine2.
+  ///
+  /// In en, this message translates to:
+  /// **'If they discard the Princess, they are eliminated.'**
+  String get rulesLlEffectPrinceLine2;
+
+  /// No description provided for @rulesLlEffectKingTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'King (6)'**
+  String get rulesLlEffectKingTitle;
+
+  /// No description provided for @rulesLlEffectKingLine1.
+  ///
+  /// In en, this message translates to:
+  /// **'Choose a player and swap hand cards with them.'**
+  String get rulesLlEffectKingLine1;
+
+  /// No description provided for @rulesLlEffectCountessTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Countess (7)'**
+  String get rulesLlEffectCountessTitle;
+
+  /// No description provided for @rulesLlEffectCountessLine1.
+  ///
+  /// In en, this message translates to:
+  /// **'If you hold the King (6) or Prince (5) with the Countess, you must play the Countess.'**
+  String get rulesLlEffectCountessLine1;
+
+  /// No description provided for @rulesLlEffectCountessLine2.
+  ///
+  /// In en, this message translates to:
+  /// **'Otherwise, it can be freely played and has no effect.'**
+  String get rulesLlEffectCountessLine2;
+
+  /// No description provided for @rulesLlEffectPrincessTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Princess (8)'**
+  String get rulesLlEffectPrincessTitle;
+
+  /// No description provided for @rulesLlEffectPrincessLine1.
+  ///
+  /// In en, this message translates to:
+  /// **'If this card is played or discarded for any reason, you are immediately eliminated.'**
+  String get rulesLlEffectPrincessLine1;
+
+  /// No description provided for @rulesLlFlowTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Turn Sequence'**
+  String get rulesLlFlowTitle;
+
+  /// No description provided for @rulesLlFlowBody.
+  ///
+  /// In en, this message translates to:
+  /// **'1. Remove 1 card face-down from the deck. (In a 2-player game, 3 additional cards are removed face-up.)\n2. Deal 1 card to each player.\n3. On your turn, draw 1 card from the deck, then play 1 of your 2 cards and resolve its effect.\n4. After resolving the effect, play passes to the next player.\n5. The round ends when only 1 player remains or the deck is empty.'**
+  String get rulesLlFlowBody;
+
+  /// No description provided for @rulesLlWinTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Victory Condition'**
+  String get rulesLlWinTitle;
+
+  /// No description provided for @rulesLlWinBody.
+  ///
+  /// In en, this message translates to:
+  /// **'When the round ends, the surviving player with the highest card (ties broken by total card value) wins a token.\n\nTokens needed to win:\n• 2 players: 7 tokens\n• 3 players: 5 tokens\n• 4 players: 4 tokens'**
+  String get rulesLlWinBody;
+
   /// No description provided for @friendsTitle.
   ///
   /// In en, this message translates to:
@@ -4454,6 +4742,12 @@ abstract class L10n {
   /// In en, this message translates to:
   /// **'Skull King Record'**
   String get rankingSkullKingRecord;
+
+  /// No description provided for @rankingLoveLetterRecord.
+  ///
+  /// In en, this message translates to:
+  /// **'Love Letter Record'**
+  String get rankingLoveLetterRecord;
 
   /// No description provided for @rankingStatRecord.
   ///
@@ -5570,6 +5864,84 @@ abstract class L10n {
   /// In en, this message translates to:
   /// **'Princess'**
   String get llCardPrincess;
+
+  /// No description provided for @llCardGuideTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Card Guide'**
+  String get llCardGuideTitle;
+
+  /// No description provided for @llDescGuard.
+  ///
+  /// In en, this message translates to:
+  /// **'1 · Guard: Name a player and guess their card. If correct, they\'re eliminated!'**
+  String get llDescGuard;
+
+  /// No description provided for @llDescSpy.
+  ///
+  /// In en, this message translates to:
+  /// **'2 · Spy: Secretly look at another player\'s card.'**
+  String get llDescSpy;
+
+  /// No description provided for @llDescBaron.
+  ///
+  /// In en, this message translates to:
+  /// **'3 · Baron: Compare cards with a player. Lower card is eliminated!'**
+  String get llDescBaron;
+
+  /// No description provided for @llDescHandmaid.
+  ///
+  /// In en, this message translates to:
+  /// **'4 · Handmaid: Protected from all effects until your next turn.'**
+  String get llDescHandmaid;
+
+  /// No description provided for @llDescPrince.
+  ///
+  /// In en, this message translates to:
+  /// **'5 · Prince: Force a player to discard. If they discard Princess, eliminated!'**
+  String get llDescPrince;
+
+  /// No description provided for @llDescKing.
+  ///
+  /// In en, this message translates to:
+  /// **'6 · King: Trade cards with another player.'**
+  String get llDescKing;
+
+  /// No description provided for @llDescCountess.
+  ///
+  /// In en, this message translates to:
+  /// **'7 · Countess: Must be played if you hold King or Prince.'**
+  String get llDescCountess;
+
+  /// No description provided for @llDescPrincess.
+  ///
+  /// In en, this message translates to:
+  /// **'8 · Princess: If you play this card, you are eliminated!'**
+  String get llDescPrincess;
+
+  /// No description provided for @maintenanceTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Server Under Maintenance'**
+  String get maintenanceTitle;
+
+  /// No description provided for @maintenanceCountdown.
+  ///
+  /// In en, this message translates to:
+  /// **'Remaining: {time}'**
+  String maintenanceCountdown(String time);
+
+  /// No description provided for @maintenanceRetry.
+  ///
+  /// In en, this message translates to:
+  /// **'Retry'**
+  String get maintenanceRetry;
+
+  /// No description provided for @maintenanceEnded.
+  ///
+  /// In en, this message translates to:
+  /// **'Maintenance over, reconnecting...'**
+  String get maintenanceEnded;
 }
 
 class _L10nDelegate extends LocalizationsDelegate<L10n> {

@@ -474,8 +474,16 @@ class GameRoom {
   }
 
   startGame() {
-    if (this.gameType === 'skull_king' || this.gameType === 'love_letter') {
-      // SK/LL allows fewer than maxPlayers - compact null slots
+    if (this.gameType === 'love_letter') {
+      // Love Letter: only host + ready players participate
+      const activePlayers = this.players.filter(p =>
+        p !== null && (p.id === this.hostId || p.isBot || p.ready)
+      );
+      if (activePlayers.length < 2) return false;
+      this._preGamePlayers = this.players.slice();
+      this.players = activePlayers;
+    } else if (this.gameType === 'skull_king') {
+      // SK allows fewer than maxPlayers - compact null slots
       const activePlayers = this.players.filter(p => p !== null);
       if (activePlayers.length < 2) return false;
       // Save original slot structure for restoration after game ends
@@ -531,18 +539,27 @@ class GameRoom {
   }
 
   areAllReady() {
+    if (this.gameType === 'love_letter') {
+      // Love Letter: host + ready players >= 2 is enough to start
+      let readyCount = 0;
+      for (const p of this.players) {
+        if (p === null) continue;
+        if (p.id === this.hostId || p.isBot || p.ready) readyCount++;
+      }
+      return readyCount >= 2;
+    }
     // All non-null human players (except host) must be ready. Bots are always ready.
     for (const p of this.players) {
       if (p === null) {
-        if (this.gameType === 'skull_king' || this.gameType === 'love_letter') continue; // SK/LL allows empty slots
+        if (this.gameType === 'skull_king') continue; // SK allows empty slots
         return false; // tichu needs all slots filled
       }
       if (p.isBot) continue;
       if (p.id === this.hostId) continue; // host doesn't need to ready
       if (!p.ready) return false;
     }
-    // SK/LL requires at least 2 players
-    if ((this.gameType === 'skull_king' || this.gameType === 'love_letter') && this.getPlayerCount() < 2) return false;
+    // SK requires at least 2 players
+    if (this.gameType === 'skull_king' && this.getPlayerCount() < 2) return false;
     return true;
   }
 

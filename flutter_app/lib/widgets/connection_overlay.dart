@@ -1,6 +1,7 @@
 import 'dart:io' show Platform;
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import '../services/game_service.dart';
 import '../services/network_service.dart';
 import '../services/session_service.dart';
 
@@ -89,6 +90,16 @@ class _ConnectionOverlayState extends State<ConnectionOverlay>
     final myAttemptId = ++_reconnectAttemptId;
 
     try {
+      // If we're in a known maintenance window, skip reconnect and go to login
+      // so MaintenanceScreen shows immediately.
+      final game = context.read<GameService>();
+      if (game.isInKnownMaintenanceWindow) {
+        if (myAttemptId != _reconnectAttemptId) return;
+        if (!mounted) return;
+        _goToLogin();
+        return;
+      }
+
       final session = context.read<SessionService>();
       final success = await session.reconnectAndRestore()
           .timeout(const Duration(seconds: 30), onTimeout: () => false);

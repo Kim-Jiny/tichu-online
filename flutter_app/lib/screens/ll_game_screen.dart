@@ -129,10 +129,13 @@ class _LLGameScreenState extends State<LLGameScreen> {
           _gameEndCountdownTimer?.cancel();
         }
 
-        // Clear stale selections when effect state changes
+        // Clear stale selections when leaving effect_resolve
         if (llState.phase != 'effect_resolve' || llState.pendingEffect == null) {
           _selectedTarget = null;
           _selectedGuess = null;
+        }
+        // Clear card selection when it's no longer in hand
+        if (_selectedCard != null && !llState.myCards.contains(_selectedCard)) {
           _selectedCard = null;
         }
 
@@ -237,24 +240,13 @@ class _LLGameScreenState extends State<LLGameScreen> {
             ),
           ),
           const Spacer(),
-          // Timer
-          if (_remainingSeconds > 0)
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-              decoration: BoxDecoration(
-                color: _remainingSeconds <= 5 ? Colors.red.shade900 : Colors.white10,
-                borderRadius: BorderRadius.circular(8),
-              ),
-              child: Text(
-                '$_remainingSeconds',
-                style: TextStyle(
-                  color: _remainingSeconds <= 5 ? Colors.redAccent : Colors.white70,
-                  fontSize: 13,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-            ),
-          const SizedBox(width: 4),
+          // Card guide button
+          IconButton(
+            icon: const Icon(Icons.help_outline, color: Colors.white70, size: 20),
+            onPressed: () => _showCardGuide(context),
+            padding: EdgeInsets.zero,
+            constraints: const BoxConstraints(minWidth: 36, minHeight: 36),
+          ),
           // Chat button
           Stack(
             children: [
@@ -399,6 +391,25 @@ class _LLGameScreenState extends State<LLGameScreen> {
               ],
             ),
           ),
+          // Timer for current player
+          if (isCurrent && _remainingSeconds > 0)
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+              decoration: BoxDecoration(
+                color: _remainingSeconds <= 5 ? Colors.red.shade900 : Colors.amber.withValues(alpha: 0.2),
+                borderRadius: BorderRadius.circular(4),
+              ),
+              child: Text(
+                '${_remainingSeconds}s',
+                style: TextStyle(
+                  color: _remainingSeconds <= 5 ? Colors.redAccent : Colors.amber,
+                  fontSize: 12,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ),
+          if (isCurrent && _remainingSeconds > 0)
+            const SizedBox(width: 6),
           // Card count
           if (!player.eliminated)
             Container(
@@ -527,8 +538,11 @@ class _LLGameScreenState extends State<LLGameScreen> {
                 selected: isSelected,
                 onSelected: (_) => setState(() => _selectedTarget = targetId),
                 selectedColor: Colors.amber,
-                backgroundColor: Colors.white12,
-                labelStyle: TextStyle(color: isSelected ? Colors.black : Colors.white70),
+                backgroundColor: Colors.white24,
+                labelStyle: TextStyle(
+                  color: isSelected ? Colors.black : Colors.white,
+                  fontWeight: FontWeight.w600,
+                ),
               );
             }).toList(),
           ),
@@ -954,6 +968,119 @@ class _LLGameScreenState extends State<LLGameScreen> {
     );
   }
 
+  void _showCardGuide(BuildContext context) {
+    final l10n = L10n.of(context);
+    final cards = [
+      ('guard', l10n.llDescGuard),
+      ('spy', l10n.llDescSpy),
+      ('baron', l10n.llDescBaron),
+      ('handmaid', l10n.llDescHandmaid),
+      ('prince', l10n.llDescPrince),
+      ('king', l10n.llDescKing),
+      ('countess', l10n.llDescCountess),
+      ('princess', l10n.llDescPrincess),
+    ];
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: const Color(0xFF2D1B4E),
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+      ),
+      builder: (context) => SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                width: 36,
+                height: 4,
+                decoration: BoxDecoration(
+                  color: Colors.white24,
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+              const SizedBox(height: 12),
+              Text(
+                l10n.llCardGuideTitle,
+                style: const TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold),
+              ),
+              const SizedBox(height: 12),
+              Flexible(
+                child: ListView.separated(
+                  shrinkWrap: true,
+                  itemCount: cards.length,
+                  separatorBuilder: (context, index) => Divider(color: Colors.white.withValues(alpha: 0.08), height: 1),
+                  itemBuilder: (context, i) {
+                    final (type, desc) = cards[i];
+                    final color = LoveLetterCard.cardColors[type] ?? Colors.grey;
+                    return Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 8),
+                      child: Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          LoveLetterCard(
+                            cardId: 'll_$type',
+                            width: 36,
+                            height: 52,
+                            compact: true,
+                            isInteractive: false,
+                          ),
+                          const SizedBox(width: 10),
+                          Expanded(
+                            child: Text(
+                              desc,
+                              style: TextStyle(color: color.withValues(alpha: 0.9), fontSize: 12, height: 1.4),
+                            ),
+                          ),
+                        ],
+                      ),
+                    );
+                  },
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  String? _getCardDescription(BuildContext context, String cardId) {
+    final type = LoveLetterCard.getCardType(cardId);
+    if (type == null) return null;
+    final l10n = L10n.of(context);
+    switch (type) {
+      case 'guard': return l10n.llDescGuard;
+      case 'spy': return l10n.llDescSpy;
+      case 'baron': return l10n.llDescBaron;
+      case 'handmaid': return l10n.llDescHandmaid;
+      case 'prince': return l10n.llDescPrince;
+      case 'king': return l10n.llDescKing;
+      case 'countess': return l10n.llDescCountess;
+      case 'princess': return l10n.llDescPrincess;
+      default: return null;
+    }
+  }
+
+  Widget _buildCardDescription(BuildContext context) {
+    final desc = _getCardDescription(context, _selectedCard!);
+    if (desc == null) return const SizedBox.shrink();
+    return Container(
+      width: double.infinity,
+      margin: const EdgeInsets.only(bottom: 6),
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+      decoration: BoxDecoration(
+        color: Colors.white.withValues(alpha: 0.1),
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: Text(
+        desc,
+        style: const TextStyle(color: Colors.white70, fontSize: 11, height: 1.3),
+      ),
+    );
+  }
+
   // ====================== BOTTOM (MY HAND) ======================
 
   Widget _buildBottomArea(BuildContext context, GameService gs, LLGameStateData state) {
@@ -990,6 +1117,25 @@ class _LLGameScreenState extends State<LLGameScreen> {
                     style: TextStyle(color: Colors.red.shade300, fontSize: 10, fontWeight: FontWeight.bold),
                   ),
                 ),
+              if (state.isMyTurn && _remainingSeconds > 0)
+                Padding(
+                  padding: const EdgeInsets.only(left: 8),
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                    decoration: BoxDecoration(
+                      color: _remainingSeconds <= 5 ? Colors.red.shade900 : Colors.amber.withValues(alpha: 0.2),
+                      borderRadius: BorderRadius.circular(4),
+                    ),
+                    child: Text(
+                      '${_remainingSeconds}s',
+                      style: TextStyle(
+                        color: _remainingSeconds <= 5 ? Colors.redAccent : Colors.amber,
+                        fontSize: 12,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ),
+                ),
               const Spacer(),
               // Tokens
               ...List.generate(state.targetTokens, (i) => Padding(
@@ -1019,6 +1165,9 @@ class _LLGameScreenState extends State<LLGameScreen> {
             ),
             const SizedBox(height: 6),
           ],
+          // Card description
+          if (_selectedCard != null)
+            _buildCardDescription(context),
           // My cards
           Row(
             mainAxisAlignment: MainAxisAlignment.center,

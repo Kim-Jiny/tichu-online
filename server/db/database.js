@@ -522,6 +522,36 @@ async function initDatabase() {
 
     await client.query(`ALTER TABLE tc_sk_match_history ADD COLUMN IF NOT EXISTS deserter_nickname VARCHAR(50)`);
 
+    // ===== Love Letter Tables =====
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS tc_ll_match_history (
+        id SERIAL PRIMARY KEY,
+        player_count INT NOT NULL,
+        is_ranked BOOLEAN DEFAULT FALSE,
+        end_reason VARCHAR(20) DEFAULT 'normal',
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      )
+    `);
+
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS tc_ll_match_players (
+        id SERIAL PRIMARY KEY,
+        match_id INT NOT NULL REFERENCES tc_ll_match_history(id),
+        nickname VARCHAR(50) NOT NULL,
+        score INT NOT NULL,
+        rank INT NOT NULL,
+        is_winner BOOLEAN DEFAULT FALSE,
+        is_bot BOOLEAN DEFAULT FALSE
+      )
+    `);
+
+    await client.query(`ALTER TABLE tc_ll_match_history ADD COLUMN IF NOT EXISTS deserter_nickname VARCHAR(50)`);
+
+    // LL user stats columns
+    await client.query(`ALTER TABLE tc_users ADD COLUMN IF NOT EXISTS ll_total_games INT DEFAULT 0`);
+    await client.query(`ALTER TABLE tc_users ADD COLUMN IF NOT EXISTS ll_wins INT DEFAULT 0`);
+    await client.query(`ALTER TABLE tc_users ADD COLUMN IF NOT EXISTS ll_losses INT DEFAULT 0`);
+
     // SK user stats columns
     await client.query(`ALTER TABLE tc_users ADD COLUMN IF NOT EXISTS sk_total_games INT DEFAULT 0`);
     await client.query(`ALTER TABLE tc_users ADD COLUMN IF NOT EXISTS sk_wins INT DEFAULT 0`);
@@ -1233,6 +1263,7 @@ async function getUserProfile(nickname) {
               u.exp_total, u.level, u.created_at,
               u.sk_total_games, u.sk_wins, u.sk_losses, u.sk_rating,
               u.sk_season_rating, u.sk_season_games, u.sk_season_wins, u.sk_season_losses,
+              u.ll_total_games, u.ll_wins, u.ll_losses,
               e.banner_key, e.theme_key, e.title_key,
               si.name AS title_name
        FROM tc_users u
@@ -1275,6 +1306,9 @@ async function getUserProfile(nickname) {
     const skSeasonWinRate = user.sk_season_games > 0
       ? Math.round((user.sk_season_wins / user.sk_season_games) * 100)
       : 0;
+    const llWinRate = user.ll_total_games > 0
+      ? Math.round((user.ll_wins / user.ll_total_games) * 100)
+      : 0;
 
     return {
       nickname: user.nickname,
@@ -1309,6 +1343,10 @@ async function getUserProfile(nickname) {
       skSeasonWins: user.sk_season_wins,
       skSeasonLosses: user.sk_season_losses,
       skSeasonWinRate,
+      llTotalGames: user.ll_total_games,
+      llWins: user.ll_wins,
+      llLosses: user.ll_losses,
+      llWinRate,
     };
   } catch (err) {
     console.error('Get user profile error:', err);
@@ -1396,8 +1434,49 @@ async function getRecentMatches(nickname, limit = 5) {
       });
     }
 
+    // Love Letter matches
+    const llResult = await client.query(
+      `SELECT h.*, p.score as my_score, p.rank as my_rank, p.is_winner as my_winner
+       FROM tc_ll_match_history h
+       JOIN tc_ll_match_players p ON p.match_id = h.id AND p.nickname = $1
+       ORDER BY h.created_at DESC
+       LIMIT $2`,
+      [nickname, limit]
+    );
+    const llMatches = [];
+    for (const row of llResult.rows) {
+      const playersRes = await client.query(
+        `SELECT nickname, score, rank, is_winner, is_bot FROM tc_ll_match_players WHERE match_id = $1 ORDER BY rank`,
+        [row.id]
+      );
+      const deserterNickname = row.deserter_nickname || null;
+      const isDesertionLoss = deserterNickname === nickname;
+      const isDraw = deserterNickname != null && deserterNickname !== nickname;
+      llMatches.push({
+        id: row.id,
+        gameType: 'love_letter',
+        won: isDraw ? false : row.my_winner,
+        isDraw,
+        isDesertionLoss,
+        deserterNickname,
+        myScore: row.my_score,
+        myRank: row.my_rank,
+        playerCount: row.player_count,
+        isRanked: row.is_ranked,
+        endReason: row.end_reason || 'normal',
+        players: playersRes.rows.map(p => ({
+          nickname: p.nickname,
+          score: p.score,
+          rank: p.rank,
+          isWinner: p.is_winner,
+          isBot: p.is_bot,
+        })),
+        createdAt: row.created_at,
+      });
+    }
+
     // Merge and sort by date
-    const all = [...tichuMatches, ...skMatches];
+    const all = [...tichuMatches, ...skMatches, ...llMatches];
     all.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
     return all.slice(0, limit);
   } catch (err) {
@@ -2111,6 +2190,18 @@ async function changeNickname(oldNickname, newNickname) {
     // Update nickname in tc_sk_match_history deserter_nickname
     await client.query(
       `UPDATE tc_sk_match_history SET deserter_nickname = $2 WHERE deserter_nickname = $1`,
+      [oldNickname, trimmed]
+    );
+
+    // Update nickname in tc_ll_match_players
+    await client.query(
+      `UPDATE tc_ll_match_players SET nickname = $2 WHERE nickname = $1`,
+      [oldNickname, trimmed]
+    );
+
+    // Update nickname in tc_ll_match_history deserter_nickname
+    await client.query(
+      `UPDATE tc_ll_match_history SET deserter_nickname = $2 WHERE deserter_nickname = $1`,
       [oldNickname, trimmed]
     );
 
@@ -4379,6 +4470,73 @@ async function saveSKMatchResultWithStats(data) {
   }
 }
 
+// ===== Love Letter DB Functions =====
+
+async function saveLLMatchResultWithStats(data) {
+  const client = await pool.connect();
+  try {
+    await client.query('BEGIN');
+    const matchRes = await client.query(
+      `INSERT INTO tc_ll_match_history (player_count, is_ranked, end_reason, deserter_nickname)
+       VALUES ($1, $2, $3, $4) RETURNING id`,
+      [data.playerCount, data.isRanked, data.endReason || 'normal', data.deserterNickname || null]
+    );
+    const matchId = matchRes.rows[0].id;
+
+    for (const p of data.players) {
+      await client.query(
+        `INSERT INTO tc_ll_match_players (match_id, nickname, score, rank, is_winner, is_bot)
+         VALUES ($1, $2, $3, $4, $5, $6)`,
+        [matchId, p.nickname, p.score, p.rank, p.isWinner, p.isBot]
+      );
+    }
+
+    const humanPlayers = data.players.filter(p => p.nickname && !p.isBot);
+    for (const p of humanPlayers) {
+      const won = p.isWinner === true;
+      const isDraw = p.isDraw === true;
+      const isDeserter =
+        ['leave', 'timeout'].includes(data.endReason || 'normal') &&
+        data.deserterNickname === p.nickname;
+
+      if (isDraw) {
+        const expGain = 3;
+        await client.query(
+          `UPDATE tc_users SET
+            ll_total_games = ll_total_games + 1,
+            exp_total = exp_total + $2,
+            level = GREATEST(1, ((exp_total + $2) / 100) + 1)
+           WHERE nickname = $1`,
+          [p.nickname, expGain]
+        );
+      } else {
+        const goldReward = isDeserter ? 0 : (won ? 10 : 3);
+        const expGain = won ? 15 : 5;
+        await client.query(
+          `UPDATE tc_users SET
+            ll_total_games = ll_total_games + 1,
+            ll_wins = ll_wins + CASE WHEN $2 THEN 1 ELSE 0 END,
+            ll_losses = ll_losses + CASE WHEN $2 THEN 0 ELSE 1 END,
+            gold = gold + $3,
+            exp_total = exp_total + $4,
+            level = GREATEST(1, ((exp_total + $4) / 100) + 1)
+           WHERE nickname = $1`,
+          [p.nickname, won, goldReward, expGain]
+        );
+      }
+    }
+
+    await client.query('COMMIT');
+    return { success: true, matchId };
+  } catch (err) {
+    await client.query('ROLLBACK');
+    console.error('saveLLMatchResultWithStats error:', err);
+    return { success: false, message: err.message };
+  } finally {
+    client.release();
+  }
+}
+
 async function getSKRankings(limit = 50) {
   const client = await pool.connect();
   try {
@@ -4658,6 +4816,7 @@ module.exports = {
   getSKRankings,
   getCurrentSKSeasonRankings,
   getSKSeasonRankings,
+  saveLLMatchResultWithStats,
   getPublishedNotices,
   getNotices,
   getNoticeById,

@@ -55,6 +55,13 @@ class _LoginScreenState extends State<LoginScreen> {
     super.dispose();
   }
 
+  String _mapLoginError(String? error, String fallback) {
+    if (error == 'connection_failed') {
+      return L10n.of(context).loginServerUnavailable;
+    }
+    return error ?? fallback;
+  }
+
   Future<void> _tryAutoLogin() async {
     await _attemptAutoLogin();
   }
@@ -143,7 +150,7 @@ class _LoginScreenState extends State<LoginScreen> {
         setState(() => _isConnecting = false);
       } else {
         setState(() {
-          _error = result.error ?? l10n.loginFailed;
+          _error = _mapLoginError(result.error, l10n.loginFailed);
           _isConnecting = false;
         });
       }
@@ -223,7 +230,7 @@ class _LoginScreenState extends State<LoginScreen> {
         });
       } else {
         setState(() {
-          _error = result.error ?? l10n.loginSocialFailedGeneric;
+          _error = _mapLoginError(result.error, l10n.loginSocialFailedGeneric);
           _isConnecting = false;
         });
       }
@@ -261,7 +268,7 @@ class _LoginScreenState extends State<LoginScreen> {
         setState(() => _isConnecting = false);
       } else {
         setState(() {
-          _error = result.error ?? l10n.loginFailed;
+          _error = _mapLoginError(result.error, l10n.loginFailed);
           _isConnecting = false;
         });
       }
@@ -492,7 +499,7 @@ class _LoginScreenState extends State<LoginScreen> {
           ),
           if (_error != null) ...[
             const SizedBox(height: 16),
-            if (_error!.contains('점검'))
+            if (context.read<GameService>().loginErrorReason == 'maintenance')
               Container(
                 padding: const EdgeInsets.all(16),
                 decoration: BoxDecoration(

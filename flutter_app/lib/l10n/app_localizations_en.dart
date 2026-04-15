@@ -774,6 +774,9 @@ class L10nEn extends L10n {
   String get lobbySkullKingRecord => 'Skull King Record';
 
   @override
+  String get lobbyLoveLetterRecord => 'Love Letter Record';
+
+  @override
   String get lobbyStatRecord => 'Record';
 
   @override
@@ -817,6 +820,9 @@ class L10nEn extends L10n {
 
   @override
   String get lobbyMatchTypeSkullKing => 'Skull King';
+
+  @override
+  String get lobbyMatchTypeLoveLetter => 'Love Letter';
 
   @override
   String get lobbyMatchTypeRanked => 'Ranked';
@@ -1281,6 +1287,9 @@ class L10nEn extends L10n {
 
   @override
   String get skGameSkullKingRecord => 'Skull King Record';
+
+  @override
+  String get skGameLoveLetterRecord => 'Love Letter Record';
 
   @override
   String get skGameStatRecord => 'Record';
@@ -1861,6 +1870,9 @@ class L10nEn extends L10n {
   String get rulesTabSkullKing => 'Skull King';
 
   @override
+  String get rulesTabLoveLetter => 'Love Letter';
+
+  @override
   String get rulesTichuGoalTitle => 'Game Objective';
 
   @override
@@ -2284,6 +2296,153 @@ class L10nEn extends L10n {
       'The trick winner earns +20 bonus per Loot card in the trick, and each player who played a Loot card also earns +20 as their own bonus. (Only awarded on bid success)';
 
   @override
+  String get rulesLlGoalTitle => 'Game Objective';
+
+  @override
+  String get rulesLlGoalBody =>
+      'A card game for 2–4 players. Each round, the last player standing or the player with the highest card when the deck runs out wins a token. The first player to collect enough tokens wins the game.';
+
+  @override
+  String get rulesLlCardCompositionTitle => 'Card Composition (16 cards total)';
+
+  @override
+  String get rulesLlGuard => 'Guard';
+
+  @override
+  String get rulesLlGuardSub => 'Guess an opponent\'s card to eliminate them';
+
+  @override
+  String get rulesLlSpy => 'Spy';
+
+  @override
+  String get rulesLlSpySub => 'Secretly view an opponent\'s card';
+
+  @override
+  String get rulesLlBaron => 'Baron';
+
+  @override
+  String get rulesLlBaronSub => 'Compare cards; lower card is eliminated';
+
+  @override
+  String get rulesLlHandmaid => 'Handmaid';
+
+  @override
+  String get rulesLlHandmaidSub => 'Protected from effects until next turn';
+
+  @override
+  String get rulesLlPrince => 'Prince';
+
+  @override
+  String get rulesLlPrinceSub => 'Force a player to discard their card';
+
+  @override
+  String get rulesLlKing => 'King';
+
+  @override
+  String get rulesLlKingSub => 'Swap cards with another player';
+
+  @override
+  String get rulesLlCountess => 'Countess';
+
+  @override
+  String get rulesLlCountessSub => 'Must be played if holding King or Prince';
+
+  @override
+  String get rulesLlPrincess => 'Princess';
+
+  @override
+  String get rulesLlPrincessSub => 'Eliminated if played or discarded';
+
+  @override
+  String get rulesLlCardEffectsTitle => 'Detailed Card Effects';
+
+  @override
+  String get rulesLlEffectGuardTitle => 'Guard (1)';
+
+  @override
+  String get rulesLlEffectGuardLine1 =>
+      'Name a player and guess a non-Guard card they might hold.';
+
+  @override
+  String get rulesLlEffectGuardLine2 =>
+      'If correct, that player is eliminated from the round.';
+
+  @override
+  String get rulesLlEffectSpyTitle => 'Spy (2)';
+
+  @override
+  String get rulesLlEffectSpyLine1 =>
+      'Choose a player and secretly look at their hand card.';
+
+  @override
+  String get rulesLlEffectBaronTitle => 'Baron (3)';
+
+  @override
+  String get rulesLlEffectBaronLine1 =>
+      'Choose a player and privately compare hand cards.';
+
+  @override
+  String get rulesLlEffectBaronLine2 =>
+      'The player with the lower card is eliminated. Ties have no effect.';
+
+  @override
+  String get rulesLlEffectHandmaidTitle => 'Handmaid (4)';
+
+  @override
+  String get rulesLlEffectHandmaidLine1 =>
+      'Until your next turn, you cannot be chosen as the target of any card effect.';
+
+  @override
+  String get rulesLlEffectPrinceTitle => 'Prince (5)';
+
+  @override
+  String get rulesLlEffectPrinceLine1 =>
+      'Choose any player (including yourself) to discard their hand and draw a new card.';
+
+  @override
+  String get rulesLlEffectPrinceLine2 =>
+      'If they discard the Princess, they are eliminated.';
+
+  @override
+  String get rulesLlEffectKingTitle => 'King (6)';
+
+  @override
+  String get rulesLlEffectKingLine1 =>
+      'Choose a player and swap hand cards with them.';
+
+  @override
+  String get rulesLlEffectCountessTitle => 'Countess (7)';
+
+  @override
+  String get rulesLlEffectCountessLine1 =>
+      'If you hold the King (6) or Prince (5) with the Countess, you must play the Countess.';
+
+  @override
+  String get rulesLlEffectCountessLine2 =>
+      'Otherwise, it can be freely played and has no effect.';
+
+  @override
+  String get rulesLlEffectPrincessTitle => 'Princess (8)';
+
+  @override
+  String get rulesLlEffectPrincessLine1 =>
+      'If this card is played or discarded for any reason, you are immediately eliminated.';
+
+  @override
+  String get rulesLlFlowTitle => 'Turn Sequence';
+
+  @override
+  String get rulesLlFlowBody =>
+      '1. Remove 1 card face-down from the deck. (In a 2-player game, 3 additional cards are removed face-up.)\n2. Deal 1 card to each player.\n3. On your turn, draw 1 card from the deck, then play 1 of your 2 cards and resolve its effect.\n4. After resolving the effect, play passes to the next player.\n5. The round ends when only 1 player remains or the deck is empty.';
+
+  @override
+  String get rulesLlWinTitle => 'Victory Condition';
+
+  @override
+  String get rulesLlWinBody =>
+      'When the round ends, the surviving player with the highest card (ties broken by total card value) wins a token.\n\nTokens needed to win:\n• 2 players: 7 tokens\n• 3 players: 5 tokens\n• 4 players: 4 tokens';
+
+  @override
   String get friendsTitle => 'Friends';
 
   @override
@@ -2431,6 +2590,9 @@ class L10nEn extends L10n {
 
   @override
   String get rankingSkullKingRecord => 'Skull King Record';
+
+  @override
+  String get rankingLoveLetterRecord => 'Love Letter Record';
 
   @override
   String get rankingStatRecord => 'Record';
@@ -3081,4 +3243,51 @@ class L10nEn extends L10n {
 
   @override
   String get llCardPrincess => 'Princess';
+
+  @override
+  String get llCardGuideTitle => 'Card Guide';
+
+  @override
+  String get llDescGuard =>
+      '1 · Guard: Name a player and guess their card. If correct, they\'re eliminated!';
+
+  @override
+  String get llDescSpy => '2 · Spy: Secretly look at another player\'s card.';
+
+  @override
+  String get llDescBaron =>
+      '3 · Baron: Compare cards with a player. Lower card is eliminated!';
+
+  @override
+  String get llDescHandmaid =>
+      '4 · Handmaid: Protected from all effects until your next turn.';
+
+  @override
+  String get llDescPrince =>
+      '5 · Prince: Force a player to discard. If they discard Princess, eliminated!';
+
+  @override
+  String get llDescKing => '6 · King: Trade cards with another player.';
+
+  @override
+  String get llDescCountess =>
+      '7 · Countess: Must be played if you hold King or Prince.';
+
+  @override
+  String get llDescPrincess =>
+      '8 · Princess: If you play this card, you are eliminated!';
+
+  @override
+  String get maintenanceTitle => 'Server Under Maintenance';
+
+  @override
+  String maintenanceCountdown(String time) {
+    return 'Remaining: $time';
+  }
+
+  @override
+  String get maintenanceRetry => 'Retry';
+
+  @override
+  String get maintenanceEnded => 'Maintenance over, reconnecting...';
 }

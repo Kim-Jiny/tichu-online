@@ -15,7 +15,7 @@ const {
   submitInquiry, getUserInquiries, markInquiriesRead, getRankings,
   getWallet, getGoldHistory, getShopItems, getUserItems, buyItem, equipItem, useItem, changeNickname,
   incrementLeaveCount, setRankedBan, getRankedBan, setChatBan, getChatBan, grantSeasonRewards,
-  getActiveSeason, createSeason, getSeasons, getConfig, getLocalizedConfig,
+  getActiveSeason, createSeason, getSeasons, getConfig, getLocalizedConfig, updateConfig,
   getCurrentSeasonRankings, getSeasonRankings, resetSeasonStats,
   loginSocial, registerSocial,
   linkSocial, unlinkSocial, getLinkedSocial,
@@ -42,7 +42,7 @@ const {
   getUserDetail,
   isUserAdmin,
   getDetailedAdminStats,
-  saveSKMatchResult, saveSKMatchResultWithStats,
+  saveSKMatchResult, saveSKMatchResultWithStats, saveLLMatchResultWithStats,
   updateSKUserStats,
   getSKRankings,
   getCurrentSKSeasonRankings,
@@ -214,7 +214,7 @@ function filterRoomsForClient(ws, rooms) {
 }
 
 // Maintenance config (in-memory)
-let maintenanceConfig = {
+const defaultMaintenanceConfig = {
   noticeStart: null,    // ISO string
   noticeEnd: null,
   maintenanceStart: null,
@@ -224,6 +224,8 @@ let maintenanceConfig = {
   message_de: '',
 };
 
+let maintenanceConfig = { ...defaultMaintenanceConfig };
+
 const recentRoomInvites = new Map();
 
 function getMaintenanceConfig() {
@@ -232,6 +234,32 @@ function getMaintenanceConfig() {
 
 function setMaintenanceConfig(config) {
   maintenanceConfig = { ...maintenanceConfig, ...config };
+  updateConfig('maintenance', JSON.stringify(maintenanceConfig)).catch(e =>
+    console.error('[Maintenance] Failed to persist config:', e.message)
+  );
+  // Broadcast updated maintenance status to all connected clients
+  broadcastMaintenanceStatus();
+}
+
+function broadcastMaintenanceStatus() {
+  for (const client of wss.clients) {
+    if (client.readyState === client.OPEN) {
+      const status = getMaintenanceStatus(client.locale);
+      sendTo(client, { type: 'maintenance_status', ...status });
+    }
+  }
+}
+
+async function loadMaintenanceConfig() {
+  try {
+    const saved = await getConfig('maintenance');
+    if (saved) {
+      maintenanceConfig = { ...defaultMaintenanceConfig, ...JSON.parse(saved) };
+      console.log('[Maintenance] Loaded config from DB');
+    }
+  } catch (e) {
+    console.error('[Maintenance] Failed to load config from DB:', e.message);
+  }
 }
 
 function getMaintenanceStatus(locale) {
@@ -379,6 +407,7 @@ process.on('unhandledRejection', (reason, promise) => {
 // Initialize database and start server
 (async () => {
   await initDatabase();
+  await loadMaintenanceConfig();
   await ensureSeasonCycle();
 
   server.listen(PORT, () => {
@@ -896,7 +925,7 @@ async function handleLogin(ws, data) {
   // Block login during maintenance
   const mStatus = getMaintenanceStatus(ws.locale);
   if (mStatus.maintenance) {
-    sendTo(ws, { type: 'login_error', message: mStatus.message || t(ws.locale, 'maintenance') });
+    sendTo(ws, { type: 'login_error', message: mStatus.message || t(ws.locale, 'maintenance'), reason: 'maintenance' });
     return;
   }
 
@@ -982,7 +1011,7 @@ async function handleSocialLogin(ws, data) {
     // Block login during maintenance
     const mStatus = getMaintenanceStatus(ws.locale);
     if (mStatus.maintenance) {
-      sendTo(ws, { type: 'login_error', message: mStatus.message || t(ws.locale, 'maintenance') });
+      sendTo(ws, { type: 'login_error', message: mStatus.message || t(ws.locale, 'maintenance'), reason: 'maintenance' });
       return;
     }
 
@@ -1089,7 +1118,7 @@ async function handleSocialRegister(ws, data) {
     // Block during maintenance
     const mStatus = getMaintenanceStatus(ws.locale);
     if (mStatus.maintenance) {
-      sendTo(ws, { type: 'login_error', message: mStatus.message || t(ws.locale, 'maintenance') });
+      sendTo(ws, { type: 'login_error', message: mStatus.message || t(ws.locale, 'maintenance'), reason: 'maintenance' });
       return;
     }
 
@@ -2413,8 +2442,22 @@ async function saveLLGameResult(room) {
   try {
     const game = room.game;
     const rankings = game.getRankings();
-    console.log(`LL match result for room ${room.name}: ${rankings.map(r => `${r.nickname}=${r.score}`).join(', ')}`);
-    // TODO: Add LL-specific DB save when LL rankings/stats are implemented
+
+    await saveLLMatchResultWithStats({
+      playerCount: game.playerCount,
+      isRanked: false,
+      endReason: 'normal',
+      deserterNickname: null,
+      players: rankings.map(r => ({
+        nickname: r.nickname,
+        score: r.score,
+        rank: r.rank,
+        isWinner: r.rank === 1,
+        isBot: r.playerId.startsWith('bot_'),
+      })),
+    });
+
+    console.log(`LL match result saved for room ${room.name}`);
   } catch (err) {
     console.error('Error saving LL match result:', err);
   }
@@ -2952,8 +2995,44 @@ async function handleDesertion(roomId, playerId, reason = 'leave') {
 
   try {
     if (room.gameType === 'love_letter') {
-      // Love Letter: just log (no ranked stats yet)
-      console.log(`LL desertion in room ${room.name} by ${deserterNick}`);
+      const deserterScore = game.tokens?.[playerId] ?? 0;
+      const rankings = game.getRankings();
+      const remaining = rankings.filter((r) => r.playerId !== playerId);
+      const players = [];
+
+      let currentRank = 1;
+      for (let i = 0; i < remaining.length; i++) {
+        if (i > 0 && remaining[i].score < remaining[i - 1].score) {
+          currentRank = i + 1;
+        }
+        players.push({
+          nickname: remaining[i].nickname,
+          score: remaining[i].score,
+          rank: currentRank,
+          isWinner: false,
+          isDraw: true,
+          isBot: remaining[i].playerId.startsWith('bot_'),
+        });
+      }
+
+      players.push({
+        nickname: deserterNick || playerId,
+        score: deserterScore,
+        rank: game.playerCount,
+        isWinner: false,
+        isDraw: false,
+        isBot: playerId.startsWith('bot_'),
+      });
+
+      await saveLLMatchResultWithStats({
+        playerCount: game.playerCount,
+        isRanked: false,
+        endReason: reason,
+        deserterNickname: deserterNick || null,
+        players,
+      });
+
+      console.log(`LL desertion result saved for room ${room.name} by ${deserterNick}`);
     } else if (room.gameType === 'skull_king') {
       const deserterScore = game.totalScores[playerId] ?? 0;
       const rankings = game.getRankings();

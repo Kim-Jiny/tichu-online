@@ -87,7 +87,11 @@ class SessionService extends ChangeNotifier {
   }) async {
     clearAutoRestoreSuppression();
     clearRestoreFeedback();
-    await ensureConnected(url);
+    try {
+      await ensureConnected(url);
+    } catch (_) {
+      return const SessionAuthResult.failed('connection_failed');
+    }
     final deviceInfo = await _collectDeviceInfo();
     _prepareForLogin();
     _game.loginWithCredentials(username, password, deviceInfo: deviceInfo);
@@ -112,7 +116,11 @@ class SessionService extends ChangeNotifier {
   }) async {
     clearAutoRestoreSuppression();
     clearRestoreFeedback();
-    await ensureConnected(url);
+    try {
+      await ensureConnected(url);
+    } catch (_) {
+      return const SessionAuthResult.failed('connection_failed');
+    }
     final deviceInfo = await _collectDeviceInfo();
     _prepareForLogin();
     _game.loginSocial(provider, token, deviceInfo: deviceInfo);
@@ -217,6 +225,7 @@ class SessionService extends ChangeNotifier {
   Future<void> logout() async {
     _network.disconnect(intentional: true);
     _game.reset();
+    await _game.clearMaintenanceCache();
     _skipNextAutoRestore = true;
     appNavigatorKey.currentState?.popUntil((route) => route.isFirst);
     await clearPersistedSession();
@@ -384,6 +393,7 @@ class SessionService extends ChangeNotifier {
   void _setRestoreFailure(String message) {
     _restoreError = message;
     _restorePhase = RestorePhase.failed;
+    _skipNextAutoRestore = true;
     notifyListeners();
   }
 }

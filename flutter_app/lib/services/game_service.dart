@@ -79,6 +79,7 @@ class GameService extends ChangeNotifier {
 
   // Auth state
   String? loginError;
+  String? loginErrorReason;
   String? registerResult;
   bool? nicknameAvailable;
   String? nicknameCheckMessage;
@@ -265,6 +266,7 @@ class GameService extends ChangeNotifier {
     _loadPushPrefs();
     _loadSfxPrefs();
     _loadReadNoticeIds();
+    _restoreMaintenanceCache();
   }
 
   // Helper: count of non-null players
@@ -416,6 +418,7 @@ class GameService extends ChangeNotifier {
 
       case 'login_error':
         loginError = data['message'] ?? 'login_failed';
+        loginErrorReason = data['reason'] as String?;
         notifyListeners();
         break;
 
@@ -1462,6 +1465,55 @@ class GameService extends ChangeNotifier {
     maintenanceMessage = (status['message'] as String?) ?? '';
     maintenanceStart = status['maintenanceStart'] as String?;
     maintenanceEnd = status['maintenanceEnd'] as String?;
+    _saveMaintenanceCache();
+  }
+
+  Future<void> _saveMaintenanceCache() async {
+    final prefs = await SharedPreferences.getInstance();
+    if (maintenanceStart != null && maintenanceEnd != null) {
+      await prefs.setString('maintenance_start', maintenanceStart!);
+      await prefs.setString('maintenance_end', maintenanceEnd!);
+      await prefs.setString('maintenance_message', maintenanceMessage);
+    } else {
+      await prefs.remove('maintenance_start');
+      await prefs.remove('maintenance_end');
+      await prefs.remove('maintenance_message');
+    }
+  }
+
+  Future<void> _restoreMaintenanceCache() async {
+    final prefs = await SharedPreferences.getInstance();
+    final start = prefs.getString('maintenance_start');
+    final end = prefs.getString('maintenance_end');
+    if (start != null && end != null) {
+      maintenanceStart = start;
+      maintenanceEnd = end;
+      maintenanceMessage = prefs.getString('maintenance_message') ?? '';
+    }
+  }
+
+  Future<void> clearMaintenanceCache() async {
+    maintenanceStart = null;
+    maintenanceEnd = null;
+    maintenanceMessage = '';
+    isUnderMaintenance = false;
+    hasMaintenanceNotice = false;
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.remove('maintenance_start');
+    await prefs.remove('maintenance_end');
+    await prefs.remove('maintenance_message');
+  }
+
+  bool get isInKnownMaintenanceWindow {
+    if (maintenanceStart == null || maintenanceEnd == null) return false;
+    try {
+      final start = DateTime.parse(maintenanceStart!);
+      final end = DateTime.parse(maintenanceEnd!);
+      final now = DateTime.now().toUtc();
+      return now.isAfter(start) && now.isBefore(end);
+    } catch (_) {
+      return false;
+    }
   }
 
   void _handleDogPlayed(Map<String, dynamic> data) {
@@ -1687,6 +1739,7 @@ class GameService extends ChangeNotifier {
 
   void clearAuthState() {
     loginError = null;
+    loginErrorReason = null;
     registerResult = null;
     nicknameAvailable = null;
     nicknameCheckMessage = null;
@@ -1823,11 +1876,9 @@ class GameService extends ChangeNotifier {
     linkedSocialEmail = null;
     socialLinkResultMessage = null;
     socialLinkResultSuccess = null;
-    isUnderMaintenance = false;
-    hasMaintenanceNotice = false;
-    maintenanceMessage = '';
-    maintenanceStart = null;
-    maintenanceEnd = null;
+    // Note: maintenance fields are preserved across reset()
+    // so MaintenanceScreen can still show after connection loss.
+    // Use clearMaintenanceCache() to explicitly clear them.
     clearAuthState();
     notifyListeners();
   }
@@ -1835,6 +1886,7 @@ class GameService extends ChangeNotifier {
   void prepareForLoginAttempt() {
     playerId = '';
     loginError = null;
+    loginErrorReason = null;
     needNickname = false;
     gameState = null;
     skGameState = null;

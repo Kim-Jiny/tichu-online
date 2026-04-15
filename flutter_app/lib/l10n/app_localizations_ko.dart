@@ -753,6 +753,9 @@ class L10nKo extends L10n {
   String get lobbySkullKingRecord => '스컬킹 전적';
 
   @override
+  String get lobbyLoveLetterRecord => '러브레터 전적';
+
+  @override
   String get lobbyStatRecord => '전적';
 
   @override
@@ -796,6 +799,9 @@ class L10nKo extends L10n {
 
   @override
   String get lobbyMatchTypeSkullKing => '스컬킹';
+
+  @override
+  String get lobbyMatchTypeLoveLetter => '러브레터';
 
   @override
   String get lobbyMatchTypeRanked => '랭크';
@@ -1256,6 +1262,9 @@ class L10nKo extends L10n {
 
   @override
   String get skGameSkullKingRecord => '스컬킹 전적';
+
+  @override
+  String get skGameLoveLetterRecord => '러브레터 전적';
 
   @override
   String get skGameStatRecord => '전적';
@@ -1830,6 +1839,9 @@ class L10nKo extends L10n {
   String get rulesTabSkullKing => '스컬킹';
 
   @override
+  String get rulesTabLoveLetter => '러브레터';
+
+  @override
   String get rulesTichuGoalTitle => '게임 목표';
 
   @override
@@ -2233,6 +2245,146 @@ class L10nKo extends L10n {
       '트릭을 이긴 사람이 트릭에 포함된 보물 1장당 +20 보너스를 얻고, 보물을 낸 각 플레이어도 자신의 보너스로 +20을 얻습니다. (비드 성공 시에만 지급)';
 
   @override
+  String get rulesLlGoalTitle => '게임 목표';
+
+  @override
+  String get rulesLlGoalBody =>
+      '2~4명이 플레이하는 카드 게임입니다. 매 라운드 마지막까지 살아남거나, 덱이 떨어졌을 때 가장 높은 카드를 가진 플레이어가 토큰을 획득합니다. 먼저 일정 수의 토큰을 모으면 승리합니다.';
+
+  @override
+  String get rulesLlCardCompositionTitle => '카드 구성 (총 16장)';
+
+  @override
+  String get rulesLlGuard => '가드 (Guard)';
+
+  @override
+  String get rulesLlGuardSub => '상대의 카드를 추측하여 탈락시킴';
+
+  @override
+  String get rulesLlSpy => '스파이 (Spy)';
+
+  @override
+  String get rulesLlSpySub => '상대의 카드를 몰래 확인';
+
+  @override
+  String get rulesLlBaron => '남작 (Baron)';
+
+  @override
+  String get rulesLlBaronSub => '상대와 카드 비교, 낮은 쪽 탈락';
+
+  @override
+  String get rulesLlHandmaid => '시녀 (Handmaid)';
+
+  @override
+  String get rulesLlHandmaidSub => '다음 턴까지 효과 보호';
+
+  @override
+  String get rulesLlPrince => '왕자 (Prince)';
+
+  @override
+  String get rulesLlPrinceSub => '상대의 카드를 강제로 버리게 함';
+
+  @override
+  String get rulesLlKing => '왕 (King)';
+
+  @override
+  String get rulesLlKingSub => '상대와 카드 교환';
+
+  @override
+  String get rulesLlCountess => '백작부인 (Countess)';
+
+  @override
+  String get rulesLlCountessSub => '왕/왕자 보유 시 반드시 사용';
+
+  @override
+  String get rulesLlPrincess => '공주 (Princess)';
+
+  @override
+  String get rulesLlPrincessSub => '내면 즉시 탈락';
+
+  @override
+  String get rulesLlCardEffectsTitle => '카드 효과 상세';
+
+  @override
+  String get rulesLlEffectGuardTitle => '가드 (1)';
+
+  @override
+  String get rulesLlEffectGuardLine1 => '다른 플레이어를 지목하고 가드를 제외한 카드 이름을 추측합니다.';
+
+  @override
+  String get rulesLlEffectGuardLine2 => '정확히 맞히면 해당 플레이어는 탈락합니다.';
+
+  @override
+  String get rulesLlEffectSpyTitle => '스파이 (2)';
+
+  @override
+  String get rulesLlEffectSpyLine1 => '다른 플레이어를 지목하고 그 플레이어의 손 카드를 비공개로 확인합니다.';
+
+  @override
+  String get rulesLlEffectBaronTitle => '남작 (3)';
+
+  @override
+  String get rulesLlEffectBaronLine1 => '다른 플레이어를 지목하고 서로 카드를 비교합니다.';
+
+  @override
+  String get rulesLlEffectBaronLine2 =>
+      '카드 숫자가 낮은 쪽이 탈락합니다. 동점이면 아무 일도 일어나지 않습니다.';
+
+  @override
+  String get rulesLlEffectHandmaidTitle => '시녀 (4)';
+
+  @override
+  String get rulesLlEffectHandmaidLine1 =>
+      '다음 자신의 턴이 올 때까지 다른 플레이어의 카드 효과 대상이 될 수 없습니다.';
+
+  @override
+  String get rulesLlEffectPrinceTitle => '왕자 (5)';
+
+  @override
+  String get rulesLlEffectPrinceLine1 =>
+      '아무 플레이어(자신 포함)를 지목하여 손 카드를 버리게 한 뒤 새 카드를 뽑게 합니다.';
+
+  @override
+  String get rulesLlEffectPrinceLine2 => '공주를 버리게 되면 해당 플레이어는 탈락합니다.';
+
+  @override
+  String get rulesLlEffectKingTitle => '왕 (6)';
+
+  @override
+  String get rulesLlEffectKingLine1 => '다른 플레이어를 지목하고 서로 손 카드를 교환합니다.';
+
+  @override
+  String get rulesLlEffectCountessTitle => '백작부인 (7)';
+
+  @override
+  String get rulesLlEffectCountessLine1 =>
+      '손에 왕(6) 또는 왕자(5)와 함께 들고 있다면 반드시 백작부인을 내야 합니다.';
+
+  @override
+  String get rulesLlEffectCountessLine2 =>
+      '그 외의 경우 자유롭게 낼 수 있으며, 별도의 효과는 없습니다.';
+
+  @override
+  String get rulesLlEffectPrincessTitle => '공주 (8)';
+
+  @override
+  String get rulesLlEffectPrincessLine1 => '어떤 이유로든 이 카드를 내거나 버리면 즉시 탈락합니다.';
+
+  @override
+  String get rulesLlFlowTitle => '진행 순서';
+
+  @override
+  String get rulesLlFlowBody =>
+      '1. 덱에서 카드 1장을 앞면이 보이지 않게 제외합니다. (2인일 때는 추가로 3장을 앞면이 보이게 제외)\n2. 각 플레이어에게 카드 1장씩 나눠줍니다.\n3. 턴이 되면 덱에서 카드 1장을 뽑아 손에 들고, 2장 중 1장을 선택하여 효과를 사용합니다.\n4. 효과를 적용한 후 다음 플레이어의 턴으로 넘어갑니다.\n5. 생존자가 1명 남거나 덱이 떨어지면 라운드가 종료됩니다.';
+
+  @override
+  String get rulesLlWinTitle => '승리 조건';
+
+  @override
+  String get rulesLlWinBody =>
+      '라운드 종료 시 생존자 중 가장 높은 카드를 가진 플레이어(동점 시 카드 숫자 합이 높은 쪽)가 토큰을 획득합니다.\n\n필요 토큰 수:\n• 2인: 7토큰\n• 3인: 5토큰\n• 4인: 4토큰';
+
+  @override
   String get friendsTitle => '친구';
 
   @override
@@ -2379,6 +2531,9 @@ class L10nKo extends L10n {
 
   @override
   String get rankingSkullKingRecord => '스컬킹 전적';
+
+  @override
+  String get rankingLoveLetterRecord => '러브레터 전적';
 
   @override
   String get rankingStatRecord => '전적';
@@ -3011,4 +3166,45 @@ class L10nKo extends L10n {
 
   @override
   String get llCardPrincess => '공주';
+
+  @override
+  String get llCardGuideTitle => '카드 설명';
+
+  @override
+  String get llDescGuard => '1 · 가드: 상대를 지목하고 카드를 추측합니다. 맞으면 탈락!';
+
+  @override
+  String get llDescSpy => '2 · 스파이: 상대의 카드를 몰래 확인합니다.';
+
+  @override
+  String get llDescBaron => '3 · 남작: 상대와 카드를 비교합니다. 낮은 쪽이 탈락!';
+
+  @override
+  String get llDescHandmaid => '4 · 시녀: 다음 턴까지 모든 효과로부터 보호받습니다.';
+
+  @override
+  String get llDescPrince => '5 · 왕자: 상대의 카드를 버리게 합니다. 공주를 버리면 탈락!';
+
+  @override
+  String get llDescKing => '6 · 왕: 상대와 카드를 교환합니다.';
+
+  @override
+  String get llDescCountess => '7 · 백작부인: 왕이나 왕자와 함께 들고 있으면 반드시 내야 합니다.';
+
+  @override
+  String get llDescPrincess => '8 · 공주: 이 카드를 내면 즉시 탈락합니다!';
+
+  @override
+  String get maintenanceTitle => '서버 점검 중';
+
+  @override
+  String maintenanceCountdown(String time) {
+    return '남은 시간: $time';
+  }
+
+  @override
+  String get maintenanceRetry => '재시도';
+
+  @override
+  String get maintenanceEnded => '점검 종료, 재연결 중...';
 }

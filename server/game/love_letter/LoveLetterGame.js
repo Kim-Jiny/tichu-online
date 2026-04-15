@@ -14,8 +14,9 @@ class LoveLetterGame {
     this.playerCount = playerIds.length;
     this.gameType = 'love_letter';
 
-    // Token target: 2p → 4, 3-4p → 3
-    this.targetTokens = options.targetTokens || (this.playerCount === 2 ? 4 : 3);
+    // Token target: 2p → 4, 3p → 3, 4p → 2
+    const defaultTokens = this.playerCount === 2 ? 4 : this.playerCount === 3 ? 3 : 2;
+    this.targetTokens = options.targetTokens || defaultTokens;
 
     this.state = 'waiting';
     this.round = 0;

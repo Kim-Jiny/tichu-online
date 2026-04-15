@@ -781,6 +781,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
       builder: (ctx) => AlertDialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
         title: Text(title),
+        contentPadding: const EdgeInsets.fromLTRB(24, 16, 24, 16),
         content: SizedBox(
           width: double.maxFinite,
           height: 400,

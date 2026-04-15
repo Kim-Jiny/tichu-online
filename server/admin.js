@@ -2213,8 +2213,12 @@ async function handleAdminRoute(req, res, url, pathname, method, lobby, wss, mai
             <input type="datetime-local" name="maintenanceStart" value="${formatDatetimeLocal(config.maintenanceStart)}" style="padding:10px;border:1px solid #ddd;border-radius:8px;font-size:14px">
             <label>점검 종료</label>
             <input type="datetime-local" name="maintenanceEnd" value="${formatDatetimeLocal(config.maintenanceEnd)}" style="padding:10px;border:1px solid #ddd;border-radius:8px;font-size:14px">
-            <label>안내 메시지</label>
-            <textarea name="message" rows="3" placeholder="점검 안내 메시지">${escapeHtml(config.message || '')}</textarea>
+            <label>안내 메시지 (한국어)</label>
+            <textarea name="message_ko" rows="3" placeholder="점검 안내 메시지 (한국어)">${escapeHtml(config.message_ko || '')}</textarea>
+            <label>안내 메시지 (English)</label>
+            <textarea name="message_en" rows="3" placeholder="Maintenance message (English)">${escapeHtml(config.message_en || '')}</textarea>
+            <label>안내 메시지 (Deutsch)</label>
+            <textarea name="message_de" rows="3" placeholder="Wartungsmeldung (Deutsch)">${escapeHtml(config.message_de || '')}</textarea>
           </div>
           <div style="margin-top:16px;display:flex;gap:8px">
             <button type="submit" class="btn btn-primary">저장</button>
@@ -2236,7 +2240,9 @@ async function handleAdminRoute(req, res, url, pathname, method, lobby, wss, mai
         noticeEnd: body.noticeEnd || null,
         maintenanceStart: body.maintenanceStart || null,
         maintenanceEnd: body.maintenanceEnd || null,
-        message: body.message || '',
+        message_ko: body.message_ko || '',
+        message_en: body.message_en || '',
+        message_de: body.message_de || '',
       });
     }
     return redirect(res, '/tc-backstage/maintenance');
@@ -2249,7 +2255,9 @@ async function handleAdminRoute(req, res, url, pathname, method, lobby, wss, mai
         noticeEnd: null,
         maintenanceStart: null,
         maintenanceEnd: null,
-        message: '',
+        message_ko: '',
+        message_en: '',
+        message_de: '',
       });
     }
     return redirect(res, '/tc-backstage/maintenance');

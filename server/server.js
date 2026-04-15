@@ -219,7 +219,9 @@ let maintenanceConfig = {
   noticeEnd: null,
   maintenanceStart: null,
   maintenanceEnd: null,
-  message: '',
+  message_ko: '',
+  message_en: '',
+  message_de: '',
 };
 
 const recentRoomInvites = new Map();
@@ -232,7 +234,7 @@ function setMaintenanceConfig(config) {
   maintenanceConfig = { ...maintenanceConfig, ...config };
 }
 
-function getMaintenanceStatus() {
+function getMaintenanceStatus(locale) {
   const now = new Date();
   let notice = false;
   let maintenance = false;
@@ -248,10 +250,21 @@ function getMaintenanceStatus() {
     if (now >= ms && now <= me) maintenance = true;
   }
 
+  // Pick localized message with fallback: requested locale → en → ko
+  let message = '';
+  if (locale === 'de' && maintenanceConfig.message_de) {
+    message = maintenanceConfig.message_de;
+  } else if (locale === 'en' && maintenanceConfig.message_en) {
+    message = maintenanceConfig.message_en;
+  } else if (locale === 'ko' && maintenanceConfig.message_ko) {
+    message = maintenanceConfig.message_ko;
+  }
+  if (!message) message = maintenanceConfig.message_en || maintenanceConfig.message_ko || '';
+
   return {
     notice,
     maintenance,
-    message: maintenanceConfig.message || '',
+    message,
     maintenanceStart: maintenanceConfig.maintenanceStart,
     maintenanceEnd: maintenanceConfig.maintenanceEnd,
   };
@@ -738,7 +751,7 @@ async function handleMessage(ws, data) {
       }
       break;
     case 'get_maintenance_status':
-      sendTo(ws, { type: 'maintenance_status', ...getMaintenanceStatus() });
+      sendTo(ws, { type: 'maintenance_status', ...getMaintenanceStatus(ws.locale) });
       break;
     case 'get_app_config':
       await handleGetAppConfig(ws);
@@ -869,6 +882,10 @@ async function handleDeleteAccount(ws) {
 
 async function handleLogin(ws, data) {
   const { username, password } = data;
+  // Extract locale early so maintenance message is localized
+  const earlyLocale = (data.deviceInfo && data.deviceInfo.locale) || ws.locale || null;
+  ws.locale = earlyLocale;
+
   const result = await loginUser(username, password);
 
   if (!result.success) {
@@ -877,7 +894,7 @@ async function handleLogin(ws, data) {
   }
 
   // Block login during maintenance
-  const mStatus = getMaintenanceStatus();
+  const mStatus = getMaintenanceStatus(ws.locale);
   if (mStatus.maintenance) {
     sendTo(ws, { type: 'login_error', message: mStatus.message || t(ws.locale, 'maintenance') });
     return;
@@ -963,7 +980,7 @@ async function handleSocialLogin(ws, data) {
     }
 
     // Block login during maintenance
-    const mStatus = getMaintenanceStatus();
+    const mStatus = getMaintenanceStatus(ws.locale);
     if (mStatus.maintenance) {
       sendTo(ws, { type: 'login_error', message: mStatus.message || t(ws.locale, 'maintenance') });
       return;
@@ -1070,7 +1087,7 @@ async function handleSocialRegister(ws, data) {
     }
 
     // Block during maintenance
-    const mStatus = getMaintenanceStatus();
+    const mStatus = getMaintenanceStatus(ws.locale);
     if (mStatus.maintenance) {
       sendTo(ws, { type: 'login_error', message: mStatus.message || t(ws.locale, 'maintenance') });
       return;
@@ -1239,7 +1256,7 @@ async function handleReconnection(ws) {
           pushFriendInvite: ws.pushFriendInvite !== false,
           pushAdminInquiry: ws.pushAdminInquiry !== false,
           pushAdminReport: ws.pushAdminReport !== false,
-          maintenanceStatus: getMaintenanceStatus(),
+          maintenanceStatus: getMaintenanceStatus(ws.locale),
         });
         sendTo(ws, {
           type: 'error',
@@ -1271,7 +1288,7 @@ async function handleReconnection(ws) {
           pushFriendInvite: ws.pushFriendInvite !== false,
           pushAdminInquiry: ws.pushAdminInquiry !== false,
           pushAdminReport: ws.pushAdminReport !== false,
-          maintenanceStatus: getMaintenanceStatus(),
+          maintenanceStatus: getMaintenanceStatus(ws.locale),
         });
         sendTo(ws, {
           type: 'reconnected',
@@ -1309,7 +1326,7 @@ async function handleReconnection(ws) {
           pushFriendInvite: ws.pushFriendInvite !== false,
           pushAdminInquiry: ws.pushAdminInquiry !== false,
           pushAdminReport: ws.pushAdminReport !== false,
-          maintenanceStatus: getMaintenanceStatus(),
+          maintenanceStatus: getMaintenanceStatus(ws.locale),
         });
         sendTo(ws, {
           type: 'error',
@@ -1341,7 +1358,7 @@ async function handleReconnection(ws) {
           pushFriendInvite: ws.pushFriendInvite !== false,
           pushAdminInquiry: ws.pushAdminInquiry !== false,
           pushAdminReport: ws.pushAdminReport !== false,
-          maintenanceStatus: getMaintenanceStatus(),
+          maintenanceStatus: getMaintenanceStatus(ws.locale),
         });
         sendTo(ws, {
           type: 'spectate_joined',
@@ -1398,7 +1415,7 @@ async function handleReconnection(ws) {
             pushFriendInvite: ws.pushFriendInvite !== false,
             pushAdminInquiry: ws.pushAdminInquiry !== false,
             pushAdminReport: ws.pushAdminReport !== false,
-            maintenanceStatus: getMaintenanceStatus(),
+            maintenanceStatus: getMaintenanceStatus(ws.locale),
           });
           sendTo(ws, {
             type: 'error',
@@ -1439,7 +1456,7 @@ async function handleReconnection(ws) {
           pushFriendInvite: ws.pushFriendInvite !== false,
           pushAdminInquiry: ws.pushAdminInquiry !== false,
           pushAdminReport: ws.pushAdminReport !== false,
-          maintenanceStatus: getMaintenanceStatus(),
+          maintenanceStatus: getMaintenanceStatus(ws.locale),
         });
         sendTo(ws, {
           type: 'room_joined',
@@ -1466,7 +1483,7 @@ async function handleReconnection(ws) {
     pushFriendInvite: ws.pushFriendInvite !== false,
     pushAdminInquiry: ws.pushAdminInquiry !== false,
     pushAdminReport: ws.pushAdminReport !== false,
-    maintenanceStatus: getMaintenanceStatus(),
+    maintenanceStatus: getMaintenanceStatus(ws.locale),
   });
   sendTo(ws, {
     type: 'room_list',

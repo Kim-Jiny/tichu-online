@@ -442,7 +442,7 @@ async function initDatabase() {
         ('leave_reduce_1', '탈주 카운트 -1', 'utility', 150, FALSE, TRUE, NULL, TRUE, 'leave_count_reduce', 1, '{}'::jsonb),
         ('leave_reduce_3', '탈주 카운트 -3', 'utility', 400, FALSE, TRUE, NULL, TRUE, 'leave_count_reduce', 3, '{}'::jsonb),
         ('nickname_change', '닉네임 변경권', 'utility', 500, FALSE, TRUE, NULL, TRUE, 'nickname_change', NULL, '{}'::jsonb),
-        ('top_card_counter_7d', '탑패 카운터(7일)', 'utility', 1000, FALSE, FALSE, 7, TRUE, NULL, NULL, '{}'::jsonb),
+        ('top_card_counter_7d', '티츄 탑패 카운터(7일)', 'utility', 1000, FALSE, FALSE, 7, TRUE, NULL, NULL, '{}'::jsonb),
         ('stats_reset', '전적 초기화권', 'utility', 2000, FALSE, TRUE, NULL, TRUE, 'stats_reset', NULL, '{}'::jsonb),
         ('season_stats_reset', '랭킹전적 초기화권', 'utility', 1000, FALSE, TRUE, NULL, TRUE, 'season_stats_reset', NULL, '{}'::jsonb),
         ('banner_season_gold', '시즌 골드 배너', 'banner', 0, TRUE, FALSE, 30, FALSE, NULL, NULL, '{}'::jsonb),

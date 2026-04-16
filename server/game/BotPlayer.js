@@ -115,17 +115,26 @@ function decomposeHand(cards) {
     }
   }
 
-  // 2. Extract straights (5+ consecutive)
+  // 2. Extract straights (5+ consecutive).
+  // Preserve Ace as single if the straight is long enough without it: an A left
+  // in hand as a single is a near-guaranteed trick winner, while the remaining
+  // straight (still >=5) is barely weaker.
   byValue = groupByValue(remaining);
   const values = Object.keys(byValue).map(Number).sort((a, b) => a - b);
   if (values.length >= 5) {
     let runStart = 0;
     for (let i = 1; i <= values.length; i++) {
       if (i === values.length || values[i] !== values[i - 1] + 1) {
-        const runLen = i - runStart;
+        let runEnd = i; // exclusive
+        let runLen = runEnd - runStart;
+        // If run ends at Ace and still has room, drop the Ace.
+        if (runLen > 5 && values[runEnd - 1] === 14) {
+          runEnd -= 1;
+          runLen -= 1;
+        }
         if (runLen >= 5) {
           const straightCards = [];
-          for (let j = runStart; j < i; j++) {
+          for (let j = runStart; j < runEnd; j++) {
             straightCards.push(byValue[values[j]][0]);
           }
           plans.push(straightCards);
@@ -136,7 +145,9 @@ function decomposeHand(cards) {
     }
   }
 
-  // 3. Extract steps (consecutive pairs)
+  // 3. Extract steps (consecutive pairs).
+  // Preserve Ace-pair if the step is long enough without it: A-pair alone is
+  // stronger than most step finales it would be glued into.
   byValue = groupByValue(remaining);
   const pairValues = [];
   for (const [v, group] of Object.entries(byValue)) {
@@ -147,10 +158,15 @@ function decomposeHand(cards) {
     let runStart = 0;
     for (let i = 1; i <= pairValues.length; i++) {
       if (i === pairValues.length || pairValues[i] !== pairValues[i - 1] + 1) {
-        const runLen = i - runStart;
+        let runEnd = i;
+        let runLen = runEnd - runStart;
+        if (runLen > 2 && pairValues[runEnd - 1] === 14) {
+          runEnd -= 1;
+          runLen -= 1;
+        }
         if (runLen >= 2) {
           const stepCards = [];
-          for (let j = runStart; j < i; j++) {
+          for (let j = runStart; j < runEnd; j++) {
             const group = byValue[pairValues[j]];
             stepCards.push(group[0], group[1]);
           }
@@ -724,22 +740,30 @@ function leadTrick(state, cards, normalCards, combos) {
 
   const partnerTichu = partner && !partner.hasFinished && (partner.hasSmallTichu || partner.hasLargeTichu);
 
-  // 0. 1v1 endgame: opponent has 1 card left — play multi-card combos first, then singles high-to-low
+  // 0. 1v1 endgame strategies (partner finished, only 1 opponent active)
   const activeOpponents = opponents.filter(o => !o.hasFinished);
   const partnerFinished = !partner || partner.hasFinished;
-  if (partnerFinished && activeOpponents.length === 1 && activeOpponents[0].cardCount === 1) {
-    // Play any multi-card combo first (opponent can't follow)
+  const is1v1 = partnerFinished && activeOpponents.length === 1;
+
+  // 0a. 1v1 + opponent on RIGHT: playing dog returns the lead to us (partner
+  // and the left opp are both finished, so next-active cycles back to me).
+  // Burn the dog now while it's a free action — it's dead weight otherwise.
+  if (is1v1 && activeOpponents[0].position === 'right' && cards.includes('special_dog')) {
+    return { type: 'play_cards', cards: ['special_dog'] };
+  }
+
+  // 0b. 1v1 + opponent has exactly 1 card: they can't follow any combo, so
+  // dump combos first (largest clears the most cards), then high singles.
+  if (is1v1 && activeOpponents[0].cardCount === 1) {
     const bombSet = new Set(combos.bombs.flat());
     const multiPlans = plans.filter(p =>
       p.length >= 2 && !p.includes('special_dog') && !p.includes('special_bird') &&
       !(p.length === 4 && p.every(c => bombSet.has(c)))
     );
     if (multiPlans.length > 0) {
-      // Play the largest combo to clear the most cards
       multiPlans.sort((a, b) => b.length - a.length);
       return { type: 'play_cards', cards: multiPlans[0] };
     }
-    // Only singles left — play highest first to secure tricks
     const playable = cards.filter(c => c !== 'special_dog');
     if (playable.length > 0) {
       playable.sort((a, b) => getCardValue(b) - getCardValue(a));
@@ -765,8 +789,25 @@ function leadTrick(state, cards, normalCards, combos) {
       const partnerFewCards = partner.cardCount <= 5;
       const myCards = cards.filter(c => c !== 'special_dog');
 
-      // Play dog if partner declared tichu, has few cards, or we have many cards
-      if (partnerTichu || partnerFewCards || myCards.length >= 10) {
+      // Stuck-dog guard: if remaining cards (without dog) can't win any lead,
+      // we'll never get another chance to play the dog as a follow — so play it now.
+      // Only triggers in the endgame (≤3 non-dog cards) to avoid wasting dog early.
+      let stuckDogRisk = false;
+      if (myCards.length > 0 && myCards.length <= 3) {
+        const remainingPlans = decomposeHand(myCards);
+        const canWinLead = remainingPlans.some(p => {
+          if (p.length === 1) {
+            const v = getCardValue(p[0]);
+            return v >= 13 || p[0] === 'special_dragon';
+          }
+          return p.length >= 2; // any combo is likely to lead a trick
+        });
+        stuckDogRisk = !canWinLead;
+      }
+
+      // Play dog if partner declared tichu, has few cards, we have many cards,
+      // or the remaining hand can't win a lead (dog would get stuck otherwise).
+      if (partnerTichu || partnerFewCards || myCards.length >= 10 || stuckDogRisk) {
         return { type: 'play_cards', cards: ['special_dog'] };
       }
     }
@@ -817,12 +858,24 @@ function leadTrick(state, cards, normalCards, combos) {
     // Only play A/K combos when we have few cards left
     const safePlans = multiCardPlans.filter(p => {
       const hv = getHighestValue(p);
-      if (hv >= 14) return cards.length <= 5; // A combo: only if few cards left
-      if (hv >= 13) return cards.length <= 7; // K combo: only if somewhat few cards
+      if (hv >= 14) return cards.length <= 2; // A combo: only as the final play
+      if (hv >= 13) return cards.length <= 6; // K combo: only in late game
       return true;
     });
-    const bestPlans = safePlans.length > 0 ? safePlans : multiCardPlans;
-    return { type: 'play_cards', cards: bestPlans[0] };
+    if (safePlans.length > 0) {
+      return { type: 'play_cards', cards: safePlans[0] };
+    }
+    // No safe combo available. Prefer leading a LOW single (≤10) over burning
+    // a high combo (e.g. AA pair with [3,4,A,A]). Low singles will lose
+    // anyway, but the A's stay in hand as guaranteed late-game trick winners.
+    // We only reroute for LOW singles though — burning a lone A/K single to
+    // save a combo would be strictly worse.
+    const lowSinglePlans = singlePlans.filter(p => getCardValue(p[0]) <= 10);
+    if (lowSinglePlans.length > 0) {
+      return { type: 'play_cards', cards: [lowSinglePlans[0][0]] };
+    }
+    // No low singles: play the high combo (better than burning K/A singles).
+    return { type: 'play_cards', cards: multiCardPlans[0] };
   }
 
   // 6. Single card - play lowest

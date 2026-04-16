@@ -23,12 +23,20 @@ function decideSKBotAction(game, botId) {
 
 function decideBid(game, botId) {
   const hand = game.hands[botId] || [];
+  const infos = hand.map(id => getCardInfo(id)).filter(Boolean);
+
+  // Context for expansion synergy
+  const hasWhiteWhale = infos.some(i => i.type === CARD_TYPE.WHITE_WHALE);
+  const highNumbers = infos.filter(i =>
+    i.type === CARD_TYPE.NUMBER &&
+    ((i.suit === 'black' && i.value >= 9) || i.value >= 12)
+  );
+  // White Whale synergy: nullifies opponents' specials, so high numbers become
+  // much more likely to win when we also hold White Whale.
+  const whiteWhaleSynergy = hasWhiteWhale && highNumbers.length >= 1;
+
   let estimatedTricks = 0;
-
-  for (const cardId of hand) {
-    const info = getCardInfo(cardId);
-    if (!info) continue;
-
+  for (const info of infos) {
     if (info.type === CARD_TYPE.SKULL_KING) {
       estimatedTricks += 1;
     } else if (info.type === CARD_TYPE.PIRATE) {
@@ -38,22 +46,24 @@ function decideBid(game, botId) {
     } else if (info.type === CARD_TYPE.TIGRESS) {
       estimatedTricks += 0.5;
     } else if (info.type === CARD_TYPE.WHITE_WHALE) {
-      // Whale can steal a trick with a high number in hand, but unpredictable
-      estimatedTricks += 0.2;
+      // With high numbers in hand, White Whale nullifies opponents' specials
+      // and our number wins → much more reliable trick.
+      estimatedTricks += whiteWhaleSynergy ? 0.5 : 0.15;
     } else if (info.type === CARD_TYPE.NUMBER) {
       if (info.suit === 'black' && info.value >= 10) {
-        estimatedTricks += 0.7;
+        estimatedTricks += whiteWhaleSynergy ? 0.85 : 0.7;
       } else if (info.suit === 'black' && info.value >= 7) {
-        estimatedTricks += 0.4;
+        estimatedTricks += whiteWhaleSynergy ? 0.5 : 0.4;
       } else if (info.value >= 12) {
-        estimatedTricks += 0.3;
+        estimatedTricks += whiteWhaleSynergy ? 0.45 : 0.3;
       }
     }
-    // Escapes, low cards, Kraken, and Loot contribute 0 to trick count
+    // Escapes, low numbers, Kraken, and Loot contribute 0 to trick count.
+    // Loot adds +20 bonus if bid is met, but doesn't win a trick itself.
   }
 
   const bid = Math.round(estimatedTricks);
-  return { type: 'submit_bid', bid: Math.min(bid, game.round) };
+  return { type: 'submit_bid', bid: Math.min(Math.max(bid, 0), game.round) };
 }
 
 function decidePlay(game, botId) {
@@ -99,27 +109,29 @@ function decideLeadCard(legalCards, tricksNeeded, tricksRemaining) {
       });
     if (numbers.length > 0) return makePlayAction(numbers[0].id, numbers[0].info);
   } else if (tricksNeeded <= 0) {
-    // Already met or exceeded bid: play weak
+    // Already met or exceeded bid: play weak.
+    // Preserve Kraken/White Whale for follow-phase denial of high-stakes tricks
+    // (SK+pirate / SK+mermaid). Dump simpler cards first.
     const loot = infos.find(c => c.info.type === CARD_TYPE.LOOT);
     if (loot) return makePlayAction(loot.id, loot.info);
 
     const escapes = infos.filter(c => c.info.type === CARD_TYPE.ESCAPE);
     if (escapes.length > 0) return makePlayAction(escapes[0].id, escapes[0].info);
 
-    const kraken = infos.find(c => c.info.type === CARD_TYPE.KRAKEN);
-    if (kraken) return makePlayAction(kraken.id, kraken.info);
-
     const tigress = infos.find(c => c.info.type === CARD_TYPE.TIGRESS);
     if (tigress) return makePlayAction(tigress.id, tigress.info, 'escape');
 
-    const whale = infos.find(c => c.info.type === CARD_TYPE.WHITE_WHALE);
-    if (whale) return makePlayAction(whale.id, whale.info);
-
-    // Lowest number
+    // Lowest number before burning Kraken/White Whale (keep those as denial tools)
     const numbers = infos
       .filter(c => c.info.type === CARD_TYPE.NUMBER)
       .sort((a, b) => a.info.value - b.info.value);
     if (numbers.length > 0) return makePlayAction(numbers[0].id, numbers[0].info);
+
+    const kraken = infos.find(c => c.info.type === CARD_TYPE.KRAKEN);
+    if (kraken) return makePlayAction(kraken.id, kraken.info);
+
+    const whale = infos.find(c => c.info.type === CARD_TYPE.WHITE_WHALE);
+    if (whale) return makePlayAction(whale.id, whale.info);
   }
 
   // Fallback
@@ -173,11 +185,15 @@ function decideFollowCard(game, botId, legalCards, tricksNeeded) {
 
   // Helper: play weak card to dump the trick (highest loser first)
   const playWeak = () => {
-    // Kraken stake-block: if we don't need the trick and a big-bonus play is
-    // forming, void it instead of quietly dumping an escape.
+    // High-stakes denial: a big-bonus play is forming on the table.
+    // Kraken voids the whole trick (best denial). White Whale nullifies
+    // specials, turning the trick into a number contest that awards no
+    // SK/pirate/mermaid bonus (second-best denial).
     if (highStakesTrick) {
       const krakenBlock = infos.find(c => c.info.type === CARD_TYPE.KRAKEN);
       if (krakenBlock) return makePlayAction(krakenBlock.id, krakenBlock.info);
+      const whaleBlock = infos.find(c => c.info.type === CARD_TYPE.WHITE_WHALE);
+      if (whaleBlock) return makePlayAction(whaleBlock.id, whaleBlock.info);
     }
     // Loot never wins a trick → safest dump, and if we still win the trick
     // it grants a bonus to us.
@@ -302,13 +318,16 @@ function decideFollowCard(game, botId, legalCards, tricksNeeded) {
     if (numbers.length > 0) return makePlayAction(numbers[0].id, numbers[0].info);
   } else {
     // Don't want more tricks: dump weak.
-    // Kraken stake-block: if a big-bonus special trick (SK+pirate or SK+mermaid)
-    // is forming, voiding it with a Kraken is strictly better than any normal
-    // dump because the opponent is denied the bonus too. Fire this before
-    // playSafeLosingDump which would otherwise spend a high trump as "safe".
+    // High-stakes denial: a big-bonus special trick (SK+pirate or SK+mermaid)
+    // is forming. Voiding with Kraken or nullifying with White Whale is
+    // strictly better than any normal dump because the opponent is denied the
+    // bonus too. Fire this before playSafeLosingDump which would otherwise
+    // spend a high trump as "safe".
     if (highStakesTrick) {
       const krakenBlock = infos.find(c => c.info.type === CARD_TYPE.KRAKEN);
       if (krakenBlock) return makePlayAction(krakenBlock.id, krakenBlock.info);
+      const whaleBlock = infos.find(c => c.info.type === CARD_TYPE.WHITE_WHALE);
+      if (whaleBlock) return makePlayAction(whaleBlock.id, whaleBlock.info);
     }
     const safeDump = playSafeLosingDump();
     if (safeDump) return safeDump;

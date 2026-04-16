@@ -399,6 +399,26 @@ setInterval(() => {
   }
 }, 5 * 60 * 1000);
 
+// WebSocket heartbeat: detect zombie connections (network died without proper close).
+// Pings every 15s; terminates any client that didn't pong since last ping (max ~30s detection).
+// Terminated sockets fire the `close` event, which runs the normal disconnect flow
+// (marks player disconnected and starts the 30s waiting-room removal timer).
+const HEARTBEAT_INTERVAL_MS = 15000;
+const heartbeatInterval = setInterval(() => {
+  wss.clients.forEach((ws) => {
+    if (ws.isAlive === false) {
+      console.log(`[Heartbeat] Terminating zombie connection: ${ws.nickname || '-'} (${ws.playerId || '-'})`);
+      try { ws.terminate(); } catch (_) {}
+      return;
+    }
+    ws.isAlive = false;
+    try { ws.ping(); } catch (_) {}
+  });
+}, HEARTBEAT_INTERVAL_MS);
+wss.on('close', () => {
+  clearInterval(heartbeatInterval);
+});
+
 // Safety net for unawaited async errors
 process.on('unhandledRejection', (reason, promise) => {
   console.error('[UNHANDLED REJECTION]', reason);
@@ -426,6 +446,10 @@ wss.on('connection', (ws, req) => {
   ws.roomId = null;
   ws.clientIp = req.headers['x-forwarded-for']?.split(',')[0]?.trim()
     || req.socket.remoteAddress || null;
+
+  // Heartbeat: mark alive initially, refresh on pong
+  ws.isAlive = true;
+  ws.on('pong', () => { ws.isAlive = true; });
 
   console.log('New connection established');
 

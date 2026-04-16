@@ -32,6 +32,7 @@ class LobbyManager {
         name: room.name,
         playerCount: room.getPlayerCount(),
         maxPlayers: room.maxPlayers,
+        effectiveMaxPlayers: room.getEffectiveMaxPlayers ? room.getEffectiveMaxPlayers() : room.maxPlayers,
         gameType: room.gameType,
         hostName: room.hostNickname,
         isPrivate: room.isPrivate,

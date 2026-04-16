@@ -598,6 +598,12 @@ async function handleMessage(ws, data) {
     case 'add_bot':
       handleAddBot(ws, data);
       break;
+    case 'block_slot':
+      handleBlockSlot(ws, data);
+      break;
+    case 'unblock_slot':
+      handleUnblockSlot(ws, data);
+      break;
     case 'switch_to_spectator':
       handleSwitchToSpectator(ws);
       break;
@@ -2207,6 +2213,40 @@ function handleAddBot(ws, data) {
   }
   const targetSlot = typeof data.targetSlot === 'number' ? data.targetSlot : undefined;
   const result = room.addBot(targetSlot, ws.locale);
+  if (!result.success) {
+    sendTo(ws, { type: 'error', message: resultMessage(result, ws.locale) });
+    return;
+  }
+  broadcastRoomState(ws.roomId);
+  broadcastRoomList();
+}
+
+function handleBlockSlot(ws, data) {
+  if (!ws.roomId) {
+    sendTo(ws, { type: 'error', message: t(ws.locale, 'not_in_room') });
+    return;
+  }
+  const room = lobby.getRoom(ws.roomId);
+  if (!room) { sendTo(ws, { type: 'room_closed' }); ws.roomId = null; return; }
+  const slotIndex = typeof data.slotIndex === 'number' ? data.slotIndex : -1;
+  const result = room.blockSlot(ws.playerId, slotIndex);
+  if (!result.success) {
+    sendTo(ws, { type: 'error', message: resultMessage(result, ws.locale) });
+    return;
+  }
+  broadcastRoomState(ws.roomId);
+  broadcastRoomList();
+}
+
+function handleUnblockSlot(ws, data) {
+  if (!ws.roomId) {
+    sendTo(ws, { type: 'error', message: t(ws.locale, 'not_in_room') });
+    return;
+  }
+  const room = lobby.getRoom(ws.roomId);
+  if (!room) { sendTo(ws, { type: 'room_closed' }); ws.roomId = null; return; }
+  const slotIndex = typeof data.slotIndex === 'number' ? data.slotIndex : -1;
+  const result = room.unblockSlot(ws.playerId, slotIndex);
   if (!result.success) {
     sendTo(ws, { type: 'error', message: resultMessage(result, ws.locale) });
     return;

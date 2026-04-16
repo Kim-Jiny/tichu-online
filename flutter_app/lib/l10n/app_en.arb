@@ -388,6 +388,7 @@
   "lobbyHost": "Host",
   "lobbyBot": "Bot",
   "lobbyEmptySlot": "[Empty]",
+  "lobbySlotBlocked": "[Blocked]",
   "lobbyMaintenanceDefault": "Server maintenance scheduled",
   "lobbyRoomInfoSk": "{seconds}s · {players}/{maxPlayers}P",
   "@lobbyRoomInfoSk": {

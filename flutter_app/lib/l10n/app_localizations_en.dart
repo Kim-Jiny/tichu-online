@@ -878,6 +878,9 @@ class L10nEn extends L10n {
   String get lobbyEmptySlot => '[Empty]';
 
   @override
+  String get lobbySlotBlocked => '[Blocked]';
+
+  @override
   String get lobbyMaintenanceDefault => 'Server maintenance scheduled';
 
   @override

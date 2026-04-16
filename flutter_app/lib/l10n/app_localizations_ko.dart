@@ -857,6 +857,9 @@ class L10nKo extends L10n {
   String get lobbyEmptySlot => '[빈 자리]';
 
   @override
+  String get lobbySlotBlocked => '[막힘]';
+
+  @override
   String get lobbyMaintenanceDefault => '서버 점검 예정';
 
   @override

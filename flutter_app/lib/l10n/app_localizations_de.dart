@@ -888,6 +888,9 @@ class L10nDe extends L10n {
   String get lobbyEmptySlot => '[Leer]';
 
   @override
+  String get lobbySlotBlocked => '[Gesperrt]';
+
+  @override
   String get lobbyMaintenanceDefault => 'Serverwartung geplant';
 
   @override

@@ -279,6 +279,7 @@
   "lobbyHost": "방장",
   "lobbyBot": "봇",
   "lobbyEmptySlot": "[빈 자리]",
+  "lobbySlotBlocked": "[막힘]",
   "lobbyMaintenanceDefault": "서버 점검 예정",
   "lobbyRoomInfoSk": "{seconds}초 · {players}/{maxPlayers}명",
   "lobbyRoomInfoTichu": "{seconds}초 · {score}점",

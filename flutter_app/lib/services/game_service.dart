@@ -45,6 +45,10 @@ class GameService extends ChangeNotifier {
   int roomTurnTimeLimit = 30;
   int roomTargetScore = 1000;
   int roomMaxPlayers = 4;
+  Set<int> roomBlockedSlots = <int>{};
+
+  /// Effective max players after host-blocked slots are excluded.
+  int get effectiveRoomMaxPlayers => roomMaxPlayers - roomBlockedSlots.length;
 
   // Room list
   List<Room> roomList = [];
@@ -623,6 +627,7 @@ class GameService extends ChangeNotifier {
         llGameState = null;
         currentGameType = 'tichu';
         roomMaxPlayers = 4;
+        roomBlockedSlots = <int>{};
         chatMessages = [];
         autoRejectCardView = false;
         autoAcceptCardView = false;
@@ -690,6 +695,13 @@ class GameService extends ChangeNotifier {
           }
           currentGameType = room['gameType'] ?? 'tichu';
           roomMaxPlayers = room['maxPlayers'] ?? 4;
+          final blockedList = room['blockedSlots'] as List?;
+          roomBlockedSlots = blockedList == null
+              ? <int>{}
+              : blockedList
+                  .map((e) => e is int ? e : int.tryParse('$e') ?? -1)
+                  .where((i) => i >= 0)
+                  .toSet();
           final spectatorList = room['spectators'] as List?;
           if (spectatorList != null) {
             spectators = spectatorList.map((s) => {
@@ -1774,6 +1786,7 @@ class GameService extends ChangeNotifier {
     roomTurnTimeLimit = 30;
     roomTargetScore = 1000;
     roomMaxPlayers = 4;
+    roomBlockedSlots = <int>{};
     currentGameType = 'tichu';
     roomList = [];
     spectatableRooms = [];
@@ -2122,6 +2135,7 @@ class GameService extends ChangeNotifier {
     roomTurnTimeLimit = 30;
     roomTargetScore = 1000;
     roomMaxPlayers = 4;
+    roomBlockedSlots = <int>{};
     currentGameType = 'tichu';
     isSpectator = false;
     gameState = null;
@@ -2151,6 +2165,14 @@ class GameService extends ChangeNotifier {
     final msg = <String, dynamic>{'type': 'add_bot'};
     if (targetSlot != null) msg['targetSlot'] = targetSlot;
     _network.send(msg);
+  }
+
+  void blockSlot(int slotIndex) {
+    _network.send({'type': 'block_slot', 'slotIndex': slotIndex});
+  }
+
+  void unblockSlot(int slotIndex) {
+    _network.send({'type': 'unblock_slot', 'slotIndex': slotIndex});
   }
 
   void toggleReady() {

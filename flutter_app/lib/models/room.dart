@@ -14,6 +14,9 @@ class Room {
   final int targetScore;
   final String gameType;
   final int maxPlayers;
+  /// Effective max players after host has blocked some empty slots.
+  /// Equal to [maxPlayers] minus the number of blocked slots.
+  final int effectiveMaxPlayers;
   /// Enabled Skull King expansions — only meaningful when [gameType] is
   /// `skull_king`. Subset of `['kraken', 'white_whale', 'loot']`.
   final List<String> skExpansions;
@@ -32,8 +35,9 @@ class Room {
     this.targetScore = 1000,
     this.gameType = 'tichu',
     this.maxPlayers = 4,
+    int? effectiveMaxPlayers,
     this.skExpansions = const [],
-  });
+  }) : effectiveMaxPlayers = effectiveMaxPlayers ?? maxPlayers;
 
   bool get isSkullKing => gameType == 'skull_king';
 
@@ -66,6 +70,11 @@ class Room {
       targetScore: json['targetScore'] ?? 1000,
       gameType: json['gameType'] ?? 'tichu',
       maxPlayers: json['maxPlayers'] ?? 4,
+      effectiveMaxPlayers: json['effectiveMaxPlayers'] is int
+          ? json['effectiveMaxPlayers'] as int
+          : (json['effectiveMaxPlayers'] is num
+              ? (json['effectiveMaxPlayers'] as num).toInt()
+              : null),
       skExpansions: expansions,
     );
   }

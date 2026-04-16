@@ -27,6 +27,9 @@ class GameRoom {
     this.players = Array.from({ length: this.maxPlayers }, (_, i) =>
       i === 0 ? { id: hostId, nickname: hostNickname, connected: true, ready: false } : null
     );
+    // Slots blocked by host (host can block empty slots to effectively shrink the room).
+    // Only meaningful for skull_king and love_letter. Tichu always requires full 4.
+    this.blockedSlots = new Set();
     this.spectators = []; // { id, nickname }
     this.game = null;
     // Bot tracking
@@ -64,7 +67,7 @@ class GameRoom {
     if (this.isPrivate && this.password !== password) {
       return { success: false, message: 'Room password is incorrect' };
     }
-    if (this.getPlayerCount() >= this.maxPlayers) {
+    if (this.getPlayerCount() >= this.getEffectiveMaxPlayers()) {
       return { success: false, message: 'Room is full' };
     }
     if (this.game) {
@@ -73,8 +76,14 @@ class GameRoom {
     if (this.players.some((p) => p !== null && p.id === playerId)) {
       return { success: false, message: 'Already in this room' };
     }
-    // Find first null slot
-    const emptySlot = this.players.indexOf(null);
+    // Find first null, non-blocked slot
+    let emptySlot = -1;
+    for (let i = 0; i < this.players.length; i++) {
+      if (this.players[i] === null && !this.blockedSlots.has(i)) {
+        emptySlot = i;
+        break;
+      }
+    }
     if (emptySlot === -1) {
       return { success: false, message: 'Room is full' };
     }
@@ -323,7 +332,7 @@ class GameRoom {
   // --- Bot management ---
 
   addBot(targetSlot, locale) {
-    if (this.getPlayerCount() >= this.maxPlayers) {
+    if (this.getPlayerCount() >= this.getEffectiveMaxPlayers()) {
       return { success: false, messageKey: 'room_full' };
     }
     if (this.game) {
@@ -334,9 +343,19 @@ class GameRoom {
       if (this.players[targetSlot] !== null) {
         return { success: false, messageKey: 'room_slot_taken' };
       }
+      if (this.blockedSlots.has(targetSlot)) {
+        return { success: false, messageKey: 'room_slot_taken' };
+      }
       slot = targetSlot;
     } else {
-      slot = this.players.indexOf(null);
+      // Find first null, non-blocked slot
+      slot = -1;
+      for (let i = 0; i < this.players.length; i++) {
+        if (this.players[i] === null && !this.blockedSlots.has(i)) {
+          slot = i;
+          break;
+        }
+      }
     }
     if (slot === -1) {
       return { success: false, messageKey: 'room_no_empty_slot' };
@@ -419,7 +438,7 @@ class GameRoom {
     if (this.game) {
       return { success: false, messageKey: 'room_no_switch_in_game' };
     }
-    if (this.getPlayerCount() >= this.maxPlayers) {
+    if (this.getPlayerCount() >= this.getEffectiveMaxPlayers()) {
       return { success: false, messageKey: 'room_full' };
     }
     const specIdx = this.spectators.findIndex(s => s.id === spectatorId);
@@ -430,6 +449,9 @@ class GameRoom {
       return { success: false, messageKey: 'invalid_slot' };
     }
     if (this.players[targetSlot] !== null) {
+      return { success: false, messageKey: 'room_slot_taken' };
+    }
+    if (this.blockedSlots.has(targetSlot)) {
       return { success: false, messageKey: 'room_slot_taken' };
     }
 
@@ -466,11 +488,59 @@ class GameRoom {
     if (this.players[targetSlot] !== null) {
       return { success: false, messageKey: 'room_slot_taken' };
     }
+    if (this.blockedSlots.has(targetSlot)) {
+      return { success: false, messageKey: 'room_slot_taken' };
+    }
     // Move player to target slot
     this.players[targetSlot] = this.players[currentIndex];
     this.players[currentIndex] = null;
     console.log(`Player ${playerId} moved to slot ${targetSlot}`);
     return { success: true };
+  }
+
+  // Host blocks an empty slot so no one can join it (effectively shrinking the room)
+  blockSlot(playerId, slotIndex) {
+    if (playerId !== this.hostId) {
+      return { success: false, messageKey: 'host_only' };
+    }
+    if (this.game) {
+      return { success: false, messageKey: 'room_no_switch_in_game' };
+    }
+    if (this.gameType === 'tichu') {
+      return { success: false, messageKey: 'invalid_slot' };
+    }
+    if (typeof slotIndex !== 'number' || slotIndex < 0 || slotIndex >= this.maxPlayers) {
+      return { success: false, messageKey: 'invalid_slot' };
+    }
+    if (this.players[slotIndex] !== null) {
+      return { success: false, messageKey: 'room_slot_taken' };
+    }
+    // Need at least 2 non-blocked slots left (minimum players for SK/LL)
+    const remainingAfterBlock = this.maxPlayers - this.blockedSlots.size - 1;
+    if (remainingAfterBlock < 2) {
+      return { success: false, messageKey: 'room_full' };
+    }
+    this.blockedSlots.add(slotIndex);
+    return { success: true };
+  }
+
+  unblockSlot(playerId, slotIndex) {
+    if (playerId !== this.hostId) {
+      return { success: false, messageKey: 'host_only' };
+    }
+    if (this.game) {
+      return { success: false, messageKey: 'room_no_switch_in_game' };
+    }
+    if (typeof slotIndex !== 'number' || slotIndex < 0 || slotIndex >= this.maxPlayers) {
+      return { success: false, messageKey: 'invalid_slot' };
+    }
+    this.blockedSlots.delete(slotIndex);
+    return { success: true };
+  }
+
+  // Effective room capacity accounting for blocked slots
+  getEffectiveMaxPlayers() {
+    return this.maxPlayers - this.blockedSlots.size;
   }
 
   startGame() {
@@ -615,6 +685,8 @@ class GameRoom {
       turnTimeLimit: this.turnTimeLimit,
       targetScore: this.targetScore,
       skExpansions: [...this.skExpansions],
+      blockedSlots: [...this.blockedSlots].sort((a, b) => a - b),
+      effectiveMaxPlayers: this.getEffectiveMaxPlayers(),
     };
   }
 

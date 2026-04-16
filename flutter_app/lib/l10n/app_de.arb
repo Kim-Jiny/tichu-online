@@ -279,6 +279,7 @@
   "lobbyHost": "Host",
   "lobbyBot": "Bot",
   "lobbyEmptySlot": "[Leer]",
+  "lobbySlotBlocked": "[Gesperrt]",
   "lobbyMaintenanceDefault": "Serverwartung geplant",
   "lobbyRoomInfoSk": "{seconds}s · {players}/{maxPlayers}P",
   "lobbyRoomInfoTichu": "{seconds}s · {score}Pkt.",

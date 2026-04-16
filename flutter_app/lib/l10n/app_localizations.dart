@@ -1707,6 +1707,12 @@ abstract class L10n {
   /// **'[Empty]'**
   String get lobbyEmptySlot;
 
+  /// No description provided for @lobbySlotBlocked.
+  ///
+  /// In en, this message translates to:
+  /// **'[Blocked]'**
+  String get lobbySlotBlocked;
+
   /// No description provided for @lobbyMaintenanceDefault.
   ///
   /// In en, this message translates to:

@@ -8,6 +8,7 @@ const {
   getAllShopItemsAdmin, addShopItem, updateShopItem, deleteShopItem, getShopItemById,
   getConfig, updateConfig,
   getNotices, getNoticeById, createNotice, updateNotice, deleteNotice,
+  insertMaintenanceHistory, getMaintenanceHistory,
 } = require('./db/database');
 
 // In-memory session store: token -> { username, createdAt }
@@ -2199,6 +2200,26 @@ async function handleAdminRoute(req, res, url, pathname, method, lobby, wss, mai
       statusText = '<span class="badge badge-pending">안내 중</span>';
     }
 
+    const history = await getMaintenanceHistory(50);
+    const historyRows = history.map((h, i) => {
+      const badge = h.action === 'set'
+        ? '<span class="badge" style="background:#e3f2fd;color:#1565c0">설정</span>'
+        : '<span class="badge" style="background:#ffebee;color:#c62828">초기화</span>';
+      const mStart = h.maintenance_start ? new Date(h.maintenance_start).toLocaleString('ko-KR') : '-';
+      const mEnd = h.maintenance_end ? new Date(h.maintenance_end).toLocaleString('ko-KR') : '-';
+      const msg = h.message_ko ? escapeHtml(h.message_ko.length > 30 ? h.message_ko.slice(0, 30) + '...' : h.message_ko) : '-';
+      const admin = escapeHtml(h.admin_user || '-');
+      const created = new Date(h.created_at).toLocaleString('ko-KR');
+      return `<tr>
+        <td>${history.length - i}</td>
+        <td>${badge}</td>
+        <td>${mStart} ~ ${mEnd}</td>
+        <td>${msg}</td>
+        <td>${admin}</td>
+        <td>${created}</td>
+      </tr>`;
+    }).join('');
+
     const content = `
       <h1 class="page-title">점검</h1>
       <div class="card">
@@ -2228,6 +2249,18 @@ async function handleAdminRoute(req, res, url, pathname, method, lobby, wss, mai
           <button type="submit" class="btn btn-danger" onclick="return confirm('점검 설정을 초기화하시겠습니까?')">전체 초기화</button>
         </form>
       </div>
+
+      <div class="card" style="margin-top:20px">
+        <h3>점검 히스토리</h3>
+        <div class="table-responsive" style="margin-top:12px">
+          <table>
+            <thead><tr>
+              <th>#</th><th>작업</th><th>점검 시간</th><th>메시지</th><th>관리자</th><th>일시</th>
+            </tr></thead>
+            <tbody>${historyRows || '<tr><td colspan="6" style="text-align:center;color:#999">기록 없음</td></tr>'}</tbody>
+          </table>
+        </div>
+      </div>
     `;
     return html(res, layout('점검', content, 'maintenance'));
   }
@@ -2235,7 +2268,7 @@ async function handleAdminRoute(req, res, url, pathname, method, lobby, wss, mai
   if (pathname === '/tc-backstage/maintenance' && method === 'POST') {
     if (setMaintenanceConfig) {
       const body = await parseBody(req);
-      setMaintenanceConfig({
+      const config = {
         noticeStart: body.noticeStart || null,
         noticeEnd: body.noticeEnd || null,
         maintenanceStart: body.maintenanceStart || null,
@@ -2243,7 +2276,9 @@ async function handleAdminRoute(req, res, url, pathname, method, lobby, wss, mai
         message_ko: body.message_ko || '',
         message_en: body.message_en || '',
         message_de: body.message_de || '',
-      });
+      };
+      setMaintenanceConfig(config);
+      await insertMaintenanceHistory({ action: 'set', config, adminUser: sessionInfo.session.username });
     }
     return redirect(res, '/tc-backstage/maintenance');
   }
@@ -2259,6 +2294,7 @@ async function handleAdminRoute(req, res, url, pathname, method, lobby, wss, mai
         message_en: '',
         message_de: '',
       });
+      await insertMaintenanceHistory({ action: 'clear', config: {}, adminUser: sessionInfo.session.username });
     }
     return redirect(res, '/tc-backstage/maintenance');
   }

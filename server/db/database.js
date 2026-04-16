@@ -594,6 +594,23 @@ async function initDatabase() {
       )
     `);
 
+    // Maintenance history table
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS tc_maintenance_history (
+        id SERIAL PRIMARY KEY,
+        action VARCHAR(20) NOT NULL,
+        notice_start TIMESTAMP,
+        notice_end TIMESTAMP,
+        maintenance_start TIMESTAMP,
+        maintenance_end TIMESTAMP,
+        message_ko TEXT,
+        message_en TEXT,
+        message_de TEXT,
+        admin_user VARCHAR(50),
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      )
+    `);
+
     console.log('Database initialized (tc_ tables)');
   } catch (err) {
     console.error('Database initialization error:', err);
@@ -4721,6 +4738,35 @@ async function deleteNotice(id) {
   }
 }
 
+// ===== Maintenance History =====
+
+async function insertMaintenanceHistory({ action, config = {}, adminUser = null }) {
+  await pool.query(
+    `INSERT INTO tc_maintenance_history
+       (action, notice_start, notice_end, maintenance_start, maintenance_end, message_ko, message_en, message_de, admin_user)
+     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)`,
+    [
+      action,
+      config.noticeStart || null,
+      config.noticeEnd || null,
+      config.maintenanceStart || null,
+      config.maintenanceEnd || null,
+      config.message_ko || null,
+      config.message_en || null,
+      config.message_de || null,
+      adminUser,
+    ]
+  );
+}
+
+async function getMaintenanceHistory(limit = 50) {
+  const result = await pool.query(
+    `SELECT * FROM tc_maintenance_history ORDER BY created_at DESC LIMIT $1`,
+    [limit]
+  );
+  return result.rows;
+}
+
 module.exports = {
   initDatabase,
   registerUser,
@@ -4823,5 +4869,7 @@ module.exports = {
   createNotice,
   updateNotice,
   deleteNotice,
+  insertMaintenanceHistory,
+  getMaintenanceHistory,
   pool,
 };

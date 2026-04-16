@@ -2382,7 +2382,7 @@ class L10nKo extends L10n {
 
   @override
   String get rulesLlWinBody =>
-      '라운드 종료 시 생존자 중 가장 높은 카드를 가진 플레이어(동점 시 카드 숫자 합이 높은 쪽)가 토큰을 획득합니다.\n\n필요 토큰 수:\n• 2인: 7토큰\n• 3인: 5토큰\n• 4인: 4토큰';
+      '라운드 종료 시 생존자 중 가장 높은 카드를 가진 플레이어(동점 시 카드 숫자 합이 높은 쪽)가 토큰을 획득합니다.\n\n필요 토큰 수:\n• 2인: 4토큰\n• 3인: 3토큰\n• 4인: 2토큰';
 
   @override
   String get friendsTitle => '친구';
@@ -3208,117 +3208,186 @@ class L10nKo extends L10n {
   @override
   String get maintenanceEnded => '점검 종료, 재연결 중...';
 
-  // Gold history
-  @override
-  String get goldHistoryLeaveDefeat => '탈주 패배';
-  @override
-  String get goldHistoryRankedWin => '랭크전 승리';
-  @override
-  String get goldHistoryCasualWin => '일반전 승리';
-  @override
-  String get goldHistoryDraw => '무승부 종료';
-  @override
-  String get goldHistoryRankedLoss => '랭크전 패배';
-  @override
-  String get goldHistoryCasualLoss => '일반전 패배';
-  @override
-  String get goldHistoryAdReward => '광고 보상';
-  @override
-  String get goldHistorySeasonReward => '시즌 보상';
   @override
   String get goldHistoryShopPurchase => '상점 구매';
+
+  @override
+  String get goldHistoryLeaveDefeat => '탈주 패배';
+
+  @override
+  String get goldHistoryRankedWin => '랭크전 승리';
+
+  @override
+  String get goldHistoryCasualWin => '일반전 승리';
+
+  @override
+  String get goldHistoryDraw => '무승부 종료';
+
+  @override
+  String get goldHistoryRankedLoss => '랭크전 패배';
+
+  @override
+  String get goldHistoryCasualLoss => '일반전 패배';
+
+  @override
+  String get goldHistoryAdReward => '광고 보상';
+
+  @override
+  String get goldHistorySeasonReward => '시즌 보상';
+
   @override
   String get goldHistorySkLeaveDefeat => '스컬킹 탈주 패배';
+
   @override
   String get goldHistorySkRankedWin => '스컬킹 랭크전 승리';
+
   @override
   String get goldHistorySkCasualWin => '스컬킹 일반전 승리';
+
   @override
   String get goldHistorySkRankedLoss => '스컬킹 랭크전 패배';
+
   @override
   String get goldHistorySkCasualLoss => '스컬킹 일반전 패배';
+
   @override
   String get goldHistoryAdminGrant => '관리자 지급';
+
   @override
   String get goldHistoryAdminDeduct => '관리자 차감';
-  @override
-  String goldHistoryFinalScore(String scoreA, String scoreB) => '최종 점수 $scoreA : $scoreB';
-  @override
-  String goldHistorySeasonRank(String rank) => '시즌 $rank위 보상';
-  @override
-  String goldHistorySkRankScore(String rank, String score) => '순위 $rank위 / 점수 $score';
-  @override
-  String goldHistoryAdminBy(String admin) => '$admin에 의한 관리자 조정';
 
-  // Admin center
+  @override
+  String goldHistoryFinalScore(String scoreA, String scoreB) {
+    return '최종 점수 $scoreA:$scoreB';
+  }
+
+  @override
+  String goldHistorySeasonRank(String rank) {
+    return '시즌 $rank등';
+  }
+
+  @override
+  String goldHistorySkRankScore(String rank, String score) {
+    return '$rank위 ($score점)';
+  }
+
+  @override
+  String goldHistoryAdminBy(String admin) {
+    return '관리자: $admin';
+  }
+
   @override
   String get adminCenterTitle => '관리자 센터';
-  @override
-  String get adminActiveUsers => '활성 유저';
-  @override
-  String get adminPendingInquiries => '미처리 문의';
-  @override
-  String get adminPendingReports => '미처리 신고';
-  @override
-  String get adminTotalUsers => '전체 유저';
+
   @override
   String get adminTabInquiries => '문의';
+
   @override
   String get adminTabReports => '신고';
+
   @override
   String get adminTabUsers => '유저';
+
   @override
-  String get adminSearchHint => '닉네임 또는 계정명 검색';
+  String get adminActiveUsers => '접속자';
+
+  @override
+  String get adminPendingInquiries => '대기 문의';
+
+  @override
+  String get adminPendingReports => '대기 신고';
+
+  @override
+  String get adminTotalUsers => '전체 유저';
+
+  @override
+  String get adminSearchHint => '닉네임으로 검색';
+
   @override
   String get adminSearch => '검색';
+
   @override
   String get adminOnline => '온라인';
+
   @override
   String get adminOffline => '오프라인';
-  @override
-  String adminInquiryTitle(int id) => '문의 #$id';
+
   @override
   String get adminUser => '유저';
+
   @override
   String get adminSubject => '제목';
+
   @override
-  String get adminNote => '관리자 메모';
+  String get adminNote => '메모';
+
   @override
-  String get adminResolved => '처리 완료';
+  String get adminResolved => '해결됨';
+
   @override
-  String get adminReviewed => '검토됨';
-  @override
-  String adminReportTitle(String nickname) => '$nickname 신고';
-  @override
-  String adminReportCount(int count) => '신고 $count건';
-  @override
-  String adminReportRoom(String roomId) => '방 $roomId';
+  String get adminReviewed => '확인됨';
+
   @override
   String get adminBasicInfo => '기본 정보';
+
   @override
-  String get adminUsername => '계정명';
+  String get adminUsername => '닉네임';
+
   @override
   String get adminRating => '레이팅';
+
   @override
   String get adminGold => '골드';
+
   @override
   String get adminRecord => '전적';
+
   @override
-  String adminWinLoss(int wins, int losses) => '$wins승 / $losses패';
-  @override
-  String get adminStatus => '활성 상태';
+  String get adminStatus => '상태';
+
   @override
   String get adminCurrentRoom => '현재 방';
+
   @override
-  String get adminGoldAdjust => '골드 지급/차감';
+  String get adminGoldAdjust => '골드 조정';
+
   @override
-  String get adminGoldAmount => '골드 수량';
+  String get adminGoldAmount => '금액';
+
   @override
-  String get adminGoldHint => '예: 100';
+  String get adminGoldHint => '양의 정수를 입력하세요';
+
   @override
-  String get adminGoldValidation => '1 이상의 숫자를 입력하세요';
+  String get adminGoldValidation => '유효한 양의 정수를 입력하세요';
+
   @override
   String get adminGrant => '지급';
+
   @override
   String get adminDeduct => '차감';
+
+  @override
+  String adminReportCount(int count) {
+    return '신고 $count건';
+  }
+
+  @override
+  String adminReportRoom(String roomId) {
+    return '방: $roomId';
+  }
+
+  @override
+  String adminInquiryTitle(int id) {
+    return '문의 #$id';
+  }
+
+  @override
+  String adminReportTitle(String nickname) {
+    return '신고: $nickname';
+  }
+
+  @override
+  String adminWinLoss(int wins, int losses) {
+    return '$wins승 $losses패';
+  }
 }

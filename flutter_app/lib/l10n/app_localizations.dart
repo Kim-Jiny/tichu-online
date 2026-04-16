@@ -4482,7 +4482,7 @@ abstract class L10n {
   /// No description provided for @rulesLlWinBody.
   ///
   /// In en, this message translates to:
-  /// **'When the round ends, the surviving player with the highest card (ties broken by total card value) wins a token.\n\nTokens needed to win:\n• 2 players: 7 tokens\n• 3 players: 5 tokens\n• 4 players: 4 tokens'**
+  /// **'When the round ends, the surviving player with the highest card (ties broken by total card value) wins a token.\n\nTokens needed to win:\n• 2 players: 4 tokens\n• 3 players: 3 tokens\n• 4 players: 2 tokens'**
   String get rulesLlWinBody;
 
   /// No description provided for @friendsTitle.
@@ -5943,64 +5943,335 @@ abstract class L10n {
   /// **'Maintenance over, reconnecting...'**
   String get maintenanceEnded;
 
-  // Gold history
-  String get goldHistoryLeaveDefeat;
-  String get goldHistoryRankedWin;
-  String get goldHistoryCasualWin;
-  String get goldHistoryDraw;
-  String get goldHistoryRankedLoss;
-  String get goldHistoryCasualLoss;
-  String get goldHistoryAdReward;
-  String get goldHistorySeasonReward;
+  /// No description provided for @goldHistoryShopPurchase.
+  ///
+  /// In en, this message translates to:
+  /// **'Shop purchase'**
   String get goldHistoryShopPurchase;
+
+  /// No description provided for @goldHistoryLeaveDefeat.
+  ///
+  /// In en, this message translates to:
+  /// **'Forfeit loss'**
+  String get goldHistoryLeaveDefeat;
+
+  /// No description provided for @goldHistoryRankedWin.
+  ///
+  /// In en, this message translates to:
+  /// **'Ranked win'**
+  String get goldHistoryRankedWin;
+
+  /// No description provided for @goldHistoryCasualWin.
+  ///
+  /// In en, this message translates to:
+  /// **'Casual win'**
+  String get goldHistoryCasualWin;
+
+  /// No description provided for @goldHistoryDraw.
+  ///
+  /// In en, this message translates to:
+  /// **'Draw'**
+  String get goldHistoryDraw;
+
+  /// No description provided for @goldHistoryRankedLoss.
+  ///
+  /// In en, this message translates to:
+  /// **'Ranked loss'**
+  String get goldHistoryRankedLoss;
+
+  /// No description provided for @goldHistoryCasualLoss.
+  ///
+  /// In en, this message translates to:
+  /// **'Casual loss'**
+  String get goldHistoryCasualLoss;
+
+  /// No description provided for @goldHistoryAdReward.
+  ///
+  /// In en, this message translates to:
+  /// **'Ad reward'**
+  String get goldHistoryAdReward;
+
+  /// No description provided for @goldHistorySeasonReward.
+  ///
+  /// In en, this message translates to:
+  /// **'Season reward'**
+  String get goldHistorySeasonReward;
+
+  /// No description provided for @goldHistorySkLeaveDefeat.
+  ///
+  /// In en, this message translates to:
+  /// **'Skull King forfeit loss'**
   String get goldHistorySkLeaveDefeat;
+
+  /// No description provided for @goldHistorySkRankedWin.
+  ///
+  /// In en, this message translates to:
+  /// **'Skull King ranked win'**
   String get goldHistorySkRankedWin;
+
+  /// No description provided for @goldHistorySkCasualWin.
+  ///
+  /// In en, this message translates to:
+  /// **'Skull King casual win'**
   String get goldHistorySkCasualWin;
+
+  /// No description provided for @goldHistorySkRankedLoss.
+  ///
+  /// In en, this message translates to:
+  /// **'Skull King ranked loss'**
   String get goldHistorySkRankedLoss;
+
+  /// No description provided for @goldHistorySkCasualLoss.
+  ///
+  /// In en, this message translates to:
+  /// **'Skull King casual loss'**
   String get goldHistorySkCasualLoss;
+
+  /// No description provided for @goldHistoryAdminGrant.
+  ///
+  /// In en, this message translates to:
+  /// **'Admin grant'**
   String get goldHistoryAdminGrant;
+
+  /// No description provided for @goldHistoryAdminDeduct.
+  ///
+  /// In en, this message translates to:
+  /// **'Admin deduction'**
   String get goldHistoryAdminDeduct;
+
+  /// No description provided for @goldHistoryFinalScore.
+  ///
+  /// In en, this message translates to:
+  /// **'Final score {scoreA}:{scoreB}'**
   String goldHistoryFinalScore(String scoreA, String scoreB);
+
+  /// No description provided for @goldHistorySeasonRank.
+  ///
+  /// In en, this message translates to:
+  /// **'Season rank: {rank}'**
   String goldHistorySeasonRank(String rank);
+
+  /// No description provided for @goldHistorySkRankScore.
+  ///
+  /// In en, this message translates to:
+  /// **'Rank {rank} ({score} pts)'**
   String goldHistorySkRankScore(String rank, String score);
+
+  /// No description provided for @goldHistoryAdminBy.
+  ///
+  /// In en, this message translates to:
+  /// **'By admin: {admin}'**
   String goldHistoryAdminBy(String admin);
 
-  // Admin center
+  /// No description provided for @adminCenterTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Admin Center'**
   String get adminCenterTitle;
-  String get adminActiveUsers;
-  String get adminPendingInquiries;
-  String get adminPendingReports;
-  String get adminTotalUsers;
+
+  /// No description provided for @adminTabInquiries.
+  ///
+  /// In en, this message translates to:
+  /// **'Inquiries'**
   String get adminTabInquiries;
+
+  /// No description provided for @adminTabReports.
+  ///
+  /// In en, this message translates to:
+  /// **'Reports'**
   String get adminTabReports;
+
+  /// No description provided for @adminTabUsers.
+  ///
+  /// In en, this message translates to:
+  /// **'Users'**
   String get adminTabUsers;
+
+  /// No description provided for @adminActiveUsers.
+  ///
+  /// In en, this message translates to:
+  /// **'Active'**
+  String get adminActiveUsers;
+
+  /// No description provided for @adminPendingInquiries.
+  ///
+  /// In en, this message translates to:
+  /// **'Pending inquiries'**
+  String get adminPendingInquiries;
+
+  /// No description provided for @adminPendingReports.
+  ///
+  /// In en, this message translates to:
+  /// **'Pending reports'**
+  String get adminPendingReports;
+
+  /// No description provided for @adminTotalUsers.
+  ///
+  /// In en, this message translates to:
+  /// **'Total users'**
+  String get adminTotalUsers;
+
+  /// No description provided for @adminSearchHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Search by nickname'**
   String get adminSearchHint;
+
+  /// No description provided for @adminSearch.
+  ///
+  /// In en, this message translates to:
+  /// **'Search'**
   String get adminSearch;
+
+  /// No description provided for @adminOnline.
+  ///
+  /// In en, this message translates to:
+  /// **'Online'**
   String get adminOnline;
+
+  /// No description provided for @adminOffline.
+  ///
+  /// In en, this message translates to:
+  /// **'Offline'**
   String get adminOffline;
-  String adminInquiryTitle(int id);
+
+  /// No description provided for @adminUser.
+  ///
+  /// In en, this message translates to:
+  /// **'User'**
   String get adminUser;
+
+  /// No description provided for @adminSubject.
+  ///
+  /// In en, this message translates to:
+  /// **'Subject'**
   String get adminSubject;
+
+  /// No description provided for @adminNote.
+  ///
+  /// In en, this message translates to:
+  /// **'Note'**
   String get adminNote;
+
+  /// No description provided for @adminResolved.
+  ///
+  /// In en, this message translates to:
+  /// **'Resolved'**
   String get adminResolved;
+
+  /// No description provided for @adminReviewed.
+  ///
+  /// In en, this message translates to:
+  /// **'Reviewed'**
   String get adminReviewed;
-  String adminReportTitle(String nickname);
-  String adminReportCount(int count);
-  String adminReportRoom(String roomId);
+
+  /// No description provided for @adminBasicInfo.
+  ///
+  /// In en, this message translates to:
+  /// **'Basic info'**
   String get adminBasicInfo;
+
+  /// No description provided for @adminUsername.
+  ///
+  /// In en, this message translates to:
+  /// **'Username'**
   String get adminUsername;
+
+  /// No description provided for @adminRating.
+  ///
+  /// In en, this message translates to:
+  /// **'Rating'**
   String get adminRating;
+
+  /// No description provided for @adminGold.
+  ///
+  /// In en, this message translates to:
+  /// **'Gold'**
   String get adminGold;
+
+  /// No description provided for @adminRecord.
+  ///
+  /// In en, this message translates to:
+  /// **'Record'**
   String get adminRecord;
-  String adminWinLoss(int wins, int losses);
+
+  /// No description provided for @adminStatus.
+  ///
+  /// In en, this message translates to:
+  /// **'Status'**
   String get adminStatus;
+
+  /// No description provided for @adminCurrentRoom.
+  ///
+  /// In en, this message translates to:
+  /// **'Current room'**
   String get adminCurrentRoom;
+
+  /// No description provided for @adminGoldAdjust.
+  ///
+  /// In en, this message translates to:
+  /// **'Adjust gold'**
   String get adminGoldAdjust;
+
+  /// No description provided for @adminGoldAmount.
+  ///
+  /// In en, this message translates to:
+  /// **'Amount'**
   String get adminGoldAmount;
+
+  /// No description provided for @adminGoldHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Enter a positive number'**
   String get adminGoldHint;
+
+  /// No description provided for @adminGoldValidation.
+  ///
+  /// In en, this message translates to:
+  /// **'Please enter a valid positive amount'**
   String get adminGoldValidation;
+
+  /// No description provided for @adminGrant.
+  ///
+  /// In en, this message translates to:
+  /// **'Grant'**
   String get adminGrant;
+
+  /// No description provided for @adminDeduct.
+  ///
+  /// In en, this message translates to:
+  /// **'Deduct'**
   String get adminDeduct;
+
+  /// No description provided for @adminReportCount.
+  ///
+  /// In en, this message translates to:
+  /// **'{count} reports'**
+  String adminReportCount(int count);
+
+  /// No description provided for @adminReportRoom.
+  ///
+  /// In en, this message translates to:
+  /// **'Room: {roomId}'**
+  String adminReportRoom(String roomId);
+
+  /// No description provided for @adminInquiryTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Inquiry #{id}'**
+  String adminInquiryTitle(int id);
+
+  /// No description provided for @adminReportTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Report: {nickname}'**
+  String adminReportTitle(String nickname);
+
+  /// No description provided for @adminWinLoss.
+  ///
+  /// In en, this message translates to:
+  /// **'{wins}W/{losses}L'**
+  String adminWinLoss(int wins, int losses);
 }
 
 class _L10nDelegate extends LocalizationsDelegate<L10n> {

@@ -1573,5 +1573,110 @@
     }
   },
   "maintenanceRetry": "Retry",
-  "maintenanceEnded": "Maintenance over, reconnecting..."
+  "maintenanceEnded": "Maintenance over, reconnecting...",
+
+  "goldHistoryShopPurchase": "Shop purchase",
+  "goldHistoryLeaveDefeat": "Forfeit loss",
+  "goldHistoryRankedWin": "Ranked win",
+  "goldHistoryCasualWin": "Casual win",
+  "goldHistoryDraw": "Draw",
+  "goldHistoryRankedLoss": "Ranked loss",
+  "goldHistoryCasualLoss": "Casual loss",
+  "goldHistoryAdReward": "Ad reward",
+  "goldHistorySeasonReward": "Season reward",
+  "goldHistorySkLeaveDefeat": "Skull King forfeit loss",
+  "goldHistorySkRankedWin": "Skull King ranked win",
+  "goldHistorySkCasualWin": "Skull King casual win",
+  "goldHistorySkRankedLoss": "Skull King ranked loss",
+  "goldHistorySkCasualLoss": "Skull King casual loss",
+  "goldHistoryAdminGrant": "Admin grant",
+  "goldHistoryAdminDeduct": "Admin deduction",
+  "goldHistoryFinalScore": "Final score {scoreA}:{scoreB}",
+  "@goldHistoryFinalScore": {
+    "placeholders": {
+      "scoreA": { "type": "String" },
+      "scoreB": { "type": "String" }
+    }
+  },
+  "goldHistorySeasonRank": "Season rank: {rank}",
+  "@goldHistorySeasonRank": {
+    "placeholders": {
+      "rank": { "type": "String" }
+    }
+  },
+  "goldHistorySkRankScore": "Rank {rank} ({score} pts)",
+  "@goldHistorySkRankScore": {
+    "placeholders": {
+      "rank": { "type": "String" },
+      "score": { "type": "String" }
+    }
+  },
+  "goldHistoryAdminBy": "By admin: {admin}",
+  "@goldHistoryAdminBy": {
+    "placeholders": {
+      "admin": { "type": "String" }
+    }
+  },
+
+  "adminCenterTitle": "Admin Center",
+  "adminTabInquiries": "Inquiries",
+  "adminTabReports": "Reports",
+  "adminTabUsers": "Users",
+  "adminActiveUsers": "Active",
+  "adminPendingInquiries": "Pending inquiries",
+  "adminPendingReports": "Pending reports",
+  "adminTotalUsers": "Total users",
+  "adminSearchHint": "Search by nickname",
+  "adminSearch": "Search",
+  "adminOnline": "Online",
+  "adminOffline": "Offline",
+  "adminUser": "User",
+  "adminSubject": "Subject",
+  "adminNote": "Note",
+  "adminResolved": "Resolved",
+  "adminReviewed": "Reviewed",
+  "adminBasicInfo": "Basic info",
+  "adminUsername": "Username",
+  "adminRating": "Rating",
+  "adminGold": "Gold",
+  "adminRecord": "Record",
+  "adminStatus": "Status",
+  "adminCurrentRoom": "Current room",
+  "adminGoldAdjust": "Adjust gold",
+  "adminGoldAmount": "Amount",
+  "adminGoldHint": "Enter a positive number",
+  "adminGoldValidation": "Please enter a valid positive amount",
+  "adminGrant": "Grant",
+  "adminDeduct": "Deduct",
+  "adminReportCount": "{count} reports",
+  "@adminReportCount": {
+    "placeholders": {
+      "count": { "type": "int" }
+    }
+  },
+  "adminReportRoom": "Room: {roomId}",
+  "@adminReportRoom": {
+    "placeholders": {
+      "roomId": { "type": "String" }
+    }
+  },
+  "adminInquiryTitle": "Inquiry #{id}",
+  "@adminInquiryTitle": {
+    "placeholders": {
+      "id": { "type": "int" }
+    }
+  },
+  "adminReportTitle": "Report: {nickname}",
+  "@adminReportTitle": {
+    "placeholders": {
+      "nickname": { "type": "String" }
+    }
+  },
+  "adminWinLoss": "{wins}W/{losses}L",
+  "@adminWinLoss": {
+    "placeholders": {
+      "wins": { "type": "int" },
+      "losses": { "type": "int" }
+    }
+  }
 }

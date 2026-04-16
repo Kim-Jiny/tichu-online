@@ -2440,7 +2440,7 @@ class L10nEn extends L10n {
 
   @override
   String get rulesLlWinBody =>
-      'When the round ends, the surviving player with the highest card (ties broken by total card value) wins a token.\n\nTokens needed to win:\n• 2 players: 7 tokens\n• 3 players: 5 tokens\n• 4 players: 4 tokens';
+      'When the round ends, the surviving player with the highest card (ties broken by total card value) wins a token.\n\nTokens needed to win:\n• 2 players: 4 tokens\n• 3 players: 3 tokens\n• 4 players: 2 tokens';
 
   @override
   String get friendsTitle => 'Friends';
@@ -3291,117 +3291,186 @@ class L10nEn extends L10n {
   @override
   String get maintenanceEnded => 'Maintenance over, reconnecting...';
 
-  // Gold history
   @override
-  String get goldHistoryLeaveDefeat => 'Leave Defeat';
+  String get goldHistoryShopPurchase => 'Shop purchase';
+
   @override
-  String get goldHistoryRankedWin => 'Ranked Win';
+  String get goldHistoryLeaveDefeat => 'Forfeit loss';
+
   @override
-  String get goldHistoryCasualWin => 'Casual Win';
+  String get goldHistoryRankedWin => 'Ranked win';
+
+  @override
+  String get goldHistoryCasualWin => 'Casual win';
+
   @override
   String get goldHistoryDraw => 'Draw';
-  @override
-  String get goldHistoryRankedLoss => 'Ranked Loss';
-  @override
-  String get goldHistoryCasualLoss => 'Casual Loss';
-  @override
-  String get goldHistoryAdReward => 'Ad Reward';
-  @override
-  String get goldHistorySeasonReward => 'Season Reward';
-  @override
-  String get goldHistoryShopPurchase => 'Shop Purchase';
-  @override
-  String get goldHistorySkLeaveDefeat => 'SK Leave Defeat';
-  @override
-  String get goldHistorySkRankedWin => 'SK Ranked Win';
-  @override
-  String get goldHistorySkCasualWin => 'SK Casual Win';
-  @override
-  String get goldHistorySkRankedLoss => 'SK Ranked Loss';
-  @override
-  String get goldHistorySkCasualLoss => 'SK Casual Loss';
-  @override
-  String get goldHistoryAdminGrant => 'Admin Grant';
-  @override
-  String get goldHistoryAdminDeduct => 'Admin Deduction';
-  @override
-  String goldHistoryFinalScore(String scoreA, String scoreB) => 'Final Score $scoreA : $scoreB';
-  @override
-  String goldHistorySeasonRank(String rank) => 'Season Rank $rank Reward';
-  @override
-  String goldHistorySkRankScore(String rank, String score) => 'Rank $rank / Score $score';
-  @override
-  String goldHistoryAdminBy(String admin) => 'Adjusted by $admin';
 
-  // Admin center
+  @override
+  String get goldHistoryRankedLoss => 'Ranked loss';
+
+  @override
+  String get goldHistoryCasualLoss => 'Casual loss';
+
+  @override
+  String get goldHistoryAdReward => 'Ad reward';
+
+  @override
+  String get goldHistorySeasonReward => 'Season reward';
+
+  @override
+  String get goldHistorySkLeaveDefeat => 'Skull King forfeit loss';
+
+  @override
+  String get goldHistorySkRankedWin => 'Skull King ranked win';
+
+  @override
+  String get goldHistorySkCasualWin => 'Skull King casual win';
+
+  @override
+  String get goldHistorySkRankedLoss => 'Skull King ranked loss';
+
+  @override
+  String get goldHistorySkCasualLoss => 'Skull King casual loss';
+
+  @override
+  String get goldHistoryAdminGrant => 'Admin grant';
+
+  @override
+  String get goldHistoryAdminDeduct => 'Admin deduction';
+
+  @override
+  String goldHistoryFinalScore(String scoreA, String scoreB) {
+    return 'Final score $scoreA:$scoreB';
+  }
+
+  @override
+  String goldHistorySeasonRank(String rank) {
+    return 'Season rank: $rank';
+  }
+
+  @override
+  String goldHistorySkRankScore(String rank, String score) {
+    return 'Rank $rank ($score pts)';
+  }
+
+  @override
+  String goldHistoryAdminBy(String admin) {
+    return 'By admin: $admin';
+  }
+
   @override
   String get adminCenterTitle => 'Admin Center';
-  @override
-  String get adminActiveUsers => 'Active Users';
-  @override
-  String get adminPendingInquiries => 'Pending Inquiries';
-  @override
-  String get adminPendingReports => 'Pending Reports';
-  @override
-  String get adminTotalUsers => 'Total Users';
+
   @override
   String get adminTabInquiries => 'Inquiries';
+
   @override
   String get adminTabReports => 'Reports';
+
   @override
   String get adminTabUsers => 'Users';
+
   @override
-  String get adminSearchHint => 'Search nickname or account';
+  String get adminActiveUsers => 'Active';
+
+  @override
+  String get adminPendingInquiries => 'Pending inquiries';
+
+  @override
+  String get adminPendingReports => 'Pending reports';
+
+  @override
+  String get adminTotalUsers => 'Total users';
+
+  @override
+  String get adminSearchHint => 'Search by nickname';
+
   @override
   String get adminSearch => 'Search';
+
   @override
   String get adminOnline => 'Online';
+
   @override
   String get adminOffline => 'Offline';
-  @override
-  String adminInquiryTitle(int id) => 'Inquiry #$id';
+
   @override
   String get adminUser => 'User';
+
   @override
   String get adminSubject => 'Subject';
+
   @override
-  String get adminNote => 'Admin Note';
+  String get adminNote => 'Note';
+
   @override
   String get adminResolved => 'Resolved';
+
   @override
   String get adminReviewed => 'Reviewed';
+
   @override
-  String adminReportTitle(String nickname) => 'Reports on $nickname';
-  @override
-  String adminReportCount(int count) => '$count reports';
-  @override
-  String adminReportRoom(String roomId) => 'Room $roomId';
-  @override
-  String get adminBasicInfo => 'Basic Info';
+  String get adminBasicInfo => 'Basic info';
+
   @override
   String get adminUsername => 'Username';
+
   @override
   String get adminRating => 'Rating';
+
   @override
   String get adminGold => 'Gold';
+
   @override
   String get adminRecord => 'Record';
-  @override
-  String adminWinLoss(int wins, int losses) => '$wins W / $losses L';
+
   @override
   String get adminStatus => 'Status';
+
   @override
-  String get adminCurrentRoom => 'Current Room';
+  String get adminCurrentRoom => 'Current room';
+
   @override
-  String get adminGoldAdjust => 'Gold Grant/Deduct';
+  String get adminGoldAdjust => 'Adjust gold';
+
   @override
-  String get adminGoldAmount => 'Gold Amount';
+  String get adminGoldAmount => 'Amount';
+
   @override
-  String get adminGoldHint => 'e.g. 100';
+  String get adminGoldHint => 'Enter a positive number';
+
   @override
-  String get adminGoldValidation => 'Enter a number 1 or greater';
+  String get adminGoldValidation => 'Please enter a valid positive amount';
+
   @override
   String get adminGrant => 'Grant';
+
   @override
   String get adminDeduct => 'Deduct';
+
+  @override
+  String adminReportCount(int count) {
+    return '$count reports';
+  }
+
+  @override
+  String adminReportRoom(String roomId) {
+    return 'Room: $roomId';
+  }
+
+  @override
+  String adminInquiryTitle(int id) {
+    return 'Inquiry #$id';
+  }
+
+  @override
+  String adminReportTitle(String nickname) {
+    return 'Report: $nickname';
+  }
+
+  @override
+  String adminWinLoss(int wins, int losses) {
+    return '${wins}W/${losses}L';
+  }
 }

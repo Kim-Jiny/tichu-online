@@ -2383,7 +2383,8 @@ class _LobbyScreenState extends State<LobbyScreen> {
           ],
           const SizedBox(height: 12),
           if (game.isHost) ...[
-            if (game.currentGameType == 'skull_king'
+            if (game.currentGameType == 'skull_king' ||
+                    game.currentGameType == 'love_letter'
                 ? game.playerCount >= 2
                 : game.playerCount >= game.roomMaxPlayers)
               SizedBox(

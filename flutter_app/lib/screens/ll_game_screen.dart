@@ -297,11 +297,11 @@ class _LLGameScreenState extends State<LLGameScreen> {
       child: Column(
         children: [
           const SizedBox(height: 8),
+          if (state.faceUpCards.isNotEmpty) _buildFaceUpCards(state),
           _buildPlayersArea(context, gs, state),
           const SizedBox(height: 8),
           if (state.phase == 'effect_resolve' && state.pendingEffect != null)
             _buildEffectResolve(context, gs, state),
-          if (state.faceUpCards.isNotEmpty) _buildFaceUpCards(state),
         ],
       ),
     );
@@ -431,16 +431,15 @@ class _LLGameScreenState extends State<LLGameScreen> {
           // Discard pile
           if (player.discardPile.isNotEmpty)
             SizedBox(
-              height: 40,
+              height: 60,
               child: Row(
                 mainAxisSize: MainAxisSize.min,
                 children: player.discardPile.reversed.take(4).map((cardId) => Padding(
-                  padding: const EdgeInsets.only(right: 2),
+                  padding: const EdgeInsets.only(right: 3),
                   child: LoveLetterCard(
                     cardId: cardId,
-                    width: 28,
-                    height: 40,
-                    compact: true,
+                    width: 42,
+                    height: 60,
                     isInteractive: false,
                   ),
                 )).toList(),
@@ -527,21 +526,32 @@ class _LLGameScreenState extends State<LLGameScreen> {
           // Target buttons
           Wrap(
             spacing: 8,
+            runSpacing: 6,
             children: effect.validTargets.map((targetId) {
               final player = state.players.firstWhere(
                 (p) => p.id == targetId,
                 orElse: () => LLPlayer(id: targetId, name: targetId),
               );
               final isSelected = _selectedTarget == targetId;
-              return ChoiceChip(
-                label: Text(player.name),
-                selected: isSelected,
-                onSelected: (_) => setState(() => _selectedTarget = targetId),
-                selectedColor: Colors.amber,
-                backgroundColor: Colors.white24,
-                labelStyle: TextStyle(
-                  color: isSelected ? Colors.black : Colors.white,
-                  fontWeight: FontWeight.w600,
+              return GestureDetector(
+                onTap: () => setState(() => _selectedTarget = targetId),
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                  decoration: BoxDecoration(
+                    color: isSelected ? Colors.amber : Colors.white10,
+                    borderRadius: BorderRadius.circular(20),
+                    border: Border.all(
+                      color: isSelected ? Colors.amber : Colors.white24,
+                    ),
+                  ),
+                  child: Text(
+                    player.name,
+                    style: TextStyle(
+                      color: isSelected ? Colors.black : Colors.white,
+                      fontSize: 13,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
                 ),
               );
             }).toList(),
@@ -774,7 +784,7 @@ class _LLGameScreenState extends State<LLGameScreen> {
   Widget _buildFaceUpCards(LLGameStateData state) {
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-      padding: const EdgeInsets.all(8),
+      padding: const EdgeInsets.all(10),
       decoration: BoxDecoration(
         color: Colors.white.withValues(alpha: 0.05),
         borderRadius: BorderRadius.circular(8),
@@ -783,14 +793,14 @@ class _LLGameScreenState extends State<LLGameScreen> {
         children: [
           Text(
             L10n.of(context).llSetAsideFaceUp,
-            style: const TextStyle(color: Colors.white38, fontSize: 11),
+            style: const TextStyle(color: Colors.white60, fontSize: 12),
           ),
-          const SizedBox(height: 4),
+          const SizedBox(height: 6),
           Row(
             mainAxisAlignment: MainAxisAlignment.center,
             children: state.faceUpCards.map((cardId) => Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 3),
-              child: LoveLetterCard(cardId: cardId, width: 40, height: 56, compact: true, isInteractive: false),
+              padding: const EdgeInsets.symmetric(horizontal: 4),
+              child: LoveLetterCard(cardId: cardId, width: 64, height: 90, isInteractive: false),
             )).toList(),
           ),
         ],
@@ -1149,21 +1159,31 @@ class _LLGameScreenState extends State<LLGameScreen> {
             ],
           ),
           const SizedBox(height: 8),
-          // My discard pile (small)
+          // My discard pile
           if (selfPlayer.discardPile.isNotEmpty) ...[
             SizedBox(
-              height: 36,
+              height: 60,
               child: Row(
                 children: [
-                  Text(L10n.of(context).llPlayed, style: const TextStyle(color: Colors.white38, fontSize: 10)),
-                  ...selfPlayer.discardPile.map((cardId) => Padding(
-                    padding: const EdgeInsets.only(right: 2),
-                    child: LoveLetterCard(cardId: cardId, width: 24, height: 34, compact: true, isInteractive: false),
-                  )),
+                  Padding(
+                    padding: const EdgeInsets.only(right: 6),
+                    child: Text(L10n.of(context).llPlayed, style: const TextStyle(color: Colors.white54, fontSize: 11)),
+                  ),
+                  Expanded(
+                    child: SingleChildScrollView(
+                      scrollDirection: Axis.horizontal,
+                      child: Row(
+                        children: selfPlayer.discardPile.map((cardId) => Padding(
+                          padding: const EdgeInsets.only(right: 3),
+                          child: LoveLetterCard(cardId: cardId, width: 42, height: 60, isInteractive: false),
+                        )).toList(),
+                      ),
+                    ),
+                  ),
                 ],
               ),
             ),
-            const SizedBox(height: 6),
+            const SizedBox(height: 8),
           ],
           // Card description
           if (_selectedCard != null)

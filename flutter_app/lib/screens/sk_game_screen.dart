@@ -3323,7 +3323,7 @@ class _SKGameScreenState extends State<SKGameScreen> {
         break;
       default:
         gameLabel = l10n.lobbyTichu;
-        gameEmoji = '🎴';
+        gameEmoji = '🃏';
         gameBgColor = const Color(0xFF7E57C2);
         gameFgColor = Colors.white;
     }
@@ -3369,7 +3369,7 @@ class _SKGameScreenState extends State<SKGameScreen> {
                     Container(width: 36, height: 4, decoration: BoxDecoration(color: Colors.grey[300], borderRadius: BorderRadius.circular(2))),
                     const SizedBox(height: 12),
                     ListTile(
-                      leading: const Text('🎴', style: TextStyle(fontSize: 20)),
+                      leading: const Text('🃏', style: TextStyle(fontSize: 20)),
                       title: Text(l10n.lobbyTichu),
                       trailing: selectedGame == 'tichu' ? const Icon(Icons.check, color: Color(0xFF7E57C2)) : null,
                       onTap: () { Navigator.pop(bCtx); onGameChanged('tichu'); },

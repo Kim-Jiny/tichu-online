@@ -622,59 +622,128 @@ class _LobbyScreenState extends State<LobbyScreen> {
                       const SizedBox(height: 16),
                       sectionTitle(l10n.lobbySelectGame, l10n.lobbySelectGameDesc),
                       const SizedBox(height: 10),
-                      Wrap(
-                        spacing: 8,
-                        runSpacing: 8,
-                        children: [
-                          for (final entry in [
-                            ('tichu', l10n.lobbyTichu, Icons.style),
-                            ('skull_king', l10n.lobbySkullKing, Icons.anchor),
-                            ('love_letter', l10n.lobbyLoveLetter, Icons.favorite),
-                          ])
-                            GestureDetector(
-                              onTap: () => setState(() {
-                                selectedGameType = entry.$1;
-                                randomName = _generateRandomRoomName(gameType: selectedGameType, l10n: l10n);
-                                if (controller.text.isEmpty) {
-                                  controller.clear();
-                                }
-                                if (selectedGameType == 'skull_king' || selectedGameType == 'love_letter') {
-                                  isRanked = false;
-                                }
-                              }),
-                              child: AnimatedContainer(
-                                duration: const Duration(milliseconds: 150),
-                                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-                                decoration: BoxDecoration(
-                                  color: selectedGameType == entry.$1
-                                      ? accent.withValues(alpha: 0.25)
-                                      : Colors.white.withValues(alpha: 0.72),
-                                  borderRadius: BorderRadius.circular(12),
-                                  border: Border.all(
-                                    color: selectedGameType == entry.$1
-                                        ? accent
-                                        : const Color(0xFFE0D8D4),
-                                    width: selectedGameType == entry.$1 ? 1.5 : 1,
+                      Builder(
+                        builder: (ctx) {
+                          String gameLabel;
+                          String gameEmoji;
+                          Color gameBgColor;
+                          Color gameFgColor;
+                          switch (selectedGameType) {
+                            case 'skull_king':
+                              gameLabel = l10n.lobbySkullKing;
+                              gameEmoji = '⚓';
+                              gameBgColor = const Color(0xFF2D2D3D);
+                              gameFgColor = const Color(0xFFFFD54F);
+                              break;
+                            case 'love_letter':
+                              gameLabel = l10n.lobbyLoveLetter;
+                              gameEmoji = '❤️';
+                              gameBgColor = const Color(0xFFE91E63);
+                              gameFgColor = Colors.white;
+                              break;
+                            default:
+                              gameLabel = l10n.lobbyTichu;
+                              gameEmoji = '🃏';
+                              gameBgColor = const Color(0xFF7E57C2);
+                              gameFgColor = Colors.white;
+                          }
+                          void selectGame(String type) {
+                            setState(() {
+                              selectedGameType = type;
+                              randomName = _generateRandomRoomName(gameType: selectedGameType, l10n: l10n);
+                              if (selectedGameType == 'skull_king' || selectedGameType == 'love_letter') {
+                                isRanked = false;
+                              }
+                            });
+                          }
+                          return InkWell(
+                            onTap: () {
+                              showModalBottomSheet(
+                                context: ctx,
+                                shape: const RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+                                ),
+                                builder: (sheetCtx) => SafeArea(
+                                  child: Column(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      const SizedBox(height: 8),
+                                      Container(
+                                        width: 36,
+                                        height: 4,
+                                        decoration: BoxDecoration(
+                                          color: Colors.grey[300],
+                                          borderRadius: BorderRadius.circular(2),
+                                        ),
+                                      ),
+                                      const SizedBox(height: 12),
+                                      ListTile(
+                                        leading: const Text('🃏', style: TextStyle(fontSize: 20)),
+                                        title: Text(l10n.lobbyTichu),
+                                        trailing: selectedGameType == 'tichu'
+                                            ? const Icon(Icons.check, color: Color(0xFF7E57C2))
+                                            : null,
+                                        onTap: () {
+                                          Navigator.pop(sheetCtx);
+                                          selectGame('tichu');
+                                        },
+                                      ),
+                                      ListTile(
+                                        leading: const Text('⚓', style: TextStyle(fontSize: 20)),
+                                        title: Text(l10n.lobbySkullKing),
+                                        trailing: selectedGameType == 'skull_king'
+                                            ? const Icon(Icons.check, color: Color(0xFF2D2D3D))
+                                            : null,
+                                        onTap: () {
+                                          Navigator.pop(sheetCtx);
+                                          selectGame('skull_king');
+                                        },
+                                      ),
+                                      ListTile(
+                                        leading: const Text('❤️', style: TextStyle(fontSize: 20)),
+                                        title: Text(l10n.lobbyLoveLetter),
+                                        trailing: selectedGameType == 'love_letter'
+                                            ? const Icon(Icons.check, color: Color(0xFFE91E63))
+                                            : null,
+                                        onTap: () {
+                                          Navigator.pop(sheetCtx);
+                                          selectGame('love_letter');
+                                        },
+                                      ),
+                                      const SizedBox(height: 8),
+                                    ],
                                   ),
                                 ),
-                                child: Row(
-                                  mainAxisSize: MainAxisSize.min,
-                                  children: [
-                                    Icon(entry.$3, size: 16, color: const Color(0xFF3E312A)),
-                                    const SizedBox(width: 6),
-                                    Text(
-                                      entry.$2,
+                              );
+                            },
+                            borderRadius: BorderRadius.circular(12),
+                            child: Container(
+                              width: double.infinity,
+                              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                              decoration: BoxDecoration(
+                                color: gameBgColor,
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              child: Row(
+                                children: [
+                                  Text(gameEmoji, style: const TextStyle(fontSize: 18)),
+                                  const SizedBox(width: 8),
+                                  Expanded(
+                                    child: Text(
+                                      gameLabel,
                                       style: TextStyle(
-                                        fontSize: 13,
-                                        fontWeight: selectedGameType == entry.$1 ? FontWeight.bold : FontWeight.w500,
-                                        color: const Color(0xFF3E312A),
+                                        fontSize: 14,
+                                        fontWeight: FontWeight.bold,
+                                        color: gameFgColor,
                                       ),
                                     ),
-                                  ],
-                                ),
+                                  ),
+                                  Icon(Icons.arrow_drop_down, color: gameFgColor),
+                                ],
                               ),
                             ),
-                        ],
+                          );
+                        },
                       ),
                       if (selectedGameType == 'skull_king') ...[
                         const SizedBox(height: 14),
@@ -685,70 +754,83 @@ class _LobbyScreenState extends State<LobbyScreen> {
                           style: const TextStyle(fontSize: 10, color: Color(0xFF7E7069)),
                         ),
                         const SizedBox(height: 8),
-                        Row(
+                        Column(
                           children: [
                             for (final entry in [
                               ['kraken', l10n.lobbyExpKraken, l10n.lobbyExpKrakenDesc],
                               ['white_whale', l10n.lobbyExpWhiteWhale, l10n.lobbyExpWhiteWhaleDesc],
                               ['loot', l10n.lobbyExpLoot, l10n.lobbyExpLootDesc],
                             ])
-                              Expanded(
-                                child: Padding(
-                                  padding: EdgeInsets.only(
-                                    right: entry[0] == 'loot' ? 0 : 6,
-                                  ),
-                                  child: GestureDetector(
-                                    onTap: () => setState(() {
-                                      if (skExpansionsSelected.contains(entry[0])) {
-                                        skExpansionsSelected.remove(entry[0]);
-                                      } else {
-                                        skExpansionsSelected.add(entry[0]);
-                                      }
-                                    }),
-                                    child: AnimatedContainer(
-                                      duration: const Duration(milliseconds: 150),
-                                      padding: const EdgeInsets.symmetric(
-                                          vertical: 10, horizontal: 6),
-                                      decoration: BoxDecoration(
+                              Padding(
+                                padding: EdgeInsets.only(
+                                  bottom: entry[0] == 'loot' ? 0 : 6,
+                                ),
+                                child: GestureDetector(
+                                  onTap: () => setState(() {
+                                    if (skExpansionsSelected.contains(entry[0])) {
+                                      skExpansionsSelected.remove(entry[0]);
+                                    } else {
+                                      skExpansionsSelected.add(entry[0]);
+                                    }
+                                  }),
+                                  child: AnimatedContainer(
+                                    duration: const Duration(milliseconds: 150),
+                                    padding: const EdgeInsets.symmetric(
+                                        vertical: 10, horizontal: 12),
+                                    decoration: BoxDecoration(
+                                      color: skExpansionsSelected.contains(entry[0])
+                                          ? accent.withValues(alpha: 0.25)
+                                          : Colors.white,
+                                      borderRadius: BorderRadius.circular(10),
+                                      border: Border.all(
                                         color: skExpansionsSelected.contains(entry[0])
-                                            ? accent.withValues(alpha: 0.25)
-                                            : Colors.white,
-                                        borderRadius: BorderRadius.circular(10),
-                                        border: Border.all(
+                                            ? accent
+                                            : const Color(0xFFE0D8D4),
+                                        width: skExpansionsSelected.contains(entry[0]) ? 1.5 : 1,
+                                      ),
+                                    ),
+                                    child: Row(
+                                      children: [
+                                        Icon(
+                                          skExpansionsSelected.contains(entry[0])
+                                              ? Icons.check_box
+                                              : Icons.check_box_outline_blank,
+                                          size: 20,
                                           color: skExpansionsSelected.contains(entry[0])
                                               ? accent
-                                              : const Color(0xFFE0D8D4),
-                                          width: skExpansionsSelected.contains(entry[0]) ? 1.5 : 1,
+                                              : const Color(0xFFC0B5AE),
                                         ),
-                                      ),
-                                      child: Column(
-                                        crossAxisAlignment: CrossAxisAlignment.center,
-                                        children: [
-                                          Text(
-                                            entry[1],
-                                            style: TextStyle(
-                                              fontSize: 13,
-                                              fontWeight: skExpansionsSelected.contains(entry[0])
-                                                  ? FontWeight.bold
-                                                  : FontWeight.w600,
-                                              color: skExpansionsSelected.contains(entry[0])
-                                                  ? const Color(0xFF3E312A)
-                                                  : const Color(0xFF8A7A72),
-                                            ),
+                                        const SizedBox(width: 10),
+                                        Expanded(
+                                          child: Column(
+                                            crossAxisAlignment: CrossAxisAlignment.start,
+                                            children: [
+                                              Text(
+                                                entry[1],
+                                                style: TextStyle(
+                                                  fontSize: 13,
+                                                  fontWeight: skExpansionsSelected.contains(entry[0])
+                                                      ? FontWeight.bold
+                                                      : FontWeight.w600,
+                                                  color: skExpansionsSelected.contains(entry[0])
+                                                      ? const Color(0xFF3E312A)
+                                                      : const Color(0xFF8A7A72),
+                                                ),
+                                              ),
+                                              const SizedBox(height: 2),
+                                              Text(
+                                                entry[2],
+                                                style: TextStyle(
+                                                  fontSize: 10,
+                                                  color: skExpansionsSelected.contains(entry[0])
+                                                      ? const Color(0xFF5F4E46)
+                                                      : const Color(0xFFAAA09C),
+                                                ),
+                                              ),
+                                            ],
                                           ),
-                                          const SizedBox(height: 2),
-                                          Text(
-                                            entry[2],
-                                            style: TextStyle(
-                                              fontSize: 9,
-                                              color: skExpansionsSelected.contains(entry[0])
-                                                  ? const Color(0xFF5F4E46)
-                                                  : const Color(0xFFAAA09C),
-                                            ),
-                                            textAlign: TextAlign.center,
-                                          ),
-                                        ],
-                                      ),
+                                        ),
+                                      ],
                                     ),
                                   ),
                                 ),
@@ -3234,7 +3316,7 @@ class _LobbyScreenState extends State<LobbyScreen> {
               break;
             default:
               gameLabel = l10n.lobbyTichu;
-              gameEmoji = '🎴';
+              gameEmoji = '🃏';
               gameBgColor = const Color(0xFF7E57C2);
               gameFgColor = Colors.white;
           }
@@ -3253,7 +3335,7 @@ class _LobbyScreenState extends State<LobbyScreen> {
                       Container(width: 36, height: 4, decoration: BoxDecoration(color: Colors.grey[300], borderRadius: BorderRadius.circular(2))),
                       const SizedBox(height: 12),
                       ListTile(
-                        leading: const Text('🎴', style: TextStyle(fontSize: 20)),
+                        leading: const Text('🃏', style: TextStyle(fontSize: 20)),
                         title: Text(l10n.lobbyTichu),
                         trailing: selectedTab == 'tichu' ? const Icon(Icons.check, color: Color(0xFF7E57C2)) : null,
                         onTap: () { Navigator.pop(bCtx); onTabChanged('tichu'); },

@@ -538,8 +538,12 @@ function shopForm(action, values, isEdit = false) {
     <div class="form-grid">
       <label>아이템 키</label>
       <input type="text" name="item_key" value="${escapeHtml(v('item_key'))}" ${isEdit ? 'readonly style="background:#f0f0f0"' : 'required'} placeholder="예: banner_new">
-      <label>이름</label>
-      <input type="text" name="name" value="${escapeHtml(v('name'))}" required placeholder="아이템 이름">
+      <label>이름 (한국어)</label>
+      <input type="text" name="name_ko" value="${escapeHtml(v('name_ko'))}" required placeholder="아이템 이름 (한국어)">
+      <label>이름 (English)</label>
+      <input type="text" name="name_en" value="${escapeHtml(v('name_en'))}" placeholder="Item name (English)">
+      <label>이름 (Deutsch)</label>
+      <input type="text" name="name_de" value="${escapeHtml(v('name_de'))}" placeholder="Artikelname (Deutsch)">
       <label>분류</label>
       <select name="category" style="padding:10px;border:1px solid #ddd;border-radius:8px;font-size:14px">${categoryOptions}</select>
       <label>가격</label>
@@ -570,7 +574,9 @@ function shopForm(action, values, isEdit = false) {
 function parseShopFormBody(body) {
   return {
     item_key: body.item_key || '',
-    name: body.name || '',
+    name_ko: body.name_ko || '',
+    name_en: body.name_en || '',
+    name_de: body.name_de || '',
     category: body.category || 'banner',
     price: parseInt(body.price) || 0,
     is_permanent: body.is_permanent === 'on',
@@ -2079,7 +2085,7 @@ async function handleAdminRoute(req, res, url, pathname, method, lobby, wss, mai
         ${items.map(item => `<tr>
           <td>${item.id}</td>
           <td style="font-family:monospace;font-size:12px">${escapeHtml(item.item_key)}</td>
-          <td>${escapeHtml(item.name)}</td>
+          <td>${escapeHtml(item.name_ko)}</td>
           <td>${shopCategoryBadge(item.category)}</td>
           <td>${item.price}</td>
           <td>${item.is_permanent ? '영구' : (item.duration_days ? item.duration_days + '일' : '-')}</td>
@@ -2147,7 +2153,7 @@ async function handleAdminRoute(req, res, url, pathname, method, lobby, wss, mai
     if (!item) return html(res, layout('찾을 수 없음', '<div class="empty">아이템을 찾을 수 없습니다</div>', 'shop'), 404);
 
     const content = `
-      <h1 class="page-title">수정: ${escapeHtml(item.name)}</h1>
+      <h1 class="page-title">수정: ${escapeHtml(item.name_ko)}</h1>
       <div class="card">
         ${shopForm('/tc-backstage/shop/' + item.id, item, true)}
       </div>
@@ -2158,7 +2164,7 @@ async function handleAdminRoute(req, res, url, pathname, method, lobby, wss, mai
       </form>
       <a href="/tc-backstage/shop" class="btn btn-secondary" style="margin-top:12px;margin-left:8px">목록으로</a>
     `;
-    return html(res, layout(`수정: ${escapeHtml(item.name)}`, content, 'shop'));
+    return html(res, layout(`수정: ${escapeHtml(item.name_ko)}`, content, 'shop'));
   }
 
   // Shop edit process
@@ -2169,7 +2175,7 @@ async function handleAdminRoute(req, res, url, pathname, method, lobby, wss, mai
     if (!result.success) {
       const item = await getShopItemById(parseInt(shopEditMatch[1]));
       const content = `
-        <h1 class="page-title">수정: ${escapeHtml(item ? item.name : '')}</h1>
+        <h1 class="page-title">수정: ${escapeHtml(item ? item.name_ko : '')}</h1>
         <div style="color:#e53935;margin-bottom:12px">${escapeHtml(result.message)}</div>
         <div class="card">
           ${shopForm('/tc-backstage/shop/' + shopEditMatch[1], body, true)}

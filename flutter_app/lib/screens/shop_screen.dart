@@ -21,6 +21,13 @@ class _ShopScreenState extends State<ShopScreen> {
   bool _rewardedAdReady = false;
   TabController? _inventoryTabs;
 
+  String _getLocalizedItemName(Map<String, dynamic> item) {
+    final locale = Localizations.localeOf(context).languageCode;
+    return item['name_$locale']?.toString().isNotEmpty == true
+        ? item['name_$locale'].toString()
+        : item['name_ko']?.toString() ?? '';
+  }
+
   @override
   void initState() {
     super.initState();
@@ -398,7 +405,7 @@ class _ShopScreenState extends State<ShopScreen> {
                                         crossAxisAlignment: CrossAxisAlignment.start,
                                         children: [
                                           Text(
-                                            item['title']?.toString() ?? L10n.of(context).shopGoldChangeFallback,
+                                            localizeGoldTitle(item['title']?.toString(), item['source']?.toString(), L10n.of(context), Localizations.localeOf(context).languageCode),
                                             style: const TextStyle(
                                               fontSize: 14,
                                               fontWeight: FontWeight.w800,
@@ -407,7 +414,7 @@ class _ShopScreenState extends State<ShopScreen> {
                                           ),
                                           const SizedBox(height: 3),
                                           Text(
-                                            item['description']?.toString() ?? '',
+                                            localizeGoldDescription(item['description']?.toString(), item['source']?.toString(), L10n.of(context)),
                                             style: const TextStyle(
                                               fontSize: 12,
                                               color: Color(0xFF8A7A72),
@@ -741,7 +748,7 @@ class _ShopScreenState extends State<ShopScreen> {
     GameService game,
     Map<String, dynamic> item,
   ) {
-    final name = item['name']?.toString() ?? '';
+    final name = _getLocalizedItemName(item);
     final price = item['price'] ?? 0;
     final isSeason = item['is_season'] == true;
     final isPermanent = item['is_permanent'] == true;
@@ -849,7 +856,7 @@ class _ShopScreenState extends State<ShopScreen> {
   }
 
   void _showExtendConfirmDialog(BuildContext context, GameService game, Map<String, dynamic> item) {
-    final name = item['name']?.toString() ?? '';
+    final name = _getLocalizedItemName(item);
     final itemKey = item['item_key']?.toString() ?? '';
     final price = item['price'] ?? 0;
     final durationDays = item['duration_days'] ?? 0;
@@ -958,7 +965,7 @@ class _ShopScreenState extends State<ShopScreen> {
 
   Widget _buildInventoryItem(BuildContext context, Map<String, dynamic> item) {
     final game = context.read<GameService>();
-    final name = item['name']?.toString() ?? '';
+    final name = _getLocalizedItemName(item);
     final category = item['category']?.toString() ?? '';
     final isActive = item['is_active'] == true;
     final itemKey = item['item_key']?.toString() ?? '';
@@ -1525,7 +1532,7 @@ class _ShopScreenState extends State<ShopScreen> {
     game.clearLastPurchaseResult();
     if (item.isEmpty) return;
 
-    final name = item['name']?.toString() ?? '';
+    final name = _getLocalizedItemName(item);
     final category = item['category']?.toString() ?? '';
     final isPassiveUtility = itemKey.startsWith('top_card_counter');
     final isConsumable = category == 'utility' && !isPassiveUtility;
@@ -1575,7 +1582,7 @@ class _ShopScreenState extends State<ShopScreen> {
   }
 
   void _showItemDetailDialog(BuildContext context, Map<String, dynamic> item) {
-    final name = item['name']?.toString() ?? '';
+    final name = _getLocalizedItemName(item);
     final price = item['price'] ?? 0;
     final isSeason = item['is_season'] == true;
     final isPermanent = item['is_permanent'] == true;

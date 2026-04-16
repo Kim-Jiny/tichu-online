@@ -948,7 +948,7 @@ class _RegisterDialogState extends State<RegisterDialog> {
       for (int i = 0; i < 50; i++) {
         if (!mounted) return;
         if (game.registerResult != null) {
-          if (game.registerResult!.contains('완료')) {
+          if (game.registerSuccess == true) {
             widget.onSuccess();
             return;
           } else {

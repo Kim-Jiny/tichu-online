@@ -5942,6 +5942,65 @@ abstract class L10n {
   /// In en, this message translates to:
   /// **'Maintenance over, reconnecting...'**
   String get maintenanceEnded;
+
+  // Gold history
+  String get goldHistoryLeaveDefeat;
+  String get goldHistoryRankedWin;
+  String get goldHistoryCasualWin;
+  String get goldHistoryDraw;
+  String get goldHistoryRankedLoss;
+  String get goldHistoryCasualLoss;
+  String get goldHistoryAdReward;
+  String get goldHistorySeasonReward;
+  String get goldHistoryShopPurchase;
+  String get goldHistorySkLeaveDefeat;
+  String get goldHistorySkRankedWin;
+  String get goldHistorySkCasualWin;
+  String get goldHistorySkRankedLoss;
+  String get goldHistorySkCasualLoss;
+  String get goldHistoryAdminGrant;
+  String get goldHistoryAdminDeduct;
+  String goldHistoryFinalScore(String scoreA, String scoreB);
+  String goldHistorySeasonRank(String rank);
+  String goldHistorySkRankScore(String rank, String score);
+  String goldHistoryAdminBy(String admin);
+
+  // Admin center
+  String get adminCenterTitle;
+  String get adminActiveUsers;
+  String get adminPendingInquiries;
+  String get adminPendingReports;
+  String get adminTotalUsers;
+  String get adminTabInquiries;
+  String get adminTabReports;
+  String get adminTabUsers;
+  String get adminSearchHint;
+  String get adminSearch;
+  String get adminOnline;
+  String get adminOffline;
+  String adminInquiryTitle(int id);
+  String get adminUser;
+  String get adminSubject;
+  String get adminNote;
+  String get adminResolved;
+  String get adminReviewed;
+  String adminReportTitle(String nickname);
+  String adminReportCount(int count);
+  String adminReportRoom(String roomId);
+  String get adminBasicInfo;
+  String get adminUsername;
+  String get adminRating;
+  String get adminGold;
+  String get adminRecord;
+  String adminWinLoss(int wins, int losses);
+  String get adminStatus;
+  String get adminCurrentRoom;
+  String get adminGoldAdjust;
+  String get adminGoldAmount;
+  String get adminGoldHint;
+  String get adminGoldValidation;
+  String get adminGrant;
+  String get adminDeduct;
 }
 
 class _L10nDelegate extends LocalizationsDelegate<L10n> {

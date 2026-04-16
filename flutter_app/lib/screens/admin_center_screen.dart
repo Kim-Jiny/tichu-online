@@ -40,6 +40,7 @@ class _AdminCenterScreenState extends State<AdminCenterScreen> {
   Widget build(BuildContext context) {
     final themeColors = context.watch<GameService>().themeGradient;
     final isCompact = MediaQuery.sizeOf(context).width < 600;
+    final l = L10n.of(context);
     return DefaultTabController(
       length: 3,
       child: Scaffold(
@@ -90,10 +91,10 @@ class _AdminCenterScreenState extends State<AdminCenterScreen> {
                         labelColor: const Color(0xFF5A4038),
                         unselectedLabelColor: const Color(0xFF9A8E8A),
                         indicatorColor: const Color(0xFFB9A8A1),
-                        tabs: const [
-                          Tab(text: '문의'),
-                          Tab(text: '신고'),
-                          Tab(text: '유저'),
+                        tabs: [
+                          Tab(text: l.adminTabInquiries),
+                          Tab(text: l.adminTabReports),
+                          Tab(text: l.adminTabUsers),
                         ],
                       ),
                     ),
@@ -136,7 +137,7 @@ class _AdminCenterScreenState extends State<AdminCenterScreen> {
           SizedBox(width: isCompact ? 2 : 4),
           Expanded(
             child: Text(
-              '관리자 센터',
+              L10n.of(context).adminCenterTitle,
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
               style: TextStyle(
@@ -152,12 +153,13 @@ class _AdminCenterScreenState extends State<AdminCenterScreen> {
   }
 
   Widget _buildDashboard(GameService game, bool isCompact) {
+    final l = L10n.of(context);
     final dash = game.adminDashboard ?? const <String, dynamic>{};
     final List<({String label, String value, Color color, IconData icon})> cards = [
-      ('활성 유저', '${dash['activeUsers'] ?? 0}', const Color(0xFF42A5F5), Icons.wifi_tethering),
-      ('미처리 문의', '${dash['pendingInquiries'] ?? 0}', const Color(0xFFAB47BC), Icons.mail_outline),
-      ('미처리 신고', '${dash['pendingReports'] ?? 0}', const Color(0xFFEF5350), Icons.report_outlined),
-      ('전체 유저', '${dash['totalUsers'] ?? 0}', const Color(0xFFFFA726), Icons.groups_2_outlined),
+      (l.adminActiveUsers, '${dash['activeUsers'] ?? 0}', const Color(0xFF42A5F5), Icons.wifi_tethering),
+      (l.adminPendingInquiries, '${dash['pendingInquiries'] ?? 0}', const Color(0xFFAB47BC), Icons.mail_outline),
+      (l.adminPendingReports, '${dash['pendingReports'] ?? 0}', const Color(0xFFEF5350), Icons.report_outlined),
+      (l.adminTotalUsers, '${dash['totalUsers'] ?? 0}', const Color(0xFFFFA726), Icons.groups_2_outlined),
     ].map((item) => (label: item.$1, value: item.$2, color: item.$3, icon: item.$4)).toList();
     return Container(
       height: isCompact ? 104 : 112,
@@ -275,6 +277,7 @@ class _AdminCenterScreenState extends State<AdminCenterScreen> {
   }
 
   Widget _buildReportsTab(GameService game, bool isCompact) {
+    final l = L10n.of(context);
     if (game.adminReportsLoading) {
       return const Center(child: CircularProgressIndicator());
     }
@@ -331,7 +334,7 @@ class _AdminCenterScreenState extends State<AdminCenterScreen> {
                     ),
                   const SizedBox(height: 8),
                   Text(
-                    '신고 ${item['report_count'] ?? 0}건 · 방 ${item['room_id'] ?? '-'}',
+                    '${l.adminReportCount((item['report_count'] as num?)?.toInt() ?? 0)} · ${l.adminReportRoom(item['room_id']?.toString() ?? '-')}',
                     style: const TextStyle(
                       fontSize: 13,
                       color: _mutedColor,
@@ -348,6 +351,7 @@ class _AdminCenterScreenState extends State<AdminCenterScreen> {
   }
 
   Widget _buildUsersTab(GameService game, bool isCompact) {
+    final l = L10n.of(context);
     return Column(
       children: [
         Padding(
@@ -358,7 +362,7 @@ class _AdminCenterScreenState extends State<AdminCenterScreen> {
                     TextField(
                       controller: _searchController,
                       decoration: InputDecoration(
-                        hintText: '닉네임 또는 계정명 검색',
+                        hintText: l.adminSearchHint,
                         prefixIcon: const Icon(Icons.search, color: _mutedColor),
                         filled: true,
                         fillColor: Colors.white.withValues(alpha: 0.94),
@@ -378,7 +382,7 @@ class _AdminCenterScreenState extends State<AdminCenterScreen> {
                         style: FilledButton.styleFrom(
                           backgroundColor: const Color(0xFF8A7A72),
                         ),
-                        child: const Text('검색'),
+                        child: Text(l.adminSearch),
                       ),
                     ),
                   ],
@@ -389,7 +393,7 @@ class _AdminCenterScreenState extends State<AdminCenterScreen> {
                       child: TextField(
                         controller: _searchController,
                         decoration: InputDecoration(
-                          hintText: '닉네임 또는 계정명 검색',
+                          hintText: l.adminSearchHint,
                           prefixIcon: const Icon(Icons.search, color: _mutedColor),
                           filled: true,
                           fillColor: Colors.white.withValues(alpha: 0.94),
@@ -408,7 +412,7 @@ class _AdminCenterScreenState extends State<AdminCenterScreen> {
                       style: FilledButton.styleFrom(
                         backgroundColor: const Color(0xFF8A7A72),
                       ),
-                      child: const Text('검색'),
+                      child: Text(l.adminSearch),
                     ),
                   ],
                 ),
@@ -426,7 +430,7 @@ class _AdminCenterScreenState extends State<AdminCenterScreen> {
                     final online = item['isOnline'] == true;
                     final platform = _platformLabel(item['device_platform']?.toString());
                     final appVersion = item['app_version']?.toString().trim();
-                    final statusText = online ? '온라인' : '오프라인';
+                    final statusText = online ? l.adminOnline : l.adminOffline;
                     final roomName = item['roomName']?.toString();
                     return Material(
                       color: Colors.white.withValues(alpha: 0.94),
@@ -514,29 +518,30 @@ class _AdminCenterScreenState extends State<AdminCenterScreen> {
   }
 
   void _showInquiryDetail(Map<String, dynamic> item) {
+    final l = L10n.of(context);
     final noteController = TextEditingController();
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: Text('문의 #${item['id']}'),
+        title: Text(l.adminInquiryTitle((item['id'] as num?)?.toInt() ?? 0)),
         content: SizedBox(
           width: _dialogWidth(ctx, 420),
           child: SingleChildScrollView(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text('유저: ${item['user_nickname'] ?? '-'}'),
+                Text('${l.adminUser}: ${item['user_nickname'] ?? '-'}'),
                 const SizedBox(height: 8),
-                Text('제목: ${item['title'] ?? '-'}'),
+                Text('${l.adminSubject}: ${item['title'] ?? '-'}'),
                 const SizedBox(height: 8),
                 Text(item['content']?.toString() ?? '-'),
                 const SizedBox(height: 12),
                 TextField(
                   controller: noteController,
                   maxLines: 3,
-                  decoration: const InputDecoration(
-                    labelText: '관리자 메모',
-                    border: OutlineInputBorder(),
+                  decoration: InputDecoration(
+                    labelText: l.adminNote,
+                    border: const OutlineInputBorder(),
                   ),
                 ),
               ],
@@ -544,7 +549,7 @@ class _AdminCenterScreenState extends State<AdminCenterScreen> {
           ),
         ),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('닫기')),
+          TextButton(onPressed: () => Navigator.pop(ctx), child: Text(l.commonClose)),
           FilledButton(
             onPressed: item['status'] == 'resolved'
                 ? null
@@ -555,7 +560,7 @@ class _AdminCenterScreenState extends State<AdminCenterScreen> {
                         );
                     Navigator.pop(ctx);
                   },
-            child: const Text('처리 완료'),
+            child: Text(l.adminResolved),
           ),
         ],
       ),
@@ -563,12 +568,13 @@ class _AdminCenterScreenState extends State<AdminCenterScreen> {
   }
 
   void _showReportDetail(String target, String roomId) {
+    final l = L10n.of(context);
     final game = context.read<GameService>();
     game.requestAdminReportGroup(target, roomId);
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: Text('$target 신고'),
+        title: Text(l.adminReportTitle(target)),
         content: SizedBox(
           width: _dialogWidth(ctx, 440),
           child: Consumer<GameService>(
@@ -607,20 +613,20 @@ class _AdminCenterScreenState extends State<AdminCenterScreen> {
           ),
         ),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('닫기')),
+          TextButton(onPressed: () => Navigator.pop(ctx), child: Text(l.commonClose)),
           TextButton(
             onPressed: () {
               game.updateAdminReportStatus(target, roomId, 'reviewed');
               Navigator.pop(ctx);
             },
-            child: const Text('검토됨'),
+            child: Text(l.adminReviewed),
           ),
           FilledButton(
             onPressed: () {
               game.updateAdminReportStatus(target, roomId, 'resolved');
               Navigator.pop(ctx);
             },
-            child: const Text('처리 완료'),
+            child: Text(l.adminResolved),
           ),
         ],
       ),
@@ -628,6 +634,7 @@ class _AdminCenterScreenState extends State<AdminCenterScreen> {
   }
 
   void _showUserDetail(String nickname) {
+    final l = L10n.of(context);
     final game = context.read<GameService>();
     final goldController = TextEditingController();
     String? goldError;
@@ -650,23 +657,23 @@ class _AdminCenterScreenState extends State<AdminCenterScreen> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       _buildSectionCard(
-                        title: '기본 정보',
+                        title: l.adminBasicInfo,
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            _buildDetailRow('계정명', '${user['username'] ?? '-'}'),
-                            _buildDetailRow('레이팅', '${user['rating'] ?? 0}'),
-                            _buildDetailRow('골드', '${user['gold'] ?? 0}'),
-                            _buildDetailRow('전적', '${user['wins'] ?? 0}승 / ${user['losses'] ?? 0}패'),
-                            _buildDetailRow('활성 상태', '${user['onlineStatus'] ?? 'offline'}'),
+                            _buildDetailRow(l.adminUsername, '${user['username'] ?? '-'}'),
+                            _buildDetailRow(l.adminRating, '${user['rating'] ?? 0}'),
+                            _buildDetailRow(l.adminGold, '${user['gold'] ?? 0}'),
+                            _buildDetailRow(l.adminRecord, l.adminWinLoss((user['wins'] as num?)?.toInt() ?? 0, (user['losses'] as num?)?.toInt() ?? 0)),
+                            _buildDetailRow(l.adminStatus, '${user['onlineStatus'] ?? 'offline'}'),
                             if (user['roomName'] != null)
-                              _buildDetailRow('현재 방', '${user['roomName']}'),
+                              _buildDetailRow(l.adminCurrentRoom, '${user['roomName']}'),
                           ],
                         ),
                       ),
                       const SizedBox(height: 16),
                       _buildSectionCard(
-                        title: '골드 지급/차감',
+                        title: l.adminGoldAdjust,
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
@@ -674,8 +681,8 @@ class _AdminCenterScreenState extends State<AdminCenterScreen> {
                               controller: goldController,
                               keyboardType: TextInputType.number,
                               decoration: InputDecoration(
-                                labelText: '골드 수량',
-                                hintText: '예: 100',
+                                labelText: l.adminGoldAmount,
+                                hintText: l.adminGoldHint,
                                 errorText: goldError,
                                 border: const OutlineInputBorder(),
                                 isDense: true,
@@ -702,7 +709,7 @@ class _AdminCenterScreenState extends State<AdminCenterScreen> {
                                   onPressed: () {
                                     final amount = int.tryParse(goldController.text.trim());
                                     if (amount == null || amount <= 0) {
-                                      setState(() => goldError = '1 이상의 숫자를 입력하세요');
+                                      setState(() => goldError = l.adminGoldValidation);
                                       return;
                                     }
                                     setState(() => goldError = null);
@@ -710,13 +717,13 @@ class _AdminCenterScreenState extends State<AdminCenterScreen> {
                                     goldController.clear();
                                   },
                                   icon: const Icon(Icons.add_circle_outline),
-                                  label: const Text('지급'),
+                                  label: Text(l.adminGrant),
                                 );
                                 final deductButton = FilledButton.tonalIcon(
                                   onPressed: () {
                                     final amount = int.tryParse(goldController.text.trim());
                                     if (amount == null || amount <= 0) {
-                                      setState(() => goldError = '1 이상의 숫자를 입력하세요');
+                                      setState(() => goldError = l.adminGoldValidation);
                                       return;
                                     }
                                     setState(() => goldError = null);
@@ -724,7 +731,7 @@ class _AdminCenterScreenState extends State<AdminCenterScreen> {
                                     goldController.clear();
                                   },
                                   icon: const Icon(Icons.remove_circle_outline),
-                                  label: const Text('차감'),
+                                  label: Text(l.adminDeduct),
                                 );
                                 if (isNarrow) {
                                   return Column(
@@ -754,7 +761,7 @@ class _AdminCenterScreenState extends State<AdminCenterScreen> {
             ),
           ),
           actions: [
-            TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('닫기')),
+            TextButton(onPressed: () => Navigator.pop(ctx), child: Text(l.commonClose)),
           ],
         ),
       ),

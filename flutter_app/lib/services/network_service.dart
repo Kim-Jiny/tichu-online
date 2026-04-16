@@ -87,11 +87,11 @@ class NetworkService extends ChangeNotifier {
   Future<void> waitForConnection({Duration timeout = const Duration(seconds: 15)}) async {
     if (_isConnected) return;
     if (!_isConnecting) {
-      throw Exception('연결 진행 중이 아닙니다');
+      throw Exception('Not connecting');
     }
     final completer = _connectCompleter;
     if (completer == null) {
-      throw Exception('연결 상태를 확인할 수 없습니다');
+      throw Exception('Connection state unavailable');
     }
     await completer.future.timeout(timeout);
   }
@@ -112,7 +112,7 @@ class NetworkService extends ChangeNotifier {
     _channel = null;
     _shouldAutoReconnect = !intentional;
     if (_connectCompleter != null && !_connectCompleter!.isCompleted) {
-      _connectCompleter!.completeError(Exception('연결이 종료되었습니다'));
+      _connectCompleter!.completeError(Exception('Connection closed'));
     }
     _connectCompleter = null;
     if (wasConnected) {

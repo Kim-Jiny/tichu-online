@@ -81,6 +81,7 @@ class GameService extends ChangeNotifier {
   String? loginError;
   String? loginErrorReason;
   String? registerResult;
+  bool? registerSuccess;
   bool? nicknameAvailable;
   String? nicknameCheckMessage;
 
@@ -440,6 +441,7 @@ class GameService extends ChangeNotifier {
 
       case 'register_result':
         registerResult = data['message'] ?? '';
+        registerSuccess = data['success'] == true;
         notifyListeners();
         break;
 
@@ -605,7 +607,7 @@ class GameService extends ChangeNotifier {
 
       case 'kicked':
         final kickMessage = data['message'] as String? ?? 'kicked';
-        final isDuplicateLogin = kickMessage.contains('다른 기기') || kickMessage.contains('duplicate');
+        final isDuplicateLogin = data['reason'] == 'duplicate_login';
         currentRoomId = '';
         currentRoomName = '';
         roomPlayers = List.filled(roomMaxPlayers, null);
@@ -1723,6 +1725,7 @@ class GameService extends ChangeNotifier {
 
   void register(String username, String password, String nickname) {
     registerResult = null;
+    registerSuccess = null;
     _network.send({
       'type': 'register',
       'username': username,
@@ -1741,6 +1744,7 @@ class GameService extends ChangeNotifier {
     loginError = null;
     loginErrorReason = null;
     registerResult = null;
+    registerSuccess = null;
     nicknameAvailable = null;
     nicknameCheckMessage = null;
   }

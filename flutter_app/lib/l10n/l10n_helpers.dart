@@ -129,3 +129,87 @@ String localizeAdRewardSuccess(int remaining, L10n l10n) {
   return l10n.serviceAdRewardSuccess(remaining);
 }
 
+/// Localize a gold history title key to a user-facing string.
+/// For shop_purchase, the title contains pipe-separated localized names.
+String localizeGoldTitle(String? title, String? source, L10n l10n, String locale) {
+  if (title == null || title.isEmpty) return l10n.goldHistoryShopPurchase;
+  // Shop purchase: title is "ko|en|de" item names
+  if (source == 'shop_purchase' || title.contains('|')) {
+    final parts = title.split('|');
+    switch (locale) {
+      case 'en':
+        return (parts.length > 1 && parts[1].isNotEmpty) ? parts[1] : parts[0];
+      case 'de':
+        return (parts.length > 2 && parts[2].isNotEmpty) ? parts[2] : parts[0];
+      default:
+        return parts[0];
+    }
+  }
+  switch (title) {
+    case 'leave_defeat':
+      return l10n.goldHistoryLeaveDefeat;
+    case 'ranked_win':
+      return l10n.goldHistoryRankedWin;
+    case 'casual_win':
+      return l10n.goldHistoryCasualWin;
+    case 'draw':
+      return l10n.goldHistoryDraw;
+    case 'ranked_loss':
+      return l10n.goldHistoryRankedLoss;
+    case 'casual_loss':
+      return l10n.goldHistoryCasualLoss;
+    case 'ad_reward':
+      return l10n.goldHistoryAdReward;
+    case 'season_reward':
+      return l10n.goldHistorySeasonReward;
+    case 'shop_purchase':
+      return l10n.goldHistoryShopPurchase;
+    case 'sk_leave_defeat':
+      return l10n.goldHistorySkLeaveDefeat;
+    case 'sk_ranked_win':
+      return l10n.goldHistorySkRankedWin;
+    case 'sk_casual_win':
+      return l10n.goldHistorySkCasualWin;
+    case 'sk_ranked_loss':
+      return l10n.goldHistorySkRankedLoss;
+    case 'sk_casual_loss':
+      return l10n.goldHistorySkCasualLoss;
+    case 'admin_grant':
+      return l10n.goldHistoryAdminGrant;
+    case 'admin_deduct':
+      return l10n.goldHistoryAdminDeduct;
+    default:
+      return title; // fallback for legacy/unrecognized entries
+  }
+}
+
+/// Localize a gold history description based on its source type.
+String localizeGoldDescription(String? desc, String? source, L10n l10n) {
+  if (desc == null || desc.isEmpty) return '';
+  switch (source) {
+    case 'match':
+      // desc is "scoreA:scoreB"
+      final parts = desc.split(':');
+      if (parts.length == 2) {
+        return l10n.goldHistoryFinalScore(parts[0], parts[1]);
+      }
+      return desc;
+    case 'season_reward':
+      // desc is rank number
+      return l10n.goldHistorySeasonRank(desc);
+    case 'sk_match':
+      // desc is "rank:score"
+      final parts = desc.split(':');
+      if (parts.length == 2) {
+        return l10n.goldHistorySkRankScore(parts[0], parts[1]);
+      }
+      return desc;
+    case 'shop_purchase':
+      return l10n.goldHistoryShopPurchase;
+    case 'admin_adjust':
+      return l10n.goldHistoryAdminBy(desc);
+    default:
+      return desc;
+  }
+}
+

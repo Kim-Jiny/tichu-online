@@ -351,7 +351,7 @@ const waitingRoomTimers = {}; // `${roomId}_${playerId}` -> setTimeout handle fo
 function seasonNameFromDate(date) {
   const y = date.getFullYear();
   const m = String(date.getMonth() + 1).padStart(2, '0');
-  return `${y}-${m} 시즌`;
+  return `${y}-${m}`;
 }
 
 let _seasonCycleRunning = false;
@@ -962,7 +962,7 @@ async function handleLogin(ws, data) {
           broadcastRoomList();
         }
       }
-      sendTo(client, { type: 'kicked', message: t(client.locale, 'duplicate_login') });
+      sendTo(client, { type: 'kicked', reason: 'duplicate_login', message: t(client.locale, 'duplicate_login') });
       client.roomId = null; // Prevent close handler from double-processing
       client.close();
     }
@@ -1064,7 +1064,7 @@ async function handleSocialLogin(ws, data) {
               broadcastRoomList();
             }
           }
-          sendTo(client, { type: 'kicked', message: t(client.locale, 'duplicate_login') });
+          sendTo(client, { type: 'kicked', reason: 'duplicate_login', message: t(client.locale, 'duplicate_login') });
           client.roomId = null;
           client.close();
         }
@@ -3377,8 +3377,8 @@ async function handleReportUser(ws, data) {
   if (result.success) {
     await notifyAdminUsers(
       'report',
-      '새 신고 접수',
-      `${ws.nickname}님이 ${targetNickname}님을 신고했습니다`,
+      'New Report',
+      `${ws.nickname} reported ${targetNickname}`,
       { reporter: ws.nickname, target: targetNickname, roomId: ws.roomId || '' }
     );
   }
@@ -3867,8 +3867,8 @@ async function handleSubmitInquiry(ws, data) {
   if (result.success) {
     await notifyAdminUsers(
       'inquiry',
-      '새 문의 접수',
-      `${ws.nickname}님의 문의가 도착했습니다`,
+      'New Inquiry',
+      `Inquiry from ${ws.nickname}`,
       { nickname: ws.nickname, category, title }
     );
   }

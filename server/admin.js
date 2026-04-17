@@ -458,6 +458,9 @@ function gameTypeBadge(gameType) {
   if (gameType === 'skull_king') {
     return '<span class="badge" style="background:#ff7043;color:#fff">스컬킹</span>';
   }
+  if (gameType === 'love_letter') {
+    return '<span class="badge" style="background:#E91E63;color:#fff">러브레터</span>';
+  }
   return '<span class="badge" style="background:#6c63ff;color:#fff">티츄</span>';
 }
 
@@ -474,7 +477,7 @@ function renderAdminRecentMatchesTable(matches) {
         endBadge = `<span class="badge" style="background:#fff8e1;color:#f57f17">시간초과</span>${m.deserter_nickname ? `<br><span style="font-size:11px;color:#f57f17">${escapeHtml(m.deserter_nickname)}</span>` : ''}`;
       }
       const rankedBadge = m.is_ranked ? '<span class="badge" style="background:#fff3e0;color:#e65100">랭크</span>' : '<span class="badge" style="background:#f5f5f5;color:#999">일반</span>';
-      if (m.game_type === 'skull_king') {
+      if (m.game_type === 'skull_king' || m.game_type === 'love_letter') {
         return `<tr>
           <td>${m.id}</td>
           <td>${gameTypeBadge(m.game_type)}</td>
@@ -651,13 +654,15 @@ async function handleAdminRoute(req, res, url, pathname, method, lobby, wss, mai
     const signupsByDay = {};
     const tichuByDay = {};
     const skByDay = {};
-    for (const d of last7) { gamesByDay[d] = 0; rankedByDay[d] = 0; signupsByDay[d] = 0; tichuByDay[d] = 0; skByDay[d] = 0; }
+    const llByDay = {};
+    for (const d of last7) { gamesByDay[d] = 0; rankedByDay[d] = 0; signupsByDay[d] = 0; tichuByDay[d] = 0; skByDay[d] = 0; llByDay[d] = 0; }
     for (const r of stats.dailyGames) {
       const d = new Date(r.day).toISOString().split('T')[0];
       gamesByDay[d] = parseInt(r.cnt) || 0;
       rankedByDay[d] = parseInt(r.ranked_cnt) || 0;
       tichuByDay[d] = parseInt(r.tichu_cnt) || 0;
       skByDay[d] = parseInt(r.sk_cnt) || 0;
+      llByDay[d] = parseInt(r.ll_cnt) || 0;
     }
     for (const r of stats.dailySignups) {
       const d = new Date(r.day).toISOString().split('T')[0];
@@ -667,6 +672,7 @@ async function handleAdminRoute(req, res, url, pathname, method, lobby, wss, mai
     const chartGames = last7.map(d => gamesByDay[d]);
     const chartTichu = last7.map(d => tichuByDay[d]);
     const chartSK = last7.map(d => skByDay[d]);
+    const chartLL = last7.map(d => llByDay[d]);
     const chartRanked = last7.map(d => rankedByDay[d]);
     const chartSignups = last7.map(d => signupsByDay[d]);
     const adRewardsByDay = {};
@@ -692,18 +698,22 @@ async function handleAdminRoute(req, res, url, pathname, method, lobby, wss, mai
         }).join('')}
       </div>`;
     }
-    function stackedBar(tichuVals, skVals, max, label) {
+    function stackedBar(tichuVals, skVals, llVals, max, label) {
       return `<div style="display:flex;align-items:flex-end;gap:6px;height:80px;padding:8px 0">
         ${tichuVals.map((t, i) => {
           const s = skVals[i];
-          const total = t + s;
+          const l = llVals[i];
+          const total = t + s + l;
           const ht = Math.max(t / max * 60, t > 0 ? 2 : 0);
           const hs = Math.max(s / max * 60, s > 0 ? 2 : 0);
+          const hl = Math.max(l / max * 60, l > 0 ? 2 : 0);
+          const hasAbove = s > 0 || l > 0;
           return `<div style="display:flex;flex-direction:column;align-items:center;flex:1;gap:2px">
             <span style="font-size:10px;color:#666">${total}</span>
             <div style="width:100%;max-width:28px;display:flex;flex-direction:column-reverse">
-              ${t > 0 ? `<div style="height:${ht}px;background:#6c63ff;border-radius:${s > 0 ? '0' : '4px 4px'} 0 0;transition:height 0.3s" title="티츄 ${t}"></div>` : ''}
-              ${s > 0 ? `<div style="height:${hs}px;background:#ff7043;border-radius:4px 4px ${t > 0 ? '0 0' : '0 0'};transition:height 0.3s" title="SK ${s}"></div>` : ''}
+              ${t > 0 ? `<div style="height:${ht}px;background:#6c63ff;border-radius:${hasAbove ? '0' : '4px 4px'} 0 0;transition:height 0.3s" title="티츄 ${t}"></div>` : ''}
+              ${s > 0 ? `<div style="height:${hs}px;background:#ff7043;border-radius:${l > 0 ? '0' : '4px 4px'} ${t > 0 ? '0 0' : '0 0'};transition:height 0.3s" title="SK ${s}"></div>` : ''}
+              ${l > 0 ? `<div style="height:${hl}px;background:#E91E63;border-radius:4px 4px ${(t > 0 || s > 0) ? '0 0' : '0 0'};transition:height 0.3s" title="LL ${l}"></div>` : ''}
             </div>
             <span style="font-size:9px;color:#aaa">${label[i]}</span>
           </div>`;
@@ -759,11 +769,12 @@ async function handleAdminRoute(req, res, url, pathname, method, lobby, wss, mai
     let roomsTable = '';
     if (allRooms.length > 0) {
       roomsTable = `<div class="table-wrap"><table>
-        <tr><th>방</th><th>방장</th><th>인원</th><th>상태</th><th>유형</th><th>관전</th></tr>
+        <tr><th>방</th><th>방장</th><th>게임</th><th>인원</th><th>상태</th><th>유형</th><th>관전</th></tr>
         ${allRooms.map(r => `<tr>
           <td><a href="/tc-backstage/rooms/${encodeURIComponent(r.id)}" style="color:#6c63ff;text-decoration:none;font-weight:600">${escapeHtml(r.name)}</a></td>
           <td>${escapeHtml(r.hostName)}</td>
-          <td>${r.playerCount}/4</td>
+          <td>${gameTypeBadge(r.gameType)}</td>
+          <td>${r.playerCount}/${r.maxPlayers}</td>
           <td>${r.gameInProgress
             ? '<span class="badge badge-resolved">게임 중</span>'
             : '<span class="badge badge-pending">대기 중</span>'}</td>
@@ -818,7 +829,7 @@ async function handleAdminRoute(req, res, url, pathname, method, lobby, wss, mai
         <div class="stat-card"><div class="label">전체 유저</div><div class="value">${formatNumber(stats.totalUsers)}</div><div class="kpi-note">오늘 +${formatNumber(stats.newUsersToday)} 가입</div></div>
         <div class="stat-card"><div class="label">활성 (24시간)</div><div class="value">${formatNumber(stats.activeUsers24h)}</div><div class="kpi-note">7일 활성 ${formatNumber(stats.activeUsers7d)}명</div></div>
         <div class="stat-card"><div class="label">총 매치</div><div class="value">${formatNumber(stats.totalMatches)}</div><div class="kpi-note">오늘 게임 ${formatNumber(stats.todayGames)}회</div></div>
-        <div class="stat-card"><div class="label">오늘 게임</div><div class="value green">${formatNumber(stats.todayGames)}</div><div class="kpi-note"><span style="color:#5f62d6">${formatNumber(stats.todayTichuGames)} 티츄</span> · <span style="color:#ff7043">${formatNumber(stats.todaySKGames)} SK</span></div></div>
+        <div class="stat-card"><div class="label">오늘 게임</div><div class="value green">${formatNumber(stats.todayGames)}</div><div class="kpi-note"><span style="color:#5f62d6">${formatNumber(stats.todayTichuGames)} 티츄</span> · <span style="color:#ff7043">${formatNumber(stats.todaySKGames)} SK</span> · <span style="color:#E91E63">${formatNumber(stats.todayLLGames)} LL</span></div></div>
         <div class="stat-card"><div class="label">미처리 문의</div><div class="value orange">${formatNumber(stats.pendingInquiries)}</div><div class="kpi-note">사용자 응답 대기 포함</div></div>
         <div class="stat-card"><div class="label">미처리 신고</div><div class="value red">${formatNumber(stats.pendingReports)}</div><div class="kpi-note">최근 30일 ${formatNumber(reports30d)}건 누적</div></div>
       </div>
@@ -826,10 +837,11 @@ async function handleAdminRoute(req, res, url, pathname, method, lobby, wss, mai
       <div class="grid-2col">
         <div class="card">
           <h3>일별 게임 (7일)</h3>
-          ${stackedBar(chartTichu, chartSK, maxGames, chartLabels)}
+          ${stackedBar(chartTichu, chartSK, chartLL, maxGames, chartLabels)}
           <div style="margin-top:4px;font-size:11px;color:#888">
             <span style="display:inline-block;width:10px;height:10px;background:#6c63ff;border-radius:2px;margin-right:4px"></span>티츄
             <span style="display:inline-block;width:10px;height:10px;background:#ff7043;border-radius:2px;margin:0 4px 0 8px"></span>SK
+            <span style="display:inline-block;width:10px;height:10px;background:#E91E63;border-radius:2px;margin:0 4px 0 8px"></span>LL
           </div>
           <div style="margin-top:8px">
             <h3 style="font-size:14px">일별 랭크</h3>
@@ -947,6 +959,7 @@ async function handleAdminRoute(req, res, url, pathname, method, lobby, wss, mai
       { label: '전체 게임', value: formatNumber(summary.totalGames || 0), meta: `${fromValue} ~ ${toValue} · ${platformLabel}` },
       { label: '티츄', value: formatNumber(summary.tichuGames || 0), valueColor: '#5f62d6', meta: summary.totalGames ? formatPercent((summary.tichuGames || 0) * 100 / summary.totalGames, 1) : '0%' },
       { label: '스컬킹', value: formatNumber(summary.skullGames || 0), valueColor: '#138072', meta: summary.totalGames ? formatPercent((summary.skullGames || 0) * 100 / summary.totalGames, 1) : '0%' },
+      { label: '러브레터', value: formatNumber(summary.llGames || 0), valueColor: '#E91E63', meta: summary.totalGames ? formatPercent((summary.llGames || 0) * 100 / summary.totalGames, 1) : '0%' },
       { label: '랭크전', value: formatNumber(summary.rankedGames || 0), valueColor: '#c67b2b', meta: summary.totalGames ? formatPercent((summary.rankedGames || 0) * 100 / summary.totalGames, 1) : '0%' },
       { label: '가입', value: formatNumber(summary.totalSignups || 0), meta: `iOS ${formatNumber(summary.iosSignups || 0)} · AOS ${formatNumber(summary.androidSignups || 0)}` },
       { label: '획득 골드', value: formatNumber(summary.goldEarned || 0), valueColor: '#2e8b57' },
@@ -958,12 +971,13 @@ async function handleAdminRoute(req, res, url, pathname, method, lobby, wss, mai
 
     const gameTable = gameSeries.length > 0
       ? `<div class="table-wrap"><table>
-          <tr><th>${bucket === 'hour' ? '시간대' : '날짜'}</th><th>전체</th><th>티추</th><th>스컬킹</th><th>랭크전</th></tr>
+          <tr><th>${bucket === 'hour' ? '시간대' : '날짜'}</th><th>전체</th><th>티추</th><th>스컬킹</th><th>러브레터</th><th>랭크전</th></tr>
           ${gameSeries.map(row => `<tr>
             <td>${formatDate(row.bucket_time)}</td>
             <td>${row.total_cnt}</td>
             <td>${row.tichu_cnt}</td>
             <td>${row.skull_cnt}</td>
+            <td>${row.ll_cnt}</td>
             <td>${row.ranked_cnt}</td>
           </tr>`).join('')}
         </table></div>`
@@ -1032,6 +1046,7 @@ async function handleAdminRoute(req, res, url, pathname, method, lobby, wss, mai
     });
     const gameChartTichu = gameSeries.map(r => parseInt(r.tichu_cnt) || 0);
     const gameChartSK = gameSeries.map(r => parseInt(r.skull_cnt) || 0);
+    const gameChartLL = gameSeries.map(r => parseInt(r.ll_cnt) || 0);
     const gameChartRanked = gameSeries.map(r => parseInt(r.ranked_cnt) || 0);
     const gameChartTotal = gameSeries.map(r => parseInt(r.total_cnt) || 0);
 
@@ -1186,6 +1201,13 @@ async function handleAdminRoute(req, res, url, pathname, method, lobby, wss, mai
                 borderSkipped: false,
               },
               {
+                label: '러브레터',
+                data: ${JSON.stringify(gameChartLL)},
+                backgroundColor: 'rgba(233,30,99,0.8)',
+                borderRadius: 4,
+                borderSkipped: false,
+              },
+              {
                 label: '랭크전',
                 data: ${JSON.stringify(gameChartRanked)},
                 type: 'line',
@@ -1222,13 +1244,14 @@ async function handleAdminRoute(req, res, url, pathname, method, lobby, wss, mai
         // Game pie chart
         const totalTichu = ${JSON.stringify(gameChartTichu)}.reduce((a,b) => a+b, 0);
         const totalSK = ${JSON.stringify(gameChartSK)}.reduce((a,b) => a+b, 0);
+        const totalLL = ${JSON.stringify(gameChartLL)}.reduce((a,b) => a+b, 0);
         new Chart(document.getElementById('gamePieChart'), {
           type: 'doughnut',
           data: {
-            labels: ['티츄 (' + totalTichu + ')', '스컬킹 (' + totalSK + ')'],
+            labels: ['티츄 (' + totalTichu + ')', '스컬킹 (' + totalSK + ')', '러브레터 (' + totalLL + ')'],
             datasets: [{
-              data: [totalTichu, totalSK],
-              backgroundColor: ['rgba(108,99,255,0.85)', 'rgba(255,112,67,0.85)'],
+              data: [totalTichu, totalSK, totalLL],
+              backgroundColor: ['rgba(108,99,255,0.85)', 'rgba(255,112,67,0.85)', 'rgba(233,30,99,0.85)'],
               borderWidth: 0,
               hoverOffset: 8,
             }]
@@ -1817,8 +1840,9 @@ async function handleAdminRoute(req, res, url, pathname, method, lobby, wss, mai
           </div>
           <div class="label">레이팅</div><div class="value" style="font-weight:600">${user.rating}</div>
           <div class="label">시즌 레이팅</div><div class="value">${user.season_rating || 1000}</div>
-          <div class="label">게임 수</div><div class="value">${user.total_games}</div>
-          <div class="label">전적</div><div class="value">${user.wins}승 / ${user.losses}패 (${winRate}%)</div>
+          <div class="label">티츄 전적</div><div class="value">${user.total_games}판 · ${user.wins}승 / ${user.losses}패 (${winRate}%)</div>
+          <div class="label">SK 전적</div><div class="value">${user.sk_total_games || 0}판 · ${user.sk_wins || 0}승 / ${user.sk_losses || 0}패 (${user.sk_total_games > 0 ? Math.round((user.sk_wins || 0) / user.sk_total_games * 100) : 0}%)</div>
+          <div class="label">LL 전적</div><div class="value">${user.ll_total_games || 0}판 · ${user.ll_wins || 0}승 / ${user.ll_losses || 0}패 (${user.ll_total_games > 0 ? Math.round((user.ll_wins || 0) / user.ll_total_games * 100) : 0}%)</div>
           <div class="label">이탈 수</div><div class="value" style="color:${(user.leave_count || 0) >= 3 ? '#e53935' : '#333'}">${user.leave_count || 0}</div>
           <div class="label">신고</div><div class="value">${user.report_count}</div>
           <div class="label">문의</div><div class="value">${user.inquiry_count}</div>
@@ -1961,7 +1985,7 @@ async function handleAdminRoute(req, res, url, pathname, method, lobby, wss, mai
               endBadge = '<span class="badge" style="background:#fff8e1;color:#f57f17">시간초과</span>' + (m.deserterNickname ? '<br><span style="font-size:11px;color:#f57f17">' + escapeHtml(m.deserterNickname) + '</span>' : '');
             }
             const rankedBadge = m.isRanked ? '<span class="badge" style="background:#fff3e0;color:#e65100">랭크</span>' : '<span class="badge" style="background:#f5f5f5;color:#999">일반</span>';
-            if (m.gameType === 'skull_king') {
+            if (m.gameType === 'skull_king' || m.gameType === 'love_letter') {
               const playersText = m.players ? m.players.map(p => escapeHtml(p.nickname) + '(' + p.score + '점 #' + p.rank + ')').join(', ') : '-';
               return `<tr>
               <td>${m.id}</td>
@@ -2441,35 +2465,48 @@ async function handleAdminRoute(req, res, url, pathname, method, lobby, wss, mai
     const game = room.game;
 
     // Players table
+    const isTichuGame = room.gameType === 'tichu';
     const playersHtml = roomState.players.map((p, i) => {
-      if (!p) return `<tr><td>슬롯 ${i}</td><td colspan="6" style="color:#999">비어있음</td></tr>`;
-      const teamLabel = (i === 0 || i === 2) ? '<span class="badge" style="background:#e3f2fd;color:#1565c0">Team A</span>' : '<span class="badge" style="background:#fce4ec;color:#c62828">Team B</span>';
+      if (!p) {
+        const colspan = isTichuGame ? 6 : 4;
+        return `<tr><td>슬롯 ${i}</td><td colspan="${colspan}" style="color:#999">비어있음</td></tr>`;
+      }
       const statusBadges = [];
       if (p.isHost) statusBadges.push('<span class="badge badge-resolved">방장</span>');
       if (p.isBot) statusBadges.push('<span class="badge" style="background:#f3e5f5;color:#6a1b9a">봇</span>');
       if (!p.connected) statusBadges.push('<span class="badge badge-pending">연결 끊김</span>');
       if (p.isReady) statusBadges.push('<span class="badge" style="background:#e8f5e9;color:#2e7d32">준비</span>');
 
-      let cardCount = '-';
-      let tichu = '';
-      let finished = '';
-      if (game) {
-        const hand = game.hands[p.id];
-        cardCount = hand ? hand.length : 0;
-        if (game.largeTichuDeclarations.includes(p.id)) tichu = '<span class="badge" style="background:#ffebee;color:#c62828">라지 티츄</span>';
-        else if (game.smallTichuDeclarations.includes(p.id)) tichu = '<span class="badge" style="background:#fff3e0;color:#e65100">스몰 티츄</span>';
-        const finishPos = game.finishOrder.indexOf(p.id);
-        if (finishPos !== -1) finished = `<span class="badge badge-resolved">${finishPos + 1}${['st','nd','rd','th'][finishPos] || 'th'}</span>`;
+      if (isTichuGame) {
+        const teamLabel = (i === 0 || i === 2) ? '<span class="badge" style="background:#e3f2fd;color:#1565c0">Team A</span>' : '<span class="badge" style="background:#fce4ec;color:#c62828">Team B</span>';
+        let cardCount = '-';
+        let tichu = '';
+        let finished = '';
+        if (game) {
+          const hand = game.hands[p.id];
+          cardCount = hand ? hand.length : 0;
+          if (game.largeTichuDeclarations.includes(p.id)) tichu = '<span class="badge" style="background:#ffebee;color:#c62828">라지 티츄</span>';
+          else if (game.smallTichuDeclarations.includes(p.id)) tichu = '<span class="badge" style="background:#fff3e0;color:#e65100">스몰 티츄</span>';
+          const finishPos = game.finishOrder.indexOf(p.id);
+          if (finishPos !== -1) finished = `<span class="badge badge-resolved">${finishPos + 1}${['st','nd','rd','th'][finishPos] || 'th'}</span>`;
+        }
+        return `<tr>
+          <td>슬롯 ${i}</td>
+          <td style="font-weight:600">${escapeHtml(p.name)}</td>
+          <td>${teamLabel}</td>
+          <td>${statusBadges.join(' ')}</td>
+          <td style="font-weight:700;font-size:16px">${cardCount}</td>
+          <td>${tichu || '-'}</td>
+          <td>${finished || '-'}</td>
+        </tr>`;
       }
-
+      // SK / Love Letter
       return `<tr>
         <td>슬롯 ${i}</td>
         <td style="font-weight:600">${escapeHtml(p.name)}</td>
-        <td>${teamLabel}</td>
         <td>${statusBadges.join(' ')}</td>
-        <td style="font-weight:700;font-size:16px">${cardCount}</td>
-        <td>${tichu || '-'}</td>
-        <td>${finished || '-'}</td>
+        <td>-</td>
+        <td>-</td>
       </tr>`;
     }).join('');
 
@@ -2651,6 +2688,7 @@ async function handleAdminRoute(req, res, url, pathname, method, lobby, wss, mai
           <div class="label">방 ID</div><div class="value"><code>${escapeHtml(roomId)}</code></div>
           <div class="label">방 이름</div><div class="value" style="font-weight:600">${escapeHtml(roomState.name)}</div>
           <div class="label">방장</div><div class="value">${escapeHtml(roomState.players.find(p => p && p.isHost)?.name || '-')}</div>
+          <div class="label">게임</div><div class="value">${gameTypeBadge(room.gameType)}</div>
           <div class="label">유형</div><div class="value">${roomState.isRanked ? '<span class="badge" style="background:#fff3e0;color:#e65100">랭크</span>' : '일반'}${roomState.isPrivate ? ' <span class="badge" style="background:#ffebee;color:#c62828">비공개</span>' : ''}</div>
           <div class="label">턴 제한</div><div class="value">${roomState.turnTimeLimit}초</div>
           <div class="label">관전자</div><div class="value">${specHtml}</div>
@@ -2660,7 +2698,9 @@ async function handleAdminRoute(req, res, url, pathname, method, lobby, wss, mai
       <div class="card">
         <h3>플레이어</h3>
         <div class="table-wrap"><table>
-          <tr><th>슬롯</th><th>이름</th><th>팀</th><th>상태</th><th>카드</th><th>티츄</th><th>완료</th></tr>
+          ${isTichuGame
+            ? '<tr><th>슬롯</th><th>이름</th><th>팀</th><th>상태</th><th>카드</th><th>티츄</th><th>완료</th></tr>'
+            : '<tr><th>슬롯</th><th>이름</th><th>상태</th><th>카드</th><th>완료</th></tr>'}
           ${playersHtml}
         </table></div>
       </div>

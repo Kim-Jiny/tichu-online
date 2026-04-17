@@ -2917,7 +2917,8 @@ async function getUserDetail(nickname) {
   try {
     const userResult = await client.query(
       `SELECT id, username, nickname, total_games, wins, losses, rating, created_at, last_login, chat_ban_until, leave_count, gold, level, season_rating, admin_memo,
-              fcm_token, push_enabled, push_admin_inquiry, push_admin_report, is_admin, is_deleted, deleted_at, device_platform, device_model, os_version, app_version, last_ip, locale
+              fcm_token, push_enabled, push_admin_inquiry, push_admin_report, is_admin, is_deleted, deleted_at, device_platform, device_model, os_version, app_version, last_ip, locale,
+              sk_total_games, sk_wins, sk_losses, ll_total_games, ll_wins, ll_losses
        FROM tc_users WHERE nickname = $1`,
       [nickname]
     );
@@ -2964,7 +2965,8 @@ async function getDashboardStats() {
     const todayGames = await client.query(`
       SELECT
         (SELECT COUNT(*) FROM tc_match_history WHERE created_at >= CURRENT_DATE) as tichu,
-        (SELECT COUNT(*) FROM tc_sk_match_history WHERE created_at >= CURRENT_DATE) as sk
+        (SELECT COUNT(*) FROM tc_sk_match_history WHERE created_at >= CURRENT_DATE) as sk,
+        (SELECT COUNT(*) FROM tc_ll_match_history WHERE created_at >= CURRENT_DATE) as ll
     `);
     const recentMatches = await client.query(`
       (SELECT id, 'tichu'::text as game_type, winner_team, team_a_score, team_b_score,
@@ -2976,6 +2978,12 @@ async function getDashboardStats() {
         h.player_count::text as player_a2, NULL as player_b1, NULL as player_b2,
         h.is_ranked, h.end_reason, h.deserter_nickname, h.created_at
        FROM tc_sk_match_history h ORDER BY h.created_at DESC LIMIT 10)
+      UNION ALL
+      (SELECT h.id, 'love_letter'::text as game_type, NULL as winner_team, NULL::int as team_a_score, NULL::int as team_b_score,
+        (SELECT string_agg(p.nickname || '(' || p.score || '점)', ', ' ORDER BY p.rank) FROM tc_ll_match_players p WHERE p.match_id = h.id) as player_a1,
+        h.player_count::text as player_a2, NULL as player_b1, NULL as player_b2,
+        h.is_ranked, h.end_reason, h.deserter_nickname, h.created_at
+       FROM tc_ll_match_history h ORDER BY h.created_at DESC LIMIT 10)
       ORDER BY created_at DESC LIMIT 10
     `);
 
@@ -2994,26 +3002,33 @@ async function getDashboardStats() {
 
     // Total matches + ranked matches (tichu + skull king)
     const totalMatches = await client.query(
-      `SELECT (SELECT COUNT(*) FROM tc_match_history) + (SELECT COUNT(*) FROM tc_sk_match_history) as count`
+      `SELECT (SELECT COUNT(*) FROM tc_match_history) + (SELECT COUNT(*) FROM tc_sk_match_history) + (SELECT COUNT(*) FROM tc_ll_match_history) as count`
     );
     const rankedMatchesToday = await client.query(
-      `SELECT (SELECT COUNT(*) FROM tc_match_history WHERE created_at >= CURRENT_DATE AND is_ranked = true) + (SELECT COUNT(*) FROM tc_sk_match_history WHERE created_at >= CURRENT_DATE AND is_ranked = true) as count`
+      `SELECT (SELECT COUNT(*) FROM tc_match_history WHERE created_at >= CURRENT_DATE AND is_ranked = true) + (SELECT COUNT(*) FROM tc_sk_match_history WHERE created_at >= CURRENT_DATE AND is_ranked = true) + (SELECT COUNT(*) FROM tc_ll_match_history WHERE created_at >= CURRENT_DATE AND is_ranked = true) as count`
     );
 
     // Games per day (last 7 days) - tichu + skull king combined
     const dailyGames = await client.query(`
-      SELECT day, SUM(cnt) as cnt, SUM(ranked_cnt) as ranked_cnt, SUM(tichu_cnt) as tichu_cnt, SUM(sk_cnt) as sk_cnt FROM (
+      SELECT day, SUM(cnt) as cnt, SUM(ranked_cnt) as ranked_cnt, SUM(tichu_cnt) as tichu_cnt, SUM(sk_cnt) as sk_cnt, SUM(ll_cnt) as ll_cnt FROM (
         SELECT DATE(created_at) as day, COUNT(*) as cnt,
                SUM(CASE WHEN is_ranked THEN 1 ELSE 0 END) as ranked_cnt,
-               COUNT(*) as tichu_cnt, 0::bigint as sk_cnt
+               COUNT(*) as tichu_cnt, 0::bigint as sk_cnt, 0::bigint as ll_cnt
         FROM tc_match_history
         WHERE created_at >= CURRENT_DATE - INTERVAL '6 days'
         GROUP BY DATE(created_at)
         UNION ALL
         SELECT DATE(created_at) as day, COUNT(*) as cnt,
                SUM(CASE WHEN is_ranked THEN 1 ELSE 0 END) as ranked_cnt,
-               0::bigint as tichu_cnt, COUNT(*) as sk_cnt
+               0::bigint as tichu_cnt, COUNT(*) as sk_cnt, 0::bigint as ll_cnt
         FROM tc_sk_match_history
+        WHERE created_at >= CURRENT_DATE - INTERVAL '6 days'
+        GROUP BY DATE(created_at)
+        UNION ALL
+        SELECT DATE(created_at) as day, COUNT(*) as cnt,
+               SUM(CASE WHEN is_ranked THEN 1 ELSE 0 END) as ranked_cnt,
+               0::bigint as tichu_cnt, 0::bigint as sk_cnt, COUNT(*) as ll_cnt
+        FROM tc_ll_match_history
         WHERE created_at >= CURRENT_DATE - INTERVAL '6 days'
         GROUP BY DATE(created_at)
       ) combined GROUP BY day ORDER BY day
@@ -3083,9 +3098,10 @@ async function getDashboardStats() {
       totalUsers: parseInt(totalUsers.rows[0].count),
       pendingInquiries: parseInt(pendingInquiries.rows[0].count),
       pendingReports: parseInt(pendingReports.rows[0].count),
-      todayGames: parseInt(todayGames.rows[0].tichu) + parseInt(todayGames.rows[0].sk),
+      todayGames: parseInt(todayGames.rows[0].tichu) + parseInt(todayGames.rows[0].sk) + parseInt(todayGames.rows[0].ll),
       todayTichuGames: parseInt(todayGames.rows[0].tichu),
       todaySKGames: parseInt(todayGames.rows[0].sk),
+      todayLLGames: parseInt(todayGames.rows[0].ll),
       recentMatches: recentMatches.rows,
       newUsersToday: parseInt(newUsersToday.rows[0].count),
       activeUsers24h: parseInt(activeUsers24h.rows[0].count),
@@ -3105,7 +3121,7 @@ async function getDashboardStats() {
   } catch (err) {
     console.error('Get dashboard stats error:', err);
     return {
-      totalUsers: 0, pendingInquiries: 0, pendingReports: 0, todayGames: 0, todayTichuGames: 0, todaySKGames: 0,
+      totalUsers: 0, pendingInquiries: 0, pendingReports: 0, todayGames: 0, todayTichuGames: 0, todaySKGames: 0, todayLLGames: 0,
       recentMatches: [], newUsersToday: 0, activeUsers24h: 0, activeUsers7d: 0,
       totalMatches: 0, rankedMatchesToday: 0, dailyGames: [], dailySignups: [],
       topPlayers: [], goldStats: {}, shopStats: {}, leaveStats: {}, reportStats30d: {},
@@ -3126,7 +3142,8 @@ async function getAdminRecentMatches(page = 1, limit = 30) {
     const countResult = await client.query(
       `SELECT
          (SELECT COUNT(*) FROM tc_match_history) +
-         (SELECT COUNT(*) FROM tc_sk_match_history) AS total`
+         (SELECT COUNT(*) FROM tc_sk_match_history) +
+         (SELECT COUNT(*) FROM tc_ll_match_history) AS total`
     );
 
     const result = await client.query(
@@ -3141,6 +3158,12 @@ async function getAdminRecentMatches(page = 1, limit = 30) {
                h.player_count::text AS player_a2, NULL AS player_b1, NULL AS player_b2,
                h.is_ranked, h.end_reason, h.deserter_nickname, h.created_at
         FROM tc_sk_match_history h
+        UNION ALL
+        SELECT h.id, 'love_letter'::text AS game_type, NULL AS winner_team, NULL::int AS team_a_score, NULL::int AS team_b_score,
+               (SELECT string_agg(p.nickname || '(' || p.score || '점)', ', ' ORDER BY p.rank) FROM tc_ll_match_players p WHERE p.match_id = h.id) AS player_a1,
+               h.player_count::text AS player_a2, NULL AS player_b1, NULL AS player_b2,
+               h.is_ranked, h.end_reason, h.deserter_nickname, h.created_at
+        FROM tc_ll_match_history h
       ) matches
       ORDER BY created_at DESC
       LIMIT $1 OFFSET $2`,
@@ -3205,19 +3228,41 @@ async function getDetailedAdminStats(dateFrom, dateTo, bucket = 'day', options =
           )
         GROUP BY 1
       ),
+      love AS (
+        SELECT DATE_TRUNC('${groupUnit}', h.created_at) AS bucket_time,
+               COUNT(DISTINCT h.id) AS total_cnt,
+               COUNT(DISTINCT h.id) FILTER (WHERE h.is_ranked = TRUE) AS ranked_cnt
+        FROM tc_ll_match_history h
+        WHERE h.created_at >= $1 AND h.created_at < $2
+          AND (
+            $3 = '' OR EXISTS (
+              SELECT 1
+              FROM tc_ll_match_players p
+              JOIN tc_users u ON u.nickname = p.nickname
+              WHERE p.match_id = h.id
+                AND p.is_bot = FALSE
+                AND LOWER(u.device_platform) = $3
+            )
+          )
+        GROUP BY 1
+      ),
       buckets AS (
         SELECT bucket_time FROM tichu
         UNION
         SELECT bucket_time FROM skull
+        UNION
+        SELECT bucket_time FROM love
       )
       SELECT b.bucket_time,
              COALESCE(tichu.total_cnt, 0) AS tichu_cnt,
              COALESCE(skull.total_cnt, 0) AS skull_cnt,
-             COALESCE(tichu.total_cnt, 0) + COALESCE(skull.total_cnt, 0) AS total_cnt,
-             COALESCE(tichu.ranked_cnt, 0) + COALESCE(skull.ranked_cnt, 0) AS ranked_cnt
+             COALESCE(love.total_cnt, 0) AS ll_cnt,
+             COALESCE(tichu.total_cnt, 0) + COALESCE(skull.total_cnt, 0) + COALESCE(love.total_cnt, 0) AS total_cnt,
+             COALESCE(tichu.ranked_cnt, 0) + COALESCE(skull.ranked_cnt, 0) + COALESCE(love.ranked_cnt, 0) AS ranked_cnt
       FROM buckets b
       LEFT JOIN tichu ON tichu.bucket_time = b.bucket_time
       LEFT JOIN skull ON skull.bucket_time = b.bucket_time
+      LEFT JOIN love ON love.bucket_time = b.bucket_time
       ORDER BY b.bucket_time ASC
     `, [from, to, platform]);
 
@@ -3259,6 +3304,24 @@ async function getDetailedAdminStats(dateFrom, dateTo, bucket = 'day', options =
                END AS gold_delta
         FROM tc_sk_match_history h
         JOIN tc_sk_match_players p ON p.match_id = h.id
+        WHERE h.created_at >= $1 AND h.created_at < $2
+          AND p.is_bot = FALSE
+          AND EXISTS (
+            SELECT 1 FROM tc_users u
+            WHERE u.nickname = p.nickname
+              AND ($3 = '' OR LOWER(u.device_platform) = $3)
+          )
+
+        UNION ALL
+
+        SELECT DATE_TRUNC('${groupUnit}', h.created_at) AS bucket_time,
+               CASE
+                 WHEN h.end_reason IN ('leave', 'timeout') AND h.deserter_nickname = p.nickname THEN 0
+                 WHEN p.is_winner THEN CASE WHEN h.is_ranked THEN 20 ELSE 10 END
+                 ELSE CASE WHEN h.is_ranked THEN 6 ELSE 3 END
+               END AS gold_delta
+        FROM tc_ll_match_history h
+        JOIN tc_ll_match_players p ON p.match_id = h.id
         WHERE h.created_at >= $1 AND h.created_at < $2
           AND p.is_bot = FALSE
           AND EXISTS (
@@ -3387,6 +3450,21 @@ async function getDetailedAdminStats(dateFrom, dateTo, bucket = 'day', options =
         ) AS skull_games,
         (
           SELECT COUNT(*)
+          FROM tc_ll_match_history h
+          WHERE h.created_at >= $1 AND h.created_at < $2
+            AND (
+              $3 = '' OR EXISTS (
+                SELECT 1
+                FROM tc_ll_match_players p
+                JOIN tc_users u ON u.nickname = p.nickname
+                WHERE p.match_id = h.id
+                  AND p.is_bot = FALSE
+                  AND LOWER(u.device_platform) = $3
+              )
+            )
+        ) AS ll_games,
+        (
+          SELECT COUNT(*)
           FROM tc_match_history mh
           WHERE mh.created_at >= $1 AND mh.created_at < $2
             AND mh.is_ranked = TRUE
@@ -3407,6 +3485,22 @@ async function getDetailedAdminStats(dateFrom, dateTo, bucket = 'day', options =
               $3 = '' OR EXISTS (
                 SELECT 1
                 FROM tc_sk_match_players p
+                JOIN tc_users u ON u.nickname = p.nickname
+                WHERE p.match_id = h.id
+                  AND p.is_bot = FALSE
+                  AND LOWER(u.device_platform) = $3
+              )
+            )
+        ) +
+        (
+          SELECT COUNT(*)
+          FROM tc_ll_match_history h
+          WHERE h.created_at >= $1 AND h.created_at < $2
+            AND h.is_ranked = TRUE
+            AND (
+              $3 = '' OR EXISTS (
+                SELECT 1
+                FROM tc_ll_match_players p
                 JOIN tc_users u ON u.nickname = p.nickname
                 WHERE p.match_id = h.id
                   AND p.is_bot = FALSE
@@ -3476,6 +3570,23 @@ async function getDetailedAdminStats(dateFrom, dateTo, bucket = 'day', options =
 
         UNION ALL
 
+        SELECT CASE
+                 WHEN h.end_reason IN ('leave', 'timeout') AND h.deserter_nickname = p.nickname THEN 0
+                 WHEN p.is_winner THEN CASE WHEN h.is_ranked THEN 20 ELSE 10 END
+                 ELSE CASE WHEN h.is_ranked THEN 6 ELSE 3 END
+               END AS gold_delta
+        FROM tc_ll_match_history h
+        JOIN tc_ll_match_players p ON p.match_id = h.id
+        WHERE h.created_at >= $1 AND h.created_at < $2
+          AND p.is_bot = FALSE
+          AND EXISTS (
+            SELECT 1 FROM tc_users u
+            WHERE u.nickname = p.nickname
+              AND ($3 = '' OR LOWER(u.device_platform) = $3)
+          )
+
+        UNION ALL
+
         SELECT 50 AS gold_delta
         FROM tc_ad_rewards ar
         JOIN tc_users u ON u.nickname = ar.nickname
@@ -3528,9 +3639,10 @@ async function getDetailedAdminStats(dateFrom, dateTo, bucket = 'day', options =
     return {
       success: true,
       summary: {
-        totalGames: (parseInt(summaryRow.tichu_games || 0, 10) + parseInt(summaryRow.skull_games || 0, 10)),
+        totalGames: (parseInt(summaryRow.tichu_games || 0, 10) + parseInt(summaryRow.skull_games || 0, 10) + parseInt(summaryRow.ll_games || 0, 10)),
         tichuGames: parseInt(summaryRow.tichu_games || 0, 10),
         skullGames: parseInt(summaryRow.skull_games || 0, 10),
+        llGames: parseInt(summaryRow.ll_games || 0, 10),
         rankedGames: parseInt(summaryRow.ranked_games || 0, 10),
         totalSignups: parseInt(signupRow.total_signups || 0, 10),
         iosSignups: parseInt(signupRow.ios_signups || 0, 10),

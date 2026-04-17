@@ -3976,6 +3976,53 @@ async function handleGetWallet(ws) {
   sendTo(ws, { type: 'wallet_result', ...result });
 }
 
+// Translate gold history title keys to localized text
+const goldTitleKeys = {
+  ko: {
+    leave_defeat: '탈주 패배', ranked_win: '랭크 승리', casual_win: '일반 승리',
+    draw: '무승부', ranked_loss: '랭크 패배', casual_loss: '일반 패배',
+    ad_reward: '광고 보상', season_reward: '시즌 보상',
+    sk_leave_defeat: '스컬킹 탈주 패배', sk_ranked_win: '스컬킹 랭크 승리',
+    sk_casual_win: '스컬킹 일반 승리', sk_ranked_loss: '스컬킹 랭크 패배',
+    sk_casual_loss: '스컬킹 일반 패배',
+    ll_leave_defeat: '러브레터 탈주 패배', ll_win: '러브레터 승리', ll_loss: '러브레터 패배',
+    admin_grant: '관리자 지급', admin_deduct: '관리자 차감',
+  },
+  en: {
+    leave_defeat: 'Desertion', ranked_win: 'Ranked Win', casual_win: 'Casual Win',
+    draw: 'Draw', ranked_loss: 'Ranked Loss', casual_loss: 'Casual Loss',
+    ad_reward: 'Ad Reward', season_reward: 'Season Reward',
+    sk_leave_defeat: 'SK Desertion', sk_ranked_win: 'SK Ranked Win',
+    sk_casual_win: 'SK Casual Win', sk_ranked_loss: 'SK Ranked Loss',
+    sk_casual_loss: 'SK Casual Loss',
+    ll_leave_defeat: 'LL Desertion', ll_win: 'LL Win', ll_loss: 'LL Loss',
+    admin_grant: 'Admin Grant', admin_deduct: 'Admin Deduct',
+  },
+  de: {
+    leave_defeat: 'Verlassen', ranked_win: 'Rang-Sieg', casual_win: 'Sieg',
+    draw: 'Unentschieden', ranked_loss: 'Rang-Niederlage', casual_loss: 'Niederlage',
+    ad_reward: 'Werbebelohnung', season_reward: 'Saisonbelohnung',
+    sk_leave_defeat: 'SK Verlassen', sk_ranked_win: 'SK Rang-Sieg',
+    sk_casual_win: 'SK Sieg', sk_ranked_loss: 'SK Rang-Niederlage',
+    sk_casual_loss: 'SK Niederlage',
+    ll_leave_defeat: 'LL Verlassen', ll_win: 'LL Sieg', ll_loss: 'LL Niederlage',
+    admin_grant: 'Admin-Gutschrift', admin_deduct: 'Admin-Abzug',
+  },
+};
+
+function translateGoldRow(row, locale) {
+  const map = goldTitleKeys[locale] || goldTitleKeys.ko;
+  let title = row.title;
+  // Shop purchase title: "name_ko|name_en|name_de" → pick by locale
+  if (row.source === 'shop_purchase' && title && title.includes('|')) {
+    const parts = title.split('|');
+    title = locale === 'de' ? (parts[2] || parts[0]) : locale === 'en' ? (parts[1] || parts[0]) : parts[0];
+  } else if (map[title]) {
+    title = map[title];
+  }
+  return { ...row, title };
+}
+
 async function handleGetGoldHistory(ws, data) {
   if (!ws.nickname) {
     sendTo(ws, { type: 'gold_history_result', success: false, message: t(ws.locale, 'login_required') });
@@ -3986,6 +4033,10 @@ async function handleGetGoldHistory(ws, data) {
       ? Math.min(rawLimit, 50)
       : 30;
   const result = await getGoldHistory(ws.nickname, limit);
+  if (result.success && result.history) {
+    const locale = ws.locale || 'ko';
+    result.history = result.history.map(row => translateGoldRow(row, locale));
+  }
   sendTo(ws, { type: 'gold_history_result', ...result });
 }
 

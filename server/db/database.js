@@ -1784,7 +1784,7 @@ async function getShopItems() {
   try {
     const result = await client.query(
       `
-      SELECT item_key, name_ko, name_en, name_de, category, price, is_season, is_permanent,
+      SELECT item_key, name_ko, name_ko AS name, name_en, name_de, category, price, is_season, is_permanent,
              duration_days, is_purchasable, effect_type, effect_value, metadata
       FROM tc_shop_items
       WHERE is_purchasable = TRUE AND is_season = FALSE
@@ -1820,7 +1820,7 @@ async function getUserItems(nickname) {
     const result = await client.query(
       `
       SELECT ui.item_key, ui.acquired_at, ui.expires_at, ui.is_active,
-             si.name_ko, si.name_en, si.name_de, si.category, si.is_season, si.is_permanent,
+             si.name_ko, si.name_ko AS name, si.name_en, si.name_de, si.category, si.is_season, si.is_permanent,
              si.duration_days, si.effect_type, si.effect_value, si.metadata
       FROM tc_user_items ui
       JOIN tc_shop_items si ON si.item_key = ui.item_key

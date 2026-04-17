@@ -652,7 +652,6 @@ class _ProfileContentState extends State<_ProfileContent> {
     final skSeasonWinRate = profile['skSeasonWinRate'] ?? 0;
     final level = profile['level'] ?? 1;
     final expTotal = profile['expTotal'] ?? 0;
-    final gold = profile['gold'] ?? 0;
     final leaveCount = profile['leaveCount'] ?? 0;
     final bannerKey = profile['bannerKey']?.toString();
     final recentMatches = data['recentMatches'] as List<dynamic>? ?? [];
@@ -695,7 +694,11 @@ class _ProfileContentState extends State<_ProfileContent> {
           bannerKey: bannerKey,
         ),
         const SizedBox(height: 8),
-        _ProfileMiniStatRow(gold: gold, leaveCount: leaveCount),
+        _ProfileMiniStatRow(
+          leaveCount: leaveCount,
+          reportCount: profile['reportCount'] ?? 0,
+          totalGames: totalGames + skTotalGames + (profile['llTotalGames'] ?? 0),
+        ),
         const SizedBox(height: 10),
         // Game selector button
         InkWell(
@@ -1357,13 +1360,43 @@ String _formatTeam(dynamic p1, dynamic p2) {
 }
 
 class _ProfileMiniStatRow extends StatelessWidget {
-  const _ProfileMiniStatRow({required this.gold, required this.leaveCount});
+  const _ProfileMiniStatRow({
+    required this.leaveCount,
+    required this.reportCount,
+    required this.totalGames,
+  });
 
-  final int gold;
   final int leaveCount;
+  final int reportCount;
+  final int totalGames;
+
+  int _calcMannerScore() {
+    // Base 100, deduct for leaves and reports, floor at 0
+    int score = 100;
+    score -= leaveCount * 5;
+    score -= reportCount * 3;
+    // Bonus for many games played without issues
+    if (totalGames >= 50 && leaveCount <= 1 && reportCount == 0) score += 5;
+    return score.clamp(0, 100);
+  }
 
   @override
   Widget build(BuildContext context) {
+    final l10n = L10n.of(context);
+    final manner = _calcMannerScore();
+    final Color mannerColor;
+    final IconData mannerIcon;
+    if (manner >= 80) {
+      mannerColor = const Color(0xFF4CAF50);
+      mannerIcon = Icons.sentiment_very_satisfied;
+    } else if (manner >= 50) {
+      mannerColor = const Color(0xFFFF9800);
+      mannerIcon = Icons.sentiment_neutral;
+    } else {
+      mannerColor = const Color(0xFFE53935);
+      mannerIcon = Icons.sentiment_very_dissatisfied;
+    }
+
     return Row(
       children: [
         Expanded(
@@ -1377,14 +1410,14 @@ class _ProfileMiniStatRow extends StatelessWidget {
             child: Row(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                const Icon(Icons.monetization_on, color: Color(0xFFFFB74D), size: 16),
+                Icon(mannerIcon, color: mannerColor, size: 16),
                 const SizedBox(width: 6),
                 Text(
-                  L10n.of(context).rankingGold(gold),
-                  style: const TextStyle(
+                  '${l10n.rankingMannerScore} $manner',
+                  style: TextStyle(
                     fontSize: 12,
                     fontWeight: FontWeight.bold,
-                    color: Color(0xFF5A4038),
+                    color: mannerColor,
                   ),
                 ),
               ],
@@ -1407,7 +1440,7 @@ class _ProfileMiniStatRow extends StatelessWidget {
                     color: Color(0xFFE57373), size: 16),
                 const SizedBox(width: 6),
                 Text(
-                  L10n.of(context).rankingDesertions(leaveCount),
+                  l10n.rankingDesertions(leaveCount),
                   style: const TextStyle(
                     fontSize: 12,
                     fontWeight: FontWeight.bold,

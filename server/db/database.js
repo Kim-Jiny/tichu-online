@@ -192,12 +192,13 @@ async function initDatabase() {
     await client.query(`ALTER TABLE tc_shop_items ADD COLUMN IF NOT EXISTS name_ko VARCHAR(100) NOT NULL DEFAULT ''`);
     await client.query(`ALTER TABLE tc_shop_items ADD COLUMN IF NOT EXISTS name_en VARCHAR(100) NOT NULL DEFAULT ''`);
     await client.query(`ALTER TABLE tc_shop_items ADD COLUMN IF NOT EXISTS name_de VARCHAR(100) NOT NULL DEFAULT ''`);
+    // Restore 'name' column if it was previously renamed away (rollback safety)
+    await client.query(`ALTER TABLE tc_shop_items ADD COLUMN IF NOT EXISTS name VARCHAR(100) NOT NULL DEFAULT ''`);
     // Copy name → name_ko for existing rows where name_ko is empty
     await client.query(`
       DO $body$ BEGIN
-        IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'tc_shop_items' AND column_name = 'name') THEN
-          UPDATE tc_shop_items SET name_ko = name WHERE name_ko = '' AND name IS NOT NULL AND name <> '';
-        END IF;
+        UPDATE tc_shop_items SET name_ko = name WHERE name_ko = '' AND name IS NOT NULL AND name <> '';
+        UPDATE tc_shop_items SET name = name_ko WHERE (name IS NULL OR name = '') AND name_ko <> '';
       END $body$
     `);
 

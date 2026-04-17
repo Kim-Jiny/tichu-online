@@ -29,6 +29,7 @@ class GameService extends ChangeNotifier {
   Map<String, dynamic>? _pendingGameState;
   GameStateData? _prevGameState;
   SKGameStateData? _prevSKGameState;
+  LLGameStateData? _prevLLGameState;
   final SfxService _sfx = SfxService();
   final RestoreSyncTracker _restoreSync = RestoreSyncTracker();
 
@@ -501,6 +502,7 @@ class GameService extends ChangeNotifier {
         _prevGameState = null;
         skGameState = null;
         _prevSKGameState = null;
+        _prevLLGameState = null;
         llGameState = null;
         spectatorGameState = null;
         pendingCardViewRequests = {};
@@ -515,6 +517,7 @@ class GameService extends ChangeNotifier {
         spectatorGameState = null;
         skGameState = null;
         _prevSKGameState = null;
+        _prevLLGameState = null;
         llGameState = null;
         pendingCardViewRequests = {};
         approvedCardViews = {};
@@ -549,6 +552,7 @@ class GameService extends ChangeNotifier {
             skGameState = null;
             _prevGameState = null;
             _prevSKGameState = null;
+            _prevLLGameState = null;
           } else {
             spectatorGameState = state;
             skGameState = null;
@@ -640,6 +644,7 @@ class GameService extends ChangeNotifier {
         _prevGameState = null;
         skGameState = null;
         _prevSKGameState = null;
+        _prevLLGameState = null;
         llGameState = null;
         currentGameType = 'tichu';
         roomMaxPlayers = 4;
@@ -683,6 +688,7 @@ class GameService extends ChangeNotifier {
         _prevGameState = null;
         skGameState = null;
         _prevSKGameState = null;
+        _prevLLGameState = null;
         llGameState = null;
         currentGameType = 'tichu';
         chatMessages = [];
@@ -748,6 +754,7 @@ class GameService extends ChangeNotifier {
             spectatorGameState = null;
             _prevGameState = null;
             _prevSKGameState = null;
+            _prevLLGameState = null;
             myTimeoutCount = 0;
           }
         }
@@ -770,6 +777,7 @@ class GameService extends ChangeNotifier {
             gameState = null;
             llGameState = null;
             _prevGameState = null;
+            _prevLLGameState = null;
             // Clear desertion state when SK phase is not game_end
             if (nextSK.phase != 'game_end') {
               desertedPlayerName = null;
@@ -812,6 +820,8 @@ class GameService extends ChangeNotifier {
             // Love Letter game state
             currentGameType = 'love_letter';
             final nextLL = LLGameStateData.fromJson(state);
+            _handleLLSfxTransitions(_prevLLGameState, nextLL);
+            _prevLLGameState = nextLL;
             llGameState = nextLL;
             gameState = null;
             skGameState = null;
@@ -860,6 +870,8 @@ class GameService extends ChangeNotifier {
             _handleSfxTransitions(_prevGameState, nextState);
             _prevGameState = nextState;
             skGameState = null;
+            _prevSKGameState = null;
+            _prevLLGameState = null;
 
             // Clear desertion state when a new round/game starts
             final phase = state['phase'] as String? ?? '';
@@ -1745,6 +1757,44 @@ class GameService extends ChangeNotifier {
     }
   }
 
+  void _handleLLSfxTransitions(LLGameStateData? prev, LLGameStateData next) {
+    if (prev == null) {
+      if (next.isMyTurn) {
+        _sfx.play('my_turn');
+      }
+      return;
+    }
+
+    // Card played: discard pile grew for any player
+    final prevDiscardTotal = prev.players.fold<int>(0, (s, p) => s + p.discardPile.length);
+    final nextDiscardTotal = next.players.fold<int>(0, (s, p) => s + p.discardPile.length);
+    if (nextDiscardTotal > prevDiscardTotal) {
+      _sfx.play('card');
+    }
+
+    // My turn
+    if (!prev.isMyTurn && next.isMyTurn) {
+      _sfx.play('my_turn');
+    }
+
+    // Phase transitions
+    if (prev.phase != next.phase) {
+      if (next.phase == 'round_end') {
+        _sfx.play('round_end');
+      } else if (next.phase == 'game_end') {
+        // Check if self won (has most tokens)
+        final self = next.players.where((p) => p.position == 'self');
+        if (self.isNotEmpty) {
+          final myTokens = self.first.tokens;
+          final maxTokens = next.players
+              .map((p) => p.tokens)
+              .reduce((a, b) => a > b ? a : b);
+          _sfx.play(myTokens >= maxTokens ? 'victory' : 'defeat');
+        }
+      }
+    }
+  }
+
   Future<void> _loadSfxPrefs() async {
     try {
       final prefs = await SharedPreferences.getInstance();
@@ -1895,6 +1945,7 @@ class GameService extends ChangeNotifier {
     _pendingGameState = null;
     _prevGameState = null;
     _prevSKGameState = null;
+    _prevLLGameState = null;
     playerId = '';
     playerName = '';
     equippedTheme = null;
@@ -2031,6 +2082,7 @@ class GameService extends ChangeNotifier {
     spectatorGameState = null;
     _prevGameState = null;
     _prevSKGameState = null;
+    _prevLLGameState = null;
     currentGameType = 'tichu';
     myTimeoutCount = 0;
   }
@@ -2304,6 +2356,7 @@ class GameService extends ChangeNotifier {
     _prevGameState = null;
     skGameState = null;
     _prevSKGameState = null;
+    _prevLLGameState = null;
     llGameState = null;
     spectatorGameState = null;
     pendingCardViewRequests = {};
@@ -2475,6 +2528,7 @@ class GameService extends ChangeNotifier {
     gameState = null;
     _prevGameState = null;
     _prevSKGameState = null;
+    _prevLLGameState = null;
     errorMessage = 'room_restore_fallback';
     notifyListeners();
   }

@@ -4010,7 +4010,14 @@ const goldTitleKeys = {
   },
 };
 
-function translateGoldRow(row, locale) {
+// Description translations for old clients that don't parse raw format
+const goldDescKeys = {
+  ko: { match: (a, b) => `최종 점수 ${a} : ${b}`, sk_match: (r, s) => `순위 ${r}위 / 점수 ${s}`, ll_match: (r, s) => `순위 ${r}위 / 점수 ${s}`, season_reward: (r) => `시즌 ${r}위 보상`, ad_reward: () => '광고 시청 보상', shop_purchase: () => '상점 구매' },
+  en: { match: (a, b) => `Final Score ${a} : ${b}`, sk_match: (r, s) => `Rank #${r} / Score ${s}`, ll_match: (r, s) => `Rank #${r} / Score ${s}`, season_reward: (r) => `Season Rank #${r}`, ad_reward: () => 'Ad Reward', shop_purchase: () => 'Shop Purchase' },
+  de: { match: (a, b) => `Endstand ${a} : ${b}`, sk_match: (r, s) => `Platz ${r} / Punkte ${s}`, ll_match: (r, s) => `Platz ${r} / Punkte ${s}`, season_reward: (r) => `Saison Platz ${r}`, ad_reward: () => 'Werbebelohnung', shop_purchase: () => 'Einkauf' },
+};
+
+function translateGoldRow(row, locale, legacyDesc) {
   const map = goldTitleKeys[locale] || goldTitleKeys.ko;
   let title = row.title;
   // Shop purchase title: "name_ko|name_en|name_de" → pick by locale
@@ -4020,7 +4027,28 @@ function translateGoldRow(row, locale) {
   } else if (map[title]) {
     title = map[title];
   }
-  return { ...row, title };
+
+  let description = row.description;
+  // Translate description for old clients that display raw text
+  if (legacyDesc) {
+    const dmap = goldDescKeys[locale] || goldDescKeys.ko;
+    const src = row.source;
+    if ((src === 'match') && description && description.includes(':')) {
+      const [a, b] = description.split(':');
+      description = dmap.match(a, b);
+    } else if ((src === 'sk_match' || src === 'll_match') && description && description.includes(':')) {
+      const [r, s] = description.split(':');
+      description = dmap.sk_match(r, s);
+    } else if (src === 'season_reward' && description) {
+      description = dmap.season_reward(description);
+    } else if (src === 'ad_reward') {
+      description = dmap.ad_reward();
+    } else if (src === 'shop_purchase' && description === 'shop_purchase') {
+      description = dmap.shop_purchase();
+    }
+  }
+
+  return { ...row, title, description };
 }
 
 async function handleGetGoldHistory(ws, data) {
@@ -4035,7 +4063,9 @@ async function handleGetGoldHistory(ws, data) {
   const result = await getGoldHistory(ws.nickname, limit);
   if (result.success && result.history) {
     const locale = ws.locale || 'ko';
-    result.history = result.history.map(row => translateGoldRow(row, locale));
+    // Old clients (< 2.2.0) don't parse description client-side
+    const legacyDesc = compareVersions(ws.appVersion, LL_MIN_VERSION) < 0;
+    result.history = result.history.map(row => translateGoldRow(row, locale, legacyDesc));
   }
   sendTo(ws, { type: 'gold_history_result', ...result });
 }

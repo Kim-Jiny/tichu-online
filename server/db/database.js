@@ -1621,6 +1621,26 @@ async function getGoldHistory(nickname, limit = 30) {
         UNION ALL
 
         SELECT
+          h.created_at,
+          CASE
+            WHEN h.end_reason IN ('leave', 'timeout') AND h.deserter_nickname = $1 THEN 0
+            WHEN p.is_winner THEN 10
+            ELSE 3
+          END AS gold_delta,
+          'll_match' AS source,
+          CASE
+            WHEN h.end_reason IN ('leave', 'timeout') AND h.deserter_nickname = $1 THEN 'll_leave_defeat'
+            WHEN p.is_winner THEN 'll_win'
+            ELSE 'll_loss'
+          END AS title,
+          CONCAT(p.rank, ':', p.score) AS description
+        FROM tc_ll_match_players p
+        JOIN tc_ll_match_history h ON h.id = p.match_id
+        WHERE p.nickname = $1
+
+        UNION ALL
+
+        SELECT
           ui.acquired_at AS created_at,
           -si.price AS gold_delta,
           'shop_purchase' AS source,

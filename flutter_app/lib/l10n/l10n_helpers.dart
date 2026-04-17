@@ -198,6 +198,7 @@ String localizeGoldDescription(String? desc, String? source, L10n l10n) {
       // desc is rank number
       return l10n.goldHistorySeasonRank(desc);
     case 'sk_match':
+    case 'll_match':
       // desc is "rank:score"
       final parts = desc.split(':');
       if (parts.length == 2) {

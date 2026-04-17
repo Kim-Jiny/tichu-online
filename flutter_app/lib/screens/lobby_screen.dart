@@ -4490,28 +4490,23 @@ class _LobbyScreenState extends State<LobbyScreen> {
                       ),
                     ),
                     const SizedBox(width: 6),
+                    if (!isLL)
                     Container(
                       padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
                       decoration: BoxDecoration(
-                        color: isLL
-                            ? const Color(0xFFFCE4EC)
-                            : isRanked
+                        color: isRanked
                             ? const Color(0xFFFFF3E0)
                             : const Color(0xFFF5F5F5),
                         borderRadius: BorderRadius.circular(6),
                       ),
                       child: Text(
-                        isLL
-                            ? l10n.lobbyMatchTypeLoveLetter
-                            : isRanked
+                        isRanked
                             ? l10n.lobbyMatchTypeRanked
                             : l10n.lobbyMatchTypeNormal,
                         style: TextStyle(
                           fontSize: 9,
                           fontWeight: FontWeight.bold,
-                          color: isLL
-                              ? const Color(0xFFAD1457)
-                              : isRanked
+                          color: isRanked
                               ? const Color(0xFFE65100)
                               : const Color(0xFF9E9E9E),
                         ),

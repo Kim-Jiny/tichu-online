@@ -1158,34 +1158,30 @@ class _ProfileRecentMatches extends StatelessWidget {
               ),
             ),
           ),
+          if (!isLL) ...[
           const SizedBox(width: 4),
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
             decoration: BoxDecoration(
-              color: isLL
-                  ? const Color(0xFFE91E63)
-                  : match['isRanked'] == true
+              color: match['isRanked'] == true
                   ? const Color(0xFFFFF3E0)
                   : const Color(0xFFF5F5F5),
               borderRadius: BorderRadius.circular(4),
             ),
             child: Text(
-              isLL
-                  ? 'LL'
-                  : match['isRanked'] == true
+              match['isRanked'] == true
                   ? l10n.lobbyMatchTypeRanked
                   : l10n.lobbyMatchTypeNormal,
               style: TextStyle(
                 fontSize: 8,
                 fontWeight: FontWeight.bold,
-                color: isLL
-                    ? Colors.white
-                    : match['isRanked'] == true
+                color: match['isRanked'] == true
                     ? const Color(0xFFE65100)
                     : const Color(0xFF9E9E9E),
               ),
             ),
           ),
+          ],
           const SizedBox(width: 8),
           Expanded(
             child: Column(
@@ -1300,34 +1296,30 @@ Widget _buildMatchRowDialog(L10n l10n, dynamic match) {
         decoration: BoxDecoration(color: badgeColor, shape: BoxShape.circle),
         child: Text(badge, style: const TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.bold)),
       ),
+      if (!isLL) ...[
       const SizedBox(width: 4),
       Container(
         padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
         decoration: BoxDecoration(
-          color: isLL
-              ? const Color(0xFFE91E63)
-              : match['isRanked'] == true
+          color: match['isRanked'] == true
               ? const Color(0xFFFFF3E0)
               : const Color(0xFFF5F5F5),
           borderRadius: BorderRadius.circular(4),
         ),
         child: Text(
-          isLL
-              ? 'LL'
-              : match['isRanked'] == true
+          match['isRanked'] == true
               ? l10n.lobbyMatchTypeRanked
               : l10n.lobbyMatchTypeNormal,
           style: TextStyle(
             fontSize: 8,
             fontWeight: FontWeight.bold,
-            color: isLL
-                ? Colors.white
-                : match['isRanked'] == true
+            color: match['isRanked'] == true
                 ? const Color(0xFFE65100)
                 : const Color(0xFF9E9E9E),
           ),
         ),
       ),
+      ],
       const SizedBox(width: 8),
       Expanded(
         child: Column(

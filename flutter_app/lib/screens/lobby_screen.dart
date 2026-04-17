@@ -4490,42 +4490,41 @@ class _LobbyScreenState extends State<LobbyScreen> {
                       ),
                     ),
                     const SizedBox(width: 6),
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 5,
-                        vertical: 1,
-                      ),
-                      decoration: BoxDecoration(
-                        color: isSK
-                            ? const Color(0xFFE8EAF6)
-                            : isLL
-                            ? const Color(0xFFFCE4EC)
-                            : isRanked
-                            ? const Color(0xFFFFF3E0)
-                            : const Color(0xFFF5F5F5),
-                        borderRadius: BorderRadius.circular(6),
-                      ),
-                      child: Text(
-                        isSK
-                            ? l10n.lobbyMatchTypeSkullKing
-                            : isLL
-                            ? l10n.lobbyMatchTypeLoveLetter
-                            : (isRanked
-                                  ? l10n.lobbyMatchTypeRanked
-                                  : l10n.lobbyMatchTypeNormal),
-                        style: TextStyle(
-                          fontSize: 9,
-                          fontWeight: FontWeight.bold,
-                          color: isSK
-                              ? const Color(0xFF3949AB)
-                              : isLL
-                              ? const Color(0xFFAD1457)
-                              : isRanked
-                              ? const Color(0xFFE65100)
-                              : const Color(0xFF9E9E9E),
+                    if (isSK || isLL)
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
+                        decoration: BoxDecoration(
+                          color: isSK ? const Color(0xFFE8EAF6) : const Color(0xFFFCE4EC),
+                          borderRadius: BorderRadius.circular(6),
+                        ),
+                        child: Text(
+                          isSK ? l10n.lobbyMatchTypeSkullKing : l10n.lobbyMatchTypeLoveLetter,
+                          style: TextStyle(
+                            fontSize: 9,
+                            fontWeight: FontWeight.bold,
+                            color: isSK ? const Color(0xFF3949AB) : const Color(0xFFAD1457),
+                          ),
                         ),
                       ),
-                    ),
+                    if (!isLL)
+                      Padding(
+                        padding: EdgeInsets.only(left: (isSK || isLL) ? 3 : 0),
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
+                          decoration: BoxDecoration(
+                            color: isRanked ? const Color(0xFFFFF3E0) : const Color(0xFFF5F5F5),
+                            borderRadius: BorderRadius.circular(6),
+                          ),
+                          child: Text(
+                            isRanked ? l10n.lobbyMatchTypeRanked : l10n.lobbyMatchTypeNormal,
+                            style: TextStyle(
+                              fontSize: 9,
+                              fontWeight: FontWeight.bold,
+                              color: isRanked ? const Color(0xFFE65100) : const Color(0xFF9E9E9E),
+                            ),
+                          ),
+                        ),
+                      ),
                   ],
                 ),
                 const SizedBox(height: 2),

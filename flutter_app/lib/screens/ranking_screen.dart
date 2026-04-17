@@ -1166,6 +1166,20 @@ class _ProfileRecentMatches extends StatelessWidget {
               child: Text(isSK ? 'SK' : 'LL', style: const TextStyle(fontSize: 8, color: Colors.white, fontWeight: FontWeight.bold)),
             ),
           ],
+          if (isSK) ...[
+            const SizedBox(width: 3),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
+              decoration: BoxDecoration(
+                color: match['isRanked'] == true ? const Color(0xFFFFF3E0) : const Color(0xFFF5F5F5),
+                borderRadius: BorderRadius.circular(4),
+              ),
+              child: Text(
+                match['isRanked'] == true ? l10n.lobbyMatchTypeRanked : l10n.lobbyMatchTypeNormal,
+                style: TextStyle(fontSize: 8, fontWeight: FontWeight.bold, color: match['isRanked'] == true ? const Color(0xFFE65100) : const Color(0xFF9E9E9E)),
+              ),
+            ),
+          ],
           const SizedBox(width: 8),
           Expanded(
             child: Column(
@@ -1286,6 +1300,20 @@ Widget _buildMatchRowDialog(L10n l10n, dynamic match) {
           padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
           decoration: BoxDecoration(color: isSK ? const Color(0xFF5C6BC0) : const Color(0xFFE91E63), borderRadius: BorderRadius.circular(4)),
           child: Text(isSK ? 'SK' : 'LL', style: const TextStyle(fontSize: 8, color: Colors.white, fontWeight: FontWeight.bold)),
+        ),
+      ],
+      if (isSK) ...[
+        const SizedBox(width: 3),
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
+          decoration: BoxDecoration(
+            color: match['isRanked'] == true ? const Color(0xFFFFF3E0) : const Color(0xFFF5F5F5),
+            borderRadius: BorderRadius.circular(4),
+          ),
+          child: Text(
+            match['isRanked'] == true ? l10n.lobbyMatchTypeRanked : l10n.lobbyMatchTypeNormal,
+            style: TextStyle(fontSize: 8, fontWeight: FontWeight.bold, color: match['isRanked'] == true ? const Color(0xFFE65100) : const Color(0xFF9E9E9E)),
+          ),
         ),
       ],
       const SizedBox(width: 8),

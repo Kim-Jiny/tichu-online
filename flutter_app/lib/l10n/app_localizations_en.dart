@@ -2614,9 +2614,6 @@ class L10nEn extends L10n {
   }
 
   @override
-  String get rankingMannerScore => 'Manner';
-
-  @override
   String rankingDesertions(int count) {
     return 'Desertions $count';
   }
@@ -2643,6 +2640,9 @@ class L10nEn extends L10n {
 
   @override
   String get rankingRecentMatchesTitle => 'Recent Matches';
+
+  @override
+  String get rankingMannerScore => 'Manner';
 
   @override
   String get shopTitle => 'Shop';

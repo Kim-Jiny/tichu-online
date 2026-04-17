@@ -854,6 +854,7 @@
   "rankingBadgeDraw": "무",
   "rankingSkRankScore": "{rank}등 {score}점",
   "rankingRecentMatchesTitle": "최근 전적",
+  "rankingMannerScore": "매너지수",
 
   "shopTitle": "상점",
   "shopGoldAmount": "{gold} 골드",

@@ -1269,6 +1269,7 @@
     }
   },
   "rankingRecentMatchesTitle": "Recent Matches",
+  "rankingMannerScore": "Manner",
 
   "shopTitle": "Shop",
   "shopGoldAmount": "{gold} Gold",

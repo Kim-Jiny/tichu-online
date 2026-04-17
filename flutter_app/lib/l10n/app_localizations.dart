@@ -4779,12 +4779,6 @@ abstract class L10n {
   /// **'{gold} Gold'**
   String rankingGold(int gold);
 
-  /// No description provided for @rankingMannerScore.
-  ///
-  /// In en, this message translates to:
-  /// **'Manner'**
-  String get rankingMannerScore;
-
   /// No description provided for @rankingDesertions.
   ///
   /// In en, this message translates to:
@@ -4832,6 +4826,12 @@ abstract class L10n {
   /// In en, this message translates to:
   /// **'Recent Matches'**
   String get rankingRecentMatchesTitle;
+
+  /// No description provided for @rankingMannerScore.
+  ///
+  /// In en, this message translates to:
+  /// **'Manner'**
+  String get rankingMannerScore;
 
   /// No description provided for @shopTitle.
   ///

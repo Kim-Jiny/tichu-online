@@ -2630,9 +2630,6 @@ class L10nDe extends L10n {
   }
 
   @override
-  String get rankingMannerScore => 'Manieren';
-
-  @override
   String rankingDesertions(int count) {
     return 'Verlassen $count';
   }
@@ -2659,6 +2656,9 @@ class L10nDe extends L10n {
 
   @override
   String get rankingRecentMatchesTitle => 'Letzte Spiele';
+
+  @override
+  String get rankingMannerScore => 'Manieren';
 
   @override
   String get shopTitle => 'Shop';

@@ -2555,9 +2555,6 @@ class L10nKo extends L10n {
   }
 
   @override
-  String get rankingMannerScore => '매너지수';
-
-  @override
   String rankingDesertions(int count) {
     return '탈주 $count';
   }
@@ -2584,6 +2581,9 @@ class L10nKo extends L10n {
 
   @override
   String get rankingRecentMatchesTitle => '최근 전적';
+
+  @override
+  String get rankingMannerScore => '매너지수';
 
   @override
   String get shopTitle => '상점';

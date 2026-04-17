@@ -854,6 +854,7 @@
   "rankingBadgeDraw": "U",
   "rankingSkRankScore": "#{rank} {score}Pkt.",
   "rankingRecentMatchesTitle": "Letzte Spiele",
+  "rankingMannerScore": "Manieren",
 
   "shopTitle": "Shop",
   "shopGoldAmount": "{gold} Gold",

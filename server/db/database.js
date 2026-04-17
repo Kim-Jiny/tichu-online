@@ -165,6 +165,7 @@ async function initDatabase() {
       CREATE TABLE IF NOT EXISTS tc_shop_items (
         id SERIAL PRIMARY KEY,
         item_key VARCHAR(80) UNIQUE NOT NULL,
+        name VARCHAR(100) NOT NULL DEFAULT '',
         name_ko VARCHAR(100) NOT NULL DEFAULT '',
         name_en VARCHAR(100) NOT NULL DEFAULT '',
         name_de VARCHAR(100) NOT NULL DEFAULT '',
@@ -187,16 +188,18 @@ async function initDatabase() {
     await client.query(`ALTER TABLE tc_shop_items ADD COLUMN IF NOT EXISTS sale_start TIMESTAMP`);
     await client.query(`ALTER TABLE tc_shop_items ADD COLUMN IF NOT EXISTS sale_end TIMESTAMP`);
 
-    // Rename name → name_ko and add name_en/name_de (for existing tables)
-    await client.query(`
-      DO $$ BEGIN
-        IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'tc_shop_items' AND column_name = 'name') THEN
-          ALTER TABLE tc_shop_items RENAME COLUMN name TO name_ko;
-        END IF;
-      END $$
-    `);
+    // Add name_ko/name_en/name_de columns; keep original 'name' column for rollback safety
+    await client.query(`ALTER TABLE tc_shop_items ADD COLUMN IF NOT EXISTS name_ko VARCHAR(100) NOT NULL DEFAULT ''`);
     await client.query(`ALTER TABLE tc_shop_items ADD COLUMN IF NOT EXISTS name_en VARCHAR(100) NOT NULL DEFAULT ''`);
     await client.query(`ALTER TABLE tc_shop_items ADD COLUMN IF NOT EXISTS name_de VARCHAR(100) NOT NULL DEFAULT ''`);
+    // Copy name → name_ko for existing rows where name_ko is empty
+    await client.query(`
+      DO $ BEGIN
+        IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'tc_shop_items' AND column_name = 'name') THEN
+          UPDATE tc_shop_items SET name_ko = name WHERE name_ko = '' AND name IS NOT NULL AND name <> '';
+        END IF;
+      END $
+    `);
 
     // User owned items
     await client.query(`
@@ -409,59 +412,60 @@ async function initDatabase() {
     await client.query(
       `
       INSERT INTO tc_shop_items
-        (item_key, name_ko, name_en, name_de, category, price, is_season, is_permanent, duration_days, is_purchasable, effect_type, effect_value, metadata)
+        (item_key, name, name_ko, name_en, name_de, category, price, is_season, is_permanent, duration_days, is_purchasable, effect_type, effect_value, metadata)
       VALUES
-        ('banner_pastel', '파스텔 배너', 'Pastel Banner', 'Pastell-Banner', 'banner', 300, FALSE, FALSE, 30, TRUE, NULL, NULL, '{}'::jsonb),
-        ('banner_blossom', '블라썸 배너', 'Blossom Banner', 'Blüten-Banner', 'banner', 280, FALSE, FALSE, 30, TRUE, NULL, NULL, '{}'::jsonb),
-        ('banner_mint', '민트 배너', 'Mint Banner', 'Minz-Banner', 'banner', 260, FALSE, FALSE, 30, TRUE, NULL, NULL, '{}'::jsonb),
-        ('banner_sunset_7d', '노을 배너', 'Sunset Banner', 'Sonnenuntergang-Banner', 'banner', 120, FALSE, FALSE, 30, TRUE, NULL, NULL, '{}'::jsonb),
-        ('title_sweet', '존맛탱', 'Yummy', 'Lecker', 'title', 200, FALSE, FALSE, 10, TRUE, NULL, NULL, '{}'::jsonb),
-        ('title_steady', '찐고수', 'True Pro', 'Echte:r Profi', 'title', 240, FALSE, FALSE, 10, TRUE, NULL, NULL, '{}'::jsonb),
-        ('title_flash_30d', '광속러', 'Speed Demon', 'Blitzschnell', 'title', 180, FALSE, FALSE, 10, TRUE, NULL, NULL, '{}'::jsonb),
-        ('title_dragon', '갓벽한', 'Flawless', 'Makellos', 'title', 300, FALSE, FALSE, 10, TRUE, NULL, NULL, '{}'::jsonb),
-        ('title_phoenix', '불죽러', 'Undying', 'Unsterblich', 'title', 300, FALSE, FALSE, 10, TRUE, NULL, NULL, '{}'::jsonb),
-        ('title_pirate', '야르', 'Yarr', 'Yarr', 'title', 280, FALSE, FALSE, 10, TRUE, NULL, NULL, '{}'::jsonb),
-        ('title_tactician', '뇌섹러', 'Tactician', 'Taktiker:in', 'title', 320, FALSE, FALSE, 10, TRUE, NULL, NULL, '{}'::jsonb),
-        ('title_lucky', '럭키비키', 'Lucky Star', 'Glückspilz', 'title', 200, FALSE, FALSE, 10, TRUE, NULL, NULL, '{}'::jsonb),
-        ('title_bluffer', '쿨쿨잠', 'Sleepyhead', 'Schlafmütze', 'title', 260, FALSE, FALSE, 10, TRUE, NULL, NULL, '{}'::jsonb),
-        ('title_ace', '존잘러', 'Ace Player', 'Ass-Spieler:in', 'title', 280, FALSE, FALSE, 10, TRUE, NULL, NULL, '{}'::jsonb),
-        ('title_king', '킹왕짱', 'King of Kings', 'König:in', 'title', 350, FALSE, FALSE, 10, TRUE, NULL, NULL, '{}'::jsonb),
-        ('title_rookie', '뉴비임', 'Newbie', 'Neuling', 'title', 150, FALSE, FALSE, 10, TRUE, NULL, NULL, '{}'::jsonb),
-        ('title_veteran', '만렙러', 'Max Level', 'Max-Level', 'title', 300, FALSE, FALSE, 10, TRUE, NULL, NULL, '{}'::jsonb),
-        ('title_sensitive', '예민해', 'Sensitive', 'Empfindlich', 'title', 280, FALSE, FALSE, 10, TRUE, NULL, NULL, '{}'::jsonb),
-        ('title_shadow', '숨쉬듯이', 'Like Breathing', 'Wie Atmen', 'title', 260, FALSE, FALSE, 10, TRUE, NULL, NULL, '{}'::jsonb),
-        ('title_flame', '존버왕', 'HODL King', 'Durchhalter:in', 'title', 240, FALSE, FALSE, 10, TRUE, NULL, NULL, '{}'::jsonb),
-        ('title_ice', '갓생러', 'Go-Getter', 'Macher:in', 'title', 240, FALSE, FALSE, 10, TRUE, NULL, NULL, '{}'::jsonb),
-        ('title_crown', '레게노', 'Legend', 'Legende', 'title', 400, FALSE, FALSE, 10, TRUE, NULL, NULL, '{}'::jsonb),
-        ('title_diamond', '개꿀', 'Sweet Deal', 'Volltreffer', 'title', 350, FALSE, FALSE, 10, TRUE, NULL, NULL, '{}'::jsonb),
-        ('title_ghost', '투명드래곤', 'Invisible Dragon', 'Unsichtbarer Drache', 'title', 220, FALSE, FALSE, 10, TRUE, NULL, NULL, '{}'::jsonb),
-        ('title_thunder', '겜잘알', 'Game Guru', 'Spiel-Guru', 'title', 180, FALSE, FALSE, 10, TRUE, NULL, NULL, '{}'::jsonb),
-        ('title_topcard', '그게탑패', 'Top Card', 'Trumpfkarte', 'title', 280, FALSE, FALSE, 10, TRUE, NULL, NULL, '{}'::jsonb),
-        ('title_legend', '찐레전드', 'True Legend', 'Echte Legende', 'title', 500, FALSE, FALSE, 10, TRUE, NULL, NULL, '{}'::jsonb),
-        ('title_boomer', '꼰대', 'Boomer', 'Boomer', 'title', 260, FALSE, FALSE, 10, TRUE, NULL, NULL, '{}'::jsonb),
-        ('theme_cotton', '코튼 테마', 'Cotton Theme', 'Baumwoll-Thema', 'theme', 500, FALSE, FALSE, 30, TRUE, NULL, NULL, '{"includesCardSkin": true}'::jsonb),
-        ('theme_sky', '스카이 테마', 'Sky Theme', 'Himmel-Thema', 'theme', 550, FALSE, FALSE, 30, TRUE, NULL, NULL, '{"includesCardSkin": true}'::jsonb),
-        ('theme_mocha_30d', '모카 테마', 'Mocha Theme', 'Mokka-Thema', 'theme', 300, FALSE, FALSE, 30, TRUE, NULL, NULL, '{"includesCardSkin": true}'::jsonb),
-        ('theme_lavender', '라벤더 테마', 'Lavender Theme', 'Lavendel-Thema', 'theme', 500, FALSE, FALSE, 30, TRUE, NULL, NULL, '{"includesCardSkin": true}'::jsonb),
-        ('theme_cherry', '체리블라썸 테마', 'Cherry Blossom Theme', 'Kirschblüten-Thema', 'theme', 550, FALSE, FALSE, 30, TRUE, NULL, NULL, '{"includesCardSkin": true}'::jsonb),
-        ('theme_midnight', '미드나잇 테마', 'Midnight Theme', 'Mitternacht-Thema', 'theme', 600, FALSE, FALSE, 30, TRUE, NULL, NULL, '{"includesCardSkin": true}'::jsonb),
-        ('theme_sunset', '선셋 테마', 'Sunset Theme', 'Sonnenuntergang-Thema', 'theme', 500, FALSE, FALSE, 30, TRUE, NULL, NULL, '{"includesCardSkin": true}'::jsonb),
-        ('theme_forest', '포레스트 테마', 'Forest Theme', 'Wald-Thema', 'theme', 520, FALSE, FALSE, 30, TRUE, NULL, NULL, '{"includesCardSkin": true}'::jsonb),
-        ('theme_rose', '로즈골드 테마', 'Rose Gold Theme', 'Roségold-Thema', 'theme', 550, FALSE, FALSE, 30, TRUE, NULL, NULL, '{"includesCardSkin": true}'::jsonb),
-        ('theme_ocean', '오션 테마', 'Ocean Theme', 'Ozean-Thema', 'theme', 500, FALSE, FALSE, 30, TRUE, NULL, NULL, '{"includesCardSkin": true}'::jsonb),
-        ('theme_aurora', '오로라 테마', 'Aurora Theme', 'Aurora-Thema', 'theme', 600, FALSE, FALSE, 30, TRUE, NULL, NULL, '{"includesCardSkin": true}'::jsonb),
-        ('theme_mintchoco_30d', '민트초코 테마', 'Mint Choco Theme', 'Minzschoko-Thema', 'theme', 300, FALSE, FALSE, 30, TRUE, NULL, NULL, '{"includesCardSkin": true}'::jsonb),
-        ('theme_peach_30d', '피치 테마', 'Peach Theme', 'Pfirsich-Thema', 'theme', 280, FALSE, FALSE, 30, TRUE, NULL, NULL, '{"includesCardSkin": true}'::jsonb),
-        ('leave_reduce_1', '탈주 카운트 -1', 'Leave Count -1', 'Flucht-Zähler -1', 'utility', 150, FALSE, TRUE, NULL, TRUE, 'leave_count_reduce', 1, '{}'::jsonb),
-        ('leave_reduce_3', '탈주 카운트 -3', 'Leave Count -3', 'Flucht-Zähler -3', 'utility', 400, FALSE, TRUE, NULL, TRUE, 'leave_count_reduce', 3, '{}'::jsonb),
-        ('nickname_change', '닉네임 변경권', 'Nickname Change', 'Nickname-Änderung', 'utility', 500, FALSE, TRUE, NULL, TRUE, 'nickname_change', NULL, '{}'::jsonb),
-        ('top_card_counter_7d', '티츄 탑패 카운터(7일)', 'Tichu Top Card Counter (7d)', 'Tichu-Trumpfzähler (7T)', 'utility', 1000, FALSE, FALSE, 7, TRUE, NULL, NULL, '{}'::jsonb),
-        ('stats_reset', '전적 초기화권', 'Stats Reset', 'Statistik-Reset', 'utility', 2000, FALSE, TRUE, NULL, TRUE, 'stats_reset', NULL, '{}'::jsonb),
-        ('season_stats_reset', '랭킹전적 초기화권', 'Ranked Stats Reset', 'Ranglistenstatistik-Reset', 'utility', 1000, FALSE, TRUE, NULL, TRUE, 'season_stats_reset', NULL, '{}'::jsonb),
-        ('banner_season_gold', '시즌 골드 배너', 'Season Gold Banner', 'Saison-Gold-Banner', 'banner', 0, TRUE, FALSE, 30, FALSE, NULL, NULL, '{}'::jsonb),
-        ('banner_season_silver', '시즌 실버 배너', 'Season Silver Banner', 'Saison-Silber-Banner', 'banner', 0, TRUE, FALSE, 30, FALSE, NULL, NULL, '{}'::jsonb),
-        ('banner_season_bronze', '시즌 브론즈 배너', 'Season Bronze Banner', 'Saison-Bronze-Banner', 'banner', 0, TRUE, FALSE, 30, FALSE, NULL, NULL, '{}'::jsonb)
+        ('banner_pastel', '파스텔 배너', '파스텔 배너', 'Pastel Banner', 'Pastell-Banner', 'banner', 300, FALSE, FALSE, 30, TRUE, NULL, NULL, '{}'::jsonb),
+        ('banner_blossom', '블라썸 배너', '블라썸 배너', 'Blossom Banner', 'Blüten-Banner', 'banner', 280, FALSE, FALSE, 30, TRUE, NULL, NULL, '{}'::jsonb),
+        ('banner_mint', '민트 배너', '민트 배너', 'Mint Banner', 'Minz-Banner', 'banner', 260, FALSE, FALSE, 30, TRUE, NULL, NULL, '{}'::jsonb),
+        ('banner_sunset_7d', '노을 배너', '노을 배너', 'Sunset Banner', 'Sonnenuntergang-Banner', 'banner', 120, FALSE, FALSE, 30, TRUE, NULL, NULL, '{}'::jsonb),
+        ('title_sweet', '존맛탱', '존맛탱', 'Yummy', 'Lecker', 'title', 200, FALSE, FALSE, 10, TRUE, NULL, NULL, '{}'::jsonb),
+        ('title_steady', '찐고수', '찐고수', 'True Pro', 'Echte:r Profi', 'title', 240, FALSE, FALSE, 10, TRUE, NULL, NULL, '{}'::jsonb),
+        ('title_flash_30d', '광속러', '광속러', 'Speed Demon', 'Blitzschnell', 'title', 180, FALSE, FALSE, 10, TRUE, NULL, NULL, '{}'::jsonb),
+        ('title_dragon', '갓벽한', '갓벽한', 'Flawless', 'Makellos', 'title', 300, FALSE, FALSE, 10, TRUE, NULL, NULL, '{}'::jsonb),
+        ('title_phoenix', '불죽러', '불죽러', 'Undying', 'Unsterblich', 'title', 300, FALSE, FALSE, 10, TRUE, NULL, NULL, '{}'::jsonb),
+        ('title_pirate', '야르', '야르', 'Yarr', 'Yarr', 'title', 280, FALSE, FALSE, 10, TRUE, NULL, NULL, '{}'::jsonb),
+        ('title_tactician', '뇌섹러', '뇌섹러', 'Tactician', 'Taktiker:in', 'title', 320, FALSE, FALSE, 10, TRUE, NULL, NULL, '{}'::jsonb),
+        ('title_lucky', '럭키비키', '럭키비키', 'Lucky Star', 'Glückspilz', 'title', 200, FALSE, FALSE, 10, TRUE, NULL, NULL, '{}'::jsonb),
+        ('title_bluffer', '쿨쿨잠', '쿨쿨잠', 'Sleepyhead', 'Schlafmütze', 'title', 260, FALSE, FALSE, 10, TRUE, NULL, NULL, '{}'::jsonb),
+        ('title_ace', '존잘러', '존잘러', 'Ace Player', 'Ass-Spieler:in', 'title', 280, FALSE, FALSE, 10, TRUE, NULL, NULL, '{}'::jsonb),
+        ('title_king', '킹왕짱', '킹왕짱', 'King of Kings', 'König:in', 'title', 350, FALSE, FALSE, 10, TRUE, NULL, NULL, '{}'::jsonb),
+        ('title_rookie', '뉴비임', '뉴비임', 'Newbie', 'Neuling', 'title', 150, FALSE, FALSE, 10, TRUE, NULL, NULL, '{}'::jsonb),
+        ('title_veteran', '만렙러', '만렙러', 'Max Level', 'Max-Level', 'title', 300, FALSE, FALSE, 10, TRUE, NULL, NULL, '{}'::jsonb),
+        ('title_sensitive', '예민해', '예민해', 'Sensitive', 'Empfindlich', 'title', 280, FALSE, FALSE, 10, TRUE, NULL, NULL, '{}'::jsonb),
+        ('title_shadow', '숨쉬듯이', '숨쉬듯이', 'Like Breathing', 'Wie Atmen', 'title', 260, FALSE, FALSE, 10, TRUE, NULL, NULL, '{}'::jsonb),
+        ('title_flame', '존버왕', '존버왕', 'HODL King', 'Durchhalter:in', 'title', 240, FALSE, FALSE, 10, TRUE, NULL, NULL, '{}'::jsonb),
+        ('title_ice', '갓생러', '갓생러', 'Go-Getter', 'Macher:in', 'title', 240, FALSE, FALSE, 10, TRUE, NULL, NULL, '{}'::jsonb),
+        ('title_crown', '레게노', '레게노', 'Legend', 'Legende', 'title', 400, FALSE, FALSE, 10, TRUE, NULL, NULL, '{}'::jsonb),
+        ('title_diamond', '개꿀', '개꿀', 'Sweet Deal', 'Volltreffer', 'title', 350, FALSE, FALSE, 10, TRUE, NULL, NULL, '{}'::jsonb),
+        ('title_ghost', '투명드래곤', '투명드래곤', 'Invisible Dragon', 'Unsichtbarer Drache', 'title', 220, FALSE, FALSE, 10, TRUE, NULL, NULL, '{}'::jsonb),
+        ('title_thunder', '겜잘알', '겜잘알', 'Game Guru', 'Spiel-Guru', 'title', 180, FALSE, FALSE, 10, TRUE, NULL, NULL, '{}'::jsonb),
+        ('title_topcard', '그게탑패', '그게탑패', 'Top Card', 'Trumpfkarte', 'title', 280, FALSE, FALSE, 10, TRUE, NULL, NULL, '{}'::jsonb),
+        ('title_legend', '찐레전드', '찐레전드', 'True Legend', 'Echte Legende', 'title', 500, FALSE, FALSE, 10, TRUE, NULL, NULL, '{}'::jsonb),
+        ('title_boomer', '꼰대', '꼰대', 'Boomer', 'Boomer', 'title', 260, FALSE, FALSE, 10, TRUE, NULL, NULL, '{}'::jsonb),
+        ('theme_cotton', '코튼 테마', '코튼 테마', 'Cotton Theme', 'Baumwoll-Thema', 'theme', 500, FALSE, FALSE, 30, TRUE, NULL, NULL, '{"includesCardSkin": true}'::jsonb),
+        ('theme_sky', '스카이 테마', '스카이 테마', 'Sky Theme', 'Himmel-Thema', 'theme', 550, FALSE, FALSE, 30, TRUE, NULL, NULL, '{"includesCardSkin": true}'::jsonb),
+        ('theme_mocha_30d', '모카 테마', '모카 테마', 'Mocha Theme', 'Mokka-Thema', 'theme', 300, FALSE, FALSE, 30, TRUE, NULL, NULL, '{"includesCardSkin": true}'::jsonb),
+        ('theme_lavender', '라벤더 테마', '라벤더 테마', 'Lavender Theme', 'Lavendel-Thema', 'theme', 500, FALSE, FALSE, 30, TRUE, NULL, NULL, '{"includesCardSkin": true}'::jsonb),
+        ('theme_cherry', '체리블라썸 테마', '체리블라썸 테마', 'Cherry Blossom Theme', 'Kirschblüten-Thema', 'theme', 550, FALSE, FALSE, 30, TRUE, NULL, NULL, '{"includesCardSkin": true}'::jsonb),
+        ('theme_midnight', '미드나잇 테마', '미드나잇 테마', 'Midnight Theme', 'Mitternacht-Thema', 'theme', 600, FALSE, FALSE, 30, TRUE, NULL, NULL, '{"includesCardSkin": true}'::jsonb),
+        ('theme_sunset', '선셋 테마', '선셋 테마', 'Sunset Theme', 'Sonnenuntergang-Thema', 'theme', 500, FALSE, FALSE, 30, TRUE, NULL, NULL, '{"includesCardSkin": true}'::jsonb),
+        ('theme_forest', '포레스트 테마', '포레스트 테마', 'Forest Theme', 'Wald-Thema', 'theme', 520, FALSE, FALSE, 30, TRUE, NULL, NULL, '{"includesCardSkin": true}'::jsonb),
+        ('theme_rose', '로즈골드 테마', '로즈골드 테마', 'Rose Gold Theme', 'Roségold-Thema', 'theme', 550, FALSE, FALSE, 30, TRUE, NULL, NULL, '{"includesCardSkin": true}'::jsonb),
+        ('theme_ocean', '오션 테마', '오션 테마', 'Ocean Theme', 'Ozean-Thema', 'theme', 500, FALSE, FALSE, 30, TRUE, NULL, NULL, '{"includesCardSkin": true}'::jsonb),
+        ('theme_aurora', '오로라 테마', '오로라 테마', 'Aurora Theme', 'Aurora-Thema', 'theme', 600, FALSE, FALSE, 30, TRUE, NULL, NULL, '{"includesCardSkin": true}'::jsonb),
+        ('theme_mintchoco_30d', '민트초코 테마', '민트초코 테마', 'Mint Choco Theme', 'Minzschoko-Thema', 'theme', 300, FALSE, FALSE, 30, TRUE, NULL, NULL, '{"includesCardSkin": true}'::jsonb),
+        ('theme_peach_30d', '피치 테마', '피치 테마', 'Peach Theme', 'Pfirsich-Thema', 'theme', 280, FALSE, FALSE, 30, TRUE, NULL, NULL, '{"includesCardSkin": true}'::jsonb),
+        ('leave_reduce_1', '탈주 카운트 -1', '탈주 카운트 -1', 'Leave Count -1', 'Flucht-Zähler -1', 'utility', 150, FALSE, TRUE, NULL, TRUE, 'leave_count_reduce', 1, '{}'::jsonb),
+        ('leave_reduce_3', '탈주 카운트 -3', '탈주 카운트 -3', 'Leave Count -3', 'Flucht-Zähler -3', 'utility', 400, FALSE, TRUE, NULL, TRUE, 'leave_count_reduce', 3, '{}'::jsonb),
+        ('nickname_change', '닉네임 변경권', '닉네임 변경권', 'Nickname Change', 'Nickname-Änderung', 'utility', 500, FALSE, TRUE, NULL, TRUE, 'nickname_change', NULL, '{}'::jsonb),
+        ('top_card_counter_7d', '티츄 탑패 카운터(7일)', '티츄 탑패 카운터(7일)', 'Tichu Top Card Counter (7d)', 'Tichu-Trumpfzähler (7T)', 'utility', 1000, FALSE, FALSE, 7, TRUE, NULL, NULL, '{}'::jsonb),
+        ('stats_reset', '전적 초기화권', '전적 초기화권', 'Stats Reset', 'Statistik-Reset', 'utility', 2000, FALSE, TRUE, NULL, TRUE, 'stats_reset', NULL, '{}'::jsonb),
+        ('season_stats_reset', '랭킹전적 초기화권', '랭킹전적 초기화권', 'Ranked Stats Reset', 'Ranglistenstatistik-Reset', 'utility', 1000, FALSE, TRUE, NULL, TRUE, 'season_stats_reset', NULL, '{}'::jsonb),
+        ('banner_season_gold', '시즌 골드 배너', '시즌 골드 배너', 'Season Gold Banner', 'Saison-Gold-Banner', 'banner', 0, TRUE, FALSE, 30, FALSE, NULL, NULL, '{}'::jsonb),
+        ('banner_season_silver', '시즌 실버 배너', '시즌 실버 배너', 'Season Silver Banner', 'Saison-Silber-Banner', 'banner', 0, TRUE, FALSE, 30, FALSE, NULL, NULL, '{}'::jsonb),
+        ('banner_season_bronze', '시즌 브론즈 배너', '시즌 브론즈 배너', 'Season Bronze Banner', 'Saison-Bronze-Banner', 'banner', 0, TRUE, FALSE, 30, FALSE, NULL, NULL, '{}'::jsonb)
       ON CONFLICT (item_key) DO UPDATE SET
+        name = EXCLUDED.name_ko,
         name_ko = EXCLUDED.name_ko,
         name_en = EXCLUDED.name_en,
         name_de = EXCLUDED.name_de,
@@ -3774,8 +3778,8 @@ async function addShopItem(data) {
   try {
     const result = await client.query(
       `INSERT INTO tc_shop_items
-        (item_key, name_ko, name_en, name_de, category, price, is_permanent, duration_days, is_purchasable, is_season, effect_type, effect_value, sale_start, sale_end)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)
+        (item_key, name, name_ko, name_en, name_de, category, price, is_permanent, duration_days, is_purchasable, is_season, effect_type, effect_value, sale_start, sale_end)
+       VALUES ($1, $2, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)
        RETURNING *`,
       [
         data.item_key, data.name_ko || '', data.name_en || '', data.name_de || '',
@@ -3804,7 +3808,7 @@ async function updateShopItem(id, data) {
   try {
     const result = await client.query(
       `UPDATE tc_shop_items
-       SET name_ko = $2, name_en = $3, name_de = $4, category = $5, price = $6, is_permanent = $7,
+       SET name = $2, name_ko = $2, name_en = $3, name_de = $4, category = $5, price = $6, is_permanent = $7,
            duration_days = $8, is_purchasable = $9, is_season = $10,
            effect_type = $11, effect_value = $12, sale_start = $13, sale_end = $14
        WHERE id = $1

@@ -1819,43 +1819,43 @@ class _LobbyScreenState extends State<LobbyScreen> {
 
     if (isLL) {
       bgColor = isInProgress
-          ? const Color(0xFFF8E0E0)
-          : const Color(0xFFFAF0F0);
+          ? const Color(0xFFFCE4EC)
+          : const Color(0xFFFFF0F5);
       borderColor = isInProgress
-          ? const Color(0xFFD0A0A0)
-          : const Color(0xFFDDC0C0);
-      stripColor = const Color(0xFF8B1A1A);
-      badgeBgColor = const Color(0xFF8B1A1A);
-      badgeTextColor = const Color(0xFFFFB6C1);
+          ? const Color(0xFFF48FB1)
+          : const Color(0xFFF8BBD0);
+      stripColor = const Color(0xFFE91E63);
+      badgeBgColor = const Color(0xFFE91E63);
+      badgeTextColor = Colors.white;
       badgeText = '💌 ${l10n.lobbyLoveLetterBadge}';
-      nameColor = const Color(0xFF5A2020);
-      subTextColor = const Color(0xFF906060);
+      nameColor = const Color(0xFF880E4F);
+      subTextColor = const Color(0xFFAD1457);
     } else if (isSK) {
       bgColor = isInProgress
-          ? const Color(0xFFE0E4EF)
-          : const Color(0xFFECEFF6);
+          ? const Color(0xFFDCE8F0)
+          : const Color(0xFFE8F0F6);
       borderColor = isInProgress
-          ? const Color(0xFFB0B8D0)
-          : const Color(0xFFC0C8DD);
-      stripColor = const Color(0xFF2D2D3D);
-      badgeBgColor = const Color(0xFF2D2D3D);
-      badgeTextColor = const Color(0xFFFFD54F);
+          ? const Color(0xFFA0BCD0)
+          : const Color(0xFFB8CCDD);
+      stripColor = const Color(0xFF21455F);
+      badgeBgColor = const Color(0xFF21455F);
+      badgeTextColor = Colors.white;
       badgeText = l10n.lobbySkullKingBadge;
-      nameColor = const Color(0xFF2D2D3D);
-      subTextColor = const Color(0xFF7A7A90);
+      nameColor = const Color(0xFF1A3548);
+      subTextColor = const Color(0xFF546E7A);
     } else {
       bgColor = isInProgress
-          ? const Color(0xFFEDE8F8)
-          : const Color(0xFFF6F4FA);
+          ? const Color(0xFFDEEEFC)
+          : const Color(0xFFEAF4FD);
       borderColor = isInProgress
-          ? const Color(0xFFC4BBE0)
-          : const Color(0xFFD8D0E8);
-      stripColor = const Color(0xFF6C63FF);
-      badgeBgColor = const Color(0xFF6C63FF);
+          ? const Color(0xFF90CAF9)
+          : const Color(0xFFBBDEFB);
+      stripColor = const Color(0xFF64B5F6);
+      badgeBgColor = const Color(0xFF64B5F6);
       badgeTextColor = Colors.white;
       badgeText = l10n.lobbyTichuBadge;
-      nameColor = const Color(0xFF3A3058);
-      subTextColor = const Color(0xFF8A80A0);
+      nameColor = const Color(0xFF1565C0);
+      subTextColor = const Color(0xFF42A5F5);
     }
 
     return Material(

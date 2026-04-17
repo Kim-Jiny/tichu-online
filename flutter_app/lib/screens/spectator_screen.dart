@@ -1449,7 +1449,7 @@ class _SpectatorScreenState extends State<SpectatorScreen> {
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
               decoration: const BoxDecoration(
-                color: Color(0xFF77B8E8),
+                color: Color(0xFF64B5F6),
                 borderRadius: BorderRadius.only(
                   topLeft: Radius.circular(16),
                   topRight: Radius.circular(16),

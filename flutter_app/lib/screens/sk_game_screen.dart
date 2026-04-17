@@ -50,6 +50,7 @@ class _SKGameScreenState extends State<SKGameScreen> {
       _gameService!.requestBlockedUsers();
       _networkService = context.read<NetworkService>();
       _networkService!.addListener(_onNetworkChanged);
+      _readChatCount = _gameService!.chatMessages.length;
     });
     _countdownTimer = Timer.periodic(const Duration(seconds: 1), (_) {
       _updateCountdown();
@@ -1882,7 +1883,7 @@ class _SKGameScreenState extends State<SKGameScreen> {
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                 decoration: const BoxDecoration(
-                  color: Color(0xFF64B5F6),
+                  color: Color(0xFF21455F),
                   borderRadius: BorderRadius.only(
                     topLeft: Radius.circular(16),
                     topRight: Radius.circular(16),
@@ -2082,7 +2083,7 @@ class _SKGameScreenState extends State<SKGameScreen> {
                   Container(
                     padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                     decoration: BoxDecoration(
-                      color: isMe ? const Color(0xFF64B5F6) : const Color(0xFFF0F0F0),
+                      color: isMe ? const Color(0xFF21455F) : const Color(0xFFF0F0F0),
                       borderRadius: BorderRadius.circular(16),
                     ),
                     child: Text(

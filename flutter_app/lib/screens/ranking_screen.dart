@@ -1362,32 +1362,32 @@ class _ProfileMiniStatRow extends StatelessWidget {
   final int reportCount;
   final int totalGames;
 
-  int _calcMannerScore() {
-    // Base 100, deduct for leaves and reports, floor at 0
-    int score = 100;
+  static int calcMannerScore(int totalGames, int leaveCount, int reportCount) {
+    int score = 1000;
     score -= leaveCount * 5;
     score -= reportCount * 3;
-    // Bonus for many games played without issues
-    if (totalGames >= 50 && leaveCount <= 1 && reportCount == 0) score += 5;
-    return score.clamp(0, 100);
+    score += (totalGames ~/ 10) * 5;
+    return score.clamp(0, 1000);
+  }
+
+  static Color mannerColorFor(int score) {
+    if (score >= 800) return const Color(0xFF4CAF50);
+    if (score >= 500) return const Color(0xFFFF9800);
+    return const Color(0xFFE53935);
+  }
+
+  static IconData mannerIconFor(int score) {
+    if (score >= 800) return Icons.sentiment_very_satisfied;
+    if (score >= 500) return Icons.sentiment_neutral;
+    return Icons.sentiment_very_dissatisfied;
   }
 
   @override
   Widget build(BuildContext context) {
     final l10n = L10n.of(context);
-    final manner = _calcMannerScore();
-    final Color mannerColor;
-    final IconData mannerIcon;
-    if (manner >= 80) {
-      mannerColor = const Color(0xFF4CAF50);
-      mannerIcon = Icons.sentiment_very_satisfied;
-    } else if (manner >= 50) {
-      mannerColor = const Color(0xFFFF9800);
-      mannerIcon = Icons.sentiment_neutral;
-    } else {
-      mannerColor = const Color(0xFFE53935);
-      mannerIcon = Icons.sentiment_very_dissatisfied;
-    }
+    final manner = calcMannerScore(totalGames, leaveCount, reportCount);
+    final mannerColor = mannerColorFor(manner);
+    final mannerIcon = mannerIconFor(manner);
 
     return Row(
       children: [

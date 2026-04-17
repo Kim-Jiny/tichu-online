@@ -2555,6 +2555,9 @@ class L10nKo extends L10n {
   }
 
   @override
+  String get rankingMannerScore => '매너지수';
+
+  @override
   String rankingDesertions(int count) {
     return '탈주 $count';
   }

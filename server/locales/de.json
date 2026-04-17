@@ -197,6 +197,7 @@
   "room_slot_taken": "Dieser Platz ist bereits belegt",
   "room_no_empty_slot": "Keine freien Plätze",
   "room_no_switch_in_game": "Während des Spiels kann nicht gewechselt werden",
+  "room_only_human_player": "Sie können nicht zuschauen, wenn Sie der einzige Spieler sind",
   "room_spectator_not_found": "Zuschauer nicht gefunden",
   "sk_not_bidding_phase": "Nicht in der Gebotsphase",
   "sk_bid_already_submitted": "Gebot bereits abgegeben",

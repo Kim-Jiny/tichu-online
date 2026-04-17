@@ -197,6 +197,7 @@
   "room_slot_taken": "That seat is already taken",
   "room_no_empty_slot": "No empty seats",
   "room_no_switch_in_game": "Cannot switch during a game",
+  "room_only_human_player": "Cannot switch to spectator when you are the only player",
   "room_spectator_not_found": "Spectator not found",
   "sk_not_bidding_phase": "Not in the bidding phase",
   "sk_bid_already_submitted": "You have already submitted a bid",

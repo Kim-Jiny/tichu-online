@@ -1999,7 +1999,7 @@ class _SpectatorScreenState extends State<SpectatorScreen> {
       children: [
         _buildProfileHeader(level as int, expTotal as int, bannerKey),
         const SizedBox(height: 8),
-        _buildMannerLeaveRow(reportCount: reportCount as int, leaveCount: leaveCount as int),
+        _buildMannerLeaveRow(totalGames: totalGames as int, reportCount: reportCount as int, leaveCount: leaveCount as int),
         const SizedBox(height: 10),
         _buildProfileSectionCard(
           title: L10n.of(context).gameTichuSeasonRanked,
@@ -2102,10 +2102,10 @@ class _SpectatorScreenState extends State<SpectatorScreen> {
     }
   }
 
-  Widget _buildMannerLeaveRow({required int reportCount, required int leaveCount}) {
-    final label = _mannerLabel(reportCount);
-    final color = _mannerColor(reportCount);
-    final icon = _mannerIcon(reportCount);
+  Widget _buildMannerLeaveRow({required int totalGames, required int reportCount, required int leaveCount}) {
+    final manner = _calcMannerScore(totalGames, leaveCount, reportCount);
+    final color = _mannerColor(manner);
+    final icon = _mannerIcon(manner);
     return Row(
       children: [
         Expanded(
@@ -2122,7 +2122,7 @@ class _SpectatorScreenState extends State<SpectatorScreen> {
                 Icon(icon, color: color, size: 16),
                 const SizedBox(width: 6),
                 Text(
-                  L10n.of(context).gameManner(label),
+                  '${L10n.of(context).rankingMannerScore} $manner',
                   style: TextStyle(
                     fontSize: 12,
                     fontWeight: FontWeight.bold,
@@ -2164,27 +2164,23 @@ class _SpectatorScreenState extends State<SpectatorScreen> {
     );
   }
 
-  String _mannerLabel(int reportCount) {
-    final l10n = L10n.of(context);
-    if (reportCount <= 1) return l10n.gameMannerGood;
-    if (reportCount <= 3) return l10n.gameMannerNormal;
-    if (reportCount <= 6) return l10n.gameMannerBad;
-    if (reportCount <= 10) return l10n.gameMannerVeryBad;
-    return l10n.gameMannerWorst;
+  static int _calcMannerScore(int totalGames, int leaveCount, int reportCount) {
+    int score = 1000;
+    score -= leaveCount * 5;
+    score -= reportCount * 3;
+    score += (totalGames ~/ 10) * 5;
+    return score.clamp(0, 1000);
   }
 
-  static Color _mannerColor(int reportCount) {
-    if (reportCount <= 1) return const Color(0xFF66BB6A);
-    if (reportCount <= 3) return const Color(0xFF8D9E56);
-    if (reportCount <= 6) return const Color(0xFFFFA726);
-    if (reportCount <= 10) return const Color(0xFFEF5350);
-    return const Color(0xFFB71C1C);
+  static Color _mannerColor(int score) {
+    if (score >= 800) return const Color(0xFF4CAF50);
+    if (score >= 500) return const Color(0xFFFF9800);
+    return const Color(0xFFE53935);
   }
 
-  static IconData _mannerIcon(int reportCount) {
-    if (reportCount <= 1) return Icons.sentiment_satisfied_alt;
-    if (reportCount <= 3) return Icons.sentiment_neutral;
-    if (reportCount <= 6) return Icons.sentiment_dissatisfied;
+  static IconData _mannerIcon(int score) {
+    if (score >= 800) return Icons.sentiment_very_satisfied;
+    if (score >= 500) return Icons.sentiment_neutral;
     return Icons.sentiment_very_dissatisfied;
   }
 

@@ -197,6 +197,7 @@
   "room_slot_taken": "이미 다른 플레이어가 있는 자리입니다",
   "room_no_empty_slot": "빈 자리가 없습니다",
   "room_no_switch_in_game": "게임 중에는 전환할 수 없습니다",
+  "room_only_human_player": "방에 다른 플레이어가 없어 관전으로 이동할 수 없습니다",
   "room_spectator_not_found": "관전자를 찾을 수 없습니다",
   "sk_not_bidding_phase": "비딩 페이즈가 아닙니다",
   "sk_bid_already_submitted": "이미 비드를 제출했습니다",

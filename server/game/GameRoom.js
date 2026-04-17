@@ -405,6 +405,12 @@ class GameRoom {
     if (idx === -1) {
       return { success: false, messageKey: 'player_not_found' };
     }
+    // Check if this is the only human player
+    const otherHumans = this.players.filter((p, i) => p !== null && !p.isBot && i !== idx);
+    if (otherHumans.length === 0) {
+      return { success: false, messageKey: 'room_only_human_player' };
+    }
+
     const player = this.players[idx];
     const nickname = player.nickname;
 

@@ -223,13 +223,13 @@ class SessionService extends ChangeNotifier {
   }
 
   Future<void> logout() async {
-    _network.disconnect(intentional: true);
-    _game.reset();
-    await _game.clearMaintenanceCache();
     _skipNextAutoRestore = true;
-    appNavigatorKey.currentState?.popUntil((route) => route.isFirst);
+    _network.disconnect(intentional: true);
     await clearPersistedSession();
     await AuthService.signOut();
+    _game.reset();
+    await _game.clearMaintenanceCache();
+    appNavigatorKey.currentState?.popUntil((route) => route.isFirst);
   }
 
   void resetToLoginState({bool suppressAutoRestore = false}) {

@@ -192,7 +192,7 @@
   "lobbyDuplicateLoginKicked": "Du wurdest abgemeldet, da sich ein anderes Gerät angemeldet hat",
   "lobbyRoomListTitle": "Raumliste",
   "lobbyEmptyRoomList": "Keine Räume vorhanden!\nErstelle doch einen!",
-  "lobbySkullKingBadge": "Skull King",
+  "lobbySkullKingBadge": "☠️ Skull King",
   "lobbyTichuBadge": "Tichu",
   "lobbyRoomTimeSec": "{seconds}s",
   "lobbyRoomTimeAndScore": "{seconds}s · {score}Pkt.",

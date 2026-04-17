@@ -5,6 +5,7 @@ import 'package:provider/provider.dart';
 import '../l10n/app_localizations.dart';
 import '../l10n/l10n_helpers.dart';
 import '../services/game_service.dart';
+import '../services/locale_service.dart';
 import '../services/network_service.dart';
 import '../services/session_service.dart';
 import '../models/player.dart';
@@ -16,6 +17,7 @@ import 'rules_screen.dart';
 import 'friends_screen.dart';
 import '../widgets/connection_overlay.dart';
 import '../services/ad_service.dart';
+import '../services/kakao_invite_share_service.dart';
 import 'package:google_mobile_ads/google_mobile_ads.dart';
 
 class LobbyScreen extends StatefulWidget {
@@ -46,14 +48,32 @@ class _LobbyScreenState extends State<LobbyScreen> {
     super.initState();
     _bannerAd = AdService.createBannerAd(
       AdService.lobbyBannerId,
-      onAdLoaded: (_) { if (mounted) setState(() => _bannerAdLoaded = true); },
-      onAdFailedToLoad: (_, _) { if (mounted) setState(() { _bannerAd = null; _bannerAdLoaded = false; }); },
+      onAdLoaded: (_) {
+        if (mounted) setState(() => _bannerAdLoaded = true);
+      },
+      onAdFailedToLoad: (_, error) {
+        if (mounted) {
+          setState(() {
+            _bannerAd = null;
+            _bannerAdLoaded = false;
+          });
+        }
+      },
     );
     _bannerAd!.load();
     _roomBannerAd = AdService.createBannerAd(
       AdService.skWaitingBannerId,
-      onAdLoaded: (_) { if (mounted) setState(() => _roomBannerLoaded = true); },
-      onAdFailedToLoad: (_, __) { if (mounted) setState(() { _roomBannerAd = null; _roomBannerLoaded = false; }); },
+      onAdLoaded: (_) {
+        if (mounted) setState(() => _roomBannerLoaded = true);
+      },
+      onAdFailedToLoad: (_, error) {
+        if (mounted) {
+          setState(() {
+            _roomBannerAd = null;
+            _roomBannerLoaded = false;
+          });
+        }
+      },
     );
     _roomBannerAd!.load();
     WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -132,7 +152,8 @@ class _LobbyScreenState extends State<LobbyScreen> {
               ),
               child: Row(
                 children: [
-                  if (isRanked) const Text('🏆 ', style: TextStyle(fontSize: 14)),
+                  if (isRanked)
+                    const Text('🏆 ', style: TextStyle(fontSize: 14)),
                   Expanded(
                     child: Text(
                       roomName,
@@ -162,7 +183,9 @@ class _LobbyScreenState extends State<LobbyScreen> {
             style: ElevatedButton.styleFrom(
               backgroundColor: const Color(0xFF7E57C2),
               foregroundColor: Colors.white,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
             ),
             child: Text(l10n.lobbyJoin),
           ),
@@ -182,7 +205,9 @@ class _LobbyScreenState extends State<LobbyScreen> {
               .where((f) => f['isOnline'] == true && f['roomId'] == null)
               .toList();
           return AlertDialog(
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(20),
+            ),
             title: Row(
               children: [
                 const Icon(Icons.person_add, color: Color(0xFF7E57C2)),
@@ -210,7 +235,10 @@ class _LobbyScreenState extends State<LobbyScreen> {
                         final friend = onlineFriends[index];
                         final nickname = friend['nickname'] as String? ?? '';
                         return Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 12,
+                            vertical: 10,
+                          ),
                           decoration: BoxDecoration(
                             color: const Color(0xFFF1F8E9),
                             borderRadius: BorderRadius.circular(12),
@@ -241,12 +269,21 @@ class _LobbyScreenState extends State<LobbyScreen> {
                                 onTap: () {
                                   game.inviteToRoom(nickname);
                                   Navigator.pop(ctx);
-                                  ScaffoldMessenger.of(this.context).showSnackBar(
-                                    SnackBar(content: Text(l10n.lobbyInviteSent(nickname))),
+                                  ScaffoldMessenger.of(
+                                    this.context,
+                                  ).showSnackBar(
+                                    SnackBar(
+                                      content: Text(
+                                        l10n.lobbyInviteSent(nickname),
+                                      ),
+                                    ),
                                   );
                                 },
                                 child: Container(
-                                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 10,
+                                    vertical: 6,
+                                  ),
                                   decoration: BoxDecoration(
                                     color: const Color(0xFF7E57C2),
                                     borderRadius: BorderRadius.circular(8),
@@ -312,7 +349,10 @@ class _LobbyScreenState extends State<LobbyScreen> {
                   itemBuilder: (context, index) {
                     final nickname = spectators[index]['nickname'] ?? '';
                     return Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 12,
+                        vertical: 10,
+                      ),
                       decoration: BoxDecoration(
                         color: const Color(0xFFEDE7F6),
                         borderRadius: BorderRadius.circular(12),
@@ -320,7 +360,11 @@ class _LobbyScreenState extends State<LobbyScreen> {
                       ),
                       child: Row(
                         children: [
-                          const Icon(Icons.person, size: 16, color: Color(0xFF6A5A52)),
+                          const Icon(
+                            Icons.person,
+                            size: 16,
+                            color: Color(0xFF6A5A52),
+                          ),
                           const SizedBox(width: 8),
                           Expanded(
                             child: Text(
@@ -412,14 +456,50 @@ class _LobbyScreenState extends State<LobbyScreen> {
     final random = DateTime.now().millisecondsSinceEpoch;
     final l = l10n ?? L10n.of(context);
     if (gameType == 'skull_king') {
-      final adjectives = [l.lobbyRandomAdjSk1, l.lobbyRandomAdjSk2, l.lobbyRandomAdjSk3, l.lobbyRandomAdjSk4, l.lobbyRandomAdjSk5, l.lobbyRandomAdjSk6, l.lobbyRandomAdjSk7, l.lobbyRandomAdjSk8];
-      final nouns = [l.lobbyRandomNounSk1, l.lobbyRandomNounSk2, l.lobbyRandomNounSk3, l.lobbyRandomNounSk4, l.lobbyRandomNounSk5, l.lobbyRandomNounSk6, l.lobbyRandomNounSk7, l.lobbyRandomNounSk8];
+      final adjectives = [
+        l.lobbyRandomAdjSk1,
+        l.lobbyRandomAdjSk2,
+        l.lobbyRandomAdjSk3,
+        l.lobbyRandomAdjSk4,
+        l.lobbyRandomAdjSk5,
+        l.lobbyRandomAdjSk6,
+        l.lobbyRandomAdjSk7,
+        l.lobbyRandomAdjSk8,
+      ];
+      final nouns = [
+        l.lobbyRandomNounSk1,
+        l.lobbyRandomNounSk2,
+        l.lobbyRandomNounSk3,
+        l.lobbyRandomNounSk4,
+        l.lobbyRandomNounSk5,
+        l.lobbyRandomNounSk6,
+        l.lobbyRandomNounSk7,
+        l.lobbyRandomNounSk8,
+      ];
       final adj = adjectives[random % adjectives.length];
       final noun = nouns[(random ~/ 8) % nouns.length];
       return '$adj $noun';
     } else {
-      final adjectives = [l.lobbyRandomAdjTichu1, l.lobbyRandomAdjTichu2, l.lobbyRandomAdjTichu3, l.lobbyRandomAdjTichu4, l.lobbyRandomAdjTichu5, l.lobbyRandomAdjTichu6, l.lobbyRandomAdjTichu7, l.lobbyRandomAdjTichu8];
-      final nouns = [l.lobbyRandomNounTichu1, l.lobbyRandomNounTichu2, l.lobbyRandomNounTichu3, l.lobbyRandomNounTichu4, l.lobbyRandomNounTichu5, l.lobbyRandomNounTichu6, l.lobbyRandomNounTichu7, l.lobbyRandomNounTichu8];
+      final adjectives = [
+        l.lobbyRandomAdjTichu1,
+        l.lobbyRandomAdjTichu2,
+        l.lobbyRandomAdjTichu3,
+        l.lobbyRandomAdjTichu4,
+        l.lobbyRandomAdjTichu5,
+        l.lobbyRandomAdjTichu6,
+        l.lobbyRandomAdjTichu7,
+        l.lobbyRandomAdjTichu8,
+      ];
+      final nouns = [
+        l.lobbyRandomNounTichu1,
+        l.lobbyRandomNounTichu2,
+        l.lobbyRandomNounTichu3,
+        l.lobbyRandomNounTichu4,
+        l.lobbyRandomNounTichu5,
+        l.lobbyRandomNounTichu6,
+        l.lobbyRandomNounTichu7,
+        l.lobbyRandomNounTichu8,
+      ];
       final adj = adjectives[random % adjectives.length];
       final noun = nouns[(random ~/ 8) % nouns.length];
       return '$adj $noun';
@@ -445,7 +525,9 @@ class _LobbyScreenState extends State<LobbyScreen> {
         builder: (context, setState) {
           dialogSetState = setState;
           final themeColors = context.read<GameService>().themeGradient;
-          final accent = themeColors.length > 1 ? themeColors[1] : themeColors.first;
+          final accent = themeColors.length > 1
+              ? themeColors[1]
+              : themeColors.first;
           final fillColor = Colors.white.withValues(alpha: 0.82);
 
           InputDecoration fieldDecoration(
@@ -470,7 +552,10 @@ class _LobbyScreenState extends State<LobbyScreen> {
                 borderSide: BorderSide(color: accent, width: 1.4),
               ),
               isDense: true,
-              contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+              contentPadding: const EdgeInsets.symmetric(
+                horizontal: 14,
+                vertical: 12,
+              ),
             );
           }
 
@@ -546,17 +631,16 @@ class _LobbyScreenState extends State<LobbyScreen> {
                     ),
                   ),
                   const SizedBox(width: 12),
-                  Switch(
-                    value: value,
-                    onChanged: enabled ? onChanged : null,
-                  ),
+                  Switch(value: value, onChanged: enabled ? onChanged : null),
                 ],
               ),
             );
           }
 
           return AlertDialog(
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(24),
+            ),
             backgroundColor: themeColors.first.withValues(alpha: 0.94),
             contentPadding: const EdgeInsets.fromLTRB(18, 18, 18, 10),
             content: ConstrainedBox(
@@ -620,7 +704,10 @@ class _LobbyScreenState extends State<LobbyScreen> {
                         ],
                       ),
                       const SizedBox(height: 16),
-                      sectionTitle(l10n.lobbySelectGame, l10n.lobbySelectGameDesc),
+                      sectionTitle(
+                        l10n.lobbySelectGame,
+                        l10n.lobbySelectGameDesc,
+                      ),
                       const SizedBox(height: 10),
                       Builder(
                         builder: (ctx) {
@@ -650,18 +737,25 @@ class _LobbyScreenState extends State<LobbyScreen> {
                           void selectGame(String type) {
                             setState(() {
                               selectedGameType = type;
-                              randomName = _generateRandomRoomName(gameType: selectedGameType, l10n: l10n);
-                              if (selectedGameType == 'skull_king' || selectedGameType == 'love_letter') {
+                              randomName = _generateRandomRoomName(
+                                gameType: selectedGameType,
+                                l10n: l10n,
+                              );
+                              if (selectedGameType == 'skull_king' ||
+                                  selectedGameType == 'love_letter') {
                                 isRanked = false;
                               }
                             });
                           }
+
                           return InkWell(
                             onTap: () {
                               showModalBottomSheet(
                                 context: ctx,
                                 shape: const RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+                                  borderRadius: BorderRadius.vertical(
+                                    top: Radius.circular(16),
+                                  ),
                                 ),
                                 builder: (sheetCtx) => SafeArea(
                                   child: Column(
@@ -673,15 +767,23 @@ class _LobbyScreenState extends State<LobbyScreen> {
                                         height: 4,
                                         decoration: BoxDecoration(
                                           color: Colors.grey[300],
-                                          borderRadius: BorderRadius.circular(2),
+                                          borderRadius: BorderRadius.circular(
+                                            2,
+                                          ),
                                         ),
                                       ),
                                       const SizedBox(height: 12),
                                       ListTile(
-                                        leading: const Text('🃏', style: TextStyle(fontSize: 20)),
+                                        leading: const Text(
+                                          '🃏',
+                                          style: TextStyle(fontSize: 20),
+                                        ),
                                         title: Text(l10n.lobbyTichu),
                                         trailing: selectedGameType == 'tichu'
-                                            ? const Icon(Icons.check, color: Color(0xFF7E57C2))
+                                            ? const Icon(
+                                                Icons.check,
+                                                color: Color(0xFF7E57C2),
+                                              )
                                             : null,
                                         onTap: () {
                                           Navigator.pop(sheetCtx);
@@ -689,10 +791,17 @@ class _LobbyScreenState extends State<LobbyScreen> {
                                         },
                                       ),
                                       ListTile(
-                                        leading: const Text('⚓', style: TextStyle(fontSize: 20)),
+                                        leading: const Text(
+                                          '⚓',
+                                          style: TextStyle(fontSize: 20),
+                                        ),
                                         title: Text(l10n.lobbySkullKing),
-                                        trailing: selectedGameType == 'skull_king'
-                                            ? const Icon(Icons.check, color: Color(0xFF2D2D3D))
+                                        trailing:
+                                            selectedGameType == 'skull_king'
+                                            ? const Icon(
+                                                Icons.check,
+                                                color: Color(0xFF2D2D3D),
+                                              )
                                             : null,
                                         onTap: () {
                                           Navigator.pop(sheetCtx);
@@ -700,10 +809,17 @@ class _LobbyScreenState extends State<LobbyScreen> {
                                         },
                                       ),
                                       ListTile(
-                                        leading: const Text('❤️', style: TextStyle(fontSize: 20)),
+                                        leading: const Text(
+                                          '❤️',
+                                          style: TextStyle(fontSize: 20),
+                                        ),
                                         title: Text(l10n.lobbyLoveLetter),
-                                        trailing: selectedGameType == 'love_letter'
-                                            ? const Icon(Icons.check, color: Color(0xFFE91E63))
+                                        trailing:
+                                            selectedGameType == 'love_letter'
+                                            ? const Icon(
+                                                Icons.check,
+                                                color: Color(0xFFE91E63),
+                                              )
                                             : null,
                                         onTap: () {
                                           Navigator.pop(sheetCtx);
@@ -719,14 +835,20 @@ class _LobbyScreenState extends State<LobbyScreen> {
                             borderRadius: BorderRadius.circular(12),
                             child: Container(
                               width: double.infinity,
-                              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 14,
+                                vertical: 10,
+                              ),
                               decoration: BoxDecoration(
                                 color: gameBgColor,
                                 borderRadius: BorderRadius.circular(12),
                               ),
                               child: Row(
                                 children: [
-                                  Text(gameEmoji, style: const TextStyle(fontSize: 18)),
+                                  Text(
+                                    gameEmoji,
+                                    style: const TextStyle(fontSize: 18),
+                                  ),
                                   const SizedBox(width: 8),
                                   Expanded(
                                     child: Text(
@@ -738,7 +860,10 @@ class _LobbyScreenState extends State<LobbyScreen> {
                                       ),
                                     ),
                                   ),
-                                  Icon(Icons.arrow_drop_down, color: gameFgColor),
+                                  Icon(
+                                    Icons.arrow_drop_down,
+                                    color: gameFgColor,
+                                  ),
                                 ],
                               ),
                             ),
@@ -747,19 +872,40 @@ class _LobbyScreenState extends State<LobbyScreen> {
                       ),
                       if (selectedGameType == 'skull_king') ...[
                         const SizedBox(height: 14),
-                        Text(l10n.lobbyExpansionOptional, style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 12)),
+                        Text(
+                          l10n.lobbyExpansionOptional,
+                          style: const TextStyle(
+                            fontWeight: FontWeight.w700,
+                            fontSize: 12,
+                          ),
+                        ),
                         const SizedBox(height: 2),
                         Text(
                           l10n.lobbyExpansionDesc,
-                          style: const TextStyle(fontSize: 10, color: Color(0xFF7E7069)),
+                          style: const TextStyle(
+                            fontSize: 10,
+                            color: Color(0xFF7E7069),
+                          ),
                         ),
                         const SizedBox(height: 8),
                         Column(
                           children: [
                             for (final entry in [
-                              ['kraken', l10n.lobbyExpKraken, l10n.lobbyExpKrakenDesc],
-                              ['white_whale', l10n.lobbyExpWhiteWhale, l10n.lobbyExpWhiteWhaleDesc],
-                              ['loot', l10n.lobbyExpLoot, l10n.lobbyExpLootDesc],
+                              [
+                                'kraken',
+                                l10n.lobbyExpKraken,
+                                l10n.lobbyExpKrakenDesc,
+                              ],
+                              [
+                                'white_whale',
+                                l10n.lobbyExpWhiteWhale,
+                                l10n.lobbyExpWhiteWhaleDesc,
+                              ],
+                              [
+                                'loot',
+                                l10n.lobbyExpLoot,
+                                l10n.lobbyExpLootDesc,
+                              ],
                             ])
                               Padding(
                                 padding: EdgeInsets.only(
@@ -767,7 +913,9 @@ class _LobbyScreenState extends State<LobbyScreen> {
                                 ),
                                 child: GestureDetector(
                                   onTap: () => setState(() {
-                                    if (skExpansionsSelected.contains(entry[0])) {
+                                    if (skExpansionsSelected.contains(
+                                      entry[0],
+                                    )) {
                                       skExpansionsSelected.remove(entry[0]);
                                     } else {
                                       skExpansionsSelected.add(entry[0]);
@@ -776,43 +924,66 @@ class _LobbyScreenState extends State<LobbyScreen> {
                                   child: AnimatedContainer(
                                     duration: const Duration(milliseconds: 150),
                                     padding: const EdgeInsets.symmetric(
-                                        vertical: 10, horizontal: 12),
+                                      vertical: 10,
+                                      horizontal: 12,
+                                    ),
                                     decoration: BoxDecoration(
-                                      color: skExpansionsSelected.contains(entry[0])
+                                      color:
+                                          skExpansionsSelected.contains(
+                                            entry[0],
+                                          )
                                           ? accent.withValues(alpha: 0.25)
                                           : Colors.white,
                                       borderRadius: BorderRadius.circular(10),
                                       border: Border.all(
-                                        color: skExpansionsSelected.contains(entry[0])
+                                        color:
+                                            skExpansionsSelected.contains(
+                                              entry[0],
+                                            )
                                             ? accent
                                             : const Color(0xFFE0D8D4),
-                                        width: skExpansionsSelected.contains(entry[0]) ? 1.5 : 1,
+                                        width:
+                                            skExpansionsSelected.contains(
+                                              entry[0],
+                                            )
+                                            ? 1.5
+                                            : 1,
                                       ),
                                     ),
                                     child: Row(
                                       children: [
                                         Icon(
-                                          skExpansionsSelected.contains(entry[0])
+                                          skExpansionsSelected.contains(
+                                                entry[0],
+                                              )
                                               ? Icons.check_box
                                               : Icons.check_box_outline_blank,
                                           size: 20,
-                                          color: skExpansionsSelected.contains(entry[0])
+                                          color:
+                                              skExpansionsSelected.contains(
+                                                entry[0],
+                                              )
                                               ? accent
                                               : const Color(0xFFC0B5AE),
                                         ),
                                         const SizedBox(width: 10),
                                         Expanded(
                                           child: Column(
-                                            crossAxisAlignment: CrossAxisAlignment.start,
+                                            crossAxisAlignment:
+                                                CrossAxisAlignment.start,
                                             children: [
                                               Text(
                                                 entry[1],
                                                 style: TextStyle(
                                                   fontSize: 13,
-                                                  fontWeight: skExpansionsSelected.contains(entry[0])
+                                                  fontWeight:
+                                                      skExpansionsSelected
+                                                          .contains(entry[0])
                                                       ? FontWeight.bold
                                                       : FontWeight.w600,
-                                                  color: skExpansionsSelected.contains(entry[0])
+                                                  color:
+                                                      skExpansionsSelected
+                                                          .contains(entry[0])
                                                       ? const Color(0xFF3E312A)
                                                       : const Color(0xFF8A7A72),
                                                 ),
@@ -822,7 +993,9 @@ class _LobbyScreenState extends State<LobbyScreen> {
                                                 entry[2],
                                                 style: TextStyle(
                                                   fontSize: 10,
-                                                  color: skExpansionsSelected.contains(entry[0])
+                                                  color:
+                                                      skExpansionsSelected
+                                                          .contains(entry[0])
                                                       ? const Color(0xFF5F4E46)
                                                       : const Color(0xFFAAA09C),
                                                 ),
@@ -839,22 +1012,33 @@ class _LobbyScreenState extends State<LobbyScreen> {
                         ),
                       ],
                       const SizedBox(height: 16),
-                      sectionTitle(l10n.lobbyBasicInfo, l10n.lobbyBasicInfoDesc),
+                      sectionTitle(
+                        l10n.lobbyBasicInfo,
+                        l10n.lobbyBasicInfoDesc,
+                      ),
                       const SizedBox(height: 10),
                       Row(
                         children: [
                           Text(
                             l10n.lobbyRoomName,
-                            style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 12),
+                            style: const TextStyle(
+                              fontWeight: FontWeight.w700,
+                              fontSize: 12,
+                            ),
                           ),
                           const Spacer(),
                           TextButton.icon(
                             onPressed: () => setState(() {
-                              randomName = _generateRandomRoomName(gameType: selectedGameType, l10n: l10n);
+                              randomName = _generateRandomRoomName(
+                                gameType: selectedGameType,
+                                l10n: l10n,
+                              );
                               controller.text = randomName;
                             }),
                             style: TextButton.styleFrom(
-                              padding: const EdgeInsets.symmetric(horizontal: 8),
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 8,
+                              ),
                               minimumSize: const Size(0, 28),
                               tapTargetSize: MaterialTapTargetSize.shrinkWrap,
                               foregroundColor: accent,
@@ -887,7 +1071,9 @@ class _LobbyScreenState extends State<LobbyScreen> {
                           decoration: fieldDecoration(l10n.lobbyPasswordHint),
                         ),
                       ],
-                      if (context.read<GameService>().authProvider != 'local') ...[
+                      if (selectedGameType != 'love_letter' &&
+                          context.read<GameService>().authProvider !=
+                              'local') ...[
                         const SizedBox(height: 12),
                         optionCard(
                           title: l10n.lobbyRanked,
@@ -904,7 +1090,12 @@ class _LobbyScreenState extends State<LobbyScreen> {
                         ),
                       ],
                       const SizedBox(height: 16),
-                      sectionTitle(l10n.lobbyGameSettings, selectedGameType == 'tichu' ? l10n.lobbyGameSettingsDescTichu : l10n.lobbyGameSettingsDescSk),
+                      sectionTitle(
+                        l10n.lobbyGameSettings,
+                        selectedGameType == 'tichu'
+                            ? l10n.lobbyGameSettingsDescTichu
+                            : l10n.lobbyGameSettingsDescSk,
+                      ),
                       const SizedBox(height: 10),
                       Row(
                         children: [
@@ -914,7 +1105,10 @@ class _LobbyScreenState extends State<LobbyScreen> {
                               children: [
                                 Text(
                                   l10n.lobbyTimeLimit,
-                                  style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 12),
+                                  style: const TextStyle(
+                                    fontWeight: FontWeight.w700,
+                                    fontSize: 12,
+                                  ),
                                 ),
                                 const SizedBox(height: 6),
                                 TextField(
@@ -925,7 +1119,10 @@ class _LobbyScreenState extends State<LobbyScreen> {
                                     LengthLimitingTextInputFormatter(3),
                                   ],
                                   textAlign: TextAlign.center,
-                                  decoration: fieldDecoration(l10n.lobbyTimeLimitRange, suffixText: l10n.lobbySuffixSeconds),
+                                  decoration: fieldDecoration(
+                                    l10n.lobbyTimeLimitRange,
+                                    suffixText: l10n.lobbySuffixSeconds,
+                                  ),
                                 ),
                               ],
                             ),
@@ -938,7 +1135,10 @@ class _LobbyScreenState extends State<LobbyScreen> {
                                 children: [
                                   Text(
                                     l10n.lobbyTargetScore,
-                                    style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 12),
+                                    style: const TextStyle(
+                                      fontWeight: FontWeight.w700,
+                                      fontSize: 12,
+                                    ),
                                   ),
                                   const SizedBox(height: 6),
                                   TextField(
@@ -951,7 +1151,9 @@ class _LobbyScreenState extends State<LobbyScreen> {
                                     ],
                                     textAlign: TextAlign.center,
                                     decoration: fieldDecoration(
-                                      isRanked ? l10n.lobbyTargetScoreFixed : l10n.lobbyTargetScoreRange,
+                                      isRanked
+                                          ? l10n.lobbyTargetScoreFixed
+                                          : l10n.lobbyTargetScoreRange,
                                       suffixText: l10n.lobbySuffixPoints,
                                     ),
                                   ),
@@ -964,7 +1166,10 @@ class _LobbyScreenState extends State<LobbyScreen> {
                       const SizedBox(height: 10),
                       Container(
                         width: double.infinity,
-                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 12,
+                          vertical: 10,
+                        ),
                         decoration: BoxDecoration(
                           color: Colors.white.withValues(alpha: 0.55),
                           borderRadius: BorderRadius.circular(12),
@@ -983,7 +1188,10 @@ class _LobbyScreenState extends State<LobbyScreen> {
                         const SizedBox(height: 12),
                         Container(
                           width: double.infinity,
-                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 12,
+                            vertical: 10,
+                          ),
                           decoration: BoxDecoration(
                             color: const Color(0xFFFFECEC),
                             borderRadius: BorderRadius.circular(12),
@@ -1016,19 +1224,25 @@ class _LobbyScreenState extends State<LobbyScreen> {
                       : controller.text.trim();
                   final password = passwordController.text.trim();
                   if (name.isEmpty) {
-                    dialogSetState?.call(() => errorText = l10n.lobbyEnterRoomName);
+                    dialogSetState?.call(
+                      () => errorText = l10n.lobbyEnterRoomName,
+                    );
                     return;
                   }
                   if (isPrivate && password.length < 4) {
-                    dialogSetState?.call(() => errorText = l10n.lobbyPasswordTooShort);
+                    dialogSetState?.call(
+                      () => errorText = l10n.lobbyPasswordTooShort,
+                    );
                     return;
                   }
                   final turnTimeLimit =
-                      (int.tryParse(timeLimitController.text.trim()) ?? 30).clamp(10, 999);
+                      (int.tryParse(timeLimitController.text.trim()) ?? 30)
+                          .clamp(10, 999);
                   final targetScore = isRanked
                       ? 1000
-                      : (int.tryParse(targetScoreController.text.trim()) ?? 1000)
-                          .clamp(100, 20000);
+                      : (int.tryParse(targetScoreController.text.trim()) ??
+                                1000)
+                            .clamp(100, 20000);
                   context.read<GameService>().createRoom(
                     name,
                     password: isPrivate ? password : '',
@@ -1039,8 +1253,8 @@ class _LobbyScreenState extends State<LobbyScreen> {
                     maxPlayers: selectedGameType == 'skull_king'
                         ? 6
                         : selectedGameType == 'love_letter'
-                            ? 4
-                            : 4,
+                        ? 4
+                        : 4,
                     skExpansions: selectedGameType == 'skull_king'
                         ? skExpansionsSelected.toList()
                         : const [],
@@ -1055,7 +1269,10 @@ class _LobbyScreenState extends State<LobbyScreen> {
                     borderRadius: BorderRadius.circular(14),
                   ),
                   elevation: 0,
-                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 14,
+                    vertical: 10,
+                  ),
                 ),
                 icon: const Icon(Icons.check_circle_outline, size: 18),
                 label: Text(l10n.lobbyCreateRoom),
@@ -1076,65 +1293,68 @@ class _LobbyScreenState extends State<LobbyScreen> {
       child: PopScope(
         canPop: false,
         child: Scaffold(
-        body: Container(
-        decoration: BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topCenter,
-            end: Alignment.bottomCenter,
-            colors: themeColors,
+          body: Container(
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                begin: Alignment.topCenter,
+                end: Alignment.bottomCenter,
+                colors: themeColors,
+              ),
+            ),
+            child: SafeArea(
+              child: Consumer<GameService>(
+                builder: (context, game, _) {
+                  // Handle duplicate login kick
+                  if (game.duplicateLoginKicked) {
+                    WidgetsBinding.instance.addPostFrameCallback((_) async {
+                      if (!mounted) return;
+                      if (!game.consumeDuplicateLoginKick()) return;
+                      final session = context.read<SessionService>();
+                      final messenger = ScaffoldMessenger.of(context);
+                      final duplicateLoginMessage = L10n.of(
+                        context,
+                      ).lobbyDuplicateLoginKicked;
+                      await session.logout();
+                      if (!mounted) return;
+                      messenger.showSnackBar(
+                        SnackBar(
+                          content: Text(duplicateLoginMessage),
+                          backgroundColor: Colors.red,
+                        ),
+                      );
+                    });
+                  }
+                  // Show room invite dialog if any
+                  if (game.hasRoomInvites) {
+                    WidgetsBinding.instance.addPostFrameCallback((_) {
+                      if (!mounted) return;
+                      final invite = game.firstRoomInvite;
+                      if (invite == null) return;
+                      game.dismissInvite(0);
+                      _showRoomInviteDialog(invite, game);
+                    });
+                  }
+
+                  // Sync local room flag with server state
+                  if (!game.hasRoom && _inRoom) {
+                    _inRoom = false;
+                  }
+                  if (game.isInWaitingRoom && !_inRoom) {
+                    _inRoom = true;
+                  }
+
+                  final destination = game.currentDestination;
+
+                  if (destination != AppDestination.lobby || _inRoom) {
+                    _inRoom = true;
+                    return _buildRoomView(game, isLandscape: isLandscape);
+                  }
+                  return _buildLobbyView(game, isLandscape: isLandscape);
+                },
+              ),
+            ),
           ),
         ),
-        child: SafeArea(
-          child: Consumer<GameService>(
-            builder: (context, game, _) {
-              // Handle duplicate login kick
-              if (game.duplicateLoginKicked) {
-                WidgetsBinding.instance.addPostFrameCallback((_) async {
-                  if (!mounted) return;
-                  if (!game.consumeDuplicateLoginKick()) return;
-                  final session = context.read<SessionService>();
-                  final messenger = ScaffoldMessenger.of(context);
-                  await session.logout();
-                  if (!mounted) return;
-                  messenger.showSnackBar(
-                    SnackBar(
-                      content: Text(L10n.of(context).lobbyDuplicateLoginKicked),
-                      backgroundColor: Colors.red,
-                    ),
-                  );
-                });
-              }
-              // Show room invite dialog if any
-              if (game.hasRoomInvites) {
-                WidgetsBinding.instance.addPostFrameCallback((_) {
-                  if (!mounted) return;
-                  final invite = game.firstRoomInvite;
-                  if (invite == null) return;
-                  game.dismissInvite(0);
-                  _showRoomInviteDialog(invite, game);
-                });
-              }
-
-              // Sync local room flag with server state
-              if (!game.hasRoom && _inRoom) {
-                _inRoom = false;
-              }
-              if (game.isInWaitingRoom && !_inRoom) {
-                _inRoom = true;
-              }
-
-              final destination = game.currentDestination;
-
-              if (destination != AppDestination.lobby || _inRoom) {
-                _inRoom = true;
-                return _buildRoomView(game, isLandscape: isLandscape);
-              }
-              return _buildLobbyView(game, isLandscape: isLandscape);
-            },
-          ),
-        ),
-      ),
-      ),
       ),
     );
   }
@@ -1181,15 +1401,11 @@ class _LobbyScreenState extends State<LobbyScreen> {
         _buildLobbyHeader(game, isLandscape: false),
 
         // Maintenance notice banner
-        if (game.hasMaintenanceNotice)
-          _buildMaintenanceBanner(game),
-        if (game.inquiryBannerMessage != null)
-          _buildInquiryBanner(game),
+        if (game.hasMaintenanceNotice) _buildMaintenanceBanner(game),
+        if (game.inquiryBannerMessage != null) _buildInquiryBanner(game),
 
         // Room list or Friends panel
-        Expanded(
-          child: _buildRoomListPanel(game),
-        ),
+        Expanded(child: _buildRoomListPanel(game)),
         if (_bannerAd != null && _bannerAdLoaded)
           SizedBox(
             height: _bannerAd!.size.height.toDouble(),
@@ -1248,10 +1464,7 @@ class _LobbyScreenState extends State<LobbyScreen> {
         children: [
           ConstrainedBox(
             constraints: BoxConstraints(maxHeight: isLandscape ? 36 : 44),
-            child: Image.asset(
-              'assets/logo2.png',
-              fit: BoxFit.contain,
-            ),
+            child: Image.asset('assets/logo2.png', fit: BoxFit.contain),
           ),
           const SizedBox(width: 12),
           Expanded(
@@ -1374,7 +1587,9 @@ class _LobbyScreenState extends State<LobbyScreen> {
                 ),
                 constraints: const BoxConstraints(minWidth: 16, minHeight: 16),
                 child: Text(
-                  game.unreadNoticeCount > 9 ? '9+' : '${game.unreadNoticeCount}',
+                  game.unreadNoticeCount > 9
+                      ? '9+'
+                      : '${game.unreadNoticeCount}',
                   style: const TextStyle(
                     color: Colors.white,
                     fontSize: 9,
@@ -1395,7 +1610,8 @@ class _LobbyScreenState extends State<LobbyScreen> {
       try {
         final start = DateTime.parse(game.maintenanceStart!).toLocal();
         final end = DateTime.parse(game.maintenanceEnd!).toLocal();
-        String fmt(DateTime d) => '${d.month}/${d.day} ${d.hour.toString().padLeft(2, '0')}:${d.minute.toString().padLeft(2, '0')}';
+        String fmt(DateTime d) =>
+            '${d.month}/${d.day} ${d.hour.toString().padLeft(2, '0')}:${d.minute.toString().padLeft(2, '0')}';
         timeText = '${fmt(start)} ~ ${fmt(end)}';
       } catch (_) {}
     }
@@ -1456,7 +1672,10 @@ class _LobbyScreenState extends State<LobbyScreen> {
           const SizedBox(width: 10),
           Expanded(
             child: Text(
-              localizeInquiryBanner(game.inquiryBannerMessage, L10n.of(context)),
+              localizeInquiryBanner(
+                game.inquiryBannerMessage,
+                L10n.of(context),
+              ),
               style: const TextStyle(
                 color: Color(0xFF1E88E5),
                 fontSize: 13,
@@ -1467,7 +1686,11 @@ class _LobbyScreenState extends State<LobbyScreen> {
           ),
           GestureDetector(
             onTap: () => game.requestInquiries(),
-            child: const Icon(Icons.refresh, size: 18, color: Color(0xFF1E88E5)),
+            child: const Icon(
+              Icons.refresh,
+              size: 18,
+              color: Color(0xFF1E88E5),
+            ),
           ),
         ],
       ),
@@ -1496,10 +1719,7 @@ class _LobbyScreenState extends State<LobbyScreen> {
             children: [
               Text(
                 L10n.of(context).lobbyRoomListTitle,
-                style: const TextStyle(
-                  fontSize: 16,
-                  color: Color(0xFF8A7A72),
-                ),
+                style: const TextStyle(fontSize: 16, color: Color(0xFF8A7A72)),
               ),
               const Spacer(),
               IconButton(
@@ -1545,7 +1765,6 @@ class _LobbyScreenState extends State<LobbyScreen> {
     );
   }
 
-
   // removed separate spectate list; in-progress rooms are shown inline
 
   Widget _buildEmptyRoomList() {
@@ -1553,10 +1772,7 @@ class _LobbyScreenState extends State<LobbyScreen> {
       child: Text(
         L10n.of(context).lobbyEmptyRoomList,
         textAlign: TextAlign.center,
-        style: const TextStyle(
-          fontSize: 16,
-          color: Color(0xFF9A8E8A),
-        ),
+        style: const TextStyle(fontSize: 16, color: Color(0xFF9A8E8A)),
       ),
     );
   }
@@ -1602,8 +1818,12 @@ class _LobbyScreenState extends State<LobbyScreen> {
     final Color subTextColor;
 
     if (isLL) {
-      bgColor = isInProgress ? const Color(0xFFF8E0E0) : const Color(0xFFFAF0F0);
-      borderColor = isInProgress ? const Color(0xFFD0A0A0) : const Color(0xFFDDC0C0);
+      bgColor = isInProgress
+          ? const Color(0xFFF8E0E0)
+          : const Color(0xFFFAF0F0);
+      borderColor = isInProgress
+          ? const Color(0xFFD0A0A0)
+          : const Color(0xFFDDC0C0);
       stripColor = const Color(0xFF8B1A1A);
       badgeBgColor = const Color(0xFF8B1A1A);
       badgeTextColor = const Color(0xFFFFB6C1);
@@ -1611,17 +1831,25 @@ class _LobbyScreenState extends State<LobbyScreen> {
       nameColor = const Color(0xFF5A2020);
       subTextColor = const Color(0xFF906060);
     } else if (isSK) {
-      bgColor = isInProgress ? const Color(0xFFE0E4EF) : const Color(0xFFECEFF6);
-      borderColor = isInProgress ? const Color(0xFFB0B8D0) : const Color(0xFFC0C8DD);
+      bgColor = isInProgress
+          ? const Color(0xFFE0E4EF)
+          : const Color(0xFFECEFF6);
+      borderColor = isInProgress
+          ? const Color(0xFFB0B8D0)
+          : const Color(0xFFC0C8DD);
       stripColor = const Color(0xFF2D2D3D);
       badgeBgColor = const Color(0xFF2D2D3D);
       badgeTextColor = const Color(0xFFFFD54F);
-      badgeText = '☠️ ${l10n.lobbySkullKingBadge}';
+      badgeText = l10n.lobbySkullKingBadge;
       nameColor = const Color(0xFF2D2D3D);
       subTextColor = const Color(0xFF7A7A90);
     } else {
-      bgColor = isInProgress ? const Color(0xFFEDE8F8) : const Color(0xFFF6F4FA);
-      borderColor = isInProgress ? const Color(0xFFC4BBE0) : const Color(0xFFD8D0E8);
+      bgColor = isInProgress
+          ? const Color(0xFFEDE8F8)
+          : const Color(0xFFF6F4FA);
+      borderColor = isInProgress
+          ? const Color(0xFFC4BBE0)
+          : const Color(0xFFD8D0E8);
       stripColor = const Color(0xFF6C63FF);
       badgeBgColor = const Color(0xFF6C63FF);
       badgeTextColor = Colors.white;
@@ -1639,7 +1867,8 @@ class _LobbyScreenState extends State<LobbyScreen> {
             _spectateWithPasswordCheck(room);
             return;
           }
-          if (room.isRanked && context.read<GameService>().authProvider == 'local') {
+          if (room.isRanked &&
+              context.read<GameService>().authProvider == 'local') {
             _showRankedSocialRequiredDialog();
             return;
           }
@@ -1682,13 +1911,23 @@ class _LobbyScreenState extends State<LobbyScreen> {
                             Row(
                               children: [
                                 Container(
-                                  padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 7,
+                                    vertical: 3,
+                                  ),
                                   margin: const EdgeInsets.only(right: 8),
                                   decoration: BoxDecoration(
                                     color: badgeBgColor,
                                     borderRadius: BorderRadius.circular(8),
                                   ),
-                                  child: Text(badgeText, style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: badgeTextColor)),
+                                  child: Text(
+                                    badgeText,
+                                    style: TextStyle(
+                                      fontSize: 11,
+                                      fontWeight: FontWeight.bold,
+                                      color: badgeTextColor,
+                                    ),
+                                  ),
                                 ),
                                 Expanded(
                                   child: Text(
@@ -1709,8 +1948,13 @@ class _LobbyScreenState extends State<LobbyScreen> {
                               children: [
                                 Text(
                                   isSK
-                                      ? l10n.lobbyRoomTimeSec(room.turnTimeLimit)
-                                      : l10n.lobbyRoomTimeAndScore(room.turnTimeLimit, room.targetScore),
+                                      ? l10n.lobbyRoomTimeSec(
+                                          room.turnTimeLimit,
+                                        )
+                                      : l10n.lobbyRoomTimeAndScore(
+                                          room.turnTimeLimit,
+                                          room.targetScore,
+                                        ),
                                   style: TextStyle(
                                     fontSize: 11,
                                     color: subTextColor,
@@ -1728,9 +1972,13 @@ class _LobbyScreenState extends State<LobbyScreen> {
                                         ),
                                         decoration: BoxDecoration(
                                           color: const Color(0xFF2D2D3D),
-                                          borderRadius: BorderRadius.circular(6),
+                                          borderRadius: BorderRadius.circular(
+                                            6,
+                                          ),
                                           border: Border.all(
-                                            color: const Color(0xFFFFD54F).withValues(alpha: 0.5),
+                                            color: const Color(
+                                              0xFFFFD54F,
+                                            ).withValues(alpha: 0.5),
                                             width: 0.8,
                                           ),
                                         ),
@@ -1751,67 +1999,90 @@ class _LobbyScreenState extends State<LobbyScreen> {
                           ],
                         ),
                       ),
-              if (isInProgress)
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                  margin: const EdgeInsets.only(right: 8),
-                  decoration: BoxDecoration(
-                    color: isSK ? const Color(0xFFCCD0DD) : const Color(0xFFD8CCF6),
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: Row(
-                    children: [
-                      Icon(Icons.visibility, size: 14, color: isSK ? const Color(0xFF3A3A50) : const Color(0xFF6C63FF)),
-                      const SizedBox(width: 4),
-                      Text(
-                        l10n.lobbyInProgress(room.spectatorCount),
-                        style: TextStyle(
-                          fontSize: 12,
-                          color: isSK ? const Color(0xFF3A3A50) : const Color(0xFF6C63FF),
-                          fontWeight: FontWeight.bold,
+                      if (isInProgress)
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 10,
+                            vertical: 6,
+                          ),
+                          margin: const EdgeInsets.only(right: 8),
+                          decoration: BoxDecoration(
+                            color: isSK
+                                ? const Color(0xFFCCD0DD)
+                                : const Color(0xFFD8CCF6),
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: Row(
+                            children: [
+                              Icon(
+                                Icons.visibility,
+                                size: 14,
+                                color: isSK
+                                    ? const Color(0xFF3A3A50)
+                                    : const Color(0xFF6C63FF),
+                              ),
+                              const SizedBox(width: 4),
+                              Text(
+                                l10n.lobbyInProgress(room.spectatorCount),
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  color: isSK
+                                      ? const Color(0xFF3A3A50)
+                                      : const Color(0xFF6C63FF),
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      if (!isInProgress)
+                        GestureDetector(
+                          onTap: () {
+                            _spectateWithPasswordCheck(room);
+                          },
+                          child: Container(
+                            padding: const EdgeInsets.all(8),
+                            margin: const EdgeInsets.only(right: 8),
+                            decoration: BoxDecoration(
+                              color: isSK
+                                  ? const Color(0xFFD8DAE4)
+                                  : const Color(0xFFE0D8F4),
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            child: Icon(
+                              Icons.visibility,
+                              size: 18,
+                              color: isSK
+                                  ? const Color(0xFF3A3A50)
+                                  : const Color(0xFF6C63FF),
+                            ),
+                          ),
+                        ),
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 12,
+                          vertical: 6,
+                        ),
+                        decoration: BoxDecoration(
+                          color: isInProgress
+                              ? (isSK
+                                    ? const Color(0xFFD4D8E4)
+                                    : const Color(0xFFD4CCF0))
+                              : (isSK
+                                    ? const Color(0xFFD8DAE4)
+                                    : const Color(0xFFE0D8F4)),
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: Text(
+                          '${room.playerCount}/${room.effectiveMaxPlayers}',
+                          style: TextStyle(
+                            fontSize: 14,
+                            color: isSK
+                                ? const Color(0xFF3A3A50)
+                                : const Color(0xFF4A4070),
+                          ),
                         ),
                       ),
-                    ],
-                  ),
-                ),
-              if (!isInProgress)
-                GestureDetector(
-                  onTap: () {
-                    _spectateWithPasswordCheck(room);
-                  },
-                  child: Container(
-                    padding: const EdgeInsets.all(8),
-                    margin: const EdgeInsets.only(right: 8),
-                    decoration: BoxDecoration(
-                      color: isSK ? const Color(0xFFD8DAE4) : const Color(0xFFE0D8F4),
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: Icon(
-                      Icons.visibility,
-                      size: 18,
-                      color: isSK ? const Color(0xFF3A3A50) : const Color(0xFF6C63FF),
-                    ),
-                  ),
-                ),
-              Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 12,
-                  vertical: 6,
-                ),
-                decoration: BoxDecoration(
-                  color: isInProgress
-                      ? (isSK ? const Color(0xFFD4D8E4) : const Color(0xFFD4CCF0))
-                      : (isSK ? const Color(0xFFD8DAE4) : const Color(0xFFE0D8F4)),
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: Text(
-                  '${room.playerCount}/${room.effectiveMaxPlayers}',
-                  style: TextStyle(
-                    fontSize: 14,
-                    color: isSK ? const Color(0xFF3A3A50) : const Color(0xFF4A4070),
-                  ),
-                ),
-              ),
                     ],
                   ),
                 ),
@@ -1833,7 +2104,10 @@ class _LobbyScreenState extends State<LobbyScreen> {
           children: [
             const Icon(Icons.lock, color: Color(0xFFF2A65A), size: 22),
             const SizedBox(width: 8),
-            Text(l10n.lobbySocialLinkRequired, style: const TextStyle(fontSize: 16)),
+            Text(
+              l10n.lobbySocialLinkRequired,
+              style: const TextStyle(fontSize: 16),
+            ),
           ],
         ),
         content: Text(
@@ -1890,9 +2164,7 @@ class _LobbyScreenState extends State<LobbyScreen> {
         title: Text(title),
         content: TextField(
           controller: controller,
-          decoration: InputDecoration(
-            hintText: l10n.lobbyPassword,
-          ),
+          decoration: InputDecoration(hintText: l10n.lobbyPassword),
           obscureText: true,
         ),
         actions: [
@@ -1922,8 +2194,7 @@ class _LobbyScreenState extends State<LobbyScreen> {
           _buildRoomHeader(game, isLandscape: isLandscape),
 
           // Maintenance notice banner (in waiting room)
-          if (game.hasMaintenanceNotice)
-            _buildMaintenanceBanner(game),
+          if (game.hasMaintenanceNotice) _buildMaintenanceBanner(game),
 
           // Error message banner
           if (game.errorMessage != null)
@@ -1940,8 +2211,14 @@ class _LobbyScreenState extends State<LobbyScreen> {
                   const SizedBox(width: 8),
                   Expanded(
                     child: Text(
-                      localizeServiceMessage(game.errorMessage!, L10n.of(context)),
-                      style: const TextStyle(color: Color(0xFFC62828), fontSize: 13),
+                      localizeServiceMessage(
+                        game.errorMessage!,
+                        L10n.of(context),
+                      ),
+                      style: const TextStyle(
+                        color: Color(0xFFC62828),
+                        fontSize: 13,
+                      ),
                     ),
                   ),
                 ],
@@ -1963,10 +2240,7 @@ class _LobbyScreenState extends State<LobbyScreen> {
                           ),
                         ),
                         const SizedBox(width: 12),
-                        Expanded(
-                          flex: 4,
-                          child: _buildRoomChatContainer(game),
-                        ),
+                        Expanded(flex: 4, child: _buildRoomChatContainer(game)),
                       ],
                     ),
                   )
@@ -1988,7 +2262,10 @@ class _LobbyScreenState extends State<LobbyScreen> {
                 child: SizedBox(
                   height: _roomBannerAd!.size.height.toDouble(),
                   width: _roomBannerAd!.size.width.toDouble(),
-                  child: AdWidget(ad: _roomBannerAd!, key: ValueKey(_roomBannerAd!.hashCode)),
+                  child: AdWidget(
+                    ad: _roomBannerAd!,
+                    key: ValueKey(_roomBannerAd!.hashCode),
+                  ),
                 ),
               ),
             ),
@@ -1998,6 +2275,9 @@ class _LobbyScreenState extends State<LobbyScreen> {
   }
 
   Widget _buildRoomHeader(GameService game, {required bool isLandscape}) {
+    final messenger = ScaffoldMessenger.of(context);
+    final isKoreanUser =
+        context.read<LocaleService>().effectiveLocale.languageCode == 'ko';
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
       decoration: BoxDecoration(
@@ -2032,26 +2312,55 @@ class _LobbyScreenState extends State<LobbyScreen> {
                 ),
               ),
               Container(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                 margin: const EdgeInsets.only(right: 8),
                 decoration: BoxDecoration(
                   color: const Color(0xFFF0EBE8),
                   borderRadius: BorderRadius.circular(10),
                 ),
                 child: Text(
-                  game.currentGameType == 'skull_king' || game.currentGameType == 'love_letter'
-                      ? L10n.of(context).lobbyRoomInfoSk(game.roomTurnTimeLimit, game.playerCount, game.effectiveRoomMaxPlayers)
-                      : L10n.of(context).lobbyRoomInfoTichu(game.roomTurnTimeLimit, game.roomTargetScore),
+                  game.currentGameType == 'skull_king' ||
+                          game.currentGameType == 'love_letter'
+                      ? L10n.of(context).lobbyRoomInfoSk(
+                          game.roomTurnTimeLimit,
+                          game.playerCount,
+                          game.effectiveRoomMaxPlayers,
+                        )
+                      : L10n.of(context).lobbyRoomInfoTichu(
+                          game.roomTurnTimeLimit,
+                          game.roomTargetScore,
+                        ),
                   style: const TextStyle(
                     fontSize: 12,
                     color: Color(0xFF8A7A72),
                   ),
                 ),
               ),
+              if (isKoreanUser) ...[
+                const SizedBox(width: 8),
+                _buildIconButton(
+                  icon: Icons.share_rounded,
+                  color: const Color(0xFFF57C00),
+                  onTap: () async {
+                    try {
+                      await KakaoInviteShareService.instance.shareRoomInvite(
+                        game,
+                      );
+                    } catch (error) {
+                      if (!mounted) return;
+                      messenger.showSnackBar(
+                        SnackBar(content: Text(error.toString())),
+                      );
+                    }
+                  },
+                ),
+                const SizedBox(width: 8),
+              ],
               Container(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 12,
+                  vertical: 6,
+                ),
                 decoration: BoxDecoration(
                   color: game.playerCount >= game.effectiveRoomMaxPlayers
                       ? const Color(0xFFE8F5E9)
@@ -2081,8 +2390,10 @@ class _LobbyScreenState extends State<LobbyScreen> {
                 GestureDetector(
                   onTap: () => _showInviteFriendsDialog(game),
                   child: Container(
-                    padding:
-                        const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 10,
+                      vertical: 6,
+                    ),
                     decoration: BoxDecoration(
                       color: const Color(0xFFF3E5F5),
                       borderRadius: BorderRadius.circular(12),
@@ -2111,8 +2422,10 @@ class _LobbyScreenState extends State<LobbyScreen> {
                 GestureDetector(
                   onTap: () => game.switchToSpectator(),
                   child: Container(
-                    padding:
-                        const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 10,
+                      vertical: 6,
+                    ),
                     decoration: BoxDecoration(
                       color: const Color(0xFFE8E0F8),
                       borderRadius: BorderRadius.circular(12),
@@ -2120,7 +2433,11 @@ class _LobbyScreenState extends State<LobbyScreen> {
                     child: Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        const Icon(Icons.visibility, size: 14, color: Color(0xFF4A4080)),
+                        const Icon(
+                          Icons.visibility,
+                          size: 14,
+                          color: Color(0xFF4A4080),
+                        ),
                         const SizedBox(width: 4),
                         Text(
                           L10n.of(context).lobbySpectate,
@@ -2140,8 +2457,10 @@ class _LobbyScreenState extends State<LobbyScreen> {
                     GestureDetector(
                       onTap: () => _showRoomUtilitySheet(game),
                       child: Container(
-                        padding:
-                            const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 10,
+                          vertical: 6,
+                        ),
                         decoration: BoxDecoration(
                           color: const Color(0xFFF6F3F2),
                           borderRadius: BorderRadius.circular(12),
@@ -2149,7 +2468,11 @@ class _LobbyScreenState extends State<LobbyScreen> {
                         child: Row(
                           mainAxisSize: MainAxisSize.min,
                           children: [
-                            const Icon(Icons.more_horiz, size: 14, color: Color(0xFF8A7A72)),
+                            const Icon(
+                              Icons.more_horiz,
+                              size: 14,
+                              color: Color(0xFF8A7A72),
+                            ),
                             const SizedBox(width: 4),
                             Text(
                               L10n.of(context).lobbyMore,
@@ -2163,7 +2486,9 @@ class _LobbyScreenState extends State<LobbyScreen> {
                         ),
                       ),
                     ),
-                    if ((game.pendingFriendRequestCount + game.totalUnreadDmCount) > 0)
+                    if ((game.pendingFriendRequestCount +
+                            game.totalUnreadDmCount) >
+                        0)
                       Positioned(
                         right: -6,
                         top: -6,
@@ -2173,9 +2498,14 @@ class _LobbyScreenState extends State<LobbyScreen> {
                             color: Color(0xFFE53935),
                             shape: BoxShape.circle,
                           ),
-                          constraints: const BoxConstraints(minWidth: 18, minHeight: 18),
+                          constraints: const BoxConstraints(
+                            minWidth: 18,
+                            minHeight: 18,
+                          ),
                           child: Text(
-                            (game.pendingFriendRequestCount + game.totalUnreadDmCount) > 9
+                            (game.pendingFriendRequestCount +
+                                        game.totalUnreadDmCount) >
+                                    9
                                 ? '9+'
                                 : '${game.pendingFriendRequestCount + game.totalUnreadDmCount}',
                             style: const TextStyle(
@@ -2204,7 +2534,11 @@ class _LobbyScreenState extends State<LobbyScreen> {
                       child: Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          const Icon(Icons.settings, size: 14, color: Color(0xFF1E88E5)),
+                          const Icon(
+                            Icons.settings,
+                            size: 14,
+                            color: Color(0xFF1E88E5),
+                          ),
                           const SizedBox(width: 4),
                           Text(
                             L10n.of(context).lobbyRoomSettings,
@@ -2276,22 +2610,35 @@ class _LobbyScreenState extends State<LobbyScreen> {
               ),
               if (i < game.roomPlayers.length - 1) const SizedBox(height: 8),
             ],
-          ] else if (game.currentGameType == 'skull_king' || game.currentGameType == 'love_letter') ...[
+          ] else if (game.currentGameType == 'skull_king' ||
+              game.currentGameType == 'love_letter') ...[
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
               decoration: BoxDecoration(
-                color: game.currentGameType == 'love_letter' ? const Color(0xFF8B1A1A) : const Color(0xFF2D2D3D),
+                color: game.currentGameType == 'love_letter'
+                    ? const Color(0xFF8B1A1A)
+                    : const Color(0xFF2D2D3D),
                 borderRadius: BorderRadius.circular(12),
               ),
               child: Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  Icon(game.currentGameType == 'love_letter' ? Icons.favorite : Icons.anchor, size: 14, color: Colors.white),
+                  Icon(
+                    game.currentGameType == 'love_letter'
+                        ? Icons.favorite
+                        : Icons.anchor,
+                    size: 14,
+                    color: Colors.white,
+                  ),
                   const SizedBox(width: 6),
                   Text(
                     game.currentGameType == 'love_letter'
-                        ? L10n.of(context).lobbyLoveLetterPlayers(game.roomMaxPlayers)
-                        : L10n.of(context).lobbySkullKingPlayers(game.roomMaxPlayers),
+                        ? L10n.of(
+                            context,
+                          ).lobbyLoveLetterPlayers(game.roomMaxPlayers)
+                        : L10n.of(
+                            context,
+                          ).lobbySkullKingPlayers(game.roomMaxPlayers),
                     style: const TextStyle(
                       fontSize: 13,
                       fontWeight: FontWeight.bold,
@@ -2417,7 +2764,9 @@ class _LobbyScreenState extends State<LobbyScreen> {
                   elevation: 0,
                 ),
                 child: Text(
-                  _isMyReady(game) ? L10n.of(context).lobbyReadyDone : L10n.of(context).lobbyReady,
+                  _isMyReady(game)
+                      ? L10n.of(context).lobbyReadyDone
+                      : L10n.of(context).lobbyReady,
                   style: const TextStyle(
                     fontSize: 15,
                     fontWeight: FontWeight.bold,
@@ -2478,7 +2827,11 @@ class _LobbyScreenState extends State<LobbyScreen> {
             ),
             child: Row(
               children: [
-                const Icon(Icons.chat_bubble_outline, size: 16, color: Color(0xFF6A5A52)),
+                const Icon(
+                  Icons.chat_bubble_outline,
+                  size: 16,
+                  color: Color(0xFF6A5A52),
+                ),
                 const SizedBox(width: 6),
                 Text(
                   L10n.of(context).lobbyChat,
@@ -2527,7 +2880,10 @@ class _LobbyScreenState extends State<LobbyScreen> {
                     controller: _chatController,
                     decoration: InputDecoration(
                       hintText: L10n.of(context).lobbyMessageHint,
-                      hintStyle: const TextStyle(fontSize: 13, color: Color(0xFFAA9A92)),
+                      hintStyle: const TextStyle(
+                        fontSize: 13,
+                        color: Color(0xFFAA9A92),
+                      ),
                       border: InputBorder.none,
                       contentPadding: EdgeInsets.symmetric(horizontal: 12),
                       isDense: true,
@@ -2544,7 +2900,11 @@ class _LobbyScreenState extends State<LobbyScreen> {
                       color: const Color(0xFF64B5F6),
                       borderRadius: BorderRadius.circular(8),
                     ),
-                    child: const Icon(Icons.send, color: Colors.white, size: 16),
+                    child: const Icon(
+                      Icons.send,
+                      color: Colors.white,
+                      size: 16,
+                    ),
                   ),
                 ),
               ],
@@ -2555,7 +2915,12 @@ class _LobbyScreenState extends State<LobbyScreen> {
     );
   }
 
-  Widget _buildChatMessage(String sender, String message, bool isMe, GameService game) {
+  Widget _buildChatMessage(
+    String sender,
+    String message,
+    bool isMe,
+    GameService game,
+  ) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 6),
       child: GestureDetector(
@@ -2567,7 +2932,9 @@ class _LobbyScreenState extends State<LobbyScreen> {
           }
         },
         child: Row(
-          mainAxisAlignment: isMe ? MainAxisAlignment.end : MainAxisAlignment.start,
+          mainAxisAlignment: isMe
+              ? MainAxisAlignment.end
+              : MainAxisAlignment.start,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             if (!isMe) ...[
@@ -2576,29 +2943,42 @@ class _LobbyScreenState extends State<LobbyScreen> {
                 backgroundColor: const Color(0xFFE0D8D4),
                 child: Text(
                   sender.isNotEmpty ? sender[0] : '?',
-                  style: const TextStyle(fontSize: 10, color: Color(0xFF5A4038)),
+                  style: const TextStyle(
+                    fontSize: 10,
+                    color: Color(0xFF5A4038),
+                  ),
                 ),
               ),
               const SizedBox(width: 6),
             ],
             Flexible(
               child: Column(
-                crossAxisAlignment: isMe ? CrossAxisAlignment.end : CrossAxisAlignment.start,
+                crossAxisAlignment: isMe
+                    ? CrossAxisAlignment.end
+                    : CrossAxisAlignment.start,
                 children: [
                   if (!isMe)
                     Padding(
                       padding: const EdgeInsets.only(bottom: 2),
                       child: Text(
                         sender,
-                        style: const TextStyle(fontSize: 10, color: Color(0xFF8A8A8A)),
+                        style: const TextStyle(
+                          fontSize: 10,
+                          color: Color(0xFF8A8A8A),
+                        ),
                       ),
                     ),
                   Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 10,
+                      vertical: 6,
+                    ),
                     decoration: BoxDecoration(
                       color: isMe ? const Color(0xFF64B5F6) : Colors.white,
                       borderRadius: BorderRadius.circular(12),
-                      border: isMe ? null : Border.all(color: const Color(0xFFE0D8D4)),
+                      border: isMe
+                          ? null
+                          : Border.all(color: const Color(0xFFE0D8D4)),
                     ),
                     child: Text(
                       message,
@@ -2684,19 +3064,21 @@ class _LobbyScreenState extends State<LobbyScreen> {
             _buildUserActionBtn(
               icon: isBlockedUser ? Icons.check_circle : Icons.block,
               label: isBlockedUser ? l10n.lobbyUnblock : l10n.lobbyBlock,
-              color: isBlockedUser ? const Color(0xFF64B5F6) : const Color(0xFFFF8A65),
+              color: isBlockedUser
+                  ? const Color(0xFF64B5F6)
+                  : const Color(0xFFFF8A65),
               onTap: () {
                 Navigator.pop(ctx);
                 if (isBlockedUser) {
                   game.unblockUserAction(nickname);
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(content: Text(l10n.lobbyUnblocked)),
-                  );
+                  ScaffoldMessenger.of(
+                    context,
+                  ).showSnackBar(SnackBar(content: Text(l10n.lobbyUnblocked)));
                 } else {
                   game.blockUserAction(nickname);
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(content: Text(l10n.lobbyBlocked)),
-                  );
+                  ScaffoldMessenger.of(
+                    context,
+                  ).showSnackBar(SnackBar(content: Text(l10n.lobbyBlocked)));
                 }
               },
             ),
@@ -2723,7 +3105,8 @@ class _LobbyScreenState extends State<LobbyScreen> {
 
   void _showRoomUtilitySheet(GameService game) {
     final l10n = L10n.of(context);
-    final unreadCount = game.pendingFriendRequestCount + game.totalUnreadDmCount;
+    final unreadCount =
+        game.pendingFriendRequestCount + game.totalUnreadDmCount;
     showModalBottomSheet(
       context: context,
       shape: const RoundedRectangleBorder(
@@ -2788,10 +3171,15 @@ class _LobbyScreenState extends State<LobbyScreen> {
                         right: -4,
                         top: -4,
                         child: Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 2),
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 5,
+                            vertical: 2,
+                          ),
                           decoration: const BoxDecoration(
                             color: Color(0xFFE53935),
-                            borderRadius: BorderRadius.all(Radius.circular(999)),
+                            borderRadius: BorderRadius.all(
+                              Radius.circular(999),
+                            ),
                           ),
                           child: Text(
                             unreadCount > 9 ? '9+' : '$unreadCount',
@@ -2816,11 +3204,12 @@ class _LobbyScreenState extends State<LobbyScreen> {
                   unreadCount > 0
                       ? l10n.lobbyUnreadDmCount(unreadCount)
                       : l10n.lobbyFriendsDmDesc,
-                  style: const TextStyle(
-                    color: Color(0xFF8A7A72),
-                  ),
+                  style: const TextStyle(color: Color(0xFF8A7A72)),
                 ),
-                trailing: const Icon(Icons.chevron_right, color: Color(0xFF8A7A72)),
+                trailing: const Icon(
+                  Icons.chevron_right,
+                  color: Color(0xFF8A7A72),
+                ),
                 onTap: () {
                   Navigator.pop(ctx);
                   Navigator.push(
@@ -2852,11 +3241,12 @@ class _LobbyScreenState extends State<LobbyScreen> {
                 ),
                 subtitle: Text(
                   l10n.lobbyCurrentSpectators(game.spectators.length),
-                  style: const TextStyle(
-                    color: Color(0xFF8A7A72),
-                  ),
+                  style: const TextStyle(color: Color(0xFF8A7A72)),
                 ),
-                trailing: const Icon(Icons.chevron_right, color: Color(0xFF8A7A72)),
+                trailing: const Icon(
+                  Icons.chevron_right,
+                  color: Color(0xFF8A7A72),
+                ),
                 onTap: () {
                   Navigator.pop(ctx);
                   _showSpectatorListDialog(game);
@@ -2910,7 +3300,9 @@ class _LobbyScreenState extends State<LobbyScreen> {
       builder: (ctx) => StatefulBuilder(
         builder: (ctx, setState) {
           return AlertDialog(
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(20),
+            ),
             title: Row(
               children: [
                 const Icon(Icons.flag, color: Color(0xFFE57373)),
@@ -2966,7 +3358,10 @@ class _LobbyScreenState extends State<LobbyScreen> {
                       onTap: () => setState(() => selectedReason = r),
                       borderRadius: BorderRadius.circular(16),
                       child: Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 12,
+                          vertical: 6,
+                        ),
                         decoration: BoxDecoration(
                           color: isSelected
                               ? const Color(0xFFDDECF7)
@@ -2985,7 +3380,9 @@ class _LobbyScreenState extends State<LobbyScreen> {
                             color: isSelected
                                 ? const Color(0xFF3E6D8E)
                                 : const Color(0xFF6A5A52),
-                            fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                            fontWeight: isSelected
+                                ? FontWeight.bold
+                                : FontWeight.normal,
                           ),
                         ),
                       ),
@@ -3045,7 +3442,9 @@ class _LobbyScreenState extends State<LobbyScreen> {
                               ScaffoldMessenger.of(context).showSnackBar(
                                 SnackBar(
                                   content: Text(game.reportResultMessage!),
-                                  backgroundColor: success ? null : const Color(0xFFE57373),
+                                  backgroundColor: success
+                                      ? null
+                                      : const Color(0xFFE57373),
                                 ),
                               );
                             }
@@ -3060,7 +3459,9 @@ class _LobbyScreenState extends State<LobbyScreen> {
                       },
                 style: ElevatedButton.styleFrom(
                   backgroundColor: const Color(0xFFE57373),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
                 ),
                 child: Text(l10n.lobbyReport),
               ),
@@ -3075,7 +3476,11 @@ class _LobbyScreenState extends State<LobbyScreen> {
   // [dialogContext] lets callers (e.g. the Settings screen) open the dialog
   // on top of their own route instead of the lobby — the default falls back
   // to the lobby state's own context.
-  void _showUserProfileDialog(String nickname, GameService game, {BuildContext? dialogContext}) {
+  void _showUserProfileDialog(
+    String nickname,
+    GameService game, {
+    BuildContext? dialogContext,
+  }) {
     game.requestProfile(nickname);
     final l10n = L10n.of(dialogContext ?? context);
 
@@ -3088,12 +3493,15 @@ class _LobbyScreenState extends State<LobbyScreen> {
             return Consumer<GameService>(
               builder: (ctx, game, _) {
                 final profile = game.profileFor(nickname);
-                final isLoading = profile == null || profile['nickname'] != nickname;
+                final isLoading =
+                    profile == null || profile['nickname'] != nickname;
 
                 final isMe = nickname == game.playerName;
                 final isBlockedUser = game.blockedUsers.contains(nickname);
                 return AlertDialog(
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(24),
+                  ),
                   backgroundColor: const Color(0xFFF8F4F1),
                   titlePadding: const EdgeInsets.fromLTRB(18, 18, 18, 0),
                   contentPadding: const EdgeInsets.fromLTRB(18, 14, 18, 10),
@@ -3137,7 +3545,9 @@ class _LobbyScreenState extends State<LobbyScreen> {
                                   ),
                                   const SizedBox(height: 2),
                                   Text(
-                                    isMe ? l10n.lobbyMyProfile : l10n.lobbyPlayerProfile,
+                                    isMe
+                                        ? l10n.lobbyMyProfile
+                                        : l10n.lobbyPlayerProfile,
                                     style: const TextStyle(
                                       fontSize: 12,
                                       color: Color(0xFF84766E),
@@ -3161,7 +3571,9 @@ class _LobbyScreenState extends State<LobbyScreen> {
                                   tooltip: l10n.lobbyAlreadyFriend,
                                   onTap: () {},
                                 )
-                              else if (game.sentFriendRequests.contains(nickname))
+                              else if (game.sentFriendRequests.contains(
+                                nickname,
+                              ))
                                 _buildTitleIconButton(
                                   icon: Icons.hourglass_top,
                                   color: const Color(0xFFBDBDBD),
@@ -3177,26 +3589,38 @@ class _LobbyScreenState extends State<LobbyScreen> {
                                     game.addFriendAction(nickname);
                                     Navigator.pop(ctx);
                                     ScaffoldMessenger.of(context).showSnackBar(
-                                      SnackBar(content: Text(l10n.lobbyFriendRequestSent)),
+                                      SnackBar(
+                                        content: Text(
+                                          l10n.lobbyFriendRequestSent,
+                                        ),
+                                      ),
                                     );
                                   },
                                 ),
                               _buildTitleIconButton(
-                                icon: isBlockedUser ? Icons.block : Icons.shield_outlined,
+                                icon: isBlockedUser
+                                    ? Icons.block
+                                    : Icons.shield_outlined,
                                 color: isBlockedUser
                                     ? const Color(0xFF64B5F6)
                                     : const Color(0xFFFF8A65),
-                                tooltip: isBlockedUser ? l10n.lobbyUnblock : l10n.lobbyBlock,
+                                tooltip: isBlockedUser
+                                    ? l10n.lobbyUnblock
+                                    : l10n.lobbyBlock,
                                 onTap: () {
                                   if (isBlockedUser) {
                                     game.unblockUserAction(nickname);
                                     ScaffoldMessenger.of(context).showSnackBar(
-                                      SnackBar(content: Text(l10n.lobbyUnblocked)),
+                                      SnackBar(
+                                        content: Text(l10n.lobbyUnblocked),
+                                      ),
                                     );
                                   } else {
                                     game.blockUserAction(nickname);
                                     ScaffoldMessenger.of(context).showSnackBar(
-                                      SnackBar(content: Text(l10n.lobbyBlocked)),
+                                      SnackBar(
+                                        content: Text(l10n.lobbyBlocked),
+                                      ),
                                     );
                                   }
                                 },
@@ -3220,10 +3644,12 @@ class _LobbyScreenState extends State<LobbyScreen> {
                           ),
                           child: SingleChildScrollView(
                             child: _buildProfileContent(
-                              profile, game,
+                              profile,
+                              game,
                               dialogContext: ctx,
                               selectedTab: profileGameTab,
-                              onTabChanged: (tab) => setDialogState(() => profileGameTab = tab),
+                              onTabChanged: (tab) =>
+                                  setDialogState(() => profileGameTab = tab),
                             ),
                           ),
                         ),
@@ -3242,7 +3668,9 @@ class _LobbyScreenState extends State<LobbyScreen> {
     );
   }
 
-  Widget _buildProfileContent(Map<String, dynamic> data, GameService game, {
+  Widget _buildProfileContent(
+    Map<String, dynamic> data,
+    GameService game, {
     required BuildContext dialogContext,
     required String selectedTab,
     required ValueChanged<String> onTabChanged,
@@ -3293,95 +3721,149 @@ class _LobbyScreenState extends State<LobbyScreen> {
       children: [
         _buildProfileHeader(nickname, level, expTotal, bannerKey),
         const SizedBox(height: 8),
-        _buildMannerLeaveRow(reportCount: reportCount as int, leaveCount: leaveCount as int),
+        _buildMannerLeaveRow(
+          reportCount: reportCount as int,
+          leaveCount: leaveCount as int,
+        ),
         const SizedBox(height: 10),
         // Game selector button
-        Builder(builder: (_) {
-          String gameLabel;
-          String gameEmoji;
-          Color gameBgColor;
-          Color gameFgColor;
-          switch (selectedTab) {
-            case 'skull_king':
-              gameLabel = l10n.lobbySkullKing;
-              gameEmoji = '⚓';
-              gameBgColor = const Color(0xFF2D2D3D);
-              gameFgColor = const Color(0xFFFFD54F);
-              break;
-            case 'love_letter':
-              gameLabel = l10n.lobbyLoveLetter;
-              gameEmoji = '❤️';
-              gameBgColor = const Color(0xFFE91E63);
-              gameFgColor = Colors.white;
-              break;
-            default:
-              gameLabel = l10n.lobbyTichu;
-              gameEmoji = '🃏';
-              gameBgColor = const Color(0xFF7E57C2);
-              gameFgColor = Colors.white;
-          }
-          return InkWell(
-            onTap: () {
-              showModalBottomSheet(
-                context: dialogContext,
-                shape: const RoundedRectangleBorder(
-                  borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
-                ),
-                builder: (bCtx) => SafeArea(
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      const SizedBox(height: 8),
-                      Container(width: 36, height: 4, decoration: BoxDecoration(color: Colors.grey[300], borderRadius: BorderRadius.circular(2))),
-                      const SizedBox(height: 12),
-                      ListTile(
-                        leading: const Text('🃏', style: TextStyle(fontSize: 20)),
-                        title: Text(l10n.lobbyTichu),
-                        trailing: selectedTab == 'tichu' ? const Icon(Icons.check, color: Color(0xFF7E57C2)) : null,
-                        onTap: () { Navigator.pop(bCtx); onTabChanged('tichu'); },
-                      ),
-                      ListTile(
-                        leading: const Text('⚓', style: TextStyle(fontSize: 20)),
-                        title: Text(l10n.lobbySkullKing),
-                        trailing: selectedTab == 'skull_king' ? const Icon(Icons.check, color: Color(0xFF2D2D3D)) : null,
-                        onTap: () { Navigator.pop(bCtx); onTabChanged('skull_king'); },
-                      ),
-                      ListTile(
-                        leading: const Text('❤️', style: TextStyle(fontSize: 20)),
-                        title: Text(l10n.lobbyLoveLetter),
-                        trailing: selectedTab == 'love_letter' ? const Icon(Icons.check, color: Color(0xFFE91E63)) : null,
-                        onTap: () { Navigator.pop(bCtx); onTabChanged('love_letter'); },
-                      ),
-                      const SizedBox(height: 8),
-                    ],
-                  ),
-                ),
-              );
-            },
-            borderRadius: BorderRadius.circular(12),
-            child: Container(
-              width: double.infinity,
-              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-              decoration: BoxDecoration(
-                color: gameBgColor,
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: Row(
-                children: [
-                  Text(gameEmoji, style: const TextStyle(fontSize: 18)),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: Text(
-                      gameLabel,
-                      style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: gameFgColor),
+        Builder(
+          builder: (_) {
+            String gameLabel;
+            String gameEmoji;
+            Color gameBgColor;
+            Color gameFgColor;
+            switch (selectedTab) {
+              case 'skull_king':
+                gameLabel = l10n.lobbySkullKing;
+                gameEmoji = '⚓';
+                gameBgColor = const Color(0xFF2D2D3D);
+                gameFgColor = const Color(0xFFFFD54F);
+                break;
+              case 'love_letter':
+                gameLabel = l10n.lobbyLoveLetter;
+                gameEmoji = '❤️';
+                gameBgColor = const Color(0xFFE91E63);
+                gameFgColor = Colors.white;
+                break;
+              default:
+                gameLabel = l10n.lobbyTichu;
+                gameEmoji = '🃏';
+                gameBgColor = const Color(0xFF7E57C2);
+                gameFgColor = Colors.white;
+            }
+            return InkWell(
+              onTap: () {
+                showModalBottomSheet(
+                  context: dialogContext,
+                  shape: const RoundedRectangleBorder(
+                    borderRadius: BorderRadius.vertical(
+                      top: Radius.circular(16),
                     ),
                   ),
-                  Icon(Icons.arrow_drop_down, color: gameFgColor),
-                ],
+                  builder: (bCtx) => SafeArea(
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        const SizedBox(height: 8),
+                        Container(
+                          width: 36,
+                          height: 4,
+                          decoration: BoxDecoration(
+                            color: Colors.grey[300],
+                            borderRadius: BorderRadius.circular(2),
+                          ),
+                        ),
+                        const SizedBox(height: 12),
+                        ListTile(
+                          leading: const Text(
+                            '🃏',
+                            style: TextStyle(fontSize: 20),
+                          ),
+                          title: Text(l10n.lobbyTichu),
+                          trailing: selectedTab == 'tichu'
+                              ? const Icon(
+                                  Icons.check,
+                                  color: Color(0xFF7E57C2),
+                                )
+                              : null,
+                          onTap: () {
+                            Navigator.pop(bCtx);
+                            onTabChanged('tichu');
+                          },
+                        ),
+                        ListTile(
+                          leading: const Text(
+                            '⚓',
+                            style: TextStyle(fontSize: 20),
+                          ),
+                          title: Text(l10n.lobbySkullKing),
+                          trailing: selectedTab == 'skull_king'
+                              ? const Icon(
+                                  Icons.check,
+                                  color: Color(0xFF2D2D3D),
+                                )
+                              : null,
+                          onTap: () {
+                            Navigator.pop(bCtx);
+                            onTabChanged('skull_king');
+                          },
+                        ),
+                        ListTile(
+                          leading: const Text(
+                            '❤️',
+                            style: TextStyle(fontSize: 20),
+                          ),
+                          title: Text(l10n.lobbyLoveLetter),
+                          trailing: selectedTab == 'love_letter'
+                              ? const Icon(
+                                  Icons.check,
+                                  color: Color(0xFFE91E63),
+                                )
+                              : null,
+                          onTap: () {
+                            Navigator.pop(bCtx);
+                            onTabChanged('love_letter');
+                          },
+                        ),
+                        const SizedBox(height: 8),
+                      ],
+                    ),
+                  ),
+                );
+              },
+              borderRadius: BorderRadius.circular(12),
+              child: Container(
+                width: double.infinity,
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 14,
+                  vertical: 10,
+                ),
+                decoration: BoxDecoration(
+                  color: gameBgColor,
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Row(
+                  children: [
+                    Text(gameEmoji, style: const TextStyle(fontSize: 18)),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        gameLabel,
+                        style: TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.bold,
+                          color: gameFgColor,
+                        ),
+                      ),
+                    ),
+                    Icon(Icons.arrow_drop_down, color: gameFgColor),
+                  ],
+                ),
               ),
-            ),
-          );
-        }),
+            );
+          },
+        ),
         const SizedBox(height: 10),
         if (selectedTab == 'tichu') ...[
           _buildProfileSectionCard(
@@ -3392,7 +3874,14 @@ class _LobbyScreenState extends State<LobbyScreen> {
             iconColor: const Color(0xFFFFD54F),
             mainText: '$seasonRating',
             chips: [
-              _buildStatChip(l10n.lobbyStatRecord, l10n.lobbyRecordFormat(seasonGames as int, seasonWins as int, seasonLosses as int)),
+              _buildStatChip(
+                l10n.lobbyStatRecord,
+                l10n.lobbyRecordFormat(
+                  seasonGames as int,
+                  seasonWins as int,
+                  seasonLosses as int,
+                ),
+              ),
               _buildStatChip(l10n.lobbyStatWinRate, '$seasonWinRate%'),
             ],
           ),
@@ -3405,7 +3894,14 @@ class _LobbyScreenState extends State<LobbyScreen> {
             iconColor: const Color(0xFF6C63FF),
             mainText: '',
             chips: [
-              _buildStatChip(l10n.lobbyStatRecord, l10n.lobbyRecordFormat(totalGames as int, wins as int, losses as int)),
+              _buildStatChip(
+                l10n.lobbyStatRecord,
+                l10n.lobbyRecordFormat(
+                  totalGames as int,
+                  wins as int,
+                  losses as int,
+                ),
+              ),
               _buildStatChip(l10n.lobbyStatWinRate, '$winRate%'),
             ],
           ),
@@ -3418,7 +3914,14 @@ class _LobbyScreenState extends State<LobbyScreen> {
             iconColor: const Color(0xFFFFD54F),
             mainText: '$skSeasonRating',
             chips: [
-              _buildStatChip(l10n.lobbyStatRecord, l10n.lobbyRecordFormat(skSeasonGames as int, skSeasonWins as int, skSeasonLosses as int)),
+              _buildStatChip(
+                l10n.lobbyStatRecord,
+                l10n.lobbyRecordFormat(
+                  skSeasonGames as int,
+                  skSeasonWins as int,
+                  skSeasonLosses as int,
+                ),
+              ),
               _buildStatChip(l10n.lobbyStatWinRate, '$skSeasonWinRate%'),
             ],
           ),
@@ -3431,7 +3934,14 @@ class _LobbyScreenState extends State<LobbyScreen> {
             iconColor: const Color(0xFF2D2D3D),
             mainText: '',
             chips: [
-              _buildStatChip(l10n.lobbyStatRecord, l10n.lobbyRecordFormat(skGames as int, skWins as int, skLosses as int)),
+              _buildStatChip(
+                l10n.lobbyStatRecord,
+                l10n.lobbyRecordFormat(
+                  skGames as int,
+                  skWins as int,
+                  skLosses as int,
+                ),
+              ),
               _buildStatChip(l10n.lobbyStatWinRate, '$skWinRate%'),
             ],
           ),
@@ -3444,7 +3954,14 @@ class _LobbyScreenState extends State<LobbyScreen> {
             iconColor: const Color(0xFFE91E63),
             mainText: '',
             chips: [
-              _buildStatChip(l10n.lobbyStatRecord, l10n.lobbyRecordFormat(llGames as int, llWins as int, llLosses as int)),
+              _buildStatChip(
+                l10n.lobbyStatRecord,
+                l10n.lobbyRecordFormat(
+                  llGames as int,
+                  llWins as int,
+                  llLosses as int,
+                ),
+              ),
               _buildStatChip(l10n.lobbyStatWinRate, '$llWinRate%'),
             ],
           ),
@@ -3480,9 +3997,12 @@ class _LobbyScreenState extends State<LobbyScreen> {
     );
   }
 
-
-
-  Widget _buildProfileHeader(String nickname, int level, int expTotal, String? bannerKey) {
+  Widget _buildProfileHeader(
+    String nickname,
+    int level,
+    int expTotal,
+    String? bannerKey,
+  ) {
     final expInLevel = expTotal % 100;
     final expPercent = expInLevel / 100;
     final banner = _bannerStyle(bannerKey);
@@ -3490,7 +4010,9 @@ class _LobbyScreenState extends State<LobbyScreen> {
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
       decoration: BoxDecoration(
         gradient: banner.gradient,
-        color: banner.gradient == null ? Colors.white.withValues(alpha: 0.95) : null,
+        color: banner.gradient == null
+            ? Colors.white.withValues(alpha: 0.95)
+            : null,
         borderRadius: BorderRadius.circular(14),
         border: Border.all(color: const Color(0xFFE0D8D4)),
       ),
@@ -3657,7 +4179,10 @@ class _LobbyScreenState extends State<LobbyScreen> {
     return Icons.sentiment_very_dissatisfied;
   }
 
-  Widget _buildMannerLeaveRow({required int reportCount, required int leaveCount}) {
+  Widget _buildMannerLeaveRow({
+    required int reportCount,
+    required int leaveCount,
+  }) {
     final l10n = L10n.of(context);
     final label = _mannerLabel(reportCount, l10n);
     final color = _mannerColor(reportCount);
@@ -3701,8 +4226,11 @@ class _LobbyScreenState extends State<LobbyScreen> {
             child: Row(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                const Icon(Icons.warning_amber_rounded,
-                    color: Color(0xFFE57373), size: 16),
+                const Icon(
+                  Icons.warning_amber_rounded,
+                  color: Color(0xFFE57373),
+                  size: 16,
+                ),
                 const SizedBox(width: 6),
                 Text(
                   l10n.lobbyDesertions(leaveCount),
@@ -3806,8 +4334,13 @@ class _LobbyScreenState extends State<LobbyScreen> {
       builder: (ctx) {
         final media = MediaQuery.of(ctx).size;
         return AlertDialog(
-          insetPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 24),
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+          insetPadding: const EdgeInsets.symmetric(
+            horizontal: 16,
+            vertical: 24,
+          ),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(24),
+          ),
           backgroundColor: const Color(0xFFF8F4F1),
           titlePadding: const EdgeInsets.fromLTRB(18, 18, 18, 0),
           contentPadding: const EdgeInsets.fromLTRB(18, 14, 18, 10),
@@ -3877,7 +4410,8 @@ class _LobbyScreenState extends State<LobbyScreen> {
     final l10n = L10n.of(context);
 
     final deserterNickname = match['deserterNickname']?.toString();
-    final isDesertionLoss = match['isDesertionLoss'] == true ||
+    final isDesertionLoss =
+        match['isDesertionLoss'] == true ||
         (deserterNickname != null &&
             deserterNickname.isNotEmpty &&
             deserterNickname == profileNickname);
@@ -3957,29 +4491,38 @@ class _LobbyScreenState extends State<LobbyScreen> {
                     ),
                     const SizedBox(width: 6),
                     Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 5,
+                        vertical: 1,
+                      ),
                       decoration: BoxDecoration(
                         color: isSK
                             ? const Color(0xFFE8EAF6)
                             : isLL
-                                ? const Color(0xFFFCE4EC)
-                                : isRanked
-                                    ? const Color(0xFFFFF3E0)
-                                    : const Color(0xFFF5F5F5),
+                            ? const Color(0xFFFCE4EC)
+                            : isRanked
+                            ? const Color(0xFFFFF3E0)
+                            : const Color(0xFFF5F5F5),
                         borderRadius: BorderRadius.circular(6),
                       ),
                       child: Text(
-                        isSK ? l10n.lobbyMatchTypeSkullKing : isLL ? l10n.lobbyMatchTypeLoveLetter : (isRanked ? l10n.lobbyMatchTypeRanked : l10n.lobbyMatchTypeNormal),
+                        isSK
+                            ? l10n.lobbyMatchTypeSkullKing
+                            : isLL
+                            ? l10n.lobbyMatchTypeLoveLetter
+                            : (isRanked
+                                  ? l10n.lobbyMatchTypeRanked
+                                  : l10n.lobbyMatchTypeNormal),
                         style: TextStyle(
                           fontSize: 9,
                           fontWeight: FontWeight.bold,
                           color: isSK
                               ? const Color(0xFF3949AB)
                               : isLL
-                                  ? const Color(0xFFAD1457)
-                                  : isRanked
-                                      ? const Color(0xFFE65100)
-                                      : const Color(0xFF9E9E9E),
+                              ? const Color(0xFFAD1457)
+                              : isRanked
+                              ? const Color(0xFFE65100)
+                              : const Color(0xFF9E9E9E),
                         ),
                       ),
                     ),
@@ -4034,25 +4577,43 @@ class _LobbyScreenState extends State<LobbyScreen> {
     return me?.isReady ?? false;
   }
 
-  Widget _buildClickablePlayerSlot(Player? player, {
+  Widget _buildClickablePlayerSlot(
+    Player? player, {
     required int slotIndex,
     required GameService game,
   }) {
     // Find my current slot
-    final myIndex = game.roomPlayers.indexWhere((p) => p != null && p.id == game.playerId);
+    final myIndex = game.roomPlayers.indexWhere(
+      (p) => p != null && p.id == game.playerId,
+    );
     final isMySlot = myIndex == slotIndex;
     final isEmpty = player == null;
     final isBot = !isEmpty && player.id.startsWith('bot_');
-    final isBlockedPlayer = !isEmpty && !isMySlot && !isBot && game.blockedUsers.contains(player.name);
+    final isBlockedPlayer =
+        !isEmpty &&
+        !isMySlot &&
+        !isBot &&
+        game.blockedUsers.contains(player.name);
     final isReady = !isEmpty && !isBot && !player.isHost && player.isReady;
     final isSlotBlocked = isEmpty && game.roomBlockedSlots.contains(slotIndex);
-    final isFlexibleGame = game.currentGameType == 'skull_king' || game.currentGameType == 'love_letter';
+    final isFlexibleGame =
+        game.currentGameType == 'skull_king' ||
+        game.currentGameType == 'love_letter';
     // Host can block empty slots for SK/LL, but keep at least 2 effective slots
-    final canBlockSlot = game.isHost && isEmpty && !isSlotBlocked && isFlexibleGame &&
+    final canBlockSlot =
+        game.isHost &&
+        isEmpty &&
+        !isSlotBlocked &&
+        isFlexibleGame &&
         (game.roomMaxPlayers - game.roomBlockedSlots.length - 1 >= 2);
     final canUnblockSlot = game.isHost && isSlotBlocked;
     // Can only move to empty slots (no swapping, no blocked)
-    final canMove = game.currentGameType != 'skull_king' && !isMySlot && isEmpty && !isSlotBlocked && myIndex != -1;
+    final canMove =
+        game.currentGameType != 'skull_king' &&
+        !isMySlot &&
+        isEmpty &&
+        !isSlotBlocked &&
+        myIndex != -1;
 
     return GestureDetector(
       onTap: () {
@@ -4074,27 +4635,27 @@ class _LobbyScreenState extends State<LobbyScreen> {
           color: isSlotBlocked
               ? const Color(0xFFEDE9E6)
               : isReady
-                  ? const Color(0xFFE8F5E9)
-                  : isMySlot
-                      ? const Color(0xFFE8F0E8)
-                      : isBot
-                          ? const Color(0xFFE8EAF6)
-                          : isBlockedPlayer
-                              ? const Color(0xFFFAF0F0)
-                              : const Color(0xFFFAF6F4),
+              ? const Color(0xFFE8F5E9)
+              : isMySlot
+              ? const Color(0xFFE8F0E8)
+              : isBot
+              ? const Color(0xFFE8EAF6)
+              : isBlockedPlayer
+              ? const Color(0xFFFAF0F0)
+              : const Color(0xFFFAF6F4),
           borderRadius: BorderRadius.circular(16),
           border: Border.all(
             color: isSlotBlocked
                 ? const Color(0xFFBBB1A8)
                 : isReady
-                    ? const Color(0xFF66BB6A)
-                    : isMySlot
-                        ? const Color(0xFFA8D4A8)
-                        : isBot
-                            ? const Color(0xFFC5CAE9)
-                            : isBlockedPlayer
-                                ? const Color(0xFFE0B0B0)
-                                : const Color(0xFFDDD0CC),
+                ? const Color(0xFF66BB6A)
+                : isMySlot
+                ? const Color(0xFFA8D4A8)
+                : isBot
+                ? const Color(0xFFC5CAE9)
+                : isBlockedPlayer
+                ? const Color(0xFFE0B0B0)
+                : const Color(0xFFDDD0CC),
             width: isReady ? 2 : 1,
           ),
         ),
@@ -4112,20 +4673,32 @@ class _LobbyScreenState extends State<LobbyScreen> {
                     color: const Color(0xFFFFE0E0),
                     borderRadius: BorderRadius.circular(8),
                   ),
-                  child: const Icon(Icons.close, size: 14, color: Color(0xFFC62828)),
+                  child: const Icon(
+                    Icons.close,
+                    size: 14,
+                    color: Color(0xFFC62828),
+                  ),
                 ),
               ),
             // Blocked slot indicator
             if (isSlotBlocked)
               const Padding(
                 padding: EdgeInsets.only(right: 6),
-                child: Icon(Icons.lock_outline, size: 16, color: Color(0xFF8A7A72)),
+                child: Icon(
+                  Icons.lock_outline,
+                  size: 16,
+                  color: Color(0xFF8A7A72),
+                ),
               ),
             // Ready check icon
             if (isReady)
               const Padding(
                 padding: EdgeInsets.only(right: 6),
-                child: Icon(Icons.check_circle, size: 16, color: Color(0xFF43A047)),
+                child: Icon(
+                  Icons.check_circle,
+                  size: 16,
+                  color: Color(0xFF43A047),
+                ),
               ),
             // Host badge
             if (player != null && player.isHost)
@@ -4205,26 +4778,28 @@ class _LobbyScreenState extends State<LobbyScreen> {
                       ),
                     ),
                   Text(
-                      player?.name ??
-                          (isSlotBlocked
-                              ? L10n.of(context).lobbySlotBlocked
-                              : L10n.of(context).lobbyEmptySlot),
-                      style: TextStyle(
-                        fontSize: 16,
-                        color: isBot
-                            ? const Color(0xFF3949AB)
-                            : isBlockedPlayer
-                                ? const Color(0xFFBB8888)
-                                : (player != null && !player.connected)
-                                    ? const Color(0xFFBBAAAA)
-                                    : player != null
-                                        ? const Color(0xFF5A4038)
-                                        : isSlotBlocked
-                                            ? const Color(0xFF8A7A72)
-                                            : const Color(0xFFAA9A92),
-                        fontWeight: isMySlot ? FontWeight.bold : FontWeight.normal,
-                      ),
-                      overflow: TextOverflow.ellipsis,
+                    player?.name ??
+                        (isSlotBlocked
+                            ? L10n.of(context).lobbySlotBlocked
+                            : L10n.of(context).lobbyEmptySlot),
+                    style: TextStyle(
+                      fontSize: 16,
+                      color: isBot
+                          ? const Color(0xFF3949AB)
+                          : isBlockedPlayer
+                          ? const Color(0xFFBB8888)
+                          : (player != null && !player.connected)
+                          ? const Color(0xFFBBAAAA)
+                          : player != null
+                          ? const Color(0xFF5A4038)
+                          : isSlotBlocked
+                          ? const Color(0xFF8A7A72)
+                          : const Color(0xFFAA9A92),
+                      fontWeight: isMySlot
+                          ? FontWeight.bold
+                          : FontWeight.normal,
+                    ),
+                    overflow: TextOverflow.ellipsis,
                   ),
                 ],
               ),
@@ -4234,7 +4809,10 @@ class _LobbyScreenState extends State<LobbyScreen> {
               GestureDetector(
                 onTap: () => game.addBot(targetSlot: slotIndex),
                 child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 8,
+                    vertical: 4,
+                  ),
                   decoration: BoxDecoration(
                     color: const Color(0xFFE8EAF6),
                     borderRadius: BorderRadius.circular(8),
@@ -4242,7 +4820,11 @@ class _LobbyScreenState extends State<LobbyScreen> {
                   child: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      const Icon(Icons.smart_toy, size: 14, color: Color(0xFF3949AB)),
+                      const Icon(
+                        Icons.smart_toy,
+                        size: 14,
+                        color: Color(0xFF3949AB),
+                      ),
                       const SizedBox(width: 4),
                       Text(
                         L10n.of(context).lobbyBot,
@@ -4272,7 +4854,11 @@ class _LobbyScreenState extends State<LobbyScreen> {
                     color: const Color(0xFFFFCDD2),
                     borderRadius: BorderRadius.circular(8),
                   ),
-                  child: const Icon(Icons.close, size: 16, color: Color(0xFFC62828)),
+                  child: const Icon(
+                    Icons.close,
+                    size: 16,
+                    color: Color(0xFFC62828),
+                  ),
                 ),
               ),
           ],
@@ -4283,65 +4869,119 @@ class _LobbyScreenState extends State<LobbyScreen> {
 
   IconData _getTitleIcon(String? titleKey) {
     switch (titleKey) {
-      case 'title_sweet': return Icons.cake;
-      case 'title_steady': return Icons.shield;
-      case 'title_flash_30d': return Icons.flash_on;
-      case 'title_dragon': return Icons.local_fire_department;
-      case 'title_phoenix': return Icons.local_fire_department;
-      case 'title_pirate': return Icons.anchor;
-      case 'title_tactician': return Icons.psychology;
-      case 'title_lucky': return Icons.star;
-      case 'title_bluffer': return Icons.theater_comedy;
-      case 'title_ace': return Icons.military_tech;
-      case 'title_king': return Icons.workspace_premium;
-      case 'title_rookie': return Icons.emoji_nature;
-      case 'title_veteran': return Icons.security;
-      case 'title_sensitive': return Icons.sentiment_very_dissatisfied;
-      case 'title_shadow': return Icons.visibility_off;
-      case 'title_flame': return Icons.whatshot;
-      case 'title_ice': return Icons.ac_unit;
-      case 'title_crown': return Icons.diamond;
-      case 'title_diamond': return Icons.diamond;
-      case 'title_ghost': return Icons.blur_on;
-      case 'title_thunder': return Icons.bolt;
-      case 'title_topcard': return Icons.style;
-      case 'title_legend': return Icons.auto_awesome;
-      case 'title_boomer': return Icons.elderly;
-      default: return Icons.star;
+      case 'title_sweet':
+        return Icons.cake;
+      case 'title_steady':
+        return Icons.shield;
+      case 'title_flash_30d':
+        return Icons.flash_on;
+      case 'title_dragon':
+        return Icons.local_fire_department;
+      case 'title_phoenix':
+        return Icons.local_fire_department;
+      case 'title_pirate':
+        return Icons.anchor;
+      case 'title_tactician':
+        return Icons.psychology;
+      case 'title_lucky':
+        return Icons.star;
+      case 'title_bluffer':
+        return Icons.theater_comedy;
+      case 'title_ace':
+        return Icons.military_tech;
+      case 'title_king':
+        return Icons.workspace_premium;
+      case 'title_rookie':
+        return Icons.emoji_nature;
+      case 'title_veteran':
+        return Icons.security;
+      case 'title_sensitive':
+        return Icons.sentiment_very_dissatisfied;
+      case 'title_shadow':
+        return Icons.visibility_off;
+      case 'title_flame':
+        return Icons.whatshot;
+      case 'title_ice':
+        return Icons.ac_unit;
+      case 'title_crown':
+        return Icons.diamond;
+      case 'title_diamond':
+        return Icons.diamond;
+      case 'title_ghost':
+        return Icons.blur_on;
+      case 'title_thunder':
+        return Icons.bolt;
+      case 'title_topcard':
+        return Icons.style;
+      case 'title_legend':
+        return Icons.auto_awesome;
+      case 'title_boomer':
+        return Icons.elderly;
+      default:
+        return Icons.star;
     }
   }
 
   Color _getTitleColor(String? titleKey) {
     switch (titleKey) {
-      case 'title_sweet': return const Color(0xFFEC407A);
-      case 'title_steady': return const Color(0xFF5C6BC0);
-      case 'title_flash_30d': return const Color(0xFFFFA000);
-      case 'title_dragon': return const Color(0xFFD32F2F);
-      case 'title_phoenix': return const Color(0xFFFF6F00);
-      case 'title_pirate': return const Color(0xFF37474F);
-      case 'title_tactician': return const Color(0xFF00695C);
-      case 'title_lucky': return const Color(0xFFFFD600);
-      case 'title_bluffer': return const Color(0xFF6A1B9A);
-      case 'title_ace': return const Color(0xFFC62828);
-      case 'title_king': return const Color(0xFFFF8F00);
-      case 'title_rookie': return const Color(0xFF66BB6A);
-      case 'title_veteran': return const Color(0xFF1565C0);
-      case 'title_sensitive': return const Color(0xFFE91E63);
-      case 'title_shadow': return const Color(0xFF424242);
-      case 'title_flame': return const Color(0xFFFF5722);
-      case 'title_ice': return const Color(0xFF0288D1);
-      case 'title_crown': return const Color(0xFFE65100);
-      case 'title_diamond': return const Color(0xFF00BCD4);
-      case 'title_ghost': return const Color(0xFF78909C);
-      case 'title_thunder': return const Color(0xFFFFAB00);
-      case 'title_topcard': return const Color(0xFF00897B);
-      case 'title_legend': return const Color(0xFFFF6D00);
-      case 'title_boomer': return const Color(0xFF795548);
-      default: return const Color(0xFF7E57C2);
+      case 'title_sweet':
+        return const Color(0xFFEC407A);
+      case 'title_steady':
+        return const Color(0xFF5C6BC0);
+      case 'title_flash_30d':
+        return const Color(0xFFFFA000);
+      case 'title_dragon':
+        return const Color(0xFFD32F2F);
+      case 'title_phoenix':
+        return const Color(0xFFFF6F00);
+      case 'title_pirate':
+        return const Color(0xFF37474F);
+      case 'title_tactician':
+        return const Color(0xFF00695C);
+      case 'title_lucky':
+        return const Color(0xFFFFD600);
+      case 'title_bluffer':
+        return const Color(0xFF6A1B9A);
+      case 'title_ace':
+        return const Color(0xFFC62828);
+      case 'title_king':
+        return const Color(0xFFFF8F00);
+      case 'title_rookie':
+        return const Color(0xFF66BB6A);
+      case 'title_veteran':
+        return const Color(0xFF1565C0);
+      case 'title_sensitive':
+        return const Color(0xFFE91E63);
+      case 'title_shadow':
+        return const Color(0xFF424242);
+      case 'title_flame':
+        return const Color(0xFFFF5722);
+      case 'title_ice':
+        return const Color(0xFF0288D1);
+      case 'title_crown':
+        return const Color(0xFFE65100);
+      case 'title_diamond':
+        return const Color(0xFF00BCD4);
+      case 'title_ghost':
+        return const Color(0xFF78909C);
+      case 'title_thunder':
+        return const Color(0xFFFFAB00);
+      case 'title_topcard':
+        return const Color(0xFF00897B);
+      case 'title_legend':
+        return const Color(0xFFFF6D00);
+      case 'title_boomer':
+        return const Color(0xFF795548);
+      default:
+        return const Color(0xFF7E57C2);
     }
   }
 
-  void _showKickConfirmDialog(String playerName, String playerId, GameService game) {
+  void _showKickConfirmDialog(
+    String playerName,
+    String playerId,
+    GameService game,
+  ) {
     final l10n = L10n.of(context);
     showDialog(
       context: context,
@@ -4369,7 +5009,6 @@ class _LobbyScreenState extends State<LobbyScreen> {
       ),
     );
   }
-
 }
 
 class _BannerStyle {

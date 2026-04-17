@@ -308,129 +308,216 @@ class _SKGameScreenState extends State<SKGameScreen> {
   }
 
   Widget _buildSpectatorWaitingRoom(GameService game) {
-    final players = game.roomPlayers.whereType<Player>().toList();
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(12, 12, 12, 16),
-      child: Column(
-        children: [
-          _buildSpectatorRoomHeader(game),
-          const SizedBox(height: 14),
-          Expanded(
-            child: Center(
-              child: Container(
-                constraints: const BoxConstraints(maxWidth: 760),
-                padding: const EdgeInsets.all(18),
-                decoration: BoxDecoration(
-                  color: Colors.white.withValues(alpha: 0.94),
-                  borderRadius: BorderRadius.circular(22),
-                  border: Border.all(color: const Color(0xFFE0D8D4)),
-               ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      L10n.of(context).skGameSpectatorWaitingTitle,
-                      style: const TextStyle(
-                        color: Color(0xFF3E312A),
-                        fontSize: 18,
-                        fontWeight: FontWeight.w900,
-                      ),
+    final slots = game.roomPlayers;
+    return Stack(
+      children: [
+        Padding(
+          padding: const EdgeInsets.fromLTRB(12, 12, 12, 16),
+          child: Column(
+            children: [
+              _buildSpectatorRoomHeader(game),
+              const SizedBox(height: 14),
+              Expanded(
+                child: Center(
+                  child: Container(
+                    constraints: const BoxConstraints(maxWidth: 760),
+                    padding: const EdgeInsets.all(18),
+                    decoration: BoxDecoration(
+                      color: Colors.white.withValues(alpha: 0.94),
+                      borderRadius: BorderRadius.circular(22),
+                      border: Border.all(color: const Color(0xFFE0D8D4)),
                     ),
-                    const SizedBox(height: 6),
-                    Text(
-                      L10n.of(context).skGameSpectatorWaitingDesc,
-                      style: TextStyle(
-                        color: const Color(0xFF6A5A52).withValues(alpha: 0.92),
-                        fontSize: 13,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                    const SizedBox(height: 16),
-                    Expanded(
-                      child: LayoutBuilder(
-                        builder: (context, gridConstraints) {
-                          final wide = gridConstraints.maxWidth > 620;
-                          return GridView.builder(
-                            gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-                              crossAxisCount: wide ? 2 : 1,
-                              mainAxisSpacing: 12,
-                              crossAxisSpacing: 12,
-                              childAspectRatio: wide ? 1.65 : 2.3,
-                            ),
-                            itemCount: players.length,
-                            itemBuilder: (context, index) {
-                              final p = players[index];
-                              return Container(
-                                padding: const EdgeInsets.all(12),
-                                decoration: BoxDecoration(
-                                  color: Colors.white,
-                                  borderRadius: BorderRadius.circular(16),
-                                  border: Border.all(color: const Color(0xFFE0D8D4)),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          L10n.of(context).skGameSpectatorWaitingTitle,
+                          style: const TextStyle(
+                            color: Color(0xFF3E312A),
+                            fontSize: 18,
+                            fontWeight: FontWeight.w900,
+                          ),
+                        ),
+                        const SizedBox(height: 6),
+                        Text(
+                          L10n.of(context).skGameSpectatorWaitingDesc,
+                          style: TextStyle(
+                            color: const Color(0xFF6A5A52).withValues(alpha: 0.92),
+                            fontSize: 13,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                        const SizedBox(height: 16),
+                        Expanded(
+                          child: LayoutBuilder(
+                            builder: (context, gridConstraints) {
+                              final wide = gridConstraints.maxWidth > 620;
+                              return GridView.builder(
+                                gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                                  crossAxisCount: wide ? 2 : 1,
+                                  mainAxisSpacing: 10,
+                                  crossAxisSpacing: 12,
+                                  childAspectRatio: wide ? 2.4 : 4.0,
                                 ),
-                                child: Row(
-                                  children: [
-                                    Container(
-                                      width: 36,
-                                      height: 36,
-                                      decoration: BoxDecoration(
-                                        color: p.isHost
-                                            ? const Color(0xFFFFF2B3)
-                                            : const Color(0xFFF2ECE8),
-                                        shape: BoxShape.circle,
-                                      ),
-                                      child: Icon(
-                                        p.isHost ? Icons.emoji_events : Icons.person,
-                                        size: 18,
-                                        color: p.isHost
-                                            ? const Color(0xFFE6A800)
-                                            : const Color(0xFF6A5A52),
-                                      ),
-                                    ),
-                                    const SizedBox(width: 10),
-                                    Expanded(
-                                      child: Column(
-                                        mainAxisSize: MainAxisSize.min,
-                                        mainAxisAlignment: MainAxisAlignment.center,
-                                        crossAxisAlignment: CrossAxisAlignment.start,
-                                        children: [
-                                          Text(
-                                            p.name,
-                                            maxLines: 1,
-                                            overflow: TextOverflow.ellipsis,
-                                            style: const TextStyle(
-                                              color: Color(0xFF3E312A),
-                                              fontSize: 14,
-                                              fontWeight: FontWeight.w800,
-                                            ),
-                                          ),
-                                          const SizedBox(height: 2),
-                                          Text(
-                                            p.isHost ? L10n.of(context).skGameHost : (p.isReady ? L10n.of(context).skGameReady : L10n.of(context).skGameWaiting),
-                                            maxLines: 1,
-                                            overflow: TextOverflow.ellipsis,
-                                            style: TextStyle(
-                                              color: const Color(0xFF8A7A72).withValues(alpha: 0.92),
-                                              fontSize: 12,
-                                              fontWeight: FontWeight.w600,
-                                            ),
-                                          ),
-                                        ],
-                                      ),
-                                    ),
-                                  ],
-                                ),
+                                itemCount: slots.length,
+                                itemBuilder: (context, index) {
+                                  return _buildSpectatorSlot(game, slots[index], index);
+                                },
                               );
                             },
-                          );
-                        },
-                      ),
+                          ),
+                        ),
+                        const SizedBox(height: 14),
+                        Text(
+                          L10n.of(context).spectatorWaitingForGame,
+                          style: const TextStyle(
+                            color: Color(0xFF8A8A8A),
+                            fontSize: 13,
+                          ),
+                        ),
+                      ],
                     ),
-                  ],
+                  ),
                 ),
               ),
+            ],
+          ),
+        ),
+        if (_chatOpen) _buildChatPanel(game),
+      ],
+    );
+  }
+
+  Widget _buildSpectatorSlot(GameService game, Player? player, int slotIndex) {
+    final bool isBlocked = game.roomBlockedSlots.contains(slotIndex);
+    final bool isEmpty = player == null;
+
+    if (isBlocked) {
+      return Container(
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(
+          color: const Color(0xFFF0EDED),
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: const Color(0xFFD8CFCB)),
+        ),
+        child: const Row(
+          children: [
+            Icon(Icons.block, size: 24, color: Color(0xFFBDB5B0)),
+            SizedBox(width: 10),
+            Text(
+              '',
+              style: TextStyle(color: Color(0xFFBDB5B0), fontSize: 13),
+            ),
+          ],
+        ),
+      );
+    }
+
+    if (isEmpty) {
+      return Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: () => game.switchToPlayer(slotIndex),
+          borderRadius: BorderRadius.circular(16),
+          splashColor: Colors.blue.withValues(alpha: 0.2),
+          child: Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: const Color(0xFFF7F2F0),
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(color: const Color(0xFFD8CFCB)),
+            ),
+            child: Row(
+              children: [
+                const Icon(Icons.person_add, size: 24, color: Color(0xFF9AA7B0)),
+                const SizedBox(width: 10),
+                Text(
+                  L10n.of(context).spectatorSit,
+                  style: const TextStyle(
+                    color: Color(0xFF9AA7B0),
+                    fontSize: 13,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ],
             ),
           ),
-        ],
+        ),
+      );
+    }
+
+    final p = player;
+    final bool isReady = p.isReady;
+    return GestureDetector(
+      onTap: () => _showPlayerProfileDialog(p.name, game),
+      child: Container(
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(
+            color: isReady ? const Color(0xFF9ED6A5) : const Color(0xFFE0D8D4),
+            width: isReady ? 2 : 1,
+          ),
+        ),
+        child: Row(
+          children: [
+            Container(
+              width: 36,
+              height: 36,
+              decoration: BoxDecoration(
+                color: p.isHost
+                    ? const Color(0xFFFFF2B3)
+                    : const Color(0xFFF2ECE8),
+                shape: BoxShape.circle,
+              ),
+              child: Icon(
+                p.isHost ? Icons.emoji_events : Icons.person,
+                size: 18,
+                color: p.isHost
+                    ? const Color(0xFFE6A800)
+                    : const Color(0xFF6A5A52),
+              ),
+            ),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                mainAxisAlignment: MainAxisAlignment.center,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    p.name,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(
+                      color: Color(0xFF3E312A),
+                      fontSize: 14,
+                      fontWeight: FontWeight.w800,
+                    ),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    p.isHost
+                        ? L10n.of(context).spectatorHost
+                        : (isReady ? L10n.of(context).spectatorReady : L10n.of(context).spectatorWaiting),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                      color: p.isHost
+                          ? const Color(0xFFE6A800)
+                          : isReady
+                              ? const Color(0xFF4BAA6A)
+                              : const Color(0xFF9A8E8A),
+                      fontSize: 12,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }

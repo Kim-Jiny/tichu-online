@@ -227,7 +227,7 @@
   "lobbyDuplicateLoginKicked": "You were logged out because another device logged in",
   "lobbyRoomListTitle": "Game Room List",
   "lobbyEmptyRoomList": "No rooms yet!\nWhy not create one?",
-  "lobbySkullKingBadge": "Skull King",
+  "lobbySkullKingBadge": "☠️ Skull King",
   "lobbyTichuBadge": "Tichu",
   "lobbyRoomTimeSec": "{seconds}s",
   "@lobbyRoomTimeSec": {

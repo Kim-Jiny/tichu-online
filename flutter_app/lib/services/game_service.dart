@@ -24,6 +24,7 @@ class GameService extends ChangeNotifier {
   Timer? _pushToggleTimer;
   int _pushPrefsLoadVersion = 0;
   final Map<String, DateTime> _roomInviteCooldowns = {};
+  Completer<String?>? _shareInviteLinkCompleter;
   DateTime? _dogDelayUntil;
   Map<String, dynamic>? _pendingGameState;
   GameStateData? _prevGameState;
@@ -62,7 +63,8 @@ class GameService extends ChangeNotifier {
   Set<String> approvedCardViews = {}; // player IDs that approved
 
   // Incoming card view requests (for players)
-  List<Map<String, String>> incomingCardViewRequests = []; // [{spectatorId, spectatorNickname}]
+  List<Map<String, String>> incomingCardViewRequests =
+      []; // [{spectatorId, spectatorNickname}]
   bool autoRejectCardView = false; // 패 보기 요청 항상 거절
   bool autoAcceptCardView = false; // 패 보기 요청 항상 승인
 
@@ -260,7 +262,9 @@ class GameService extends ChangeNotifier {
 
   GameService(this._network) {
     _subscription = _network.messageStream.listen(_handleMessage);
-    _fcmTokenSubscription = FirebaseMessaging.instance.onTokenRefresh.listen((newToken) {
+    _fcmTokenSubscription = FirebaseMessaging.instance.onTokenRefresh.listen((
+      newToken,
+    ) {
       final preview = newToken.substring(0, newToken.length.clamp(0, 20));
       debugPrint('[FCM] onTokenRefresh: $preview...');
       if (playerId.isNotEmpty && pushEnabled) {
@@ -282,10 +286,14 @@ class GameService extends ChangeNotifier {
   bool get hasSpectatorRoom => isSpectator && hasRoom;
   bool get isInWaitingRoom => hasRoom && !isSpectator && !hasActiveGame;
   bool get hasActiveGame {
-    if (skGameState != null && skGameState!.phase.isNotEmpty && skGameState!.phase != 'game_end') {
+    if (skGameState != null &&
+        skGameState!.phase.isNotEmpty &&
+        skGameState!.phase != 'game_end') {
       return true;
     }
-    if (llGameState != null && llGameState!.phase.isNotEmpty && llGameState!.phase != 'game_end') {
+    if (llGameState != null &&
+        llGameState!.phase.isNotEmpty &&
+        llGameState!.phase != 'game_end') {
       return true;
     }
     return gameState != null &&
@@ -293,10 +301,12 @@ class GameService extends ChangeNotifier {
         gameState!.phase != 'waiting' &&
         gameState!.phase != 'game_end';
   }
+
   bool get hasSpectatorGameState => spectatorGameState != null;
   bool get hasPendingSocialNickname => needNickname;
   Map<String, dynamic>? get profileData => _profiles.current;
-  Map<String, dynamic>? profileFor(String nickname) => _profiles.profileFor(nickname);
+  Map<String, dynamic>? profileFor(String nickname) =>
+      _profiles.profileFor(nickname);
   AppDestination get currentDestination {
     if (isSpectator && hasRoom) {
       if (currentGameType == 'skull_king') return AppDestination.skGame;
@@ -412,7 +422,9 @@ class GameService extends ChangeNotifier {
         pushAdminInquiryEnabled = data['pushAdminInquiry'] != false;
         pushAdminReportEnabled = data['pushAdminReport'] != false;
         loginError = null;
-        _parseMaintenanceStatus(data['maintenanceStatus'] as Map<String, dynamic>?);
+        _parseMaintenanceStatus(
+          data['maintenanceStatus'] as Map<String, dynamic>?,
+        );
         _savePushPrefs();
         // Async FCM token update - don't block login
         _sendFcmTokenAsync();
@@ -456,9 +468,8 @@ class GameService extends ChangeNotifier {
         break;
 
       case 'room_list':
-        roomList = (data['rooms'] as List?)
-                ?.map((r) => Room.fromJson(r))
-                .toList() ??
+        roomList =
+            (data['rooms'] as List?)?.map((r) => Room.fromJson(r)).toList() ??
             [];
         notifyListeners();
         break;
@@ -512,9 +523,8 @@ class GameService extends ChangeNotifier {
         break;
 
       case 'spectatable_rooms':
-        spectatableRooms = (data['rooms'] as List?)
-                ?.map((r) => Room.fromJson(r))
-                .toList() ??
+        spectatableRooms =
+            (data['rooms'] as List?)?.map((r) => Room.fromJson(r)).toList() ??
             [];
         notifyListeners();
         break;
@@ -546,10 +556,14 @@ class GameService extends ChangeNotifier {
           }
           final spectatorList = state['spectators'] as List?;
           if (spectatorList != null) {
-            spectators = spectatorList.map((s) => {
-              'id': (s['id'] ?? '').toString(),
-              'nickname': (s['nickname'] ?? '').toString(),
-            }).toList();
+            spectators = spectatorList
+                .map(
+                  (s) => {
+                    'id': (s['id'] ?? '').toString(),
+                    'nickname': (s['nickname'] ?? '').toString(),
+                  },
+                )
+                .toList();
           } else {
             spectators = [];
           }
@@ -594,7 +608,9 @@ class GameService extends ChangeNotifier {
             respondCardViewRequest(spectatorId, true);
           } else {
             // Remove duplicate if exists
-            incomingCardViewRequests.removeWhere((r) => r['spectatorId'] == spectatorId);
+            incomingCardViewRequests.removeWhere(
+              (r) => r['spectatorId'] == spectatorId,
+            );
             incomingCardViewRequests.add({
               'spectatorId': spectatorId,
               'spectatorNickname': spectatorNickname,
@@ -699,19 +715,25 @@ class GameService extends ChangeNotifier {
           roomBlockedSlots = blockedList == null
               ? <int>{}
               : blockedList
-                  .map((e) => e is int ? e : int.tryParse('$e') ?? -1)
-                  .where((i) => i >= 0)
-                  .toSet();
+                    .map((e) => e is int ? e : int.tryParse('$e') ?? -1)
+                    .where((i) => i >= 0)
+                    .toSet();
           final spectatorList = room['spectators'] as List?;
           if (spectatorList != null) {
-            spectators = spectatorList.map((s) => {
-              'id': (s['id'] ?? '').toString(),
-              'nickname': (s['nickname'] ?? '').toString(),
-            }).toList();
+            spectators = spectatorList
+                .map(
+                  (s) => {
+                    'id': (s['id'] ?? '').toString(),
+                    'nickname': (s['nickname'] ?? '').toString(),
+                  },
+                )
+                .toList();
           } else {
             spectators = [];
           }
-          isHost = roomPlayers.any((p) => p != null && p.id == playerId && p.isHost);
+          isHost = roomPlayers.any(
+            (p) => p != null && p.id == playerId && p.isHost,
+          );
           isRankedRoom = room['isRanked'] == true;
           roomTurnTimeLimit = room['turnTimeLimit'] ?? 30;
           roomTargetScore = room['targetScore'] ?? 1000;
@@ -753,24 +775,36 @@ class GameService extends ChangeNotifier {
               desertedPlayerName = null;
               desertedReason = null;
             }
-            final selfPlayer = nextSK.players.where((p) => p.position == 'self');
-            myTimeoutCount = selfPlayer.isNotEmpty ? selfPlayer.first.timeoutCount : 0;
+            final selfPlayer = nextSK.players.where(
+              (p) => p.position == 'self',
+            );
+            myTimeoutCount = selfPlayer.isNotEmpty
+                ? selfPlayer.first.timeoutCount
+                : 0;
             // Parse card viewers and spectators for SK too
             final viewers = state['cardViewers'] as List?;
             if (viewers != null) {
-              cardViewers = viewers.map((v) => {
-                'id': (v['id'] ?? '').toString(),
-                'nickname': (v['nickname'] ?? '').toString(),
-              }).toList();
+              cardViewers = viewers
+                  .map(
+                    (v) => {
+                      'id': (v['id'] ?? '').toString(),
+                      'nickname': (v['nickname'] ?? '').toString(),
+                    },
+                  )
+                  .toList();
             } else {
               cardViewers = [];
             }
             final skSpectatorList = state['spectators'] as List?;
             if (skSpectatorList != null) {
-              spectators = skSpectatorList.map((s) => {
-                'id': (s['id'] ?? '').toString(),
-                'nickname': (s['nickname'] ?? '').toString(),
-              }).toList();
+              spectators = skSpectatorList
+                  .map(
+                    (s) => {
+                      'id': (s['id'] ?? '').toString(),
+                      'nickname': (s['nickname'] ?? '').toString(),
+                    },
+                  )
+                  .toList();
             } else {
               spectators = [];
             }
@@ -787,23 +821,35 @@ class GameService extends ChangeNotifier {
               desertedPlayerName = null;
               desertedReason = null;
             }
-            final selfPlayer = nextLL.players.where((p) => p.position == 'self');
-            myTimeoutCount = selfPlayer.isNotEmpty ? selfPlayer.first.timeoutCount : 0;
+            final selfPlayer = nextLL.players.where(
+              (p) => p.position == 'self',
+            );
+            myTimeoutCount = selfPlayer.isNotEmpty
+                ? selfPlayer.first.timeoutCount
+                : 0;
             final viewers = state['cardViewers'] as List?;
             if (viewers != null) {
-              cardViewers = viewers.map((v) => {
-                'id': (v['id'] ?? '').toString(),
-                'nickname': (v['nickname'] ?? '').toString(),
-              }).toList();
+              cardViewers = viewers
+                  .map(
+                    (v) => {
+                      'id': (v['id'] ?? '').toString(),
+                      'nickname': (v['nickname'] ?? '').toString(),
+                    },
+                  )
+                  .toList();
             } else {
               cardViewers = [];
             }
             final llSpectatorList = state['spectators'] as List?;
             if (llSpectatorList != null) {
-              spectators = llSpectatorList.map((s) => {
-                'id': (s['id'] ?? '').toString(),
-                'nickname': (s['nickname'] ?? '').toString(),
-              }).toList();
+              spectators = llSpectatorList
+                  .map(
+                    (s) => {
+                      'id': (s['id'] ?? '').toString(),
+                      'nickname': (s['nickname'] ?? '').toString(),
+                    },
+                  )
+                  .toList();
             } else {
               spectators = [];
             }
@@ -824,19 +870,27 @@ class GameService extends ChangeNotifier {
             // Parse card viewers
             final viewers = state['cardViewers'] as List?;
             if (viewers != null) {
-              cardViewers = viewers.map((v) => {
-                'id': (v['id'] ?? '').toString(),
-                'nickname': (v['nickname'] ?? '').toString(),
-              }).toList();
+              cardViewers = viewers
+                  .map(
+                    (v) => {
+                      'id': (v['id'] ?? '').toString(),
+                      'nickname': (v['nickname'] ?? '').toString(),
+                    },
+                  )
+                  .toList();
             } else {
               cardViewers = [];
             }
             final spectatorList = state['spectators'] as List?;
             if (spectatorList != null) {
-              spectators = spectatorList.map((s) => {
-                'id': (s['id'] ?? '').toString(),
-                'nickname': (s['nickname'] ?? '').toString(),
-              }).toList();
+              spectators = spectatorList
+                  .map(
+                    (s) => {
+                      'id': (s['id'] ?? '').toString(),
+                      'nickname': (s['nickname'] ?? '').toString(),
+                    },
+                  )
+                  .toList();
             } else {
               spectators = [];
             }
@@ -865,7 +919,8 @@ class GameService extends ChangeNotifier {
         break;
       case 'cards_played':
         _sfx.play('card');
-        final cards = (data['cards'] as List?)?.map((e) => e.toString()).toList() ?? [];
+        final cards =
+            (data['cards'] as List?)?.map((e) => e.toString()).toList() ?? [];
         if (cards.contains('special_dragon')) _sfx.play('dragon');
         if (cards.contains('special_dog')) _sfx.play('dog');
         break;
@@ -909,7 +964,8 @@ class GameService extends ChangeNotifier {
           'sender': data['sender'] ?? '',
           'senderId': data['senderId'] ?? '',
           'message': data['message'] ?? '',
-          'timestamp': data['timestamp'] ?? DateTime.now().millisecondsSinceEpoch,
+          'timestamp':
+              data['timestamp'] ?? DateTime.now().millisecondsSinceEpoch,
         };
         chatMessages.add(msg);
         if (chatMessages.length > 100) {
@@ -936,12 +992,16 @@ class GameService extends ChangeNotifier {
 
       case 'chat_history':
         final messages = data['messages'] as List? ?? [];
-        chatMessages = messages.map((m) => {
-          'sender': m['sender'] ?? '',
-          'senderId': m['senderId'] ?? '',
-          'message': m['message'] ?? '',
-          'timestamp': m['timestamp'] ?? 0,
-        }).toList();
+        chatMessages = messages
+            .map(
+              (m) => {
+                'sender': m['sender'] ?? '',
+                'senderId': m['senderId'] ?? '',
+                'message': m['message'] ?? '',
+                'timestamp': m['timestamp'] ?? 0,
+              },
+            )
+            .toList();
         notifyListeners();
         break;
 
@@ -969,11 +1029,17 @@ class GameService extends ChangeNotifier {
         final friendsList = data['friends'] as List? ?? [];
         // Support both object array [{nickname, isOnline, ...}] and string array
         if (friendsList.isNotEmpty && friendsList.first is Map) {
-          friendsData = friendsList.map((f) => Map<String, dynamic>.from(f as Map)).toList();
-          friends = friendsData.map((f) => f['nickname']?.toString() ?? '').toList();
+          friendsData = friendsList
+              .map((f) => Map<String, dynamic>.from(f as Map))
+              .toList();
+          friends = friendsData
+              .map((f) => f['nickname']?.toString() ?? '')
+              .toList();
         } else {
           friends = friendsList.map((f) => f.toString()).toList();
-          friendsData = friends.map((f) => <String, dynamic>{'nickname': f, 'isOnline': false}).toList();
+          friendsData = friends
+              .map((f) => <String, dynamic>{'nickname': f, 'isOnline': false})
+              .toList();
         }
         notifyListeners();
         break;
@@ -1002,7 +1068,8 @@ class GameService extends ChangeNotifier {
       case 'friend_request_received':
         // Someone sent us a friend request
         final fromNickname = data['fromNickname'] as String? ?? '';
-        if (fromNickname.isNotEmpty && !pendingFriendRequests.contains(fromNickname)) {
+        if (fromNickname.isNotEmpty &&
+            !pendingFriendRequests.contains(fromNickname)) {
           pendingFriendRequests.add(fromNickname);
           pendingFriendRequestCount = pendingFriendRequests.length;
         }
@@ -1040,7 +1107,9 @@ class GameService extends ChangeNotifier {
 
       case 'search_users_result':
         final users = data['users'] as List? ?? [];
-        searchResults = users.map((u) => Map<String, dynamic>.from(u as Map)).toList();
+        searchResults = users
+            .map((u) => Map<String, dynamic>.from(u as Map))
+            .toList();
         notifyListeners();
         break;
 
@@ -1057,7 +1126,9 @@ class GameService extends ChangeNotifier {
         };
         dmMessages.putIfAbsent(partner, () => []);
         // Avoid duplicate
-        final isNewMessage = !dmMessages[partner]!.any((m) => m['id'] == msg['id']);
+        final isNewMessage = !dmMessages[partner]!.any(
+          (m) => m['id'] == msg['id'],
+        );
         if (isNewMessage) {
           dmMessages[partner]!.add(msg);
         }
@@ -1095,13 +1166,16 @@ class GameService extends ChangeNotifier {
             'sender': raw['sender_nickname'] ?? raw['sender'] ?? '',
             'receiver': raw['receiver_nickname'] ?? raw['receiver'] ?? '',
             'message': raw['message'] ?? '',
-            'createdAt': (raw['created_at'] ?? raw['createdAt'] ?? '').toString(),
+            'createdAt': (raw['created_at'] ?? raw['createdAt'] ?? '')
+                .toString(),
           };
         }).toList();
         if (nickname.isNotEmpty) {
           final existing = dmMessages[nickname] ?? [];
           final existingIds = existing.map((m) => m['id']).toSet();
-          final newMsgs = parsed.where((m) => !existingIds.contains(m['id'])).toList();
+          final newMsgs = parsed
+              .where((m) => !existingIds.contains(m['id']))
+              .toList();
           dmMessages[nickname] = [...newMsgs, ...existing];
         }
         notifyListeners();
@@ -1117,7 +1191,9 @@ class GameService extends ChangeNotifier {
 
       case 'dm_conversations':
         final convs = data['conversations'] as List? ?? [];
-        dmConversations = convs.map((c) => Map<String, dynamic>.from(c as Map)).toList();
+        dmConversations = convs
+            .map((c) => Map<String, dynamic>.from(c as Map))
+            .toList();
         notifyListeners();
         break;
 
@@ -1153,6 +1229,18 @@ class GameService extends ChangeNotifier {
           });
         }
         notifyListeners();
+        break;
+
+      case 'share_invite_link':
+        _shareInviteLinkCompleter?.complete(data['url'] as String?);
+        _shareInviteLinkCompleter = null;
+        break;
+
+      case 'share_invite_link_error':
+        final message =
+            data['message'] as String? ?? 'Failed to create share invite link';
+        _shareInviteLinkCompleter?.completeError(StateError(message));
+        _shareInviteLinkCompleter = null;
         break;
 
       case 'report_result':
@@ -1204,7 +1292,8 @@ class GameService extends ChangeNotifier {
           goldHistory = list.map((e) => Map<String, dynamic>.from(e)).toList();
           goldHistoryError = null;
         } else {
-          goldHistoryError = data['message'] as String? ?? 'gold_history_load_failed';
+          goldHistoryError =
+              data['message'] as String? ?? 'gold_history_load_failed';
         }
         notifyListeners();
         break;
@@ -1225,7 +1314,8 @@ class GameService extends ChangeNotifier {
               .toList();
           adminUsersError = null;
         } else {
-          adminUsersError = data['message'] as String? ?? 'admin_users_load_failed';
+          adminUsersError =
+              data['message'] as String? ?? 'admin_users_load_failed';
         }
         notifyListeners();
         break;
@@ -1237,7 +1327,8 @@ class GameService extends ChangeNotifier {
           );
           adminUserDetailError = null;
         } else {
-          adminUserDetailError = data['message'] as String? ?? 'admin_user_detail_load_failed';
+          adminUserDetailError =
+              data['message'] as String? ?? 'admin_user_detail_load_failed';
         }
         notifyListeners();
         break;
@@ -1249,7 +1340,8 @@ class GameService extends ChangeNotifier {
               .toList();
           adminInquiriesError = null;
         } else {
-          adminInquiriesError = data['message'] as String? ?? 'admin_inquiries_load_failed';
+          adminInquiriesError =
+              data['message'] as String? ?? 'admin_inquiries_load_failed';
         }
         notifyListeners();
         break;
@@ -1261,7 +1353,8 @@ class GameService extends ChangeNotifier {
               .toList();
           adminReportsError = null;
         } else {
-          adminReportsError = data['message'] as String? ?? 'admin_reports_load_failed';
+          adminReportsError =
+              data['message'] as String? ?? 'admin_reports_load_failed';
         }
         notifyListeners();
         break;
@@ -1273,7 +1366,8 @@ class GameService extends ChangeNotifier {
               .toList();
           adminReportGroupError = null;
         } else {
-          adminReportGroupError = data['message'] as String? ?? 'admin_report_group_load_failed';
+          adminReportGroupError =
+              data['message'] as String? ?? 'admin_report_group_load_failed';
         }
         notifyListeners();
         break;
@@ -1282,8 +1376,11 @@ class GameService extends ChangeNotifier {
       case 'admin_inquiry_resolve_result':
       case 'admin_report_status_result':
         adminActionSuccess = data['success'] == true;
-        adminActionMessage = data['message'] as String? ??
-            (adminActionSuccess == true ? 'admin_action_success' : 'admin_action_failed');
+        adminActionMessage =
+            data['message'] as String? ??
+            (adminActionSuccess == true
+                ? 'admin_action_success'
+                : 'admin_action_failed');
         if (type == 'admin_adjust_gold_result' &&
             adminActionSuccess == true &&
             adminUserDetail?['nickname'] == data['nickname']) {
@@ -1324,10 +1421,13 @@ class GameService extends ChangeNotifier {
         inventoryLoading = false;
         if (data['success'] == true) {
           final list = data['items'] as List? ?? [];
-          inventoryItems = list.map((e) => Map<String, dynamic>.from(e)).toList();
+          inventoryItems = list
+              .map((e) => Map<String, dynamic>.from(e))
+              .toList();
           inventoryError = null;
         } else {
-          inventoryError = data['message'] as String? ?? 'inventory_load_failed';
+          inventoryError =
+              data['message'] as String? ?? 'inventory_load_failed';
         }
         notifyListeners();
         break;
@@ -1344,7 +1444,8 @@ class GameService extends ChangeNotifier {
           lastPurchaseItemKey = data['itemKey'] as String?;
           lastPurchaseSuccess = data['success'] == true;
           lastPurchaseExtended = data['extended'] == true;
-          if (data['success'] == true && data['itemKey'] == 'top_card_counter_7d') {
+          if (data['success'] == true &&
+              data['itemKey'] == 'top_card_counter_7d') {
             hasTopCardCounter = true;
           }
         }
@@ -1370,14 +1471,16 @@ class GameService extends ChangeNotifier {
       case 'inquiries_result':
         inquiriesLoading = false;
         if (data['success'] == true) {
-          inquiries = (data['inquiries'] as List?)
+          inquiries =
+              (data['inquiries'] as List?)
                   ?.map((e) => (e as Map).cast<String, dynamic>())
                   .toList() ??
               [];
           inquiriesError = null;
           _maybeShowInquiryBanner();
         } else {
-          inquiriesError = data['message'] as String? ?? 'inquiries_load_failed';
+          inquiriesError =
+              data['message'] as String? ?? 'inquiries_load_failed';
           inquiries = [];
         }
         notifyListeners();
@@ -1386,7 +1489,8 @@ class GameService extends ChangeNotifier {
       case 'notices_result':
         noticesLoading = false;
         if (data['success'] == true) {
-          notices = (data['notices'] as List?)
+          notices =
+              (data['notices'] as List?)
                   ?.map((e) => (e as Map).cast<String, dynamic>())
                   .toList() ??
               [];
@@ -1415,7 +1519,8 @@ class GameService extends ChangeNotifier {
           nicknameChangeResult = 'nickname_changed';
           nicknameChangeSuccess = true;
         } else {
-          nicknameChangeResult = data['message'] as String? ?? 'nickname_change_failed';
+          nicknameChangeResult =
+              data['message'] as String? ?? 'nickname_change_failed';
           nicknameChangeSuccess = false;
         }
         requestWallet();
@@ -1631,7 +1736,9 @@ class GameService extends ChangeNotifier {
         final self = next.players.where((p) => p.position == 'self');
         if (self.isNotEmpty) {
           final myScore = self.first.totalScore;
-          final maxScore = next.players.map((p) => p.totalScore).reduce((a, b) => a > b ? a : b);
+          final maxScore = next.players
+              .map((p) => p.totalScore)
+              .reduce((a, b) => a > b ? a : b);
           _sfx.play(myScore >= maxScore ? 'victory' : 'defeat');
         }
       }
@@ -1700,7 +1807,11 @@ class GameService extends ChangeNotifier {
     _network.send({'type': 'login', 'nickname': nickname});
   }
 
-  void loginWithCredentials(String username, String password, {Map<String, String?>? deviceInfo}) {
+  void loginWithCredentials(
+    String username,
+    String password, {
+    Map<String, String?>? deviceInfo,
+  }) {
     loginError = null;
     _network.send({
       'type': 'login',
@@ -1710,7 +1821,11 @@ class GameService extends ChangeNotifier {
     });
   }
 
-  void loginSocial(String provider, String token, {Map<String, String?>? deviceInfo}) {
+  void loginSocial(
+    String provider,
+    String token, {
+    Map<String, String?>? deviceInfo,
+  }) {
     loginError = null;
     needNickname = false;
     socialProvider = provider;
@@ -1723,7 +1838,13 @@ class GameService extends ChangeNotifier {
     });
   }
 
-  void registerSocial(String provider, String token, String nickname, {bool existingUser = false, Map<String, String?>? deviceInfo}) {
+  void registerSocial(
+    String provider,
+    String token,
+    String nickname, {
+    bool existingUser = false,
+    Map<String, String?>? deviceInfo,
+  }) {
     loginError = null;
     _network.send({
       'type': 'social_register',
@@ -1969,22 +2090,38 @@ class GameService extends ChangeNotifier {
   }
 
   void setAdminUser(String nickname, bool isAdmin) {
-    _network.send({'type': 'set_admin_user', 'nickname': nickname, 'isAdmin': isAdmin});
+    _network.send({
+      'type': 'set_admin_user',
+      'nickname': nickname,
+      'isAdmin': isAdmin,
+    });
   }
 
   void adjustAdminGold(String nickname, int amount) {
-    _network.send({'type': 'admin_adjust_gold', 'nickname': nickname, 'amount': amount});
+    _network.send({
+      'type': 'admin_adjust_gold',
+      'nickname': nickname,
+      'amount': amount,
+    });
   }
 
   void requestAdminInquiries({int page = 1, int limit = 50}) {
     adminInquiriesLoading = true;
     adminInquiriesError = null;
     notifyListeners();
-    _network.send({'type': 'get_admin_inquiries', 'page': page, 'limit': limit});
+    _network.send({
+      'type': 'get_admin_inquiries',
+      'page': page,
+      'limit': limit,
+    });
   }
 
   void resolveAdminInquiry(int id, String adminNote) {
-    _network.send({'type': 'resolve_admin_inquiry', 'id': id, 'adminNote': adminNote});
+    _network.send({
+      'type': 'resolve_admin_inquiry',
+      'id': id,
+      'adminNote': adminNote,
+    });
   }
 
   void requestAdminReports({int page = 1, int limit = 50}) {
@@ -2023,7 +2160,11 @@ class GameService extends ChangeNotifier {
   }
 
   void spectateRoom(String roomId, {String password = ''}) {
-    _network.send({'type': 'spectate_room', 'roomId': roomId, 'password': password});
+    _network.send({
+      'type': 'spectate_room',
+      'roomId': roomId,
+      'password': password,
+    });
   }
 
   void switchToSpectator() {
@@ -2052,12 +2193,16 @@ class GameService extends ChangeNotifier {
       'allow': allow,
     });
     // Remove from local list
-    incomingCardViewRequests.removeWhere((r) => r['spectatorId'] == spectatorId);
+    incomingCardViewRequests.removeWhere(
+      (r) => r['spectatorId'] == spectatorId,
+    );
     notifyListeners();
   }
 
   void rejectAllCardViewRequests() {
-    for (final req in List<Map<String, String>>.from(incomingCardViewRequests)) {
+    for (final req in List<Map<String, String>>.from(
+      incomingCardViewRequests,
+    )) {
       respondCardViewRequest(req['spectatorId'] ?? '', false);
     }
     incomingCardViewRequests.clear();
@@ -2094,7 +2239,16 @@ class GameService extends ChangeNotifier {
     return incomingCardViewRequests.first;
   }
 
-  void createRoom(String roomName, {String password = '', bool isRanked = false, int turnTimeLimit = 30, int targetScore = 1000, String gameType = 'tichu', int maxPlayers = 4, List<String> skExpansions = const []}) {
+  void createRoom(
+    String roomName, {
+    String password = '',
+    bool isRanked = false,
+    int turnTimeLimit = 30,
+    int targetScore = 1000,
+    String gameType = 'tichu',
+    int maxPlayers = 4,
+    List<String> skExpansions = const [],
+  }) {
     final msg = <String, dynamic>{
       'type': 'create_room',
       'roomName': roomName,
@@ -2115,7 +2269,15 @@ class GameService extends ChangeNotifier {
   }
 
   void joinRoom(String roomId, {String password = ''}) {
-    _network.send({'type': 'join_room', 'roomId': roomId, 'password': password});
+    _network.send({
+      'type': 'join_room',
+      'roomId': roomId,
+      'password': password,
+    });
+  }
+
+  void joinRoomByInviteToken(String token) {
+    _network.send({'type': 'join_room_by_invite', 'token': token});
   }
 
   void leaveRoom() {
@@ -2242,7 +2404,7 @@ class GameService extends ChangeNotifier {
   void exchangeCards(String left, String partner, String right) {
     _network.send({
       'type': 'exchange_cards',
-      'cards': {'left': left, 'partner': partner, 'right': right}
+      'cards': {'left': left, 'partner': partner, 'right': right},
     });
   }
 
@@ -2335,14 +2497,22 @@ class GameService extends ChangeNotifier {
   void requestSKRankings() {
     rankingsLoading = true;
     rankingsError = null;
-    _network.send({'type': 'get_rankings', 'gameType': 'skull_king', 'seasonId': 'current'});
+    _network.send({
+      'type': 'get_rankings',
+      'gameType': 'skull_king',
+      'seasonId': 'current',
+    });
     notifyListeners();
   }
 
   void requestSKRankingsForSeason(int seasonId) {
     rankingsLoading = true;
     rankingsError = null;
-    _network.send({'type': 'get_rankings', 'gameType': 'skull_king', 'seasonId': seasonId});
+    _network.send({
+      'type': 'get_rankings',
+      'gameType': 'skull_king',
+      'seasonId': seasonId,
+    });
     notifyListeners();
   }
 
@@ -2413,7 +2583,11 @@ class GameService extends ChangeNotifier {
   void linkSocial(String provider, String token) {
     socialLinkResultSuccess = null;
     socialLinkResultMessage = null;
-    _network.send({'type': 'social_link', 'provider': provider, 'token': token});
+    _network.send({
+      'type': 'social_link',
+      'provider': provider,
+      'token': token,
+    });
   }
 
   void unlinkSocial() {
@@ -2471,7 +2645,11 @@ class GameService extends ChangeNotifier {
 
   // Report
   void reportUserAction(String nickname, String reason) {
-    _network.send({'type': 'report_user', 'nickname': nickname, 'reason': reason});
+    _network.send({
+      'type': 'report_user',
+      'nickname': nickname,
+      'reason': reason,
+    });
   }
 
   // Friends
@@ -2526,9 +2704,32 @@ class GameService extends ChangeNotifier {
       });
       return;
     }
-    _roomInviteCooldowns[nickname] = DateTime.now().add(const Duration(seconds: 10));
+    _roomInviteCooldowns[nickname] = DateTime.now().add(
+      const Duration(seconds: 10),
+    );
     _network.send({'type': 'invite_to_room', 'nickname': nickname});
     notifyListeners();
+  }
+
+  Future<String?> createShareInviteLink() {
+    final existing = _shareInviteLinkCompleter;
+    if (existing != null && !existing.isCompleted) {
+      return existing.future;
+    }
+
+    final completer = Completer<String?>();
+    _shareInviteLinkCompleter = completer;
+    _network.send({'type': 'create_share_invite_link'});
+
+    return completer.future.timeout(
+      const Duration(seconds: 5),
+      onTimeout: () {
+        if (identical(_shareInviteLinkCompleter, completer)) {
+          _shareInviteLinkCompleter = null;
+        }
+        throw TimeoutException('Timed out while creating share invite link');
+      },
+    );
   }
 
   // DM / Search actions
@@ -2537,7 +2738,11 @@ class GameService extends ChangeNotifier {
   }
 
   void sendDm(String nickname, String message) {
-    _network.send({'type': 'send_dm', 'nickname': nickname, 'message': message});
+    _network.send({
+      'type': 'send_dm',
+      'nickname': nickname,
+      'message': message,
+    });
   }
 
   void setActiveDmPartner(String? nickname) {
@@ -2545,7 +2750,10 @@ class GameService extends ChangeNotifier {
   }
 
   void requestDmHistory(String nickname, {int? beforeId}) {
-    final msg = <String, dynamic>{'type': 'get_dm_history', 'nickname': nickname};
+    final msg = <String, dynamic>{
+      'type': 'get_dm_history',
+      'nickname': nickname,
+    };
     if (beforeId != null) msg['beforeId'] = beforeId;
     _network.send(msg);
   }
@@ -2623,9 +2831,7 @@ class GameService extends ChangeNotifier {
     try {
       final prefs = await SharedPreferences.getInstance();
       final list = prefs.getStringList(_readNoticesPrefsKey) ?? const [];
-      _readNoticeIds.addAll(
-        list.map(int.tryParse).whereType<int>(),
-      );
+      _readNoticeIds.addAll(list.map(int.tryParse).whereType<int>());
       if (_disposed) return;
       notifyListeners();
     } catch (_) {
@@ -2662,7 +2868,9 @@ class GameService extends ChangeNotifier {
   Future<void> _sendFcmTokenAsync() async {
     try {
       final messaging = FirebaseMessaging.instance;
-      debugPrint('[FCM] Starting token fetch (platform: ${Platform.operatingSystem})');
+      debugPrint(
+        '[FCM] Starting token fetch (platform: ${Platform.operatingSystem})',
+      );
 
       // iOS: wait for APNs token first
       if (Platform.isIOS) {
@@ -2680,7 +2888,9 @@ class GameService extends ChangeNotifier {
       }
 
       debugPrint('[FCM] Calling getToken()...');
-      final token = await messaging.getToken().timeout(const Duration(seconds: 15));
+      final token = await messaging.getToken().timeout(
+        const Duration(seconds: 15),
+      );
       final preview = token != null
           ? token.substring(0, token.length.clamp(0, 20))
           : 'null';
@@ -2746,7 +2956,9 @@ class GameService extends ChangeNotifier {
 
   void _maybeShowInquiryBanner() {
     for (final item in inquiries) {
-      final id = (item['id'] is int) ? item['id'] as int : int.tryParse('${item['id']}') ?? -1;
+      final id = (item['id'] is int)
+          ? item['id'] as int
+          : int.tryParse('${item['id']}') ?? -1;
       final status = item['status']?.toString() ?? '';
       final adminNote = item['admin_note']?.toString() ?? '';
       final userRead = item['user_read'] == true;
@@ -2782,6 +2994,13 @@ class GameService extends ChangeNotifier {
   @override
   void dispose() {
     _disposed = true; // C2: Mark as disposed
+    if (_shareInviteLinkCompleter != null &&
+        !_shareInviteLinkCompleter!.isCompleted) {
+      _shareInviteLinkCompleter!.completeError(
+        StateError('GameService disposed'),
+      );
+    }
+    _shareInviteLinkCompleter = null;
     _subscription?.cancel();
     _fcmTokenSubscription?.cancel();
     _dogDelayTimer?.cancel();

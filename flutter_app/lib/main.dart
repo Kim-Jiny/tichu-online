@@ -15,6 +15,7 @@ import 'firebase_options.dart';
 import 'l10n/app_localizations.dart';
 import 'services/network_service.dart';
 import 'services/game_service.dart';
+import 'services/invite_link_service.dart';
 import 'services/session_service.dart';
 import 'services/locale_service.dart';
 import 'screens/game_screen.dart';
@@ -27,10 +28,9 @@ import 'screens/maintenance_screen.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  await Firebase.initializeApp(
-    options: DefaultFirebaseOptions.currentPlatform,
-  );
+  await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
   kakao.KakaoSdk.init(nativeAppKey: 'd9b4b3cfc86537fed9a80a659641ad30');
+  await InviteLinkService.instance.initialize();
   MobileAds.instance.updateRequestConfiguration(
     RequestConfiguration(testDeviceIds: ['45b45cb9d1be2ccb4c01a54eea9a0a64']),
   );
@@ -43,7 +43,9 @@ void main() async {
   await FirebaseMessaging.instance.setAutoInitEnabled(true);
 
   FirebaseMessaging.onMessage.listen((RemoteMessage message) {
-    debugPrint('Foreground push: ${message.notification?.title} - ${message.notification?.body}');
+    debugPrint(
+      'Foreground push: ${message.notification?.title} - ${message.notification?.body}',
+    );
   });
 
   runApp(const TichuApp());
@@ -56,11 +58,13 @@ class TichuApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MultiProvider(
       providers: [
-        ChangeNotifierProvider(create: (_) {
-          final localeService = LocaleService();
-          localeService.loadSaved();
-          return localeService;
-        }),
+        ChangeNotifierProvider(
+          create: (_) {
+            final localeService = LocaleService();
+            localeService.loadSaved();
+            return localeService;
+          },
+        ),
         ChangeNotifierProvider(create: (_) => NetworkService()),
         ChangeNotifierProxyProvider<NetworkService, GameService>(
           create: (context) => GameService(context.read<NetworkService>()),
@@ -100,7 +104,9 @@ class TichuApp extends StatelessWidget {
                 ? (currentScale * 0.92).clamp(0.9, 1.0)
                 : currentScale;
             return MediaQuery(
-              data: media.copyWith(textScaler: TextScaler.linear(adjustedScale)),
+              data: media.copyWith(
+                textScaler: TextScaler.linear(adjustedScale),
+              ),
               child: child ?? const SizedBox.shrink(),
             );
           },
@@ -197,12 +203,13 @@ class _AppFlowScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     final session = context.watch<SessionService>();
     final game = context.watch<GameService>();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      InviteLinkService.instance.processPendingInvite(session, game);
+    });
 
     Widget child;
     if (session.isRestoring && !game.isLoggedIn) {
-      child = const Scaffold(
-        body: Center(child: CircularProgressIndicator()),
-      );
+      child = const Scaffold(body: Center(child: CircularProgressIndicator()));
     } else if (!game.isLoggedIn) {
       child = game.isInKnownMaintenanceWindow
           ? const MaintenanceScreen()
@@ -301,7 +308,8 @@ class _EntryScreenState extends State<_EntryScreen> {
     final status = await AppTrackingTransparency.trackingAuthorizationStatus;
     debugPrint('[ATT] current status: $status');
     if (status == TrackingStatus.notDetermined) {
-      final result = await AppTrackingTransparency.requestTrackingAuthorization();
+      final result =
+          await AppTrackingTransparency.requestTrackingAuthorization();
       debugPrint('[ATT] request result: $result');
     }
     // Request push permission AFTER ATT to avoid overlapping iOS system dialogs
@@ -310,7 +318,9 @@ class _EntryScreenState extends State<_EntryScreen> {
       badge: true,
       sound: true,
     );
-    debugPrint('[FCM] Notification permission: ${settings.authorizationStatus}');
+    debugPrint(
+      '[FCM] Notification permission: ${settings.authorizationStatus}',
+    );
   }
 
   Future<void> _checkEula() async {
@@ -343,17 +353,20 @@ class _EntryScreenState extends State<_EntryScreen> {
     if (network.isConnected) {
       game.requestAppConfig();
     } else {
-      network.connect().then((_) {
-        if (mounted) game.requestAppConfig();
-      }).catchError((e) {
-        _detachEulaListener();
-        if (mounted) {
-          setState(() {
-            _loading = false;
-            _eulaText = '';
+      network
+          .connect()
+          .then((_) {
+            if (mounted) game.requestAppConfig();
+          })
+          .catchError((e) {
+            _detachEulaListener();
+            if (mounted) {
+              setState(() {
+                _loading = false;
+                _eulaText = '';
+              });
+            }
           });
-        }
-      });
     }
   }
 
@@ -394,9 +407,12 @@ class _EntryScreenState extends State<_EntryScreen> {
       if (network.isConnected) {
         game.requestAppConfig();
       } else {
-        network.connect().then((_) {
-          if (mounted) game.requestAppConfig();
-        }).catchError((_) {});
+        network
+            .connect()
+            .then((_) {
+              if (mounted) game.requestAppConfig();
+            })
+            .catchError((_) {});
       }
     }
   }
@@ -434,7 +450,9 @@ class _EntryScreenState extends State<_EntryScreen> {
 
   void _onForceUpdateCheck() {
     final game = _gameService;
-    if (game == null || game.minVersion == null || game.minVersion!.isEmpty) return;
+    if (game == null || game.minVersion == null || game.minVersion!.isEmpty) {
+      return;
+    }
     _detachForceUpdateListener();
     _checkForceUpdate(game.minVersion!);
   }
@@ -462,9 +480,11 @@ class _EntryScreenState extends State<_EntryScreen> {
   }
 
   Future<void> _openStore() async {
-    final uri = Uri.parse(Platform.isIOS
-        ? 'https://apps.apple.com/app/tichu-online/id6759035151'
-        : 'https://play.google.com/store/apps/details?id=com.jiny.tichuOnline');
+    final uri = Uri.parse(
+      Platform.isIOS
+          ? 'https://apps.apple.com/app/tichu-online/id6759035151'
+          : 'https://play.google.com/store/apps/details?id=com.jiny.tichuOnline',
+    );
     if (!await launchUrl(uri, mode: LaunchMode.externalApplication)) {
       // fallback: try without mode
       await launchUrl(uri);
@@ -477,18 +497,13 @@ class _EntryScreenState extends State<_EntryScreen> {
       return Scaffold(
         backgroundColor: Colors.black,
         body: SizedBox.expand(
-          child: Image.asset(
-            'assets/splash.png',
-            fit: BoxFit.cover,
-          ),
+          child: Image.asset('assets/splash.png', fit: BoxFit.cover),
         ),
       );
     }
 
     if (_checking) {
-      return const Scaffold(
-        body: Center(child: CircularProgressIndicator()),
-      );
+      return const Scaffold(body: Center(child: CircularProgressIndicator()));
     }
 
     if (_eulaAccepted && _forceUpdate) {
@@ -506,13 +521,20 @@ class _EntryScreenState extends State<_EntryScreen> {
                 const SizedBox(height: 24),
                 Text(
                   L10n.of(context).appForceUpdateTitle,
-                  style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                  style: const TextStyle(
+                    fontSize: 20,
+                    fontWeight: FontWeight.bold,
+                  ),
                 ),
                 const SizedBox(height: 12),
                 Text(
                   L10n.of(context).appForceUpdateBody,
                   textAlign: TextAlign.center,
-                  style: const TextStyle(fontSize: 14, color: Colors.grey, height: 1.5),
+                  style: const TextStyle(
+                    fontSize: 14,
+                    color: Colors.grey,
+                    height: 1.5,
+                  ),
                 ),
                 const SizedBox(height: 28),
                 SizedBox(
@@ -523,9 +545,17 @@ class _EntryScreenState extends State<_EntryScreen> {
                     style: ElevatedButton.styleFrom(
                       backgroundColor: const Color(0xFF7E57C2),
                       foregroundColor: Colors.white,
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
                     ),
-                    child: Text(L10n.of(context).appForceUpdateButton, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+                    child: Text(
+                      L10n.of(context).appForceUpdateButton,
+                      style: const TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
                   ),
                 ),
               ],
@@ -549,27 +579,17 @@ class _EntryScreenState extends State<_EntryScreen> {
               // App logo
               ClipRRect(
                 borderRadius: BorderRadius.circular(20),
-                child: Image.asset(
-                  'assets/icon.png',
-                  width: 80,
-                  height: 80,
-                ),
+                child: Image.asset('assets/icon.png', width: 80, height: 80),
               ),
               const SizedBox(height: 12),
               const Text(
                 'Tichu Online',
-                style: TextStyle(
-                  fontSize: 22,
-                  fontWeight: FontWeight.bold,
-                ),
+                style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
               ),
               const SizedBox(height: 4),
               Text(
                 L10n.of(context).appEulaSubtitle,
-                style: const TextStyle(
-                  fontSize: 14,
-                  color: Colors.grey,
-                ),
+                style: const TextStyle(fontSize: 14, color: Colors.grey),
               ),
               const SizedBox(height: 16),
               // EULA text area

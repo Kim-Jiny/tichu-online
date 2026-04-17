@@ -1188,7 +1188,7 @@ abstract class L10n {
   /// No description provided for @lobbySkullKingBadge.
   ///
   /// In en, this message translates to:
-  /// **'Skull King'**
+  /// **'☠️ Skull King'**
   String get lobbySkullKingBadge;
 
   /// No description provided for @lobbyTichuBadge.

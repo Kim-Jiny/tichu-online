@@ -178,16 +178,19 @@ class LoveLetterGame {
           // No valid target, effect fizzles
           return this._advanceTurnOrEndRound();
         }
-        // Need target + guess
+        // Need target + guess; auto-select if only one target
         this.state = 'effect_resolve';
         this.pendingEffect = {
           type: 'guard',
           playerId,
           cardId,
-          needsTarget: true,
+          needsTarget: targetable.length > 1,
           needsGuess: true,
           validTargets: targetable,
         };
+        if (targetable.length === 1) {
+          this.pendingEffect.targetId = targetable[0];
+        }
         return { success: true };
 
       case CARD_TYPE.SPY:
@@ -199,9 +202,13 @@ class LoveLetterGame {
           type: 'spy',
           playerId,
           cardId,
-          needsTarget: true,
+          needsTarget: targetable.length > 1,
           validTargets: targetable,
         };
+        if (targetable.length === 1) {
+          this.pendingEffect.targetId = targetable[0];
+          return this._resolveEffect();
+        }
         return { success: true };
 
       case CARD_TYPE.BARON:
@@ -213,12 +220,16 @@ class LoveLetterGame {
           type: 'baron',
           playerId,
           cardId,
-          needsTarget: true,
+          needsTarget: targetable.length > 1,
           validTargets: targetable,
         };
+        if (targetable.length === 1) {
+          this.pendingEffect.targetId = targetable[0];
+          return this._resolveEffect();
+        }
         return { success: true };
 
-      case CARD_TYPE.PRINCE:
+      case CARD_TYPE.PRINCE: {
         // Prince can target self or others
         const princeTargets = this._getAlivePlayers().filter(pid =>
           pid === playerId || !this.protected[pid]
@@ -231,10 +242,15 @@ class LoveLetterGame {
           type: 'prince',
           playerId,
           cardId,
-          needsTarget: true,
+          needsTarget: princeTargets.length > 1,
           validTargets: princeTargets,
         };
+        if (princeTargets.length === 1) {
+          this.pendingEffect.targetId = princeTargets[0];
+          return this._resolveEffect();
+        }
         return { success: true };
+      }
 
       case CARD_TYPE.KING:
         if (targetable.length === 0) {
@@ -245,9 +261,13 @@ class LoveLetterGame {
           type: 'king',
           playerId,
           cardId,
-          needsTarget: true,
+          needsTarget: targetable.length > 1,
           validTargets: targetable,
         };
+        if (targetable.length === 1) {
+          this.pendingEffect.targetId = targetable[0];
+          return this._resolveEffect();
+        }
         return { success: true };
 
       default:

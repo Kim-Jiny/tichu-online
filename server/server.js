@@ -1,4 +1,5 @@
 const { WebSocketServer } = require('ws');
+const crypto = require('crypto');
 const http = require('http');
 const serverStartedAt = new Date().toISOString();
 const LobbyManager = require('./lobby/LobbyManager');
@@ -157,6 +158,265 @@ function resultMessage(result, locale) {
 }
 
 const PORT = process.env.PORT || 8080;
+const INVITE_BASE_URL = process.env.INVITE_BASE_URL || 'https://tichu.jiny.shop';
+const ANDROID_PACKAGE_NAME = 'com.jiny.tichuOnline';
+const IOS_APP_ID = 'HW9XJ9J5M2.com.jiny.tichuOnline';
+const IOS_STORE_URL = 'https://apps.apple.com/app/tichu-online/id6759035151';
+const ANDROID_STORE_URL = `https://play.google.com/store/apps/details?id=${ANDROID_PACKAGE_NAME}`;
+const DEFAULT_ANDROID_SHA256 = '42:BC:52:D8:BA:95:74:09:27:07:D4:42:7A:7D:93:25:7C:4F:65:99:1E:02:FE:62:6C:80:3B:72:14:B6:C1:44';
+const inviteLinkTokens = new Map();
+
+function getAndroidSha256Fingerprints() {
+  const raw = process.env.ANDROID_APP_SHA256_FINGERPRINTS || DEFAULT_ANDROID_SHA256;
+  return raw.split(',')
+    .map((value) => value.trim())
+    .filter(Boolean);
+}
+
+function createInviteToken(room, inviterNickname) {
+  const token = crypto.randomBytes(24).toString('base64url');
+  inviteLinkTokens.set(token, {
+    roomId: room.id,
+    roomName: room.name,
+    password: room.password || '',
+    inviterNickname,
+    createdAt: Date.now(),
+  });
+  return token;
+}
+
+function getInviteTokenPayload(token) {
+  const payload = inviteLinkTokens.get(token);
+  if (!payload) return null;
+  const maxAgeMs = 7 * 24 * 60 * 60 * 1000;
+  if (Date.now() - payload.createdAt > maxAgeMs) {
+    inviteLinkTokens.delete(token);
+    return null;
+  }
+  return payload;
+}
+
+function escapeHtml(value) {
+  return String(value)
+    .replaceAll('&', '&amp;')
+    .replaceAll('<', '&lt;')
+    .replaceAll('>', '&gt;')
+    .replaceAll('"', '&quot;')
+    .replaceAll("'", '&#39;');
+}
+
+function renderMarketingPage({
+  title,
+  description,
+  eyebrow = 'Tichu Online',
+  primaryLabel,
+  primaryHref,
+  secondaryLabel = 'Google Play',
+  secondaryHref = ANDROID_STORE_URL,
+  tertiaryLabel = 'App Store',
+  tertiaryHref = IOS_STORE_URL,
+  metaTitle,
+  metaDescription,
+}) {
+  const pageTitle = metaTitle || title;
+  const pageDescription = metaDescription || description;
+  return `<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>${escapeHtml(pageTitle)}</title>
+    <meta name="description" content="${escapeHtml(pageDescription)}" />
+    <meta property="og:title" content="${escapeHtml(pageTitle)}" />
+    <meta property="og:description" content="${escapeHtml(pageDescription)}" />
+    <meta property="og:type" content="website" />
+    <meta property="og:url" content="${escapeHtml(primaryHref)}" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <style>
+      :root {
+        --bg: #fbf5ec;
+        --panel: rgba(255,255,255,0.88);
+        --text: #34231c;
+        --muted: #705b4f;
+        --line: rgba(99, 69, 56, 0.12);
+        --accent: #ef8d2d;
+        --accent-dark: #c46a13;
+        --chip: #f4e6d3;
+      }
+      * { box-sizing: border-box; }
+      body {
+        margin: 0;
+        font-family: -apple-system, BlinkMacSystemFont, "Apple SD Gothic Neo", "Noto Sans KR", sans-serif;
+        background:
+          radial-gradient(circle at top left, rgba(239,141,45,0.18), transparent 32%),
+          radial-gradient(circle at bottom right, rgba(90,64,56,0.10), transparent 28%),
+          linear-gradient(180deg, #f8efe3 0%, var(--bg) 100%);
+        color: var(--text);
+      }
+      main {
+        min-height: 100vh;
+        display: grid;
+        place-items: center;
+        padding: 24px;
+      }
+      .shell {
+        width: min(920px, 100%);
+        display: grid;
+        gap: 18px;
+      }
+      .card {
+        background: var(--panel);
+        border: 1px solid var(--line);
+        border-radius: 28px;
+        box-shadow: 0 30px 80px rgba(73, 44, 33, 0.12);
+        overflow: hidden;
+      }
+      .hero {
+        display: grid;
+        grid-template-columns: 1.15fr 0.85fr;
+      }
+      .hero-copy {
+        padding: 36px;
+      }
+      .eyebrow {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        padding: 8px 12px;
+        border-radius: 999px;
+        background: var(--chip);
+        color: var(--accent-dark);
+        font-size: 13px;
+        font-weight: 700;
+      }
+      h1 {
+        margin: 18px 0 12px;
+        font-size: clamp(30px, 5vw, 48px);
+        line-height: 1.02;
+        letter-spacing: -0.04em;
+      }
+      .lead {
+        margin: 0;
+        font-size: 17px;
+        line-height: 1.65;
+        color: var(--muted);
+      }
+      .actions {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 12px;
+        margin-top: 28px;
+      }
+      .button {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        min-height: 52px;
+        padding: 0 18px;
+        border-radius: 16px;
+        text-decoration: none;
+        font-weight: 700;
+        transition: transform 120ms ease, opacity 120ms ease;
+      }
+      .button:hover { transform: translateY(-1px); opacity: 0.97; }
+      .button-primary { background: var(--accent); color: #fff; }
+      .button-secondary { background: #fff; color: var(--text); border: 1px solid var(--line); }
+      .hero-side {
+        padding: 26px;
+        background:
+          linear-gradient(180deg, rgba(255,255,255,0.45), rgba(255,255,255,0.15)),
+          linear-gradient(135deg, #f3dfc3 0%, #ead3b8 100%);
+        display: grid;
+        gap: 12px;
+        align-content: center;
+      }
+      .panel {
+        padding: 16px 18px;
+        border-radius: 18px;
+        background: rgba(255,255,255,0.72);
+        border: 1px solid rgba(255,255,255,0.65);
+      }
+      .panel strong { display: block; font-size: 15px; margin-bottom: 6px; }
+      .panel p { margin: 0; color: var(--muted); line-height: 1.5; font-size: 14px; }
+      .features {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 14px;
+        padding: 18px;
+      }
+      .feature {
+        padding: 18px;
+        border-radius: 20px;
+        background: rgba(255,255,255,0.78);
+        border: 1px solid var(--line);
+      }
+      .feature h2 {
+        margin: 0 0 8px;
+        font-size: 16px;
+      }
+      .feature p {
+        margin: 0;
+        font-size: 14px;
+        line-height: 1.6;
+        color: var(--muted);
+      }
+      @media (max-width: 760px) {
+        .hero { grid-template-columns: 1fr; }
+        .features { grid-template-columns: 1fr; }
+        .hero-copy, .hero-side { padding: 24px; }
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <div class="shell">
+        <section class="card hero">
+          <div class="hero-copy">
+            <div class="eyebrow">${escapeHtml(eyebrow)}</div>
+            <h1>${escapeHtml(title)}</h1>
+            <p class="lead">${escapeHtml(description)}</p>
+            <div class="actions">
+              ${primaryLabel && primaryHref
+                ? `<a class="button button-primary" href="${escapeHtml(primaryHref)}">${escapeHtml(primaryLabel)}</a>`
+                : ''}
+              <a class="button ${primaryLabel && primaryHref ? 'button-secondary' : 'button-primary'}" href="${escapeHtml(secondaryHref)}">${escapeHtml(secondaryLabel)}</a>
+              <a class="button button-secondary" href="${escapeHtml(tertiaryHref)}">${escapeHtml(tertiaryLabel)}</a>
+            </div>
+          </div>
+          <div class="hero-side">
+            <div class="panel">
+              <strong>빠르게 모여서 한 판</strong>
+              <p>카카오톡 공유로 친구를 초대하고, 링크를 누르면 바로 방으로 이어지는 흐름을 준비하고 있어요.</p>
+            </div>
+            <div class="panel">
+              <strong>지원 게임</strong>
+              <p>티츄, 스컬킹, 러브레터까지 한 앱에서 가볍게 즐길 수 있어요.</p>
+            </div>
+            <div class="panel">
+              <strong>모바일 중심</strong>
+              <p>앱이 설치되어 있으면 바로 실행되고, 없으면 스토어로 자연스럽게 이동할 수 있어요.</p>
+            </div>
+          </div>
+        </section>
+        <section class="features">
+          <article class="feature">
+            <h2>티츄</h2>
+            <p>팀플레이와 선언 타이밍이 살아 있는 클래식 카드게임을 모바일에 맞게 담았습니다.</p>
+          </article>
+          <article class="feature">
+            <h2>스컬킹</h2>
+            <p>판 읽기와 예측 재미가 강한 라운드형 카드게임을 친구들과 빠르게 즐길 수 있어요.</p>
+          </article>
+          <article class="feature">
+            <h2>러브레터</h2>
+            <p>짧지만 심리전이 강한 게임도 바로 시작할 수 있게 함께 지원합니다.</p>
+          </article>
+        </section>
+      </div>
+    </main>
+  </body>
+</html>`;
+}
 
 // Skull King version gating
 const SK_MIN_VERSION = '2.0.0';
@@ -322,12 +582,80 @@ const server = http.createServer(async (req, res) => {
   if (pathname === '/health') {
     res.writeHead(200, { 'Content-Type': 'text/plain' });
     res.end('OK');
+  } else if (pathname === '/.well-known/assetlinks.json') {
+    const body = JSON.stringify([
+      {
+        relation: ['delegate_permission/common.handle_all_urls'],
+        target: {
+          namespace: 'android_app',
+          package_name: ANDROID_PACKAGE_NAME,
+          sha256_cert_fingerprints: getAndroidSha256Fingerprints(),
+        },
+      },
+    ]);
+    res.writeHead(200, { 'Content-Type': 'application/json; charset=utf-8' });
+    res.end(body);
+  } else if (
+    pathname === '/apple-app-site-association'
+    || pathname === '/.well-known/apple-app-site-association'
+  ) {
+    const body = JSON.stringify({
+      applinks: {
+        apps: [],
+        details: [
+          {
+            appIDs: [IOS_APP_ID],
+            components: [
+              { '/': '/invite' },
+              { '/': '/invite/*' },
+            ],
+          },
+        ],
+      },
+    });
+    res.writeHead(200, { 'Content-Type': 'application/json; charset=utf-8' });
+    res.end(body);
+  } else if (pathname === '/invite') {
+    const token = url.searchParams.get('t') || url.searchParams.get('token') || '';
+    const payload = token ? getInviteTokenPayload(token) : null;
+    const roomName = payload?.roomName || 'Tichu Online Room';
+    const inviter = payload?.inviterNickname || 'A friend';
+    const deepLinkUrl = `${INVITE_BASE_URL}/invite?t=${encodeURIComponent(token)}`;
+    const title = payload
+      ? `${inviter} invited you to ${roomName}`
+      : 'Tichu Online invite';
+    const description = payload
+      ? 'Open this invite in Tichu Online to join the room.'
+      : 'This room invite is no longer valid.';
+    const html = renderMarketingPage({
+      eyebrow: payload ? `${inviter}님의 초대` : 'Tichu Online 초대',
+      title: payload ? `${roomName} 방에 참여해보세요` : '초대 링크를 확인할 수 없어요',
+      description: payload
+        ? '앱이 설치되어 있으면 바로 방으로 이동하고, 설치되어 있지 않다면 아래 스토어에서 내려받을 수 있어요.'
+        : '초대 링크가 만료되었거나 유효하지 않습니다. 새로운 링크를 다시 받아주세요.',
+      primaryLabel: '앱에서 초대 열기',
+      primaryHref: deepLinkUrl,
+      metaTitle: title,
+      metaDescription: description,
+    });
+    res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' });
+    res.end(html);
   } else if (pathname === '/debug-path') {
     res.writeHead(200, { 'Content-Type': 'text/plain' });
     res.end(`pathname=${req.url} | hasAdmin=${typeof handleAdminRoute}`);
   } else {
-    res.writeHead(200, { 'Content-Type': 'text/plain' });
-    res.end('Tichu WebSocket Server');
+    const html = renderMarketingPage({
+      title: 'Tichu Online으로 친구들과 카드 한 판',
+      description: '티츄, 스컬킹, 러브레터를 모바일에서 빠르게 즐길 수 있는 멀티플레이 카드게임 앱입니다. 친구 초대 링크를 받았다면 아래 스토어에서 설치한 뒤 바로 게임에 참여할 수 있어요.',
+      secondaryLabel: 'Google Play에서 설치',
+      secondaryHref: ANDROID_STORE_URL,
+      tertiaryLabel: 'App Store에서 설치',
+      tertiaryHref: IOS_STORE_URL,
+      metaTitle: 'Tichu Online',
+      metaDescription: '티츄, 스컬킹, 러브레터를 즐길 수 있는 모바일 카드게임 앱 Tichu Online',
+    });
+    res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' });
+    res.end(html);
   }
 });
 
@@ -395,6 +723,11 @@ setInterval(() => {
   for (const [nickname, session] of spectatorSessions) {
     if (now - session.disconnectedAt > maxAge) {
       spectatorSessions.delete(nickname);
+    }
+  }
+  for (const [token, payload] of inviteLinkTokens) {
+    if (now - payload.createdAt > 7 * 24 * 60 * 60 * 1000) {
+      inviteLinkTokens.delete(token);
     }
   }
 }, 5 * 60 * 1000);
@@ -565,6 +898,9 @@ async function handleMessage(ws, data) {
     case 'join_room':
       await handleJoinRoom(ws, data);
       break;
+    case 'join_room_by_invite':
+      await handleJoinRoomByInvite(ws, data);
+      break;
     case 'leave_room':
       await handleLeaveRoom(ws);
       break;
@@ -612,6 +948,9 @@ async function handleMessage(ws, data) {
       break;
     case 'get_profile':
       await handleGetProfile(ws, data);
+      break;
+    case 'create_share_invite_link':
+      handleCreateShareInviteLink(ws);
       break;
     // Game actions (Tichu)
     case 'declare_large_tichu':
@@ -1688,6 +2027,57 @@ async function handleJoinRoom(ws, data) {
   broadcastRoomList();
 }
 
+async function handleJoinRoomByInvite(ws, data) {
+  const token = typeof data.token === 'string' ? data.token.trim() : '';
+  if (!token) {
+    sendTo(ws, { type: 'error', message: t(ws.locale, 'room_not_found') });
+    return;
+  }
+
+  const payload = getInviteTokenPayload(token);
+  if (!payload) {
+    sendTo(ws, { type: 'error', message: t(ws.locale, 'room_not_found') });
+    return;
+  }
+
+  await handleJoinRoom(ws, {
+    roomId: payload.roomId,
+    password: payload.password,
+  });
+}
+
+function handleCreateShareInviteLink(ws) {
+  if (!ws.playerId || !ws.roomId) {
+    sendTo(ws, {
+      type: 'share_invite_link_error',
+      message: 'Join a room before sharing an invite link.',
+    });
+    return;
+  }
+
+  const room = lobby.getRoom(ws.roomId);
+  if (!room) {
+    sendTo(ws, {
+      type: 'share_invite_link_error',
+      message: t(ws.locale, 'room_not_found'),
+    });
+    return;
+  }
+  if (room.game) {
+    sendTo(ws, {
+      type: 'share_invite_link_error',
+      message: 'Room invites can only be shared before the game starts.',
+    });
+    return;
+  }
+
+  const token = createInviteToken(room, ws.nickname || 'A friend');
+  sendTo(ws, {
+    type: 'share_invite_link',
+    url: `${INVITE_BASE_URL}/invite?t=${encodeURIComponent(token)}`,
+  });
+}
+
 async function handleLeaveRoom(ws) {
   if (!ws.roomId) {
     // Server may have restarted - client thinks it's in a room but server doesn't know
@@ -2097,7 +2487,6 @@ function handleStartGame(ws) {
     broadcastGameEvent(ws.roomId, { type: 'error', message: t(ws.locale, 'all_players_must_ready') });
     return;
   }
-  room.resetReady();
   room.startGame();
   broadcastRoomState(ws.roomId);
   broadcastRoomList();

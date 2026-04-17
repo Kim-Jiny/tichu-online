@@ -544,11 +544,23 @@ class GameRoom {
   }
 
   startGame() {
+    // Restore pre-game slot structure if a previous game rearranged them
+    // (e.g. game was abandoned via player removal without full resetReady)
+    if (this._preGamePlayers) {
+      const currentPlayerMap = new Map();
+      for (const p of this.players) {
+        if (p !== null) currentPlayerMap.set(p.id, p);
+      }
+      this.players = this._preGamePlayers.map(slot => {
+        if (slot === null) return null;
+        return currentPlayerMap.get(slot.id) || null;
+      });
+      this._preGamePlayers = null;
+    }
+
     if (this.gameType === 'love_letter') {
-      // Love Letter: only host + ready players participate
-      const activePlayers = this.players.filter(p =>
-        p !== null && (p.id === this.hostId || p.isBot || p.ready)
-      );
+      // Love Letter: all non-null players participate
+      const activePlayers = this.players.filter(p => p !== null);
       if (activePlayers.length < 2) return false;
       this._preGamePlayers = this.players.slice();
       this.players = activePlayers;
@@ -609,27 +621,18 @@ class GameRoom {
   }
 
   areAllReady() {
-    if (this.gameType === 'love_letter') {
-      // Love Letter: host + ready players >= 2 is enough to start
-      let readyCount = 0;
-      for (const p of this.players) {
-        if (p === null) continue;
-        if (p.id === this.hostId || p.isBot || p.ready) readyCount++;
-      }
-      return readyCount >= 2;
-    }
     // All non-null human players (except host) must be ready. Bots are always ready.
     for (const p of this.players) {
       if (p === null) {
-        if (this.gameType === 'skull_king') continue; // SK allows empty slots
+        if (this.gameType === 'skull_king' || this.gameType === 'love_letter') continue;
         return false; // tichu needs all slots filled
       }
       if (p.isBot) continue;
       if (p.id === this.hostId) continue; // host doesn't need to ready
       if (!p.ready) return false;
     }
-    // SK requires at least 2 players
-    if (this.gameType === 'skull_king' && this.getPlayerCount() < 2) return false;
+    // SK/LL requires at least 2 players
+    if ((this.gameType === 'skull_king' || this.gameType === 'love_letter') && this.getPlayerCount() < 2) return false;
     return true;
   }
 

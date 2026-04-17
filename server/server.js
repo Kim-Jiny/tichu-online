@@ -234,26 +234,45 @@ function renderMarketingPage({
     <meta name="twitter:card" content="summary_large_image" />
     <style>
       :root {
-        --bg: #fbf5ec;
-        --panel: rgba(255,255,255,0.88);
-        --text: #34231c;
-        --muted: #705b4f;
-        --line: rgba(99, 69, 56, 0.12);
-        --accent: #ef8d2d;
-        --accent-dark: #c46a13;
-        --chip: #f4e6d3;
+        --bg: #dff3ff;
+        --bg-deep: #b8e1fb;
+        --panel: rgba(255,255,255,0.84);
+        --panel-strong: rgba(255,255,255,0.94);
+        --text: #143a57;
+        --muted: #4d6f88;
+        --line: rgba(53, 117, 163, 0.16);
+        --accent: #ffb638;
+        --accent-dark: #cf8612;
+        --chip: rgba(255,255,255,0.76);
+        --sky-shadow: rgba(49, 109, 156, 0.18);
       }
       * { box-sizing: border-box; }
       body {
         margin: 0;
         font-family: -apple-system, BlinkMacSystemFont, "Apple SD Gothic Neo", "Noto Sans KR", sans-serif;
         background:
-          radial-gradient(circle at top left, rgba(239,141,45,0.18), transparent 32%),
-          radial-gradient(circle at bottom right, rgba(90,64,56,0.10), transparent 28%),
-          linear-gradient(180deg, #f8efe3 0%, var(--bg) 100%);
+          radial-gradient(circle at top left, rgba(255,255,255,0.9), transparent 30%),
+          radial-gradient(circle at top right, rgba(117, 204, 255, 0.35), transparent 26%),
+          radial-gradient(circle at bottom left, rgba(255, 193, 92, 0.20), transparent 24%),
+          linear-gradient(180deg, #effaff 0%, var(--bg) 50%, var(--bg-deep) 100%);
         color: var(--text);
       }
+      body::before,
+      body::after {
+        content: "";
+        position: fixed;
+        width: 280px;
+        height: 280px;
+        border-radius: 50%;
+        background: radial-gradient(circle, rgba(255,255,255,0.55), rgba(255,255,255,0));
+        pointer-events: none;
+        z-index: 0;
+      }
+      body::before { top: 70px; left: -40px; }
+      body::after { right: -60px; bottom: 20px; }
       main {
+        position: relative;
+        z-index: 1;
         min-height: 100vh;
         display: grid;
         place-items: center;
@@ -268,12 +287,13 @@ function renderMarketingPage({
         background: var(--panel);
         border: 1px solid var(--line);
         border-radius: 28px;
-        box-shadow: 0 30px 80px rgba(73, 44, 33, 0.12);
+        box-shadow: 0 30px 80px var(--sky-shadow);
         overflow: hidden;
+        backdrop-filter: blur(10px);
       }
       .hero {
         display: grid;
-        grid-template-columns: 1.15fr 0.85fr;
+        grid-template-columns: 1.05fr 0.95fr;
       }
       .hero-copy {
         padding: 36px;
@@ -320,14 +340,16 @@ function renderMarketingPage({
       }
       .button:hover { transform: translateY(-1px); opacity: 0.97; }
       .button-primary { background: var(--accent); color: #fff; }
-      .button-secondary { background: #fff; color: var(--text); border: 1px solid var(--line); }
+      .button-secondary { background: rgba(255,255,255,0.92); color: var(--text); border: 1px solid var(--line); }
       .hero-side {
-        padding: 26px;
+        position: relative;
+        padding: 28px 28px 24px;
         background:
-          linear-gradient(180deg, rgba(255,255,255,0.45), rgba(255,255,255,0.15)),
-          linear-gradient(135deg, #f3dfc3 0%, #ead3b8 100%);
+          radial-gradient(circle at top center, rgba(255,255,255,0.75), transparent 42%),
+          linear-gradient(180deg, rgba(255,255,255,0.4), rgba(204,235,255,0.45)),
+          linear-gradient(135deg, #d9f1ff 0%, #bee6fb 52%, #9fd7f5 100%);
         display: grid;
-        gap: 12px;
+        gap: 14px;
         align-content: center;
       }
       .panel {
@@ -347,7 +369,7 @@ function renderMarketingPage({
       .feature {
         padding: 18px;
         border-radius: 20px;
-        background: rgba(255,255,255,0.78);
+        background: var(--panel-strong);
         border: 1px solid var(--line);
       }
       .feature h2 {

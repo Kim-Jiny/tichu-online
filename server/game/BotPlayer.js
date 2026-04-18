@@ -4,10 +4,11 @@
  */
 
 class BotPlayer {
-  constructor(id, nickname) {
+  constructor(id, nickname, speed = 'normal') {
     this.id = id;           // 'bot_1', 'bot_2', ...
     this.nickname = nickname; // '봇 1', '봇 2', ...
     this.isBot = true;
+    this.speed = speed;     // 'fast', 'normal', 'slow'
   }
 }
 

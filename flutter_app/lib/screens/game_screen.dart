@@ -47,6 +47,7 @@ class _GameScreenState extends State<GameScreen> {
   int _lastTickSoundSecond = 999;
   bool _wasDisconnected = false;
   bool _birdCallDialogOpen = false;
+  bool _roundEndReady = false; // delay before showing round end dialog
   bool _waitingForRoomRecovery = false;
   GameService? _gameService;
   NetworkService? _networkService; // C6: Cache for safe dispose
@@ -462,6 +463,16 @@ class _GameScreenState extends State<GameScreen> {
               if (_prevPhase == 'card_exchange' && state.phase != 'card_exchange') {
                 _maybeShowExchangeSummary(state);
               }
+              // Delay round end dialog so players can see the last card played
+              if (_prevPhase != 'round_end' && _prevPhase != 'game_end' &&
+                  (state.phase == 'round_end' || state.phase == 'game_end')) {
+                _roundEndReady = false;
+                Future.delayed(const Duration(seconds: 1), () {
+                  if (mounted) setState(() => _roundEndReady = true);
+                });
+              } else if (state.phase != 'round_end' && state.phase != 'game_end') {
+                _roundEndReady = false;
+              }
               _prevPhase = state.phase;
 
               return Stack(
@@ -486,7 +497,7 @@ class _GameScreenState extends State<GameScreen> {
 
                   if (state.needsToCallRank && !_birdCallDialogOpen) _buildCallRankDialog(game),
 
-                  if (state.phase == 'round_end' || state.phase == 'game_end')
+                  if (_roundEndReady && (state.phase == 'round_end' || state.phase == 'game_end'))
                     _buildRoundEndDialog(state, game),
 
                   // Timeout banner
@@ -1349,58 +1360,56 @@ class _GameScreenState extends State<GameScreen> {
     final manner = _calcMannerScore(totalGames, leaveCount, reportCount);
     final color = _mannerColor(manner);
     final icon = _mannerIcon(manner);
+    final l10n = L10n.of(context);
+    final compact = MediaQuery.of(context).size.width < 400;
+    final boxDeco = BoxDecoration(
+      color: Colors.white.withValues(alpha: 0.95),
+      borderRadius: BorderRadius.circular(12),
+      border: Border.all(color: const Color(0xFFE0D8D4)),
+    );
     return Row(
       children: [
         Expanded(
           child: Container(
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-            decoration: BoxDecoration(
-              color: Colors.white.withValues(alpha: 0.95),
-              borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: const Color(0xFFE0D8D4)),
-            ),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Icon(icon, color: color, size: 16),
-                const SizedBox(width: 6),
-                Text(
-                  '${L10n.of(context).rankingMannerScore} $manner',
-                  style: TextStyle(
-                    fontSize: 12,
-                    fontWeight: FontWeight.bold,
-                    color: color,
-                  ),
-                ),
-              ],
-            ),
+            decoration: boxDeco,
+            child: compact
+                ? Column(children: [
+                    Row(mainAxisAlignment: MainAxisAlignment.center, children: [
+                      Icon(icon, color: color, size: 16),
+                      const SizedBox(width: 4),
+                      Text(l10n.rankingMannerScore, style: const TextStyle(fontSize: 11, color: Color(0xFF8A8A8A))),
+                    ]),
+                    const SizedBox(height: 2),
+                    Text('$manner', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: color)),
+                  ])
+                : Row(mainAxisAlignment: MainAxisAlignment.center, children: [
+                    Icon(icon, color: color, size: 16),
+                    const SizedBox(width: 6),
+                    Text('${l10n.rankingMannerScore} $manner', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: color)),
+                  ]),
           ),
         ),
         const SizedBox(width: 8),
         Expanded(
           child: Container(
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-            decoration: BoxDecoration(
-              color: Colors.white.withValues(alpha: 0.95),
-              borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: const Color(0xFFE0D8D4)),
-            ),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                const Icon(Icons.warning_amber_rounded,
-                    color: Color(0xFFE57373), size: 16),
-                const SizedBox(width: 6),
-                Text(
-                  L10n.of(context).gameDesertions(leaveCount),
-                  style: const TextStyle(
-                    fontSize: 12,
-                    fontWeight: FontWeight.bold,
-                    color: Color(0xFF9A6A6A),
-                  ),
-                ),
-              ],
-            ),
+            decoration: boxDeco,
+            child: compact
+                ? Column(children: [
+                    Row(mainAxisAlignment: MainAxisAlignment.center, children: [
+                      const Icon(Icons.warning_amber_rounded, color: Color(0xFFE57373), size: 16),
+                      const SizedBox(width: 4),
+                      Text(l10n.gameDesertionLabel, style: const TextStyle(fontSize: 11, color: Color(0xFF8A8A8A))),
+                    ]),
+                    const SizedBox(height: 2),
+                    Text('$leaveCount', style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Color(0xFF9A6A6A))),
+                  ])
+                : Row(mainAxisAlignment: MainAxisAlignment.center, children: [
+                    const Icon(Icons.warning_amber_rounded, color: Color(0xFFE57373), size: 16),
+                    const SizedBox(width: 6),
+                    Text(l10n.gameDesertions(leaveCount), style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Color(0xFF9A6A6A))),
+                  ]),
           ),
         ),
       ],

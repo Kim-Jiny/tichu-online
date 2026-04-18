@@ -14,6 +14,7 @@ class Player {
   final int timeoutCount;
   final String? titleKey;
   final String? titleName;
+  final String? botSpeed;
 
   Player({
     required this.id,
@@ -31,6 +32,7 @@ class Player {
     this.timeoutCount = 0,
     this.titleKey,
     this.titleName,
+    this.botSpeed,
   });
 
   factory Player.fromJson(Map<String, dynamic> json) {
@@ -50,6 +52,7 @@ class Player {
       timeoutCount: json['timeoutCount'] ?? 0,
       titleKey: json['titleKey'] as String?,
       titleName: json['titleName'] as String?,
+      botSpeed: json['botSpeed'] as String?,
     );
   }
 }

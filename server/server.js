@@ -2623,7 +2623,8 @@ function handleAddBot(ws, data) {
     return;
   }
   const targetSlot = typeof data.targetSlot === 'number' ? data.targetSlot : undefined;
-  const result = room.addBot(targetSlot, ws.locale);
+  const speed = typeof data.speed === 'string' ? data.speed : 'normal';
+  const result = room.addBot(targetSlot, ws.locale, speed);
   if (!result.success) {
     sendTo(ws, { type: 'error', message: resultMessage(result, ws.locale) });
     return;
@@ -3067,6 +3068,22 @@ function _broadcastState(roomId, room) {
 // Bot auto-response: schedule a single delayed bot action check
 let pendingBotCheck = {}; // roomId -> true (prevent duplicate scheduling)
 
+function getBotBaseDelay(speed) {
+  switch (speed) {
+    case 'fast': return 300 + Math.floor(Math.random() * 300);    // 300-600ms (기존 속도)
+    case 'slow': return 1200 + Math.floor(Math.random() * 600);   // 1200-1800ms
+    default:     return 600 + Math.floor(Math.random() * 400);    // 600-1000ms
+  }
+}
+
+function getBotExtraDelay(speed) {
+  switch (speed) {
+    case 'fast': return 200;   // 기존 속도
+    case 'slow': return 800;
+    default:     return 400;
+  }
+}
+
 function scheduleBotActions(roomId) {
   const room = lobby.getRoom(roomId);
   if (!room || !room.game) return;
@@ -3074,8 +3091,21 @@ function scheduleBotActions(roomId) {
   if (pendingBotCheck[roomId]) return; // Already scheduled
 
   pendingBotCheck[roomId] = true;
-  // Faster for declarations/exchanges, slower for card play
-  const baseDelay = 300 + Math.floor(Math.random() * 300);
+
+  // Quick check to find which bot needs to act and get its speed
+  const isSK0 = room.gameType === 'skull_king';
+  const isLL0 = room.gameType === 'love_letter';
+  const decideFn0 = isLL0 ? decideLLBotAction : isSK0 ? decideSKBotAction : decideBotAction;
+  let activeBotSpeed = 'normal';
+  for (const botId of room.getBotIds()) {
+    if (decideFn0(room.game, botId)) {
+      const bot = room.bots.get(botId);
+      activeBotSpeed = bot ? bot.speed : 'normal';
+      break;
+    }
+  }
+
+  const baseDelay = getBotBaseDelay(activeBotSpeed);
 
   setTimeout(() => {
     delete pendingBotCheck[roomId];
@@ -3089,6 +3119,8 @@ function scheduleBotActions(roomId) {
     for (const botId of r.getBotIds()) {
       let action = decideFn(r.game, botId);
       if (action) {
+        const bot = r.bots.get(botId);
+        const botSpeed = bot ? bot.speed : 'normal';
         // Add extra delay for card play actions to feel more natural
         const isCardPlay = action.type === 'play_cards' || action.type === 'pass' || action.type === 'play_card';
         if (isCardPlay) {
@@ -3119,7 +3151,7 @@ function scheduleBotActions(roomId) {
               if (r2.game && r2.game.state === 'game_end') { saveGameResult(r2); scheduleAutoReturnToRoom(roomId); }
               sendGameStateToAll(roomId);
             }
-          }, 200);
+          }, getBotExtraDelay(botSpeed));
           return;
         }
         console.log(`[BOT] ${botId} action: ${action.type}`);

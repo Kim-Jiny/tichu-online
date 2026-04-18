@@ -210,6 +210,7 @@
   "lobbyPasswordHint": "Password (4+ characters)",
   "lobbyRanked": "Ranked",
   "lobbyRankedDesc": "Score is fixed at 1000 and private settings are automatically disabled.",
+  "lobbyRankedDescSk": "Private settings are automatically disabled.",
   "lobbyGameSettings": "Game Settings",
   "lobbyGameSettingsDescSk": "Set the turn time.",
   "lobbyGameSettingsDescTichu": "Set the turn time and target score.",
@@ -221,6 +222,7 @@
   "lobbyTargetScoreRange": "100–20000",
   "lobbyTargetScoreFixed": "1000 (fixed)",
   "lobbyRankedFixedScoreInfo": "Ranked play uses a fixed target score of 1000.",
+  "lobbyRankedInfoSk": "Private rooms are not available in ranked play.",
   "lobbyNormalSettingsInfo": "Time limit: 10–999 sec, target score: 100–20000 pts.",
   "lobbyEnterRoomName": "Please enter a room name.",
   "lobbyPasswordTooShort": "Password must be at least 4 characters.",
@@ -387,6 +389,10 @@
   },
   "lobbyHost": "Host",
   "lobbyBot": "Bot",
+  "lobbyBotSpeedTitle": "Bot Speed",
+  "lobbyBotSpeedFast": "Fast",
+  "lobbyBotSpeedNormal": "Normal",
+  "lobbyBotSpeedSlow": "Slow",
   "lobbyEmptySlot": "[Empty]",
   "lobbySlotBlocked": "[Blocked]",
   "lobbyMaintenanceDefault": "Server maintenance scheduled",
@@ -694,6 +700,7 @@
       "label": { "type": "String" }
     }
   },
+  "gameDesertionLabel": "Desertions",
   "gameDesertions": "Desertions {count}",
   "@gameDesertions": {
     "placeholders": {

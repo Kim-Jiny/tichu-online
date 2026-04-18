@@ -331,7 +331,7 @@ class GameRoom {
 
   // --- Bot management ---
 
-  addBot(targetSlot, locale) {
+  addBot(targetSlot, locale, speed = 'normal') {
     if (this.getPlayerCount() >= this.getEffectiveMaxPlayers()) {
       return { success: false, messageKey: 'room_full' };
     }
@@ -360,13 +360,16 @@ class GameRoom {
     if (slot === -1) {
       return { success: false, messageKey: 'room_no_empty_slot' };
     }
+    // Validate speed
+    const validSpeeds = ['fast', 'normal', 'slow'];
+    const botSpeed = validSpeeds.includes(speed) ? speed : 'normal';
     const botId = `bot_${nextBotNum++}`;
     const { t } = require('../i18n');
     const botNickname = t(locale, 'bot_nickname', { number: this.bots.size + 1 });
-    const bot = new BotPlayer(botId, botNickname);
+    const bot = new BotPlayer(botId, botNickname, botSpeed);
     this.bots.set(botId, bot);
-    this.players[slot] = { id: botId, nickname: botNickname, connected: true, isBot: true, ready: true };
-    console.log(`Bot ${botNickname} added to room ${this.name} (slot ${slot})`);
+    this.players[slot] = { id: botId, nickname: botNickname, connected: true, isBot: true, ready: true, botSpeed };
+    console.log(`Bot ${botNickname} (speed: ${botSpeed}) added to room ${this.name} (slot ${slot})`);
     return { success: true, botId };
   }
 
@@ -688,6 +691,7 @@ class GameRoom {
           isReady: !!p.isBot || !!p.ready,
           titleKey: p.titleKey || null,
           titleName: p.titleName || null,
+          botSpeed: p.botSpeed || null,
         };
       }),
       gameInProgress: !!this.game,

@@ -1083,6 +1083,12 @@ abstract class L10n {
   /// **'Score is fixed at 1000 and private settings are automatically disabled.'**
   String get lobbyRankedDesc;
 
+  /// No description provided for @lobbyRankedDescSk.
+  ///
+  /// In en, this message translates to:
+  /// **'Private settings are automatically disabled.'**
+  String get lobbyRankedDescSk;
+
   /// No description provided for @lobbyGameSettings.
   ///
   /// In en, this message translates to:
@@ -1148,6 +1154,12 @@ abstract class L10n {
   /// In en, this message translates to:
   /// **'Ranked play uses a fixed target score of 1000.'**
   String get lobbyRankedFixedScoreInfo;
+
+  /// No description provided for @lobbyRankedInfoSk.
+  ///
+  /// In en, this message translates to:
+  /// **'Private rooms are not available in ranked play.'**
+  String get lobbyRankedInfoSk;
 
   /// No description provided for @lobbyNormalSettingsInfo.
   ///
@@ -1700,6 +1712,30 @@ abstract class L10n {
   /// In en, this message translates to:
   /// **'Bot'**
   String get lobbyBot;
+
+  /// No description provided for @lobbyBotSpeedTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Bot Speed'**
+  String get lobbyBotSpeedTitle;
+
+  /// No description provided for @lobbyBotSpeedFast.
+  ///
+  /// In en, this message translates to:
+  /// **'Fast'**
+  String get lobbyBotSpeedFast;
+
+  /// No description provided for @lobbyBotSpeedNormal.
+  ///
+  /// In en, this message translates to:
+  /// **'Normal'**
+  String get lobbyBotSpeedNormal;
+
+  /// No description provided for @lobbyBotSpeedSlow.
+  ///
+  /// In en, this message translates to:
+  /// **'Slow'**
+  String get lobbyBotSpeedSlow;
 
   /// No description provided for @lobbyEmptySlot.
   ///
@@ -2696,6 +2732,12 @@ abstract class L10n {
   /// In en, this message translates to:
   /// **'Manner {label}'**
   String gameManner(String label);
+
+  /// No description provided for @gameDesertionLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Desertions'**
+  String get gameDesertionLabel;
 
   /// No description provided for @gameDesertions.
   ///

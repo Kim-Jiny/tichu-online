@@ -1077,7 +1077,9 @@ class _LobbyScreenState extends State<LobbyScreen> {
                         const SizedBox(height: 12),
                         optionCard(
                           title: l10n.lobbyRanked,
-                          description: l10n.lobbyRankedDesc,
+                          description: selectedGameType == 'skull_king'
+                              ? l10n.lobbyRankedDescSk
+                              : l10n.lobbyRankedDesc,
                           value: isRanked,
                           onChanged: (v) => setState(() {
                             isRanked = v;
@@ -1176,7 +1178,9 @@ class _LobbyScreenState extends State<LobbyScreen> {
                         ),
                         child: Text(
                           isRanked
-                              ? l10n.lobbyRankedFixedScoreInfo
+                              ? (selectedGameType == 'skull_king'
+                                  ? l10n.lobbyRankedInfoSk
+                                  : l10n.lobbyRankedFixedScoreInfo)
                               : l10n.lobbyNormalSettingsInfo,
                           style: const TextStyle(
                             fontSize: 11,
@@ -4186,61 +4190,55 @@ class _LobbyScreenState extends State<LobbyScreen> {
     final manner = _calcMannerScore(totalGames, leaveCount, reportCount);
     final color = _mannerColor(manner);
     final icon = _mannerIcon(manner);
+    final compact = MediaQuery.of(context).size.width < 400;
+    final boxDeco = BoxDecoration(
+      color: Colors.white.withValues(alpha: 0.95),
+      borderRadius: BorderRadius.circular(12),
+      border: Border.all(color: const Color(0xFFE0D8D4)),
+    );
     return Row(
       children: [
         Expanded(
           child: Container(
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-            decoration: BoxDecoration(
-              color: Colors.white.withValues(alpha: 0.95),
-              borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: const Color(0xFFE0D8D4)),
-            ),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Icon(icon, color: color, size: 16),
-                const SizedBox(width: 6),
-                Text(
-                  '${l10n.rankingMannerScore} $manner',
-                  style: TextStyle(
-                    fontSize: 12,
-                    fontWeight: FontWeight.bold,
-                    color: color,
-                  ),
-                ),
-              ],
-            ),
+            decoration: boxDeco,
+            child: compact
+                ? Column(children: [
+                    Row(mainAxisAlignment: MainAxisAlignment.center, children: [
+                      Icon(icon, color: color, size: 16),
+                      const SizedBox(width: 4),
+                      Text(l10n.rankingMannerScore, style: const TextStyle(fontSize: 11, color: Color(0xFF8A8A8A))),
+                    ]),
+                    const SizedBox(height: 2),
+                    Text('$manner', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: color)),
+                  ])
+                : Row(mainAxisAlignment: MainAxisAlignment.center, children: [
+                    Icon(icon, color: color, size: 16),
+                    const SizedBox(width: 6),
+                    Text('${l10n.rankingMannerScore} $manner', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: color)),
+                  ]),
           ),
         ),
         const SizedBox(width: 8),
         Expanded(
           child: Container(
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-            decoration: BoxDecoration(
-              color: Colors.white.withValues(alpha: 0.95),
-              borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: const Color(0xFFE0D8D4)),
-            ),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                const Icon(
-                  Icons.warning_amber_rounded,
-                  color: Color(0xFFE57373),
-                  size: 16,
-                ),
-                const SizedBox(width: 6),
-                Text(
-                  l10n.lobbyDesertions(leaveCount),
-                  style: const TextStyle(
-                    fontSize: 12,
-                    fontWeight: FontWeight.bold,
-                    color: Color(0xFF9A6A6A),
-                  ),
-                ),
-              ],
-            ),
+            decoration: boxDeco,
+            child: compact
+                ? Column(children: [
+                    Row(mainAxisAlignment: MainAxisAlignment.center, children: [
+                      const Icon(Icons.warning_amber_rounded, color: Color(0xFFE57373), size: 16),
+                      const SizedBox(width: 4),
+                      Text(l10n.gameDesertionLabel, style: const TextStyle(fontSize: 11, color: Color(0xFF8A8A8A))),
+                    ]),
+                    const SizedBox(height: 2),
+                    Text('$leaveCount', style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Color(0xFF9A6A6A))),
+                  ])
+                : Row(mainAxisAlignment: MainAxisAlignment.center, children: [
+                    const Icon(Icons.warning_amber_rounded, color: Color(0xFFE57373), size: 16),
+                    const SizedBox(width: 6),
+                    Text(l10n.lobbyDesertions(leaveCount), style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Color(0xFF9A6A6A))),
+                  ]),
           ),
         ),
       ],
@@ -4703,7 +4701,7 @@ class _LobbyScreenState extends State<LobbyScreen> {
                   ),
                 ),
               ),
-            // Bot badge
+            // Bot badge with speed indicator
             if (isBot)
               Container(
                 margin: const EdgeInsets.only(right: 6),
@@ -4712,13 +4710,30 @@ class _LobbyScreenState extends State<LobbyScreen> {
                   color: const Color(0xFFC5CAE9),
                   borderRadius: BorderRadius.circular(8),
                 ),
-                child: const Text(
-                  'BOT',
-                  style: TextStyle(
-                    fontSize: 10,
-                    fontWeight: FontWeight.bold,
-                    color: Color(0xFF3949AB),
-                  ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const Text(
+                      'BOT',
+                      style: TextStyle(
+                        fontSize: 10,
+                        fontWeight: FontWeight.bold,
+                        color: Color(0xFF3949AB),
+                      ),
+                    ),
+                    if (player.botSpeed != null && player.botSpeed != 'normal') ...[
+                      const SizedBox(width: 3),
+                      Icon(
+                        player.botSpeed == 'fast'
+                            ? Icons.fast_forward
+                            : Icons.slow_motion_video,
+                        size: 10,
+                        color: player.botSpeed == 'fast'
+                            ? const Color(0xFFE65100)
+                            : const Color(0xFF558B2F),
+                      ),
+                    ],
+                  ],
                 ),
               ),
             // Blocked indicator
@@ -4791,8 +4806,51 @@ class _LobbyScreenState extends State<LobbyScreen> {
             ),
             // Add bot button on empty slots (host only, not ranked, not blocked)
             if (isEmpty && game.isHost && !game.isRankedRoom && !isSlotBlocked)
-              GestureDetector(
-                onTap: () => game.addBot(targetSlot: slotIndex),
+              PopupMenuButton<String>(
+                onSelected: (speed) {
+                  game.addBot(targetSlot: slotIndex, speed: speed);
+                },
+                itemBuilder: (ctx) {
+                  final l10n = L10n.of(ctx);
+                  return [
+                    PopupMenuItem(
+                      value: 'fast',
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          const Icon(Icons.fast_forward, size: 16, color: Color(0xFFE65100)),
+                          const SizedBox(width: 8),
+                          Text(l10n.lobbyBotSpeedFast),
+                        ],
+                      ),
+                    ),
+                    PopupMenuItem(
+                      value: 'normal',
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          const Icon(Icons.play_arrow, size: 16, color: Color(0xFF3949AB)),
+                          const SizedBox(width: 8),
+                          Text(l10n.lobbyBotSpeedNormal),
+                        ],
+                      ),
+                    ),
+                    PopupMenuItem(
+                      value: 'slow',
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          const Icon(Icons.slow_motion_video, size: 16, color: Color(0xFF558B2F)),
+                          const SizedBox(width: 8),
+                          Text(l10n.lobbyBotSpeedSlow),
+                        ],
+                      ),
+                    ),
+                  ];
+                },
+                padding: EdgeInsets.zero,
+                constraints: const BoxConstraints(),
+                position: PopupMenuPosition.under,
                 child: Container(
                   padding: const EdgeInsets.symmetric(
                     horizontal: 8,

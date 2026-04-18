@@ -515,6 +515,9 @@ class L10nKo extends L10n {
   String get lobbyRankedDesc => '점수는 1000점 고정이며 비공개 설정은 자동으로 꺼집니다.';
 
   @override
+  String get lobbyRankedDescSk => '비공개 설정은 자동으로 꺼집니다.';
+
+  @override
   String get lobbyGameSettings => '게임 설정';
 
   @override
@@ -546,6 +549,9 @@ class L10nKo extends L10n {
 
   @override
   String get lobbyRankedFixedScoreInfo => '랭크전은 목표 점수 1000점으로 고정됩니다.';
+
+  @override
+  String get lobbyRankedInfoSk => '랭크전은 비공개 방을 사용할 수 없습니다.';
 
   @override
   String get lobbyNormalSettingsInfo =>
@@ -852,6 +858,18 @@ class L10nKo extends L10n {
 
   @override
   String get lobbyBot => '봇';
+
+  @override
+  String get lobbyBotSpeedTitle => '봇 속도';
+
+  @override
+  String get lobbyBotSpeedFast => '빠름';
+
+  @override
+  String get lobbyBotSpeedNormal => '보통';
+
+  @override
+  String get lobbyBotSpeedSlow => '느림';
 
   @override
   String get lobbyEmptySlot => '[빈 자리]';
@@ -1403,6 +1421,9 @@ class L10nKo extends L10n {
   String gameManner(String label) {
     return '매너 $label';
   }
+
+  @override
+  String get gameDesertionLabel => '탈주';
 
   @override
   String gameDesertions(int count) {

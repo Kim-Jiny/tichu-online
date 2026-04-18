@@ -530,6 +530,10 @@ class L10nEn extends L10n {
       'Score is fixed at 1000 and private settings are automatically disabled.';
 
   @override
+  String get lobbyRankedDescSk =>
+      'Private settings are automatically disabled.';
+
+  @override
   String get lobbyGameSettings => 'Game Settings';
 
   @override
@@ -563,6 +567,10 @@ class L10nEn extends L10n {
   @override
   String get lobbyRankedFixedScoreInfo =>
       'Ranked play uses a fixed target score of 1000.';
+
+  @override
+  String get lobbyRankedInfoSk =>
+      'Private rooms are not available in ranked play.';
 
   @override
   String get lobbyNormalSettingsInfo =>
@@ -873,6 +881,18 @@ class L10nEn extends L10n {
 
   @override
   String get lobbyBot => 'Bot';
+
+  @override
+  String get lobbyBotSpeedTitle => 'Bot Speed';
+
+  @override
+  String get lobbyBotSpeedFast => 'Fast';
+
+  @override
+  String get lobbyBotSpeedNormal => 'Normal';
+
+  @override
+  String get lobbyBotSpeedSlow => 'Slow';
 
   @override
   String get lobbyEmptySlot => '[Empty]';
@@ -1430,6 +1450,9 @@ class L10nEn extends L10n {
   String gameManner(String label) {
     return 'Manner $label';
   }
+
+  @override
+  String get gameDesertionLabel => 'Desertions';
 
   @override
   String gameDesertions(int count) {

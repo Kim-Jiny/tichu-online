@@ -538,6 +538,10 @@ class L10nDe extends L10n {
       'Die Punktzahl ist auf 1000 festgelegt und die Privat-Einstellung wird automatisch deaktiviert.';
 
   @override
+  String get lobbyRankedDescSk =>
+      'Die Privat-Einstellung wird automatisch deaktiviert.';
+
+  @override
   String get lobbyGameSettings => 'Spieleinstellungen';
 
   @override
@@ -571,6 +575,10 @@ class L10nDe extends L10n {
   @override
   String get lobbyRankedFixedScoreInfo =>
       'Im Ranglistenspiel ist die Zielpunktzahl auf 1000 festgelegt.';
+
+  @override
+  String get lobbyRankedInfoSk =>
+      'Private Räume sind im Ranglistenspiel nicht verfügbar.';
 
   @override
   String get lobbyNormalSettingsInfo =>
@@ -883,6 +891,18 @@ class L10nDe extends L10n {
 
   @override
   String get lobbyBot => 'Bot';
+
+  @override
+  String get lobbyBotSpeedTitle => 'Bot-Geschwindigkeit';
+
+  @override
+  String get lobbyBotSpeedFast => 'Schnell';
+
+  @override
+  String get lobbyBotSpeedNormal => 'Normal';
+
+  @override
+  String get lobbyBotSpeedSlow => 'Langsam';
 
   @override
   String get lobbyEmptySlot => '[Leer]';
@@ -1440,6 +1460,9 @@ class L10nDe extends L10n {
   String gameManner(String label) {
     return 'Manieren $label';
   }
+
+  @override
+  String get gameDesertionLabel => 'Verlassen';
 
   @override
   String gameDesertions(int count) {

@@ -935,9 +935,22 @@ class GameService extends ChangeNotifier {
             (data['cards'] as List?)?.map((e) => e.toString()).toList() ?? [];
         if (cards.contains('special_dragon')) _sfx.play('dragon');
         if (cards.contains('special_dog')) _sfx.play('dog');
+        // Clear dog banner when next cards are played
+        if (dogPlayActive) {
+          _dogClearTimer?.cancel();
+          dogPlayActive = false;
+          dogPlayPlayerName = '';
+          notifyListeners();
+        }
         break;
       case 'bomb_played':
         _sfx.play('card');
+        if (dogPlayActive) {
+          _dogClearTimer?.cancel();
+          dogPlayActive = false;
+          dogPlayPlayerName = '';
+          notifyListeners();
+        }
         break;
       case 'player_passed':
         break;
@@ -2376,8 +2389,8 @@ class GameService extends ChangeNotifier {
     }
   }
 
-  void addBot({int? targetSlot}) {
-    final msg = <String, dynamic>{'type': 'add_bot'};
+  void addBot({int? targetSlot, String speed = 'normal'}) {
+    final msg = <String, dynamic>{'type': 'add_bot', 'speed': speed};
     if (targetSlot != null) msg['targetSlot'] = targetSlot;
     _network.send(msg);
   }

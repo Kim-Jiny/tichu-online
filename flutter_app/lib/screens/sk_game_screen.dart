@@ -251,7 +251,13 @@ class _SKGameScreenState extends State<SKGameScreen> {
                                 ],
                               ),
                             ),
-                          if (state.phase == 'bidding') Expanded(child: SingleChildScrollView(child: _buildBiddingUI(state, game))),
+                          if (state.phase == 'bidding')
+                            Expanded(
+                              child: Align(
+                                alignment: Alignment.bottomCenter,
+                                child: SingleChildScrollView(child: _buildBiddingUI(state, game)),
+                              ),
+                            ),
                           if (state.phase == 'playing' || state.phase == 'trick_end')
                             _buildHandArea(state, game),
                           if (state.phase == 'round_end') _buildRoundEndUI(state),

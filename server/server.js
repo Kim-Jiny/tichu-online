@@ -2769,9 +2769,6 @@ function handleGameAction(ws, data) {
   // Don't clear for phase-wide actions (large tichu / exchange) or small tichu declaration
   // SK: submit_bid is a phase action (simultaneous), play_card clears timer
   const phaseActions = ['pass_large_tichu', 'declare_large_tichu', 'exchange_cards', 'declare_small_tichu', 'submit_bid', 'effect_ack', 'select_target', 'guard_guess'];
-  if (!phaseActions.includes(data.type)) {
-    clearTurnTimer(ws.roomId);
-  }
   const prevPhase = room.game.state;
 
   if (data.type === 'next_round') {
@@ -2798,6 +2795,11 @@ function handleGameAction(ws, data) {
   if (!result.success) {
     sendTo(ws, { type: 'error', message: resultMessage(result, ws.locale) });
     return;
+  }
+
+  // Clear turn timer only after action confirmed valid
+  if (!phaseActions.includes(data.type)) {
+    clearTurnTimer(ws.roomId);
   }
 
   // Clear phase timer if phase changed (e.g. bidding → playing)
@@ -2956,6 +2958,8 @@ function sendGameStateToAll(roomId) {
       const r = lobby.getRoom(roomId);
       if (!r || !r.game || r.game.state !== 'effect_resolve') return;
       if (!r.game.pendingEffect || !r.game.pendingEffect.resolved) return;
+      // Clear stale turn timer from the effect_resolve phase before advancing
+      clearTurnTimer(roomId);
       // Auto-ack on behalf of the acting player
       const actingPlayer = r.game.pendingEffect.playerId;
       r.game.handleAction(actingPlayer, { type: 'effect_ack' });

@@ -1096,7 +1096,7 @@ class _LLGameScreenState extends State<LLGameScreen> {
           resultText = l10n.llBaronLose(loserName);
         }
         // Show cards if available
-        if (effect.result?['myCard'] != null && (isMyEffect || effect.targetId == gs.playerId)) {
+        if (effect.result?['myCard'] != null && effect.result?['targetCard'] != null && (isMyEffect || effect.targetId == gs.playerId)) {
           extraWidget = Row(
             mainAxisSize: MainAxisSize.min,
             children: [

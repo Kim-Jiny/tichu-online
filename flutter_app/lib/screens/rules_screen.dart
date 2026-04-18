@@ -971,14 +971,17 @@ class _CardCountRow extends StatelessWidget {
               children: [
                 Row(
                   children: [
-                    Text(
-                      label,
-                      style: TextStyle(
-                        fontSize: 13,
-                        fontWeight: FontWeight.w700,
-                        color: highlight
-                            ? const Color(0xFFE65100)
-                            : const Color(0xFF3E312A),
+                    Flexible(
+                      child: Text(
+                        label,
+                        style: TextStyle(
+                          fontSize: 13,
+                          fontWeight: FontWeight.w700,
+                          color: highlight
+                              ? const Color(0xFFE65100)
+                              : const Color(0xFF3E312A),
+                        ),
+                        overflow: TextOverflow.ellipsis,
                       ),
                     ),
                     if (highlight) ...[
@@ -1142,14 +1145,18 @@ class _TigressDisplayPreview extends StatelessWidget {
           const SizedBox(height: 8),
           Row(
             children: [
-              _TigressChoiceCard(
-                assetPath: 'assets/cards/sk_escape.png',
-                label: L10n.of(context).rulesSkTigressChoiceEscape,
+              Expanded(
+                child: _TigressChoiceCard(
+                  assetPath: 'assets/cards/sk_escape.png',
+                  label: L10n.of(context).rulesSkTigressChoiceEscape,
+                ),
               ),
               const SizedBox(width: 12),
-              _TigressChoiceCard(
-                assetPath: 'assets/cards/sk_pirate.png',
-                label: L10n.of(context).rulesSkTigressChoicePirate,
+              Expanded(
+                child: _TigressChoiceCard(
+                  assetPath: 'assets/cards/sk_pirate.png',
+                  label: L10n.of(context).rulesSkTigressChoicePirate,
+                ),
               ),
             ],
           ),
@@ -1204,12 +1211,16 @@ class _TigressChoiceCard extends StatelessWidget {
           ],
         ),
         const SizedBox(width: 6),
-        Text(
-          label,
-          style: const TextStyle(
-            fontSize: 11,
-            fontWeight: FontWeight.w700,
-            color: Color(0xFF5A4038),
+        Flexible(
+          child: Text(
+            label,
+            style: const TextStyle(
+              fontSize: 11,
+              fontWeight: FontWeight.w700,
+              color: Color(0xFF5A4038),
+            ),
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
           ),
         ),
       ],

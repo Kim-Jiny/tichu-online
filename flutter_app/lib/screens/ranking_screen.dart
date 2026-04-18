@@ -90,8 +90,8 @@ class _RankingScreenState extends State<RankingScreen> {
         width: double.infinity,
         child: SegmentedButton<String>(
           segments: [
-            ButtonSegment(value: 'tichu', label: Text(L10n.of(context).rankingTichu)),
-            ButtonSegment(value: 'skull_king', label: Text(L10n.of(context).rankingSkullKing)),
+            ButtonSegment(value: 'tichu', label: Text(L10n.of(context).rankingTichu, overflow: TextOverflow.ellipsis, maxLines: 1)),
+            ButtonSegment(value: 'skull_king', label: Text(L10n.of(context).rankingSkullKing, overflow: TextOverflow.ellipsis, maxLines: 1)),
           ],
           selected: {_rankingGameType},
           onSelectionChanged: (v) {

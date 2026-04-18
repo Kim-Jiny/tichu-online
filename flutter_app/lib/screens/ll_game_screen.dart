@@ -2152,14 +2152,14 @@ class _LLGameScreenState extends State<LLGameScreen> {
               ? Column(children: [
                   Row(mainAxisAlignment: MainAxisAlignment.center, children: [
                     Icon(icon, color: color, size: 16), const SizedBox(width: 4),
-                    Text(l10n.rankingMannerScore, style: const TextStyle(fontSize: 11, color: Color(0xFF8A8A8A))),
+                    Flexible(child: Text(l10n.rankingMannerScore, style: const TextStyle(fontSize: 11, color: Color(0xFF8A8A8A)), overflow: TextOverflow.ellipsis)),
                   ]),
                   const SizedBox(height: 2),
                   Text(label, style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: color)),
                 ])
               : Row(mainAxisAlignment: MainAxisAlignment.center, children: [
                   Icon(icon, color: color, size: 16), const SizedBox(width: 6),
-                  Text(l10n.gameManner(label), style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: color)),
+                  Flexible(child: Text(l10n.gameManner(label), style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: color), overflow: TextOverflow.ellipsis)),
                 ]),
         )),
         const SizedBox(width: 8),
@@ -2170,14 +2170,14 @@ class _LLGameScreenState extends State<LLGameScreen> {
               ? Column(children: [
                   Row(mainAxisAlignment: MainAxisAlignment.center, children: [
                     const Icon(Icons.warning_amber_rounded, color: Color(0xFFE57373), size: 16), const SizedBox(width: 4),
-                    Text(l10n.gameDesertionLabel, style: const TextStyle(fontSize: 11, color: Color(0xFF8A8A8A))),
+                    Flexible(child: Text(l10n.gameDesertionLabel, style: const TextStyle(fontSize: 11, color: Color(0xFF8A8A8A)), overflow: TextOverflow.ellipsis)),
                   ]),
                   const SizedBox(height: 2),
                   Text('$leaveCount', style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Color(0xFF9A6A6A))),
                 ])
               : Row(mainAxisAlignment: MainAxisAlignment.center, children: [
                   const Icon(Icons.warning_amber_rounded, color: Color(0xFFE57373), size: 16), const SizedBox(width: 6),
-                  Text(l10n.gameDesertions(leaveCount), style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Color(0xFF9A6A6A))),
+                  Flexible(child: Text(l10n.gameDesertions(leaveCount), style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Color(0xFF9A6A6A)), overflow: TextOverflow.ellipsis)),
                 ]),
         )),
       ],

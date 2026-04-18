@@ -241,16 +241,17 @@ class _SKGameScreenState extends State<SKGameScreen> {
                         children: [
                           _buildTopBar(state, game),
                           _buildScoreboard(state, game),
-                          Expanded(
-                            child: Column(
-                              children: [
-                                const Spacer(),
-                                _buildTrickArea(state),
-                                const Spacer(),
-                              ],
+                          if (state.phase != 'bidding')
+                            Expanded(
+                              child: Column(
+                                children: [
+                                  const Spacer(),
+                                  _buildTrickArea(state),
+                                  const Spacer(),
+                                ],
+                              ),
                             ),
-                          ),
-                          if (state.phase == 'bidding') _buildBiddingUI(state, game),
+                          if (state.phase == 'bidding') Expanded(child: SingleChildScrollView(child: _buildBiddingUI(state, game))),
                           if (state.phase == 'playing' || state.phase == 'trick_end')
                             _buildHandArea(state, game),
                           if (state.phase == 'round_end') _buildRoundEndUI(state),
@@ -600,7 +601,7 @@ class _SKGameScreenState extends State<SKGameScreen> {
           children: [
             const Icon(Icons.people_alt, color: Color(0xFF5A4038)),
             const SizedBox(width: 8),
-            Text(L10n.of(context).skGameSpectatorListTitle),
+            Flexible(child: Text(L10n.of(context).skGameSpectatorListTitle, overflow: TextOverflow.ellipsis)),
           ],
         ),
         content: spectators.isEmpty

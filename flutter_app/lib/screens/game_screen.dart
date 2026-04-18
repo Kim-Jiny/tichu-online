@@ -1378,7 +1378,7 @@ class _GameScreenState extends State<GameScreen> {
                     Row(mainAxisAlignment: MainAxisAlignment.center, children: [
                       Icon(icon, color: color, size: 16),
                       const SizedBox(width: 4),
-                      Text(l10n.rankingMannerScore, style: const TextStyle(fontSize: 11, color: Color(0xFF8A8A8A))),
+                      Flexible(child: Text(l10n.rankingMannerScore, style: const TextStyle(fontSize: 11, color: Color(0xFF8A8A8A)), overflow: TextOverflow.ellipsis)),
                     ]),
                     const SizedBox(height: 2),
                     Text('$manner', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: color)),
@@ -1386,7 +1386,7 @@ class _GameScreenState extends State<GameScreen> {
                 : Row(mainAxisAlignment: MainAxisAlignment.center, children: [
                     Icon(icon, color: color, size: 16),
                     const SizedBox(width: 6),
-                    Text('${l10n.rankingMannerScore} $manner', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: color)),
+                    Flexible(child: Text('${l10n.rankingMannerScore} $manner', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: color), overflow: TextOverflow.ellipsis)),
                   ]),
           ),
         ),
@@ -1400,7 +1400,7 @@ class _GameScreenState extends State<GameScreen> {
                     Row(mainAxisAlignment: MainAxisAlignment.center, children: [
                       const Icon(Icons.warning_amber_rounded, color: Color(0xFFE57373), size: 16),
                       const SizedBox(width: 4),
-                      Text(l10n.gameDesertionLabel, style: const TextStyle(fontSize: 11, color: Color(0xFF8A8A8A))),
+                      Flexible(child: Text(l10n.gameDesertionLabel, style: const TextStyle(fontSize: 11, color: Color(0xFF8A8A8A)), overflow: TextOverflow.ellipsis)),
                     ]),
                     const SizedBox(height: 2),
                     Text('$leaveCount', style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Color(0xFF9A6A6A))),
@@ -1408,7 +1408,7 @@ class _GameScreenState extends State<GameScreen> {
                 : Row(mainAxisAlignment: MainAxisAlignment.center, children: [
                     const Icon(Icons.warning_amber_rounded, color: Color(0xFFE57373), size: 16),
                     const SizedBox(width: 6),
-                    Text(l10n.gameDesertions(leaveCount), style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Color(0xFF9A6A6A))),
+                    Flexible(child: Text(l10n.gameDesertions(leaveCount), style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Color(0xFF9A6A6A)), overflow: TextOverflow.ellipsis)),
                   ]),
           ),
         ),
@@ -3963,9 +3963,12 @@ class _GameScreenState extends State<GameScreen> {
           Row(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Text(
-                selectedCard != null ? L10n.of(context).gameSelectRecipient : L10n.of(context).gameSelectExchangeCard(assignedCount),
-                style: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold),
+              Flexible(
+                child: Text(
+                  selectedCard != null ? L10n.of(context).gameSelectRecipient : L10n.of(context).gameSelectExchangeCard(assignedCount),
+                  style: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold),
+                  overflow: TextOverflow.ellipsis,
+                ),
               ),
               if (_exchangeAssignments.isNotEmpty) ...[
                 const SizedBox(width: 6),
@@ -4078,12 +4081,15 @@ class _GameScreenState extends State<GameScreen> {
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Text(
-              name,
-              style: TextStyle(
-                fontSize: 12,
-                fontWeight: FontWeight.bold,
-                color: isAssigned ? const Color(0xFF3A5A40) : const Color(0xFF5A4038),
+            Flexible(
+              child: Text(
+                name,
+                style: TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.bold,
+                  color: isAssigned ? const Color(0xFF3A5A40) : const Color(0xFF5A4038),
+                ),
+                overflow: TextOverflow.ellipsis,
               ),
             ),
             if (isAssigned) ...[

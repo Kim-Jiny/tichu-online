@@ -133,7 +133,7 @@ class _LobbyScreenState extends State<LobbyScreen> {
           children: [
             const Icon(Icons.mail, color: Color(0xFF7E57C2)),
             const SizedBox(width: 8),
-            Text(l10n.lobbyRoomInviteTitle),
+            Flexible(child: Text(l10n.lobbyRoomInviteTitle, overflow: TextOverflow.ellipsis)),
           ],
         ),
         content: Column(
@@ -212,7 +212,7 @@ class _LobbyScreenState extends State<LobbyScreen> {
               children: [
                 const Icon(Icons.person_add, color: Color(0xFF7E57C2)),
                 const SizedBox(width: 8),
-                Text(l10n.lobbyInviteFriendsTitle),
+                Flexible(child: Text(l10n.lobbyInviteFriendsTitle, overflow: TextOverflow.ellipsis)),
               ],
             ),
             content: onlineFriends.isEmpty
@@ -327,7 +327,7 @@ class _LobbyScreenState extends State<LobbyScreen> {
           children: [
             const Icon(Icons.visibility, color: Color(0xFF4A4080)),
             const SizedBox(width: 8),
-            Text(l10n.lobbySpectatorListTitle),
+            Flexible(child: Text(l10n.lobbySpectatorListTitle, overflow: TextOverflow.ellipsis)),
           ],
         ),
         content: spectators.isEmpty
@@ -404,7 +404,7 @@ class _LobbyScreenState extends State<LobbyScreen> {
           children: [
             const Icon(Icons.settings, color: Color(0xFF1E88E5)),
             const SizedBox(width: 8),
-            Text(l10n.lobbyRoomSettingsTitle),
+            Flexible(child: Text(l10n.lobbyRoomSettingsTitle, overflow: TextOverflow.ellipsis)),
           ],
         ),
         content: TextField(
@@ -1044,7 +1044,7 @@ class _LobbyScreenState extends State<LobbyScreen> {
                               foregroundColor: accent,
                             ),
                             icon: const Icon(Icons.casino_outlined, size: 16),
-                            label: Text(l10n.lobbyRandom),
+                            label: Text(l10n.lobbyRandom, overflow: TextOverflow.ellipsis, maxLines: 1),
                           ),
                         ],
                       ),
@@ -1279,7 +1279,7 @@ class _LobbyScreenState extends State<LobbyScreen> {
                   ),
                 ),
                 icon: const Icon(Icons.check_circle_outline, size: 18),
-                label: Text(l10n.lobbyCreateRoom),
+                label: Text(l10n.lobbyCreateRoom, overflow: TextOverflow.ellipsis, maxLines: 1),
               ),
             ],
           );
@@ -4207,7 +4207,7 @@ class _LobbyScreenState extends State<LobbyScreen> {
                     Row(mainAxisAlignment: MainAxisAlignment.center, children: [
                       Icon(icon, color: color, size: 16),
                       const SizedBox(width: 4),
-                      Text(l10n.rankingMannerScore, style: const TextStyle(fontSize: 11, color: Color(0xFF8A8A8A))),
+                      Flexible(child: Text(l10n.rankingMannerScore, style: const TextStyle(fontSize: 11, color: Color(0xFF8A8A8A)), overflow: TextOverflow.ellipsis)),
                     ]),
                     const SizedBox(height: 2),
                     Text('$manner', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: color)),
@@ -4215,7 +4215,7 @@ class _LobbyScreenState extends State<LobbyScreen> {
                 : Row(mainAxisAlignment: MainAxisAlignment.center, children: [
                     Icon(icon, color: color, size: 16),
                     const SizedBox(width: 6),
-                    Text('${l10n.rankingMannerScore} $manner', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: color)),
+                    Flexible(child: Text('${l10n.rankingMannerScore} $manner', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: color), overflow: TextOverflow.ellipsis)),
                   ]),
           ),
         ),
@@ -4229,7 +4229,7 @@ class _LobbyScreenState extends State<LobbyScreen> {
                     Row(mainAxisAlignment: MainAxisAlignment.center, children: [
                       const Icon(Icons.warning_amber_rounded, color: Color(0xFFE57373), size: 16),
                       const SizedBox(width: 4),
-                      Text(l10n.gameDesertionLabel, style: const TextStyle(fontSize: 11, color: Color(0xFF8A8A8A))),
+                      Flexible(child: Text(l10n.gameDesertionLabel, style: const TextStyle(fontSize: 11, color: Color(0xFF8A8A8A)), overflow: TextOverflow.ellipsis)),
                     ]),
                     const SizedBox(height: 2),
                     Text('$leaveCount', style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Color(0xFF9A6A6A))),
@@ -4237,7 +4237,7 @@ class _LobbyScreenState extends State<LobbyScreen> {
                 : Row(mainAxisAlignment: MainAxisAlignment.center, children: [
                     const Icon(Icons.warning_amber_rounded, color: Color(0xFFE57373), size: 16),
                     const SizedBox(width: 6),
-                    Text(l10n.lobbyDesertions(leaveCount), style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Color(0xFF9A6A6A))),
+                    Flexible(child: Text(l10n.lobbyDesertions(leaveCount), style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Color(0xFF9A6A6A)), overflow: TextOverflow.ellipsis)),
                   ]),
           ),
         ),

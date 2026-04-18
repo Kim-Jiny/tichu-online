@@ -164,6 +164,13 @@ class _LLGameScreenState extends State<LLGameScreen> {
                         _buildBottomArea(context, gs, llState),
                       ],
                     ),
+                    if (llState.phase == 'effect_resolve' && llState.pendingEffect != null)
+                      Positioned(
+                        left: 0,
+                        right: 0,
+                        bottom: 0,
+                        child: _buildEffectResolve(context, gs, llState),
+                      ),
                     if (_chatOpen) _buildChatPanel(context, gs),
                   ],
                 ),
@@ -598,8 +605,6 @@ class _LLGameScreenState extends State<LLGameScreen> {
           if (state.faceUpCards.isNotEmpty) _buildFaceUpCards(state),
           _buildPlayersArea(context, gs, state),
           const SizedBox(height: 8),
-          if (state.phase == 'effect_resolve' && state.pendingEffect != null)
-            _buildEffectResolve(context, gs, state),
         ],
       ),
     );
@@ -763,48 +768,56 @@ class _LLGameScreenState extends State<LLGameScreen> {
       orElse: () => LLPlayer(id: '', name: '?'),
     ).name;
 
+    Widget content;
+
     // If effect is resolved, show result
     if (effect.resolved && effect.result != null) {
-      return _buildEffectResult(context, gs, state, effect, actorName);
+      content = _buildEffectResult(context, gs, state, effect, actorName);
     }
-
     // Needs target selection
-    if (isMyEffect && effect.needsTarget) {
+    else if (isMyEffect && effect.needsTarget) {
       if (effect.type == 'guard' && effect.needsGuess) {
-        return _buildGuardTargetAndGuess(context, gs, state, effect);
+        content = _buildGuardTargetAndGuess(context, gs, state, effect);
+      } else {
+        content = _buildTargetSelection(context, gs, state, effect);
       }
-      return _buildTargetSelection(context, gs, state, effect);
     }
-
     // Guard with auto-selected target: only needs guess
-    if (isMyEffect && effect.type == 'guard' && effect.needsGuess) {
-      return _buildGuardGuessOnly(context, gs, state, effect);
+    else if (isMyEffect && effect.type == 'guard' && effect.needsGuess) {
+      content = _buildGuardGuessOnly(context, gs, state, effect);
+    }
+    // Waiting for action
+    else {
+      content = Container(
+        margin: const EdgeInsets.all(12),
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: Colors.white.withValues(alpha: 0.95),
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: const Color(0xFFE0D8D4)),
+        ),
+        child: Column(
+          children: [
+            Text(
+              _getEffectDescription(effect.type, actorName, l10n),
+              style: const TextStyle(color: Color(0xFF5A4038), fontSize: 14),
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 8),
+            const SizedBox(
+              width: 20,
+              height: 20,
+              child: CircularProgressIndicator(strokeWidth: 2, color: Color(0xFFE91E63)),
+            ),
+          ],
+        ),
+      );
     }
 
-    // Waiting for action
     return Container(
-      margin: const EdgeInsets.all(12),
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: 0.95),
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: const Color(0xFFE0D8D4)),
-      ),
-      child: Column(
-        children: [
-          Text(
-            _getEffectDescription(effect.type, actorName, l10n),
-            style: const TextStyle(color: Color(0xFF5A4038), fontSize: 14),
-            textAlign: TextAlign.center,
-          ),
-          const SizedBox(height: 8),
-          const SizedBox(
-            width: 20,
-            height: 20,
-            child: CircularProgressIndicator(strokeWidth: 2, color: Color(0xFFE91E63)),
-          ),
-        ],
-      ),
+      color: Colors.black.withValues(alpha: 0.3),
+      padding: const EdgeInsets.only(bottom: 8),
+      child: content,
     );
   }
 
@@ -875,7 +888,7 @@ class _LLGameScreenState extends State<LLGameScreen> {
               final isSelected = _selectedGuess == type;
               final color = LoveLetterCard.cardColors[type] ?? Colors.grey;
               final value = LoveLetterCard.cardValues[type] ?? 0;
-              final name = LoveLetterCard.cardNames[type] ?? type;
+              final name = _getCardTypeName(type, l10n);
               return GestureDetector(
                 onTap: () => setState(() => _selectedGuess = type),
                 child: Container(
@@ -948,7 +961,7 @@ class _LLGameScreenState extends State<LLGameScreen> {
               final isSelected = _selectedGuess == type;
               final color = LoveLetterCard.cardColors[type] ?? Colors.grey;
               final value = LoveLetterCard.cardValues[type] ?? 0;
-              final name = LoveLetterCard.cardNames[type] ?? type;
+              final name = _getCardTypeName(type, l10n);
               return GestureDetector(
                 onTap: () => setState(() => _selectedGuess = type),
                 child: Container(
@@ -1359,14 +1372,14 @@ class _LLGameScreenState extends State<LLGameScreen> {
   void _showCardGuide(BuildContext context) {
     final l10n = L10n.of(context);
     final cards = [
-      ('guard', l10n.llDescGuard),
-      ('spy', l10n.llDescSpy),
-      ('baron', l10n.llDescBaron),
-      ('handmaid', l10n.llDescHandmaid),
-      ('prince', l10n.llDescPrince),
-      ('king', l10n.llDescKing),
-      ('countess', l10n.llDescCountess),
-      ('princess', l10n.llDescPrincess),
+      ('guard', 1, 5, l10n.llDescGuard),
+      ('spy', 2, 2, l10n.llDescSpy),
+      ('baron', 3, 2, l10n.llDescBaron),
+      ('handmaid', 4, 2, l10n.llDescHandmaid),
+      ('prince', 5, 2, l10n.llDescPrince),
+      ('king', 6, 1, l10n.llDescKing),
+      ('countess', 7, 1, l10n.llDescCountess),
+      ('princess', 8, 1, l10n.llDescPrincess),
     ];
     showModalBottomSheet(
       context: context,
@@ -1400,8 +1413,9 @@ class _LLGameScreenState extends State<LLGameScreen> {
                   itemCount: cards.length,
                   separatorBuilder: (context, index) => const Divider(color: Color(0xFFE0D8D4), height: 1),
                   itemBuilder: (context, i) {
-                    final (type, desc) = cards[i];
+                    final (type, value, count, desc) = cards[i];
                     final color = LoveLetterCard.cardColors[type] ?? Colors.grey;
+                    final name = _getCardTypeName(type, l10n);
                     return Padding(
                       padding: const EdgeInsets.symmetric(vertical: 8),
                       child: Row(
@@ -1416,9 +1430,19 @@ class _LLGameScreenState extends State<LLGameScreen> {
                           ),
                           const SizedBox(width: 10),
                           Expanded(
-                            child: Text(
-                              desc,
-                              style: TextStyle(color: color, fontSize: 12, height: 1.4),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  '$name ($value) ×$count',
+                                  style: TextStyle(color: color, fontSize: 13, fontWeight: FontWeight.bold),
+                                ),
+                                const SizedBox(height: 2),
+                                Text(
+                                  desc,
+                                  style: const TextStyle(color: Color(0xFF6A5A52), fontSize: 12, height: 1.4),
+                                ),
+                              ],
                             ),
                           ),
                         ],

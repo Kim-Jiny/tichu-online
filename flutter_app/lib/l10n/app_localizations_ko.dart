@@ -3078,7 +3078,7 @@ class L10nKo extends L10n {
   String get llReturnIn => '돌아가기';
 
   @override
-  String get llGuardSelectTarget => 'Guard: 대상과 카드를 선택하세요';
+  String get llGuardSelectTarget => '가드: 대상과 카드를 선택하세요';
 
   @override
   String get llGuardGuessCard => '어떤 카드를 가지고 있는지 추측하세요:';
@@ -3088,27 +3088,27 @@ class L10nKo extends L10n {
 
   @override
   String llGuardEffect(String name) {
-    return '$name이(가) Guard를 사용합니다...';
+    return '$name이(가) 가드를 사용합니다...';
   }
 
   @override
   String llSpyEffect(String name) {
-    return '$name이(가) Spy를 사용합니다...';
+    return '$name이(가) 스파이를 사용합니다...';
   }
 
   @override
   String llBaronEffect(String name) {
-    return '$name이(가) Baron을 사용합니다...';
+    return '$name이(가) 남작을 사용합니다...';
   }
 
   @override
   String llPrinceEffect(String name) {
-    return '$name이(가) Prince를 사용합니다...';
+    return '$name이(가) 왕자를 사용합니다...';
   }
 
   @override
   String llKingEffect(String name) {
-    return '$name이(가) King을 사용합니다...';
+    return '$name이(가) 왕을 사용합니다...';
   }
 
   @override
@@ -3143,12 +3143,12 @@ class L10nKo extends L10n {
 
   @override
   String llBaronLose(String loser) {
-    return '$loser이(가) Baron 비교에서 탈락했습니다';
+    return '$loser이(가) 남작 비교에서 탈락했습니다';
   }
 
   @override
   String llPrinceEliminated(String target) {
-    return '$target이(가) Princess를 버려 탈락했습니다!';
+    return '$target이(가) 공주를 버려 탈락했습니다!';
   }
 
   @override

@@ -1431,12 +1431,15 @@ class _ProfileMiniStatRow extends StatelessWidget {
                 const Icon(Icons.warning_amber_rounded,
                     color: Color(0xFFE57373), size: 16),
                 const SizedBox(width: 6),
-                Text(
-                  l10n.rankingDesertions(leaveCount),
-                  style: const TextStyle(
-                    fontSize: 12,
-                    fontWeight: FontWeight.bold,
-                    color: Color(0xFF9A6A6A),
+                Flexible(
+                  child: Text(
+                    l10n.rankingDesertions(leaveCount),
+                    style: const TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.bold,
+                      color: Color(0xFF9A6A6A),
+                    ),
+                    overflow: TextOverflow.ellipsis,
                   ),
                 ),
               ],

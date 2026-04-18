@@ -219,7 +219,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
           children: [
             const Icon(Icons.campaign, color: Color(0xFF42A5F5)),
             const SizedBox(width: 8),
-            Text(l10n.noticeTitle),
+            Flexible(child: Text(l10n.noticeTitle, overflow: TextOverflow.ellipsis)),
           ],
         ),
         content: SizedBox(
@@ -424,7 +424,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
             children: [
               const Icon(Icons.help_outline, color: Color(0xFFBA68C8)),
               const SizedBox(width: 8),
-              Text(l10n.inquiryTitle),
+              Flexible(child: Text(l10n.inquiryTitle, overflow: TextOverflow.ellipsis)),
             ],
           ),
           content: SingleChildScrollView(
@@ -549,7 +549,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
           children: [
             const Icon(Icons.mark_email_read, color: Color(0xFF1E88E5)),
             const SizedBox(width: 8),
-            Text(l10n.inquiryHistoryTitle),
+            Flexible(child: Text(l10n.inquiryHistoryTitle, overflow: TextOverflow.ellipsis)),
           ],
         ),
         content: SizedBox(
@@ -1016,12 +1016,15 @@ class _SettingsScreenState extends State<SettingsScreen> {
                           color: const Color(0xFF8A7A72),
                         ),
                         const SizedBox(width: 4),
-                        Text(
-                          l10n.settingsHeaderTitle,
-                          style: const TextStyle(
-                            fontSize: 20,
-                            fontWeight: FontWeight.bold,
-                            color: Color(0xFF5A4038),
+                        Flexible(
+                          child: Text(
+                            l10n.settingsHeaderTitle,
+                            style: const TextStyle(
+                              fontSize: 20,
+                              fontWeight: FontWeight.bold,
+                              color: Color(0xFF5A4038),
+                            ),
+                            overflow: TextOverflow.ellipsis,
                           ),
                         ),
                       ],

@@ -2108,9 +2108,12 @@ class _LobbyScreenState extends State<LobbyScreen> {
           children: [
             const Icon(Icons.lock, color: Color(0xFFF2A65A), size: 22),
             const SizedBox(width: 8),
-            Text(
-              l10n.lobbySocialLinkRequired,
-              style: const TextStyle(fontSize: 16),
+            Flexible(
+              child: Text(
+                l10n.lobbySocialLinkRequired,
+                style: const TextStyle(fontSize: 16),
+                overflow: TextOverflow.ellipsis,
+              ),
             ),
           ],
         ),
@@ -4820,7 +4823,7 @@ class _LobbyScreenState extends State<LobbyScreen> {
                         children: [
                           const Icon(Icons.fast_forward, size: 16, color: Color(0xFFE65100)),
                           const SizedBox(width: 8),
-                          Text(l10n.lobbyBotSpeedFast),
+                          Flexible(child: Text(l10n.lobbyBotSpeedFast, overflow: TextOverflow.ellipsis)),
                         ],
                       ),
                     ),
@@ -4831,7 +4834,7 @@ class _LobbyScreenState extends State<LobbyScreen> {
                         children: [
                           const Icon(Icons.play_arrow, size: 16, color: Color(0xFF3949AB)),
                           const SizedBox(width: 8),
-                          Text(l10n.lobbyBotSpeedNormal),
+                          Flexible(child: Text(l10n.lobbyBotSpeedNormal, overflow: TextOverflow.ellipsis)),
                         ],
                       ),
                     ),
@@ -4842,7 +4845,7 @@ class _LobbyScreenState extends State<LobbyScreen> {
                         children: [
                           const Icon(Icons.slow_motion_video, size: 16, color: Color(0xFF558B2F)),
                           const SizedBox(width: 8),
-                          Text(l10n.lobbyBotSpeedSlow),
+                          Flexible(child: Text(l10n.lobbyBotSpeedSlow, overflow: TextOverflow.ellipsis)),
                         ],
                       ),
                     ),

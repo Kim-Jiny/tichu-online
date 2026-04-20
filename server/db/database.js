@@ -631,6 +631,35 @@ async function initDatabase() {
       )
     `);
 
+    // Push notification history table
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS tc_push_history (
+        id SERIAL PRIMARY KEY,
+        admin_username VARCHAR(50) NOT NULL,
+        title VARCHAR(200) NOT NULL,
+        body TEXT NOT NULL,
+        target_filter VARCHAR(20) DEFAULT 'all',
+        total_sent INTEGER DEFAULT 0,
+        success_count INTEGER DEFAULT 0,
+        fail_count INTEGER DEFAULT 0,
+        invalid_tokens INTEGER DEFAULT 0,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      )
+    `);
+
+    // Push notification recipients table
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS tc_push_recipients (
+        id SERIAL PRIMARY KEY,
+        push_history_id INTEGER NOT NULL REFERENCES tc_push_history(id),
+        user_id INTEGER NOT NULL,
+        nickname VARCHAR(50) NOT NULL,
+        status VARCHAR(20) NOT NULL,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      )
+    `);
+    await client.query(`CREATE INDEX IF NOT EXISTS idx_push_recipients_history ON tc_push_recipients(push_history_id)`);
+
     console.log('Database initialized (tc_ tables)');
   } catch (err) {
     console.error('Database initialization error:', err);
@@ -4921,6 +4950,72 @@ async function getMaintenanceHistory(limit = 50) {
   return result.rows;
 }
 
+// Get FCM tokens for broadcast push
+async function getBroadcastFcmTokens(targetFilter = 'all') {
+  let query = `SELECT id, fcm_token, nickname FROM tc_users WHERE push_enabled = true AND is_deleted IS NOT TRUE AND fcm_token IS NOT NULL AND fcm_token != ''`;
+  const params = [];
+  if (targetFilter === 'ios') {
+    query += ` AND device_platform = $1`;
+    params.push('ios');
+  } else if (targetFilter === 'android') {
+    query += ` AND device_platform = $1`;
+    params.push('android');
+  }
+  const result = await pool.query(query, params);
+  return result.rows;
+}
+
+// Insert push history record
+async function insertPushHistory({ adminUsername, title, body, targetFilter, totalSent, successCount, failCount, invalidTokens }) {
+  const result = await pool.query(
+    `INSERT INTO tc_push_history (admin_username, title, body, target_filter, total_sent, success_count, fail_count, invalid_tokens)
+     VALUES ($1, $2, $3, $4, $5, $6, $7, $8) RETURNING id`,
+    [adminUsername, title, body, targetFilter, totalSent, successCount, failCount, invalidTokens]
+  );
+  return result.rows[0].id;
+}
+
+// Get push history with pagination
+async function getPushHistory(page = 1, limit = 20) {
+  const offset = (page - 1) * limit;
+  const countRes = await pool.query('SELECT COUNT(*) FROM tc_push_history');
+  const total = parseInt(countRes.rows[0].count);
+  const result = await pool.query(
+    `SELECT * FROM tc_push_history ORDER BY created_at DESC LIMIT $1 OFFSET $2`,
+    [limit, offset]
+  );
+  return { rows: result.rows, total, page, limit };
+}
+
+// Clear invalid FCM token for a user
+async function clearInvalidFcmToken(userId) {
+  await pool.query(`UPDATE tc_users SET fcm_token = NULL WHERE id = $1`, [userId]);
+}
+
+// Insert push recipients
+async function insertPushRecipients(historyId, recipients) {
+  for (const r of recipients) {
+    await pool.query(
+      `INSERT INTO tc_push_recipients (push_history_id, user_id, nickname, status) VALUES ($1, $2, $3, $4)`,
+      [historyId, r.userId, r.nickname, r.status]
+    );
+  }
+}
+
+// Get push history detail with recipients (paginated)
+async function getPushHistoryDetail(id, page = 1, limit = 50) {
+  const historyRes = await pool.query(`SELECT * FROM tc_push_history WHERE id = $1`, [id]);
+  if (historyRes.rows.length === 0) return null;
+  const offset = (page - 1) * limit;
+  const countRes = await pool.query(`SELECT COUNT(*) FROM tc_push_recipients WHERE push_history_id = $1`, [id]);
+  const total = parseInt(countRes.rows[0].count);
+  const recipientsRes = await pool.query(
+    `SELECT user_id, nickname, status FROM tc_push_recipients WHERE push_history_id = $1 ORDER BY id ASC LIMIT $2 OFFSET $3`,
+    [id, limit, offset]
+  );
+  return { history: historyRes.rows[0], recipients: recipientsRes.rows, total, page, limit };
+}
+
 module.exports = {
   initDatabase,
   registerUser,
@@ -5025,5 +5120,11 @@ module.exports = {
   deleteNotice,
   insertMaintenanceHistory,
   getMaintenanceHistory,
+  getBroadcastFcmTokens,
+  insertPushHistory,
+  getPushHistory,
+  clearInvalidFcmToken,
+  insertPushRecipients,
+  getPushHistoryDetail,
   pool,
 };

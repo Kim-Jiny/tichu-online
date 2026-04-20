@@ -9,6 +9,7 @@ const {
   getConfig, updateConfig,
   getNotices, getNoticeById, createNotice, updateNotice, deleteNotice,
   insertMaintenanceHistory, getMaintenanceHistory,
+  getBroadcastFcmTokens, insertPushHistory, getPushHistory, clearInvalidFcmToken, insertPushRecipients, getPushHistoryDetail,
 } = require('./db/database');
 
 // In-memory session store: token -> { username, createdAt }
@@ -310,6 +311,7 @@ input[type="text"], input[type="password"] { width: 100%; padding: 10px 12px; bo
   <a href="/tc-backstage/reports" class="${activePage === 'reports' ? 'active' : ''}" onclick="closeSidebar()">신고</a>
   <a href="/tc-backstage/users" class="${activePage === 'users' ? 'active' : ''}" onclick="closeSidebar()">유저</a>
   <a href="/tc-backstage/notices" class="${activePage === 'notices' ? 'active' : ''}" onclick="closeSidebar()">공지사항</a>
+  <a href="/tc-backstage/push" class="${activePage === 'push' ? 'active' : ''}" onclick="closeSidebar()">푸시알림</a>
   <a href="/tc-backstage/maintenance" class="${activePage === 'maintenance' ? 'active' : ''}" onclick="closeSidebar()">점검</a>
   <a href="/tc-backstage/settings" class="${activePage === 'settings' ? 'active' : ''}" onclick="closeSidebar()">설정</a>
   <div class="logout">
@@ -596,7 +598,7 @@ function parseShopFormBody(body) {
 // ===== Route handler =====
 
 async function handleAdminRoute(req, res, url, pathname, method, lobby, wss, maintenanceFns = {}) {
-  const { getMaintenanceConfig, setMaintenanceConfig, getMaintenanceStatus, sendPushNotification } = maintenanceFns;
+  const { getMaintenanceConfig, setMaintenanceConfig, getMaintenanceStatus, sendPushNotification, sendBroadcastPush } = maintenanceFns;
   // Login page (no auth required)
   if (pathname === '/tc-backstage/login') {
     if (method === 'GET') {
@@ -2967,6 +2969,193 @@ async function handleAdminRoute(req, res, url, pathname, method, lobby, wss, mai
   if (noticeDeleteMatch && method === 'POST') {
     await deleteNotice(parseInt(noticeDeleteMatch[1]));
     return redirect(res, '/tc-backstage/notices');
+  }
+
+  // ===== Push notifications =====
+  if (pathname === '/tc-backstage/push' && method === 'GET') {
+    const page = parseInt(url.searchParams.get('page')) || 1;
+    const data = await getPushHistory(page, 20);
+    const resultMsg = url.searchParams.get('result');
+    const resultBanner = resultMsg ? `<div class="card" style="background:${resultMsg.startsWith('실패') ? '#ffebee' : '#e8f5e9'};border-left:4px solid ${resultMsg.startsWith('실패') ? '#c62828' : '#2e7d32'};margin-bottom:16px;font-weight:600">${escapeHtml(resultMsg)}</div>` : '';
+
+    let tableContent;
+    if (data.rows.length > 0) {
+      tableContent = `<div class="table-wrap"><table>
+        <tr><th>ID</th><th>관리자</th><th>제목</th><th>내용</th><th>대상</th><th>성공</th><th>실패</th><th>무효토큰</th><th>일시</th></tr>
+        ${data.rows.map(r => {
+          const filterBadge = r.target_filter === 'ios' ? '<span class="badge" style="background:#e3f2fd;color:#1565c0">iOS</span>'
+            : r.target_filter === 'android' ? '<span class="badge" style="background:#e8f5e9;color:#2e7d32">Android</span>'
+            : '<span class="badge" style="background:#f5f5f5;color:#333">전체</span>';
+          const bodyTruncated = r.body.length > 40 ? r.body.substring(0, 40) + '...' : r.body;
+          const date = new Date(r.created_at).toLocaleString('ko-KR');
+          return `<tr>
+            <td><a href="/tc-backstage/push/${r.id}">${r.id}</a></td>
+            <td>${escapeHtml(r.admin_username)}</td>
+            <td>${escapeHtml(r.title)}</td>
+            <td style="color:#666;font-size:13px">${escapeHtml(bodyTruncated)}</td>
+            <td>${filterBadge}</td>
+            <td style="color:#2e7d32;font-weight:600">${r.success_count}</td>
+            <td style="color:#c62828;font-weight:600">${r.fail_count}</td>
+            <td style="color:#e65100;font-weight:600">${r.invalid_tokens}</td>
+            <td style="font-size:12px;color:#888">${date}</td>
+          </tr>`;
+        }).join('')}
+      </table></div>
+      ${pagination(data.page, data.total, data.limit, '/tc-backstage/push')}`;
+    } else {
+      tableContent = '<div class="empty">발송 이력 없음</div>';
+    }
+
+    const content = `
+      ${pageHeader('푸시알림', '전체 사용자에게 푸시 알림을 보내고 발송 이력을 관리합니다.')}
+      ${resultBanner}
+      <div class="card">
+        <h3>푸시 발송</h3>
+        <form method="POST" action="/tc-backstage/push/send" onsubmit="return confirm('정말 발송하시겠습니까? 대상 사용자 전체에게 푸시가 전송됩니다.')">
+          <div style="margin-bottom:12px">
+            <label style="font-weight:600;display:block;margin-bottom:4px">대상</label>
+            <select name="targetFilter" style="padding:8px 12px;border-radius:8px;border:1px solid #ddd;font-size:14px;width:200px">
+              <option value="all">전체</option>
+              <option value="ios">iOS만</option>
+              <option value="android">Android만</option>
+            </select>
+          </div>
+          <div style="margin-bottom:12px">
+            <label style="font-weight:600;display:block;margin-bottom:4px">제목</label>
+            <input type="text" name="title" placeholder="푸시 제목" required style="width:100%;max-width:500px">
+          </div>
+          <div style="margin-bottom:12px">
+            <label style="font-weight:600;display:block;margin-bottom:4px">내용</label>
+            <textarea name="body" rows="3" placeholder="푸시 내용" required style="width:100%;max-width:500px"></textarea>
+          </div>
+          <button type="submit" class="btn btn-primary">발송</button>
+        </form>
+      </div>
+      <div class="card" style="margin-top:16px">
+        <h3>발송 이력</h3>
+        ${tableContent}
+      </div>
+    `;
+    return html(res, layout('푸시알림', content, 'push'));
+  }
+
+  // Send broadcast push
+  if (pathname === '/tc-backstage/push/send' && method === 'POST') {
+    const sessionData = getSessionFromCookie(req);
+    const adminUsername = sessionData?.session?.username || 'unknown';
+    const body = await parseBody(req);
+    const title = (body.title || '').trim();
+    const pushBody = (body.body || '').trim();
+    const targetFilter = body.targetFilter || 'all';
+
+    if (!title || !pushBody) {
+      return redirect(res, '/tc-backstage/push?result=' + encodeURIComponent('실패: 제목과 내용을 입력해주세요'));
+    }
+
+    const tokenRows = await getBroadcastFcmTokens(targetFilter);
+    if (tokenRows.length === 0) {
+      return redirect(res, '/tc-backstage/push?result=' + encodeURIComponent('실패: 발송 대상이 없습니다'));
+    }
+
+    const result = await sendBroadcastPush(tokenRows, title, pushBody);
+
+    // Clear invalid tokens
+    for (const userId of result.invalidUserIds) {
+      await clearInvalidFcmToken(userId);
+    }
+
+    // Build nickname map from tokenRows
+    const nicknameMap = {};
+    for (const row of tokenRows) {
+      nicknameMap[row.id] = row.nickname;
+    }
+
+    const historyId = await insertPushHistory({
+      adminUsername,
+      title,
+      body: pushBody,
+      targetFilter,
+      totalSent: tokenRows.length,
+      successCount: result.successCount,
+      failCount: result.failCount,
+      invalidTokens: result.invalidUserIds.length,
+    });
+
+    // Build and save recipients
+    const recipients = (result.results || []).map(r => ({
+      userId: r.userId,
+      nickname: nicknameMap[r.userId] || 'unknown',
+      status: r.invalid ? 'invalid_token' : (r.success ? 'success' : 'fail'),
+    }));
+    if (recipients.length > 0) {
+      await insertPushRecipients(historyId, recipients);
+    }
+
+    let msg;
+    if (result.error) {
+      msg = `실패: ${result.error} (이력 #${historyId}에 기록됨) — 전체 ${tokenRows.length}명`;
+    } else {
+      msg = `발송 완료 — 전체 ${tokenRows.length}명, 성공 ${result.successCount}, 실패 ${result.failCount}, 무효토큰 ${result.invalidUserIds.length}`;
+    }
+    return redirect(res, '/tc-backstage/push?result=' + encodeURIComponent(msg));
+  }
+
+  // Push detail page
+  const pushDetailMatch = pathname.match(/^\/tc-backstage\/push\/(\d+)$/);
+  if (pushDetailMatch && method === 'GET') {
+    const pushId = parseInt(pushDetailMatch[1]);
+    const page = parseInt(url.searchParams.get('page')) || 1;
+    const data = await getPushHistoryDetail(pushId, page, 50);
+    if (!data) return html(res, layout('찾을 수 없음', '<div class="empty">발송 이력을 찾을 수 없습니다</div>', 'push'), 404);
+
+    const h = data.history;
+    const filterLabel = h.target_filter === 'ios' ? 'iOS' : h.target_filter === 'android' ? 'Android' : '전체';
+    const filterBadge = h.target_filter === 'ios' ? '<span class="badge" style="background:#e3f2fd;color:#1565c0">iOS</span>'
+      : h.target_filter === 'android' ? '<span class="badge" style="background:#e8f5e9;color:#2e7d32">Android</span>'
+      : '<span class="badge" style="background:#f5f5f5;color:#333">전체</span>';
+
+    const statusBadgePush = (status) => {
+      if (status === 'success') return '<span class="badge" style="background:#e8f5e9;color:#2e7d32">성공</span>';
+      if (status === 'invalid_token') return '<span class="badge" style="background:#fff3e0;color:#e65100">무효토큰</span>';
+      return '<span class="badge" style="background:#ffebee;color:#c62828">실패</span>';
+    };
+
+    let recipientTable;
+    if (data.recipients.length > 0) {
+      recipientTable = `<div class="table-wrap"><table>
+        <tr><th>닉네임</th><th>상태</th></tr>
+        ${data.recipients.map(r => `<tr>
+          <td><a href="/tc-backstage/users/${encodeURIComponent(r.nickname)}">${escapeHtml(r.nickname)}</a></td>
+          <td>${statusBadgePush(r.status)}</td>
+        </tr>`).join('')}
+      </table></div>
+      ${pagination(data.page, data.total, data.limit, `/tc-backstage/push/${pushId}`)}`;
+    } else {
+      recipientTable = '<div class="empty">수신자 기록 없음</div>';
+    }
+
+    const content = `
+      <h1 class="page-title">발송 상세 #${h.id}</h1>
+      <div class="card">
+        <div class="detail-grid">
+          <div class="label">관리자</div><div class="value">${escapeHtml(h.admin_username)}</div>
+          <div class="label">제목</div><div class="value">${escapeHtml(h.title)}</div>
+          <div class="label">내용</div><div class="value" style="white-space:pre-wrap">${escapeHtml(h.body)}</div>
+          <div class="label">대상</div><div class="value">${filterBadge}</div>
+          <div class="label">전체 발송</div><div class="value">${h.total_sent}명</div>
+          <div class="label">성공</div><div class="value" style="color:#2e7d32;font-weight:600">${h.success_count}</div>
+          <div class="label">실패</div><div class="value" style="color:#c62828;font-weight:600">${h.fail_count}</div>
+          <div class="label">무효토큰</div><div class="value" style="color:#e65100;font-weight:600">${h.invalid_tokens}</div>
+          <div class="label">발송일시</div><div class="value">${formatDate(h.created_at)}</div>
+        </div>
+      </div>
+      <div class="card" style="margin-top:16px">
+        <h3>수신자 목록 (${formatNumber(data.total)}명)</h3>
+        ${recipientTable}
+      </div>
+      <a href="/tc-backstage/push" class="btn btn-secondary" style="margin-top:12px">목록으로</a>
+    `;
+    return html(res, layout(`발송 상세 #${h.id}`, content, 'push'));
   }
 
   // 404

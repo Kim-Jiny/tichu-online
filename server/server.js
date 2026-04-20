@@ -54,6 +54,10 @@ const {
   setAdminMemo,
   getSKRecentMatches,
   getPublishedNotices,
+  getBroadcastFcmTokens,
+  insertPushHistory,
+  getPushHistory,
+  clearInvalidFcmToken,
 } = require('./db/database');
 
 // Firebase Admin SDK initialization (optional - only if FIREBASE_SERVICE_ACCOUNT is set)
@@ -118,6 +122,46 @@ async function sendPushNotification(fcmToken, title, body) {
     console.error('Push notification error:', err.message);
     return { success: false, message: err.message };
   }
+}
+
+// Broadcast push notification to multiple users (batched)
+async function sendBroadcastPush(tokenRows, title, body) {
+  if (!firebaseAdmin) return { successCount: 0, failCount: tokenRows.length, invalidUserIds: [], results: tokenRows.map(r => ({ userId: r.id, success: false, invalid: false })), error: 'Firebase not configured' };
+  const BATCH_SIZE = 500;
+  let successCount = 0;
+  let failCount = 0;
+  const invalidUserIds = [];
+  const results = [];
+
+  for (let i = 0; i < tokenRows.length; i += BATCH_SIZE) {
+    const batch = tokenRows.slice(i, i + BATCH_SIZE);
+    const tokens = batch.map(r => r.fcm_token);
+    try {
+      const result = await firebaseAdmin.messaging().sendEachForMulticast({
+        tokens,
+        notification: { title, body },
+      });
+      result.responses.forEach((resp, idx) => {
+        if (resp.success) {
+          successCount++;
+          results.push({ userId: batch[idx].id, success: true, invalid: false });
+        } else {
+          failCount++;
+          const code = resp.error?.code;
+          const isInvalid = code === 'messaging/registration-token-not-registered' || code === 'messaging/invalid-registration-token';
+          if (isInvalid) {
+            invalidUserIds.push(batch[idx].id);
+          }
+          results.push({ userId: batch[idx].id, success: false, invalid: isInvalid });
+        }
+      });
+    } catch (err) {
+      console.error('Broadcast push batch error:', err.message);
+      failCount += batch.length;
+      batch.forEach(r => results.push({ userId: r.id, success: false, invalid: false }));
+    }
+  }
+  return { successCount, failCount, invalidUserIds, results };
 }
 
 const { handleAdminRoute } = require('./admin');
@@ -592,7 +636,7 @@ const server = http.createServer(async (req, res) => {
 
   if (pathname.startsWith('/tc-backstage')) {
     try {
-      await handleAdminRoute(req, res, url, pathname, req.method, lobby, wss, { getMaintenanceConfig, setMaintenanceConfig, getMaintenanceStatus, sendPushNotification });
+      await handleAdminRoute(req, res, url, pathname, req.method, lobby, wss, { getMaintenanceConfig, setMaintenanceConfig, getMaintenanceStatus, sendPushNotification, sendBroadcastPush });
     } catch (err) {
       console.error('Admin route error:', err);
       res.writeHead(500, { 'Content-Type': 'text/plain' });

@@ -796,6 +796,31 @@ setInterval(() => {
       inviteLinkTokens.delete(token);
     }
   }
+  // Clean up zombie rooms: no game, and all humans disconnected for >= 30 min
+  let zombieRemoved = false;
+  for (const [id, room] of lobby.rooms) {
+    if (room.game) continue;
+    const humans = room.players.filter(p => p !== null && !p.isBot);
+    if (humans.length === 0) {
+      // No humans at all (shouldn't happen, but clean up)
+      console.log(`[Cleanup] Removing zombie room: ${id} (no humans)`);
+      removeRoomAndNotifySpectators(id);
+      zombieRemoved = true;
+      continue;
+    }
+    // All humans must be disconnected AND their sessions expired (30min+)
+    const allHumansGoneLongEnough = humans.every(p => {
+      if (p.connected) return false;
+      const session = playerSessions.get(p.nickname);
+      return !session || (now - session.disconnectedAt > maxAge);
+    });
+    if (allHumansGoneLongEnough) {
+      console.log(`[Cleanup] Removing zombie room: ${id} (all humans disconnected 30min+)`);
+      removeRoomAndNotifySpectators(id);
+      zombieRemoved = true;
+    }
+  }
+  if (zombieRemoved) broadcastRoomList();
 }, 5 * 60 * 1000);
 
 // WebSocket heartbeat: detect zombie connections (network died without proper close).
@@ -1241,6 +1266,9 @@ async function handleMessage(ws, data) {
     case 'set_locale':
       if (typeof data.locale === 'string' && ['en', 'ko', 'de'].includes(data.locale)) {
         ws.locale = data.locale;
+        if (ws.nickname) {
+          updateDeviceInfo(ws.nickname, { locale: data.locale });
+        }
       }
       break;
     default:
@@ -2273,6 +2301,15 @@ function scheduleAutoReturnToRoom(roomId) {
     room.game = null;
     room.resetReady();
     clearTurnTimer(roomId);
+
+    // If no connected human players remain, remove the zombie room
+    const hasConnectedHuman = room.players.some(p => p !== null && !p.isBot && p.connected);
+    if (!hasConnectedHuman) {
+      removeRoomAndNotifySpectators(roomId);
+      broadcastRoomList();
+      return;
+    }
+
     broadcastRoomState(roomId);
     broadcastRoomList();
   }, 3000);

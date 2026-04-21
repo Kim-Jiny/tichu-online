@@ -74,10 +74,51 @@ class PlayingCard extends StatelessWidget {
   }
 
   Widget _buildFrontFace() {
+    if (cardId == 'joker') {
+      return _buildJokerCard();
+    }
     if (cardId.startsWith('special_')) {
       return _buildSpecialCard();
     }
     return _buildNormalCard();
+  }
+
+  Widget _buildJokerCard() {
+    final scale = (width / 48).clamp(0.7, 1.3);
+    return Container(
+      decoration: BoxDecoration(
+        gradient: const LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [Color(0xFFFFF3E0), Color(0xFFFFE0B2)],
+        ),
+        borderRadius: BorderRadius.circular(14),
+      ),
+      child: Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Text(
+              '\u2605',
+              style: TextStyle(
+                fontSize: 20 * scale,
+                color: const Color(0xFFFF6F00),
+              ),
+            ),
+            SizedBox(height: 2 * scale),
+            Text(
+              'JOKER',
+              style: TextStyle(
+                fontSize: 9 * scale,
+                fontWeight: FontWeight.bold,
+                color: const Color(0xFFE65100),
+                letterSpacing: 1,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
   }
 
   Widget _buildNormalCard() {

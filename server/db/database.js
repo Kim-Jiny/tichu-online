@@ -567,10 +567,46 @@ async function initDatabase() {
 
     await client.query(`ALTER TABLE tc_ll_match_history ADD COLUMN IF NOT EXISTS deserter_nickname VARCHAR(50)`);
 
+    // ===== Mighty Tables =====
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS tc_mighty_match_history (
+        id SERIAL PRIMARY KEY,
+        player_count INT NOT NULL,
+        is_ranked BOOLEAN DEFAULT FALSE,
+        end_reason VARCHAR(20) DEFAULT 'normal',
+        declarer_nickname VARCHAR(50),
+        partner_nickname VARCHAR(50),
+        declarer_team_success BOOLEAN,
+        declarer_team_points INT DEFAULT 0,
+        bid_points INT DEFAULT 0,
+        trump_suit VARCHAR(20),
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      )
+    `);
+
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS tc_mighty_match_players (
+        id SERIAL PRIMARY KEY,
+        match_id INT NOT NULL REFERENCES tc_mighty_match_history(id),
+        nickname VARCHAR(50) NOT NULL,
+        score INT NOT NULL,
+        rank INT NOT NULL,
+        is_winner BOOLEAN DEFAULT FALSE,
+        is_bot BOOLEAN DEFAULT FALSE
+      )
+    `);
+
+    await client.query(`ALTER TABLE tc_mighty_match_history ADD COLUMN IF NOT EXISTS deserter_nickname VARCHAR(50)`);
+
     // LL user stats columns
     await client.query(`ALTER TABLE tc_users ADD COLUMN IF NOT EXISTS ll_total_games INT DEFAULT 0`);
     await client.query(`ALTER TABLE tc_users ADD COLUMN IF NOT EXISTS ll_wins INT DEFAULT 0`);
     await client.query(`ALTER TABLE tc_users ADD COLUMN IF NOT EXISTS ll_losses INT DEFAULT 0`);
+
+    // Mighty user stats columns
+    await client.query(`ALTER TABLE tc_users ADD COLUMN IF NOT EXISTS mighty_total_games INT DEFAULT 0`);
+    await client.query(`ALTER TABLE tc_users ADD COLUMN IF NOT EXISTS mighty_wins INT DEFAULT 0`);
+    await client.query(`ALTER TABLE tc_users ADD COLUMN IF NOT EXISTS mighty_losses INT DEFAULT 0`);
 
     // SK user stats columns
     await client.query(`ALTER TABLE tc_users ADD COLUMN IF NOT EXISTS sk_total_games INT DEFAULT 0`);
@@ -1541,8 +1577,57 @@ async function getRecentMatches(nickname, limit = 5) {
       });
     }
 
+    // Mighty matches
+    const mightyResult = await client.query(
+      `SELECT h.*, p.score as my_score, p.rank as my_rank, p.is_winner as my_winner
+       FROM tc_mighty_match_history h
+       JOIN tc_mighty_match_players p ON p.match_id = h.id AND p.nickname = $1
+       ORDER BY h.created_at DESC
+       LIMIT $2`,
+      [nickname, limit]
+    );
+    const mightyMatches = [];
+    for (const row of mightyResult.rows) {
+      const playersRes = await client.query(
+        `SELECT nickname, score, rank, is_winner, is_bot
+         FROM tc_mighty_match_players
+         WHERE match_id = $1
+         ORDER BY rank`,
+        [row.id]
+      );
+      const deserterNickname = row.deserter_nickname || null;
+      const isDesertionLoss = deserterNickname === nickname;
+      mightyMatches.push({
+        id: row.id,
+        gameType: 'mighty',
+        won: row.my_winner === true,
+        isDraw: false,
+        isDesertionLoss,
+        deserterNickname,
+        myScore: row.my_score,
+        myRank: row.my_rank,
+        playerCount: row.player_count,
+        isRanked: row.is_ranked,
+        endReason: row.end_reason || 'normal',
+        declarerNickname: row.declarer_nickname,
+        partnerNickname: row.partner_nickname,
+        declarerTeamSuccess: row.declarer_team_success,
+        declarerTeamPoints: row.declarer_team_points,
+        bidPoints: row.bid_points,
+        trumpSuit: row.trump_suit,
+        players: playersRes.rows.map(p => ({
+          nickname: p.nickname,
+          score: p.score,
+          rank: p.rank,
+          isWinner: p.is_winner,
+          isBot: p.is_bot,
+        })),
+        createdAt: row.created_at,
+      });
+    }
+
     // Merge and sort by date
-    const all = [...tichuMatches, ...skMatches, ...llMatches];
+    const all = [...tichuMatches, ...skMatches, ...llMatches, ...mightyMatches];
     all.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
     return all.slice(0, limit);
   } catch (err) {
@@ -2291,6 +2376,21 @@ async function changeNickname(oldNickname, newNickname) {
       [oldNickname, trimmed]
     );
 
+    // Update nickname in tc_mighty_match_players
+    await client.query(
+      `UPDATE tc_mighty_match_players SET nickname = $2 WHERE nickname = $1`,
+      [oldNickname, trimmed]
+    );
+
+    // Update nickname in tc_mighty_match_history
+    await client.query(
+      `UPDATE tc_mighty_match_history
+       SET deserter_nickname = CASE WHEN deserter_nickname = $1 THEN $2 ELSE deserter_nickname END,
+           declarer_nickname = CASE WHEN declarer_nickname = $1 THEN $2 ELSE declarer_nickname END,
+           partner_nickname = CASE WHEN partner_nickname = $1 THEN $2 ELSE partner_nickname END`,
+      [oldNickname, trimmed]
+    );
+
     // Update nickname in tc_ad_rewards
     await client.query(
       `UPDATE tc_ad_rewards SET nickname = $2 WHERE nickname = $1`,
@@ -3020,7 +3120,8 @@ async function getDashboardStats() {
       SELECT
         (SELECT COUNT(*) FROM tc_match_history WHERE created_at >= CURRENT_DATE) as tichu,
         (SELECT COUNT(*) FROM tc_sk_match_history WHERE created_at >= CURRENT_DATE) as sk,
-        (SELECT COUNT(*) FROM tc_ll_match_history WHERE created_at >= CURRENT_DATE) as ll
+        (SELECT COUNT(*) FROM tc_ll_match_history WHERE created_at >= CURRENT_DATE) as ll,
+        (SELECT COUNT(*) FROM tc_mighty_match_history WHERE created_at >= CURRENT_DATE) as mighty
     `);
     const recentMatches = await client.query(`
       (SELECT id, 'tichu'::text as game_type, winner_team, team_a_score, team_b_score,
@@ -3038,6 +3139,12 @@ async function getDashboardStats() {
         h.player_count::text as player_a2, NULL as player_b1, NULL as player_b2,
         h.is_ranked, h.end_reason, h.deserter_nickname, h.created_at
        FROM tc_ll_match_history h ORDER BY h.created_at DESC LIMIT 10)
+      UNION ALL
+      (SELECT h.id, 'mighty'::text as game_type, NULL as winner_team, NULL::int as team_a_score, NULL::int as team_b_score,
+        (SELECT string_agg(p.nickname || '(' || p.score || '점)', ', ' ORDER BY p.rank) FROM tc_mighty_match_players p WHERE p.match_id = h.id) as player_a1,
+        h.player_count::text as player_a2, NULL as player_b1, NULL as player_b2,
+        h.is_ranked, h.end_reason, h.deserter_nickname, h.created_at
+       FROM tc_mighty_match_history h ORDER BY h.created_at DESC LIMIT 10)
       ORDER BY created_at DESC LIMIT 10
     `);
 
@@ -3056,33 +3163,40 @@ async function getDashboardStats() {
 
     // Total matches + ranked matches (tichu + skull king)
     const totalMatches = await client.query(
-      `SELECT (SELECT COUNT(*) FROM tc_match_history) + (SELECT COUNT(*) FROM tc_sk_match_history) + (SELECT COUNT(*) FROM tc_ll_match_history) as count`
+      `SELECT (SELECT COUNT(*) FROM tc_match_history) + (SELECT COUNT(*) FROM tc_sk_match_history) + (SELECT COUNT(*) FROM tc_ll_match_history) + (SELECT COUNT(*) FROM tc_mighty_match_history) as count`
     );
     const rankedMatchesToday = await client.query(
-      `SELECT (SELECT COUNT(*) FROM tc_match_history WHERE created_at >= CURRENT_DATE AND is_ranked = true) + (SELECT COUNT(*) FROM tc_sk_match_history WHERE created_at >= CURRENT_DATE AND is_ranked = true) + (SELECT COUNT(*) FROM tc_ll_match_history WHERE created_at >= CURRENT_DATE AND is_ranked = true) as count`
+      `SELECT (SELECT COUNT(*) FROM tc_match_history WHERE created_at >= CURRENT_DATE AND is_ranked = true) + (SELECT COUNT(*) FROM tc_sk_match_history WHERE created_at >= CURRENT_DATE AND is_ranked = true) + (SELECT COUNT(*) FROM tc_ll_match_history WHERE created_at >= CURRENT_DATE AND is_ranked = true) + (SELECT COUNT(*) FROM tc_mighty_match_history WHERE created_at >= CURRENT_DATE AND is_ranked = true) as count`
     );
 
     // Games per day (last 7 days) - tichu + skull king combined
     const dailyGames = await client.query(`
-      SELECT day, SUM(cnt) as cnt, SUM(ranked_cnt) as ranked_cnt, SUM(tichu_cnt) as tichu_cnt, SUM(sk_cnt) as sk_cnt, SUM(ll_cnt) as ll_cnt FROM (
+      SELECT day, SUM(cnt) as cnt, SUM(ranked_cnt) as ranked_cnt, SUM(tichu_cnt) as tichu_cnt, SUM(sk_cnt) as sk_cnt, SUM(ll_cnt) as ll_cnt, SUM(mighty_cnt) as mighty_cnt FROM (
         SELECT DATE(created_at) as day, COUNT(*) as cnt,
                SUM(CASE WHEN is_ranked THEN 1 ELSE 0 END) as ranked_cnt,
-               COUNT(*) as tichu_cnt, 0::bigint as sk_cnt, 0::bigint as ll_cnt
+               COUNT(*) as tichu_cnt, 0::bigint as sk_cnt, 0::bigint as ll_cnt, 0::bigint as mighty_cnt
         FROM tc_match_history
         WHERE created_at >= CURRENT_DATE - INTERVAL '6 days'
         GROUP BY DATE(created_at)
         UNION ALL
         SELECT DATE(created_at) as day, COUNT(*) as cnt,
                SUM(CASE WHEN is_ranked THEN 1 ELSE 0 END) as ranked_cnt,
-               0::bigint as tichu_cnt, COUNT(*) as sk_cnt, 0::bigint as ll_cnt
+               0::bigint as tichu_cnt, COUNT(*) as sk_cnt, 0::bigint as ll_cnt, 0::bigint as mighty_cnt
         FROM tc_sk_match_history
         WHERE created_at >= CURRENT_DATE - INTERVAL '6 days'
         GROUP BY DATE(created_at)
         UNION ALL
         SELECT DATE(created_at) as day, COUNT(*) as cnt,
                SUM(CASE WHEN is_ranked THEN 1 ELSE 0 END) as ranked_cnt,
-               0::bigint as tichu_cnt, 0::bigint as sk_cnt, COUNT(*) as ll_cnt
+               0::bigint as tichu_cnt, 0::bigint as sk_cnt, COUNT(*) as ll_cnt, 0::bigint as mighty_cnt
         FROM tc_ll_match_history
+        WHERE created_at >= CURRENT_DATE - INTERVAL '6 days'
+        GROUP BY DATE(created_at)
+        UNION ALL
+        SELECT DATE(created_at) as day, COUNT(*) as cnt,
+               SUM(CASE WHEN is_ranked THEN 1 ELSE 0 END) as ranked_cnt,
+               0::bigint as tichu_cnt, 0::bigint as sk_cnt, 0::bigint as ll_cnt, COUNT(*) as mighty_cnt
+        FROM tc_mighty_match_history
         WHERE created_at >= CURRENT_DATE - INTERVAL '6 days'
         GROUP BY DATE(created_at)
       ) combined GROUP BY day ORDER BY day
@@ -3152,10 +3266,11 @@ async function getDashboardStats() {
       totalUsers: parseInt(totalUsers.rows[0].count),
       pendingInquiries: parseInt(pendingInquiries.rows[0].count),
       pendingReports: parseInt(pendingReports.rows[0].count),
-      todayGames: parseInt(todayGames.rows[0].tichu) + parseInt(todayGames.rows[0].sk) + parseInt(todayGames.rows[0].ll),
+      todayGames: parseInt(todayGames.rows[0].tichu) + parseInt(todayGames.rows[0].sk) + parseInt(todayGames.rows[0].ll) + parseInt(todayGames.rows[0].mighty),
       todayTichuGames: parseInt(todayGames.rows[0].tichu),
       todaySKGames: parseInt(todayGames.rows[0].sk),
       todayLLGames: parseInt(todayGames.rows[0].ll),
+      todayMightyGames: parseInt(todayGames.rows[0].mighty),
       recentMatches: recentMatches.rows,
       newUsersToday: parseInt(newUsersToday.rows[0].count),
       activeUsers24h: parseInt(activeUsers24h.rows[0].count),
@@ -3175,7 +3290,7 @@ async function getDashboardStats() {
   } catch (err) {
     console.error('Get dashboard stats error:', err);
     return {
-      totalUsers: 0, pendingInquiries: 0, pendingReports: 0, todayGames: 0, todayTichuGames: 0, todaySKGames: 0, todayLLGames: 0,
+      totalUsers: 0, pendingInquiries: 0, pendingReports: 0, todayGames: 0, todayTichuGames: 0, todaySKGames: 0, todayLLGames: 0, todayMightyGames: 0,
       recentMatches: [], newUsersToday: 0, activeUsers24h: 0, activeUsers7d: 0,
       totalMatches: 0, rankedMatchesToday: 0, dailyGames: [], dailySignups: [],
       topPlayers: [], goldStats: {}, shopStats: {}, leaveStats: {}, reportStats30d: {},
@@ -3197,7 +3312,8 @@ async function getAdminRecentMatches(page = 1, limit = 30) {
       `SELECT
          (SELECT COUNT(*) FROM tc_match_history) +
          (SELECT COUNT(*) FROM tc_sk_match_history) +
-         (SELECT COUNT(*) FROM tc_ll_match_history) AS total`
+         (SELECT COUNT(*) FROM tc_ll_match_history) +
+         (SELECT COUNT(*) FROM tc_mighty_match_history) AS total`
     );
 
     const result = await client.query(
@@ -3218,6 +3334,12 @@ async function getAdminRecentMatches(page = 1, limit = 30) {
                h.player_count::text AS player_a2, NULL AS player_b1, NULL AS player_b2,
                h.is_ranked, h.end_reason, h.deserter_nickname, h.created_at
         FROM tc_ll_match_history h
+        UNION ALL
+        SELECT h.id, 'mighty'::text AS game_type, NULL AS winner_team, NULL::int AS team_a_score, NULL::int AS team_b_score,
+               (SELECT string_agg(p.nickname || '(' || p.score || '점)', ', ' ORDER BY p.rank) FROM tc_mighty_match_players p WHERE p.match_id = h.id) AS player_a1,
+               h.player_count::text AS player_a2, NULL AS player_b1, NULL AS player_b2,
+               h.is_ranked, h.end_reason, h.deserter_nickname, h.created_at
+        FROM tc_mighty_match_history h
       ) matches
       ORDER BY created_at DESC
       LIMIT $1 OFFSET $2`,
@@ -3300,23 +3422,45 @@ async function getDetailedAdminStats(dateFrom, dateTo, bucket = 'day', options =
           )
         GROUP BY 1
       ),
+      mighty AS (
+        SELECT DATE_TRUNC('${groupUnit}', h.created_at) AS bucket_time,
+               COUNT(DISTINCT h.id) AS total_cnt,
+               COUNT(DISTINCT h.id) FILTER (WHERE h.is_ranked = TRUE) AS ranked_cnt
+        FROM tc_mighty_match_history h
+        WHERE h.created_at >= $1 AND h.created_at < $2
+          AND (
+            $3 = '' OR EXISTS (
+              SELECT 1
+              FROM tc_mighty_match_players p
+              JOIN tc_users u ON u.nickname = p.nickname
+              WHERE p.match_id = h.id
+                AND p.is_bot = FALSE
+                AND LOWER(u.device_platform) = $3
+            )
+          )
+        GROUP BY 1
+      ),
       buckets AS (
         SELECT bucket_time FROM tichu
         UNION
         SELECT bucket_time FROM skull
         UNION
         SELECT bucket_time FROM love
+        UNION
+        SELECT bucket_time FROM mighty
       )
       SELECT b.bucket_time,
              COALESCE(tichu.total_cnt, 0) AS tichu_cnt,
              COALESCE(skull.total_cnt, 0) AS skull_cnt,
              COALESCE(love.total_cnt, 0) AS ll_cnt,
-             COALESCE(tichu.total_cnt, 0) + COALESCE(skull.total_cnt, 0) + COALESCE(love.total_cnt, 0) AS total_cnt,
-             COALESCE(tichu.ranked_cnt, 0) + COALESCE(skull.ranked_cnt, 0) + COALESCE(love.ranked_cnt, 0) AS ranked_cnt
+             COALESCE(mighty.total_cnt, 0) AS mighty_cnt,
+             COALESCE(tichu.total_cnt, 0) + COALESCE(skull.total_cnt, 0) + COALESCE(love.total_cnt, 0) + COALESCE(mighty.total_cnt, 0) AS total_cnt,
+             COALESCE(tichu.ranked_cnt, 0) + COALESCE(skull.ranked_cnt, 0) + COALESCE(love.ranked_cnt, 0) + COALESCE(mighty.ranked_cnt, 0) AS ranked_cnt
       FROM buckets b
       LEFT JOIN tichu ON tichu.bucket_time = b.bucket_time
       LEFT JOIN skull ON skull.bucket_time = b.bucket_time
       LEFT JOIN love ON love.bucket_time = b.bucket_time
+      LEFT JOIN mighty ON mighty.bucket_time = b.bucket_time
       ORDER BY b.bucket_time ASC
     `, [from, to, platform]);
 
@@ -3376,6 +3520,24 @@ async function getDetailedAdminStats(dateFrom, dateTo, bucket = 'day', options =
                END AS gold_delta
         FROM tc_ll_match_history h
         JOIN tc_ll_match_players p ON p.match_id = h.id
+        WHERE h.created_at >= $1 AND h.created_at < $2
+          AND p.is_bot = FALSE
+          AND EXISTS (
+            SELECT 1 FROM tc_users u
+            WHERE u.nickname = p.nickname
+              AND ($3 = '' OR LOWER(u.device_platform) = $3)
+          )
+
+        UNION ALL
+
+        SELECT DATE_TRUNC('${groupUnit}', h.created_at) AS bucket_time,
+               CASE
+                 WHEN h.end_reason IN ('leave', 'timeout') AND h.deserter_nickname = p.nickname THEN 0
+                 WHEN p.is_winner THEN CASE WHEN h.is_ranked THEN 10 ELSE 10 END
+                 ELSE 3
+               END AS gold_delta
+        FROM tc_mighty_match_history h
+        JOIN tc_mighty_match_players p ON p.match_id = h.id
         WHERE h.created_at >= $1 AND h.created_at < $2
           AND p.is_bot = FALSE
           AND EXISTS (
@@ -3519,6 +3681,21 @@ async function getDetailedAdminStats(dateFrom, dateTo, bucket = 'day', options =
         ) AS ll_games,
         (
           SELECT COUNT(*)
+          FROM tc_mighty_match_history h
+          WHERE h.created_at >= $1 AND h.created_at < $2
+            AND (
+              $3 = '' OR EXISTS (
+                SELECT 1
+                FROM tc_mighty_match_players p
+                JOIN tc_users u ON u.nickname = p.nickname
+                WHERE p.match_id = h.id
+                  AND p.is_bot = FALSE
+                  AND LOWER(u.device_platform) = $3
+              )
+            )
+        ) AS mighty_games,
+        (
+          SELECT COUNT(*)
           FROM tc_match_history mh
           WHERE mh.created_at >= $1 AND mh.created_at < $2
             AND mh.is_ranked = TRUE
@@ -3555,6 +3732,22 @@ async function getDetailedAdminStats(dateFrom, dateTo, bucket = 'day', options =
               $3 = '' OR EXISTS (
                 SELECT 1
                 FROM tc_ll_match_players p
+                JOIN tc_users u ON u.nickname = p.nickname
+                WHERE p.match_id = h.id
+                  AND p.is_bot = FALSE
+                AND LOWER(u.device_platform) = $3
+              )
+            )
+        ) +
+        (
+          SELECT COUNT(*)
+          FROM tc_mighty_match_history h
+          WHERE h.created_at >= $1 AND h.created_at < $2
+            AND h.is_ranked = TRUE
+            AND (
+              $3 = '' OR EXISTS (
+                SELECT 1
+                FROM tc_mighty_match_players p
                 JOIN tc_users u ON u.nickname = p.nickname
                 WHERE p.match_id = h.id
                   AND p.is_bot = FALSE
@@ -3641,6 +3834,23 @@ async function getDetailedAdminStats(dateFrom, dateTo, bucket = 'day', options =
 
         UNION ALL
 
+        SELECT CASE
+                 WHEN h.end_reason IN ('leave', 'timeout') AND h.deserter_nickname = p.nickname THEN 0
+                 WHEN p.is_winner THEN 10
+                 ELSE 3
+               END AS gold_delta
+        FROM tc_mighty_match_history h
+        JOIN tc_mighty_match_players p ON p.match_id = h.id
+        WHERE h.created_at >= $1 AND h.created_at < $2
+          AND p.is_bot = FALSE
+          AND EXISTS (
+            SELECT 1 FROM tc_users u
+            WHERE u.nickname = p.nickname
+              AND ($3 = '' OR LOWER(u.device_platform) = $3)
+          )
+
+        UNION ALL
+
         SELECT 50 AS gold_delta
         FROM tc_ad_rewards ar
         JOIN tc_users u ON u.nickname = ar.nickname
@@ -3693,10 +3903,11 @@ async function getDetailedAdminStats(dateFrom, dateTo, bucket = 'day', options =
     return {
       success: true,
       summary: {
-        totalGames: (parseInt(summaryRow.tichu_games || 0, 10) + parseInt(summaryRow.skull_games || 0, 10) + parseInt(summaryRow.ll_games || 0, 10)),
+        totalGames: (parseInt(summaryRow.tichu_games || 0, 10) + parseInt(summaryRow.skull_games || 0, 10) + parseInt(summaryRow.ll_games || 0, 10) + parseInt(summaryRow.mighty_games || 0, 10)),
         tichuGames: parseInt(summaryRow.tichu_games || 0, 10),
         skullGames: parseInt(summaryRow.skull_games || 0, 10),
         llGames: parseInt(summaryRow.ll_games || 0, 10),
+        mightyGames: parseInt(summaryRow.mighty_games || 0, 10),
         rankedGames: parseInt(summaryRow.ranked_games || 0, 10),
         totalSignups: parseInt(signupRow.total_signups || 0, 10),
         iosSignups: parseInt(signupRow.ios_signups || 0, 10),
@@ -4737,6 +4948,76 @@ async function saveLLMatchResultWithStats(data) {
   }
 }
 
+// ===== Mighty DB Functions =====
+
+async function saveMightyMatchResultWithStats(data) {
+  const client = await pool.connect();
+  try {
+    await client.query('BEGIN');
+    const matchRes = await client.query(
+      `INSERT INTO tc_mighty_match_history (
+         player_count, is_ranked, end_reason, deserter_nickname,
+         declarer_nickname, partner_nickname, declarer_team_success,
+         declarer_team_points, bid_points, trump_suit
+       )
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+       RETURNING id`,
+      [
+        data.playerCount,
+        data.isRanked,
+        data.endReason || 'normal',
+        data.deserterNickname || null,
+        data.declarerNickname || null,
+        data.partnerNickname || null,
+        data.declarerTeamSuccess === true,
+        data.declarerTeamPoints || 0,
+        data.bidPoints || 0,
+        data.trumpSuit || null,
+      ]
+    );
+    const matchId = matchRes.rows[0].id;
+
+    for (const p of data.players) {
+      await client.query(
+        `INSERT INTO tc_mighty_match_players (match_id, nickname, score, rank, is_winner, is_bot)
+         VALUES ($1, $2, $3, $4, $5, $6)`,
+        [matchId, p.nickname, p.score, p.rank, p.isWinner, p.isBot]
+      );
+    }
+
+    for (const p of data.players.filter(p => p.nickname && !p.isBot)) {
+      const won = p.isWinner === true;
+      await client.query(
+        `UPDATE tc_users SET
+          mighty_total_games = mighty_total_games + 1,
+          mighty_wins = mighty_wins + CASE WHEN $2 THEN 1 ELSE 0 END,
+          mighty_losses = mighty_losses + CASE WHEN $2 THEN 0 ELSE 1 END,
+          gold = gold + $3,
+          exp_total = exp_total + $4,
+          level = GREATEST(1, ((exp_total + $4) / 100) + 1)
+         WHERE nickname = $1`,
+        [
+          p.nickname,
+          won,
+          ['leave', 'timeout'].includes(data.endReason || 'normal') && data.deserterNickname === p.nickname
+            ? 0
+            : (won ? 10 : 3),
+          won ? 15 : 5,
+        ]
+      );
+    }
+
+    await client.query('COMMIT');
+    return { success: true, matchId };
+  } catch (err) {
+    await client.query('ROLLBACK');
+    console.error('saveMightyMatchResultWithStats error:', err);
+    return { success: false, message: err.message };
+  } finally {
+    client.release();
+  }
+}
+
 async function getSKRankings(limit = 50) {
   const client = await pool.connect();
   try {
@@ -5112,6 +5393,7 @@ module.exports = {
   getCurrentSKSeasonRankings,
   getSKSeasonRankings,
   saveLLMatchResultWithStats,
+  saveMightyMatchResultWithStats,
   getPublishedNotices,
   getNotices,
   getNoticeById,

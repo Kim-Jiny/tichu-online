@@ -7,6 +7,7 @@ const GameRoom = require('./game/GameRoom');
 const { decideBotAction } = require('./game/BotPlayer');
 const { decideSKBotAction } = require('./game/skull_king/SkullKingBot');
 const { decideLLBotAction } = require('./game/love_letter/LoveLetterBot');
+const { decideMightyBotAction } = require('./game/mighty/MightyBot');
 const {
   initDatabase, registerUser, loginUser, checkNickname, deleteUser,
   blockUser, unblockUser, getBlockedUsers, reportUser,
@@ -43,7 +44,7 @@ const {
   getUserDetail,
   isUserAdmin,
   getDetailedAdminStats,
-  saveSKMatchResult, saveSKMatchResultWithStats, saveLLMatchResultWithStats,
+  saveSKMatchResult, saveSKMatchResultWithStats, saveLLMatchResultWithStats, saveMightyMatchResultWithStats,
   updateSKUserStats,
   getSKRankings,
   getCurrentSKSeasonRankings,
@@ -1999,7 +2000,8 @@ function handleCreateRoom(ws, data) {
   const roomName = (data.roomName || `${ws.nickname}'s Room`).trim();
   const isRanked = !!data.isRanked;
   const gameType = data.gameType === 'skull_king' ? 'skull_king'
-    : data.gameType === 'love_letter' ? 'love_letter' : 'tichu';
+    : data.gameType === 'love_letter' ? 'love_letter'
+    : data.gameType === 'mighty' ? 'mighty' : 'tichu';
 
   // Version gating
   if (gameType === 'skull_king' && !clientSupportsSK(ws)) {
@@ -2023,7 +2025,9 @@ function handleCreateRoom(ws, data) {
 
   let maxPlayers = 4;
   let skExpansions = [];
-  if (gameType === 'love_letter') {
+  if (gameType === 'mighty') {
+    maxPlayers = 5; // Mighty always 5 players
+  } else if (gameType === 'love_letter') {
     maxPlayers = Math.min(Math.max(parseInt(data.maxPlayers) || 4, 2), 4);
   } else if (gameType === 'skull_king') {
     maxPlayers = Math.min(Math.max(parseInt(data.maxPlayers) || 4, 2), 6);
@@ -2849,7 +2853,9 @@ function handleGameAction(ws, data) {
   // S7: Only clear turn timer for actions that affect turn progression
   // Don't clear for phase-wide actions (large tichu / exchange) or small tichu declaration
   // SK: submit_bid is a phase action (simultaneous), play_card clears timer
-  const phaseActions = ['pass_large_tichu', 'declare_large_tichu', 'exchange_cards', 'declare_small_tichu', 'submit_bid', 'effect_ack', 'select_target', 'guard_guess'];
+  // Mighty: submit_bid IS turn-based (not simultaneous), so it should clear the timer
+  const phaseActions = ['pass_large_tichu', 'declare_large_tichu', 'exchange_cards', 'declare_small_tichu', 'effect_ack', 'select_target', 'guard_guess'];
+  if (room.gameType !== 'mighty') phaseActions.push('submit_bid');
   const prevPhase = room.game.state;
 
   if (data.type === 'next_round') {
@@ -2920,6 +2926,10 @@ async function saveGameResult(room) {
   // Love Letter: no separate DB save for now (uses SK format)
   if (room.gameType === 'love_letter') {
     return saveLLGameResult(room);
+  }
+
+  if (room.gameType === 'mighty') {
+    return saveMightyGameResult(room);
   }
 
   const game = room.game;
@@ -3022,6 +3032,76 @@ async function saveLLGameResult(room) {
   }
 }
 
+function buildMightyPlayers(game, deserterId = null) {
+  const partnerId = game.partner || null;
+  const declarerTeam = new Set([game.declarer, partnerId].filter(Boolean));
+  const declarerWon = game.roundResult?.success === true;
+  const allPlayers = game.playerIds.map((pid) => ({
+    playerId: pid,
+    nickname: game.playerNames[pid] || pid,
+    score: game.scores[pid] || 0,
+    isWinner: declarerTeam.size === 0
+      ? false
+      : declarerWon
+        ? declarerTeam.has(pid)
+        : !declarerTeam.has(pid),
+    isBot: pid.startsWith('bot_'),
+  }));
+
+  if (deserterId) {
+    const deserterIdx = allPlayers.findIndex((p) => p.playerId === deserterId);
+    if (deserterIdx >= 0) {
+      const [deserter] = allPlayers.splice(deserterIdx, 1);
+      allPlayers.sort((a, b) => b.score - a.score || a.nickname.localeCompare(b.nickname));
+      const rankedPlayers = [];
+      let currentRank = 1;
+      for (let i = 0; i < allPlayers.length; i++) {
+        if (i > 0 && allPlayers[i].score < allPlayers[i - 1].score) {
+          currentRank = i + 1;
+        }
+        rankedPlayers.push({ ...allPlayers[i], rank: currentRank });
+      }
+      rankedPlayers.push({ ...deserter, rank: game.playerCount, isWinner: false });
+      return rankedPlayers;
+    }
+  }
+
+  allPlayers.sort((a, b) => b.score - a.score || a.nickname.localeCompare(b.nickname));
+  let currentRank = 1;
+  return allPlayers.map((player, index) => {
+    if (index > 0 && player.score < allPlayers[index - 1].score) {
+      currentRank = index + 1;
+    }
+    return { ...player, rank: currentRank };
+  });
+}
+
+function buildMightyMatchPayload(room, { endReason = 'normal', deserterNickname = null, deserterId = null } = {}) {
+  const game = room.game;
+  return {
+    playerCount: game.playerCount,
+    isRanked: room.isRanked,
+    endReason,
+    deserterNickname,
+    declarerNickname: game.declarer ? (game.playerNames[game.declarer] || game.declarer) : null,
+    partnerNickname: game.partner ? (game.playerNames[game.partner] || game.partner) : null,
+    declarerTeamSuccess: game.roundResult?.success === true,
+    declarerTeamPoints: game.roundResult?.declarerPoints || 0,
+    bidPoints: game.currentBid?.points || 0,
+    trumpSuit: game.trumpSuit || null,
+    players: buildMightyPlayers(game, deserterId).map(({ playerId, ...player }) => player),
+  };
+}
+
+async function saveMightyGameResult(room) {
+  try {
+    await saveMightyMatchResultWithStats(buildMightyMatchPayload(room));
+    console.log(`Mighty match result saved for room ${room.name}`);
+  } catch (err) {
+    console.error('Error saving Mighty match result:', err);
+  }
+}
+
 function sendGameStateToAll(roomId) {
   const room = lobby.getRoom(roomId);
   if (!room || !room.game) return;
@@ -3054,6 +3134,23 @@ function sendGameStateToAll(roomId) {
     return;
   }
 
+  if (room.gameType === 'mighty' && room.game.state === 'trick_end') {
+    if (trickEndTimers[roomId]) clearTimeout(trickEndTimers[roomId]);
+    trickEndTimers[roomId] = setTimeout(() => {
+      delete trickEndTimers[roomId];
+      const r = lobby.getRoom(roomId);
+      if (!r || !r.game || r.game.state !== 'trick_end') return;
+      r.game.advanceAfterTrickEnd();
+      if (r.game.state === 'game_end') {
+        saveGameResult(r);
+        scheduleAutoReturnToRoom(roomId);
+      }
+      sendGameStateToAll(roomId);
+    }, 1500);
+    _broadcastState(roomId, room);
+    return;
+  }
+
   if (room.gameType === 'skull_king' && room.game.state === 'trick_end') {
     if (trickEndTimers[roomId]) clearTimeout(trickEndTimers[roomId]);
     // Voided tricks (Kraken / White Whale) need a longer display window so
@@ -3077,7 +3174,7 @@ function sendGameStateToAll(roomId) {
   // Auto next round after delay
   if (room.game.state === 'round_end') {
     if (roundEndTimers[roomId]) clearTimeout(roundEndTimers[roomId]);
-    const roundEndDelay = room.gameType === 'skull_king' ? 5000 : room.gameType === 'love_letter' ? 4000 : 3000;
+    const roundEndDelay = room.gameType === 'skull_king' ? 5000 : room.gameType === 'love_letter' ? 4000 : room.gameType === 'mighty' ? 5000 : 3000;
     roundEndTimers[roomId] = setTimeout(() => {
       delete roundEndTimers[roomId];
       const r = lobby.getRoom(roomId);
@@ -3180,7 +3277,8 @@ function scheduleBotActions(roomId) {
   // Quick check to find which bot needs to act and get its speed
   const isSK0 = room.gameType === 'skull_king';
   const isLL0 = room.gameType === 'love_letter';
-  const decideFn0 = isLL0 ? decideLLBotAction : isSK0 ? decideSKBotAction : decideBotAction;
+  const isMighty0 = room.gameType === 'mighty';
+  const decideFn0 = isMighty0 ? decideMightyBotAction : isLL0 ? decideLLBotAction : isSK0 ? decideSKBotAction : decideBotAction;
   let activeBotSpeed = 'normal';
   for (const botId of room.getBotIds()) {
     if (decideFn0(room.game, botId)) {
@@ -3200,7 +3298,8 @@ function scheduleBotActions(roomId) {
     // Re-evaluate at execution time
     const isSK = r.gameType === 'skull_king';
     const isLL = r.gameType === 'love_letter';
-    const decideFn = isLL ? decideLLBotAction : isSK ? decideSKBotAction : decideBotAction;
+    const isMighty = r.gameType === 'mighty';
+    const decideFn = isMighty ? decideMightyBotAction : isLL ? decideLLBotAction : isSK ? decideSKBotAction : decideBotAction;
     for (const botId of r.getBotIds()) {
       let action = decideFn(r.game, botId);
       if (action) {
@@ -3326,6 +3425,32 @@ function startTurnTimer(roomId) {
     turnTimerPhases[roomId] = 'sk_bidding';
     turnTimers[roomId] = setTimeout(() => {
       handlePhaseTimeout(roomId, 'sk_bidding');
+    }, timeLimit);
+    return;
+  }
+
+  // Mighty bidding: sequential turn-based (not simultaneous like SK)
+  if (room.gameType === 'mighty' && gameState === 'bidding') {
+    clearTurnTimer(roomId);
+    const currentPlayer = room.game.currentPlayer;
+    if (!currentPlayer || room.isBot(currentPlayer)) return;
+    const timeLimit = room.turnTimeLimit * 1000;
+    room.turnDeadline = Date.now() + timeLimit;
+    turnTimers[roomId] = setTimeout(() => {
+      handleTurnTimeout(roomId, currentPlayer);
+    }, timeLimit);
+    return;
+  }
+
+  // Mighty kitty exchange: declarer has double time
+  if (room.gameType === 'mighty' && gameState === 'kitty_exchange') {
+    clearTurnTimer(roomId);
+    const declarer = room.game.declarer;
+    if (!declarer || room.isBot(declarer)) return;
+    const timeLimit = room.turnTimeLimit * 2 * 1000;
+    room.turnDeadline = Date.now() + timeLimit;
+    turnTimers[roomId] = setTimeout(() => {
+      handleTurnTimeout(roomId, declarer);
     }, timeLimit);
     return;
   }
@@ -3508,6 +3633,7 @@ async function handleTurnTimeout(roomId, playerId) {
       if (result && result.success) {
         if (result.broadcast) broadcastGameEvent(roomId, result.broadcast);
         if (room.game && room.game.state === 'game_end') {
+          sendGameStateToAll(roomId);
           saveGameResult(room);
           scheduleAutoReturnToRoom(roomId);
         } else if (room.game) {
@@ -3522,6 +3648,7 @@ async function handleTurnTimeout(roomId, playerId) {
             if (forceResult && forceResult.success) {
               if (forceResult.broadcast) broadcastGameEvent(roomId, forceResult.broadcast);
               if (room.game && room.game.state === 'game_end') {
+                sendGameStateToAll(roomId);
                 saveGameResult(room);
                 scheduleAutoReturnToRoom(roomId);
               } else if (room.game) {
@@ -3663,6 +3790,15 @@ async function handleDesertion(roomId, playerId, reason = 'leave') {
         players,
       });
 
+    } else if (room.gameType === 'mighty') {
+      await saveMightyMatchResultWithStats(
+        buildMightyMatchPayload(room, {
+          endReason: reason,
+          deserterNickname: deserterNick || null,
+          deserterId: playerId,
+        })
+      );
+      console.log(`Mighty desertion result saved for room ${room.name} by ${deserterNick}`);
     } else {
       const totalScores = game.totalScores;
       const teams = game.teams;

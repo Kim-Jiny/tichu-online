@@ -24,6 +24,7 @@ import 'screens/lobby_screen.dart';
 import 'screens/spectator_screen.dart';
 import 'screens/sk_game_screen.dart';
 import 'screens/ll_game_screen.dart';
+import 'screens/mighty_game_screen.dart';
 import 'screens/maintenance_screen.dart';
 
 void main() async {
@@ -231,6 +232,9 @@ class _AppFlowScreen extends StatelessWidget {
         case AppDestination.llGame:
           child = const LLGameScreen();
           break;
+        case AppDestination.mightyGame:
+          child = const MightyGameScreen();
+          break;
         case AppDestination.spectator:
           child = const SpectatorScreen();
           break;
@@ -263,6 +267,8 @@ class _AppFlowScreen extends StatelessWidget {
         return 'skGame';
       case AppDestination.llGame:
         return 'llGame';
+      case AppDestination.mightyGame:
+        return 'mightyGame';
       case AppDestination.spectator:
         return 'spectator';
     }

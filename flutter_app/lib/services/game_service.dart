@@ -8,12 +8,13 @@ import '../models/room.dart';
 import '../models/game_state.dart';
 import '../models/sk_game_state.dart';
 import '../models/ll_game_state.dart';
+import '../models/mighty_game_state.dart';
 import 'network_service.dart';
 import 'profile_store.dart';
 import 'restore_sync_tracker.dart';
 import 'sfx_service.dart';
 
-enum AppDestination { lobby, waitingRoom, game, spectator, skGame, llGame }
+enum AppDestination { lobby, waitingRoom, game, spectator, skGame, llGame, mightyGame }
 
 class GameService extends ChangeNotifier {
   final NetworkService _network;
@@ -30,6 +31,7 @@ class GameService extends ChangeNotifier {
   GameStateData? _prevGameState;
   SKGameStateData? _prevSKGameState;
   LLGameStateData? _prevLLGameState;
+  MightyGameStateData? _prevMightyGameState;
   final SfxService _sfx = SfxService();
   final RestoreSyncTracker _restoreSync = RestoreSyncTracker();
 
@@ -79,6 +81,7 @@ class GameService extends ChangeNotifier {
   GameStateData? gameState;
   SKGameStateData? skGameState;
   LLGameStateData? llGameState;
+  MightyGameStateData? mightyGameState;
   String currentGameType = 'tichu';
 
   // Error message
@@ -287,6 +290,11 @@ class GameService extends ChangeNotifier {
   bool get hasSpectatorRoom => isSpectator && hasRoom;
   bool get isInWaitingRoom => hasRoom && !isSpectator && !hasActiveGame;
   bool get hasActiveGame {
+    if (mightyGameState != null &&
+        mightyGameState!.phase.isNotEmpty &&
+        mightyGameState!.phase != 'game_end') {
+      return true;
+    }
     if (skGameState != null &&
         skGameState!.phase.isNotEmpty &&
         skGameState!.phase != 'game_end') {
@@ -312,9 +320,11 @@ class GameService extends ChangeNotifier {
     if (isSpectator && hasRoom) {
       if (currentGameType == 'skull_king') return AppDestination.skGame;
       if (currentGameType == 'love_letter') return AppDestination.llGame;
+      if (currentGameType == 'mighty') return AppDestination.mightyGame;
       return AppDestination.spectator;
     }
     if (!hasRoom) return AppDestination.lobby;
+    if (mightyGameState != null) return AppDestination.mightyGame;
     if (llGameState != null) return AppDestination.llGame;
     if (skGameState != null) return AppDestination.skGame;
     if (gameState != null) return AppDestination.game;
@@ -504,6 +514,8 @@ class GameService extends ChangeNotifier {
         _prevSKGameState = null;
         _prevLLGameState = null;
         llGameState = null;
+        mightyGameState = null;
+        _prevMightyGameState = null;
         spectatorGameState = null;
         pendingCardViewRequests = {};
         approvedCardViews = {};
@@ -519,6 +531,8 @@ class GameService extends ChangeNotifier {
         _prevSKGameState = null;
         _prevLLGameState = null;
         llGameState = null;
+        mightyGameState = null;
+        _prevMightyGameState = null;
         pendingCardViewRequests = {};
         approvedCardViews = {};
         _prevGameState = null;
@@ -543,20 +557,37 @@ class GameService extends ChangeNotifier {
             spectatorGameState = null;
             gameState = null;
             llGameState = null;
+            mightyGameState = null;
             _prevGameState = null;
+            _prevMightyGameState = null;
           } else if (stateGameType == 'love_letter') {
             currentGameType = 'love_letter';
             llGameState = LLGameStateData.fromJson(state);
             spectatorGameState = null;
             gameState = null;
             skGameState = null;
+            mightyGameState = null;
             _prevGameState = null;
             _prevSKGameState = null;
             _prevLLGameState = null;
+            _prevMightyGameState = null;
+          } else if (stateGameType == 'mighty') {
+            currentGameType = 'mighty';
+            mightyGameState = MightyGameStateData.fromJson(state);
+            spectatorGameState = null;
+            gameState = null;
+            skGameState = null;
+            llGameState = null;
+            _prevGameState = null;
+            _prevSKGameState = null;
+            _prevLLGameState = null;
+            _prevMightyGameState = null;
           } else {
             spectatorGameState = state;
             skGameState = null;
             llGameState = null;
+            mightyGameState = null;
+            _prevMightyGameState = null;
           }
           final spectatorList = state['spectators'] as List?;
           if (spectatorList != null) {
@@ -646,6 +677,8 @@ class GameService extends ChangeNotifier {
         _prevSKGameState = null;
         _prevLLGameState = null;
         llGameState = null;
+        mightyGameState = null;
+        _prevMightyGameState = null;
         currentGameType = 'tichu';
         roomMaxPlayers = 4;
         roomBlockedSlots = <int>{};
@@ -690,6 +723,8 @@ class GameService extends ChangeNotifier {
         _prevSKGameState = null;
         _prevLLGameState = null;
         llGameState = null;
+        mightyGameState = null;
+        _prevMightyGameState = null;
         currentGameType = 'tichu';
         chatMessages = [];
         desertedPlayerName = null;
@@ -751,10 +786,12 @@ class GameService extends ChangeNotifier {
             gameState = null;
             skGameState = null;
             llGameState = null;
+            mightyGameState = null;
             spectatorGameState = null;
             _prevGameState = null;
             _prevSKGameState = null;
             _prevLLGameState = null;
+            _prevMightyGameState = null;
             myTimeoutCount = 0;
           }
         }
@@ -776,8 +813,10 @@ class GameService extends ChangeNotifier {
             skGameState = nextSK;
             gameState = null;
             llGameState = null;
+            mightyGameState = null;
             _prevGameState = null;
             _prevLLGameState = null;
+            _prevMightyGameState = null;
             // Clear desertion state when SK phase is not game_end
             if (nextSK.phase != 'game_end') {
               desertedPlayerName = null;
@@ -816,6 +855,54 @@ class GameService extends ChangeNotifier {
             } else {
               spectators = [];
             }
+          } else if (stateGameType == 'mighty') {
+            // Mighty game state
+            currentGameType = 'mighty';
+            final nextMighty = MightyGameStateData.fromJson(state);
+            _prevMightyGameState = mightyGameState;
+            mightyGameState = nextMighty;
+            gameState = null;
+            skGameState = null;
+            llGameState = null;
+            _prevGameState = null;
+            _prevSKGameState = null;
+            _prevLLGameState = null;
+            if (nextMighty.phase != 'game_end') {
+              desertedPlayerName = null;
+              desertedReason = null;
+            }
+            final selfPlayer = nextMighty.players.where(
+              (p) => p.position == 'self',
+            );
+            myTimeoutCount = selfPlayer.isNotEmpty
+                ? selfPlayer.first.timeoutCount
+                : 0;
+            final viewers = state['cardViewers'] as List?;
+            if (viewers != null) {
+              cardViewers = viewers
+                  .map(
+                    (v) => {
+                      'id': (v['id'] ?? '').toString(),
+                      'nickname': (v['nickname'] ?? '').toString(),
+                    },
+                  )
+                  .toList();
+            } else {
+              cardViewers = [];
+            }
+            final mightySpectatorList = state['spectators'] as List?;
+            if (mightySpectatorList != null) {
+              spectators = mightySpectatorList
+                  .map(
+                    (s) => {
+                      'id': (s['id'] ?? '').toString(),
+                      'nickname': (s['nickname'] ?? '').toString(),
+                    },
+                  )
+                  .toList();
+            } else {
+              spectators = [];
+            }
           } else if (stateGameType == 'love_letter') {
             // Love Letter game state
             currentGameType = 'love_letter';
@@ -825,8 +912,10 @@ class GameService extends ChangeNotifier {
             llGameState = nextLL;
             gameState = null;
             skGameState = null;
+            mightyGameState = null;
             _prevGameState = null;
             _prevSKGameState = null;
+            _prevMightyGameState = null;
             if (nextLL.phase != 'game_end') {
               desertedPlayerName = null;
               desertedReason = null;
@@ -870,8 +959,10 @@ class GameService extends ChangeNotifier {
             _handleSfxTransitions(_prevGameState, nextState);
             _prevGameState = nextState;
             skGameState = null;
+            mightyGameState = null;
             _prevSKGameState = null;
             _prevLLGameState = null;
+            _prevMightyGameState = null;
 
             // Clear desertion state when a new round/game starts
             final phase = state['phase'] as String? ?? '';
@@ -2329,6 +2420,9 @@ class GameService extends ChangeNotifier {
     } else if (gameType == 'love_letter') {
       msg['gameType'] = 'love_letter';
       msg['maxPlayers'] = maxPlayers;
+    } else if (gameType == 'mighty') {
+      msg['gameType'] = 'mighty';
+      msg['maxPlayers'] = maxPlayers;
     }
     _network.send(msg);
   }
@@ -2371,6 +2465,8 @@ class GameService extends ChangeNotifier {
     _prevSKGameState = null;
     _prevLLGameState = null;
     llGameState = null;
+    mightyGameState = null;
+    _prevMightyGameState = null;
     spectatorGameState = null;
     pendingCardViewRequests = {};
     approvedCardViews = {};
@@ -2441,6 +2537,33 @@ class GameService extends ChangeNotifier {
 
   void llEffectAck() {
     _network.send({'type': 'effect_ack'});
+  }
+
+  // Mighty actions
+  void mightySubmitBid(int points, String suit) {
+    _network.send({
+      'type': 'submit_bid',
+      'points': points,
+      'suit': suit,
+    });
+  }
+
+  void mightyPass() {
+    _network.send({'type': 'submit_bid', 'pass': true});
+  }
+
+  void mightyDiscardKitty(List<String> discards, String friendCard) {
+    _network.send({
+      'type': 'discard_kitty',
+      'discards': discards,
+      'friendCard': friendCard,
+    });
+  }
+
+  void mightyPlayCard(String cardId, {String? jokerSuit}) {
+    final msg = <String, dynamic>{'type': 'play_card', 'cardId': cardId};
+    if (jokerSuit != null) msg['jokerSuit'] = jokerSuit;
+    _network.send(msg);
   }
 
   void playCards(List<String> cards, {String? callRank}) {

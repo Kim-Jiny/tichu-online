@@ -224,5 +224,20 @@
   "ll_invalid_guess": "Invalid guess (cannot guess Guard)",
   "ll_effect_not_resolved": "Effect not yet resolved",
   "ll_not_round_end": "Not in the round-end state",
-  "ll_invalid_effect": "Invalid effect"
+  "ll_invalid_effect": "Invalid effect",
+
+  "mighty_invalid_action": "Invalid action",
+  "mighty_not_bidding_phase": "Not in the bidding phase",
+  "mighty_bid_invalid_points": "Invalid bid amount",
+  "mighty_bid_invalid_suit": "Invalid trump suit",
+  "mighty_no_trump_not_allowed": "No-trump bid is not allowed",
+  "mighty_bid_too_low": "Bid must be higher than current bid",
+  "mighty_not_kitty_phase": "Not in the kitty exchange phase",
+  "mighty_not_declarer": "Only the declarer can perform this action",
+  "mighty_must_discard_three": "You must discard exactly 3 cards",
+  "mighty_card_not_in_hand": "Card is not in your hand",
+  "mighty_invalid_friend_card": "Invalid friend card",
+  "mighty_not_play_phase": "Not in the play phase",
+  "mighty_illegal_card": "You cannot play that card",
+  "mighty_not_round_end": "Not in the round-end state"
 }

@@ -224,5 +224,20 @@
   "ll_invalid_guess": "유효하지 않은 추측입니다 (Guard는 추측할 수 없습니다)",
   "ll_effect_not_resolved": "효과가 아직 해결되지 않았습니다",
   "ll_not_round_end": "라운드 종료 상태가 아닙니다",
-  "ll_invalid_effect": "유효하지 않은 효과입니다"
+  "ll_invalid_effect": "유효하지 않은 효과입니다",
+
+  "mighty_invalid_action": "유효하지 않은 액션입니다",
+  "mighty_not_bidding_phase": "비딩 단계가 아닙니다",
+  "mighty_bid_invalid_points": "유효하지 않은 비드 점수입니다",
+  "mighty_bid_invalid_suit": "유효하지 않은 트럼프 수트입니다",
+  "mighty_no_trump_not_allowed": "노트럼프 비드가 허용되지 않습니다",
+  "mighty_bid_too_low": "현재 비드보다 높아야 합니다",
+  "mighty_not_kitty_phase": "키티 교환 단계가 아닙니다",
+  "mighty_not_declarer": "주공만 이 액션을 수행할 수 있습니다",
+  "mighty_must_discard_three": "정확히 3장을 버려야 합니다",
+  "mighty_card_not_in_hand": "손에 없는 카드입니다",
+  "mighty_invalid_friend_card": "유효하지 않은 프렌드 카드입니다",
+  "mighty_not_play_phase": "플레이 단계가 아닙니다",
+  "mighty_illegal_card": "해당 카드를 낼 수 없습니다",
+  "mighty_not_round_end": "라운드 종료 상태가 아닙니다"
 }

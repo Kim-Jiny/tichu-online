@@ -728,6 +728,12 @@ class _LobbyScreenState extends State<LobbyScreen> {
                               gameBgColor = const Color(0xFFE91E63);
                               gameFgColor = Colors.white;
                               break;
+                            case 'mighty':
+                              gameLabel = 'Mighty';
+                              gameEmoji = '🃑';
+                              gameBgColor = const Color(0xFF1565C0);
+                              gameFgColor = Colors.white;
+                              break;
                             default:
                               gameLabel = l10n.lobbyTichu;
                               gameEmoji = '🃏';
@@ -742,8 +748,14 @@ class _LobbyScreenState extends State<LobbyScreen> {
                                 l10n: l10n,
                               );
                               if (selectedGameType == 'skull_king' ||
-                                  selectedGameType == 'love_letter') {
+                                  selectedGameType == 'love_letter' ||
+                                  selectedGameType == 'mighty') {
                                 isRanked = false;
+                              }
+                              if (selectedGameType == 'mighty') {
+                                targetScoreController.text = '50';
+                              } else if (selectedGameType == 'tichu') {
+                                targetScoreController.text = '1000';
                               }
                             });
                           }
@@ -824,6 +836,24 @@ class _LobbyScreenState extends State<LobbyScreen> {
                                         onTap: () {
                                           Navigator.pop(sheetCtx);
                                           selectGame('love_letter');
+                                        },
+                                      ),
+                                      ListTile(
+                                        leading: const Text(
+                                          '🃑',
+                                          style: TextStyle(fontSize: 20),
+                                        ),
+                                        title: const Text('Mighty'),
+                                        trailing:
+                                            selectedGameType == 'mighty'
+                                            ? const Icon(
+                                                Icons.check,
+                                                color: Color(0xFF1565C0),
+                                              )
+                                            : null,
+                                        onTap: () {
+                                          Navigator.pop(sheetCtx);
+                                          selectGame('mighty');
                                         },
                                       ),
                                       const SizedBox(height: 8),
@@ -1129,7 +1159,7 @@ class _LobbyScreenState extends State<LobbyScreen> {
                               ],
                             ),
                           ),
-                          if (selectedGameType == 'tichu') ...[
+                          if (selectedGameType == 'tichu' || selectedGameType == 'mighty') ...[
                             const SizedBox(width: 10),
                             Expanded(
                               child: Column(
@@ -1244,9 +1274,11 @@ class _LobbyScreenState extends State<LobbyScreen> {
                           .clamp(10, 999);
                   final targetScore = isRanked
                       ? 1000
-                      : (int.tryParse(targetScoreController.text.trim()) ??
-                                1000)
-                            .clamp(100, 20000);
+                      : selectedGameType == 'mighty'
+                          ? (int.tryParse(targetScoreController.text.trim()) ?? 50)
+                              .clamp(10, 500)
+                          : (int.tryParse(targetScoreController.text.trim()) ?? 1000)
+                              .clamp(100, 20000);
                   context.read<GameService>().createRoom(
                     name,
                     password: isPrivate ? password : '',
@@ -1256,6 +1288,8 @@ class _LobbyScreenState extends State<LobbyScreen> {
                     gameType: selectedGameType,
                     maxPlayers: selectedGameType == 'skull_king'
                         ? 6
+                        : selectedGameType == 'mighty'
+                        ? 5
                         : selectedGameType == 'love_letter'
                         ? 4
                         : 4,
@@ -1809,6 +1843,7 @@ class _LobbyScreenState extends State<LobbyScreen> {
     final isInProgress = room.gameInProgress;
     final isSK = room.isSkullKing;
     final isLL = room.gameType == 'love_letter';
+    final isMighty = room.gameType == 'mighty';
     final l10n = L10n.of(context);
 
     // Game type colors
@@ -1834,6 +1869,19 @@ class _LobbyScreenState extends State<LobbyScreen> {
       badgeText = '💌 ${l10n.lobbyLoveLetterBadge}';
       nameColor = const Color(0xFF880E4F);
       subTextColor = const Color(0xFFAD1457);
+    } else if (isMighty) {
+      bgColor = isInProgress
+          ? const Color(0xFFE8EAF6)
+          : const Color(0xFFEDE7F6);
+      borderColor = isInProgress
+          ? const Color(0xFF9FA8DA)
+          : const Color(0xFFB39DDB);
+      stripColor = const Color(0xFF5C6BC0);
+      badgeBgColor = const Color(0xFF5C6BC0);
+      badgeTextColor = Colors.white;
+      badgeText = '🃑 Mighty';
+      nameColor = const Color(0xFF283593);
+      subTextColor = const Color(0xFF5C6BC0);
     } else if (isSK) {
       bgColor = isInProgress
           ? const Color(0xFFDCE8F0)
@@ -2327,7 +2375,8 @@ class _LobbyScreenState extends State<LobbyScreen> {
                 ),
                 child: Text(
                   game.currentGameType == 'skull_king' ||
-                          game.currentGameType == 'love_letter'
+                          game.currentGameType == 'love_letter' ||
+                          game.currentGameType == 'mighty'
                       ? L10n.of(context).lobbyRoomInfoSk(
                           game.roomTurnTimeLimit,
                           game.playerCount,
@@ -2618,13 +2667,16 @@ class _LobbyScreenState extends State<LobbyScreen> {
               if (i < game.roomPlayers.length - 1) const SizedBox(height: 8),
             ],
           ] else if (game.currentGameType == 'skull_king' ||
-              game.currentGameType == 'love_letter') ...[
+              game.currentGameType == 'love_letter' ||
+              game.currentGameType == 'mighty') ...[
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
               decoration: BoxDecoration(
                 color: game.currentGameType == 'love_letter'
                     ? const Color(0xFF8B1A1A)
-                    : const Color(0xFF2D2D3D),
+                    : game.currentGameType == 'mighty'
+                        ? const Color(0xFF1565C0)
+                        : const Color(0xFF2D2D3D),
                 borderRadius: BorderRadius.circular(12),
               ),
               child: Row(
@@ -2633,7 +2685,9 @@ class _LobbyScreenState extends State<LobbyScreen> {
                   Icon(
                     game.currentGameType == 'love_letter'
                         ? Icons.favorite
-                        : Icons.anchor,
+                        : game.currentGameType == 'mighty'
+                            ? Icons.style
+                            : Icons.anchor,
                     size: 14,
                     color: Colors.white,
                   ),
@@ -2643,9 +2697,11 @@ class _LobbyScreenState extends State<LobbyScreen> {
                         ? L10n.of(
                             context,
                           ).lobbyLoveLetterPlayers(game.roomMaxPlayers)
-                        : L10n.of(
-                            context,
-                          ).lobbySkullKingPlayers(game.roomMaxPlayers),
+                        : game.currentGameType == 'mighty'
+                            ? 'Mighty ${game.playerCount}/${game.roomMaxPlayers}'
+                            : L10n.of(
+                                context,
+                              ).lobbySkullKingPlayers(game.roomMaxPlayers),
                     style: const TextStyle(
                       fontSize: 13,
                       fontWeight: FontWeight.bold,
@@ -2729,7 +2785,9 @@ class _LobbyScreenState extends State<LobbyScreen> {
             if (game.currentGameType == 'skull_king' ||
                     game.currentGameType == 'love_letter'
                 ? game.playerCount >= 2
-                : game.playerCount >= game.effectiveRoomMaxPlayers)
+                : game.currentGameType == 'mighty'
+                    ? game.playerCount >= 5
+                    : game.playerCount >= game.effectiveRoomMaxPlayers)
               SizedBox(
                 width: double.infinity,
                 height: 48,

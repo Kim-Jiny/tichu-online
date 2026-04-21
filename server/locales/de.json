@@ -208,5 +208,20 @@
   "sk_suit_follow_violated": "Du musst Farbe bedienen",
   "sk_invalid_card": "Ungültige Karte",
   "sk_tigress_choice_required": "Tigress-Auswahl erforderlich (Pirat/Flucht)",
-  "sk_not_round_end": "Nicht im Rundenend-Zustand"
+  "sk_not_round_end": "Nicht im Rundenend-Zustand",
+
+  "mighty_invalid_action": "Ungültige Aktion",
+  "mighty_not_bidding_phase": "Nicht in der Gebotsphase",
+  "mighty_bid_invalid_points": "Ungültiger Gebotsbetrag",
+  "mighty_bid_invalid_suit": "Ungültige Trumpffarbe",
+  "mighty_no_trump_not_allowed": "Ohne-Trumpf-Gebot ist nicht erlaubt",
+  "mighty_bid_too_low": "Gebot muss höher als das aktuelle Gebot sein",
+  "mighty_not_kitty_phase": "Nicht in der Kitty-Tauschphase",
+  "mighty_not_declarer": "Nur der Alleinspieler kann diese Aktion ausführen",
+  "mighty_must_discard_three": "Du musst genau 3 Karten ablegen",
+  "mighty_card_not_in_hand": "Diese Karte ist nicht auf deiner Hand",
+  "mighty_invalid_friend_card": "Ungültige Freundkarte",
+  "mighty_not_play_phase": "Nicht in der Spielphase",
+  "mighty_illegal_card": "Du kannst diese Karte nicht spielen",
+  "mighty_not_round_end": "Nicht im Rundenend-Zustand"
 }

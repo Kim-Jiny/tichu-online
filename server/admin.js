@@ -131,7 +131,12 @@ body {
   transition: transform 0.3s ease;
   box-shadow: 10px 0 30px rgba(16, 41, 35, 0.16);
 }
-.sidebar h2 { padding: 0 22px 18px; font-size: 18px; color: #fff; border-bottom: 1px solid rgba(255,255,255,0.08); margin-bottom: 12px; letter-spacing: 0.01em; }
+.sidebar-header { padding: 0 22px 18px; border-bottom: 1px solid rgba(255,255,255,0.08); margin-bottom: 12px; }
+.sidebar-header-link { display: block; color: inherit; text-decoration: none; }
+.sidebar h2 { padding: 0; font-size: 18px; color: #fff; margin-bottom: 6px; letter-spacing: 0.01em; }
+.sidebar-meta { font-size: 12px; color: rgba(231,239,233,0.62); line-height: 1.5; }
+.nav-section { margin: 4px 0 10px; }
+.nav-section-label { padding: 0 22px; margin: 14px 0 8px; font-size: 11px; color: rgba(231,239,233,0.45); text-transform: uppercase; letter-spacing: 0.12em; }
 .sidebar a { display: block; padding: 13px 22px; color: rgba(231,239,233,0.75); text-decoration: none; font-size: 14px; transition: all 0.2s; border-left: 3px solid transparent; }
 .sidebar a:hover { background: rgba(255,255,255,0.06); color: #fff; }
 .sidebar a.active { background: rgba(255,255,255,0.08); color: #fff; border-left-color: #dcb46a; }
@@ -206,13 +211,14 @@ body {
 .metric-inline .name { font-size: 13px; color: var(--muted); }
 .metric-inline .num { font-weight: 700; font-size: 15px; color: var(--text); }
 .card-actions { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 14px; }
-.table-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+.table-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; border: 1px solid rgba(32,28,22,0.06); border-radius: 16px; background: rgba(255,255,255,0.68); }
 table { width: 100%; border-collapse: separate; border-spacing: 0; }
-th { text-align: left; padding: 12px 14px; background: #f6f3ec; color: var(--muted); font-size: 12px; font-weight: 700; border-bottom: 1px solid #e6dfd2; white-space: nowrap; text-transform: uppercase; letter-spacing: 0.05em; }
+th { text-align: left; padding: 12px 14px; background: #f6f3ec; color: var(--muted); font-size: 12px; font-weight: 700; border-bottom: 1px solid #e6dfd2; white-space: nowrap; text-transform: uppercase; letter-spacing: 0.05em; position: sticky; top: 0; z-index: 1; }
 th:first-child { border-top-left-radius: 14px; }
 th:last-child { border-top-right-radius: 14px; }
 td { padding: 12px 14px; border-bottom: 1px solid #f0ebe2; font-size: 14px; vertical-align: top; }
-tr:hover td { background: rgba(15,108,92,0.04); }
+tr:nth-child(even) td { background: rgba(255,255,255,0.35); }
+tr:hover td { background: rgba(15,108,92,0.06); }
 .badge { display: inline-block; padding: 3px 10px; border-radius: 12px; font-size: 12px; font-weight: 600; white-space: nowrap; }
 .badge-pending { background: #fff3e0; color: #e65100; }
 .badge-resolved { background: #e8f5e9; color: #2e7d32; }
@@ -245,6 +251,85 @@ textarea, select, input[type="date"], input[type="datetime-local"], input[type="
 input[type="text"], input[type="password"] { width: 100%; padding: 10px 12px; border: 1px solid #dad3c7; border-radius: 12px; font-size: 14px; font-family: inherit; background: rgba(255,255,255,0.92); color: var(--text); }
 .search-bar { display: flex; gap: 8px; margin-bottom: 16px; }
 .search-bar input { flex: 1; }
+.filter-card {
+  padding: 16px 18px;
+  border-radius: 18px;
+  background: rgba(255,255,255,0.76);
+  border: 1px solid rgba(32,28,22,0.06);
+  box-shadow: 0 12px 28px rgba(34,29,21,0.05);
+  margin-bottom: 18px;
+}
+.filter-title { font-size: 12px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 10px; }
+.subtab-bar { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 18px; }
+.subtab-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 14px;
+  border-radius: 999px;
+  text-decoration: none;
+  color: var(--muted);
+  background: rgba(255,255,255,0.72);
+  border: 1px solid rgba(32,28,22,0.08);
+  font-size: 13px;
+  font-weight: 700;
+}
+.subtab-link:hover { color: var(--text); background: rgba(255,255,255,0.92); }
+.subtab-link.active {
+  color: #fff;
+  background: linear-gradient(135deg, #17352f 0%, #24584d 100%);
+  border-color: rgba(23,53,47,0.3);
+  box-shadow: 0 12px 24px rgba(23,53,47,0.18);
+}
+.subtab-copy { font-size: 12px; color: var(--muted); margin-bottom: 14px; line-height: 1.6; }
+.preset-bar { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 10px; }
+.preset-link {
+  display: inline-flex;
+  align-items: center;
+  padding: 8px 12px;
+  border-radius: 999px;
+  text-decoration: none;
+  color: var(--muted);
+  background: rgba(255,255,255,0.8);
+  border: 1px solid rgba(32,28,22,0.08);
+  font-size: 12px;
+  font-weight: 700;
+}
+.preset-link.active {
+  color: #fff;
+  background: var(--brand);
+  border-color: var(--brand);
+}
+.sticky-kpi-rail {
+  position: sticky;
+  top: 12px;
+  z-index: 20;
+  margin-bottom: 18px;
+  padding: 16px 18px;
+  border-radius: 18px;
+  background: rgba(255,255,255,0.9);
+  border: 1px solid rgba(32,28,22,0.08);
+  box-shadow: 0 14px 28px rgba(34,29,21,0.08);
+  backdrop-filter: blur(10px);
+}
+.sticky-kpi-title { font-size: 12px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 10px; }
+.sticky-kpi-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 10px; }
+.sticky-kpi-item { padding: 12px 14px; border-radius: 14px; background: #f7f3ea; border: 1px solid #ebe4d8; }
+.sticky-kpi-item .k { font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 6px; }
+.sticky-kpi-item .v { font-size: 22px; font-weight: 800; color: var(--text); letter-spacing: -0.02em; }
+.sticky-kpi-item .m { margin-top: 6px; font-size: 12px; color: var(--muted); line-height: 1.5; }
+.status-strip { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 12px; margin-bottom: 18px; }
+.status-card {
+  padding: 14px 16px;
+  border-radius: 16px;
+  border: 1px solid rgba(32,28,22,0.08);
+  background: rgba(255,255,255,0.85);
+}
+.status-card.warning { background: rgba(255,244,229,0.95); border-color: rgba(198,123,43,0.25); }
+.status-card.danger { background: rgba(255,235,238,0.95); border-color: rgba(192,86,63,0.25); }
+.status-card.good { background: rgba(232,245,233,0.95); border-color: rgba(46,125,50,0.22); }
+.status-card .title { font-size: 13px; font-weight: 800; color: var(--text); margin-bottom: 6px; }
+.status-card .desc { font-size: 12px; color: var(--muted); line-height: 1.55; }
 .pagination { display: flex; gap: 8px; margin-top: 16px; justify-content: center; flex-wrap: wrap; }
 .pagination a { padding: 7px 12px; border-radius: 10px; background: #ece5d8; color: #333; text-decoration: none; font-size: 13px; }
 .pagination a.active { background: var(--brand); color: #fff; }
@@ -303,17 +388,34 @@ input[type="text"], input[type="password"] { width: 100%; padding: 10px 12px; bo
 <button class="menu-toggle" onclick="document.querySelector('.sidebar').classList.toggle('open');document.querySelector('.sidebar-overlay').classList.toggle('open')">&#9776;</button>
 <div class="sidebar-overlay" onclick="document.querySelector('.sidebar').classList.remove('open');this.classList.remove('open')"></div>
 <nav class="sidebar">
-  <h2>Tichu Admin</h2>
-  <a href="/tc-backstage/" class="${activePage === 'home' ? 'active' : ''}" onclick="closeSidebar()">대시보드</a>
-  <a href="/tc-backstage/stats" class="${activePage === 'stats' ? 'active' : ''}" onclick="closeSidebar()">통계</a>
-  <a href="/tc-backstage/inquiries" class="${activePage === 'inquiries' ? 'active' : ''}" onclick="closeSidebar()">문의</a>
-  <a href="/tc-backstage/shop" class="${activePage === 'shop' ? 'active' : ''}" onclick="closeSidebar()">상점</a>
-  <a href="/tc-backstage/reports" class="${activePage === 'reports' ? 'active' : ''}" onclick="closeSidebar()">신고</a>
-  <a href="/tc-backstage/users" class="${activePage === 'users' ? 'active' : ''}" onclick="closeSidebar()">유저</a>
-  <a href="/tc-backstage/notices" class="${activePage === 'notices' ? 'active' : ''}" onclick="closeSidebar()">공지사항</a>
-  <a href="/tc-backstage/push" class="${activePage === 'push' ? 'active' : ''}" onclick="closeSidebar()">푸시알림</a>
-  <a href="/tc-backstage/maintenance" class="${activePage === 'maintenance' ? 'active' : ''}" onclick="closeSidebar()">점검</a>
-  <a href="/tc-backstage/settings" class="${activePage === 'settings' ? 'active' : ''}" onclick="closeSidebar()">설정</a>
+  <div class="sidebar-header">
+    <a href="/tc-backstage/" class="sidebar-header-link" onclick="closeSidebar()">
+      <h2>Tichu Admin</h2>
+      <div class="sidebar-meta">운영 대시보드 · 실시간 점검 · 게임 모니터링</div>
+    </a>
+  </div>
+  <div class="nav-section">
+    <div class="nav-section-label">Overview</div>
+    <a href="/tc-backstage/" class="${activePage === 'home' ? 'active' : ''}" onclick="closeSidebar()">대시보드</a>
+    <a href="/tc-backstage/stats" class="${activePage === 'stats' ? 'active' : ''}" onclick="closeSidebar()">통계</a>
+  </div>
+  <div class="nav-section">
+    <div class="nav-section-label">Operations</div>
+    <a href="/tc-backstage/inquiries" class="${activePage === 'inquiries' ? 'active' : ''}" onclick="closeSidebar()">문의</a>
+    <a href="/tc-backstage/reports" class="${activePage === 'reports' ? 'active' : ''}" onclick="closeSidebar()">신고</a>
+    <a href="/tc-backstage/users" class="${activePage === 'users' ? 'active' : ''}" onclick="closeSidebar()">유저</a>
+    <a href="/tc-backstage/shop" class="${activePage === 'shop' ? 'active' : ''}" onclick="closeSidebar()">상점</a>
+  </div>
+  <div class="nav-section">
+    <div class="nav-section-label">Comms</div>
+    <a href="/tc-backstage/notices" class="${activePage === 'notices' ? 'active' : ''}" onclick="closeSidebar()">공지사항</a>
+    <a href="/tc-backstage/push" class="${activePage === 'push' ? 'active' : ''}" onclick="closeSidebar()">푸시알림</a>
+  </div>
+  <div class="nav-section">
+    <div class="nav-section-label">System</div>
+    <a href="/tc-backstage/maintenance" class="${activePage === 'maintenance' ? 'active' : ''}" onclick="closeSidebar()">점검</a>
+    <a href="/tc-backstage/settings" class="${activePage === 'settings' ? 'active' : ''}" onclick="closeSidebar()">설정</a>
+  </div>
   <div class="logout">
     <a href="/tc-backstage/logout">로그아웃</a>
   </div>
@@ -456,6 +558,17 @@ function metricLine(name, value) {
   return `<div class="metric-inline"><span class="name">${escapeHtml(name)}</span><span class="num">${value}</span></div>`;
 }
 
+function buildDeltaMeta(currentValue, previousValue, suffix = '', digits = 1) {
+  const current = Number(currentValue || 0);
+  const previous = Number(previousValue || 0);
+  if (!Number.isFinite(previous) || previous === 0) {
+    return '비교 기준 없음';
+  }
+  const delta = ((current - previous) / previous) * 100;
+  const sign = delta > 0 ? '+' : '';
+  return `이전 기간 대비 ${sign}${delta.toFixed(digits)}%${suffix}`;
+}
+
 function gameTypeBadge(gameType) {
   if (gameType === 'skull_king') {
     return '<span class="badge" style="background:#ff7043;color:#fff">스컬킹</span>';
@@ -463,7 +576,43 @@ function gameTypeBadge(gameType) {
   if (gameType === 'love_letter') {
     return '<span class="badge" style="background:#E91E63;color:#fff">러브레터</span>';
   }
+  if (gameType === 'mighty') {
+    return '<span class="badge" style="background:#1565C0;color:#fff">마이티</span>';
+  }
   return '<span class="badge" style="background:#6c63ff;color:#fff">티츄</span>';
+}
+
+function mightySuitLabel(suit) {
+  if (suit === 'spade') return '♠';
+  if (suit === 'heart') return '♥';
+  if (suit === 'diamond') return '♦';
+  if (suit === 'club') return '♣';
+  if (suit === 'no_trump') return 'NT';
+  return suit || '-';
+}
+
+function renderAdminCardChip(cardId) {
+  if (!cardId) return '<span style="color:#999">-</span>';
+  let label = cardId;
+  let style = 'background:#f0f0f0;color:#333;';
+  if (cardId === 'mighty_joker') {
+    label = 'Joker';
+    style = 'background:#fff3e0;color:#e65100;font-weight:700;';
+  } else if (cardId.startsWith('mighty_')) {
+    const raw = cardId.replace('mighty_', '');
+    const parts = raw.split('_');
+    if (parts.length === 2) {
+      label = `${mightySuitLabel(parts[0])}${parts[1]}`;
+    }
+    if (parts[0] === 'heart' || parts[0] === 'diamond') {
+      style = 'background:#ffebee;color:#c62828;';
+    } else {
+      style = 'background:#eceff1;color:#263238;';
+    }
+  } else if (cardId.startsWith('special_')) {
+    style = 'background:#fff3e0;color:#e65100;font-weight:700;';
+  }
+  return `<code style="${style}padding:2px 6px;border-radius:4px;font-size:11px;margin:1px;display:inline-block;">${escapeHtml(label)}</code>`;
 }
 
 function renderAdminRecentMatchesTable(matches) {
@@ -479,7 +628,7 @@ function renderAdminRecentMatchesTable(matches) {
         endBadge = `<span class="badge" style="background:#fff8e1;color:#f57f17">시간초과</span>${m.deserter_nickname ? `<br><span style="font-size:11px;color:#f57f17">${escapeHtml(m.deserter_nickname)}</span>` : ''}`;
       }
       const rankedBadge = m.is_ranked ? '<span class="badge" style="background:#fff3e0;color:#e65100">랭크</span>' : '<span class="badge" style="background:#f5f5f5;color:#999">일반</span>';
-      if (m.game_type === 'skull_king' || m.game_type === 'love_letter') {
+      if (m.game_type === 'skull_king' || m.game_type === 'love_letter' || m.game_type === 'mighty') {
         return `<tr>
           <td>${m.id}</td>
           <td>${gameTypeBadge(m.game_type)}</td>
@@ -933,21 +1082,48 @@ async function handleAdminRoute(req, res, url, pathname, method, lobby, wss, mai
 
   if (pathname === '/tc-backstage/stats' && method === 'GET') {
     const todayKST = formatDateInput(new Date());
+    const oneDayMs = 24 * 60 * 60 * 1000;
     const defaultTo = new Date(`${todayKST}T23:59:59+09:00`);
     const defaultFromValue = formatDateInput(new Date(defaultTo.getTime() - (6 * 24 * 60 * 60 * 1000)));
     const defaultFrom = new Date(`${defaultFromValue}T00:00:00+09:00`);
 
+    const preset = ['today', 'yesterday', 'last7', 'last30'].includes(url.searchParams.get('preset'))
+      ? url.searchParams.get('preset')
+      : '';
     const fromParam = url.searchParams.get('from');
     const toParam = url.searchParams.get('to');
     const bucket = url.searchParams.get('bucket') === 'hour' ? 'hour' : 'day';
+    const statTab = ['games', 'acquisition', 'economy', 'shop'].includes(url.searchParams.get('tab'))
+      ? url.searchParams.get('tab')
+      : 'games';
     const platform = ['ios', 'android'].includes((url.searchParams.get('platform') || '').toLowerCase())
       ? (url.searchParams.get('platform') || '').toLowerCase()
       : '';
-    const from = fromParam ? new Date(`${fromParam}T00:00:00+09:00`) : defaultFrom;
-    const to = toParam ? new Date(`${toParam}T23:59:59+09:00`) : defaultTo;
+    let from = fromParam ? new Date(`${fromParam}T00:00:00+09:00`) : defaultFrom;
+    let to = toParam ? new Date(`${toParam}T23:59:59+09:00`) : defaultTo;
+    if (preset === 'today') {
+      from = new Date(`${todayKST}T00:00:00+09:00`);
+      to = new Date(`${todayKST}T23:59:59+09:00`);
+    } else if (preset === 'yesterday') {
+      const yesterday = formatDateInput(new Date(new Date(`${todayKST}T12:00:00+09:00`).getTime() - oneDayMs));
+      from = new Date(`${yesterday}T00:00:00+09:00`);
+      to = new Date(`${yesterday}T23:59:59+09:00`);
+    } else if (preset === 'last7') {
+      const from7 = formatDateInput(new Date(defaultTo.getTime() - (6 * oneDayMs)));
+      from = new Date(`${from7}T00:00:00+09:00`);
+      to = defaultTo;
+    } else if (preset === 'last30') {
+      const from30 = formatDateInput(new Date(defaultTo.getTime() - (29 * oneDayMs)));
+      from = new Date(`${from30}T00:00:00+09:00`);
+      to = defaultTo;
+    }
 
     const stats = await getDetailedAdminStats(from.toISOString(), to.toISOString(), bucket, { platform });
+    const prevTo = new Date(from.getTime() - 1);
+    const prevFrom = new Date(prevTo.getTime() - (to.getTime() - from.getTime()));
+    const prevStats = await getDetailedAdminStats(prevFrom.toISOString(), prevTo.toISOString(), bucket, { platform });
     const summary = stats.summary || {};
+    const prevSummary = prevStats.summary || {};
     const gameSeries = stats.gameSeries || [];
     const signupSeries = stats.signupSeries || [];
     const goldSeries = stats.goldSeries || [];
@@ -956,12 +1132,143 @@ async function handleAdminRoute(req, res, url, pathname, method, lobby, wss, mai
     const fromValue = formatDateInput(from);
     const toValue = formatDateInput(to);
     const platformLabel = platform === 'ios' ? 'iOS' : platform === 'android' ? 'AOS' : '전체';
+    const bucketCount = Math.max(
+      gameSeries.length,
+      signupSeries.length,
+      goldSeries.length,
+      shopSalesSeries.length,
+      1
+    );
+    const topGameEntries = [
+      { key: 'tichu', label: '티츄', value: Number(summary.tichuGames || 0) },
+      { key: 'skull', label: '스컬킹', value: Number(summary.skullGames || 0) },
+      { key: 'love', label: '러브레터', value: Number(summary.llGames || 0) },
+      { key: 'mighty', label: '마이티', value: Number(summary.mightyGames || 0) },
+    ].sort((a, b) => b.value - a.value);
+    const dominantGame = topGameEntries[0];
+    const peakGameRow = [...gameSeries].sort((a, b) => Number(b.total_cnt || 0) - Number(a.total_cnt || 0))[0];
+    const peakSignupRow = [...signupSeries].sort((a, b) => Number(b.total_cnt || 0) - Number(a.total_cnt || 0))[0];
+    const peakEarnRow = [...goldSeries].sort((a, b) => Number(b.earned || 0) - Number(a.earned || 0))[0];
+    const peakSpendRow = [...goldSeries].sort((a, b) => Number(b.spent || 0) - Number(a.spent || 0))[0];
+    const peakShopRow = [...shopSalesSeries].sort((a, b) => Number(b.purchase_count || 0) - Number(a.purchase_count || 0))[0];
+    const positiveNetBuckets = goldSeries.filter((row) => Number(row.net || 0) > 0).length;
+    const iosShare = Number(summary.totalSignups || 0) > 0 ? (Number(summary.iosSignups || 0) * 100 / Number(summary.totalSignups || 0)) : 0;
+    const aosShare = Number(summary.totalSignups || 0) > 0 ? (Number(summary.androidSignups || 0) * 100 / Number(summary.totalSignups || 0)) : 0;
+    const avgGamesPerBucket = Number(summary.totalGames || 0) / bucketCount;
+    const avgSignupsPerBucket = Number(summary.totalSignups || 0) / Math.max(signupSeries.length, 1);
+    const avgNetPerBucket = Number(summary.goldNet || 0) / Math.max(goldSeries.length, 1);
+    const avgPurchaseValue = Number(summary.shopPurchases || 0) > 0 ? (Number(summary.shopGoldSpent || 0) / Number(summary.shopPurchases || 0)) : 0;
+    const purchasePerBuyer = Number(summary.shopBuyers || 0) > 0 ? (Number(summary.shopPurchases || 0) / Number(summary.shopBuyers || 0)) : 0;
+    const signupPerGame = Number(summary.totalGames || 0) > 0 ? (Number(summary.totalSignups || 0) / Number(summary.totalGames || 0)) : 0;
+    const rankedShare = Number(summary.totalGames || 0) > 0 ? (Number(summary.rankedGames || 0) * 100 / Number(summary.totalGames || 0)) : 0;
+    const mightyShare = Number(summary.totalGames || 0) > 0 ? (Number(summary.mightyGames || 0) * 100 / Number(summary.totalGames || 0)) : 0;
+    const shopBuyerConversion = Number(summary.totalSignups || 0) > 0 ? (Number(summary.shopBuyers || 0) * 100 / Number(summary.totalSignups || 0)) : 0;
+
+    const statsTabParams = new URLSearchParams();
+    statsTabParams.set('from', fromValue);
+    statsTabParams.set('to', toValue);
+    statsTabParams.set('bucket', bucket);
+    if (preset) statsTabParams.set('preset', preset);
+    if (platform) statsTabParams.set('platform', platform);
+    const buildStatsTabLink = (tabKey) => {
+      const params = new URLSearchParams(statsTabParams);
+      params.set('tab', tabKey);
+      return `/tc-backstage/stats?${params.toString()}`;
+    };
+    const buildStatsLink = (overrides = {}) => {
+      const params = new URLSearchParams(statsTabParams);
+      Object.entries(overrides).forEach(([key, value]) => {
+        if (value === null || value === undefined || value === '') params.delete(key);
+        else params.set(key, value);
+      });
+      return `/tc-backstage/stats?${params.toString()}`;
+    };
+    const statTabs = [
+      { key: 'games', label: '게임 분석', desc: '볼륨, 비중, 피크 시간대' },
+      { key: 'acquisition', label: '유입 분석', desc: '가입, 플랫폼 분포, 전환' },
+      { key: 'economy', label: '경제 분석', desc: '획득/소모/순변동' },
+      { key: 'shop', label: '상점 분석', desc: '판매, 구매자, 베스트셀러' },
+    ];
+    const presetLinks = [
+      { key: 'today', label: '오늘' },
+      { key: 'yesterday', label: '어제' },
+      { key: 'last7', label: '최근 7일' },
+      { key: 'last30', label: '최근 30일' },
+    ];
+    const comparisonMeta = {
+      games: buildDeltaMeta(summary.totalGames, prevSummary.totalGames),
+      signups: buildDeltaMeta(summary.totalSignups, prevSummary.totalSignups),
+      goldNet: buildDeltaMeta(summary.goldNet, prevSummary.goldNet),
+      shopPurchases: buildDeltaMeta(summary.shopPurchases, prevSummary.shopPurchases),
+    };
+    const warningCards = [];
+    if (Number(prevSummary.totalGames || 0) > 0) {
+      const deltaGames = ((Number(summary.totalGames || 0) - Number(prevSummary.totalGames || 0)) / Number(prevSummary.totalGames || 1)) * 100;
+      if (deltaGames <= -20) warningCards.push({ tone: 'danger', title: '게임량 급감', desc: `이전 기간 대비 ${deltaGames.toFixed(1)}% 감소했습니다. 최근 매치 흐름을 바로 확인해보세요.` });
+      else if (deltaGames >= 20) warningCards.push({ tone: 'good', title: '게임량 상승', desc: `이전 기간 대비 +${deltaGames.toFixed(1)}% 증가했습니다. 어떤 게임이 올렸는지 보기 좋습니다.` });
+    }
+    if (Number(prevSummary.totalSignups || 0) > 0) {
+      const deltaSignups = ((Number(summary.totalSignups || 0) - Number(prevSummary.totalSignups || 0)) / Number(prevSummary.totalSignups || 1)) * 100;
+      if (deltaSignups <= -20) warningCards.push({ tone: 'warning', title: '신규 가입 둔화', desc: `가입 수가 ${deltaSignups.toFixed(1)}% 줄었습니다. 플랫폼별 유입 변화를 함께 확인해보세요.` });
+    }
+    if (Number(prevSummary.goldSpent || 0) > 0) {
+      const deltaGoldSpent = ((Number(summary.goldSpent || 0) - Number(prevSummary.goldSpent || 0)) / Number(prevSummary.goldSpent || 1)) * 100;
+      if (deltaGoldSpent >= 25) warningCards.push({ tone: 'warning', title: '골드 소모 급증', desc: `소모 골드가 +${deltaGoldSpent.toFixed(1)}% 증가했습니다. 상점과 경제 탭을 같이 점검해보세요.` });
+    }
+    if (mightyShare >= 25) {
+      warningCards.push({ tone: 'good', title: '마이티 비중 확대', desc: `현재 전체 게임 중 마이티가 ${mightyShare.toFixed(1)}%를 차지합니다.` });
+    }
+    const stickyFavorites = {
+      games: [
+        { label: '전체 게임', value: formatNumber(summary.totalGames || 0), meta: comparisonMeta.games },
+        { label: '랭크 비중', value: formatPercent(rankedShare, 1), meta: `${formatNumber(summary.rankedGames || 0)}판` },
+        { label: '마이티 비중', value: formatPercent(mightyShare, 1), meta: buildDeltaMeta(summary.mightyGames, prevSummary.mightyGames) },
+        { label: '주력 게임', value: escapeHtml(dominantGame?.label || '-'), meta: dominantGame ? `${formatNumber(dominantGame.value)}판` : '데이터 없음' },
+      ],
+      acquisition: [
+        { label: '전체 가입', value: formatNumber(summary.totalSignups || 0), meta: comparisonMeta.signups },
+        { label: 'iOS 비중', value: formatPercent(iosShare, 1), meta: `${formatNumber(summary.iosSignups || 0)}명` },
+        { label: 'AOS 비중', value: formatPercent(aosShare, 1), meta: `${formatNumber(summary.androidSignups || 0)}명` },
+        { label: '가입/게임', value: formatPercent(signupPerGame * 100, 1), meta: '게임 100판당' },
+      ],
+      economy: [
+        { label: '획득 골드', value: formatNumber(summary.goldEarned || 0), meta: buildDeltaMeta(summary.goldEarned, prevSummary.goldEarned) },
+        { label: '소모 골드', value: formatNumber(summary.goldSpent || 0), meta: buildDeltaMeta(summary.goldSpent, prevSummary.goldSpent) },
+        { label: '순변동', value: formatNumber(summary.goldNet || 0), meta: comparisonMeta.goldNet },
+        { label: '흑자 구간', value: formatNumber(positiveNetBuckets), meta: `${Math.max(goldSeries.length, 1)}개 중` },
+      ],
+      shop: [
+        { label: '상점 구매', value: formatNumber(summary.shopPurchases || 0), meta: comparisonMeta.shopPurchases },
+        { label: '상점 지출', value: formatNumber(summary.shopGoldSpent || 0), meta: buildDeltaMeta(summary.shopGoldSpent, prevSummary.shopGoldSpent) },
+        { label: '객단가', value: avgPurchaseValue.toFixed(1), meta: '구매 1건당 골드' },
+        { label: '가입 대비 구매자', value: formatPercent(shopBuyerConversion, 1), meta: `${formatNumber(summary.shopBuyers || 0)}명` },
+      ],
+    };
+    const statActions = {
+      games: [
+        { label: '최근 매치 보기', href: '/tc-backstage/matches' },
+        { label: '실시간 방 보기', href: '/tc-backstage/' },
+      ],
+      acquisition: [
+        { label: '신규 유저 보기', href: '/tc-backstage/users?sort=joined_desc' },
+        { label: '전체 유저 보기', href: '/tc-backstage/users' },
+      ],
+      economy: [
+        { label: '골드 많은 유저', href: '/tc-backstage/users?sort=gold_desc' },
+        { label: '이탈 많은 유저', href: '/tc-backstage/users?sort=leaves_desc' },
+      ],
+      shop: [
+        { label: '상점 관리', href: '/tc-backstage/shop' },
+        { label: '유저 목록 보기', href: '/tc-backstage/users' },
+      ],
+    };
 
     const summaryCards = summaryStrip([
       { label: '전체 게임', value: formatNumber(summary.totalGames || 0), meta: `${fromValue} ~ ${toValue} · ${platformLabel}` },
       { label: '티츄', value: formatNumber(summary.tichuGames || 0), valueColor: '#5f62d6', meta: summary.totalGames ? formatPercent((summary.tichuGames || 0) * 100 / summary.totalGames, 1) : '0%' },
       { label: '스컬킹', value: formatNumber(summary.skullGames || 0), valueColor: '#138072', meta: summary.totalGames ? formatPercent((summary.skullGames || 0) * 100 / summary.totalGames, 1) : '0%' },
       { label: '러브레터', value: formatNumber(summary.llGames || 0), valueColor: '#E91E63', meta: summary.totalGames ? formatPercent((summary.llGames || 0) * 100 / summary.totalGames, 1) : '0%' },
+      { label: '마이티', value: formatNumber(summary.mightyGames || 0), valueColor: '#7b1fa2', meta: summary.totalGames ? formatPercent((summary.mightyGames || 0) * 100 / summary.totalGames, 1) : '0%' },
       { label: '랭크전', value: formatNumber(summary.rankedGames || 0), valueColor: '#c67b2b', meta: summary.totalGames ? formatPercent((summary.rankedGames || 0) * 100 / summary.totalGames, 1) : '0%' },
       { label: '가입', value: formatNumber(summary.totalSignups || 0), meta: `iOS ${formatNumber(summary.iosSignups || 0)} · AOS ${formatNumber(summary.androidSignups || 0)}` },
       { label: '획득 골드', value: formatNumber(summary.goldEarned || 0), valueColor: '#2e8b57' },
@@ -973,13 +1280,14 @@ async function handleAdminRoute(req, res, url, pathname, method, lobby, wss, mai
 
     const gameTable = gameSeries.length > 0
       ? `<div class="table-wrap"><table>
-          <tr><th>${bucket === 'hour' ? '시간대' : '날짜'}</th><th>전체</th><th>티추</th><th>스컬킹</th><th>러브레터</th><th>랭크전</th></tr>
+          <tr><th>${bucket === 'hour' ? '시간대' : '날짜'}</th><th>전체</th><th>티추</th><th>스컬킹</th><th>러브레터</th><th>마이티</th><th>랭크전</th></tr>
           ${gameSeries.map(row => `<tr>
             <td>${formatDate(row.bucket_time)}</td>
             <td>${row.total_cnt}</td>
             <td>${row.tichu_cnt}</td>
             <td>${row.skull_cnt}</td>
             <td>${row.ll_cnt}</td>
+            <td>${row.mighty_cnt}</td>
             <td>${row.ranked_cnt}</td>
           </tr>`).join('')}
         </table></div>`
@@ -1049,8 +1357,10 @@ async function handleAdminRoute(req, res, url, pathname, method, lobby, wss, mai
     const gameChartTichu = gameSeries.map(r => parseInt(r.tichu_cnt) || 0);
     const gameChartSK = gameSeries.map(r => parseInt(r.skull_cnt) || 0);
     const gameChartLL = gameSeries.map(r => parseInt(r.ll_cnt) || 0);
+    const gameChartMighty = gameSeries.map(r => parseInt(r.mighty_cnt) || 0);
     const gameChartRanked = gameSeries.map(r => parseInt(r.ranked_cnt) || 0);
     const gameChartTotal = gameSeries.map(r => parseInt(r.total_cnt) || 0);
+    const gameBucketTimes = gameSeries.map(r => r.bucket_time);
 
     const signupChartLabels = signupSeries.map(r => {
       const d = toKST(r.bucket_time);
@@ -1061,6 +1371,7 @@ async function handleAdminRoute(req, res, url, pathname, method, lobby, wss, mai
     const signupChartIOS = signupSeries.map(r => parseInt(r.ios_cnt) || 0);
     const signupChartAOS = signupSeries.map(r => parseInt(r.android_cnt) || 0);
     const signupChartTotal = signupSeries.map(r => parseInt(r.total_cnt) || 0);
+    const signupBucketTimes = signupSeries.map(r => r.bucket_time);
 
     const goldChartLabels = goldSeries.map(r => {
       const d = toKST(r.bucket_time);
@@ -1071,6 +1382,7 @@ async function handleAdminRoute(req, res, url, pathname, method, lobby, wss, mai
     const goldChartEarned = goldSeries.map(r => parseInt(r.earned) || 0);
     const goldChartSpent = goldSeries.map(r => parseInt(r.spent) || 0);
     const goldChartNet = goldSeries.map(r => parseInt(r.net) || 0);
+    const goldBucketTimes = goldSeries.map(r => r.bucket_time);
 
     const shopChartLabels = shopSalesSeries.map(r => {
       const d = toKST(r.bucket_time);
@@ -1081,13 +1393,137 @@ async function handleAdminRoute(req, res, url, pathname, method, lobby, wss, mai
     const shopChartPurchases = shopSalesSeries.map(r => parseInt(r.purchase_count) || 0);
     const shopChartBuyers = shopSalesSeries.map(r => parseInt(r.buyer_count) || 0);
     const shopChartGoldSpent = shopSalesSeries.map(r => parseInt(r.gold_spent) || 0);
+    const shopBucketTimes = shopSalesSeries.map(r => r.bucket_time);
+
+    const gamesTabContent = `
+      ${summaryStrip([
+        { label: '전체 게임', value: formatNumber(summary.totalGames || 0), meta: `${fromValue} ~ ${toValue} · ${platformLabel}` },
+        { label: '랭크 비중', value: formatPercent(rankedShare, 1), meta: `${formatNumber(summary.rankedGames || 0)}판` },
+        { label: '주력 게임', value: escapeHtml(dominantGame?.label || '-'), meta: dominantGame ? `${formatNumber(dominantGame.value)}판` : '데이터 없음' },
+        { label: '평균 게임량', value: avgGamesPerBucket.toFixed(1), meta: bucket === 'hour' ? '시간대당 평균' : '일자당 평균' },
+        { label: '마이티 비중', value: formatPercent(mightyShare, 1), meta: `${formatNumber(summary.mightyGames || 0)}판` },
+        { label: '피크 구간', value: peakGameRow ? formatDate(peakGameRow.bucket_time) : '-', meta: peakGameRow ? `${formatNumber(peakGameRow.total_cnt)}판` : '데이터 없음' },
+      ])}
+      <div class="card-actions">
+        ${(statActions.games || []).map((action) => `<a href="${action.href}" class="btn btn-secondary">${escapeHtml(action.label)}</a>`).join('')}
+      </div>
+      <div class="subtab-copy">게임 탭은 실제 플레이 볼륨과 어떤 게임이 운영을 주도하는지에 집중합니다. 차트를 클릭하면 해당 날짜로 바로 drill-down 됩니다.</div>
+      <div class="grid-2col">
+        <div class="card">
+          <h3>게임량 추이</h3>
+          <div style="position:relative;height:300px;margin-top:14px"><canvas id="gameChart"></canvas></div>
+        </div>
+        <div class="card">
+          <h3>게임 비율</h3>
+          <div style="position:relative;height:300px;display:flex;align-items:center;justify-content:center;margin-top:14px"><canvas id="gamePieChart"></canvas></div>
+        </div>
+      </div>
+      <div class="card">
+        <h3>게임량 상세</h3>
+        ${gameTable}
+      </div>
+    `;
+
+    const acquisitionTabContent = `
+      ${summaryStrip([
+        { label: '전체 가입', value: formatNumber(summary.totalSignups || 0), meta: `${fromValue} ~ ${toValue}` },
+        { label: 'iOS 비중', value: formatPercent(iosShare, 1), meta: `${formatNumber(summary.iosSignups || 0)}명` },
+        { label: 'AOS 비중', value: formatPercent(aosShare, 1), meta: `${formatNumber(summary.androidSignups || 0)}명` },
+        { label: '평균 가입량', value: avgSignupsPerBucket.toFixed(1), meta: bucket === 'hour' ? '시간대당 평균' : '일자당 평균' },
+        { label: '게임 대비 가입', value: formatPercent(signupPerGame * 100, 1), meta: `게임 100판당 ${signupPerGame.toFixed(2)}명` },
+        { label: '피크 구간', value: peakSignupRow ? formatDate(peakSignupRow.bucket_time) : '-', meta: peakSignupRow ? `${formatNumber(peakSignupRow.total_cnt)}명` : '데이터 없음' },
+      ])}
+      <div class="card-actions">
+        ${(statActions.acquisition || []).map((action) => `<a href="${action.href}" class="btn btn-secondary">${escapeHtml(action.label)}</a>`).join('')}
+      </div>
+      <div class="subtab-copy">유입 탭은 가입 추이와 플랫폼 분포, 그리고 게임량 대비 신규 유저 유입 강도를 같이 봅니다. 차트를 클릭하면 해당 날짜로 좁혀볼 수 있습니다.</div>
+      <div class="grid-2col">
+        <div class="card">
+          <h3>가입 추이</h3>
+          <div style="position:relative;height:300px;margin-top:14px"><canvas id="signupChart"></canvas></div>
+        </div>
+        <div class="card">
+          <h3>가입 상세</h3>
+          ${signupTable}
+        </div>
+      </div>
+    `;
+
+    const economyTabContent = `
+      ${summaryStrip([
+        { label: '획득 골드', value: formatNumber(summary.goldEarned || 0), valueColor: '#2e8b57' },
+        { label: '소모 골드', value: formatNumber(summary.goldSpent || 0), valueColor: '#c0563f' },
+        { label: '순변동', value: formatNumber(summary.goldNet || 0), valueColor: (summary.goldNet || 0) >= 0 ? '#1f2328' : '#c0563f' },
+        { label: '평균 순변동', value: avgNetPerBucket.toFixed(1), meta: bucket === 'hour' ? '시간대당 평균' : '일자당 평균' },
+        { label: '흑자 구간', value: formatNumber(positiveNetBuckets), meta: `${Math.max(goldSeries.length, 1)}개 구간 중` },
+        { label: '최대 획득 시점', value: peakEarnRow ? formatDate(peakEarnRow.bucket_time) : '-', meta: peakEarnRow ? `${formatNumber(peakEarnRow.earned)} 골드` : '데이터 없음' },
+      ])}
+      <div class="card-actions">
+        ${(statActions.economy || []).map((action) => `<a href="${action.href}" class="btn btn-secondary">${escapeHtml(action.label)}</a>`).join('')}
+      </div>
+      <div class="subtab-copy">경제 탭은 게임 보상, 광고, 상점 소비를 합친 전체 골드 흐름을 읽기 쉽게 보여줍니다. 차트 클릭 시 해당 날짜 기준으로 바로 좁혀집니다.</div>
+      <div class="grid-2col">
+        <div class="card">
+          <h3>골드 획득 / 소모</h3>
+          <div style="position:relative;height:300px;margin-top:14px"><canvas id="goldChart"></canvas></div>
+        </div>
+        <div class="card">
+          <h3>보조 지표</h3>
+          <div class="soft-panel">
+            ${metricLine('최대 획득 구간', peakEarnRow ? `${escapeHtml(formatDate(peakEarnRow.bucket_time))} · ${formatNumber(peakEarnRow.earned)}` : '-')}
+            ${metricLine('최대 소모 구간', peakSpendRow ? `${escapeHtml(formatDate(peakSpendRow.bucket_time))} · ${formatNumber(peakSpendRow.spent)}` : '-')}
+            ${metricLine('구간당 평균 획득', (Number(summary.goldEarned || 0) / Math.max(goldSeries.length, 1)).toFixed(1))}
+            ${metricLine('구간당 평균 소모', (Number(summary.goldSpent || 0) / Math.max(goldSeries.length, 1)).toFixed(1))}
+          </div>
+          <div style="height:14px"></div>
+          ${goldTable}
+        </div>
+      </div>
+    `;
+
+    const shopTabContent = `
+      ${summaryStrip([
+        { label: '상점 구매', value: formatNumber(summary.shopPurchases || 0), meta: `구매자 ${formatNumber(summary.shopBuyers || 0)}명` },
+        { label: '상점 지출', value: formatNumber(summary.shopGoldSpent || 0), valueColor: '#b35b19', meta: `판매 아이템 ${formatNumber(summary.shopUniqueItems || 0)}종` },
+        { label: '객단가', value: avgPurchaseValue.toFixed(1), meta: '구매 1건당 골드' },
+        { label: '구매자당 주문', value: purchasePerBuyer.toFixed(1), meta: '평균 구매 횟수' },
+        { label: '최대 판매 구간', value: peakShopRow ? formatDate(peakShopRow.bucket_time) : '-', meta: peakShopRow ? `${formatNumber(peakShopRow.purchase_count)}건` : '데이터 없음' },
+        { label: '대표 상품', value: topShopItems[0] ? escapeHtml(topShopItems[0].item_name) : '-', meta: topShopItems[0] ? `${formatNumber(topShopItems[0].purchase_count)}건` : '데이터 없음' },
+      ])}
+      <div class="card-actions">
+        ${(statActions.shop || []).map((action) => `<a href="${action.href}" class="btn btn-secondary">${escapeHtml(action.label)}</a>`).join('')}
+      </div>
+      <div class="subtab-copy">상점 탭은 판매량뿐 아니라 구매자 밀도와 어떤 상품이 실제 지출을 끌고 가는지에 초점을 둡니다. 차트를 클릭하면 해당 날짜 기준으로 바로 drill-down 됩니다.</div>
+      <div class="grid-2col">
+        <div class="card">
+          <h3>상점 판매 추이</h3>
+          <div style="position:relative;height:300px"><canvas id="shopSalesChart"></canvas></div>
+        </div>
+        <div class="card">
+          <h3>베스트셀러 아이템</h3>
+          ${topShopItemsTable}
+        </div>
+      </div>
+      <div class="card">
+        <h3>상점 판매 상세</h3>
+        ${shopSalesTable}
+      </div>
+    `;
+
+    const tabContentMap = {
+      games: gamesTabContent,
+      acquisition: acquisitionTabContent,
+      economy: economyTabContent,
+      shop: shopTabContent,
+    };
 
     const content = `
       <script src="https://cdn.jsdelivr.net/npm/chart.js@4/dist/chart.umd.min.js"></script>
       ${pageHeader('통계', '기간별 게임량, 가입, 골드 흐름, 그리고 상점 판매 추이까지 함께 볼 수 있습니다. 플랫폼 필터로 iOS/AOS 기준도 바로 확인할 수 있습니다.')}
-      <div class="card">
-        <h3>조회 조건</h3>
+      <div class="filter-card">
+        <div class="filter-title">조회 조건</div>
         <form method="GET" action="/tc-backstage/stats" class="search-bar" style="align-items:end;flex-wrap:wrap">
+          <input type="hidden" name="tab" value="${escapeHtml(statTab)}">
           <div style="min-width:160px">
             <div style="font-size:12px;color:#888;margin-bottom:6px">시작일</div>
             <input type="date" name="from" value="${escapeHtml(fromValue)}">
@@ -1115,62 +1551,41 @@ async function handleAdminRoute(req, res, url, pathname, method, lobby, wss, mai
           <a href="/tc-backstage/stats" class="btn btn-secondary">초기화</a>
         </form>
       </div>
-
       ${summaryCards}
-
-      <div class="grid-2col">
-        <div class="card">
-          <h3>가입 추이</h3>
-          <div style="position:relative;height:300px"><canvas id="signupChart"></canvas></div>
-        </div>
-        <div class="card">
-          <h3>가입 상세</h3>
-          ${signupTable}
+      <div class="preset-bar">
+        ${presetLinks.map((item) => `<a href="${buildStatsLink({ preset: item.key })}" class="preset-link ${preset === item.key ? 'active' : ''}">${item.label}</a>`).join('')}
+      </div>
+      <div class="subtab-bar">
+        ${statTabs.map((tab) => `
+          <a href="${buildStatsTabLink(tab.key)}" class="subtab-link ${statTab === tab.key ? 'active' : ''}">
+            <span>${escapeHtml(tab.label)}</span>
+            <span style="font-size:11px;opacity:0.8">${escapeHtml(tab.desc)}</span>
+          </a>
+        `).join('')}
+      </div>
+      <div class="sticky-kpi-rail">
+        <div class="sticky-kpi-title">즐겨찾기 KPI</div>
+        <div class="sticky-kpi-grid">
+          ${(stickyFavorites[statTab] || []).map((item) => `
+            <div class="sticky-kpi-item">
+              <div class="k">${escapeHtml(item.label)}</div>
+              <div class="v">${item.value}</div>
+              <div class="m">${item.meta || ''}</div>
+            </div>
+          `).join('')}
         </div>
       </div>
-
-      <div class="grid-2col">
-        <div class="card">
-          <h3>게임량 추이</h3>
-          <div style="position:relative;height:300px"><canvas id="gameChart"></canvas></div>
+      ${warningCards.length > 0 ? `
+        <div class="status-strip">
+          ${warningCards.map((card) => `
+            <div class="status-card ${card.tone}">
+              <div class="title">${escapeHtml(card.title)}</div>
+              <div class="desc">${escapeHtml(card.desc)}</div>
+            </div>
+          `).join('')}
         </div>
-        <div class="card">
-          <h3>게임 비율</h3>
-          <div style="position:relative;height:300px;display:flex;align-items:center;justify-content:center"><canvas id="gamePieChart"></canvas></div>
-        </div>
-      </div>
-
-      <div class="card">
-        <h3>골드 획득 / 소모</h3>
-        <div style="position:relative;height:300px"><canvas id="goldChart"></canvas></div>
-      </div>
-
-      <div class="grid-2col">
-        <div class="card">
-          <h3>상점 판매 추이</h3>
-          <div style="position:relative;height:300px"><canvas id="shopSalesChart"></canvas></div>
-        </div>
-        <div class="card">
-          <h3>베스트셀러 아이템</h3>
-          ${topShopItemsTable}
-        </div>
-      </div>
-
-      <div class="grid-2col">
-        <div class="card">
-          <h3>게임량 상세</h3>
-          ${gameTable}
-        </div>
-        <div class="card">
-          <h3>골드 상세</h3>
-          ${goldTable}
-        </div>
-      </div>
-
-      <div class="card">
-        <h3>상점 판매 상세</h3>
-        ${shopSalesTable}
-      </div>
+      ` : ''}
+      ${tabContentMap[statTab]}
 
       <script>
       (function() {
@@ -1181,9 +1596,33 @@ async function handleAdminRoute(req, res, url, pathname, method, lobby, wss, mai
           padding: 10,
           cornerRadius: 8,
         };
+        const drilldownBase = ${JSON.stringify(buildStatsLink({ preset: null }))};
+        function attachDrilldown(chart, bucketValues, targetTab) {
+          if (!chart || !Array.isArray(bucketValues) || bucketValues.length === 0) return;
+          chart.options.onClick = (_, elements) => {
+            if (!elements || elements.length === 0) return;
+            const index = elements[0].index;
+            const raw = bucketValues[index];
+            if (!raw) return;
+            const d = new Date(raw);
+            const year = d.getFullYear();
+            const month = String(d.getMonth() + 1).padStart(2, '0');
+            const day = String(d.getDate()).padStart(2, '0');
+            const dateValue = year + '-' + month + '-' + day;
+            const nextUrl = new URL(drilldownBase, window.location.origin);
+            nextUrl.searchParams.set('tab', targetTab);
+            nextUrl.searchParams.set('from', dateValue);
+            nextUrl.searchParams.set('to', dateValue);
+            nextUrl.searchParams.set('bucket', 'hour');
+            window.location.href = nextUrl.pathname + nextUrl.search;
+          };
+          chart.update();
+        }
 
         // Game chart - stacked bar
-        new Chart(document.getElementById('gameChart'), {
+        const gameChartEl = document.getElementById('gameChart');
+        if (gameChartEl) {
+          const gameChart = new Chart(gameChartEl, {
           type: 'bar',
           data: {
             labels: ${JSON.stringify(gameChartLabels)},
@@ -1206,6 +1645,13 @@ async function handleAdminRoute(req, res, url, pathname, method, lobby, wss, mai
                 label: '러브레터',
                 data: ${JSON.stringify(gameChartLL)},
                 backgroundColor: 'rgba(233,30,99,0.8)',
+                borderRadius: 4,
+                borderSkipped: false,
+              },
+              {
+                label: '마이티',
+                data: ${JSON.stringify(gameChartMighty)},
+                backgroundColor: 'rgba(123,31,162,0.8)',
                 borderRadius: 4,
                 borderSkipped: false,
               },
@@ -1242,18 +1688,22 @@ async function handleAdminRoute(req, res, url, pathname, method, lobby, wss, mai
             },
           }
         });
+          attachDrilldown(gameChart, ${JSON.stringify(gameBucketTimes)}, 'games');
+        }
 
         // Game pie chart
         const totalTichu = ${JSON.stringify(gameChartTichu)}.reduce((a,b) => a+b, 0);
         const totalSK = ${JSON.stringify(gameChartSK)}.reduce((a,b) => a+b, 0);
         const totalLL = ${JSON.stringify(gameChartLL)}.reduce((a,b) => a+b, 0);
-        new Chart(document.getElementById('gamePieChart'), {
+        const totalMighty = ${JSON.stringify(gameChartMighty)}.reduce((a,b) => a+b, 0);
+        const gamePieChartEl = document.getElementById('gamePieChart');
+        if (gamePieChartEl) new Chart(gamePieChartEl, {
           type: 'doughnut',
           data: {
-            labels: ['티츄 (' + totalTichu + ')', '스컬킹 (' + totalSK + ')', '러브레터 (' + totalLL + ')'],
+            labels: ['티츄 (' + totalTichu + ')', '스컬킹 (' + totalSK + ')', '러브레터 (' + totalLL + ')', '마이티 (' + totalMighty + ')'],
             datasets: [{
-              data: [totalTichu, totalSK, totalLL],
-              backgroundColor: ['rgba(108,99,255,0.85)', 'rgba(255,112,67,0.85)', 'rgba(233,30,99,0.85)'],
+              data: [totalTichu, totalSK, totalLL, totalMighty],
+              backgroundColor: ['rgba(108,99,255,0.85)', 'rgba(255,112,67,0.85)', 'rgba(233,30,99,0.85)', 'rgba(123,31,162,0.85)'],
               borderWidth: 0,
               hoverOffset: 8,
             }]
@@ -1270,7 +1720,9 @@ async function handleAdminRoute(req, res, url, pathname, method, lobby, wss, mai
         });
 
         // Gold chart - bar + line
-        new Chart(document.getElementById('goldChart'), {
+        const goldChartEl = document.getElementById('goldChart');
+        if (goldChartEl) {
+          const goldChart = new Chart(goldChartEl, {
           type: 'bar',
           data: {
             labels: ${JSON.stringify(goldChartLabels)},
@@ -1321,8 +1773,12 @@ async function handleAdminRoute(req, res, url, pathname, method, lobby, wss, mai
             },
           }
         });
+          attachDrilldown(goldChart, ${JSON.stringify(goldBucketTimes)}, 'economy');
+        }
 
-        new Chart(document.getElementById('signupChart'), {
+        const signupChartEl = document.getElementById('signupChart');
+        if (signupChartEl) {
+          const signupChart = new Chart(signupChartEl, {
           type: 'bar',
           data: {
             labels: ${JSON.stringify(signupChartLabels)},
@@ -1374,8 +1830,12 @@ async function handleAdminRoute(req, res, url, pathname, method, lobby, wss, mai
             },
           }
         });
+          attachDrilldown(signupChart, ${JSON.stringify(signupBucketTimes)}, 'acquisition');
+        }
 
-        new Chart(document.getElementById('shopSalesChart'), {
+        const shopSalesChartEl = document.getElementById('shopSalesChart');
+        if (shopSalesChartEl) {
+          const shopSalesChart = new Chart(shopSalesChartEl, {
           type: 'bar',
           data: {
             labels: ${JSON.stringify(shopChartLabels)},
@@ -1436,6 +1896,8 @@ async function handleAdminRoute(req, res, url, pathname, method, lobby, wss, mai
             },
           }
         });
+          attachDrilldown(shopSalesChart, ${JSON.stringify(shopBucketTimes)}, 'shop');
+        }
       })();
       </script>
     `;
@@ -1702,7 +2164,8 @@ async function handleAdminRoute(req, res, url, pathname, method, lobby, wss, mai
     ];
 
     const searchForm = `
-      <div class="search-bar">
+      <div class="filter-card">
+        <div class="filter-title">유저 필터</div>
         <form method="GET" action="/tc-backstage/users" style="display:flex;flex-wrap:wrap;gap:8px;width:100%;align-items:center">
           <input type="text" name="q" placeholder="닉네임 또는 계정명 검색..." value="${escapeHtml(search)}" style="flex:1;min-width:180px">
           <input type="text" name="ip" placeholder="IP 검색" value="${escapeHtml(ipQuery)}" style="width:130px;padding:8px 10px;border-radius:8px;border:1px solid #ddd;font-size:13px">
@@ -1987,7 +2450,7 @@ async function handleAdminRoute(req, res, url, pathname, method, lobby, wss, mai
               endBadge = '<span class="badge" style="background:#fff8e1;color:#f57f17">시간초과</span>' + (m.deserterNickname ? '<br><span style="font-size:11px;color:#f57f17">' + escapeHtml(m.deserterNickname) + '</span>' : '');
             }
             const rankedBadge = m.isRanked ? '<span class="badge" style="background:#fff3e0;color:#e65100">랭크</span>' : '<span class="badge" style="background:#f5f5f5;color:#999">일반</span>';
-            if (m.gameType === 'skull_king' || m.gameType === 'love_letter') {
+            if (m.gameType === 'skull_king' || m.gameType === 'love_letter' || m.gameType === 'mighty') {
               const playersText = m.players ? m.players.map(p => escapeHtml(p.nickname) + '(' + p.score + '점 #' + p.rank + ')').join(', ') : '-';
               return `<tr>
               <td>${m.id}</td>
@@ -2468,9 +2931,10 @@ async function handleAdminRoute(req, res, url, pathname, method, lobby, wss, mai
 
     // Players table
     const isTichuGame = room.gameType === 'tichu';
+    const isMightyGame = room.gameType === 'mighty';
     const playersHtml = roomState.players.map((p, i) => {
       if (!p) {
-        const colspan = isTichuGame ? 6 : 4;
+        const colspan = isTichuGame ? 6 : isMightyGame ? 5 : 4;
         return `<tr><td>슬롯 ${i}</td><td colspan="${colspan}" style="color:#999">비어있음</td></tr>`;
       }
       const statusBadges = [];
@@ -2502,6 +2966,31 @@ async function handleAdminRoute(req, res, url, pathname, method, lobby, wss, mai
           <td>${finished || '-'}</td>
         </tr>`;
       }
+      if (isMightyGame) {
+        let cardCount = '-';
+        let bidText = '-';
+        let trickPointText = '-';
+        if (game) {
+          const hand = game.hands[p.id];
+          const bid = game.bids ? game.bids[p.id] : null;
+          const trickCount = Array.isArray(game.tricks) ? game.tricks.filter(t => t.winner === p.id).length : 0;
+          const pointCount = Array.isArray(game.pointCards?.[p.id]) ? game.pointCards[p.id].length : 0;
+          cardCount = hand ? hand.length : 0;
+          if (bid === 'pass') bidText = '<span class="badge" style="background:#f5f5f5;color:#888">패스</span>';
+          else if (bid && typeof bid === 'object') bidText = `<span class="badge" style="background:#e3f2fd;color:#1565c0">${bid.points} ${mightySuitLabel(bid.suit)}</span>`;
+          if (game.declarer === p.id) statusBadges.push('<span class="badge" style="background:#fff3e0;color:#e65100">주공</span>');
+          if (game.friendRevealed && game.partner === p.id) statusBadges.push('<span class="badge" style="background:#e8f5e9;color:#2e7d32">프렌드</span>');
+          trickPointText = `${trickCount}T / ${pointCount}P`;
+        }
+        return `<tr>
+          <td>슬롯 ${i}</td>
+          <td style="font-weight:600">${escapeHtml(p.name)}</td>
+          <td>${statusBadges.join(' ') || '-'}</td>
+          <td style="font-weight:700;font-size:16px">${cardCount}</td>
+          <td>${bidText}</td>
+          <td>${trickPointText}</td>
+        </tr>`;
+      }
       // SK / Love Letter
       return `<tr>
         <td>슬롯 ${i}</td>
@@ -2527,6 +3016,8 @@ async function handleAdminRoute(req, res, url, pathname, method, lobby, wss, mai
       // Phase badge
       const phaseColors = {
         'waiting': 'badge-pending',
+        'bidding': 'badge-pending',
+        'kitty_exchange': 'badge-suggestion',
         'dealing_first_8': 'badge-pending',
         'large_tichu_phase': 'badge-pending',
         'dealing_remaining_6': 'badge-pending',
@@ -2537,127 +3028,240 @@ async function handleAdminRoute(req, res, url, pathname, method, lobby, wss, mai
       };
       const phaseBadge = `<span class="badge ${phaseColors[phase] || 'badge-other'}">${phase}</span>`;
 
-      // Current trick
-      let trickHtml = '';
-      if (game.currentTrick.length > 0) {
-        trickHtml = `<div class="table-wrap"><table>
-          <tr><th>플레이어</th><th>카드</th><th>조합</th><th>값</th></tr>
-          ${game.currentTrick.map(t => `<tr>
-            <td style="font-weight:600">${escapeHtml(game.playerNames[t.playerId])}</td>
-            <td><code style="background:#f0f0f0;padding:2px 6px;border-radius:4px;font-size:12px">${t.cards.join(', ')}</code></td>
-            <td><span class="badge badge-reviewed">${t.combo.type}</span></td>
-            <td style="font-weight:700">${t.combo.value}</td>
-          </tr>`).join('')}
-        </table></div>`;
-      } else {
-        trickHtml = '<div style="color:#999;font-size:13px">테이블에 카드 없음</div>';
-      }
+      if (isMightyGame) {
+        let trickHtml = '';
+        if (game.currentTrick.length > 0) {
+          trickHtml = `<div class="table-wrap"><table>
+            <tr><th>플레이어</th><th>카드</th></tr>
+            ${game.currentTrick.map(t => `<tr>
+              <td style="font-weight:600">${escapeHtml(game.playerNames[t.pid] || t.pid)}</td>
+              <td>${renderAdminCardChip(t.cardId)}</td>
+            </tr>`).join('')}
+          </table></div>`;
+        } else {
+          trickHtml = '<div style="color:#999;font-size:13px">테이블에 카드 없음</div>';
+        }
 
-      // Trick piles summary (points collected per player)
-      let trickPilesHtml = '';
-      if (game.trickPiles) {
-        const pileRows = game.playerIds.map(pid => {
-          const cards = game.trickPiles[pid] || [];
-          const pts = cards.reduce((s, c) => {
-            const rank = c.startsWith('special_') ? c.split('_')[1] : c.split('_')[1];
-            if (rank === '5') return s + 5;
-            if (rank === '10' || rank === 'K') return s + 10;
-            if (c === 'special_dragon') return s + 25;
-            if (c === 'special_phoenix') return s - 25;
-            return s;
-          }, 0);
+        let handsHtml = '';
+        if (game.hands) {
+          const handRows = game.playerIds.map(pid => {
+            const hand = game.hands[pid] || [];
+            const cardDisplay = hand.length > 0
+              ? hand.map(renderAdminCardChip).join(' ')
+              : '<span style="color:#999">비어있음</span>';
+            return `<tr>
+              <td style="font-weight:600;white-space:nowrap">${escapeHtml(game.playerNames[pid])}</td>
+              <td>${cardDisplay}</td>
+            </tr>`;
+          }).join('');
+          handsHtml = `<div class="table-wrap"><table>
+            <tr><th style="width:100px">플레이어</th><th>카드</th></tr>
+            ${handRows}
+          </table></div>`;
+        }
+
+        const scoreRows = game.playerIds.map(pid => {
+          const score = game.scores?.[pid] ?? 0;
+          const trickCount = Array.isArray(game.tricks) ? game.tricks.filter(t => t.winner === pid).length : 0;
+          const pointCount = Array.isArray(game.pointCards?.[pid]) ? game.pointCards[pid].length : 0;
           return `<tr>
             <td style="font-weight:600">${escapeHtml(game.playerNames[pid])}</td>
-            <td>${cards.length}</td>
-            <td style="font-weight:700;color:${pts >= 0 ? '#4caf50' : '#e53935'}">${pts}</td>
+            <td style="font-weight:700">${score}</td>
+            <td>${trickCount}</td>
+            <td>${pointCount}</td>
           </tr>`;
         }).join('');
-        trickPilesHtml = `<div class="table-wrap"><table>
-          <tr><th>플레이어</th><th>획득 카드</th><th>점수</th></tr>
-          ${pileRows}
+        const scoreHtml = `<div class="table-wrap"><table>
+          <tr><th>플레이어</th><th>누적 점수</th><th>트릭</th><th>포인트 카드</th></tr>
+          ${scoreRows}
         </table></div>`;
-      }
 
-      // Hands (card list per player)
-      let handsHtml = '';
-      if (game.hands) {
-        const handRows = game.playerIds.map(pid => {
-          const hand = game.hands[pid] || [];
-          const cardDisplay = hand.length > 0
-            ? hand.map(c => {
-                let style = 'background:#f0f0f0;padding:2px 6px;border-radius:4px;font-size:11px;margin:1px;display:inline-block;';
-                if (c.startsWith('special_')) style += 'background:#fff3e0;color:#e65100;font-weight:600;';
-                else if (c.endsWith('_A') || c.endsWith('_K')) style += 'font-weight:600;';
-                return `<code style="${style}">${c}</code>`;
-              }).join(' ')
-            : '<span style="color:#999">비어있음</span>';
-          return `<tr>
-            <td style="font-weight:600;white-space:nowrap">${escapeHtml(game.playerNames[pid])}</td>
-            <td>${cardDisplay}</td>
-          </tr>`;
-        }).join('');
-        handsHtml = `<div class="table-wrap"><table>
-          <tr><th style="width:100px">플레이어</th><th>카드</th></tr>
-          ${handRows}
-        </table></div>`;
-      }
+        let roundResultHtml = '<div style="color:#999;font-size:13px">아직 완료된 라운드 없음</div>';
+        if (game.roundResult) {
+          roundResultHtml = `<div class="table-wrap"><table>
+            <tr><th>플레이어</th><th>라운드 점수</th></tr>
+            ${game.playerIds.map(pid => `<tr>
+              <td style="font-weight:600">${escapeHtml(game.playerNames[pid])}</td>
+              <td>${game.roundResult.scores?.[pid] ?? 0}</td>
+            </tr>`).join('')}
+          </table></div>
+          <div style="margin-top:12px;font-size:13px;color:#555">
+            <strong>결과:</strong>
+            ${game.roundResult.success ? '주공 성공' : '주공 실패'}
+            <span style="margin-left:10px"><strong>주공 팀 포인트:</strong> ${game.roundResult.declarerPoints ?? 0}</span>
+          </div>`;
+        }
 
-      // Score history
-      let scoreHistoryHtml = '';
-      if (game.scoreHistory && game.scoreHistory.length > 0) {
-        scoreHistoryHtml = `<div class="table-wrap"><table>
-          <tr><th>라운드</th><th>팀 A</th><th>팀 B</th></tr>
-          ${game.scoreHistory.map(s => `<tr>
-            <td>R${s.round}</td>
-            <td style="font-weight:600;color:${s.teamA > 0 ? '#4caf50' : s.teamA < 0 ? '#e53935' : '#333'}">${s.teamA > 0 ? '+' : ''}${s.teamA}</td>
-            <td style="font-weight:600;color:${s.teamB > 0 ? '#4caf50' : s.teamB < 0 ? '#e53935' : '#333'}">${s.teamB > 0 ? '+' : ''}${s.teamB}</td>
-          </tr>`).join('')}
-          <tr style="border-top:2px solid #333;font-weight:700">
-            <td>Total</td>
-            <td style="color:#1565c0;font-size:16px">${game.totalScores.teamA}</td>
-            <td style="color:#c62828;font-size:16px">${game.totalScores.teamB}</td>
-          </tr>
-        </table></div>`;
-      }
+        let specialHtml = '';
+        specialHtml += `<div style="margin-bottom:8px"><strong>트럼프:</strong> ${game.trumpSuit ? `<span class="badge" style="background:#fff3e0;color:#e65100">${mightySuitLabel(game.trumpSuit)}</span>` : '<span style="color:#999">미정</span>'}</div>`;
+        specialHtml += `<div style="margin-bottom:8px"><strong>현재 비드:</strong> ${game.currentBid?.bidder ? `<span class="badge" style="background:#e3f2fd;color:#1565c0">${game.currentBid.points} ${mightySuitLabel(game.currentBid.suit)}</span> <span style="font-size:12px;color:#666">${escapeHtml(game.playerNames[game.currentBid.bidder] || game.currentBid.bidder)}</span>` : '<span style="color:#999">없음</span>'}</div>`;
+        specialHtml += `<div style="margin-bottom:8px"><strong>주공:</strong> ${game.declarer ? escapeHtml(game.playerNames[game.declarer] || game.declarer) : '<span style="color:#999">미정</span>'}</div>`;
+        specialHtml += `<div style="margin-bottom:8px"><strong>프렌드 카드:</strong> ${game.friendCard ? renderAdminCardChip(game.friendCard) : '<span class="badge" style="background:#f5f5f5;color:#888">솔로/미선택</span>'}</div>`;
+        if (game.friendRevealed) {
+          specialHtml += `<div style="margin-bottom:8px"><strong>프렌드 공개:</strong> <span class="badge" style="background:#e8f5e9;color:#2e7d32">${escapeHtml(game.playerNames[game.partner] || game.partner)}</span></div>`;
+        }
+        if (Array.isArray(game.discarded) && game.discarded.length > 0) {
+          specialHtml += `<div style="margin-bottom:8px"><strong>버린 카드:</strong> ${game.discarded.map(renderAdminCardChip).join(' ')}</div>`;
+        }
 
-      // Special states
-      let specialHtml = '';
-      if (game.callRank) specialHtml += `<div style="margin-bottom:8px"><strong>소원 활성:</strong> <span class="badge badge-pending">${game.callRank}</span></div>`;
-      if (game.dragonPending) specialHtml += `<div style="margin-bottom:8px"><strong>용 처리 대기:</strong> <span class="badge" style="background:#ffebee;color:#c62828">${escapeHtml(game.playerNames[game.dragonDecider] || '?')} 넘겨야 함</span></div>`;
-      if (game.passCount > 0) specialHtml += `<div style="margin-bottom:8px"><strong>패스 횟수:</strong> ${game.passCount}</div>`;
-
-      gameHtml = `
-        <div class="stats-grid" style="grid-template-columns:repeat(auto-fit, minmax(130px, 1fr));margin-bottom:20px">
-          <div class="stat-card" style="border-left:4px solid #6c63ff"><div class="label">단계</div><div style="margin-top:4px">${phaseBadge}</div></div>
-          <div class="stat-card" style="border-left:4px solid #ff9800"><div class="label">라운드</div><div class="value orange">${round}</div></div>
-          <div class="stat-card" style="border-left:4px solid #4caf50"><div class="label">현재 턴</div><div style="font-weight:600;font-size:16px;margin-top:4px">${escapeHtml(currentPlayerName)}</div></div>
-          <div class="stat-card" style="border-left:4px solid #1565c0"><div class="label">Team A</div><div class="value" style="color:#1565c0">${game.totalScores.teamA}</div></div>
-          <div class="stat-card" style="border-left:4px solid #c62828"><div class="label">Team B</div><div class="value" style="color:#c62828">${game.totalScores.teamB}</div></div>
-        </div>
-
-        ${specialHtml ? `<div class="card"><h3>활성 상태</h3>${specialHtml}</div>` : ''}
-
-        <div class="card">
-          <h3>현재 트릭</h3>
-          ${trickHtml}
-        </div>
-
-        <div class="card">
-          <h3>플레이어 핸드</h3>
-          ${handsHtml}
-        </div>
-
-        <div class="grid-2col">
-          <div class="card">
-            <h3>트릭 포인트</h3>
-            ${trickPilesHtml}
+        gameHtml = `
+          <div class="stats-grid" style="grid-template-columns:repeat(auto-fit, minmax(130px, 1fr));margin-bottom:20px">
+            <div class="stat-card" style="border-left:4px solid #1565c0"><div class="label">단계</div><div style="margin-top:4px">${phaseBadge}</div></div>
+            <div class="stat-card" style="border-left:4px solid #ff9800"><div class="label">라운드</div><div class="value orange">${round}</div></div>
+            <div class="stat-card" style="border-left:4px solid #4caf50"><div class="label">현재 턴</div><div style="font-weight:600;font-size:16px;margin-top:4px">${escapeHtml(currentPlayerName)}</div></div>
+            <div class="stat-card" style="border-left:4px solid #7b1fa2"><div class="label">트럼프</div><div style="font-weight:700;font-size:18px;margin-top:4px">${escapeHtml(mightySuitLabel(game.trumpSuit))}</div></div>
+            <div class="stat-card" style="border-left:4px solid #455a64"><div class="label">주공</div><div style="font-weight:600;font-size:16px;margin-top:4px">${escapeHtml(game.declarer ? (game.playerNames[game.declarer] || game.declarer) : '-')}</div></div>
           </div>
+
           <div class="card">
-            <h3>점수 기록</h3>
-            ${scoreHistoryHtml || '<div style="color:#999;font-size:13px">아직 완료된 라운드 없음</div>'}
+            <h3>활성 상태</h3>
+            ${specialHtml}
           </div>
-        </div>
-      `;
+
+          <div class="card">
+            <h3>현재 트릭</h3>
+            ${trickHtml}
+          </div>
+
+          <div class="card">
+            <h3>플레이어 핸드</h3>
+            ${handsHtml}
+          </div>
+
+          <div class="grid-2col">
+            <div class="card">
+              <h3>점수판</h3>
+              ${scoreHtml}
+            </div>
+            <div class="card">
+              <h3>라운드 결과</h3>
+              ${roundResultHtml}
+            </div>
+          </div>
+        `;
+      } else {
+        // Current trick
+        let trickHtml = '';
+        if (game.currentTrick.length > 0) {
+          trickHtml = `<div class="table-wrap"><table>
+            <tr><th>플레이어</th><th>카드</th><th>조합</th><th>값</th></tr>
+            ${game.currentTrick.map(t => `<tr>
+              <td style="font-weight:600">${escapeHtml(game.playerNames[t.playerId])}</td>
+              <td><code style="background:#f0f0f0;padding:2px 6px;border-radius:4px;font-size:12px">${t.cards.join(', ')}</code></td>
+              <td><span class="badge badge-reviewed">${t.combo.type}</span></td>
+              <td style="font-weight:700">${t.combo.value}</td>
+            </tr>`).join('')}
+          </table></div>`;
+        } else {
+          trickHtml = '<div style="color:#999;font-size:13px">테이블에 카드 없음</div>';
+        }
+
+        // Trick piles summary (points collected per player)
+        let trickPilesHtml = '';
+        if (game.trickPiles) {
+          const pileRows = game.playerIds.map(pid => {
+            const cards = game.trickPiles[pid] || [];
+            const pts = cards.reduce((s, c) => {
+              const rank = c.startsWith('special_') ? c.split('_')[1] : c.split('_')[1];
+              if (rank === '5') return s + 5;
+              if (rank === '10' || rank === 'K') return s + 10;
+              if (c === 'special_dragon') return s + 25;
+              if (c === 'special_phoenix') return s - 25;
+              return s;
+            }, 0);
+            return `<tr>
+              <td style="font-weight:600">${escapeHtml(game.playerNames[pid])}</td>
+              <td>${cards.length}</td>
+              <td style="font-weight:700;color:${pts >= 0 ? '#4caf50' : '#e53935'}">${pts}</td>
+            </tr>`;
+          }).join('');
+          trickPilesHtml = `<div class="table-wrap"><table>
+            <tr><th>플레이어</th><th>획득 카드</th><th>점수</th></tr>
+            ${pileRows}
+          </table></div>`;
+        }
+
+        // Hands (card list per player)
+        let handsHtml = '';
+        if (game.hands) {
+          const handRows = game.playerIds.map(pid => {
+            const hand = game.hands[pid] || [];
+            const cardDisplay = hand.length > 0
+              ? hand.map(c => {
+                  let style = 'background:#f0f0f0;padding:2px 6px;border-radius:4px;font-size:11px;margin:1px;display:inline-block;';
+                  if (c.startsWith('special_')) style += 'background:#fff3e0;color:#e65100;font-weight:600;';
+                  else if (c.endsWith('_A') || c.endsWith('_K')) style += 'font-weight:600;';
+                  return `<code style="${style}">${c}</code>`;
+                }).join(' ')
+              : '<span style="color:#999">비어있음</span>';
+            return `<tr>
+              <td style="font-weight:600;white-space:nowrap">${escapeHtml(game.playerNames[pid])}</td>
+              <td>${cardDisplay}</td>
+            </tr>`;
+          }).join('');
+          handsHtml = `<div class="table-wrap"><table>
+            <tr><th style="width:100px">플레이어</th><th>카드</th></tr>
+            ${handRows}
+          </table></div>`;
+        }
+
+        // Score history
+        let scoreHistoryHtml = '';
+        if (game.scoreHistory && game.scoreHistory.length > 0) {
+          scoreHistoryHtml = `<div class="table-wrap"><table>
+            <tr><th>라운드</th><th>팀 A</th><th>팀 B</th></tr>
+            ${game.scoreHistory.map(s => `<tr>
+              <td>R${s.round}</td>
+              <td style="font-weight:600;color:${s.teamA > 0 ? '#4caf50' : s.teamA < 0 ? '#e53935' : '#333'}">${s.teamA > 0 ? '+' : ''}${s.teamA}</td>
+              <td style="font-weight:600;color:${s.teamB > 0 ? '#4caf50' : s.teamB < 0 ? '#e53935' : '#333'}">${s.teamB > 0 ? '+' : ''}${s.teamB}</td>
+            </tr>`).join('')}
+            <tr style="border-top:2px solid #333;font-weight:700">
+              <td>Total</td>
+              <td style="color:#1565c0;font-size:16px">${game.totalScores.teamA}</td>
+              <td style="color:#c62828;font-size:16px">${game.totalScores.teamB}</td>
+            </tr>
+          </table></div>`;
+        }
+
+        // Special states
+        let specialHtml = '';
+        if (game.callRank) specialHtml += `<div style="margin-bottom:8px"><strong>소원 활성:</strong> <span class="badge badge-pending">${game.callRank}</span></div>`;
+        if (game.dragonPending) specialHtml += `<div style="margin-bottom:8px"><strong>용 처리 대기:</strong> <span class="badge" style="background:#ffebee;color:#c62828">${escapeHtml(game.playerNames[game.dragonDecider] || '?')} 넘겨야 함</span></div>`;
+        if (game.passCount > 0) specialHtml += `<div style="margin-bottom:8px"><strong>패스 횟수:</strong> ${game.passCount}</div>`;
+
+        gameHtml = `
+          <div class="stats-grid" style="grid-template-columns:repeat(auto-fit, minmax(130px, 1fr));margin-bottom:20px">
+            <div class="stat-card" style="border-left:4px solid #6c63ff"><div class="label">단계</div><div style="margin-top:4px">${phaseBadge}</div></div>
+            <div class="stat-card" style="border-left:4px solid #ff9800"><div class="label">라운드</div><div class="value orange">${round}</div></div>
+            <div class="stat-card" style="border-left:4px solid #4caf50"><div class="label">현재 턴</div><div style="font-weight:600;font-size:16px;margin-top:4px">${escapeHtml(currentPlayerName)}</div></div>
+            <div class="stat-card" style="border-left:4px solid #1565c0"><div class="label">Team A</div><div class="value" style="color:#1565c0">${game.totalScores.teamA}</div></div>
+            <div class="stat-card" style="border-left:4px solid #c62828"><div class="label">Team B</div><div class="value" style="color:#c62828">${game.totalScores.teamB}</div></div>
+          </div>
+
+          ${specialHtml ? `<div class="card"><h3>활성 상태</h3>${specialHtml}</div>` : ''}
+
+          <div class="card">
+            <h3>현재 트릭</h3>
+            ${trickHtml}
+          </div>
+
+          <div class="card">
+            <h3>플레이어 핸드</h3>
+            ${handsHtml}
+          </div>
+
+          <div class="grid-2col">
+            <div class="card">
+              <h3>트릭 포인트</h3>
+              ${trickPilesHtml}
+            </div>
+            <div class="card">
+              <h3>점수 기록</h3>
+              ${scoreHistoryHtml || '<div style="color:#999;font-size:13px">아직 완료된 라운드 없음</div>'}
+            </div>
+          </div>
+        `;
+      }
     } else {
       gameHtml = '<div class="card"><div class="empty">진행 중인 게임 없음</div></div>';
     }
@@ -2702,6 +3306,8 @@ async function handleAdminRoute(req, res, url, pathname, method, lobby, wss, mai
         <div class="table-wrap"><table>
           ${isTichuGame
             ? '<tr><th>슬롯</th><th>이름</th><th>팀</th><th>상태</th><th>카드</th><th>티츄</th><th>완료</th></tr>'
+            : isMightyGame
+              ? '<tr><th>슬롯</th><th>이름</th><th>상태</th><th>카드</th><th>비드</th><th>트릭/포인트</th></tr>'
             : '<tr><th>슬롯</th><th>이름</th><th>상태</th><th>카드</th><th>완료</th></tr>'}
           ${playersHtml}
         </table></div>

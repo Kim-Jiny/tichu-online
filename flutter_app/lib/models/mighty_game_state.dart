@@ -65,6 +65,70 @@ class MightyTrickPlay {
   }
 }
 
+class MightyCompletedTrick {
+  final String leader;
+  final String winner;
+  final List<MightyTrickPlay> cards;
+
+  MightyCompletedTrick({
+    required this.leader,
+    required this.winner,
+    required this.cards,
+  });
+
+  factory MightyCompletedTrick.fromJson(Map<String, dynamic> json) {
+    return MightyCompletedTrick(
+      leader: json['leader'] ?? '',
+      winner: json['winner'] ?? '',
+      cards: (json['cards'] as List?)
+              ?.map((c) => MightyTrickPlay.fromJson(c))
+              .toList() ??
+          [],
+    );
+  }
+}
+
+class MightyScoreHistoryEntry {
+  final int round;
+  final int bid;
+  final String? trumpSuit;
+  final String? declarer;
+  final String? partner;
+  final bool success;
+  final int declarerPoints;
+  final Map<String, int> scores;
+
+  MightyScoreHistoryEntry({
+    required this.round,
+    required this.bid,
+    this.trumpSuit,
+    this.declarer,
+    this.partner,
+    required this.success,
+    required this.declarerPoints,
+    required this.scores,
+  });
+
+  factory MightyScoreHistoryEntry.fromJson(Map<String, dynamic> json) {
+    final Map<String, int> scores = {};
+    if (json['scores'] != null) {
+      (json['scores'] as Map).forEach((k, v) {
+        scores[k.toString()] = (v as num?)?.toInt() ?? 0;
+      });
+    }
+    return MightyScoreHistoryEntry(
+      round: json['round'] ?? 0,
+      bid: json['bid'] ?? 0,
+      trumpSuit: json['trumpSuit'],
+      declarer: json['declarer'],
+      partner: json['partner'],
+      success: json['success'] == true,
+      declarerPoints: (json['declarerPoints'] as num?)?.toInt() ?? 0,
+      scores: scores,
+    );
+  }
+}
+
 class MightyGameStateData {
   final String phase;
   final int round;
@@ -84,10 +148,14 @@ class MightyGameStateData {
   final Map<String, int> scores;
   final Map<String, dynamic>? roundResult;
   final String? mightyCard;
+  final String? jokerCallCard;
+  final bool jokerCallActive;
   final int? turnDeadline;
   final bool kittyReceived;
   final List<MightyTrickPlay> lastTrickCards;
   final String? lastTrickWinner;
+  final List<MightyCompletedTrick> tricks;
+  final List<MightyScoreHistoryEntry> scoreHistory;
 
   MightyGameStateData({
     this.phase = '',
@@ -108,10 +176,14 @@ class MightyGameStateData {
     this.scores = const {},
     this.roundResult,
     this.mightyCard,
+    this.jokerCallCard,
+    this.jokerCallActive = false,
     this.turnDeadline,
     this.kittyReceived = false,
     this.lastTrickCards = const [],
     this.lastTrickWinner,
+    this.tricks = const [],
+    this.scoreHistory = const [],
   });
 
   factory MightyGameStateData.fromJson(Map<String, dynamic> json) {
@@ -179,10 +251,20 @@ class MightyGameStateData {
       scores: scores,
       roundResult: roundResult,
       mightyCard: json['mightyCard'],
+      jokerCallCard: json['jokerCallCard'],
+      jokerCallActive: json['jokerCallActive'] == true,
       turnDeadline: (json['turnDeadline'] as num?)?.toInt(),
       kittyReceived: json['kittyReceived'] == true,
       lastTrickCards: lastTrickList,
       lastTrickWinner: json['lastTrickWinner'],
+      tricks: (json['tricks'] as List?)
+              ?.map((t) => MightyCompletedTrick.fromJson(t as Map<String, dynamic>))
+              .toList() ??
+          [],
+      scoreHistory: (json['scoreHistory'] as List?)
+              ?.map((e) => MightyScoreHistoryEntry.fromJson(e as Map<String, dynamic>))
+              .toList() ??
+          [],
     );
   }
 }

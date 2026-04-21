@@ -19,8 +19,8 @@ class MightyGame {
       jokerCallCard: options.jokerCallCard || 'auto',
       soloBonus: options.soloBonus || 2,
       perfectBonus: options.perfectBonus || 2,
-      firstTrickJokerPower: options.firstTrickJokerPower !== false,
-      lastTrickJokerPower: options.lastTrickJokerPower !== false,
+      firstTrickJokerPower: options.firstTrickJokerPower === true,
+      lastTrickJokerPower: options.lastTrickJokerPower === true,
       targetScore: options.targetScore || null,
       scoreMultiplier: options.scoreMultiplier || 1,
     };
@@ -45,10 +45,12 @@ class MightyGame {
     this.currentTrick = [];
     this.pointCards = {};
     this.scores = {};
+    this.scoreHistory = []; // [{round, bid, declarer, partner, success, scores: {pid: score}}]
     this.discarded = [];
     this.dealerIndex = 0;
     this.roundResult = null;
     this.jokerSuitDeclared = null; // When joker is led, declarer chooses a suit
+    this.jokerCallActive = false; // true when joker-call card is played with jokerCall flag
     this.lastTrickCards = [];
     this.lastTrickWinner = null;
   }
@@ -83,6 +85,7 @@ class MightyGame {
     this.discarded = [];
     this.roundResult = null;
     this.jokerSuitDeclared = null;
+    this.jokerCallActive = false;
     this.lastTrickCards = [];
     this.lastTrickWinner = null;
 
@@ -284,8 +287,8 @@ class MightyGame {
 
     // Validate friend card
     if (friendCard && friendCard !== 'none') {
-      // friendCard must be a valid card id or 'no_friend'
-      if (friendCard !== 'no_friend') {
+      // friendCard must be a valid card id, 'no_friend', or 'first_trick'
+      if (friendCard !== 'no_friend' && friendCard !== 'first_trick') {
         // Joker cannot be friend card
         if (friendCard === 'mighty_joker') {
           return { success: false, messageKey: 'mighty_invalid_friend_card' };
@@ -346,7 +349,7 @@ class MightyGame {
       return { success: false, messageKey: 'game_not_your_turn' };
     }
 
-    const { cardId, jokerSuit } = action;
+    const { cardId, jokerSuit, jokerCall } = action;
     const hand = this.hands[playerId];
 
     if (!hand.includes(cardId)) {
@@ -357,6 +360,11 @@ class MightyGame {
     const legalCards = this._getLegalCards(playerId);
     if (!legalCards.includes(cardId)) {
       return { success: false, messageKey: 'mighty_illegal_card' };
+    }
+
+    // Joker call: leader plays the joker-call card and declares joker call
+    if (this.currentTrick.length === 0) {
+      this.jokerCallActive = jokerCall === true;
     }
 
     // If playing joker as lead, must declare suit (must be an actual suit, not no_trump)
@@ -394,8 +402,17 @@ class MightyGame {
     const hand = this.hands[playerId];
     if (hand.length === 0) return [];
 
-    // Leading: any card is legal
+    // Leading
     if (this.currentTrick.length === 0) {
+      // First trick: cannot lead with trump suit cards (joker is still allowed)
+      if (this.tricks.length === 0 && this.trumpSuit && this.trumpSuit !== 'no_trump') {
+        const nonTrump = hand.filter(c => {
+          if (c === 'mighty_joker') return true; // joker always leadable
+          const info = getCardInfo(c);
+          return info.suit !== this.trumpSuit;
+        });
+        if (nonTrump.length > 0) return nonTrump;
+      }
       return hand;
     }
 
@@ -409,29 +426,27 @@ class MightyGame {
       leadSuit = leadInfo.suit;
     }
 
-    // Joker call card led → joker holder must play joker
+    // Joker call card led with jokerCall active → joker holder must play joker
     const jokerCallCard = this.getJokerCallCard();
-    if (leadCard === jokerCallCard && hand.includes('mighty_joker')) {
+    if (leadCard === jokerCallCard && this.jokerCallActive && hand.includes('mighty_joker')) {
       // Must play joker (unless it's the only card rule - simplified: must play joker)
       return ['mighty_joker'];
     }
 
-    // Mighty and joker can always be played
+    // Joker can always be played (mighty must follow suit like normal cards)
     const mightyCard = this.getMightyCard();
     const alwaysPlayable = [];
-    if (hand.includes(mightyCard)) alwaysPlayable.push(mightyCard);
     if (hand.includes('mighty_joker')) alwaysPlayable.push('mighty_joker');
 
-    // Must follow lead suit if possible (mighty/joker excluded — they're always playable)
+    // Must follow lead suit if possible (mighty is a normal suit card for follow purposes)
     const suitCards = hand.filter(c => {
       if (c === 'mighty_joker') return false;
-      if (c === mightyCard) return false;
       const info = getCardInfo(c);
       return info.suit === leadSuit;
     });
 
     if (suitCards.length > 0) {
-      // Must follow suit, but mighty/joker also allowed
+      // Must follow suit, joker also allowed
       const legal = new Set([...suitCards, ...alwaysPlayable]);
       return hand.filter(c => legal.has(c));
     }
@@ -469,6 +484,14 @@ class MightyGame {
     }));
     this.lastTrickWinner = winner;
 
+    // First-trick friend: if friendCard is 'first_trick' and this is trick 0, winner becomes partner
+    if (trickNumber === 0 && this.friendCard === 'first_trick' && !this.friendRevealed) {
+      if (winner !== this.declarer) {
+        this.partner = winner;
+        this.friendRevealed = true;
+      }
+    }
+
     this.tricks.push({
       leader: this.currentTrick[0].pid,
       cards: this.currentTrick.slice(),
@@ -477,6 +500,7 @@ class MightyGame {
 
     this.currentTrick = [];
     this.jokerSuitDeclared = null;
+    this.jokerCallActive = false;
 
     // Show trick_end state so clients can display the last trick
     this.state = 'trick_end';
@@ -504,11 +528,11 @@ class MightyGame {
     const leadInfo = getCardInfo(leadCard);
     let leadSuit = leadCard === 'mighty_joker' ? this.jokerSuitDeclared : leadInfo.suit;
 
-    // Joker loses power when: option says no power on first/last trick, or joker-call card is led
+    // Joker loses power when: option says no power on first/last trick, or joker-call card is led with call active
     const jokerIsWeak =
       (isFirstTrick && !this.options.firstTrickJokerPower) ||
       (isLastTrick && !this.options.lastTrickJokerPower) ||
-      (leadCard === jokerCallCard);
+      (leadCard === jokerCallCard && this.jokerCallActive);
 
     let bestPlay = null;
     let bestPriority = -1;
@@ -567,6 +591,17 @@ class MightyGame {
     for (const pid of this.playerIds) {
       this.scores[pid] += result.scores[pid];
     }
+
+    this.scoreHistory.push({
+      round: this.round,
+      bid: this.currentBid.points,
+      trumpSuit: this.trumpSuit,
+      declarer: this.declarer,
+      partner: this.partner,
+      success: result.success,
+      declarerPoints: result.declarerPoints,
+      scores: { ...result.scores },
+    });
 
     this.roundResult = result;
 
@@ -659,10 +694,18 @@ class MightyGame {
       currentTrick,
       legalCards,
       scores: this.scores,
+      scoreHistory: this.scoreHistory,
       roundResult: this.state === 'round_end' || this.state === 'game_end' ? this.roundResult : null,
       mightyCard: this.trumpSuit ? this.getMightyCard() : null,
+      jokerCallCard: this.trumpSuit ? this.getJokerCallCard() : null,
+      jokerCallActive: this.jokerCallActive,
       lastTrickCards: this.state === 'trick_end' ? this.lastTrickCards : [],
       lastTrickWinner: this.state === 'trick_end' ? this.lastTrickWinner : null,
+      tricks: this.tricks.map(t => ({
+        leader: t.leader,
+        winner: t.winner,
+        cards: t.cards.map(c => ({ playerId: c.pid, cardId: c.cardId })),
+      })),
     };
 
     // Kitty phase: show 13 cards to declarer
@@ -711,10 +754,18 @@ class MightyGame {
       currentBid: this.currentBid,
       bids: this._getPublicBids(),
       scores: this.scores,
+      scoreHistory: this.scoreHistory,
       roundResult: this.state === 'round_end' || this.state === 'game_end' ? this.roundResult : null,
       mightyCard: this.trumpSuit ? this.getMightyCard() : null,
+      jokerCallCard: this.trumpSuit ? this.getJokerCallCard() : null,
+      jokerCallActive: this.jokerCallActive,
       lastTrickCards: this.state === 'trick_end' ? this.lastTrickCards : [],
       lastTrickWinner: this.state === 'trick_end' ? this.lastTrickWinner : null,
+      tricks: this.tricks.map(t => ({
+        leader: t.leader,
+        winner: t.winner,
+        cards: t.cards.map(c => ({ playerId: c.pid, cardId: c.cardId })),
+      })),
     };
   }
 
@@ -826,6 +877,16 @@ class MightyGame {
       this.roundResult.scores[newId] = this.roundResult.scores[oldId];
       delete this.roundResult.scores[oldId];
     }
+
+    // scoreHistory
+    for (const entry of this.scoreHistory) {
+      if (entry.scores && entry.scores[oldId] !== undefined) {
+        entry.scores[newId] = entry.scores[oldId];
+        delete entry.scores[oldId];
+      }
+      if (entry.declarer === oldId) entry.declarer = newId;
+      if (entry.partner === oldId) entry.partner = newId;
+    }
   }
 
   // ─── AUTO TIMEOUT ───────────────────────────────────────
@@ -857,6 +918,10 @@ class MightyGame {
         if (cardId === 'mighty_joker' && this.currentTrick.length === 0) {
           result.jokerSuit = this.trumpSuit && this.trumpSuit !== 'no_trump'
             ? this.trumpSuit : 'spade';
+        }
+        // Bot always activates joker call when leading the joker-call card
+        if (this.currentTrick.length === 0 && cardId === this.getJokerCallCard()) {
+          result.jokerCall = true;
         }
         return result;
       }

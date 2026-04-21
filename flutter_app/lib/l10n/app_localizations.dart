@@ -4533,6 +4533,156 @@ abstract class L10n {
   /// **'When the round ends, the surviving player with the highest card (ties broken by total card value) wins a token.\n\nTokens needed to win:\n• 2 players: 4 tokens\n• 3 players: 3 tokens\n• 4 players: 2 tokens'**
   String get rulesLlWinBody;
 
+  /// No description provided for @rulesTabMighty.
+  ///
+  /// In en, this message translates to:
+  /// **'Mighty'**
+  String get rulesTabMighty;
+
+  /// No description provided for @rulesMtGoalTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Game Objective'**
+  String get rulesMtGoalTitle;
+
+  /// No description provided for @rulesMtGoalBody.
+  ///
+  /// In en, this message translates to:
+  /// **'A trick-taking card game for 5 players. One player becomes the declarer and chooses a friend; together they try to win enough point cards to meet the bid. The remaining 3 players form the defence and try to stop them.'**
+  String get rulesMtGoalBody;
+
+  /// No description provided for @rulesMtCardCompositionTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Card Composition (53 cards)'**
+  String get rulesMtCardCompositionTitle;
+
+  /// No description provided for @rulesMtCardCompositionBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Standard 52-card deck (4 suits × 13 ranks: 2–A) plus 1 Joker.\nCard strength order: A > K > Q > J > 10 > 9 > … > 2\nPoint cards: A = 1 pt, K = 1 pt, Q = 1 pt, J = 1 pt, 10 = 1 pt (total 20 pts)'**
+  String get rulesMtCardCompositionBody;
+
+  /// No description provided for @rulesMtSpecialTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Special Cards'**
+  String get rulesMtSpecialTitle;
+
+  /// No description provided for @rulesMtSpecialMightyTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Mighty'**
+  String get rulesMtSpecialMightyTitle;
+
+  /// No description provided for @rulesMtSpecialMightyLine1.
+  ///
+  /// In en, this message translates to:
+  /// **'The strongest card in the game. Beats everything except the Joker Call.'**
+  String get rulesMtSpecialMightyLine1;
+
+  /// No description provided for @rulesMtSpecialMightyLine2.
+  ///
+  /// In en, this message translates to:
+  /// **'By default it is the Spade Ace. If the trump suit is Spades, the Mighty becomes the Diamond Ace instead.'**
+  String get rulesMtSpecialMightyLine2;
+
+  /// No description provided for @rulesMtSpecialJokerTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Joker'**
+  String get rulesMtSpecialJokerTitle;
+
+  /// No description provided for @rulesMtSpecialJokerLine1.
+  ///
+  /// In en, this message translates to:
+  /// **'The second-strongest card. Wins any trick unless the Joker Call is played.'**
+  String get rulesMtSpecialJokerLine1;
+
+  /// No description provided for @rulesMtSpecialJokerLine2.
+  ///
+  /// In en, this message translates to:
+  /// **'When leading a trick, the Joker player declares which suit others must follow.'**
+  String get rulesMtSpecialJokerLine2;
+
+  /// No description provided for @rulesMtSpecialJokerCallTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Joker Call'**
+  String get rulesMtSpecialJokerCallTitle;
+
+  /// No description provided for @rulesMtSpecialJokerCallLine1.
+  ///
+  /// In en, this message translates to:
+  /// **'When the designated Joker-Call card (♣3 by default) leads the trick, the Joker loses its power and is treated as the weakest card.'**
+  String get rulesMtSpecialJokerCallLine1;
+
+  /// No description provided for @rulesMtSpecialJokerCallLine2.
+  ///
+  /// In en, this message translates to:
+  /// **'If the trump suit is Clubs, the Joker Call becomes ♠3 instead.'**
+  String get rulesMtSpecialJokerCallLine2;
+
+  /// No description provided for @rulesMtBiddingTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Bidding'**
+  String get rulesMtBiddingTitle;
+
+  /// No description provided for @rulesMtBiddingBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Players bid in turn, stating how many points (out of 20) they will capture. The minimum bid is 13. The highest bidder becomes the declarer and chooses the trump suit.\n\nIf all players pass, the round is redealt (no-game).'**
+  String get rulesMtBiddingBody;
+
+  /// No description provided for @rulesMtFriendTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Friend Declaration'**
+  String get rulesMtFriendTitle;
+
+  /// No description provided for @rulesMtFriendBody.
+  ///
+  /// In en, this message translates to:
+  /// **'After winning the bid, the declarer declares a friend by naming a specific card (e.g. \'Spade King\'). The player who holds that card becomes the declarer\'s secret ally — their identity is revealed when the card is played.\n\nThe declarer may also choose to go alone (no friend).'**
+  String get rulesMtFriendBody;
+
+  /// No description provided for @rulesMtTrickTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Trick Rules'**
+  String get rulesMtTrickTitle;
+
+  /// No description provided for @rulesMtTrickBody.
+  ///
+  /// In en, this message translates to:
+  /// **'1. The lead player plays any card, setting the lead suit.\n2. Other players must follow suit if possible.\n3. If you cannot follow suit, you may play any card (including trump).\n4. The highest card of the lead suit wins, unless a trump card is played — in that case the highest trump wins.\n5. Mighty and Joker override normal strength rules.\n6. The trick winner leads the next trick.'**
+  String get rulesMtTrickBody;
+
+  /// No description provided for @rulesMtScoringTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Scoring'**
+  String get rulesMtScoringTitle;
+
+  /// No description provided for @rulesMtScoringBody.
+  ///
+  /// In en, this message translates to:
+  /// **'There are 20 point cards in the deck (each A, K, Q, J, 10 across 4 suits = 20).\n\n• Declarer team wins: If they collect ≥ bid number of point cards.\n• Defence team wins: If the declarer team falls short of their bid.\n\nThe higher the bid, the greater the reward — but also the penalty for failure.'**
+  String get rulesMtScoringBody;
+
+  /// No description provided for @rulesMtWinTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Victory Condition'**
+  String get rulesMtWinTitle;
+
+  /// No description provided for @rulesMtWinBody.
+  ///
+  /// In en, this message translates to:
+  /// **'After all 13 tricks are played, count the point cards collected by the declarer\'s team.\n\n• If they meet or exceed the bid → Declarer team wins.\n• If they fall short → Defence team wins.\n\nScores are accumulated over multiple rounds. The player with the highest score at the end of the session wins.'**
+  String get rulesMtWinBody;
+
   /// No description provided for @friendsTitle.
   ///
   /// In en, this message translates to:

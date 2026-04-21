@@ -2484,6 +2484,94 @@ class L10nDe extends L10n {
       'Am Ende der Runde gewinnt der überlebende Spieler mit der höchsten Karte (bei Gleichstand entscheidet die Gesamtkartensumme) ein Token.\n\nBenötigte Token zum Sieg:\n• 2 Spieler: 4 Token\n• 3 Spieler: 3 Token\n• 4 Spieler: 2 Token';
 
   @override
+  String get rulesTabMighty => 'Mighty';
+
+  @override
+  String get rulesMtGoalTitle => 'Spielziel';
+
+  @override
+  String get rulesMtGoalBody =>
+      'Ein Stichkartenspiel für 5 Spieler. Ein Spieler wird zum Alleinspieler und wählt einen Freund; gemeinsam versuchen sie, genügend Punktkarten zu gewinnen, um das Gebot zu erfüllen. Die übrigen 3 Spieler bilden die Verteidigung und versuchen, sie aufzuhalten.';
+
+  @override
+  String get rulesMtCardCompositionTitle => 'Kartenzusammensetzung (53 Karten)';
+
+  @override
+  String get rulesMtCardCompositionBody =>
+      'Standard-52-Karten-Deck (4 Farben × 13 Ränge: 2–A) plus 1 Joker.\nKartenstärke: A > K > Q > J > 10 > 9 > … > 2\nPunktkarten: A = 1 Pkt, K = 1 Pkt, Q = 1 Pkt, J = 1 Pkt, 10 = 1 Pkt (gesamt 20 Pkt)';
+
+  @override
+  String get rulesMtSpecialTitle => 'Sonderkarten';
+
+  @override
+  String get rulesMtSpecialMightyTitle => 'Mighty';
+
+  @override
+  String get rulesMtSpecialMightyLine1 =>
+      'Die stärkste Karte im Spiel. Schlägt alles außer dem Joker-Ruf.';
+
+  @override
+  String get rulesMtSpecialMightyLine2 =>
+      'Standardmäßig das Pik-Ass. Wenn Pik die Trumpffarbe ist, wird stattdessen das Karo-Ass zum Mighty.';
+
+  @override
+  String get rulesMtSpecialJokerTitle => 'Joker';
+
+  @override
+  String get rulesMtSpecialJokerLine1 =>
+      'Die zweitstärkste Karte. Gewinnt jeden Stich, es sei denn, der Joker-Ruf wird gespielt.';
+
+  @override
+  String get rulesMtSpecialJokerLine2 =>
+      'Beim Ausspielen des Jokers erklärt der Spieler, welche Farbe die anderen bedienen müssen.';
+
+  @override
+  String get rulesMtSpecialJokerCallTitle => 'Joker-Ruf';
+
+  @override
+  String get rulesMtSpecialJokerCallLine1 =>
+      'Wenn die festgelegte Joker-Ruf-Karte (Standard ♣3) den Stich anführt, verliert der Joker seine Kraft und wird als schwächste Karte behandelt.';
+
+  @override
+  String get rulesMtSpecialJokerCallLine2 =>
+      'Wenn Kreuz die Trumpffarbe ist, wird der Joker-Ruf zu ♠3.';
+
+  @override
+  String get rulesMtBiddingTitle => 'Bieten';
+
+  @override
+  String get rulesMtBiddingBody =>
+      'Spieler bieten reihum und geben an, wie viele Punkte (von 20) sie erzielen werden. Das Mindestgebot beträgt 13. Der Höchstbietende wird Alleinspieler und wählt die Trumpffarbe.\n\nWenn alle Spieler passen, wird neu gegeben (kein Spiel).';
+
+  @override
+  String get rulesMtFriendTitle => 'Freund-Erklärung';
+
+  @override
+  String get rulesMtFriendBody =>
+      'Nach dem Gewinn des Gebots erklärt der Alleinspieler einen Freund, indem er eine bestimmte Karte nennt (z.B. \'Pik-König\'). Der Spieler, der diese Karte hält, wird zum geheimen Verbündeten — seine Identität wird enthüllt, wenn die Karte gespielt wird.\n\nDer Alleinspieler kann auch allein spielen (kein Freund).';
+
+  @override
+  String get rulesMtTrickTitle => 'Stichregeln';
+
+  @override
+  String get rulesMtTrickBody =>
+      '1. Der Ausspieler spielt eine beliebige Karte und bestimmt die Ansagefarbe.\n2. Andere Spieler müssen die Farbe bedienen, wenn möglich.\n3. Wer nicht bedienen kann, darf eine beliebige Karte spielen (einschließlich Trumpf).\n4. Die höchste Karte der Ansagefarbe gewinnt, es sei denn, eine Trumpfkarte wird gespielt — dann gewinnt der höchste Trumpf.\n5. Mighty und Joker überschreiben die normalen Stärkeregeln.\n6. Der Stichgewinner spielt den nächsten Stich aus.';
+
+  @override
+  String get rulesMtScoringTitle => 'Punktwertung';
+
+  @override
+  String get rulesMtScoringBody =>
+      'Es gibt 20 Punktkarten im Deck (je A, K, Q, J, 10 in 4 Farben = 20).\n\n• Alleinspieler-Team gewinnt: Wenn sie ≥ Gebotanzahl an Punktkarten sammeln.\n• Verteidigung gewinnt: Wenn das Alleinspieler-Team unter dem Gebot bleibt.\n\nJe höher das Gebot, desto größer die Belohnung — aber auch die Strafe bei Misserfolg.';
+
+  @override
+  String get rulesMtWinTitle => 'Siegbedingung';
+
+  @override
+  String get rulesMtWinBody =>
+      'Nach allen 13 Stichen werden die Punktkarten des Alleinspieler-Teams gezählt.\n\n• Gebot erreicht oder übertroffen → Alleinspieler-Team gewinnt.\n• Gebot verfehlt → Verteidigung gewinnt.\n\nPunkte werden über mehrere Runden gesammelt. Der Spieler mit der höchsten Punktzahl am Ende der Sitzung gewinnt.';
+
+  @override
   String get friendsTitle => 'Freunde';
 
   @override

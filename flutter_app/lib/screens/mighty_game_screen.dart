@@ -6,6 +6,8 @@ import '../services/network_service.dart';
 import '../models/mighty_game_state.dart';
 import '../widgets/playing_card.dart';
 import '../widgets/connection_overlay.dart';
+import '../l10n/app_localizations.dart';
+import '../l10n/l10n_helpers.dart';
 
 class MightyGameScreen extends StatefulWidget {
   const MightyGameScreen({super.key});
@@ -26,6 +28,7 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
   // Play state
   String? _selectedCard;
   String? _jokerSuitChoice;
+  bool _jokerCallChoice = true; // default Yes for joker call
 
   // Timer
   Timer? _countdownTimer;
@@ -43,6 +46,13 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
   Timer? _cardViewRequestTimer;
   String? _viewingPlayerId;
 
+  // Chat
+  bool _chatOpen = false;
+  int _readChatCount = 0;
+  final TextEditingController _chatController = TextEditingController();
+  final ScrollController _chatScrollController = ScrollController();
+  int _lastChatMessageCount = 0;
+
   // Network
   bool _wasDisconnected = false;
   GameService? _gameService;
@@ -55,6 +65,7 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
       _gameService = context.read<GameService>();
       _networkService = context.read<NetworkService>();
       _networkService!.addListener(_onNetworkChanged);
+      _readChatCount = _gameService!.chatMessages.length;
     });
     _countdownTimer = Timer.periodic(const Duration(seconds: 1), (_) {
       _updateCountdown();
@@ -76,6 +87,8 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
   @override
   void dispose() {
     _networkService?.removeListener(_onNetworkChanged);
+    _chatController.dispose();
+    _chatScrollController.dispose();
     _countdownTimer?.cancel();
     _gameEndCountdownTimer?.cancel();
     _cardViewRequestTimer?.cancel();
@@ -161,6 +174,7 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
                         _lastPhase = state.phase;
                         _selectedCard = null;
                         _jokerSuitChoice = null;
+                        _jokerCallChoice = true;
                         if (state.phase == 'bidding') {
                           _bidPoints = 13;
                           _bidSuit = 'spade';
@@ -219,6 +233,7 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
                             Expanded(child: SingleChildScrollView(child: _buildGameEndUI(state, game))),
                         ],
                       ),
+                      if (_chatOpen) _buildChatPanel(game),
                       if (game.errorMessage != null)
                         _buildErrorBanner(game.errorMessage!),
                     ],
@@ -309,9 +324,35 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
                     ),
                   ),
                 ),
-              const SizedBox(width: 6),
+              if (state.scoreHistory.isNotEmpty)
+                Padding(
+                  padding: const EdgeInsets.only(right: 6),
+                  child: _buildTopActionButton(
+                    icon: Icons.history,
+                    active: false,
+                    onTap: () => _showScoreHistoryDialog(state),
+                  ),
+                ),
+              Padding(
+                padding: const EdgeInsets.only(right: 6),
+                child: _buildTopActionButton(
+                  icon: Icons.chat_bubble_outline,
+                  active: _chatOpen,
+                  badgeCount: _chatOpen ? 0 : (game.chatMessages.length - _readChatCount).clamp(0, 99),
+                  onTap: () {
+                    setState(() {
+                      _chatOpen = !_chatOpen;
+                      if (_chatOpen) {
+                        _readChatCount = game.chatMessages.length;
+                        _scrollChatToBottom();
+                      }
+                    });
+                  },
+                ),
+              ),
               _buildTopActionButton(
                 icon: Icons.exit_to_app,
+                active: false,
                 iconColor: const Color(0xFFE53935),
                 onTap: () => _showExitConfirmDialog(game),
               ),
@@ -367,20 +408,247 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
 
   Widget _buildTopActionButton({
     required IconData icon,
-    Color? iconColor,
     required VoidCallback onTap,
+    required bool active,
+    int badgeCount = 0,
+    Color? iconColor,
   }) {
     return GestureDetector(
       onTap: onTap,
+      child: Stack(
+        clipBehavior: Clip.none,
+        children: [
+          AnimatedContainer(
+            duration: const Duration(milliseconds: 180),
+            padding: const EdgeInsets.all(8),
+            decoration: BoxDecoration(
+              color: active
+                  ? const Color(0xFF5A4038).withValues(alpha: 0.92)
+                  : Colors.white.withValues(alpha: 0.85),
+              borderRadius: BorderRadius.circular(10),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: 0.08),
+                  blurRadius: 6,
+                ),
+              ],
+            ),
+            child: Icon(
+              icon,
+              size: 19,
+              color: active
+                  ? Colors.white
+                  : (iconColor ?? const Color(0xFF5A4038)),
+            ),
+          ),
+          if (badgeCount > 0)
+            Positioned(
+              right: -4,
+              top: -4,
+              child: Container(
+                constraints: const BoxConstraints(minWidth: 18),
+                padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFE53935),
+                  borderRadius: BorderRadius.circular(999),
+                  border: Border.all(color: Colors.white, width: 1.2),
+                ),
+                child: Text(
+                  badgeCount > 99 ? '99+' : '$badgeCount',
+                  textAlign: TextAlign.center,
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 9,
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+
+  void _scrollChatToBottom() {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (_chatScrollController.hasClients) {
+        _chatScrollController.jumpTo(_chatScrollController.position.maxScrollExtent);
+      }
+    });
+  }
+
+  void _sendChatMessage(GameService game) {
+    final message = _chatController.text.trim();
+    if (message.isEmpty) return;
+    game.sendChatMessage(message);
+    _chatController.clear();
+    _scrollChatToBottom();
+  }
+
+  Widget _buildChatPanel(GameService game) {
+    if (game.chatMessages.length != _lastChatMessageCount) {
+      _lastChatMessageCount = game.chatMessages.length;
+      _readChatCount = game.chatMessages.length;
+      _scrollChatToBottom();
+    }
+
+    final media = MediaQuery.of(context);
+    final keyboardHeight = media.viewInsets.bottom;
+    final topInset = media.padding.top;
+    final availableWidth = (media.size.width - 16).clamp(220.0, 320.0);
+    final topOffset = topInset + 42;
+    final bottomOffset = 8 + keyboardHeight;
+    final maxHeight = media.size.height - topOffset - bottomOffset;
+    final panelHeight = maxHeight.clamp(160.0, 350.0);
+
+    return Positioned(
+      right: 8,
+      top: topOffset,
+      width: availableWidth,
+      height: panelHeight,
       child: Container(
-        width: 36,
-        height: 36,
         decoration: BoxDecoration(
-          color: Colors.white.withValues(alpha: 0.9),
-          borderRadius: BorderRadius.circular(10),
-          border: Border.all(color: const Color(0xFFE0D8D4)),
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(16),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.15),
+              blurRadius: 10,
+              offset: const Offset(0, 4),
+            ),
+          ],
         ),
-        child: Icon(icon, size: 18, color: iconColor ?? const Color(0xFF5A4038)),
+        child: Column(
+          children: [
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+              decoration: const BoxDecoration(
+                color: Color(0xFF5A4038),
+                borderRadius: BorderRadius.only(
+                  topLeft: Radius.circular(16),
+                  topRight: Radius.circular(16),
+                ),
+              ),
+              child: Row(
+                children: [
+                  const Text(
+                    'Chat',
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontWeight: FontWeight.bold,
+                      fontSize: 16,
+                    ),
+                  ),
+                  const Spacer(),
+                  GestureDetector(
+                    onTap: () => setState(() => _chatOpen = false),
+                    child: const Icon(Icons.close, color: Colors.white, size: 20),
+                  ),
+                ],
+              ),
+            ),
+            Expanded(
+              child: ListView.builder(
+                controller: _chatScrollController,
+                padding: const EdgeInsets.all(8),
+                itemCount: game.chatMessages.length,
+                itemBuilder: (context, index) {
+                  final msg = game.chatMessages[index];
+                  final sender = msg['sender'] as String? ?? '';
+                  String message = msg['message'] as String? ?? '';
+                  if (message == 'chat_banned') {
+                    final mins = msg['remainingMinutes'] as int? ?? 0;
+                    message = localizeChatBanned(mins, L10n.of(context));
+                  }
+                  final isMe = sender == game.playerName;
+                  final isBlocked = sender.isNotEmpty && game.isBlocked(sender);
+                  if (isBlocked) return const SizedBox.shrink();
+                  return _buildChatBubble(sender, message, isMe);
+                },
+              ),
+            ),
+            Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                border: Border(
+                  top: BorderSide(color: Colors.grey.withValues(alpha: 0.2)),
+                ),
+              ),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: TextField(
+                      controller: _chatController,
+                      decoration: const InputDecoration(
+                        hintText: 'Type a message...',
+                        border: InputBorder.none,
+                        contentPadding: EdgeInsets.symmetric(horizontal: 12),
+                      ),
+                      style: const TextStyle(fontSize: 14),
+                      onSubmitted: (_) => _sendChatMessage(game),
+                    ),
+                  ),
+                  IconButton(
+                    onPressed: () => _sendChatMessage(game),
+                    icon: const Icon(Icons.send, color: Color(0xFF8D6E63)),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildChatBubble(String sender, String message, bool isMe) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 8),
+      child: Row(
+        mainAxisAlignment: isMe ? MainAxisAlignment.end : MainAxisAlignment.start,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          if (!isMe && sender.isNotEmpty) ...[
+            CircleAvatar(
+              radius: 14,
+              backgroundColor: const Color(0xFFE0E0E0),
+              child: Text(
+                sender[0],
+                style: const TextStyle(fontSize: 12, color: Color(0xFF5A4038)),
+              ),
+            ),
+            const SizedBox(width: 6),
+          ],
+          Flexible(
+            child: Column(
+              crossAxisAlignment: isMe ? CrossAxisAlignment.end : CrossAxisAlignment.start,
+              children: [
+                if (!isMe && sender.isNotEmpty)
+                  Padding(
+                    padding: const EdgeInsets.only(bottom: 2),
+                    child: Text(
+                      sender,
+                      style: const TextStyle(fontSize: 11, color: Color(0xFF8A8A8A)),
+                    ),
+                  ),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                  decoration: BoxDecoration(
+                    color: isMe ? const Color(0xFF5A4038) : const Color(0xFFF0F0F0),
+                    borderRadius: BorderRadius.circular(16),
+                  ),
+                  child: Text(
+                    message,
+                    style: TextStyle(
+                      fontSize: 14,
+                      color: isMe ? Colors.white : const Color(0xFF333333),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -537,6 +805,17 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
                                   )
                                 : null,
                           ),
+                          // Mini point card labels for opposition
+                          if (hasPointCards)
+                            SizedBox(
+                              height: 14,
+                              child: Text(
+                                p.pointCards.take(5).map((c) => _miniCardLabel(c)).join(' '),
+                                style: const TextStyle(fontSize: 8, color: Color(0xFF8A7A72)),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ),
                         ],
                       ),
                     ),
@@ -1028,6 +1307,7 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
                         _buildFriendOption('mighty_diamond_A', '\u2666A'),
                       if (state.mightyCard != 'mighty_club_A')
                         _buildFriendOption('mighty_club_A', '\u2663A'),
+                      _buildFriendOption('first_trick', '1st Trick'),
                     ],
                   ),
                   const SizedBox(height: 12),
@@ -1062,7 +1342,13 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
   Widget _buildFriendOption(String value, String label) {
     final isSelected = _friendCardSelection == value;
     return GestureDetector(
-      onTap: () => setState(() => _friendCardSelection = value),
+      onTap: () => setState(() {
+        _friendCardSelection = value;
+        // Remove newly selected friend card from discard selection
+        if (value != 'no_friend' && value != 'first_trick') {
+          _discardSelection.remove(value);
+        }
+      }),
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
         decoration: BoxDecoration(
@@ -1123,15 +1409,18 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
                 height: 42,
                 child: FilledButton.icon(
                   onPressed: () {
+                    final isJokerCallCard = selectedCard == state.jokerCallCard;
                     game.mightyPlayCard(
                       selectedCard,
                       jokerSuit: selectedCard == 'mighty_joker'
                           ? (_jokerSuitChoice ?? 'spade')
                           : null,
+                      jokerCall: isJokerCallCard && state.currentTrick.isEmpty && _jokerCallChoice,
                     );
                     setState(() {
                       _selectedCard = null;
                       _jokerSuitChoice = null;
+                      _jokerCallChoice = true;
                     });
                   },
                   style: FilledButton.styleFrom(
@@ -1140,32 +1429,77 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
                     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                   ),
                   icon: const Icon(Icons.play_arrow, size: 20),
-                  label: const Text('Play', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15)),
+                  label: Text(
+                    _remainingSeconds > 0 ? 'Play (${_remainingSeconds}s)' : 'Play',
+                    style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
+                  ),
                 ),
               ),
             )
           else if (isPlaying)
-            const Padding(
-              padding: EdgeInsets.only(bottom: 8),
-              child: Text(
-                'Select a card',
-                style: TextStyle(color: Color(0xFF5A4038), fontSize: 14, fontWeight: FontWeight.bold),
+            Padding(
+              padding: const EdgeInsets.only(bottom: 8),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  const Text(
+                    'Select a card',
+                    style: TextStyle(color: Color(0xFF5A4038), fontSize: 14, fontWeight: FontWeight.bold),
+                  ),
+                  if (_remainingSeconds > 0) ...[
+                    const SizedBox(width: 8),
+                    Text(
+                      '(${_remainingSeconds}s)',
+                      style: TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.bold,
+                        color: _remainingSeconds <= 5 ? const Color(0xFFE53935) : const Color(0xFF8A7A72),
+                      ),
+                    ),
+                  ],
+                ],
               ),
             ),
+          // Joker weak warning (first/last trick)
+          if (isPlaying && _selectedCard == 'mighty_joker') ...[
+            if (state.tricks.isEmpty || state.tricks.length == (50 ~/ state.players.length) - 1)
+              Container(
+                margin: const EdgeInsets.only(bottom: 6, left: 8, right: 8),
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFFFF3E0),
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(color: const Color(0xFFFFB74D)),
+                ),
+                child: Row(
+                  children: [
+                    const Icon(Icons.warning_amber_rounded, size: 16, color: Color(0xFFE65100)),
+                    const SizedBox(width: 6),
+                    Text(
+                      state.tricks.isEmpty ? 'Joker loses on 1st trick!' : 'Joker loses on last trick!',
+                      style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Color(0xFFE65100)),
+                    ),
+                  ],
+                ),
+              ),
+          ],
           // Joker suit selector
           if (isPlaying && _selectedCard == 'mighty_joker' && state.currentTrick.isEmpty)
             _buildJokerSuitSelector(),
+          // Joker call toggle
+          if (isPlaying && _selectedCard == state.jokerCallCard && state.currentTrick.isEmpty)
+            _buildJokerCallToggle(),
           // Card rows
           Padding(
             padding: const EdgeInsets.symmetric(vertical: 4),
-            child: _buildHandRows(cards, legalCards: legalCards, isPlaying: isPlaying, isKitty: isKitty),
+            child: _buildHandRows(cards, legalCards: legalCards, isPlaying: isPlaying, isKitty: isKitty, state: state),
           ),
         ],
       ),
     );
   }
 
-  Widget _buildHandRows(List<String> cards, {required Set<String> legalCards, required bool isPlaying, required bool isKitty}) {
+  Widget _buildHandRows(List<String> cards, {required Set<String> legalCards, required bool isPlaying, required bool isKitty, MightyGameStateData? state}) {
     return LayoutBuilder(
       builder: (context, constraints) {
         final availableWidth = constraints.maxWidth - 24;
@@ -1177,11 +1511,25 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
 
         Widget buildCard(String cardId) {
           final isLegal = !isPlaying || legalCards.isEmpty || legalCards.contains(cardId);
+          // Kitty: block mighty, joker, and friend card from discard
+          final isKittyBlocked = isKitty && _isKittyBlockedCard(cardId, state);
           final isSelected = isPlaying
               ? _selectedCard == cardId
               : isKitty
                   ? _discardSelection.contains(cardId)
                   : false;
+
+          // Badge: mighty card or joker call card
+          final isMightyCard = state?.mightyCard != null && cardId == state!.mightyCard;
+          final isJokerCallCard = !isMightyCard && state?.jokerCallCard != null && cardId == state!.jokerCallCard;
+          // Trump suit border
+          Color? trumpBorder;
+          if (state?.trumpSuit != null && state!.trumpSuit != 'no_trump') {
+            final cardSuit = _getCardSuit(cardId);
+            if (cardSuit == state.trumpSuit) {
+              trumpBorder = PlayingCard.suitColors[cardSuit];
+            }
+          }
 
           return GestureDetector(
             onTap: () {
@@ -1190,6 +1538,7 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
                   if (!isLegal) return;
                   _selectedCard = _selectedCard == cardId ? null : cardId;
                 } else if (isKitty) {
+                  if (isKittyBlocked) return;
                   if (_discardSelection.contains(cardId)) {
                     _discardSelection.remove(cardId);
                   } else if (_discardSelection.length < 3) {
@@ -1202,7 +1551,7 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
               duration: const Duration(milliseconds: 150),
               transform: Matrix4.translationValues(0, isSelected ? -12 : 0, 0),
               child: Opacity(
-                opacity: isLegal ? 1.0 : 0.4,
+                opacity: (isLegal && !isKittyBlocked) ? 1.0 : 0.4,
                 child: Container(
                   decoration: isSelected
                       ? BoxDecoration(
@@ -1224,6 +1573,9 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
                       height: cardHeight,
                       isSelected: isSelected,
                       isInteractive: false,
+                      badgeIcon: isMightyCard ? Icons.star : isJokerCallCard ? Icons.gps_fixed : null,
+                      badgeColor: isMightyCard ? const Color(0xFFFFB300) : isJokerCallCard ? const Color(0xFFE53935) : null,
+                      borderColor: trumpBorder,
                     ),
                   ),
                 ),
@@ -1511,8 +1863,221 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
   String _friendCardLabel(String cardId) {
     if (cardId == 'mighty_joker') return 'Joker';
     if (cardId == 'no_friend') return 'Solo';
+    if (cardId == 'first_trick') return '1st Trick';
     final parts = cardId.replaceFirst('mighty_', '').split('_');
     if (parts.length == 2) return '${_suitSymbol(parts[0])}${parts[1]}';
     return cardId;
+  }
+
+  String? _getCardSuit(String cardId) {
+    if (cardId == 'mighty_joker') return null;
+    final stripped = cardId.replaceFirst('mighty_', '');
+    final parts = stripped.split('_');
+    if (parts.length >= 2) return parts[0];
+    return null;
+  }
+
+  String _miniCardLabel(String cardId) {
+    if (cardId == 'mighty_joker') return 'JK';
+    final stripped = cardId.replaceFirst('mighty_', '');
+    final parts = stripped.split('_');
+    if (parts.length == 2) return '${_suitSymbol(parts[0])}${parts[1]}';
+    return '?';
+  }
+
+  bool _isKittyBlockedCard(String cardId, MightyGameStateData? state) {
+    if (state == null) return false;
+    // Block mighty card
+    if (state.mightyCard != null && cardId == state.mightyCard) return true;
+    // Block joker
+    if (cardId == 'mighty_joker') return true;
+    // Block friend card (unless it's a special value)
+    if (_friendCardSelection.isNotEmpty &&
+        _friendCardSelection != 'no_friend' &&
+        _friendCardSelection != 'first_trick' &&
+        cardId == _friendCardSelection) {
+      return true;
+    }
+    return false;
+  }
+
+  Widget _buildJokerCallToggle() {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 6),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          const Text('Joker Call: ', style: TextStyle(fontSize: 12, color: Color(0xFF5A4038))),
+          GestureDetector(
+            onTap: () => setState(() => _jokerCallChoice = true),
+            child: Container(
+              margin: const EdgeInsets.symmetric(horizontal: 3),
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
+              decoration: BoxDecoration(
+                color: _jokerCallChoice ? const Color(0xFFE8F5E9) : const Color(0xFFF5F5F5),
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(
+                  color: _jokerCallChoice ? const Color(0xFF4CAF50) : const Color(0xFFE0D8D4),
+                  width: _jokerCallChoice ? 2 : 1,
+                ),
+              ),
+              child: Text('Yes', style: TextStyle(
+                fontSize: 13,
+                fontWeight: _jokerCallChoice ? FontWeight.bold : FontWeight.normal,
+                color: _jokerCallChoice ? const Color(0xFF4CAF50) : const Color(0xFF5A4038),
+              )),
+            ),
+          ),
+          GestureDetector(
+            onTap: () => setState(() => _jokerCallChoice = false),
+            child: Container(
+              margin: const EdgeInsets.symmetric(horizontal: 3),
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
+              decoration: BoxDecoration(
+                color: !_jokerCallChoice ? const Color(0xFFFFEBEE) : const Color(0xFFF5F5F5),
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(
+                  color: !_jokerCallChoice ? const Color(0xFFE53935) : const Color(0xFFE0D8D4),
+                  width: !_jokerCallChoice ? 2 : 1,
+                ),
+              ),
+              child: Text('No', style: TextStyle(
+                fontSize: 13,
+                fontWeight: !_jokerCallChoice ? FontWeight.bold : FontWeight.normal,
+                color: !_jokerCallChoice ? const Color(0xFFE53935) : const Color(0xFF5A4038),
+              )),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showScoreHistoryDialog(MightyGameStateData state) {
+    final suitSymbol = {
+      'spade': '♠', 'heart': '♥', 'diamond': '♦', 'club': '♣', 'no_trump': 'NT',
+    };
+
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Score History', style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold)),
+        content: SizedBox(
+          width: double.maxFinite,
+          child: ListView.builder(
+            shrinkWrap: true,
+            itemCount: state.scoreHistory.length,
+            itemBuilder: (context, index) {
+              final entry = state.scoreHistory[index];
+              final declarerName = state.players
+                  .where((p) => p.id == entry.declarer)
+                  .map((p) => p.name)
+                  .firstOrNull ?? entry.declarer ?? '?';
+              final partnerName = entry.partner != null
+                  ? state.players
+                      .where((p) => p.id == entry.partner)
+                      .map((p) => p.name)
+                      .firstOrNull ?? entry.partner!
+                  : null;
+              final trump = suitSymbol[entry.trumpSuit] ?? entry.trumpSuit ?? '?';
+
+              return Container(
+                margin: const EdgeInsets.only(bottom: 8),
+                padding: const EdgeInsets.all(10),
+                decoration: BoxDecoration(
+                  color: entry.success
+                      ? const Color(0xFFE8F5E9)
+                      : const Color(0xFFFFEBEE),
+                  borderRadius: BorderRadius.circular(10),
+                  border: Border.all(
+                    color: entry.success
+                        ? const Color(0xFFA5D6A7)
+                        : const Color(0xFFEF9A9A),
+                  ),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    // Round header
+                    Row(
+                      children: [
+                        Text(
+                          'R${entry.round}',
+                          style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w800, color: Color(0xFF5A4038)),
+                        ),
+                        const SizedBox(width: 8),
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFF1565C0),
+                            borderRadius: BorderRadius.circular(6),
+                          ),
+                          child: Text(
+                            '$trump ${entry.bid}',
+                            style: const TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: Colors.white),
+                          ),
+                        ),
+                        const SizedBox(width: 6),
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                          decoration: BoxDecoration(
+                            color: entry.success ? const Color(0xFF4CAF50) : const Color(0xFFE53935),
+                            borderRadius: BorderRadius.circular(6),
+                          ),
+                          child: Text(
+                            entry.success ? '${entry.declarerPoints}pts ✓' : '${entry.declarerPoints}pts ✗',
+                            style: const TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: Colors.white),
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      partnerName != null
+                          ? '$declarerName + $partnerName'
+                          : '$declarerName (solo)',
+                      style: const TextStyle(fontSize: 11, color: Color(0xFF5A4038)),
+                    ),
+                    const SizedBox(height: 6),
+                    // Per-player scores
+                    Wrap(
+                      spacing: 6,
+                      runSpacing: 4,
+                      children: state.players.map((p) {
+                        final score = entry.scores[p.id] ?? 0;
+                        final isDeclTeam = p.id == entry.declarer || p.id == entry.partner;
+                        return Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                          decoration: BoxDecoration(
+                            color: Colors.white.withValues(alpha: 0.8),
+                            borderRadius: BorderRadius.circular(6),
+                            border: Border.all(
+                              color: isDeclTeam
+                                  ? const Color(0xFF1565C0).withValues(alpha: 0.4)
+                                  : const Color(0xFFE0D8D4),
+                            ),
+                          ),
+                          child: Text(
+                            '${p.name} ${score >= 0 ? "+$score" : "$score"}',
+                            style: TextStyle(
+                              fontSize: 11,
+                              fontWeight: isDeclTeam ? FontWeight.w700 : FontWeight.w500,
+                              color: score >= 0 ? const Color(0xFF2E7D32) : const Color(0xFFC62828),
+                            ),
+                          ),
+                        );
+                      }).toList(),
+                    ),
+                  ],
+                ),
+              );
+            },
+          ),
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Close')),
+        ],
+      ),
+    );
   }
 }

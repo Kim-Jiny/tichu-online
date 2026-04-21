@@ -59,58 +59,42 @@ class _RulesScreenState extends State<RulesScreen> {
                   ],
                 ),
               ),
-              // Game type tabs
+              // Game selector chip — tapping opens a bottom sheet
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 16),
-                child: SizedBox(
-                  width: double.infinity,
-                  child: SegmentedButton<String>(
-                    segments: [
-                      ButtonSegment(
-                        value: 'tichu',
-                        label: Text(L10n.of(context).rulesTabTichu),
-                        icon: const Icon(Icons.style, size: 16),
-                      ),
-                      ButtonSegment(
-                        value: 'skull_king',
-                        label: Text(L10n.of(context).rulesTabSkullKing),
-                        icon: const Icon(Icons.anchor, size: 16),
-                      ),
-                      ButtonSegment(
-                        value: 'love_letter',
-                        label: Text(L10n.of(context).rulesTabLoveLetter),
-                        icon: const Icon(Icons.favorite, size: 16),
-                      ),
-                    ],
-                    selected: {_selectedGame},
-                    onSelectionChanged: (s) => setState(() => _selectedGame = s.first),
-                    style: ButtonStyle(
-                      backgroundColor: WidgetStateProperty.resolveWith((states) {
-                        if (states.contains(WidgetState.selected)) {
-                          return switch (_selectedGame) {
-                            'tichu' => const Color(0xFF6C63FF),
-                            'skull_king' => const Color(0xFF2D2D3D),
-                            'love_letter' => const Color(0xFFE91E63),
-                            _ => const Color(0xFF6C63FF),
-                          };
-                        }
-                        return Colors.white;
-                      }),
-                      foregroundColor: WidgetStateProperty.resolveWith((states) {
-                        if (states.contains(WidgetState.selected)) {
-                          return switch (_selectedGame) {
-                            'skull_king' => const Color(0xFFFFD54F),
-                            _ => Colors.white,
-                          };
-                        }
-                        return const Color(0xFF6A6A6A);
-                      }),
-                      shape: WidgetStateProperty.all(
-                        RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                      ),
-                      side: WidgetStateProperty.all(
-                        const BorderSide(color: Color(0xFFE0D8D4)),
-                      ),
+                child: GestureDetector(
+                  onTap: () => _showGamePicker(),
+                  child: Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                    decoration: BoxDecoration(
+                      color: Colors.white.withValues(alpha: 0.95),
+                      borderRadius: BorderRadius.circular(14),
+                      border: Border.all(color: const Color(0xFFE0D8D4)),
+                    ),
+                    child: Row(
+                      children: [
+                        Icon(
+                          _gameIcon(_selectedGame),
+                          color: _gameColor(_selectedGame),
+                          size: 20,
+                        ),
+                        const SizedBox(width: 10),
+                        Text(
+                          _gameLabel(_selectedGame),
+                          style: TextStyle(
+                            fontSize: 15,
+                            fontWeight: FontWeight.w700,
+                            color: _gameColor(_selectedGame),
+                          ),
+                        ),
+                        const Spacer(),
+                        const Icon(
+                          Icons.keyboard_arrow_down_rounded,
+                          color: Color(0xFF8A7A72),
+                          size: 22,
+                        ),
+                      ],
                     ),
                   ),
                 ),
@@ -123,10 +107,81 @@ class _RulesScreenState extends State<RulesScreen> {
                     'tichu' => _buildTichuRules(),
                     'skull_king' => _buildSkullKingRules(),
                     'love_letter' => _buildLoveLetterRules(),
+                    'mighty' => _buildMightyRules(),
                     _ => _buildTichuRules(),
                   },
                 ),
               ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  // ─── Game picker helpers ───────────────────────────────────────────────────
+
+  static const _games = ['tichu', 'skull_king', 'love_letter', 'mighty'];
+
+  IconData _gameIcon(String key) => switch (key) {
+        'tichu' => Icons.style,
+        'skull_king' => Icons.anchor,
+        'love_letter' => Icons.favorite,
+        'mighty' => Icons.military_tech,
+        _ => Icons.style,
+      };
+
+  Color _gameColor(String key) => switch (key) {
+        'tichu' => const Color(0xFF6C63FF),
+        'skull_king' => const Color(0xFF2D2D3D),
+        'love_letter' => const Color(0xFFE91E63),
+        'mighty' => const Color(0xFF1565C0),
+        _ => const Color(0xFF6C63FF),
+      };
+
+  String _gameLabel(String key) => switch (key) {
+        'tichu' => L10n.of(context).rulesTabTichu,
+        'skull_king' => L10n.of(context).rulesTabSkullKing,
+        'love_letter' => L10n.of(context).rulesTabLoveLetter,
+        'mighty' => L10n.of(context).rulesTabMighty,
+        _ => '',
+      };
+
+  void _showGamePicker() {
+    showModalBottomSheet<String>(
+      context: context,
+      backgroundColor: Colors.transparent,
+      builder: (ctx) => Container(
+        decoration: const BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+        ),
+        child: SafeArea(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const SizedBox(height: 12),
+              Container(
+                width: 36,
+                height: 4,
+                decoration: BoxDecoration(
+                  color: const Color(0xFFD0C8C4),
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+              const SizedBox(height: 16),
+              for (final key in _games)
+                _GamePickerTile(
+                  icon: _gameIcon(key),
+                  color: _gameColor(key),
+                  label: _gameLabel(key),
+                  selected: key == _selectedGame,
+                  onTap: () {
+                    Navigator.pop(ctx, key);
+                    setState(() => _selectedGame = key);
+                  },
+                ),
+              const SizedBox(height: 12),
             ],
           ),
         ),
@@ -790,6 +845,116 @@ class _RulesScreenState extends State<RulesScreen> {
     );
   }
 
+  // ─── MIGHTY ──────────────────────────────────────────────────────────────
+
+  Widget _buildMightyRules() {
+    const mtAccent = Color(0xFF1565C0);
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        _section(
+          icon: Icons.flag,
+          iconColor: mtAccent,
+          title: L10n.of(context).rulesMtGoalTitle,
+          child: Text(
+            L10n.of(context).rulesMtGoalBody,
+            style: _bodyStyle,
+          ),
+        ),
+        _section(
+          icon: Icons.style,
+          iconColor: mtAccent,
+          title: L10n.of(context).rulesMtCardCompositionTitle,
+          child: Text(
+            L10n.of(context).rulesMtCardCompositionBody,
+            style: _bodyStyle,
+          ),
+        ),
+        _section(
+          icon: Icons.auto_awesome,
+          iconColor: mtAccent,
+          title: L10n.of(context).rulesMtSpecialTitle,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              _SpecialRule(
+                emoji: '\u{1F451}',
+                title: L10n.of(context).rulesMtSpecialMightyTitle,
+                lines: [
+                  L10n.of(context).rulesMtSpecialMightyLine1,
+                  L10n.of(context).rulesMtSpecialMightyLine2,
+                ],
+              ),
+              const SizedBox(height: 10),
+              _SpecialRule(
+                emoji: '\u{1F0CF}',
+                title: L10n.of(context).rulesMtSpecialJokerTitle,
+                lines: [
+                  L10n.of(context).rulesMtSpecialJokerLine1,
+                  L10n.of(context).rulesMtSpecialJokerLine2,
+                ],
+              ),
+              const SizedBox(height: 10),
+              _SpecialRule(
+                emoji: '\u{1F4E2}',
+                title: L10n.of(context).rulesMtSpecialJokerCallTitle,
+                lines: [
+                  L10n.of(context).rulesMtSpecialJokerCallLine1,
+                  L10n.of(context).rulesMtSpecialJokerCallLine2,
+                ],
+              ),
+            ],
+          ),
+        ),
+        _section(
+          icon: Icons.gavel,
+          iconColor: mtAccent,
+          title: L10n.of(context).rulesMtBiddingTitle,
+          child: Text(
+            L10n.of(context).rulesMtBiddingBody,
+            style: _bodyStyle,
+          ),
+        ),
+        _section(
+          icon: Icons.people,
+          iconColor: mtAccent,
+          title: L10n.of(context).rulesMtFriendTitle,
+          child: Text(
+            L10n.of(context).rulesMtFriendBody,
+            style: _bodyStyle,
+          ),
+        ),
+        _section(
+          icon: Icons.format_list_numbered,
+          iconColor: mtAccent,
+          title: L10n.of(context).rulesMtTrickTitle,
+          child: Text(
+            L10n.of(context).rulesMtTrickBody,
+            style: _bodyStyle,
+          ),
+        ),
+        _section(
+          icon: Icons.calculate,
+          iconColor: mtAccent,
+          title: L10n.of(context).rulesMtScoringTitle,
+          child: Text(
+            L10n.of(context).rulesMtScoringBody,
+            style: _bodyStyle,
+          ),
+        ),
+        _section(
+          icon: Icons.emoji_events,
+          iconColor: mtAccent,
+          title: L10n.of(context).rulesMtWinTitle,
+          child: Text(
+            L10n.of(context).rulesMtWinBody,
+            style: _bodyStyle,
+          ),
+        ),
+      ],
+    );
+  }
+
   // ─── Shared section helper ─────────────────────────────────────────────────
 
   Widget _section({
@@ -1396,6 +1561,53 @@ class _TichuDeclarationRow extends StatelessWidget {
             ),
           ),
         ],
+      ),
+    );
+  }
+}
+
+// ─── Bottom-sheet game picker tile ────────────────────────────────────────────
+
+class _GamePickerTile extends StatelessWidget {
+  final IconData icon;
+  final Color color;
+  final String label;
+  final bool selected;
+  final VoidCallback onTap;
+
+  const _GamePickerTile({
+    required this.icon,
+    required this.color,
+    required this.label,
+    required this.selected,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return InkWell(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
+        color: selected ? color.withValues(alpha: 0.08) : null,
+        child: Row(
+          children: [
+            Icon(icon, color: color, size: 22),
+            const SizedBox(width: 14),
+            Expanded(
+              child: Text(
+                label,
+                style: TextStyle(
+                  fontSize: 15,
+                  fontWeight: selected ? FontWeight.w800 : FontWeight.w500,
+                  color: selected ? color : const Color(0xFF5A4038),
+                ),
+              ),
+            ),
+            if (selected)
+              Icon(Icons.check_rounded, color: color, size: 20),
+          ],
+        ),
       ),
     );
   }

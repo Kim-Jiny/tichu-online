@@ -2469,6 +2469,94 @@ class L10nEn extends L10n {
       'When the round ends, the surviving player with the highest card (ties broken by total card value) wins a token.\n\nTokens needed to win:\n• 2 players: 4 tokens\n• 3 players: 3 tokens\n• 4 players: 2 tokens';
 
   @override
+  String get rulesTabMighty => 'Mighty';
+
+  @override
+  String get rulesMtGoalTitle => 'Game Objective';
+
+  @override
+  String get rulesMtGoalBody =>
+      'A trick-taking card game for 5 players. One player becomes the declarer and chooses a friend; together they try to win enough point cards to meet the bid. The remaining 3 players form the defence and try to stop them.';
+
+  @override
+  String get rulesMtCardCompositionTitle => 'Card Composition (53 cards)';
+
+  @override
+  String get rulesMtCardCompositionBody =>
+      'Standard 52-card deck (4 suits × 13 ranks: 2–A) plus 1 Joker.\nCard strength order: A > K > Q > J > 10 > 9 > … > 2\nPoint cards: A = 1 pt, K = 1 pt, Q = 1 pt, J = 1 pt, 10 = 1 pt (total 20 pts)';
+
+  @override
+  String get rulesMtSpecialTitle => 'Special Cards';
+
+  @override
+  String get rulesMtSpecialMightyTitle => 'Mighty';
+
+  @override
+  String get rulesMtSpecialMightyLine1 =>
+      'The strongest card in the game. Beats everything except the Joker Call.';
+
+  @override
+  String get rulesMtSpecialMightyLine2 =>
+      'By default it is the Spade Ace. If the trump suit is Spades, the Mighty becomes the Diamond Ace instead.';
+
+  @override
+  String get rulesMtSpecialJokerTitle => 'Joker';
+
+  @override
+  String get rulesMtSpecialJokerLine1 =>
+      'The second-strongest card. Wins any trick unless the Joker Call is played.';
+
+  @override
+  String get rulesMtSpecialJokerLine2 =>
+      'When leading a trick, the Joker player declares which suit others must follow.';
+
+  @override
+  String get rulesMtSpecialJokerCallTitle => 'Joker Call';
+
+  @override
+  String get rulesMtSpecialJokerCallLine1 =>
+      'When the designated Joker-Call card (♣3 by default) leads the trick, the Joker loses its power and is treated as the weakest card.';
+
+  @override
+  String get rulesMtSpecialJokerCallLine2 =>
+      'If the trump suit is Clubs, the Joker Call becomes ♠3 instead.';
+
+  @override
+  String get rulesMtBiddingTitle => 'Bidding';
+
+  @override
+  String get rulesMtBiddingBody =>
+      'Players bid in turn, stating how many points (out of 20) they will capture. The minimum bid is 13. The highest bidder becomes the declarer and chooses the trump suit.\n\nIf all players pass, the round is redealt (no-game).';
+
+  @override
+  String get rulesMtFriendTitle => 'Friend Declaration';
+
+  @override
+  String get rulesMtFriendBody =>
+      'After winning the bid, the declarer declares a friend by naming a specific card (e.g. \'Spade King\'). The player who holds that card becomes the declarer\'s secret ally — their identity is revealed when the card is played.\n\nThe declarer may also choose to go alone (no friend).';
+
+  @override
+  String get rulesMtTrickTitle => 'Trick Rules';
+
+  @override
+  String get rulesMtTrickBody =>
+      '1. The lead player plays any card, setting the lead suit.\n2. Other players must follow suit if possible.\n3. If you cannot follow suit, you may play any card (including trump).\n4. The highest card of the lead suit wins, unless a trump card is played — in that case the highest trump wins.\n5. Mighty and Joker override normal strength rules.\n6. The trick winner leads the next trick.';
+
+  @override
+  String get rulesMtScoringTitle => 'Scoring';
+
+  @override
+  String get rulesMtScoringBody =>
+      'There are 20 point cards in the deck (each A, K, Q, J, 10 across 4 suits = 20).\n\n• Declarer team wins: If they collect ≥ bid number of point cards.\n• Defence team wins: If the declarer team falls short of their bid.\n\nThe higher the bid, the greater the reward — but also the penalty for failure.';
+
+  @override
+  String get rulesMtWinTitle => 'Victory Condition';
+
+  @override
+  String get rulesMtWinBody =>
+      'After all 13 tricks are played, count the point cards collected by the declarer\'s team.\n\n• If they meet or exceed the bid → Declarer team wins.\n• If they fall short → Defence team wins.\n\nScores are accumulated over multiple rounds. The player with the highest score at the end of the session wins.';
+
+  @override
   String get friendsTitle => 'Friends';
 
   @override

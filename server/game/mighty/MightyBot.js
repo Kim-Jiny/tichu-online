@@ -254,36 +254,25 @@ function decideLeadCard(game, botId, legalCards) {
   }
 
   if (botIsGov) {
-    // Government lead: play sure winners first to collect points
-    // Mighty
-    if (legalCards.includes(mightyCard)) return mightyCard;
-    // Trump A/K (likely top cards)
-    if (game.trumpSuit && game.trumpSuit !== 'no_trump' && suitCards[game.trumpSuit]) {
-      const trumpCards = suitCards[game.trumpSuit].sort((a, b) =>
-        RANK_ORDER[getCardInfo(b).rank] - RANK_ORDER[getCardInfo(a).rank]);
-      const topTrump = trumpCards[0];
-      const topRank = getCardInfo(topTrump).rank;
-      if (topRank === 'A' || topRank === 'K') return topTrump;
-    }
+    const isFriendLeading = game.friendRevealed && game.partner && botId === game.partner;
 
-    // ─── Friend-aware lead: return suits to partner ───
-    if (game.friendRevealed && game.partner && botId === game.partner) {
+    // ─── Friend lead: prioritize returning suits to declarer ───
+    if (isFriendLeading) {
       const friendCardSuit = _getFriendCardSuit(game);
       const hasTrump = game.trumpSuit && game.trumpSuit !== 'no_trump';
 
       if (!hasTrump) {
-        // No-trump bid: lead top card first, then return friend-card suit
+        // No-trump: top card first, then return friend-card suit
         const topCard = _getTopWinnerFromHand(legalCards, suitCards, game);
         if (topCard) return topCard;
-        // Return friend-card suit
         if (friendCardSuit && suitCards[friendCardSuit] && suitCards[friendCardSuit].length > 0) {
           const sorted = suitCards[friendCardSuit].sort((a, b) =>
             RANK_ORDER[getCardInfo(b).rank] - RANK_ORDER[getCardInfo(a).rank]);
           return sorted[0];
         }
       } else {
-        // Trump bid: return trump suit to declarer
-        // But if only declarer+friend have trump → return friend-card suit instead
+        // Trump bid: return trump first (so declarer can collect with trump)
+        // Only switch to friend-card suit if confirmed gov-only has trump
         const onlyGovHasTrump = _onlyGovernmentHasTrump(game);
         const returnSuit = onlyGovHasTrump ? friendCardSuit : game.trumpSuit;
 
@@ -292,6 +281,18 @@ function decideLeadCard(game, botId, legalCards) {
             RANK_ORDER[getCardInfo(b).rank] - RANK_ORDER[getCardInfo(a).rank]);
           return sorted[0];
         }
+      }
+      // Friend fallthrough: play mighty or top cards if no return suit available
+      if (legalCards.includes(mightyCard)) return mightyCard;
+    } else {
+      // Declarer lead: play sure winners first to collect points
+      if (legalCards.includes(mightyCard)) return mightyCard;
+      if (game.trumpSuit && game.trumpSuit !== 'no_trump' && suitCards[game.trumpSuit]) {
+        const trumpCards = suitCards[game.trumpSuit].sort((a, b) =>
+          RANK_ORDER[getCardInfo(b).rank] - RANK_ORDER[getCardInfo(a).rank]);
+        const topTrump = trumpCards[0];
+        const topRank = getCardInfo(topTrump).rank;
+        if (topRank === 'A' || topRank === 'K') return topTrump;
       }
     }
   } else {

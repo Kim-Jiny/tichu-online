@@ -1310,6 +1310,7 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
                     children: [
                       _buildFriendModeChip('no_friend', 'No Friend'),
                       _buildFriendModeChip('first_trick', '1st Trick'),
+                      _buildFriendModeChip('joker', 'Joker'),
                       _buildFriendModeChip('card', 'Card'),
                     ],
                   ),
@@ -1461,6 +1462,8 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
           _friendCardSelection = 'no_friend';
         } else if (mode == 'first_trick') {
           _friendCardSelection = 'first_trick';
+        } else if (mode == 'joker') {
+          _friendCardSelection = 'mighty_joker';
         } else {
           // card mode: compose from suit + rank
           _friendCardSelection = 'mighty_${_friendSuit}_$_friendRank';

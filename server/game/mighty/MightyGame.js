@@ -289,13 +289,11 @@ class MightyGame {
     if (friendCard && friendCard !== 'none') {
       // friendCard must be a valid card id, 'no_friend', or 'first_trick'
       if (friendCard !== 'no_friend' && friendCard !== 'first_trick') {
-        // Joker cannot be friend card
-        if (friendCard === 'mighty_joker') {
-          return { success: false, messageKey: 'mighty_invalid_friend_card' };
-        }
-        const info = getCardInfo(friendCard);
-        if (!info.suit || !info.rank) {
-          return { success: false, messageKey: 'mighty_invalid_friend_card' };
+        if (friendCard !== 'mighty_joker') {
+          const info = getCardInfo(friendCard);
+          if (!info.suit || !info.rank) {
+            return { success: false, messageKey: 'mighty_invalid_friend_card' };
+          }
         }
         // Cannot discard the declared friend card
         if (discards.includes(friendCard)) {

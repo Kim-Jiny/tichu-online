@@ -34,8 +34,7 @@ function decideBid(game, botId) {
   const hand = game.hands[botId];
   const strength = evaluateHandStrength(hand, game);
 
-  // Estimate how many points we can win
-  const estimatedPoints = Math.min(20, game.options.minBid - 1 + strength);
+  const estimatedPoints = Math.min(20, game.options.minBid + Math.floor(strength / 2.5));
 
   if (estimatedPoints >= game.options.minBid && estimatedPoints > game.currentBid.points) {
     const suit = pickBestTrump(hand);
@@ -50,17 +49,15 @@ function evaluateHandStrength(hand, game) {
 
   for (const cardId of hand) {
     if (cardId === 'mighty_joker') {
-      strength += 3;
+      strength += 2;
       continue;
     }
     const info = getCardInfo(cardId);
-    if (info.rank === 'A') strength += 2;
-    else if (info.rank === 'K') strength += 1.5;
-    else if (info.rank === 'Q') strength += 1;
-    else if (info.rank === 'J') strength += 0.5;
+    if (info.rank === 'A') strength += 1.5;
+    else if (info.rank === 'K') strength += 1;
   }
 
-  // Count suit lengths (long suits are stronger)
+  // Long suit bonus: only if maxLen >= 6
   const suitCounts = {};
   for (const cardId of hand) {
     if (cardId === 'mighty_joker') continue;
@@ -68,7 +65,7 @@ function evaluateHandStrength(hand, game) {
     suitCounts[info.suit] = (suitCounts[info.suit] || 0) + 1;
   }
   const maxSuitLen = Math.max(...Object.values(suitCounts), 0);
-  if (maxSuitLen >= 5) strength += maxSuitLen - 4;
+  if (maxSuitLen >= 6) strength += 1;
 
   return Math.round(strength);
 }
@@ -126,7 +123,6 @@ function decideKittyDiscard(game, botId) {
   if (!hand.includes(mightyCard)) {
     friendCard = mightyCard;
   } else {
-    // Call highest card we don't have
     friendCard = pickFriendCard(hand, game);
   }
 
@@ -140,7 +136,6 @@ function decideKittyDiscard(game, botId) {
 }
 
 function pickFriendCard(hand, game) {
-  // Try to find a strong card we don't have
   const candidates = ['mighty_spade_A', 'mighty_heart_A', 'mighty_diamond_A', 'mighty_club_A',
     'mighty_spade_K', 'mighty_heart_K', 'mighty_diamond_K', 'mighty_club_K'];
 
@@ -150,6 +145,81 @@ function pickFriendCard(hand, game) {
     }
   }
   return 'no_friend';
+}
+
+// ─── HELPER FUNCTIONS ───────────────────────────────────
+
+function getRemainingPlayers(game, botId) {
+  const botIdx = game.currentTrick.findIndex(p => p.pid === botId);
+  // Bot hasn't played yet; count from currentTrick.length onward in play order
+  const playedIds = new Set(game.currentTrick.map(p => p.pid));
+  const leaderIdx = game.playerIds.indexOf(game.currentTrick[0].pid);
+  const remaining = [];
+  for (let i = 0; i < game.playerCount; i++) {
+    const pid = game.playerIds[(leaderIdx + i) % game.playerCount];
+    if (!playedIds.has(pid) && pid !== botId) {
+      remaining.push(pid);
+    }
+  }
+  return remaining;
+}
+
+function isGovernment(game, playerId) {
+  if (playerId === game.declarer) return true;
+  if (game.friendRevealed && playerId === game.partner) return true;
+  return false;
+}
+
+function getTrickPointCount(game) {
+  let count = 0;
+  for (const play of game.currentTrick) {
+    if (play.cardId === 'mighty_joker') continue;
+    const info = getCardInfo(play.cardId);
+    if (info.point > 0) count++;
+  }
+  return count;
+}
+
+function hasOppositionBehind(game, botId) {
+  const remaining = getRemainingPlayers(game, botId);
+  const botIsGov = isGovernment(game, botId);
+  for (const pid of remaining) {
+    const pidIsGov = isGovernment(game, pid);
+    if (botIsGov !== pidIsGov) return true;
+    // If friend not revealed and bot is opposition, declarer behind counts
+    if (!botIsGov && !game.friendRevealed && pid !== game.declarer) {
+      // Unknown: could be friend, treat conservatively
+    }
+    if (!botIsGov && pid === game.declarer) return true;
+  }
+  return false;
+}
+
+function getBestPointCard(legalCards) {
+  let best = null;
+  let bestRank = -1;
+  for (const cardId of legalCards) {
+    if (cardId === 'mighty_joker') continue;
+    const info = getCardInfo(cardId);
+    if (info.point > 0) {
+      const rank = RANK_ORDER[info.rank] || 0;
+      if (rank > bestRank) {
+        bestRank = rank;
+        best = cardId;
+      }
+    }
+  }
+  return best;
+}
+
+function getNonPointWeakest(legalCards, game) {
+  const mightyCard = game.getMightyCard();
+  const nonPoint = legalCards.filter(cardId => {
+    if (cardId === mightyCard || cardId === 'mighty_joker') return false;
+    return getCardInfo(cardId).point === 0;
+  });
+  if (nonPoint.length > 0) return getWeakestCard(nonPoint, game);
+  return getWeakestCard(legalCards, game);
 }
 
 // ─── TRICK PLAY ──────────────────────────────────────────
@@ -172,13 +242,9 @@ function decidePlay(game, botId) {
 
 function decideLeadCard(game, botId, legalCards) {
   const mightyCard = game.getMightyCard();
+  const botIsGov = isGovernment(game, botId);
 
-  // Lead mighty early if we have it (strong opening)
-  if (legalCards.includes(mightyCard) && game.tricks.length < 3) {
-    return mightyCard;
-  }
-
-  // Lead from longest suit
+  // Group cards by suit
   const suitCards = {};
   for (const cardId of legalCards) {
     if (cardId === 'mighty_joker') continue;
@@ -187,6 +253,39 @@ function decideLeadCard(game, botId, legalCards) {
     suitCards[info.suit].push(cardId);
   }
 
+  if (botIsGov) {
+    // Government lead: play sure winners first to collect points
+    // Mighty
+    if (legalCards.includes(mightyCard)) return mightyCard;
+    // Trump A/K (likely top cards)
+    if (game.trumpSuit && game.trumpSuit !== 'no_trump' && suitCards[game.trumpSuit]) {
+      const trumpCards = suitCards[game.trumpSuit].sort((a, b) =>
+        RANK_ORDER[getCardInfo(b).rank] - RANK_ORDER[getCardInfo(a).rank]);
+      const topTrump = trumpCards[0];
+      const topRank = getCardInfo(topTrump).rank;
+      if (topRank === 'A' || topRank === 'K') return topTrump;
+    }
+  } else {
+    // Opposition lead: prefer short suits to create voids
+    let shortestSuit = null;
+    let shortestLen = Infinity;
+    for (const [suit, cards] of Object.entries(suitCards)) {
+      // Skip trump suit for void creation
+      if (suit === game.trumpSuit) continue;
+      if (cards.length > 0 && cards.length < shortestLen) {
+        shortestLen = cards.length;
+        shortestSuit = suit;
+      }
+    }
+    if (shortestSuit && suitCards[shortestSuit].length > 0) {
+      // Lead highest from shortest suit
+      const sorted = suitCards[shortestSuit].sort((a, b) =>
+        RANK_ORDER[getCardInfo(b).rank] - RANK_ORDER[getCardInfo(a).rank]);
+      return sorted[0];
+    }
+  }
+
+  // Fallback: lead highest from longest suit
   let bestSuit = null;
   let bestLen = 0;
   for (const [suit, cards] of Object.entries(suitCards)) {
@@ -197,10 +296,8 @@ function decideLeadCard(game, botId, legalCards) {
   }
 
   if (bestSuit && suitCards[bestSuit].length > 0) {
-    // Lead highest from longest suit
-    const sorted = suitCards[bestSuit].sort((a, b) => {
-      return RANK_ORDER[getCardInfo(b).rank] - RANK_ORDER[getCardInfo(a).rank];
-    });
+    const sorted = suitCards[bestSuit].sort((a, b) =>
+      RANK_ORDER[getCardInfo(b).rank] - RANK_ORDER[getCardInfo(a).rank]);
     return sorted[0];
   }
 
@@ -210,35 +307,153 @@ function decideLeadCard(game, botId, legalCards) {
 function decideFollowCard(game, botId, legalCards) {
   const mightyCard = game.getMightyCard();
   const currentWinner = getCurrentTrickWinner(game);
-
-  // Determine if we're on the declarer's team
-  const isDeclarer = botId === game.declarer;
-  const isPartner = game.friendRevealed && botId === game.partner;
-  const isDeclarerTeam = isDeclarer || isPartner;
-
-  // Check if current winner is on our team
-  const winnerOnOurTeam = isDeclarerTeam
-    ? (currentWinner === game.declarer || (game.friendRevealed && currentWinner === game.partner))
-    : (game.friendRevealed
-        ? (currentWinner !== game.declarer && currentWinner !== game.partner)
-        : (currentWinner !== game.declarer)); // Unknown partner: try to beat declarer
-
-  if (winnerOnOurTeam) {
-    // Teammate is winning: play lowest legal card
-    return getWeakestCard(legalCards, game);
-  }
-
-  // Try to win the trick
+  const botIsGov = isGovernment(game, botId);
+  const winnerIsGov = isGovernment(game, currentWinner);
   const winningCards = legalCards.filter(cardId => canBeatCurrentWinner(game, cardId));
 
+  // Determine if winner is on our team
+  const winnerOnOurTeam = botIsGov
+    ? winnerIsGov
+    : (game.friendRevealed
+      ? !winnerIsGov
+      : currentWinner !== game.declarer);
+
+  if (botIsGov) {
+    return governmentFollow(game, botId, legalCards, winningCards, currentWinner, winnerOnOurTeam, mightyCard);
+  } else {
+    return oppositionFollow(game, botId, legalCards, winningCards, currentWinner, winnerOnOurTeam, mightyCard);
+  }
+}
+
+function governmentFollow(game, botId, legalCards, winningCards, currentWinner, winnerOnOurTeam, mightyCard) {
+  const oppBehind = hasOppositionBehind(game, botId);
+
+  if (winnerOnOurTeam) {
+    if (!oppBehind) {
+      // Ally winning, no opposition behind → dump point cards
+      const bestPoint = getBestPointCard(legalCards);
+      if (bestPoint) return bestPoint;
+      return getWeakestCard(legalCards, game);
+    }
+    // Ally winning but opposition still behind
+    // Only dump points if winner has top card (mighty/joker/trump A)
+    const winnerCard = getWinnerCardId(game);
+    if (winnerCard === mightyCard || winnerCard === 'mighty_joker' ||
+        (game.trumpSuit && game.trumpSuit !== 'no_trump' && winnerCard &&
+         winnerCard !== 'mighty_joker' && getCardInfo(winnerCard).suit === game.trumpSuit &&
+         getCardInfo(winnerCard).rank === 'A')) {
+      const bestPoint = getBestPointCard(legalCards);
+      if (bestPoint) return bestPoint;
+    }
+    return getNonPointWeakest(legalCards, game);
+  }
+
+  // Enemy winning
   if (winningCards.length > 0) {
-    // Play weakest winning card
+    if (oppBehind) {
+      // Enemy winning, opposition behind → use strong card to secure
+      // Prefer mighty > joker > trump high
+      if (winningCards.includes(mightyCard)) return mightyCard;
+      if (winningCards.includes('mighty_joker')) return 'mighty_joker';
+      // Strongest winning card
+      return getStrongestCard(winningCards, game);
+    }
+    // Enemy winning, no opposition behind → weakest winning card
     return getWeakestCard(winningCards, game);
   }
 
-  // Can't win: play weakest card
-  return getWeakestCard(legalCards, game);
+  // Can't win
+  return getNonPointWeakest(legalCards, game);
 }
+
+function oppositionFollow(game, botId, legalCards, winningCards, currentWinner, winnerOnOurTeam, mightyCard) {
+  const govBehind = hasGovernmentBehind(game, botId);
+  const trickPoints = getTrickPointCount(game);
+
+  if (!winnerOnOurTeam) {
+    // Government is winning
+    // Joker snipe: if we have joker, trick has 2+ point cards, and we can win
+    if (legalCards.includes('mighty_joker') && trickPoints >= 2 &&
+        canBeatCurrentWinner(game, 'mighty_joker')) {
+      return 'mighty_joker';
+    }
+    // Try to beat with weakest winning card
+    if (winningCards.length > 0) {
+      return getWeakestCard(winningCards, game);
+    }
+    // Can't win → non-point weakest
+    return getNonPointWeakest(legalCards, game);
+  }
+
+  // Our team (opposition ally) is winning
+  if (!govBehind) {
+    // No government behind → dump point cards
+    const bestPoint = getBestPointCard(legalCards);
+    if (bestPoint) return bestPoint;
+    return getWeakestCard(legalCards, game);
+  }
+  // Government still behind → don't feed them points
+  return getNonPointWeakest(legalCards, game);
+}
+
+function hasGovernmentBehind(game, botId) {
+  const remaining = getRemainingPlayers(game, botId);
+  for (const pid of remaining) {
+    if (isGovernment(game, pid)) return true;
+    // If friend not revealed, declarer is known government
+    if (!game.friendRevealed && pid === game.declarer) return true;
+  }
+  return false;
+}
+
+function getWinnerCardId(game) {
+  const mightyCard = game.getMightyCard();
+  const leadCard = game.currentTrick[0].cardId;
+  const leadSuit = leadCard === 'mighty_joker' ? game.jokerSuitDeclared : getCardInfo(leadCard).suit;
+  const isFirstTrick = game.tricks.length === 0;
+  const totalTricks = Math.floor(50 / game.playerCount);
+  const isLastTrick = game.tricks.length === totalTricks - 1;
+  const jokerCallCard = game.getJokerCallCard();
+  const jokerIsWeak = (isFirstTrick && !game.options.firstTrickJokerPower) ||
+    (isLastTrick && !game.options.lastTrickJokerPower) ||
+    (leadCard === jokerCallCard);
+
+  let bestPlay = null;
+  let bestPriority = -1;
+  for (const play of game.currentTrick) {
+    const priority = game._getCardPriority(play.cardId, leadSuit, jokerIsWeak, mightyCard);
+    if (priority > bestPriority) {
+      bestPriority = priority;
+      bestPlay = play;
+    }
+  }
+  return bestPlay ? bestPlay.cardId : null;
+}
+
+function getStrongestCard(cards, game) {
+  const mightyCard = game.getMightyCard();
+  let strongest = cards[0];
+  let strongestValue = -1;
+
+  for (const cardId of cards) {
+    let value;
+    if (cardId === mightyCard) value = 1000;
+    else if (cardId === 'mighty_joker') value = 900;
+    else {
+      const info = getCardInfo(cardId);
+      value = RANK_ORDER[info.rank] || 0;
+      if (info.suit === game.trumpSuit) value += 100;
+    }
+    if (value > strongestValue) {
+      strongestValue = value;
+      strongest = cardId;
+    }
+  }
+
+  return strongest;
+}
+
+// ─── TRICK EVALUATION ───────────────────────────────────
 
 function getCurrentTrickWinner(game) {
   if (game.currentTrick.length === 0) return null;

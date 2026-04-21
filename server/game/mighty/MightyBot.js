@@ -170,6 +170,12 @@ function isGovernment(game, playerId) {
   return false;
 }
 
+/** Like isGovernment but also identifies unrevealed friend (for self-check only) */
+function isGovernmentSelf(game, playerId) {
+  if (isGovernment(game, playerId)) return true;
+  return _isFriend(game, playerId);
+}
+
 function getTrickPointCount(game) {
   let count = 0;
   for (const play of game.currentTrick) {
@@ -182,14 +188,13 @@ function getTrickPointCount(game) {
 
 function hasOppositionBehind(game, botId) {
   const remaining = getRemainingPlayers(game, botId);
-  const botIsGov = isGovernment(game, botId);
+  const botIsGov = isGovernmentSelf(game, botId);
   for (const pid of remaining) {
     const pidIsGov = isGovernment(game, pid);
     if (botIsGov !== pidIsGov) return true;
-    // If friend not revealed and bot is opposition, declarer behind counts
-    if (!botIsGov && !game.friendRevealed && pid !== game.declarer) {
-      // Unknown: could be friend, treat conservatively
-    }
+    // If friend not revealed and bot is government (unrevealed friend),
+    // any non-declarer behind is potentially opposition
+    if (botIsGov && !game.friendRevealed && pid !== game.declarer) return true;
     if (!botIsGov && pid === game.declarer) return true;
   }
   return false;
@@ -242,7 +247,7 @@ function decidePlay(game, botId) {
 
 function decideLeadCard(game, botId, legalCards) {
   const mightyCard = game.getMightyCard();
-  const botIsGov = isGovernment(game, botId);
+  const botIsGov = isGovernmentSelf(game, botId);
 
   // Group cards by suit
   const suitCards = {};
@@ -254,7 +259,7 @@ function decideLeadCard(game, botId, legalCards) {
   }
 
   if (botIsGov) {
-    const isFriendLeading = game.friendRevealed && game.partner && botId === game.partner;
+    const isFriendLeading = _isFriend(game, botId);
 
     // ─── Friend lead: prioritize returning suits to declarer ───
     if (isFriendLeading) {
@@ -337,7 +342,7 @@ function decideLeadCard(game, botId, legalCards) {
 function decideFollowCard(game, botId, legalCards) {
   const mightyCard = game.getMightyCard();
   const currentWinner = getCurrentTrickWinner(game);
-  const botIsGov = isGovernment(game, botId);
+  const botIsGov = isGovernmentSelf(game, botId);
   const winnerIsGov = isGovernment(game, currentWinner);
   const winningCards = legalCards.filter(cardId => canBeatCurrentWinner(game, cardId));
 
@@ -357,7 +362,7 @@ function decideFollowCard(game, botId, legalCards) {
 
 function governmentFollow(game, botId, legalCards, winningCards, currentWinner, winnerOnOurTeam, mightyCard) {
   const oppBehind = hasOppositionBehind(game, botId);
-  const isFriend = botId === game.partner && game.friendRevealed;
+  const isFriend = _isFriend(game, botId);
   const declarerLed = game.currentTrick.length > 0 && game.currentTrick[0].pid === game.declarer;
 
   // ─── Friend helping declarer's lead ───
@@ -581,9 +586,34 @@ function getWeakestCard(cards, game) {
 
 // ─── FRIEND LEAD HELPERS ────────────────────────────────
 
+/** Check if a player is the friend (even before reveal, by checking hand) */
+function _isFriend(game, playerId) {
+  if (playerId === game.declarer) return false;
+  if (game.friendRevealed && playerId === game.partner) return true;
+  if (!game.friendRevealed && game.friendCard && game.friendCard !== 'no_friend' && game.friendCard !== 'first_trick') {
+    const hand = game.hands[playerId] || [];
+    if (hand.includes(game.friendCard)) return true;
+  }
+  return false;
+}
+
+/** Get all cards played in previous tricks and current trick */
+function _getPlayedCards(game) {
+  const played = new Set();
+  for (const trick of (game.tricks || [])) {
+    for (const play of (trick.cards || [])) {
+      played.add(play.cardId);
+    }
+  }
+  for (const play of (game.currentTrick || [])) {
+    played.add(play.cardId);
+  }
+  return played;
+}
+
 /**
  * Check if a card is the effective top of its suit.
- * e.g. Spade K is the top when Spade A is the Mighty card.
+ * Considers: mighty removal, and whether higher cards have already been played.
  * Mighty and Joker are always top.
  */
 function _isEffectiveTopOfSuit(cardId, game) {
@@ -594,17 +624,24 @@ function _isEffectiveTopOfSuit(cardId, game) {
 
   const info = getCardInfo(cardId);
   const mightyInfo = getCardInfo(mightyCard);
+  const played = _getPlayedCards(game);
 
-  // A is top of its suit unless A itself is the mighty of that suit
-  if (info.rank === 'A' && !(mightyInfo.suit === info.suit && mightyInfo.rank === 'A')) {
-    return true;
-  }
-  // K is top of the mighty suit (since A of that suit = mighty, removed from normal play)
-  if (info.rank === 'K' && mightyInfo.suit === info.suit && mightyInfo.rank === 'A') {
-    return true;
+  // Build ordered list of ranks higher than this card in the same suit
+  const rankOrder = ['2', '3', '4', '5', '6', '7', '8', '9', '10', 'J', 'Q', 'K', 'A'];
+  const myRankIdx = rankOrder.indexOf(info.rank);
+
+  for (let i = rankOrder.length - 1; i > myRankIdx; i--) {
+    const higherRank = rankOrder[i];
+    const higherCardId = `mighty_${info.suit}_${higherRank}`;
+
+    // Skip if this higher card IS the mighty (removed from normal suit play)
+    if (higherCardId === mightyCard) continue;
+
+    // If a higher card exists and hasn't been played, this card is NOT top
+    if (!played.has(higherCardId)) return false;
   }
 
-  return false;
+  return true;
 }
 
 /** Get the suit of the friend-declared card */

@@ -847,6 +847,9 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
                               width: 38,
                               height: 53,
                               isInteractive: false,
+                              borderColor: (state.trumpSuit != null && state.trumpSuit != 'no_trump' && _getCardSuit(trickPlay.cardId) == state.trumpSuit)
+                                  ? PlayingCard.suitColors[_getCardSuit(trickPlay.cardId)]
+                                  : null,
                             ),
                           ),
                         ),

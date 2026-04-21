@@ -265,6 +265,35 @@ function decideLeadCard(game, botId, legalCards) {
       const topRank = getCardInfo(topTrump).rank;
       if (topRank === 'A' || topRank === 'K') return topTrump;
     }
+
+    // ─── Friend-aware lead: return suits to partner ───
+    if (game.friendRevealed && game.partner && botId === game.partner) {
+      const friendCardSuit = _getFriendCardSuit(game);
+      const hasTrump = game.trumpSuit && game.trumpSuit !== 'no_trump';
+
+      if (!hasTrump) {
+        // No-trump bid: lead top card first, then return friend-card suit
+        const topCard = _getTopWinnerFromHand(legalCards, suitCards, game);
+        if (topCard) return topCard;
+        // Return friend-card suit
+        if (friendCardSuit && suitCards[friendCardSuit] && suitCards[friendCardSuit].length > 0) {
+          const sorted = suitCards[friendCardSuit].sort((a, b) =>
+            RANK_ORDER[getCardInfo(b).rank] - RANK_ORDER[getCardInfo(a).rank]);
+          return sorted[0];
+        }
+      } else {
+        // Trump bid: return trump suit to declarer
+        // But if only declarer+friend have trump → return friend-card suit instead
+        const onlyGovHasTrump = _onlyGovernmentHasTrump(game);
+        const returnSuit = onlyGovHasTrump ? friendCardSuit : game.trumpSuit;
+
+        if (returnSuit && suitCards[returnSuit] && suitCards[returnSuit].length > 0) {
+          const sorted = suitCards[returnSuit].sort((a, b) =>
+            RANK_ORDER[getCardInfo(b).rank] - RANK_ORDER[getCardInfo(a).rank]);
+          return sorted[0];
+        }
+      }
+    }
   } else {
     // Opposition lead: prefer short suits to create voids
     let shortestSuit = null;
@@ -327,6 +356,26 @@ function decideFollowCard(game, botId, legalCards) {
 
 function governmentFollow(game, botId, legalCards, winningCards, currentWinner, winnerOnOurTeam, mightyCard) {
   const oppBehind = hasOppositionBehind(game, botId);
+  const isFriend = botId === game.partner && game.friendRevealed;
+  const declarerLed = game.currentTrick.length > 0 && game.currentTrick[0].pid === game.declarer;
+
+  // ─── Friend protecting declarer's lead ───
+  if (isFriend && declarerLed && winnerOnOurTeam && oppBehind) {
+    const winnerCard = getWinnerCardId(game);
+    const isDeclarerTopSafe = _isUnchallengeableTopCard(winnerCard, game);
+
+    if (!isDeclarerTopSafe) {
+      // Declarer's card is NOT a top card or could be beaten by trump/joker
+      // → Friend plays mighty > joker > top winning card to secure the trick
+      if (winningCards.includes(mightyCard)) return mightyCard;
+      if (winningCards.includes('mighty_joker')) return 'mighty_joker';
+      if (winningCards.length > 0) return getStrongestCard(winningCards, game);
+    } else if (_canOppositionOverrule(game, winnerCard, botId)) {
+      // Declarer has top card but opposition could beat it with trump/joker
+      // → Friend plays mighty to protect
+      if (legalCards.includes(mightyCard)) return mightyCard;
+    }
+  }
 
   if (winnerOnOurTeam) {
     if (!oppBehind) {
@@ -530,6 +579,85 @@ function getWeakestCard(cards, game) {
   }
 
   return weakest;
+}
+
+// ─── FRIEND LEAD HELPERS ────────────────────────────────
+
+/** Check if a card is an unchallengeable top card (mighty, joker, or trump A) */
+function _isUnchallengeableTopCard(cardId, game) {
+  if (!cardId) return false;
+  const mightyCard = game.getMightyCard();
+  if (cardId === mightyCard) return true;
+  if (cardId === 'mighty_joker') return true;
+  // Trump A is only safe if nothing behind can override (but joker/mighty can)
+  // So trump A alone is not truly unchallengeable
+  const info = getCardInfo(cardId);
+  if (game.trumpSuit && game.trumpSuit !== 'no_trump' &&
+      info.suit === game.trumpSuit && info.rank === 'A') {
+    // Trump A can still lose to mighty — treat as safe only if mighty already played
+    const mightyPlayed = game.tricks.some(t =>
+      t.cards.some(c => c.cardId === mightyCard));
+    if (mightyPlayed) return true;
+  }
+  return false;
+}
+
+/** Check if opposition behind could beat the current winner with trump or joker */
+function _canOppositionOverrule(game, winnerCard, botId) {
+  const remaining = getRemainingPlayers(game, botId);
+  const winnerInfo = winnerCard !== 'mighty_joker' ? getCardInfo(winnerCard) : null;
+  const isNonTrumpLead = winnerInfo && winnerInfo.suit !== game.trumpSuit;
+
+  for (const pid of remaining) {
+    if (isGovernment(game, pid)) continue;
+    const hand = game.hands[pid] || [];
+    for (const cardId of hand) {
+      // Opposition has joker
+      if (cardId === 'mighty_joker') return true;
+      // Opposition can trump a non-trump lead
+      if (isNonTrumpLead && game.trumpSuit && game.trumpSuit !== 'no_trump') {
+        const info = getCardInfo(cardId);
+        if (info.suit === game.trumpSuit) return true;
+      }
+    }
+  }
+  return false;
+}
+
+/** Get the suit of the friend-declared card */
+function _getFriendCardSuit(game) {
+  if (!game.friendCard || game.friendCard === 'no_friend' || game.friendCard === 'first_trick') {
+    return null;
+  }
+  const info = getCardInfo(game.friendCard);
+  return info.suit || null;
+}
+
+/** Check if only government (declarer + partner) still hold trump cards */
+function _onlyGovernmentHasTrump(game) {
+  if (!game.trumpSuit || game.trumpSuit === 'no_trump') return false;
+  for (const pid of game.playerIds) {
+    if (pid === game.declarer || pid === game.partner) continue;
+    const hand = game.hands[pid] || [];
+    for (const cardId of hand) {
+      if (cardId === 'mighty_joker') continue;
+      const info = getCardInfo(cardId);
+      if (info.suit === game.trumpSuit) return false;
+    }
+  }
+  return true;
+}
+
+/** Find a sure-winner top card (non-trump A that hasn't been played) */
+function _getTopWinnerFromHand(legalCards, suitCards, game) {
+  for (const [suit, cards] of Object.entries(suitCards)) {
+    if (suit === game.trumpSuit) continue;
+    const sorted = cards.sort((a, b) =>
+      RANK_ORDER[getCardInfo(b).rank] - RANK_ORDER[getCardInfo(a).rank]);
+    const topRank = getCardInfo(sorted[0]).rank;
+    if (topRank === 'A') return sorted[0];
+  }
+  return null;
 }
 
 function makePlayAction(cardId, game) {

@@ -1054,6 +1054,8 @@ async function handleMessage(ws, data) {
     case 'next_round':
     case 'dragon_give':
     case 'call_rank':
+    // Game actions (Mighty)
+    case 'discard_kitty':
     // Game actions (Skull King)
     case 'submit_bid':
     case 'play_card':

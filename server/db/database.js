@@ -3112,16 +3112,18 @@ async function getUserDetail(nickname) {
 async function getDashboardStats() {
   const client = await pool.connect();
   try {
+    const kstTodayExpr = `DATE(timezone('Asia/Seoul', NOW()))`;
+    const kstCreatedDate = (column = 'created_at') => `DATE(timezone('Asia/Seoul', ${column}))`;
     // Basic counts
     const totalUsers = await client.query('SELECT COUNT(*) FROM tc_users WHERE is_deleted IS NOT TRUE');
     const pendingInquiries = await client.query(`SELECT COUNT(*) FROM tc_inquiries WHERE status = 'pending'`);
     const pendingReports = await client.query(`SELECT COUNT(*) FROM tc_reports WHERE status = 'pending'`);
     const todayGames = await client.query(`
       SELECT
-        (SELECT COUNT(*) FROM tc_match_history WHERE created_at >= CURRENT_DATE) as tichu,
-        (SELECT COUNT(*) FROM tc_sk_match_history WHERE created_at >= CURRENT_DATE) as sk,
-        (SELECT COUNT(*) FROM tc_ll_match_history WHERE created_at >= CURRENT_DATE) as ll,
-        (SELECT COUNT(*) FROM tc_mighty_match_history WHERE created_at >= CURRENT_DATE) as mighty
+        (SELECT COUNT(*) FROM tc_match_history WHERE ${kstCreatedDate()} = ${kstTodayExpr}) as tichu,
+        (SELECT COUNT(*) FROM tc_sk_match_history WHERE ${kstCreatedDate()} = ${kstTodayExpr}) as sk,
+        (SELECT COUNT(*) FROM tc_ll_match_history WHERE ${kstCreatedDate()} = ${kstTodayExpr}) as ll,
+        (SELECT COUNT(*) FROM tc_mighty_match_history WHERE ${kstCreatedDate()} = ${kstTodayExpr}) as mighty
     `);
     const recentMatches = await client.query(`
       (SELECT id, 'tichu'::text as game_type, winner_team, team_a_score, team_b_score,
@@ -3150,7 +3152,7 @@ async function getDashboardStats() {
 
     // New users today
     const newUsersToday = await client.query(
-      `SELECT COUNT(*) FROM tc_users WHERE created_at >= CURRENT_DATE AND is_deleted IS NOT TRUE`
+      `SELECT COUNT(*) FROM tc_users WHERE ${kstCreatedDate()} = ${kstTodayExpr} AND is_deleted IS NOT TRUE`
     );
 
     // Active users (logged in within 24h / 7d)
@@ -3166,48 +3168,48 @@ async function getDashboardStats() {
       `SELECT (SELECT COUNT(*) FROM tc_match_history) + (SELECT COUNT(*) FROM tc_sk_match_history) + (SELECT COUNT(*) FROM tc_ll_match_history) + (SELECT COUNT(*) FROM tc_mighty_match_history) as count`
     );
     const rankedMatchesToday = await client.query(
-      `SELECT (SELECT COUNT(*) FROM tc_match_history WHERE created_at >= CURRENT_DATE AND is_ranked = true) + (SELECT COUNT(*) FROM tc_sk_match_history WHERE created_at >= CURRENT_DATE AND is_ranked = true) + (SELECT COUNT(*) FROM tc_ll_match_history WHERE created_at >= CURRENT_DATE AND is_ranked = true) + (SELECT COUNT(*) FROM tc_mighty_match_history WHERE created_at >= CURRENT_DATE AND is_ranked = true) as count`
+      `SELECT (SELECT COUNT(*) FROM tc_match_history WHERE ${kstCreatedDate()} = ${kstTodayExpr} AND is_ranked = true) + (SELECT COUNT(*) FROM tc_sk_match_history WHERE ${kstCreatedDate()} = ${kstTodayExpr} AND is_ranked = true) + (SELECT COUNT(*) FROM tc_ll_match_history WHERE ${kstCreatedDate()} = ${kstTodayExpr} AND is_ranked = true) + (SELECT COUNT(*) FROM tc_mighty_match_history WHERE ${kstCreatedDate()} = ${kstTodayExpr} AND is_ranked = true) as count`
     );
 
     // Games per day (last 7 days) - tichu + skull king combined
     const dailyGames = await client.query(`
       SELECT day, SUM(cnt) as cnt, SUM(ranked_cnt) as ranked_cnt, SUM(tichu_cnt) as tichu_cnt, SUM(sk_cnt) as sk_cnt, SUM(ll_cnt) as ll_cnt, SUM(mighty_cnt) as mighty_cnt FROM (
-        SELECT DATE(created_at) as day, COUNT(*) as cnt,
+        SELECT ${kstCreatedDate()} as day, COUNT(*) as cnt,
                SUM(CASE WHEN is_ranked THEN 1 ELSE 0 END) as ranked_cnt,
                COUNT(*) as tichu_cnt, 0::bigint as sk_cnt, 0::bigint as ll_cnt, 0::bigint as mighty_cnt
         FROM tc_match_history
-        WHERE created_at >= CURRENT_DATE - INTERVAL '6 days'
-        GROUP BY DATE(created_at)
+        WHERE ${kstCreatedDate()} >= ${kstTodayExpr} - INTERVAL '6 days'
+        GROUP BY ${kstCreatedDate()}
         UNION ALL
-        SELECT DATE(created_at) as day, COUNT(*) as cnt,
+        SELECT ${kstCreatedDate()} as day, COUNT(*) as cnt,
                SUM(CASE WHEN is_ranked THEN 1 ELSE 0 END) as ranked_cnt,
                0::bigint as tichu_cnt, COUNT(*) as sk_cnt, 0::bigint as ll_cnt, 0::bigint as mighty_cnt
         FROM tc_sk_match_history
-        WHERE created_at >= CURRENT_DATE - INTERVAL '6 days'
-        GROUP BY DATE(created_at)
+        WHERE ${kstCreatedDate()} >= ${kstTodayExpr} - INTERVAL '6 days'
+        GROUP BY ${kstCreatedDate()}
         UNION ALL
-        SELECT DATE(created_at) as day, COUNT(*) as cnt,
+        SELECT ${kstCreatedDate()} as day, COUNT(*) as cnt,
                SUM(CASE WHEN is_ranked THEN 1 ELSE 0 END) as ranked_cnt,
                0::bigint as tichu_cnt, 0::bigint as sk_cnt, COUNT(*) as ll_cnt, 0::bigint as mighty_cnt
         FROM tc_ll_match_history
-        WHERE created_at >= CURRENT_DATE - INTERVAL '6 days'
-        GROUP BY DATE(created_at)
+        WHERE ${kstCreatedDate()} >= ${kstTodayExpr} - INTERVAL '6 days'
+        GROUP BY ${kstCreatedDate()}
         UNION ALL
-        SELECT DATE(created_at) as day, COUNT(*) as cnt,
+        SELECT ${kstCreatedDate()} as day, COUNT(*) as cnt,
                SUM(CASE WHEN is_ranked THEN 1 ELSE 0 END) as ranked_cnt,
                0::bigint as tichu_cnt, 0::bigint as sk_cnt, 0::bigint as ll_cnt, COUNT(*) as mighty_cnt
         FROM tc_mighty_match_history
-        WHERE created_at >= CURRENT_DATE - INTERVAL '6 days'
-        GROUP BY DATE(created_at)
+        WHERE ${kstCreatedDate()} >= ${kstTodayExpr} - INTERVAL '6 days'
+        GROUP BY ${kstCreatedDate()}
       ) combined GROUP BY day ORDER BY day
     `);
 
     // New users per day (last 7 days)
     const dailySignups = await client.query(`
-      SELECT DATE(created_at) as day, COUNT(*) as cnt
+      SELECT ${kstCreatedDate()} as day, COUNT(*) as cnt
       FROM tc_users
-      WHERE created_at >= CURRENT_DATE - INTERVAL '6 days' AND is_deleted IS NOT TRUE
-      GROUP BY DATE(created_at)
+      WHERE ${kstCreatedDate()} >= ${kstTodayExpr} - INTERVAL '6 days' AND is_deleted IS NOT TRUE
+      GROUP BY ${kstCreatedDate()}
       ORDER BY day
     `);
 
@@ -3248,17 +3250,17 @@ async function getDashboardStats() {
     const adRewardStats = await client.query(`
       SELECT COUNT(*) as total_claims,
              COUNT(DISTINCT nickname) as unique_users,
-             COUNT(*) FILTER (WHERE claimed_at::date = CURRENT_DATE) as today_claims,
-             COUNT(DISTINCT nickname) FILTER (WHERE claimed_at::date = CURRENT_DATE) as today_users
+             COUNT(*) FILTER (WHERE DATE(timezone('Asia/Seoul', claimed_at)) = ${kstTodayExpr}) as today_claims,
+             COUNT(DISTINCT nickname) FILTER (WHERE DATE(timezone('Asia/Seoul', claimed_at)) = ${kstTodayExpr}) as today_users
       FROM tc_ad_rewards
     `);
 
     // Daily ad rewards (last 7 days)
     const dailyAdRewards = await client.query(`
-      SELECT DATE(claimed_at) as day, COUNT(*) as cnt, COUNT(DISTINCT nickname) as users
+      SELECT DATE(timezone('Asia/Seoul', claimed_at)) as day, COUNT(*) as cnt, COUNT(DISTINCT nickname) as users
       FROM tc_ad_rewards
-      WHERE claimed_at >= CURRENT_DATE - INTERVAL '6 days'
-      GROUP BY DATE(claimed_at)
+      WHERE DATE(timezone('Asia/Seoul', claimed_at)) >= ${kstTodayExpr} - INTERVAL '6 days'
+      GROUP BY DATE(timezone('Asia/Seoul', claimed_at))
       ORDER BY day
     `);
 

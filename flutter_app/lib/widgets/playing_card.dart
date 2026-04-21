@@ -10,6 +10,9 @@ class PlayingCard extends StatelessWidget {
   final VoidCallback? onTap;
   final double width;
   final double height;
+  final IconData? badgeIcon;
+  final Color? badgeColor;
+  final Color? borderColor;
 
   const PlayingCard({
     super.key,
@@ -20,6 +23,9 @@ class PlayingCard extends StatelessWidget {
     this.onTap,
     this.width = 60,
     this.height = 84,
+    this.badgeIcon,
+    this.badgeColor,
+    this.borderColor,
   });
 
   static const Map<String, Color> suitColors = {
@@ -42,32 +48,55 @@ class PlayingCard extends StatelessWidget {
     final backBg = cardColors[0];
     final backBorder = cardColors[1];
 
+    final effectiveBorderColor = isSelected
+        ? const Color(0xFF4D99FF)
+        : borderColor ?? (isFaceUp ? const Color(0xFFE6DCE8) : backBorder);
+    final effectiveBorderWidth = isSelected ? 2.0 : (borderColor != null ? 2.0 : 1.0);
+
     return GestureDetector(
       onTap: isInteractive ? onTap : null,
       child: SizedBox(
         width: width,
         height: height,
-        child: AnimatedContainer(
-          duration: const Duration(milliseconds: 150),
-          transform: Matrix4.translationValues(0, isSelected ? -8 : 0, 0),
-          decoration: BoxDecoration(
-            color: isFaceUp ? Colors.white : backBg,
-            borderRadius: BorderRadius.circular(14),
-            border: Border.all(
-              color: isSelected
-                  ? const Color(0xFF4D99FF)
-                  : isFaceUp ? const Color(0xFFE6DCE8) : backBorder,
-              width: isSelected ? 2 : 1,
-            ),
-            boxShadow: [
-              BoxShadow(
-                color: const Color(0xFFE1D7E6).withValues(alpha: 0.4),
-                blurRadius: 6,
-                offset: const Offset(0, 3),
+        child: Stack(
+          clipBehavior: Clip.none,
+          children: [
+            AnimatedContainer(
+              duration: const Duration(milliseconds: 150),
+              transform: Matrix4.translationValues(0, isSelected ? -8 : 0, 0),
+              decoration: BoxDecoration(
+                color: isFaceUp ? Colors.white : backBg,
+                borderRadius: BorderRadius.circular(14),
+                border: Border.all(
+                  color: effectiveBorderColor,
+                  width: effectiveBorderWidth,
+                ),
+                boxShadow: [
+                  BoxShadow(
+                    color: const Color(0xFFE1D7E6).withValues(alpha: 0.4),
+                    blurRadius: 6,
+                    offset: const Offset(0, 3),
+                  ),
+                ],
               ),
-            ],
-          ),
-          child: isFaceUp ? _buildFrontFace() : _buildBackFace(cardColors),
+              child: isFaceUp ? _buildFrontFace() : _buildBackFace(cardColors),
+            ),
+            if (badgeIcon != null)
+              Positioned(
+                right: -4,
+                top: -4,
+                child: Container(
+                  width: 18,
+                  height: 18,
+                  decoration: BoxDecoration(
+                    color: badgeColor ?? const Color(0xFFE53935),
+                    shape: BoxShape.circle,
+                    border: Border.all(color: Colors.white, width: 1.5),
+                  ),
+                  child: Icon(badgeIcon, size: 11, color: Colors.white),
+                ),
+              ),
+          ],
         ),
       ),
     );

@@ -95,6 +95,7 @@ function layout(title, content, activePage = '') {
 <title>${title} - Tichu Admin</title>
 <style>
 * { margin: 0; padding: 0; box-sizing: border-box; }
+html, body { width: 100%; max-width: 100%; overflow-x: hidden; }
 :root {
   --bg: #f4f1ea;
   --surface: rgba(255,255,255,0.92);
@@ -144,13 +145,13 @@ body {
 .sidebar .logout a { color: #e57373; }
 .menu-toggle { display: none; position: fixed; top: 12px; left: 12px; z-index: 200; background: #17352f; color: #fff; border: none; border-radius: 12px; width: 42px; height: 42px; font-size: 22px; cursor: pointer; align-items: center; justify-content: center; box-shadow: 0 8px 24px rgba(16,41,35,0.22); }
 .sidebar-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 90; }
-.main { margin-left: 248px; flex: 1; padding: 28px; min-height: 100vh; }
-.page-shell { max-width: 1480px; margin: 0 auto; }
+.main { margin-left: 248px; flex: 1; padding: 28px; min-height: 100vh; min-width: 0; width: 100%; max-width: 100%; overflow-x: hidden; }
+.page-shell { max-width: 1480px; margin: 0 auto; min-width: 0; width: 100%; }
 .page-header { display: flex; justify-content: space-between; align-items: flex-start; gap: 16px; margin-bottom: 18px; }
 .page-title { font-size: 30px; font-weight: 800; margin-bottom: 8px; color: var(--text); letter-spacing: -0.02em; }
 .page-subtitle { font-size: 14px; line-height: 1.6; color: var(--muted); max-width: 760px; }
 .header-actions { display: flex; gap: 10px; flex-wrap: wrap; justify-content: flex-end; }
-.stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 16px; margin-bottom: 24px; }
+.stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 16px; margin-bottom: 24px; min-width: 0; }
 .stat-card {
   background: linear-gradient(180deg, rgba(255,255,255,0.98), rgba(255,255,255,0.9));
   border: 1px solid var(--line);
@@ -182,6 +183,9 @@ body {
   border: 1px solid var(--line);
   box-shadow: var(--shadow);
   margin-bottom: 20px;
+  min-width: 0;
+  width: 100%;
+  max-width: 100%;
 }
 .card h3 { font-size: 18px; margin-bottom: 16px; color: var(--text); letter-spacing: -0.01em; }
 .hero-card {
@@ -191,15 +195,17 @@ body {
   padding: 24px;
   margin-bottom: 22px;
   box-shadow: 0 24px 50px rgba(23, 53, 47, 0.24);
+  min-width: 0;
+  max-width: 100%;
 }
 .hero-card .eyebrow { font-size: 12px; text-transform: uppercase; letter-spacing: 0.12em; color: rgba(255,255,255,0.72); margin-bottom: 8px; }
 .hero-card .headline { font-size: 30px; font-weight: 800; line-height: 1.18; max-width: 760px; letter-spacing: -0.03em; }
 .hero-card .sub { margin-top: 10px; color: rgba(255,255,255,0.78); font-size: 14px; line-height: 1.6; }
-.hero-meta { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 12px; margin-top: 20px; }
+.hero-meta { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 12px; margin-top: 20px; min-width: 0; }
 .hero-meta .item { background: rgba(255,255,255,0.09); border: 1px solid rgba(255,255,255,0.08); border-radius: 16px; padding: 14px 16px; backdrop-filter: blur(8px); }
 .hero-meta .item .k { font-size: 12px; color: rgba(255,255,255,0.7); margin-bottom: 6px; text-transform: uppercase; letter-spacing: 0.06em; }
 .hero-meta .item .v { font-size: 22px; font-weight: 800; }
-.summary-strip { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 12px; margin-bottom: 20px; }
+.summary-strip { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 12px; margin-bottom: 20px; min-width: 0; }
 .summary-item { background: rgba(255,255,255,0.72); border: 1px solid var(--line); border-radius: 16px; padding: 16px 18px; }
 .summary-item .k { font-size: 12px; color: var(--muted); margin-bottom: 6px; text-transform: uppercase; letter-spacing: 0.06em; }
 .summary-item .v { font-size: 24px; font-weight: 800; letter-spacing: -0.02em; color: var(--text); }
@@ -211,8 +217,8 @@ body {
 .metric-inline .name { font-size: 13px; color: var(--muted); }
 .metric-inline .num { font-weight: 700; font-size: 15px; color: var(--text); }
 .card-actions { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 14px; }
-.table-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; border: 1px solid rgba(32,28,22,0.06); border-radius: 16px; background: rgba(255,255,255,0.68); }
-table { width: 100%; border-collapse: separate; border-spacing: 0; }
+.table-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; border: 1px solid rgba(32,28,22,0.06); border-radius: 16px; background: rgba(255,255,255,0.68); scrollbar-width: thin; max-width: 100%; width: 100%; }
+table { width: 100%; max-width: 100%; border-collapse: separate; border-spacing: 0; }
 th { text-align: left; padding: 12px 14px; background: #f6f3ec; color: var(--muted); font-size: 12px; font-weight: 700; border-bottom: 1px solid #e6dfd2; white-space: nowrap; text-transform: uppercase; letter-spacing: 0.05em; position: sticky; top: 0; z-index: 1; }
 th:first-child { border-top-left-radius: 14px; }
 th:last-child { border-top-right-radius: 14px; }
@@ -338,7 +344,7 @@ input[type="text"], input[type="password"] { width: 100%; padding: 10px 12px; bo
 .chat-msg .sender { font-weight: 700; color: var(--text); }
 .chat-msg .text { color: #555; }
 .empty { text-align: center; padding: 40px; color: var(--muted); font-size: 15px; }
-.grid-2col { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 20px; }
+.grid-2col { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 20px; min-width: 0; }
 .form-grid { display: grid; grid-template-columns: 140px 1fr; gap: 12px 16px; align-items: center; max-width: 600px; }
 .muted { color: var(--muted); }
 .mono { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; }
@@ -349,38 +355,98 @@ input[type="text"], input[type="password"] { width: 100%; padding: 10px 12px; bo
 .soft-panel { background: #f7f3ea; border-radius: 16px; padding: 16px; border: 1px solid #ebe4d8; }
 .soft-panel h4 { font-size: 14px; margin-bottom: 10px; color: var(--text); }
 
+@media (max-width: 1100px) {
+  .main { padding: 20px; }
+  .page-title { font-size: 28px; }
+  .grid-2col { grid-template-columns: 1fr; }
+  .sticky-kpi-rail { position: static; top: auto; }
+}
+
 @media (max-width: 768px) {
   .menu-toggle { display: flex; }
-  .sidebar { transform: translateX(-100%); }
+  .sidebar {
+    width: min(82vw, 320px);
+    transform: translateX(-100%);
+    padding-top: 64px;
+  }
   .sidebar.open { transform: translateX(0); }
   .sidebar-overlay.open { display: block; }
-  .main { margin-left: 0; padding: 16px; padding-top: 60px; }
+  .main { margin-left: 0; padding: 14px; padding-top: 64px; width: 100vw; max-width: 100vw; }
+  .page-shell { max-width: 100%; }
   .page-header { flex-direction: column; }
   .page-title { font-size: 24px; }
+  .page-subtitle { font-size: 13px; }
+  .header-actions { width: 100%; }
+  .header-actions .btn { width: 100%; text-align: center; }
   .hero-card .headline { font-size: 24px; }
+  .hero-card { padding: 18px; border-radius: 18px; }
+  .hero-card .sub { font-size: 13px; }
+  .hero-meta { grid-template-columns: 1fr 1fr; gap: 10px; }
+  .hero-meta .item { padding: 12px; }
+  .hero-meta .item .v { font-size: 18px; }
   .stats-grid { grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 10px; }
   .stat-card { padding: 14px; }
   .stat-card .value { font-size: 22px; }
-  .card { padding: 14px; }
+  .card { padding: 14px; border-radius: 16px; }
   .summary-strip { grid-template-columns: 1fr 1fr; }
-  .grid-2col { grid-template-columns: 1fr; }
+  .summary-item { padding: 14px; }
+  .summary-item .v { font-size: 20px; }
   .detail-grid { grid-template-columns: 100px 1fr; gap: 6px 12px; }
   .form-grid { grid-template-columns: 1fr; max-width: 100%; }
   .form-grid label { font-weight: 600; margin-top: 4px; }
-  .search-bar { flex-direction: column; }
+  .search-bar { flex-direction: column; gap: 10px; }
+  .search-bar > * { width: 100%; min-width: 0 !important; }
   .search-bar .btn { width: 100%; text-align: center; }
-  .btn { padding: 10px 16px; }
-  table { font-size: 13px; }
-  th, td { padding: 8px; }
+  .filter-card { padding: 14px; border-radius: 16px; }
+  .subtab-bar,
+  .preset-bar {
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    padding-bottom: 4px;
+    margin-right: -4px;
+  }
+  .subtab-link,
+  .preset-link { white-space: nowrap; flex: 0 0 auto; }
+  .subtab-link { padding: 9px 12px; font-size: 12px; }
+  .subtab-link span:last-child { display: none; }
+  .sticky-kpi-rail { padding: 14px; border-radius: 16px; }
+  .sticky-kpi-grid { grid-template-columns: 1fr 1fr; }
+  .sticky-kpi-item { padding: 12px; }
+  .sticky-kpi-item .v { font-size: 18px; }
+  .status-strip { grid-template-columns: 1fr; }
+  .card-actions { flex-direction: column; }
+  .card-actions .btn { width: 100%; text-align: center; }
+  .split-stats { grid-template-columns: 1fr; }
+  .soft-panel { padding: 14px; }
+  .detail-grid { grid-template-columns: 1fr; }
+  .detail-grid .label { margin-top: 8px; }
+  .table-meta { align-items: stretch; }
+  .table-meta > * { width: 100%; }
+  .table-wrap { margin: 0; border-radius: 14px; width: 100%; max-width: 100%; }
+  table { font-size: 13px; width: max-content; min-width: 100%; }
+  th, td { padding: 9px 10px; }
+  textarea, select, input[type="date"], input[type="datetime-local"], input[type="number"], input[type="text"], input[type="password"] {
+    font-size: 16px;
+  }
+  .btn { padding: 11px 14px; }
 }
 @media (max-width: 480px) {
+  .sidebar { width: 88vw; }
+  .main { padding: 12px; padding-top: 60px; width: 100vw; max-width: 100vw; }
+  .page-title { font-size: 22px; }
   .stats-grid { grid-template-columns: 1fr 1fr; gap: 8px; }
   .summary-strip { grid-template-columns: 1fr; }
   .stat-card { padding: 10px; }
   .stat-card .value { font-size: 18px; }
-  .hero-meta { grid-template-columns: 1fr 1fr; }
-  .detail-grid { grid-template-columns: 1fr; }
-  .detail-grid .label { margin-top: 8px; }
+  .hero-card { padding: 16px; }
+  .hero-card .headline { font-size: 20px; }
+  .hero-meta { grid-template-columns: 1fr; }
+  .sticky-kpi-grid { grid-template-columns: 1fr; }
+  .subtab-link { padding: 8px 11px; }
+  .preset-link { padding: 8px 10px; font-size: 11px; }
+  .table-wrap { margin: 0; }
+  table { width: max-content; min-width: 100%; }
 }
 </style>
 </head>
@@ -499,6 +565,10 @@ function formatDateInput(d) {
   const mm = String(dt.getMonth() + 1).padStart(2, '0');
   const dd = String(dt.getDate()).padStart(2, '0');
   return `${yyyy}-${mm}-${dd}`;
+}
+
+function kstDateKey(d) {
+  return formatDateInput(d);
 }
 
 function pagination(page, total, limit, baseUrl) {
@@ -798,7 +868,7 @@ async function handleAdminRoute(req, res, url, pathname, method, lobby, wss, mai
     const last7 = [];
     for (let i = 6; i >= 0; i--) {
       const d = new Date(); d.setDate(d.getDate() - i);
-      last7.push(d.toISOString().split('T')[0]);
+      last7.push(kstDateKey(d));
     }
     const gamesByDay = {};
     const rankedByDay = {};
@@ -806,17 +876,19 @@ async function handleAdminRoute(req, res, url, pathname, method, lobby, wss, mai
     const tichuByDay = {};
     const skByDay = {};
     const llByDay = {};
-    for (const d of last7) { gamesByDay[d] = 0; rankedByDay[d] = 0; signupsByDay[d] = 0; tichuByDay[d] = 0; skByDay[d] = 0; llByDay[d] = 0; }
+    const mightyByDay = {};
+    for (const d of last7) { gamesByDay[d] = 0; rankedByDay[d] = 0; signupsByDay[d] = 0; tichuByDay[d] = 0; skByDay[d] = 0; llByDay[d] = 0; mightyByDay[d] = 0; }
     for (const r of stats.dailyGames) {
-      const d = new Date(r.day).toISOString().split('T')[0];
+      const d = kstDateKey(r.day);
       gamesByDay[d] = parseInt(r.cnt) || 0;
       rankedByDay[d] = parseInt(r.ranked_cnt) || 0;
       tichuByDay[d] = parseInt(r.tichu_cnt) || 0;
       skByDay[d] = parseInt(r.sk_cnt) || 0;
       llByDay[d] = parseInt(r.ll_cnt) || 0;
+      mightyByDay[d] = parseInt(r.mighty_cnt) || 0;
     }
     for (const r of stats.dailySignups) {
-      const d = new Date(r.day).toISOString().split('T')[0];
+      const d = kstDateKey(r.day);
       signupsByDay[d] = parseInt(r.cnt) || 0;
     }
     const chartLabels = last7.map(d => d.slice(5)); // MM-DD
@@ -824,12 +896,13 @@ async function handleAdminRoute(req, res, url, pathname, method, lobby, wss, mai
     const chartTichu = last7.map(d => tichuByDay[d]);
     const chartSK = last7.map(d => skByDay[d]);
     const chartLL = last7.map(d => llByDay[d]);
+    const chartMighty = last7.map(d => mightyByDay[d]);
     const chartRanked = last7.map(d => rankedByDay[d]);
     const chartSignups = last7.map(d => signupsByDay[d]);
     const adRewardsByDay = {};
     for (const d of last7) { adRewardsByDay[d] = 0; }
     for (const r of (stats.dailyAdRewards || [])) {
-      const d = new Date(r.day).toISOString().split('T')[0];
+      const d = kstDateKey(r.day);
       adRewardsByDay[d] = parseInt(r.cnt) || 0;
     }
     const chartAdRewards = last7.map(d => adRewardsByDay[d]);
@@ -849,22 +922,25 @@ async function handleAdminRoute(req, res, url, pathname, method, lobby, wss, mai
         }).join('')}
       </div>`;
     }
-    function stackedBar(tichuVals, skVals, llVals, max, label) {
+    function stackedBar(tichuVals, skVals, llVals, mightyVals, max, label) {
       return `<div style="display:flex;align-items:flex-end;gap:6px;height:80px;padding:8px 0">
         ${tichuVals.map((t, i) => {
           const s = skVals[i];
           const l = llVals[i];
-          const total = t + s + l;
+          const m = mightyVals[i];
+          const total = t + s + l + m;
           const ht = Math.max(t / max * 60, t > 0 ? 2 : 0);
           const hs = Math.max(s / max * 60, s > 0 ? 2 : 0);
           const hl = Math.max(l / max * 60, l > 0 ? 2 : 0);
-          const hasAbove = s > 0 || l > 0;
+          const hm = Math.max(m / max * 60, m > 0 ? 2 : 0);
+          const hasAbove = s > 0 || l > 0 || m > 0;
           return `<div style="display:flex;flex-direction:column;align-items:center;flex:1;gap:2px">
             <span style="font-size:10px;color:#666">${total}</span>
             <div style="width:100%;max-width:28px;display:flex;flex-direction:column-reverse">
               ${t > 0 ? `<div style="height:${ht}px;background:#6c63ff;border-radius:${hasAbove ? '0' : '4px 4px'} 0 0;transition:height 0.3s" title="티츄 ${t}"></div>` : ''}
-              ${s > 0 ? `<div style="height:${hs}px;background:#ff7043;border-radius:${l > 0 ? '0' : '4px 4px'} ${t > 0 ? '0 0' : '0 0'};transition:height 0.3s" title="SK ${s}"></div>` : ''}
-              ${l > 0 ? `<div style="height:${hl}px;background:#E91E63;border-radius:4px 4px ${(t > 0 || s > 0) ? '0 0' : '0 0'};transition:height 0.3s" title="LL ${l}"></div>` : ''}
+              ${s > 0 ? `<div style="height:${hs}px;background:#ff7043;border-radius:${l > 0 || m > 0 ? '0' : '4px 4px'} ${t > 0 ? '0 0' : '0 0'};transition:height 0.3s" title="SK ${s}"></div>` : ''}
+              ${l > 0 ? `<div style="height:${hl}px;background:#E91E63;border-radius:${m > 0 ? '0' : '4px 4px'} ${(t > 0 || s > 0) ? '0 0' : '0 0'};transition:height 0.3s" title="LL ${l}"></div>` : ''}
+              ${m > 0 ? `<div style="height:${hm}px;background:#1565C0;border-radius:4px 4px ${(t > 0 || s > 0 || l > 0) ? '0 0' : '0 0'};transition:height 0.3s" title="마이티 ${m}"></div>` : ''}
             </div>
             <span style="font-size:9px;color:#aaa">${label[i]}</span>
           </div>`;
@@ -980,7 +1056,7 @@ async function handleAdminRoute(req, res, url, pathname, method, lobby, wss, mai
         <div class="stat-card"><div class="label">전체 유저</div><div class="value">${formatNumber(stats.totalUsers)}</div><div class="kpi-note">오늘 +${formatNumber(stats.newUsersToday)} 가입</div></div>
         <div class="stat-card"><div class="label">활성 (24시간)</div><div class="value">${formatNumber(stats.activeUsers24h)}</div><div class="kpi-note">7일 활성 ${formatNumber(stats.activeUsers7d)}명</div></div>
         <div class="stat-card"><div class="label">총 매치</div><div class="value">${formatNumber(stats.totalMatches)}</div><div class="kpi-note">오늘 게임 ${formatNumber(stats.todayGames)}회</div></div>
-        <div class="stat-card"><div class="label">오늘 게임</div><div class="value green">${formatNumber(stats.todayGames)}</div><div class="kpi-note"><span style="color:#5f62d6">${formatNumber(stats.todayTichuGames)} 티츄</span> · <span style="color:#ff7043">${formatNumber(stats.todaySKGames)} SK</span> · <span style="color:#E91E63">${formatNumber(stats.todayLLGames)} LL</span></div></div>
+        <div class="stat-card"><div class="label">오늘 게임</div><div class="value green">${formatNumber(stats.todayGames)}</div><div class="kpi-note"><span style="color:#5f62d6">${formatNumber(stats.todayTichuGames)} 티츄</span> · <span style="color:#ff7043">${formatNumber(stats.todaySKGames)} SK</span> · <span style="color:#E91E63">${formatNumber(stats.todayLLGames)} LL</span> · <span style="color:#1565C0">${formatNumber(stats.todayMightyGames)} 마이티</span></div></div>
         <div class="stat-card"><div class="label">미처리 문의</div><div class="value orange">${formatNumber(stats.pendingInquiries)}</div><div class="kpi-note">사용자 응답 대기 포함</div></div>
         <div class="stat-card"><div class="label">미처리 신고</div><div class="value red">${formatNumber(stats.pendingReports)}</div><div class="kpi-note">최근 30일 ${formatNumber(reports30d)}건 누적</div></div>
       </div>
@@ -988,11 +1064,12 @@ async function handleAdminRoute(req, res, url, pathname, method, lobby, wss, mai
       <div class="grid-2col">
         <div class="card">
           <h3>일별 게임 (7일)</h3>
-          ${stackedBar(chartTichu, chartSK, chartLL, maxGames, chartLabels)}
+          ${stackedBar(chartTichu, chartSK, chartLL, chartMighty, maxGames, chartLabels)}
           <div style="margin-top:4px;font-size:11px;color:#888">
             <span style="display:inline-block;width:10px;height:10px;background:#6c63ff;border-radius:2px;margin-right:4px"></span>티츄
             <span style="display:inline-block;width:10px;height:10px;background:#ff7043;border-radius:2px;margin:0 4px 0 8px"></span>SK
             <span style="display:inline-block;width:10px;height:10px;background:#E91E63;border-radius:2px;margin:0 4px 0 8px"></span>LL
+            <span style="display:inline-block;width:10px;height:10px;background:#1565C0;border-radius:2px;margin:0 4px 0 8px"></span>마이티
           </div>
           <div style="margin-top:8px">
             <h3 style="font-size:14px">일별 랭크</h3>

@@ -2560,9 +2560,10 @@ class GameService extends ChangeNotifier {
     });
   }
 
-  void mightyPlayCard(String cardId, {String? jokerSuit}) {
+  void mightyPlayCard(String cardId, {String? jokerSuit, bool jokerCall = false}) {
     final msg = <String, dynamic>{'type': 'play_card', 'cardId': cardId};
     if (jokerSuit != null) msg['jokerSuit'] = jokerSuit;
+    if (jokerCall) msg['jokerCall'] = true;
     _network.send(msg);
   }
 

@@ -359,22 +359,19 @@ function governmentFollow(game, botId, legalCards, winningCards, currentWinner, 
   const isFriend = botId === game.partner && game.friendRevealed;
   const declarerLed = game.currentTrick.length > 0 && game.currentTrick[0].pid === game.declarer;
 
-  // ─── Friend protecting declarer's lead ───
+  // ─── Friend helping declarer's lead ───
+  // Only help with strong cards when declarer's card is genuinely weak.
+  // If declarer has the effective top of the suit (e.g. K when A=mighty),
+  // just dump points — don't waste mighty/joker preemptively.
   if (isFriend && declarerLed && winnerOnOurTeam && oppBehind) {
     const winnerCard = getWinnerCardId(game);
-    const isDeclarerTopSafe = _isUnchallengeableTopCard(winnerCard, game);
-
-    if (!isDeclarerTopSafe) {
-      // Declarer's card is NOT a top card or could be beaten by trump/joker
-      // → Friend plays mighty > joker > top winning card to secure the trick
+    if (!_isEffectiveTopOfSuit(winnerCard, game)) {
+      // Declarer's card is NOT the top of its suit → help take the trick
       if (winningCards.includes(mightyCard)) return mightyCard;
       if (winningCards.includes('mighty_joker')) return 'mighty_joker';
       if (winningCards.length > 0) return getStrongestCard(winningCards, game);
-    } else if (_canOppositionOverrule(game, winnerCard, botId)) {
-      // Declarer has top card but opposition could beat it with trump/joker
-      // → Friend plays mighty to protect
-      if (legalCards.includes(mightyCard)) return mightyCard;
     }
+    // Declarer has top of suit → fall through to normal "ally winning" logic
   }
 
   if (winnerOnOurTeam) {
@@ -583,44 +580,29 @@ function getWeakestCard(cards, game) {
 
 // ─── FRIEND LEAD HELPERS ────────────────────────────────
 
-/** Check if a card is an unchallengeable top card (mighty, joker, or trump A) */
-function _isUnchallengeableTopCard(cardId, game) {
+/**
+ * Check if a card is the effective top of its suit.
+ * e.g. Spade K is the top when Spade A is the Mighty card.
+ * Mighty and Joker are always top.
+ */
+function _isEffectiveTopOfSuit(cardId, game) {
   if (!cardId) return false;
   const mightyCard = game.getMightyCard();
   if (cardId === mightyCard) return true;
   if (cardId === 'mighty_joker') return true;
-  // Trump A is only safe if nothing behind can override (but joker/mighty can)
-  // So trump A alone is not truly unchallengeable
+
   const info = getCardInfo(cardId);
-  if (game.trumpSuit && game.trumpSuit !== 'no_trump' &&
-      info.suit === game.trumpSuit && info.rank === 'A') {
-    // Trump A can still lose to mighty — treat as safe only if mighty already played
-    const mightyPlayed = game.tricks.some(t =>
-      t.cards.some(c => c.cardId === mightyCard));
-    if (mightyPlayed) return true;
-  }
-  return false;
-}
+  const mightyInfo = getCardInfo(mightyCard);
 
-/** Check if opposition behind could beat the current winner with trump or joker */
-function _canOppositionOverrule(game, winnerCard, botId) {
-  const remaining = getRemainingPlayers(game, botId);
-  const winnerInfo = winnerCard !== 'mighty_joker' ? getCardInfo(winnerCard) : null;
-  const isNonTrumpLead = winnerInfo && winnerInfo.suit !== game.trumpSuit;
-
-  for (const pid of remaining) {
-    if (isGovernment(game, pid)) continue;
-    const hand = game.hands[pid] || [];
-    for (const cardId of hand) {
-      // Opposition has joker
-      if (cardId === 'mighty_joker') return true;
-      // Opposition can trump a non-trump lead
-      if (isNonTrumpLead && game.trumpSuit && game.trumpSuit !== 'no_trump') {
-        const info = getCardInfo(cardId);
-        if (info.suit === game.trumpSuit) return true;
-      }
-    }
+  // A is top of its suit unless A itself is the mighty of that suit
+  if (info.rank === 'A' && !(mightyInfo.suit === info.suit && mightyInfo.rank === 'A')) {
+    return true;
   }
+  // K is top of the mighty suit (since A of that suit = mighty, removed from normal play)
+  if (info.rank === 'K' && mightyInfo.suit === info.suit && mightyInfo.rank === 'A') {
+    return true;
+  }
+
   return false;
 }
 

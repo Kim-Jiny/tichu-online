@@ -24,6 +24,9 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
   // Kitty exchange state
   final Set<String> _discardSelection = {};
   String _friendCardSelection = '';
+  String _friendMode = ''; // 'no_friend', 'first_trick', 'card'
+  String _friendSuit = 'spade';
+  String _friendRank = 'A';
 
   // Play state
   String? _selectedCard;
@@ -180,10 +183,16 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
                           _bidSuit = 'spade';
                           _discardSelection.clear();
                           _friendCardSelection = '';
+                          _friendMode = '';
+                          _friendSuit = 'spade';
+                          _friendRank = 'A';
                         }
                         if (state.phase == 'kitty_exchange') {
                           _discardSelection.clear();
                           _friendCardSelection = '';
+                          _friendMode = '';
+                          _friendSuit = 'spade';
+                          _friendRank = 'A';
                         }
                       });
                     });
@@ -227,6 +236,8 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
                             _buildHandArea(state, game),
                           if (state.phase == 'trick_end')
                             Expanded(child: _buildTrickEndArea(state)),
+                          if (state.phase == 'trick_end')
+                            _buildHandArea(state, game),
                           if (state.phase == 'round_end')
                             Expanded(child: SingleChildScrollView(child: _buildRoundEndUI(state))),
                           if (state.phase == 'game_end')
@@ -1290,26 +1301,115 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
                     ],
                   ),
                   const SizedBox(height: 12),
-                  const Text('Friend card:', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Color(0xFF5A4038))),
+                  const Text('Friend:', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Color(0xFF5A4038))),
                   const SizedBox(height: 6),
+                  // Step 1: Friend mode
                   Wrap(
                     spacing: 6,
                     runSpacing: 6,
                     children: [
-                      _buildFriendOption('no_friend', 'Solo'),
-                      if (state.mightyCard != null)
-                        _buildFriendOption(state.mightyCard!, 'Mighty'),
-                      if (state.mightyCard != 'mighty_spade_A')
-                        _buildFriendOption('mighty_spade_A', '\u2660A'),
-                      if (state.mightyCard != 'mighty_heart_A')
-                        _buildFriendOption('mighty_heart_A', '\u2665A'),
-                      if (state.mightyCard != 'mighty_diamond_A')
-                        _buildFriendOption('mighty_diamond_A', '\u2666A'),
-                      if (state.mightyCard != 'mighty_club_A')
-                        _buildFriendOption('mighty_club_A', '\u2663A'),
-                      _buildFriendOption('first_trick', '1st Trick'),
+                      _buildFriendModeChip('no_friend', 'No Friend'),
+                      _buildFriendModeChip('first_trick', '1st Trick'),
+                      _buildFriendModeChip('card', 'Card'),
                     ],
                   ),
+                  // Step 2: If card mode, pick suit + rank
+                  if (_friendMode == 'card') ...[
+                    const SizedBox(height: 8),
+                    // Suit row
+                    Row(
+                      children: [
+                        for (final suit in ['spade', 'heart', 'diamond', 'club'])
+                          Expanded(
+                            child: GestureDetector(
+                              onTap: () => setState(() {
+                                _friendSuit = suit;
+                                _syncFriendCardSelection(state);
+                              }),
+                              child: Container(
+                                margin: const EdgeInsets.symmetric(horizontal: 2),
+                                padding: const EdgeInsets.symmetric(vertical: 8),
+                                decoration: BoxDecoration(
+                                  color: _friendSuit == suit ? const Color(0xFFE3F2FD) : const Color(0xFFF5F5F5),
+                                  borderRadius: BorderRadius.circular(8),
+                                  border: Border.all(
+                                    color: _friendSuit == suit ? const Color(0xFF1565C0) : const Color(0xFFE0D8D4),
+                                    width: _friendSuit == suit ? 2 : 1,
+                                  ),
+                                ),
+                                child: Center(
+                                  child: Text(
+                                    _suitSymbol(suit),
+                                    style: TextStyle(
+                                      fontSize: 18,
+                                      color: (suit == 'heart' || suit == 'diamond') ? Colors.red : Colors.black,
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ),
+                      ],
+                    ),
+                    const SizedBox(height: 6),
+                    // Rank row
+                    Wrap(
+                      spacing: 4,
+                      runSpacing: 4,
+                      children: [
+                        for (final rank in ['A', 'K', 'Q', 'J', '10', '9', '8', '7', '6', '5', '4', '3', '2'])
+                          GestureDetector(
+                            onTap: () {
+                              // Don't allow selecting mighty card as friend
+                              final cardId = 'mighty_${_friendSuit}_$rank';
+                              if (state.mightyCard == cardId) return;
+                              setState(() {
+                                _friendRank = rank;
+                                _syncFriendCardSelection(state);
+                              });
+                            },
+                            child: Container(
+                              width: 36,
+                              height: 30,
+                              decoration: BoxDecoration(
+                                color: _friendRank == rank
+                                    ? (state.mightyCard == 'mighty_${_friendSuit}_$rank'
+                                        ? const Color(0xFFEEEEEE)
+                                        : const Color(0xFFE3F2FD))
+                                    : const Color(0xFFF5F5F5),
+                                borderRadius: BorderRadius.circular(6),
+                                border: Border.all(
+                                  color: _friendRank == rank && state.mightyCard != 'mighty_${_friendSuit}_$rank'
+                                      ? const Color(0xFF1565C0)
+                                      : const Color(0xFFE0D8D4),
+                                  width: _friendRank == rank ? 2 : 1,
+                                ),
+                              ),
+                              child: Center(
+                                child: Text(
+                                  rank,
+                                  style: TextStyle(
+                                    fontSize: 11,
+                                    fontWeight: _friendRank == rank ? FontWeight.bold : FontWeight.normal,
+                                    color: state.mightyCard == 'mighty_${_friendSuit}_$rank'
+                                        ? const Color(0xFFBDBDBD)
+                                        : const Color(0xFF5A4038),
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ),
+                      ],
+                    ),
+                    // Show selected card label
+                    if (_friendCardSelection.isNotEmpty) ...[
+                      const SizedBox(height: 6),
+                      Text(
+                        _friendCardLabel(_friendCardSelection),
+                        style: const TextStyle(fontSize: 11, color: Color(0xFF1565C0), fontWeight: FontWeight.w600),
+                      ),
+                    ],
+                  ],
                   const SizedBox(height: 12),
                   SizedBox(
                     width: double.infinity,
@@ -1339,18 +1439,35 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
     );
   }
 
-  Widget _buildFriendOption(String value, String label) {
-    final isSelected = _friendCardSelection == value;
+  void _syncFriendCardSelection(MightyGameStateData state) {
+    if (_friendMode == 'card') {
+      final cardId = 'mighty_${_friendSuit}_$_friendRank';
+      // Don't allow mighty card as friend
+      if (state.mightyCard == cardId) {
+        _friendCardSelection = '';
+      } else {
+        _friendCardSelection = cardId;
+        _discardSelection.remove(cardId);
+      }
+    }
+  }
+
+  Widget _buildFriendModeChip(String mode, String label) {
+    final isSelected = _friendMode == mode;
     return GestureDetector(
       onTap: () => setState(() {
-        _friendCardSelection = value;
-        // Remove newly selected friend card from discard selection
-        if (value != 'no_friend' && value != 'first_trick') {
-          _discardSelection.remove(value);
+        _friendMode = mode;
+        if (mode == 'no_friend') {
+          _friendCardSelection = 'no_friend';
+        } else if (mode == 'first_trick') {
+          _friendCardSelection = 'first_trick';
+        } else {
+          // card mode: compose from suit + rank
+          _friendCardSelection = 'mighty_${_friendSuit}_$_friendRank';
         }
       }),
       child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
         decoration: BoxDecoration(
           color: isSelected ? const Color(0xFFE3F2FD) : const Color(0xFFF5F5F5),
           borderRadius: BorderRadius.circular(8),

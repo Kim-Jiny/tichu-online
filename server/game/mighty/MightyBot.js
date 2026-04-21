@@ -366,18 +366,23 @@ function governmentFollow(game, botId, legalCards, winningCards, currentWinner, 
   const declarerLed = game.currentTrick.length > 0 && game.currentTrick[0].pid === game.declarer;
 
   // ─── Friend helping declarer's lead ───
-  // Only help with strong cards when declarer's card is genuinely weak.
-  // If declarer has the effective top of the suit (e.g. K when A=mighty),
-  // just dump points — don't waste mighty/joker preemptively.
-  if (isFriend && declarerLed && winnerOnOurTeam && oppBehind) {
-    const winnerCard = getWinnerCardId(game);
-    if (!_isEffectiveTopOfSuit(winnerCard, game)) {
-      // Declarer's card is NOT the top of its suit → help take the trick
+  if (isFriend && declarerLed) {
+    if (!winnerOnOurTeam) {
+      // Declarer is LOSING → rescue with mighty/joker/strongest
       if (winningCards.includes(mightyCard)) return mightyCard;
       if (winningCards.includes('mighty_joker')) return 'mighty_joker';
       if (winningCards.length > 0) return getStrongestCard(winningCards, game);
+    } else if (oppBehind) {
+      // Declarer is winning but opposition still behind
+      const winnerCard = getWinnerCardId(game);
+      if (!_isEffectiveTopOfSuit(winnerCard, game)) {
+        // Declarer's card is NOT the top of its suit → help protect
+        if (winningCards.includes(mightyCard)) return mightyCard;
+        if (winningCards.includes('mighty_joker')) return 'mighty_joker';
+        if (winningCards.length > 0) return getStrongestCard(winningCards, game);
+      }
+      // Declarer has top of suit → fall through to normal "ally winning" logic
     }
-    // Declarer has top of suit → fall through to normal "ally winning" logic
   }
 
   if (winnerOnOurTeam) {

@@ -431,10 +431,11 @@ class MightyGame {
       return ['mighty_joker'];
     }
 
-    // Joker can always be played (mighty must follow suit like normal cards)
+    // Joker and mighty can always be played
     const mightyCard = this.getMightyCard();
     const alwaysPlayable = [];
     if (hand.includes('mighty_joker')) alwaysPlayable.push('mighty_joker');
+    if (hand.includes(mightyCard)) alwaysPlayable.push(mightyCard);
 
     // Must follow lead suit if possible (mighty is a normal suit card for follow purposes)
     const suitCards = hand.filter(c => {

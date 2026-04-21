@@ -816,17 +816,18 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
                                   )
                                 : null,
                           ),
-                          // Mini point card labels for opposition
-                          if (hasPointCards)
-                            SizedBox(
-                              height: 14,
-                              child: Text(
-                                p.pointCards.take(5).map((c) => _miniCardLabel(c)).join(' '),
-                                style: const TextStyle(fontSize: 8, color: Color(0xFF8A7A72)),
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                              ),
-                            ),
+                          // Mini point card labels (always reserve space)
+                          SizedBox(
+                            height: 14,
+                            child: hasPointCards
+                                ? Text(
+                                    p.pointCards.take(5).map((c) => _miniCardLabel(c)).join(' '),
+                                    style: const TextStyle(fontSize: 8, color: Color(0xFF8A7A72)),
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                  )
+                                : null,
+                          ),
                         ],
                       ),
                     ),
@@ -1364,9 +1365,6 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
                         for (final rank in ['A', 'K', 'Q', 'J', '10', '9', '8', '7', '6', '5', '4', '3', '2'])
                           GestureDetector(
                             onTap: () {
-                              // Don't allow selecting mighty card as friend
-                              final cardId = 'mighty_${_friendSuit}_$rank';
-                              if (state.mightyCard == cardId) return;
                               setState(() {
                                 _friendRank = rank;
                                 _syncFriendCardSelection(state);
@@ -1377,13 +1375,11 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
                               height: 30,
                               decoration: BoxDecoration(
                                 color: _friendRank == rank
-                                    ? (state.mightyCard == 'mighty_${_friendSuit}_$rank'
-                                        ? const Color(0xFFEEEEEE)
-                                        : const Color(0xFFE3F2FD))
+                                    ? const Color(0xFFE3F2FD)
                                     : const Color(0xFFF5F5F5),
                                 borderRadius: BorderRadius.circular(6),
                                 border: Border.all(
-                                  color: _friendRank == rank && state.mightyCard != 'mighty_${_friendSuit}_$rank'
+                                  color: _friendRank == rank
                                       ? const Color(0xFF1565C0)
                                       : const Color(0xFFE0D8D4),
                                   width: _friendRank == rank ? 2 : 1,
@@ -1395,9 +1391,7 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
                                   style: TextStyle(
                                     fontSize: 11,
                                     fontWeight: _friendRank == rank ? FontWeight.bold : FontWeight.normal,
-                                    color: state.mightyCard == 'mighty_${_friendSuit}_$rank'
-                                        ? const Color(0xFFBDBDBD)
-                                        : const Color(0xFF5A4038),
+                                    color: const Color(0xFF5A4038),
                                   ),
                                 ),
                               ),
@@ -1446,13 +1440,8 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
   void _syncFriendCardSelection(MightyGameStateData state) {
     if (_friendMode == 'card') {
       final cardId = 'mighty_${_friendSuit}_$_friendRank';
-      // Don't allow mighty card as friend
-      if (state.mightyCard == cardId) {
-        _friendCardSelection = '';
-      } else {
-        _friendCardSelection = cardId;
-        _discardSelection.remove(cardId);
-      }
+      _friendCardSelection = cardId;
+      _discardSelection.remove(cardId);
     }
   }
 

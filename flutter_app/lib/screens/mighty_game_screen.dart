@@ -412,14 +412,12 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
           ),
         ),
         if (showContractInfo)
-          _buildContractInfoBar(state),
-        if (showContractInfo && state.remainingTrumps != null && game.hasMightyTrumpCounter)
-          _buildTrumpCounter(state),
+          _buildContractInfoBar(state, game),
       ],
     );
   }
 
-  Widget _buildContractInfoBar(MightyGameStateData state) {
+  Widget _buildContractInfoBar(MightyGameStateData state, GameService game) {
     final declarerName = state.players
         .where((p) => p.id == state.declarer)
         .map((p) => p.name)
@@ -443,12 +441,7 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
       friendLabel = L10n.of(context).mtSolo;
     }
 
-    // Declarer's current point count during play
-    final declarerPts = state.players
-        .where((p) => p.id == state.declarer)
-        .map((p) => p.pointCount)
-        .firstOrNull ?? 0;
-    final isPlaying = state.phase == 'playing' || state.phase == 'trick_end';
+    final showTrumpCounter = state.remainingTrumps != null && game.hasMightyTrumpCounter;
 
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
@@ -459,72 +452,66 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
         border: Border.all(color: const Color(0xFFFFE082)),
       ),
       child: Row(
-        mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Text(
-            declarerName,
-            style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: Color(0xFF5A4038)),
-          ),
-          const SizedBox(width: 6),
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
-            decoration: BoxDecoration(
-              color: const Color(0xFF1565C0),
-              borderRadius: BorderRadius.circular(6),
-            ),
-            child: Text(
-              '$suitLabel $bidPoints',
-              style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.white),
-            ),
-          ),
-          if (isPlaying) ...[
-            const SizedBox(width: 4),
-            Text(
-              '($declarerPts)',
-              style: TextStyle(
-                fontSize: 12,
-                fontWeight: FontWeight.bold,
-                color: declarerPts >= ((bidPoints is num) ? bidPoints.toInt() : 13) ? const Color(0xFF2E7D32) : const Color(0xFFE53935),
-              ),
-            ),
+          if (showTrumpCounter) ...[
+            _buildTrumpCounterLabel(state),
+            const SizedBox(width: 8),
           ],
-          const SizedBox(width: 6),
-          Flexible(
-            child: Text(
-              friendLabel,
-              style: const TextStyle(fontSize: 10, color: Color(0xFF8A7A72)),
-              overflow: TextOverflow.ellipsis,
+          Expanded(
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Text(
+                  declarerName,
+                  style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: Color(0xFF5A4038)),
+                ),
+                const SizedBox(width: 6),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF1565C0),
+                    borderRadius: BorderRadius.circular(6),
+                  ),
+                  child: Text(
+                    '$suitLabel $bidPoints',
+                    style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.white),
+                  ),
+                ),
+                if (!state.friendRevealed) ...[
+                  const SizedBox(width: 6),
+                  Flexible(
+                    child: Text(
+                      friendLabel,
+                      style: const TextStyle(fontSize: 10, color: Color(0xFF8A7A72)),
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                ],
+              ],
             ),
           ),
+          if (showTrumpCounter)
+            const SizedBox(width: 8),
         ],
       ),
     );
   }
 
-  Widget _buildTrumpCounter(MightyGameStateData state) {
+  Widget _buildTrumpCounterLabel(MightyGameStateData state) {
     final trumps = state.remainingTrumps!;
     final count = (trumps['count'] as num?)?.toInt() ?? 0;
     final suit = trumps['suit']?.toString() ?? '';
-    final suitLabel = _suitSymbol(suit);
     final isZero = count == 0;
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-      margin: const EdgeInsets.symmetric(horizontal: 8),
-      decoration: BoxDecoration(
-        color: const Color(0xFFF0F4FF).withValues(alpha: 0.9),
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: const Color(0xFF90CAF9)),
-      ),
-      child: Text(
-        '$suitLabel $count',
-        style: TextStyle(
-          fontSize: 12,
-          fontWeight: FontWeight.bold,
-          color: isZero ? const Color(0xFFE53935) : const Color(0xFF1565C0),
-        ),
+    return Text(
+      '${_suitSymbol(suit)}$count',
+      style: TextStyle(
+        fontSize: 12,
+        fontWeight: FontWeight.bold,
+        color: isZero ? const Color(0xFFE53935) : const Color(0xFF1565C0),
       ),
     );
   }
+
 
   Widget _buildTopActionButton({
     required IconData icon,
@@ -926,16 +913,7 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
                               fontWeight: FontWeight.bold,
                             ),
                           ),
-                          // Trick/Point info
-                          SizedBox(
-                            height: 16,
-                            child: state.phase == 'playing' || state.phase == 'trick_end' || state.phase == 'round_end' || state.phase == 'game_end'
-                                ? Text(
-                                    '${p.trickCount}T ${p.pointCount}P',
-                                    style: const TextStyle(fontSize: 9, color: Color(0xFF8A7A72)),
-                                  )
-                                : null,
-                          ),
+                          const SizedBox(height: 16),
                           const SizedBox(height: 2),
                         ],
                       ),

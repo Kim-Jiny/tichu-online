@@ -5,6 +5,7 @@ import 'package:provider/provider.dart';
 import '../services/game_service.dart';
 import '../services/network_service.dart';
 import '../models/mighty_game_state.dart';
+import '../models/player.dart';
 import '../widgets/playing_card.dart';
 import '../widgets/connection_overlay.dart';
 import '../l10n/app_localizations.dart';
@@ -168,6 +169,9 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
                 builder: (context, game, _) {
                   final state = game.mightyGameState;
                   if (state == null) {
+                    if (game.isSpectator && game.hasRoom && !game.hasActiveGame) {
+                      return _buildSpectatorWaiting(game);
+                    }
                     return const Center(child: CircularProgressIndicator());
                   }
                   // Clear stale state on phase change
@@ -284,6 +288,218 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
               ),
             ),
           ),
+        ),
+      ),
+    );
+  }
+
+  // ── Spectator Waiting Room ──
+  Widget _buildSpectatorWaiting(GameService game) {
+    final slots = game.roomPlayers;
+    final l10n = L10n.of(context);
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(12, 12, 12, 16),
+      child: Column(
+        children: [
+          // Header
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+            decoration: BoxDecoration(
+              color: Colors.white.withValues(alpha: 0.90),
+              borderRadius: BorderRadius.circular(18),
+              border: Border.all(color: const Color(0xFFE0D8D4)),
+            ),
+            child: Row(
+              children: [
+                IconButton(
+                  onPressed: () => game.leaveRoom(),
+                  icon: const Icon(Icons.arrow_back, color: Color(0xFF5A4038)),
+                ),
+                const SizedBox(width: 6),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF2E7D32).withValues(alpha: 0.12),
+                    borderRadius: BorderRadius.circular(999),
+                  ),
+                  child: Text(
+                    l10n.spectatorWatching,
+                    style: const TextStyle(
+                      color: Color(0xFF2E7D32),
+                      fontSize: 12,
+                      fontWeight: FontWeight.w800,
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Text(
+                    game.currentRoomName,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(
+                      color: Color(0xFF5A4038),
+                      fontSize: 15,
+                      fontWeight: FontWeight.w800,
+                    ),
+                  ),
+                ),
+                _buildTopActionButton(
+                  icon: Icons.chat_bubble_outline,
+                  active: _chatOpen,
+                  badgeCount: _chatOpen ? 0 : (game.chatMessages.length - _readChatCount).clamp(0, 99),
+                  onTap: () {
+                    setState(() {
+                      _chatOpen = !_chatOpen;
+                      if (_chatOpen) _readChatCount = game.chatMessages.length;
+                    });
+                  },
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 14),
+          // Slot grid
+          Expanded(
+            child: Center(
+              child: Container(
+                constraints: const BoxConstraints(maxWidth: 760),
+                padding: const EdgeInsets.all(18),
+                decoration: BoxDecoration(
+                  color: Colors.white.withValues(alpha: 0.94),
+                  borderRadius: BorderRadius.circular(22),
+                  border: Border.all(color: const Color(0xFFE0D8D4)),
+                ),
+                child: Column(
+                  children: [
+                    Expanded(
+                      child: LayoutBuilder(
+                        builder: (context, constraints) {
+                          final wide = constraints.maxWidth > 620;
+                          return GridView.builder(
+                            gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                              crossAxisCount: wide ? 2 : 1,
+                              mainAxisSpacing: 10,
+                              crossAxisSpacing: 12,
+                              childAspectRatio: wide ? 2.4 : 4.0,
+                            ),
+                            itemCount: slots.length,
+                            itemBuilder: (context, index) {
+                              return _buildWaitingSlot(game, slots[index], index);
+                            },
+                          );
+                        },
+                      ),
+                    ),
+                    const SizedBox(height: 14),
+                    Text(
+                      l10n.spectatorWaitingForGame,
+                      style: const TextStyle(color: Color(0xFF8A8A8A), fontSize: 13),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+          if (_chatOpen) ...[
+            const SizedBox(height: 8),
+            SizedBox(height: 200, child: _buildChatPanel(game)),
+          ],
+        ],
+      ),
+    );
+  }
+
+  Widget _buildWaitingSlot(GameService game, Player? player, int slotIndex) {
+    final isBlocked = game.roomBlockedSlots.contains(slotIndex);
+    if (isBlocked) {
+      return Container(
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(
+          color: const Color(0xFFF0EDED),
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: const Color(0xFFD8CFCB)),
+        ),
+        child: const Row(
+          children: [
+            Icon(Icons.block, size: 24, color: Color(0xFFBDB5B0)),
+          ],
+        ),
+      );
+    }
+    if (player == null) {
+      return Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: () => game.switchToPlayer(slotIndex),
+          borderRadius: BorderRadius.circular(16),
+          child: Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: const Color(0xFFF7F2F0),
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(color: const Color(0xFFD8CFCB)),
+            ),
+            child: Row(
+              children: [
+                const Icon(Icons.person_add, size: 24, color: Color(0xFF9AA7B0)),
+                const SizedBox(width: 10),
+                Text(
+                  L10n.of(context).spectatorSit,
+                  style: const TextStyle(color: Color(0xFF9AA7B0), fontSize: 13, fontWeight: FontWeight.w600),
+                ),
+              ],
+            ),
+          ),
+        ),
+      );
+    }
+    final isReady = player.isReady;
+    return GestureDetector(
+      onTap: () => _showPlayerProfileDialog(player.name, game, isBot: player.id.startsWith('bot_')),
+      child: Container(
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(
+            color: isReady ? const Color(0xFF9ED6A5) : const Color(0xFFE0D8D4),
+            width: isReady ? 2 : 1,
+          ),
+        ),
+        child: Row(
+          children: [
+            Container(
+              width: 36,
+              height: 36,
+              decoration: BoxDecoration(
+                color: player.isHost ? const Color(0xFFFFF2B3) : const Color(0xFFE8F5E9),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Icon(
+                player.isHost ? Icons.star : Icons.person,
+                color: player.isHost ? const Color(0xFFE6A800) : const Color(0xFF2E7D32),
+                size: 20,
+              ),
+            ),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Text(
+                player.name,
+                style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: Color(0xFF3E312A)),
+                overflow: TextOverflow.ellipsis,
+              ),
+            ),
+            if (isReady)
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFE8F5E9),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: const Text('READY', style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: Color(0xFF4CAF50))),
+              ),
+          ],
         ),
       ),
     );

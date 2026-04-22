@@ -2035,7 +2035,10 @@ function handleCreateRoom(ws, data) {
     ? ''
     : (typeof data.password === 'string' ? data.password.trim() : '');
   const turnTimeLimit = Math.min(Math.max(parseInt(data.turnTimeLimit) || 30, 10), 999);
-  const targetScore = Math.min(Math.max(parseInt(data.targetScore) || 1000, 100), 20000);
+  const minTarget = gameType === 'mighty' ? 10 : 100;
+  const defaultTarget = gameType === 'mighty' ? 50 : 1000;
+  const maxTarget = gameType === 'mighty' ? 500 : 20000;
+  const targetScore = Math.min(Math.max(parseInt(data.targetScore) || defaultTarget, minTarget), maxTarget);
 
   let maxPlayers = 4;
   let skExpansions = [];

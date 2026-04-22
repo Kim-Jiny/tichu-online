@@ -192,11 +192,32 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
                         }
                         if (state.phase == 'kitty_exchange') {
                           _discardSelection.clear();
-                          _friendCardSelection = '';
-                          _friendMode = '';
-                          _friendSuit = 'spade';
-                          _friendRank = 'A';
                           _selectedTrumpSuit = null;
+                          // Smart default: mighty → trump A → joker → spade A
+                          final myCards = state.myCards;
+                          final mightyCard = state.mightyCard;
+                          final trump = state.trumpSuit ?? 'spade';
+                          final trumpAce = 'mighty_${trump}_A';
+                          if (mightyCard != null && !myCards.contains(mightyCard)) {
+                            final parts = mightyCard.replaceFirst('mighty_', '').split('_');
+                            _friendMode = 'card';
+                            _friendSuit = parts.isNotEmpty ? parts[0] : 'spade';
+                            _friendRank = parts.length > 1 ? parts[1] : 'A';
+                            _friendCardSelection = 'mighty_${_friendSuit}_$_friendRank';
+                          } else if (!myCards.contains(trumpAce)) {
+                            _friendMode = 'card';
+                            _friendSuit = trump;
+                            _friendRank = 'A';
+                            _friendCardSelection = 'mighty_${_friendSuit}_$_friendRank';
+                          } else if (!myCards.contains('mighty_joker')) {
+                            _friendMode = 'joker';
+                            _friendCardSelection = 'mighty_joker';
+                          } else {
+                            _friendMode = 'card';
+                            _friendSuit = 'spade';
+                            _friendRank = 'A';
+                            _friendCardSelection = 'mighty_${_friendSuit}_$_friendRank';
+                          }
                         }
                       });
                     });
@@ -215,8 +236,6 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
                         children: [
                           _buildTopBar(state, game),
                           _buildScoreboard(state, game),
-                          if (state.phase == 'playing' || state.phase == 'trick_end' || state.phase == 'round_end')
-                            _buildOppositionPointBar(state),
                           if (state.phase == 'bidding') ...[
                             Expanded(
                               child: Align(
@@ -232,6 +251,7 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
                             Expanded(
                               child: Column(
                                 children: [
+                                  _buildOppositionPointBar(state),
                                   const Spacer(),
                                   _buildTrickArea(state),
                                   const Spacer(),
@@ -241,9 +261,13 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
                           if (state.phase == 'playing')
                             _buildHandArea(state, game),
                           if (state.phase == 'trick_end')
+                            _buildOppositionPointBar(state),
+                          if (state.phase == 'trick_end')
                             Expanded(child: _buildTrickEndArea(state)),
                           if (state.phase == 'trick_end')
                             _buildHandArea(state, game),
+                          if (state.phase == 'round_end')
+                            _buildOppositionPointBar(state),
                           if (state.phase == 'round_end')
                             Expanded(child: SingleChildScrollView(child: _buildRoundEndUI(state))),
                           if (state.phase == 'game_end')
@@ -1035,7 +1059,7 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
               borderRadius: BorderRadius.circular(6),
             ),
             child: Text(
-              '${oppPoints}P',
+              '야당',
               style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Colors.white),
             ),
           ),
@@ -2642,45 +2666,65 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
                     ),
                   )),
                 ],
-                rows: state.scoreHistory.map((entry) {
-                  final trump = suitSymbol[entry.trumpSuit] ?? entry.trumpSuit ?? '?';
-                  // Update cumulative
-                  for (final p in state.players) {
-                    cumScores[p.id] = (cumScores[p.id] ?? 0) + (entry.scores[p.id] ?? 0);
-                  }
-                  return DataRow(
-                    color: WidgetStateProperty.all(
-                      entry.success ? const Color(0xFFE8F5E9) : const Color(0xFFFFEBEE),
-                    ),
+                rows: [
+                  ...state.scoreHistory.map((entry) {
+                    final trump = suitSymbol[entry.trumpSuit] ?? entry.trumpSuit ?? '?';
+                    for (final p in state.players) {
+                      cumScores[p.id] = (cumScores[p.id] ?? 0) + (entry.scores[p.id] ?? 0);
+                    }
+                    return DataRow(
+                      color: WidgetStateProperty.all(
+                        entry.success ? const Color(0xFFE8F5E9) : const Color(0xFFFFEBEE),
+                      ),
+                      cells: [
+                        DataCell(Text('${entry.round}', style: const TextStyle(fontWeight: FontWeight.w700))),
+                        DataCell(Text('$trump${entry.bid}', style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w600))),
+                        DataCell(Text(
+                          entry.success ? '${entry.declarerPoints}✓' : '${entry.declarerPoints}✗',
+                          style: TextStyle(
+                            fontSize: 11,
+                            fontWeight: FontWeight.bold,
+                            color: entry.success ? const Color(0xFF2E7D32) : const Color(0xFFC62828),
+                          ),
+                        )),
+                        ...state.players.map((p) {
+                          final score = entry.scores[p.id] ?? 0;
+                          final isDeclTeam = p.id == entry.declarer || p.id == entry.partner;
+                          return DataCell(Text(
+                            score >= 0 ? '+$score' : '$score',
+                            textAlign: TextAlign.center,
+                            style: TextStyle(
+                              fontSize: 11,
+                              fontWeight: isDeclTeam ? FontWeight.w800 : FontWeight.w500,
+                              color: score >= 0 ? const Color(0xFF2E7D32) : const Color(0xFFC62828),
+                            ),
+                          ));
+                        }),
+                      ],
+                    );
+                  }),
+                  // Total row
+                  DataRow(
+                    color: WidgetStateProperty.all(const Color(0xFFF5F0EB)),
                     cells: [
-                      DataCell(Text('${entry.round}', style: const TextStyle(fontWeight: FontWeight.w700))),
-                      DataCell(Text('$trump${entry.bid}', style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w600))),
-                      DataCell(Text(
-                        entry.success ? '${entry.declarerPoints}✓' : '${entry.declarerPoints}✗',
-                        style: TextStyle(
-                          fontSize: 11,
-                          fontWeight: FontWeight.bold,
-                          color: entry.success ? const Color(0xFF2E7D32) : const Color(0xFFC62828),
-                        ),
-                      )),
+                      const DataCell(Text('')),
+                      const DataCell(Text('')),
+                      const DataCell(Text('합계', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold))),
                       ...state.players.map((p) {
-                        final score = entry.scores[p.id] ?? 0;
-                        final cum = cumScores[p.id] ?? 0;
-                        final isDeclTeam = p.id == entry.declarer || p.id == entry.partner;
+                        final total = cumScores[p.id] ?? 0;
                         return DataCell(Text(
-                          '${score >= 0 ? "+$score" : "$score"}\n$cum',
+                          '$total',
                           textAlign: TextAlign.center,
                           style: TextStyle(
-                            fontSize: 10,
-                            height: 1.3,
-                            fontWeight: isDeclTeam ? FontWeight.w800 : FontWeight.w500,
-                            color: score >= 0 ? const Color(0xFF2E7D32) : const Color(0xFFC62828),
+                            fontSize: 11,
+                            fontWeight: FontWeight.w800,
+                            color: total >= 0 ? const Color(0xFF2E7D32) : const Color(0xFFC62828),
                           ),
                         ));
                       }),
                     ],
-                  );
-                }).toList(),
+                  ),
+                ],
               ),
             ),
           ),

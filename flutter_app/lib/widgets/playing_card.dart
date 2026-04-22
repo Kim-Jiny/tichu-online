@@ -66,7 +66,7 @@ class PlayingCard extends StatelessWidget {
               transform: Matrix4.translationValues(0, isSelected ? -8 : 0, 0),
               decoration: BoxDecoration(
                 color: isFaceUp ? Colors.white : backBg,
-                borderRadius: BorderRadius.circular(14),
+                borderRadius: BorderRadius.circular((width / 48 * 14).clamp(4, 14)),
                 border: Border.all(
                   color: effectiveBorderColor,
                   width: effectiveBorderWidth,
@@ -164,26 +164,29 @@ class PlayingCard extends StatelessWidget {
     final rankSize = 22.0 * scale;
 
     return Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          SizedBox(
-            width: symbolSize,
-            height: symbolSize,
-            child: CustomPaint(
-              painter: _SuitPainter(suit: suit, color: color),
+      child: FittedBox(
+        fit: BoxFit.scaleDown,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            SizedBox(
+              width: symbolSize,
+              height: symbolSize,
+              child: CustomPaint(
+                painter: _SuitPainter(suit: suit, color: color),
+              ),
             ),
-          ),
-          SizedBox(height: 2 * scale),
-          Text(
-            rank,
-            style: TextStyle(
-              fontSize: rankSize,
-              color: color,
-              fontWeight: FontWeight.bold,
+            SizedBox(height: 2 * scale),
+            Text(
+              rank,
+              style: TextStyle(
+                fontSize: rankSize,
+                color: color,
+                fontWeight: FontWeight.bold,
+              ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }

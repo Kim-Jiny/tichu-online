@@ -3173,11 +3173,15 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
       badgeColor = const Color(0xFFE57373);
     }
 
-    final declarer = match['declarerNickname']?.toString() ?? '?';
-    final bid = match['bidPoints'] ?? 0;
-    final trump = match['trumpSuit']?.toString() ?? '?';
+    final myRank = match['myRank'] ?? '-';
+    final myScore = match['myScore'] ?? 0;
     final date = _formatShortDate(match['createdAt']);
     final isRanked = match['isRanked'] == true;
+    final players = match['players'] as List<dynamic>? ?? [];
+    final playerText = players.map((p) => p['nickname'] ?? '?').join(', ');
+    final scoreText = isDesertionLoss
+        ? ''
+        : l10n.lobbyRankAndScore(myRank.toString(), myScore as int);
 
     return Padding(
       padding: const EdgeInsets.only(bottom: 6),
@@ -3208,13 +3212,15 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
                 Text(date, style: const TextStyle(fontSize: 11, color: Color(0xFF8A8A8A))),
                 const SizedBox(height: 2),
                 Text(
-                  l10n.rankingMightyMatchDetail(declarer, bid, trump),
+                  playerText,
                   style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Color(0xFF5A4038)),
                   overflow: TextOverflow.ellipsis,
                 ),
               ],
             ),
           ),
+          if (scoreText.isNotEmpty)
+            Text(scoreText, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Color(0xFF5A4038))),
         ],
       ),
     );

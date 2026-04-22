@@ -353,6 +353,15 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
               Padding(
                 padding: const EdgeInsets.only(right: 6),
                 child: _buildTopActionButton(
+                  icon: Icons.people_alt,
+                  active: false,
+                  badgeCount: game.spectators.length,
+                  onTap: () => _showSpectatorListDialog(game),
+                ),
+              ),
+              Padding(
+                padding: const EdgeInsets.only(right: 6),
+                child: _buildTopActionButton(
                   icon: Icons.chat_bubble_outline,
                   active: _chatOpen,
                   badgeCount: _chatOpen ? 0 : (game.chatMessages.length - _readChatCount).clamp(0, 99),
@@ -389,6 +398,7 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
         .firstOrNull ?? '';
     final bidPoints = state.currentBid['points'];
     final bidSuit = state.currentBid['suit'];
+    final suitLabel = bidSuit != null ? _suitSymbol(bidSuit.toString()) : '';
 
     String friendLabel = '';
     if (state.friendCard != null) {
@@ -405,20 +415,60 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
       friendLabel = L10n.of(context).mtSolo;
     }
 
+    // Declarer's current point count during play
+    final declarerPts = state.players
+        .where((p) => p.id == state.declarer)
+        .map((p) => p.pointCount)
+        .firstOrNull ?? 0;
+    final isPlaying = state.phase == 'playing' || state.phase == 'trick_end';
+
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
       margin: const EdgeInsets.symmetric(horizontal: 8),
       decoration: BoxDecoration(
         color: const Color(0xFFFFF8E1).withValues(alpha: 0.9),
         borderRadius: BorderRadius.circular(8),
         border: Border.all(color: const Color(0xFFFFE082)),
       ),
-      child: Text(
-        '$declarerName | $bidPoints${bidSuit != null ? _suitSymbol(bidSuit.toString()) : ''} | ${L10n.of(context).mtFriendLabel(friendLabel)}',
-        style: const TextStyle(fontSize: 10, fontWeight: FontWeight.w600, color: Color(0xFF5A4038)),
-        textAlign: TextAlign.center,
-        maxLines: 1,
-        overflow: TextOverflow.ellipsis,
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Text(
+            declarerName,
+            style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: Color(0xFF5A4038)),
+          ),
+          const SizedBox(width: 6),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
+            decoration: BoxDecoration(
+              color: const Color(0xFF1565C0),
+              borderRadius: BorderRadius.circular(6),
+            ),
+            child: Text(
+              '$suitLabel $bidPoints',
+              style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.white),
+            ),
+          ),
+          if (isPlaying) ...[
+            const SizedBox(width: 4),
+            Text(
+              '($declarerPts)',
+              style: TextStyle(
+                fontSize: 12,
+                fontWeight: FontWeight.bold,
+                color: declarerPts >= (bidPoints as num? ?? 13) ? const Color(0xFF2E7D32) : const Color(0xFFE53935),
+              ),
+            ),
+          ],
+          const SizedBox(width: 6),
+          Flexible(
+            child: Text(
+              friendLabel,
+              style: const TextStyle(fontSize: 10, color: Color(0xFF8A7A72)),
+              overflow: TextOverflow.ellipsis,
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -801,6 +851,17 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
                                   overflow: TextOverflow.ellipsis,
                                 ),
                               ),
+                              if (isCurrentTurn && _remainingSeconds > 0) ...[
+                                const SizedBox(width: 3),
+                                Text(
+                                  '${_remainingSeconds}s',
+                                  style: TextStyle(
+                                    fontSize: 9,
+                                    fontWeight: FontWeight.bold,
+                                    color: _remainingSeconds <= 5 ? const Color(0xFFE53935) : const Color(0xFFE6A800),
+                                  ),
+                                ),
+                              ],
                             ],
                           ),
                           const SizedBox(height: 2),
@@ -2328,10 +2389,152 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
     );
   }
 
+  void _showSpectatorListDialog(GameService game) {
+    final spectators = game.spectators;
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Row(
+          children: [
+            const Icon(Icons.people_alt, color: Color(0xFF5A4038)),
+            const SizedBox(width: 8),
+            Text(L10n.of(context).gameSpectatorList),
+          ],
+        ),
+        content: spectators.isEmpty
+            ? SizedBox(
+                height: 60,
+                child: Center(
+                  child: Text(
+                    L10n.of(context).gameNoSpectators,
+                    style: const TextStyle(color: Color(0xFF9A8E8A)),
+                  ),
+                ),
+              )
+            : SizedBox(
+                width: double.maxFinite,
+                height: 220,
+                child: ListView.separated(
+                  itemCount: spectators.length,
+                  separatorBuilder: (_, __) => const SizedBox(height: 6),
+                  itemBuilder: (context, index) {
+                    final nickname = spectators[index]['nickname'] ?? '';
+                    return Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFF1F1F1),
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(color: const Color(0xFFE0D8D4)),
+                      ),
+                      child: Row(
+                        children: [
+                          const Icon(Icons.person, size: 16, color: Color(0xFF6A5A52)),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: Text(
+                              nickname,
+                              style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: Color(0xFF5A4038)),
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                        ],
+                      ),
+                    );
+                  },
+                ),
+              ),
+        actions: [
+          if (!game.isSpectator)
+            StatefulBuilder(
+              builder: (context, setDialogState) {
+                return Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    GestureDetector(
+                      onTap: () {
+                        game.setAutoAcceptCardView(!game.autoAcceptCardView);
+                        setDialogState(() {});
+                      },
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                        decoration: BoxDecoration(
+                          color: game.autoAcceptCardView ? const Color(0xFFE8F5E9) : const Color(0xFFF5F5F5),
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(
+                              game.autoAcceptCardView ? Icons.check_circle : Icons.check_circle_outline,
+                              size: 16,
+                              color: game.autoAcceptCardView ? const Color(0xFF4CAF50) : const Color(0xFF999999),
+                            ),
+                            const SizedBox(width: 4),
+                            Text(
+                              L10n.of(context).gameAlwaysAllow,
+                              style: TextStyle(
+                                fontSize: 12,
+                                fontWeight: FontWeight.bold,
+                                color: game.autoAcceptCardView ? const Color(0xFF4CAF50) : const Color(0xFF999999),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 6),
+                    GestureDetector(
+                      onTap: () {
+                        game.setAutoRejectCardView(!game.autoRejectCardView);
+                        setDialogState(() {});
+                      },
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                        decoration: BoxDecoration(
+                          color: game.autoRejectCardView ? const Color(0xFFFFEBEE) : const Color(0xFFF5F5F5),
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(
+                              game.autoRejectCardView ? Icons.block : Icons.block_outlined,
+                              size: 16,
+                              color: game.autoRejectCardView ? const Color(0xFFE53935) : const Color(0xFF999999),
+                            ),
+                            const SizedBox(width: 4),
+                            Text(
+                              L10n.of(context).gameAlwaysReject,
+                              style: TextStyle(
+                                fontSize: 12,
+                                fontWeight: FontWeight.bold,
+                                color: game.autoRejectCardView ? const Color(0xFFE53935) : const Color(0xFF999999),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ],
+                );
+              },
+            ),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: Text(L10n.of(context).gameClose),
+          ),
+        ],
+      ),
+    );
+  }
+
   void _showScoreHistoryDialog(MightyGameStateData state) {
     final suitSymbol = {
       'spade': '♠', 'heart': '♥', 'diamond': '♦', 'club': '♣', 'no_trump': 'NT',
     };
+
+    // Cumulative scores per player
+    final cumScores = <String, int>{for (final p in state.players) p.id: 0};
 
     showDialog(
       context: context,
@@ -2339,114 +2542,70 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
         title: Text(L10n.of(context).mtScoreHistory, style: const TextStyle(fontSize: 15, fontWeight: FontWeight.bold)),
         content: SizedBox(
           width: double.maxFinite,
-          child: ListView.builder(
-            shrinkWrap: true,
-            itemCount: state.scoreHistory.length,
-            itemBuilder: (context, index) {
-              final entry = state.scoreHistory[index];
-              final declarerName = state.players
-                  .where((p) => p.id == entry.declarer)
-                  .map((p) => p.name)
-                  .firstOrNull ?? entry.declarer ?? '?';
-              final partnerName = entry.partner != null
-                  ? state.players
-                      .where((p) => p.id == entry.partner)
-                      .map((p) => p.name)
-                      .firstOrNull ?? entry.partner!
-                  : null;
-              final trump = suitSymbol[entry.trumpSuit] ?? entry.trumpSuit ?? '?';
-
-              return Container(
-                margin: const EdgeInsets.only(bottom: 8),
-                padding: const EdgeInsets.all(10),
-                decoration: BoxDecoration(
-                  color: entry.success
-                      ? const Color(0xFFE8F5E9)
-                      : const Color(0xFFFFEBEE),
-                  borderRadius: BorderRadius.circular(10),
-                  border: Border.all(
-                    color: entry.success
-                        ? const Color(0xFFA5D6A7)
-                        : const Color(0xFFEF9A9A),
-                  ),
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    // Round header
-                    Row(
-                      children: [
-                        Text(
-                          'R${entry.round}',
-                          style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w800, color: Color(0xFF5A4038)),
-                        ),
-                        const SizedBox(width: 8),
-                        Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                          decoration: BoxDecoration(
-                            color: const Color(0xFF1565C0),
-                            borderRadius: BorderRadius.circular(6),
-                          ),
-                          child: Text(
-                            '$trump ${entry.bid}',
-                            style: const TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: Colors.white),
-                          ),
-                        ),
-                        const SizedBox(width: 6),
-                        Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                          decoration: BoxDecoration(
-                            color: entry.success ? const Color(0xFF4CAF50) : const Color(0xFFE53935),
-                            borderRadius: BorderRadius.circular(6),
-                          ),
-                          child: Text(
-                            entry.success ? '${entry.declarerPoints}pts ✓' : '${entry.declarerPoints}pts ✗',
-                            style: const TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: Colors.white),
-                          ),
-                        ),
-                      ],
+          child: SingleChildScrollView(
+            scrollDirection: Axis.vertical,
+            child: SingleChildScrollView(
+              scrollDirection: Axis.horizontal,
+              child: DataTable(
+                columnSpacing: 10,
+                horizontalMargin: 4,
+                headingRowHeight: 36,
+                dataRowMinHeight: 32,
+                dataRowMaxHeight: 40,
+                headingTextStyle: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Color(0xFF5A4038)),
+                dataTextStyle: const TextStyle(fontSize: 11, color: Color(0xFF5A4038)),
+                columns: [
+                  const DataColumn(label: Text('R')),
+                  const DataColumn(label: Text('공약')),
+                  const DataColumn(label: Text('결과')),
+                  ...state.players.map((p) => DataColumn(
+                    label: Text(
+                      p.name.length > 4 ? '${p.name.substring(0, 4)}..' : p.name,
+                      style: const TextStyle(fontSize: 10, fontWeight: FontWeight.bold),
                     ),
-                    const SizedBox(height: 4),
-                    Text(
-                      partnerName != null
-                          ? '$declarerName + $partnerName'
-                          : '$declarerName ${L10n.of(context).mtSoloSuffix}',
-                      style: const TextStyle(fontSize: 11, color: Color(0xFF5A4038)),
+                  )),
+                ],
+                rows: state.scoreHistory.map((entry) {
+                  final trump = suitSymbol[entry.trumpSuit] ?? entry.trumpSuit ?? '?';
+                  // Update cumulative
+                  for (final p in state.players) {
+                    cumScores[p.id] = (cumScores[p.id] ?? 0) + (entry.scores[p.id] ?? 0);
+                  }
+                  return DataRow(
+                    color: WidgetStateProperty.all(
+                      entry.success ? const Color(0xFFE8F5E9) : const Color(0xFFFFEBEE),
                     ),
-                    const SizedBox(height: 6),
-                    // Per-player scores
-                    Wrap(
-                      spacing: 6,
-                      runSpacing: 4,
-                      children: state.players.map((p) {
+                    cells: [
+                      DataCell(Text('${entry.round}', style: const TextStyle(fontWeight: FontWeight.w700))),
+                      DataCell(Text('$trump${entry.bid}', style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w600))),
+                      DataCell(Text(
+                        entry.success ? '${entry.declarerPoints}✓' : '${entry.declarerPoints}✗',
+                        style: TextStyle(
+                          fontSize: 11,
+                          fontWeight: FontWeight.bold,
+                          color: entry.success ? const Color(0xFF2E7D32) : const Color(0xFFC62828),
+                        ),
+                      )),
+                      ...state.players.map((p) {
                         final score = entry.scores[p.id] ?? 0;
+                        final cum = cumScores[p.id] ?? 0;
                         final isDeclTeam = p.id == entry.declarer || p.id == entry.partner;
-                        return Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                          decoration: BoxDecoration(
-                            color: Colors.white.withValues(alpha: 0.8),
-                            borderRadius: BorderRadius.circular(6),
-                            border: Border.all(
-                              color: isDeclTeam
-                                  ? const Color(0xFF1565C0).withValues(alpha: 0.4)
-                                  : const Color(0xFFE0D8D4),
-                            ),
+                        return DataCell(Text(
+                          '${score >= 0 ? "+$score" : "$score"}\n$cum',
+                          textAlign: TextAlign.center,
+                          style: TextStyle(
+                            fontSize: 10,
+                            height: 1.3,
+                            fontWeight: isDeclTeam ? FontWeight.w800 : FontWeight.w500,
+                            color: score >= 0 ? const Color(0xFF2E7D32) : const Color(0xFFC62828),
                           ),
-                          child: Text(
-                            '${p.name} ${score >= 0 ? "+$score" : "$score"}',
-                            style: TextStyle(
-                              fontSize: 11,
-                              fontWeight: isDeclTeam ? FontWeight.w700 : FontWeight.w500,
-                              color: score >= 0 ? const Color(0xFF2E7D32) : const Color(0xFFC62828),
-                            ),
-                          ),
-                        );
-                      }).toList(),
-                    ),
-                  ],
-                ),
-              );
-            },
+                        ));
+                      }),
+                    ],
+                  );
+                }).toList(),
+              ),
+            ),
           ),
         ),
         actions: [

@@ -1629,8 +1629,7 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
             // Bid / Pass
             Builder(builder: (context) {
               final currentBidPoints = (state.currentBid['points'] as num?)?.toInt() ?? 0;
-              final currentBidSuit = state.currentBid['suit'] as String?;
-              final isMaxBid = currentBidPoints >= 20 && currentBidSuit == 'no_trump';
+              final isMaxBid = currentBidPoints >= 20;
               return Row(
                 children: [
                   Expanded(
@@ -3514,7 +3513,7 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
     final playerText = players.map((p) => p['nickname'] ?? '?').join(', ');
     final scoreText = isDesertionLoss
         ? ''
-        : l10n.lobbyRankAndScore(myRank.toString(), myScore as int);
+        : l10n.lobbyRankAndScore(myRank.toString(), (myScore as num?)?.toInt() ?? 0);
 
     return Padding(
       padding: const EdgeInsets.only(bottom: 6),

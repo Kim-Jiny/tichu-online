@@ -859,6 +859,7 @@ class GameService extends ChangeNotifier {
             // Mighty game state
             currentGameType = 'mighty';
             final nextMighty = MightyGameStateData.fromJson(state);
+            _handleMightySfxTransitions(_prevMightyGameState, nextMighty);
             _prevMightyGameState = mightyGameState;
             mightyGameState = nextMighty;
             gameState = null;
@@ -1894,6 +1895,41 @@ class GameService extends ChangeNotifier {
               .map((p) => p.tokens)
               .reduce((a, b) => a > b ? a : b);
           _sfx.play(myTokens >= maxTokens ? 'victory' : 'defeat');
+        }
+      }
+    }
+  }
+
+  void _handleMightySfxTransitions(MightyGameStateData? prev, MightyGameStateData next) {
+    if (prev == null) {
+      if (next.isMyTurn) {
+        _sfx.play('my_turn');
+      }
+      return;
+    }
+
+    // Card played: trick grew
+    if (next.currentTrick.length > prev.currentTrick.length) {
+      _sfx.play('card');
+    }
+
+    // My turn
+    if (!prev.isMyTurn && next.isMyTurn) {
+      _sfx.play('my_turn');
+    }
+
+    // Phase transitions
+    if (prev.phase != next.phase) {
+      if (next.phase == 'round_end') {
+        _sfx.play('round_end');
+      } else if (next.phase == 'game_end') {
+        // Check if self won (highest score)
+        final self = next.players.where((p) => p.position == 'self');
+        if (self.isNotEmpty) {
+          final myScore = next.scores[self.first.id] ?? 0;
+          final maxScore = next.scores.values.isEmpty ? 0
+              : next.scores.values.reduce((a, b) => a > b ? a : b);
+          _sfx.play(myScore >= maxScore ? 'victory' : 'defeat');
         }
       }
     }

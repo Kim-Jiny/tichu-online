@@ -1928,7 +1928,7 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
   Widget _buildTrumpChangePanel(MightyGameStateData state, GameService game) {
     if (!state.isMyTurn) return const SizedBox.shrink();
     final bidPoints = state.currentBid['points'] as int? ?? 13;
-    if (bidPoints >= 20) return const SizedBox.shrink(); // already at cap
+    final isAtCap = bidPoints >= 20;
 
     final trumpSuit = state.trumpSuit ?? 'no_trump';
     _selectedTrumpSuit ??= trumpSuit;
@@ -1946,34 +1946,35 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Header: current bid + raise bid button
-          Row(
-            children: [
-              Text(
-                L10n.of(context).mtTrumpPenalty(2),
-                style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Color(0xFF5A4038)),
-              ),
-              const Spacer(),
-              Text(
-                '$bidPoints',
-                style: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: Color(0xFF5A4038)),
-              ),
-              const SizedBox(width: 6),
-              SizedBox(
-                height: 30,
-                child: FilledButton(
-                  onPressed: () => game.mightyRaiseBid(),
-                  style: FilledButton.styleFrom(
-                    backgroundColor: const Color(0xFF1565C0),
-                    padding: const EdgeInsets.symmetric(horizontal: 10),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-                  ),
-                  child: Text('→ $nextBid', style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
+          // Header: current bid + raise bid button (hide at cap)
+          if (!isAtCap)
+            Row(
+              children: [
+                Text(
+                  L10n.of(context).mtTrumpPenalty(2),
+                  style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Color(0xFF5A4038)),
                 ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 6),
+                const Spacer(),
+                Text(
+                  '$bidPoints',
+                  style: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: Color(0xFF5A4038)),
+                ),
+                const SizedBox(width: 6),
+                SizedBox(
+                  height: 30,
+                  child: FilledButton(
+                    onPressed: () => game.mightyRaiseBid(),
+                    style: FilledButton.styleFrom(
+                      backgroundColor: const Color(0xFF1565C0),
+                      padding: const EdgeInsets.symmetric(horizontal: 10),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                    ),
+                    child: Text('→ $nextBid', style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
+                  ),
+                ),
+              ],
+            ),
+          if (!isAtCap) const SizedBox(height: 6),
           // Trump change: suit chips + confirm
           Row(
             children: [
@@ -2024,7 +2025,7 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
               SizedBox(
                 height: 34,
                 child: FilledButton(
-                  onPressed: () {
+                  onPressed: isSameTrump && isAtCap ? null : () {
                     if (isSameTrump) {
                       game.mightyRaiseBid();
                     } else {
@@ -2038,7 +2039,9 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
                     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
                   ),
                   child: Text(
-                    isSameTrump ? '→ $nextBid' : L10n.of(context).mtChangeTrump,
+                    isAtCap
+                        ? L10n.of(context).mtChangeTrump
+                        : (isSameTrump ? '→ $nextBid' : L10n.of(context).mtChangeTrump),
                     style: const TextStyle(fontSize: 11),
                   ),
                 ),

@@ -185,6 +185,12 @@ class MightyGame {
   }
 
   _advanceBidding() {
+    // Bid of 20 = instant win, no need for others to pass
+    if (this.currentBid.points === 20) {
+      this._finalizeBidding();
+      return { success: true };
+    }
+
     // Check if bidding is over
     if (this.passCount >= this.playerCount - 1 && this.currentBid.bidder) {
       // Everyone passed except one bidder
@@ -265,6 +271,13 @@ class MightyGame {
     }
     if (suit === this.trumpSuit) {
       return { success: false, messageKey: 'mighty_same_trump' };
+    }
+
+    // At 20 points: allow trump change without penalty
+    if (this.currentBid.points >= 20) {
+      this.trumpSuit = suit;
+      this.currentBid.suit = suit;
+      return { success: true };
     }
 
     const newPoints = Math.min(20, this.currentBid.points + this.options.trumpChangePenalty);

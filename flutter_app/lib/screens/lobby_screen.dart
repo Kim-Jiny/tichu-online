@@ -1187,8 +1187,12 @@ class _LobbyScreenState extends State<LobbyScreen> {
                                     textAlign: TextAlign.center,
                                     decoration: fieldDecoration(
                                       isRanked
-                                          ? l10n.lobbyTargetScoreFixed
-                                          : l10n.lobbyTargetScoreRange,
+                                          ? (selectedGameType == 'mighty'
+                                              ? l10n.lobbyTargetScoreFixedMighty
+                                              : l10n.lobbyTargetScoreFixed)
+                                          : (selectedGameType == 'mighty'
+                                              ? l10n.lobbyTargetScoreRangeMighty
+                                              : l10n.lobbyTargetScoreRange),
                                       suffixText: l10n.lobbySuffixPoints,
                                     ),
                                   ),
@@ -1216,7 +1220,9 @@ class _LobbyScreenState extends State<LobbyScreen> {
                                   : selectedGameType == 'mighty'
                                       ? l10n.lobbyRankedInfoMighty
                                       : l10n.lobbyRankedFixedScoreInfo)
-                              : l10n.lobbyNormalSettingsInfo,
+                              : (selectedGameType == 'mighty'
+                                  ? l10n.lobbyNormalSettingsInfoMighty
+                                  : l10n.lobbyNormalSettingsInfo),
                           style: const TextStyle(
                             fontSize: 11,
                             color: Color(0xFF6D615B),

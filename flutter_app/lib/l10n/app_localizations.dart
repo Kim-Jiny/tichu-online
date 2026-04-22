@@ -1149,11 +1149,23 @@ abstract class L10n {
   /// **'100–20000'**
   String get lobbyTargetScoreRange;
 
+  /// No description provided for @lobbyTargetScoreRangeMighty.
+  ///
+  /// In en, this message translates to:
+  /// **'10–500'**
+  String get lobbyTargetScoreRangeMighty;
+
   /// No description provided for @lobbyTargetScoreFixed.
   ///
   /// In en, this message translates to:
   /// **'1000 (fixed)'**
   String get lobbyTargetScoreFixed;
+
+  /// No description provided for @lobbyTargetScoreFixedMighty.
+  ///
+  /// In en, this message translates to:
+  /// **'50 (fixed)'**
+  String get lobbyTargetScoreFixedMighty;
 
   /// No description provided for @lobbyRankedFixedScoreInfo.
   ///
@@ -1178,6 +1190,12 @@ abstract class L10n {
   /// In en, this message translates to:
   /// **'Time limit: 10–999 sec, target score: 100–20000 pts.'**
   String get lobbyNormalSettingsInfo;
+
+  /// No description provided for @lobbyNormalSettingsInfoMighty.
+  ///
+  /// In en, this message translates to:
+  /// **'Time limit: 10–999 sec, target score: 10–500 pts.'**
+  String get lobbyNormalSettingsInfoMighty;
 
   /// No description provided for @lobbyEnterRoomName.
   ///

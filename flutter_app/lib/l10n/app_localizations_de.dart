@@ -574,7 +574,13 @@ class L10nDe extends L10n {
   String get lobbyTargetScoreRange => '100–20000';
 
   @override
+  String get lobbyTargetScoreRangeMighty => '10–500';
+
+  @override
   String get lobbyTargetScoreFixed => '1000 (fest)';
+
+  @override
+  String get lobbyTargetScoreFixedMighty => '50 (fest)';
 
   @override
   String get lobbyRankedFixedScoreInfo =>
@@ -591,6 +597,10 @@ class L10nDe extends L10n {
   @override
   String get lobbyNormalSettingsInfo =>
       'Zeitlimit: 10–999 Sek., Zielpunktzahl: 100–20000 Pkt.';
+
+  @override
+  String get lobbyNormalSettingsInfoMighty =>
+      'Zeitlimit: 10–999 Sek., Zielpunktzahl: 10–500 Pkt.';
 
   @override
   String get lobbyEnterRoomName => 'Bitte einen Raumnamen eingeben.';

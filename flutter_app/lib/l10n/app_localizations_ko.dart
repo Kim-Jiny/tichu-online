@@ -548,7 +548,13 @@ class L10nKo extends L10n {
   String get lobbyTargetScoreRange => '100~20000';
 
   @override
+  String get lobbyTargetScoreRangeMighty => '10~500';
+
+  @override
   String get lobbyTargetScoreFixed => '1000 (고정)';
+
+  @override
+  String get lobbyTargetScoreFixedMighty => '50 (고정)';
 
   @override
   String get lobbyRankedFixedScoreInfo => '랭크전은 목표 점수 1000점으로 고정됩니다.';
@@ -563,6 +569,10 @@ class L10nKo extends L10n {
   @override
   String get lobbyNormalSettingsInfo =>
       '시간 제한은 10~999초, 목표 점수는 100~20000점까지 설정할 수 있습니다.';
+
+  @override
+  String get lobbyNormalSettingsInfoMighty =>
+      '시간 제한은 10~999초, 목표 점수는 10~500점까지 설정할 수 있습니다.';
 
   @override
   String get lobbyEnterRoomName => '방 이름을 입력해주세요.';

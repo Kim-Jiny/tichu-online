@@ -3809,6 +3809,12 @@ class _LobbyScreenState extends State<LobbyScreen> {
                 gameBgColor = const Color(0xFF2D2D3D);
                 gameFgColor = const Color(0xFFFFD54F);
                 break;
+              case 'mighty':
+                gameLabel = l10n.rankingMighty;
+                gameEmoji = '🎯';
+                gameBgColor = const Color(0xFF2E7D32);
+                gameFgColor = Colors.white;
+                break;
               case 'love_letter':
                 gameLabel = l10n.lobbyLoveLetter;
                 gameEmoji = '❤️';
@@ -3876,6 +3882,23 @@ class _LobbyScreenState extends State<LobbyScreen> {
                           onTap: () {
                             Navigator.pop(bCtx);
                             onTabChanged('skull_king');
+                          },
+                        ),
+                        ListTile(
+                          leading: const Text(
+                            '🎯',
+                            style: TextStyle(fontSize: 20),
+                          ),
+                          title: Text(l10n.rankingMighty),
+                          trailing: selectedTab == 'mighty'
+                              ? const Icon(
+                                  Icons.check,
+                                  color: Color(0xFF2E7D32),
+                                )
+                              : null,
+                          onTap: () {
+                            Navigator.pop(bCtx);
+                            onTabChanged('mighty');
                           },
                         ),
                         ListTile(
@@ -4012,6 +4035,46 @@ class _LobbyScreenState extends State<LobbyScreen> {
                 ),
               ),
               _buildStatChip(l10n.lobbyStatWinRate, '$skWinRate%'),
+            ],
+          ),
+        ] else if (selectedTab == 'mighty') ...[
+          _buildProfileSectionCard(
+            title: l10n.rankingMightySeasonRanked,
+            accent: const Color(0xFF2E7D32),
+            background: const Color(0xFFE8F5E9),
+            icon: Icons.emoji_events,
+            iconColor: const Color(0xFFFFD54F),
+            mainText: '${profile['mightySeasonRating'] ?? 1000}',
+            chips: [
+              _buildStatChip(
+                l10n.lobbyStatRecord,
+                l10n.lobbyRecordFormat(
+                  (profile['mightySeasonGames'] ?? 0) as int,
+                  (profile['mightySeasonWins'] ?? 0) as int,
+                  (profile['mightySeasonLosses'] ?? 0) as int,
+                ),
+              ),
+              _buildStatChip(l10n.lobbyStatWinRate, '${profile['mightySeasonWinRate'] ?? 0}%'),
+            ],
+          ),
+          const SizedBox(height: 10),
+          _buildProfileSectionCard(
+            title: l10n.rankingMightyRecord,
+            accent: const Color(0xFF1B5E20),
+            background: const Color(0xFFF1F8E9),
+            icon: Icons.military_tech,
+            iconColor: const Color(0xFF4CAF50),
+            mainText: '',
+            chips: [
+              _buildStatChip(
+                l10n.lobbyStatRecord,
+                l10n.lobbyRecordFormat(
+                  (profile['mightyTotalGames'] ?? 0) as int,
+                  (profile['mightyWins'] ?? 0) as int,
+                  (profile['mightyLosses'] ?? 0) as int,
+                ),
+              ),
+              _buildStatChip(l10n.lobbyStatWinRate, '${profile['mightyWinRate'] ?? 0}%'),
             ],
           ),
         ] else ...[

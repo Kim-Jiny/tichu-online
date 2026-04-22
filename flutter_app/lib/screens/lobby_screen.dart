@@ -4560,9 +4560,17 @@ class _LobbyScreenState extends State<LobbyScreen> {
     }
 
     // Score / player info
+    final isMighty = gameType == 'mighty';
     final String scoreText;
     final String playerText;
-    if (isSK || isLL) {
+    if (isMighty) {
+      final declarer = match['declarerNickname']?.toString() ?? '?';
+      final bid = match['bidPoints'] ?? 0;
+      final trump = match['trumpSuit']?.toString() ?? '?';
+      scoreText = l10n.rankingMightyMatchDetail(declarer, bid, trump);
+      final players = match['players'] as List<dynamic>? ?? [];
+      playerText = players.map((p) => p['nickname'] ?? '?').join(', ');
+    } else if (isSK || isLL) {
       final players = match['players'] as List<dynamic>? ?? [];
       final myRank = match['myRank'] ?? '-';
       final myScore = match['myScore'] ?? 0;

@@ -3529,13 +3529,14 @@ async function getDetailedAdminStats(dateFrom, dateTo, bucket = 'day', options =
   const groupUnit = bucket === 'hour' ? 'hour' : 'day';
   const from = dateFrom || new Date(Date.now() - 6 * 24 * 60 * 60 * 1000).toISOString();
   const to = dateTo || new Date().toISOString();
+  const kstBucketExpr = (column) => `DATE_TRUNC('${groupUnit}', timezone('Asia/Seoul', ${column}))`;
   const platform = ['ios', 'android'].includes(String(options.platform || '').toLowerCase())
     ? String(options.platform).toLowerCase()
     : '';
   try {
     const gameSeries = await client.query(`
       WITH tichu AS (
-        SELECT DATE_TRUNC('${groupUnit}', created_at) AS bucket_time,
+        SELECT ${kstBucketExpr('created_at')} AS bucket_time,
                COUNT(DISTINCT mh.id) AS total_cnt,
                COUNT(DISTINCT mh.id) FILTER (WHERE mh.is_ranked = TRUE) AS ranked_cnt
         FROM tc_match_history mh
@@ -3551,7 +3552,7 @@ async function getDetailedAdminStats(dateFrom, dateTo, bucket = 'day', options =
         GROUP BY 1
       ),
       skull AS (
-        SELECT DATE_TRUNC('${groupUnit}', h.created_at) AS bucket_time,
+        SELECT ${kstBucketExpr('h.created_at')} AS bucket_time,
                COUNT(DISTINCT h.id) AS total_cnt,
                COUNT(DISTINCT h.id) FILTER (WHERE h.is_ranked = TRUE) AS ranked_cnt
         FROM tc_sk_match_history h
@@ -3569,7 +3570,7 @@ async function getDetailedAdminStats(dateFrom, dateTo, bucket = 'day', options =
         GROUP BY 1
       ),
       love AS (
-        SELECT DATE_TRUNC('${groupUnit}', h.created_at) AS bucket_time,
+        SELECT ${kstBucketExpr('h.created_at')} AS bucket_time,
                COUNT(DISTINCT h.id) AS total_cnt,
                COUNT(DISTINCT h.id) FILTER (WHERE h.is_ranked = TRUE) AS ranked_cnt
         FROM tc_ll_match_history h
@@ -3587,7 +3588,7 @@ async function getDetailedAdminStats(dateFrom, dateTo, bucket = 'day', options =
         GROUP BY 1
       ),
       mighty AS (
-        SELECT DATE_TRUNC('${groupUnit}', h.created_at) AS bucket_time,
+        SELECT ${kstBucketExpr('h.created_at')} AS bucket_time,
                COUNT(DISTINCT h.id) AS total_cnt,
                COUNT(DISTINCT h.id) FILTER (WHERE h.is_ranked = TRUE) AS ranked_cnt
         FROM tc_mighty_match_history h
@@ -3630,7 +3631,7 @@ async function getDetailedAdminStats(dateFrom, dateTo, bucket = 'day', options =
 
     const goldSeries = await client.query(`
       WITH gold_events AS (
-        SELECT DATE_TRUNC('${groupUnit}', mh.created_at) AS bucket_time,
+        SELECT ${kstBucketExpr('mh.created_at')} AS bucket_time,
                CASE
                  WHEN mh.winner_team = 'draw' THEN 0
                  WHEN mh.end_reason IN ('leave', 'timeout') AND mh.deserter_nickname = p.nickname THEN 0
@@ -3658,7 +3659,7 @@ async function getDetailedAdminStats(dateFrom, dateTo, bucket = 'day', options =
 
         UNION ALL
 
-        SELECT DATE_TRUNC('${groupUnit}', h.created_at) AS bucket_time,
+        SELECT ${kstBucketExpr('h.created_at')} AS bucket_time,
                CASE
                  WHEN h.end_reason IN ('leave', 'timeout') AND h.deserter_nickname = p.nickname THEN 0
                  WHEN p.is_winner THEN CASE WHEN h.is_ranked THEN 20 ELSE 10 END
@@ -3676,7 +3677,7 @@ async function getDetailedAdminStats(dateFrom, dateTo, bucket = 'day', options =
 
         UNION ALL
 
-        SELECT DATE_TRUNC('${groupUnit}', h.created_at) AS bucket_time,
+        SELECT ${kstBucketExpr('h.created_at')} AS bucket_time,
                CASE
                  WHEN h.end_reason IN ('leave', 'timeout') AND h.deserter_nickname = p.nickname THEN 0
                  WHEN p.is_winner THEN CASE WHEN h.is_ranked THEN 20 ELSE 10 END
@@ -3694,7 +3695,7 @@ async function getDetailedAdminStats(dateFrom, dateTo, bucket = 'day', options =
 
         UNION ALL
 
-        SELECT DATE_TRUNC('${groupUnit}', h.created_at) AS bucket_time,
+        SELECT ${kstBucketExpr('h.created_at')} AS bucket_time,
                CASE
                  WHEN h.end_reason IN ('leave', 'timeout') AND h.deserter_nickname = p.nickname THEN 0
                  WHEN p.is_winner THEN CASE WHEN h.is_ranked THEN 20 ELSE 10 END
@@ -3712,7 +3713,7 @@ async function getDetailedAdminStats(dateFrom, dateTo, bucket = 'day', options =
 
         UNION ALL
 
-        SELECT DATE_TRUNC('${groupUnit}', ar.claimed_at) AS bucket_time,
+        SELECT ${kstBucketExpr('ar.claimed_at')} AS bucket_time,
                50 AS gold_delta
         FROM tc_ad_rewards ar
         JOIN tc_users u ON u.nickname = ar.nickname
@@ -3721,7 +3722,7 @@ async function getDetailedAdminStats(dateFrom, dateTo, bucket = 'day', options =
 
         UNION ALL
 
-        SELECT DATE_TRUNC('${groupUnit}', ui.acquired_at) AS bucket_time,
+        SELECT ${kstBucketExpr('ui.acquired_at')} AS bucket_time,
                -COALESCE(si.price, 0) AS gold_delta
         FROM tc_user_items ui
         LEFT JOIN tc_shop_items si ON si.item_key = ui.item_key
@@ -3732,7 +3733,7 @@ async function getDetailedAdminStats(dateFrom, dateTo, bucket = 'day', options =
 
         UNION ALL
 
-        SELECT DATE_TRUNC('${groupUnit}', gh.created_at) AS bucket_time,
+        SELECT ${kstBucketExpr('gh.created_at')} AS bucket_time,
                gh.gold_delta
         FROM tc_gold_history gh
         JOIN tc_users u ON u.nickname = gh.nickname
@@ -3750,7 +3751,7 @@ async function getDetailedAdminStats(dateFrom, dateTo, bucket = 'day', options =
 
     const shopSalesSeries = await client.query(`
       SELECT
-        DATE_TRUNC('${groupUnit}', ui.acquired_at) AS bucket_time,
+        ${kstBucketExpr('ui.acquired_at')} AS bucket_time,
         COUNT(*) AS purchase_count,
         COUNT(DISTINCT ui.nickname) AS buyer_count,
         COALESCE(SUM(si.price), 0) AS gold_spent
@@ -3787,7 +3788,7 @@ async function getDetailedAdminStats(dateFrom, dateTo, bucket = 'day', options =
 
     const signupSeries = await client.query(`
       SELECT
-        DATE_TRUNC('${groupUnit}', created_at) AS bucket_time,
+        ${kstBucketExpr('created_at')} AS bucket_time,
         COUNT(*) AS total_cnt,
         COUNT(*) FILTER (WHERE LOWER(device_platform) = 'ios') AS ios_cnt,
         COUNT(*) FILTER (WHERE LOWER(device_platform) = 'android') AS android_cnt

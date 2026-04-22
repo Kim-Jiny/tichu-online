@@ -456,7 +456,7 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
               style: TextStyle(
                 fontSize: 12,
                 fontWeight: FontWeight.bold,
-                color: declarerPts >= (bidPoints as num? ?? 13) ? const Color(0xFF2E7D32) : const Color(0xFFE53935),
+                color: declarerPts >= ((bidPoints is num) ? bidPoints.toInt() : 13) ? const Color(0xFF2E7D32) : const Color(0xFFE53935),
               ),
             ),
           ],

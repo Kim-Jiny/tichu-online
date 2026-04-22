@@ -1269,6 +1269,7 @@
   "@mtReturningIn": { "placeholders": { "seconds": {} } },
   "mtReturningToRoom": "Returning to room...",
   "mtScoreHistory": "Score History",
+  "mtRoundAbbr": "R",
   "mtOpposition": "Defense",
   "mtContract": "Contract",
   "mtResult": "Result",

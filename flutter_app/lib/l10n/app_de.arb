@@ -903,6 +903,7 @@
   "mtReturningIn": "Rückkehr in {seconds}...",
   "mtReturningToRoom": "Zurück zum Raum...",
   "mtScoreHistory": "Punkteverlauf",
+  "mtRoundAbbr": "R",
   "mtOpposition": "Verteidigung",
   "mtContract": "Vertrag",
   "mtResult": "Ergebnis",

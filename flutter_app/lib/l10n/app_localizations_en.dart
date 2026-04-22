@@ -2788,6 +2788,10 @@ class L10nEn extends L10n {
   String get mtScoreHistory => 'Score History';
 
   @override
+  @override
+  String get mtRoundAbbr => 'R';
+
+  @override
   String get mtOpposition => 'Defense';
 
   @override

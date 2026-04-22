@@ -5077,6 +5077,12 @@ abstract class L10n {
   ///
   /// In en, this message translates to:
   /// **'Defense'**
+  /// No description provided for @mtRoundAbbr.
+  ///
+  /// In en, this message translates to:
+  /// **'R'**
+  String get mtRoundAbbr;
+
   String get mtOpposition;
 
   /// No description provided for @mtContract.

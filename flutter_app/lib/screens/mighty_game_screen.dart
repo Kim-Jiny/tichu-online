@@ -3024,7 +3024,7 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
                 headingTextStyle: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Color(0xFF5A4038)),
                 dataTextStyle: const TextStyle(fontSize: 11, color: Color(0xFF5A4038)),
                 columns: [
-                  const DataColumn(label: Text('R')),
+                  DataColumn(label: Text(L10n.of(context).mtRoundAbbr)),
                   DataColumn(label: Text(L10n.of(context).mtContract)),
                   DataColumn(label: Text(L10n.of(context).mtResult)),
                   ...state.players.map((p) => DataColumn(

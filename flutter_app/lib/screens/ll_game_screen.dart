@@ -1383,7 +1383,6 @@ class _LLGameScreenState extends State<LLGameScreen> {
     ];
     showModalBottomSheet(
       context: context,
-      backgroundColor: Colors.white,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
       ),
@@ -1902,7 +1901,6 @@ class _LLGameScreenState extends State<LLGameScreen> {
 
             return AlertDialog(
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
-              backgroundColor: const Color(0xFFF8F4F1),
               titlePadding: const EdgeInsets.fromLTRB(18, 18, 18, 0),
               contentPadding: const EdgeInsets.fromLTRB(18, 14, 18, 10),
               title: Container(

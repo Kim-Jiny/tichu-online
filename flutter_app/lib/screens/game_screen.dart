@@ -1083,7 +1083,6 @@ class _GameScreenState extends State<GameScreen> {
 
             return AlertDialog(
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
-              backgroundColor: const Color(0xFFF8F4F1),
               titlePadding: const EdgeInsets.fromLTRB(18, 18, 18, 0),
               contentPadding: const EdgeInsets.fromLTRB(18, 14, 18, 10),
               title: Container(
@@ -1427,7 +1426,6 @@ class _GameScreenState extends State<GameScreen> {
         return AlertDialog(
           insetPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 24),
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
-          backgroundColor: const Color(0xFFF8F4F1),
           titlePadding: const EdgeInsets.fromLTRB(18, 18, 18, 0),
           contentPadding: const EdgeInsets.fromLTRB(18, 14, 18, 10),
           title: Container(

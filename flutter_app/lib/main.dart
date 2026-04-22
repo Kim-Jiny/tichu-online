@@ -52,6 +52,70 @@ void main() async {
   runApp(const TichuApp());
 }
 
+ThemeData _buildTheme() {
+  final colorScheme = ColorScheme.fromSeed(
+    seedColor: const Color(0xFFF28C26),
+    brightness: Brightness.light,
+  );
+  return ThemeData(
+    colorScheme: colorScheme,
+    useMaterial3: true,
+    dialogTheme: DialogThemeData(
+      backgroundColor: colorScheme.surfaceContainerLowest,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      titleTextStyle: TextStyle(
+        fontSize: 18,
+        fontWeight: FontWeight.bold,
+        color: colorScheme.onSurface,
+      ),
+      contentTextStyle: TextStyle(
+        fontSize: 14,
+        color: colorScheme.onSurfaceVariant,
+      ),
+    ),
+    bottomSheetTheme: BottomSheetThemeData(
+      backgroundColor: colorScheme.surfaceContainerLowest,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+      ),
+    ),
+    popupMenuTheme: PopupMenuThemeData(
+      color: colorScheme.surfaceContainerLowest,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+    ),
+    snackBarTheme: SnackBarThemeData(
+      backgroundColor: colorScheme.inverseSurface,
+      contentTextStyle: TextStyle(color: colorScheme.onInverseSurface),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+      behavior: SnackBarBehavior.floating,
+    ),
+    dividerTheme: DividerThemeData(
+      color: colorScheme.outlineVariant,
+    ),
+    listTileTheme: ListTileThemeData(
+      iconColor: colorScheme.onSurfaceVariant,
+      textColor: colorScheme.onSurface,
+    ),
+    textButtonTheme: TextButtonThemeData(
+      style: TextButton.styleFrom(
+        foregroundColor: colorScheme.primary,
+      ),
+    ),
+    filledButtonTheme: FilledButtonThemeData(
+      style: FilledButton.styleFrom(
+        backgroundColor: colorScheme.primary,
+        foregroundColor: colorScheme.onPrimary,
+      ),
+    ),
+    outlinedButtonTheme: OutlinedButtonThemeData(
+      style: OutlinedButton.styleFrom(
+        foregroundColor: colorScheme.primary,
+        side: BorderSide(color: colorScheme.outline),
+      ),
+    ),
+  );
+}
+
 class TichuApp extends StatelessWidget {
   const TichuApp({super.key});
 
@@ -111,13 +175,7 @@ class TichuApp extends StatelessWidget {
               child: child ?? const SizedBox.shrink(),
             );
           },
-          theme: ThemeData(
-            colorScheme: ColorScheme.fromSeed(
-              seedColor: const Color(0xFFF28C26),
-              brightness: Brightness.light,
-            ),
-            useMaterial3: true,
-          ),
+          theme: _buildTheme(),
           home: const _OrientationGate(child: _EntryScreen()),
         ),
       ),

@@ -1411,7 +1411,6 @@ class _SKGameScreenState extends State<SKGameScreen> {
       context: context,
       builder: (ctx) => AlertDialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        backgroundColor: const Color(0xFFF8F4F1),
         title: Text(
           L10n.of(context).skGameLeaveTitle,
           style: const TextStyle(
@@ -2171,7 +2170,6 @@ class _SKGameScreenState extends State<SKGameScreen> {
       builder: (ctx) {
         return AlertDialog(
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
-          backgroundColor: const Color(0xFFF8F4F1),
           titlePadding: const EdgeInsets.fromLTRB(18, 18, 18, 0),
           contentPadding: const EdgeInsets.fromLTRB(18, 14, 18, 12),
           title: Container(
@@ -2856,7 +2854,6 @@ class _SKGameScreenState extends State<SKGameScreen> {
       barrierColor: Colors.black54,
       builder: (ctx) => Dialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
-        backgroundColor: const Color(0xFFF8F4F1),
         child: Padding(
           padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 20),
           child: Column(
@@ -3239,7 +3236,6 @@ class _SKGameScreenState extends State<SKGameScreen> {
 
             return AlertDialog(
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
-              backgroundColor: const Color(0xFFF8F4F1),
               titlePadding: const EdgeInsets.fromLTRB(18, 18, 18, 0),
               contentPadding: const EdgeInsets.fromLTRB(18, 14, 18, 10),
               title: Container(

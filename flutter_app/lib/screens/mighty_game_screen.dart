@@ -285,7 +285,7 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
                     const Icon(Icons.style, size: 14, color: Color(0xFF5A4038)),
                     const SizedBox(width: 5),
                     Text(
-                      'R${state.round} ${_phaseLabel(state.phase)}',
+                      L10n.of(context).mtRoundPhase(state.round.toString(), _phaseLabel(state.phase)),
                       style: const TextStyle(
                         fontSize: 13,
                         fontWeight: FontWeight.bold,
@@ -396,7 +396,7 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
         friendLabel = _friendCardLabel(state.friendCard!);
       }
     } else {
-      friendLabel = 'Solo';
+      friendLabel = L10n.of(context).mtSolo;
     }
 
     return Container(
@@ -408,7 +408,7 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
         border: Border.all(color: const Color(0xFFFFE082)),
       ),
       child: Text(
-        '$declarerName | $bidPoints${bidSuit != null ? _suitSymbol(bidSuit.toString()) : ''} | Friend: $friendLabel',
+        '$declarerName | $bidPoints${bidSuit != null ? _suitSymbol(bidSuit.toString()) : ''} | ${L10n.of(context).mtFriendLabel(friendLabel)}',
         style: const TextStyle(fontSize: 10, fontWeight: FontWeight.w600, color: Color(0xFF5A4038)),
         textAlign: TextAlign.center,
         maxLines: 1,
@@ -542,8 +542,8 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
               ),
               child: Row(
                 children: [
-                  const Text(
-                    'Chat',
+                  Text(
+                    L10n.of(context).mtChat,
                     style: TextStyle(
                       color: Colors.white,
                       fontWeight: FontWeight.bold,
@@ -590,10 +590,10 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
                   Expanded(
                     child: TextField(
                       controller: _chatController,
-                      decoration: const InputDecoration(
-                        hintText: 'Type a message...',
+                      decoration: InputDecoration(
+                        hintText: L10n.of(context).mtTypeMessage,
                         border: InputBorder.none,
-                        contentPadding: EdgeInsets.symmetric(horizontal: 12),
+                        contentPadding: const EdgeInsets.symmetric(horizontal: 12),
                       ),
                       style: const TextStyle(fontSize: 14),
                       onSubmitted: (_) => _sendChatMessage(game),
@@ -668,16 +668,16 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('Leave Game?'),
-        content: const Text('Are you sure you want to leave?'),
+        title: Text(L10n.of(context).mtLeaveGame),
+        content: Text(L10n.of(context).mtLeaveConfirm),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancel')),
+          TextButton(onPressed: () => Navigator.pop(ctx), child: Text(L10n.of(context).mtCancel)),
           TextButton(
             onPressed: () {
               Navigator.pop(ctx);
               game.leaveRoom();
             },
-            child: const Text('Leave', style: TextStyle(color: Colors.red)),
+            child: Text(L10n.of(context).mtLeave, style: const TextStyle(color: Colors.red)),
           ),
         ],
       ),
@@ -769,9 +769,9 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
                           SizedBox(
                             height: 14,
                             child: isDeclarer
-                                ? const Text('주공', style: TextStyle(fontSize: 9, fontWeight: FontWeight.w800, color: Color(0xFFFF8A00)))
+                                ? Text(L10n.of(context).mtDeclarer, style: const TextStyle(fontSize: 9, fontWeight: FontWeight.w800, color: Color(0xFFFF8A00)))
                                 : isPartner
-                                    ? const Text('프렌드', style: TextStyle(fontSize: 9, fontWeight: FontWeight.w800, color: Color(0xFF4CAF50)))
+                                    ? Text(L10n.of(context).mtFriend, style: const TextStyle(fontSize: 9, fontWeight: FontWeight.w800, color: Color(0xFF4CAF50)))
                                     : null,
                           ),
                           Row(
@@ -909,9 +909,9 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: Text('${p.name} - Point Cards (${p.pointCount}P)', style: const TextStyle(fontSize: 15)),
+        title: Text(L10n.of(context).mtPointCardsTitle(p.name, p.pointCount), style: const TextStyle(fontSize: 15)),
         content: p.pointCards.isEmpty
-            ? const Text('No point cards yet')
+            ? Text(L10n.of(context).mtNoPointCards)
             : Wrap(
                 spacing: 6,
                 runSpacing: 6,
@@ -923,7 +923,7 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
                 )).toList(),
               ),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Close')),
+          TextButton(onPressed: () => Navigator.pop(ctx), child: Text(L10n.of(context).mtClose)),
         ],
       ),
     );
@@ -946,7 +946,7 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
               const Icon(Icons.style, size: 20, color: Color(0xFF8A7A72)),
               const SizedBox(height: 4),
               Text(
-                state.isMyTurn ? 'Your turn' : 'Waiting...',
+                state.isMyTurn ? L10n.of(context).mtYourTurn : L10n.of(context).mtWaiting,
                 style: const TextStyle(
                   fontSize: 13,
                   fontWeight: FontWeight.bold,
@@ -984,7 +984,7 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
           mainAxisSize: MainAxisSize.min,
           children: [
             Text(
-              '${state.currentTrick.length}/${state.players.length} played',
+              L10n.of(context).mtPlayed(state.currentTrick.length, state.players.length),
               style: const TextStyle(
                 fontSize: 14,
                 fontWeight: FontWeight.w800,
@@ -996,8 +996,8 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
                 padding: const EdgeInsets.only(top: 4),
                 child: Text(
                   state.friendRevealed && state.partner != null
-                      ? 'Friend: ${_friendCardLabel(state.friendCard!)} \u2192 ${state.players.where((p) => p.id == state.partner).map((p) => p.name).firstOrNull ?? ''}'
-                      : 'Friend: ${_friendCardLabel(state.friendCard!)}',
+                      ? L10n.of(context).mtFriendRevealed(_friendCardLabel(state.friendCard!), state.players.where((p) => p.id == state.partner).map((p) => p.name).firstOrNull ?? '')
+                      : L10n.of(context).mtFriendHidden(_friendCardLabel(state.friendCard!)),
                   style: const TextStyle(fontSize: 11, color: Color(0xFF8A7A72)),
                 ),
               ),
@@ -1030,7 +1030,7 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
                 borderRadius: BorderRadius.circular(8),
               ),
               child: Text(
-                '$winnerName wins!',
+                L10n.of(context).mtWins(winnerName),
                 style: const TextStyle(
                   fontSize: 14,
                   fontWeight: FontWeight.w800,
@@ -1043,8 +1043,8 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
                 padding: const EdgeInsets.only(top: 6),
                 child: Text(
                   state.friendRevealed && state.partner != null
-                      ? 'Friend: ${_friendCardLabel(state.friendCard!)} \u2192 ${state.players.where((p) => p.id == state.partner).map((p) => p.name).firstOrNull ?? ''}'
-                      : 'Friend: ${_friendCardLabel(state.friendCard!)}',
+                      ? L10n.of(context).mtFriendRevealed(_friendCardLabel(state.friendCard!), state.players.where((p) => p.id == state.partner).map((p) => p.name).firstOrNull ?? '')
+                      : L10n.of(context).mtFriendHidden(_friendCardLabel(state.friendCard!)),
                   style: const TextStyle(fontSize: 11, color: Color(0xFF8A7A72)),
                 ),
               ),
@@ -1078,7 +1078,7 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
                 border: Border.all(color: const Color(0xFFFFE082)),
               ),
               child: Text(
-                'Current bid: ${state.currentBid['points']} ${_suitLabel(state.currentBid['suit'])}',
+                L10n.of(context).mtCurrentBid(state.currentBid['points'].toString(), _suitLabel(state.currentBid['suit'])),
                 style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: Color(0xFF5A4038)),
               ),
             ),
@@ -1090,7 +1090,7 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
                   .map((p) => p.name)
                   .firstOrNull ?? e.key;
               final bidText = e.value == 'pass'
-                  ? 'Pass'
+                  ? L10n.of(context).mtPass
                   : e.value is Map
                     ? '${e.value['points']} ${_suitLabel(e.value['suit'])}'
                     : '${e.value}';
@@ -1130,7 +1130,7 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
                 });
                 return Row(
                   children: [
-                    const Text('Points:', style: TextStyle(fontSize: 12, color: Color(0xFF5A4038))),
+                    Text(L10n.of(context).mtPoints, style: const TextStyle(fontSize: 12, color: Color(0xFF5A4038))),
                     const Spacer(),
                     Container(
                       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
@@ -1192,7 +1192,7 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
                       backgroundColor: const Color(0xFF1565C0),
                       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                     ),
-                    child: Text('Bid $_bidPoints ${_suitLabel(_bidSuit)}'),
+                    child: Text(L10n.of(context).mtBid(_bidPoints, _suitLabel(_bidSuit))),
                   ),
                 ),
                 const SizedBox(width: 8),
@@ -1201,7 +1201,7 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
                   style: OutlinedButton.styleFrom(
                     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                   ),
-                  child: const Text('Pass'),
+                  child: Text(L10n.of(context).mtPass),
                 ),
               ],
             ),
@@ -1209,7 +1209,7 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
             Padding(
               padding: const EdgeInsets.all(8),
               child: Text(
-                'Waiting for ${state.players.where((p) => p.id == state.currentPlayer).map((p) => p.name).firstOrNull ?? "..."}',
+                L10n.of(context).mtWaitingFor(state.players.where((p) => p.id == state.currentPlayer).map((p) => p.name).firstOrNull ?? '...'),
                 style: const TextStyle(fontSize: 13, color: Color(0xFF8A7A72)),
               ),
             ),
@@ -1255,8 +1255,8 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
             color: Colors.white.withValues(alpha: 0.7),
             borderRadius: BorderRadius.circular(16),
           ),
-          child: const Text(
-            'Declarer is exchanging kitty...',
+          child: Text(
+            L10n.of(context).mtExchangingKitty,
             style: TextStyle(fontSize: 14, color: Color(0xFF5A4038)),
           ),
         ),
@@ -1282,8 +1282,8 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
                     children: [
                       const Icon(Icons.swap_horiz, size: 18, color: Color(0xFF5A4038)),
                       const SizedBox(width: 6),
-                      const Text(
-                        'Discard 3 cards',
+                      Text(
+                        L10n.of(context).mtDiscard3,
                         style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: Color(0xFF5A4038)),
                       ),
                       const Spacer(),
@@ -1305,17 +1305,17 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
                     ],
                   ),
                   const SizedBox(height: 12),
-                  const Text('Friend:', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Color(0xFF5A4038))),
+                  Text(L10n.of(context).mtFriendColon, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Color(0xFF5A4038))),
                   const SizedBox(height: 6),
                   // Step 1: Friend mode
                   Wrap(
                     spacing: 6,
                     runSpacing: 6,
                     children: [
-                      _buildFriendModeChip('no_friend', 'No Friend'),
-                      _buildFriendModeChip('first_trick', '1st Trick'),
-                      _buildFriendModeChip('joker', 'Joker'),
-                      _buildFriendModeChip('card', 'Card'),
+                      _buildFriendModeChip('no_friend', L10n.of(context).mtNoFriend),
+                      _buildFriendModeChip('first_trick', L10n.of(context).mt1stTrick),
+                      _buildFriendModeChip('joker', L10n.of(context).mtJoker),
+                      _buildFriendModeChip('card', L10n.of(context).mtCard),
                     ],
                   ),
                   // Step 2: If card mode, pick suit + rank
@@ -1423,7 +1423,7 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
                         backgroundColor: const Color(0xFF1565C0),
                         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                       ),
-                      child: const Text('Confirm'),
+                      child: Text(L10n.of(context).mtConfirm),
                     ),
                   ),
                 ],
@@ -1542,7 +1542,7 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
                   ),
                   icon: const Icon(Icons.play_arrow, size: 20),
                   label: Text(
-                    _remainingSeconds > 0 ? 'Play (${_remainingSeconds}s)' : 'Play',
+                    _remainingSeconds > 0 ? L10n.of(context).mtPlayTimer(_remainingSeconds) : L10n.of(context).mtPlay,
                     style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
                   ),
                 ),
@@ -1554,8 +1554,8 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  const Text(
-                    'Select a card',
+                  Text(
+                    L10n.of(context).mtSelectCard,
                     style: TextStyle(color: Color(0xFF5A4038), fontSize: 14, fontWeight: FontWeight.bold),
                   ),
                   if (_remainingSeconds > 0) ...[
@@ -1588,7 +1588,7 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
                     const Icon(Icons.warning_amber_rounded, size: 16, color: Color(0xFFE65100)),
                     const SizedBox(width: 6),
                     Text(
-                      state.tricks.isEmpty ? 'Joker loses on 1st trick!' : 'Joker loses on last trick!',
+                      state.tricks.isEmpty ? L10n.of(context).mtJokerLoses1st : L10n.of(context).mtJokerLosesLast,
                       style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Color(0xFFE65100)),
                     ),
                   ],
@@ -1730,7 +1730,7 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
       child: Row(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          const Text('Joker suit: ', style: TextStyle(fontSize: 12, color: Color(0xFF5A4038))),
+          Text(L10n.of(context).mtJokerSuit, style: const TextStyle(fontSize: 12, color: Color(0xFF5A4038))),
           ...[
             ('spade', '\u2660', const Color(0xFF2B2B2B)),
             ('heart', '\u2665', const Color(0xFFD24B4B)),
@@ -1779,7 +1779,7 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
               border: Border.all(color: const Color(0xFFE7DBD4)),
             ),
             child: Text(
-              'Round ${state.round} Result',
+              L10n.of(context).mtRoundResult(state.round),
               style: const TextStyle(color: Color(0xFF5A4038), fontSize: 16, fontWeight: FontWeight.w800),
             ),
           ),
@@ -1792,7 +1792,7 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
                 borderRadius: BorderRadius.circular(8),
               ),
               child: Text(
-                result['success'] == true ? 'Declarer wins! (${result['declarerPoints']}P)' : 'Declarer fails (${result['declarerPoints']}P)',
+                result['success'] == true ? L10n.of(context).mtDeclarerWins(result['declarerPoints']) : L10n.of(context).mtDeclarerFails(result['declarerPoints']),
                 style: TextStyle(
                   fontSize: 13,
                   fontWeight: FontWeight.bold,
@@ -1838,7 +1838,7 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
             );
           }),
           const SizedBox(height: 8),
-          const Text('Next round preparing...', style: TextStyle(color: Color(0xFF8A7A72), fontSize: 12)),
+          Text(L10n.of(context).mtNextRound, style: const TextStyle(color: Color(0xFF8A7A72), fontSize: 12)),
         ],
       ),
     );
@@ -1867,7 +1867,7 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
               borderRadius: BorderRadius.circular(12),
               border: Border.all(color: const Color(0xFFE7DBD4)),
             ),
-            child: const Text('Game Over', style: TextStyle(color: Color(0xFF5A4038), fontSize: 18, fontWeight: FontWeight.w800)),
+            child: Text(L10n.of(context).mtGameOver, style: const TextStyle(color: Color(0xFF5A4038), fontSize: 18, fontWeight: FontWeight.w800)),
           ),
           const SizedBox(height: 16),
           ...sorted.asMap().entries.map((entry) {
@@ -1915,7 +1915,7 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
               border: Border.all(color: const Color(0xFFC7DCF8)),
             ),
             child: Text(
-              _gameEndCountdown > 0 ? 'Returning in $_gameEndCountdown...' : 'Returning to room...',
+              _gameEndCountdown > 0 ? L10n.of(context).mtReturningIn(_gameEndCountdown) : L10n.of(context).mtReturningToRoom,
               textAlign: TextAlign.center,
               style: const TextStyle(color: Color(0xFF355D89), fontSize: 14, fontWeight: FontWeight.w700),
             ),
@@ -1945,13 +1945,14 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
 
   // ── Helpers ──
   String _phaseLabel(String phase) {
+    final l10n = L10n.of(context);
     switch (phase) {
-      case 'bidding': return 'Bidding';
-      case 'kitty_exchange': return 'Kitty';
-      case 'playing': return 'Playing';
-      case 'trick_end': return 'Playing';
-      case 'round_end': return 'Round End';
-      case 'game_end': return 'Game End';
+      case 'bidding': return l10n.mtPhaseBidding;
+      case 'kitty_exchange': return l10n.mtPhaseKitty;
+      case 'playing': return l10n.mtPhasePlaying;
+      case 'trick_end': return l10n.mtPhasePlaying;
+      case 'round_end': return l10n.mtPhaseRoundEnd;
+      case 'game_end': return l10n.mtPhaseGameEnd;
       default: return phase;
     }
   }
@@ -1973,9 +1974,10 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
   }
 
   String _friendCardLabel(String cardId) {
-    if (cardId == 'mighty_joker') return 'Joker';
-    if (cardId == 'no_friend') return 'Solo';
-    if (cardId == 'first_trick') return '1st Trick';
+    final l10n = L10n.of(context);
+    if (cardId == 'mighty_joker') return l10n.mtFriendCardJoker;
+    if (cardId == 'no_friend') return l10n.mtFriendCardSolo;
+    if (cardId == 'first_trick') return l10n.mtFriendCard1st;
     final parts = cardId.replaceFirst('mighty_', '').split('_');
     if (parts.length == 2) return '${_suitSymbol(parts[0])}${parts[1]}';
     return cardId;
@@ -1990,7 +1992,7 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
   }
 
   String _miniCardLabel(String cardId) {
-    if (cardId == 'mighty_joker') return 'JK';
+    if (cardId == 'mighty_joker') return L10n.of(context).mtJokerAbbr;
     final stripped = cardId.replaceFirst('mighty_', '');
     final parts = stripped.split('_');
     if (parts.length == 2) return '${_suitSymbol(parts[0])}${parts[1]}';
@@ -2019,7 +2021,7 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
       child: Row(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          const Text('Joker Call: ', style: TextStyle(fontSize: 12, color: Color(0xFF5A4038))),
+          Text(L10n.of(context).mtJokerCall, style: const TextStyle(fontSize: 12, color: Color(0xFF5A4038))),
           GestureDetector(
             onTap: () => setState(() => _jokerCallChoice = true),
             child: Container(
@@ -2033,7 +2035,7 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
                   width: _jokerCallChoice ? 2 : 1,
                 ),
               ),
-              child: Text('Yes', style: TextStyle(
+              child: Text(L10n.of(context).mtYes, style: TextStyle(
                 fontSize: 13,
                 fontWeight: _jokerCallChoice ? FontWeight.bold : FontWeight.normal,
                 color: _jokerCallChoice ? const Color(0xFF4CAF50) : const Color(0xFF5A4038),
@@ -2053,7 +2055,7 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
                   width: !_jokerCallChoice ? 2 : 1,
                 ),
               ),
-              child: Text('No', style: TextStyle(
+              child: Text(L10n.of(context).mtNo, style: TextStyle(
                 fontSize: 13,
                 fontWeight: !_jokerCallChoice ? FontWeight.bold : FontWeight.normal,
                 color: !_jokerCallChoice ? const Color(0xFFE53935) : const Color(0xFF5A4038),
@@ -2073,7 +2075,7 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('Score History', style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold)),
+        title: Text(L10n.of(context).mtScoreHistory, style: const TextStyle(fontSize: 15, fontWeight: FontWeight.bold)),
         content: SizedBox(
           width: double.maxFinite,
           child: ListView.builder(
@@ -2147,7 +2149,7 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
                     Text(
                       partnerName != null
                           ? '$declarerName + $partnerName'
-                          : '$declarerName (solo)',
+                          : '$declarerName ${L10n.of(context).mtSoloSuffix}',
                       style: const TextStyle(fontSize: 11, color: Color(0xFF5A4038)),
                     ),
                     const SizedBox(height: 6),
@@ -2187,7 +2189,7 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
           ),
         ),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Close')),
+          TextButton(onPressed: () => Navigator.pop(ctx), child: Text(L10n.of(context).mtClose)),
         ],
       ),
     );

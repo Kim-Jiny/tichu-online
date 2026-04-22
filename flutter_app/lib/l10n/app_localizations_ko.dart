@@ -2496,6 +2496,216 @@ class L10nKo extends L10n {
       '13트릭이 모두 끝나면, 주공팀이 모은 점수 카드를 셉니다.\n\n• 비딩 이상 달성 → 주공팀 승리.\n• 비딩 미달 → 수비팀 승리.\n\n여러 라운드에 걸쳐 점수를 누적하며, 세션 종료 시 가장 높은 점수의 플레이어가 최종 승리합니다.';
 
   @override
+  String get mtPhaseBidding => '비딩';
+
+  @override
+  String get mtPhaseKitty => '키티';
+
+  @override
+  String get mtPhasePlaying => '플레이';
+
+  @override
+  String get mtPhaseRoundEnd => '라운드 종료';
+
+  @override
+  String get mtPhaseGameEnd => '게임 종료';
+
+  @override
+  String mtRoundPhase(Object round, Object phase) {
+    return 'R$round $phase';
+  }
+
+  @override
+  String get mtSolo => '노프렌드';
+
+  @override
+  String mtFriendLabel(Object label) {
+    return '프렌드: $label';
+  }
+
+  @override
+  String get mtChat => '채팅';
+
+  @override
+  String get mtTypeMessage => '메시지를 입력하세요...';
+
+  @override
+  String get mtLeaveGame => '게임 나가기';
+
+  @override
+  String get mtLeaveConfirm => '정말 나가시겠습니까?';
+
+  @override
+  String get mtCancel => '취소';
+
+  @override
+  String get mtLeave => '나가기';
+
+  @override
+  String get mtDeclarer => '주공';
+
+  @override
+  String get mtFriend => '프렌드';
+
+  @override
+  String mtPointCardsTitle(Object name, Object count) {
+    return '$name - 점수 카드 (${count}P)';
+  }
+
+  @override
+  String get mtNoPointCards => '아직 점수 카드가 없습니다';
+
+  @override
+  String get mtClose => '닫기';
+
+  @override
+  String get mtYourTurn => '내 차례';
+
+  @override
+  String get mtWaiting => '대기 중...';
+
+  @override
+  String mtPlayed(Object current, Object total) {
+    return '$current/$total 플레이';
+  }
+
+  @override
+  String mtFriendRevealed(Object card, Object name) {
+    return '프렌드: $card → $name';
+  }
+
+  @override
+  String mtFriendHidden(Object card) {
+    return '프렌드: $card';
+  }
+
+  @override
+  String mtWins(Object name) {
+    return '$name 승리!';
+  }
+
+  @override
+  String mtCurrentBid(Object points, Object suit) {
+    return '현재 비딩: $points $suit';
+  }
+
+  @override
+  String get mtPass => '패스';
+
+  @override
+  String get mtPoints => '점수:';
+
+  @override
+  String mtBid(Object points, Object suit) {
+    return '비딩 $points $suit';
+  }
+
+  @override
+  String mtWaitingFor(Object name) {
+    return '$name 대기 중';
+  }
+
+  @override
+  String get mtExchangingKitty => '주공이 키티를 교환 중...';
+
+  @override
+  String get mtDiscard3 => '3장 버리기';
+
+  @override
+  String get mtFriendColon => '프렌드:';
+
+  @override
+  String get mtNoFriend => '노프렌드';
+
+  @override
+  String get mt1stTrick => '초구';
+
+  @override
+  String get mtJoker => '조커';
+
+  @override
+  String get mtCard => '카드';
+
+  @override
+  String get mtConfirm => '확인';
+
+  @override
+  String mtPlayTimer(Object seconds) {
+    return '내기 ($seconds초)';
+  }
+
+  @override
+  String get mtPlay => '내기';
+
+  @override
+  String get mtSelectCard => '카드를 선택하세요';
+
+  @override
+  String get mtJokerLoses1st => '첫 트릭에서 조커가 집니다!';
+
+  @override
+  String get mtJokerLosesLast => '마지막 트릭에서 조커가 집니다!';
+
+  @override
+  String get mtJokerSuit => '조커 문양: ';
+
+  @override
+  String get mtJokerCall => '조커콜: ';
+
+  @override
+  String get mtYes => '예';
+
+  @override
+  String get mtNo => '아니오';
+
+  @override
+  String mtRoundResult(Object round) {
+    return '라운드 $round 결과';
+  }
+
+  @override
+  String mtDeclarerWins(Object points) {
+    return '주공 승리! (${points}P)';
+  }
+
+  @override
+  String mtDeclarerFails(Object points) {
+    return '주공 실패 (${points}P)';
+  }
+
+  @override
+  String get mtNextRound => '다음 라운드 준비 중...';
+
+  @override
+  String get mtGameOver => '게임 종료';
+
+  @override
+  String mtReturningIn(Object seconds) {
+    return '$seconds초 후 복귀...';
+  }
+
+  @override
+  String get mtReturningToRoom => '방으로 돌아가는 중...';
+
+  @override
+  String get mtScoreHistory => '점수 기록';
+
+  @override
+  String get mtSoloSuffix => '(노프렌드)';
+
+  @override
+  String get mtFriendCardJoker => '조커';
+
+  @override
+  String get mtFriendCardSolo => '노프렌드';
+
+  @override
+  String get mtFriendCard1st => '초구';
+
+  @override
+  String get mtJokerAbbr => 'JK';
+
+  @override
   String get friendsTitle => '친구';
 
   @override

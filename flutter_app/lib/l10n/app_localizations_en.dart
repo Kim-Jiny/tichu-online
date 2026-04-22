@@ -2557,6 +2557,216 @@ class L10nEn extends L10n {
       'After all 13 tricks are played, count the point cards collected by the declarer\'s team.\n\n• If they meet or exceed the bid → Declarer team wins.\n• If they fall short → Defence team wins.\n\nScores are accumulated over multiple rounds. The player with the highest score at the end of the session wins.';
 
   @override
+  String get mtPhaseBidding => 'Bidding';
+
+  @override
+  String get mtPhaseKitty => 'Kitty';
+
+  @override
+  String get mtPhasePlaying => 'Playing';
+
+  @override
+  String get mtPhaseRoundEnd => 'Round End';
+
+  @override
+  String get mtPhaseGameEnd => 'Game End';
+
+  @override
+  String mtRoundPhase(Object round, Object phase) {
+    return 'R$round $phase';
+  }
+
+  @override
+  String get mtSolo => 'Solo';
+
+  @override
+  String mtFriendLabel(Object label) {
+    return 'Friend: $label';
+  }
+
+  @override
+  String get mtChat => 'Chat';
+
+  @override
+  String get mtTypeMessage => 'Type a message...';
+
+  @override
+  String get mtLeaveGame => 'Leave Game?';
+
+  @override
+  String get mtLeaveConfirm => 'Are you sure you want to leave?';
+
+  @override
+  String get mtCancel => 'Cancel';
+
+  @override
+  String get mtLeave => 'Leave';
+
+  @override
+  String get mtDeclarer => 'Declarer';
+
+  @override
+  String get mtFriend => 'Friend';
+
+  @override
+  String mtPointCardsTitle(Object name, Object count) {
+    return '$name - Point Cards (${count}P)';
+  }
+
+  @override
+  String get mtNoPointCards => 'No point cards yet';
+
+  @override
+  String get mtClose => 'Close';
+
+  @override
+  String get mtYourTurn => 'Your turn';
+
+  @override
+  String get mtWaiting => 'Waiting...';
+
+  @override
+  String mtPlayed(Object current, Object total) {
+    return '$current/$total played';
+  }
+
+  @override
+  String mtFriendRevealed(Object card, Object name) {
+    return 'Friend: $card → $name';
+  }
+
+  @override
+  String mtFriendHidden(Object card) {
+    return 'Friend: $card';
+  }
+
+  @override
+  String mtWins(Object name) {
+    return '$name wins!';
+  }
+
+  @override
+  String mtCurrentBid(Object points, Object suit) {
+    return 'Current bid: $points $suit';
+  }
+
+  @override
+  String get mtPass => 'Pass';
+
+  @override
+  String get mtPoints => 'Points:';
+
+  @override
+  String mtBid(Object points, Object suit) {
+    return 'Bid $points $suit';
+  }
+
+  @override
+  String mtWaitingFor(Object name) {
+    return 'Waiting for $name';
+  }
+
+  @override
+  String get mtExchangingKitty => 'Declarer is exchanging kitty...';
+
+  @override
+  String get mtDiscard3 => 'Discard 3 cards';
+
+  @override
+  String get mtFriendColon => 'Friend:';
+
+  @override
+  String get mtNoFriend => 'No Friend';
+
+  @override
+  String get mt1stTrick => '1st Trick';
+
+  @override
+  String get mtJoker => 'Joker';
+
+  @override
+  String get mtCard => 'Card';
+
+  @override
+  String get mtConfirm => 'Confirm';
+
+  @override
+  String mtPlayTimer(Object seconds) {
+    return 'Play (${seconds}s)';
+  }
+
+  @override
+  String get mtPlay => 'Play';
+
+  @override
+  String get mtSelectCard => 'Select a card';
+
+  @override
+  String get mtJokerLoses1st => 'Joker loses on 1st trick!';
+
+  @override
+  String get mtJokerLosesLast => 'Joker loses on last trick!';
+
+  @override
+  String get mtJokerSuit => 'Joker suit: ';
+
+  @override
+  String get mtJokerCall => 'Joker Call: ';
+
+  @override
+  String get mtYes => 'Yes';
+
+  @override
+  String get mtNo => 'No';
+
+  @override
+  String mtRoundResult(Object round) {
+    return 'Round $round Result';
+  }
+
+  @override
+  String mtDeclarerWins(Object points) {
+    return 'Declarer wins! (${points}P)';
+  }
+
+  @override
+  String mtDeclarerFails(Object points) {
+    return 'Declarer fails (${points}P)';
+  }
+
+  @override
+  String get mtNextRound => 'Next round preparing...';
+
+  @override
+  String get mtGameOver => 'Game Over';
+
+  @override
+  String mtReturningIn(Object seconds) {
+    return 'Returning in $seconds...';
+  }
+
+  @override
+  String get mtReturningToRoom => 'Returning to room...';
+
+  @override
+  String get mtScoreHistory => 'Score History';
+
+  @override
+  String get mtSoloSuffix => '(solo)';
+
+  @override
+  String get mtFriendCardJoker => 'Joker';
+
+  @override
+  String get mtFriendCardSolo => 'Solo';
+
+  @override
+  String get mtFriendCard1st => '1st Trick';
+
+  @override
+  String get mtJokerAbbr => 'JK';
+
+  @override
   String get friendsTitle => 'Friends';
 
   @override

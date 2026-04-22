@@ -4683,6 +4683,366 @@ abstract class L10n {
   /// **'After all 13 tricks are played, count the point cards collected by the declarer\'s team.\n\n• If they meet or exceed the bid → Declarer team wins.\n• If they fall short → Defence team wins.\n\nScores are accumulated over multiple rounds. The player with the highest score at the end of the session wins.'**
   String get rulesMtWinBody;
 
+  /// No description provided for @mtPhaseBidding.
+  ///
+  /// In en, this message translates to:
+  /// **'Bidding'**
+  String get mtPhaseBidding;
+
+  /// No description provided for @mtPhaseKitty.
+  ///
+  /// In en, this message translates to:
+  /// **'Kitty'**
+  String get mtPhaseKitty;
+
+  /// No description provided for @mtPhasePlaying.
+  ///
+  /// In en, this message translates to:
+  /// **'Playing'**
+  String get mtPhasePlaying;
+
+  /// No description provided for @mtPhaseRoundEnd.
+  ///
+  /// In en, this message translates to:
+  /// **'Round End'**
+  String get mtPhaseRoundEnd;
+
+  /// No description provided for @mtPhaseGameEnd.
+  ///
+  /// In en, this message translates to:
+  /// **'Game End'**
+  String get mtPhaseGameEnd;
+
+  /// No description provided for @mtRoundPhase.
+  ///
+  /// In en, this message translates to:
+  /// **'R{round} {phase}'**
+  String mtRoundPhase(Object round, Object phase);
+
+  /// No description provided for @mtSolo.
+  ///
+  /// In en, this message translates to:
+  /// **'Solo'**
+  String get mtSolo;
+
+  /// No description provided for @mtFriendLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Friend: {label}'**
+  String mtFriendLabel(Object label);
+
+  /// No description provided for @mtChat.
+  ///
+  /// In en, this message translates to:
+  /// **'Chat'**
+  String get mtChat;
+
+  /// No description provided for @mtTypeMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'Type a message...'**
+  String get mtTypeMessage;
+
+  /// No description provided for @mtLeaveGame.
+  ///
+  /// In en, this message translates to:
+  /// **'Leave Game?'**
+  String get mtLeaveGame;
+
+  /// No description provided for @mtLeaveConfirm.
+  ///
+  /// In en, this message translates to:
+  /// **'Are you sure you want to leave?'**
+  String get mtLeaveConfirm;
+
+  /// No description provided for @mtCancel.
+  ///
+  /// In en, this message translates to:
+  /// **'Cancel'**
+  String get mtCancel;
+
+  /// No description provided for @mtLeave.
+  ///
+  /// In en, this message translates to:
+  /// **'Leave'**
+  String get mtLeave;
+
+  /// No description provided for @mtDeclarer.
+  ///
+  /// In en, this message translates to:
+  /// **'Declarer'**
+  String get mtDeclarer;
+
+  /// No description provided for @mtFriend.
+  ///
+  /// In en, this message translates to:
+  /// **'Friend'**
+  String get mtFriend;
+
+  /// No description provided for @mtPointCardsTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'{name} - Point Cards ({count}P)'**
+  String mtPointCardsTitle(Object name, Object count);
+
+  /// No description provided for @mtNoPointCards.
+  ///
+  /// In en, this message translates to:
+  /// **'No point cards yet'**
+  String get mtNoPointCards;
+
+  /// No description provided for @mtClose.
+  ///
+  /// In en, this message translates to:
+  /// **'Close'**
+  String get mtClose;
+
+  /// No description provided for @mtYourTurn.
+  ///
+  /// In en, this message translates to:
+  /// **'Your turn'**
+  String get mtYourTurn;
+
+  /// No description provided for @mtWaiting.
+  ///
+  /// In en, this message translates to:
+  /// **'Waiting...'**
+  String get mtWaiting;
+
+  /// No description provided for @mtPlayed.
+  ///
+  /// In en, this message translates to:
+  /// **'{current}/{total} played'**
+  String mtPlayed(Object current, Object total);
+
+  /// No description provided for @mtFriendRevealed.
+  ///
+  /// In en, this message translates to:
+  /// **'Friend: {card} → {name}'**
+  String mtFriendRevealed(Object card, Object name);
+
+  /// No description provided for @mtFriendHidden.
+  ///
+  /// In en, this message translates to:
+  /// **'Friend: {card}'**
+  String mtFriendHidden(Object card);
+
+  /// No description provided for @mtWins.
+  ///
+  /// In en, this message translates to:
+  /// **'{name} wins!'**
+  String mtWins(Object name);
+
+  /// No description provided for @mtCurrentBid.
+  ///
+  /// In en, this message translates to:
+  /// **'Current bid: {points} {suit}'**
+  String mtCurrentBid(Object points, Object suit);
+
+  /// No description provided for @mtPass.
+  ///
+  /// In en, this message translates to:
+  /// **'Pass'**
+  String get mtPass;
+
+  /// No description provided for @mtPoints.
+  ///
+  /// In en, this message translates to:
+  /// **'Points:'**
+  String get mtPoints;
+
+  /// No description provided for @mtBid.
+  ///
+  /// In en, this message translates to:
+  /// **'Bid {points} {suit}'**
+  String mtBid(Object points, Object suit);
+
+  /// No description provided for @mtWaitingFor.
+  ///
+  /// In en, this message translates to:
+  /// **'Waiting for {name}'**
+  String mtWaitingFor(Object name);
+
+  /// No description provided for @mtExchangingKitty.
+  ///
+  /// In en, this message translates to:
+  /// **'Declarer is exchanging kitty...'**
+  String get mtExchangingKitty;
+
+  /// No description provided for @mtDiscard3.
+  ///
+  /// In en, this message translates to:
+  /// **'Discard 3 cards'**
+  String get mtDiscard3;
+
+  /// No description provided for @mtFriendColon.
+  ///
+  /// In en, this message translates to:
+  /// **'Friend:'**
+  String get mtFriendColon;
+
+  /// No description provided for @mtNoFriend.
+  ///
+  /// In en, this message translates to:
+  /// **'No Friend'**
+  String get mtNoFriend;
+
+  /// No description provided for @mt1stTrick.
+  ///
+  /// In en, this message translates to:
+  /// **'1st Trick'**
+  String get mt1stTrick;
+
+  /// No description provided for @mtJoker.
+  ///
+  /// In en, this message translates to:
+  /// **'Joker'**
+  String get mtJoker;
+
+  /// No description provided for @mtCard.
+  ///
+  /// In en, this message translates to:
+  /// **'Card'**
+  String get mtCard;
+
+  /// No description provided for @mtConfirm.
+  ///
+  /// In en, this message translates to:
+  /// **'Confirm'**
+  String get mtConfirm;
+
+  /// No description provided for @mtPlayTimer.
+  ///
+  /// In en, this message translates to:
+  /// **'Play ({seconds}s)'**
+  String mtPlayTimer(Object seconds);
+
+  /// No description provided for @mtPlay.
+  ///
+  /// In en, this message translates to:
+  /// **'Play'**
+  String get mtPlay;
+
+  /// No description provided for @mtSelectCard.
+  ///
+  /// In en, this message translates to:
+  /// **'Select a card'**
+  String get mtSelectCard;
+
+  /// No description provided for @mtJokerLoses1st.
+  ///
+  /// In en, this message translates to:
+  /// **'Joker loses on 1st trick!'**
+  String get mtJokerLoses1st;
+
+  /// No description provided for @mtJokerLosesLast.
+  ///
+  /// In en, this message translates to:
+  /// **'Joker loses on last trick!'**
+  String get mtJokerLosesLast;
+
+  /// No description provided for @mtJokerSuit.
+  ///
+  /// In en, this message translates to:
+  /// **'Joker suit: '**
+  String get mtJokerSuit;
+
+  /// No description provided for @mtJokerCall.
+  ///
+  /// In en, this message translates to:
+  /// **'Joker Call: '**
+  String get mtJokerCall;
+
+  /// No description provided for @mtYes.
+  ///
+  /// In en, this message translates to:
+  /// **'Yes'**
+  String get mtYes;
+
+  /// No description provided for @mtNo.
+  ///
+  /// In en, this message translates to:
+  /// **'No'**
+  String get mtNo;
+
+  /// No description provided for @mtRoundResult.
+  ///
+  /// In en, this message translates to:
+  /// **'Round {round} Result'**
+  String mtRoundResult(Object round);
+
+  /// No description provided for @mtDeclarerWins.
+  ///
+  /// In en, this message translates to:
+  /// **'Declarer wins! ({points}P)'**
+  String mtDeclarerWins(Object points);
+
+  /// No description provided for @mtDeclarerFails.
+  ///
+  /// In en, this message translates to:
+  /// **'Declarer fails ({points}P)'**
+  String mtDeclarerFails(Object points);
+
+  /// No description provided for @mtNextRound.
+  ///
+  /// In en, this message translates to:
+  /// **'Next round preparing...'**
+  String get mtNextRound;
+
+  /// No description provided for @mtGameOver.
+  ///
+  /// In en, this message translates to:
+  /// **'Game Over'**
+  String get mtGameOver;
+
+  /// No description provided for @mtReturningIn.
+  ///
+  /// In en, this message translates to:
+  /// **'Returning in {seconds}...'**
+  String mtReturningIn(Object seconds);
+
+  /// No description provided for @mtReturningToRoom.
+  ///
+  /// In en, this message translates to:
+  /// **'Returning to room...'**
+  String get mtReturningToRoom;
+
+  /// No description provided for @mtScoreHistory.
+  ///
+  /// In en, this message translates to:
+  /// **'Score History'**
+  String get mtScoreHistory;
+
+  /// No description provided for @mtSoloSuffix.
+  ///
+  /// In en, this message translates to:
+  /// **'(solo)'**
+  String get mtSoloSuffix;
+
+  /// No description provided for @mtFriendCardJoker.
+  ///
+  /// In en, this message translates to:
+  /// **'Joker'**
+  String get mtFriendCardJoker;
+
+  /// No description provided for @mtFriendCardSolo.
+  ///
+  /// In en, this message translates to:
+  /// **'Solo'**
+  String get mtFriendCardSolo;
+
+  /// No description provided for @mtFriendCard1st.
+  ///
+  /// In en, this message translates to:
+  /// **'1st Trick'**
+  String get mtFriendCard1st;
+
+  /// No description provided for @mtJokerAbbr.
+  ///
+  /// In en, this message translates to:
+  /// **'JK'**
+  String get mtJokerAbbr;
+
   /// No description provided for @friendsTitle.
   ///
   /// In en, this message translates to:

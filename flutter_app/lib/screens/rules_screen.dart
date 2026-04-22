@@ -925,6 +925,15 @@ class _RulesScreenState extends State<RulesScreen> {
           ),
         ),
         _section(
+          icon: Icons.swap_horiz,
+          iconColor: mtAccent,
+          title: L10n.of(context).rulesMtKittyTitle,
+          child: Text(
+            L10n.of(context).rulesMtKittyBody,
+            style: _bodyStyle,
+          ),
+        ),
+        _section(
           icon: Icons.format_list_numbered,
           iconColor: mtAccent,
           title: L10n.of(context).rulesMtTrickTitle,

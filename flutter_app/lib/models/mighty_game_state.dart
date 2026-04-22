@@ -152,6 +152,7 @@ class MightyGameStateData {
   final bool jokerCallActive;
   final int? turnDeadline;
   final bool kittyReceived;
+  final List<String> kittyCards;
   final List<MightyTrickPlay> lastTrickCards;
   final String? lastTrickWinner;
   final List<MightyCompletedTrick> tricks;
@@ -180,6 +181,7 @@ class MightyGameStateData {
     this.jokerCallActive = false,
     this.turnDeadline,
     this.kittyReceived = false,
+    this.kittyCards = const [],
     this.lastTrickCards = const [],
     this.lastTrickWinner,
     this.tricks = const [],
@@ -255,6 +257,7 @@ class MightyGameStateData {
       jokerCallActive: json['jokerCallActive'] == true,
       turnDeadline: (json['turnDeadline'] as num?)?.toInt(),
       kittyReceived: json['kittyReceived'] == true,
+      kittyCards: List<String>.from(json['kittyCards'] ?? []),
       lastTrickCards: lastTrickList,
       lastTrickWinner: json['lastTrickWinner'],
       tricks: (json['tricks'] as List?)

@@ -2448,7 +2448,7 @@ class L10nKo extends L10n {
 
   @override
   String get rulesMtSpecialJokerLine2 =>
-      '조커로 리드할 때, 조커 소유자가 다른 플레이어들이 따라야 할 문양을 선언합니다.';
+      '조커로 리드할 때, 조커 소유자가 다른 플레이어들이 따라야 할 문양을 선언합니다.\n첫 트릭과 마지막 트릭에서는 조커의 힘이 무효화됩니다.';
 
   @override
   String get rulesMtSpecialJokerCallTitle => '조커콜';
@@ -2465,35 +2465,42 @@ class L10nKo extends L10n {
 
   @override
   String get rulesMtBiddingBody =>
-      '플레이어들은 차례대로 비딩하며, 20점 중 몇 점을 획득할지 선언합니다. 최소 비딩은 13입니다. 가장 높은 비딩을 한 플레이어가 주공이 되어 기루다(으뜸 문양)를 선택합니다.\n\n모든 플레이어가 패스하면 무승부로 카드를 다시 나눕니다.';
+      '플레이어들은 차례대로 비딩하며, 20점 중 몇 점을 획득할지 선언합니다. 최소 비딩은 13, 최대 20입니다. 가장 높은 비딩을 한 플레이어가 주공이 되어 기루다(으뜸 문양)를 선택합니다.\n\n모든 플레이어가 패스하면 무승부로 카드를 다시 나눕니다.';
 
   @override
   String get rulesMtFriendTitle => '프렌드 선언';
 
   @override
   String get rulesMtFriendBody =>
-      '비딩에서 이긴 후, 주공은 특정 카드를 지정하여 프렌드를 선언합니다 (예: \'스페이드 K\'). 해당 카드를 가진 플레이어가 주공의 비밀 아군이 되며, 카드가 나올 때 정체가 밝혀집니다.\n\n주공은 프렌드 없이 혼자 플레이할 수도 있습니다.';
+      '비딩에서 이긴 후, 주공은 특정 카드를 지정하여 프렌드를 선언합니다 (예: \'스페이드 K\'). 해당 카드를 가진 플레이어가 주공의 비밀 아군이 되며, 카드가 나올 때 정체가 밝혀집니다.\n\n주공은 프렌드 없이 혼자 플레이하거나, 초구 프렌드(첫 트릭 승자)를 지정할 수도 있습니다.';
+
+  @override
+  String get rulesMtKittyTitle => '키티 교환';
+
+  @override
+  String get rulesMtKittyBody =>
+      '주공은 키티 카드 3장을 받고, 손패에서 3장을 버립니다.\n\n이 단계에서 주공은 비딩을 +2씩 올릴 수 있으며 (최대 20), 기루다 문양 변경 여부는 자유입니다.';
 
   @override
   String get rulesMtTrickTitle => '트릭 규칙';
 
   @override
   String get rulesMtTrickBody =>
-      '1. 리드 플레이어가 카드를 내어 리드 문양을 정합니다.\n2. 다른 플레이어는 가능하면 같은 문양을 내야 합니다.\n3. 같은 문양이 없으면 아무 카드나 낼 수 있습니다 (기루다 포함).\n4. 리드 문양 중 가장 높은 카드가 이기지만, 기루다가 나오면 가장 높은 기루다가 이깁니다.\n5. 마이티와 조커는 일반 세기 규칙을 무시합니다.\n6. 트릭 승자가 다음 트릭을 리드합니다.';
+      '1. 리드 플레이어가 카드를 내어 리드 문양을 정합니다.\n2. 다른 플레이어는 가능하면 같은 문양을 내야 합니다.\n3. 같은 문양이 없으면 아무 카드나 낼 수 있습니다 (기루다 포함).\n4. 리드 문양 중 가장 높은 카드가 이기지만, 기루다가 나오면 가장 높은 기루다가 이깁니다.\n5. 마이티와 조커는 일반 세기 규칙을 무시합니다.\n6. 트릭 승자가 다음 트릭을 리드합니다.\n7. 첫 트릭에서는 기루다 문양으로 리드할 수 없습니다.';
 
   @override
   String get rulesMtScoringTitle => '점수 계산';
 
   @override
   String get rulesMtScoringBody =>
-      '덱에는 20장의 점수 카드가 있습니다 (4문양 × A, K, Q, J, 10 = 20장).\n\n• 주공팀 승리: 비딩 수 이상의 점수 카드를 모은 경우.\n• 수비팀 승리: 주공팀이 비딩 수에 미달한 경우.\n\n비딩이 높을수록 보상도 크지만, 실패 시 벌점도 커집니다.';
+      '덱에 점수 카드 20장 (A, K, Q, J, 10 × 4문양 = 20장).\n\n[기본 점수]\n기본 = (비딩 − 13 + 1) × 2\n성공 시: + (먹은 점수 − 비딩)\n\n[점수 배분]\n• 주공: 기본 × 2\n• 프렌드: 기본 × 1\n• 야당 각: −기본\n실패 시 부호 반전.\n\n[배율 (기본 점수에 곱셈, 중복 적용)]\n• 솔로 (노프렌드): ×2\n• 런 (20점 올킬): ×2\n• 노기루다 (NT): ×2\n• 20비딩: ×2\n최대 배율: ×16 (솔로 + 런 + NT + 20비딩)\n\n[예시]\n13비딩, 프렌드 있음, 15점 획득:\n기본 = (1×2) + 2 = 4\n주공 +8, 프렌드 +4, 야당 각 −4';
 
   @override
   String get rulesMtWinTitle => '승리 조건';
 
   @override
   String get rulesMtWinBody =>
-      '13트릭이 모두 끝나면, 주공팀이 모은 점수 카드를 셉니다.\n\n• 비딩 이상 달성 → 주공팀 승리.\n• 비딩 미달 → 수비팀 승리.\n\n여러 라운드에 걸쳐 점수를 누적하며, 세션 종료 시 가장 높은 점수의 플레이어가 최종 승리합니다.';
+      '10트릭이 모두 끝나면, 주공팀이 모은 점수 카드를 셉니다.\n\n• 비딩 이상 달성 → 주공팀 승리.\n• 비딩 미달 → 수비팀 승리.\n\n여러 라운드에 걸쳐 점수를 누적하며, 세션 종료 시 가장 높은 점수의 플레이어가 최종 승리합니다.';
 
   @override
   String get mtPhaseBidding => '비딩';
@@ -2628,6 +2635,14 @@ class L10nKo extends L10n {
 
   @override
   String get mtConfirm => '확인';
+
+  @override
+  String get mtChangeTrump => '기루다 변경';
+
+  @override
+  String mtTrumpPenalty(int penalty) {
+    return '비딩 +$penalty';
+  }
 
   @override
   String mtPlayTimer(Object seconds) {

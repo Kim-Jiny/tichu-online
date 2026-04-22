@@ -2560,6 +2560,14 @@ class GameService extends ChangeNotifier {
     });
   }
 
+  void mightyChangeTrump(String suit) {
+    _network.send({'type': 'change_trump', 'suit': suit});
+  }
+
+  void mightyRaiseBid() {
+    _network.send({'type': 'raise_bid'});
+  }
+
   void mightyPlayCard(String cardId, {String? jokerSuit, bool jokerCall = false}) {
     final msg = <String, dynamic>{'type': 'play_card', 'cardId': cardId};
     if (jokerSuit != null) msg['jokerSuit'] = jokerSuit;

@@ -4602,7 +4602,7 @@ abstract class L10n {
   /// No description provided for @rulesMtSpecialJokerLine2.
   ///
   /// In en, this message translates to:
-  /// **'When leading a trick, the Joker player declares which suit others must follow.'**
+  /// **'When leading a trick, the Joker player declares which suit others must follow.\nThe Joker loses its power on the first and last tricks.'**
   String get rulesMtSpecialJokerLine2;
 
   /// No description provided for @rulesMtSpecialJokerCallTitle.
@@ -4632,7 +4632,7 @@ abstract class L10n {
   /// No description provided for @rulesMtBiddingBody.
   ///
   /// In en, this message translates to:
-  /// **'Players bid in turn, stating how many points (out of 20) they will capture. The minimum bid is 13. The highest bidder becomes the declarer and chooses the trump suit.\n\nIf all players pass, the round is redealt (no-game).'**
+  /// **'Players bid in turn, stating how many points (out of 20) they will capture. The minimum bid is 13, maximum 20. The highest bidder becomes the declarer and chooses the trump suit.\n\nIf all players pass, the round is redealt (no-game).'**
   String get rulesMtBiddingBody;
 
   /// No description provided for @rulesMtFriendTitle.
@@ -4644,8 +4644,20 @@ abstract class L10n {
   /// No description provided for @rulesMtFriendBody.
   ///
   /// In en, this message translates to:
-  /// **'After winning the bid, the declarer declares a friend by naming a specific card (e.g. \'Spade King\'). The player who holds that card becomes the declarer\'s secret ally — their identity is revealed when the card is played.\n\nThe declarer may also choose to go alone (no friend).'**
+  /// **'After winning the bid, the declarer declares a friend by naming a specific card (e.g. \'Spade King\'). The player who holds that card becomes the declarer\'s secret ally — their identity is revealed when the card is played.\n\nThe declarer may also choose to go alone (no friend), or designate the first trick winner as their friend.'**
   String get rulesMtFriendBody;
+
+  /// No description provided for @rulesMtKittyTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Kitty Exchange'**
+  String get rulesMtKittyTitle;
+
+  /// No description provided for @rulesMtKittyBody.
+  ///
+  /// In en, this message translates to:
+  /// **'The declarer receives 3 kitty cards and must discard 3 cards from their hand.\n\nDuring this phase, the declarer may raise the bid by +2 (capped at 20), with or without changing the trump suit.'**
+  String get rulesMtKittyBody;
 
   /// No description provided for @rulesMtTrickTitle.
   ///
@@ -4656,7 +4668,7 @@ abstract class L10n {
   /// No description provided for @rulesMtTrickBody.
   ///
   /// In en, this message translates to:
-  /// **'1. The lead player plays any card, setting the lead suit.\n2. Other players must follow suit if possible.\n3. If you cannot follow suit, you may play any card (including trump).\n4. The highest card of the lead suit wins, unless a trump card is played — in that case the highest trump wins.\n5. Mighty and Joker override normal strength rules.\n6. The trick winner leads the next trick.'**
+  /// **'1. The lead player plays any card, setting the lead suit.\n2. Other players must follow suit if possible.\n3. If you cannot follow suit, you may play any card (including trump).\n4. The highest card of the lead suit wins, unless a trump card is played — in that case the highest trump wins.\n5. Mighty and Joker override normal strength rules.\n6. The trick winner leads the next trick.\n7. On the first trick, you cannot lead with a trump suit card.'**
   String get rulesMtTrickBody;
 
   /// No description provided for @rulesMtScoringTitle.
@@ -4668,7 +4680,7 @@ abstract class L10n {
   /// No description provided for @rulesMtScoringBody.
   ///
   /// In en, this message translates to:
-  /// **'There are 20 point cards in the deck (each A, K, Q, J, 10 across 4 suits = 20).\n\n• Declarer team wins: If they collect ≥ bid number of point cards.\n• Defence team wins: If the declarer team falls short of their bid.\n\nThe higher the bid, the greater the reward — but also the penalty for failure.'**
+  /// **'20 point cards in the deck (A, K, Q, J, 10 × 4 suits = 20).\n\n[Base Score]\nBase = (Bid − 13 + 1) × 2\nOn success: + (points collected − bid)\n\n[Score Distribution]\n• Declarer: Base × 2\n• Friend: Base × 1\n• Each Defender: −Base\nOn failure, signs are reversed.\n\n[Multipliers (multiply base, stackable)]\n• Solo (no friend): ×2\n• Run (all 20 pts): ×2\n• No Trump: ×2\n• Bid 20: ×2\nMax multiplier: ×16 (solo + run + NT + bid 20)\n\n[Example]\nBid 13, collected 15 pts with a friend:\nBase = (1×2) + 2 = 4\nDeclarer +8, Friend +4, Defenders −4 each'**
   String get rulesMtScoringBody;
 
   /// No description provided for @rulesMtWinTitle.
@@ -4680,7 +4692,7 @@ abstract class L10n {
   /// No description provided for @rulesMtWinBody.
   ///
   /// In en, this message translates to:
-  /// **'After all 13 tricks are played, count the point cards collected by the declarer\'s team.\n\n• If they meet or exceed the bid → Declarer team wins.\n• If they fall short → Defence team wins.\n\nScores are accumulated over multiple rounds. The player with the highest score at the end of the session wins.'**
+  /// **'After all 10 tricks are played, count the point cards collected by the declarer\'s team.\n\n• If they meet or exceed the bid → Declarer team wins.\n• If they fall short → Defence team wins.\n\nScores are accumulated over multiple rounds. The player with the highest score at the end of the session wins.'**
   String get rulesMtWinBody;
 
   /// No description provided for @mtPhaseBidding.
@@ -4910,6 +4922,18 @@ abstract class L10n {
   /// In en, this message translates to:
   /// **'Confirm'**
   String get mtConfirm;
+
+  /// No description provided for @mtChangeTrump.
+  ///
+  /// In en, this message translates to:
+  /// **'Change Trump'**
+  String get mtChangeTrump;
+
+  /// No description provided for @mtTrumpPenalty.
+  ///
+  /// In en, this message translates to:
+  /// **'Bid +{penalty}'**
+  String mtTrumpPenalty(int penalty);
 
   /// No description provided for @mtPlayTimer.
   ///

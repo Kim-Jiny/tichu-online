@@ -14,8 +14,8 @@ class MightyGame {
     this.options = {
       minBid: options.minBid || 13,
       allowNoTrump: options.allowNoTrump !== false,
-      allowTrumpChange: options.allowTrumpChange || false,
-      trumpChangePenalty: options.trumpChangePenalty || 1,
+      allowTrumpChange: options.allowTrumpChange !== false,
+      trumpChangePenalty: options.trumpChangePenalty || 2,
       jokerCallCard: options.jokerCallCard || 'auto',
       soloBonus: options.soloBonus || 2,
       perfectBonus: options.perfectBonus || 2,
@@ -125,6 +125,8 @@ class MightyGame {
   handleAction(playerId, action) {
     switch (action.type) {
       case 'submit_bid': return this._handleBid(playerId, action);
+      case 'change_trump': return this._handleChangeTrump(playerId, action);
+      case 'raise_bid': return this._handleRaiseBid(playerId, action);
       case 'discard_kitty': return this._handleDiscardKitty(playerId, action);
       case 'play_card': return this._handlePlayCard(playerId, action);
       case 'next_round': return this._handleNextRound(playerId, action);
@@ -244,6 +246,57 @@ class MightyGame {
     this.hands[this.declarer] = this.hands[this.declarer].concat(this.kitty);
   }
 
+  // ─── TRUMP CHANGE (during kitty exchange) ───────────────
+
+  _handleChangeTrump(playerId, action) {
+    if (this.state !== 'kitty_exchange') {
+      return { success: false, messageKey: 'mighty_not_kitty_phase' };
+    }
+    if (playerId !== this.declarer) {
+      return { success: false, messageKey: 'mighty_not_declarer' };
+    }
+    if (!this.options.allowTrumpChange) {
+      return { success: false, messageKey: 'mighty_trump_change_disabled' };
+    }
+
+    const { suit } = action;
+    if (suit !== 'no_trump' && !SUITS.includes(suit)) {
+      return { success: false, messageKey: 'mighty_bid_invalid_suit' };
+    }
+    if (suit === this.trumpSuit) {
+      return { success: false, messageKey: 'mighty_same_trump' };
+    }
+
+    const newPoints = Math.min(20, this.currentBid.points + this.options.trumpChangePenalty);
+    if (newPoints === this.currentBid.points) {
+      return { success: false, messageKey: 'mighty_bid_at_cap' };
+    }
+
+    this.trumpSuit = suit;
+    this.currentBid.points = newPoints;
+    this.currentBid.suit = suit;
+    return { success: true };
+  }
+
+  // ─── RAISE BID (during kitty exchange, without trump change) ──
+
+  _handleRaiseBid(playerId, action) {
+    if (this.state !== 'kitty_exchange') {
+      return { success: false, messageKey: 'mighty_not_kitty_phase' };
+    }
+    if (playerId !== this.declarer) {
+      return { success: false, messageKey: 'mighty_not_declarer' };
+    }
+
+    const newPoints = Math.min(20, this.currentBid.points + this.options.trumpChangePenalty);
+    if (newPoints === this.currentBid.points) {
+      return { success: false, messageKey: 'mighty_bid_at_cap' };
+    }
+
+    this.currentBid.points = newPoints;
+    return { success: true };
+  }
+
   // ─── KITTY EXCHANGE ─────────────────────────────────────
 
   _handleDiscardKitty(playerId, action) {
@@ -254,7 +307,7 @@ class MightyGame {
       return { success: false, messageKey: 'mighty_not_declarer' };
     }
 
-    const { discards, friendCard, newTrumpSuit } = action;
+    const { discards, friendCard } = action;
 
     // Validate discards
     if (!Array.isArray(discards) || discards.length !== 3) {
@@ -300,16 +353,6 @@ class MightyGame {
           return { success: false, messageKey: 'mighty_cannot_discard_friend' };
         }
       }
-    }
-
-    // Handle trump change
-    if (newTrumpSuit && this.options.allowTrumpChange && newTrumpSuit !== this.trumpSuit) {
-      if (newTrumpSuit !== 'no_trump' && !SUITS.includes(newTrumpSuit)) {
-        return { success: false, messageKey: 'mighty_bid_invalid_suit' };
-      }
-      this.trumpSuit = newTrumpSuit;
-      this.currentBid.points += this.options.trumpChangePenalty;
-      this.currentBid.suit = newTrumpSuit;
     }
 
     // Perform discard
@@ -485,10 +528,8 @@ class MightyGame {
 
     // First-trick friend: if friendCard is 'first_trick' and this is trick 0, winner becomes partner
     if (trickNumber === 0 && this.friendCard === 'first_trick' && !this.friendRevealed) {
-      if (winner !== this.declarer) {
-        this.partner = winner;
-        this.friendRevealed = true;
-      }
+      this.partner = winner;
+      this.friendRevealed = true;
     }
 
     this.tricks.push({
@@ -583,6 +624,7 @@ class MightyGame {
       playerIds: this.playerIds,
       pointCards: this.pointCards,
       bid: this.currentBid.points,
+      trumpSuit: this.trumpSuit,
       options: this.options,
     });
 
@@ -707,9 +749,10 @@ class MightyGame {
       })),
     };
 
-    // Kitty phase: show 13 cards to declarer
+    // Kitty phase: show 13 cards to declarer + which cards came from kitty
     if (this.state === 'kitty_exchange' && playerId === this.declarer) {
       state.kittyReceived = true;
+      state.kittyCards = this.kitty;
     }
 
     return state;

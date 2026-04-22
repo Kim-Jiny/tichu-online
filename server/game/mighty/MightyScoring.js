@@ -26,8 +26,8 @@ function countPoints(collectedCards) {
  * @param {object} params.options - game options
  * @returns {{ scores: object, declarerPoints: number, success: boolean }}
  */
-function calculateRoundScores({ declarer, partner, playerIds, pointCards, bid, options }) {
-  const { minBid = 13, scoreMultiplier = 1, soloBonus = 2, perfectBonus = 2 } = options;
+function calculateRoundScores({ declarer, partner, playerIds, pointCards, bid, trumpSuit, options }) {
+  const { minBid = 13 } = options;
 
   // Count points for declarer team
   const isSolo = !partner || partner === declarer;
@@ -42,40 +42,41 @@ function calculateRoundScores({ declarer, partner, playerIds, pointCards, bid, o
 
   const success = declarerTeamPoints >= bid;
   const isPerfect = declarerTeamPoints === 20;
-  const baseScore = (bid - minBid + 1) * scoreMultiplier;
+  const isNoTrump = trumpSuit === 'no_trump';
+  const isMaxBid = bid >= 20;
 
-  let declarerScore;
+  // Base score = (bid - minBid + 1) * 2 + extra points over bid
+  let baseScore = (bid - minBid + 1) * 2;
   if (success) {
-    declarerScore = baseScore;
-    if (isPerfect) declarerScore *= perfectBonus;
-    if (isSolo) declarerScore *= soloBonus;
-  } else {
-    declarerScore = -baseScore;
-    if (isSolo) declarerScore *= soloBonus;
+    baseScore += (declarerTeamPoints - bid);
   }
 
+  // Multipliers: solo ×2, run(perfect) ×2, NT ×2, 20bid ×2
+  if (isPerfect) baseScore *= 2;
+  if (isSolo) baseScore *= 2;
+  if (isNoTrump) baseScore *= 2;
+  if (isMaxBid) baseScore *= 2;
+
+  // Declarer: ±base × 2, Partner: ±base, Defenders: each ∓base
   const scores = {};
-  const defenderCount = isSolo ? playerIds.length - 1 : playerIds.length - 2;
-
-  // Declarer score
-  scores[declarer] = declarerScore;
-
-  // Partner score (half of declarer, rounded toward zero)
-  const partnerScore = (!isSolo && partner) ? Math.trunc(declarerScore / 2) : 0;
-  if (!isSolo && partner) {
-    scores[partner] = partnerScore;
-  }
-
-  // Defenders share opposite; distribute remainder to ensure zero-sum
-  const declarerTeamTotal = declarerScore + partnerScore;
-  const defenderTotal = -declarerTeamTotal; // must sum to this
   const defenders = playerIds.filter(pid => pid !== declarer && (isSolo || pid !== partner));
-  const baseShare = Math.trunc(defenderTotal / defenderCount);
-  let remainder = defenderTotal - baseShare * defenderCount;
-  for (const pid of defenders) {
-    scores[pid] = baseShare;
-    if (remainder > 0) { scores[pid]++; remainder--; }
-    else if (remainder < 0) { scores[pid]--; remainder++; }
+
+  if (success) {
+    scores[declarer] = baseScore * 2;
+    if (!isSolo && partner) {
+      scores[partner] = baseScore;
+    }
+    for (const pid of defenders) {
+      scores[pid] = -baseScore;
+    }
+  } else {
+    scores[declarer] = -baseScore * 2;
+    if (!isSolo && partner) {
+      scores[partner] = -baseScore;
+    }
+    for (const pid of defenders) {
+      scores[pid] = baseScore;
+    }
   }
 
   return { scores, declarerPoints: declarerTeamPoints, success };

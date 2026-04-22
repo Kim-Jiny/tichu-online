@@ -1,6 +1,6 @@
 'use strict';
 
-const SUITS = ['spade', 'heart', 'diamond', 'club'];
+const SUITS = ['spade', 'diamond', 'heart', 'club'];
 const RANKS = ['2', '3', '4', '5', '6', '7', '8', '9', '10', 'J', 'Q', 'K', 'A'];
 const POINT_RANKS = ['A', 'K', 'Q', 'J', '10'];
 const RANK_ORDER = { '2': 2, '3': 3, '4': 4, '5': 5, '6': 6, '7': 7, '8': 8, '9': 9, '10': 10, 'J': 11, 'Q': 12, 'K': 13, 'A': 14 };
@@ -51,9 +51,7 @@ function getCardInfo(cardId) {
 }
 
 function sortCards(cards, trumpSuit) {
-  const suitOrder = trumpSuit && trumpSuit !== 'no_trump'
-    ? [trumpSuit, ...SUITS.filter(s => s !== trumpSuit)]
-    : SUITS;
+  const suitOrder = SUITS;
 
   return cards.slice().sort((a, b) => {
     if (a === 'mighty_joker') return -1;

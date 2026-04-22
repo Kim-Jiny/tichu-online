@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../services/game_service.dart';
@@ -27,6 +28,7 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
   String _friendMode = ''; // 'no_friend', 'first_trick', 'card'
   String _friendSuit = 'spade';
   String _friendRank = 'A';
+  String? _selectedTrumpSuit; // null = no change
 
   // Play state
   String? _selectedCard;
@@ -186,6 +188,7 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
                           _friendMode = '';
                           _friendSuit = 'spade';
                           _friendRank = 'A';
+                          _selectedTrumpSuit = null;
                         }
                         if (state.phase == 'kitty_exchange') {
                           _discardSelection.clear();
@@ -193,6 +196,7 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
                           _friendMode = '';
                           _friendSuit = 'spade';
                           _friendRank = 'A';
+                          _selectedTrumpSuit = null;
                         }
                       });
                     });
@@ -245,6 +249,8 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
                         ],
                       ),
                       if (_chatOpen) _buildChatPanel(game),
+                      if (game.hasIncomingCardViewRequests)
+                        _buildCardViewRequestPopup(game),
                       if (game.errorMessage != null)
                         _buildErrorBanner(game.errorMessage!),
                     ],
@@ -851,6 +857,12 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
                               borderColor: (state.trumpSuit != null && state.trumpSuit != 'no_trump' && _getCardSuit(trickPlay.cardId) == state.trumpSuit)
                                   ? PlayingCard.suitColors[_getCardSuit(trickPlay.cardId)]
                                   : null,
+                              badgeIcon: trickPlay.cardId == state.mightyCard ? Icons.star
+                                  : trickPlay.cardId == state.jokerCallCard ? Icons.gps_fixed
+                                  : null,
+                              badgeColor: trickPlay.cardId == state.mightyCard ? const Color(0xFFFFB300)
+                                  : trickPlay.cardId == state.jokerCallCard ? const Color(0xFFE53935)
+                                  : null,
                             ),
                           ),
                         ),
@@ -1431,6 +1443,8 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
             ),
           ),
         ),
+        // ── Trump change panel (above hand) ──
+        _buildTrumpChangePanel(state, game),
         // Hand for kitty selection
         _buildHandArea(state, game),
       ],
@@ -1483,6 +1497,131 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
     );
   }
 
+  // ── Bid / Trump Adjustment Panel (floats above hand during kitty exchange) ──
+  Widget _buildTrumpChangePanel(MightyGameStateData state, GameService game) {
+    if (!state.isMyTurn) return const SizedBox.shrink();
+    final bidPoints = state.currentBid['points'] as int? ?? 13;
+    if (bidPoints >= 20) return const SizedBox.shrink(); // already at cap
+
+    final trumpSuit = state.trumpSuit ?? 'no_trump';
+    final hasSelection = _selectedTrumpSuit != null && _selectedTrumpSuit != trumpSuit;
+    final nextBid = math.min(20, bidPoints + 2);
+
+    return Container(
+      margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+      padding: const EdgeInsets.all(10),
+      decoration: BoxDecoration(
+        color: Colors.white.withValues(alpha: 0.95),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: const Color(0xFFE0D8D4)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Header: current bid + raise bid button
+          Row(
+            children: [
+              Text(
+                L10n.of(context).mtTrumpPenalty(2),
+                style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Color(0xFF5A4038)),
+              ),
+              const Spacer(),
+              Text(
+                '$bidPoints',
+                style: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: Color(0xFF5A4038)),
+              ),
+              const SizedBox(width: 6),
+              SizedBox(
+                height: 30,
+                child: FilledButton(
+                  onPressed: () => game.mightyRaiseBid(),
+                  style: FilledButton.styleFrom(
+                    backgroundColor: const Color(0xFF1565C0),
+                    padding: const EdgeInsets.symmetric(horizontal: 10),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                  ),
+                  child: Text('→ $nextBid', style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 6),
+          // Trump change: suit chips + confirm
+          Row(
+            children: [
+              for (final entry in [
+                ('spade', '\u2660', const Color(0xFF2B2B2B)),
+                ('heart', '\u2665', const Color(0xFFD24B4B)),
+                ('diamond', '\u2666', const Color(0xFF6FB6E5)),
+                ('club', '\u2663', const Color(0xFF4BAA6A)),
+                ('no_trump', 'NT', const Color(0xFF7B1FA2)),
+              ])
+                Expanded(
+                  child: GestureDetector(
+                    onTap: entry.$1 == trumpSuit
+                        ? null
+                        : () => setState(() {
+                            _selectedTrumpSuit = _selectedTrumpSuit == entry.$1 ? null : entry.$1;
+                          }),
+                    child: Container(
+                      margin: const EdgeInsets.symmetric(horizontal: 2),
+                      padding: const EdgeInsets.symmetric(vertical: 7),
+                      decoration: BoxDecoration(
+                        color: entry.$1 == trumpSuit
+                            ? entry.$3.withValues(alpha: 0.08)
+                            : _selectedTrumpSuit == entry.$1
+                                ? entry.$3.withValues(alpha: 0.15)
+                                : Colors.transparent,
+                        borderRadius: BorderRadius.circular(8),
+                        border: Border.all(
+                          color: entry.$1 == trumpSuit
+                              ? entry.$3.withValues(alpha: 0.3)
+                              : _selectedTrumpSuit == entry.$1
+                                  ? entry.$3
+                                  : const Color(0xFFE0D8D4),
+                          width: _selectedTrumpSuit == entry.$1 ? 2 : 1,
+                        ),
+                      ),
+                      child: Center(
+                        child: Text(
+                          entry.$2,
+                          style: TextStyle(
+                            fontSize: 15,
+                            color: entry.$1 == trumpSuit
+                                ? entry.$3.withValues(alpha: 0.4)
+                                : entry.$3,
+                            fontWeight: _selectedTrumpSuit == entry.$1 ? FontWeight.bold : FontWeight.normal,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              const SizedBox(width: 6),
+              SizedBox(
+                height: 34,
+                child: FilledButton(
+                  onPressed: hasSelection
+                      ? () {
+                          game.mightyChangeTrump(_selectedTrumpSuit!);
+                          setState(() => _selectedTrumpSuit = null);
+                        }
+                      : null,
+                  style: FilledButton.styleFrom(
+                    backgroundColor: const Color(0xFFE65100),
+                    padding: const EdgeInsets.symmetric(horizontal: 12),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                  ),
+                  child: Text(L10n.of(context).mtChangeTrump, style: const TextStyle(fontSize: 11)),
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
   // ── Hand Area (SK-style) ──
   Widget _buildHandArea(MightyGameStateData state, GameService game) {
     final cards = state.myCards;
@@ -1525,7 +1664,7 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
                     game.mightyPlayCard(
                       selectedCard,
                       jokerSuit: selectedCard == 'mighty_joker'
-                          ? (_jokerSuitChoice ?? 'spade')
+                          ? (_jokerSuitChoice ?? (state.trumpSuit != null && state.trumpSuit != 'no_trump' ? state.trumpSuit! : 'spade'))
                           : null,
                       jokerCall: isJokerCallCard && state.currentTrick.isEmpty && _jokerCallChoice,
                     );
@@ -1631,9 +1770,11 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
                   ? _discardSelection.contains(cardId)
                   : false;
 
-          // Badge: mighty card or joker call card
+          // Badge: mighty card, joker call card, friend card, or kitty card
           final isMightyCard = state?.mightyCard != null && cardId == state!.mightyCard;
           final isJokerCallCard = !isMightyCard && state?.jokerCallCard != null && cardId == state!.jokerCallCard;
+          final isFriendCard = !isMightyCard && !isJokerCallCard && state?.friendCard != null && cardId == state!.friendCard;
+          final isKittyCard = !isMightyCard && !isJokerCallCard && !isFriendCard && isKitty && (state?.kittyCards.contains(cardId) ?? false);
           // Trump suit border
           Color? trumpBorder;
           if (state?.trumpSuit != null && state!.trumpSuit != 'no_trump') {
@@ -1649,6 +1790,11 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
                 if (isPlaying) {
                   if (!isLegal) return;
                   _selectedCard = _selectedCard == cardId ? null : cardId;
+                  // Auto-select trump suit when joker is selected for leading
+                  if (_selectedCard == 'mighty_joker' && state != null) {
+                    final ts = state.trumpSuit;
+                    _jokerSuitChoice = (ts != null && ts != 'no_trump') ? ts : 'spade';
+                  }
                 } else if (isKitty) {
                   if (isKittyBlocked) return;
                   if (_discardSelection.contains(cardId)) {
@@ -1685,8 +1831,8 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
                       height: cardHeight,
                       isSelected: isSelected,
                       isInteractive: false,
-                      badgeIcon: isMightyCard ? Icons.star : isJokerCallCard ? Icons.gps_fixed : null,
-                      badgeColor: isMightyCard ? const Color(0xFFFFB300) : isJokerCallCard ? const Color(0xFFE53935) : null,
+                      badgeIcon: isMightyCard ? Icons.star : isJokerCallCard ? Icons.gps_fixed : isFriendCard ? Icons.people : isKittyCard ? Icons.move_up : null,
+                      badgeColor: isMightyCard ? const Color(0xFFFFB300) : isJokerCallCard ? const Color(0xFFE53935) : isFriendCard ? const Color(0xFF4CAF50) : isKittyCard ? const Color(0xFF7B1FA2) : null,
                       borderColor: trumpBorder,
                     ),
                   ),
@@ -1921,6 +2067,114 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
             ),
           ),
         ],
+      ),
+    );
+  }
+
+  // ── Card View Request Popup ──
+  Widget _buildCardViewRequestPopup(GameService game) {
+    final request = game.firstIncomingCardViewRequest;
+    if (request == null) return const SizedBox.shrink();
+    final spectatorNickname = request['spectatorNickname'] ?? L10n.of(context).gameSpectator;
+    final spectatorId = request['spectatorId'] ?? '';
+
+    return Positioned(
+      top: 60,
+      left: 20,
+      right: 20,
+      child: Container(
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(16),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.2),
+              blurRadius: 12,
+              offset: const Offset(0, 4),
+            ),
+          ],
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Row(
+              children: [
+                const Icon(Icons.visibility, color: Color(0xFF6A6090)),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    L10n.of(context).gameCardViewRequest(spectatorNickname),
+                    style: const TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.bold,
+                      color: Color(0xFF4A4080),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 12),
+            Row(
+              children: [
+                Expanded(
+                  child: OutlinedButton(
+                    onPressed: () => game.respondCardViewRequest(spectatorId, false),
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: const Color(0xFFCC6666),
+                      side: const BorderSide(color: Color(0xFFCC6666)),
+                      padding: const EdgeInsets.symmetric(vertical: 10),
+                    ),
+                    child: Text(L10n.of(context).gameReject),
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: ElevatedButton(
+                    onPressed: () => game.respondCardViewRequest(spectatorId, true),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: const Color(0xFF6A9BD1),
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(vertical: 10),
+                    ),
+                    child: Text(L10n.of(context).gameAllow),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 8),
+            Row(
+              children: [
+                Expanded(
+                  child: OutlinedButton(
+                    onPressed: () => game.rejectAllCardViewRequests(),
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: const Color(0xFF999999),
+                      side: const BorderSide(color: Color(0xFFCCCCCC)),
+                      padding: const EdgeInsets.symmetric(vertical: 10),
+                    ),
+                    child: Text(L10n.of(context).gameAlwaysReject, style: const TextStyle(fontSize: 13)),
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: OutlinedButton(
+                    onPressed: () {
+                      game.respondCardViewRequest(spectatorId, true);
+                      game.setAutoAcceptCardView(true);
+                    },
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: const Color(0xFF4CAF50),
+                      side: const BorderSide(color: Color(0xFF4CAF50)),
+                      padding: const EdgeInsets.symmetric(vertical: 10),
+                    ),
+                    child: Text(L10n.of(context).gameAlwaysAllow, style: const TextStyle(fontSize: 13)),
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
       ),
     );
   }

@@ -2523,7 +2523,7 @@ class L10nDe extends L10n {
 
   @override
   String get rulesMtSpecialJokerLine2 =>
-      'Beim Ausspielen des Jokers erklärt der Spieler, welche Farbe die anderen bedienen müssen.';
+      'Beim Ausspielen des Jokers erklärt der Spieler, welche Farbe die anderen bedienen müssen.\nDer Joker verliert seine Kraft im ersten und letzten Stich.';
 
   @override
   String get rulesMtSpecialJokerCallTitle => 'Joker-Ruf';
@@ -2541,35 +2541,42 @@ class L10nDe extends L10n {
 
   @override
   String get rulesMtBiddingBody =>
-      'Spieler bieten reihum und geben an, wie viele Punkte (von 20) sie erzielen werden. Das Mindestgebot beträgt 13. Der Höchstbietende wird Alleinspieler und wählt die Trumpffarbe.\n\nWenn alle Spieler passen, wird neu gegeben (kein Spiel).';
+      'Spieler bieten reihum und geben an, wie viele Punkte (von 20) sie erzielen werden. Das Mindestgebot beträgt 13, das Maximum 20. Der Höchstbietende wird Alleinspieler und wählt die Trumpffarbe.\n\nWenn alle Spieler passen, wird neu gegeben (kein Spiel).';
 
   @override
   String get rulesMtFriendTitle => 'Freund-Erklärung';
 
   @override
   String get rulesMtFriendBody =>
-      'Nach dem Gewinn des Gebots erklärt der Alleinspieler einen Freund, indem er eine bestimmte Karte nennt (z.B. \'Pik-König\'). Der Spieler, der diese Karte hält, wird zum geheimen Verbündeten — seine Identität wird enthüllt, wenn die Karte gespielt wird.\n\nDer Alleinspieler kann auch allein spielen (kein Freund).';
+      'Nach dem Gewinn des Gebots erklärt der Alleinspieler einen Freund, indem er eine bestimmte Karte nennt (z.B. \'Pik-König\'). Der Spieler, der diese Karte hält, wird zum geheimen Verbündeten — seine Identität wird enthüllt, wenn die Karte gespielt wird.\n\nDer Alleinspieler kann auch allein spielen (kein Freund) oder den Gewinner des ersten Stichs als Freund bestimmen.';
+
+  @override
+  String get rulesMtKittyTitle => 'Kitty-Tausch';
+
+  @override
+  String get rulesMtKittyBody =>
+      'Der Alleinspieler erhält 3 Kitty-Karten und muss 3 Karten aus seiner Hand abwerfen.\n\nIn dieser Phase kann der Alleinspieler das Gebot um +2 erhöhen (maximal 20), mit oder ohne Änderung der Trumpffarbe.';
 
   @override
   String get rulesMtTrickTitle => 'Stichregeln';
 
   @override
   String get rulesMtTrickBody =>
-      '1. Der Ausspieler spielt eine beliebige Karte und bestimmt die Ansagefarbe.\n2. Andere Spieler müssen die Farbe bedienen, wenn möglich.\n3. Wer nicht bedienen kann, darf eine beliebige Karte spielen (einschließlich Trumpf).\n4. Die höchste Karte der Ansagefarbe gewinnt, es sei denn, eine Trumpfkarte wird gespielt — dann gewinnt der höchste Trumpf.\n5. Mighty und Joker überschreiben die normalen Stärkeregeln.\n6. Der Stichgewinner spielt den nächsten Stich aus.';
+      '1. Der Ausspieler spielt eine beliebige Karte und bestimmt die Ansagefarbe.\n2. Andere Spieler müssen die Farbe bedienen, wenn möglich.\n3. Wer nicht bedienen kann, darf eine beliebige Karte spielen (einschließlich Trumpf).\n4. Die höchste Karte der Ansagefarbe gewinnt, es sei denn, eine Trumpfkarte wird gespielt — dann gewinnt der höchste Trumpf.\n5. Mighty und Joker überschreiben die normalen Stärkeregeln.\n6. Der Stichgewinner spielt den nächsten Stich aus.\n7. Im ersten Stich darf nicht mit einer Trumpfkarte ausgespielt werden.';
 
   @override
   String get rulesMtScoringTitle => 'Punktwertung';
 
   @override
   String get rulesMtScoringBody =>
-      'Es gibt 20 Punktkarten im Deck (je A, K, Q, J, 10 in 4 Farben = 20).\n\n• Alleinspieler-Team gewinnt: Wenn sie ≥ Gebotanzahl an Punktkarten sammeln.\n• Verteidigung gewinnt: Wenn das Alleinspieler-Team unter dem Gebot bleibt.\n\nJe höher das Gebot, desto größer die Belohnung — aber auch die Strafe bei Misserfolg.';
+      '20 Punktkarten im Deck (A, K, Q, J, 10 × 4 Farben = 20).\n\n[Grundpunktzahl]\nBasis = (Gebot − 13 + 1) × 2\nBei Erfolg: + (gesammelte Punkte − Gebot)\n\n[Punkteverteilung]\n• Alleinspieler: Basis × 2\n• Freund: Basis × 1\n• Jeder Verteidiger: −Basis\nBei Misserfolg werden die Vorzeichen umgekehrt.\n\n[Multiplikatoren (auf Basis, stapelbar)]\n• Solo (kein Freund): ×2\n• Run (alle 20 Pkt): ×2\n• Ohne Trumpf (NT): ×2\n• Gebot 20: ×2\nMax. Multiplikator: ×16 (Solo + Run + NT + Gebot 20)\n\n[Beispiel]\nGebot 13, 15 Pkt gesammelt, mit Freund:\nBasis = (1×2) + 2 = 4\nAlleinspieler +8, Freund +4, Verteidiger je −4';
 
   @override
   String get rulesMtWinTitle => 'Siegbedingung';
 
   @override
   String get rulesMtWinBody =>
-      'Nach allen 13 Stichen werden die Punktkarten des Alleinspieler-Teams gezählt.\n\n• Gebot erreicht oder übertroffen → Alleinspieler-Team gewinnt.\n• Gebot verfehlt → Verteidigung gewinnt.\n\nPunkte werden über mehrere Runden gesammelt. Der Spieler mit der höchsten Punktzahl am Ende der Sitzung gewinnt.';
+      'Nach allen 10 Stichen werden die Punktkarten des Alleinspieler-Teams gezählt.\n\n• Gebot erreicht oder übertroffen → Alleinspieler-Team gewinnt.\n• Gebot verfehlt → Verteidigung gewinnt.\n\nPunkte werden über mehrere Runden gesammelt. Der Spieler mit der höchsten Punktzahl am Ende der Sitzung gewinnt.';
 
   @override
   String get mtPhaseBidding => 'Bieten';
@@ -2704,6 +2711,14 @@ class L10nDe extends L10n {
 
   @override
   String get mtConfirm => 'Bestätigen';
+
+  @override
+  String get mtChangeTrump => 'Trumpf ändern';
+
+  @override
+  String mtTrumpPenalty(int penalty) {
+    return 'Gebot +$penalty';
+  }
 
   @override
   String mtPlayTimer(Object seconds) {

@@ -539,6 +539,18 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
                         color: Color(0xFF5A4038),
                       ),
                     ),
+                    const SizedBox(width: 6),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFECEFF1),
+                        borderRadius: BorderRadius.circular(6),
+                      ),
+                      child: Text(
+                        '/${game.roomTargetScore}',
+                        style: const TextStyle(fontSize: 11, color: Color(0xFF78909C)),
+                      ),
+                    ),
                     if (trumpLabel.isNotEmpty) ...[
                       const SizedBox(width: 6),
                       Container(

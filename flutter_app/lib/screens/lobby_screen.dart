@@ -1118,7 +1118,8 @@ class _LobbyScreenState extends State<LobbyScreen> {
                             if (isRanked) {
                               isPrivate = false;
                               passwordController.clear();
-                              targetScoreController.text = '1000';
+                              targetScoreController.text =
+                                  selectedGameType == 'mighty' ? '50' : '1000';
                             }
                           }),
                         ),

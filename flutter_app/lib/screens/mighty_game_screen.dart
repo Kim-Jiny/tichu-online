@@ -1145,7 +1145,7 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
               }
               return Row(
               children: [
-                const Text('Points:', style: TextStyle(fontSize: 12, color: Color(0xFF5A4038))),
+                Text(L10n.of(context).mtPoints, style: const TextStyle(fontSize: 12, color: Color(0xFF5A4038))),
                 Expanded(
                   child: Slider(
                     value: _bidPoints.toDouble().clamp(minBid.toDouble(), 20),

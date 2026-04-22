@@ -855,7 +855,13 @@ async function handleAdminRoute(req, res, url, pathname, method, lobby, wss, mai
 
   // Dashboard home
   if (pathname === '/tc-backstage/' || pathname === '/tc-backstage') {
-    const stats = await getDashboardStats();
+    const activityPeriod = ['today', 'week', 'month'].includes(url.searchParams.get('activity'))
+      ? url.searchParams.get('activity')
+      : 'week';
+    const activityGame = ['all', 'tichu', 'skull_king', 'love_letter', 'mighty'].includes(url.searchParams.get('activityGame'))
+      ? url.searchParams.get('activityGame')
+      : 'all';
+    const stats = await getDashboardStats(activityPeriod, activityGame);
     // Get live data from lobby/wss
     const connectedUsers = wss ? wss.clients.size : 0;
     const allRooms = lobby ? lobby.getRoomList() : [];
@@ -971,21 +977,67 @@ async function handleAdminRoute(req, res, url, pathname, method, lobby, wss, mai
     const matchesTable = renderAdminRecentMatchesTable(stats.recentMatches);
 
     // Top players table
+    const activityLabels = {
+      today: { title: '오늘 게임량', range: '오늘 KST 기준' },
+      week: { title: '주간 게임량', range: '최근 7일 KST 기준' },
+      month: { title: '월간 게임량', range: '최근 30일 KST 기준' },
+    };
+    const activityGameLabels = {
+      all: { label: '전체', title: '전체 게임량' },
+      tichu: { label: '티츄', title: '티츄 게임량' },
+      skull_king: { label: 'SK', title: 'SK 게임량' },
+      love_letter: { label: 'LL', title: 'LL 게임량' },
+      mighty: { label: '마이티', title: '마이티 게임량' },
+    };
+    const activityLabel = activityLabels[stats.topPlayersPeriod || activityPeriod] || activityLabels.week;
+    const activityGameLabel = activityGameLabels[stats.topPlayersGame || activityGame] || activityGameLabels.all;
+    const activityFilter = ['today', 'week', 'month'].map(period => {
+      const label = period === 'today' ? '오늘' : period === 'week' ? '주간' : '월간';
+      const active = period === activityPeriod ? 'active' : '';
+      return `<a class="preset-link ${active}" href="/tc-backstage/?activity=${period}&activityGame=${activityGame}">${label}</a>`;
+    }).join('');
+    const gameActivityFilter = [
+      ['all', '전체'],
+      ['tichu', '티츄'],
+      ['skull_king', 'SK'],
+      ['love_letter', 'LL'],
+      ['mighty', '마이티'],
+    ].map(([game, label]) => {
+      const active = game === activityGame ? 'active' : '';
+      return `<a class="preset-link ${active}" href="/tc-backstage/?activity=${activityPeriod}&activityGame=${game}">${label}</a>`;
+    }).join('');
     let topPlayersTable = '';
     if (stats.topPlayers.length > 0) {
       topPlayersTable = `<div class="table-wrap"><table>
-        <tr><th>#</th><th>닉네임</th><th>레이팅</th><th>시즌</th><th>승/패</th><th>게임</th><th>시즌판수</th><th>Lv</th></tr>
+        <tr><th>#</th><th>닉네임</th><th>${activityGameLabel.title}</th><th>게임별</th><th>누적 게임</th><th>레이팅</th><th>Lv</th></tr>
         ${stats.topPlayers.map((p, i) => {
           const medal = i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : `${i + 1}`;
-          const winRate = p.total_games > 0 ? Math.round(p.wins / p.total_games * 100) : 0;
+          const tichuGames = parseInt(p.tichu_games) || 0;
+          const skGames = parseInt(p.sk_games) || 0;
+          const llGames = parseInt(p.ll_games) || 0;
+          const mightyGames = parseInt(p.mighty_games) || 0;
+          const rankGames = activityGame === 'tichu'
+            ? tichuGames
+            : activityGame === 'skull_king'
+              ? skGames
+              : activityGame === 'love_letter'
+                ? llGames
+                : activityGame === 'mighty'
+                  ? mightyGames
+                  : parseInt(p.activity_games) || 0;
+          const totalGamesAll = (parseInt(p.total_games) || 0) + (parseInt(p.sk_total_games) || 0) + (parseInt(p.ll_total_games) || 0) + (parseInt(p.mighty_total_games) || 0);
           return `<tr>
             <td style="text-align:center">${medal}</td>
             <td><a href="/tc-backstage/users/${encodeURIComponent(p.nickname)}" style="color:#6c63ff;text-decoration:none;font-weight:600">${escapeHtml(p.nickname)}</a></td>
+            <td style="font-weight:800">${formatNumber(rankGames)}판</td>
+            <td style="font-size:12px;color:#666;line-height:1.6">
+              <span style="color:#5f62d6">티츄 ${formatNumber(tichuGames)}</span> ·
+              <span style="color:#ff7043">SK ${formatNumber(skGames)}</span> ·
+              <span style="color:#E91E63">LL ${formatNumber(llGames)}</span> ·
+              <span style="color:#1565C0">마이티 ${formatNumber(mightyGames)}</span>
+            </td>
+            <td>${formatNumber(totalGamesAll)}판</td>
             <td style="font-weight:700">${p.rating}</td>
-            <td>${p.season_rating}</td>
-            <td>${p.wins}승 / ${p.losses}패 <span style="color:#888;font-size:12px">(${winRate}%)</span></td>
-            <td>${p.total_games}</td>
-            <td>${p.season_games || 0}</td>
             <td>${p.level}</td>
           </tr>`;
         }).join('')}
@@ -1124,7 +1176,16 @@ async function handleAdminRoute(req, res, url, pathname, method, lobby, wss, mai
 
       <div class="grid-2col">
         <div class="card">
-          <h3>상위 10명</h3>
+          <div class="table-meta">
+            <div>
+              <h3>플레이량 Top 10</h3>
+              <div class="muted" style="font-size:12px">${activityLabel.range} · ${activityGameLabel.label} 기준 참여 횟수로 정렬합니다.</div>
+            </div>
+            <div>
+              <div class="preset-bar" style="margin-top:0">${activityFilter}</div>
+              <div class="preset-bar" style="margin-top:8px">${gameActivityFilter}</div>
+            </div>
+          </div>
           ${topPlayersTable || '<div class="empty">아직 플레이어 없음</div>'}
         </div>
         <div class="card">

@@ -3109,11 +3109,27 @@ async function getUserDetail(nickname) {
 }
 
 // Get dashboard stats
-async function getDashboardStats() {
+async function getDashboardStats(activityPeriod = 'week', activityGame = 'all') {
   const client = await pool.connect();
   try {
     const kstTodayExpr = `DATE(timezone('Asia/Seoul', NOW()))`;
     const kstCreatedDate = (column = 'created_at') => `DATE(timezone('Asia/Seoul', ${column}))`;
+    const safeActivityPeriod = ['today', 'week', 'month'].includes(activityPeriod) ? activityPeriod : 'week';
+    const safeActivityGame = ['all', 'tichu', 'skull_king', 'love_letter', 'mighty'].includes(activityGame) ? activityGame : 'all';
+    const activityStartExpr = safeActivityPeriod === 'today'
+      ? kstTodayExpr
+      : safeActivityPeriod === 'month'
+        ? `${kstTodayExpr} - INTERVAL '29 days'`
+        : `${kstTodayExpr} - INTERVAL '6 days'`;
+    const activityRankExpr = safeActivityGame === 'all'
+      ? 'p.activity_games'
+      : safeActivityGame === 'tichu'
+        ? 'p.tichu_games'
+        : safeActivityGame === 'skull_king'
+          ? 'p.sk_games'
+          : safeActivityGame === 'love_letter'
+            ? 'p.ll_games'
+            : 'p.mighty_games';
     // Basic counts
     const totalUsers = await client.query('SELECT COUNT(*) FROM tc_users WHERE is_deleted IS NOT TRUE');
     const pendingInquiries = await client.query(`SELECT COUNT(*) FROM tc_inquiries WHERE status = 'pending'`);
@@ -3213,10 +3229,74 @@ async function getDashboardStats() {
       ORDER BY day
     `);
 
-    // Top 10 players by rating
+    // Top 10 players by activity in the selected KST period
     const topPlayers = await client.query(`
-      SELECT nickname, rating, wins, losses, total_games, season_rating, season_games, level
-      FROM tc_users WHERE is_deleted IS NOT TRUE ORDER BY rating DESC, season_games DESC LIMIT 10
+      WITH activity AS (
+        SELECT nickname, game_type, COUNT(*)::int AS games
+        FROM (
+          SELECT p.nickname, 'tichu'::text AS game_type
+          FROM tc_match_history h
+          CROSS JOIN LATERAL (VALUES (h.player_a1), (h.player_a2), (h.player_b1), (h.player_b2)) AS p(nickname)
+          WHERE ${kstCreatedDate('h.created_at')} >= ${activityStartExpr}
+            AND p.nickname IS NOT NULL
+            AND p.nickname <> ''
+          UNION ALL
+          SELECT p.nickname, 'skull_king'::text AS game_type
+          FROM tc_sk_match_history h
+          JOIN tc_sk_match_players p ON p.match_id = h.id
+          WHERE ${kstCreatedDate('h.created_at')} >= ${activityStartExpr}
+            AND p.nickname IS NOT NULL
+            AND p.nickname <> ''
+            AND p.is_bot IS NOT TRUE
+          UNION ALL
+          SELECT p.nickname, 'love_letter'::text AS game_type
+          FROM tc_ll_match_history h
+          JOIN tc_ll_match_players p ON p.match_id = h.id
+          WHERE ${kstCreatedDate('h.created_at')} >= ${activityStartExpr}
+            AND p.nickname IS NOT NULL
+            AND p.nickname <> ''
+            AND p.is_bot IS NOT TRUE
+          UNION ALL
+          SELECT p.nickname, 'mighty'::text AS game_type
+          FROM tc_mighty_match_history h
+          JOIN tc_mighty_match_players p ON p.match_id = h.id
+          WHERE ${kstCreatedDate('h.created_at')} >= ${activityStartExpr}
+            AND p.nickname IS NOT NULL
+            AND p.nickname <> ''
+            AND p.is_bot IS NOT TRUE
+        ) raw_activity
+        GROUP BY nickname, game_type
+      ),
+      pivot AS (
+        SELECT
+          nickname,
+          COALESCE(SUM(games), 0)::int AS activity_games,
+          COALESCE(SUM(games) FILTER (WHERE game_type = 'tichu'), 0)::int AS tichu_games,
+          COALESCE(SUM(games) FILTER (WHERE game_type = 'skull_king'), 0)::int AS sk_games,
+          COALESCE(SUM(games) FILTER (WHERE game_type = 'love_letter'), 0)::int AS ll_games,
+          COALESCE(SUM(games) FILTER (WHERE game_type = 'mighty'), 0)::int AS mighty_games
+        FROM activity
+        GROUP BY nickname
+      )
+      SELECT
+        u.nickname,
+        u.rating,
+        u.total_games,
+        u.sk_total_games,
+        u.ll_total_games,
+        u.mighty_total_games,
+        u.level,
+        COALESCE(p.activity_games, 0) AS activity_games,
+        COALESCE(p.tichu_games, 0) AS tichu_games,
+        COALESCE(p.sk_games, 0) AS sk_games,
+        COALESCE(p.ll_games, 0) AS ll_games,
+        COALESCE(p.mighty_games, 0) AS mighty_games
+      FROM pivot p
+      JOIN tc_users u ON u.nickname = p.nickname
+      WHERE u.is_deleted IS NOT TRUE
+        AND ${activityRankExpr} > 0
+      ORDER BY ${activityRankExpr} DESC, p.activity_games DESC, p.tichu_games DESC NULLS LAST, p.sk_games DESC NULLS LAST, p.ll_games DESC NULLS LAST, p.mighty_games DESC NULLS LAST, u.nickname ASC
+      LIMIT 10
     `);
 
     // Gold economy
@@ -3282,6 +3362,8 @@ async function getDashboardStats() {
       dailyGames: dailyGames.rows,
       dailySignups: dailySignups.rows,
       topPlayers: topPlayers.rows,
+      topPlayersPeriod: safeActivityPeriod,
+      topPlayersGame: safeActivityGame,
       goldStats: goldStats.rows[0],
       shopStats: shopStats.rows[0],
       leaveStats: leaveStats.rows[0],
@@ -3295,7 +3377,7 @@ async function getDashboardStats() {
       totalUsers: 0, pendingInquiries: 0, pendingReports: 0, todayGames: 0, todayTichuGames: 0, todaySKGames: 0, todayLLGames: 0, todayMightyGames: 0,
       recentMatches: [], newUsersToday: 0, activeUsers24h: 0, activeUsers7d: 0,
       totalMatches: 0, rankedMatchesToday: 0, dailyGames: [], dailySignups: [],
-      topPlayers: [], goldStats: {}, shopStats: {}, leaveStats: {}, reportStats30d: {},
+      topPlayers: [], topPlayersPeriod: 'week', topPlayersGame: 'all', goldStats: {}, shopStats: {}, leaveStats: {}, reportStats30d: {},
       adRewardStats: {}, dailyAdRewards: [],
     };
   } finally {

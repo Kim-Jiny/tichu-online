@@ -1367,19 +1367,36 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
             );
             }),
             // Suit selection
-            Padding(
-              padding: const EdgeInsets.symmetric(vertical: 6),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                children: [
-                  _buildSuitChip('spade', '\u2660', const Color(0xFF2B2B2B)),
-                  _buildSuitChip('heart', '\u2665', const Color(0xFFD24B4B)),
-                  _buildSuitChip('diamond', '\u2666', const Color(0xFF6FB6E5)),
-                  _buildSuitChip('club', '\u2663', const Color(0xFF4BAA6A)),
-                  _buildSuitChip('no_trump', 'NT', const Color(0xFF7B1FA2)),
-                ],
-              ),
-            ),
+            Builder(builder: (context) {
+              final cbPoints = (state.currentBid['points'] as num?)?.toInt() ?? 0;
+              final cbSuit = state.currentBid['suit'] as String?;
+              bool suitEnabled(String suit) {
+                if (cbPoints == 0) return true;
+                if (_bidPoints > cbPoints) return true;
+                if (_bidPoints == cbPoints && suit == 'no_trump' && cbSuit != 'no_trump') return true;
+                if (_bidPoints < cbPoints) return false;
+                return false;
+              }
+              // Auto-switch to no_trump if current suit is invalid
+              if (!suitEnabled(_bidSuit) && suitEnabled('no_trump')) {
+                WidgetsBinding.instance.addPostFrameCallback((_) {
+                  if (mounted) setState(() => _bidSuit = 'no_trump');
+                });
+              }
+              return Padding(
+                padding: const EdgeInsets.symmetric(vertical: 6),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                  children: [
+                    _buildSuitChip('spade', '\u2660', const Color(0xFF2B2B2B), enabled: suitEnabled('spade')),
+                    _buildSuitChip('heart', '\u2665', const Color(0xFFD24B4B), enabled: suitEnabled('heart')),
+                    _buildSuitChip('diamond', '\u2666', const Color(0xFF6FB6E5), enabled: suitEnabled('diamond')),
+                    _buildSuitChip('club', '\u2663', const Color(0xFF4BAA6A), enabled: suitEnabled('club')),
+                    _buildSuitChip('no_trump', 'NT', const Color(0xFF7B1FA2), enabled: suitEnabled('no_trump')),
+                  ],
+                ),
+              );
+            }),
             const SizedBox(height: 6),
             // Bid / Pass
             Builder(builder: (context) {
@@ -1423,27 +1440,28 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
     );
   }
 
-  Widget _buildSuitChip(String suit, String label, Color color) {
+  Widget _buildSuitChip(String suit, String label, Color color, {bool enabled = true}) {
     final isSelected = _bidSuit == suit;
+    final effectiveColor = enabled ? color : const Color(0xFFBDBDBD);
     return GestureDetector(
-      onTap: () => setState(() => _bidSuit = suit),
+      onTap: enabled ? () => setState(() => _bidSuit = suit) : null,
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 150),
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
         decoration: BoxDecoration(
-          color: isSelected ? color.withValues(alpha: 0.12) : Colors.transparent,
+          color: isSelected && enabled ? color.withValues(alpha: 0.12) : Colors.transparent,
           borderRadius: BorderRadius.circular(10),
           border: Border.all(
-            color: isSelected ? color : const Color(0xFFE0D8D4),
-            width: isSelected ? 2 : 1,
+            color: isSelected && enabled ? color : const Color(0xFFE0D8D4),
+            width: isSelected && enabled ? 2 : 1,
           ),
         ),
         child: Text(
           label,
           style: TextStyle(
             fontSize: 18,
-            color: color,
-            fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+            color: effectiveColor,
+            fontWeight: isSelected && enabled ? FontWeight.bold : FontWeight.normal,
           ),
         ),
       ),

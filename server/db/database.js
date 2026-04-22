@@ -4018,8 +4018,8 @@ async function getDetailedAdminStats(dateFrom, dateTo, bucket = 'day', options =
 
         SELECT CASE
                  WHEN h.end_reason IN ('leave', 'timeout') AND h.deserter_nickname = p.nickname THEN 0
-                 WHEN p.is_winner THEN 10
-                 ELSE 3
+                 WHEN p.is_winner THEN CASE WHEN h.is_ranked THEN 20 ELSE 10 END
+                 ELSE CASE WHEN h.is_ranked THEN 6 ELSE 3 END
                END AS gold_delta
         FROM tc_mighty_match_history h
         JOIN tc_mighty_match_players p ON p.match_id = h.id

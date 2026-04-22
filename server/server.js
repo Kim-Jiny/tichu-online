@@ -4310,9 +4310,18 @@ async function handleGetRankings(ws, data) {
         const myRankRes = await pool.query(
           `SELECT COUNT(*) + 1 AS rank FROM tc_users
            WHERE is_deleted IS NOT TRUE AND mighty_season_games > 0
-             AND ((mighty_season_rating > (SELECT mighty_season_rating FROM tc_users WHERE nickname = $1))
-              OR (mighty_season_rating = (SELECT mighty_season_rating FROM tc_users WHERE nickname = $1)
-                  AND mighty_season_wins > (SELECT mighty_season_wins FROM tc_users WHERE nickname = $1)))`,
+             AND (
+               mighty_season_rating > (SELECT mighty_season_rating FROM tc_users WHERE nickname = $1)
+               OR (mighty_season_rating = (SELECT mighty_season_rating FROM tc_users WHERE nickname = $1)
+                   AND mighty_season_wins > (SELECT mighty_season_wins FROM tc_users WHERE nickname = $1))
+               OR (mighty_season_rating = (SELECT mighty_season_rating FROM tc_users WHERE nickname = $1)
+                   AND mighty_season_wins = (SELECT mighty_season_wins FROM tc_users WHERE nickname = $1)
+                   AND mighty_season_games > (SELECT mighty_season_games FROM tc_users WHERE nickname = $1))
+               OR (mighty_season_rating = (SELECT mighty_season_rating FROM tc_users WHERE nickname = $1)
+                   AND mighty_season_wins = (SELECT mighty_season_wins FROM tc_users WHERE nickname = $1)
+                   AND mighty_season_games = (SELECT mighty_season_games FROM tc_users WHERE nickname = $1)
+                   AND nickname < $1)
+             )`,
           [ws.nickname]
         );
         const myProfileRes = await pool.query(

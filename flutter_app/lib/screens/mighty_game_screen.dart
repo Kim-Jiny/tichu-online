@@ -236,6 +236,10 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
                         children: [
                           _buildTopBar(state, game),
                           _buildScoreboard(state, game),
+                          if (state.phase == 'playing' || state.phase == 'trick_end' || state.phase == 'round_end')
+                            _buildOppositionPointBar(state),
+                          if (state.phase == 'playing' || state.phase == 'trick_end')
+                            _buildPlayedCardsRow(state),
                           if (state.phase == 'bidding') ...[
                             Expanded(
                               child: Align(
@@ -251,7 +255,6 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
                             Expanded(
                               child: Column(
                                 children: [
-                                  _buildOppositionPointBar(state),
                                   const Spacer(),
                                   _buildTrickArea(state),
                                   const Spacer(),
@@ -261,13 +264,9 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
                           if (state.phase == 'playing')
                             _buildHandArea(state, game),
                           if (state.phase == 'trick_end')
-                            _buildOppositionPointBar(state),
-                          if (state.phase == 'trick_end')
                             Expanded(child: _buildTrickEndArea(state)),
                           if (state.phase == 'trick_end')
                             _buildHandArea(state, game),
-                          if (state.phase == 'round_end')
-                            _buildOppositionPointBar(state),
                           if (state.phase == 'round_end')
                             Expanded(child: SingleChildScrollView(child: _buildRoundEndUI(state))),
                           if (state.phase == 'game_end')
@@ -785,21 +784,13 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
     final isSpectator = game.isSpectator;
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 6),
-      margin: EdgeInsets.only(bottom: state.phase == 'playing' || state.phase == 'trick_end' ? 80 : 0),
+      margin: EdgeInsets.zero,
       child: Row(
         children: state.players.map((p) {
           final isCurrentTurn = p.id == state.currentPlayer;
           final isSelf = p.position == 'self';
           final isDeclarer = p.id == state.declarer;
           final isPartner = state.friendRevealed && p.id == state.partner;
-          // Show current trick cards during playing, lastTrickCards during trick_end
-          final trickPlay = state.phase == 'trick_end'
-              ? state.lastTrickCards.cast<MightyTrickPlay?>().firstWhere(
-                  (play) => play?.playerId == p.id, orElse: () => null)
-              : state.currentTrick.cast<MightyTrickPlay?>().firstWhere(
-                  (play) => play?.playerId == p.id, orElse: () => null);
-          final isTrickWinner = state.phase == 'trick_end' && p.id == state.lastTrickWinner;
-
           // Spectator card view state
           final isPending = isSpectator && game.pendingCardViewRequests.contains(p.id);
           final isApproved = isSpectator && game.approvedCardViews.contains(p.id) && p.canViewCards;
@@ -837,23 +828,19 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
                       margin: const EdgeInsets.symmetric(horizontal: 2),
                       padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 6),
                       decoration: BoxDecoration(
-                        color: isTrickWinner
-                            ? const Color(0xFFE8F5E9)
-                            : isSelf
-                                ? Colors.white.withValues(alpha: 0.95)
-                                : isCurrentTurn
-                                    ? const Color(0xFFFFF2B3)
-                                    : Colors.white.withValues(alpha: 0.7),
-                        borderRadius: BorderRadius.circular(12),
-                        border: isTrickWinner
-                            ? Border.all(color: const Color(0xFF4CAF50), width: 2)
+                        color: isSelf
+                            ? Colors.white.withValues(alpha: 0.95)
                             : isCurrentTurn
-                                ? Border.all(color: const Color(0xFFE6C86A), width: 2)
-                                : isDeclarer
-                                    ? Border.all(color: const Color(0xFFFF8A00), width: 2)
-                                    : isPartner
-                                        ? Border.all(color: const Color(0xFF4CAF50), width: 2)
-                                        : Border.all(color: const Color(0xFFE0D8D4)),
+                                ? const Color(0xFFFFF2B3)
+                                : Colors.white.withValues(alpha: 0.7),
+                        borderRadius: BorderRadius.circular(12),
+                        border: isCurrentTurn
+                            ? Border.all(color: const Color(0xFFE6C86A), width: 2)
+                            : isDeclarer
+                                ? Border.all(color: const Color(0xFFFF8A00), width: 2)
+                                : isPartner
+                                    ? Border.all(color: const Color(0xFF4CAF50), width: 2)
+                                    : Border.all(color: const Color(0xFFE0D8D4)),
                         boxShadow: isSelf
                             ? [BoxShadow(color: Colors.black.withValues(alpha: 0.08), blurRadius: 4)]
                             : null,
@@ -918,36 +905,6 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
                         ],
                       ),
                     ),
-                    // Played card badge below scoreboard
-                    if (trickPlay != null)
-                      Positioned(
-                        left: 0, right: 0, bottom: -72,
-                        child: Center(
-                          child: Container(
-                            decoration: isTrickWinner
-                                ? BoxDecoration(
-                                    borderRadius: BorderRadius.circular(6),
-                                    boxShadow: [BoxShadow(color: const Color(0xFF4CAF50).withValues(alpha: 0.4), blurRadius: 8)],
-                                  )
-                                : null,
-                            child: PlayingCard(
-                              cardId: _displayCardId(trickPlay.cardId),
-                              width: 38,
-                              height: 53,
-                              isInteractive: false,
-                              borderColor: (state.trumpSuit != null && state.trumpSuit != 'no_trump' && _getCardSuit(trickPlay.cardId) == state.trumpSuit)
-                                  ? PlayingCard.suitColors[_getCardSuit(trickPlay.cardId)]
-                                  : null,
-                              badgeIcon: trickPlay.cardId == state.mightyCard ? Icons.star
-                                  : trickPlay.cardId == state.jokerCallCard ? Icons.gps_fixed
-                                  : null,
-                              badgeColor: trickPlay.cardId == state.mightyCard ? const Color(0xFFFFB300)
-                                  : trickPlay.cardId == state.jokerCallCard ? const Color(0xFFE53935)
-                                  : null,
-                            ),
-                          ),
-                        ),
-                      ),
                     // Spectator card view badges
                     if (isSpectator && isPending)
                       Positioned(
@@ -998,6 +955,55 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
     );
   }
 
+  Widget _buildPlayedCardsRow(MightyGameStateData state) {
+    final isEnd = state.phase == 'trick_end';
+    final tricks = isEnd ? state.lastTrickCards : state.currentTrick;
+    final winnerId = isEnd ? state.lastTrickWinner : null;
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 6),
+      margin: const EdgeInsets.only(top: 8),
+      height: 60,
+      child: Row(
+        children: state.players.map((p) {
+          final trickPlay = tricks.cast<MightyTrickPlay?>().firstWhere(
+              (play) => play?.playerId == p.id, orElse: () => null);
+          final isWinner = winnerId != null && p.id == winnerId;
+
+          return Expanded(
+            child: Center(
+              child: trickPlay != null
+                  ? Container(
+                      decoration: isWinner
+                          ? BoxDecoration(
+                              borderRadius: BorderRadius.circular(6),
+                              boxShadow: [BoxShadow(color: const Color(0xFF4CAF50).withValues(alpha: 0.4), blurRadius: 8)],
+                            )
+                          : null,
+                      child: PlayingCard(
+                        cardId: _displayCardId(trickPlay.cardId),
+                        width: 38,
+                        height: 53,
+                        isInteractive: false,
+                        borderColor: (state.trumpSuit != null && state.trumpSuit != 'no_trump' && _getCardSuit(trickPlay.cardId) == state.trumpSuit)
+                            ? PlayingCard.suitColors[_getCardSuit(trickPlay.cardId)]
+                            : null,
+                        badgeIcon: trickPlay.cardId == state.mightyCard ? Icons.star
+                            : trickPlay.cardId == state.jokerCallCard ? Icons.gps_fixed
+                            : null,
+                        badgeColor: trickPlay.cardId == state.mightyCard ? const Color(0xFFFFB300)
+                            : trickPlay.cardId == state.jokerCallCard ? const Color(0xFFE53935)
+                            : null,
+                      ),
+                    )
+                  : const SizedBox.shrink(),
+            ),
+          );
+        }).toList(),
+      ),
+    );
+  }
+
   Widget _buildOppositionPointBar(MightyGameStateData state) {
     // Collect all opposition point cards
     final oppCards = <String>[];
@@ -1009,8 +1015,6 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
         oppPoints += p.pointCount;
       }
     }
-    if (oppCards.isEmpty) return const SizedBox.shrink();
-
     final bidPoints = (state.currentBid['points'] is num)
         ? (state.currentBid['points'] as num).toInt()
         : 13;
@@ -1130,8 +1134,17 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
       );
     }
 
-    // Trick cards are shown below each player in the scoreboard.
-    // Center area shows info text.
+    // Lead suit from first card in trick
+    String? leadSuit;
+    if (state.currentTrick.isNotEmpty) {
+      final leadCardId = state.currentTrick.first.cardId;
+      if (leadCardId == 'mighty_joker') {
+        leadSuit = state.jokerSuitDeclared;
+      } else {
+        leadSuit = _getCardSuit(leadCardId);
+      }
+    }
+
     return Center(
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
@@ -1142,13 +1155,37 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Text(
-              L10n.of(context).mtPlayed(state.currentTrick.length, state.players.length),
-              style: const TextStyle(
-                fontSize: 14,
-                fontWeight: FontWeight.w800,
-                color: Color(0xFF5A4038),
-              ),
+            Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  L10n.of(context).mtPlayed(state.currentTrick.length, state.players.length),
+                  style: const TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w800,
+                    color: Color(0xFF5A4038),
+                  ),
+                ),
+                if (leadSuit != null) ...[
+                  const SizedBox(width: 8),
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFF5F0EB),
+                      borderRadius: BorderRadius.circular(6),
+                      border: Border.all(color: const Color(0xFFE0D8D4)),
+                    ),
+                    child: Text(
+                      _suitSymbol(leadSuit),
+                      style: TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.bold,
+                        color: PlayingCard.suitColors[leadSuit] ?? const Color(0xFF5A4038),
+                      ),
+                    ),
+                  ),
+                ],
+              ],
             ),
             if (state.friendCard != null)
               Padding(

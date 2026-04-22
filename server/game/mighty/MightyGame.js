@@ -755,6 +755,7 @@ class MightyGame {
       mightyCard: this.trumpSuit ? this.getMightyCard() : null,
       jokerCallCard: this.trumpSuit ? this.getJokerCallCard() : null,
       jokerCallActive: this.jokerCallActive,
+      jokerSuitDeclared: this.jokerSuitDeclared,
       lastTrickCards: this.state === 'trick_end' ? this.lastTrickCards : [],
       lastTrickWinner: this.state === 'trick_end' ? this.lastTrickWinner : null,
       tricks: this.tricks.map(t => ({
@@ -821,6 +822,7 @@ class MightyGame {
       mightyCard: this.trumpSuit ? this.getMightyCard() : null,
       jokerCallCard: this.trumpSuit ? this.getJokerCallCard() : null,
       jokerCallActive: this.jokerCallActive,
+      jokerSuitDeclared: this.jokerSuitDeclared,
       lastTrickCards: this.state === 'trick_end' ? this.lastTrickCards : [],
       lastTrickWinner: this.state === 'trick_end' ? this.lastTrickWinner : null,
       tricks: this.tricks.map(t => ({

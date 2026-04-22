@@ -49,6 +49,9 @@ const {
   getSKRankings,
   getCurrentSKSeasonRankings,
   getSKSeasonRankings,
+  getMightyRankings,
+  getCurrentMightySeasonRankings,
+  getMightySeasonRankings,
   getDashboardStats,
   getAdminGoldHistory,
   adminAdjustGold,
@@ -3793,13 +3796,57 @@ async function handleDesertion(roomId, playerId, reason = 'leave') {
       });
 
     } else if (room.gameType === 'mighty') {
-      await saveMightyMatchResultWithStats(
-        buildMightyMatchPayload(room, {
-          endReason: reason,
-          deserterNickname: deserterNick || null,
-          deserterId: playerId,
-        })
-      );
+      const game = room.game;
+      const deserterScore = game.scores[playerId] ?? 0;
+      const remaining = game.playerIds.filter(pid => pid !== playerId);
+      const players = [];
+
+      // Remaining players get draw (no win/loss), sorted by score
+      const sortedRemaining = remaining.map(pid => ({
+        playerId: pid,
+        nickname: game.playerNames[pid] || pid,
+        score: game.scores[pid] || 0,
+        isBot: pid.startsWith('bot_'),
+      })).sort((a, b) => b.score - a.score || a.nickname.localeCompare(b.nickname));
+
+      let currentRank = 1;
+      for (let i = 0; i < sortedRemaining.length; i++) {
+        if (i > 0 && sortedRemaining[i].score < sortedRemaining[i - 1].score) {
+          currentRank = i + 1;
+        }
+        players.push({
+          nickname: sortedRemaining[i].nickname,
+          score: sortedRemaining[i].score,
+          rank: currentRank,
+          isWinner: false,
+          isDraw: true,
+          isBot: sortedRemaining[i].isBot,
+        });
+      }
+
+      // Deserter gets last rank, loss
+      players.push({
+        nickname: deserterNick || playerId,
+        score: deserterScore,
+        rank: game.playerCount,
+        isWinner: false,
+        isDraw: false,
+        isBot: playerId.startsWith('bot_'),
+      });
+
+      await saveMightyMatchResultWithStats({
+        playerCount: game.playerCount,
+        isRanked: room.isRanked,
+        endReason: reason,
+        deserterNickname: deserterNick || null,
+        declarerNickname: game.declarer ? (game.playerNames[game.declarer] || game.declarer) : null,
+        partnerNickname: game.partner ? (game.playerNames[game.partner] || game.partner) : null,
+        declarerTeamSuccess: false,
+        declarerTeamPoints: 0,
+        bidPoints: game.currentBid?.points || 0,
+        trumpSuit: game.trumpSuit || null,
+        players,
+      });
       console.log(`Mighty desertion result saved for room ${room.name} by ${deserterNick}`);
     } else {
       const totalScores = game.totalScores;
@@ -4195,6 +4242,84 @@ async function handleGetRankings(ws, data) {
       } catch (_) {}
     }
     sendTo(ws, { type: 'rankings_result', gameType: 'skull_king', ...result });
+    return;
+  }
+
+  // Mighty rankings
+  if (gameType === 'mighty') {
+    const seasonId = data?.seasonId;
+    let result;
+    let isSeason = false;
+    if (seasonId === 'current') {
+      result = await getCurrentMightySeasonRankings(50);
+      isSeason = true;
+    } else if (seasonId) {
+      result = await getMightySeasonRankings(seasonId, 50);
+      isSeason = true;
+    } else {
+      result = await getMightyRankings(50);
+    }
+    // Calculate requester's Mighty rank (all-time)
+    if (ws.nickname && result.success && !seasonId) {
+      const { pool } = require('./db/database');
+      try {
+        const myRankRes = await pool.query(
+          `SELECT COUNT(*) + 1 AS rank FROM tc_users
+           WHERE is_deleted IS NOT TRUE AND mighty_total_games > 0
+             AND ((mighty_rating > (SELECT mighty_rating FROM tc_users WHERE nickname = $1))
+              OR (mighty_rating = (SELECT mighty_rating FROM tc_users WHERE nickname = $1)
+                  AND mighty_wins > (SELECT mighty_wins FROM tc_users WHERE nickname = $1)))`,
+          [ws.nickname]
+        );
+        const myProfileRes = await pool.query(
+          `SELECT u.nickname, u.mighty_rating AS rating, u.mighty_wins AS wins,
+                  u.mighty_losses AS losses, u.mighty_total_games AS total_games,
+                  CASE WHEN u.mighty_total_games > 0
+                    THEN ROUND((u.mighty_wins::FLOAT / u.mighty_total_games) * 100)
+                    ELSE 0 END AS win_rate,
+                  e.banner_key
+           FROM tc_users u
+           LEFT JOIN tc_user_equips e ON e.nickname = u.nickname
+           WHERE u.nickname = $1`,
+          [ws.nickname]
+        );
+        if (myProfileRes.rows.length > 0) {
+          result.myRank = parseInt(myRankRes.rows[0].rank);
+          result.myRankData = myProfileRes.rows[0];
+        }
+      } catch (_) {}
+    }
+    // Calculate requester's Mighty season rank
+    if (ws.nickname && result.success && isSeason && seasonId === 'current') {
+      const { pool } = require('./db/database');
+      try {
+        const myRankRes = await pool.query(
+          `SELECT COUNT(*) + 1 AS rank FROM tc_users
+           WHERE is_deleted IS NOT TRUE AND mighty_season_games > 0
+             AND ((mighty_season_rating > (SELECT mighty_season_rating FROM tc_users WHERE nickname = $1))
+              OR (mighty_season_rating = (SELECT mighty_season_rating FROM tc_users WHERE nickname = $1)
+                  AND mighty_season_wins > (SELECT mighty_season_wins FROM tc_users WHERE nickname = $1)))`,
+          [ws.nickname]
+        );
+        const myProfileRes = await pool.query(
+          `SELECT u.nickname, u.mighty_season_rating AS rating, u.mighty_season_wins AS wins,
+                  u.mighty_season_losses AS losses, u.mighty_season_games AS total_games,
+                  CASE WHEN u.mighty_season_games > 0
+                    THEN ROUND((u.mighty_season_wins::FLOAT / u.mighty_season_games) * 100)
+                    ELSE 0 END AS win_rate,
+                  e.banner_key
+           FROM tc_users u
+           LEFT JOIN tc_user_equips e ON e.nickname = u.nickname
+           WHERE u.nickname = $1`,
+          [ws.nickname]
+        );
+        if (myProfileRes.rows.length > 0) {
+          result.myRank = parseInt(myRankRes.rows[0].rank);
+          result.myRankData = myProfileRes.rows[0];
+        }
+      } catch (_) {}
+    }
+    sendTo(ws, { type: 'rankings_result', gameType: 'mighty', ...result });
     return;
   }
 

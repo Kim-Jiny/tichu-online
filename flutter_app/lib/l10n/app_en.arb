@@ -1351,6 +1351,17 @@
   "rankingTichuRecord": "Tichu Record",
   "rankingSkullKingSeasonRanked": "Skull King Season Ranked",
   "rankingSkullKingRecord": "Skull King Record",
+  "rankingMighty": "Mighty",
+  "rankingMightySeasonRanked": "Mighty Season Ranked",
+  "rankingMightyRecord": "Mighty Record",
+  "rankingMightyMatchDetail": "{declarer} bid {bid} {trump}",
+  "@rankingMightyMatchDetail": {
+    "placeholders": {
+      "declarer": { "type": "String" },
+      "bid": { "type": "int" },
+      "trump": { "type": "String" }
+    }
+  },
   "rankingLoveLetterRecord": "Love Letter Record",
   "rankingStatRecord": "Record",
   "rankingStatWinRate": "Win Rate",

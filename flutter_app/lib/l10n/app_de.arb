@@ -947,6 +947,17 @@
   "rankingTichuRecord": "Tichu Statistik",
   "rankingSkullKingSeasonRanked": "Skull King Saison-Rangliste",
   "rankingSkullKingRecord": "Skull King Statistik",
+  "rankingMighty": "Mighty",
+  "rankingMightySeasonRanked": "Mighty Saison-Rang",
+  "rankingMightyRecord": "Mighty Rekord",
+  "rankingMightyMatchDetail": "{declarer} Gebot {bid} {trump}",
+  "@rankingMightyMatchDetail": {
+    "placeholders": {
+      "declarer": { "type": "String" },
+      "bid": { "type": "int" },
+      "trump": { "type": "String" }
+    }
+  },
   "rankingLoveLetterRecord": "Love Letter Statistik",
   "rankingStatRecord": "Bilanz",
   "rankingStatWinRate": "Siegquote",

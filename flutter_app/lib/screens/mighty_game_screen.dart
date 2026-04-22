@@ -1195,28 +1195,34 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
             ),
             const SizedBox(height: 6),
             // Bid / Pass
-            Row(
-              children: [
-                Expanded(
-                  child: FilledButton(
-                    onPressed: () => game.mightySubmitBid(_bidPoints, _bidSuit),
-                    style: FilledButton.styleFrom(
-                      backgroundColor: const Color(0xFF1565C0),
+            Builder(builder: (context) {
+              final currentBidPoints = (state.currentBid['points'] as num?)?.toInt() ?? 0;
+              final currentBidSuit = state.currentBid['suit'] as String?;
+              final isMaxBid = currentBidPoints >= 20 && currentBidSuit == 'no_trump';
+              return Row(
+                children: [
+                  Expanded(
+                    child: FilledButton(
+                      onPressed: isMaxBid ? null : () => game.mightySubmitBid(_bidPoints, _bidSuit),
+                      style: FilledButton.styleFrom(
+                        backgroundColor: const Color(0xFF1565C0),
+                        disabledBackgroundColor: const Color(0xFFBDBDBD),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                      ),
+                      child: Text(L10n.of(context).mtBid(_bidPoints, _suitLabel(_bidSuit))),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  OutlinedButton(
+                    onPressed: () => game.mightyPass(),
+                    style: OutlinedButton.styleFrom(
                       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                     ),
-                    child: Text(L10n.of(context).mtBid(_bidPoints, _suitLabel(_bidSuit))),
+                    child: Text(L10n.of(context).mtPass),
                   ),
-                ),
-                const SizedBox(width: 8),
-                OutlinedButton(
-                  onPressed: () => game.mightyPass(),
-                  style: OutlinedButton.styleFrom(
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                  ),
-                  child: Text(L10n.of(context).mtPass),
-                ),
-              ],
-            ),
+                ],
+              );
+            }),
           ] else
             Padding(
               padding: const EdgeInsets.all(8),
@@ -1504,7 +1510,8 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
     if (bidPoints >= 20) return const SizedBox.shrink(); // already at cap
 
     final trumpSuit = state.trumpSuit ?? 'no_trump';
-    final hasSelection = _selectedTrumpSuit != null && _selectedTrumpSuit != trumpSuit;
+    _selectedTrumpSuit ??= trumpSuit;
+    final isSameTrump = _selectedTrumpSuit == trumpSuit;
     final nextBid = math.min(20, bidPoints + 2);
 
     return Container(
@@ -1558,26 +1565,22 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
               ])
                 Expanded(
                   child: GestureDetector(
-                    onTap: entry.$1 == trumpSuit
-                        ? null
-                        : () => setState(() {
-                            _selectedTrumpSuit = _selectedTrumpSuit == entry.$1 ? null : entry.$1;
-                          }),
+                    onTap: () => setState(() {
+                      _selectedTrumpSuit = entry.$1;
+                    }),
                     child: Container(
                       margin: const EdgeInsets.symmetric(horizontal: 2),
                       padding: const EdgeInsets.symmetric(vertical: 7),
                       decoration: BoxDecoration(
-                        color: entry.$1 == trumpSuit
-                            ? entry.$3.withValues(alpha: 0.08)
-                            : _selectedTrumpSuit == entry.$1
-                                ? entry.$3.withValues(alpha: 0.15)
-                                : Colors.transparent,
+                        color: _selectedTrumpSuit == entry.$1
+                            ? entry.$3.withValues(alpha: 0.15)
+                            : Colors.transparent,
                         borderRadius: BorderRadius.circular(8),
                         border: Border.all(
-                          color: entry.$1 == trumpSuit
-                              ? entry.$3.withValues(alpha: 0.3)
-                              : _selectedTrumpSuit == entry.$1
-                                  ? entry.$3
+                          color: _selectedTrumpSuit == entry.$1
+                              ? entry.$3
+                              : entry.$1 == trumpSuit
+                                  ? entry.$3.withValues(alpha: 0.5)
                                   : const Color(0xFFE0D8D4),
                           width: _selectedTrumpSuit == entry.$1 ? 2 : 1,
                         ),
@@ -1587,10 +1590,9 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
                           entry.$2,
                           style: TextStyle(
                             fontSize: 15,
-                            color: entry.$1 == trumpSuit
-                                ? entry.$3.withValues(alpha: 0.4)
-                                : entry.$3,
-                            fontWeight: _selectedTrumpSuit == entry.$1 ? FontWeight.bold : FontWeight.normal,
+                            color: entry.$3,
+                            fontWeight: _selectedTrumpSuit == entry.$1 || entry.$1 == trumpSuit
+                                ? FontWeight.bold : FontWeight.normal,
                           ),
                         ),
                       ),
@@ -1601,18 +1603,23 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
               SizedBox(
                 height: 34,
                 child: FilledButton(
-                  onPressed: hasSelection
-                      ? () {
-                          game.mightyChangeTrump(_selectedTrumpSuit!);
-                          setState(() => _selectedTrumpSuit = null);
-                        }
-                      : null,
+                  onPressed: () {
+                    if (isSameTrump) {
+                      game.mightyRaiseBid();
+                    } else {
+                      game.mightyChangeTrump(_selectedTrumpSuit!);
+                    }
+                    setState(() => _selectedTrumpSuit = null);
+                  },
                   style: FilledButton.styleFrom(
-                    backgroundColor: const Color(0xFFE65100),
+                    backgroundColor: isSameTrump ? const Color(0xFF1565C0) : const Color(0xFFE65100),
                     padding: const EdgeInsets.symmetric(horizontal: 12),
                     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
                   ),
-                  child: Text(L10n.of(context).mtChangeTrump, style: const TextStyle(fontSize: 11)),
+                  child: Text(
+                    isSameTrump ? '→ $nextBid' : L10n.of(context).mtChangeTrump,
+                    style: const TextStyle(fontSize: 11),
+                  ),
                 ),
               ),
             ],

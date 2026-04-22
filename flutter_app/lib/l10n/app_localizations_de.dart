@@ -2947,6 +2947,20 @@ class L10nDe extends L10n {
   String get rankingSkullKingRecord => 'Skull King Statistik';
 
   @override
+  String get rankingMighty => 'Mighty';
+
+  @override
+  String get rankingMightySeasonRanked => 'Mighty Saison-Rang';
+
+  @override
+  String get rankingMightyRecord => 'Mighty Rekord';
+
+  @override
+  String rankingMightyMatchDetail(String declarer, int bid, String trump) {
+    return '$declarer Gebot $bid $trump';
+  }
+
+  @override
   String get rankingLoveLetterRecord => 'Love Letter Statistik';
 
   @override

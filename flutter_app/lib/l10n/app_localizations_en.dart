@@ -2931,6 +2931,20 @@ class L10nEn extends L10n {
   String get rankingSkullKingRecord => 'Skull King Record';
 
   @override
+  String get rankingMighty => 'Mighty';
+
+  @override
+  String get rankingMightySeasonRanked => 'Mighty Season Ranked';
+
+  @override
+  String get rankingMightyRecord => 'Mighty Record';
+
+  @override
+  String rankingMightyMatchDetail(String declarer, int bid, String trump) {
+    return '$declarer bid $bid $trump';
+  }
+
+  @override
   String get rankingLoveLetterRecord => 'Love Letter Record';
 
   @override

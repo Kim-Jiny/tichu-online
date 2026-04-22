@@ -607,6 +607,13 @@ async function initDatabase() {
     await client.query(`ALTER TABLE tc_users ADD COLUMN IF NOT EXISTS mighty_total_games INT DEFAULT 0`);
     await client.query(`ALTER TABLE tc_users ADD COLUMN IF NOT EXISTS mighty_wins INT DEFAULT 0`);
     await client.query(`ALTER TABLE tc_users ADD COLUMN IF NOT EXISTS mighty_losses INT DEFAULT 0`);
+    await client.query(`ALTER TABLE tc_users ADD COLUMN IF NOT EXISTS mighty_rating INT DEFAULT 1000`);
+
+    // Mighty season stats columns
+    await client.query(`ALTER TABLE tc_users ADD COLUMN IF NOT EXISTS mighty_season_rating INT DEFAULT 1000`);
+    await client.query(`ALTER TABLE tc_users ADD COLUMN IF NOT EXISTS mighty_season_games INT DEFAULT 0`);
+    await client.query(`ALTER TABLE tc_users ADD COLUMN IF NOT EXISTS mighty_season_wins INT DEFAULT 0`);
+    await client.query(`ALTER TABLE tc_users ADD COLUMN IF NOT EXISTS mighty_season_losses INT DEFAULT 0`);
 
     // SK user stats columns
     await client.query(`ALTER TABLE tc_users ADD COLUMN IF NOT EXISTS sk_total_games INT DEFAULT 0`);
@@ -1366,6 +1373,8 @@ async function getUserProfile(nickname) {
               u.sk_total_games, u.sk_wins, u.sk_losses, u.sk_rating,
               u.sk_season_rating, u.sk_season_games, u.sk_season_wins, u.sk_season_losses,
               u.ll_total_games, u.ll_wins, u.ll_losses,
+              u.mighty_total_games, u.mighty_wins, u.mighty_losses, u.mighty_rating,
+              u.mighty_season_rating, u.mighty_season_games, u.mighty_season_wins, u.mighty_season_losses,
               e.banner_key, e.theme_key, e.title_key,
               si.name_ko AS title_name
        FROM tc_users u
@@ -1411,6 +1420,12 @@ async function getUserProfile(nickname) {
     const llWinRate = user.ll_total_games > 0
       ? Math.round((user.ll_wins / user.ll_total_games) * 100)
       : 0;
+    const mightyWinRate = user.mighty_total_games > 0
+      ? Math.round((user.mighty_wins / user.mighty_total_games) * 100)
+      : 0;
+    const mightySeasonWinRate = user.mighty_season_games > 0
+      ? Math.round((user.mighty_season_wins / user.mighty_season_games) * 100)
+      : 0;
 
     return {
       nickname: user.nickname,
@@ -1449,6 +1464,16 @@ async function getUserProfile(nickname) {
       llWins: user.ll_wins,
       llLosses: user.ll_losses,
       llWinRate,
+      mightyTotalGames: user.mighty_total_games,
+      mightyWins: user.mighty_wins,
+      mightyLosses: user.mighty_losses,
+      mightyRating: user.mighty_rating,
+      mightyWinRate,
+      mightySeasonRating: user.mighty_season_rating,
+      mightySeasonGames: user.mighty_season_games,
+      mightySeasonWins: user.mighty_season_wins,
+      mightySeasonLosses: user.mighty_season_losses,
+      mightySeasonWinRate,
     };
   } catch (err) {
     console.error('Get user profile error:', err);
@@ -2678,7 +2703,11 @@ async function resetSeasonStats() {
            sk_season_rating = 1000,
            sk_season_games = 0,
            sk_season_wins = 0,
-           sk_season_losses = 0`
+           sk_season_losses = 0,
+           mighty_season_rating = 1000,
+           mighty_season_games = 0,
+           mighty_season_wins = 0,
+           mighty_season_losses = 0`
     );
     return { success: true };
   } catch (err) {
@@ -2765,6 +2794,28 @@ async function grantSeasonRewards(seasonId) {
       await client.query(
         `INSERT INTO tc_season_rankings (season_id, rank, nickname, rating, wins, losses, total_games, game_type)
          VALUES ($1, $2, $3, $4, $5, $6, $7, 'skull_king')
+         ON CONFLICT DO NOTHING`,
+        [seasonId, i + 1, u.nickname, u.rating, u.wins, u.losses, u.total_games]
+      );
+    }
+
+    // Save Mighty season rankings
+    const mightyTopRes = await client.query(
+      `SELECT nickname,
+             mighty_season_rating AS rating,
+             mighty_season_wins AS wins,
+             mighty_season_losses AS losses,
+             mighty_season_games AS total_games
+      FROM tc_users
+      WHERE mighty_season_games > 0 AND is_deleted IS NOT TRUE
+      ORDER BY mighty_season_rating DESC, mighty_season_wins DESC, mighty_season_games DESC, nickname ASC
+      LIMIT 100`
+    );
+    for (let i = 0; i < mightyTopRes.rows.length; i++) {
+      const u = mightyTopRes.rows[i];
+      await client.query(
+        `INSERT INTO tc_season_rankings (season_id, rank, nickname, rating, wins, losses, total_games, game_type)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, 'mighty')
          ON CONFLICT DO NOTHING`,
         [seasonId, i + 1, u.nickname, u.rating, u.wins, u.losses, u.total_games]
       );
@@ -3072,7 +3123,8 @@ async function getUserDetail(nickname) {
     const userResult = await client.query(
       `SELECT id, username, nickname, total_games, wins, losses, rating, created_at, last_login, chat_ban_until, leave_count, gold, level, season_rating, admin_memo,
               fcm_token, push_enabled, push_admin_inquiry, push_admin_report, is_admin, is_deleted, deleted_at, device_platform, device_model, os_version, app_version, last_ip, locale,
-              sk_total_games, sk_wins, sk_losses, ll_total_games, ll_wins, ll_losses
+              sk_total_games, sk_wins, sk_losses, ll_total_games, ll_wins, ll_losses,
+              mighty_total_games, mighty_wins, mighty_losses, mighty_rating
        FROM tc_users WHERE nickname = $1`,
       [nickname]
     );
@@ -3108,28 +3160,123 @@ async function getUserDetail(nickname) {
   }
 }
 
+function normalizeDashboardActivityFilters(activityPeriod = 'week', activityGame = 'all') {
+  return {
+    period: ['today', 'week', 'month'].includes(activityPeriod) ? activityPeriod : 'week',
+    game: ['all', 'tichu', 'skull_king', 'love_letter', 'mighty'].includes(activityGame) ? activityGame : 'all',
+  };
+}
+
+async function queryDashboardActivityTopPlayers(client, activityPeriod = 'week', activityGame = 'all') {
+  const { period: safeActivityPeriod, game: safeActivityGame } = normalizeDashboardActivityFilters(activityPeriod, activityGame);
+  const kstTodayExpr = `DATE(timezone('Asia/Seoul', NOW()))`;
+  const kstCreatedDate = (column = 'created_at') => `DATE(timezone('Asia/Seoul', ${column}))`;
+  const activityStartExpr = safeActivityPeriod === 'today'
+    ? kstTodayExpr
+    : safeActivityPeriod === 'month'
+      ? `${kstTodayExpr} - INTERVAL '29 days'`
+      : `${kstTodayExpr} - INTERVAL '6 days'`;
+  const activityRankExpr = safeActivityGame === 'all'
+    ? 'p.activity_games'
+    : safeActivityGame === 'tichu'
+      ? 'p.tichu_games'
+      : safeActivityGame === 'skull_king'
+        ? 'p.sk_games'
+        : safeActivityGame === 'love_letter'
+          ? 'p.ll_games'
+          : 'p.mighty_games';
+
+  return client.query(`
+    WITH activity AS (
+      SELECT nickname, game_type, COUNT(*)::int AS games
+      FROM (
+        SELECT p.nickname, 'tichu'::text AS game_type
+        FROM tc_match_history h
+        CROSS JOIN LATERAL (VALUES (h.player_a1), (h.player_a2), (h.player_b1), (h.player_b2)) AS p(nickname)
+        WHERE ${kstCreatedDate('h.created_at')} >= ${activityStartExpr}
+          AND p.nickname IS NOT NULL
+          AND p.nickname <> ''
+        UNION ALL
+        SELECT p.nickname, 'skull_king'::text AS game_type
+        FROM tc_sk_match_history h
+        JOIN tc_sk_match_players p ON p.match_id = h.id
+        WHERE ${kstCreatedDate('h.created_at')} >= ${activityStartExpr}
+          AND p.nickname IS NOT NULL
+          AND p.nickname <> ''
+          AND p.is_bot IS NOT TRUE
+        UNION ALL
+        SELECT p.nickname, 'love_letter'::text AS game_type
+        FROM tc_ll_match_history h
+        JOIN tc_ll_match_players p ON p.match_id = h.id
+        WHERE ${kstCreatedDate('h.created_at')} >= ${activityStartExpr}
+          AND p.nickname IS NOT NULL
+          AND p.nickname <> ''
+          AND p.is_bot IS NOT TRUE
+        UNION ALL
+        SELECT p.nickname, 'mighty'::text AS game_type
+        FROM tc_mighty_match_history h
+        JOIN tc_mighty_match_players p ON p.match_id = h.id
+        WHERE ${kstCreatedDate('h.created_at')} >= ${activityStartExpr}
+          AND p.nickname IS NOT NULL
+          AND p.nickname <> ''
+          AND p.is_bot IS NOT TRUE
+      ) raw_activity
+      GROUP BY nickname, game_type
+    ),
+    pivot AS (
+      SELECT
+        nickname,
+        COALESCE(SUM(games), 0)::int AS activity_games,
+        COALESCE(SUM(games) FILTER (WHERE game_type = 'tichu'), 0)::int AS tichu_games,
+        COALESCE(SUM(games) FILTER (WHERE game_type = 'skull_king'), 0)::int AS sk_games,
+        COALESCE(SUM(games) FILTER (WHERE game_type = 'love_letter'), 0)::int AS ll_games,
+        COALESCE(SUM(games) FILTER (WHERE game_type = 'mighty'), 0)::int AS mighty_games
+      FROM activity
+      GROUP BY nickname
+    )
+    SELECT
+      u.nickname,
+      u.rating,
+      u.total_games,
+      u.sk_total_games,
+      u.ll_total_games,
+      u.mighty_total_games,
+      u.level,
+      COALESCE(p.activity_games, 0) AS activity_games,
+      COALESCE(p.tichu_games, 0) AS tichu_games,
+      COALESCE(p.sk_games, 0) AS sk_games,
+      COALESCE(p.ll_games, 0) AS ll_games,
+      COALESCE(p.mighty_games, 0) AS mighty_games
+    FROM pivot p
+    JOIN tc_users u ON u.nickname = p.nickname
+    WHERE u.is_deleted IS NOT TRUE
+      AND ${activityRankExpr} > 0
+    ORDER BY ${activityRankExpr} DESC, p.activity_games DESC, p.tichu_games DESC NULLS LAST, p.sk_games DESC NULLS LAST, p.ll_games DESC NULLS LAST, p.mighty_games DESC NULLS LAST, u.nickname ASC
+    LIMIT 10
+  `);
+}
+
+async function getDashboardActivityTopPlayers(activityPeriod = 'week', activityGame = 'all') {
+  const client = await pool.connect();
+  const { period, game } = normalizeDashboardActivityFilters(activityPeriod, activityGame);
+  try {
+    const result = await queryDashboardActivityTopPlayers(client, period, game);
+    return { rows: result.rows, period, game };
+  } catch (err) {
+    console.error('Get dashboard activity top players error:', err);
+    return { rows: [], period, game };
+  } finally {
+    client.release();
+  }
+}
+
 // Get dashboard stats
 async function getDashboardStats(activityPeriod = 'week', activityGame = 'all') {
   const client = await pool.connect();
   try {
     const kstTodayExpr = `DATE(timezone('Asia/Seoul', NOW()))`;
     const kstCreatedDate = (column = 'created_at') => `DATE(timezone('Asia/Seoul', ${column}))`;
-    const safeActivityPeriod = ['today', 'week', 'month'].includes(activityPeriod) ? activityPeriod : 'week';
-    const safeActivityGame = ['all', 'tichu', 'skull_king', 'love_letter', 'mighty'].includes(activityGame) ? activityGame : 'all';
-    const activityStartExpr = safeActivityPeriod === 'today'
-      ? kstTodayExpr
-      : safeActivityPeriod === 'month'
-        ? `${kstTodayExpr} - INTERVAL '29 days'`
-        : `${kstTodayExpr} - INTERVAL '6 days'`;
-    const activityRankExpr = safeActivityGame === 'all'
-      ? 'p.activity_games'
-      : safeActivityGame === 'tichu'
-        ? 'p.tichu_games'
-        : safeActivityGame === 'skull_king'
-          ? 'p.sk_games'
-          : safeActivityGame === 'love_letter'
-            ? 'p.ll_games'
-            : 'p.mighty_games';
+    const { period: safeActivityPeriod, game: safeActivityGame } = normalizeDashboardActivityFilters(activityPeriod, activityGame);
     // Basic counts
     const totalUsers = await client.query('SELECT COUNT(*) FROM tc_users WHERE is_deleted IS NOT TRUE');
     const pendingInquiries = await client.query(`SELECT COUNT(*) FROM tc_inquiries WHERE status = 'pending'`);
@@ -3230,74 +3377,7 @@ async function getDashboardStats(activityPeriod = 'week', activityGame = 'all') 
     `);
 
     // Top 10 players by activity in the selected KST period
-    const topPlayers = await client.query(`
-      WITH activity AS (
-        SELECT nickname, game_type, COUNT(*)::int AS games
-        FROM (
-          SELECT p.nickname, 'tichu'::text AS game_type
-          FROM tc_match_history h
-          CROSS JOIN LATERAL (VALUES (h.player_a1), (h.player_a2), (h.player_b1), (h.player_b2)) AS p(nickname)
-          WHERE ${kstCreatedDate('h.created_at')} >= ${activityStartExpr}
-            AND p.nickname IS NOT NULL
-            AND p.nickname <> ''
-          UNION ALL
-          SELECT p.nickname, 'skull_king'::text AS game_type
-          FROM tc_sk_match_history h
-          JOIN tc_sk_match_players p ON p.match_id = h.id
-          WHERE ${kstCreatedDate('h.created_at')} >= ${activityStartExpr}
-            AND p.nickname IS NOT NULL
-            AND p.nickname <> ''
-            AND p.is_bot IS NOT TRUE
-          UNION ALL
-          SELECT p.nickname, 'love_letter'::text AS game_type
-          FROM tc_ll_match_history h
-          JOIN tc_ll_match_players p ON p.match_id = h.id
-          WHERE ${kstCreatedDate('h.created_at')} >= ${activityStartExpr}
-            AND p.nickname IS NOT NULL
-            AND p.nickname <> ''
-            AND p.is_bot IS NOT TRUE
-          UNION ALL
-          SELECT p.nickname, 'mighty'::text AS game_type
-          FROM tc_mighty_match_history h
-          JOIN tc_mighty_match_players p ON p.match_id = h.id
-          WHERE ${kstCreatedDate('h.created_at')} >= ${activityStartExpr}
-            AND p.nickname IS NOT NULL
-            AND p.nickname <> ''
-            AND p.is_bot IS NOT TRUE
-        ) raw_activity
-        GROUP BY nickname, game_type
-      ),
-      pivot AS (
-        SELECT
-          nickname,
-          COALESCE(SUM(games), 0)::int AS activity_games,
-          COALESCE(SUM(games) FILTER (WHERE game_type = 'tichu'), 0)::int AS tichu_games,
-          COALESCE(SUM(games) FILTER (WHERE game_type = 'skull_king'), 0)::int AS sk_games,
-          COALESCE(SUM(games) FILTER (WHERE game_type = 'love_letter'), 0)::int AS ll_games,
-          COALESCE(SUM(games) FILTER (WHERE game_type = 'mighty'), 0)::int AS mighty_games
-        FROM activity
-        GROUP BY nickname
-      )
-      SELECT
-        u.nickname,
-        u.rating,
-        u.total_games,
-        u.sk_total_games,
-        u.ll_total_games,
-        u.mighty_total_games,
-        u.level,
-        COALESCE(p.activity_games, 0) AS activity_games,
-        COALESCE(p.tichu_games, 0) AS tichu_games,
-        COALESCE(p.sk_games, 0) AS sk_games,
-        COALESCE(p.ll_games, 0) AS ll_games,
-        COALESCE(p.mighty_games, 0) AS mighty_games
-      FROM pivot p
-      JOIN tc_users u ON u.nickname = p.nickname
-      WHERE u.is_deleted IS NOT TRUE
-        AND ${activityRankExpr} > 0
-      ORDER BY ${activityRankExpr} DESC, p.activity_games DESC, p.tichu_games DESC NULLS LAST, p.sk_games DESC NULLS LAST, p.ll_games DESC NULLS LAST, p.mighty_games DESC NULLS LAST, u.nickname ASC
-      LIMIT 10
-    `);
+    const topPlayers = await queryDashboardActivityTopPlayers(client, safeActivityPeriod, safeActivityGame);
 
     // Gold economy
     const goldStats = await client.query(`
@@ -3617,8 +3697,8 @@ async function getDetailedAdminStats(dateFrom, dateTo, bucket = 'day', options =
         SELECT DATE_TRUNC('${groupUnit}', h.created_at) AS bucket_time,
                CASE
                  WHEN h.end_reason IN ('leave', 'timeout') AND h.deserter_nickname = p.nickname THEN 0
-                 WHEN p.is_winner THEN CASE WHEN h.is_ranked THEN 10 ELSE 10 END
-                 ELSE 3
+                 WHEN p.is_winner THEN CASE WHEN h.is_ranked THEN 20 ELSE 10 END
+                 ELSE CASE WHEN h.is_ranked THEN 6 ELSE 3 END
                END AS gold_delta
         FROM tc_mighty_match_history h
         JOIN tc_mighty_match_players p ON p.match_id = h.id
@@ -5069,26 +5149,69 @@ async function saveMightyMatchResultWithStats(data) {
       );
     }
 
-    for (const p of data.players.filter(p => p.nickname && !p.isBot)) {
-      const won = p.isWinner === true;
-      await client.query(
-        `UPDATE tc_users SET
-          mighty_total_games = mighty_total_games + 1,
-          mighty_wins = mighty_wins + CASE WHEN $2 THEN 1 ELSE 0 END,
-          mighty_losses = mighty_losses + CASE WHEN $2 THEN 0 ELSE 1 END,
-          gold = gold + $3,
-          exp_total = exp_total + $4,
-          level = GREATEST(1, ((exp_total + $4) / 100) + 1)
-         WHERE nickname = $1`,
-        [
-          p.nickname,
-          won,
-          ['leave', 'timeout'].includes(data.endReason || 'normal') && data.deserterNickname === p.nickname
-            ? 0
-            : (won ? 10 : 3),
-          won ? 15 : 5,
-        ]
+    // Fetch current Mighty ratings for ELO calculation
+    const humanPlayers = data.players.filter(p => p.nickname && !p.isBot);
+    const mightyRatingMap = {};
+    if (humanPlayers.length > 0) {
+      const nicknames = humanPlayers.map(p => p.nickname);
+      const ratingRes = await client.query(
+        `SELECT nickname, mighty_rating FROM tc_users WHERE nickname = ANY($1)`,
+        [nicknames]
       );
+      for (const row of ratingRes.rows) {
+        mightyRatingMap[row.nickname] = row.mighty_rating || 1000;
+      }
+    }
+
+    // Average rating of all players (including bots at 1000)
+    const allRatings = data.players.map(p => p.isBot ? 1000 : (mightyRatingMap[p.nickname] || 1000));
+    const totalAvg = allRatings.reduce((a, b) => a + b, 0) / allRatings.length;
+
+    for (const p of humanPlayers) {
+      const won = p.isWinner === true;
+      const isDraw = p.isDraw === true;
+      const isDeserter =
+        ['leave', 'timeout'].includes(data.endReason || 'normal') &&
+        data.deserterNickname === p.nickname;
+
+      if (isDraw) {
+        const expGain = 3;
+        await client.query(
+          `UPDATE tc_users SET
+            mighty_total_games = mighty_total_games + 1,
+            mighty_season_games = mighty_season_games + CASE WHEN $3 THEN 1 ELSE 0 END,
+            exp_total = exp_total + $2,
+            level = GREATEST(1, ((exp_total + $2) / 100) + 1)
+           WHERE nickname = $1`,
+          [p.nickname, expGain, data.isRanked]
+        );
+      } else {
+        const myRating = mightyRatingMap[p.nickname] || 1000;
+        const othersRatings = data.players.filter(o => o.nickname !== p.nickname).map(o => o.isBot ? 1000 : (mightyRatingMap[o.nickname] || 1000));
+        const oppAvg = othersRatings.length > 0 ? othersRatings.reduce((a, b) => a + b, 0) / othersRatings.length : 1000;
+        const ratingChange = calcElo(myRating, oppAvg, won);
+        const baseGoldReward = won ? 10 : 3;
+        const goldReward = isDeserter
+            ? 0
+            : (data.isRanked ? baseGoldReward * 2 : baseGoldReward);
+        const expGain = won ? 15 : 5;
+        await client.query(
+          `UPDATE tc_users SET
+            mighty_total_games = mighty_total_games + 1,
+            mighty_wins = mighty_wins + CASE WHEN $2 THEN 1 ELSE 0 END,
+            mighty_losses = mighty_losses + CASE WHEN $2 THEN 0 ELSE 1 END,
+            mighty_rating = GREATEST(0, mighty_rating + $3),
+            mighty_season_games = mighty_season_games + CASE WHEN $6 THEN 1 ELSE 0 END,
+            mighty_season_wins = mighty_season_wins + CASE WHEN $6 AND $2 THEN 1 ELSE 0 END,
+            mighty_season_losses = mighty_season_losses + CASE WHEN $6 AND NOT $2 THEN 1 ELSE 0 END,
+            mighty_season_rating = GREATEST(0, mighty_season_rating + $3),
+            gold = gold + $4,
+            exp_total = exp_total + $5,
+            level = GREATEST(1, ((exp_total + $5) / 100) + 1)
+           WHERE nickname = $1`,
+          [p.nickname, won, data.isRanked ? ratingChange : 0, goldReward, expGain, data.isRanked]
+        );
+      }
     }
 
     await client.query('COMMIT');
@@ -5174,6 +5297,84 @@ async function getSKSeasonRankings(seasonId, limit = 50) {
     return { success: true, rankings: res.rows };
   } catch (err) {
     console.error('getSKSeasonRankings error:', err);
+    return { success: false, rankings: [] };
+  } finally {
+    client.release();
+  }
+}
+
+async function getMightyRankings(limit = 50) {
+  const client = await pool.connect();
+  try {
+    const res = await client.query(
+      `SELECT u.nickname, u.mighty_rating AS rating, u.mighty_wins AS wins,
+              u.mighty_losses AS losses, u.mighty_total_games AS total_games,
+              CASE WHEN u.mighty_total_games > 0
+                THEN ROUND((u.mighty_wins::FLOAT / u.mighty_total_games) * 100)
+                ELSE 0 END AS win_rate,
+              e.banner_key
+       FROM tc_users u
+       LEFT JOIN tc_user_equips e ON e.nickname = u.nickname
+       WHERE u.mighty_total_games > 0 AND u.is_deleted IS NOT TRUE
+       ORDER BY u.mighty_rating DESC, u.mighty_wins DESC
+       LIMIT $1`,
+      [limit]
+    );
+    return { success: true, rankings: res.rows };
+  } catch (err) {
+    console.error('getMightyRankings error:', err);
+    return { success: false, rankings: [] };
+  } finally {
+    client.release();
+  }
+}
+
+async function getCurrentMightySeasonRankings(limit = 50) {
+  const client = await pool.connect();
+  try {
+    const res = await client.query(
+      `SELECT u.nickname, u.mighty_season_rating AS rating,
+              u.mighty_season_wins AS wins, u.mighty_season_losses AS losses,
+              u.mighty_season_games AS total_games,
+              CASE WHEN u.mighty_season_games > 0
+                THEN ROUND((u.mighty_season_wins::FLOAT / u.mighty_season_games) * 100)
+                ELSE 0 END AS win_rate,
+              e.banner_key
+       FROM tc_users u
+       LEFT JOIN tc_user_equips e ON e.nickname = u.nickname
+       WHERE u.is_deleted IS NOT TRUE AND u.mighty_season_games > 0
+       ORDER BY u.mighty_season_rating DESC, u.mighty_season_wins DESC, u.mighty_season_games DESC, u.nickname ASC
+       LIMIT $1`,
+      [limit]
+    );
+    return { success: true, rankings: res.rows };
+  } catch (err) {
+    console.error('getCurrentMightySeasonRankings error:', err);
+    return { success: false, rankings: [] };
+  } finally {
+    client.release();
+  }
+}
+
+async function getMightySeasonRankings(seasonId, limit = 50) {
+  const client = await pool.connect();
+  try {
+    const res = await client.query(
+      `SELECT r.nickname, r.rating, r.wins, r.losses, r.total_games,
+              CASE WHEN r.total_games > 0
+                THEN ROUND((r.wins::FLOAT / r.total_games) * 100)
+                ELSE 0 END AS win_rate,
+              e.banner_key
+       FROM tc_season_rankings r
+       LEFT JOIN tc_user_equips e ON e.nickname = r.nickname
+       WHERE r.season_id = $1 AND r.game_type = 'mighty'
+       ORDER BY r.rank ASC
+       LIMIT $2`,
+      [seasonId, limit]
+    );
+    return { success: true, rankings: res.rows };
+  } catch (err) {
+    console.error('getMightySeasonRankings error:', err);
     return { success: false, rankings: [] };
   } finally {
     client.release();
@@ -5437,6 +5638,7 @@ module.exports = {
   getUsers,
   getUserDetail,
   getDashboardStats,
+  getDashboardActivityTopPlayers,
   getAdminRecentMatches,
   getDetailedAdminStats,
   getRankings,
@@ -5478,6 +5680,9 @@ module.exports = {
   getSKSeasonRankings,
   saveLLMatchResultWithStats,
   saveMightyMatchResultWithStats,
+  getMightyRankings,
+  getCurrentMightySeasonRankings,
+  getMightySeasonRankings,
   getPublishedNotices,
   getNotices,
   getNoticeById,

@@ -2869,6 +2869,20 @@ class L10nKo extends L10n {
   String get rankingSkullKingRecord => '스컬킹 전적';
 
   @override
+  String get rankingMighty => '마이티';
+
+  @override
+  String get rankingMightySeasonRanked => '마이티 시즌 랭크';
+
+  @override
+  String get rankingMightyRecord => '마이티 전적';
+
+  @override
+  String rankingMightyMatchDetail(String declarer, int bid, String trump) {
+    return '$declarer $bid $trump';
+  }
+
+  @override
   String get rankingLoveLetterRecord => '러브레터 전적';
 
   @override

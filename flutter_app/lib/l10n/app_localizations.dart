@@ -5325,6 +5325,30 @@ abstract class L10n {
   /// **'Skull King Record'**
   String get rankingSkullKingRecord;
 
+  /// No description provided for @rankingMighty.
+  ///
+  /// In en, this message translates to:
+  /// **'Mighty'**
+  String get rankingMighty;
+
+  /// No description provided for @rankingMightySeasonRanked.
+  ///
+  /// In en, this message translates to:
+  /// **'Mighty Season Ranked'**
+  String get rankingMightySeasonRanked;
+
+  /// No description provided for @rankingMightyRecord.
+  ///
+  /// In en, this message translates to:
+  /// **'Mighty Record'**
+  String get rankingMightyRecord;
+
+  /// No description provided for @rankingMightyMatchDetail.
+  ///
+  /// In en, this message translates to:
+  /// **'{declarer} bid {bid} {trump}'**
+  String rankingMightyMatchDetail(String declarer, int bid, String trump);
+
   /// No description provided for @rankingLoveLetterRecord.
   ///
   /// In en, this message translates to:

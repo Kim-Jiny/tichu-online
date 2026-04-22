@@ -92,6 +92,7 @@ class _RankingScreenState extends State<RankingScreen> {
           segments: [
             ButtonSegment(value: 'tichu', label: Text(L10n.of(context).rankingTichu, overflow: TextOverflow.ellipsis, maxLines: 1)),
             ButtonSegment(value: 'skull_king', label: Text(L10n.of(context).rankingSkullKing, overflow: TextOverflow.ellipsis, maxLines: 1)),
+            ButtonSegment(value: 'mighty', label: Text(L10n.of(context).rankingMighty, overflow: TextOverflow.ellipsis, maxLines: 1)),
           ],
           selected: {_rankingGameType},
           onSelectionChanged: (v) {
@@ -101,6 +102,8 @@ class _RankingScreenState extends State<RankingScreen> {
             });
             if (_rankingGameType == 'skull_king') {
               game.requestSKRankings();
+            } else if (_rankingGameType == 'mighty') {
+              game.requestMightyRankings();
             } else {
               game.requestRankings();
             }
@@ -144,6 +147,8 @@ class _RankingScreenState extends State<RankingScreen> {
               final game = context.read<GameService>();
               if (_rankingGameType == 'skull_king') {
                 game.requestSKRankings();
+              } else if (_rankingGameType == 'mighty') {
+                game.requestMightyRankings();
               } else {
                 game.requestRankings();
               }
@@ -199,6 +204,12 @@ class _RankingScreenState extends State<RankingScreen> {
                       game.requestSKRankings();
                     } else {
                       game.requestSKRankingsForSeason(value);
+                    }
+                  } else if (_rankingGameType == 'mighty') {
+                    if (isActive) {
+                      game.requestMightyRankings();
+                    } else {
+                      game.requestMightyRankingsForSeason(value);
                     }
                   } else {
                     if (isActive) {
@@ -610,6 +621,12 @@ class _ProfileContentState extends State<_ProfileContent> {
               onTap: () { Navigator.pop(ctx); setState(() => _selectedGame = 'skull_king'); },
             ),
             ListTile(
+              leading: const Text('🎯', style: TextStyle(fontSize: 20)),
+              title: Text(l10n.rankingMighty),
+              trailing: _selectedGame == 'mighty' ? const Icon(Icons.check, color: Color(0xFF2E7D32)) : null,
+              onTap: () { Navigator.pop(ctx); setState(() => _selectedGame = 'mighty'); },
+            ),
+            ListTile(
               leading: const Text('❤️', style: TextStyle(fontSize: 20)),
               title: Text(l10n.lobbyLoveLetter),
               trailing: _selectedGame == 'love_letter' ? const Icon(Icons.check, color: Color(0xFFE91E63)) : null,
@@ -650,6 +667,15 @@ class _ProfileContentState extends State<_ProfileContent> {
     final skSeasonWins = profile['skSeasonWins'] ?? 0;
     final skSeasonLosses = profile['skSeasonLosses'] ?? 0;
     final skSeasonWinRate = profile['skSeasonWinRate'] ?? 0;
+    final mightyTotalGames = profile['mightyTotalGames'] ?? 0;
+    final mightyWins = profile['mightyWins'] ?? 0;
+    final mightyLosses = profile['mightyLosses'] ?? 0;
+    final mightyWinRate = profile['mightyWinRate'] ?? 0;
+    final mightySeasonRating = profile['mightySeasonRating'] ?? 1000;
+    final mightySeasonGames = profile['mightySeasonGames'] ?? 0;
+    final mightySeasonWins = profile['mightySeasonWins'] ?? 0;
+    final mightySeasonLosses = profile['mightySeasonLosses'] ?? 0;
+    final mightySeasonWinRate = profile['mightySeasonWinRate'] ?? 0;
     final level = profile['level'] ?? 1;
     final expTotal = profile['expTotal'] ?? 0;
     final leaveCount = profile['leaveCount'] ?? 0;
@@ -671,6 +697,12 @@ class _ProfileContentState extends State<_ProfileContent> {
         gameEmoji = '⚓';
         gameBgColor = const Color(0xFF2D2D3D);
         gameFgColor = const Color(0xFFFFD54F);
+        break;
+      case 'mighty':
+        gameLabel = l10n.rankingMighty;
+        gameEmoji = '🎯';
+        gameBgColor = const Color(0xFF2E7D32);
+        gameFgColor = Colors.white;
         break;
       case 'love_letter':
         gameLabel = l10n.lobbyLoveLetter;
@@ -697,7 +729,7 @@ class _ProfileContentState extends State<_ProfileContent> {
         _ProfileMiniStatRow(
           leaveCount: leaveCount,
           reportCount: profile['reportCount'] ?? 0,
-          totalGames: totalGames + skTotalGames + (profile['llTotalGames'] ?? 0),
+          totalGames: totalGames + skTotalGames + mightyTotalGames + (profile['llTotalGames'] ?? 0),
         ),
         const SizedBox(height: 10),
         // Game selector button
@@ -777,6 +809,32 @@ class _ProfileContentState extends State<_ProfileContent> {
             chips: [
               _ProfileStatChip(l10n.rankingStatRecord, l10n.rankingRecordFormat(skTotalGames, skWins, skLosses)),
               _ProfileStatChip(l10n.rankingStatWinRate, '$skWinRate%'),
+            ],
+          ),
+        ] else if (_selectedGame == 'mighty') ...[
+          _ProfileSectionCard(
+            title: l10n.rankingMightySeasonRanked,
+            accent: const Color(0xFF2E7D32),
+            background: const Color(0xFFE8F5E9),
+            icon: Icons.emoji_events,
+            iconColor: const Color(0xFFFFD54F),
+            mainText: '$mightySeasonRating',
+            chips: [
+              _ProfileStatChip(l10n.rankingStatRecord, l10n.rankingRecordFormat(mightySeasonGames, mightySeasonWins, mightySeasonLosses)),
+              _ProfileStatChip(l10n.rankingStatWinRate, '$mightySeasonWinRate%'),
+            ],
+          ),
+          const SizedBox(height: 10),
+          _ProfileSectionCard(
+            title: l10n.rankingMightyRecord,
+            accent: const Color(0xFF1B5E20),
+            background: const Color(0xFFF1F8E9),
+            icon: Icons.military_tech,
+            iconColor: const Color(0xFF4CAF50),
+            mainText: '',
+            chips: [
+              _ProfileStatChip(l10n.rankingStatRecord, l10n.rankingRecordFormat(mightyTotalGames, mightyWins, mightyLosses)),
+              _ProfileStatChip(l10n.rankingStatWinRate, '$mightyWinRate%'),
             ],
           ),
         ] else ...[
@@ -1099,6 +1157,7 @@ class _ProfileRecentMatches extends StatelessWidget {
     final gameType = match['gameType']?.toString() ?? 'tichu';
     final isSK = gameType == 'skull_king';
     final isLL = gameType == 'love_letter';
+    final isMighty = gameType == 'mighty';
     final isDraw = match['isDraw'] == true;
     final isDesertionLoss = match['isDesertionLoss'] == true;
     final won = match['won'] == true;
@@ -1122,7 +1181,14 @@ class _ProfileRecentMatches extends StatelessWidget {
 
     String detail;
     String score;
-    if (isSK || isLL) {
+    if (isMighty) {
+      final players = (match['players'] as List<dynamic>?)?.map((p) => p['nickname']?.toString() ?? '').join(', ') ?? '';
+      detail = players;
+      final declarer = match['declarerNickname']?.toString() ?? '?';
+      final bid = match['bidPoints'] ?? 0;
+      final trump = match['trumpSuit']?.toString() ?? '?';
+      score = l10n.rankingMightyMatchDetail(declarer, bid, trump);
+    } else if (isSK || isLL) {
       final players = (match['players'] as List<dynamic>?)?.map((p) => p['nickname']?.toString() ?? '').join(', ') ?? '';
       detail = players;
       final rank = match['myRank'] ?? '-';

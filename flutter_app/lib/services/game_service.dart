@@ -2715,6 +2715,28 @@ class GameService extends ChangeNotifier {
     notifyListeners();
   }
 
+  void requestMightyRankings() {
+    rankingsLoading = true;
+    rankingsError = null;
+    _network.send({
+      'type': 'get_rankings',
+      'gameType': 'mighty',
+      'seasonId': 'current',
+    });
+    notifyListeners();
+  }
+
+  void requestMightyRankingsForSeason(int seasonId) {
+    rankingsLoading = true;
+    rankingsError = null;
+    _network.send({
+      'type': 'get_rankings',
+      'gameType': 'mighty',
+      'seasonId': seasonId,
+    });
+    notifyListeners();
+  }
+
   void requestSeasons() {
     _network.send({'type': 'get_seasons'});
   }

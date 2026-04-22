@@ -939,6 +939,17 @@
   "rankingTichuRecord": "티츄 전적",
   "rankingSkullKingSeasonRanked": "스컬킹 시즌 랭킹전",
   "rankingSkullKingRecord": "스컬킹 전적",
+  "rankingMighty": "마이티",
+  "rankingMightySeasonRanked": "마이티 시즌 랭크",
+  "rankingMightyRecord": "마이티 전적",
+  "rankingMightyMatchDetail": "{declarer} {bid} {trump}",
+  "@rankingMightyMatchDetail": {
+    "placeholders": {
+      "declarer": { "type": "String" },
+      "bid": { "type": "int" },
+      "trump": { "type": "String" }
+    }
+  },
   "rankingLoveLetterRecord": "러브레터 전적",
   "rankingStatRecord": "전적",
   "rankingStatWinRate": "승률",

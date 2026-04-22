@@ -2004,7 +2004,7 @@ class _LobbyScreenState extends State<LobbyScreen> {
                             Row(
                               children: [
                                 Text(
-                                  isSK
+                                  (isSK || isLL)
                                       ? l10n.lobbyRoomTimeSec(
                                           room.turnTimeLimit,
                                         )

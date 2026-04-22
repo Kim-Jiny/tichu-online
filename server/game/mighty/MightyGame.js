@@ -797,9 +797,10 @@ class MightyGame {
     if (this.declarer) governmentIds.add(this.declarer);
     if (this.friendRevealed && this.partner) governmentIds.add(this.partner);
 
-    const players = this.playerIds.map(pid => ({
+    const players = this.playerIds.map((pid, i) => ({
       id: pid,
       name: this.playerNames[pid] || pid,
+      position: `player_${i}`,
       cards: permittedPlayerIds.has(pid) ? sortCards(this.hands[pid] || [], this.trumpSuit) : [],
       canViewCards: permittedPlayerIds.has(pid),
       cardCount: (this.hands[pid] || []).length,
@@ -807,6 +808,8 @@ class MightyGame {
       trickCount: this.tricks.filter(t => t.winner === pid).length,
       pointCount: countPoints(this.pointCards[pid] || []),
       pointCards: governmentIds.has(pid) ? [] : (this.pointCards[pid] || []),
+      connected: true,
+      timeoutCount: 0,
     }));
 
     const currentTrick = this.currentTrick.map(play => ({
@@ -838,6 +841,9 @@ class MightyGame {
       jokerSuitDeclared: this.jokerSuitDeclared,
       lastTrickCards: this.state === 'trick_end' ? this.lastTrickCards : [],
       lastTrickWinner: this.state === 'trick_end' ? this.lastTrickWinner : null,
+      remainingTrumps: (this.trumpSuit && this.trumpSuit !== 'no_trump' &&
+        (this.state === 'playing' || this.state === 'trick_end'))
+        ? this._countRemainingTrumps() : undefined,
       tricks: this.tricks.map(t => ({
         leader: t.leader,
         winner: t.winner,

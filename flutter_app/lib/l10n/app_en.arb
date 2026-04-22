@@ -295,6 +295,7 @@
   "lobbyRoomSettings": "Settings",
   "lobbySkullKingRanked": "Skull King - Ranked",
   "lobbyTichuRanked": "Tichu - Ranked",
+  "lobbyMightyRanked": "Mighty - Ranked",
   "lobbySkullKingPlayers": "Skull King · {count}P",
   "@lobbySkullKingPlayers": {
     "placeholders": {

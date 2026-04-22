@@ -729,6 +729,9 @@ class L10nEn extends L10n {
   String get lobbyTichuRanked => 'Tichu - Ranked';
 
   @override
+  String get lobbyMightyRanked => 'Mighty - Ranked';
+
+  @override
   String lobbySkullKingPlayers(int count) {
     return 'Skull King · ${count}P';
   }

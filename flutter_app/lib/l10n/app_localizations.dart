@@ -1437,6 +1437,12 @@ abstract class L10n {
   /// **'Tichu - Ranked'**
   String get lobbyTichuRanked;
 
+  /// No description provided for @lobbyMightyRanked.
+  ///
+  /// In en, this message translates to:
+  /// **'Mighty - Ranked'**
+  String get lobbyMightyRanked;
+
   /// No description provided for @lobbySkullKingPlayers.
   ///
   /// In en, this message translates to:

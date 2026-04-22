@@ -236,6 +236,7 @@
   "lobbyRoomSettings": "Einstellungen",
   "lobbySkullKingRanked": "Skull King - Ranglistenspiel",
   "lobbyTichuRanked": "Tichu - Ranglistenspiel",
+  "lobbyMightyRanked": "Mighty - Ranglistenspiel",
   "lobbySkullKingPlayers": "Skull King · {count}P",
   "lobbyLoveLetterPlayers": "Love Letter · {count}P",
   "@lobbyLoveLetterPlayers": {

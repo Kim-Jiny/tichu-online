@@ -739,6 +739,9 @@ class L10nDe extends L10n {
   String get lobbyTichuRanked => 'Tichu - Ranglistenspiel';
 
   @override
+  String get lobbyMightyRanked => 'Mighty - Ranglistenspiel';
+
+  @override
   String lobbySkullKingPlayers(int count) {
     return 'Skull King · ${count}P';
   }

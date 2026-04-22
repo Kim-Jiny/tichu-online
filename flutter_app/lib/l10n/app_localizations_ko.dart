@@ -706,6 +706,9 @@ class L10nKo extends L10n {
   String get lobbyTichuRanked => '티츄 - 랭크전';
 
   @override
+  String get lobbyMightyRanked => '마이티 - 랭크전';
+
+  @override
   String lobbySkullKingPlayers(int count) {
     return '스컬킹 · $count인';
   }

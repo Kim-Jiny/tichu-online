@@ -1127,7 +1127,7 @@ class _LobbyScreenState extends State<LobbyScreen> {
                       const SizedBox(height: 16),
                       sectionTitle(
                         l10n.lobbyGameSettings,
-                        selectedGameType == 'tichu'
+                        (selectedGameType == 'tichu' || selectedGameType == 'mighty')
                             ? l10n.lobbyGameSettingsDescTichu
                             : l10n.lobbyGameSettingsDescSk,
                       ),
@@ -2386,8 +2386,7 @@ class _LobbyScreenState extends State<LobbyScreen> {
                 ),
                 child: Text(
                   game.currentGameType == 'skull_king' ||
-                          game.currentGameType == 'love_letter' ||
-                          game.currentGameType == 'mighty'
+                          game.currentGameType == 'love_letter'
                       ? L10n.of(context).lobbyRoomInfoSk(
                           game.roomTurnTimeLimit,
                           game.playerCount,
@@ -2658,7 +2657,9 @@ class _LobbyScreenState extends State<LobbyScreen> {
                   Text(
                     game.currentGameType == 'skull_king'
                         ? L10n.of(context).lobbySkullKingRanked
-                        : L10n.of(context).lobbyTichuRanked,
+                        : game.currentGameType == 'mighty'
+                            ? L10n.of(context).lobbyMightyRanked
+                            : L10n.of(context).lobbyTichuRanked,
                     style: const TextStyle(
                       fontSize: 13,
                       fontWeight: FontWeight.bold,

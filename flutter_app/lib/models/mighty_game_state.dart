@@ -157,6 +157,7 @@ class MightyGameStateData {
   final String? lastTrickWinner;
   final List<MightyCompletedTrick> tricks;
   final List<MightyScoreHistoryEntry> scoreHistory;
+  final Map<String, dynamic>? remainingTrumps;
 
   MightyGameStateData({
     this.phase = '',
@@ -186,6 +187,7 @@ class MightyGameStateData {
     this.lastTrickWinner,
     this.tricks = const [],
     this.scoreHistory = const [],
+    this.remainingTrumps,
   });
 
   factory MightyGameStateData.fromJson(Map<String, dynamic> json) {
@@ -268,6 +270,9 @@ class MightyGameStateData {
               ?.map((e) => MightyScoreHistoryEntry.fromJson(e as Map<String, dynamic>))
               .toList() ??
           [],
+      remainingTrumps: json['remainingTrumps'] != null
+          ? Map<String, dynamic>.from(json['remainingTrumps'])
+          : null,
     );
   }
 }

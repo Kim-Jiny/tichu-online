@@ -1729,6 +1729,7 @@ async function handleReconnection(ws) {
   const titleKey = profile?.titleKey || null;
   const titleName = profile?.titleName || null;
   const hasTopCardCounter = profile?.hasTopCardCounter || false;
+  const hasMightyTrumpCounter = profile?.hasMightyTrumpCounter || false;
   ws.titleKey = titleKey;
   ws.titleName = titleName;
 
@@ -1750,6 +1751,7 @@ async function handleReconnection(ws) {
           themeKey,
           titleKey,
           hasTopCardCounter,
+          hasMightyTrumpCounter,
           authProvider,
           isAdmin: ws.isAdmin === true,
           pushEnabled: ws.pushEnabled !== false,
@@ -1782,6 +1784,7 @@ async function handleReconnection(ws) {
           themeKey,
           titleKey,
           hasTopCardCounter,
+          hasMightyTrumpCounter,
           authProvider,
           isAdmin: ws.isAdmin === true,
           pushEnabled: ws.pushEnabled !== false,
@@ -1820,6 +1823,7 @@ async function handleReconnection(ws) {
           themeKey,
           titleKey,
           hasTopCardCounter,
+          hasMightyTrumpCounter,
           authProvider,
           isAdmin: ws.isAdmin === true,
           pushEnabled: ws.pushEnabled !== false,
@@ -1852,6 +1856,7 @@ async function handleReconnection(ws) {
           themeKey,
           titleKey,
           hasTopCardCounter,
+          hasMightyTrumpCounter,
           authProvider,
           isAdmin: ws.isAdmin === true,
           pushEnabled: ws.pushEnabled !== false,
@@ -1950,6 +1955,7 @@ async function handleReconnection(ws) {
           themeKey,
           titleKey,
           hasTopCardCounter,
+          hasMightyTrumpCounter,
           authProvider,
           isAdmin: ws.isAdmin === true,
           pushEnabled: ws.pushEnabled !== false,
@@ -1977,6 +1983,7 @@ async function handleReconnection(ws) {
     themeKey,
     titleKey,
     hasTopCardCounter,
+    hasMightyTrumpCounter,
     authProvider,
     isAdmin: ws.isAdmin === true,
     pushEnabled: ws.pushEnabled !== false,

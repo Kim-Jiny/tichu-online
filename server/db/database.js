@@ -462,6 +462,8 @@ async function initDatabase() {
         ('top_card_counter_7d', '티츄 탑패 카운터(7일)', '티츄 탑패 카운터(7일)', 'Tichu Top Card Counter (7d)', 'Tichu-Trumpfzähler (7T)', 'utility', 1000, FALSE, FALSE, 7, TRUE, NULL, NULL, '{}'::jsonb),
         ('stats_reset', '전적 초기화권', '전적 초기화권', 'Stats Reset', 'Statistik-Reset', 'utility', 2000, FALSE, TRUE, NULL, TRUE, 'stats_reset', NULL, '{}'::jsonb),
         ('season_stats_reset', '랭킹전적 초기화권', '랭킹전적 초기화권', 'Ranked Stats Reset', 'Ranglistenstatistik-Reset', 'utility', 1000, FALSE, TRUE, NULL, TRUE, 'season_stats_reset', NULL, '{}'::jsonb),
+        ('leave_reset', '탈주 카운트 초기화', '탈주 카운트 초기화', 'Leave Count Reset', 'Flucht-Zähler-Reset', 'utility', 2000, FALSE, TRUE, NULL, TRUE, 'leave_count_reset', NULL, '{}'::jsonb),
+        ('mighty_trump_counter_7d', '마이티 기루다 카운터(7일)', '마이티 기루다 카운터(7일)', 'Mighty Trump Counter (7d)', 'Mighty-Trumpfzähler (7T)', 'utility', 1000, FALSE, FALSE, 7, TRUE, NULL, NULL, '{}'::jsonb),
         ('banner_season_gold', '시즌 골드 배너', '시즌 골드 배너', 'Season Gold Banner', 'Saison-Gold-Banner', 'banner', 0, TRUE, FALSE, 30, FALSE, NULL, NULL, '{}'::jsonb),
         ('banner_season_silver', '시즌 실버 배너', '시즌 실버 배너', 'Season Silver Banner', 'Saison-Silber-Banner', 'banner', 0, TRUE, FALSE, 30, FALSE, NULL, NULL, '{}'::jsonb),
         ('banner_season_bronze', '시즌 브론즈 배너', '시즌 브론즈 배너', 'Season Bronze Banner', 'Saison-Bronze-Banner', 'banner', 0, TRUE, FALSE, 30, FALSE, NULL, NULL, '{}'::jsonb)
@@ -1411,6 +1413,15 @@ async function getUserProfile(nickname) {
     );
     const hasTopCardCounter = topCardRes.rows.length > 0;
 
+    // Check active mighty trump counter item
+    const mightyTrumpRes = await client.query(
+      `SELECT 1 FROM tc_user_items
+       WHERE nickname = $1 AND item_key = 'mighty_trump_counter_7d'
+         AND (expires_at IS NULL OR expires_at >= NOW()) LIMIT 1`,
+      [nickname]
+    );
+    const hasMightyTrumpCounter = mightyTrumpRes.rows.length > 0;
+
     const skWinRate = user.sk_total_games > 0
       ? Math.round((user.sk_wins / user.sk_total_games) * 100)
       : 0;
@@ -1450,6 +1461,7 @@ async function getUserProfile(nickname) {
       titleName: user.title_name || null,
       createdAt: user.created_at,
       hasTopCardCounter,
+      hasMightyTrumpCounter,
       skTotalGames: user.sk_total_games,
       skWins: user.sk_wins,
       skLosses: user.sk_losses,
@@ -2194,7 +2206,7 @@ async function useItem(nickname, itemKey) {
       return { success: false, messageKey: 'db_item_not_found' };
     }
     const { effect_type: effectType, effect_value: effectValue } = itemRes.rows[0];
-    const allowedEffects = ['leave_count_reduce', 'stats_reset', 'season_stats_reset'];
+    const allowedEffects = ['leave_count_reduce', 'leave_count_reset', 'stats_reset', 'season_stats_reset'];
     if (!allowedEffects.includes(effectType)) {
       await client.query('ROLLBACK');
       return { success: false, messageKey: 'db_item_not_usable' };
@@ -2217,6 +2229,11 @@ async function useItem(nickname, itemKey) {
         `UPDATE tc_users SET leave_count = GREATEST(0, leave_count - $2)
          WHERE nickname = $1`,
         [nickname, effectValue || 1]
+      );
+    } else if (effectType === 'leave_count_reset') {
+      await client.query(
+        `UPDATE tc_users SET leave_count = 0 WHERE nickname = $1`,
+        [nickname]
       );
     } else if (effectType === 'stats_reset') {
       await client.query(

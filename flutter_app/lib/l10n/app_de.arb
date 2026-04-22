@@ -1047,6 +1047,7 @@
   "shopEffectNicknameChange": "Effekt: 1 Namensänderung",
   "shopEffectLeaveReduce": "Effekt: Verlassen -{value}",
   "shopEffectStatsReset": "Effekt: Alle Statistiken zurücksetzen (Siege/Niederlagen/Spiele)",
+  "shopEffectLeaveReset": "Effekt: Verlassen-Zähler auf 0 zurücksetzen",
   "shopEffectSeasonStatsReset": "Effekt: Ranglistenstatistiken zurücksetzen (Siege/Niederlagen/Spiele)",
   "shopPriceGold": "{price} Gold",
   "shopNicknameChangeTitle": "Nickname ändern",

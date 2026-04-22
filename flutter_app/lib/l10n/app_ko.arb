@@ -1039,6 +1039,7 @@
   "shopEffectNicknameChange": "효과: 닉네임 1회 변경",
   "shopEffectLeaveReduce": "효과: 탈주 -{value}",
   "shopEffectStatsReset": "효과: 전체 전적(승/패/판수) 초기화",
+  "shopEffectLeaveReset": "효과: 탈주 카운트 0으로 초기화",
   "shopEffectSeasonStatsReset": "효과: 랭킹 전적(승/패/판수) 초기화",
   "shopPriceGold": "{price} 골드",
   "shopNicknameChangeTitle": "닉네임 변경",

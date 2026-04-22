@@ -1521,6 +1521,7 @@
     }
   },
   "shopEffectStatsReset": "Effect: Reset all stats (wins/losses/games)",
+  "shopEffectLeaveReset": "Effect: Reset leave count to 0",
   "shopEffectSeasonStatsReset": "Effect: Reset ranked stats (wins/losses/games)",
   "shopPriceGold": "{price} Gold",
   "@shopPriceGold": {

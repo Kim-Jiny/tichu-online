@@ -215,6 +215,8 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
                         children: [
                           _buildTopBar(state, game),
                           _buildScoreboard(state, game),
+                          if (state.phase == 'playing' || state.phase == 'trick_end' || state.phase == 'round_end')
+                            _buildOppositionPointBar(state),
                           if (state.phase == 'bidding') ...[
                             Expanded(
                               child: Align(
@@ -387,6 +389,8 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
         ),
         if (showContractInfo)
           _buildContractInfoBar(state),
+        if (showContractInfo && state.remainingTrumps != null && game.hasMightyTrumpCounter)
+          _buildTrumpCounter(state),
       ],
     );
   }
@@ -469,6 +473,31 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
             ),
           ),
         ],
+      ),
+    );
+  }
+
+  Widget _buildTrumpCounter(MightyGameStateData state) {
+    final trumps = state.remainingTrumps!;
+    final count = (trumps['count'] as num?)?.toInt() ?? 0;
+    final suit = trumps['suit']?.toString() ?? '';
+    final suitLabel = _suitSymbol(suit);
+    final isZero = count == 0;
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+      margin: const EdgeInsets.symmetric(horizontal: 8),
+      decoration: BoxDecoration(
+        color: const Color(0xFFF0F4FF).withValues(alpha: 0.9),
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: const Color(0xFF90CAF9)),
+      ),
+      child: Text(
+        '$suitLabel $count',
+        style: TextStyle(
+          fontSize: 12,
+          fontWeight: FontWeight.bold,
+          color: isZero ? const Color(0xFFE53935) : const Color(0xFF1565C0),
+        ),
       ),
     );
   }
@@ -883,18 +912,7 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
                                   )
                                 : null,
                           ),
-                          // Mini point card labels (always reserve space)
-                          SizedBox(
-                            height: 14,
-                            child: hasPointCards
-                                ? Text(
-                                    p.pointCards.take(5).map((c) => _miniCardLabel(c)).join(' '),
-                                    style: const TextStyle(fontSize: 8, color: Color(0xFF8A7A72)),
-                                    maxLines: 1,
-                                    overflow: TextOverflow.ellipsis,
-                                  )
-                                : null,
-                          ),
+                          const SizedBox(height: 2),
                         ],
                       ),
                     ),
@@ -974,6 +992,72 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
             ),
           );
         }).toList(),
+      ),
+    );
+  }
+
+  Widget _buildOppositionPointBar(MightyGameStateData state) {
+    // Collect all opposition point cards
+    final oppCards = <String>[];
+    int oppPoints = 0;
+    for (final p in state.players) {
+      final isGovt = p.id == state.declarer || (state.friendRevealed && p.id == state.partner);
+      if (!isGovt) {
+        oppCards.addAll(p.pointCards);
+        oppPoints += p.pointCount;
+      }
+    }
+    if (oppCards.isEmpty) return const SizedBox.shrink();
+
+    final bidPoints = (state.currentBid['points'] is num)
+        ? (state.currentBid['points'] as num).toInt()
+        : 13;
+    // Opposition needs (20 - bidPoints + 1) to defeat declarer
+    final oppTarget = 20 - bidPoints + 1;
+
+    return Container(
+      margin: const EdgeInsets.symmetric(horizontal: 8),
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      decoration: BoxDecoration(
+        color: Colors.white.withValues(alpha: 0.85),
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: const Color(0xFFE0D8D4)),
+      ),
+      child: Row(
+        children: [
+          // Label with opposition points
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+            decoration: BoxDecoration(
+              color: oppPoints >= oppTarget
+                  ? const Color(0xFFE53935)
+                  : const Color(0xFF8A7A72),
+              borderRadius: BorderRadius.circular(6),
+            ),
+            child: Text(
+              '${oppPoints}P',
+              style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Colors.white),
+            ),
+          ),
+          const SizedBox(width: 6),
+          // Scrollable card list
+          Expanded(
+            child: SingleChildScrollView(
+              scrollDirection: Axis.horizontal,
+              child: Row(
+                children: oppCards.map((cardId) => Padding(
+                  padding: const EdgeInsets.only(right: 3),
+                  child: PlayingCard(
+                    cardId: _displayCardId(cardId),
+                    width: 24,
+                    height: 34,
+                    isInteractive: false,
+                  ),
+                )).toList(),
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -2313,13 +2397,6 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
     return null;
   }
 
-  String _miniCardLabel(String cardId) {
-    if (cardId == 'mighty_joker') return L10n.of(context).mtJokerAbbr;
-    final stripped = cardId.replaceFirst('mighty_', '');
-    final parts = stripped.split('_');
-    if (parts.length == 2) return '${_suitSymbol(parts[0])}${parts[1]}';
-    return '?';
-  }
 
   bool _isKittyBlockedCard(String cardId, MightyGameStateData? state) {
     if (state == null) return false;

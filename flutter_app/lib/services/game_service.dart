@@ -214,6 +214,9 @@ class GameService extends ChangeNotifier {
   // Top card counter
   bool hasTopCardCounter = false;
 
+  // Mighty trump counter
+  bool hasMightyTrumpCounter = false;
+
   // Social login
   bool needNickname = false;
   String? socialProvider;
@@ -426,6 +429,7 @@ class GameService extends ChangeNotifier {
         equippedTheme = data['themeKey'] as String?;
         equippedTitle = data['titleKey'] as String?;
         hasTopCardCounter = data['hasTopCardCounter'] == true;
+        hasMightyTrumpCounter = data['hasMightyTrumpCounter'] == true;
         authProvider = data['authProvider'] as String? ?? 'local';
         isAdminUser = data['isAdmin'] == true;
         pushEnabled = data['pushEnabled'] != false;
@@ -1565,6 +1569,10 @@ class GameService extends ChangeNotifier {
               data['itemKey'] == 'top_card_counter_7d') {
             hasTopCardCounter = true;
           }
+          if (data['success'] == true &&
+              data['itemKey'] == 'mighty_trump_counter_7d') {
+            hasMightyTrumpCounter = true;
+          }
         }
         if (type == 'equip_result' && data['success'] == true) {
           final themeKey = data['themeKey'] as String?;
@@ -2184,6 +2192,7 @@ class GameService extends ChangeNotifier {
     adminActionMessage = null;
     adminActionSuccess = null;
     hasTopCardCounter = false;
+    hasMightyTrumpCounter = false;
     dogPlayActive = false;
     dogPlayPlayerName = '';
     inquiryBannerMessage = null;

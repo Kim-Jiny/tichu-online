@@ -3175,6 +3175,9 @@ class L10nKo extends L10n {
   String get shopEffectStatsReset => '효과: 전체 전적(승/패/판수) 초기화';
 
   @override
+  String get shopEffectLeaveReset => '효과: 탈주 카운트 0으로 초기화';
+
+  @override
   String get shopEffectSeasonStatsReset => '효과: 랭킹 전적(승/패/판수) 초기화';
 
   @override

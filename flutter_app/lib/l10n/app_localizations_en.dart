@@ -3247,6 +3247,9 @@ class L10nEn extends L10n {
       'Effect: Reset all stats (wins/losses/games)';
 
   @override
+  String get shopEffectLeaveReset => 'Effect: Reset leave count to 0';
+
+  @override
   String get shopEffectSeasonStatsReset =>
       'Effect: Reset ranked stats (wins/losses/games)';
 

@@ -3263,6 +3263,10 @@ class L10nDe extends L10n {
       'Effekt: Alle Statistiken zurücksetzen (Siege/Niederlagen/Spiele)';
 
   @override
+  String get shopEffectLeaveReset =>
+      'Effekt: Verlassen-Zähler auf 0 zurücksetzen';
+
+  @override
   String get shopEffectSeasonStatsReset =>
       'Effekt: Ranglistenstatistiken zurücksetzen (Siege/Niederlagen/Spiele)';
 

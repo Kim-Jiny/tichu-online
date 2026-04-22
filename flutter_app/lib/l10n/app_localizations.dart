@@ -5877,6 +5877,12 @@ abstract class L10n {
   /// **'Effect: Reset all stats (wins/losses/games)'**
   String get shopEffectStatsReset;
 
+  /// No description provided for @shopEffectLeaveReset.
+  ///
+  /// In en, this message translates to:
+  /// **'Effect: Reset leave count to 0'**
+  String get shopEffectLeaveReset;
+
   /// No description provided for @shopEffectSeasonStatsReset.
   ///
   /// In en, this message translates to:

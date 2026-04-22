@@ -970,7 +970,7 @@ class _ShopScreenState extends State<ShopScreen> {
     final isActive = item['is_active'] == true;
     final itemKey = item['item_key']?.toString() ?? '';
     final effectType = item['effect_type']?.toString() ?? '';
-    final isPassiveUtility = itemKey.startsWith('top_card_counter');
+    final isPassiveUtility = itemKey.startsWith('top_card_counter') || itemKey.startsWith('mighty_trump_counter');
     final isConsumable = category == 'utility' && !isPassiveUtility;
     final expiresAt = item['expires_at'];
     final expiresText = expiresAt != null ? _formatExpire(context, expiresAt) : null;
@@ -1534,7 +1534,7 @@ class _ShopScreenState extends State<ShopScreen> {
 
     final name = _getLocalizedItemName(item);
     final category = item['category']?.toString() ?? '';
-    final isPassiveUtility = itemKey.startsWith('top_card_counter');
+    final isPassiveUtility = itemKey.startsWith('top_card_counter') || itemKey.startsWith('mighty_trump_counter');
     final isConsumable = category == 'utility' && !isPassiveUtility;
     showDialog(
       context: context,
@@ -1601,6 +1601,8 @@ class _ShopScreenState extends State<ShopScreen> {
       info.add(l10n.shopEffectNicknameChange);
     } else if (effectType == 'leave_count_reduce') {
       info.add(l10n.shopEffectLeaveReduce('${effectValue ?? 1}'));
+    } else if (effectType == 'leave_count_reset') {
+      info.add(l10n.shopEffectLeaveReset);
     } else if (effectType == 'stats_reset') {
       info.add(l10n.shopEffectStatsReset);
     } else if (effectType == 'season_stats_reset') {

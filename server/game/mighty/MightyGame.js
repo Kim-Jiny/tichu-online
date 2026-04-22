@@ -439,6 +439,21 @@ class MightyGame {
     return { success: true };
   }
 
+  _countRemainingTrumps() {
+    if (!this.trumpSuit || this.trumpSuit === 'no_trump') return null;
+    let count = 0;
+    for (const pid of this.playerIds) {
+      const hand = this.hands[pid] || [];
+      for (const cardId of hand) {
+        const info = getCardInfo(cardId);
+        if (info.suit === this.trumpSuit || cardId === 'mighty_joker') {
+          count++;
+        }
+      }
+    }
+    return { count, suit: this.trumpSuit };
+  }
+
   _getLegalCards(playerId) {
     const hand = this.hands[playerId];
     if (hand.length === 0) return [];
@@ -748,6 +763,11 @@ class MightyGame {
         cards: t.cards.map(c => ({ playerId: c.pid, cardId: c.cardId })),
       })),
     };
+
+    // Remaining trump count (for trump counter item)
+    if (this.trumpSuit && this.trumpSuit !== 'no_trump' && (this.state === 'playing' || this.state === 'trick_end')) {
+      state.remainingTrumps = this._countRemainingTrumps();
+    }
 
     // Kitty phase: show 13 cards to declarer + which cards came from kitty
     if (this.state === 'kitty_exchange' && playerId === this.declarer) {

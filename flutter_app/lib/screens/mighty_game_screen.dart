@@ -2050,8 +2050,110 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
     );
   }
 
+  // ── Spectator Hand View ──
+  Widget _buildSpectatorHandArea(MightyGameStateData state, GameService game) {
+    final viewingPlayer = _viewingPlayerId == null
+        ? null
+        : state.players.cast<MightyPlayer?>().firstWhere(
+              (p) => p?.id == _viewingPlayerId,
+              orElse: () => null,
+            );
+    final isApproved = viewingPlayer != null &&
+        game.approvedCardViews.contains(viewingPlayer.id) &&
+        viewingPlayer.canViewCards;
+    final isPending = viewingPlayer != null &&
+        game.pendingCardViewRequests.contains(viewingPlayer.id);
+
+    final baseDeco = BoxDecoration(
+      color: Colors.white.withValues(alpha: 0.85),
+      borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+      border: const Border(top: BorderSide(color: Color(0xFFE0D8D4))),
+    );
+
+    if (viewingPlayer == null) {
+      return Container(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+        decoration: baseDeco,
+        child: Text(
+          L10n.of(context).skGameTapToRequestCards,
+          textAlign: TextAlign.center,
+          style: const TextStyle(color: Color(0xFF8A7A72), fontSize: 13, fontWeight: FontWeight.w600),
+        ),
+      );
+    }
+
+    if (isPending && !isApproved) {
+      return Container(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+        decoration: baseDeco,
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            const SizedBox(width: 14, height: 14, child: CircularProgressIndicator(strokeWidth: 2, color: Color(0xFFFFB74D))),
+            const SizedBox(width: 8),
+            Text(
+              L10n.of(context).skGameRequestingCardView(viewingPlayer.name),
+              style: const TextStyle(color: Color(0xFF8A7A72), fontSize: 13, fontWeight: FontWeight.w600),
+            ),
+          ],
+        ),
+      );
+    }
+
+    if (isApproved) {
+      return Container(
+        padding: const EdgeInsets.fromLTRB(8, 8, 8, 12),
+        decoration: BoxDecoration(
+          color: Colors.white.withValues(alpha: 0.92),
+          borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+          border: const Border(top: BorderSide(color: Color(0xFFE0D8D4))),
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Padding(
+              padding: const EdgeInsets.only(bottom: 4),
+              child: Text(
+                L10n.of(context).skGamePlayerHand(viewingPlayer.name),
+                style: const TextStyle(color: Color(0xFF5A4038), fontSize: 13, fontWeight: FontWeight.w700),
+              ),
+            ),
+            if (viewingPlayer.cards.isEmpty)
+              Padding(
+                padding: const EdgeInsets.symmetric(vertical: 8),
+                child: Text(
+                  L10n.of(context).skGameNoCards,
+                  style: const TextStyle(color: Color(0xFF8A7A72), fontSize: 12),
+                ),
+              )
+            else
+              Padding(
+                padding: const EdgeInsets.symmetric(vertical: 4),
+                child: _buildHandRows(viewingPlayer.cards, legalCards: const {}, isPlaying: false, isKitty: false),
+              ),
+          ],
+        ),
+      );
+    }
+
+    // Rejected
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+      decoration: baseDeco,
+      child: Text(
+        L10n.of(context).skGameCardViewRejected(viewingPlayer.name),
+        textAlign: TextAlign.center,
+        style: const TextStyle(color: Color(0xFF8A7A72), fontSize: 13, fontWeight: FontWeight.w600),
+      ),
+    );
+  }
+
   // ── Hand Area (SK-style) ──
   Widget _buildHandArea(MightyGameStateData state, GameService game) {
+    // Spectator card view
+    if (game.isSpectator) {
+      return _buildSpectatorHandArea(state, game);
+    }
     final cards = state.myCards;
     if (cards.isEmpty) return const SizedBox(height: 20);
 

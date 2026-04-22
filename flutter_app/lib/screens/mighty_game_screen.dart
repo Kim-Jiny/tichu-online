@@ -1260,7 +1260,7 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
               borderRadius: BorderRadius.circular(6),
             ),
             child: Text(
-              '야당',
+              L10n.of(context).mtOpposition,
               style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Colors.white),
             ),
           ),
@@ -3025,8 +3025,8 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
                 dataTextStyle: const TextStyle(fontSize: 11, color: Color(0xFF5A4038)),
                 columns: [
                   const DataColumn(label: Text('R')),
-                  const DataColumn(label: Text('공약')),
-                  const DataColumn(label: Text('결과')),
+                  DataColumn(label: Text(L10n.of(context).mtContract)),
+                  DataColumn(label: Text(L10n.of(context).mtResult)),
                   ...state.players.map((p) => DataColumn(
                     label: Text(
                       p.name.length > 4 ? '${p.name.substring(0, 4)}..' : p.name,
@@ -3077,7 +3077,7 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
                     cells: [
                       const DataCell(Text('')),
                       const DataCell(Text('')),
-                      const DataCell(Text('합계', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold))),
+                      DataCell(Text(L10n.of(context).mtTotal, style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold))),
                       ...state.players.map((p) {
                         final total = cumScores[p.id] ?? 0;
                         return DataCell(Text(

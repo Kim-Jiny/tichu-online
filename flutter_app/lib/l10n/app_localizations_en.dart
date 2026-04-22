@@ -2788,6 +2788,18 @@ class L10nEn extends L10n {
   String get mtScoreHistory => 'Score History';
 
   @override
+  String get mtOpposition => 'Defense';
+
+  @override
+  String get mtContract => 'Contract';
+
+  @override
+  String get mtResult => 'Result';
+
+  @override
+  String get mtTotal => 'Total';
+
+  @override
   String get mtSoloSuffix => '(solo)';
 
   @override

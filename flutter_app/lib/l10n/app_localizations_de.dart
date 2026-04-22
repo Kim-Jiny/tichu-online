@@ -2803,6 +2803,18 @@ class L10nDe extends L10n {
   String get mtScoreHistory => 'Punkteverlauf';
 
   @override
+  String get mtOpposition => 'Verteidigung';
+
+  @override
+  String get mtContract => 'Vertrag';
+
+  @override
+  String get mtResult => 'Ergebnis';
+
+  @override
+  String get mtTotal => 'Gesamt';
+
+  @override
   String get mtSoloSuffix => '(solo)';
 
   @override

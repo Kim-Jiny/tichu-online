@@ -2726,6 +2726,18 @@ class L10nKo extends L10n {
   String get mtScoreHistory => '점수 기록';
 
   @override
+  String get mtOpposition => '야당';
+
+  @override
+  String get mtContract => '공약';
+
+  @override
+  String get mtResult => '결과';
+
+  @override
+  String get mtTotal => '합계';
+
+  @override
   String get mtSoloSuffix => '(노프렌드)';
 
   @override

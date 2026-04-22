@@ -211,6 +211,7 @@
   "sk_not_round_end": "Not in the round-end state",
 
   "ll_update_required": "Please update the app to play Love Letter",
+  "mighty_update_required": "Please update the app to play Mighty",
   "ll_not_play_phase": "Not in the play phase",
   "ll_not_your_turn": "It's not your turn",
   "ll_eliminated": "You are already eliminated",

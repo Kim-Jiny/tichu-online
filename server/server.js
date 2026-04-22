@@ -493,6 +493,8 @@ const SK_MIN_VERSION = '2.0.0';
 const SK_EXPANSION_MIN_VERSION = '2.1.0';
 // Love Letter version gating
 const LL_MIN_VERSION = '2.2.0';
+// Mighty version gating
+const MIGHTY_MIN_VERSION = '2.3.0';
 // SK_EXPANSION_UPDATE_MESSAGE removed – now uses t(locale, 'sk_expansion_update_required')
 
 function compareVersions(v1, v2) {
@@ -524,8 +526,13 @@ function clientSupportsLL(ws) {
   return compareVersions(ws.appVersion, LL_MIN_VERSION) >= 0;
 }
 
+function clientSupportsMighty(ws) {
+  return compareVersions(ws.appVersion, MIGHTY_MIN_VERSION) >= 0;
+}
+
 function clientCanAccessRoom(ws, room) {
   if (!room) return true;
+  if (room.gameType === 'mighty') return clientSupportsMighty(ws);
   if (room.gameType === 'love_letter') return clientSupportsLL(ws);
   if (room.gameType !== 'skull_king') return true;
   if (!clientSupportsSK(ws)) return false;
@@ -534,6 +541,7 @@ function clientCanAccessRoom(ws, room) {
 }
 
 function roomAccessUpdateMessage(locale, room, action = 'join') {
+  if (room && room.gameType === 'mighty') return t(locale, 'mighty_update_required');
   if (room && room.gameType === 'love_letter') return t(locale, 'll_update_required');
   if (roomHasSKExpansions(room)) return t(locale, 'sk_expansion_update_required');
   return t(locale, 'sk_update_' + action);
@@ -2024,6 +2032,10 @@ function handleCreateRoom(ws, data) {
   }
   if (gameType === 'love_letter' && !clientSupportsLL(ws)) {
     sendTo(ws, { type: 'error', message: t(ws.locale, 'll_update_required') });
+    return;
+  }
+  if (gameType === 'mighty' && !clientSupportsMighty(ws)) {
+    sendTo(ws, { type: 'error', message: t(ws.locale, 'mighty_update_required') });
     return;
   }
 

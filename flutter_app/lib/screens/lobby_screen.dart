@@ -1109,7 +1109,9 @@ class _LobbyScreenState extends State<LobbyScreen> {
                           title: l10n.lobbyRanked,
                           description: selectedGameType == 'skull_king'
                               ? l10n.lobbyRankedDescSk
-                              : l10n.lobbyRankedDesc,
+                              : selectedGameType == 'mighty'
+                                  ? l10n.lobbyRankedDescMighty
+                                  : l10n.lobbyRankedDesc,
                           value: isRanked,
                           onChanged: (v) => setState(() {
                             isRanked = v;
@@ -1210,7 +1212,9 @@ class _LobbyScreenState extends State<LobbyScreen> {
                           isRanked
                               ? (selectedGameType == 'skull_king'
                                   ? l10n.lobbyRankedInfoSk
-                                  : l10n.lobbyRankedFixedScoreInfo)
+                                  : selectedGameType == 'mighty'
+                                      ? l10n.lobbyRankedInfoMighty
+                                      : l10n.lobbyRankedFixedScoreInfo)
                               : l10n.lobbyNormalSettingsInfo,
                           style: const TextStyle(
                             fontSize: 11,
@@ -1273,7 +1277,7 @@ class _LobbyScreenState extends State<LobbyScreen> {
                       (int.tryParse(timeLimitController.text.trim()) ?? 30)
                           .clamp(10, 999);
                   final targetScore = isRanked
-                      ? 1000
+                      ? (selectedGameType == 'mighty' ? 50 : 1000)
                       : selectedGameType == 'mighty'
                           ? (int.tryParse(targetScoreController.text.trim()) ?? 50)
                               .clamp(10, 500)

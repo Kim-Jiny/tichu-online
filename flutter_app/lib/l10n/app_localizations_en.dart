@@ -534,6 +534,10 @@ class L10nEn extends L10n {
       'Private settings are automatically disabled.';
 
   @override
+  String get lobbyRankedDescMighty =>
+      'Score is fixed at 50 and private settings are automatically disabled.';
+
+  @override
   String get lobbyGameSettings => 'Game Settings';
 
   @override
@@ -571,6 +575,10 @@ class L10nEn extends L10n {
   @override
   String get lobbyRankedInfoSk =>
       'Private rooms are not available in ranked play.';
+
+  @override
+  String get lobbyRankedInfoMighty =>
+      'Ranked play uses a fixed target score of 50. Private rooms are not available.';
 
   @override
   String get lobbyNormalSettingsInfo =>

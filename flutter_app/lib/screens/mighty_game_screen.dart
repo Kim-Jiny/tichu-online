@@ -816,6 +816,8 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
                   }
                 } else if (hasPointCards && (state.phase == 'playing' || state.phase == 'trick_end' || state.phase == 'round_end')) {
                   _showPointCardsDialog(p);
+                } else {
+                  _showPlayerProfileDialog(p.name, game, isBot: p.id.startsWith('bot_'));
                 }
               },
               child: SizedBox(
@@ -878,17 +880,6 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
                                   overflow: TextOverflow.ellipsis,
                                 ),
                               ),
-                              if (isCurrentTurn && _remainingSeconds > 0) ...[
-                                const SizedBox(width: 3),
-                                Text(
-                                  '${_remainingSeconds}s',
-                                  style: TextStyle(
-                                    fontSize: 9,
-                                    fontWeight: FontWeight.bold,
-                                    color: _remainingSeconds <= 5 ? const Color(0xFFE53935) : const Color(0xFFE6A800),
-                                  ),
-                                ),
-                              ],
                             ],
                           ),
                           const SizedBox(height: 2),
@@ -989,10 +980,10 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
                             ? PlayingCard.suitColors[_getCardSuit(trickPlay.cardId)]
                             : null,
                         badgeIcon: trickPlay.cardId == state.mightyCard ? Icons.star
-                            : trickPlay.cardId == state.jokerCallCard ? Icons.gps_fixed
+                            : (state.jokerCallActive && trickPlay.cardId == state.jokerCallCard) ? Icons.gps_fixed
                             : null,
                         badgeColor: trickPlay.cardId == state.mightyCard ? const Color(0xFFFFB300)
-                            : trickPlay.cardId == state.jokerCallCard ? const Color(0xFFE53935)
+                            : (state.jokerCallActive && trickPlay.cardId == state.jokerCallCard) ? const Color(0xFFE53935)
                             : null,
                       ),
                     )
@@ -1187,6 +1178,18 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
                 ],
               ],
             ),
+            if (_remainingSeconds > 0)
+              Padding(
+                padding: const EdgeInsets.only(top: 4),
+                child: Text(
+                  '${_remainingSeconds}s',
+                  style: TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.bold,
+                    color: _remainingSeconds <= 5 ? const Color(0xFFE53935) : const Color(0xFF8A7A72),
+                  ),
+                ),
+              ),
             if (state.friendCard != null)
               Padding(
                 padding: const EdgeInsets.only(top: 4),
@@ -2747,6 +2750,567 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
         actions: [
           TextButton(onPressed: () => Navigator.pop(ctx), child: Text(L10n.of(context).mtClose)),
         ],
+      ),
+    );
+  }
+
+  // ── Player Profile Dialog ──
+  void _showPlayerProfileDialog(String nickname, GameService game, {bool isBot = false}) {
+    game.requestProfile(nickname);
+    showDialog(
+      context: context,
+      builder: (ctx) {
+        return Consumer<GameService>(
+          builder: (ctx, game, _) {
+            final profile = game.profileFor(nickname);
+            final isLoading = profile == null || profile['nickname'] != nickname;
+            final isMe = nickname == game.playerName;
+            final isBlockedUser = game.isBlocked(nickname);
+            final l10n = L10n.of(context);
+
+            return AlertDialog(
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+              titlePadding: const EdgeInsets.fromLTRB(18, 18, 18, 0),
+              contentPadding: const EdgeInsets.fromLTRB(18, 14, 18, 10),
+              title: Container(
+                padding: const EdgeInsets.all(14),
+                decoration: BoxDecoration(
+                  color: Colors.white.withValues(alpha: 0.92),
+                  borderRadius: BorderRadius.circular(18),
+                  border: Border.all(color: const Color(0xFFE8DDD8)),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        Container(
+                          width: 38,
+                          height: 38,
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFE8F5E9),
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: const Icon(Icons.person_outline, color: Color(0xFF2E7D32)),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                nickname,
+                                style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w800, color: Color(0xFF3E312A)),
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                              const SizedBox(height: 2),
+                              Text(
+                                isMe ? l10n.gameMyProfile : l10n.gamePlayerProfile,
+                                style: const TextStyle(fontSize: 12, color: Color(0xFF84766E)),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                    if (!isMe && !isBot) ...[
+                      const SizedBox(height: 12),
+                      Wrap(
+                        spacing: 8,
+                        runSpacing: 8,
+                        children: [
+                          if (game.friends.contains(nickname))
+                            _buildProfileIconBtn(Icons.check, const Color(0xFFBDBDBD), l10n.gameAlreadyFriend, () {})
+                          else if (game.sentFriendRequests.contains(nickname))
+                            _buildProfileIconBtn(Icons.hourglass_top, const Color(0xFFBDBDBD), l10n.gameRequestPending, () {})
+                          else
+                            _buildProfileIconBtn(Icons.person_add, const Color(0xFF81C784), l10n.gameAddFriend, () {
+                              game.addFriendAction(nickname);
+                              Navigator.pop(ctx);
+                              ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(l10n.gameFriendRequestSent)));
+                            }),
+                          _buildProfileIconBtn(
+                            isBlockedUser ? Icons.block : Icons.shield_outlined,
+                            isBlockedUser ? const Color(0xFF64B5F6) : const Color(0xFFFF8A65),
+                            isBlockedUser ? l10n.gameUnblock : l10n.gameBlock,
+                            () {
+                              if (isBlockedUser) {
+                                game.unblockUserAction(nickname);
+                                ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(l10n.gameUnblocked)));
+                              } else {
+                                game.blockUserAction(nickname);
+                                ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(l10n.gameBlocked)));
+                              }
+                            },
+                          ),
+                          _buildProfileIconBtn(Icons.flag, const Color(0xFFE57373), l10n.gameReport, () {
+                            Navigator.pop(ctx);
+                            _showReportDialog(nickname, game);
+                          }),
+                        ],
+                      ),
+                    ],
+                  ],
+                ),
+              ),
+              content: isLoading
+                  ? const SizedBox(height: 140, width: 360, child: Center(child: CircularProgressIndicator()))
+                  : ConstrainedBox(
+                      constraints: const BoxConstraints(maxWidth: 420, maxHeight: 560),
+                      child: SingleChildScrollView(child: _buildProfileContent(profile)),
+                    ),
+              actions: [
+                TextButton(onPressed: () => Navigator.pop(ctx), child: Text(l10n.gameClose)),
+              ],
+            );
+          },
+        );
+      },
+    );
+  }
+
+  Widget _buildProfileIconBtn(IconData icon, Color color, String tooltip, VoidCallback onTap) {
+    return Tooltip(
+      message: tooltip,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(12),
+        child: Container(
+          width: 28,
+          height: 28,
+          decoration: BoxDecoration(
+            color: color.withValues(alpha: 0.15),
+            borderRadius: BorderRadius.circular(10),
+            border: Border.all(color: color.withValues(alpha: 0.35)),
+          ),
+          child: Icon(icon, size: 16, color: color),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildProfileContent(Map<String, dynamic> data) {
+    final profile = data['profile'] as Map<String, dynamic>?;
+    if (profile == null) return Text(L10n.of(context).gameProfileNotFound);
+
+    final l10n = L10n.of(context);
+    final level = profile['level'] ?? 1;
+    final expTotal = profile['expTotal'] ?? 0;
+    final leaveCount = profile['leaveCount'] ?? 0;
+    final reportCount = profile['reportCount'] ?? 0;
+    final totalGames = profile['totalGames'] ?? 0;
+    final bannerKey = profile['bannerKey']?.toString();
+
+    // Mighty stats
+    final mightyTotalGames = profile['mightyTotalGames'] ?? 0;
+    final mightyWins = profile['mightyWins'] ?? 0;
+    final mightyLosses = profile['mightyLosses'] ?? 0;
+    final mightyWinRate = profile['mightyWinRate'] ?? 0;
+    final mightySeasonRating = profile['mightySeasonRating'] ?? 1000;
+    final mightySeasonGames = profile['mightySeasonGames'] ?? 0;
+    final mightySeasonWins = profile['mightySeasonWins'] ?? 0;
+    final mightySeasonLosses = profile['mightySeasonLosses'] ?? 0;
+    final mightySeasonWinRate = profile['mightySeasonWinRate'] ?? 0;
+
+    final recentMatches = (data['recentMatches'] as List<dynamic>? ?? [])
+        .where((m) => m['gameType'] == 'mighty')
+        .toList();
+    final profileNickname = data['nickname']?.toString() ?? '';
+
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        _buildProfileHeader(level as int, expTotal as int, bannerKey),
+        const SizedBox(height: 8),
+        _buildMannerLeaveRow(totalGames: totalGames as int, reportCount: reportCount as int, leaveCount: leaveCount as int),
+        const SizedBox(height: 10),
+        _buildProfileSection(
+          title: l10n.rankingMightySeasonRanked,
+          accent: const Color(0xFF2E7D32),
+          background: const Color(0xFFE8F5E9),
+          icon: Icons.emoji_events,
+          iconColor: const Color(0xFFFFD54F),
+          mainText: '$mightySeasonRating',
+          chips: [
+            _buildStatChip(l10n.gameStatRecord, l10n.gameRecordFormat(mightySeasonGames as int, mightySeasonWins as int, mightySeasonLosses as int)),
+            _buildStatChip(l10n.gameStatWinRate, '$mightySeasonWinRate%'),
+          ],
+        ),
+        const SizedBox(height: 10),
+        _buildProfileSection(
+          title: l10n.rankingMightyRecord,
+          accent: const Color(0xFF1B5E20),
+          background: const Color(0xFFF1F8E9),
+          icon: Icons.military_tech,
+          iconColor: const Color(0xFF4CAF50),
+          mainText: '',
+          chips: [
+            _buildStatChip(l10n.gameStatRecord, l10n.gameRecordFormat(mightyTotalGames as int, mightyWins as int, mightyLosses as int)),
+            _buildStatChip(l10n.gameStatWinRate, '$mightyWinRate%'),
+          ],
+        ),
+        const SizedBox(height: 12),
+        _buildRecentMatchesList(recentMatches, profileNickname),
+      ],
+    );
+  }
+
+  Widget _buildProfileHeader(int level, int expTotal, String? bannerKey) {
+    final expInLevel = expTotal % 100;
+    final expPercent = expInLevel / 100;
+    final gradient = _bannerGradient(bannerKey);
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+      decoration: BoxDecoration(
+        gradient: gradient,
+        color: gradient == null ? Colors.white.withValues(alpha: 0.95) : null,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: const Color(0xFFE0D8D4)),
+      ),
+      child: Row(
+        children: [
+          Text('Lv.$level', style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: Color(0xFF5A4038))),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(6),
+                  child: LinearProgressIndicator(
+                    value: expPercent,
+                    minHeight: 6,
+                    backgroundColor: const Color(0xFFEFE7E3),
+                    valueColor: const AlwaysStoppedAnimation(Color(0xFF64B5F6)),
+                  ),
+                ),
+                const SizedBox(height: 2),
+                Text('$expInLevel/100 EXP', style: const TextStyle(fontSize: 9, color: Color(0xFF9A8E8A))),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  LinearGradient? _bannerGradient(String? key) {
+    switch (key) {
+      case 'banner_pastel': return const LinearGradient(colors: [Color(0xFFF6C1C9), Color(0xFFF3E7EA)]);
+      case 'banner_blossom': return const LinearGradient(colors: [Color(0xFFF7D6D0), Color(0xFFF3E9E6)]);
+      case 'banner_mint': return const LinearGradient(colors: [Color(0xFFCDEBD8), Color(0xFFEFF8F2)]);
+      case 'banner_sunset_7d': return const LinearGradient(colors: [Color(0xFFFFC3A0), Color(0xFFFFE5B4)]);
+      case 'banner_season_gold': return const LinearGradient(colors: [Color(0xFFFFE082), Color(0xFFFFF3C0)]);
+      case 'banner_season_silver': return const LinearGradient(colors: [Color(0xFFCFD8DC), Color(0xFFF1F3F4)]);
+      case 'banner_season_bronze': return const LinearGradient(colors: [Color(0xFFD7B59A), Color(0xFFF4E8DC)]);
+      default: return null;
+    }
+  }
+
+  static int _calcMannerScore(int totalGames, int leaveCount, int reportCount) {
+    int score = 1000;
+    score -= leaveCount * 5;
+    score -= reportCount * 3;
+    score += (totalGames ~/ 10) * 5;
+    return score.clamp(0, 1000);
+  }
+
+  Widget _buildMannerLeaveRow({required int totalGames, required int reportCount, required int leaveCount}) {
+    final manner = _calcMannerScore(totalGames, leaveCount, reportCount);
+    final Color color;
+    final IconData icon;
+    if (manner >= 800) { color = const Color(0xFF4CAF50); icon = Icons.sentiment_very_satisfied; }
+    else if (manner >= 500) { color = const Color(0xFFFF9800); icon = Icons.sentiment_neutral; }
+    else { color = const Color(0xFFE53935); icon = Icons.sentiment_very_dissatisfied; }
+    final l10n = L10n.of(context);
+    final boxDeco = BoxDecoration(
+      color: Colors.white.withValues(alpha: 0.95),
+      borderRadius: BorderRadius.circular(12),
+      border: Border.all(color: const Color(0xFFE0D8D4)),
+    );
+    return Row(
+      children: [
+        Expanded(
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+            decoration: boxDeco,
+            child: Row(mainAxisAlignment: MainAxisAlignment.center, children: [
+              Icon(icon, color: color, size: 16),
+              const SizedBox(width: 6),
+              Flexible(child: Text('${l10n.rankingMannerScore} $manner', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: color), overflow: TextOverflow.ellipsis)),
+            ]),
+          ),
+        ),
+        const SizedBox(width: 8),
+        Expanded(
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+            decoration: boxDeco,
+            child: Row(mainAxisAlignment: MainAxisAlignment.center, children: [
+              const Icon(Icons.warning_amber_rounded, color: Color(0xFFE57373), size: 16),
+              const SizedBox(width: 6),
+              Flexible(child: Text(l10n.gameDesertions(leaveCount), style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Color(0xFF9A6A6A)), overflow: TextOverflow.ellipsis)),
+            ]),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildProfileSection({
+    required String title,
+    required Color accent,
+    required Color background,
+    required IconData icon,
+    required Color iconColor,
+    required String mainText,
+    required List<Widget> chips,
+  }) {
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: background,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: background.withValues(alpha: 0.6)),
+      ),
+      child: Column(
+        children: [
+          Row(
+            children: [
+              Icon(icon, color: iconColor, size: 16),
+              const SizedBox(width: 6),
+              Text(title, style: TextStyle(fontSize: 12, color: accent, fontWeight: FontWeight.bold)),
+              const Spacer(),
+              if (mainText.isNotEmpty)
+                Text(mainText, style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: accent)),
+            ],
+          ),
+          const SizedBox(height: 8),
+          Wrap(spacing: 6, runSpacing: 6, alignment: WrapAlignment.center, children: chips),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildStatChip(String label, String value) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      decoration: BoxDecoration(
+        color: Colors.white.withValues(alpha: 0.9),
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: const Color(0xFFE0D8D4)),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text(label, style: const TextStyle(fontSize: 10, color: Color(0xFF8A8A8A))),
+          const SizedBox(width: 4),
+          Text(value, style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Color(0xFF5A4038))),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildRecentMatchesList(List<dynamic> matches, String profileNickname) {
+    final l10n = L10n.of(context);
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: Colors.white.withValues(alpha: 0.95),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: const Color(0xFFE0D8D4)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(l10n.gameRecentMatchesThree, style: const TextStyle(fontSize: 12, color: Color(0xFF8A8A8A))),
+          const SizedBox(height: 8),
+          if (matches.isEmpty)
+            Text(l10n.gameNoRecentMatches, style: const TextStyle(fontSize: 12, color: Color(0xFF9A8E8A)))
+          else
+            Column(
+              children: matches.take(3).map<Widget>((match) => _buildMatchRow(match)).toList(),
+            ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildMatchRow(dynamic match) {
+    final l10n = L10n.of(context);
+    final isDesertionLoss = match['isDesertionLoss'] == true;
+    final won = match['won'] == true;
+
+    String badge;
+    Color badgeColor;
+    if (isDesertionLoss) {
+      badge = l10n.rankingBadgeDesertion;
+      badgeColor = const Color(0xFFFF8A65);
+    } else if (won) {
+      badge = 'W';
+      badgeColor = const Color(0xFF81C784);
+    } else {
+      badge = 'L';
+      badgeColor = const Color(0xFFE57373);
+    }
+
+    final declarer = match['declarerNickname']?.toString() ?? '?';
+    final bid = match['bidPoints'] ?? 0;
+    final trump = match['trumpSuit']?.toString() ?? '?';
+    final date = _formatShortDate(match['createdAt']);
+    final isRanked = match['isRanked'] == true;
+
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 6),
+      child: Row(
+        children: [
+          Container(
+            width: 24, height: 24, alignment: Alignment.center,
+            decoration: BoxDecoration(color: badgeColor, shape: BoxShape.circle),
+            child: Text(badge, style: const TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.bold)),
+          ),
+          const SizedBox(width: 4),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
+            decoration: BoxDecoration(
+              color: isRanked ? const Color(0xFFFFF3E0) : const Color(0xFFF5F5F5),
+              borderRadius: BorderRadius.circular(4),
+            ),
+            child: Text(
+              isRanked ? l10n.lobbyMatchTypeRanked : l10n.lobbyMatchTypeNormal,
+              style: TextStyle(fontSize: 8, fontWeight: FontWeight.bold, color: isRanked ? const Color(0xFFE65100) : const Color(0xFF9E9E9E)),
+            ),
+          ),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(date, style: const TextStyle(fontSize: 11, color: Color(0xFF8A8A8A))),
+                const SizedBox(height: 2),
+                Text(
+                  l10n.rankingMightyMatchDetail(declarer, bid, trump),
+                  style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Color(0xFF5A4038)),
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  String _formatShortDate(dynamic value) {
+    try {
+      final dt = DateTime.parse(value.toString()).toLocal();
+      return '${dt.year}.${dt.month.toString().padLeft(2, '0')}.${dt.day.toString().padLeft(2, '0')}';
+    } catch (_) {
+      return '-';
+    }
+  }
+
+  void _showReportDialog(String nickname, GameService game) {
+    final reasonController = TextEditingController();
+    final l10n = L10n.of(context);
+    final reasons = [
+      l10n.gameReportReasonAbuse,
+      l10n.gameReportReasonSpam,
+      l10n.gameReportReasonNickname,
+      l10n.gameReportReasonGameplay,
+      l10n.gameReportReasonOther,
+    ];
+    String? selectedReason;
+
+    showDialog(
+      context: context,
+      builder: (context) => StatefulBuilder(
+        builder: (ctx, setState) {
+          final media = MediaQuery.of(ctx);
+          return AnimatedPadding(
+            duration: const Duration(milliseconds: 180),
+            curve: Curves.easeOut,
+            padding: EdgeInsets.only(bottom: media.viewInsets.bottom),
+            child: AlertDialog(
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+              title: Row(
+                children: [
+                  const Icon(Icons.flag, color: Color(0xFFE57373)),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(l10n.gameReportTitle(nickname), style: const TextStyle(fontWeight: FontWeight.bold), overflow: TextOverflow.ellipsis),
+                  ),
+                ],
+              ),
+              content: ConstrainedBox(
+                constraints: BoxConstraints(maxWidth: 420, maxHeight: media.size.height * 0.55),
+                child: SingleChildScrollView(
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Container(
+                        width: double.infinity,
+                        padding: const EdgeInsets.all(10),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFFFF1F1),
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(color: const Color(0xFFF0C7C7)),
+                        ),
+                        child: Text(l10n.gameReportWarning, style: const TextStyle(fontSize: 12, color: Color(0xFF9A4A4A), height: 1.4)),
+                      ),
+                      const SizedBox(height: 12),
+                      Align(
+                        alignment: Alignment.centerLeft,
+                        child: Text(l10n.gameSelectReason, style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.grey.shade700)),
+                      ),
+                      const SizedBox(height: 6),
+                      Wrap(
+                        spacing: 8,
+                        runSpacing: 8,
+                        children: reasons.map((r) {
+                          final isSelected = selectedReason == r;
+                          return ChoiceChip(
+                            label: Text(r, style: TextStyle(fontSize: 12, color: isSelected ? Colors.white : const Color(0xFF5A4038))),
+                            selected: isSelected,
+                            selectedColor: const Color(0xFFE57373),
+                            backgroundColor: const Color(0xFFF5F0EB),
+                            onSelected: (_) => setState(() => selectedReason = r),
+                          );
+                        }).toList(),
+                      ),
+                      const SizedBox(height: 12),
+                      TextField(
+                        controller: reasonController,
+                        maxLines: 3,
+                        maxLength: 200,
+                        decoration: InputDecoration(
+                          hintText: l10n.gameReportDetailHint,
+                          hintStyle: const TextStyle(fontSize: 12),
+                          border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+              actions: [
+                TextButton(onPressed: () => Navigator.pop(ctx), child: Text(l10n.gameClose)),
+                ElevatedButton(
+                  onPressed: selectedReason == null
+                      ? null
+                      : () {
+                          final detail = reasonController.text.trim();
+                          final reason = detail.isEmpty ? selectedReason! : '${selectedReason!} / $detail';
+                          Navigator.pop(ctx);
+                          game.reportUserAction(nickname, reason);
+                        },
+                  child: Text(l10n.gameReportSubmit),
+                ),
+              ],
+            ),
+          );
+        },
       ),
     );
   }

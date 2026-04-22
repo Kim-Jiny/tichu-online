@@ -1089,6 +1089,12 @@ abstract class L10n {
   /// **'Private settings are automatically disabled.'**
   String get lobbyRankedDescSk;
 
+  /// No description provided for @lobbyRankedDescMighty.
+  ///
+  /// In en, this message translates to:
+  /// **'Score is fixed at 50 and private settings are automatically disabled.'**
+  String get lobbyRankedDescMighty;
+
   /// No description provided for @lobbyGameSettings.
   ///
   /// In en, this message translates to:
@@ -1160,6 +1166,12 @@ abstract class L10n {
   /// In en, this message translates to:
   /// **'Private rooms are not available in ranked play.'**
   String get lobbyRankedInfoSk;
+
+  /// No description provided for @lobbyRankedInfoMighty.
+  ///
+  /// In en, this message translates to:
+  /// **'Ranked play uses a fixed target score of 50. Private rooms are not available.'**
+  String get lobbyRankedInfoMighty;
 
   /// No description provided for @lobbyNormalSettingsInfo.
   ///

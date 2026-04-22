@@ -2038,7 +2038,9 @@ function handleCreateRoom(ws, data) {
   const minTarget = gameType === 'mighty' ? 10 : 100;
   const defaultTarget = gameType === 'mighty' ? 50 : 1000;
   const maxTarget = gameType === 'mighty' ? 500 : 20000;
-  const targetScore = Math.min(Math.max(parseInt(data.targetScore) || defaultTarget, minTarget), maxTarget);
+  const targetScore = (isRanked && gameType === 'mighty')
+    ? 50
+    : Math.min(Math.max(parseInt(data.targetScore) || defaultTarget, minTarget), maxTarget);
 
   let maxPlayers = 4;
   let skExpansions = [];

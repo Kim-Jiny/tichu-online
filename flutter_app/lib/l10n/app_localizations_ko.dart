@@ -518,6 +518,9 @@ class L10nKo extends L10n {
   String get lobbyRankedDescSk => '비공개 설정은 자동으로 꺼집니다.';
 
   @override
+  String get lobbyRankedDescMighty => '점수는 50점 고정이며 비공개 설정은 자동으로 꺼집니다.';
+
+  @override
   String get lobbyGameSettings => '게임 설정';
 
   @override
@@ -552,6 +555,10 @@ class L10nKo extends L10n {
 
   @override
   String get lobbyRankedInfoSk => '랭크전은 비공개 방을 사용할 수 없습니다.';
+
+  @override
+  String get lobbyRankedInfoMighty =>
+      '랭크전은 목표 점수 50점으로 고정되며 비공개 방을 사용할 수 없습니다.';
 
   @override
   String get lobbyNormalSettingsInfo =>

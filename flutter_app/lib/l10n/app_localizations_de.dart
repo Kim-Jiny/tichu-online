@@ -542,6 +542,10 @@ class L10nDe extends L10n {
       'Die Privat-Einstellung wird automatisch deaktiviert.';
 
   @override
+  String get lobbyRankedDescMighty =>
+      'Die Punktzahl ist auf 50 festgelegt und die Privat-Einstellung wird automatisch deaktiviert.';
+
+  @override
   String get lobbyGameSettings => 'Spieleinstellungen';
 
   @override
@@ -579,6 +583,10 @@ class L10nDe extends L10n {
   @override
   String get lobbyRankedInfoSk =>
       'Private Räume sind im Ranglistenspiel nicht verfügbar.';
+
+  @override
+  String get lobbyRankedInfoMighty =>
+      'Im Ranglistenspiel ist die Zielpunktzahl auf 50 festgelegt. Private Räume sind nicht verfügbar.';
 
   @override
   String get lobbyNormalSettingsInfo =>

@@ -12,6 +12,7 @@ import '../services/locale_service.dart';
 import '../services/ad_service.dart';
 import 'package:google_mobile_ads/google_mobile_ads.dart';
 import 'admin_center_screen.dart';
+import 'notices_screen.dart';
 
 class SettingsScreen extends StatefulWidget {
   /// Callback invoked when the user taps "내 프로필". The callback receives
@@ -174,256 +175,18 @@ class _SettingsScreenState extends State<SettingsScreen> {
     game.deleteAccount().whenComplete(_logout);
   }
 
-  String _noticeCategoryLabel(L10n l10n, dynamic value) {
-    switch (value?.toString()) {
-      case 'release': return l10n.noticeCategoryRelease;
-      case 'update': return l10n.noticeCategoryUpdate;
-      case 'preview': return l10n.noticeCategoryPreview;
-      case 'general': return l10n.noticeCategoryGeneral;
-      default: return l10n.noticeCategoryGeneral;
-    }
-  }
 
-  Color _noticeCategoryBgColor(dynamic value) {
-    switch (value?.toString()) {
-      case 'release': return const Color(0xFFE3F2FD);
-      case 'update': return const Color(0xFFE8F5E9);
-      case 'preview': return const Color(0xFFFFF3E0);
-      case 'general': return const Color(0xFFECEFF1);
-      default: return const Color(0xFFECEFF1);
-    }
-  }
-
-  Color _noticeCategoryTextColor(dynamic value) {
-    switch (value?.toString()) {
-      case 'release': return const Color(0xFF1565C0);
-      case 'update': return const Color(0xFF2E7D32);
-      case 'preview': return const Color(0xFFE65100);
-      case 'general': return const Color(0xFF546E7A);
-      default: return const Color(0xFF546E7A);
-    }
-  }
-
-  void _showNoticesDialog() {
+  void _openNoticesPage() {
     final game = context.read<GameService>();
-    final l10n = L10n.of(context);
     // Capture unread IDs before marking as read, so we can show "NEW" badges
     final unreadIds = <int>{};
     for (final n in game.notices) {
       final id = n['id'];
       if (id is int && !game.readNoticeIds.contains(id)) unreadIds.add(id);
     }
-    // Mark all (existing + freshly fetched) notices as read — opening the
-    // dialog counts as "seeing" them, which clears the red badges.
-    game.markCurrentNoticesAsRead();
-    game.requestNotices(markReadOnReceive: true);
-    showDialog(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        title: Row(
-          children: [
-            const Icon(Icons.campaign, color: Color(0xFF42A5F5)),
-            const SizedBox(width: 8),
-            Flexible(child: Text(l10n.noticeTitle, overflow: TextOverflow.ellipsis)),
-          ],
-        ),
-        content: SizedBox(
-          width: double.maxFinite,
-          child: Consumer<GameService>(
-            builder: (context, game, _) {
-              if (game.noticesLoading) {
-                return const SizedBox(
-                  height: 160,
-                  child: Center(child: CircularProgressIndicator()),
-                );
-              }
-              if (game.noticesError != null) {
-                return SizedBox(
-                  height: 160,
-                  child: Center(
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Text(
-                          localizeServiceMessage(game.noticesError!, L10n.of(context)),
-                          style: const TextStyle(color: Color(0xFFCC6666)),
-                          textAlign: TextAlign.center,
-                        ),
-                        const SizedBox(height: 10),
-                        TextButton(
-                          onPressed: () => game.requestNotices(),
-                          child: Text(l10n.noticeRetry),
-                        ),
-                      ],
-                    ),
-                  ),
-                );
-              }
-              if (game.notices.isEmpty) {
-                return SizedBox(
-                  height: 140,
-                  child: Center(
-                    child: Text(
-                      l10n.noticeEmpty,
-                      style: const TextStyle(color: Color(0xFF9A8E8A)),
-                    ),
-                  ),
-                );
-              }
-              return SizedBox(
-                height: 360,
-                child: ListView.separated(
-                  itemCount: game.notices.length,
-                  separatorBuilder: (_, __) => const SizedBox(height: 8),
-                  itemBuilder: (context, index) {
-                    final item = game.notices[index];
-                    final title = item['title']?.toString() ?? '';
-                    final category = item['category']?.toString() ?? 'general';
-                    final isPinned = item['is_pinned'] == true;
-                    final publishedAt = _formatShortDate(item['published_at']);
-                    final noticeId = item['id'];
-                    final isNew = noticeId is int && unreadIds.contains(noticeId);
-                    return InkWell(
-                      onTap: () => _showNoticeDetailDialog(item),
-                      borderRadius: BorderRadius.circular(12),
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-                        decoration: BoxDecoration(
-                          color: isNew ? const Color(0xFFFFF8E1) : Colors.white,
-                          borderRadius: BorderRadius.circular(12),
-                          border: Border.all(color: isNew ? const Color(0xFFFFCC80) : const Color(0xFFE0D8D4)),
-                        ),
-                        child: Row(
-                          children: [
-                            if (isNew)
-                              Container(
-                                margin: const EdgeInsets.only(right: 6),
-                                padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 2),
-                                decoration: BoxDecoration(
-                                  color: const Color(0xFFE53935),
-                                  borderRadius: BorderRadius.circular(4),
-                                ),
-                                child: const Text('NEW', style: TextStyle(fontSize: 9, fontWeight: FontWeight.w800, color: Colors.white)),
-                              ),
-                            if (isPinned)
-                              const Padding(
-                                padding: EdgeInsets.only(right: 6),
-                                child: Icon(Icons.push_pin, size: 16, color: Color(0xFFFF8F00)),
-                              ),
-                            Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                              decoration: BoxDecoration(
-                                color: _noticeCategoryBgColor(category),
-                                borderRadius: BorderRadius.circular(8),
-                              ),
-                              child: Text(
-                                _noticeCategoryLabel(l10n, category),
-                                style: TextStyle(
-                                  fontSize: 11,
-                                  fontWeight: FontWeight.w600,
-                                  color: _noticeCategoryTextColor(category),
-                                ),
-                              ),
-                            ),
-                            const SizedBox(width: 8),
-                            Expanded(
-                              child: Text(
-                                title,
-                                style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w500),
-                                overflow: TextOverflow.ellipsis,
-                              ),
-                            ),
-                            const SizedBox(width: 6),
-                            Text(
-                              publishedAt,
-                              style: const TextStyle(fontSize: 11, color: Color(0xFF9A8E8A)),
-                            ),
-                            const SizedBox(width: 4),
-                            const Icon(Icons.chevron_right, size: 18, color: Color(0xFFB0A8A4)),
-                          ],
-                        ),
-                      ),
-                    );
-                  },
-                ),
-              );
-            },
-          ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx),
-            child: Text(l10n.commonClose),
-          ),
-        ],
-      ),
-    );
-  }
-
-  void _showNoticeDetailDialog(Map<String, dynamic> item) {
-    final l10n = L10n.of(context);
-    final title = item['title']?.toString() ?? '';
-    final content = item['content']?.toString() ?? '';
-    final category = item['category']?.toString() ?? 'general';
-    final publishedAt = _formatShortDate(item['published_at']);
-
-    showDialog(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        title: Row(
-          children: [
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-              decoration: BoxDecoration(
-                color: _noticeCategoryBgColor(category),
-                borderRadius: BorderRadius.circular(8),
-              ),
-              child: Text(
-                _noticeCategoryLabel(l10n, category),
-                style: TextStyle(
-                  fontSize: 12,
-                  fontWeight: FontWeight.w600,
-                  color: _noticeCategoryTextColor(category),
-                ),
-              ),
-            ),
-            const SizedBox(width: 8),
-            Expanded(
-              child: Text(
-                title,
-                style: const TextStyle(fontSize: 16),
-              ),
-            ),
-          ],
-        ),
-        content: SingleChildScrollView(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Text(
-                publishedAt,
-                style: const TextStyle(fontSize: 12, color: Color(0xFF9A8E8A)),
-              ),
-              const SizedBox(height: 12),
-              const Divider(height: 1),
-              const SizedBox(height: 12),
-              Text(
-                content,
-                style: const TextStyle(fontSize: 14, height: 1.6),
-              ),
-            ],
-          ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx),
-            child: Text(l10n.commonClose),
-          ),
-        ],
-      ),
+    Navigator.push(
+      context,
+      MaterialPageRoute(builder: (_) => NoticesScreen(unreadIds: unreadIds)),
     );
   }
 
@@ -1256,7 +1019,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                                 icon: Icons.campaign,
                                 iconColor: const Color(0xFF42A5F5),
                                 title: L10n.of(context).settingsNotices,
-                                onTap: _showNoticesDialog,
+                                onTap: _openNoticesPage,
                                 trailing: Row(
                                   mainAxisSize: MainAxisSize.min,
                                   children: [

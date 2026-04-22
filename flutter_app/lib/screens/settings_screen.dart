@@ -207,6 +207,12 @@ class _SettingsScreenState extends State<SettingsScreen> {
   void _showNoticesDialog() {
     final game = context.read<GameService>();
     final l10n = L10n.of(context);
+    // Capture unread IDs before marking as read, so we can show "NEW" badges
+    final unreadIds = <int>{};
+    for (final n in game.notices) {
+      final id = n['id'];
+      if (id is int && !game.readNoticeIds.contains(id)) unreadIds.add(id);
+    }
     // Mark all (existing + freshly fetched) notices as read — opening the
     // dialog counts as "seeing" them, which clears the red badges.
     game.markCurrentNoticesAsRead();
@@ -276,18 +282,30 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     final category = item['category']?.toString() ?? 'general';
                     final isPinned = item['is_pinned'] == true;
                     final publishedAt = _formatShortDate(item['published_at']);
+                    final noticeId = item['id'];
+                    final isNew = noticeId is int && unreadIds.contains(noticeId);
                     return InkWell(
                       onTap: () => _showNoticeDetailDialog(item),
                       borderRadius: BorderRadius.circular(12),
                       child: Container(
                         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
                         decoration: BoxDecoration(
-                          color: Colors.white,
+                          color: isNew ? const Color(0xFFFFF8E1) : Colors.white,
                           borderRadius: BorderRadius.circular(12),
-                          border: Border.all(color: const Color(0xFFE0D8D4)),
+                          border: Border.all(color: isNew ? const Color(0xFFFFCC80) : const Color(0xFFE0D8D4)),
                         ),
                         child: Row(
                           children: [
+                            if (isNew)
+                              Container(
+                                margin: const EdgeInsets.only(right: 6),
+                                padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 2),
+                                decoration: BoxDecoration(
+                                  color: const Color(0xFFE53935),
+                                  borderRadius: BorderRadius.circular(4),
+                                ),
+                                child: const Text('NEW', style: TextStyle(fontSize: 9, fontWeight: FontWeight.w800, color: Colors.white)),
+                              ),
                             if (isPinned)
                               const Padding(
                                 padding: EdgeInsets.only(right: 6),

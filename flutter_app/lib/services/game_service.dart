@@ -168,6 +168,9 @@ class GameService extends ChangeNotifier {
   // notices_result response automatically marks everything seen.
   bool _pendingNoticeMarkRead = false;
 
+  /// Read-only view of notice IDs the user has already seen.
+  Set<int> get readNoticeIds => _readNoticeIds;
+
   /// Count of notices the user hasn't opened yet.
   int get unreadNoticeCount {
     int count = 0;

@@ -2512,14 +2512,14 @@ class L10nDe extends L10n {
 
   @override
   String get rulesMtGoalBody =>
-      'Ein Stichkartenspiel für 5 Spieler. Ein Spieler wird zum Alleinspieler und wählt einen Freund; gemeinsam versuchen sie, genügend Punktkarten zu gewinnen, um das Gebot zu erfüllen. Die übrigen 3 Spieler bilden die Verteidigung und versuchen, sie aufzuhalten.';
+      'Ein Stichkartenspiel für 5 oder 6 Spieler. Ein Spieler wird zum Alleinspieler und wählt einen Freund; gemeinsam versuchen sie, genügend Punktkarten zu gewinnen, um das Gebot zu erfüllen. Die übrigen Spieler bilden die Verteidigung und versuchen, sie aufzuhalten.\n\nMit 6 Spielern gilt automatisch die Kill-Mighty-Variante. Sperrt der Gastgeber einen Platz, wird im klassischen 5-Spieler-Modus gespielt.';
 
   @override
   String get rulesMtCardCompositionTitle => 'Kartenzusammensetzung (53 Karten)';
 
   @override
   String get rulesMtCardCompositionBody =>
-      'Standard-52-Karten-Deck (4 Farben × 13 Ränge: 2–A) plus 1 Joker.\nKartenstärke: A > K > Q > J > 10 > 9 > … > 2\nPunktkarten: A = 1 Pkt, K = 1 Pkt, Q = 1 Pkt, J = 1 Pkt, 10 = 1 Pkt (gesamt 20 Pkt)';
+      'Standard-52-Karten-Deck (4 Farben × 13 Ränge: 2–A) plus 1 Joker.\nKartenstärke: A > K > Q > J > 10 > 9 > … > 2\nPunktkarten: A = 1 Pkt, K = 1 Pkt, Q = 1 Pkt, J = 1 Pkt, 10 = 1 Pkt (gesamt 20 Pkt)\n\n[Verteilung]\n• 5 Spieler: je 10 Karten + 3-Karten-Kitty\n• 6 Spieler: je 8 Karten + 5-Karten-Kitty';
 
   @override
   String get rulesMtSpecialTitle => 'Sonderkarten';
@@ -2562,7 +2562,21 @@ class L10nDe extends L10n {
 
   @override
   String get rulesMtBiddingBody =>
-      'Spieler bieten reihum und geben an, wie viele Punkte (von 20) sie erzielen werden. Das Mindestgebot beträgt 13, das Maximum 20. Der Höchstbietende wird Alleinspieler und wählt die Trumpffarbe.\n\nWenn alle Spieler passen, wird neu gegeben (kein Spiel).';
+      'Spieler bieten reihum und geben an, wie viele Punkte (von 20) sie erzielen werden.\n\n• Mindestgebot: 13 im 5-Spieler-Modus, 14 in 6-Spieler-Kill-Mighty\n• Höchstgebot: 20\n\nDer Höchstbietende wird Alleinspieler und wählt die Trumpffarbe. Wenn alle Spieler passen, wird neu gegeben (kein Spiel).\n\nBei sehr schwacher Hand kann statt Bieten oder Passen ein Deal-Miss gerufen werden, um neu geben zu lassen.';
+
+  @override
+  String get rulesMtDealMissTitle => 'Deal-Miss';
+
+  @override
+  String get rulesMtDealMissBody =>
+      'Ist deine Hand beim Bieten sehr schwach, kannst du einen Deal-Miss ansagen.\n\n[Hand-Bewertung]\n• Pik-Ass = 0 Pkt\n• Joker = streicht die einzelne höchste Punktkarte in der Hand\n• A / K / Q / J = je 1 Pkt\n• 10 = 0,5 Pkt\n\n[Ansage-Bedingungen]\n• Du bist dran und hast noch weder geboten noch gepasst\n• 5 Spieler: Handpunkte ≤ 0,5\n• 6-Spieler-Kill-Mighty: Handpunkte genau 0\n\n[Wirkung]\n• Der Ansager verliert sofort 5 Punkte\n• Diese 5 Punkte landen im \"Deal-Miss-Pool\"\n• Die Karten werden gemischt und derselbe Geber gibt neu\n• Der Pool geht als Bonus an den nächsten erfolgreichen Alleinspieler (bleibt bei Misserfolg bestehen)';
+
+  @override
+  String get rulesMtKillTitle => 'Kill-Ansage (nur 6 Spieler)';
+
+  @override
+  String get rulesMtKillBody =>
+      'Nach Ende des Biedens im 6-Spieler-Modus benennt der Alleinspieler eine Kill-Zielkarte, die NICHT auf seiner Hand liegt.\n\n[① Kill – Ziel liegt in einer anderen Hand]\n• Die 8 Karten des Opfers + die 5 Kitty-Karten = 13 Karten werden gemischt\n• Der Alleinspieler erhält 5, jeder der anderen 4 erhält 2\n• Das Opfer ist diese Runde ausgeschlossen (0 Punkte)\n• Es geht wie im 5-Spieler-Mighty weiter (3 ablegen, Freund wählen)\n\n[② Selbst-KO – Ziel liegt im Kitty]\n• Die 8 Karten des Alleinspielers + 5 Kitty = 13 Karten werden gemischt\n• Die anderen 5 erhalten je 2, die restlichen 3 bilden das neue Kitty\n• Der Alleinspieler ist diese Runde ausgeschlossen (0 Punkte)\n• Das Bieten startet nach 5-Spieler-Regeln neu (min 13, Deal-Miss 0,5)';
 
   @override
   String get rulesMtFriendTitle => 'Freund-Erklärung';

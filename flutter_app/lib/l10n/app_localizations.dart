@@ -4584,7 +4584,7 @@ abstract class L10n {
   /// No description provided for @rulesMtGoalBody.
   ///
   /// In en, this message translates to:
-  /// **'A trick-taking card game for 5 players. One player becomes the declarer and chooses a friend; together they try to win enough point cards to meet the bid. The remaining 3 players form the defence and try to stop them.'**
+  /// **'A trick-taking card game for 5 or 6 players. One player becomes the declarer and chooses a friend; together they try to win enough point cards to meet the bid. The remaining players form the defence and try to stop them.\n\nWith 6 players the kill-mighty variant applies automatically. If the host locks one seat, the room plays classic 5-player mighty.'**
   String get rulesMtGoalBody;
 
   /// No description provided for @rulesMtCardCompositionTitle.
@@ -4596,7 +4596,7 @@ abstract class L10n {
   /// No description provided for @rulesMtCardCompositionBody.
   ///
   /// In en, this message translates to:
-  /// **'Standard 52-card deck (4 suits × 13 ranks: 2–A) plus 1 Joker.\nCard strength order: A > K > Q > J > 10 > 9 > … > 2\nPoint cards: A = 1 pt, K = 1 pt, Q = 1 pt, J = 1 pt, 10 = 1 pt (total 20 pts)'**
+  /// **'Standard 52-card deck (4 suits × 13 ranks: 2–A) plus 1 Joker.\nCard strength order: A > K > Q > J > 10 > 9 > … > 2\nPoint cards: A = 1 pt, K = 1 pt, Q = 1 pt, J = 1 pt, 10 = 1 pt (total 20 pts)\n\n[Deal]\n• 5 players: 10 cards each + 3-card kitty\n• 6 players: 8 cards each + 5-card kitty'**
   String get rulesMtCardCompositionBody;
 
   /// No description provided for @rulesMtSpecialTitle.
@@ -4668,8 +4668,32 @@ abstract class L10n {
   /// No description provided for @rulesMtBiddingBody.
   ///
   /// In en, this message translates to:
-  /// **'Players bid in turn, stating how many points (out of 20) they will capture. The minimum bid is 13, maximum 20. The highest bidder becomes the declarer and chooses the trump suit.\n\nIf all players pass, the round is redealt (no-game).'**
+  /// **'Players bid in turn, stating how many points (out of 20) they will capture.\n\n• Minimum bid: 13 in 5-player mighty, 14 in 6-player kill mighty\n• Maximum bid: 20\n\nThe highest bidder becomes the declarer and chooses the trump suit. If all players pass, the round is redealt (no-game).\n\nA player with a very weak hand may also declare a deal miss for a redeal instead of bidding or passing.'**
   String get rulesMtBiddingBody;
+
+  /// No description provided for @rulesMtDealMissTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Deal Miss'**
+  String get rulesMtDealMissTitle;
+
+  /// No description provided for @rulesMtDealMissBody.
+  ///
+  /// In en, this message translates to:
+  /// **'During bidding, a player whose hand is very weak may declare a deal miss.\n\n[Hand scoring]\n• Spade A = 0 pts\n• Joker = cancels the single highest point card in hand\n• A / K / Q / J = 1 pt each\n• 10 = 0.5 pt\n\n[Declaration rules]\n• It must be your turn, and you haven\'t bid or passed yet\n• 5-player: hand score ≤ 0.5\n• 6-player kill mighty: hand score exactly 0\n\n[Effect]\n• Declarer loses 5 points immediately\n• These 5 points accumulate in the \"deal-miss pool\"\n• The deck is reshuffled and the same dealer redeals\n• The pool is awarded as a bonus to the next successful declarer (it carries over on failure)'**
+  String get rulesMtDealMissBody;
+
+  /// No description provided for @rulesMtKillTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Kill Declaration (6-player only)'**
+  String get rulesMtKillTitle;
+
+  /// No description provided for @rulesMtKillBody.
+  ///
+  /// In en, this message translates to:
+  /// **'After bidding ends in 6-player mode, the declarer names one kill target card that is NOT in their own hand.\n\n[① Kill — target is in another player\'s hand]\n• The victim\'s 8 cards + the 5-card kitty = 13 cards are shuffled\n• Declarer receives 5, each of the other 4 survivors receives 2\n• Victim is excluded from the round (scores 0)\n• Play proceeds like 5-player mighty (discard 3, choose friend)\n\n[② Self-KO — target is in the kitty]\n• The declarer\'s 8 cards + the 5-card kitty = 13 cards are shuffled\n• The other 5 players each receive 2; the remaining 3 form a new kitty\n• The declarer is excluded from the round (scores 0)\n• Bidding restarts under 5-player rules (min 13, deal-miss 0.5)'**
+  String get rulesMtKillBody;
 
   /// No description provided for @rulesMtFriendTitle.
   ///

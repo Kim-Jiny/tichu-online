@@ -916,6 +916,24 @@ class _RulesScreenState extends State<RulesScreen> {
           ),
         ),
         _section(
+          icon: Icons.block,
+          iconColor: mtAccent,
+          title: L10n.of(context).rulesMtDealMissTitle,
+          child: Text(
+            L10n.of(context).rulesMtDealMissBody,
+            style: _bodyStyle,
+          ),
+        ),
+        _section(
+          icon: Icons.gps_fixed,
+          iconColor: mtAccent,
+          title: L10n.of(context).rulesMtKillTitle,
+          child: Text(
+            L10n.of(context).rulesMtKillBody,
+            style: _bodyStyle,
+          ),
+        ),
+        _section(
           icon: Icons.people,
           iconColor: mtAccent,
           title: L10n.of(context).rulesMtFriendTitle,

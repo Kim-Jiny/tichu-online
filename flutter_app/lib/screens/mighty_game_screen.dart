@@ -192,7 +192,7 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
                         _jokerSuitChoice = null;
                         _jokerCallChoice = true;
                         if (state.phase == 'bidding') {
-                          _bidPoints = 13;
+                          _bidPoints = state.mode == '6p' ? 14 : 13;
                           _bidSuit = 'spade';
                           _discardSelection.clear();
                           _friendCardSelection = '';
@@ -1584,11 +1584,13 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
             Builder(builder: (context) {
               final currentBidPoints = (state.currentBid['points'] as num?)?.toInt() ?? 0;
               final currentBidSuit = state.currentBid['suit'] as String?;
+              // Minimum bid depends on the effective mode: 5p=13, 6p kill-mighty=14.
+              final modeMin = state.mode == '6p' ? 14 : 13;
               // Same points allowed if bidding no_trump over a suited bid
               final canBidSamePoints = currentBidSuit != null && currentBidSuit != 'no_trump' && _bidSuit == 'no_trump';
               final minBid = canBidSamePoints
-                  ? currentBidPoints.clamp(13, 20)
-                  : (currentBidPoints + 1).clamp(13, 20);
+                  ? currentBidPoints.clamp(modeMin, 20)
+                  : (currentBidPoints + 1).clamp(modeMin, 20);
               if (_bidPoints < minBid) {
                 WidgetsBinding.instance.addPostFrameCallback((_) {
                   if (mounted) setState(() => _bidPoints = minBid);

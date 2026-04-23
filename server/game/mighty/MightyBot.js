@@ -876,18 +876,30 @@ function _governmentLead(game, botId, legalCards, suitCards, mightyCard) {
     if (_isEffectiveTopOfSuit(sorted[0], game)) return sorted[0];
   }
 
-  // Phase 4: Joker — safe when no opponent trumps remain
-  if (legalCards.includes('mighty_joker')) {
-    if (_countOpponentTrumps(game, botId) === 0) return 'mighty_joker';
+  // Phase 4: Joker — safe when no real opponent holds trump anymore. Using the
+  // opp-aware check (excludes revealed partner) instead of the raw unseen-trump
+  // count so joker leads become available as soon as we've confirmed opp is dry.
+  if (legalCards.includes('mighty_joker') && _onlyGovernmentHasTrump(game)) {
+    return 'mighty_joker';
   }
 
-  // Phase 5: Lead remaining trumps
-  if (suitCards[game.trumpSuit] && suitCards[game.trumpSuit].length > 0) {
+  // Phase 5: Lead remaining trumps — skip when only government holds trump.
+  // Leading trump there just lets opp discard junk; feed them a non-trump instead
+  // so they're forced to spend real cards.
+  if (suitCards[game.trumpSuit] && suitCards[game.trumpSuit].length > 0
+      && !_onlyGovernmentHasTrump(game)) {
     return suitCards[game.trumpSuit].sort((a, b) =>
       RANK_ORDER[getCardInfo(b).rank] - RANK_ORDER[getCardInfo(a).rank])[0];
   }
 
-  // Phase 6: Lead from longest suit
+  // Phase 6: Lead from longest suit (prefer non-trump first so opp must follow)
+  const nonTrumpSuitCards = {};
+  for (const [suit, cards] of Object.entries(suitCards)) {
+    if (suit !== game.trumpSuit && cards.length > 0) nonTrumpSuitCards[suit] = cards;
+  }
+  if (Object.keys(nonTrumpSuitCards).length > 0) {
+    return _leadFromLongest(nonTrumpSuitCards, legalCards);
+  }
   return _leadFromLongest(suitCards, legalCards);
 }
 
@@ -1431,34 +1443,62 @@ function makePlayAction(cardId, game, botId) {
 }
 
 /** Pick the best suit to declare when leading joker.
- *  Choose suit where we have follow-up strength, or where opponents are weak. */
+ *  Prefer suits where opponents still hold cards (so they have to follow and
+ *  waste real material) and where we have follow-up strength. Avoid declaring
+ *  trump when only government (and friend) still hold trump — that just lets
+ *  opponents discard junk. Fall back to trump only if nothing else works.
+ */
 function _pickJokerLeadSuit(game, botId) {
   const hand = game.hands[botId] || [];
-  const voids = _getKnownVoids(game);
+  const trump = game.trumpSuit && game.trumpSuit !== 'no_trump' ? game.trumpSuit : null;
+  // If we can be sure only government holds trump, make calling trump a last resort.
+  const trumpDead = trump ? _noRealOppTrumpLeft(game, botId) : false;
 
-  // Score each suit: our strength + how many opponents are void (can't follow)
-  const suitScore = {};
-  for (const suit of SUITS) suitScore[suit] = 0;
-
-  for (const cardId of hand) {
-    if (cardId === 'mighty_joker') continue;
-    const info = getCardInfo(cardId);
-    suitScore[info.suit] += RANK_ORDER[info.rank];
-  }
-
-  // Bonus for suits where opponents are void (they'll be forced to discard)
+  // Pre-compute: for every suit, do any opponent (non-gov seat that isn't self)
+  // still hold that suit in their hand? If the suit is fully void across opp
+  // seats, joker-calling it just forces free discards.
+  const oppHoldsSuit = {};
+  for (const suit of SUITS) oppHoldsSuit[suit] = false;
   for (const pid of game.playerIds) {
     if (pid === botId) continue;
-    for (const suit of (voids[pid] || [])) {
-      suitScore[suit] += 3;
+    if (pid === game.declarer) continue;
+    if (game.friendRevealed && pid === game.partner) continue;
+    const h = game.hands[pid] || [];
+    for (const cid of h) {
+      if (cid === 'mighty_joker') continue;
+      const info = getCardInfo(cid);
+      if (info.suit) oppHoldsSuit[info.suit] = true;
     }
   }
 
-  let bestSuit = game.trumpSuit && game.trumpSuit !== 'no_trump' ? game.trumpSuit : 'spade';
-  let bestScore = -1;
+  // Score each suit by our own strength in it
+  const suitScore = {};
+  for (const suit of SUITS) suitScore[suit] = 0;
+  for (const cardId of hand) {
+    if (cardId === 'mighty_joker') continue;
+    const info = getCardInfo(cardId);
+    suitScore[info.suit] += RANK_ORDER[info.rank] || 0;
+  }
+  // Boost suits where some opposition seat is known void (forced discards)
+  const voids = _getKnownVoids(game);
+  for (const pid of game.playerIds) {
+    if (pid === botId) continue;
+    for (const suit of (voids[pid] || [])) suitScore[suit] += 3;
+  }
+  // Huge bonus when opposition still holds the suit — that's the whole point of
+  // calling it with joker. Penalty when calling trump while opp is out of it.
+  for (const suit of SUITS) {
+    if (oppHoldsSuit[suit]) suitScore[suit] += 50;
+    if (suit === trump && trumpDead) suitScore[suit] -= 100;
+  }
+
+  let bestSuit = null;
+  let bestScore = -Infinity;
   for (const [suit, score] of Object.entries(suitScore)) {
     if (score > bestScore) { bestScore = score; bestSuit = suit; }
   }
+  // Safety fallbacks — trump if it exists, else spade
+  if (!bestSuit) bestSuit = trump || 'spade';
   return bestSuit;
 }
 

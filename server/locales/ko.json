@@ -46,6 +46,7 @@
   "revoke_failed": "취소에 실패했습니다",
   "game_already_in_progress": "이미 게임이 진행 중입니다",
   "four_players_required": "4명이 모여야 시작할 수 있습니다",
+  "mighty_players_required": "마이티는 {count}명이 모여야 시작할 수 있습니다",
   "all_players_must_ready": "모든 플레이어가 준비해야 합니다",
   "host_only_change": "방장만 변경할 수 있습니다",
   "no_team_change_in_game": "게임 중에는 팀을 변경할 수 없습니다",

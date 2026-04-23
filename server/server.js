@@ -2644,15 +2644,28 @@ function handleStartGame(ws) {
     sendTo(ws, { type: 'error', message: t(ws.locale, 'host_only_start') });
     return;
   }
+  let mightyWillAutoBlock = false;
   if (room.gameType === 'skull_king' || room.gameType === 'love_letter') {
     if (room.getPlayerCount() < 2) {
       sendTo(ws, { type: 'error', message: t(ws.locale, 'min_players_required') });
       return;
     }
   } else if (room.gameType === 'mighty') {
-    // Mighty needs the effective capacity filled (5 or 6 depending on blocked slots)
-    if (room.getPlayerCount() < room.getEffectiveMaxPlayers()) {
-      sendTo(ws, { type: 'error', message: t(ws.locale, 'four_players_required') });
+    // Mighty needs the effective capacity filled (5 or 6 depending on blocked slots).
+    // Special-case: a 6-seat room with exactly 5 players and one empty
+    // non-blocked slot means the host filled seats for 5p mode without
+    // explicitly blocking the extra seat. We'll silently treat it as 5p —
+    // but only APPLY the block later, after the readiness check passes, so
+    // a failed start doesn't leave the room mutated.
+    const have = room.getPlayerCount();
+    const effectiveMax = room.getEffectiveMaxPlayers();
+    mightyWillAutoBlock = have === 5 && effectiveMax === 6;
+    const targetSeats = mightyWillAutoBlock ? 5 : effectiveMax;
+    if (have < targetSeats) {
+      sendTo(ws, {
+        type: 'error',
+        message: t(ws.locale, 'mighty_players_required', { count: targetSeats }),
+      });
       return;
     }
   } else {
@@ -2678,6 +2691,15 @@ function handleStartGame(ws) {
         roomId: ws.roomId,
         disconnectedAt: Date.now(),
       });
+    }
+  }
+  // Apply the deferred mighty auto-block now that every precondition passed.
+  if (mightyWillAutoBlock) {
+    for (let i = 0; i < room.maxPlayers; i++) {
+      if (room.players[i] === null && !room.blockedSlots.has(i)) {
+        room.blockedSlots.add(i);
+        break;
+      }
     }
   }
   room.startGame();

@@ -47,6 +47,7 @@
   "revoke_failed": "Anfrage konnte nicht zurückgezogen werden",
   "game_already_in_progress": "Ein Spiel läuft bereits",
   "four_players_required": "4 Spieler werden benötigt",
+  "mighty_players_required": "Mighty benötigt {count} Spieler zum Start",
   "all_players_must_ready": "Alle Spieler müssen bereit sein",
   "host_only_change": "Nur der Host kann Änderungen vornehmen",
   "no_team_change_in_game": "Während des Spiels können Teams nicht gewechselt werden",

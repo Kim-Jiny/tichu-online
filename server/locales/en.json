@@ -46,6 +46,7 @@
   "revoke_failed": "Failed to cancel the request",
   "game_already_in_progress": "A game is already in progress",
   "four_players_required": "4 players are required to start",
+  "mighty_players_required": "Mighty needs {count} players to start",
   "all_players_must_ready": "All players must be ready",
   "host_only_change": "Only the host can make changes",
   "no_team_change_in_game": "Cannot change teams during a game",

@@ -607,7 +607,13 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
                         ),
                         child: Text(
                           trumpLabel,
-                          style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
+                          style: TextStyle(
+                            fontWeight: FontWeight.bold,
+                            fontSize: 13,
+                            color: state.trumpSuit == null || state.trumpSuit == 'no_trump'
+                                ? const Color(0xFF7B1FA2)
+                                : (PlayingCard.suitColors[state.trumpSuit!] ?? const Color(0xFF5A4038)),
+                          ),
                         ),
                       ),
                     ],
@@ -1943,7 +1949,7 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
                                     _suitSymbol(suit),
                                     style: TextStyle(
                                       fontSize: 18,
-                                      color: (suit == 'heart' || suit == 'diamond') ? Colors.red : Colors.black,
+                                      color: PlayingCard.suitColors[suit] ?? const Color(0xFF5A4038),
                                     ),
                                   ),
                                 ),

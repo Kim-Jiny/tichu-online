@@ -5241,7 +5241,16 @@ async function saveMightyMatchResultWithStats(data) {
         const myRating = mightyRatingMap[p.nickname] || 1000;
         const othersRatings = data.players.filter(o => o.nickname !== p.nickname).map(o => o.isBot ? 1000 : (mightyRatingMap[o.nickname] || 1000));
         const oppAvg = othersRatings.length > 0 ? othersRatings.reduce((a, b) => a + b, 0) / othersRatings.length : 1000;
-        const ratingChange = calcElo(myRating, oppAvg, won);
+        // Rating change scales with the final session score, not just binary
+        // win/loss. A big-swing round (+60 / −50) moves rating more than a
+        // squeaker (+5 / −5). Standard ELO provides the rating-sensitivity
+        // baseline; we multiply by |score| / 25, clamped to [0.3, 2.5] so
+        // neither a barely-positive winner nor a runaway blowout gets an
+        // extreme rating change.
+        const finalScore = p.score || 0;
+        const baseElo = calcElo(myRating, oppAvg, won);
+        const scoreMultiplier = Math.max(0.3, Math.min(2.5, Math.abs(finalScore) / 25));
+        const ratingChange = Math.round(baseElo * scoreMultiplier);
         const baseGoldReward = won ? 10 : 3;
         const goldReward = isDeserter
             ? 0

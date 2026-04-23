@@ -3119,10 +3119,11 @@ async function saveLLGameResult(room) {
 }
 
 function buildMightyPlayers(game, deserterId = null) {
-  // Winner criteria for ranking/stats:
-  //   5-player mighty → top 2 by score are winners
-  //   6-player (kill) mighty → top 3 by score are winners
-  const winnerCutoff = game.playerCount >= 6 ? 3 : 2;
+  // Winner criteria for ranking/stats (5p and 6p alike):
+  //   rank ≤ 2 AND final score > 0 → winner
+  //   everyone else → loss
+  const isMightyWinner = (rank, score) => rank <= 2 && score > 0;
+
   const allPlayers = game.playerIds.map((pid) => ({
     playerId: pid,
     nickname: game.playerNames[pid] || pid,
@@ -3144,7 +3145,7 @@ function buildMightyPlayers(game, deserterId = null) {
         rankedPlayers.push({
           ...allPlayers[i],
           rank: currentRank,
-          isWinner: currentRank <= winnerCutoff,
+          isWinner: isMightyWinner(currentRank, allPlayers[i].score),
         });
       }
       rankedPlayers.push({ ...deserter, rank: game.playerCount, isWinner: false });
@@ -3161,7 +3162,7 @@ function buildMightyPlayers(game, deserterId = null) {
     return {
       ...player,
       rank: currentRank,
-      isWinner: currentRank <= winnerCutoff,
+      isWinner: isMightyWinner(currentRank, player.score),
     };
   });
 }

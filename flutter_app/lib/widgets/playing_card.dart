@@ -113,6 +113,19 @@ class PlayingCard extends StatelessWidget {
   }
 
   Widget _buildJokerCard() {
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(7),
+      child: Image.asset(
+        'assets/cards/joker.png',
+        fit: BoxFit.cover,
+        width: width,
+        height: height,
+        errorBuilder: (ctx, err, stack) => _buildJokerFallback(),
+      ),
+    );
+  }
+
+  Widget _buildJokerFallback() {
     final scale = (width / 48).clamp(0.7, 1.3);
     return Container(
       decoration: BoxDecoration(

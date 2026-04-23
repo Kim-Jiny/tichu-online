@@ -404,41 +404,83 @@ function decideKittyDiscard(game, botId) {
 }
 
 /**
- * Smart friend card selection.
- * Call the Ace of the suit where declarer is WEAKEST (needs the most help).
+ * Pick a friend card by scoring multiple candidate calls:
+ *   1. Non-trump Ace of a suit where declarer has a 1-3 card holding (best
+ *      when singleton, still ok when void).
+ *   2. Non-trump King of a suit where declarer already holds the Ace — the
+ *      friend's K backs up declarer's A for two guaranteed wins.
+ *   3. Joker call — whoever holds the joker becomes friend; extra-valuable
+ *      when trump is strong (joker wins ruffed tricks too).
+ *
+ * Higher score wins. Stable across repeats of the same hand shape but
+ * differentiates on hand composition, producing visible variety across rounds.
  */
 function pickFriendCard(hand, game) {
   const mightyCard = game.getMightyCard();
   const trumpSuit = game.trumpSuit;
+  const hasJoker = hand.includes('mighty_joker');
 
-  // Count cards per non-trump suit
-  const suitCounts = {};
-  for (const suit of SUITS) suitCounts[suit] = 0;
+  const suitInfo = {};
+  for (const suit of SUITS) {
+    suitInfo[suit] = { count: 0, hasA: false, hasK: false };
+  }
   for (const cardId of hand) {
     if (cardId === 'mighty_joker' || cardId === mightyCard) continue;
     const info = getCardInfo(cardId);
-    suitCounts[info.suit]++;
+    suitInfo[info.suit].count++;
+    if (info.rank === 'A') suitInfo[info.suit].hasA = true;
+    if (info.rank === 'K') suitInfo[info.suit].hasK = true;
   }
 
-  // Sort non-trump suits by count ascending (weakest first)
-  const targetSuits = SUITS
-    .filter(s => s !== trumpSuit)
-    .sort((a, b) => suitCounts[a] - suitCounts[b]);
+  const candidates = [];
 
-  // Call Ace of weakest suit (if we don't have it and it's not the mighty)
-  for (const suit of targetSuits) {
+  // Option 1: non-trump Ace
+  for (const suit of SUITS) {
+    if (suit === trumpSuit) continue;
+    const s = suitInfo[suit];
+    if (s.hasA) continue;
     const aceId = `mighty_${suit}_A`;
-    if (!hand.includes(aceId) && aceId !== mightyCard) {
-      return aceId;
-    }
+    if (aceId === mightyCard) continue;
+
+    let score = 10;
+    if (s.count === 1) score += 6;        // singleton — ideal, my low plays, friend's A wins
+    else if (s.count === 2) score += 4;
+    else if (s.count === 3) score += 2;
+    else if (s.count === 0) score += 1;   // void — OK but I'd have to trump or discard
+    else score -= 2;                      // long 4+ — friend's A less impactful
+    if (s.hasK) score += 3;               // A + friend's absence-of-K locks top two
+    candidates.push({ cardId: aceId, score });
   }
 
-  // All non-trump aces in hand → call King of weakest suit
-  for (const suit of targetSuits) {
+  // Option 2: non-trump King where I already hold the Ace
+  for (const suit of SUITS) {
+    if (suit === trumpSuit) continue;
+    const s = suitInfo[suit];
+    if (!s.hasA || s.hasK) continue;
     const kingId = `mighty_${suit}_K`;
-    if (!hand.includes(kingId)) {
-      return kingId;
-    }
+    let score = 9;
+    if (s.count <= 3) score += 3;         // short suit + A+K = total dominance
+    candidates.push({ cardId: kingId, score });
+  }
+
+  // Option 3: joker call
+  if (!hasJoker) {
+    let score = 9;
+    const trumpCount = trumpSuit !== 'no_trump' ? (suitInfo[trumpSuit]?.count || 0) : 0;
+    if (trumpCount >= 3) score += 2;      // joker complements trump play
+    if (!trumpSuit || trumpSuit === 'no_trump') score += 1; // in NT, joker is #2
+    candidates.push({ cardId: 'mighty_joker', score });
+  }
+
+  if (candidates.length > 0) {
+    candidates.sort((a, b) => b.score - a.score);
+    return candidates[0].cardId;
+  }
+
+  // Fallback: King of any suit where I lack the K
+  for (const suit of SUITS) {
+    if (suit === trumpSuit) continue;
+    if (!suitInfo[suit].hasK) return `mighty_${suit}_K`;
   }
 
   return 'no_friend';

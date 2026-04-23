@@ -44,6 +44,7 @@ class TichuGame {
     this.receivedFrom = {};  // playerId -> { left: cardId, partner: cardId, right: cardId }
 
     this.currentTrick = [];   // [{ playerId, cards, combo }]
+    this.lastTrick = [];      // last completed trick (for round_end display)
     this.currentPlayer = null;
     this.passCount = 0;
     this.lastPlayedBy = null;
@@ -719,6 +720,9 @@ class TichuGame {
     // Add cards to winner's trick pile
     this.trickPiles[winner].push(...allTrickCards);
 
+    // Save last trick for round_end display
+    this.lastTrick = this.currentTrick.slice();
+
     // Clear trick
     this.currentTrick = [];
     this.passCount = 0;
@@ -960,6 +964,7 @@ class TichuGame {
       const lastPlay = this.currentTrick[this.currentTrick.length - 1];
       const winner = lastPlay.playerId;
       this.trickPiles[winner].push(...allTrickCards);
+      this.lastTrick = this.currentTrick.slice();
       this.currentTrick = [];
     }
 
@@ -1074,6 +1079,15 @@ class TichuGame {
         combo: t.combo.type,
         comboValue: t.combo.value,
       })),
+      lastTrick: (this.state === STATE.ROUND_END || this.state === STATE.GAME_END)
+        ? this.lastTrick.map((t) => ({
+            playerId: t.playerId,
+            playerName: this.playerNames[t.playerId],
+            cards: t.cards,
+            combo: t.combo.type,
+            comboValue: t.combo.value,
+          }))
+        : [],
       teams: this.teams,
       totalScores: this.totalScores,
       lastRoundScores: this.lastRoundScores || null,
@@ -1145,6 +1159,15 @@ class TichuGame {
         combo: t.combo.type,
         comboValue: t.combo.value,
       })),
+      lastTrick: (this.state === STATE.ROUND_END || this.state === STATE.GAME_END)
+        ? this.lastTrick.map((t) => ({
+            playerId: t.playerId,
+            playerName: this.playerNames[t.playerId],
+            cards: t.cards,
+            combo: t.combo.type,
+            comboValue: t.combo.value,
+          }))
+        : [],
       teams: this.teams,
       totalScores: this.totalScores,
       lastRoundScores: this.lastRoundScores || null,

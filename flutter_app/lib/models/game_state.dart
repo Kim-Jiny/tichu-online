@@ -30,6 +30,7 @@ class GameStateData {
   final String? currentPlayer;
   final bool isMyTurn;
   final List<TrickPlay> currentTrick;
+  final List<TrickPlay> lastTrick;
   final Map<String, int> totalScores;
   final Map<String, int> lastRoundScores;
   final List<Map<String, dynamic>> scoreHistory;
@@ -55,6 +56,7 @@ class GameStateData {
     this.currentPlayer,
     this.isMyTurn = false,
     this.currentTrick = const [],
+    this.lastTrick = const [],
     this.totalScores = const {'teamA': 0, 'teamB': 0},
     this.lastRoundScores = const {},
     this.scoreHistory = const [],
@@ -89,6 +91,13 @@ class GameStateData {
           .toList();
     }
 
+    List<TrickPlay> lastTrickList = [];
+    if (json['lastTrick'] != null) {
+      lastTrickList = (json['lastTrick'] as List)
+          .map((t) => TrickPlay.fromJson(t))
+          .toList();
+    }
+
     Map<String, int> scores = {'teamA': 0, 'teamB': 0};
     if (json['totalScores'] != null) {
       scores = {
@@ -119,6 +128,7 @@ class GameStateData {
       currentPlayer: json['currentPlayer'],
       isMyTurn: json['isMyTurn'] ?? false,
       currentTrick: trickList,
+      lastTrick: lastTrickList,
       totalScores: scores,
       lastRoundScores: lastScores,
       scoreHistory: history,

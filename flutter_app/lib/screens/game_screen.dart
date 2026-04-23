@@ -2935,7 +2935,9 @@ class _GameScreenState extends State<GameScreen> {
 
             // Latest trick only
             if (state.currentTrick.isNotEmpty)
-              _buildLatestTrick(state),
+              _buildLatestTrick(state)
+            else if (state.lastTrick.isNotEmpty && (state.phase == 'round_end' || state.phase == 'game_end'))
+              _buildLatestTrick(state, useLastTrick: true),
 
           ],
         ),
@@ -3511,8 +3513,10 @@ class _GameScreenState extends State<GameScreen> {
     );
   }
 
-  Widget _buildLatestTrick(GameStateData state) {
-    final lastPlay = state.currentTrick.last;
+  Widget _buildLatestTrick(GameStateData state, {bool useLastTrick = false}) {
+    final trick = useLastTrick ? state.lastTrick : state.currentTrick;
+    if (trick.isEmpty) return const SizedBox.shrink();
+    final lastPlay = trick.last;
     // Bug #9: Determine team color from player position
     final isMyTeam = state.players.any((p) =>
       (p.position == 'self' || p.position == 'partner') && p.id == lastPlay.playerId);

@@ -2593,6 +2593,21 @@ function handleStartGame(ws) {
     broadcastGameEvent(ws.roomId, { type: 'error', message: t(ws.locale, 'all_players_must_ready') });
     return;
   }
+  // Cancel waiting room timers and register sessions for disconnected players
+  for (const player of room.players) {
+    if (player === null || player.isBot) continue;
+    const timerKey = `${ws.roomId}_${player.id}`;
+    if (waitingRoomTimers[timerKey]) {
+      clearTimeout(waitingRoomTimers[timerKey]);
+      delete waitingRoomTimers[timerKey];
+    }
+    if (player.connected === false) {
+      playerSessions.set(player.nickname, {
+        roomId: ws.roomId,
+        disconnectedAt: Date.now(),
+      });
+    }
+  }
   room.startGame();
   broadcastRoomState(ws.roomId);
   broadcastRoomList();

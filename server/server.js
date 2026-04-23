@@ -3350,12 +3350,19 @@ function scheduleBotActions(roomId) {
   }
 
   const baseDelay = getBotBaseDelay(activeBotSpeed);
-  // Mighty: after a deal-miss or kill reveal, hold bots until the grace period
-  // elapses so players can read the reveal overlay before the next action.
   let effectiveDelay = baseDelay;
-  if (room.gameType === 'mighty' && typeof room.game.revealGracePeriodEndAt === 'number') {
-    const graceRemaining = room.game.revealGracePeriodEndAt - Date.now();
-    if (graceRemaining > baseDelay) effectiveDelay = graceRemaining;
+  if (room.gameType === 'mighty') {
+    // Hold bots until the reveal grace period (deal-miss / kill) ends so
+    // players can read the overlay before the next action fires.
+    if (typeof room.game.revealGracePeriodEndAt === 'number') {
+      const graceRemaining = room.game.revealGracePeriodEndAt - Date.now();
+      if (graceRemaining > effectiveDelay) effectiveDelay = graceRemaining;
+    }
+    // Kitty exchange is information-rich (kitty reveal, trump change, friend
+    // selection) — give players at least 2 s to watch the declarer bot work.
+    if (room.game.state === 'kitty_exchange' && effectiveDelay < 2000) {
+      effectiveDelay = 2000;
+    }
   }
 
   setTimeout(() => {

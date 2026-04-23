@@ -480,7 +480,11 @@ function decideKittyDiscard(game, botId) {
   } else {
     const trumpCount = trumpSuit !== 'no_trump' ? (suitGroups[trumpSuit] || []).length : 0;
     const hasJoker = hand.includes('mighty_joker');
-    if (trumpSuit !== 'no_trump' && trumpCount >= 6 && hasJoker) {
+    // Solo criteria — strict. Simulation showed loose solo tanked the win rate;
+    // a genuinely solo-able hand is a long trump AND a joker AND a real reason
+    // not to want a partner's side-suit winner.
+    const isSuited = trumpSuit && trumpSuit !== 'no_trump';
+    if (isSuited && hasJoker && trumpCount >= 6) {
       friendCard = 'no_friend';
     } else {
       friendCard = pickFriendCard(hand, game);
@@ -546,41 +550,44 @@ function pickFriendCard(hand, game) {
 
   const candidates = [];
 
-  // Option 1: non-trump Ace
+  // Option 1: non-trump Ace. Best when we have a 1-3 card holding in the suit;
+  // void or very long suits get penalised (friend's A has less tactical value).
   for (const suit of SUITS) {
     if (suit === trumpSuit) continue;
     const s = suitInfo[suit];
     if (s.hasA) continue;
     const aceId = `mighty_${suit}_A`;
     if (aceId === mightyCard) continue;
-
     let score = 10;
-    if (s.count === 1) score += 6;        // singleton — ideal, my low plays, friend's A wins
-    else if (s.count === 2) score += 4;
-    else if (s.count === 3) score += 2;
-    else if (s.count === 0) score += 1;   // void — OK but I'd have to trump or discard
-    else score -= 2;                      // long 4+ — friend's A less impactful
-    if (s.hasK) score += 3;               // A + friend's absence-of-K locks top two
+    if (s.count === 1) score += 5;
+    else if (s.count === 2) score += 3;
+    else if (s.count === 3) score += 1;
+    else if (s.count === 0) score -= 3;   // void: friend's A is weaker, we'd have trumped anyway
+    else score -= 3;                      // 4+ suit: our own length already covers it
+    if (s.hasK) score += 2;
     candidates.push({ cardId: aceId, score });
   }
 
-  // Option 2: non-trump King where I already hold the Ace
+  // Option 2: non-trump King where I already hold the Ace. In sims this
+  // actually performs worse than other calls, so keep it available but weak —
+  // only picked when nothing else scores better.
   for (const suit of SUITS) {
     if (suit === trumpSuit) continue;
     const s = suitInfo[suit];
     if (!s.hasA || s.hasK) continue;
     const kingId = `mighty_${suit}_K`;
     let score = 9;
-    if (s.count <= 3) score += 3;         // short suit + A+K = total dominance
+    if (s.count <= 3) score += 2;
     candidates.push({ cardId: kingId, score });
   }
 
-  // Option 3: joker call
+  // Option 3: joker call. Sim data shows joker calls win ~45-49% — as strong
+  // as a mighty call. Boost the base so it outranks a marginal side-A.
   if (!hasJoker) {
-    let score = 9;
+    let score = 16;
     const trumpCount = trumpSuit !== 'no_trump' ? (suitInfo[trumpSuit]?.count || 0) : 0;
-    if (trumpCount >= 3) score += 2;      // joker complements trump play
-    if (!trumpSuit || trumpSuit === 'no_trump') score += 1; // in NT, joker is #2
+    if (trumpCount >= 4) score += 2;
+    if (!trumpSuit || trumpSuit === 'no_trump') score += 2;
     candidates.push({ cardId: 'mighty_joker', score });
   }
 

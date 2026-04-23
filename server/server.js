@@ -1073,6 +1073,7 @@ async function handleMessage(ws, data) {
     case 'change_trump':
     case 'discard_kitty':
     case 'declare_deal_miss':
+    case 'declare_kill':
     // Game actions (Skull King)
     case 'submit_bid':
     case 'play_card':
@@ -3089,18 +3090,14 @@ async function saveLLGameResult(room) {
 }
 
 function buildMightyPlayers(game, deserterId = null) {
-  const partnerId = game.partner || null;
-  const declarerTeam = new Set([game.declarer, partnerId].filter(Boolean));
-  const declarerWon = game.roundResult?.success === true;
+  // Winner criteria for ranking/stats:
+  //   5-player mighty → top 2 by score are winners
+  //   6-player (kill) mighty → top 3 by score are winners
+  const winnerCutoff = game.playerCount >= 6 ? 3 : 2;
   const allPlayers = game.playerIds.map((pid) => ({
     playerId: pid,
     nickname: game.playerNames[pid] || pid,
     score: game.scores[pid] || 0,
-    isWinner: declarerTeam.size === 0
-      ? false
-      : declarerWon
-        ? declarerTeam.has(pid)
-        : !declarerTeam.has(pid),
     isBot: pid.startsWith('bot_'),
   }));
 
@@ -3115,7 +3112,11 @@ function buildMightyPlayers(game, deserterId = null) {
         if (i > 0 && allPlayers[i].score < allPlayers[i - 1].score) {
           currentRank = i + 1;
         }
-        rankedPlayers.push({ ...allPlayers[i], rank: currentRank });
+        rankedPlayers.push({
+          ...allPlayers[i],
+          rank: currentRank,
+          isWinner: currentRank <= winnerCutoff,
+        });
       }
       rankedPlayers.push({ ...deserter, rank: game.playerCount, isWinner: false });
       return rankedPlayers;
@@ -3128,7 +3129,11 @@ function buildMightyPlayers(game, deserterId = null) {
     if (index > 0 && player.score < allPlayers[index - 1].score) {
       currentRank = index + 1;
     }
-    return { ...player, rank: currentRank };
+    return {
+      ...player,
+      rank: currentRank,
+      isWinner: currentRank <= winnerCutoff,
+    };
   });
 }
 

@@ -242,5 +242,8 @@
   "mighty_illegal_card": "You cannot play that card",
   "mighty_not_round_end": "Not in the round-end state",
   "mighty_deal_miss_already_acted": "You have already bid or passed — deal miss is no longer available",
-  "mighty_deal_miss_hand_too_strong": "Your hand is too strong to declare a deal miss"
+  "mighty_deal_miss_hand_too_strong": "Your hand is too strong to declare a deal miss",
+  "mighty_not_kill_phase": "Not in the kill-declaration phase",
+  "mighty_invalid_kill_target": "Invalid kill target card",
+  "mighty_kill_in_own_hand": "Cannot kill a card that is in your own hand"
 }

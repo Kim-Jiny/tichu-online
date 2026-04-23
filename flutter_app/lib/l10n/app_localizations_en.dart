@@ -2698,6 +2698,33 @@ class L10nEn extends L10n {
   String get mtDealMissTapToClose => 'Tap anywhere to dismiss';
 
   @override
+  String get mtKillPhase => 'Kill Declaration';
+
+  @override
+  String get mtKillPhasePrompt => 'Choose a card to kill';
+
+  @override
+  String mtKillPhaseWait(Object name) {
+    return '$name is choosing a card to kill';
+  }
+
+  @override
+  String mtKillResultKilled(Object declarer, Object target, Object victim) {
+    return '$declarer named $target → $victim eliminated';
+  }
+
+  @override
+  String mtKillResultSuicide(Object declarer, Object target) {
+    return '$declarer named $target but it was in the kitty. Self-KO!';
+  }
+
+  @override
+  String get mtKillExcluded => 'OUT';
+
+  @override
+  String get mtKillConfirm => 'Kill';
+
+  @override
   String get mtPoints => 'Points:';
 
   @override

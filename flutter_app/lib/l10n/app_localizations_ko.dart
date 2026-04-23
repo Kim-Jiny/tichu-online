@@ -2636,6 +2636,33 @@ class L10nKo extends L10n {
   String get mtDealMissTapToClose => '화면을 탭하면 닫힙니다';
 
   @override
+  String get mtKillPhase => '킬 선언';
+
+  @override
+  String get mtKillPhasePrompt => '죽일 카드를 선택하세요';
+
+  @override
+  String mtKillPhaseWait(Object name) {
+    return '$name님이 죽일 카드를 선택 중입니다';
+  }
+
+  @override
+  String mtKillResultKilled(Object declarer, Object target, Object victim) {
+    return '$declarer님이 $target을(를) 지명 → $victim님 탈락';
+  }
+
+  @override
+  String mtKillResultSuicide(Object declarer, Object target) {
+    return '$declarer님이 $target을(를) 지명했지만 바닥 카드였습니다. 자폭!';
+  }
+
+  @override
+  String get mtKillExcluded => '탈락';
+
+  @override
+  String get mtKillConfirm => '지명';
+
+  @override
   String get mtPoints => '점수:';
 
   @override

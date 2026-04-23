@@ -226,5 +226,8 @@
   "mighty_illegal_card": "Du kannst diese Karte nicht spielen",
   "mighty_not_round_end": "Nicht im Rundenend-Zustand",
   "mighty_deal_miss_already_acted": "Du hast bereits geboten oder gepasst — Deal-Miss ist nicht mehr möglich",
-  "mighty_deal_miss_hand_too_strong": "Deine Hand ist zu stark für einen Deal-Miss"
+  "mighty_deal_miss_hand_too_strong": "Deine Hand ist zu stark für einen Deal-Miss",
+  "mighty_not_kill_phase": "Nicht in der Kill-Phase",
+  "mighty_invalid_kill_target": "Ungültiges Kill-Zielkarte",
+  "mighty_kill_in_own_hand": "Du kannst keine Karte aus deiner eigenen Hand killen"
 }

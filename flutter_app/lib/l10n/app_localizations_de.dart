@@ -2713,6 +2713,33 @@ class L10nDe extends L10n {
   String get mtDealMissTapToClose => 'Tippe zum Schließen';
 
   @override
+  String get mtKillPhase => 'Kill-Ansage';
+
+  @override
+  String get mtKillPhasePrompt => 'Karte zum Killen wählen';
+
+  @override
+  String mtKillPhaseWait(Object name) {
+    return '$name wählt eine Karte zum Killen';
+  }
+
+  @override
+  String mtKillResultKilled(Object declarer, Object target, Object victim) {
+    return '$declarer nannte $target → $victim ausgeschieden';
+  }
+
+  @override
+  String mtKillResultSuicide(Object declarer, Object target) {
+    return '$declarer nannte $target, aber sie lag im Kitty. Eigen-KO!';
+  }
+
+  @override
+  String get mtKillExcluded => 'RAUS';
+
+  @override
+  String get mtKillConfirm => 'Killen';
+
+  @override
   String get mtPoints => 'Punkte:';
 
   @override

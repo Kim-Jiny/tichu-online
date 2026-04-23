@@ -141,6 +141,35 @@ class MightyScoreHistoryEntry {
   }
 }
 
+class MightyKillEvent {
+  final String declarerId;
+  final String declarerName;
+  final String targetCardId;
+  final String? victimId;
+  final String? victimName;
+  final bool wasKitty;
+
+  MightyKillEvent({
+    required this.declarerId,
+    required this.declarerName,
+    required this.targetCardId,
+    this.victimId,
+    this.victimName,
+    required this.wasKitty,
+  });
+
+  factory MightyKillEvent.fromJson(Map<String, dynamic> json) {
+    return MightyKillEvent(
+      declarerId: json['declarerId']?.toString() ?? '',
+      declarerName: json['declarerName']?.toString() ?? '',
+      targetCardId: json['targetCardId']?.toString() ?? '',
+      victimId: json['victimId']?.toString(),
+      victimName: json['victimName']?.toString(),
+      wasKitty: json['wasKitty'] == true,
+    );
+  }
+}
+
 class MightyDealMissEvent {
   final String playerId;
   final String playerName;
@@ -200,6 +229,10 @@ class MightyGameStateData {
   final int dealMissPool;
   final bool canDeclareDealMiss;
   final MightyDealMissEvent? lastDealMissEvent;
+  final String mode; // '5p' or '6p'
+  final List<String> excludedPlayers;
+  final MightyKillEvent? lastKillEvent;
+  final List<String> newlyReceivedCards;
 
   MightyGameStateData({
     this.phase = '',
@@ -234,6 +267,10 @@ class MightyGameStateData {
     this.dealMissPool = 0,
     this.canDeclareDealMiss = false,
     this.lastDealMissEvent,
+    this.mode = '5p',
+    this.excludedPlayers = const [],
+    this.lastKillEvent,
+    this.newlyReceivedCards = const [],
   });
 
   factory MightyGameStateData.fromJson(Map<String, dynamic> json) {
@@ -325,6 +362,12 @@ class MightyGameStateData {
       lastDealMissEvent: json['lastDealMissEvent'] == null
           ? null
           : MightyDealMissEvent.fromJson(Map<String, dynamic>.from(json['lastDealMissEvent'])),
+      mode: json['mode']?.toString() ?? '5p',
+      excludedPlayers: List<String>.from(json['excludedPlayers'] ?? const []),
+      lastKillEvent: json['lastKillEvent'] == null
+          ? null
+          : MightyKillEvent.fromJson(Map<String, dynamic>.from(json['lastKillEvent'])),
+      newlyReceivedCards: List<String>.from(json['newlyReceivedCards'] ?? const []),
     );
   }
 }

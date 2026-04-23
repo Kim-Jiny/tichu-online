@@ -27,15 +27,20 @@ function shuffle(deck) {
 
 function deal(playerIds) {
   const deck = shuffle(createDeck());
+  const n = playerIds.length;
   const hands = {};
   for (const pid of playerIds) {
     hands[pid] = [];
   }
-  // Deal 10 cards each to 5 players = 50, remaining 3 = kitty
-  for (let i = 0; i < 50; i++) {
-    hands[playerIds[i % playerIds.length]].push(deck[i]);
+  // 5 players → 10 each + 3 kitty (50+3 = 53)
+  // 6 players → 8 each + 5 kitty (48+5 = 53)
+  const cardsPerPlayer = n === 6 ? 8 : 10;
+  const kittySize = n === 6 ? 5 : 3;
+  const totalDealt = cardsPerPlayer * n;
+  for (let i = 0; i < totalDealt; i++) {
+    hands[playerIds[i % n]].push(deck[i]);
   }
-  const kitty = deck.slice(50, 53);
+  const kitty = deck.slice(totalDealt, totalDealt + kittySize);
   return { hands, kitty };
 }
 

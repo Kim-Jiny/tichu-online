@@ -4917,6 +4917,48 @@ abstract class L10n {
   /// **'Tap anywhere to dismiss'**
   String get mtDealMissTapToClose;
 
+  /// No description provided for @mtKillPhase.
+  ///
+  /// In en, this message translates to:
+  /// **'Kill Declaration'**
+  String get mtKillPhase;
+
+  /// No description provided for @mtKillPhasePrompt.
+  ///
+  /// In en, this message translates to:
+  /// **'Choose a card to kill'**
+  String get mtKillPhasePrompt;
+
+  /// No description provided for @mtKillPhaseWait.
+  ///
+  /// In en, this message translates to:
+  /// **'{name} is choosing a card to kill'**
+  String mtKillPhaseWait(Object name);
+
+  /// No description provided for @mtKillResultKilled.
+  ///
+  /// In en, this message translates to:
+  /// **'{declarer} named {target} → {victim} eliminated'**
+  String mtKillResultKilled(Object declarer, Object target, Object victim);
+
+  /// No description provided for @mtKillResultSuicide.
+  ///
+  /// In en, this message translates to:
+  /// **'{declarer} named {target} but it was in the kitty. Self-KO!'**
+  String mtKillResultSuicide(Object declarer, Object target);
+
+  /// No description provided for @mtKillExcluded.
+  ///
+  /// In en, this message translates to:
+  /// **'OUT'**
+  String get mtKillExcluded;
+
+  /// No description provided for @mtKillConfirm.
+  ///
+  /// In en, this message translates to:
+  /// **'Kill'**
+  String get mtKillConfirm;
+
   /// No description provided for @mtPoints.
   ///
   /// In en, this message translates to:

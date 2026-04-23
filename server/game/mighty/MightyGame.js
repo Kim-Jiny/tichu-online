@@ -10,9 +10,18 @@ class MightyGame {
     this.playerCount = playerIds.length; // 5 (or 6 future)
     this.gameType = 'mighty';
 
+    // Mode: '6p' starts kill-mighty (8 cards + 5 kitty + kill phase + min bid 14 + deal-miss 0)
+    //       '5p' is classic mighty (10 cards + 3 kitty + no kill + min bid 13 + deal-miss 0.5).
+    // After a kill or suicide, a 6p game transitions to '5p' semantics for the remaining
+    // tricks (or the re-bid after suicide).
+    const is6p = playerIds.length >= 6;
+    this.mode = is6p ? '6p' : '5p';
+    this.activePlayerCount = playerIds.length;
+    this.excludedPlayers = new Set();
+
     // Options (house rules)
     this.options = {
-      minBid: options.minBid || 13,
+      minBid: options.minBid || (is6p ? 14 : 13),
       allowNoTrump: options.allowNoTrump !== false,
       allowTrumpChange: options.allowTrumpChange !== false,
       trumpChangePenalty: options.trumpChangePenalty || 2,
@@ -55,6 +64,8 @@ class MightyGame {
     this.lastTrickCards = [];
     this.lastTrickWinner = null;
     this.lastDealMissEvent = null; // { playerId, playerName, cards, handScore, round } — visible to all; cleared on first bid/pass of new round
+    this.lastKillEvent = null; // { declarerId, declarerName, targetCardId, victimId, victimName, wasKitty } — shown once after kill/suicide
+    this.newlyReceivedCards = {}; // pid → [cardId, ...] highlight for post-kill redistribution; cleared when kitty phase ends
   }
 
   start() {
@@ -91,6 +102,20 @@ class MightyGame {
     this.lastTrickCards = [];
     this.lastTrickWinner = null;
     this.lastDealMissEvent = null;
+    this.lastKillEvent = null;
+    this.newlyReceivedCards = {};
+
+    // Restore mode/active count for a fresh round — previous round may have ended in 5p
+    // semantics (kill/suicide), but a new 6-player round starts fresh in 6p mode.
+    if (this.playerCount >= 6) {
+      this.mode = '6p';
+      this.options.minBid = 14;
+    } else {
+      this.mode = '5p';
+      this.options.minBid = 13;
+    }
+    this.excludedPlayers = new Set();
+    this.activePlayerCount = this.playerCount;
 
     for (const pid of this.playerIds) {
       this.pointCards[pid] = [];
@@ -99,11 +124,8 @@ class MightyGame {
     // Move dealer (advance by 1 each round)
     this.dealerIndex = (this.dealerIndex + 1) % this.playerCount;
 
-    // Set bid order: starting from left of dealer
-    this.bidOrder = [];
-    for (let i = 1; i <= this.playerCount; i++) {
-      this.bidOrder.push(this.playerIds[(this.dealerIndex + i) % this.playerCount]);
-    }
+    // Set bid order: active players only, starting from left of dealer
+    this.bidOrder = this._buildBidOrder();
     this.currentBidderIndex = 0;
 
     this.state = 'bidding';
@@ -129,6 +151,7 @@ class MightyGame {
     switch (action.type) {
       case 'submit_bid': return this._handleBid(playerId, action);
       case 'declare_deal_miss': return this._handleDealMiss(playerId, action);
+      case 'declare_kill': return this._handleDeclareKill(playerId, action);
       case 'change_trump': return this._handleChangeTrump(playerId, action);
       case 'raise_bid': return this._handleRaiseBid(playerId, action);
       case 'discard_kitty': return this._handleDiscardKitty(playerId, action);
@@ -210,11 +233,26 @@ class MightyGame {
     return total;
   }
 
+  _dealMissThreshold() {
+    // 6p kill-mighty: must be exactly 0. 5p classic: 0.5 or lower.
+    return this.mode === '6p' ? 0 : 0.5;
+  }
+
+  /** Active (non-excluded) seats starting from the player left of the dealer. */
+  _buildBidOrder() {
+    const order = [];
+    for (let i = 1; i <= this.playerCount; i++) {
+      const pid = this.playerIds[(this.dealerIndex + i) % this.playerCount];
+      if (!this.excludedPlayers.has(pid)) order.push(pid);
+    }
+    return order;
+  }
+
   _canDeclareDealMiss(playerId) {
     if (this.state !== 'bidding') return false;
     if (this.currentPlayer !== playerId) return false;
     if (this.bids[playerId] !== undefined) return false;
-    return this._evaluateDealMissScore(this.hands[playerId] || []) <= 0.5;
+    return this._evaluateDealMissScore(this.hands[playerId] || []) <= this._dealMissThreshold();
   }
 
   _handleDealMiss(playerId, action) {
@@ -228,7 +266,7 @@ class MightyGame {
       return { success: false, messageKey: 'mighty_deal_miss_already_acted' };
     }
     const handScore = this._evaluateDealMissScore(this.hands[playerId] || []);
-    if (handScore > 0.5) {
+    if (handScore > this._dealMissThreshold()) {
       return { success: false, messageKey: 'mighty_deal_miss_hand_too_strong' };
     }
 
@@ -286,20 +324,21 @@ class MightyGame {
   }
 
   _advanceBidding() {
+    const active = this.activePlayerCount;
+
     // Bid of 20 = instant win, no need for others to pass
     if (this.currentBid.points === 20) {
       this._finalizeBidding();
       return { success: true };
     }
 
-    // Check if bidding is over
-    if (this.passCount >= this.playerCount - 1 && this.currentBid.bidder) {
-      // Everyone passed except one bidder
+    // Check if bidding is over (everyone passed except one bidder)
+    if (this.passCount >= active - 1 && this.currentBid.bidder) {
       this._finalizeBidding();
       return { success: true };
     }
 
-    if (this.passCount >= this.playerCount) {
+    if (this.passCount >= active) {
       // Everyone passed - redeal with same dealer (don't inflate round counter)
       const savedDealer = this.dealerIndex;
       const savedRound = this.round;
@@ -307,10 +346,7 @@ class MightyGame {
       this.round = savedRound;
       this.dealerIndex = savedDealer;
       // Rebuild bid order from same dealer
-      this.bidOrder = [];
-      for (let i = 1; i <= this.playerCount; i++) {
-        this.bidOrder.push(this.playerIds[(this.dealerIndex + i) % this.playerCount]);
-      }
+      this.bidOrder = this._buildBidOrder();
       this.currentPlayer = this.bidOrder[0];
       return { success: true };
     }
@@ -328,8 +364,9 @@ class MightyGame {
 
   _findNextBidder() {
     const startIdx = this.bidOrder.indexOf(this.currentPlayer);
-    for (let i = 1; i <= this.playerCount; i++) {
-      const idx = (startIdx + i) % this.playerCount;
+    const n = this.bidOrder.length;
+    for (let i = 1; i <= n; i++) {
+      const idx = (startIdx + i) % n;
       const pid = this.bidOrder[idx];
       if (this.bids[pid] !== 'pass') {
         // If this is the only remaining bidder (the current bid holder)
@@ -346,11 +383,168 @@ class MightyGame {
   _finalizeBidding() {
     this.declarer = this.currentBid.bidder;
     this.trumpSuit = this.currentBid.suit;
-    this.state = 'kitty_exchange';
     this.currentPlayer = this.declarer;
 
-    // Declarer picks up kitty
-    this.hands[this.declarer] = this.hands[this.declarer].concat(this.kitty);
+    if (this.mode === '6p') {
+      // 6p kill-mighty: declarer picks a kill target before touching the kitty
+      this.state = 'kill_select';
+    } else {
+      // 5p classic: declarer picks up the 3-card kitty immediately
+      this.state = 'kitty_exchange';
+      this.hands[this.declarer] = this.hands[this.declarer].concat(this.kitty);
+    }
+  }
+
+  // ─── KILL PHASE (6p kill-mighty) ────────────────────────
+  //
+  // After bidding in 6p mode, the declarer picks a "kill target" card that
+  // they do NOT hold. If the target is in another player's hand, that player
+  // is eliminated from the round (0 points); their 8-card hand plus the
+  // 5-card kitty (13 cards) are shuffled and redistributed so the declarer
+  // receives 5 new cards and each of the other 4 survivors receives 2. The
+  // game then proceeds as 5-player mighty from kitty-exchange onward.
+  //
+  // If the target card is in the kitty, the declarer commits "suicide":
+  // their hand + kitty (13 cards) are shuffled, 2 each go to the other 5
+  // players, 3 become the new kitty, and bidding restarts in 5p mode.
+  //
+  // Either way the killed/suicided player is out of the round and scores 0.
+
+  _handleDeclareKill(playerId, action) {
+    if (this.state !== 'kill_select') {
+      return { success: false, messageKey: 'mighty_not_kill_phase' };
+    }
+    if (playerId !== this.declarer) {
+      return { success: false, messageKey: 'mighty_not_declarer' };
+    }
+    const { cardId } = action || {};
+    if (!cardId || typeof cardId !== 'string') {
+      return { success: false, messageKey: 'mighty_invalid_kill_target' };
+    }
+    if ((this.hands[playerId] || []).includes(cardId)) {
+      return { success: false, messageKey: 'mighty_kill_in_own_hand' };
+    }
+
+    let victimId = null;
+    let wasKitty = false;
+    if (this.kitty.includes(cardId)) {
+      wasKitty = true;
+    } else {
+      for (const pid of this.playerIds) {
+        if (pid === this.declarer) continue;
+        if ((this.hands[pid] || []).includes(cardId)) {
+          victimId = pid;
+          break;
+        }
+      }
+      if (!victimId) {
+        return { success: false, messageKey: 'mighty_invalid_kill_target' };
+      }
+    }
+
+    // Build reveal event for all clients. (New cards-each player receives
+    // are stored in this.newlyReceivedCards and shown during kitty phase.)
+    this.lastKillEvent = {
+      declarerId: this.declarer,
+      declarerName: this.playerNames[this.declarer] || this.declarer,
+      targetCardId: cardId,
+      victimId: wasKitty ? this.declarer : victimId,
+      victimName: wasKitty
+        ? (this.playerNames[this.declarer] || this.declarer)
+        : (this.playerNames[victimId] || victimId),
+      wasKitty,
+    };
+
+    if (wasKitty) {
+      this._resolveSuicide();
+    } else {
+      this._resolveKill(victimId);
+    }
+    return { success: true };
+  }
+
+  _shuffle(arr) {
+    const a = arr.slice();
+    for (let i = a.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [a[i], a[j]] = [a[j], a[i]];
+    }
+    return a;
+  }
+
+  _resolveKill(victimId) {
+    // Pool = victim's 8-card hand + the 5-card kitty = 13 cards
+    const pool = this._shuffle([...(this.hands[victimId] || []), ...this.kitty]);
+    this.newlyReceivedCards = {};
+
+    // Declarer gets 5 added → total 13 (8 original + 5 new)
+    const forDeclarer = pool.slice(0, 5);
+    this.hands[this.declarer] = this.hands[this.declarer].concat(forDeclarer);
+    this.newlyReceivedCards[this.declarer] = forDeclarer;
+
+    // 4 surviving non-declarer, non-victim players get 2 each
+    let idx = 5;
+    for (const pid of this.playerIds) {
+      if (pid === this.declarer || pid === victimId) continue;
+      const got = pool.slice(idx, idx + 2);
+      idx += 2;
+      this.hands[pid] = (this.hands[pid] || []).concat(got);
+      this.newlyReceivedCards[pid] = got;
+    }
+
+    // Victim is emptied and excluded from the round
+    this.hands[victimId] = [];
+    this.excludedPlayers.add(victimId);
+    this.activePlayerCount = this.playerCount - this.excludedPlayers.size;
+
+    // From here on the round follows 5p semantics
+    this.mode = '5p';
+    this.options.minBid = 13;
+    this.kitty = []; // consumed by redistribution; the declarer will discard 3 below
+
+    // Declarer now holds 13 cards — enter normal 5p kitty exchange (discard 3)
+    this.state = 'kitty_exchange';
+    this.currentPlayer = this.declarer;
+  }
+
+  _resolveSuicide() {
+    // Pool = declarer's 8 + kitty 5 = 13 cards
+    const pool = this._shuffle([...(this.hands[this.declarer] || []), ...this.kitty]);
+    this.newlyReceivedCards = {};
+
+    // 5 surviving (non-declarer) players each get 2 cards
+    let idx = 0;
+    for (const pid of this.playerIds) {
+      if (pid === this.declarer) continue;
+      const got = pool.slice(idx, idx + 2);
+      idx += 2;
+      this.hands[pid] = (this.hands[pid] || []).concat(got);
+      this.newlyReceivedCards[pid] = got;
+    }
+
+    // Remaining 3 cards become the new kitty
+    this.kitty = pool.slice(idx);
+
+    const suicidedDeclarer = this.declarer;
+    this.hands[suicidedDeclarer] = [];
+    this.excludedPlayers.add(suicidedDeclarer);
+    this.activePlayerCount = this.playerCount - this.excludedPlayers.size;
+
+    // Switch to 5p rules for the re-bid
+    this.mode = '5p';
+    this.options.minBid = 13;
+
+    // Reset bidding state (suicided declarer is out, survivors re-bid fresh)
+    this.declarer = null;
+    this.trumpSuit = null;
+    this.currentBid = { points: 0, suit: null, bidder: null };
+    this.bids = {};
+    this.passCount = 0;
+
+    // Bid order: active (non-excluded) seats starting from left of original dealer
+    this.bidOrder = this._buildBidOrder();
+    this.currentPlayer = this.bidOrder[0];
+    this.state = 'bidding';
   }
 
   // ─── TRUMP CHANGE (during kitty exchange) ───────────────
@@ -491,6 +685,9 @@ class MightyGame {
     // Start playing
     this.state = 'playing';
     this.currentPlayer = this.declarer; // Declarer leads first trick
+
+    // Kitty-exchange is over — drop any post-kill redistribution highlights
+    this.newlyReceivedCards = {};
     return { success: true };
   }
 
@@ -544,7 +741,7 @@ class MightyGame {
     }
 
     // Check if trick is complete
-    if (this.currentTrick.length === this.playerCount) {
+    if (this.currentTrick.length === this.activePlayerCount) {
       return this._resolveTrick();
     }
 
@@ -627,13 +824,25 @@ class MightyGame {
 
   _advanceToNextPlayer() {
     const currentIdx = this.playerIds.indexOf(this.currentPlayer);
-    this.currentPlayer = this.playerIds[(currentIdx + 1) % this.playerCount];
+    // Skip any excluded seats (killed/suicided in kill-mighty)
+    for (let i = 1; i <= this.playerCount; i++) {
+      const nextPid = this.playerIds[(currentIdx + i) % this.playerCount];
+      if (!this.excludedPlayers.has(nextPid)) {
+        this.currentPlayer = nextPid;
+        return;
+      }
+    }
+  }
+
+  _totalTricksThisRound() {
+    // Total cards in play / active seats. For 5p (or 6p post-kill) this is 10.
+    return Math.floor(50 / this.activePlayerCount);
   }
 
   _resolveTrick() {
     const trickNumber = this.tricks.length; // 0-indexed
     const isFirstTrick = trickNumber === 0;
-    const totalTricks = Math.floor(50 / this.playerCount); // 10 for 5 players
+    const totalTricks = this._totalTricksThisRound();
     const isLastTrick = trickNumber === totalTricks - 1;
 
     const winner = this._determineTrickWinner(isFirstTrick, isLastTrick);
@@ -678,7 +887,7 @@ class MightyGame {
   advanceAfterTrickEnd() {
     if (this.state !== 'trick_end') return;
 
-    const totalTricks = Math.floor(50 / this.playerCount);
+    const totalTricks = this._totalTricksThisRound();
     if (this.tricks.length >= totalTricks) {
       this._endRound();
       return;
@@ -746,15 +955,24 @@ class MightyGame {
   _endRound() {
     this.state = 'round_end';
 
+    // Excluded players (killed/suicided in kill-mighty) score 0; only active
+    // seats take part in the declarer-vs-defenders scoring calculation.
+    const activePlayerIds = this.playerIds.filter(pid => !this.excludedPlayers.has(pid));
+
     const result = calculateRoundScores({
       declarer: this.declarer,
       partner: this.partner,
-      playerIds: this.playerIds,
+      playerIds: activePlayerIds,
       pointCards: this.pointCards,
       bid: this.currentBid.points,
       trumpSuit: this.trumpSuit,
       options: this.options,
     });
+
+    // Fill 0 for excluded players so downstream UI doesn't miss them
+    for (const pid of this.playerIds) {
+      if (!(pid in result.scores)) result.scores[pid] = 0;
+    }
 
     // Apply scores
     for (const pid of this.playerIds) {
@@ -888,6 +1106,9 @@ class MightyGame {
       dealMissPool: this.dealMissPool,
       lastDealMissEvent: this.lastDealMissEvent,
       canDeclareDealMiss: this._canDeclareDealMiss(playerId),
+      mode: this.mode,
+      excludedPlayers: [...this.excludedPlayers],
+      lastKillEvent: this.lastKillEvent,
       tricks: this.tricks.map(t => ({
         leader: t.leader,
         winner: t.winner,
@@ -904,6 +1125,14 @@ class MightyGame {
     if (this.state === 'kitty_exchange' && playerId === this.declarer) {
       state.kittyReceived = true;
       state.kittyCards = this.kitty;
+    }
+
+    // Per-seat highlight: cards received via kill/suicide redistribution.
+    // Only during kitty-exchange (kill case) or bidding right after suicide,
+    // and only to the player themselves.
+    if (this.newlyReceivedCards && this.newlyReceivedCards[playerId]
+        && (this.state === 'kitty_exchange' || this.state === 'bidding')) {
+      state.newlyReceivedCards = this.newlyReceivedCards[playerId];
     }
 
     return state;
@@ -960,6 +1189,9 @@ class MightyGame {
       lastTrickWinner: this.state === 'trick_end' ? this.lastTrickWinner : null,
       dealMissPool: this.dealMissPool,
       lastDealMissEvent: this.lastDealMissEvent,
+      mode: this.mode,
+      excludedPlayers: [...this.excludedPlayers],
+      lastKillEvent: this.lastKillEvent,
       remainingTrumps: (this.trumpSuit && this.trumpSuit !== 'no_trump' &&
         (this.state === 'playing' || this.state === 'trick_end'))
         ? this._countRemainingTrumps() : undefined,
@@ -1095,6 +1327,24 @@ class MightyGame {
       if (entry.partner === oldId) entry.partner = newId;
       if (entry.dealMisser === oldId) entry.dealMisser = newId;
     }
+
+    // excludedPlayers (kill/suicide)
+    if (this.excludedPlayers.has(oldId)) {
+      this.excludedPlayers.delete(oldId);
+      this.excludedPlayers.add(newId);
+    }
+
+    // newlyReceivedCards (post-kill highlight)
+    if (this.newlyReceivedCards && this.newlyReceivedCards[oldId] !== undefined) {
+      this.newlyReceivedCards[newId] = this.newlyReceivedCards[oldId];
+      delete this.newlyReceivedCards[oldId];
+    }
+
+    // lastKillEvent references
+    if (this.lastKillEvent) {
+      if (this.lastKillEvent.declarerId === oldId) this.lastKillEvent.declarerId = newId;
+      if (this.lastKillEvent.victimId === oldId) this.lastKillEvent.victimId = newId;
+    }
   }
 
   // ─── AUTO TIMEOUT ───────────────────────────────────────
@@ -1102,6 +1352,30 @@ class MightyGame {
   getAutoTimeoutAction(playerId) {
     if (this.state === 'bidding' && this.currentPlayer === playerId) {
       return { type: 'submit_bid', pass: true };
+    }
+
+    if (this.state === 'kill_select' && playerId === this.declarer) {
+      // Fallback: kill the highest non-own card we can find in the deck
+      const myHand = new Set(this.hands[playerId] || []);
+      const preferredOrder = ['mighty_joker'];
+      const mighty = this.getMightyCard();
+      const trump = this.trumpSuit;
+      if (trump && trump !== 'no_trump') {
+        preferredOrder.push(`mighty_${trump}_A`);
+        preferredOrder.push(`mighty_${trump}_K`);
+      }
+      preferredOrder.push(mighty);
+      for (const cid of preferredOrder) {
+        if (!myHand.has(cid)) return { type: 'declare_kill', cardId: cid };
+      }
+      // Last resort: any card
+      for (const suit of ['spade', 'heart', 'diamond', 'club']) {
+        for (const rank of ['A', 'K', 'Q', 'J', '10', '9', '8', '7', '6', '5', '4', '3', '2']) {
+          const cid = `mighty_${suit}_${rank}`;
+          if (!myHand.has(cid)) return { type: 'declare_kill', cardId: cid };
+        }
+      }
+      return null;
     }
 
     if (this.state === 'kitty_exchange' && playerId === this.declarer) {

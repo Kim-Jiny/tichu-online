@@ -13,6 +13,10 @@ function decideMightyBotAction(game, botId) {
     return decideBid(game, botId);
   }
 
+  if (game.state === 'kill_select' && game.declarer === botId) {
+    return decideKillTarget(game, botId);
+  }
+
   if (game.state === 'kitty_exchange' && game.declarer === botId) {
     const trumpChange = considerTrumpChange(game, botId);
     if (trumpChange) return trumpChange;
@@ -277,6 +281,82 @@ function considerTrumpChange(game, botId) {
   }
 
   return null;
+}
+
+// ═══════════════════════════════════════════════════════════
+//  KILL TARGET SELECTION (6p kill-mighty)
+// ═══════════════════════════════════════════════════════════
+
+/**
+ * Pick a card to "kill" when 6p kill-mighty requires the declarer to choose.
+ * Priority — pick the strongest card NOT in our own hand:
+ *   1. Joker
+ *   2. Trump A (if trump is a suit)
+ *   3. Trump K (if trump is a suit)
+ *   4. Mighty (spade A, or diamond A when trump is spade)
+ *   5. A of our longest non-trump suit (fallback: K of that suit)
+ *   6. Trump Q
+ *   7. Trump J
+ *   8. Remaining Aces then Kings in SUITS order
+ * Cards already in the bot's hand are skipped at every step.
+ */
+function decideKillTarget(game, botId) {
+  const hand = new Set(game.hands[botId] || []);
+  const trump = game.trumpSuit;
+  const mightyCard = game.getMightyCard();
+  const pick = (cardId) => (hand.has(cardId) ? null : cardId);
+
+  // 1. Joker
+  let choice = pick('mighty_joker');
+  if (choice) return { type: 'declare_kill', cardId: choice };
+
+  // 2-3, 6-7. Trump honours (A, K, Q, J) when trump is a real suit
+  if (trump && trump !== 'no_trump') {
+    choice = pick(`mighty_${trump}_A`); if (choice) return { type: 'declare_kill', cardId: choice };
+    choice = pick(`mighty_${trump}_K`); if (choice) return { type: 'declare_kill', cardId: choice };
+  }
+
+  // 4. Mighty (falls in between trump K and longest-side A)
+  choice = pick(mightyCard);
+  if (choice) return { type: 'declare_kill', cardId: choice };
+
+  // 5. A then K of the longest non-trump side suit
+  const sideSuits = SUITS
+    .filter(s => s !== trump || trump === 'no_trump')
+    .map(s => {
+      let count = 0;
+      for (const cid of hand) {
+        if (cid === 'mighty_joker') continue;
+        const info = getCardInfo(cid);
+        if (info.suit === s) count++;
+      }
+      return { suit: s, count };
+    })
+    .sort((a, b) => b.count - a.count);
+  for (const { suit } of sideSuits) {
+    const ace = `mighty_${suit}_A`;
+    if (!hand.has(ace) && ace !== mightyCard) return { type: 'declare_kill', cardId: ace };
+  }
+  for (const { suit } of sideSuits) {
+    const king = `mighty_${suit}_K`;
+    if (!hand.has(king)) return { type: 'declare_kill', cardId: king };
+  }
+
+  if (trump && trump !== 'no_trump') {
+    choice = pick(`mighty_${trump}_Q`); if (choice) return { type: 'declare_kill', cardId: choice };
+    choice = pick(`mighty_${trump}_J`); if (choice) return { type: 'declare_kill', cardId: choice };
+  }
+
+  // Generic A-then-K sweep across all suits
+  for (const rank of ['A', 'K', 'Q', 'J', '10', '9', '8', '7', '6', '5', '4', '3', '2']) {
+    for (const suit of SUITS) {
+      const cid = `mighty_${suit}_${rank}`;
+      if (!hand.has(cid)) return { type: 'declare_kill', cardId: cid };
+    }
+  }
+
+  // Should be unreachable — we're missing every card? fall back to joker
+  return { type: 'declare_kill', cardId: 'mighty_joker' };
 }
 
 // ═══════════════════════════════════════════════════════════

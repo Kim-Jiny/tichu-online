@@ -64,6 +64,8 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
   // Kill reveal: same pattern — keyed by "round-targetCardId" so it only shows once
   String? _dismissedKillKey;
   String? _selectedKillCard;
+  // Kill target picker: currently browsed suit panel (null = joker tab).
+  String _killSuitTab = 'spade';
 
   // Spectator card view
   Timer? _cardViewRequestTimer;
@@ -3085,72 +3087,102 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
       );
     }
 
-    // Declarer's selection grid: every card in the deck except cards in own hand
+    // Declarer's selection grid: every card in the deck except cards in own hand.
+    // To keep the panel readable in a single viewport we split it into a
+    // dedicated joker chip plus a suit-tabbed rank row, instead of rendering
+    // all 53 cards at once.
     final ownHand = state.myCards.toSet();
     const suits = ['spade', 'heart', 'diamond', 'club'];
     const ranks = ['A', 'K', 'Q', 'J', '10', '9', '8', '7', '6', '5', '4', '3', '2'];
 
-    return SingleChildScrollView(
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-              decoration: BoxDecoration(
-                color: const Color(0xFFFFEBEE),
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: const Color(0xFFFFAB91)),
-              ),
-              child: Row(
-                children: [
-                  const Icon(Icons.gps_fixed, size: 18, color: Color(0xFFD84315)),
-                  const SizedBox(width: 6),
-                  Expanded(
-                    child: Text(
-                      l10n.mtKillPhasePrompt,
-                      style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: Color(0xFFD84315)),
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+            decoration: BoxDecoration(
+              color: const Color(0xFFFFEBEE),
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: const Color(0xFFFFAB91)),
+            ),
+            child: Row(
+              children: [
+                const Icon(Icons.gps_fixed, size: 18, color: Color(0xFFD84315)),
+                const SizedBox(width: 6),
+                Expanded(
+                  child: Text(
+                    l10n.mtKillPhasePrompt,
+                    style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: Color(0xFFD84315)),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 10),
+          // Joker — always a separate chip so it can't be hidden behind a tab.
+          _buildKillCardChip(ownHand, 'mighty_joker'),
+          const SizedBox(height: 10),
+          // Suit tabs
+          Row(
+            children: [
+              for (final suit in suits) ...[
+                Expanded(
+                  child: GestureDetector(
+                    onTap: () => setState(() => _killSuitTab = suit),
+                    child: Container(
+                      margin: const EdgeInsets.symmetric(horizontal: 2),
+                      padding: const EdgeInsets.symmetric(vertical: 10),
+                      decoration: BoxDecoration(
+                        color: _killSuitTab == suit
+                            ? (PlayingCard.suitColors[suit] ?? const Color(0xFF5A4038)).withValues(alpha: 0.12)
+                            : Colors.white,
+                        borderRadius: BorderRadius.circular(10),
+                        border: Border.all(
+                          color: _killSuitTab == suit
+                              ? (PlayingCard.suitColors[suit] ?? const Color(0xFF5A4038))
+                              : const Color(0xFFE0D8D4),
+                          width: _killSuitTab == suit ? 2 : 1,
+                        ),
+                      ),
+                      child: Center(
+                        child: SuitIcon(suit: suit, size: 22),
+                      ),
                     ),
                   ),
-                ],
-              ),
-            ),
-            const SizedBox(height: 8),
-            // Joker row
-            _buildKillCardChip(ownHand, 'mighty_joker'),
-            const SizedBox(height: 6),
-            // Suit × rank grid
-            for (final suit in suits) ...[
-              Padding(
-                padding: const EdgeInsets.symmetric(vertical: 4),
-                child: Wrap(
-                  spacing: 4,
-                  runSpacing: 4,
-                  children: [
-                    for (final rank in ranks) _buildKillCardChip(ownHand, 'mighty_${suit}_$rank'),
-                  ],
                 ),
-              ),
+              ],
             ],
-            const SizedBox(height: 10),
-            FilledButton(
-              onPressed: _selectedKillCard == null
-                  ? null
-                  : () {
-                      game.mightyDeclareKill(_selectedKillCard!);
-                      setState(() => _selectedKillCard = null);
-                    },
-              style: FilledButton.styleFrom(
-                backgroundColor: const Color(0xFFD84315),
-                disabledBackgroundColor: const Color(0xFFBDBDBD),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                padding: const EdgeInsets.symmetric(vertical: 12),
-              ),
-              child: Text(l10n.mtKillConfirm, style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 15)),
+          ),
+          const SizedBox(height: 10),
+          // Rank grid for the selected suit — 13 chips fit on two rows.
+          Wrap(
+            spacing: 6,
+            runSpacing: 6,
+            alignment: WrapAlignment.center,
+            children: [
+              for (final rank in ranks) _buildKillCardChip(ownHand, 'mighty_${_killSuitTab}_$rank'),
+            ],
+          ),
+          const SizedBox(height: 14),
+          FilledButton(
+            onPressed: _selectedKillCard == null
+                ? null
+                : () {
+                    game.mightyDeclareKill(_selectedKillCard!);
+                    setState(() => _selectedKillCard = null);
+                  },
+            style: FilledButton.styleFrom(
+              backgroundColor: const Color(0xFFD84315),
+              disabledBackgroundColor: const Color(0xFFBDBDBD),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              padding: const EdgeInsets.symmetric(vertical: 12),
             ),
-          ],
-        ),
+            child: Text(l10n.mtKillConfirm, style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 15)),
+          ),
+        ],
       ),
     );
   }
@@ -3158,25 +3190,26 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
   Widget _buildKillCardChip(Set<String> ownHand, String cardId) {
     final inHand = ownHand.contains(cardId);
     final isSelected = _selectedKillCard == cardId;
-    String label;
-    Color? color;
-    if (cardId == 'mighty_joker') {
-      label = 'JOKER';
-      color = const Color(0xFF7B1FA2);
+    final isJoker = cardId == 'mighty_joker';
+
+    String? rank;
+    String? suit;
+    Color textColor;
+    if (isJoker) {
+      textColor = const Color(0xFF7B1FA2);
     } else {
       final parts = cardId.replaceFirst('mighty_', '').split('_');
-      final suit = parts[0];
-      final rank = parts[1];
-      final sym = suit == 'spade' ? '♠' : suit == 'heart' ? '♥' : suit == 'diamond' ? '♦' : '♣';
-      label = '$sym$rank';
-      color = (suit == 'heart' || suit == 'diamond') ? const Color(0xFFD32F2F) : const Color(0xFF1A1A1A);
+      suit = parts[0];
+      rank = parts[1];
+      textColor = PlayingCard.suitColors[suit] ?? const Color(0xFF1A1A1A);
     }
+
     return GestureDetector(
       onTap: inHand ? null : () => setState(() => _selectedKillCard = cardId),
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 120),
-        width: cardId == 'mighty_joker' ? double.infinity : 48,
-        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 8),
+        width: isJoker ? double.infinity : 52,
+        padding: EdgeInsets.symmetric(horizontal: isJoker ? 12 : 4, vertical: isJoker ? 12 : 8),
         alignment: Alignment.center,
         decoration: BoxDecoration(
           color: inHand
@@ -3190,15 +3223,38 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
             width: isSelected ? 2 : 1,
           ),
         ),
-        child: Text(
-          label,
-          style: TextStyle(
-            fontSize: cardId == 'mighty_joker' ? 14 : 13,
-            fontWeight: FontWeight.bold,
-            color: inHand ? const Color(0xFFBDBDBD) : color,
-            decoration: inHand ? TextDecoration.lineThrough : TextDecoration.none,
-          ),
-        ),
+        child: isJoker
+            ? Text(
+                'JOKER',
+                style: TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.bold,
+                  color: inHand ? const Color(0xFFBDBDBD) : textColor,
+                  decoration: inHand ? TextDecoration.lineThrough : TextDecoration.none,
+                  letterSpacing: 1.5,
+                ),
+              )
+            : Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  SuitIcon(
+                    suit: suit!,
+                    size: 14,
+                    color: inHand ? const Color(0xFFBDBDBD) : textColor,
+                  ),
+                  const SizedBox(width: 2),
+                  Text(
+                    rank!,
+                    style: TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.bold,
+                      color: inHand ? const Color(0xFFBDBDBD) : textColor,
+                      decoration: inHand ? TextDecoration.lineThrough : TextDecoration.none,
+                    ),
+                  ),
+                ],
+              ),
       ),
     );
   }

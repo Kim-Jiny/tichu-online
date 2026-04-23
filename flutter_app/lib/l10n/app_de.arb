@@ -875,6 +875,8 @@
   "mtPass": "Passen",
   "mtDealMiss": "Deal-Miss",
   "mtDealMissPool": "Deal-Miss {points}",
+  "mtDealMissReveal": "{name} hat Deal-Miss mit einer {score}-Punkte-Hand angesagt",
+  "mtDealMissTapToClose": "Tippe zum Schließen",
   "mtPoints": "Punkte:",
   "mtBid": "Bieten {points} {suit}",
   "mtWaitingFor": "Warten auf {name}",

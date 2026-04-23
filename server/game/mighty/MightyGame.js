@@ -54,6 +54,7 @@ class MightyGame {
     this.jokerCallActive = false; // true when joker-call card is played with jokerCall flag
     this.lastTrickCards = [];
     this.lastTrickWinner = null;
+    this.lastDealMissEvent = null; // { playerId, playerName, cards, handScore, round } — visible to all; cleared on first bid/pass of new round
   }
 
   start() {
@@ -89,6 +90,7 @@ class MightyGame {
     this.jokerCallActive = false;
     this.lastTrickCards = [];
     this.lastTrickWinner = null;
+    this.lastDealMissEvent = null;
 
     for (const pid of this.playerIds) {
       this.pointCards[pid] = [];
@@ -146,6 +148,9 @@ class MightyGame {
     if (playerId !== this.currentPlayer) {
       return { success: false, messageKey: 'game_not_your_turn' };
     }
+
+    // First bid/pass of a new round dismisses any outstanding deal-miss reveal
+    this.lastDealMissEvent = null;
 
     const { points, suit, pass } = action;
 
@@ -227,6 +232,11 @@ class MightyGame {
       return { success: false, messageKey: 'mighty_deal_miss_hand_too_strong' };
     }
 
+    // Snapshot the revealed hand BEFORE redealing (so everyone can see what was called)
+    const eventRound = this.round;
+    const eventPlayerName = this.playerNames[playerId] || playerId;
+    const eventCards = [...(this.hands[playerId] || [])];
+
     // Penalty: 5 points off declarer, into the pool
     this.scores[playerId] -= 5;
     this.dealMissPool += 5;
@@ -253,6 +263,15 @@ class MightyGame {
       this.bidOrder.push(this.playerIds[(this.dealerIndex + i) % this.playerCount]);
     }
     this.currentPlayer = this.bidOrder[0];
+
+    // Publish the reveal so every client can show who declared and what they held
+    this.lastDealMissEvent = {
+      playerId,
+      playerName: eventPlayerName,
+      cards: sortCards(eventCards, null),
+      handScore,
+      round: eventRound,
+    };
     return { success: true };
   }
 
@@ -868,6 +887,7 @@ class MightyGame {
       lastTrickCards: this.state === 'trick_end' ? this.lastTrickCards : [],
       lastTrickWinner: this.state === 'trick_end' ? this.lastTrickWinner : null,
       dealMissPool: this.dealMissPool,
+      lastDealMissEvent: this.lastDealMissEvent,
       canDeclareDealMiss: this._canDeclareDealMiss(playerId),
       tricks: this.tricks.map(t => ({
         leader: t.leader,
@@ -940,6 +960,7 @@ class MightyGame {
       lastTrickCards: this.state === 'trick_end' ? this.lastTrickCards : [],
       lastTrickWinner: this.state === 'trick_end' ? this.lastTrickWinner : null,
       dealMissPool: this.dealMissPool,
+      lastDealMissEvent: this.lastDealMissEvent,
       remainingTrumps: (this.trumpSuit && this.trumpSuit !== 'no_trump' &&
         (this.state === 'playing' || this.state === 'trick_end'))
         ? this._countRemainingTrumps() : undefined,
@@ -1032,6 +1053,11 @@ class MightyGame {
 
     // lastTrickWinner
     if (this.lastTrickWinner === oldId) this.lastTrickWinner = newId;
+
+    // lastDealMissEvent
+    if (this.lastDealMissEvent && this.lastDealMissEvent.playerId === oldId) {
+      this.lastDealMissEvent.playerId = newId;
+    }
 
     // lastTrickCards
     for (const play of this.lastTrickCards) {

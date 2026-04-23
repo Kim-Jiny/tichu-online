@@ -48,6 +48,9 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
   // Phase tracking for clearing stale state
   String _lastPhase = '';
 
+  // Deal-miss reveal: user can dismiss; keyed by "round-playerId" so a new event re-shows
+  String? _dismissedDealMissKey;
+
   // Spectator card view
   Timer? _cardViewRequestTimer;
   String? _viewingPlayerId;
@@ -287,6 +290,10 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
                         _buildTimeoutBanner(game.timeoutPlayerName!),
                       if (game.errorMessage != null)
                         _buildErrorBanner(game.errorMessage!),
+                      if (state.lastDealMissEvent != null &&
+                          _dismissedDealMissKey !=
+                              '${state.lastDealMissEvent!.round}-${state.lastDealMissEvent!.playerId}')
+                        _buildDealMissRevealOverlay(state.lastDealMissEvent!),
                     ],
                   );
                 },
@@ -2855,6 +2862,80 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
     );
   }
 
+  Widget _buildDealMissRevealOverlay(MightyDealMissEvent event) {
+    final l10n = L10n.of(context);
+    return Positioned.fill(
+      child: GestureDetector(
+        onTap: () => setState(() {
+          _dismissedDealMissKey = '${event.round}-${event.playerId}';
+        }),
+        behavior: HitTestBehavior.opaque,
+        child: Container(
+          color: Colors.black.withValues(alpha: 0.5),
+          alignment: Alignment.center,
+          child: Container(
+            margin: const EdgeInsets.symmetric(horizontal: 16),
+            padding: const EdgeInsets.fromLTRB(16, 16, 16, 14),
+            decoration: BoxDecoration(
+              color: const Color(0xFFFFF8F2),
+              borderRadius: BorderRadius.circular(18),
+              border: Border.all(color: const Color(0xFFFFAB91), width: 2),
+              boxShadow: [
+                BoxShadow(color: Colors.black.withValues(alpha: 0.2), blurRadius: 12, offset: const Offset(0, 4)),
+              ],
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    const Icon(Icons.warning_amber_rounded, size: 20, color: Color(0xFFD84315)),
+                    const SizedBox(width: 6),
+                    Text(
+                      l10n.mtDealMiss,
+                      style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 16, color: Color(0xFFD84315)),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 6),
+                Text(
+                  l10n.mtDealMissReveal(event.playerName, _formatHandScore(event.handScore)),
+                  textAlign: TextAlign.center,
+                  style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: Color(0xFF5A4038)),
+                ),
+                const SizedBox(height: 10),
+                Wrap(
+                  alignment: WrapAlignment.center,
+                  spacing: 4,
+                  runSpacing: 4,
+                  children: event.cards
+                      .map((cardId) => PlayingCard(
+                            cardId: _displayCardId(cardId),
+                            width: 38,
+                            height: 54,
+                            isInteractive: false,
+                          ))
+                      .toList(),
+                ),
+                const SizedBox(height: 10),
+                Text(
+                  l10n.mtDealMissTapToClose,
+                  style: const TextStyle(fontSize: 11, color: Color(0xFF8A7A72)),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  String _formatHandScore(double v) {
+    if (v == v.roundToDouble()) return v.toInt().toString();
+    return v.toStringAsFixed(1);
+  }
+
   Widget _buildErrorBanner(String message) {
     return Positioned(
       top: 60,
@@ -3133,126 +3214,140 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
       'spade': '♠', 'heart': '♥', 'diamond': '♦', 'club': '♣', 'no_trump': 'NT',
     };
 
-    // Cumulative scores per player
-    final cumScores = <String, int>{for (final p in state.players) p.id: 0};
+    final cumulativeScores = <String, int>{for (final p in state.players) p.id: 0};
 
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: Text(L10n.of(context).mtScoreHistory, style: const TextStyle(fontSize: 15, fontWeight: FontWeight.bold)),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        titlePadding: const EdgeInsets.fromLTRB(18, 18, 18, 0),
+        contentPadding: const EdgeInsets.fromLTRB(14, 12, 14, 8),
+        title: Row(
+          children: [
+            const Expanded(
+              child: Text(
+                '점수 기록',
+                style: TextStyle(fontSize: 16, fontWeight: FontWeight.w800, color: Color(0xFF5A4038)),
+              ),
+            ),
+            Text(
+              '${state.scoreHistory.length}R',
+              style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: Color(0xFF8A7A72)),
+            ),
+          ],
+        ),
         content: SizedBox(
           width: double.maxFinite,
           child: SingleChildScrollView(
             scrollDirection: Axis.vertical,
-            child: SingleChildScrollView(
-              scrollDirection: Axis.horizontal,
-              child: DataTable(
-                columnSpacing: 10,
-                horizontalMargin: 4,
-                headingRowHeight: 36,
-                dataRowMinHeight: 32,
-                dataRowMaxHeight: 40,
-                headingTextStyle: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Color(0xFF5A4038)),
-                dataTextStyle: const TextStyle(fontSize: 11, color: Color(0xFF5A4038)),
-                columns: [
-                  DataColumn(label: Text(L10n.of(context).mtRoundAbbr)),
-                  DataColumn(label: Text(L10n.of(context).mtContract)),
-                  DataColumn(label: Text(L10n.of(context).mtResult)),
-                  ...state.players.map((p) => DataColumn(
-                    label: Text(
-                      p.name.length > 4 ? '${p.name.substring(0, 4)}..' : p.name,
-                      style: const TextStyle(fontSize: 10, fontWeight: FontWeight.bold),
+            child: LayoutBuilder(
+              builder: (context, constraints) {
+                Widget cell(
+                  String text, {
+                  TextAlign align = TextAlign.center,
+                  FontWeight fontWeight = FontWeight.w600,
+                  Color color = const Color(0xFF5A4038),
+                  double fontSize = 10,
+                  EdgeInsets padding = const EdgeInsets.symmetric(horizontal: 3, vertical: 8),
+                }) {
+                  return Padding(
+                    padding: padding,
+                    child: Text(
+                      text,
+                      textAlign: align,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        fontSize: fontSize,
+                        fontWeight: fontWeight,
+                        color: color,
+                      ),
                     ),
-                  )),
-                ],
-                rows: [
-                  ...state.scoreHistory.map((entry) {
-                    final trump = suitSymbol[entry.trumpSuit] ?? entry.trumpSuit ?? '?';
-                    for (final p in state.players) {
-                      cumScores[p.id] = (cumScores[p.id] ?? 0) + (entry.scores[p.id] ?? 0);
-                    }
-                    if (entry.dealMiss) {
-                      return DataRow(
-                        color: WidgetStateProperty.all(const Color(0xFFFFF3E0)),
-                        cells: [
-                          DataCell(Text('${entry.round}', style: const TextStyle(fontWeight: FontWeight.w700))),
-                          DataCell(Text(
-                            L10n.of(context).mtDealMiss,
-                            style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w700, color: Color(0xFFD84315)),
-                          )),
-                          DataCell(Text(
-                            '+${entry.dealMissPool}',
-                            style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Color(0xFFD84315)),
-                          )),
+                  );
+                }
+
+                final border = TableBorder.symmetric(
+                  inside: const BorderSide(color: Color(0xFFE4DBD1), width: 0.6),
+                  outside: const BorderSide(color: Color(0xFFE4DBD1), width: 0.8),
+                );
+
+                return Table(
+                  columnWidths: {
+                    0: const FlexColumnWidth(0.7),
+                    1: const FlexColumnWidth(1.5),
+                    for (int i = 0; i < state.players.length; i++) i + 2: const FlexColumnWidth(1),
+                  },
+                  defaultVerticalAlignment: TableCellVerticalAlignment.middle,
+                  border: border,
+                  children: [
+                    TableRow(
+                      decoration: const BoxDecoration(color: Color(0xFFF5F0EB)),
+                      children: [
+                        cell('R', fontWeight: FontWeight.w800, fontSize: 10.5),
+                        cell('비딩', fontWeight: FontWeight.w800, fontSize: 10.5),
+                        ...state.players.map((p) => cell(
+                              p.name.length > 2 ? p.name.substring(0, 2) : p.name,
+                              fontWeight: FontWeight.w800,
+                              fontSize: 9.5,
+                            )),
+                      ],
+                    ),
+                    ...state.scoreHistory.map((entry) {
+                      final trump = suitSymbol[entry.trumpSuit] ?? entry.trumpSuit ?? '?';
+                      for (final p in state.players) {
+                        cumulativeScores[p.id] = (cumulativeScores[p.id] ?? 0) + (entry.scores[p.id] ?? 0);
+                      }
+                      final rowTint = entry.dealMiss
+                          ? const Color(0xFFFFF3E0)
+                          : (entry.success ? const Color(0xFFF1F8E9) : const Color(0xFFFFEBEE));
+                      final bidText = entry.dealMiss
+                          ? L10n.of(context).mtDealMiss
+                          : '$trump${entry.bid}${entry.success ? '✓' : '✗'}';
+                      return TableRow(
+                        decoration: BoxDecoration(color: rowTint),
+                        children: [
+                          cell('${entry.round}', fontWeight: FontWeight.w700),
+                          cell(
+                            bidText,
+                            align: TextAlign.left,
+                            fontWeight: FontWeight.w700,
+                            color: entry.dealMiss ? const Color(0xFFD84315) : const Color(0xFF5A4038),
+                          ),
                           ...state.players.map((p) {
                             final diff = entry.scores[p.id] ?? 0;
-                            final total = cumScores[p.id] ?? 0;
-                            return DataCell(Text(
-                              diff == 0 ? '$total' : '${diff > 0 ? '+' : ''}$diff / $total',
-                              style: TextStyle(
-                                fontSize: 10,
-                                fontWeight: diff != 0 ? FontWeight.bold : FontWeight.normal,
-                                color: diff < 0 ? const Color(0xFFC62828) : const Color(0xFF5A4038),
-                              ),
-                            ));
+                            final isDeclTeam = !entry.dealMiss && (p.id == entry.declarer || p.id == entry.partner);
+                            return cell(
+                              diff == 0 ? '0' : (diff > 0 ? '+$diff' : '$diff'),
+                              fontSize: 9.5,
+                              fontWeight: isDeclTeam || diff != 0 ? FontWeight.w700 : FontWeight.w500,
+                              color: diff > 0
+                                  ? const Color(0xFF2E7D32)
+                                  : diff < 0
+                                      ? const Color(0xFFC62828)
+                                      : const Color(0xFF5A4038),
+                            );
                           }),
                         ],
                       );
-                    }
-                    return DataRow(
-                      color: WidgetStateProperty.all(
-                        entry.success ? const Color(0xFFE8F5E9) : const Color(0xFFFFEBEE),
-                      ),
-                      cells: [
-                        DataCell(Text('${entry.round}', style: const TextStyle(fontWeight: FontWeight.w700))),
-                        DataCell(Text('$trump${entry.bid}', style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w600))),
-                        DataCell(Text(
-                          entry.success ? '${entry.declarerPoints}✓' : '${entry.declarerPoints}✗',
-                          style: TextStyle(
-                            fontSize: 11,
-                            fontWeight: FontWeight.bold,
-                            color: entry.success ? const Color(0xFF2E7D32) : const Color(0xFFC62828),
-                          ),
-                        )),
+                    }),
+                    TableRow(
+                      decoration: const BoxDecoration(color: Color(0xFFECE7E1)),
+                      children: [
+                        cell('', fontWeight: FontWeight.w800),
+                        cell('합계', align: TextAlign.left, fontWeight: FontWeight.w800),
                         ...state.players.map((p) {
-                          final score = entry.scores[p.id] ?? 0;
-                          final isDeclTeam = p.id == entry.declarer || p.id == entry.partner;
-                          return DataCell(Text(
-                            score >= 0 ? '+$score' : '$score',
-                            textAlign: TextAlign.center,
-                            style: TextStyle(
-                              fontSize: 11,
-                              fontWeight: isDeclTeam ? FontWeight.w800 : FontWeight.w500,
-                              color: score >= 0 ? const Color(0xFF2E7D32) : const Color(0xFFC62828),
-                            ),
-                          ));
-                        }),
-                      ],
-                    );
-                  }),
-                  // Total row
-                  DataRow(
-                    color: WidgetStateProperty.all(const Color(0xFFF5F0EB)),
-                    cells: [
-                      const DataCell(Text('')),
-                      const DataCell(Text('')),
-                      DataCell(Text(L10n.of(context).mtTotal, style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold))),
-                      ...state.players.map((p) {
-                        final total = cumScores[p.id] ?? 0;
-                        return DataCell(Text(
-                          '$total',
-                          textAlign: TextAlign.center,
-                          style: TextStyle(
-                            fontSize: 11,
+                          final total = cumulativeScores[p.id] ?? 0;
+                          return cell(
+                            '$total',
                             fontWeight: FontWeight.w800,
                             color: total >= 0 ? const Color(0xFF2E7D32) : const Color(0xFFC62828),
-                          ),
-                        ));
-                      }),
-                    ],
-                  ),
-                ],
-              ),
+                          );
+                        }),
+                      ],
+                    ),
+                  ],
+                );
+              },
             ),
           ),
         ),

@@ -4905,6 +4905,18 @@ abstract class L10n {
   /// **'Deal miss {points}'**
   String mtDealMissPool(Object points);
 
+  /// No description provided for @mtDealMissReveal.
+  ///
+  /// In en, this message translates to:
+  /// **'{name} declared deal miss with a {score}-point hand'**
+  String mtDealMissReveal(Object name, Object score);
+
+  /// No description provided for @mtDealMissTapToClose.
+  ///
+  /// In en, this message translates to:
+  /// **'Tap anywhere to dismiss'**
+  String get mtDealMissTapToClose;
+
   /// No description provided for @mtPoints.
   ///
   /// In en, this message translates to:

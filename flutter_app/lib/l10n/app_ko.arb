@@ -867,6 +867,8 @@
   "mtPass": "패스",
   "mtDealMiss": "딜미스",
   "mtDealMissPool": "딜미스 {points}",
+  "mtDealMissReveal": "{name}님이 {score}점 패로 딜미스를 선언했습니다",
+  "mtDealMissTapToClose": "화면을 탭하면 닫힙니다",
   "mtPoints": "점수:",
   "mtBid": "비딩 {points} {suit}",
   "mtWaitingFor": "{name} 대기 중",

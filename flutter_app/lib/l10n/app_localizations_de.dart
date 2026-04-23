@@ -2705,6 +2705,14 @@ class L10nDe extends L10n {
   }
 
   @override
+  String mtDealMissReveal(Object name, Object score) {
+    return '$name hat Deal-Miss mit einer $score-Punkte-Hand angesagt';
+  }
+
+  @override
+  String get mtDealMissTapToClose => 'Tippe zum Schließen';
+
+  @override
   String get mtPoints => 'Punkte:';
 
   @override

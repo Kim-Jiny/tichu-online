@@ -2690,6 +2690,14 @@ class L10nEn extends L10n {
   }
 
   @override
+  String mtDealMissReveal(Object name, Object score) {
+    return '$name declared deal miss with a $score-point hand';
+  }
+
+  @override
+  String get mtDealMissTapToClose => 'Tap anywhere to dismiss';
+
+  @override
   String get mtPoints => 'Points:';
 
   @override

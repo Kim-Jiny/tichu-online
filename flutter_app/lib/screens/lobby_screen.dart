@@ -3564,7 +3564,7 @@ class _LobbyScreenState extends State<LobbyScreen> {
     showDialog(
       context: dialogContext ?? context,
       builder: (ctx) {
-        String profileGameTab = 'tichu';
+        String profileGameTab = game.currentGameType;
         return StatefulBuilder(
           builder: (ctx, setDialogState) {
             return Consumer<GameService>(

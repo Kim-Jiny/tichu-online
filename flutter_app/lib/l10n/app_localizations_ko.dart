@@ -2628,6 +2628,14 @@ class L10nKo extends L10n {
   }
 
   @override
+  String mtDealMissReveal(Object name, Object score) {
+    return '$name님이 $score점 패로 딜미스를 선언했습니다';
+  }
+
+  @override
+  String get mtDealMissTapToClose => '화면을 탭하면 닫힙니다';
+
+  @override
   String get mtPoints => '점수:';
 
   @override

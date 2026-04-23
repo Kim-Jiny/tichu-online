@@ -2600,6 +2600,10 @@ class GameService extends ChangeNotifier {
     _network.send({'type': 'submit_bid', 'pass': true});
   }
 
+  void mightyDeclareDealMiss() {
+    _network.send({'type': 'declare_deal_miss'});
+  }
+
   void mightyDiscardKitty(List<String> discards, String friendCard) {
     _network.send({
       'type': 'discard_kitty',

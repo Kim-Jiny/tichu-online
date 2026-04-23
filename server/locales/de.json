@@ -224,5 +224,7 @@
   "mighty_invalid_friend_card": "Ungültige Freundkarte",
   "mighty_not_play_phase": "Nicht in der Spielphase",
   "mighty_illegal_card": "Du kannst diese Karte nicht spielen",
-  "mighty_not_round_end": "Nicht im Rundenend-Zustand"
+  "mighty_not_round_end": "Nicht im Rundenend-Zustand",
+  "mighty_deal_miss_already_acted": "Du hast bereits geboten oder gepasst — Deal-Miss ist nicht mehr möglich",
+  "mighty_deal_miss_hand_too_strong": "Deine Hand ist zu stark für einen Deal-Miss"
 }

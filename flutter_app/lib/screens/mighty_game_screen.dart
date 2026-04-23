@@ -515,8 +515,10 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
     final trumpLabel = state.trumpSuit != null
         ? (state.trumpSuit == 'no_trump' ? 'NT' : _suitSymbol(state.trumpSuit!))
         : '';
-    final showContractInfo = state.declarer != null &&
-        state.phase != 'bidding' && state.phase != 'dealing';
+    final hasCurrentBidder = state.currentBid['bidder'] != null;
+    final showContractInfo = (state.declarer != null &&
+            state.phase != 'bidding' && state.phase != 'dealing') ||
+        (state.phase == 'bidding' && (hasCurrentBidder || state.dealMissPool > 0));
 
     return Column(
       children: [
@@ -537,7 +539,9 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
                     const Icon(Icons.style, size: 14, color: Color(0xFF5A4038)),
                     const SizedBox(width: 5),
                     Text(
-                      L10n.of(context).mtRoundPhase(state.round.toString(), _phaseLabel(state.phase)),
+                      state.phase == 'round_end'
+                          ? 'R${state.round}'
+                          : L10n.of(context).mtRoundPhase(state.round.toString(), _phaseLabel(state.phase)),
                       style: const TextStyle(
                         fontSize: 13,
                         fontWeight: FontWeight.bold,
@@ -625,27 +629,31 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
   }
 
   Widget _buildContractInfoBar(MightyGameStateData state, GameService game) {
-    final declarerName = state.players
-        .where((p) => p.id == state.declarer)
-        .map((p) => p.name)
-        .firstOrNull ?? '';
+    final isBidding = state.phase == 'bidding';
+    final leaderId = isBidding ? state.currentBid['bidder'] as String? : state.declarer;
+    final leaderName = leaderId == null
+        ? ''
+        : (state.players.where((p) => p.id == leaderId).map((p) => p.name).firstOrNull ?? '');
     final bidPoints = state.currentBid['points'];
     final bidSuit = state.currentBid['suit'];
     final suitLabel = bidSuit != null ? _suitSymbol(bidSuit.toString()) : '';
+    final hasBid = bidPoints != null && (bidPoints is num) && bidPoints > 0;
 
     String friendLabel = '';
-    if (state.friendCard != null) {
-      if (state.friendRevealed && state.partner != null) {
-        final partnerName = state.players
-            .where((p) => p.id == state.partner)
-            .map((p) => p.name)
-            .firstOrNull ?? '';
-        friendLabel = '${_friendCardLabel(state.friendCard!)} \u2192 $partnerName';
+    if (!isBidding) {
+      if (state.friendCard != null) {
+        if (state.friendRevealed && state.partner != null) {
+          final partnerName = state.players
+              .where((p) => p.id == state.partner)
+              .map((p) => p.name)
+              .firstOrNull ?? '';
+          friendLabel = '${_friendCardLabel(state.friendCard!)} \u2192 $partnerName';
+        } else {
+          friendLabel = _friendCardLabel(state.friendCard!);
+        }
       } else {
-        friendLabel = _friendCardLabel(state.friendCard!);
+        friendLabel = L10n.of(context).mtSolo;
       }
-    } else {
-      friendLabel = L10n.of(context).mtSolo;
     }
 
     final showTrumpCounter = state.remainingTrumps != null && game.hasMightyTrumpCounter;
@@ -668,23 +676,25 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
             child: Row(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                Text(
-                  declarerName,
-                  style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: Color(0xFF5A4038)),
-                ),
-                const SizedBox(width: 6),
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFF1565C0),
-                    borderRadius: BorderRadius.circular(6),
+                if (leaderName.isNotEmpty)
+                  Text(
+                    leaderName,
+                    style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: Color(0xFF5A4038)),
                   ),
-                  child: Text(
-                    '$suitLabel $bidPoints',
-                    style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.white),
+                if (leaderName.isNotEmpty && hasBid) const SizedBox(width: 6),
+                if (hasBid)
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFF1565C0),
+                      borderRadius: BorderRadius.circular(6),
+                    ),
+                    child: Text(
+                      '$suitLabel $bidPoints',
+                      style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.white),
+                    ),
                   ),
-                ),
-                if (!state.friendRevealed) ...[
+                if (!isBidding && !state.friendRevealed) ...[
                   const SizedBox(width: 6),
                   Flexible(
                     child: Text(
@@ -697,7 +707,25 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
               ],
             ),
           ),
-          if (showTrumpCounter)
+          if (state.dealMissPool > 0) ...[
+            const SizedBox(width: 6),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
+              decoration: BoxDecoration(
+                color: const Color(0xFFFFEBEE),
+                borderRadius: BorderRadius.circular(6),
+                border: Border.all(color: const Color(0xFFFFAB91)),
+              ),
+              child: Text(
+                L10n.of(context).mtDealMissPool(state.dealMissPool.toString()),
+                style: const TextStyle(
+                  fontWeight: FontWeight.bold,
+                  fontSize: 11,
+                  color: Color(0xFFD84315),
+                ),
+              ),
+            ),
+          ] else if (showTrumpCounter)
             const SizedBox(width: 8),
         ],
       ),
@@ -1317,11 +1345,6 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              if (game.myTimeoutCount > 0)
-                Padding(
-                  padding: const EdgeInsets.only(bottom: 6),
-                  child: _buildTimeoutResetChip(game),
-                ),
               const Icon(Icons.style, size: 20, color: Color(0xFF8A7A72)),
               const SizedBox(height: 4),
               Text(
@@ -1491,28 +1514,17 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          // Timer + Timeout reset
-          Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              if (game.myTimeoutCount > 0)
-                Padding(
-                  padding: const EdgeInsets.only(right: 8),
-                  child: _buildTimeoutResetChip(game),
-                ),
-              if (_remainingSeconds > 0)
-                Text(
-                  '${_remainingSeconds}s',
-                  style: TextStyle(
-                    fontSize: 13,
-                    fontWeight: FontWeight.bold,
-                    color: _remainingSeconds <= 5 ? const Color(0xFFE53935) : const Color(0xFF8A7A72),
-                  ),
-                ),
-            ],
-          ),
-          if (_remainingSeconds > 0 || game.myTimeoutCount > 0)
+          if (_remainingSeconds > 0) ...[
+            Text(
+              '${_remainingSeconds}s',
+              style: TextStyle(
+                fontSize: 13,
+                fontWeight: FontWeight.bold,
+                color: _remainingSeconds <= 5 ? const Color(0xFFE53935) : const Color(0xFF8A7A72),
+              ),
+            ),
             const SizedBox(height: 6),
+          ],
           // Current bid display
           if (state.currentBid['bidder'] != null)
             Container(
@@ -1645,7 +1657,7 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
               );
             }),
             const SizedBox(height: 6),
-            // Bid / Pass
+            // Bid / Pass / Deal miss
             Builder(builder: (context) {
               final currentBidPoints = (state.currentBid['points'] as num?)?.toInt() ?? 0;
               final isMaxBid = currentBidPoints >= 20;
@@ -1670,6 +1682,18 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
                     ),
                     child: Text(L10n.of(context).mtPass),
                   ),
+                  if (state.canDeclareDealMiss) ...[
+                    const SizedBox(width: 8),
+                    OutlinedButton(
+                      onPressed: () => _confirmDealMiss(game),
+                      style: OutlinedButton.styleFrom(
+                        foregroundColor: const Color(0xFFD84315),
+                        side: const BorderSide(color: Color(0xFFFF7043)),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                      ),
+                      child: Text(L10n.of(context).mtDealMiss),
+                    ),
+                  ],
                 ],
               );
             }),
@@ -1684,6 +1708,31 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
         ],
       ),
     );
+  }
+
+  Future<void> _confirmDealMiss(GameService game) async {
+    final l10n = L10n.of(context);
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Text(l10n.mtDealMiss, style: const TextStyle(fontSize: 15, fontWeight: FontWeight.bold)),
+        content: const Text(
+          '딜미스를 선언하시겠습니까?\n\n본인 점수에서 5점이 차감되고, 다음에 성공하는 주공이 적립된 딜미스 점수를 모두 가져갑니다.',
+          style: TextStyle(fontSize: 13),
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx, false), child: Text(l10n.mtCancel)),
+          FilledButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            style: FilledButton.styleFrom(backgroundColor: const Color(0xFFD84315)),
+            child: Text(l10n.mtDealMiss),
+          ),
+        ],
+      ),
+    );
+    if (ok == true) {
+      game.mightyDeclareDealMiss();
+    }
   }
 
   Widget _buildSuitChip(String suit, String label, Color color, {bool enabled = true}) {
@@ -2214,6 +2263,11 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
+          if (game.myTimeoutCount > 0)
+            Padding(
+              padding: const EdgeInsets.only(bottom: 6),
+              child: _buildTimeoutResetChip(game),
+            ),
           // Play button
           if (isPlaying && selectedCard != null && isSelectedLegal)
             Padding(
@@ -3116,6 +3170,34 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
                     final trump = suitSymbol[entry.trumpSuit] ?? entry.trumpSuit ?? '?';
                     for (final p in state.players) {
                       cumScores[p.id] = (cumScores[p.id] ?? 0) + (entry.scores[p.id] ?? 0);
+                    }
+                    if (entry.dealMiss) {
+                      return DataRow(
+                        color: WidgetStateProperty.all(const Color(0xFFFFF3E0)),
+                        cells: [
+                          DataCell(Text('${entry.round}', style: const TextStyle(fontWeight: FontWeight.w700))),
+                          DataCell(Text(
+                            L10n.of(context).mtDealMiss,
+                            style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w700, color: Color(0xFFD84315)),
+                          )),
+                          DataCell(Text(
+                            '+${entry.dealMissPool}',
+                            style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Color(0xFFD84315)),
+                          )),
+                          ...state.players.map((p) {
+                            final diff = entry.scores[p.id] ?? 0;
+                            final total = cumScores[p.id] ?? 0;
+                            return DataCell(Text(
+                              diff == 0 ? '$total' : '${diff > 0 ? '+' : ''}$diff / $total',
+                              style: TextStyle(
+                                fontSize: 10,
+                                fontWeight: diff != 0 ? FontWeight.bold : FontWeight.normal,
+                                color: diff < 0 ? const Color(0xFFC62828) : const Color(0xFF5A4038),
+                              ),
+                            ));
+                          }),
+                        ],
+                      );
                     }
                     return DataRow(
                       color: WidgetStateProperty.all(

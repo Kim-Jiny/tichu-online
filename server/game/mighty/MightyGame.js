@@ -30,6 +30,7 @@ class MightyGame {
     this.round = 0;
     this.hands = {};
     this.kitty = [];
+    this.dealMissPool = 0; // Accumulated points paid by deal-miss declarers; goes to next successful declarer
     this.trumpSuit = null;
     this.declarer = null;
     this.partner = null;
@@ -125,6 +126,7 @@ class MightyGame {
   handleAction(playerId, action) {
     switch (action.type) {
       case 'submit_bid': return this._handleBid(playerId, action);
+      case 'declare_deal_miss': return this._handleDealMiss(playerId, action);
       case 'change_trump': return this._handleChangeTrump(playerId, action);
       case 'raise_bid': return this._handleRaiseBid(playerId, action);
       case 'discard_kitty': return this._handleDiscardKitty(playerId, action);
@@ -172,6 +174,86 @@ class MightyGame {
     this.bids[playerId] = { points, suit };
     this.currentBid = { points, suit, bidder: playerId };
     return this._advanceBidding();
+  }
+
+  // ─── DEAL MISS ──────────────────────────────────────────
+  //
+  // During bidding, before you have made any bid or pass, if your hand is
+  // very weak (≤ 0.5 deal-miss points) you may declare a deal miss.
+  // You pay 5 points into a pool; the pool is awarded to the next declarer
+  // who succeeds. Scoring (only for deal-miss eligibility):
+  //   spade A = 0, joker = erases the strongest point card,
+  //   A/K/Q/J = 1, 10 = 0.5.
+  _evaluateDealMissScore(hand) {
+    let total = 0;
+    let hasJoker = false;
+    let maxCardValue = 0;
+    for (const cardId of hand) {
+      if (cardId === 'mighty_joker') { hasJoker = true; continue; }
+      if (cardId === 'mighty_spade_A') continue; // mighty — worth 0
+      const info = getCardInfo(cardId);
+      let v = 0;
+      if (info.rank === 'A' || info.rank === 'K' || info.rank === 'Q' || info.rank === 'J') v = 1;
+      else if (info.rank === '10') v = 0.5;
+      if (v > 0) {
+        total += v;
+        if (v > maxCardValue) maxCardValue = v;
+      }
+    }
+    if (hasJoker) total -= maxCardValue;
+    if (total < 0) total = 0;
+    return total;
+  }
+
+  _canDeclareDealMiss(playerId) {
+    if (this.state !== 'bidding') return false;
+    if (this.currentPlayer !== playerId) return false;
+    if (this.bids[playerId] !== undefined) return false;
+    return this._evaluateDealMissScore(this.hands[playerId] || []) <= 0.5;
+  }
+
+  _handleDealMiss(playerId, action) {
+    if (this.state !== 'bidding') {
+      return { success: false, messageKey: 'mighty_not_bidding_phase' };
+    }
+    if (playerId !== this.currentPlayer) {
+      return { success: false, messageKey: 'game_not_your_turn' };
+    }
+    if (this.bids[playerId] !== undefined) {
+      return { success: false, messageKey: 'mighty_deal_miss_already_acted' };
+    }
+    const handScore = this._evaluateDealMissScore(this.hands[playerId] || []);
+    if (handScore > 0.5) {
+      return { success: false, messageKey: 'mighty_deal_miss_hand_too_strong' };
+    }
+
+    // Penalty: 5 points off declarer, into the pool
+    this.scores[playerId] -= 5;
+    this.dealMissPool += 5;
+
+    // Record the event in history so it's visible on the scoreboard
+    const histScores = {};
+    for (const pid of this.playerIds) histScores[pid] = (pid === playerId) ? -5 : 0;
+    this.scoreHistory.push({
+      round: this.round,
+      dealMiss: true,
+      dealMisser: playerId,
+      dealMissPool: this.dealMissPool,
+      handScore,
+      scores: histScores,
+    });
+
+    // Redeal with the SAME dealer (same-dealer semantics like "everyone passed"),
+    // but do advance the round counter so this shows as a distinct round.
+    const savedDealer = this.dealerIndex;
+    this.startNewRound();
+    this.dealerIndex = savedDealer;
+    this.bidOrder = [];
+    for (let i = 1; i <= this.playerCount; i++) {
+      this.bidOrder.push(this.playerIds[(this.dealerIndex + i) % this.playerCount]);
+    }
+    this.currentPlayer = this.bidOrder[0];
+    return { success: true };
   }
 
   _isHigherBid(points, suit) {
@@ -661,6 +743,19 @@ class MightyGame {
       this.scores[pid] += result.scores[pid];
     }
 
+    // Deal-miss pool: awarded in full to the declarer on success
+    let dealMissBonus = 0;
+    if (result.success && this.dealMissPool > 0) {
+      dealMissBonus = this.dealMissPool;
+      this.scores[this.declarer] += dealMissBonus;
+      this.dealMissPool = 0;
+      // Reflect the bonus in result.scores so round-end UI matches cumulative totals
+      result.scores[this.declarer] = (result.scores[this.declarer] || 0) + dealMissBonus;
+    }
+    result.dealMissBonus = dealMissBonus;
+
+    const historyScores = { ...result.scores };
+
     this.scoreHistory.push({
       round: this.round,
       bid: this.currentBid.points,
@@ -669,7 +764,8 @@ class MightyGame {
       partner: this.partner,
       success: result.success,
       declarerPoints: result.declarerPoints,
-      scores: { ...result.scores },
+      dealMissBonus,
+      scores: historyScores,
     });
 
     this.roundResult = result;
@@ -771,6 +867,8 @@ class MightyGame {
       jokerSuitDeclared: this.jokerSuitDeclared,
       lastTrickCards: this.state === 'trick_end' ? this.lastTrickCards : [],
       lastTrickWinner: this.state === 'trick_end' ? this.lastTrickWinner : null,
+      dealMissPool: this.dealMissPool,
+      canDeclareDealMiss: this._canDeclareDealMiss(playerId),
       tricks: this.tricks.map(t => ({
         leader: t.leader,
         winner: t.winner,
@@ -841,6 +939,7 @@ class MightyGame {
       jokerSuitDeclared: this.jokerSuitDeclared,
       lastTrickCards: this.state === 'trick_end' ? this.lastTrickCards : [],
       lastTrickWinner: this.state === 'trick_end' ? this.lastTrickWinner : null,
+      dealMissPool: this.dealMissPool,
       remainingTrumps: (this.trumpSuit && this.trumpSuit !== 'no_trump' &&
         (this.state === 'playing' || this.state === 'trick_end'))
         ? this._countRemainingTrumps() : undefined,
@@ -969,6 +1068,7 @@ class MightyGame {
       }
       if (entry.declarer === oldId) entry.declarer = newId;
       if (entry.partner === oldId) entry.partner = newId;
+      if (entry.dealMisser === oldId) entry.dealMisser = newId;
     }
   }
 

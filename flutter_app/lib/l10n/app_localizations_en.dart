@@ -2682,6 +2682,14 @@ class L10nEn extends L10n {
   String get mtPass => 'Pass';
 
   @override
+  String get mtDealMiss => 'Deal miss';
+
+  @override
+  String mtDealMissPool(Object points) {
+    return 'Deal miss $points';
+  }
+
+  @override
   String get mtPoints => 'Points:';
 
   @override

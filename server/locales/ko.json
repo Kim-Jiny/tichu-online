@@ -240,5 +240,7 @@
   "mighty_invalid_friend_card": "유효하지 않은 프렌드 카드입니다",
   "mighty_not_play_phase": "플레이 단계가 아닙니다",
   "mighty_illegal_card": "해당 카드를 낼 수 없습니다",
-  "mighty_not_round_end": "라운드 종료 상태가 아닙니다"
+  "mighty_not_round_end": "라운드 종료 상태가 아닙니다",
+  "mighty_deal_miss_already_acted": "이미 비딩에 참여해서 딜미스를 선언할 수 없습니다",
+  "mighty_deal_miss_hand_too_strong": "손패가 너무 강해 딜미스를 선언할 수 없습니다"
 }

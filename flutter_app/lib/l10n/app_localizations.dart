@@ -4893,6 +4893,18 @@ abstract class L10n {
   /// **'Pass'**
   String get mtPass;
 
+  /// No description provided for @mtDealMiss.
+  ///
+  /// In en, this message translates to:
+  /// **'Deal miss'**
+  String get mtDealMiss;
+
+  /// No description provided for @mtDealMissPool.
+  ///
+  /// In en, this message translates to:
+  /// **'Deal miss {points}'**
+  String mtDealMissPool(Object points);
+
   /// No description provided for @mtPoints.
   ///
   /// In en, this message translates to:

@@ -873,6 +873,8 @@
   "mtWins": "{name} gewinnt!",
   "mtCurrentBid": "Aktuelles Gebot: {points} {suit}",
   "mtPass": "Passen",
+  "mtDealMiss": "Deal-Miss",
+  "mtDealMissPool": "Deal-Miss {points}",
   "mtPoints": "Punkte:",
   "mtBid": "Bieten {points} {suit}",
   "mtWaitingFor": "Warten auf {name}",

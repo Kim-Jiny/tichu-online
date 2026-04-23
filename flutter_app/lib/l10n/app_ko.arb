@@ -865,6 +865,8 @@
   "mtWins": "{name} 승리!",
   "mtCurrentBid": "현재 비딩: {points} {suit}",
   "mtPass": "패스",
+  "mtDealMiss": "딜미스",
+  "mtDealMissPool": "딜미스 {points}",
   "mtPoints": "점수:",
   "mtBid": "비딩 {points} {suit}",
   "mtWaitingFor": "{name} 대기 중",

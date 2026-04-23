@@ -2620,6 +2620,14 @@ class L10nKo extends L10n {
   String get mtPass => '패스';
 
   @override
+  String get mtDealMiss => '딜미스';
+
+  @override
+  String mtDealMissPool(Object points) {
+    return '딜미스 $points';
+  }
+
+  @override
   String get mtPoints => '점수:';
 
   @override

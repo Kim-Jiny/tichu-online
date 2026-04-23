@@ -130,6 +130,14 @@ function _isCardStillInPlay(game, cardId) {
 
 function decideBid(game, botId) {
   const hand = game.hands[botId];
+
+  // Deal miss: if we haven't bid/passed yet and the hand qualifies, declare it.
+  // The 5-point cost is worth avoiding a forced weak bid or losing as defender.
+  if (game.bids[botId] === undefined && typeof game._canDeclareDealMiss === 'function'
+      && game._canDeclareDealMiss(botId)) {
+    return { type: 'declare_deal_miss' };
+  }
+
   const strength = evaluateHandStrength(hand, game);
 
   const estimatedPoints = Math.min(20, game.options.minBid + Math.floor(strength / 2.5));

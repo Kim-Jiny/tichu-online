@@ -96,6 +96,10 @@ class MightyScoreHistoryEntry {
   final String? partner;
   final bool success;
   final int declarerPoints;
+  final int dealMissBonus;
+  final bool dealMiss;
+  final String? dealMisser;
+  final int dealMissPool;
   final Map<String, int> scores;
 
   MightyScoreHistoryEntry({
@@ -106,6 +110,10 @@ class MightyScoreHistoryEntry {
     this.partner,
     required this.success,
     required this.declarerPoints,
+    this.dealMissBonus = 0,
+    this.dealMiss = false,
+    this.dealMisser,
+    this.dealMissPool = 0,
     required this.scores,
   });
 
@@ -124,6 +132,10 @@ class MightyScoreHistoryEntry {
       partner: json['partner'],
       success: json['success'] == true,
       declarerPoints: (json['declarerPoints'] as num?)?.toInt() ?? 0,
+      dealMissBonus: (json['dealMissBonus'] as num?)?.toInt() ?? 0,
+      dealMiss: json['dealMiss'] == true,
+      dealMisser: json['dealMisser'],
+      dealMissPool: (json['dealMissPool'] as num?)?.toInt() ?? 0,
       scores: scores,
     );
   }
@@ -159,6 +171,8 @@ class MightyGameStateData {
   final List<MightyCompletedTrick> tricks;
   final List<MightyScoreHistoryEntry> scoreHistory;
   final Map<String, dynamic>? remainingTrumps;
+  final int dealMissPool;
+  final bool canDeclareDealMiss;
 
   MightyGameStateData({
     this.phase = '',
@@ -190,6 +204,8 @@ class MightyGameStateData {
     this.tricks = const [],
     this.scoreHistory = const [],
     this.remainingTrumps,
+    this.dealMissPool = 0,
+    this.canDeclareDealMiss = false,
   });
 
   factory MightyGameStateData.fromJson(Map<String, dynamic> json) {
@@ -276,6 +292,8 @@ class MightyGameStateData {
       remainingTrumps: json['remainingTrumps'] != null
           ? Map<String, dynamic>.from(json['remainingTrumps'])
           : null,
+      dealMissPool: (json['dealMissPool'] as num?)?.toInt() ?? 0,
+      canDeclareDealMiss: json['canDeclareDealMiss'] == true,
     );
   }
 }

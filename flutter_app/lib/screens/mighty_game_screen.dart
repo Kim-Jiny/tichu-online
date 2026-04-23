@@ -1801,17 +1801,33 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
             Builder(builder: (context) {
               final cbPoints = (state.currentBid['points'] as num?)?.toInt() ?? 0;
               final cbSuit = state.currentBid['suit'] as String?;
-              bool suitEnabled(String suit) {
-                if (cbPoints == 0) return true;
-                if (_bidPoints > cbPoints) return true;
-                if (_bidPoints == cbPoints && suit == 'no_trump' && cbSuit != 'no_trump') return true;
-                if (_bidPoints < cbPoints) return false;
-                return false;
+              final modeMin = state.mode == '6p' ? 14 : 13;
+              // Minimum bid points needed to pick this suit given the current
+              // table bid. NT over a suited bid can tie; anything else must
+              // strictly raise the points. Returns > 20 when unreachable.
+              int minBidFor(String suit) {
+                if (cbPoints == 0) return modeMin;
+                final raw = (suit == 'no_trump' && cbSuit != null && cbSuit != 'no_trump')
+                    ? cbPoints
+                    : cbPoints + 1;
+                return raw < modeMin ? modeMin : raw;
               }
-              // Auto-switch to no_trump if current suit is invalid
-              if (!suitEnabled(_bidSuit) && suitEnabled('no_trump')) {
+              bool suitAvailable(String suit) => minBidFor(suit) <= 20;
+              void selectSuit(String suit) {
+                final needed = minBidFor(suit);
+                if (needed > 20) return;
+                setState(() {
+                  if (_bidPoints < needed) _bidPoints = needed;
+                  _bidSuit = suit;
+                });
+              }
+              // Auto-switch away from an unreachable suit (e.g., suit cap-out
+              // at 20). Previously the user could get stuck on a grayed suit.
+              if (!suitAvailable(_bidSuit)) {
+                final fallback = ['no_trump', 'spade', 'heart', 'diamond', 'club']
+                    .firstWhere((s) => suitAvailable(s), orElse: () => 'no_trump');
                 WidgetsBinding.instance.addPostFrameCallback((_) {
-                  if (mounted) setState(() => _bidSuit = 'no_trump');
+                  if (mounted) setState(() => _bidSuit = fallback);
                 });
               }
               return Padding(
@@ -1819,11 +1835,16 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                   children: [
-                    _buildSuitChip('spade', '\u2660', const Color(0xFF2B2B2B), enabled: suitEnabled('spade')),
-                    _buildSuitChip('heart', '\u2665', const Color(0xFFD24B4B), enabled: suitEnabled('heart')),
-                    _buildSuitChip('diamond', '\u2666', const Color(0xFF6FB6E5), enabled: suitEnabled('diamond')),
-                    _buildSuitChip('club', '\u2663', const Color(0xFF4BAA6A), enabled: suitEnabled('club')),
-                    _buildSuitChip('no_trump', 'NT', const Color(0xFF7B1FA2), enabled: suitEnabled('no_trump')),
+                    _buildSuitChip('spade', '\u2660', const Color(0xFF2B2B2B),
+                      enabled: suitAvailable('spade'), onTap: () => selectSuit('spade')),
+                    _buildSuitChip('heart', '\u2665', const Color(0xFFD24B4B),
+                      enabled: suitAvailable('heart'), onTap: () => selectSuit('heart')),
+                    _buildSuitChip('diamond', '\u2666', const Color(0xFF6FB6E5),
+                      enabled: suitAvailable('diamond'), onTap: () => selectSuit('diamond')),
+                    _buildSuitChip('club', '\u2663', const Color(0xFF4BAA6A),
+                      enabled: suitAvailable('club'), onTap: () => selectSuit('club')),
+                    _buildSuitChip('no_trump', 'NT', const Color(0xFF7B1FA2),
+                      enabled: suitAvailable('no_trump'), onTap: () => selectSuit('no_trump')),
                   ],
                 ),
               );
@@ -1907,11 +1928,13 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
     }
   }
 
-  Widget _buildSuitChip(String suit, String label, Color color, {bool enabled = true}) {
+  Widget _buildSuitChip(String suit, String label, Color color, {bool enabled = true, VoidCallback? onTap}) {
     final isSelected = _bidSuit == suit;
     final effectiveColor = enabled ? color : const Color(0xFFBDBDBD);
     return GestureDetector(
-      onTap: enabled ? () => setState(() => _bidSuit = suit) : null,
+      onTap: enabled
+          ? (onTap ?? () => setState(() => _bidSuit = suit))
+          : null,
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 150),
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),

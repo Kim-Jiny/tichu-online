@@ -31,6 +31,10 @@ class GameRoom {
     // Slots blocked by host (host can block empty slots to effectively shrink the room).
     // Only meaningful for skull_king and love_letter. Tichu always requires full 4.
     this.blockedSlots = new Set();
+    // Subset of blockedSlots that were auto-blocked by the server at startGame
+    // (not manually blocked by the host). Cleared on game end so the room
+    // returns to its "host intent" state for the next game.
+    this.autoBlockedSlots = new Set();
     // Tichu-only: when true, the waiting room drops the fixed (0,2) vs (1,3)
     // team framing and randomly assigns teams at startGame. UI mirrors the
     // SK/Mighty free-seat layout.
@@ -137,7 +141,18 @@ class GameRoom {
       : this.maxPlayers;
     if (this.game && this.getPlayerCount() < minPlayersForGame && this.game.state !== 'game_end') {
       this.game = null;
+      // Abandoned game — release auto-blocked slots so the room reverts to
+      // the host's original configuration, same as a clean game_end return.
+      this._releaseAutoBlockedSlots();
     }
+  }
+
+  _releaseAutoBlockedSlots() {
+    if (this.autoBlockedSlots.size === 0) return;
+    for (const slotIdx of this.autoBlockedSlots) {
+      this.blockedSlots.delete(slotIdx);
+    }
+    this.autoBlockedSlots.clear();
   }
 
   // Mark player as disconnected (during game, don't remove)
@@ -755,6 +770,9 @@ class GameRoom {
       });
       this._preGamePlayers = null;
     }
+    // Release slots that were auto-blocked at startGame (e.g., 6-seat Mighty
+    // filled with 5 players). Host-applied blocks stay put.
+    this._releaseAutoBlockedSlots();
     for (const p of this.players) {
       if (p !== null) p.ready = false;
     }

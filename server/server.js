@@ -2709,15 +2709,26 @@ function handleStartGame(ws) {
     }
   }
   // Apply the deferred mighty auto-block now that every precondition passed.
+  // Tag the slot as auto-blocked so resetReady() can release it when the
+  // room returns to the waiting state after the game ends.
+  let autoBlockedSlot = -1;
   if (mightyWillAutoBlock) {
     for (let i = 0; i < room.maxPlayers; i++) {
       if (room.players[i] === null && !room.blockedSlots.has(i)) {
         room.blockedSlots.add(i);
+        room.autoBlockedSlots.add(i);
+        autoBlockedSlot = i;
         break;
       }
     }
   }
-  room.startGame();
+  const started = room.startGame();
+  if (started === false && autoBlockedSlot !== -1) {
+    // Defensive: if startGame rejected despite our checks, roll back the
+    // auto-block so the room isn't left in a half-mutated state.
+    room.blockedSlots.delete(autoBlockedSlot);
+    room.autoBlockedSlots.delete(autoBlockedSlot);
+  }
   broadcastRoomState(ws.roomId);
   broadcastRoomList();
   // Send initial cards to each player

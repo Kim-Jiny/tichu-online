@@ -991,17 +991,19 @@ function governmentFollow(game, botId, legalCards, winningCards, currentWinner, 
     if (_isEffectiveTopOfSuit(winnerCard, game)) {
       return pickSafeDump(legalCards, game);
     }
-    // Not top and opp behind: reinforce if trick value warrants OR if our only
-    // alternative is to dump a point card (which would feed opp)
-    if (oppBehind && winningCards.length > 0) {
-      if (isNT || trickPoints >= 2 || isLastPlayer) {
-        return pickSufficientWinner(winningCards, game, isLastPlayer, oppBehind);
-      }
-      const safe = getSafeDiscard(legalCards, game);
-      if (getCardInfo(safe).point > 0) {
-        return pickSufficientWinner(winningCards, game, isLastPlayer, oppBehind);
-      }
-      return safe;
+    // Declarer led a non-top card (e.g., ♥10 while ♥J/Q/K/A are still unplayed)
+    // and opp is still behind. If we don't cover, opp will cascade their point
+    // cards onto this trick. Reinforce with the minimum sufficient winner —
+    // that's A of the suit first, else mighty/joker.
+    // Exception: trump leads are usually intentional trump-draws; duck with
+    // a low trump instead of burning mighty.
+    const leadCard = game.currentTrick[0].cardId;
+    const leadIsTrump = leadCard === 'mighty_joker' ||
+      (game.trumpSuit && game.trumpSuit !== 'no_trump' &&
+       getCardInfo(leadCard).suit === game.trumpSuit);
+
+    if (!leadIsTrump && oppBehind && winningCards.length > 0) {
+      return pickSufficientWinner(winningCards, game, isLastPlayer, oppBehind);
     }
     return getSafeDiscard(legalCards, game);
   }

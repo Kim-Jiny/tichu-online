@@ -1835,14 +1835,16 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
             width: isSelected && enabled ? 2 : 1,
           ),
         ),
-        child: Text(
-          label,
-          style: TextStyle(
-            fontSize: 18,
-            color: effectiveColor,
-            fontWeight: isSelected && enabled ? FontWeight.bold : FontWeight.normal,
-          ),
-        ),
+        child: suit == 'no_trump'
+            ? Text(
+                label,
+                style: TextStyle(
+                  fontSize: 18,
+                  color: effectiveColor,
+                  fontWeight: isSelected && enabled ? FontWeight.bold : FontWeight.normal,
+                ),
+              )
+            : SuitIcon(suit: suit, size: 20, color: effectiveColor),
       ),
     );
   }
@@ -1945,13 +1947,7 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
                                   ),
                                 ),
                                 child: Center(
-                                  child: Text(
-                                    _suitSymbol(suit),
-                                    style: TextStyle(
-                                      fontSize: 18,
-                                      color: PlayingCard.suitColors[suit] ?? const Color(0xFF5A4038),
-                                    ),
-                                  ),
+                                  child: SuitIcon(suit: suit, size: 18),
                                 ),
                               ),
                             ),
@@ -2177,15 +2173,17 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
                         ),
                       ),
                       child: Center(
-                        child: Text(
-                          entry.$2,
-                          style: TextStyle(
-                            fontSize: 15,
-                            color: entry.$3,
-                            fontWeight: _selectedTrumpSuit == entry.$1 || entry.$1 == trumpSuit
-                                ? FontWeight.bold : FontWeight.normal,
-                          ),
-                        ),
+                        child: entry.$1 == 'no_trump'
+                            ? Text(
+                                entry.$2,
+                                style: TextStyle(
+                                  fontSize: 15,
+                                  color: entry.$3,
+                                  fontWeight: _selectedTrumpSuit == entry.$1 || entry.$1 == trumpSuit
+                                      ? FontWeight.bold : FontWeight.normal,
+                                ),
+                              )
+                            : SuitIcon(suit: entry.$1, size: 18, color: entry.$3),
                       ),
                     ),
                   ),

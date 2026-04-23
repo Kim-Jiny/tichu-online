@@ -186,7 +186,7 @@ class PlayingCard extends StatelessWidget {
               width: symbolSize,
               height: symbolSize,
               child: CustomPaint(
-                painter: _SuitPainter(suit: suit, color: color),
+                painter: SuitPainter(suit: suit, color: color),
               ),
             ),
             SizedBox(height: 2 * scale),
@@ -270,12 +270,45 @@ class PlayingCard extends StatelessWidget {
   }
 }
 
+/// Renders a suit glyph via [SuitPainter], bypassing the OS emoji font so the
+/// colour is predictable on Android (where ♥ / ♦ are otherwise promoted to
+/// coloured emoji that ignore [TextStyle.color]).
+class SuitIcon extends StatelessWidget {
+  final String suit;
+  final double size;
+  final Color? color;
+
+  const SuitIcon({super.key, required this.suit, this.size = 16, this.color});
+
+  @override
+  Widget build(BuildContext context) {
+    if (suit == 'no_trump') {
+      return Text(
+        'NT',
+        style: TextStyle(
+          fontSize: size,
+          fontWeight: FontWeight.bold,
+          color: color ?? const Color(0xFF7B1FA2),
+        ),
+      );
+    }
+    final paintColor = color ?? PlayingCard.suitColors[suit] ?? const Color(0xFF5A4038);
+    return SizedBox(
+      width: size,
+      height: size,
+      child: CustomPaint(
+        painter: SuitPainter(suit: suit, color: paintColor),
+      ),
+    );
+  }
+}
+
 /// Draws suit symbols using Canvas paths — consistent colors on all platforms.
-class _SuitPainter extends CustomPainter {
+class SuitPainter extends CustomPainter {
   final String suit;
   final Color color;
 
-  _SuitPainter({required this.suit, required this.color});
+  SuitPainter({required this.suit, required this.color});
 
   @override
   void paint(Canvas canvas, Size size) {
@@ -358,5 +391,5 @@ class _SuitPainter extends CustomPainter {
   }
 
   @override
-  bool shouldRepaint(_SuitPainter old) => suit != old.suit || color != old.color;
+  bool shouldRepaint(SuitPainter old) => suit != old.suit || color != old.color;
 }

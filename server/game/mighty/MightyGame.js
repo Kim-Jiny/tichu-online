@@ -296,10 +296,7 @@ class MightyGame {
     const savedDealer = this.dealerIndex;
     this.startNewRound();
     this.dealerIndex = savedDealer;
-    this.bidOrder = [];
-    for (let i = 1; i <= this.playerCount; i++) {
-      this.bidOrder.push(this.playerIds[(this.dealerIndex + i) % this.playerCount]);
-    }
+    this.bidOrder = this._buildBidOrder();
     this.currentPlayer = this.bidOrder[0];
 
     // Publish the reveal so every client can show who declared and what they held

@@ -1099,11 +1099,13 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
                           // Role badge
                           SizedBox(
                             height: 14,
-                            child: isDeclarer
-                                ? Text(L10n.of(context).mtDeclarer, style: const TextStyle(fontSize: 9, fontWeight: FontWeight.w800, color: Color(0xFFFF8A00)))
-                                : isPartner
-                                    ? Text(L10n.of(context).mtFriend, style: const TextStyle(fontSize: 9, fontWeight: FontWeight.w800, color: Color(0xFF4CAF50)))
-                                    : null,
+                            child: isExcluded
+                                ? Text(L10n.of(context).mtKillExcluded, style: const TextStyle(fontSize: 9, fontWeight: FontWeight.w800, color: Color(0xFFD84315)))
+                                : isDeclarer
+                                    ? Text(L10n.of(context).mtDeclarer, style: const TextStyle(fontSize: 9, fontWeight: FontWeight.w800, color: Color(0xFFFF8A00)))
+                                    : isPartner
+                                        ? Text(L10n.of(context).mtFriend, style: const TextStyle(fontSize: 9, fontWeight: FontWeight.w800, color: Color(0xFF4CAF50)))
+                                        : null,
                           ),
                           Row(
                             mainAxisAlignment: MainAxisAlignment.center,

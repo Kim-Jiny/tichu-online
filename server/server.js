@@ -3516,6 +3516,20 @@ function startTurnTimer(roomId) {
     return;
   }
 
+  // Mighty kill-select (6p only): declarer picks a kill target. Uses the
+  // standard turn time limit; auto-timeout resolves via getAutoTimeoutAction.
+  if (room.gameType === 'mighty' && gameState === 'kill_select') {
+    clearTurnTimer(roomId);
+    const declarer = room.game.declarer;
+    if (!declarer || room.isBot(declarer)) return;
+    const timeLimit = room.turnTimeLimit * 1000;
+    room.turnDeadline = Date.now() + timeLimit;
+    turnTimers[roomId] = setTimeout(() => {
+      handleTurnTimeout(roomId, declarer);
+    }, timeLimit);
+    return;
+  }
+
   // Love Letter: also set timer during effect_resolve (target/guess selection)
   if (room.gameType === 'love_letter' && gameState === 'effect_resolve') {
     if (turnTimers[roomId]) return; // Already has a timer

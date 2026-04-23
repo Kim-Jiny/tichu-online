@@ -32,6 +32,13 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
   String? _selectedTrumpSuit; // null = no change
   String? _lastKnownTrumpSuit; // tracks the last trumpSuit we rendered for; used to resync _selectedTrumpSuit when the server confirms a change
 
+  // Kitty-phase contract-change banner: auto-dismissing overlay that
+  // highlights trump/bid changes so non-declarers notice them.
+  String? _kittyContractTrump;
+  int? _kittyContractBid;
+  _ContractChangeInfo? _contractChangeBanner;
+  Timer? _contractChangeTimer;
+
   // Play state
   String? _selectedCard;
   String? _jokerSuitChoice;
@@ -117,6 +124,7 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
     _countdownTimer?.cancel();
     _gameEndCountdownTimer?.cancel();
     _cardViewRequestTimer?.cancel();
+    _contractChangeTimer?.cancel();
     super.dispose();
   }
 
@@ -289,6 +297,42 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
                     });
                   }
 
+                  // Kitty-phase contract-change detection: flash a banner when
+                  // the declarer changes trump or raises the bid so the other
+                  // players notice the contract shift.
+                  if (state.phase == 'kitty_exchange' && state.declarer != null) {
+                    final currTrump = state.trumpSuit;
+                    final currBid = (state.currentBid['points'] as num?)?.toInt();
+                    if (_kittyContractTrump != null && _kittyContractBid != null) {
+                      final trumpChanged = currTrump != null && currTrump != _kittyContractTrump;
+                      final bidRaised = currBid != null && currBid > _kittyContractBid!;
+                      if (trumpChanged || bidRaised) {
+                        final info = _ContractChangeInfo(
+                          oldTrump: trumpChanged ? _kittyContractTrump : null,
+                          newTrump: trumpChanged ? currTrump : null,
+                          oldBid: bidRaised ? _kittyContractBid : null,
+                          newBid: bidRaised ? currBid : null,
+                        );
+                        WidgetsBinding.instance.addPostFrameCallback((_) {
+                          if (!mounted) return;
+                          setState(() => _contractChangeBanner = info);
+                          _contractChangeTimer?.cancel();
+                          _contractChangeTimer = Timer(const Duration(milliseconds: 2600), () {
+                            if (!mounted) return;
+                            setState(() => _contractChangeBanner = null);
+                          });
+                        });
+                      }
+                    }
+                    _kittyContractTrump = currTrump;
+                    _kittyContractBid = currBid;
+                  } else {
+                    if (_kittyContractTrump != null || _kittyContractBid != null) {
+                      _kittyContractTrump = null;
+                      _kittyContractBid = null;
+                    }
+                  }
+
                   return Stack(
                     children: [
                       Column(
@@ -354,6 +398,8 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
                           _dismissedKillKey !=
                               '${state.round}-${state.lastKillEvent!.targetCardId}')
                         _buildKillRevealOverlay(state, state.lastKillEvent!),
+                      if (_contractChangeBanner != null)
+                        _buildContractChangeBanner(_contractChangeBanner!),
                     ],
                   );
                 },
@@ -3042,6 +3088,102 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
     return v.toStringAsFixed(1);
   }
 
+  Widget _buildContractChangeBanner(_ContractChangeInfo info) {
+    final l10n = L10n.of(context);
+    Widget suitChip(String suit) {
+      if (suit == 'no_trump') {
+        return Container(
+          padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
+          decoration: BoxDecoration(
+            color: const Color(0xFFF3E5F5),
+            borderRadius: BorderRadius.circular(6),
+          ),
+          child: const Text(
+            'NT',
+            style: TextStyle(fontSize: 14, fontWeight: FontWeight.w800, color: Color(0xFF7B1FA2)),
+          ),
+        );
+      }
+      final color = PlayingCard.suitColors[suit] ?? const Color(0xFF5A4038);
+      return Container(
+        padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(6),
+          border: Border.all(color: color.withValues(alpha: 0.3)),
+        ),
+        child: SuitIcon(suit: suit, size: 16, color: color),
+      );
+    }
+
+    final rows = <Widget>[];
+    if (info.oldTrump != null && info.newTrump != null) {
+      rows.add(Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text(
+            l10n.mtChangeTrump,
+            style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: Color(0xFF4E342E)),
+          ),
+          const SizedBox(width: 8),
+          suitChip(info.oldTrump!),
+          const SizedBox(width: 6),
+          const Icon(Icons.arrow_forward_rounded, size: 16, color: Color(0xFF8D6E63)),
+          const SizedBox(width: 6),
+          suitChip(info.newTrump!),
+        ],
+      ));
+    }
+    if (info.oldBid != null && info.newBid != null) {
+      if (rows.isNotEmpty) rows.add(const SizedBox(height: 6));
+      rows.add(Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          const Icon(Icons.trending_up_rounded, size: 16, color: Color(0xFFC62828)),
+          const SizedBox(width: 6),
+          Text(
+            '${info.oldBid}',
+            style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: Color(0xFF8A7A72)),
+          ),
+          const SizedBox(width: 6),
+          const Icon(Icons.arrow_forward_rounded, size: 16, color: Color(0xFF8D6E63)),
+          const SizedBox(width: 6),
+          Text(
+            '${info.newBid}',
+            style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w800, color: Color(0xFFC62828)),
+          ),
+        ],
+      ));
+    }
+    if (rows.isEmpty) return const SizedBox.shrink();
+
+    return Positioned(
+      top: 68,
+      left: 0,
+      right: 0,
+      child: IgnorePointer(
+        child: Center(
+          child: AnimatedContainer(
+            duration: const Duration(milliseconds: 200),
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 9),
+            decoration: BoxDecoration(
+              color: const Color(0xFFFFF8E1),
+              borderRadius: BorderRadius.circular(14),
+              border: Border.all(color: const Color(0xFFFFB74D), width: 2),
+              boxShadow: [
+                BoxShadow(color: Colors.black.withValues(alpha: 0.18), blurRadius: 10, offset: const Offset(0, 4)),
+              ],
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: rows,
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
   Widget _buildDealMissCardRows(List<String> cards) {
     final splitIndex = (cards.length / 2).ceil();
     final row1 = cards.take(splitIndex).toList();
@@ -4397,4 +4539,12 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
       ),
     );
   }
+}
+
+class _ContractChangeInfo {
+  final String? oldTrump;
+  final String? newTrump;
+  final int? oldBid;
+  final int? newBid;
+  _ContractChangeInfo({this.oldTrump, this.newTrump, this.oldBid, this.newBid});
 }

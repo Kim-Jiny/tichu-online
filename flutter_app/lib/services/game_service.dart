@@ -2231,10 +2231,13 @@ class GameService extends ChangeNotifier {
     needNickname = false;
     gameState = null;
     skGameState = null;
+    llGameState = null;
+    mightyGameState = null;
     spectatorGameState = null;
     _prevGameState = null;
     _prevSKGameState = null;
     _prevLLGameState = null;
+    _prevMightyGameState = null;
     currentGameType = 'tichu';
     myTimeoutCount = 0;
   }
@@ -2727,9 +2730,13 @@ class GameService extends ChangeNotifier {
     incomingCardViewRequests = [];
     cardViewers = [];
     gameState = null;
+    skGameState = null;
+    llGameState = null;
+    mightyGameState = null;
     _prevGameState = null;
     _prevSKGameState = null;
     _prevLLGameState = null;
+    _prevMightyGameState = null;
     errorMessage = 'room_restore_fallback';
     notifyListeners();
   }

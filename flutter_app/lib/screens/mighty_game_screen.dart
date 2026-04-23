@@ -30,6 +30,7 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
   String _friendSuit = 'spade';
   String _friendRank = 'A';
   String? _selectedTrumpSuit; // null = no change
+  String? _lastKnownTrumpSuit; // tracks the last trumpSuit we rendered for; used to resync _selectedTrumpSuit when the server confirms a change
 
   // Play state
   String? _selectedCard;
@@ -227,10 +228,12 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
                           _friendSuit = 'spade';
                           _friendRank = 'A';
                           _selectedTrumpSuit = null;
+                          _lastKnownTrumpSuit = null;
                         }
                         if (state.phase == 'kitty_exchange') {
                           _discardSelection.clear();
                           _selectedTrumpSuit = null;
+                          _lastKnownTrumpSuit = null;
                           // Smart default: mighty → trump A → joker → spade A
                           final myCards = state.myCards;
                           final mightyCard = state.mightyCard;
@@ -2061,6 +2064,12 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
     final isAtCap = bidPoints >= 20;
 
     final trumpSuit = state.trumpSuit ?? 'no_trump';
+    // Whenever the server confirms a trump change, resync our selection so
+    // the new suit is highlighted instead of the stale pre-change one.
+    if (_lastKnownTrumpSuit != null && _lastKnownTrumpSuit != trumpSuit) {
+      _selectedTrumpSuit = trumpSuit;
+    }
+    _lastKnownTrumpSuit = trumpSuit;
     _selectedTrumpSuit ??= trumpSuit;
     final isSameTrump = _selectedTrumpSuit == trumpSuit;
     final nextBid = math.min(20, bidPoints + 2);

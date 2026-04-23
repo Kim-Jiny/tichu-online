@@ -2447,12 +2447,21 @@ function handleSpectateRoom(ws, data) {
 }
 
 function handleRequestCardView(ws, data) {
-  if (!ws.roomId || !ws.isSpectator) {
+  if (!ws.roomId) {
     sendTo(ws, { type: 'error', message: t(ws.locale, 'not_spectating') });
     return;
   }
   const room = lobby.getRoom(ws.roomId);
   if (!room) return;
+  // Spectators can always ask. Killed-mighty players act as pseudo-spectators
+  // for the rest of the round so they have something to do.
+  const isKilledMighty = !ws.isSpectator && room.gameType === 'mighty'
+    && room.game && room.game.excludedPlayers
+    && room.game.excludedPlayers.has(ws.playerId);
+  if (!ws.isSpectator && !isKilledMighty) {
+    sendTo(ws, { type: 'error', message: t(ws.locale, 'not_spectating') });
+    return;
+  }
 
   const playerId = data.playerId;
   const result = room.requestCardView(ws.playerId, ws.nickname, playerId);
@@ -2473,10 +2482,19 @@ function handleRequestCardView(ws, data) {
     });
     if (room.game) {
       const permittedPlayers = room.getPermittedPlayers(ws.playerId);
-      const state = room.game.getStateForSpectator(permittedPlayers);
-      state.spectators = room.spectators.map((s) => ({ id: s.id, nickname: s.nickname }));
-      state.spectatorCount = room.spectators.length;
-      sendTo(ws, { type: 'spectator_game_state', state });
+      if (isKilledMighty) {
+        // Killed-mighty player still receives the normal player state; refresh
+        // just them so the newly granted cards appear on the scoreboard.
+        const state = room.game.getStateForPlayer(ws.playerId, permittedPlayers);
+        state.spectators = room.spectators.map((s) => ({ id: s.id, nickname: s.nickname }));
+        state.spectatorCount = room.spectators.length;
+        sendTo(ws, { type: 'game_state', state });
+      } else {
+        const state = room.game.getStateForSpectator(permittedPlayers);
+        state.spectators = room.spectators.map((s) => ({ id: s.id, nickname: s.nickname }));
+        state.spectatorCount = room.spectators.length;
+        sendTo(ws, { type: 'spectator_game_state', state });
+      }
     }
     return;
   }
@@ -2543,10 +2561,21 @@ function handleRespondCardView(ws, data) {
     // If allowed, send updated game state with the new permission
     if (allow && room.game) {
       const permittedPlayers = room.getPermittedPlayers(spectatorId);
-      const state = room.game.getStateForSpectator(permittedPlayers);
-      state.spectators = room.spectators.map((s) => ({ id: s.id, nickname: s.nickname }));
-      state.spectatorCount = room.spectators.length;
-      sendTo(spectatorWs, { type: 'spectator_game_state', state });
+      // If the requester is a killed-mighty player (not a real spectator),
+      // send player-state with their pseudo-spectator permissions merged in.
+      const isKilledRequester = room.gameType === 'mighty'
+        && room.game.excludedPlayers && room.game.excludedPlayers.has(spectatorId);
+      if (isKilledRequester) {
+        const state = room.game.getStateForPlayer(spectatorId, permittedPlayers);
+        state.spectators = room.spectators.map((s) => ({ id: s.id, nickname: s.nickname }));
+        state.spectatorCount = room.spectators.length;
+        sendTo(spectatorWs, { type: 'game_state', state });
+      } else {
+        const state = room.game.getStateForSpectator(permittedPlayers);
+        state.spectators = room.spectators.map((s) => ({ id: s.id, nickname: s.nickname }));
+        state.spectatorCount = room.spectators.length;
+        sendTo(spectatorWs, { type: 'spectator_game_state', state });
+      }
     }
   }
 
@@ -3256,6 +3285,12 @@ function sendGameStateToAll(roomId) {
 }
 
 function _broadcastState(roomId, room) {
+  // Clear out stale card-view permissions (killed-mighty players from the
+  // previous round who are now active again).
+  if (typeof room.pruneCardViewPermissions === 'function') {
+    room.pruneCardViewPermissions();
+  }
+
   // Build connection status map (skip null slots)
   const connectionStatus = {};
   for (const player of room.players) {
@@ -3268,6 +3303,8 @@ function _broadcastState(roomId, room) {
   // Build timeout count map by player name
   const roomTimeouts = timeoutCounts[roomId] || {};
 
+  const isMighty = room.gameType === 'mighty';
+
   // Send to human players (skip null slots and bots)
   for (const player of room.players) {
     if (player === null) continue;
@@ -3275,7 +3312,14 @@ function _broadcastState(roomId, room) {
     if (room.isBot(player.id)) continue;
     const ws = findWsByPlayerId(player.id);
     if (ws) {
-      const state = room.game.getStateForPlayer(player.id);
+      // Killed-mighty players get their scoreboard filled with peek data for
+      // any seat they've been granted viewing rights to.
+      const isExcluded = isMighty && room.game.excludedPlayers
+        && room.game.excludedPlayers.has(player.id);
+      const permitted = isExcluded
+        ? room.getPermittedPlayers(player.id)
+        : new Set();
+      const state = room.game.getStateForPlayer(player.id, permitted);
       state.players = state.players.map(p => ({
         ...p,
         connected: connectionStatus[p.id] !== false,

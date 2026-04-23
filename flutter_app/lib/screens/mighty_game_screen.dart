@@ -1025,6 +1025,10 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
   // ── Scoreboard (SK-style) ──
   Widget _buildScoreboard(MightyGameStateData state, GameService game) {
     final isSpectator = game.isSpectator;
+    final myId = game.playerId;
+    final isSelfExcluded = myId.isNotEmpty && state.excludedPlayers.contains(myId);
+    // Killed-mighty player acts as pseudo-spectator for the rest of the round.
+    final canRequestCardView = isSpectator || isSelfExcluded;
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 6),
       margin: EdgeInsets.zero,
@@ -1035,9 +1039,9 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
           final isDeclarer = p.id == state.declarer;
           final isPartner = state.friendRevealed && p.id == state.partner;
           final isExcluded = state.excludedPlayers.contains(p.id);
-          // Spectator card view state
-          final isPending = isSpectator && game.pendingCardViewRequests.contains(p.id);
-          final isApproved = isSpectator && game.approvedCardViews.contains(p.id) && p.canViewCards;
+          // Card-view state: real spectator OR killed-mighty player peeking.
+          final isPending = canRequestCardView && game.pendingCardViewRequests.contains(p.id);
+          final isApproved = canRequestCardView && game.approvedCardViews.contains(p.id) && p.canViewCards;
 
           // Opposition = not declarer and not revealed partner → can show pointCards
           final isGovt = p.id == state.declarer || (state.friendRevealed && p.id == state.partner);
@@ -1048,7 +1052,12 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
               opacity: isExcluded ? 0.45 : 1.0,
               child: GestureDetector(
               onTap: () {
-                if (isSpectator) {
+                // Self-tile always shows own profile (no request flow).
+                if (isSelf) {
+                  _showPlayerProfileDialog(p.name, game, isBot: p.id.startsWith('bot_'));
+                  return;
+                }
+                if (canRequestCardView) {
                   if (isApproved) {
                     setState(() => _viewingPlayerId = p.id);
                   } else if (!isPending) {
@@ -1156,8 +1165,8 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
                         ],
                       ),
                     ),
-                    // Spectator card view badges
-                    if (isSpectator && isPending)
+                    // Card view badges for spectators AND killed-mighty peekers
+                    if (canRequestCardView && !isSelf && isPending)
                       Positioned(
                         right: 2, top: -4,
                         child: Container(
@@ -1170,7 +1179,7 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
                           child: const Icon(Icons.schedule, size: 12, color: Color(0xFFFFB74D)),
                         ),
                       )
-                    else if (isSpectator && isApproved)
+                    else if (canRequestCardView && !isSelf && isApproved)
                       Positioned(
                         right: 2, top: -4,
                         child: Container(
@@ -1183,7 +1192,7 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
                           child: const Icon(Icons.visibility, size: 12, color: Color(0xFF64B5F6)),
                         ),
                       )
-                    else if (isSpectator)
+                    else if (canRequestCardView && !isSelf)
                       Positioned(
                         right: 2, top: -4,
                         child: Container(
@@ -2249,6 +2258,12 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
   Widget _buildHandArea(MightyGameStateData state, GameService game) {
     // Spectator card view
     if (game.isSpectator) {
+      return _buildSpectatorHandArea(state, game);
+    }
+    // Killed-mighty player — reuse the spectator-style peek panel so they can
+    // view any opponents they've been granted card-view permission for.
+    final myId = game.playerId;
+    if (myId.isNotEmpty && state.excludedPlayers.contains(myId)) {
       return _buildSpectatorHandArea(state, game);
     }
     final cards = state.myCards;

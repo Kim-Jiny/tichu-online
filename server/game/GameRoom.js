@@ -209,7 +209,12 @@ class GameRoom {
 
   // Request to view a player's cards
   requestCardView(spectatorId, spectatorNickname, playerId) {
-    if (!this.spectators.find(s => s.id === spectatorId)) {
+    // Valid requesters: real spectators OR killed-mighty players (who are
+    // sidelined for the current round and act as pseudo-spectators).
+    const isSpectator = this.spectators.find(s => s.id === spectatorId);
+    const isKilledMighty = this.gameType === 'mighty' && this.game
+      && this.game.excludedPlayers && this.game.excludedPlayers.has(spectatorId);
+    if (!isSpectator && !isKilledMighty) {
       return { success: false, message: 'Not a spectator' };
     }
     if (!this.players.some(p => p !== null && p.id === playerId)) {
@@ -268,6 +273,39 @@ class GameRoom {
   // Get permitted player IDs for a spectator
   getPermittedPlayers(spectatorId) {
     return this.spectatorPermissions[spectatorId] || new Set();
+  }
+
+  /**
+   * Remove card-view permissions for any requester who is neither a current
+   * spectator nor a currently-excluded mighty player. Used when a Mighty
+   * round ends and previously-killed players rejoin the next round — they
+   * lose their pseudo-spectator view of everyone else's cards.
+   */
+  pruneCardViewPermissions() {
+    const validRequesters = new Set(this.spectators.map(s => s.id));
+    if (this.gameType === 'mighty' && this.game && this.game.excludedPlayers) {
+      for (const pid of this.game.excludedPlayers) validRequesters.add(pid);
+    }
+    for (const requesterId of Object.keys(this.spectatorPermissions)) {
+      if (!validRequesters.has(requesterId)) {
+        delete this.spectatorPermissions[requesterId];
+      }
+    }
+    for (const playerId of Object.keys(this.pendingCardRequests)) {
+      this.pendingCardRequests[playerId] = this.pendingCardRequests[playerId].filter(r =>
+        validRequesters.has(r.spectatorId)
+      );
+      if (this.pendingCardRequests[playerId].length === 0) {
+        delete this.pendingCardRequests[playerId];
+      }
+    }
+    for (const timerKey of Object.keys(this.cardRequestTimers)) {
+      const [, requesterId] = timerKey.split(':');
+      if (!validRequesters.has(requesterId)) {
+        clearTimeout(this.cardRequestTimers[timerKey]);
+        delete this.cardRequestTimers[timerKey];
+      }
+    }
   }
 
   // Get pending requests for a player

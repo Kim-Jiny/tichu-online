@@ -1036,11 +1036,15 @@ class MightyGame {
 
   // ─── STATE FOR PLAYER ───────────────────────────────────
 
-  getStateForPlayer(playerId) {
+  getStateForPlayer(playerId, permittedPlayerIds = new Set()) {
     const playerIdx = this.playerIds.indexOf(playerId);
     const isMyTurn = this.currentPlayer === playerId;
     const legalCards = isMyTurn && this.state === 'playing'
       ? this._getLegalCards(playerId) : [];
+
+    // Excluded (killed / self-KO'd) players can act like pseudo-spectators —
+    // they can see the cards of players who approved a card-view request.
+    const isExcluded = this.excludedPlayers.has(playerId);
 
     // Build players array (relative positioning, same pattern as SK)
     // Government = declarer + revealed partner; opposition = everyone else
@@ -1053,6 +1057,7 @@ class MightyGame {
       const pid = this.playerIds[(playerIdx + i) % this.playerCount];
       const isSelf = pid === playerId;
       const isGovt = governmentIds.has(pid);
+      const canReveal = isExcluded && permittedPlayerIds.has(pid);
       players.push({
         id: pid,
         name: this.playerNames[pid] || pid,
@@ -1062,6 +1067,10 @@ class MightyGame {
         trickCount: this.tricks.filter(t => t.winner === pid).length,
         pointCount: countPoints(this.pointCards[pid] || []),
         pointCards: isGovt ? [] : (this.pointCards[pid] || []),
+        // Surface hand cards the same way the spectator state does when an
+        // excluded player has been granted permission to peek.
+        cards: canReveal ? sortCards(this.hands[pid] || [], this.trumpSuit) : [],
+        canViewCards: canReveal,
         connected: true,
         timeoutCount: 0,
       });

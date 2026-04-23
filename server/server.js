@@ -3350,6 +3350,13 @@ function scheduleBotActions(roomId) {
   }
 
   const baseDelay = getBotBaseDelay(activeBotSpeed);
+  // Mighty: after a deal-miss or kill reveal, hold bots until the grace period
+  // elapses so players can read the reveal overlay before the next action.
+  let effectiveDelay = baseDelay;
+  if (room.gameType === 'mighty' && typeof room.game.revealGracePeriodEndAt === 'number') {
+    const graceRemaining = room.game.revealGracePeriodEndAt - Date.now();
+    if (graceRemaining > baseDelay) effectiveDelay = graceRemaining;
+  }
 
   setTimeout(() => {
     delete pendingBotCheck[roomId];
@@ -3426,7 +3433,7 @@ function scheduleBotActions(roomId) {
         }
       }
     }
-  }, baseDelay);
+  }, effectiveDelay);
 }
 
 // --- Turn Timer System ---

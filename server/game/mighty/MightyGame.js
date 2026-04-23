@@ -63,9 +63,10 @@ class MightyGame {
     this.jokerCallActive = false; // true when joker-call card is played with jokerCall flag
     this.lastTrickCards = [];
     this.lastTrickWinner = null;
-    this.lastDealMissEvent = null; // { playerId, playerName, cards, handScore, round } — visible to all; cleared on first bid/pass of new round
-    this.lastKillEvent = null; // { declarerId, declarerName, targetCardId, victimId, victimName, wasKitty } — shown once after kill/suicide
+    this.lastDealMissEvent = null; // { playerId, playerName, cards, handScore, round } — visible to all; dismiss by tap locally, server clears on next round
+    this.lastKillEvent = null; // { declarerId, declarerName, targetCardId, victimId, victimName, wasKitty } — same tap-to-dismiss UX
     this.newlyReceivedCards = {}; // pid → [cardId, ...] highlight for post-kill redistribution; cleared when kitty phase ends
+    this.revealGracePeriodEndAt = 0; // when a reveal event fires, bot actions are held until this timestamp (ms since epoch) so players can read the overlay
   }
 
   start() {
@@ -171,9 +172,6 @@ class MightyGame {
     if (playerId !== this.currentPlayer) {
       return { success: false, messageKey: 'game_not_your_turn' };
     }
-
-    // First bid/pass of a new round dismisses any outstanding deal-miss reveal
-    this.lastDealMissEvent = null;
 
     const { points, suit, pass } = action;
 
@@ -307,6 +305,7 @@ class MightyGame {
       handScore,
       round: eventRound,
     };
+    this.revealGracePeriodEndAt = Date.now() + 1000;
     return { success: true };
   }
 
@@ -451,6 +450,7 @@ class MightyGame {
         : (this.playerNames[victimId] || victimId),
       wasKitty,
     };
+    this.revealGracePeriodEndAt = Date.now() + 1000;
 
     if (wasKitty) {
       this._resolveSuicide();

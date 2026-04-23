@@ -612,9 +612,11 @@ function pickFriendCard(hand, game) {
 function getRemainingPlayers(game, botId) {
   const playedIds = new Set(game.currentTrick.map(p => p.pid));
   const leaderIdx = game.playerIds.indexOf(game.currentTrick[0].pid);
+  const excluded = game.excludedPlayers || new Set();
   const remaining = [];
   for (let i = 0; i < game.playerCount; i++) {
     const pid = game.playerIds[(leaderIdx + i) % game.playerCount];
+    if (excluded.has(pid)) continue;
     if (!playedIds.has(pid) && pid !== botId) {
       remaining.push(pid);
     }
@@ -1131,7 +1133,7 @@ function governmentFollow(game, botId, legalCards, winningCards, currentWinner, 
   const isFriend = _isFriend(game, botId);
   const declarerLed = game.currentTrick.length > 0 && game.currentTrick[0].pid === game.declarer;
   const trickPoints = getTrickPointCount(game);
-  const isLastPlayer = game.currentTrick.length === game.playerCount - 1;
+  const isLastPlayer = game.currentTrick.length === (game.activePlayerCount || game.playerCount) - 1;
   const isNT = !game.trumpSuit || game.trumpSuit === 'no_trump';
 
   // ─── Friend responding to declarer's lead ───
@@ -1218,7 +1220,7 @@ function governmentFollow(game, botId, legalCards, winningCards, currentWinner, 
 function oppositionFollow(game, botId, legalCards, winningCards, currentWinner, winnerOnOurTeam, mightyCard) {
   const govBehind = hasGovernmentBehind(game, botId);
   const trickPoints = getTrickPointCount(game);
-  const isLastPlayer = game.currentTrick.length === game.playerCount - 1;
+  const isLastPlayer = game.currentTrick.length === (game.activePlayerCount || game.playerCount) - 1;
   const govPoints = _getGovernmentPointCount(game);
   const bidTarget = game.currentBid.points;
   const isNT = !game.trumpSuit || game.trumpSuit === 'no_trump';
@@ -1311,7 +1313,7 @@ function getCurrentTrickWinner(game) {
   const leadCard = game.currentTrick[0].cardId;
   const leadSuit = leadCard === 'mighty_joker' ? game.jokerSuitDeclared : getCardInfo(leadCard).suit;
   const isFirstTrick = game.tricks.length === 0;
-  const totalTricks = Math.floor(50 / game.playerCount);
+  const totalTricks = Math.floor(50 / (game.activePlayerCount || game.playerCount));
   const isLastTrick = game.tricks.length === totalTricks - 1;
   const jokerCallCard = game.getJokerCallCard();
   const jokerIsWeak = (isFirstTrick && !game.options.firstTrickJokerPower) ||
@@ -1336,7 +1338,7 @@ function canBeatCurrentWinner(game, cardId) {
   const leadCard = game.currentTrick[0].cardId;
   const leadSuit = leadCard === 'mighty_joker' ? game.jokerSuitDeclared : getCardInfo(leadCard).suit;
   const isFirstTrick = game.tricks.length === 0;
-  const totalTricks = Math.floor(50 / game.playerCount);
+  const totalTricks = Math.floor(50 / (game.activePlayerCount || game.playerCount));
   const isLastTrick = game.tricks.length === totalTricks - 1;
   const jokerCallCard = game.getJokerCallCard();
   const jokerIsWeak = (isFirstTrick && !game.options.firstTrickJokerPower) ||
@@ -1359,7 +1361,7 @@ function getWinnerCardId(game) {
   const leadCard = game.currentTrick[0].cardId;
   const leadSuit = leadCard === 'mighty_joker' ? game.jokerSuitDeclared : getCardInfo(leadCard).suit;
   const isFirstTrick = game.tricks.length === 0;
-  const totalTricks = Math.floor(50 / game.playerCount);
+  const totalTricks = Math.floor(50 / (game.activePlayerCount || game.playerCount));
   const isLastTrick = game.tricks.length === totalTricks - 1;
   const jokerCallCard = game.getJokerCallCard();
   const jokerIsWeak = (isFirstTrick && !game.options.firstTrickJokerPower) ||

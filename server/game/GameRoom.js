@@ -571,13 +571,7 @@ class GameRoom {
       this._preGamePlayers = null;
     }
 
-    if (this.gameType === 'mighty') {
-      // Mighty: exactly 5 players required
-      const activePlayers = this.players.filter(p => p !== null);
-      if (activePlayers.length < 5) return false;
-      this._preGamePlayers = this.players.slice();
-      this.players = activePlayers;
-    } else if (this.gameType === 'love_letter') {
+    if (this.gameType === 'love_letter') {
       // Love Letter: all non-null players participate
       const activePlayers = this.players.filter(p => p !== null);
       if (activePlayers.length < 2) return false;

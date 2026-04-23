@@ -3344,7 +3344,19 @@ class L10nEn extends L10n {
 
   @override
   String get shopEffectSeasonStatsReset =>
-      'Effect: Reset ranked stats (wins/losses/games)';
+      'Effect: Reset ALL ranked stats across Tichu, Skull King, and Mighty (wins/losses/games)';
+
+  @override
+  String get shopEffectTichuSeasonStatsReset =>
+      'Effect: Reset Tichu ranked stats (wins/losses/games)';
+
+  @override
+  String get shopEffectSKSeasonStatsReset =>
+      'Effect: Reset Skull King ranked stats (wins/losses/games)';
+
+  @override
+  String get shopEffectMightySeasonStatsReset =>
+      'Effect: Reset Mighty ranked stats (wins/losses/games)';
 
   @override
   String shopPriceGold(int price) {

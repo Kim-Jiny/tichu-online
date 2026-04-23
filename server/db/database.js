@@ -461,7 +461,10 @@ async function initDatabase() {
         ('nickname_change', '닉네임 변경권', '닉네임 변경권', 'Nickname Change', 'Nickname-Änderung', 'utility', 500, FALSE, TRUE, NULL, TRUE, 'nickname_change', NULL, '{}'::jsonb),
         ('top_card_counter_7d', '티츄 탑패 카운터(7일)', '티츄 탑패 카운터(7일)', 'Tichu Top Card Counter (7d)', 'Tichu-Trumpfzähler (7T)', 'utility', 1000, FALSE, FALSE, 7, TRUE, NULL, NULL, '{}'::jsonb),
         ('stats_reset', '전적 초기화권', '전적 초기화권', 'Stats Reset', 'Statistik-Reset', 'utility', 2000, FALSE, TRUE, NULL, TRUE, 'stats_reset', NULL, '{}'::jsonb),
-        ('season_stats_reset', '랭킹전적 초기화권', '랭킹전적 초기화권', 'Ranked Stats Reset', 'Ranglistenstatistik-Reset', 'utility', 1000, FALSE, TRUE, NULL, TRUE, 'season_stats_reset', NULL, '{}'::jsonb),
+        ('season_stats_reset', '전체 랭킹전적 초기화권', '전체 랭킹전적 초기화권', 'All Ranked Stats Reset', 'Alle-Ranglistenstatistik-Reset', 'utility', 1500, FALSE, TRUE, NULL, TRUE, 'season_stats_reset', NULL, '{}'::jsonb),
+        ('tichu_season_stats_reset', '티츄 랭킹전적 초기화권', '티츄 랭킹전적 초기화권', 'Tichu Ranked Stats Reset', 'Tichu-Ranglistenstatistik-Reset', 'utility', 700, FALSE, TRUE, NULL, TRUE, 'tichu_season_stats_reset', NULL, '{}'::jsonb),
+        ('sk_season_stats_reset', '스컬킹 랭킹전적 초기화권', '스컬킹 랭킹전적 초기화권', 'Skull King Ranked Stats Reset', 'Skull-King-Ranglistenstatistik-Reset', 'utility', 700, FALSE, TRUE, NULL, TRUE, 'sk_season_stats_reset', NULL, '{}'::jsonb),
+        ('mighty_season_stats_reset', '마이티 랭킹전적 초기화권', '마이티 랭킹전적 초기화권', 'Mighty Ranked Stats Reset', 'Mighty-Ranglistenstatistik-Reset', 'utility', 700, FALSE, TRUE, NULL, TRUE, 'mighty_season_stats_reset', NULL, '{}'::jsonb),
         ('leave_reset', '탈주 카운트 초기화', '탈주 카운트 초기화', 'Leave Count Reset', 'Flucht-Zähler-Reset', 'utility', 2000, FALSE, TRUE, NULL, TRUE, 'leave_count_reset', NULL, '{}'::jsonb),
         ('mighty_trump_counter_7d', '마이티 기루다 카운터(7일)', '마이티 기루다 카운터(7일)', 'Mighty Trump Counter (7d)', 'Mighty-Trumpfzähler (7T)', 'utility', 1000, FALSE, FALSE, 7, TRUE, NULL, NULL, '{}'::jsonb),
         ('banner_season_gold', '시즌 골드 배너', '시즌 골드 배너', 'Season Gold Banner', 'Saison-Gold-Banner', 'banner', 0, TRUE, FALSE, 30, FALSE, NULL, NULL, '{}'::jsonb),
@@ -2211,7 +2214,11 @@ async function useItem(nickname, itemKey) {
       return { success: false, messageKey: 'db_item_not_found' };
     }
     const { effect_type: effectType, effect_value: effectValue } = itemRes.rows[0];
-    const allowedEffects = ['leave_count_reduce', 'leave_count_reset', 'stats_reset', 'season_stats_reset'];
+    const allowedEffects = [
+      'leave_count_reduce', 'leave_count_reset', 'stats_reset',
+      'season_stats_reset',
+      'tichu_season_stats_reset', 'sk_season_stats_reset', 'mighty_season_stats_reset',
+    ];
     if (!allowedEffects.includes(effectType)) {
       await client.query('ROLLBACK');
       return { success: false, messageKey: 'db_item_not_usable' };
@@ -2247,9 +2254,31 @@ async function useItem(nickname, itemKey) {
         [nickname]
       );
     } else if (effectType === 'season_stats_reset') {
+      // Legacy "all ranked" reset — wipes every game's season stats. Users who
+      // purchased this before the per-game split still redeem it as intended,
+      // now correctly including the mighty columns the old query missed.
       await client.query(
         `UPDATE tc_users SET season_games = 0, season_wins = 0, season_losses = 0,
-           sk_season_games = 0, sk_season_wins = 0, sk_season_losses = 0
+           sk_season_games = 0, sk_season_wins = 0, sk_season_losses = 0,
+           mighty_season_games = 0, mighty_season_wins = 0, mighty_season_losses = 0
+         WHERE nickname = $1`,
+        [nickname]
+      );
+    } else if (effectType === 'tichu_season_stats_reset') {
+      await client.query(
+        `UPDATE tc_users SET season_games = 0, season_wins = 0, season_losses = 0
+         WHERE nickname = $1`,
+        [nickname]
+      );
+    } else if (effectType === 'sk_season_stats_reset') {
+      await client.query(
+        `UPDATE tc_users SET sk_season_games = 0, sk_season_wins = 0, sk_season_losses = 0
+         WHERE nickname = $1`,
+        [nickname]
+      );
+    } else if (effectType === 'mighty_season_stats_reset') {
+      await client.query(
+        `UPDATE tc_users SET mighty_season_games = 0, mighty_season_wins = 0, mighty_season_losses = 0
          WHERE nickname = $1`,
         [nickname]
       );

@@ -1553,7 +1553,10 @@
   },
   "shopEffectStatsReset": "Effect: Reset all stats (wins/losses/games)",
   "shopEffectLeaveReset": "Effect: Reset leave count to 0",
-  "shopEffectSeasonStatsReset": "Effect: Reset ranked stats (wins/losses/games)",
+  "shopEffectSeasonStatsReset": "Effect: Reset ALL ranked stats across Tichu, Skull King, and Mighty (wins/losses/games)",
+  "shopEffectTichuSeasonStatsReset": "Effect: Reset Tichu ranked stats (wins/losses/games)",
+  "shopEffectSKSeasonStatsReset": "Effect: Reset Skull King ranked stats (wins/losses/games)",
+  "shopEffectMightySeasonStatsReset": "Effect: Reset Mighty ranked stats (wins/losses/games)",
   "shopPriceGold": "{price} Gold",
   "@shopPriceGold": {
     "placeholders": {

@@ -6042,8 +6042,26 @@ abstract class L10n {
   /// No description provided for @shopEffectSeasonStatsReset.
   ///
   /// In en, this message translates to:
-  /// **'Effect: Reset ranked stats (wins/losses/games)'**
+  /// **'Effect: Reset ALL ranked stats across Tichu, Skull King, and Mighty (wins/losses/games)'**
   String get shopEffectSeasonStatsReset;
+
+  /// No description provided for @shopEffectTichuSeasonStatsReset.
+  ///
+  /// In en, this message translates to:
+  /// **'Effect: Reset Tichu ranked stats (wins/losses/games)'**
+  String get shopEffectTichuSeasonStatsReset;
+
+  /// No description provided for @shopEffectSKSeasonStatsReset.
+  ///
+  /// In en, this message translates to:
+  /// **'Effect: Reset Skull King ranked stats (wins/losses/games)'**
+  String get shopEffectSKSeasonStatsReset;
+
+  /// No description provided for @shopEffectMightySeasonStatsReset.
+  ///
+  /// In en, this message translates to:
+  /// **'Effect: Reset Mighty ranked stats (wins/losses/games)'**
+  String get shopEffectMightySeasonStatsReset;
 
   /// No description provided for @shopPriceGold.
   ///

@@ -3361,7 +3361,19 @@ class L10nDe extends L10n {
 
   @override
   String get shopEffectSeasonStatsReset =>
-      'Effekt: Ranglistenstatistiken zurücksetzen (Siege/Niederlagen/Spiele)';
+      'Effekt: ALLE Ranglistenstatistiken zurücksetzen (Tichu, Skull King, Mighty — Siege/Niederlagen/Spiele)';
+
+  @override
+  String get shopEffectTichuSeasonStatsReset =>
+      'Effekt: Tichu-Ranglistenstatistiken zurücksetzen (Siege/Niederlagen/Spiele)';
+
+  @override
+  String get shopEffectSKSeasonStatsReset =>
+      'Effekt: Skull-King-Ranglistenstatistiken zurücksetzen (Siege/Niederlagen/Spiele)';
+
+  @override
+  String get shopEffectMightySeasonStatsReset =>
+      'Effekt: Mighty-Ranglistenstatistiken zurücksetzen (Siege/Niederlagen/Spiele)';
 
   @override
   String shopPriceGold(int price) {

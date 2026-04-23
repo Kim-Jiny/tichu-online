@@ -1463,6 +1463,27 @@ class _ShopScreenState extends State<ShopScreen> {
           'gradient': [const Color(0xFFF3E5F5), const Color(0xFFCE93D8)],
           'borderColor': const Color(0xFFBA68C8),
         };
+      case 'tichu_season_stats_reset':
+        return {
+          'icon': Icons.emoji_events,
+          'iconColor': const Color(0xFF355D89),
+          'gradient': [const Color(0xFFE3F2FD), const Color(0xFFBBDEFB)],
+          'borderColor': const Color(0xFF90CAF9),
+        };
+      case 'sk_season_stats_reset':
+        return {
+          'icon': Icons.emoji_events,
+          'iconColor': const Color(0xFF424242),
+          'gradient': [const Color(0xFFECEFF1), const Color(0xFFB0BEC5)],
+          'borderColor': const Color(0xFF90A4AE),
+        };
+      case 'mighty_season_stats_reset':
+        return {
+          'icon': Icons.emoji_events,
+          'iconColor': const Color(0xFF1565C0),
+          'gradient': [const Color(0xFFE1F5FE), const Color(0xFFB3E5FC)],
+          'borderColor': const Color(0xFF81D4FA),
+        };
     }
 
     // Fallback by category
@@ -1607,6 +1628,12 @@ class _ShopScreenState extends State<ShopScreen> {
       info.add(l10n.shopEffectStatsReset);
     } else if (effectType == 'season_stats_reset') {
       info.add(l10n.shopEffectSeasonStatsReset);
+    } else if (effectType == 'tichu_season_stats_reset') {
+      info.add(l10n.shopEffectTichuSeasonStatsReset);
+    } else if (effectType == 'sk_season_stats_reset') {
+      info.add(l10n.shopEffectSKSeasonStatsReset);
+    } else if (effectType == 'mighty_season_stats_reset') {
+      info.add(l10n.shopEffectMightySeasonStatsReset);
     }
 
     showDialog(

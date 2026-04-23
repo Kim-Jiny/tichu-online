@@ -3270,7 +3270,17 @@ class L10nKo extends L10n {
   String get shopEffectLeaveReset => '효과: 탈주 카운트 0으로 초기화';
 
   @override
-  String get shopEffectSeasonStatsReset => '효과: 랭킹 전적(승/패/판수) 초기화';
+  String get shopEffectSeasonStatsReset =>
+      '효과: 티츄·스컬킹·마이티 랭킹 전적(승/패/판수) 모두 초기화';
+
+  @override
+  String get shopEffectTichuSeasonStatsReset => '효과: 티츄 랭킹 전적(승/패/판수) 초기화';
+
+  @override
+  String get shopEffectSKSeasonStatsReset => '효과: 스컬킹 랭킹 전적(승/패/판수) 초기화';
+
+  @override
+  String get shopEffectMightySeasonStatsReset => '효과: 마이티 랭킹 전적(승/패/판수) 초기화';
 
   @override
   String shopPriceGold(int price) {

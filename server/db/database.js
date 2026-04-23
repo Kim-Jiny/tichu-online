@@ -1634,11 +1634,16 @@ async function getRecentMatches(nickname, limit = 5) {
       );
       const deserterNickname = row.deserter_nickname || null;
       const isDesertionLoss = deserterNickname === nickname;
+      // When someone else deserts a Mighty match, remaining players are saved
+      // as isDraw:true / isWinner:false (no rating or W/L change). The DB
+      // only persists is_winner, so we reconstruct the draw state the same
+      // way the SK / LL queries do.
+      const isDraw = deserterNickname != null && deserterNickname !== nickname;
       mightyMatches.push({
         id: row.id,
         gameType: 'mighty',
-        won: row.my_winner === true,
-        isDraw: false,
+        won: isDraw ? false : row.my_winner === true,
+        isDraw,
         isDesertionLoss,
         deserterNickname,
         myScore: row.my_score,

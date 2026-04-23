@@ -1052,6 +1052,27 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
     );
   }
 
+  // Build the compact pass / bid chip shown on a scoreboard tile during the
+  // bidding phase. p.bid is either the string 'pass' or a Map {points, suit}.
+  Widget? _bidScoreboardBadge(dynamic bid) {
+    if (bid == 'pass') {
+      return const Text(
+        'PASS',
+        style: TextStyle(fontSize: 9, fontWeight: FontWeight.w800, color: Color(0xFF9E9E9E), letterSpacing: 0.5),
+      );
+    }
+    if (bid is Map) {
+      final points = bid['points'];
+      final suit = bid['suit']?.toString() ?? '';
+      final sym = _suitSymbol(suit);
+      return Text(
+        '$sym$points',
+        style: const TextStyle(fontSize: 9, fontWeight: FontWeight.w800, color: Color(0xFF1565C0)),
+      );
+    }
+    return null;
+  }
+
   // ── Scoreboard (SK-style) ──
   Widget _buildScoreboard(MightyGameStateData state, GameService game) {
     final isSpectator = game.isSpectator;
@@ -1135,7 +1156,8 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.center,
                         children: [
-                          // Role badge
+                          // Role badge — during bidding show the pass/bid
+                          // chip, after bidding show the declarer/friend role.
                           SizedBox(
                             height: 14,
                             child: isExcluded
@@ -1144,7 +1166,9 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
                                     ? Text(L10n.of(context).mtDeclarer, style: const TextStyle(fontSize: 9, fontWeight: FontWeight.w800, color: Color(0xFFFF8A00)))
                                     : isPartner
                                         ? Text(L10n.of(context).mtFriend, style: const TextStyle(fontSize: 9, fontWeight: FontWeight.w800, color: Color(0xFF4CAF50)))
-                                        : null,
+                                        : (state.phase == 'bidding' && p.bid != null)
+                                            ? _bidScoreboardBadge(p.bid)
+                                            : null,
                           ),
                           Row(
                             mainAxisAlignment: MainAxisAlignment.center,

@@ -559,10 +559,9 @@ class MightyGame {
     for (const pid of this.playerIds) {
       const hand = this.hands[pid] || [];
       for (const cardId of hand) {
+        if (cardId === 'mighty_joker') continue;
         const info = getCardInfo(cardId);
-        if (info.suit === this.trumpSuit || cardId === 'mighty_joker') {
-          count++;
-        }
+        if (info.suit === this.trumpSuit) count++;
       }
     }
     return { count, suit: this.trumpSuit };

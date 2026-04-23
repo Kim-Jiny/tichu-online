@@ -1183,8 +1183,12 @@ function governmentFollow(game, botId, legalCards, winningCards, currentWinner, 
     }
     // Declarer led a non-top card (e.g., ♥10 while ♥J/Q/K/A are still unplayed)
     // and opp is still behind. If we don't cover, opp will cascade their point
-    // cards onto this trick. Reinforce with the minimum sufficient winner —
-    // that's A of the suit first, else mighty/joker.
+    // cards onto this trick. Reinforce with a GUARANTEED winner — A of the
+    // lead suit first, else mighty/joker. A cheap-trump ruff isn't good
+    // enough here: opp behind can still over-trump it, whereas declarer is
+    // explicitly trusting the friend to secure this trick. Only fall back to
+    // the cheap-ruff path (via pickSufficientWinner) when no guaranteed
+    // finisher is available.
     // Exception: trump leads are usually intentional trump-draws; duck with
     // a low trump instead of burning mighty.
     const leadCard = game.currentTrick[0].cardId;
@@ -1193,6 +1197,11 @@ function governmentFollow(game, botId, legalCards, winningCards, currentWinner, 
        getCardInfo(leadCard).suit === game.trumpSuit);
 
     if (!leadIsTrump && oppBehind && winningCards.length > 0) {
+      const cheap = winningCards.filter(c => c !== mightyCard && c !== 'mighty_joker');
+      const sureCheap = cheap.filter(c => _isEffectiveTopOfSuit(c, game));
+      if (sureCheap.length > 0) return getWeakestCard(sureCheap, game);
+      if (winningCards.includes(mightyCard)) return mightyCard;
+      if (winningCards.includes('mighty_joker')) return 'mighty_joker';
       return pickSufficientWinner(winningCards, game, isLastPlayer, oppBehind);
     }
     return getSafeDiscard(legalCards, game);

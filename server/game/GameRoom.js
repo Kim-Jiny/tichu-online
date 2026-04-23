@@ -595,6 +595,18 @@ class GameRoom {
   }
 
   startGame() {
+    // Clear stale spectator card-view state from the previous game — hands are
+    // re-dealt each game, so permissions must be re-approved. Without this,
+    // a spectator who was previously approved hits "Already have permission"
+    // when re-requesting for the new game, and (worse) could see the fresh
+    // hand without the player re-consenting.
+    this.spectatorPermissions = {};
+    this.pendingCardRequests = {};
+    for (const timerKey of Object.keys(this.cardRequestTimers)) {
+      clearTimeout(this.cardRequestTimers[timerKey]);
+    }
+    this.cardRequestTimers = {};
+
     // Restore pre-game slot structure if a previous game rearranged them
     // (e.g. game was abandoned via player removal without full resetReady)
     if (this._preGamePlayers) {

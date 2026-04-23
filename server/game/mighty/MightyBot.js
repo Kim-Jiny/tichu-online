@@ -562,7 +562,7 @@ function pickFriendCard(hand, game) {
     if (s.count === 1) score += 5;
     else if (s.count === 2) score += 3;
     else if (s.count === 3) score += 1;
-    else if (s.count === 0) score -= 3;   // void: friend's A is weaker, we'd have trumped anyway
+    else if (s.count === 0) score -= 8;   // void: we can't even follow to feed friend's A — strictly worse than 4+ length
     else score -= 3;                      // 4+ suit: our own length already covers it
     if (s.hasK) score += 2;
     candidates.push({ cardId: aceId, score });
@@ -867,6 +867,19 @@ function decideLeadCard(game, botId, legalCards) {
   const mightyCard = game.getMightyCard();
   const botIsGov = isGovernmentSelf(game, botId);
 
+  // Joker-endgame override: 2 cards left on the trick-before-last, one is
+  // joker. If we lead the non-joker and win, joker is forced onto the last
+  // trick where it's weak (priority 0) and loses. Lead joker now instead —
+  // it's still strong here, and the non-joker card leads the last trick,
+  // where it can actually compete.
+  if (legalCards.length === 2 && legalCards.includes('mighty_joker')) {
+    const totalTricks = Math.floor(50 / (game.activePlayerCount || game.playerCount));
+    const nextIsLast = game.tricks.length === totalTricks - 2;
+    if (nextIsLast && !game.options.lastTrickJokerPower) {
+      return 'mighty_joker';
+    }
+  }
+
   // Group cards by suit
   const suitCards = {};
   for (const cardId of legalCards) {
@@ -1121,11 +1134,26 @@ function decideFollowCard(game, botId, legalCards) {
     ? winnerIsGov
     : (game.friendRevealed ? !winnerIsGov : currentWinner !== game.declarer);
 
-  if (botIsGov) {
-    return governmentFollow(game, botId, legalCards, winningCards, currentWinner, winnerOnOurTeam, mightyCard);
-  } else {
-    return oppositionFollow(game, botId, legalCards, winningCards, currentWinner, winnerOnOurTeam, mightyCard);
+  const pick = botIsGov
+    ? governmentFollow(game, botId, legalCards, winningCards, currentWinner, winnerOnOurTeam, mightyCard)
+    : oppositionFollow(game, botId, legalCards, winningCards, currentWinner, winnerOnOurTeam, mightyCard);
+
+  // Joker-endgame override: in the {trump, joker} endgame, winning now with the
+  // non-joker leaves joker alone to lead the next trick. If that next trick is
+  // the last trick (joker weak by default), the joker lead collapses to
+  // priority 0 and loses automatically. Swap to play joker NOW while it still
+  // wins — the non-joker card becomes the next lead instead, where it has a
+  // real chance.
+  if (pick && pick !== 'mighty_joker' && winningCards.includes('mighty_joker')
+      && winningCards.includes(pick) && legalCards.includes('mighty_joker')
+      && legalCards.length === 2) {
+    const totalTricks = Math.floor(50 / (game.activePlayerCount || game.playerCount));
+    const nextIsLast = game.tricks.length === totalTricks - 2;
+    if (nextIsLast && !game.options.lastTrickJokerPower) {
+      return 'mighty_joker';
+    }
   }
+  return pick;
 }
 
 function governmentFollow(game, botId, legalCards, winningCards, currentWinner, winnerOnOurTeam, mightyCard) {
@@ -1189,6 +1217,20 @@ function governmentFollow(game, botId, legalCards, winningCards, currentWinner, 
     // Unsecure ally: reinforce on valuable tricks OR when safe-discard would
     // still hand opp a point card
     if (winningCards.length > 0) {
+      // Guard: don't over-reinforce with mighty/joker when the ally is already
+      // winning with a strong trump ruff (J+). Only mighty / higher trump can
+      // beat it, and burning a specials-tier finisher (and, if the friend card
+      // is the joker, revealing the partnership) isn't worth the marginal
+      // insurance on a trick declarer is already taking.
+      const cheap = winningCards.filter(c => c !== mightyCard && c !== 'mighty_joker');
+      if (cheap.length === 0 && !isNT && winnerCard
+          && winnerCard !== mightyCard && winnerCard !== 'mighty_joker') {
+        const winnerInfo = getCardInfo(winnerCard);
+        if (winnerInfo.suit === game.trumpSuit &&
+            RANK_ORDER[winnerInfo.rank] >= RANK_ORDER['J']) {
+          return pickSafeDump(legalCards, game);
+        }
+      }
       if (isNT || trickPoints >= 2 || isLastPlayer) {
         return pickSufficientWinner(winningCards, game, isLastPlayer, oppBehind);
       }
@@ -1290,6 +1332,19 @@ function oppositionFollow(game, botId, legalCards, winningCards, currentWinner, 
   // Ally not secure — reinforce on valuable tricks OR when safe-discard would
   // hand over a point card
   if (winningCards.length > 0) {
+    // Symmetric to governmentFollow: don't over-reinforce with mighty/joker
+    // when the ally is already on a strong trump ruff (J+); only mighty / top
+    // trump can overcut, and burning our finisher for that marginal insurance
+    // isn't worth it.
+    const cheap = winningCards.filter(c => c !== mightyCard && c !== 'mighty_joker');
+    if (cheap.length === 0 && !isNT && winnerCard
+        && winnerCard !== mightyCard && winnerCard !== 'mighty_joker') {
+      const winnerInfo = getCardInfo(winnerCard);
+      if (winnerInfo.suit === game.trumpSuit &&
+          RANK_ORDER[winnerInfo.rank] >= RANK_ORDER['J']) {
+        return pickSafeDump(legalCards, game);
+      }
+    }
     if (trickPoints >= 2 || isLastPlayer || isNT) {
       return pickSufficientWinner(winningCards, game, isLastPlayer, govBehind);
     }

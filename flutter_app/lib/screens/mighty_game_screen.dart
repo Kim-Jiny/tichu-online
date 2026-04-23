@@ -3023,19 +3023,7 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
                   style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: Color(0xFF5A4038)),
                 ),
                 const SizedBox(height: 10),
-                Wrap(
-                  alignment: WrapAlignment.center,
-                  spacing: 4,
-                  runSpacing: 4,
-                  children: event.cards
-                      .map((cardId) => PlayingCard(
-                            cardId: _displayCardId(cardId),
-                            width: 38,
-                            height: 54,
-                            isInteractive: false,
-                          ))
-                      .toList(),
-                ),
+                _buildDealMissCardRows(event.cards),
                 const SizedBox(height: 10),
                 Text(
                   l10n.mtDealMissTapToClose,
@@ -3052,6 +3040,39 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
   String _formatHandScore(double v) {
     if (v == v.roundToDouble()) return v.toInt().toString();
     return v.toStringAsFixed(1);
+  }
+
+  Widget _buildDealMissCardRows(List<String> cards) {
+    final splitIndex = (cards.length / 2).ceil();
+    final row1 = cards.take(splitIndex).toList();
+    final row2 = cards.skip(splitIndex).toList();
+    Widget buildRow(List<String> ids) {
+      return Row(
+        mainAxisAlignment: MainAxisAlignment.center,
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          for (int i = 0; i < ids.length; i++) ...[
+            if (i > 0) const SizedBox(width: 4),
+            PlayingCard(
+              cardId: _displayCardId(ids[i]),
+              width: 38,
+              height: 54,
+              isInteractive: false,
+            ),
+          ],
+        ],
+      );
+    }
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        buildRow(row1),
+        if (row2.isNotEmpty) ...[
+          const SizedBox(height: 4),
+          buildRow(row2),
+        ],
+      ],
+    );
   }
 
   // ── Kill Phase UI ──

@@ -1038,6 +1038,18 @@ function decideFollowCard(game, botId, legalCards) {
   const winnerIsGov = isGovernment(game, currentWinner);
   const winningCards = legalCards.filter(cardId => canBeatCurrentWinner(game, cardId));
 
+  // First-trick-friend (초구 프렌즈): the first-trick winner becomes declarer's
+  // partner. If the bot isn't the declarer, it actively tries to win the first
+  // trick whenever it holds an effective-top A-equivalent or is the last player
+  // able to take the pot. This overrides the usual "conserve mighty" logic.
+  if (game.friendCard === 'first_trick' && game.tricks.length === 0
+      && botId !== game.declarer && winningCards.length > 0) {
+    const isLastPlayer = game.currentTrick.length === game.activePlayerCount - 1;
+    const sureWinners = winningCards.filter(c => _isEffectiveTopOfSuit(c, game));
+    if (sureWinners.length > 0) return getWeakestCard(sureWinners, game);
+    if (isLastPlayer) return getWeakestCard(winningCards, game);
+  }
+
   const winnerOnOurTeam = botIsGov
     ? winnerIsGov
     : (game.friendRevealed ? !winnerIsGov : currentWinner !== game.declarer);

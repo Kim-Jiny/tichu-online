@@ -3358,9 +3358,11 @@ function scheduleBotActions(roomId) {
       const graceRemaining = room.game.revealGracePeriodEndAt - Date.now();
       if (graceRemaining > effectiveDelay) effectiveDelay = graceRemaining;
     }
-    // Kitty exchange is information-rich (kitty reveal, trump change, friend
-    // selection) — give players at least 2 s to watch the declarer bot work.
-    if (room.game.state === 'kitty_exchange' && effectiveDelay < 2000) {
+    // Kitty exchange and kill selection are information-rich (kitty reveal,
+    // trump change, friend selection, kill target) — give players at least 2s
+    // to watch the declarer bot work.
+    if ((room.game.state === 'kitty_exchange' || room.game.state === 'kill_select')
+        && effectiveDelay < 2000) {
       effectiveDelay = 2000;
     }
   }

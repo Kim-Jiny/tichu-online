@@ -732,6 +732,15 @@ class L10nEn extends L10n {
   String get lobbyMightyRanked => 'Mighty - Ranked';
 
   @override
+  String get lobbyTichuRandomSeating => 'Tichu - Random Teams';
+
+  @override
+  String get lobbyRandomSeatingOn => 'Random teams';
+
+  @override
+  String get lobbyRandomSeatingOff => 'Fixed teams';
+
+  @override
   String lobbySkullKingPlayers(int count) {
     return 'Skull King · ${count}P';
   }

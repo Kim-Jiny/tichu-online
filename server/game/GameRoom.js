@@ -31,6 +31,10 @@ class GameRoom {
     // Slots blocked by host (host can block empty slots to effectively shrink the room).
     // Only meaningful for skull_king and love_letter. Tichu always requires full 4.
     this.blockedSlots = new Set();
+    // Tichu-only: when true, the waiting room drops the fixed (0,2) vs (1,3)
+    // team framing and randomly assigns teams at startGame. UI mirrors the
+    // SK/Mighty free-seat layout.
+    this.randomSeating = false;
     this.spectators = []; // { id, nickname }
     this.game = null;
     // Bot tracking
@@ -594,6 +598,24 @@ class GameRoom {
     return this.maxPlayers - this.blockedSlots.size;
   }
 
+  setRandomSeating(playerId, enabled) {
+    if (playerId !== this.hostId) {
+      return { success: false, messageKey: 'host_only' };
+    }
+    if (this.game) {
+      return { success: false, messageKey: 'room_no_switch_in_game' };
+    }
+    if (this.gameType !== 'tichu') {
+      return { success: false, messageKey: 'invalid_slot' };
+    }
+    if (this.isRanked) {
+      // Ranked already randomizes seats on startGame; toggle would be a no-op.
+      return { success: false, messageKey: 'no_team_change_ranked' };
+    }
+    this.randomSeating = !!enabled;
+    return { success: true };
+  }
+
   startGame() {
     // Clear stale spectator card-view state from the previous game — hands are
     // re-dealt each game, so permissions must be re-approved. Without this,
@@ -648,8 +670,10 @@ class GameRoom {
       if (this.players.some((p) => p === null)) return false;
     }
     const playerIds = this.players.map((p) => p.id);
-    if (this.gameType === 'skull_king' || this.gameType === 'love_letter' || this.gameType === 'mighty' || this.isRanked) {
-      // SK/LL or ranked: fully shuffle all seats
+    if (this.gameType === 'skull_king' || this.gameType === 'love_letter' || this.gameType === 'mighty' || this.isRanked || this.randomSeating) {
+      // SK/LL/ranked/random-seating Tichu: fully shuffle all seats. For
+      // random-seating Tichu this also produces the random team assignment
+      // the host opted into.
       for (let i = playerIds.length - 1; i > 0; i--) {
         const j = Math.floor(Math.random() * (i + 1));
         [playerIds[i], playerIds[j]] = [playerIds[j], playerIds[i]];
@@ -771,6 +795,7 @@ class GameRoom {
       skExpansions: [...this.skExpansions],
       blockedSlots: [...this.blockedSlots].sort((a, b) => a - b),
       effectiveMaxPlayers: this.getEffectiveMaxPlayers(),
+      randomSeating: this.randomSeating,
     };
   }
 

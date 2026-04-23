@@ -1443,6 +1443,24 @@ abstract class L10n {
   /// **'Mighty - Ranked'**
   String get lobbyMightyRanked;
 
+  /// No description provided for @lobbyTichuRandomSeating.
+  ///
+  /// In en, this message translates to:
+  /// **'Tichu - Random Teams'**
+  String get lobbyTichuRandomSeating;
+
+  /// No description provided for @lobbyRandomSeatingOn.
+  ///
+  /// In en, this message translates to:
+  /// **'Random teams'**
+  String get lobbyRandomSeatingOn;
+
+  /// No description provided for @lobbyRandomSeatingOff.
+  ///
+  /// In en, this message translates to:
+  /// **'Fixed teams'**
+  String get lobbyRandomSeatingOff;
+
   /// No description provided for @lobbySkullKingPlayers.
   ///
   /// In en, this message translates to:

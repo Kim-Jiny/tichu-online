@@ -242,7 +242,19 @@ class _SpectatorScreenState extends State<SpectatorScreen> {
                     child: Column(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        if (isLandscape)
+                        if (game.currentGameType == 'tichu' && game.roomRandomSeating)
+                          // Random-seating Tichu: flat SK-style list, no team
+                          // framing (teams are randomized at game start).
+                          Wrap(
+                            alignment: WrapAlignment.center,
+                            spacing: 12,
+                            runSpacing: 12,
+                            children: [
+                              for (int i = 0; i < players.length; i++)
+                                _buildPlayerSlot(game, players[i], i),
+                            ],
+                          )
+                        else if (isLandscape)
                           Wrap(
                             alignment: WrapAlignment.center,
                             spacing: 20,

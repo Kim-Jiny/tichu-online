@@ -2733,64 +2733,80 @@ class _LobbyScreenState extends State<LobbyScreen> {
               if (i < game.roomPlayers.length - 1) const SizedBox(height: 8),
             ],
           ] else ...[
-            Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Expanded(
-                  child: Column(
-                    children: [
-                      const Text(
-                        'TEAM A',
-                        style: TextStyle(
-                          fontSize: 13,
-                          fontWeight: FontWeight.bold,
-                          color: Color(0xFF6A9BD1),
-                        ),
-                      ),
-                      const SizedBox(height: 8),
-                      _buildClickablePlayerSlot(
-                        game.roomPlayers[0],
-                        slotIndex: 0,
-                        game: game,
-                      ),
-                      const SizedBox(height: 6),
-                      _buildClickablePlayerSlot(
-                        game.roomPlayers[2],
-                        slotIndex: 2,
-                        game: game,
-                      ),
-                    ],
-                  ),
+            // Compact random-team chip for non-ranked Tichu. Host taps to
+            // toggle; non-hosts see the current state as read-only.
+            if (game.currentGameType == 'tichu' && !game.isRankedRoom) ...[
+              _buildRandomSeatingChip(game),
+              const SizedBox(height: 12),
+            ],
+            if (game.roomRandomSeating) ...[
+              for (int i = 0; i < game.roomPlayers.length; i++) ...[
+                _buildClickablePlayerSlot(
+                  game.roomPlayers[i],
+                  slotIndex: i,
+                  game: game,
                 ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Column(
-                    children: [
-                      const Text(
-                        'TEAM B',
-                        style: TextStyle(
-                          fontSize: 13,
-                          fontWeight: FontWeight.bold,
-                          color: Color(0xFFF5B8C0),
-                        ),
-                      ),
-                      const SizedBox(height: 8),
-                      _buildClickablePlayerSlot(
-                        game.roomPlayers[1],
-                        slotIndex: 1,
-                        game: game,
-                      ),
-                      const SizedBox(height: 6),
-                      _buildClickablePlayerSlot(
-                        game.roomPlayers[3],
-                        slotIndex: 3,
-                        game: game,
-                      ),
-                    ],
-                  ),
-                ),
+                if (i < game.roomPlayers.length - 1) const SizedBox(height: 8),
               ],
-            ),
+            ] else
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Expanded(
+                    child: Column(
+                      children: [
+                        const Text(
+                          'TEAM A',
+                          style: TextStyle(
+                            fontSize: 13,
+                            fontWeight: FontWeight.bold,
+                            color: Color(0xFF6A9BD1),
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+                        _buildClickablePlayerSlot(
+                          game.roomPlayers[0],
+                          slotIndex: 0,
+                          game: game,
+                        ),
+                        const SizedBox(height: 6),
+                        _buildClickablePlayerSlot(
+                          game.roomPlayers[2],
+                          slotIndex: 2,
+                          game: game,
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      children: [
+                        const Text(
+                          'TEAM B',
+                          style: TextStyle(
+                            fontSize: 13,
+                            fontWeight: FontWeight.bold,
+                            color: Color(0xFFF5B8C0),
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+                        _buildClickablePlayerSlot(
+                          game.roomPlayers[1],
+                          slotIndex: 1,
+                          game: game,
+                        ),
+                        const SizedBox(height: 6),
+                        _buildClickablePlayerSlot(
+                          game.roomPlayers[3],
+                          slotIndex: 3,
+                          game: game,
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
           ],
           const SizedBox(height: 12),
           if (game.isHost) ...[
@@ -4695,6 +4711,41 @@ class _LobbyScreenState extends State<LobbyScreen> {
       orElse: () => null,
     );
     return me?.isReady ?? false;
+  }
+
+  Widget _buildRandomSeatingChip(GameService game) {
+    final on = game.roomRandomSeating;
+    final canToggle = game.isHost;
+    final fg = on ? const Color(0xFF7B1FA2) : const Color(0xFF8A7A72);
+    final bg = on ? const Color(0xFFF3E5F5) : const Color(0xFFF6F3F2);
+    final border = on ? const Color(0xFFCE93D8) : const Color(0xFFE0DAD6);
+    final label = on
+        ? L10n.of(context).lobbyRandomSeatingOn
+        : L10n.of(context).lobbyRandomSeatingOff;
+    final child = Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
+      decoration: BoxDecoration(
+        color: bg,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: border, width: 1),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(on ? Icons.shuffle_on : Icons.shuffle, size: 14, color: fg),
+          const SizedBox(width: 6),
+          Text(
+            label,
+            style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: fg),
+          ),
+        ],
+      ),
+    );
+    if (!canToggle) return child;
+    return GestureDetector(
+      onTap: () => game.setRandomSeating(!on),
+      child: child,
+    );
   }
 
   Widget _buildClickablePlayerSlot(

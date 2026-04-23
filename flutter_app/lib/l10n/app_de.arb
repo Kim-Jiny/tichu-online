@@ -237,6 +237,9 @@
   "lobbySkullKingRanked": "Skull King - Ranglistenspiel",
   "lobbyTichuRanked": "Tichu - Ranglistenspiel",
   "lobbyMightyRanked": "Mighty - Ranglistenspiel",
+  "lobbyTichuRandomSeating": "Tichu - Zufallsteams",
+  "lobbyRandomSeatingOn": "Zufallsteams",
+  "lobbyRandomSeatingOff": "Feste Teams",
   "lobbySkullKingPlayers": "Skull King · {count}P",
   "lobbyLoveLetterPlayers": "Love Letter · {count}P",
   "@lobbyLoveLetterPlayers": {

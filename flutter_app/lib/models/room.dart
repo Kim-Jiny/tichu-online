@@ -20,6 +20,10 @@ class Room {
   /// Enabled Skull King expansions — only meaningful when [gameType] is
   /// `skull_king`. Subset of `['kraken', 'white_whale', 'loot']`.
   final List<String> skExpansions;
+  /// Tichu-only: host opted to randomize teams at game start instead of
+  /// using the fixed (0,2) vs (1,3) seat-to-team mapping. Mirrors SK/Mighty
+  /// free-seat UX.
+  final bool randomSeating;
 
   Room({
     required this.id,
@@ -37,6 +41,7 @@ class Room {
     this.maxPlayers = 4,
     int? effectiveMaxPlayers,
     this.skExpansions = const [],
+    this.randomSeating = false,
   }) : effectiveMaxPlayers = effectiveMaxPlayers ?? maxPlayers;
 
   bool get isSkullKing => gameType == 'skull_king';
@@ -76,6 +81,7 @@ class Room {
               ? (json['effectiveMaxPlayers'] as num).toInt()
               : null),
       skExpansions: expansions,
+      randomSeating: json['randomSeating'] == true,
     );
   }
 }

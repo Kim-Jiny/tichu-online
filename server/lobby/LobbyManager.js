@@ -42,6 +42,7 @@ class LobbyManager {
         turnTimeLimit: room.turnTimeLimit,
         targetScore: room.targetScore,
         skExpansions: [...(room.skExpansions || [])],
+        randomSeating: !!room.randomSeating,
       });
     }
     return list;

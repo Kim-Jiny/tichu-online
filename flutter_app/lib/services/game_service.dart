@@ -50,6 +50,9 @@ class GameService extends ChangeNotifier {
   int roomTargetScore = 1000;
   int roomMaxPlayers = 4;
   Set<int> roomBlockedSlots = <int>{};
+  /// Tichu-only: host opted to randomize team assignment at startGame
+  /// instead of using the fixed (0,2) vs (1,3) seat-to-team mapping.
+  bool roomRandomSeating = false;
 
   /// Effective max players after host-blocked slots are excluded.
   int get effectiveRoomMaxPlayers => roomMaxPlayers - roomBlockedSlots.length;
@@ -689,6 +692,7 @@ class GameService extends ChangeNotifier {
         currentGameType = 'tichu';
         roomMaxPlayers = 4;
         roomBlockedSlots = <int>{};
+        roomRandomSeating = false;
         chatMessages = [];
         autoRejectCardView = false;
         autoAcceptCardView = false;
@@ -714,6 +718,7 @@ class GameService extends ChangeNotifier {
         roomPlayers = List.filled(roomMaxPlayers, null);
         isHost = false;
         isRankedRoom = false;
+        roomRandomSeating = false;
         roomTurnTimeLimit = 30;
         roomTargetScore = 1000;
         roomMaxPlayers = 4;
@@ -783,6 +788,7 @@ class GameService extends ChangeNotifier {
             (p) => p != null && p.id == playerId && p.isHost,
           );
           isRankedRoom = room['isRanked'] == true;
+          roomRandomSeating = room['randomSeating'] == true;
           roomTurnTimeLimit = room['turnTimeLimit'] ?? 30;
           roomTargetScore = room['targetScore'] ?? 1000;
           if (room['gameInProgress'] != true) {
@@ -2110,6 +2116,7 @@ class GameService extends ChangeNotifier {
     roomTargetScore = 1000;
     roomMaxPlayers = 4;
     roomBlockedSlots = <int>{};
+    roomRandomSeating = false;
     currentGameType = 'tichu';
     roomList = [];
     spectatableRooms = [];
@@ -2508,6 +2515,7 @@ class GameService extends ChangeNotifier {
     roomTargetScore = 1000;
     roomMaxPlayers = 4;
     roomBlockedSlots = <int>{};
+    roomRandomSeating = false;
     currentGameType = 'tichu';
     isSpectator = false;
     gameState = null;
@@ -2548,6 +2556,10 @@ class GameService extends ChangeNotifier {
 
   void unblockSlot(int slotIndex) {
     _network.send({'type': 'unblock_slot', 'slotIndex': slotIndex});
+  }
+
+  void setRandomSeating(bool enabled) {
+    _network.send({'type': 'set_random_seating', 'enabled': enabled});
   }
 
   void toggleReady() {

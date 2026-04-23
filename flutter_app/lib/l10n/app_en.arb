@@ -296,6 +296,9 @@
   "lobbySkullKingRanked": "Skull King - Ranked",
   "lobbyTichuRanked": "Tichu - Ranked",
   "lobbyMightyRanked": "Mighty - Ranked",
+  "lobbyTichuRandomSeating": "Tichu - Random Teams",
+  "lobbyRandomSeatingOn": "Random teams",
+  "lobbyRandomSeatingOff": "Fixed teams",
   "lobbySkullKingPlayers": "Skull King · {count}P",
   "@lobbySkullKingPlayers": {
     "placeholders": {

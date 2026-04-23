@@ -2061,7 +2061,7 @@ function handleCreateRoom(ws, data) {
   let maxPlayers = 4;
   let skExpansions = [];
   if (gameType === 'mighty') {
-    maxPlayers = 5; // Mighty always 5 players
+    maxPlayers = 6; // Mighty: 6 seats by default, 1 seat blockable for 5-player mode
   } else if (gameType === 'love_letter') {
     maxPlayers = Math.min(Math.max(parseInt(data.maxPlayers) || 4, 2), 4);
   } else if (gameType === 'skull_king') {
@@ -2617,6 +2617,12 @@ function handleStartGame(ws) {
   if (room.gameType === 'skull_king' || room.gameType === 'love_letter') {
     if (room.getPlayerCount() < 2) {
       sendTo(ws, { type: 'error', message: t(ws.locale, 'min_players_required') });
+      return;
+    }
+  } else if (room.gameType === 'mighty') {
+    // Mighty needs the effective capacity filled (5 or 6 depending on blocked slots)
+    if (room.getPlayerCount() < room.getEffectiveMaxPlayers()) {
+      sendTo(ws, { type: 'error', message: t(ws.locale, 'four_players_required') });
       return;
     }
   } else {

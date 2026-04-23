@@ -1300,7 +1300,7 @@ class _LobbyScreenState extends State<LobbyScreen> {
                     maxPlayers: selectedGameType == 'skull_king'
                         ? 6
                         : selectedGameType == 'mighty'
-                        ? 5
+                        ? 6
                         : selectedGameType == 'love_letter'
                         ? 4
                         : 4,
@@ -2710,7 +2710,7 @@ class _LobbyScreenState extends State<LobbyScreen> {
                             context,
                           ).lobbyLoveLetterPlayers(game.roomMaxPlayers)
                         : game.currentGameType == 'mighty'
-                            ? 'Mighty ${game.playerCount}/${game.roomMaxPlayers}'
+                            ? 'Mighty ${game.playerCount}/${game.effectiveRoomMaxPlayers}'
                             : L10n.of(
                                 context,
                               ).lobbySkullKingPlayers(game.roomMaxPlayers),
@@ -4718,14 +4718,17 @@ class _LobbyScreenState extends State<LobbyScreen> {
     final isSlotBlocked = isEmpty && game.roomBlockedSlots.contains(slotIndex);
     final isFlexibleGame =
         game.currentGameType == 'skull_king' ||
-        game.currentGameType == 'love_letter';
-    // Host can block empty slots for SK/LL, but keep at least 2 effective slots
+        game.currentGameType == 'love_letter' ||
+        game.currentGameType == 'mighty';
+    // Host can block empty slots; keep at least the game-specific minimum
+    // (Mighty needs 5, SK/LL need 2)
+    final minEffective = game.currentGameType == 'mighty' ? 5 : 2;
     final canBlockSlot =
         game.isHost &&
         isEmpty &&
         !isSlotBlocked &&
         isFlexibleGame &&
-        (game.roomMaxPlayers - game.roomBlockedSlots.length - 1 >= 2);
+        (game.roomMaxPlayers - game.roomBlockedSlots.length - 1 >= minEffective);
     final canUnblockSlot = game.isHost && isSlotBlocked;
     // Can only move to empty slots (no swapping, no blocked)
     final canMove =

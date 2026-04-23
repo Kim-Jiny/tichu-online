@@ -518,7 +518,7 @@ class GameRoom {
     if (this.game) {
       return { success: false, messageKey: 'room_no_switch_in_game' };
     }
-    if (this.gameType === 'tichu' || this.gameType === 'mighty') {
+    if (this.gameType === 'tichu') {
       return { success: false, messageKey: 'invalid_slot' };
     }
     if (typeof slotIndex !== 'number' || slotIndex < 0 || slotIndex >= this.maxPlayers) {
@@ -527,9 +527,10 @@ class GameRoom {
     if (this.players[slotIndex] !== null) {
       return { success: false, messageKey: 'room_slot_taken' };
     }
-    // Need at least 2 non-blocked slots left (minimum players for SK/LL)
+    // Minimum effective capacity: SK/LL need 2, Mighty needs 5
+    const minEffective = this.gameType === 'mighty' ? 5 : 2;
     const remainingAfterBlock = this.maxPlayers - this.blockedSlots.size - 1;
-    if (remainingAfterBlock < 2) {
+    if (remainingAfterBlock < minEffective) {
       return { success: false, messageKey: 'room_full' };
     }
     this.blockedSlots.add(slotIndex);
@@ -587,6 +588,15 @@ class GameRoom {
       const activePlayers = this.players.filter(p => p !== null);
       if (activePlayers.length < 2) return false;
       // Save original slot structure for restoration after game ends
+      this._preGamePlayers = this.players.slice();
+      this.players = activePlayers;
+    } else if (this.gameType === 'mighty') {
+      // Mighty: blocked slots are intentionally empty. Non-blocked slots must be filled.
+      for (let i = 0; i < this.players.length; i++) {
+        if (this.players[i] === null && !this.blockedSlots.has(i)) return false;
+      }
+      const activePlayers = this.players.filter(p => p !== null);
+      if (activePlayers.length < 5) return false;
       this._preGamePlayers = this.players.slice();
       this.players = activePlayers;
     } else {

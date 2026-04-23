@@ -211,7 +211,7 @@ const ANDROID_PACKAGE_NAME = 'com.jiny.tichuOnline';
 const IOS_APP_ID = 'HW9XJ9J5M2.com.jiny.tichuOnline';
 const IOS_STORE_URL = 'https://apps.apple.com/app/tichu-online/id6759035151';
 const ANDROID_STORE_URL = `https://play.google.com/store/apps/details?id=${ANDROID_PACKAGE_NAME}`;
-const DEFAULT_ANDROID_SHA256 = '42:BC:52:D8:BA:95:74:09:27:07:D4:42:7A:7D:93:25:7C:4F:65:99:1E:02:FE:62:6C:80:3B:72:14:B6:C1:44';
+const DEFAULT_ANDROID_SHA256 = '42:BC:52:D8:BA:95:74:09:27:07:D4:42:7A:7D:93:25:7C:4F:65:99:1E:02:FE:62:6C:80:3B:72:14:B6:C1:44,F4:AF:EF:78:2C:6A:11:A0:DE:C4:C8:7C:FF:27:A8:5B:C9:B1:D7:71:72:9D:8F:CB:64:49:B5:1C:20:EF:96:1F';
 const inviteLinkTokens = new Map();
 
 function getAndroidSha256Fingerprints() {
@@ -663,7 +663,10 @@ const server = http.createServer(async (req, res) => {
   } else if (pathname === '/.well-known/assetlinks.json') {
     const body = JSON.stringify([
       {
-        relation: ['delegate_permission/common.handle_all_urls'],
+        relation: [
+          'delegate_permission/common.handle_all_urls',
+          'delegate_permission/common.get_login_creds',
+        ],
         target: {
           namespace: 'android_app',
           package_name: ANDROID_PACKAGE_NAME,
@@ -2624,6 +2627,21 @@ function handleStartGame(ws) {
   if (!room.areAllReady()) {
     broadcastGameEvent(ws.roomId, { type: 'error', message: t(ws.locale, 'all_players_must_ready') });
     return;
+  }
+  // Cancel waiting room timers and register sessions for disconnected players
+  for (const player of room.players) {
+    if (player === null || player.isBot) continue;
+    const timerKey = `${ws.roomId}_${player.id}`;
+    if (waitingRoomTimers[timerKey]) {
+      clearTimeout(waitingRoomTimers[timerKey]);
+      delete waitingRoomTimers[timerKey];
+    }
+    if (player.connected === false) {
+      playerSessions.set(player.nickname, {
+        roomId: ws.roomId,
+        disconnectedAt: Date.now(),
+      });
+    }
   }
   room.startGame();
   broadcastRoomState(ws.roomId);

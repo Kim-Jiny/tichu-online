@@ -135,40 +135,64 @@ function _isCardStillInPlay(game, cardId) {
 function decideBid(game, botId) {
   const hand = game.hands[botId];
 
-  // Deal miss: if we haven't bid/passed yet and the hand qualifies, declare it.
-  // The 5-point cost is worth avoiding a forced weak bid or losing as defender.
-  if (game.bids[botId] === undefined && typeof game._canDeclareDealMiss === 'function'
-      && game._canDeclareDealMiss(botId)) {
-    return { type: 'declare_deal_miss' };
-  }
+  // Bots never declare deal miss. It costs 5 points now for a speculative pool
+  // reward later, and in practice the bot was burning points on marginal hands.
+  // Sim data: dealmiss was hit ~19-25 % of eligible rounds — pass instead.
 
   const strength = evaluateHandStrength(hand, game);
+  const bestTrump = pickBestTrump(hand);
 
-  const estimatedPoints = Math.min(20, game.options.minBid + Math.floor(strength / 2.5));
-
-  if (estimatedPoints >= game.options.minBid && estimatedPoints > game.currentBid.points) {
-    let suit = pickBestTrump(hand);
-
-    // Consider no-trump for balanced hands with many high cards
-    if (game.options.allowNoTrump) {
-      const suitCounts = {};
-      let highCards = 0;
-      for (const cardId of hand) {
-        if (cardId === 'mighty_joker') continue;
-        const info = getCardInfo(cardId);
-        suitCounts[info.suit] = (suitCounts[info.suit] || 0) + 1;
-        if (info.rank === 'A' || info.rank === 'K') highCards++;
-      }
-      const maxLen = Math.max(...Object.values(suitCounts), 0);
-      if (maxLen <= 4 && highCards >= 4) {
-        suit = 'no_trump';
-      }
-    }
-
-    return { type: 'submit_bid', points: estimatedPoints, suit };
+  // Count cards of the chosen trump suit (used both for suit vote and for
+  // capping how high we dare bid).
+  let trumpCount = 0;
+  for (const cardId of hand) {
+    if (cardId === 'mighty_joker') continue;
+    const info = getCardInfo(cardId);
+    if (info.suit === bestTrump) trumpCount++;
   }
 
-  return { type: 'submit_bid', pass: true };
+  let estimatedPoints = Math.min(20, game.options.minBid + Math.floor(strength / 2.5));
+
+  // Trump length cap — long trump stabilises the bid, short trump forces us
+  // toward the floor (or into a pass) even with a lot of raw high-card power.
+  if (trumpCount <= 3) {
+    estimatedPoints = Math.min(estimatedPoints, game.options.minBid);
+  } else if (trumpCount === 4) {
+    estimatedPoints = Math.min(estimatedPoints, game.options.minBid + 1);
+  } else if (trumpCount === 5) {
+    estimatedPoints = Math.min(estimatedPoints, game.options.minBid + 2);
+  } else if (trumpCount >= 7) {
+    estimatedPoints = Math.min(20, estimatedPoints + 1);
+  }
+
+  if (estimatedPoints < game.options.minBid || estimatedPoints <= game.currentBid.points) {
+    return { type: 'submit_bid', pass: true };
+  }
+
+  let suit = bestTrump;
+
+  // No-trump: only in a genuinely dominating hand. Previous criteria
+  // (maxLen ≤ 4 && highCards ≥ 4) had a ~6 % success rate in sims.
+  // Tightened: require joker or mighty, ≥ 5 A/K, and no long side suit.
+  if (game.options.allowNoTrump) {
+    const hasJoker = hand.includes('mighty_joker');
+    const mightyCardForNT = 'mighty_spade_A'; // in NT, spade A is still mighty
+    const hasMighty = hand.includes(mightyCardForNT);
+    const suitCounts = {};
+    let aceKingCount = 0;
+    for (const cardId of hand) {
+      if (cardId === 'mighty_joker') continue;
+      const info = getCardInfo(cardId);
+      suitCounts[info.suit] = (suitCounts[info.suit] || 0) + 1;
+      if (info.rank === 'A' || info.rank === 'K') aceKingCount++;
+    }
+    const maxLen = Math.max(...Object.values(suitCounts), 0);
+    if ((hasJoker || hasMighty) && maxLen <= 3 && aceKingCount >= 5) {
+      suit = 'no_trump';
+    }
+  }
+
+  return { type: 'submit_bid', points: estimatedPoints, suit };
 }
 
 function evaluateHandStrength(hand, game) {
@@ -203,27 +227,35 @@ function evaluateHandStrength(hand, game) {
 }
 
 function pickBestTrump(hand) {
-  const suitCounts = {};
-  const suitStrength = {};
-
+  const stats = {};
+  for (const suit of SUITS) {
+    stats[suit] = { count: 0, rankSum: 0, hasA: false, hasK: false, hasQ: false };
+  }
   for (const cardId of hand) {
     if (cardId === 'mighty_joker') continue;
     const info = getCardInfo(cardId);
-    suitCounts[info.suit] = (suitCounts[info.suit] || 0) + 1;
-    suitStrength[info.suit] = (suitStrength[info.suit] || 0) + RANK_ORDER[info.rank];
+    const s = stats[info.suit];
+    s.count++;
+    s.rankSum += RANK_ORDER[info.rank] || 0;
+    if (info.rank === 'A') s.hasA = true;
+    else if (info.rank === 'K') s.hasK = true;
+    else if (info.rank === 'Q') s.hasQ = true;
   }
 
   let bestSuit = 'spade';
-  let bestScore = -1;
-
+  let bestScore = -Infinity;
   for (const suit of SUITS) {
-    const score = (suitCounts[suit] || 0) * 10 + (suitStrength[suit] || 0);
-    if (score > bestScore) {
-      bestScore = score;
-      bestSuit = suit;
-    }
+    const s = stats[suit];
+    // Favour length heavily (each trump card is worth ~12 points of score).
+    // Top honours add extra certainty; very short trump gets penalised because
+    // opp can draw us out quickly.
+    let score = s.count * 12 + s.rankSum;
+    if (s.hasA) score += 6;
+    if (s.hasK) score += 3;
+    if (s.hasQ) score += 1;
+    if (s.count <= 3) score -= (4 - s.count) * 10;
+    if (score > bestScore) { bestScore = score; bestSuit = suit; }
   }
-
   return bestSuit;
 }
 

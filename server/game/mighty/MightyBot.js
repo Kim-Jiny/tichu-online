@@ -318,21 +318,44 @@ function decideKittyDiscard(game, botId) {
     }
   }
 
-  // Fill remaining with weakest non-trump, non-protected cards
+  // Fill remaining with weakest non-trump, non-protected cards.
+  // Trumps are only considered when we genuinely don't have 3 non-trump
+  // discardable cards (extreme trump hoarding case).
   if (discards.length < 3) {
-    const remaining = hand
+    const nonTrumpPool = hand
       .filter(cardId => !protectedCards.has(cardId) && !discards.includes(cardId))
+      .filter(cardId => {
+        if (trumpSuit === 'no_trump') return true;
+        return getCardInfo(cardId).suit !== trumpSuit;
+      })
       .map(cardId => {
         const info = getCardInfo(cardId);
         let value = 0;
         if (info.point > 0) value += 30;
-        if (info.suit === trumpSuit) value += 20;
         value += RANK_ORDER[info.rank] || 0;
         return { cardId, value };
       })
       .sort((a, b) => a.value - b.value);
 
-    for (const { cardId } of remaining) {
+    for (const { cardId } of nonTrumpPool) {
+      if (discards.length >= 3) break;
+      discards.push(cardId);
+    }
+  }
+
+  // Last-resort trump fallback (only when we have almost no non-trump cards)
+  if (discards.length < 3) {
+    const trumpPool = hand
+      .filter(cardId => !protectedCards.has(cardId) && !discards.includes(cardId))
+      .map(cardId => {
+        const info = getCardInfo(cardId);
+        let value = 0;
+        if (info.point > 0) value += 30;
+        value += RANK_ORDER[info.rank] || 0;
+        return { cardId, value };
+      })
+      .sort((a, b) => a.value - b.value);
+    for (const { cardId } of trumpPool) {
       if (discards.length >= 3) break;
       discards.push(cardId);
     }
@@ -355,14 +378,23 @@ function decideKittyDiscard(game, botId) {
   // Ensure friend card isn't in discards
   let finalDiscards = discards.filter(c => c !== friendCard);
   if (finalDiscards.length < 3) {
-    const extra = hand
+    // Refill preferring non-trump, falling back to trump only if forced
+    const eligible = hand
       .filter(cardId => !protectedCards.has(cardId) && !finalDiscards.includes(cardId) && cardId !== friendCard)
       .map(cardId => {
         const info = getCardInfo(cardId);
-        return { cardId, value: (info.point > 0 ? 30 : 0) + (info.suit === trumpSuit ? 20 : 0) + (RANK_ORDER[info.rank] || 0) };
-      })
-      .sort((a, b) => a.value - b.value);
-    for (const { cardId } of extra) {
+        const isTrump = trumpSuit !== 'no_trump' && info.suit === trumpSuit;
+        return {
+          cardId,
+          isTrump,
+          value: (info.point > 0 ? 30 : 0) + (RANK_ORDER[info.rank] || 0),
+        };
+      });
+    const nonTrumpFirst = [
+      ...eligible.filter(e => !e.isTrump).sort((a, b) => a.value - b.value),
+      ...eligible.filter(e => e.isTrump).sort((a, b) => a.value - b.value),
+    ];
+    for (const { cardId } of nonTrumpFirst) {
       if (finalDiscards.length >= 3) break;
       finalDiscards.push(cardId);
     }
@@ -495,6 +527,64 @@ function getNonPointWeakest(legalCards, game) {
   return getWeakestCard(legalCards, game);
 }
 
+/** Weakest card that's NOT a trump (and not mighty/joker) — used to dump off-suit safely. */
+function getNonTrumpWeakest(legalCards, game) {
+  const mightyCard = game.getMightyCard();
+  const nonTrump = legalCards.filter(cardId => {
+    if (cardId === mightyCard || cardId === 'mighty_joker') return false;
+    const info = getCardInfo(cardId);
+    return info.suit !== game.trumpSuit;
+  });
+  if (nonTrump.length > 0) return getWeakestCard(nonTrump, game);
+  return getNonPointWeakest(legalCards, game);
+}
+
+/**
+ * Pick the MINIMAL card that wins the trick.
+ * - Skips mighty/joker whenever a cheaper winner exists.
+ * - Last player: always cheapest (no one left to overcut).
+ * - Not last + opp behind: use strongest non-special winner to resist overruffing.
+ */
+function pickSufficientWinner(winningCards, game, isLastPlayer, oppBehind) {
+  const mightyCard = game.getMightyCard();
+  const cheap = winningCards.filter(c => c !== mightyCard && c !== 'mighty_joker');
+  if (isLastPlayer) {
+    if (cheap.length > 0) return getWeakestCard(cheap, game);
+    return winningCards[0];
+  }
+  if (oppBehind && cheap.length > 0) {
+    return getStrongestCard(cheap, game);
+  }
+  if (cheap.length > 0) return getWeakestCard(cheap, game);
+  return winningCards[0];
+}
+
+/**
+ * Pick a "safe dump" — prefer to give a point card to our ally without burning
+ * trumps, mighty, or joker. Falls back to non-trump non-point weakest.
+ */
+function pickSafeDump(legalCards, game) {
+  const mightyCard = game.getMightyCard();
+  const nonTrumpPoints = legalCards.filter(c => {
+    if (c === 'mighty_joker' || c === mightyCard) return false;
+    const info = getCardInfo(c);
+    return info.point > 0 && info.suit !== game.trumpSuit;
+  });
+  if (nonTrumpPoints.length > 0) {
+    return nonTrumpPoints.sort((a, b) =>
+      RANK_ORDER[getCardInfo(b).rank] - RANK_ORDER[getCardInfo(a).rank])[0];
+  }
+  // No non-trump point card: dump weakest non-trump non-point before touching trump
+  const nonTrumpNonPoint = legalCards.filter(c => {
+    if (c === 'mighty_joker' || c === mightyCard) return false;
+    const info = getCardInfo(c);
+    return info.point === 0 && info.suit !== game.trumpSuit;
+  });
+  if (nonTrumpNonPoint.length > 0) return getWeakestCard(nonTrumpNonPoint, game);
+  // Only trump-ish cards remain (mighty/joker/trumps) — play weakest trump
+  return getNonPointWeakest(legalCards, game);
+}
+
 function getStrongestCard(cards, game) {
   const mightyCard = game.getMightyCard();
   let strongest = cards[0];
@@ -603,10 +693,10 @@ function _governmentLead(game, botId, legalCards, suitCards, mightyCard) {
   }
 
   // ═══ SUITED TRUMP DECLARER STRATEGY ═══
-  // Phase 2: DRAW TRUMPS — THE critical declarer strategy
+  // Phase 2: DRAW TRUMPS — but only when opposition actually still holds trump.
+  // If the only trumps left are with us + friend, drawing trump is wasted tempo.
   if (suitCards[game.trumpSuit] && suitCards[game.trumpSuit].length > 0) {
-    const oppTrumps = _countOpponentTrumps(game, botId);
-    if (oppTrumps > 0) {
+    if (!_onlyGovernmentHasTrump(game)) {
       const trumpCards = suitCards[game.trumpSuit].sort((a, b) =>
         RANK_ORDER[getCardInfo(b).rank] - RANK_ORDER[getCardInfo(a).rank]);
       return trumpCards[0];
@@ -799,81 +889,68 @@ function governmentFollow(game, botId, legalCards, winningCards, currentWinner, 
   const isLastPlayer = game.currentTrick.length === game.playerCount - 1;
   const isNT = !game.trumpSuit || game.trumpSuit === 'no_trump';
 
-  // ─── Friend helping declarer's lead ───
+  // ─── Friend responding to declarer's lead ───
   if (isFriend && declarerLed) {
     if (!winnerOnOurTeam) {
-      // Declarer is LOSING → rescue
-      // In NT: always rescue (every trick matters for control)
-      // In suited: conserve mighty/joker for valuable tricks
-      if (isNT || trickPoints >= 2 || isLastPlayer) {
-        if (winningCards.includes(mightyCard)) return mightyCard;
-        if (winningCards.includes('mighty_joker')) return 'mighty_joker';
+      // Declarer is LOSING → rescue with the MINIMUM sufficient winning card
+      // (never burn mighty/joker when a trump ruff or lead-suit A would do)
+      if (winningCards.length > 0) {
+        return pickSufficientWinner(winningCards, game, isLastPlayer, oppBehind);
       }
-      if (winningCards.length > 0) return getStrongestCard(winningCards, game);
-    } else if (oppBehind) {
-      const winnerCard = getWinnerCardId(game);
-      if (!_isEffectiveTopOfSuit(winnerCard, game)) {
-        // Declarer's card is NOT top → opposition will beat it → must protect
-        // In NT: always protect (control > point conservation)
-        if (isNT || trickPoints >= 2) {
-          if (winningCards.includes(mightyCard)) return mightyCard;
-          if (winningCards.includes('mighty_joker')) return 'mighty_joker';
-        }
-        if (winningCards.length > 0) return getStrongestCard(winningCards, game);
-      }
+      // Can't win — dump non-trump waste
+      return getNonTrumpWeakest(legalCards, game);
     }
+    // Declarer is winning. If their card is an effective top (e.g., non-trump A), it will
+    // almost always hold — just dump a non-trump point card. Don't trump-ruff our own ace.
+    const winnerCard = getWinnerCardId(game);
+    if (_isEffectiveTopOfSuit(winnerCard, game)) {
+      return pickSafeDump(legalCards, game);
+    }
+    // Not top and opp behind: reinforce only when the trick is worth it
+    if (oppBehind && winningCards.length > 0 && (isNT || trickPoints >= 2 || isLastPlayer)) {
+      return pickSufficientWinner(winningCards, game, isLastPlayer, oppBehind);
+    }
+    return pickSafeDump(legalCards, game);
   }
 
   if (winnerOnOurTeam) {
-    // ─── NT: if our winning card is NOT top, we must reinforce ───
-    if (isNT && oppBehind) {
-      const winnerCard = getWinnerCardId(game);
-      if (winnerCard && winnerCard !== mightyCard && winnerCard !== 'mighty_joker' &&
-          !_isEffectiveTopOfSuit(winnerCard, game)) {
-        // Our card will get beaten → play stronger card to secure
-        if (winningCards.length > 0) return getStrongestCard(winningCards, game);
-      }
+    // Ally winning, no one behind → safe to pile on points
+    if (!oppBehind) {
+      return pickSafeDump(legalCards, game);
     }
 
-    if (!oppBehind) {
-      // Ally winning, no opposition behind → dump point cards
-      const bestPoint = getBestPointCard(legalCards);
-      if (bestPoint) return bestPoint;
-      return getWeakestCard(legalCards, game);
-    }
-    // Ally winning but opposition still behind → only dump if trick is secure
     const winnerCard = getWinnerCardId(game);
     const isSecure = winnerCard === mightyCard || winnerCard === 'mighty_joker' ||
       _isEffectiveTopOfSuit(winnerCard, game) ||
-      (!isNT && winnerCard &&
-       winnerCard !== 'mighty_joker' && getCardInfo(winnerCard).suit === game.trumpSuit &&
+      (!isNT && winnerCard && getCardInfo(winnerCard).suit === game.trumpSuit &&
        getCardInfo(winnerCard).rank === 'A');
 
     if (isSecure) {
-      const bestPoint = getBestPointCard(legalCards);
-      if (bestPoint) return bestPoint;
+      return pickSafeDump(legalCards, game);
     }
-    return getNonPointWeakest(legalCards, game);
+
+    // NT unsecure: reinforce only if the trick has real value
+    if (isNT && winningCards.length > 0 && (trickPoints >= 2 || isLastPlayer)) {
+      return pickSufficientWinner(winningCards, game, isLastPlayer, oppBehind);
+    }
+    // Suited unsecure: reinforce only on valuable tricks
+    if (!isNT && winningCards.length > 0 && (trickPoints >= 2 || isLastPlayer)) {
+      return pickSufficientWinner(winningCards, game, isLastPlayer, oppBehind);
+    }
+    return getNonTrumpWeakest(legalCards, game);
   }
 
   // ─── Enemy winning ───
   if (winningCards.length > 0) {
-    // In NT: always fight for the trick (control matters), less conservation
     if (!isNT && trickPoints <= 1 && !isLastPlayer) {
-      // Suited: conserve mighty/joker on low-point tricks
+      // Suited low-value: don't waste mighty/joker
       const cheapWinners = winningCards.filter(c => c !== mightyCard && c !== 'mighty_joker');
       if (cheapWinners.length > 0) {
         return oppBehind ? getStrongestCard(cheapWinners, game) : getWeakestCard(cheapWinners, game);
       }
       return getNonPointWeakest(legalCards, game);
     }
-
-    if (oppBehind) {
-      if (winningCards.includes(mightyCard)) return mightyCard;
-      if (winningCards.includes('mighty_joker')) return 'mighty_joker';
-      return getStrongestCard(winningCards, game);
-    }
-    return getWeakestCard(winningCards, game);
+    return pickSufficientWinner(winningCards, game, isLastPlayer, oppBehind);
   }
 
   return getNonPointWeakest(legalCards, game);
@@ -902,16 +979,13 @@ function oppositionFollow(game, botId, legalCards, winningCards, currentWinner, 
     }
 
     if (isNT) {
-      // ═══ NT OPPOSITION: fight for control, less conservation ═══
-      // In NT every trick matters — always try to win if we can
       if (winningCards.length > 0) {
-        return getWeakestCard(winningCards, game);
+        return pickSufficientWinner(winningCards, game, isLastPlayer, govBehind);
       }
       return getNonPointWeakest(legalCards, game);
     }
 
     // ═══ SUITED: conserve trump and specials ═══
-    // No points in trick, no more gov behind → don't bother winning
     if (trickPoints === 0 && !govBehind) {
       return getNonPointWeakest(legalCards, game);
     }
@@ -934,33 +1008,29 @@ function oppositionFollow(game, botId, legalCards, winningCards, currentWinner, 
       return getNonPointWeakest(legalCards, game);
     }
 
-    if (winningCards.length > 0) return getWeakestCard(winningCards, game);
+    if (winningCards.length > 0) return pickSufficientWinner(winningCards, game, isLastPlayer, govBehind);
     return getNonPointWeakest(legalCards, game);
   }
 
-  // Our team (opposition ally) is winning
+  // ─── Our team (opposition ally) is winning ───
+  // NEVER trump-steal an ally's already-winning trick. Dump safely.
   if (!govBehind) {
-    const bestPoint = getBestPointCard(legalCards);
-    if (bestPoint) return bestPoint;
-    return getWeakestCard(legalCards, game);
+    return pickSafeDump(legalCards, game);
   }
 
-  // Government still behind → check if ally's card is secure
   const winnerCard = getWinnerCardId(game);
   const isSecure = winnerCard === mightyCard || winnerCard === 'mighty_joker' ||
     _isEffectiveTopOfSuit(winnerCard, game);
 
   if (isSecure) {
-    const bestPoint = getBestPointCard(legalCards);
-    if (bestPoint) return bestPoint;
+    return pickSafeDump(legalCards, game);
   }
 
-  // In NT: if ally's card is not secure, try to reinforce it
-  if (isNT && !isSecure && winningCards.length > 0) {
-    return getWeakestCard(winningCards, game);
+  // Ally not secure — reinforce only if the trick is valuable
+  if (winningCards.length > 0 && (trickPoints >= 2 || isLastPlayer || isNT)) {
+    return pickSufficientWinner(winningCards, game, isLastPlayer, govBehind);
   }
-
-  return getNonPointWeakest(legalCards, game);
+  return getNonTrumpWeakest(legalCards, game);
 }
 
 // ═══════════════════════════════════════════════════════════

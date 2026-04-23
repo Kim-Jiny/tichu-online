@@ -70,6 +70,9 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
 
   // Kill reveal: same pattern — keyed by "round-targetCardId" so it only shows once
   String? _dismissedKillKey;
+  // Auto-dismiss the kill reveal after a few seconds if the user doesn't tap.
+  Timer? _killAutoDismissTimer;
+  String? _killAutoDismissKey;
   String? _selectedKillCard;
   // Kill target picker: currently browsed suit panel (null = joker tab).
   String _killSuitTab = 'spade';
@@ -125,6 +128,7 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
     _gameEndCountdownTimer?.cancel();
     _cardViewRequestTimer?.cancel();
     _contractChangeTimer?.cancel();
+    _killAutoDismissTimer?.cancel();
     super.dispose();
   }
 
@@ -295,6 +299,26 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
                     WidgetsBinding.instance.addPostFrameCallback((_) {
                       if (mounted) setState(() => _selectedCard = null);
                     });
+                  }
+
+                  // Kill-reveal auto-dismiss: when a fresh (non-dismissed) kill
+                  // event appears, schedule a 4-second auto-close so the
+                  // overlay doesn't block the game indefinitely if nobody
+                  // taps it. Keyed by round+targetCard so replaying the same
+                  // event in a later round re-arms the timer.
+                  if (state.lastKillEvent != null) {
+                    final killKey = '${state.round}-${state.lastKillEvent!.targetCardId}';
+                    final isActive = _dismissedKillKey != killKey;
+                    if (isActive && _killAutoDismissKey != killKey) {
+                      _killAutoDismissKey = killKey;
+                      _killAutoDismissTimer?.cancel();
+                      _killAutoDismissTimer = Timer(const Duration(seconds: 4), () {
+                        if (!mounted) return;
+                        setState(() => _dismissedKillKey = killKey);
+                      });
+                    } else if (!isActive && _killAutoDismissKey == killKey) {
+                      _killAutoDismissTimer?.cancel();
+                    }
                   }
 
                   // Kitty-phase contract-change detection: flash a banner when

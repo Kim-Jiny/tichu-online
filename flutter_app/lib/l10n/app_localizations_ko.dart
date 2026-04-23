@@ -2726,7 +2726,6 @@ class L10nKo extends L10n {
   String get mtScoreHistory => '점수 기록';
 
   @override
-  @override
   String get mtRoundAbbr => 'R';
 
   @override

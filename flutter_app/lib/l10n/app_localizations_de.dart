@@ -2803,7 +2803,6 @@ class L10nDe extends L10n {
   String get mtScoreHistory => 'Punkteverlauf';
 
   @override
-  @override
   String get mtRoundAbbr => 'R';
 
   @override

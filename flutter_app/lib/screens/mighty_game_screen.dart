@@ -253,14 +253,17 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
                             ),
                             _buildHandArea(state, game),
                           ],
-                          if (state.phase == 'kitty_exchange')
+                          if (state.phase == 'kitty_exchange') ...[
                             Expanded(child: _buildKittyUI(game, state)),
+                            if (!state.isMyTurn)
+                              _buildHandArea(state, game),
+                          ],
                           if (state.phase == 'playing')
                             Expanded(
                               child: Column(
                                 children: [
                                   const Spacer(),
-                                  _buildTrickArea(state),
+                                  _buildTrickArea(state, game),
                                   const Spacer(),
                                 ],
                               ),
@@ -280,6 +283,8 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
                       if (_chatOpen) _buildChatPanel(game),
                       if (game.hasIncomingCardViewRequests)
                         _buildCardViewRequestPopup(game),
+                      if (game.timeoutPlayerName != null)
+                        _buildTimeoutBanner(game.timeoutPlayerName!),
                       if (game.errorMessage != null)
                         _buildErrorBanner(game.errorMessage!),
                     ],
@@ -569,31 +574,6 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
                 ),
               ),
               const Spacer(),
-              if (_remainingSeconds > 0)
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-                  decoration: BoxDecoration(
-                    color: _remainingSeconds <= 5
-                        ? const Color(0xFFFFEBEE)
-                        : Colors.white.withValues(alpha: 0.9),
-                    borderRadius: BorderRadius.circular(12),
-                    border: Border.all(
-                      color: _remainingSeconds <= 5
-                          ? const Color(0xFFE53935)
-                          : const Color(0xFFCCCCCC),
-                    ),
-                  ),
-                  child: Text(
-                    '${_remainingSeconds}s',
-                    style: TextStyle(
-                      fontWeight: FontWeight.bold,
-                      fontSize: 13,
-                      color: _remainingSeconds <= 5
-                          ? const Color(0xFFE53935)
-                          : const Color(0xFF5A4038),
-                    ),
-                  ),
-                ),
               if (state.scoreHistory.isNotEmpty)
                 Padding(
                   padding: const EdgeInsets.only(right: 6),
@@ -1119,7 +1099,19 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
                               fontWeight: FontWeight.bold,
                             ),
                           ),
-                          const SizedBox(height: 16),
+                          SizedBox(
+                            height: 14,
+                            child: p.timeoutCount > 0
+                                ? Text(
+                                    '⏱ ${p.timeoutCount}/3',
+                                    style: const TextStyle(
+                                      color: Color(0xFFE65100),
+                                      fontSize: 10,
+                                      fontWeight: FontWeight.w800,
+                                    ),
+                                  )
+                                : null,
+                          ),
                           const SizedBox(height: 2),
                         ],
                       ),
@@ -1312,11 +1304,11 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
   }
 
   // ── Trick Area ──
-  Widget _buildTrickArea(MightyGameStateData state) {
+  Widget _buildTrickArea(MightyGameStateData state, GameService game) {
     if (state.currentTrick.isEmpty) {
       return Center(
         child: Container(
-          width: 180,
+          width: 200,
           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
           decoration: BoxDecoration(
             color: Colors.white.withValues(alpha: 0.5),
@@ -1325,6 +1317,11 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
+              if (game.myTimeoutCount > 0)
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 6),
+                  child: _buildTimeoutResetChip(game),
+                ),
               const Icon(Icons.style, size: 20, color: Color(0xFF8A7A72)),
               const SizedBox(height: 4),
               Text(
@@ -1494,6 +1491,28 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
+          // Timer + Timeout reset
+          Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              if (game.myTimeoutCount > 0)
+                Padding(
+                  padding: const EdgeInsets.only(right: 8),
+                  child: _buildTimeoutResetChip(game),
+                ),
+              if (_remainingSeconds > 0)
+                Text(
+                  '${_remainingSeconds}s',
+                  style: TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.bold,
+                    color: _remainingSeconds <= 5 ? const Color(0xFFE53935) : const Color(0xFF8A7A72),
+                  ),
+                ),
+            ],
+          ),
+          if (_remainingSeconds > 0 || game.myTimeoutCount > 0)
+            const SizedBox(height: 6),
           // Current bid display
           if (state.currentBid['bidder'] != null)
             Container(
@@ -2143,7 +2162,7 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
             else
               Padding(
                 padding: const EdgeInsets.symmetric(vertical: 4),
-                child: _buildHandRows(viewingPlayer.cards, legalCards: const {}, isPlaying: false, isKitty: false),
+                child: _buildHandRows(viewingPlayer.cards, legalCards: const {}, isPlaying: false, isKitty: false, state: state),
               ),
           ],
         ),
@@ -2724,6 +2743,64 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
   }
 
   // ── Error Banner ──
+  Widget _buildTimeoutResetChip(GameService game) {
+    return GestureDetector(
+      onTap: () => game.resetTimeout(),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+        decoration: BoxDecoration(
+          color: const Color(0xFFFFF3E0),
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: const Color(0xFFFFB74D)),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Icon(Icons.timer_off_outlined, size: 15, color: Color(0xFFE65100)),
+            const SizedBox(width: 5),
+            Text(
+              '${game.myTimeoutCount}/3',
+              style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w800, color: Color(0xFFE65100)),
+            ),
+            const SizedBox(width: 4),
+            Text(
+              L10n.of(context).gameReset,
+              style: const TextStyle(fontSize: 11, color: Color(0xFFE65100), fontWeight: FontWeight.w700),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildTimeoutBanner(String playerName) {
+    return Positioned(
+      bottom: 240,
+      left: 20,
+      right: 20,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        decoration: BoxDecoration(
+          color: const Color(0xFFFFF3E0),
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: const Color(0xFFFFB74D)),
+        ),
+        child: Row(
+          children: [
+            const Icon(Icons.timer_off, color: Color(0xFFE65100)),
+            const SizedBox(width: 8),
+            Expanded(
+              child: Text(
+                L10n.of(context).gameTimeout(playerName),
+                style: const TextStyle(color: Color(0xFFE65100), fontWeight: FontWeight.bold, fontSize: 14),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   Widget _buildErrorBanner(String message) {
     return Positioned(
       top: 60,

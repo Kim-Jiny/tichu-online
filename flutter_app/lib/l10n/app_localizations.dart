@@ -5073,16 +5073,16 @@ abstract class L10n {
   /// **'Score History'**
   String get mtScoreHistory;
 
-  /// No description provided for @mtOpposition.
-  ///
-  /// In en, this message translates to:
-  /// **'Defense'**
   /// No description provided for @mtRoundAbbr.
   ///
   /// In en, this message translates to:
   /// **'R'**
   String get mtRoundAbbr;
 
+  /// No description provided for @mtOpposition.
+  ///
+  /// In en, this message translates to:
+  /// **'Defense'**
   String get mtOpposition;
 
   /// No description provided for @mtContract.

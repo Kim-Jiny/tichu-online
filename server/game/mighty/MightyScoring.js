@@ -45,10 +45,14 @@ function calculateRoundScores({ declarer, partner, playerIds, pointCards, bid, t
   const isNoTrump = trumpSuit === 'no_trump';
   const isMaxBid = bid >= 20;
 
-  // Base score = (bid - minBid + 1) * 2 + extra points over bid
+  // Base score = (bid - minBid + 1) * 2 + distance from the bid.
+  // Success adds the surplus above the bid; failure adds the deficit below
+  // it, so a bigger miss means a bigger penalty (and defenders earn more).
   let baseScore = (bid - minBid + 1) * 2;
   if (success) {
     baseScore += (declarerTeamPoints - bid);
+  } else {
+    baseScore += (bid - declarerTeamPoints);
   }
 
   // Multipliers: solo ×2, run(perfect) ×2, NT ×2, 20bid ×2

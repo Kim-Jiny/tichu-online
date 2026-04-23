@@ -2604,7 +2604,7 @@ class L10nDe extends L10n {
 
   @override
   String get rulesMtScoringBody =>
-      '20 Punktkarten im Deck (A, K, Q, J, 10 × 4 Farben = 20).\n\n[Grundpunktzahl]\nBasis = (Gebot − 13 + 1) × 2\nBei Erfolg: + (gesammelte Punkte − Gebot)\n\n[Punkteverteilung]\n• Alleinspieler: Basis × 2\n• Freund: Basis × 1\n• Jeder Verteidiger: −Basis\nBei Misserfolg werden die Vorzeichen umgekehrt.\n\n[Multiplikatoren (auf Basis, stapelbar)]\n• Solo (kein Freund): ×2\n• Run (alle 20 Pkt): ×2\n• Ohne Trumpf (NT): ×2\n• Gebot 20: ×2\nMax. Multiplikator: ×16 (Solo + Run + NT + Gebot 20)\n\n[Beispiel]\nGebot 13, 15 Pkt gesammelt, mit Freund:\nBasis = (1×2) + 2 = 4\nAlleinspieler +8, Freund +4, Verteidiger je −4';
+      '20 Punktkarten im Deck (A, K, Q, J, 10 × 4 Farben = 20).\n\n[Grundpunktzahl]\nBasis = (Gebot − minBid + 1) × 2\n• Bei Erfolg: + (gesammelte Punkte − Gebot)\n• Bei Misserfolg: + (Gebot − gesammelte Punkte)   ← größere Fehlschläge kosten mehr\n\n[Punkteverteilung]\n• Alleinspieler: Basis × 2\n• Freund: Basis × 1\n• Jeder Verteidiger: −Basis\nBei Misserfolg werden die Vorzeichen umgekehrt.\n\n[Multiplikatoren (auf Basis, stapelbar)]\n• Solo (kein Freund): ×2\n• Run (alle 20 Pkt): ×2\n• Ohne Trumpf (NT): ×2\n• Gebot 20: ×2\nMax. Multiplikator: ×16 (Solo + Run + NT + Gebot 20)\n\n[Erfolgs-Beispiel]\nGebot 13, 15 Pkt gesammelt, mit Freund:\nBasis = (1×2) + 2 = 4\nAlleinspieler +8, Freund +4, Verteidiger je −4\n\n[Misserfolgs-Beispiel]\nGebot 14, nur 5 Pkt (9 Pkt unter Gebot):\nBasis = (2×2) + 9 = 13\nAlleinspieler −26, Freund −13, Verteidiger je +13';
 
   @override
   String get rulesMtWinTitle => 'Siegbedingung';

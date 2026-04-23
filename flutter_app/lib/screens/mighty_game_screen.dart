@@ -54,6 +54,10 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
   // when they rejoin the table next round.
   bool _wasSelfExcluded = false;
 
+  // Track the number of completed tricks so we can clear a pre-selection when
+  // a new trick starts (lead suit changes).
+  int _lastTrickCount = -1;
+
   // Deal-miss reveal: user can dismiss; keyed by "round-playerId" so a new event re-shows
   String? _dismissedDealMissKey;
 
@@ -208,6 +212,18 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
                     if (_wasSelfExcluded != isSelfExcluded) {
                       _wasSelfExcluded = isSelfExcluded;
                     }
+                  }
+                  // Clear any pre-selection at trick boundaries: the lead suit
+                  // changes every trick, so whatever the user queued up before
+                  // may no longer be legal on the new trick.
+                  if (_lastTrickCount != state.tricks.length) {
+                    if (_lastTrickCount != -1 && _selectedCard != null) {
+                      WidgetsBinding.instance.addPostFrameCallback((_) {
+                        if (!mounted) return;
+                        setState(() => _selectedCard = null);
+                      });
+                    }
+                    _lastTrickCount = state.tricks.length;
                   }
                   // Clear stale state on phase change
                   if (_lastPhase != state.phase) {
@@ -2335,7 +2351,16 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
 
     final isPlaying = state.phase == 'playing' && state.isMyTurn;
     final isKitty = state.phase == 'kitty_exchange' && state.isMyTurn;
-    final legalCards = state.legalCards.toSet();
+    // Pre-selection: during playing phase while it isn't our turn yet, we can
+    // compute which cards WOULD be legal (based on the already-known lead
+    // suit) and let the user queue one up. When the turn arrives, the server
+    // will confirm legality via state.legalCards.
+    final canPreselect = state.phase == 'playing'
+        && !state.isMyTurn
+        && state.currentTrick.isNotEmpty;
+    final legalCards = state.isMyTurn
+        ? state.legalCards.toSet()
+        : (canPreselect ? _previewLegalCards(state) : <String>{});
     final selectedCard = _selectedCard;
     final isSelectedLegal = selectedCard != null && legalCards.contains(selectedCard);
 
@@ -2454,7 +2479,7 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
           // Card rows
           Padding(
             padding: const EdgeInsets.symmetric(vertical: 4),
-            child: _buildHandRows(cards, legalCards: legalCards, isPlaying: isPlaying, isKitty: isKitty, state: state),
+            child: _buildHandRows(cards, legalCards: legalCards, isPlaying: isPlaying || canPreselect, isKitty: isKitty, state: state),
           ),
         ],
       ),
@@ -3306,6 +3331,37 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
     final parts = stripped.split('_');
     if (parts.length >= 2) return parts[0];
     return null;
+  }
+
+  /// Client-side mirror of the server's trick-play legality so users can
+  /// pre-select a card while waiting for their turn. Honours the "must
+  /// follow lead suit when possible" rule; mighty and joker are always
+  /// playable. Joker-call-forced-joker corner case is deliberately skipped
+  /// — the server will still validate the actual play.
+  Set<String> _previewLegalCards(MightyGameStateData state) {
+    final hand = state.myCards;
+    final trick = state.currentTrick;
+    if (hand.isEmpty) return <String>{};
+    if (trick.isEmpty) return hand.toSet();
+
+    final leadCardId = trick[0].cardId;
+    final leadSuit = leadCardId == 'mighty_joker'
+        ? (state.jokerSuitDeclared)
+        : _getCardSuit(leadCardId);
+    if (leadSuit == null) return hand.toSet();
+
+    final suitCards = hand.where((c) {
+      if (c == 'mighty_joker') return false;
+      return _getCardSuit(c) == leadSuit;
+    }).toList();
+
+    if (suitCards.isEmpty) return hand.toSet();
+    // Must follow suit; mighty and joker can always be substituted.
+    final legal = <String>{...suitCards};
+    if (hand.contains('mighty_joker')) legal.add('mighty_joker');
+    final mighty = state.mightyCard;
+    if (mighty != null && hand.contains(mighty)) legal.add(mighty);
+    return legal;
   }
 
 

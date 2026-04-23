@@ -16,6 +16,8 @@
   "ranked_social_required": "A linked social account is required for ranked play",
   "sk_update_required": "Please update the app to play Skull King",
   "sk_expansion_update_required": "Please update the app to join expansion rooms",
+  "random_seating_enabled_notice": "This room has switched to random teams",
+  "random_seating_disabled_notice": "This room has switched to fixed teams",
   "spectator_no_action": "Spectators cannot perform game actions",
   "chat_banned": "You are banned from chatting",
   "invite_in_game": "Cannot send invites during a game",

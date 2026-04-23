@@ -762,7 +762,7 @@ class MightyGame {
   }
 
   _getLegalCards(playerId) {
-    const hand = this.hands[playerId];
+    const hand = this.hands[playerId] || [];
     if (hand.length === 0) return [];
 
     // Leading

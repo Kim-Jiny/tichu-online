@@ -16,6 +16,8 @@
   "ranked_social_required": "랭크전은 소셜 연동이 필요합니다",
   "sk_update_required": "스컬킹을 플레이하려면 앱을 업데이트해 주세요",
   "sk_expansion_update_required": "확장팩 방에 입장하려면 앱을 최신 버전으로 업데이트해 주세요",
+  "random_seating_enabled_notice": "이 방이 랜덤 팀으로 변경되었습니다",
+  "random_seating_disabled_notice": "이 방이 고정 팀으로 변경되었습니다",
   "spectator_no_action": "관전자는 게임 액션을 수행할 수 없습니다",
   "chat_banned": "채팅 금지 상태입니다",
   "invite_in_game": "게임 진행 중에는 초대를 보낼 수 없습니다",

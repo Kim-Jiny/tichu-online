@@ -5635,7 +5635,7 @@ async function getPushHistoryDetail(id, page = 1, limit = 50) {
   if (historyRes.rows.length === 0) return null;
   const offset = (page - 1) * limit;
   const countRes = await pool.query(`SELECT COUNT(*) FROM tc_push_recipients WHERE push_history_id = $1`, [id]);
-  const total = parseInt(countRes.rows[0].count);
+  const total = countRes.rows[0] ? parseInt(countRes.rows[0].count) : 0;
   const recipientsRes = await pool.query(
     `SELECT user_id, nickname, status FROM tc_push_recipients WHERE push_history_id = $1 ORDER BY id ASC LIMIT $2 OFFSET $3`,
     [id, limit, offset]

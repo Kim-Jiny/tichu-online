@@ -495,6 +495,8 @@ const SK_EXPANSION_MIN_VERSION = '2.1.0';
 const LL_MIN_VERSION = '2.2.0';
 // Mighty version gating
 const MIGHTY_MIN_VERSION = '2.3.0';
+// Tichu random seating UI shipped with the Mighty client.
+const RANDOM_SEATING_MIN_VERSION = '2.3.0';
 // SK_EXPANSION_UPDATE_MESSAGE removed – now uses t(locale, 'sk_expansion_update_required')
 
 function compareVersions(v1, v2) {
@@ -528,6 +530,14 @@ function clientSupportsLL(ws) {
 
 function clientSupportsMighty(ws) {
   return compareVersions(ws.appVersion, MIGHTY_MIN_VERSION) >= 0;
+}
+
+function clientSupportsRandomSeating(ws) {
+  return compareVersions(ws.appVersion, RANDOM_SEATING_MIN_VERSION) >= 0;
+}
+
+function itemRequiresMightyClient(itemKey) {
+  return typeof itemKey === 'string' && itemKey.startsWith('mighty_');
 }
 
 function clientCanAccessRoom(ws, room) {
@@ -1985,6 +1995,7 @@ async function handleReconnection(ws) {
           roomId: room.id,
           roomName: room.name,
         });
+        notifyLegacyRandomSeatingClient(room, ws);
         broadcastRoomState(room.id);
         broadcastRoomList();
         return;
@@ -2160,6 +2171,7 @@ async function handleJoinRoom(ws, data) {
   sendTo(ws, { type: 'room_joined', roomId: room.id, roomName: room.name });
   // 채팅 히스토리 전송
   sendTo(ws, { type: 'chat_history', messages: room.getChatHistory() });
+  notifyLegacyRandomSeatingClient(room, ws);
   broadcastRoomState(room.id);
   broadcastRoomList();
 }
@@ -2876,8 +2888,24 @@ function handleSetRandomSeating(ws, data) {
     sendTo(ws, { type: 'error', message: resultMessage(result, ws.locale) });
     return;
   }
+  notifyLegacyRandomSeatingParticipants(room, enabled);
   broadcastRoomState(ws.roomId);
   broadcastRoomList();
+}
+
+function notifyLegacyRandomSeatingParticipants(room, enabled) {
+  const messageKey = enabled ? 'random_seating_enabled_notice' : 'random_seating_disabled_notice';
+  for (const player of room.players) {
+    if (player === null || room.isBot(player.id)) continue;
+    const client = findWsByPlayerId(player.id);
+    if (!client || clientSupportsRandomSeating(client)) continue;
+    sendTo(client, { type: 'error', message: t(client.locale, messageKey) });
+  }
+}
+
+function notifyLegacyRandomSeatingClient(room, client, messageKey = 'random_seating_enabled_notice') {
+  if (!room || !client || !room.randomSeating || clientSupportsRandomSeating(client)) return;
+  sendTo(client, { type: 'error', message: t(client.locale, messageKey) });
 }
 
 // Switch to spectator handler
@@ -2935,6 +2963,7 @@ function handleSwitchToPlayer(ws, data) {
     }
   }
   sendTo(ws, { type: 'switched_to_player', roomId: room.id, roomName: room.name });
+  notifyLegacyRandomSeatingClient(room, ws);
   broadcastRoomState(ws.roomId);
   broadcastRoomList();
 }
@@ -4886,6 +4915,9 @@ async function handleUpdateAdminReportStatus(ws, data) {
 // Shop items handler
 async function handleGetShopItems(ws) {
   const result = await getShopItems();
+  if (result.success && Array.isArray(result.items) && !clientSupportsMighty(ws)) {
+    result.items = result.items.filter((item) => !itemRequiresMightyClient(item.item_key));
+  }
   sendTo(ws, { type: 'shop_items_result', ...result });
 }
 
@@ -4896,6 +4928,9 @@ async function handleGetInventory(ws) {
     return;
   }
   const result = await getUserItems(ws.nickname);
+  if (result.success && Array.isArray(result.items) && !clientSupportsMighty(ws)) {
+    result.items = result.items.filter((item) => !itemRequiresMightyClient(item.item_key));
+  }
   sendTo(ws, { type: 'inventory_result', ...result });
 }
 
@@ -4905,6 +4940,15 @@ async function handleBuyItem(ws, data) {
     return;
   }
   const itemKey = data.itemKey;
+  if (itemRequiresMightyClient(itemKey) && !clientSupportsMighty(ws)) {
+    sendTo(ws, {
+      type: 'purchase_result',
+      success: false,
+      itemKey,
+      message: t(ws.locale, 'mighty_update_required'),
+    });
+    return;
+  }
   const result = await buyItem(ws.nickname, itemKey);
   sendTo(ws, { type: 'purchase_result', itemKey, ...result });
 }
@@ -4945,6 +4989,14 @@ async function handleUseItem(ws, data) {
     return;
   }
   const itemKey = data.itemKey;
+  if (itemRequiresMightyClient(itemKey) && !clientSupportsMighty(ws)) {
+    sendTo(ws, {
+      type: 'use_item_result',
+      success: false,
+      message: t(ws.locale, 'mighty_update_required'),
+    });
+    return;
+  }
   const result = await useItem(ws.nickname, itemKey);
   sendTo(ws, { type: 'use_item_result', ...result });
 }

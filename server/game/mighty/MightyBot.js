@@ -839,17 +839,20 @@ function _friendLead(game, botId, legalCards, suitCards, mightyCard) {
     // Step 5: No friend suit left → lead from longest
     return _leadFromLongest(suitCards, legalCards);
   } else {
-    // Trump: help draw trumps by leading trump, or return declarer's strong suit
-    const onlyGovHasTrump = _onlyGovernmentHasTrump(game);
+    // Trump: help draw trumps by leading trump, or return declarer's strong suit.
+    // Use the self-aware check — pre-reveal, `game.partner` is null, so the default
+    // _onlyGovernmentHasTrump would count the friend bot's own trumps as opposition
+    // trumps and keep drawing forever. The friend knows it's itself.
+    const oppOutOfTrump = _noRealOppTrumpLeft(game, botId);
 
-    if (!onlyGovHasTrump && suitCards[game.trumpSuit] && suitCards[game.trumpSuit].length > 0) {
+    if (!oppOutOfTrump && suitCards[game.trumpSuit] && suitCards[game.trumpSuit].length > 0) {
       // Opposition still has trump → help draw by leading trump
       return suitCards[game.trumpSuit].sort((a, b) =>
         RANK_ORDER[getCardInfo(b).rank] - RANK_ORDER[getCardInfo(a).rank])[0];
     }
 
-    // Trumps drawn or only gov has them → return friend-card suit
-    const returnSuit = onlyGovHasTrump ? friendCardSuit : game.trumpSuit;
+    // Opp has no trump left → switch to the friend-card suit to feed declarer
+    const returnSuit = oppOutOfTrump ? friendCardSuit : game.trumpSuit;
     if (returnSuit && suitCards[returnSuit] && suitCards[returnSuit].length > 0) {
       return suitCards[returnSuit].sort((a, b) =>
         RANK_ORDER[getCardInfo(b).rank] - RANK_ORDER[getCardInfo(a).rank])[0];
@@ -1270,6 +1273,28 @@ function _onlyGovernmentHasTrump(game) {
   if (!game.trumpSuit || game.trumpSuit === 'no_trump') return false;
   for (const pid of game.playerIds) {
     if (pid === game.declarer || pid === game.partner) continue;
+    const hand = game.hands[pid] || [];
+    for (const cardId of hand) {
+      if (cardId === 'mighty_joker') continue;
+      const info = getCardInfo(cardId);
+      if (info.suit === game.trumpSuit) return false;
+    }
+  }
+  return true;
+}
+
+/**
+ * Variant of _onlyGovernmentHasTrump that also excludes `selfPid` — needed by
+ * the friend bot pre-reveal, where `game.partner` is still null but the bot
+ * itself knows it is part of government and should not count its own trumps
+ * as opposition trumps.
+ */
+function _noRealOppTrumpLeft(game, selfPid) {
+  if (!game.trumpSuit || game.trumpSuit === 'no_trump') return false;
+  for (const pid of game.playerIds) {
+    if (pid === game.declarer) continue;
+    if (pid === selfPid) continue;
+    if (game.friendRevealed && pid === game.partner) continue;
     const hand = game.hands[pid] || [];
     for (const cardId of hand) {
       if (cardId === 'mighty_joker') continue;

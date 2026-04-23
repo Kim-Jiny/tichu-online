@@ -693,11 +693,15 @@ function getSafeDiscard(legalCards, game) {
 }
 
 /**
- * Pick the MINIMAL card that wins the trick, GUARANTEED to hold.
- * - Skips mighty/joker whenever a cheaper GUARANTEED winner exists.
+ * Pick the MINIMAL card that wins the trick.
  * - Last player: cheapest is always safe (no one left to overcut).
- * - Opp behind: a "cheap" winner is only sufficient if it's the effective top
- *   of its suit (nothing higher can overcut). Otherwise use mighty/joker.
+ * - Opp behind, non-trump lead + we're ruffing with trump: use the LOWEST
+ *   trump. Any unplayed trump already beats the entire lead suit; the only
+ *   overcut path is opp spending a higher trump on this very trick, which is
+ *   rare enough that the conservation is worth it.
+ * - Opp behind, trump lead (or lead-suit follow): we need an actual
+ *   guaranteed winner (effective top of the lead suit). Fall back to
+ *   mighty/joker only when no cheap sure winner exists.
  */
 function pickSufficientWinner(winningCards, game, isLastPlayer, oppBehind) {
   const mightyCard = game.getMightyCard();
@@ -709,10 +713,20 @@ function pickSufficientWinner(winningCards, game, isLastPlayer, oppBehind) {
   }
 
   if (oppBehind) {
-    // Only cheap winners that can't be overcut qualify.
+    // Ruffing path: lead is a non-trump card and we can beat it with a trump.
+    const trump = game.trumpSuit;
+    const hasTrumpSuit = trump && trump !== 'no_trump';
+    const leadCard = game.currentTrick[0] && game.currentTrick[0].cardId;
+    const leadIsTrump = leadCard === 'mighty_joker' ||
+      (leadCard && hasTrumpSuit && getCardInfo(leadCard).suit === trump);
+    if (!leadIsTrump && hasTrumpSuit) {
+      const cheapTrumps = cheap.filter(c => getCardInfo(c).suit === trump);
+      if (cheapTrumps.length > 0) return getWeakestCard(cheapTrumps, game);
+    }
+
+    // Lead-suit (or trump-suit) follow: need a guaranteed top-of-suit winner.
     const sureCheap = cheap.filter(c => _isEffectiveTopOfSuit(c, game));
     if (sureCheap.length > 0) return getWeakestCard(sureCheap, game);
-    // No guaranteed cheap winner — use mighty/joker if we have them
     if (winningCards.includes(mightyCard)) return mightyCard;
     if (winningCards.includes('mighty_joker')) return 'mighty_joker';
     if (cheap.length > 0) return getStrongestCard(cheap, game);

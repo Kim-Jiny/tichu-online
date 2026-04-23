@@ -48,6 +48,11 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
   // Phase tracking for clearing stale state
   String _lastPhase = '';
 
+  // Track whether the local player was excluded last frame so we can clear
+  // pseudo-spectator state (approved peeks, pending requests, viewing target)
+  // when they rejoin the table next round.
+  bool _wasSelfExcluded = false;
+
   // Deal-miss reveal: user can dismiss; keyed by "round-playerId" so a new event re-shows
   String? _dismissedDealMissKey;
 
@@ -180,6 +185,28 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
                       return _buildSpectatorWaiting(game);
                     }
                     return const Center(child: CircularProgressIndicator());
+                  }
+                  // Clear stale pseudo-spectator state when the local player
+                  // stops being killed (i.e. next round started and they
+                  // rejoined the table). Server-side permissions are already
+                  // wiped by pruneCardViewPermissions.
+                  {
+                    final myId = game.playerId;
+                    final isSelfExcluded = myId.isNotEmpty && state.excludedPlayers.contains(myId);
+                    if (_wasSelfExcluded && !isSelfExcluded) {
+                      WidgetsBinding.instance.addPostFrameCallback((_) {
+                        if (!mounted) return;
+                        setState(() {
+                          game.approvedCardViews.clear();
+                          game.pendingCardViewRequests.clear();
+                          _viewingPlayerId = null;
+                          _cardViewRequestTimer?.cancel();
+                        });
+                      });
+                    }
+                    if (_wasSelfExcluded != isSelfExcluded) {
+                      _wasSelfExcluded = isSelfExcluded;
+                    }
                   }
                   // Clear stale state on phase change
                   if (_lastPhase != state.phase) {

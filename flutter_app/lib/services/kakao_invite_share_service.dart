@@ -60,6 +60,8 @@ class KakaoInviteShareService {
         return '스컬킹';
       case 'love_letter':
         return '러브레터';
+      case 'mighty':
+        return '마이티';
       case 'tichu':
       default:
         return '티츄';

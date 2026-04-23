@@ -112,11 +112,13 @@ function decideLeadCard(legalCards, tricksNeeded, tricksRemaining) {
     // Already met or exceeded bid: play weak.
     // Preserve Kraken/White Whale for follow-phase denial of high-stakes tricks
     // (SK+pirate / SK+mermaid). Dump simpler cards first.
-    const loot = infos.find(c => c.info.type === CARD_TYPE.LOOT);
-    if (loot) return makePlayAction(loot.id, loot.info);
-
+    // Lead with Escape before Loot: a Loot lead gifts +20 to whoever wins the
+    // trick (likely an opponent). Escape is safer — it just loses cleanly.
     const escapes = infos.filter(c => c.info.type === CARD_TYPE.ESCAPE);
     if (escapes.length > 0) return makePlayAction(escapes[0].id, escapes[0].info);
+
+    const loot = infos.find(c => c.info.type === CARD_TYPE.LOOT);
+    if (loot) return makePlayAction(loot.id, loot.info);
 
     const tigress = infos.find(c => c.info.type === CARD_TYPE.TIGRESS);
     if (tigress) return makePlayAction(tigress.id, tigress.info, 'escape');
@@ -147,10 +149,28 @@ function decideFollowCard(game, botId, legalCards, tricksNeeded) {
   const hasPirate = trickCards.some(p => p.info && (p.info.type === CARD_TYPE.PIRATE ||
     (p.info.type === CARD_TYPE.TIGRESS && p.tigressChoice === 'pirate')));
   const hasMermaid = trickCards.some(p => p.info && p.info.type === CARD_TYPE.MERMAID);
+  const hasKraken = trickCards.some(p => p.info && p.info.type === CARD_TYPE.KRAKEN);
+  const hasWhiteWhale = trickCards.some(p => p.info && p.info.type === CARD_TYPE.WHITE_WHALE);
+  // Specials are "live" only when neither Kraken (voids the trick) nor White
+  // Whale (nullifies all specials) is on the table.
+  const specialsLive = !hasKraken && !hasWhiteWhale && (hasSK || hasPirate || hasMermaid);
 
-  // Helper: determine if a number card would win against the current trick
+  // Helper: determine if a NUMBER card in our hand would actually take the
+  // trick. Accounts for Kraken (voids), White Whale (only numbers count, any
+  // suit, highest wins), and live specials (numbers always lose to them).
   const wouldCardWin = (card) => {
-    // Find lead suit
+    if (card.info.type !== CARD_TYPE.NUMBER) return false;
+    if (hasKraken) return false; // trick voided — nothing wins
+    if (hasWhiteWhale) {
+      // Specials nullified; only numbers count and highest value wins regardless of suit.
+      const numbered = trickCards.filter(t => t.info && t.info.type === CARD_TYPE.NUMBER);
+      if (numbered.length === 0) return true; // we'd be the only number
+      const maxValue = Math.max(...numbered.map(n => n.info.value));
+      return card.info.value > maxValue;
+    }
+    if (specialsLive) return false; // numbers can't beat live SK/Pirate/Mermaid
+
+    // Base game number-vs-number resolution
     let leadSuit = null;
     for (const t of trickCards) {
       if (t.info && t.info.type === CARD_TYPE.NUMBER) { leadSuit = t.info.suit; break; }
@@ -178,6 +198,50 @@ function decideFollowCard(game, botId, legalCards, tricksNeeded) {
     return false;
   };
 
+  // Pick the cheapest NUMBER card that would actually win this trick. Returns
+  // null if no number can win. Prefers non-trump and lowest value to preserve
+  // strong cards for future tricks.
+  const pickCheapestWinner = () => {
+    const winners = infos
+      .filter(c => c.info.type === CARD_TYPE.NUMBER)
+      .filter(c => wouldCardWin(c));
+    if (winners.length === 0) return null;
+    winners.sort((a, b) => {
+      if (a.info.suit === 'black' && b.info.suit !== 'black') return 1;
+      if (a.info.suit !== 'black' && b.info.suit === 'black') return -1;
+      return a.info.value - b.info.value;
+    });
+    return makePlayAction(winners[0].id, winners[0].info);
+  };
+
+  // Dump the cheapest possible card while preserving high numbers for future
+  // tricks. Used when we wanted the trick but can't win it — we still need
+  // future tricks, so don't burn our highs. Order: escape > loot > tigress(esc)
+  // > lowest non-trump number > lowest trump.
+  const dumpPreservingHighs = () => {
+    const escape = infos.find(c => c.info.type === CARD_TYPE.ESCAPE);
+    if (escape) return makePlayAction(escape.id, escape.info);
+    // Loot bonus dies under Kraken — fall back to the next dump option there.
+    if (!hasKraken) {
+      const loot = infos.find(c => c.info.type === CARD_TYPE.LOOT);
+      if (loot) return makePlayAction(loot.id, loot.info);
+    }
+    const tigress = infos.find(c => c.info.type === CARD_TYPE.TIGRESS);
+    if (tigress) return makePlayAction(tigress.id, tigress.info, 'escape');
+    if (hasKraken) {
+      const loot = infos.find(c => c.info.type === CARD_TYPE.LOOT);
+      if (loot) return makePlayAction(loot.id, loot.info);
+    }
+    const numbers = infos.filter(c => c.info.type === CARD_TYPE.NUMBER);
+    if (numbers.length === 0) return null;
+    numbers.sort((a, b) => {
+      if (a.info.suit === 'black' && b.info.suit !== 'black') return 1;
+      if (a.info.suit !== 'black' && b.info.suit === 'black') return -1;
+      return a.info.value - b.info.value;
+    });
+    return makePlayAction(numbers[0].id, numbers[0].info);
+  };
+
   // High-stakes trick: SK + pirate (+30/pirate) or SK + mermaid (+50) is on the
   // table. Voiding this with a Kraken is strictly better than a normal dump
   // because it denies opponents the bonus too.
@@ -188,43 +252,52 @@ function decideFollowCard(game, botId, legalCards, tricksNeeded) {
     // High-stakes denial: a big-bonus play is forming on the table.
     // Kraken voids the whole trick (best denial). White Whale nullifies
     // specials, turning the trick into a number contest that awards no
-    // SK/pirate/mermaid bonus (second-best denial).
-    if (highStakesTrick) {
+    // SK/pirate/mermaid bonus (second-best denial). Skip when one of these
+    // is already on the table — there's nothing left to deny.
+    if (highStakesTrick && !hasKraken && !hasWhiteWhale) {
       const krakenBlock = infos.find(c => c.info.type === CARD_TYPE.KRAKEN);
       if (krakenBlock) return makePlayAction(krakenBlock.id, krakenBlock.info);
       const whaleBlock = infos.find(c => c.info.type === CARD_TYPE.WHITE_WHALE);
       if (whaleBlock) return makePlayAction(whaleBlock.id, whaleBlock.info);
     }
-    // Loot never wins a trick → safest dump, and if we still win the trick
-    // it grants a bonus to us.
+    // Loot grants +20 to us regardless of who wins, BUT under Kraken the trick
+    // is voided and the bonus dies — prefer Escape in that case.
     const loot = infos.find(c => c.info.type === CARD_TYPE.LOOT);
-    if (loot) return makePlayAction(loot.id, loot.info);
     const escapes = infos.filter(c => c.info.type === CARD_TYPE.ESCAPE);
-    if (escapes.length > 0) return makePlayAction(escapes[0].id, escapes[0].info);
-    // Kraken voids the trick → great dump when we don't want any trick
-    const kraken = infos.find(c => c.info.type === CARD_TYPE.KRAKEN);
-    if (kraken) return makePlayAction(kraken.id, kraken.info);
+    if (hasKraken) {
+      if (escapes.length > 0) return makePlayAction(escapes[0].id, escapes[0].info);
+      if (loot) return makePlayAction(loot.id, loot.info);
+    } else {
+      if (loot) return makePlayAction(loot.id, loot.info);
+      if (escapes.length > 0) return makePlayAction(escapes[0].id, escapes[0].info);
+    }
+    // Our own Kraken/White Whale: pointless to spend if one is already on the
+    // table (only one of each exists in the deck, but guard anyway).
+    if (!hasKraken && !hasWhiteWhale) {
+      const kraken = infos.find(c => c.info.type === CARD_TYPE.KRAKEN);
+      if (kraken) return makePlayAction(kraken.id, kraken.info);
+    }
     const tigress = infos.find(c => c.info.type === CARD_TYPE.TIGRESS);
     if (tigress) return makePlayAction(tigress.id, tigress.info, 'escape');
-    // White Whale is volatile: if we have a weak hand it's often a dump too
-    const whale = infos.find(c => c.info.type === CARD_TYPE.WHITE_WHALE);
-    if (whale) return makePlayAction(whale.id, whale.info);
+    if (!hasKraken && !hasWhiteWhale) {
+      const whale = infos.find(c => c.info.type === CARD_TYPE.WHITE_WHALE);
+      if (whale) return makePlayAction(whale.id, whale.info);
+    }
     const numbers = infos.filter(c => c.info.type === CARD_TYPE.NUMBER);
     if (numbers.length === 0) return null;
-    // If special cards are winning, all numbers lose → play highest
-    if (hasSK || hasPirate || hasMermaid) {
-      numbers.sort((a, b) => b.info.value - a.info.value);
-      return makePlayAction(numbers[0].id, numbers[0].info);
-    }
-    // Split into losers and winners
+    // wouldCardWin is now Kraken/White-Whale/specials-aware:
+    //   - Kraken on table → all numbers are "losers" (trick voided)
+    //   - White Whale → only numbers above the on-table max are winners
+    //   - Live SK/Pirate/Mermaid → all numbers are losers
     const losers = numbers.filter(c => !wouldCardWin(c));
     const winners = numbers.filter(c => wouldCardWin(c));
     if (losers.length > 0) {
-      // Play highest loser
+      // Play highest loser — frees up high cards from future tricks for a
+      // zero-bid line, and is harmless when the trick is already lost anyway.
       losers.sort((a, b) => b.info.value - a.info.value);
       return makePlayAction(losers[0].id, losers[0].info);
     }
-    // All cards would win → play lowest to minimize damage
+    // All numbers would win → play lowest to minimize the win margin.
     winners.sort((a, b) => a.info.value - b.info.value);
     return makePlayAction(winners[0].id, winners[0].info);
   };
@@ -268,25 +341,49 @@ function decideFollowCard(game, botId, legalCards, tricksNeeded) {
     return null;
   };
 
+  // Kraken on the table → trick is voided. No card can win, no bonus is paid.
+  // Burning a strong card (or our own Kraken/White Whale) is wasted — just
+  // dump the weakest card regardless of whether we wanted the trick.
+  if (hasKraken) {
+    const weak = playWeak();
+    if (weak) return weak;
+    return makePlayAction(legalCards[0], getCardInfo(legalCards[0]));
+  }
+
+  // White Whale on the table → all specials nullified, only the highest number
+  // wins (any suit). Never burn SK/Pirate/Mermaid here. If we need the trick,
+  // try the cheapest winning number; otherwise dump while preserving highs.
+  if (hasWhiteWhale) {
+    if (tricksNeeded > 0) {
+      const winnerPlay = pickCheapestWinner();
+      if (winnerPlay) return winnerPlay;
+      const dump = dumpPreservingHighs();
+      if (dump) return dump;
+    }
+    const weak = playWeak();
+    if (weak) return weak;
+    return makePlayAction(legalCards[0], getCardInfo(legalCards[0]));
+  }
+
   if (tricksNeeded > 0) {
-    // Need to win this trick
+    // Need to win this trick. When we fail to beat a special, we still need
+    // future tricks — dump while preserving high cards (don't fall back to
+    // playWeak's "highest loser" zero-bid clearance).
 
     // SK on the table → play mermaid to capture (+50 bonus)
     if (hasSK) {
       const mermaid = infos.find(c => c.info.type === CARD_TYPE.MERMAID);
       if (mermaid) return makePlayAction(mermaid.id, mermaid.info);
-      // Can't beat SK without mermaid → dump weak
-      const weak = playWeak();
-      if (weak) return weak;
+      const dump = dumpPreservingHighs();
+      if (dump) return dump;
     }
 
     // Pirate on the table → need SK to beat it (or mermaid won't help here)
     if (hasPirate && !hasSK) {
       const sk = infos.find(c => c.info.type === CARD_TYPE.SKULL_KING);
       if (sk) return makePlayAction(sk.id, sk.info);
-      // Can't beat pirate without SK → dump weak
-      const weak = playWeak();
-      if (weak) return weak;
+      const dump = dumpPreservingHighs();
+      if (dump) return dump;
     }
 
     // Mermaid on the table → pirate beats it
@@ -295,6 +392,9 @@ function decideFollowCard(game, botId, legalCards, tricksNeeded) {
       if (pirate) return makePlayAction(pirate.id, pirate.info);
       const tigress = infos.find(c => c.info.type === CARD_TYPE.TIGRESS);
       if (tigress) return makePlayAction(tigress.id, tigress.info, 'pirate');
+      // Can't beat mermaid → dump while preserving highs (no number ever beats a mermaid).
+      const dump = dumpPreservingHighs();
+      if (dump) return dump;
     }
 
     // No special on table (or only numbers) → play strong
@@ -307,15 +407,12 @@ function decideFollowCard(game, botId, legalCards, tricksNeeded) {
       if (tigress) return makePlayAction(tigress.id, tigress.info, 'pirate');
     }
 
-    // Play high number to try to win
-    const numbers = infos
-      .filter(c => c.info.type === CARD_TYPE.NUMBER)
-      .sort((a, b) => {
-        if (a.info.suit === 'black' && b.info.suit !== 'black') return -1;
-        if (a.info.suit !== 'black' && b.info.suit === 'black') return 1;
-        return b.info.value - a.info.value;
-      });
-    if (numbers.length > 0) return makePlayAction(numbers[0].id, numbers[0].info);
+    // Play the cheapest NUMBER that actually wins — saves trumps and high cards
+    // for future tricks. If none wins, dump cheap to preserve highs.
+    const winnerPlay = pickCheapestWinner();
+    if (winnerPlay) return winnerPlay;
+    const dump = dumpPreservingHighs();
+    if (dump) return dump;
   } else {
     // Don't want more tricks: dump weak.
     // High-stakes denial: a big-bonus special trick (SK+pirate or SK+mermaid)

@@ -401,79 +401,10 @@ function decideKittyDiscard(game, botId) {
   const mightyCard = game.getMightyCard();
   const protectedCards = new Set([mightyCard, 'mighty_joker']);
 
-  // Group non-protected cards by suit
-  const suitGroups = {};
-  for (const suit of SUITS) suitGroups[suit] = [];
-  for (const cardId of hand) {
-    if (protectedCards.has(cardId)) continue;
-    const info = getCardInfo(cardId);
-    suitGroups[info.suit].push(cardId);
-  }
+  const suitGroups = groupMightyCardsBySuit(hand, protectedCards);
 
-  for (const suit of SUITS) {
-    suitGroups[suit].sort((a, b) =>
-      (RANK_ORDER[getCardInfo(a).rank] || 0) - (RANK_ORDER[getCardInfo(b).rank] || 0));
-  }
-
-  const discards = [];
-
-  // Strategy: discard entire short non-trump suits to create voids
-  const shortSuits = SUITS
-    .filter(s => s !== trumpSuit && suitGroups[s].length > 0 && suitGroups[s].length <= 3)
-    .sort((a, b) => suitGroups[a].length - suitGroups[b].length);
-
-  for (const suit of shortSuits) {
-    if (discards.length >= 3) break;
-    for (const cardId of suitGroups[suit]) {
-      if (discards.length >= 3) break;
-      discards.push(cardId);
-    }
-  }
-
-  // Fill remaining with weakest non-trump, non-protected cards.
-  // Trumps are only considered when we genuinely don't have 3 non-trump
-  // discardable cards (extreme trump hoarding case).
-  if (discards.length < 3) {
-    const nonTrumpPool = hand
-      .filter(cardId => !protectedCards.has(cardId) && !discards.includes(cardId))
-      .filter(cardId => {
-        if (trumpSuit === 'no_trump') return true;
-        return getCardInfo(cardId).suit !== trumpSuit;
-      })
-      .map(cardId => {
-        const info = getCardInfo(cardId);
-        let value = 0;
-        if (info.point > 0) value += 30;
-        value += RANK_ORDER[info.rank] || 0;
-        return { cardId, value };
-      })
-      .sort((a, b) => a.value - b.value);
-
-    for (const { cardId } of nonTrumpPool) {
-      if (discards.length >= 3) break;
-      discards.push(cardId);
-    }
-  }
-
-  // Last-resort trump fallback (only when we have almost no non-trump cards)
-  if (discards.length < 3) {
-    const trumpPool = hand
-      .filter(cardId => !protectedCards.has(cardId) && !discards.includes(cardId))
-      .map(cardId => {
-        const info = getCardInfo(cardId);
-        let value = 0;
-        if (info.point > 0) value += 30;
-        value += RANK_ORDER[info.rank] || 0;
-        return { cardId, value };
-      })
-      .sort((a, b) => a.value - b.value);
-    for (const { cardId } of trumpPool) {
-      if (discards.length >= 3) break;
-      discards.push(cardId);
-    }
-  }
-
-  // Pick friend card
+  // Pick friend card before scoring discards so the bot does not accidentally
+  // throw away the card it is about to call.
   let friendCard;
   if (!hand.includes(mightyCard)) {
     friendCard = mightyCard;
@@ -491,32 +422,112 @@ function decideKittyDiscard(game, botId) {
     }
   }
 
-  // Ensure friend card isn't in discards
-  let finalDiscards = discards.filter(c => c !== friendCard);
-  if (finalDiscards.length < 3) {
-    // Refill preferring non-trump, falling back to trump only if forced
-    const eligible = hand
-      .filter(cardId => !protectedCards.has(cardId) && !finalDiscards.includes(cardId) && cardId !== friendCard)
-      .map(cardId => {
-        const info = getCardInfo(cardId);
-        const isTrump = trumpSuit !== 'no_trump' && info.suit === trumpSuit;
-        return {
-          cardId,
-          isTrump,
-          value: (info.point > 0 ? 30 : 0) + (RANK_ORDER[info.rank] || 0),
-        };
-      });
-    const nonTrumpFirst = [
-      ...eligible.filter(e => !e.isTrump).sort((a, b) => a.value - b.value),
-      ...eligible.filter(e => e.isTrump).sort((a, b) => a.value - b.value),
-    ];
-    for (const { cardId } of nonTrumpFirst) {
-      if (finalDiscards.length >= 3) break;
-      finalDiscards.push(cardId);
+  const eligible = hand.filter(cardId =>
+    !protectedCards.has(cardId) && cardId !== friendCard);
+  const discards = chooseKittyDiscards(eligible, game, suitGroups);
+
+  return { type: 'discard_kitty', discards, friendCard };
+}
+
+function groupMightyCardsBySuit(cards, excluded = new Set()) {
+  const suitGroups = {};
+  for (const suit of SUITS) suitGroups[suit] = [];
+  for (const cardId of cards) {
+    if (excluded.has(cardId) || cardId === 'mighty_joker') continue;
+    const info = getCardInfo(cardId);
+    if (info.suit) suitGroups[info.suit].push(cardId);
+  }
+  for (const suit of SUITS) {
+    suitGroups[suit].sort((a, b) =>
+      (RANK_ORDER[getCardInfo(a).rank] || 0) - (RANK_ORDER[getCardInfo(b).rank] || 0));
+  }
+  return suitGroups;
+}
+
+function chooseKittyDiscards(eligible, game, suitGroups) {
+  if (eligible.length <= 3) return eligible.slice(0, 3);
+
+  let best = null;
+  for (let i = 0; i < eligible.length - 2; i++) {
+    for (let j = i + 1; j < eligible.length - 1; j++) {
+      for (let k = j + 1; k < eligible.length; k++) {
+        const combo = [eligible[i], eligible[j], eligible[k]];
+        const score = scoreKittyDiscardCombo(combo, game, suitGroups);
+        if (!best || score > best.score || (score === best.score && combo.join('|') < best.cards.join('|'))) {
+          best = { score, cards: combo };
+        }
+      }
+    }
+  }
+  return best ? best.cards : eligible.slice(0, 3);
+}
+
+function scoreKittyDiscardCombo(combo, game, suitGroups) {
+  const trumpSuit = game.trumpSuit;
+  let score = 0;
+  const discardedBySuit = {};
+  let bankedPoints = 0;
+  let trumpDiscards = 0;
+
+  for (const cardId of combo) {
+    const info = getCardInfo(cardId);
+    if (!info.suit) continue;
+    discardedBySuit[info.suit] = (discardedBySuit[info.suit] || 0) + 1;
+    if (info.point > 0) bankedPoints++;
+    if (trumpSuit !== 'no_trump' && info.suit === trumpSuit) trumpDiscards++;
+    score += scoreKittyDiscardCard(cardId, game, suitGroups);
+  }
+
+  // Discarded point cards are already secured for the declarer, so low point
+  // cards are attractive. The per-card score still protects A/K winners.
+  score += bankedPoints * 4;
+
+  for (const suit of Object.keys(discardedBySuit)) {
+    if (trumpSuit !== 'no_trump' && suit === trumpSuit) continue;
+    const suitSize = (suitGroups[suit] || []).length;
+    const discardedCount = discardedBySuit[suit];
+    if (discardedCount === suitSize && suitSize > 0 && suitSize <= 3) {
+      score += 36 - (suitSize * 4); // creating a side-suit void is valuable
+    } else if (suitSize <= 2) {
+      score += discardedCount * 6;
     }
   }
 
-  return { type: 'discard_kitty', discards: finalDiscards.slice(0, 3), friendCard };
+  if (trumpDiscards > 0) {
+    const trumpCount = trumpSuit !== 'no_trump' ? (suitGroups[trumpSuit] || []).length : 0;
+    score -= trumpDiscards * (trumpCount >= 7 ? 6 : 28);
+    if (trumpDiscards >= 2 && trumpCount < 7) score -= 20;
+  }
+
+  return score;
+}
+
+function scoreKittyDiscardCard(cardId, game, suitGroups) {
+  const info = getCardInfo(cardId);
+  const trumpSuit = game.trumpSuit;
+  const isTrump = trumpSuit !== 'no_trump' && info.suit === trumpSuit;
+  const rankValue = RANK_ORDER[info.rank] || 0;
+  const suitSize = (suitGroups[info.suit] || []).length;
+  let score = 0;
+
+  score += isTrump ? -35 : 18;
+  score += Math.max(0, 11 - rankValue); // low cards are easier to release
+
+  if (info.point > 0) {
+    // Banking 10/J/Q is usually better than carrying a likely loser. A/K are
+    // real control cards and should only be discarded when a void is worth it.
+    if (info.rank === '10') score += 28;
+    else if (info.rank === 'J') score += 22;
+    else if (info.rank === 'Q') score += 14;
+    else if (info.rank === 'K') score -= 10;
+    else if (info.rank === 'A') score -= 24;
+  }
+
+  if (!isTrump && suitSize <= 3) score += (4 - suitSize) * 4;
+  if (!isTrump && suitSize >= 5 && rankValue >= 12) score -= 8;
+  if (isTrump && rankValue >= 11) score -= 18;
+
+  return score;
 }
 
 /**

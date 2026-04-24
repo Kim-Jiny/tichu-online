@@ -1950,21 +1950,21 @@ class _LobbyScreenState extends State<LobbyScreen> {
             borderRadius: BorderRadius.circular(16),
             border: Border.all(color: borderColor),
           ),
-          child: Row(
-            children: [
-              // Left color strip
-              Container(
-                width: 6,
-                height: 64,
-                decoration: BoxDecoration(
-                  color: stripColor,
-                  borderRadius: const BorderRadius.only(
-                    topLeft: Radius.circular(16),
-                    bottomLeft: Radius.circular(16),
+          child: IntrinsicHeight(
+            child: Row(
+              children: [
+                // Left color strip — stretches to cell height.
+                Container(
+                  width: 6,
+                  decoration: BoxDecoration(
+                    color: stripColor,
+                    borderRadius: const BorderRadius.only(
+                      topLeft: Radius.circular(16),
+                      bottomLeft: Radius.circular(16),
+                    ),
                   ),
                 ),
-              ),
-              Expanded(
+                Expanded(
                 child: Padding(
                   padding: const EdgeInsets.fromLTRB(12, 14, 16, 14),
                   child: Row(
@@ -2151,7 +2151,8 @@ class _LobbyScreenState extends State<LobbyScreen> {
                   ),
                 ),
               ),
-            ],
+              ],
+            ),
           ),
         ),
       ),

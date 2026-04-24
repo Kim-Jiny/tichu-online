@@ -291,7 +291,16 @@ class _SKGameScreenState extends State<SKGameScreen> {
                                 ],
                               ),
                             ),
-                          if (state.phase == 'bidding')
+                          if (state.phase == 'bidding') ...[
+                            // Keep the trick-area card visible during
+                            // bidding so players can still see who the
+                            // round leader is (the CenterTimerBadge inside
+                            // _buildTrickArea renders "선: {name}" when
+                            // phase == 'bidding').
+                            Padding(
+                              padding: const EdgeInsets.only(top: 8, bottom: 4),
+                              child: _buildTrickArea(state),
+                            ),
                             Expanded(
                               child: Align(
                                 alignment: Alignment.bottomCenter,
@@ -300,6 +309,7 @@ class _SKGameScreenState extends State<SKGameScreen> {
                                 ),
                               ),
                             ),
+                          ],
                           if (state.phase == 'playing' ||
                               state.phase == 'trick_end')
                             _buildHandArea(state, game),
@@ -1436,39 +1446,94 @@ class _SKGameScreenState extends State<SKGameScreen> {
     final displayName = currentPlayerName.length > 8
         ? '${currentPlayerName.substring(0, 8)}…'
         : currentPlayerName;
-    final turnLabel = state.phase == 'bidding'
-        ? L10n.of(context).skGameLeaderLabel(displayName)
-        : state.isMyTurn
+    final urgent = _remainingSeconds <= 10;
+    final primaryColor =
+        urgent ? const Color(0xFFCC4444) : const Color(0xFF5A4038);
+    final timerText = L10n.of(context).skGameSecondsShort(_remainingSeconds);
+
+    final boxDecoration = BoxDecoration(
+      color: urgent
+          ? const Color(0xFFFFE4E4)
+          : Colors.white.withValues(alpha: 0.82),
+      borderRadius: BorderRadius.circular(14),
+      border: Border.all(
+        color: urgent ? const Color(0xFFFF6B6B) : const Color(0xFFD7CEC8),
+        width: urgent ? 2 : 1,
+      ),
+    );
+
+    // Bidding badge lays out label / name / timer vertically so long
+    // nicknames don't get truncated the way a single-row "선 플레이어: X" 40s"
+    // did on narrower screens.
+    if (state.phase == 'bidding') {
+      return ConstrainedBox(
+        constraints: const BoxConstraints(maxWidth: 220),
+        child: Container(
+          margin: const EdgeInsets.only(top: 8),
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+          decoration: boxDecoration,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                L10n.of(context).skGameLeaderLabelShort,
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  fontSize: 11,
+                  fontWeight: FontWeight.w700,
+                  color: urgent
+                      ? const Color(0xFFCC4444)
+                      : const Color(0xFF8A7A72),
+                ),
+              ),
+              const SizedBox(height: 2),
+              Text(
+                currentPlayerName,
+                textAlign: TextAlign.center,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w800,
+                  color: primaryColor,
+                ),
+              ),
+              const SizedBox(height: 4),
+              Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(Icons.schedule, size: 13, color: primaryColor),
+                  const SizedBox(width: 4),
+                  Text(
+                    timerText,
+                    style: TextStyle(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w800,
+                      color: primaryColor,
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+
+    // Playing-phase badge stays single-row (compact "내 턴 / OOO 대기" + timer).
+    final turnLabel = state.isMyTurn
         ? L10n.of(context).skGameMyTurn
         : L10n.of(context).skGameWaitingFor(displayName);
-
     return ConstrainedBox(
       constraints: const BoxConstraints(maxWidth: 220),
       child: Container(
         margin: const EdgeInsets.only(top: 8),
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
-        decoration: BoxDecoration(
-          color: _remainingSeconds <= 10
-              ? const Color(0xFFFFE4E4)
-              : Colors.white.withValues(alpha: 0.82),
-          borderRadius: BorderRadius.circular(14),
-          border: Border.all(
-            color: _remainingSeconds <= 10
-                ? const Color(0xFFFF6B6B)
-                : const Color(0xFFD7CEC8),
-            width: _remainingSeconds <= 10 ? 2 : 1,
-          ),
-        ),
+        decoration: boxDecoration,
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(
-              Icons.schedule,
-              size: 14,
-              color: _remainingSeconds <= 10
-                  ? const Color(0xFFCC4444)
-                  : const Color(0xFF6A5A52),
-            ),
+            Icon(Icons.schedule, size: 14, color: primaryColor),
             const SizedBox(width: 6),
             Flexible(
               child: Text(
@@ -1478,21 +1543,17 @@ class _SKGameScreenState extends State<SKGameScreen> {
                 style: TextStyle(
                   fontSize: 13,
                   fontWeight: FontWeight.w800,
-                  color: _remainingSeconds <= 10
-                      ? const Color(0xFFCC4444)
-                      : const Color(0xFF5A4038),
+                  color: primaryColor,
                 ),
               ),
             ),
             const SizedBox(width: 4),
             Text(
-              L10n.of(context).skGameSecondsShort(_remainingSeconds),
+              timerText,
               style: TextStyle(
                 fontSize: 13,
                 fontWeight: FontWeight.w800,
-                color: _remainingSeconds <= 10
-                    ? const Color(0xFFCC4444)
-                    : const Color(0xFF5A4038),
+                color: primaryColor,
               ),
             ),
           ],

@@ -2169,6 +2169,12 @@ abstract class L10n {
   /// **'Leader: {name}'**
   String skGameLeaderLabel(String name);
 
+  /// No description provided for @skGameLeaderLabelShort.
+  ///
+  /// In en, this message translates to:
+  /// **'Leader'**
+  String get skGameLeaderLabelShort;
+
   /// No description provided for @skGameMyTurn.
   ///
   /// In en, this message translates to:

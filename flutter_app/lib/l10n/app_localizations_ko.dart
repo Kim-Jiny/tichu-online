@@ -1099,8 +1099,11 @@ class L10nKo extends L10n {
 
   @override
   String skGameLeaderLabel(String name) {
-    return '선: $name';
+    return '선 플레이어: $name';
   }
+
+  @override
+  String get skGameLeaderLabelShort => '선 플레이어';
 
   @override
   String get skGameMyTurn => '내 턴';

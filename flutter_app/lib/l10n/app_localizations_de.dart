@@ -1137,6 +1137,9 @@ class L10nDe extends L10n {
   }
 
   @override
+  String get skGameLeaderLabelShort => 'Startspieler';
+
+  @override
   String get skGameMyTurn => 'Mein Zug';
 
   @override

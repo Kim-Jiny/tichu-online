@@ -1128,6 +1128,9 @@ class L10nEn extends L10n {
   }
 
   @override
+  String get skGameLeaderLabelShort => 'Leader';
+
+  @override
   String get skGameMyTurn => 'My Turn';
 
   @override

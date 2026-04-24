@@ -495,6 +495,7 @@
   "skGameLeaveConfirm": "Are you sure you want to leave the game?",
   "skGameLeaveButton": "Leave",
   "skGameLeaderLabel": "Leader: {name}",
+  "skGameLeaderLabelShort": "Leader",
   "@skGameLeaderLabel": {
     "placeholders": {
       "name": { "type": "String" }

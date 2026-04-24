@@ -365,6 +365,7 @@
   "skGameLeaveConfirm": "Möchtest du das Spiel wirklich verlassen?",
   "skGameLeaveButton": "Verlassen",
   "skGameLeaderLabel": "Startspieler: {name}",
+  "skGameLeaderLabelShort": "Startspieler",
   "skGameMyTurn": "Mein Zug",
   "skGameWaitingFor": "Warte auf {name}",
   "skGameSecondsShort": "{seconds}s",

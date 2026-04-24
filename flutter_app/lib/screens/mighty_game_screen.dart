@@ -3757,47 +3757,49 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
                 ],
               ),
               const SizedBox(height: 12),
-              Wrap(
-                alignment: WrapAlignment.center,
-                spacing: 8,
-                runSpacing: 8,
+              Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  for (final play in prev.cards)
+                  for (int i = 0; i < prev.cards.length; i++) ...[
+                    if (i > 0) const SizedBox(width: 3),
                     Column(
                       mainAxisSize: MainAxisSize.min,
                       children: [
                         Container(
-                          decoration: play.playerId == prev.winner
+                          decoration: prev.cards[i].playerId == prev.winner
                               ? BoxDecoration(
-                                  borderRadius: BorderRadius.circular(10),
+                                  borderRadius: BorderRadius.circular(8),
                                   border: Border.all(
                                       color: const Color(0xFFFFB74D), width: 2),
                                 )
                               : null,
                           padding: const EdgeInsets.all(1),
                           child: PlayingCard(
-                            cardId: _displayCardId(play.cardId),
-                            width: 44,
-                            height: 62,
+                            cardId: _displayCardId(prev.cards[i].cardId),
+                            width: 42,
+                            height: 59,
                             isInteractive: false,
                           ),
                         ),
-                        const SizedBox(height: 3),
+                        const SizedBox(height: 2),
                         SizedBox(
-                          width: 56,
+                          width: 46,
                           child: Text(
                             state.players
-                                .firstWhere((p) => p.id == play.playerId,
-                                    orElse: () => MightyPlayer(id: play.playerId, name: play.playerId))
+                                .firstWhere((p) => p.id == prev.cards[i].playerId,
+                                    orElse: () => MightyPlayer(
+                                        id: prev.cards[i].playerId,
+                                        name: prev.cards[i].playerId))
                                 .name,
                             textAlign: TextAlign.center,
                             overflow: TextOverflow.ellipsis,
                             style: TextStyle(
-                              fontSize: 10,
-                              fontWeight: play.playerId == prev.winner
+                              fontSize: 9,
+                              fontWeight: prev.cards[i].playerId == prev.winner
                                   ? FontWeight.w800
                                   : FontWeight.w500,
-                              color: play.playerId == prev.winner
+                              color: prev.cards[i].playerId == prev.winner
                                   ? const Color(0xFFE65100)
                                   : const Color(0xFF5A4038),
                             ),
@@ -3805,6 +3807,7 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
                         ),
                       ],
                     ),
+                  ],
                 ],
               ),
               const SizedBox(height: 10),

@@ -174,6 +174,13 @@ class GameService extends ChangeNotifier {
   // Set to true by requestNotices(markReadOnReceive: true) so the next
   // notices_result response automatically marks everything seen.
   bool _pendingNoticeMarkRead = false;
+  // First-ever notices bootstrap: a brand-new install shouldn't see every
+  // pre-existing notice flagged as 'NEW'. The first time we receive a
+  // notices_result on a device with no prior read history, mark them all
+  // as read. Tracked via SharedPreferences so we only do it once per
+  // install, even if the user hasn't read anything yet.
+  bool _noticesBootstrapped = false;
+  static const String _noticesBootstrappedPrefsKey = 'notices_bootstrapped';
 
   /// Read-only view of notice IDs the user has already seen.
   Set<int> get readNoticeIds => _readNoticeIds;
@@ -1651,6 +1658,17 @@ class GameService extends ChangeNotifier {
           if (_pendingNoticeMarkRead) {
             _pendingNoticeMarkRead = false;
             markCurrentNoticesAsRead();
+          } else if (!_noticesBootstrapped) {
+            // First-ever notices_result on this install. If the user has
+            // no prior read history, treat them as a new user and hide
+            // the 'NEW' badge on every currently-published notice. Users
+            // who already read some notices (upgrading from older builds)
+            // just get the flag set with no change.
+            if (_readNoticeIds.isEmpty) {
+              markCurrentNoticesAsRead();
+            }
+            _noticesBootstrapped = true;
+            _saveNoticesBootstrappedFlag();
           }
         } else {
           noticesError = data['message'] as String? ?? 'notices_load_failed';
@@ -3158,8 +3176,18 @@ class GameService extends ChangeNotifier {
       final prefs = await SharedPreferences.getInstance();
       final list = prefs.getStringList(_readNoticesPrefsKey) ?? const [];
       _readNoticeIds.addAll(list.map(int.tryParse).whereType<int>());
+      _noticesBootstrapped = prefs.getBool(_noticesBootstrappedPrefsKey) ?? false;
       if (_disposed) return;
       notifyListeners();
+    } catch (_) {
+      // Best-effort; ignore prefs errors.
+    }
+  }
+
+  Future<void> _saveNoticesBootstrappedFlag() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setBool(_noticesBootstrappedPrefsKey, true);
     } catch (_) {
       // Best-effort; ignore prefs errors.
     }

@@ -322,8 +322,10 @@ class MightyGame {
   _advanceBidding() {
     const active = this.activePlayerCount;
 
-    // Bid of 20 = instant win, no need for others to pass
-    if (this.currentBid.points === 20) {
+    // 20 NT is the true ceiling (nothing can beat it) → instant win. A 20
+    // suited bid can still be raised to 20 NT by another player, so keep
+    // the bidding loop running in that case.
+    if (this.currentBid.points === 20 && this.currentBid.suit === 'no_trump') {
       this._finalizeBidding();
       return { success: true };
     }

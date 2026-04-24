@@ -1222,7 +1222,9 @@ class _LobbyScreenState extends State<LobbyScreen> {
                                       : l10n.lobbyRankedFixedScoreInfo)
                               : (selectedGameType == 'mighty'
                                   ? l10n.lobbyNormalSettingsInfoMighty
-                                  : l10n.lobbyNormalSettingsInfo),
+                                  : selectedGameType == 'tichu'
+                                      ? l10n.lobbyNormalSettingsInfo
+                                      : l10n.lobbyNormalSettingsInfoTimeOnly),
                           style: const TextStyle(
                             fontSize: 11,
                             color: Color(0xFF6D615B),

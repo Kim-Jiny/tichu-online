@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../l10n/app_localizations.dart';
 import '../services/game_service.dart';
+import '../widgets/playing_card.dart';
 
 /// Rules / "게임설명" screen — accessible from the lobby header.
 /// Shows Tichu and Skull King rules with exact card counts. The Skull King
@@ -865,9 +866,16 @@ class _RulesScreenState extends State<RulesScreen> {
           icon: Icons.style,
           iconColor: mtAccent,
           title: L10n.of(context).rulesMtCardCompositionTitle,
-          child: Text(
-            L10n.of(context).rulesMtCardCompositionBody,
-            style: _bodyStyle,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const _MightyDeckPreview(),
+              const SizedBox(height: 8),
+              Text(
+                L10n.of(context).rulesMtCardCompositionBody,
+                style: _bodyStyle,
+              ),
+            ],
           ),
         ),
         _section(
@@ -884,6 +892,9 @@ class _RulesScreenState extends State<RulesScreen> {
                   L10n.of(context).rulesMtSpecialMightyLine1,
                   L10n.of(context).rulesMtSpecialMightyLine2,
                 ],
+                cardId: 'mighty_spade_A',
+                altCardId: 'mighty_diamond_A',
+                altCardLabel: L10n.of(context).rulesMtSpecialMightyAltLabel,
               ),
               const SizedBox(height: 10),
               _SpecialRule(
@@ -893,6 +904,7 @@ class _RulesScreenState extends State<RulesScreen> {
                   L10n.of(context).rulesMtSpecialJokerLine1,
                   L10n.of(context).rulesMtSpecialJokerLine2,
                 ],
+                cardId: 'mighty_joker',
               ),
               const SizedBox(height: 10),
               _SpecialRule(
@@ -902,6 +914,7 @@ class _RulesScreenState extends State<RulesScreen> {
                   L10n.of(context).rulesMtSpecialJokerCallLine1,
                   L10n.of(context).rulesMtSpecialJokerCallLine2,
                 ],
+                cardId: 'mighty_club_3',
               ),
             ],
           ),
@@ -1253,12 +1266,26 @@ class _SpecialRule extends StatelessWidget {
   final String title;
   final List<String> lines;
   final Widget? extra;
+  /// Optional card ID rendered as a small [PlayingCard] thumbnail at the
+  /// right of the rule. When provided, takes visual priority over the
+  /// [emoji] badge on the left (the emoji still shows for flavour).
+  final String? cardId;
+  /// Alternate card shown side-by-side with [cardId] — used for the
+  /// Mighty rule to show both the default ♠A and the ♦A fallback when
+  /// spade is the chosen trump.
+  final String? altCardId;
+  /// Short caption rendered under the [altCardId] preview (e.g. a
+  /// "when trump = ♠" footnote).
+  final String? altCardLabel;
 
   const _SpecialRule({
     required this.emoji,
     required this.title,
     required this.lines,
     this.extra,
+    this.cardId,
+    this.altCardId,
+    this.altCardLabel,
   });
 
   @override
@@ -1270,38 +1297,74 @@ class _SpecialRule extends StatelessWidget {
         borderRadius: BorderRadius.circular(10),
         border: Border.all(color: const Color(0xFFE8DDD8)),
       ),
-      child: Column(
+      child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(
-            children: [
-              Text(emoji, style: const TextStyle(fontSize: 16)),
-              const SizedBox(width: 6),
-              Text(
-                title,
-                style: const TextStyle(
-                  fontSize: 13,
-                  fontWeight: FontWeight.w800,
-                  color: Color(0xFF3E312A),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Text(emoji, style: const TextStyle(fontSize: 16)),
+                    const SizedBox(width: 6),
+                    Flexible(
+                      child: Text(
+                        title,
+                        style: const TextStyle(
+                          fontSize: 13,
+                          fontWeight: FontWeight.w800,
+                          color: Color(0xFF3E312A),
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
-              ),
-            ],
+                const SizedBox(height: 6),
+                for (final line in lines)
+                  Padding(
+                    padding: const EdgeInsets.only(left: 4, top: 2, bottom: 2),
+                    child: Text(
+                      '• $line',
+                      style: const TextStyle(
+                        fontSize: 12,
+                        height: 1.5,
+                        color: Color(0xFF5A4038),
+                      ),
+                    ),
+                  ),
+                if (extra != null) ...[const SizedBox(height: 8), extra!],
+              ],
+            ),
           ),
-          const SizedBox(height: 6),
-          for (final line in lines) ...[
-            Padding(
-              padding: const EdgeInsets.only(left: 4, top: 2, bottom: 2),
-              child: Text(
-                '• $line',
-                style: const TextStyle(
-                  fontSize: 12,
-                  height: 1.5,
-                  color: Color(0xFF5A4038),
-                ),
-              ),
+          if (cardId != null) ...[
+            const SizedBox(width: 10),
+            Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                PlayingCard(cardId: cardId!, width: 44, height: 62, isInteractive: false),
+                if (altCardId != null) ...[
+                  const SizedBox(height: 6),
+                  PlayingCard(cardId: altCardId!, width: 44, height: 62, isInteractive: false),
+                  if (altCardLabel != null) ...[
+                    const SizedBox(height: 2),
+                    SizedBox(
+                      width: 56,
+                      child: Text(
+                        altCardLabel!,
+                        textAlign: TextAlign.center,
+                        style: const TextStyle(
+                          fontSize: 9,
+                          height: 1.2,
+                          color: Color(0xFF8A7A72),
+                        ),
+                      ),
+                    ),
+                  ],
+                ],
+              ],
             ),
           ],
-          if (extra != null) ...[const SizedBox(height: 8), extra!],
         ],
       ),
     );
@@ -1635,6 +1698,39 @@ class _GamePickerTile extends StatelessWidget {
               Icon(Icons.check_rounded, color: color, size: 20),
           ],
         ),
+      ),
+    );
+  }
+}
+
+/// Small horizontal strip showing a sample of the Mighty deck: one Ace per
+/// suit plus the joker. Purely decorative — helps the rulebook reader
+/// visualise what "52 suited + joker" looks like.
+class _MightyDeckPreview extends StatelessWidget {
+  const _MightyDeckPreview();
+
+  @override
+  Widget build(BuildContext context) {
+    const cardIds = [
+      'mighty_spade_A',
+      'mighty_heart_A',
+      'mighty_diamond_A',
+      'mighty_club_A',
+      'mighty_joker',
+    ];
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+      decoration: BoxDecoration(
+        color: const Color(0xFFF8F4F1),
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: const Color(0xFFE8DDD8)),
+      ),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceAround,
+        children: [
+          for (final id in cardIds)
+            PlayingCard(cardId: id, width: 40, height: 56, isInteractive: false),
+        ],
       ),
     );
   }

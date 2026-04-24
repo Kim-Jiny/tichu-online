@@ -264,30 +264,44 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
                           _discardSelection.clear();
                           _selectedTrumpSuit = null;
                           _lastKnownTrumpSuit = null;
-                          // Smart default: mighty → trump A → joker → spade A
+                          // Smart default, in priority order:
+                          //   1. Hand holds BOTH mighty AND joker → first-trick
+                          //      friend (strong hand, the first-trick winner
+                          //      makes a great partner).
+                          //   2. Missing mighty → call mighty as friend card.
+                          //   3. Suited bid, missing trump-A → call trump A.
+                          //   4. Missing joker → joker-call friend.
+                          //   5. Otherwise → leave unset so host picks
+                          //      explicitly (confirm button stays disabled).
                           final myCards = state.myCards;
                           final mightyCard = state.mightyCard;
                           final trump = state.trumpSuit ?? 'spade';
-                          final trumpAce = 'mighty_${trump}_A';
-                          if (mightyCard != null && !myCards.contains(mightyCard)) {
+                          final isNT = trump == 'no_trump';
+                          final hasMighty = mightyCard != null && myCards.contains(mightyCard);
+                          final hasJoker = myCards.contains('mighty_joker');
+                          final trumpAce = isNT ? null : 'mighty_${trump}_A';
+                          final hasTrumpAce = trumpAce != null && myCards.contains(trumpAce);
+
+                          if (hasMighty && hasJoker) {
+                            _friendMode = 'first_trick';
+                            _friendCardSelection = 'first_trick';
+                          } else if (mightyCard != null && !hasMighty) {
                             final parts = mightyCard.replaceFirst('mighty_', '').split('_');
                             _friendMode = 'card';
                             _friendSuit = parts.isNotEmpty ? parts[0] : 'spade';
                             _friendRank = parts.length > 1 ? parts[1] : 'A';
                             _friendCardSelection = 'mighty_${_friendSuit}_$_friendRank';
-                          } else if (!myCards.contains(trumpAce)) {
+                          } else if (trumpAce != null && !hasTrumpAce) {
                             _friendMode = 'card';
                             _friendSuit = trump;
                             _friendRank = 'A';
-                            _friendCardSelection = 'mighty_${_friendSuit}_$_friendRank';
-                          } else if (!myCards.contains('mighty_joker')) {
+                            _friendCardSelection = trumpAce;
+                          } else if (!hasJoker) {
                             _friendMode = 'joker';
                             _friendCardSelection = 'mighty_joker';
                           } else {
-                            _friendMode = 'card';
-                            _friendSuit = 'spade';
-                            _friendRank = 'A';
-                            _friendCardSelection = 'mighty_${_friendSuit}_$_friendRank';
+                            _friendMode = '';
+                            _friendCardSelection = '';
                           }
                         }
                       });
@@ -1853,12 +1867,22 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
             // Bid / Pass / Deal miss
             Builder(builder: (context) {
               final currentBidPoints = (state.currentBid['points'] as num?)?.toInt() ?? 0;
-              final isMaxBid = currentBidPoints >= 20;
+              final currentBidSuit = state.currentBid['suit'] as String?;
+              // True ceiling is 20 NT. 20+suit can still be tied by 20 NT,
+              // so we only disable when no further raise is legal.
+              final isTrueCeiling = currentBidPoints >= 20 &&
+                  currentBidSuit == 'no_trump';
+              final canTieWithNT = currentBidPoints >= 20 &&
+                  currentBidSuit != null &&
+                  currentBidSuit != 'no_trump' &&
+                  _bidSuit == 'no_trump';
+              final canBid = !isTrueCeiling &&
+                  (currentBidPoints < 20 || canTieWithNT);
               return Row(
                 children: [
                   Expanded(
                     child: FilledButton(
-                      onPressed: isMaxBid ? null : () => game.mightySubmitBid(_bidPoints, _bidSuit),
+                      onPressed: canBid ? () => game.mightySubmitBid(_bidPoints, _bidSuit) : null,
                       style: FilledButton.styleFrom(
                         backgroundColor: const Color(0xFF1565C0),
                         disabledBackgroundColor: const Color(0xFFBDBDBD),
@@ -2122,7 +2146,9 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
                     width: double.infinity,
                     height: 44,
                     child: FilledButton(
-                      onPressed: _discardSelection.length == 3 && _friendCardSelection.isNotEmpty
+                      onPressed: _discardSelection.length == 3
+                              && _friendMode.isNotEmpty
+                              && _friendCardSelection.isNotEmpty
                           ? () {
                               game.mightyDiscardKitty(_discardSelection.toList(), _friendCardSelection);
                               setState(() => _discardSelection.clear());

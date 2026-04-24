@@ -1197,6 +1197,12 @@ abstract class L10n {
   /// **'Time limit: 10–999 sec, target score: 10–500 pts.'**
   String get lobbyNormalSettingsInfoMighty;
 
+  /// No description provided for @lobbyNormalSettingsInfoTimeOnly.
+  ///
+  /// In en, this message translates to:
+  /// **'Time limit: 10–999 sec.'**
+  String get lobbyNormalSettingsInfoTimeOnly;
+
   /// No description provided for @lobbyEnterRoomName.
   ///
   /// In en, this message translates to:
@@ -4640,6 +4646,12 @@ abstract class L10n {
   /// In en, this message translates to:
   /// **'By default it is the Spade Ace. If the trump suit is Spades, the Mighty becomes the Diamond Ace instead.'**
   String get rulesMtSpecialMightyLine2;
+
+  /// No description provided for @rulesMtSpecialMightyAltLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'when trump = ♠'**
+  String get rulesMtSpecialMightyAltLabel;
 
   /// No description provided for @rulesMtSpecialJokerTitle.
   ///

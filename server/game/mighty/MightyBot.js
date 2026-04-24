@@ -878,12 +878,14 @@ function decideLeadCard(game, botId, legalCards) {
   const mightyCard = game.getMightyCard();
   const botIsGov = isGovernmentSelf(game, botId);
 
-  // Joker-endgame override: 2 cards left on the trick-before-last, one is
-  // joker. If we lead the non-joker and win, joker is forced onto the last
-  // trick where it's weak (priority 0) and loses. Lead joker now instead —
-  // it's still strong here, and the non-joker card leads the last trick,
-  // where it can actually compete.
-  if (legalCards.length === 2 && legalCards.includes('mighty_joker')) {
+  // Joker-endgame override: the last trick uses a weak joker by default
+  // (priority 0 — it loses to anything). If we still hold joker and we're
+  // leading, the penultimate trick is the last chance to cash it in at
+  // priority 900. Otherwise the role-specific strategies below may keep
+  // hoarding joker (opposition never leads it at all, declarer only leads
+  // it when trump is drained) and the joker ends up wasted on a losing
+  // last-trick play.
+  if (legalCards.includes('mighty_joker')) {
     const totalTricks = Math.floor(50 / (game.activePlayerCount || game.playerCount));
     const nextIsLast = game.tricks.length === totalTricks - 2;
     if (nextIsLast && !game.options.lastTrickJokerPower) {
@@ -1149,15 +1151,15 @@ function decideFollowCard(game, botId, legalCards) {
     ? governmentFollow(game, botId, legalCards, winningCards, currentWinner, winnerOnOurTeam, mightyCard)
     : oppositionFollow(game, botId, legalCards, winningCards, currentWinner, winnerOnOurTeam, mightyCard);
 
-  // Joker-endgame override: in the {trump, joker} endgame, winning now with the
-  // non-joker leaves joker alone to lead the next trick. If that next trick is
-  // the last trick (joker weak by default), the joker lead collapses to
-  // priority 0 and loses automatically. Swap to play joker NOW while it still
-  // wins — the non-joker card becomes the next lead instead, where it has a
-  // real chance.
-  if (pick && pick !== 'mighty_joker' && winningCards.includes('mighty_joker')
-      && winningCards.includes(pick) && legalCards.includes('mighty_joker')
-      && legalCards.length === 2) {
+  // Joker-endgame override (penultimate trick): the last trick uses a weak
+  // joker by default, so whatever the follow logic picked now, hoarding
+  // joker into trick N means it auto-loses. If joker is still in legal
+  // cards and can beat the current trick, play it here instead — even if
+  // the natural pick was a safe dump. Losing the last trick is cheaper
+  // than wasting joker outright, and winning an "extra" trick can only
+  // help (declarer team collects, opp team denies declarer).
+  if (pick && pick !== 'mighty_joker' && legalCards.includes('mighty_joker')
+      && winningCards.includes('mighty_joker')) {
     const totalTricks = Math.floor(50 / (game.activePlayerCount || game.playerCount));
     const nextIsLast = game.tricks.length === totalTricks - 2;
     if (nextIsLast && !game.options.lastTrickJokerPower) {

@@ -603,6 +603,9 @@ class L10nDe extends L10n {
       'Zeitlimit: 10–999 Sek., Zielpunktzahl: 10–500 Pkt.';
 
   @override
+  String get lobbyNormalSettingsInfoTimeOnly => 'Zeitlimit: 10–999 Sek.';
+
+  @override
   String get lobbyEnterRoomName => 'Bitte einen Raumnamen eingeben.';
 
   @override
@@ -2543,6 +2546,9 @@ class L10nDe extends L10n {
   @override
   String get rulesMtSpecialMightyLine2 =>
       'Standardmäßig das Pik-Ass. Wenn Pik die Trumpffarbe ist, wird stattdessen das Karo-Ass zum Mighty.';
+
+  @override
+  String get rulesMtSpecialMightyAltLabel => 'bei Trumpf = ♠';
 
   @override
   String get rulesMtSpecialJokerTitle => 'Joker';

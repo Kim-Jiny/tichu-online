@@ -575,6 +575,9 @@ class L10nKo extends L10n {
       '시간 제한은 10~999초, 목표 점수는 10~500점까지 설정할 수 있습니다.';
 
   @override
+  String get lobbyNormalSettingsInfoTimeOnly => '시간 제한은 10~999초까지 설정할 수 있습니다.';
+
+  @override
   String get lobbyEnterRoomName => '방 이름을 입력해주세요.';
 
   @override
@@ -2467,6 +2470,9 @@ class L10nKo extends L10n {
   @override
   String get rulesMtSpecialMightyLine2 =>
       '기본적으로 스페이드 A입니다. 기루다(으뜸패)가 스페이드면 다이아몬드 A가 마이티가 됩니다.';
+
+  @override
+  String get rulesMtSpecialMightyAltLabel => '기루다=♠ 일 때';
 
   @override
   String get rulesMtSpecialJokerTitle => '조커';

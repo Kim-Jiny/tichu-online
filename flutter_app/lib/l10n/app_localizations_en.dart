@@ -595,6 +595,9 @@ class L10nEn extends L10n {
       'Time limit: 10–999 sec, target score: 10–500 pts.';
 
   @override
+  String get lobbyNormalSettingsInfoTimeOnly => 'Time limit: 10–999 sec.';
+
+  @override
   String get lobbyEnterRoomName => 'Please enter a room name.';
 
   @override
@@ -2528,6 +2531,9 @@ class L10nEn extends L10n {
   @override
   String get rulesMtSpecialMightyLine2 =>
       'By default it is the Spade Ace. If the trump suit is Spades, the Mighty becomes the Diamond Ace instead.';
+
+  @override
+  String get rulesMtSpecialMightyAltLabel => 'when trump = ♠';
 
   @override
   String get rulesMtSpecialJokerTitle => 'Joker';

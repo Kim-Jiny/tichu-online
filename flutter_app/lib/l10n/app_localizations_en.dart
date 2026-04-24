@@ -2941,6 +2941,14 @@ class L10nEn extends L10n {
   String get mtContract => 'Contract';
 
   @override
+  String mtContractWithPoints(int points) {
+    return 'Bid $points';
+  }
+
+  @override
+  String get mtLead => 'Lead';
+
+  @override
   String get mtResult => 'Result';
 
   @override

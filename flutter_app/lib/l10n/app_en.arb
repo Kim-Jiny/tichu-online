@@ -1317,6 +1317,11 @@
   "mtRoundAbbr": "R",
   "mtOpposition": "Defense",
   "mtContract": "Contract",
+  "mtContractWithPoints": "Bid {points}",
+  "@mtContractWithPoints": {
+    "placeholders": { "points": { "type": "int" } }
+  },
+  "mtLead": "Lead",
   "mtResult": "Result",
   "mtTotal": "Total",
   "mtSoloSuffix": "(solo)",

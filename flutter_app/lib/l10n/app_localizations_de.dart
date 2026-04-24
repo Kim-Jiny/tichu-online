@@ -2956,6 +2956,14 @@ class L10nDe extends L10n {
   String get mtContract => 'Vertrag';
 
   @override
+  String mtContractWithPoints(int points) {
+    return 'Gebot $points';
+  }
+
+  @override
+  String get mtLead => 'Führung';
+
+  @override
   String get mtResult => 'Ergebnis';
 
   @override

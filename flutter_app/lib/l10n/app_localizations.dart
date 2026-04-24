@@ -5331,6 +5331,18 @@ abstract class L10n {
   /// **'Contract'**
   String get mtContract;
 
+  /// No description provided for @mtContractWithPoints.
+  ///
+  /// In en, this message translates to:
+  /// **'Bid {points}'**
+  String mtContractWithPoints(int points);
+
+  /// No description provided for @mtLead.
+  ///
+  /// In en, this message translates to:
+  /// **'Lead'**
+  String get mtLead;
+
   /// No description provided for @mtResult.
   ///
   /// In en, this message translates to:

@@ -2879,6 +2879,14 @@ class L10nKo extends L10n {
   String get mtContract => '공약';
 
   @override
+  String mtContractWithPoints(int points) {
+    return '$points공약';
+  }
+
+  @override
+  String get mtLead => '리드';
+
+  @override
   String get mtResult => '결과';
 
   @override

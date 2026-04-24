@@ -946,6 +946,11 @@
   "mtRoundAbbr": "R",
   "mtOpposition": "Verteidigung",
   "mtContract": "Vertrag",
+  "mtContractWithPoints": "Gebot {points}",
+  "@mtContractWithPoints": {
+    "placeholders": { "points": { "type": "int" } }
+  },
+  "mtLead": "Führung",
   "mtResult": "Ergebnis",
   "mtTotal": "Gesamt",
   "mtSoloSuffix": "(solo)",

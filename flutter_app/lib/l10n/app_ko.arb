@@ -938,6 +938,11 @@
   "mtRoundAbbr": "R",
   "mtOpposition": "야당",
   "mtContract": "공약",
+  "mtContractWithPoints": "{points}공약",
+  "@mtContractWithPoints": {
+    "placeholders": { "points": { "type": "int" } }
+  },
+  "mtLead": "리드",
   "mtResult": "결과",
   "mtTotal": "합계",
   "mtSoloSuffix": "(노프렌드)",

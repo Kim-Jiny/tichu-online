@@ -841,11 +841,16 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
                       borderRadius: BorderRadius.circular(6),
                     ),
                     child: Text(
-                      '$suitLabel $bidPoints',
+                      '$suitLabel ${L10n.of(context).mtContractWithPoints(bidPoints.toInt())}',
                       style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.white),
                     ),
                   ),
-                if (!isBidding && !state.friendRevealed) ...[
+                if (!isBidding && friendLabel.isNotEmpty) ...[
+                  const SizedBox(width: 6),
+                  Text(
+                    '/',
+                    style: const TextStyle(fontSize: 11, color: Color(0xFF8A7A72)),
+                  ),
                   const SizedBox(width: 6),
                   Flexible(
                     child: Text(
@@ -1573,14 +1578,16 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
 
     // Lead suit from first card in trick
     String? leadSuit;
-    if (state.currentTrick.isNotEmpty) {
-      final leadCardId = state.currentTrick.first.cardId;
-      if (leadCardId == 'mighty_joker') {
-        leadSuit = state.jokerSuitDeclared;
-      } else {
-        leadSuit = _getCardSuit(leadCardId);
-      }
+    final leadCardId = state.currentTrick.first.cardId;
+    if (leadCardId == 'mighty_joker') {
+      leadSuit = state.jokerSuitDeclared;
+    } else {
+      leadSuit = _getCardSuit(leadCardId);
     }
+
+    // Declarer's contract (suit + points)
+    final contractPoints = state.currentBid['points'] as int?;
+    final contractSuit = state.currentBid['suit']?.toString();
 
     return Center(
       child: Container(
@@ -1592,38 +1599,53 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Text(
-                  L10n.of(context).mtPlayed(state.currentTrick.length, state.players.length),
-                  style: const TextStyle(
-                    fontSize: 14,
-                    fontWeight: FontWeight.w800,
-                    color: Color(0xFF5A4038),
-                  ),
-                ),
-                if (leadSuit != null) ...[
-                  const SizedBox(width: 8),
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                    decoration: BoxDecoration(
-                      color: const Color(0xFFF5F0EB),
-                      borderRadius: BorderRadius.circular(6),
-                      border: Border.all(color: const Color(0xFFE0D8D4)),
+            // Line 1: contract (declarer's trump + bid points)
+            if (contractPoints != null && contractSuit != null)
+              Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    _suitSymbol(contractSuit),
+                    style: TextStyle(
+                      fontSize: 15,
+                      fontWeight: FontWeight.bold,
+                      color: PlayingCard.suitColors[contractSuit] ?? const Color(0xFF5A4038),
                     ),
-                    child: Text(
+                  ),
+                  const SizedBox(width: 4),
+                  Text(
+                    L10n.of(context).mtContractWithPoints(contractPoints),
+                    style: const TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w800,
+                      color: Color(0xFF5A4038),
+                    ),
+                  ),
+                ],
+              ),
+            // Line 2: lead suit
+            if (leadSuit != null)
+              Padding(
+                padding: const EdgeInsets.only(top: 4),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      '${L10n.of(context).mtLead} ',
+                      style: const TextStyle(fontSize: 11, color: Color(0xFF8A7A72)),
+                    ),
+                    Text(
                       _suitSymbol(leadSuit),
                       style: TextStyle(
-                        fontSize: 14,
+                        fontSize: 13,
                         fontWeight: FontWeight.bold,
                         color: PlayingCard.suitColors[leadSuit] ?? const Color(0xFF5A4038),
                       ),
                     ),
-                  ),
-                ],
-              ],
-            ),
+                  ],
+                ),
+              ),
+            // Line 3: turn timer
             if (_remainingSeconds > 0)
               Padding(
                 padding: const EdgeInsets.only(top: 4),
@@ -1634,16 +1656,6 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
                     fontWeight: FontWeight.bold,
                     color: _remainingSeconds <= 5 ? const Color(0xFFE53935) : const Color(0xFF8A7A72),
                   ),
-                ),
-              ),
-            if (state.friendCard != null)
-              Padding(
-                padding: const EdgeInsets.only(top: 4),
-                child: Text(
-                  state.friendRevealed && state.partner != null
-                      ? L10n.of(context).mtFriendRevealed(_friendCardLabel(state.friendCard!), state.players.where((p) => p.id == state.partner).map((p) => p.name).firstOrNull ?? '')
-                      : L10n.of(context).mtFriendHidden(_friendCardLabel(state.friendCard!)),
-                  style: const TextStyle(fontSize: 11, color: Color(0xFF8A7A72)),
                 ),
               ),
           ],

@@ -434,7 +434,7 @@ class _RulesScreenState extends State<RulesScreen> {
               _CardCountRow(
                 label: L10n.of(context).rulesSkTigress,
                 sub: L10n.of(context).rulesSkTigressSub,
-                count: 3,
+                count: 1,
                 leading: _cardAsset('assets/cards/sk_tigress.png'),
                 highlight: true,
               ),
@@ -895,6 +895,9 @@ class _RulesScreenState extends State<RulesScreen> {
                 cardId: 'mighty_spade_A',
                 altCardId: 'mighty_diamond_A',
                 altCardLabel: L10n.of(context).rulesMtSpecialMightyAltLabel,
+                // Matches the yellow star badge used on the mighty card in play.
+                badgeIcon: Icons.star,
+                badgeColor: const Color(0xFFFFB300),
               ),
               const SizedBox(height: 10),
               _SpecialRule(
@@ -905,6 +908,11 @@ class _RulesScreenState extends State<RulesScreen> {
                   L10n.of(context).rulesMtSpecialJokerLine2,
                 ],
                 cardId: 'mighty_joker',
+                // The joker doesn't carry an in-game corner badge, but a
+                // small purple mark here helps readers match the rule to
+                // the joker artwork.
+                badgeIcon: Icons.auto_awesome,
+                badgeColor: const Color(0xFF7B1FA2),
               ),
               const SizedBox(height: 10),
               _SpecialRule(
@@ -915,6 +923,9 @@ class _RulesScreenState extends State<RulesScreen> {
                   L10n.of(context).rulesMtSpecialJokerCallLine2,
                 ],
                 cardId: 'mighty_club_3',
+                // Matches the red gps_fixed badge on the joker-call card in play.
+                badgeIcon: Icons.gps_fixed,
+                badgeColor: const Color(0xFFE53935),
               ),
             ],
           ),
@@ -1269,6 +1280,9 @@ class _SpecialRule extends StatelessWidget {
   /// Optional card ID rendered as a small [PlayingCard] thumbnail at the
   /// right of the rule. When provided, takes visual priority over the
   /// [emoji] badge on the left (the emoji still shows for flavour).
+  /// Accepts both Tichu ("spade_A") and Mighty ("mighty_spade_A") card
+  /// IDs — the Mighty prefix is stripped before passing to [PlayingCard]
+  /// so the correct artwork renders.
   final String? cardId;
   /// Alternate card shown side-by-side with [cardId] — used for the
   /// Mighty rule to show both the default ♠A and the ♦A fallback when
@@ -1277,6 +1291,11 @@ class _SpecialRule extends StatelessWidget {
   /// Short caption rendered under the [altCardId] preview (e.g. a
   /// "when trump = ♠" footnote).
   final String? altCardLabel;
+  /// Optional in-game corner badge (top-right of the card preview) so
+  /// readers can tell at a glance that the Mighty / joker-call badge
+  /// they see in play corresponds to this rule.
+  final IconData? badgeIcon;
+  final Color? badgeColor;
 
   const _SpecialRule({
     required this.emoji,
@@ -1286,7 +1305,17 @@ class _SpecialRule extends StatelessWidget {
     this.cardId,
     this.altCardId,
     this.altCardLabel,
+    this.badgeIcon,
+    this.badgeColor,
   });
+
+  /// Convert `mighty_spade_A` → `spade_A` and `mighty_joker` → `joker` so
+  /// [PlayingCard] renders the actual in-game artwork instead of treating
+  /// `mighty` as the suit.
+  String _displayCardId(String id) {
+    if (id == 'mighty_joker') return 'joker';
+    return id.startsWith('mighty_') ? id.substring(7) : id;
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -1342,10 +1371,24 @@ class _SpecialRule extends StatelessWidget {
             Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                PlayingCard(cardId: cardId!, width: 44, height: 62, isInteractive: false),
+                PlayingCard(
+                  cardId: _displayCardId(cardId!),
+                  width: 44,
+                  height: 62,
+                  isInteractive: false,
+                  badgeIcon: badgeIcon,
+                  badgeColor: badgeColor,
+                ),
                 if (altCardId != null) ...[
                   const SizedBox(height: 6),
-                  PlayingCard(cardId: altCardId!, width: 44, height: 62, isInteractive: false),
+                  PlayingCard(
+                    cardId: _displayCardId(altCardId!),
+                    width: 44,
+                    height: 62,
+                    isInteractive: false,
+                    badgeIcon: badgeIcon,
+                    badgeColor: badgeColor,
+                  ),
                   if (altCardLabel != null) ...[
                     const SizedBox(height: 2),
                     SizedBox(
@@ -1711,12 +1754,14 @@ class _MightyDeckPreview extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // PlayingCard expects Tichu-style IDs ("spade_A", "joker"); the Mighty
+    // prefix would otherwise be parsed as the suit.
     const cardIds = [
-      'mighty_spade_A',
-      'mighty_heart_A',
-      'mighty_diamond_A',
-      'mighty_club_A',
-      'mighty_joker',
+      'spade_A',
+      'heart_A',
+      'diamond_A',
+      'club_A',
+      'joker',
     ];
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),

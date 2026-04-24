@@ -3870,7 +3870,7 @@ abstract class L10n {
   /// No description provided for @rulesSkCardCompositionTitle.
   ///
   /// In en, this message translates to:
-  /// **'Card Composition (67 base cards)'**
+  /// **'Card Composition (65 base cards)'**
   String get rulesSkCardCompositionTitle;
 
   /// No description provided for @rulesSkNumberCards.
@@ -4056,7 +4056,7 @@ abstract class L10n {
   /// No description provided for @rulesSkSpecialTigressTitle.
   ///
   /// In en, this message translates to:
-  /// **'Tigress — 3 cards by default'**
+  /// **'Tigress — 1 card by default'**
   String get rulesSkSpecialTigressTitle;
 
   /// No description provided for @rulesSkSpecialTigressLine1.

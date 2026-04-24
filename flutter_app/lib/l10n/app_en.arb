@@ -1029,7 +1029,7 @@
   "rulesSkGoalTitle": "Game Objective",
   "rulesSkGoalBody": "A trick-taking game for 2–6 players (free-for-all). Over 10 rounds, you must accurately predict the number of tricks you will win each round to score points.",
 
-  "rulesSkCardCompositionTitle": "Card Composition (67 base cards)",
+  "rulesSkCardCompositionTitle": "Card Composition (65 base cards)",
   "rulesSkNumberCards": "Number Cards (1 – 13)",
   "rulesSkNumberCardsSub": "4 suits × 13 cards (Yellow / Green / Purple / Black)",
   "rulesSkEscape": "Escape",
@@ -1067,7 +1067,7 @@
   "rulesSkSpecialSkullKingTitle": "Skull King",
   "rulesSkSpecialSkullKingLine1": "Beats Pirates — +30 bonus per Pirate defeated.",
   "rulesSkSpecialSkullKingLine2": "However, loses to Mermaids (gets captured).",
-  "rulesSkSpecialTigressTitle": "Tigress — 3 cards by default",
+  "rulesSkSpecialTigressTitle": "Tigress — 1 card by default",
   "rulesSkSpecialTigressLine1": "When playing, choose either Pirate or Escape.",
   "rulesSkSpecialTigressLine2": "Tigress played as Pirate works identically to a Pirate, including the Skull King's +30 bonus.",
   "rulesSkSpecialTigressLine3": "Tigress played as Escape works identically to an Escape and never wins a trick.",

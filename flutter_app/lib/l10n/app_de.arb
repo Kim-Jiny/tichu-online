@@ -688,7 +688,7 @@
   "rulesSkGoalTitle": "Spielziel",
   "rulesSkGoalBody": "Ein Stichspiel für 2–6 Spieler (Jeder gegen Jeden). Über 10 Runden musst du die Anzahl deiner gewonnenen Stiche pro Runde genau vorhersagen, um Punkte zu erhalten.",
 
-  "rulesSkCardCompositionTitle": "Kartenzusammensetzung (67 Basiskarten)",
+  "rulesSkCardCompositionTitle": "Kartenzusammensetzung (65 Basiskarten)",
   "rulesSkNumberCards": "Zahlenkarten (1 – 13)",
   "rulesSkNumberCardsSub": "4 Farben × 13 Karten (Gelb / Grün / Lila / Schwarz)",
   "rulesSkEscape": "Escape",
@@ -721,7 +721,7 @@
   "rulesSkSpecialSkullKingTitle": "Skull King",
   "rulesSkSpecialSkullKingLine1": "Schlägt Pirates — +30 Bonus pro besiegtem Pirate.",
   "rulesSkSpecialSkullKingLine2": "Verliert jedoch gegen Mermaids (wird gefangen).",
-  "rulesSkSpecialTigressTitle": "Tigress — standardmäßig 3 Karten",
+  "rulesSkSpecialTigressTitle": "Tigress — standardmäßig 1 Karte",
   "rulesSkSpecialTigressLine1": "Beim Ausspielen wählst du entweder Pirate oder Escape.",
   "rulesSkSpecialTigressLine2": "Als Pirate gespielte Tigress funktioniert identisch wie ein Pirate, einschließlich des +30 Skull King-Bonus.",
   "rulesSkSpecialTigressLine3": "Als Escape gespielte Tigress funktioniert identisch wie ein Escape und gewinnt nie einen Stich.",

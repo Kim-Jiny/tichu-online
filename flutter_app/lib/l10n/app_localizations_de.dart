@@ -2108,7 +2108,7 @@ class L10nDe extends L10n {
 
   @override
   String get rulesSkCardCompositionTitle =>
-      'Kartenzusammensetzung (67 Basiskarten)';
+      'Kartenzusammensetzung (65 Basiskarten)';
 
   @override
   String get rulesSkNumberCards => 'Zahlenkarten (1 – 13)';
@@ -2214,7 +2214,7 @@ class L10nDe extends L10n {
       'Verliert jedoch gegen Mermaids (wird gefangen).';
 
   @override
-  String get rulesSkSpecialTigressTitle => 'Tigress — standardmäßig 3 Karten';
+  String get rulesSkSpecialTigressTitle => 'Tigress — standardmäßig 1 Karte';
 
   @override
   String get rulesSkSpecialTigressLine1 =>

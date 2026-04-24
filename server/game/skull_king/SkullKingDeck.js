@@ -1,6 +1,6 @@
 /**
- * Skull King Deck - 67 cards base (expansions add more)
- * Base: 52 numbered (4 suits x 13 ranks) + 5 Escape + 4 Pirate + 2 Mermaid + 1 Skull King + 3 Tigress
+ * Skull King Deck - 65 cards base (expansions add more)
+ * Base: 52 numbered (4 suits x 13 ranks) + 5 Escape + 4 Pirate + 2 Mermaid + 1 Skull King + 1 Tigress
  * Expansions (optional):
  *   - 'kraken': +1 Kraken (voids trick)
  *   - 'white_whale': +1 White Whale (nullifies special card effects)
@@ -66,10 +66,8 @@ function createDeck(expansions = []) {
   // 1 Skull King
   deck.push({ id: 'sk_skull_king', suit: 'special', rank: 'skull_king', value: 0, type: CARD_TYPE.SKULL_KING });
 
-  // 3 Tigress (can be played as pirate or escape)
-  for (let i = 1; i <= 3; i++) {
-    deck.push({ id: `sk_tigress_${i}`, suit: 'special', rank: 'tigress', value: 0, type: CARD_TYPE.TIGRESS });
-  }
+  // 1 Tigress (can be played as pirate or escape)
+  deck.push({ id: 'sk_tigress_1', suit: 'special', rank: 'tigress', value: 0, type: CARD_TYPE.TIGRESS });
 
   // --- Expansions ---
 

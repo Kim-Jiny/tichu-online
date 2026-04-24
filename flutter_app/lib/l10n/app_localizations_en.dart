@@ -2096,7 +2096,7 @@ class L10nEn extends L10n {
       'A trick-taking game for 2–6 players (free-for-all). Over 10 rounds, you must accurately predict the number of tricks you will win each round to score points.';
 
   @override
-  String get rulesSkCardCompositionTitle => 'Card Composition (67 base cards)';
+  String get rulesSkCardCompositionTitle => 'Card Composition (65 base cards)';
 
   @override
   String get rulesSkNumberCards => 'Number Cards (1 – 13)';
@@ -2202,7 +2202,7 @@ class L10nEn extends L10n {
       'However, loses to Mermaids (gets captured).';
 
   @override
-  String get rulesSkSpecialTigressTitle => 'Tigress — 3 cards by default';
+  String get rulesSkSpecialTigressTitle => 'Tigress — 1 card by default';
 
   @override
   String get rulesSkSpecialTigressLine1 =>

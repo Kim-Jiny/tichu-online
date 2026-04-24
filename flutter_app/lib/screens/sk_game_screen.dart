@@ -24,6 +24,9 @@ class _SKGameScreenState extends State<SKGameScreen> {
   String? _viewingPlayerId;
   Timer? _cardViewRequestTimer;
   int _lastBiddingRound = -1;
+  // Pre-select tracking: remember the last trick number we saw so we can
+  // drop a queued card when a new trick starts (lead suit changes).
+  int _lastSkTrickNumber = -1;
   bool _chatOpen = false;
   int _readChatCount = 0;
   bool _viewersOpen = false;
@@ -206,6 +209,18 @@ class _SKGameScreenState extends State<SKGameScreen> {
                     WidgetsBinding.instance.addPostFrameCallback((_) {
                       if (mounted) setState(() => _selectedCard = null);
                     });
+                  }
+                  // Clear queued pre-selection on trick boundaries: the lead
+                  // suit changes each new trick, so yesterday's pick may no
+                  // longer be legal.
+                  if (_lastSkTrickNumber != state.trickNumber) {
+                    if (_lastSkTrickNumber != -1 && _selectedCard != null) {
+                      WidgetsBinding.instance.addPostFrameCallback((_) {
+                        if (!mounted) return;
+                        setState(() => _selectedCard = null);
+                      });
+                    }
+                    _lastSkTrickNumber = state.trickNumber;
                   }
 
                   if (isSpectating) {
@@ -2605,6 +2620,16 @@ class _SKGameScreenState extends State<SKGameScreen> {
     final isLandscape = MediaQuery.of(context).orientation == Orientation.landscape;
     final selectedCard = _selectedCard;
     final isSelectedLegal = selectedCard != null && state.legalCards.contains(selectedCard);
+    // Pre-selection: during playing phase while it isn't our turn yet, we
+    // can compute which cards WOULD be legal (based on the current lead
+    // suit, if any) and let the user queue one up. When the turn arrives,
+    // the server-authoritative state.legalCards takes over.
+    final canPreselect = state.phase == 'playing'
+        && !state.isMyTurn
+        && state.currentTrick.isNotEmpty;
+    final effectiveLegalCards = state.isMyTurn
+        ? state.legalCards
+        : (canPreselect ? _previewSkLegalCards(state).toList() : const <String>[]);
 
     return Container(
       padding: EdgeInsets.fromLTRB(8, 8, 8, isLandscape ? 8 : 12),
@@ -2682,8 +2707,8 @@ class _SKGameScreenState extends State<SKGameScreen> {
             child: _buildHandRows(
               state.myCards,
               interactive: true,
-              legalCards: state.legalCards,
-              isMyTurn: state.isMyTurn,
+              legalCards: effectiveLegalCards,
+              isMyTurn: state.isMyTurn || canPreselect,
               compact: isLandscape,
             ),
           ),
@@ -3850,6 +3875,43 @@ class _SKGameScreenState extends State<SKGameScreen> {
       painter: _SkSuitPainter(suit: suit, color: color),
       size: Size.square(size),
     );
+  }
+
+  /// Preview the set of legal cards for SK follow-suit rules, used to let
+  /// the user pre-select a card while it isn't their turn yet. Mirrors the
+  /// server's SkullKingGame.getLegalCards: if no numbered card has been
+  /// led yet, anything is legal; otherwise must follow the lead suit if
+  /// possible, and special (non-number) cards are always legal.
+  Set<String> _previewSkLegalCards(SKGameStateData state) {
+    final hand = state.myCards;
+    final trick = state.currentTrick;
+    if (hand.isEmpty) return const <String>{};
+    if (trick.isEmpty) return hand.toSet();
+    // Determine lead suit from the first actual number card in the trick.
+    // Tigress counts as pirate or escape based on the player's choice, so
+    // it never sets the lead suit.
+    String? leadSuit;
+    for (final play in trick) {
+      final info = _parseCardId(play.cardId);
+      var type = info.type;
+      if (type == 'tigress') {
+        type = play.tigressChoice == 'pirate' ? 'pirate' : 'escape';
+      }
+      if (type == 'number') {
+        leadSuit = info.suit;
+        break;
+      }
+    }
+    if (leadSuit == null) return hand.toSet();
+    final hasLeadSuit = hand.any((c) {
+      final info = _parseCardId(c);
+      return info.type == 'number' && info.suit == leadSuit;
+    });
+    if (!hasLeadSuit) return hand.toSet();
+    return hand.where((c) {
+      final info = _parseCardId(c);
+      return info.type != 'number' || info.suit == leadSuit;
+    }).toSet();
   }
 
   _CardInfo _parseCardId(String cardId) {

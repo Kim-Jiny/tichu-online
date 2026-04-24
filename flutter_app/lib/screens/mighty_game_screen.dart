@@ -2568,9 +2568,18 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
                 ],
               ),
             ),
-          // Joker weak warning (first/last trick)
+          // Joker weak warning (first/last trick).
+          // 6p kill-mighty: the killed player is excluded, so activePlayers
+          // is players.length - excludedPlayers. Using the raw player count
+          // here made the client think trick 8 was the last trick (50/6=8)
+          // in 6p mode, mis-flagging the joker warning.
           if (isPlaying && _selectedCard == 'mighty_joker') ...[
-            if (state.tricks.isEmpty || state.tricks.length == (50 ~/ state.players.length) - 1)
+            if (() {
+              final active = state.players.length - state.excludedPlayers.length;
+              if (active <= 0) return false;
+              final totalTricks = 50 ~/ active;
+              return state.tricks.isEmpty || state.tricks.length == totalTricks - 1;
+            }())
               Container(
                 margin: const EdgeInsets.only(bottom: 6, left: 8, right: 8),
                 padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),

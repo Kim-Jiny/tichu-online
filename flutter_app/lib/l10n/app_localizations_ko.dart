@@ -2055,7 +2055,7 @@ class L10nKo extends L10n {
       '2~6명이 개인전으로 진행하는 트릭테이킹 게임입니다. 총 10 라운드 동안 매 라운드마다 자신이 이길 트릭 수를 정확히 예측해야 점수를 얻습니다.';
 
   @override
-  String get rulesSkCardCompositionTitle => '카드 구성 (기본 총 67장)';
+  String get rulesSkCardCompositionTitle => '카드 구성 (기본 총 65장)';
 
   @override
   String get rulesSkNumberCards => '숫자 카드 (1 ~ 13)';
@@ -2154,7 +2154,7 @@ class L10nKo extends L10n {
   String get rulesSkSpecialSkullKingLine2 => '단, 인어에게는 포획당해 패배합니다.';
 
   @override
-  String get rulesSkSpecialTigressTitle => 'Tigress (티그리스) — 기본 3장';
+  String get rulesSkSpecialTigressTitle => 'Tigress (티그리스) — 기본 1장';
 
   @override
   String get rulesSkSpecialTigressLine1 => '카드를 낼 때 해적 또는 도주 중 하나를 선택합니다.';

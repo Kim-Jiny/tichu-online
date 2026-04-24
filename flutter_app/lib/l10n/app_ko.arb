@@ -680,7 +680,7 @@
   "rulesSkGoalTitle": "게임 목표",
   "rulesSkGoalBody": "2~6명이 개인전으로 진행하는 트릭테이킹 게임입니다. 총 10 라운드 동안 매 라운드마다 자신이 이길 트릭 수를 정확히 예측해야 점수를 얻습니다.",
 
-  "rulesSkCardCompositionTitle": "카드 구성 (기본 총 67장)",
+  "rulesSkCardCompositionTitle": "카드 구성 (기본 총 65장)",
   "rulesSkNumberCards": "숫자 카드 (1 ~ 13)",
   "rulesSkNumberCardsSub": "4 문양 × 13장 (노랑 / 초록 / 보라 / 검정)",
   "rulesSkEscape": "Escape (도주)",
@@ -713,7 +713,7 @@
   "rulesSkSpecialSkullKingTitle": "Skull King (스컬킹)",
   "rulesSkSpecialSkullKingLine1": "해적을 이기며, 해적 1명당 +30 보너스를 얻습니다.",
   "rulesSkSpecialSkullKingLine2": "단, 인어에게는 포획당해 패배합니다.",
-  "rulesSkSpecialTigressTitle": "Tigress (티그리스) — 기본 3장",
+  "rulesSkSpecialTigressTitle": "Tigress (티그리스) — 기본 1장",
   "rulesSkSpecialTigressLine1": "카드를 낼 때 해적 또는 도주 중 하나를 선택합니다.",
   "rulesSkSpecialTigressLine2": "해적으로 낸 티그리스는 해적과 동일하게 작동하며 스컬킹에게 +30 보너스도 포함됩니다.",
   "rulesSkSpecialTigressLine3": "도주로 낸 티그리스는 도주와 동일하게 작동하며 트릭을 이기지 않습니다.",

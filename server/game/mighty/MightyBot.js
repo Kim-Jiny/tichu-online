@@ -1020,6 +1020,31 @@ function _governmentLead(game, botId, legalCards, suitCards, mightyCard) {
 }
 
 function _friendLead(game, botId, legalCards, suitCards, mightyCard) {
+  // Mighty-friends variant: strip the Mighty from the lead pool so we
+  // don't out ourselves (and waste the card) on a trick we already win.
+  if (_shouldHoldMightyInMightyFriends(game, legalCards)) {
+    legalCards = legalCards.filter(c => c !== mightyCard);
+    const withoutMighty = {};
+    for (const [suit, cards] of Object.entries(suitCards)) {
+      const kept = cards.filter(c => c !== mightyCard);
+      if (kept.length > 0) withoutMighty[suit] = kept;
+    }
+    suitCards = withoutMighty;
+  }
+
+  // Revealed friend with no trump: avoid leading spade while the Mighty
+  // is still live — a high-spade lead usually just forces the declarer
+  // to burn Mighty on our trick.
+  if (_shouldAvoidSpadeLead(game, botId, suitCards, mightyCard)) {
+    const withoutSpade = {};
+    for (const [suit, cards] of Object.entries(suitCards)) {
+      if (suit !== 'spade' && cards.length > 0) withoutSpade[suit] = cards;
+    }
+    suitCards = withoutSpade;
+    legalCards = legalCards.filter(c =>
+      c === 'mighty_joker' || getCardInfo(c).suit !== 'spade');
+  }
+
   const friendCardSuit = _getFriendCardSuit(game);
   const hasTrump = game.trumpSuit && game.trumpSuit !== 'no_trump';
 
@@ -1028,8 +1053,17 @@ function _friendLead(game, botId, legalCards, suitCards, mightyCard) {
     // Step 1: Play mighty if we have it (sure winner)
     if (legalCards.includes(mightyCard)) return mightyCard;
 
-    // Step 2: Play ALL effective top cards across all suits (exhaust sure winners)
-    for (const [suit, cards] of Object.entries(suitCards)) {
+    // Step 2: Play ALL effective top cards — but iterate the friend suit
+    // LAST so that when we finally fall through to Step 4 we still have
+    // friend-suit cards in hand to return to the declarer (e.g. friend
+    // revealed via heart-3 → keep leading hearts, not clubs/diamonds).
+    const topsOrder = Object.keys(suitCards).sort((a, b) => {
+      if (a === friendCardSuit) return 1;
+      if (b === friendCardSuit) return -1;
+      return 0;
+    });
+    for (const suit of topsOrder) {
+      const cards = suitCards[suit];
       const sorted = cards.sort((a, b) =>
         RANK_ORDER[getCardInfo(b).rank] - RANK_ORDER[getCardInfo(a).rank]);
       if (_isEffectiveTopOfSuit(sorted[0], game)) return sorted[0];
@@ -1565,6 +1599,48 @@ function _getFriendCardSuit(game) {
   if (game.friendCard === 'mighty_joker') return null;
   const info = getCardInfo(game.friendCard);
   return info.suit || null;
+}
+
+/**
+ * Mighty-friends variant: the bot's hidden friend identity is revealed
+ * the moment the Mighty is played (since friendCard === mightyCard).
+ * Leading with Mighty on a trick-start blows that cover AND burns the
+ * card on a trick we were already going to win — hold it for a follow
+ * play instead. Only applies when the bot still has at least one
+ * alternative legal card; if Mighty is the only legal play, play it.
+ */
+function _shouldHoldMightyInMightyFriends(game, legalCards) {
+  const mightyCard = game.getMightyCard();
+  if (game.friendCard !== mightyCard) return false;
+  if (game.friendRevealed) return false;
+  if (!legalCards.includes(mightyCard)) return false;
+  return legalCards.length > 1;
+}
+
+/**
+ * Revealed-friend + no-trump-in-hand + Mighty-still-live heuristic:
+ * spade is the Mighty's home suit, so leading a high spade tends to
+ * force the declarer to burn Mighty on our trick (we were already
+ * winning it for the government). Strip spade from the lead pool when
+ * any non-spade alternative exists. No-op when we have trump cards
+ * (trump leads take priority anyway) or when Mighty has already been
+ * played. Does not fire in the Mighty-friends variant since friend is
+ * revealed exactly when Mighty is played, which contradicts the
+ * "Mighty still live" side of this guard.
+ */
+function _shouldAvoidSpadeLead(game, botId, suitCards, mightyCard) {
+  if (!game.friendRevealed || botId !== game.partner) return false;
+  const hasTrumpInHand = game.trumpSuit && game.trumpSuit !== 'no_trump'
+    && (suitCards[game.trumpSuit] || []).length > 0;
+  if (hasTrumpInHand) return false;
+  const played = _getPlayedCards(game);
+  if (played.has(mightyCard)) return false;
+  const spadeCards = suitCards.spade || [];
+  if (spadeCards.length === 0) return false;
+  for (const [suit, cards] of Object.entries(suitCards)) {
+    if (suit !== 'spade' && cards.length > 0) return true;
+  }
+  return false;
 }
 
 /** Check if only government still hold trump cards */

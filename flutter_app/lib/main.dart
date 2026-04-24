@@ -411,16 +411,19 @@ class _EntryScreenState extends State<_EntryScreen> {
     final network = context.read<NetworkService>();
     _gameService ??= context.read<GameService>();
     final game = _gameService!;
+    // Pass the effective UI locale so the pre-login EULA/privacy fetch
+    // matches the device language (ws.locale isn't set yet at this point).
+    final locale = context.read<LocaleService>().effectiveLocale.languageCode;
 
     _attachEulaListener();
 
     if (network.isConnected) {
-      game.requestAppConfig();
+      game.requestAppConfig(locale: locale);
     } else {
       network
           .connect()
           .then((_) {
-            if (mounted) game.requestAppConfig();
+            if (mounted) game.requestAppConfig(locale: locale);
           })
           .catchError((e) {
             _detachEulaListener();
@@ -468,13 +471,14 @@ class _EntryScreenState extends State<_EntryScreen> {
       _attachForceUpdateListener();
       // If EULA was already accepted, we need to fetch app_config ourselves
       final network = context.read<NetworkService>();
+      final locale = context.read<LocaleService>().effectiveLocale.languageCode;
       if (network.isConnected) {
-        game.requestAppConfig();
+        game.requestAppConfig(locale: locale);
       } else {
         network
             .connect()
             .then((_) {
-              if (mounted) game.requestAppConfig();
+              if (mounted) game.requestAppConfig(locale: locale);
             })
             .catchError((_) {});
       }

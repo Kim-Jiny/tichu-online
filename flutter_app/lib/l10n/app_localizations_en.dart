@@ -85,6 +85,9 @@ class L10nEn extends L10n {
   String get commonCancel => 'Cancel';
 
   @override
+  String get commonTotal => 'Total';
+
+  @override
   String get commonSave => 'Save';
 
   @override
@@ -1123,6 +1126,9 @@ class L10nEn extends L10n {
   String skGameLeaderLabel(String name) {
     return 'Leader: $name';
   }
+
+  @override
+  String get skGameLeaderLabelShort => 'Leader';
 
   @override
   String get skGameMyTurn => 'My Turn';
@@ -2720,7 +2726,35 @@ class L10nEn extends L10n {
   String get mtDealMiss => 'Deal miss';
 
   @override
+  String get mtDealMissConfirmBody =>
+      'Declare a deal miss?\n\nYou lose 5 points now, which go into the deal-miss pool — the next declarer who succeeds collects the whole pool.';
+
+  @override
+  String get mtBidShort => 'Bid';
+
+  @override
   String get mtPrevTrick => 'Prev trick';
+
+  @override
+  String get mtSetting => 'Setting';
+
+  @override
+  String get mtSettingConfirmTitle => 'Declare setting';
+
+  @override
+  String get mtSettingConfirmBody =>
+      'Declare that you will win every remaining trick. Your hand will be revealed and the round ends immediately.';
+
+  @override
+  String get mtSettingRevealTitle => 'Setting declared!';
+
+  @override
+  String mtSettingRevealBody(Object name) {
+    return '$name declared setting. All remaining tricks go to $name.';
+  }
+
+  @override
+  String get mtSettingTapToClose => 'Tap to dismiss';
 
   @override
   String get mtRaiseBidConfirmTitle => 'Raise bid';

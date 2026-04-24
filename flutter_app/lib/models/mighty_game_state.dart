@@ -196,6 +196,29 @@ class MightyDealMissEvent {
   }
 }
 
+class MightySettingEvent {
+  final String playerId;
+  final String playerName;
+  final List<String> cards;
+  final int round;
+
+  MightySettingEvent({
+    required this.playerId,
+    required this.playerName,
+    required this.cards,
+    required this.round,
+  });
+
+  factory MightySettingEvent.fromJson(Map<String, dynamic> json) {
+    return MightySettingEvent(
+      playerId: json['playerId']?.toString() ?? '',
+      playerName: json['playerName']?.toString() ?? '',
+      cards: List<String>.from(json['cards'] ?? const []),
+      round: (json['round'] as num?)?.toInt() ?? 0,
+    );
+  }
+}
+
 class MightyGameStateData {
   final String phase;
   final int round;
@@ -229,6 +252,8 @@ class MightyGameStateData {
   final int dealMissPool;
   final bool canDeclareDealMiss;
   final MightyDealMissEvent? lastDealMissEvent;
+  final bool canDeclareSetting;
+  final MightySettingEvent? lastSettingEvent;
   final String mode; // '5p' or '6p'
   final List<String> excludedPlayers;
   final MightyKillEvent? lastKillEvent;
@@ -267,6 +292,8 @@ class MightyGameStateData {
     this.dealMissPool = 0,
     this.canDeclareDealMiss = false,
     this.lastDealMissEvent,
+    this.canDeclareSetting = false,
+    this.lastSettingEvent,
     this.mode = '5p',
     this.excludedPlayers = const [],
     this.lastKillEvent,
@@ -362,6 +389,10 @@ class MightyGameStateData {
       lastDealMissEvent: json['lastDealMissEvent'] == null
           ? null
           : MightyDealMissEvent.fromJson(Map<String, dynamic>.from(json['lastDealMissEvent'])),
+      canDeclareSetting: json['canDeclareSetting'] == true,
+      lastSettingEvent: json['lastSettingEvent'] == null
+          ? null
+          : MightySettingEvent.fromJson(Map<String, dynamic>.from(json['lastSettingEvent'])),
       mode: json['mode']?.toString() ?? '5p',
       excludedPlayers: List<String>.from(json['excludedPlayers'] ?? const []),
       lastKillEvent: json['lastKillEvent'] == null

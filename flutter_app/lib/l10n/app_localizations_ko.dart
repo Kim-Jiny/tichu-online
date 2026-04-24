@@ -84,6 +84,9 @@ class L10nKo extends L10n {
   String get commonCancel => '취소';
 
   @override
+  String get commonTotal => '합계';
+
+  @override
   String get commonSave => '저장';
 
   @override
@@ -1096,8 +1099,11 @@ class L10nKo extends L10n {
 
   @override
   String skGameLeaderLabel(String name) {
-    return '선: $name';
+    return '선 플레이어: $name';
   }
+
+  @override
+  String get skGameLeaderLabelShort => '선 플레이어';
 
   @override
   String get skGameMyTurn => '내 턴';
@@ -2658,7 +2664,35 @@ class L10nKo extends L10n {
   String get mtDealMiss => '딜미스';
 
   @override
+  String get mtDealMissConfirmBody =>
+      '딜미스를 선언하시겠습니까?\n\n본인 점수에서 5점이 차감되고, 다음에 성공하는 주공이 적립된 딜미스 점수를 모두 가져갑니다.';
+
+  @override
+  String get mtBidShort => '비딩';
+
+  @override
   String get mtPrevTrick => '이전 트릭';
+
+  @override
+  String get mtSetting => '세팅';
+
+  @override
+  String get mtSettingConfirmTitle => '세팅 선언';
+
+  @override
+  String get mtSettingConfirmBody =>
+      '남은 모든 트릭을 이길 수 있다고 선언합니다. 내 손패가 모두에게 공개되고 라운드가 종료됩니다.';
+
+  @override
+  String get mtSettingRevealTitle => '세팅 선언!';
+
+  @override
+  String mtSettingRevealBody(Object name) {
+    return '$name님이 세팅을 선언했습니다. 남은 트릭은 모두 $name님이 가져갑니다.';
+  }
+
+  @override
+  String get mtSettingTapToClose => '탭하면 닫힙니다';
 
   @override
   String get mtRaiseBidConfirmTitle => '비딩 올리기';

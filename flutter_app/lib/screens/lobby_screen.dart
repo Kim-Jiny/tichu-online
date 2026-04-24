@@ -1829,11 +1829,17 @@ class _LobbyScreenState extends State<LobbyScreen> {
   }
 
   Widget _buildRoomList(List<Room> rooms) {
+    // Waiting rooms on top, in-progress rooms at the bottom.
+    // Stable sort so server-provided order is preserved within each group.
+    final sorted = [...rooms]..sort((a, b) {
+      if (a.gameInProgress == b.gameInProgress) return 0;
+      return a.gameInProgress ? 1 : -1;
+    });
     return ListView.separated(
-      itemCount: rooms.length,
+      itemCount: sorted.length,
       separatorBuilder: (_, _) => const SizedBox(height: 8),
       itemBuilder: (context, index) {
-        final room = rooms[index];
+        final room = sorted[index];
         return _buildRoomItem(room);
       },
     );
@@ -1950,21 +1956,22 @@ class _LobbyScreenState extends State<LobbyScreen> {
             borderRadius: BorderRadius.circular(16),
             border: Border.all(color: borderColor),
           ),
-          child: Row(
-            children: [
-              // Left color strip
-              Container(
-                width: 6,
-                height: 64,
-                decoration: BoxDecoration(
-                  color: stripColor,
-                  borderRadius: const BorderRadius.only(
-                    topLeft: Radius.circular(16),
-                    bottomLeft: Radius.circular(16),
+          child: IntrinsicHeight(
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                // Left color strip — stretches to cell height.
+                Container(
+                  width: 6,
+                  decoration: BoxDecoration(
+                    color: stripColor,
+                    borderRadius: const BorderRadius.only(
+                      topLeft: Radius.circular(16),
+                      bottomLeft: Radius.circular(16),
+                    ),
                   ),
                 ),
-              ),
-              Expanded(
+                Expanded(
                 child: Padding(
                   padding: const EdgeInsets.fromLTRB(12, 14, 16, 14),
                   child: Row(
@@ -2009,56 +2016,55 @@ class _LobbyScreenState extends State<LobbyScreen> {
                               ],
                             ),
                             const SizedBox(height: 2),
-                            Row(
+                            Wrap(
+                              spacing: 4,
+                              runSpacing: 2,
+                              crossAxisAlignment: WrapCrossAlignment.center,
                               children: [
-                                Text(
-                                  (isSK || isLL)
-                                      ? l10n.lobbyRoomTimeSec(
-                                          room.turnTimeLimit,
-                                        )
-                                      : l10n.lobbyRoomTimeAndScore(
-                                          room.turnTimeLimit,
-                                          room.targetScore,
-                                        ),
-                                  style: TextStyle(
-                                    fontSize: 11,
-                                    color: subTextColor,
+                                Padding(
+                                  padding: const EdgeInsets.only(right: 2),
+                                  child: Text(
+                                    (isSK || isLL)
+                                        ? l10n.lobbyRoomTimeSec(
+                                            room.turnTimeLimit,
+                                          )
+                                        : l10n.lobbyRoomTimeAndScore(
+                                            room.turnTimeLimit,
+                                            room.targetScore,
+                                          ),
+                                    style: TextStyle(
+                                      fontSize: 11,
+                                      color: subTextColor,
+                                    ),
                                   ),
                                 ),
-                                if (isSK && room.skExpansions.isNotEmpty) ...[
-                                  const SizedBox(width: 6),
+                                if (isSK && room.skExpansions.isNotEmpty)
                                   for (final exp in room.skExpansions)
-                                    Padding(
-                                      padding: const EdgeInsets.only(right: 4),
-                                      child: Container(
-                                        padding: const EdgeInsets.symmetric(
-                                          horizontal: 6,
-                                          vertical: 2,
+                                    Container(
+                                      padding: const EdgeInsets.symmetric(
+                                        horizontal: 6,
+                                        vertical: 2,
+                                      ),
+                                      decoration: BoxDecoration(
+                                        color: const Color(0xFF2D2D3D),
+                                        borderRadius: BorderRadius.circular(6),
+                                        border: Border.all(
+                                          color: const Color(
+                                            0xFFFFD54F,
+                                          ).withValues(alpha: 0.5),
+                                          width: 0.8,
                                         ),
-                                        decoration: BoxDecoration(
-                                          color: const Color(0xFF2D2D3D),
-                                          borderRadius: BorderRadius.circular(
-                                            6,
-                                          ),
-                                          border: Border.all(
-                                            color: const Color(
-                                              0xFFFFD54F,
-                                            ).withValues(alpha: 0.5),
-                                            width: 0.8,
-                                          ),
-                                        ),
-                                        child: Text(
-                                          _skExpansionShortLabel(exp, l10n),
-                                          style: const TextStyle(
-                                            fontSize: 9,
-                                            color: Color(0xFFFFD54F),
-                                            fontWeight: FontWeight.bold,
-                                            height: 1.0,
-                                          ),
+                                      ),
+                                      child: Text(
+                                        _skExpansionShortLabel(exp, l10n),
+                                        style: const TextStyle(
+                                          fontSize: 9,
+                                          color: Color(0xFFFFD54F),
+                                          fontWeight: FontWeight.bold,
+                                          height: 1.0,
                                         ),
                                       ),
                                     ),
-                                ],
                               ],
                             ),
                           ],
@@ -2088,7 +2094,7 @@ class _LobbyScreenState extends State<LobbyScreen> {
                               ),
                               const SizedBox(width: 4),
                               Text(
-                                l10n.lobbyInProgress(room.spectatorCount),
+                                '${room.spectatorCount}',
                                 style: TextStyle(
                                   fontSize: 12,
                                   color: isSK
@@ -2152,7 +2158,8 @@ class _LobbyScreenState extends State<LobbyScreen> {
                   ),
                 ),
               ),
-            ],
+              ],
+            ),
           ),
         ),
       ),
@@ -2725,6 +2732,22 @@ class _LobbyScreenState extends State<LobbyScreen> {
                 ],
               ),
             ),
+            // SK expansion chips: give the waiting-room members visibility
+            // into which expansions the host enabled without having to leave
+            // and re-read the room tile.
+            if (game.currentGameType == 'skull_king'
+                && game.roomSkExpansions.isNotEmpty) ...[
+              const SizedBox(height: 8),
+              Wrap(
+                alignment: WrapAlignment.center,
+                spacing: 6,
+                runSpacing: 4,
+                children: [
+                  for (final exp in game.roomSkExpansions)
+                    _buildSkExpansionChip(exp),
+                ],
+              ),
+            ],
             const SizedBox(height: 12),
             for (int i = 0; i < game.roomPlayers.length; i++) ...[
               _buildClickablePlayerSlot(
@@ -4713,6 +4736,50 @@ class _LobbyScreenState extends State<LobbyScreen> {
       orElse: () => null,
     );
     return me?.isReady ?? false;
+  }
+
+  Widget _buildSkExpansionChip(String expansionKey) {
+    final l10n = L10n.of(context);
+    String label;
+    Color fg;
+    Color bg;
+    switch (expansionKey) {
+      case 'kraken':
+        label = '🐙 ${l10n.lobbyExpKrakenShort}';
+        fg = const Color(0xFF6A1B9A);
+        bg = const Color(0xFFF3E5F5);
+        break;
+      case 'white_whale':
+        label = '🐳 ${l10n.lobbyExpWhaleShort}';
+        fg = const Color(0xFF01579B);
+        bg = const Color(0xFFE1F5FE);
+        break;
+      case 'loot':
+        label = '💰 ${l10n.lobbyExpLootShort}';
+        fg = const Color(0xFFBF7100);
+        bg = const Color(0xFFFFF3E0);
+        break;
+      default:
+        label = expansionKey;
+        fg = const Color(0xFF5A4038);
+        bg = const Color(0xFFEFEBE9);
+    }
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+      decoration: BoxDecoration(
+        color: bg,
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: fg.withValues(alpha: 0.35)),
+      ),
+      child: Text(
+        label,
+        style: TextStyle(
+          fontSize: 11,
+          fontWeight: FontWeight.w700,
+          color: fg,
+        ),
+      ),
+    );
   }
 
   Widget _buildRandomSeatingChip(GameService game) {

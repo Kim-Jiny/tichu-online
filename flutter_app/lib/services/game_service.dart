@@ -53,6 +53,10 @@ class GameService extends ChangeNotifier {
   /// Tichu-only: host opted to randomize team assignment at startGame
   /// instead of using the fixed (0,2) vs (1,3) seat-to-team mapping.
   bool roomRandomSeating = false;
+  /// Skull King expansions active in the current room. Subset of
+  /// `['kraken', 'white_whale', 'loot']`. Only meaningful when
+  /// [currentGameType] is `skull_king`.
+  List<String> roomSkExpansions = const [];
 
   /// Effective max players after host-blocked slots are excluded.
   int get effectiveRoomMaxPlayers => roomMaxPlayers - roomBlockedSlots.length;
@@ -696,6 +700,8 @@ class GameService extends ChangeNotifier {
         roomMaxPlayers = 4;
         roomBlockedSlots = <int>{};
         roomRandomSeating = false;
+    roomSkExpansions = const [];
+        roomSkExpansions = const [];
         chatMessages = [];
         autoRejectCardView = false;
         autoAcceptCardView = false;
@@ -722,6 +728,8 @@ class GameService extends ChangeNotifier {
         isHost = false;
         isRankedRoom = false;
         roomRandomSeating = false;
+    roomSkExpansions = const [];
+        roomSkExpansions = const [];
         roomTurnTimeLimit = 30;
         roomTargetScore = 1000;
         roomMaxPlayers = 4;
@@ -792,6 +800,10 @@ class GameService extends ChangeNotifier {
           );
           isRankedRoom = room['isRanked'] == true;
           roomRandomSeating = room['randomSeating'] == true;
+          final expansionsList = room['skExpansions'];
+          roomSkExpansions = expansionsList is List
+              ? expansionsList.whereType<String>().toList(growable: false)
+              : const [];
           roomTurnTimeLimit = room['turnTimeLimit'] ?? 30;
           roomTargetScore = room['targetScore'] ?? 1000;
           if (room['gameInProgress'] != true) {
@@ -2124,6 +2136,7 @@ class GameService extends ChangeNotifier {
     roomMaxPlayers = 4;
     roomBlockedSlots = <int>{};
     roomRandomSeating = false;
+    roomSkExpansions = const [];
     currentGameType = 'tichu';
     roomList = [];
     spectatableRooms = [];
@@ -2524,6 +2537,7 @@ class GameService extends ChangeNotifier {
     roomMaxPlayers = 4;
     roomBlockedSlots = <int>{};
     roomRandomSeating = false;
+    roomSkExpansions = const [];
     currentGameType = 'tichu';
     isSpectator = false;
     gameState = null;
@@ -2625,6 +2639,10 @@ class GameService extends ChangeNotifier {
 
   void mightyDeclareDealMiss() {
     _network.send({'type': 'declare_deal_miss'});
+  }
+
+  void mightyDeclareSetting() {
+    _network.send({'type': 'declare_setting'});
   }
 
   void mightyDeclareKill(String cardId) {
@@ -2824,9 +2842,13 @@ class GameService extends ChangeNotifier {
     _network.send({'type': 'get_seasons'});
   }
 
-  // Shop
-  void requestAppConfig() {
-    _network.send({'type': 'get_app_config'});
+  // Shop / EULA. `locale` is optional — pass the device/user locale so the
+  // server returns the right-language EULA/privacy on first launch (before
+  // login, ws.locale is still null).
+  void requestAppConfig({String? locale}) {
+    final msg = <String, dynamic>{'type': 'get_app_config'};
+    if (locale != null) msg['locale'] = locale;
+    _network.send(msg);
   }
 
   void sendLocale(String languageCode) {

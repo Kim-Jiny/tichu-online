@@ -241,6 +241,7 @@
   "mighty_trump_change_disabled": "Trump changes are not allowed",
   "mighty_same_trump": "That trump suit is already selected",
   "mighty_bid_at_cap": "The bid is already at the maximum",
+  "mighty_setting_invalid": "Setting is not available right now",
   "mighty_must_discard_three": "You must discard exactly 3 cards",
   "mighty_card_not_in_hand": "Card is not in your hand",
   "mighty_cannot_discard_mighty": "You cannot discard the Mighty card",

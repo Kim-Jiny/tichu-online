@@ -249,6 +249,12 @@ abstract class L10n {
   /// **'Cancel'**
   String get commonCancel;
 
+  /// No description provided for @commonTotal.
+  ///
+  /// In en, this message translates to:
+  /// **'Total'**
+  String get commonTotal;
+
   /// No description provided for @commonSave.
   ///
   /// In en, this message translates to:
@@ -2162,6 +2168,12 @@ abstract class L10n {
   /// In en, this message translates to:
   /// **'Leader: {name}'**
   String skGameLeaderLabel(String name);
+
+  /// No description provided for @skGameLeaderLabelShort.
+  ///
+  /// In en, this message translates to:
+  /// **'Leader'**
+  String get skGameLeaderLabelShort;
 
   /// No description provided for @skGameMyTurn.
   ///
@@ -4965,11 +4977,59 @@ abstract class L10n {
   /// **'Deal miss'**
   String get mtDealMiss;
 
+  /// No description provided for @mtDealMissConfirmBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Declare a deal miss?\n\nYou lose 5 points now, which go into the deal-miss pool — the next declarer who succeeds collects the whole pool.'**
+  String get mtDealMissConfirmBody;
+
+  /// No description provided for @mtBidShort.
+  ///
+  /// In en, this message translates to:
+  /// **'Bid'**
+  String get mtBidShort;
+
   /// No description provided for @mtPrevTrick.
   ///
   /// In en, this message translates to:
   /// **'Prev trick'**
   String get mtPrevTrick;
+
+  /// No description provided for @mtSetting.
+  ///
+  /// In en, this message translates to:
+  /// **'Setting'**
+  String get mtSetting;
+
+  /// No description provided for @mtSettingConfirmTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Declare setting'**
+  String get mtSettingConfirmTitle;
+
+  /// No description provided for @mtSettingConfirmBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Declare that you will win every remaining trick. Your hand will be revealed and the round ends immediately.'**
+  String get mtSettingConfirmBody;
+
+  /// No description provided for @mtSettingRevealTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Setting declared!'**
+  String get mtSettingRevealTitle;
+
+  /// No description provided for @mtSettingRevealBody.
+  ///
+  /// In en, this message translates to:
+  /// **'{name} declared setting. All remaining tricks go to {name}.'**
+  String mtSettingRevealBody(Object name);
+
+  /// No description provided for @mtSettingTapToClose.
+  ///
+  /// In en, this message translates to:
+  /// **'Tap to dismiss'**
+  String get mtSettingTapToClose;
 
   /// No description provided for @mtRaiseBidConfirmTitle.
   ///

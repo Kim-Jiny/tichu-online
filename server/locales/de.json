@@ -241,6 +241,7 @@
   "mighty_trump_change_disabled": "Trumpfwechsel sind nicht erlaubt",
   "mighty_same_trump": "Diese Trumpffarbe ist bereits ausgewählt",
   "mighty_bid_at_cap": "Das Gebot ist bereits am Maximum",
+  "mighty_setting_invalid": "Setting ist derzeit nicht möglich",
   "mighty_must_discard_three": "Du musst genau 3 Karten ablegen",
   "mighty_card_not_in_hand": "Diese Karte ist nicht auf deiner Hand",
   "mighty_cannot_discard_mighty": "Du kannst die Mighty-Karte nicht ablegen",

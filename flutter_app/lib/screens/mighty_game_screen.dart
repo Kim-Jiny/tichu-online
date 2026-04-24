@@ -790,18 +790,13 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
     final suitLabel = bidSuit != null ? _suitSymbol(bidSuit.toString()) : '';
     final hasBid = bidPoints != null && (bidPoints is num) && bidPoints > 0;
 
+    // Info bar shows WHICH CARD is the friend, not who the partner is.
+    // The reveal (partner name) is already visible on the scoreboard via
+    // the 'Friend' role badge, so we don't need to duplicate it here.
     String friendLabel = '';
     if (!isBidding) {
       if (state.friendCard != null) {
-        if (state.friendRevealed && state.partner != null) {
-          final partnerName = state.players
-              .where((p) => p.id == state.partner)
-              .map((p) => p.name)
-              .firstOrNull ?? '';
-          friendLabel = '${_friendCardLabel(state.friendCard!)} \u2192 $partnerName';
-        } else {
-          friendLabel = _friendCardLabel(state.friendCard!);
-        }
+        friendLabel = '${_friendCardLabel(state.friendCard!)} ${L10n.of(context).mtFriend}';
       } else {
         friendLabel = L10n.of(context).mtSolo;
       }
@@ -2430,10 +2425,21 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
                       ),
                     ),
                     const Divider(height: 1, color: Color(0xFFEFE5DD)),
-                    // Body
-                    Padding(
-                      padding: const EdgeInsets.fromLTRB(16, 14, 16, 16),
-                      child: _buildTrumpChangePanel(s, g, onApplied: closeDialog),
+                    // Body. StatefulBuilder gives the popup its own rebuild
+                    // channel so suit-chip taps (which update the screen-level
+                    // _selectedTrumpSuit field) refresh the dialog too — the
+                    // dialog lives in a separate Overlay route and wouldn't
+                    // otherwise rebuild when the screen's setState fires.
+                    StatefulBuilder(
+                      builder: (_, setDialogState) => Padding(
+                        padding: const EdgeInsets.fromLTRB(16, 14, 16, 16),
+                        child: _buildTrumpChangePanel(
+                          s,
+                          g,
+                          onApplied: closeDialog,
+                          dialogSetState: setDialogState,
+                        ),
+                      ),
                     ),
                   ],
                 ),
@@ -2446,7 +2452,12 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
   }
 
   // ── Bid / Trump Adjustment Panel (shown inside the contract-change popup) ──
-  Widget _buildTrumpChangePanel(MightyGameStateData state, GameService game, {VoidCallback? onApplied}) {
+  Widget _buildTrumpChangePanel(
+    MightyGameStateData state,
+    GameService game, {
+    VoidCallback? onApplied,
+    StateSetter? dialogSetState,
+  }) {
     if (!state.isMyTurn) return const SizedBox.shrink();
     final bidPoints = state.currentBid['points'] as int? ?? 13;
     final isAtCap = bidPoints >= 20;
@@ -2566,7 +2577,13 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
             ])
               Expanded(
                 child: GestureDetector(
-                  onTap: () => setState(() => _selectedTrumpSuit = entry.$1),
+                  onTap: () {
+                    _selectedTrumpSuit = entry.$1;
+                    // Rebuild both the screen (so the field persists in
+                    // State) and the dialog (so the chip highlight updates).
+                    setState(() {});
+                    dialogSetState?.call(() {});
+                  },
                   child: AnimatedContainer(
                     duration: const Duration(milliseconds: 120),
                     margin: const EdgeInsets.symmetric(horizontal: 3),

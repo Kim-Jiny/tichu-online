@@ -2801,6 +2801,9 @@ class L10nKo extends L10n {
   String get mtChangeTrump => '기루다 변경';
 
   @override
+  String get mtChangeContract => '공약 변경';
+
+  @override
   String mtTrumpPenalty(int penalty) {
     return '비딩 +$penalty';
   }

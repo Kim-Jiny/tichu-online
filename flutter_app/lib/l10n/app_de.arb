@@ -924,6 +924,7 @@
   "mtCard": "Karte",
   "mtConfirm": "Bestätigen",
   "mtChangeTrump": "Trumpf ändern",
+  "mtChangeContract": "Vertrag ändern",
   "mtTrumpPenalty": "Gebot +{penalty}",
   "mtPlayTimer": "Spielen ({seconds}s)",
   "mtPlay": "Spielen",

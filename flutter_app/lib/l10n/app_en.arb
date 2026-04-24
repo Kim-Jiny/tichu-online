@@ -1285,6 +1285,7 @@
   "mtCard": "Card",
   "mtConfirm": "Confirm",
   "mtChangeTrump": "Change Trump",
+  "mtChangeContract": "Change Contract",
   "mtTrumpPenalty": "Bid +{penalty}",
   "@mtTrumpPenalty": {
     "placeholders": {

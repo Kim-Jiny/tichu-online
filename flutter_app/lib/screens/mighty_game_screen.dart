@@ -2205,8 +2205,31 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
             ),
           ),
         ),
-        // ── Trump change panel (above hand) ──
-        _buildTrumpChangePanel(state, game),
+        // ── Contract change button — opens a popup with bid/trump controls ──
+        Padding(
+          padding: const EdgeInsets.fromLTRB(12, 6, 12, 2),
+          child: SizedBox(
+            width: double.infinity,
+            height: 34,
+            child: OutlinedButton.icon(
+              onPressed: () => _showContractChangeDialog(game),
+              icon: const Icon(Icons.edit_note, size: 18, color: Color(0xFFE65100)),
+              label: Text(
+                L10n.of(context).mtChangeContract,
+                style: const TextStyle(
+                  fontSize: 13,
+                  fontWeight: FontWeight.bold,
+                  color: Color(0xFFE65100),
+                ),
+              ),
+              style: OutlinedButton.styleFrom(
+                side: const BorderSide(color: Color(0xFFE65100)),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                padding: EdgeInsets.zero,
+              ),
+            ),
+          ),
+        ),
         // Hand for kitty selection
         _buildHandArea(state, game),
       ],
@@ -2259,8 +2282,55 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
     );
   }
 
-  // ── Bid / Trump Adjustment Panel (floats above hand during kitty exchange) ──
-  Widget _buildTrumpChangePanel(MightyGameStateData state, GameService game) {
+  // Opens a popup containing the bid/trump adjustment controls. The popup
+  // auto-closes once the declarer applies a change (server confirms state).
+  void _showContractChangeDialog(GameService game) {
+    showDialog<void>(
+      context: context,
+      barrierDismissible: true,
+      builder: (dialogCtx) {
+        return AlertDialog(
+          title: Text(L10n.of(dialogCtx).mtChangeContract),
+          contentPadding: const EdgeInsets.fromLTRB(12, 16, 12, 0),
+          content: Consumer<GameService>(
+            builder: (_, g, _) {
+              final s = g.mightyGameState;
+              if (s == null || s.phase != 'kitty_exchange' || !s.isMyTurn) {
+                // Phase moved on — close the dialog.
+                WidgetsBinding.instance.addPostFrameCallback((_) {
+                  if (Navigator.of(dialogCtx).canPop()) {
+                    Navigator.of(dialogCtx).pop();
+                  }
+                });
+                return const SizedBox.shrink();
+              }
+              return SizedBox(
+                width: 320,
+                child: _buildTrumpChangePanel(
+                  s,
+                  g,
+                  onApplied: () {
+                    if (Navigator.of(dialogCtx).canPop()) {
+                      Navigator.of(dialogCtx).pop();
+                    }
+                  },
+                ),
+              );
+            },
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(dialogCtx).pop(),
+              child: Text(L10n.of(dialogCtx).mtCancel),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  // ── Bid / Trump Adjustment Panel (shown inside the contract-change popup) ──
+  Widget _buildTrumpChangePanel(MightyGameStateData state, GameService game, {VoidCallback? onApplied}) {
     if (!state.isMyTurn) return const SizedBox.shrink();
     final bidPoints = state.currentBid['points'] as int? ?? 13;
     final isAtCap = bidPoints >= 20;
@@ -2309,7 +2379,10 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
                         title: L10n.of(context).mtRaiseBidConfirmTitle,
                         body: L10n.of(context).mtRaiseBidConfirmBody(nextBid.toString()),
                       );
-                      if (ok) game.mightyRaiseBid();
+                      if (ok) {
+                        game.mightyRaiseBid();
+                        onApplied?.call();
+                      }
                     },
                     style: FilledButton.styleFrom(
                       backgroundColor: const Color(0xFF1565C0),
@@ -2395,6 +2468,7 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
                       game.mightyChangeTrump(_selectedTrumpSuit!);
                     }
                     setState(() => _selectedTrumpSuit = null);
+                    onApplied?.call();
                   },
                   style: FilledButton.styleFrom(
                     backgroundColor: isSameTrump ? const Color(0xFF1565C0) : const Color(0xFFE65100),

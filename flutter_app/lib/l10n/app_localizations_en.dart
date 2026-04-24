@@ -2863,6 +2863,9 @@ class L10nEn extends L10n {
   String get mtChangeTrump => 'Change Trump';
 
   @override
+  String get mtChangeContract => 'Change Contract';
+
+  @override
   String mtTrumpPenalty(int penalty) {
     return 'Bid +$penalty';
   }

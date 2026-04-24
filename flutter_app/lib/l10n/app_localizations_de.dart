@@ -2878,6 +2878,9 @@ class L10nDe extends L10n {
   String get mtChangeTrump => 'Trumpf ändern';
 
   @override
+  String get mtChangeContract => 'Vertrag ändern';
+
+  @override
   String mtTrumpPenalty(int penalty) {
     return 'Gebot +$penalty';
   }

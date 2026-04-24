@@ -5199,6 +5199,12 @@ abstract class L10n {
   /// **'Change Trump'**
   String get mtChangeTrump;
 
+  /// No description provided for @mtChangeContract.
+  ///
+  /// In en, this message translates to:
+  /// **'Change Contract'**
+  String get mtChangeContract;
+
   /// No description provided for @mtTrumpPenalty.
   ///
   /// In en, this message translates to:

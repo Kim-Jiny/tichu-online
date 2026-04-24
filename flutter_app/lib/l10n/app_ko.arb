@@ -916,6 +916,7 @@
   "mtCard": "카드",
   "mtConfirm": "확인",
   "mtChangeTrump": "기루다 변경",
+  "mtChangeContract": "공약 변경",
   "mtTrumpPenalty": "비딩 +{penalty}",
   "mtPlayTimer": "내기 ({seconds}초)",
   "mtPlay": "내기",

@@ -2009,56 +2009,55 @@ class _LobbyScreenState extends State<LobbyScreen> {
                               ],
                             ),
                             const SizedBox(height: 2),
-                            Row(
+                            Wrap(
+                              spacing: 4,
+                              runSpacing: 2,
+                              crossAxisAlignment: WrapCrossAlignment.center,
                               children: [
-                                Text(
-                                  (isSK || isLL)
-                                      ? l10n.lobbyRoomTimeSec(
-                                          room.turnTimeLimit,
-                                        )
-                                      : l10n.lobbyRoomTimeAndScore(
-                                          room.turnTimeLimit,
-                                          room.targetScore,
-                                        ),
-                                  style: TextStyle(
-                                    fontSize: 11,
-                                    color: subTextColor,
+                                Padding(
+                                  padding: const EdgeInsets.only(right: 2),
+                                  child: Text(
+                                    (isSK || isLL)
+                                        ? l10n.lobbyRoomTimeSec(
+                                            room.turnTimeLimit,
+                                          )
+                                        : l10n.lobbyRoomTimeAndScore(
+                                            room.turnTimeLimit,
+                                            room.targetScore,
+                                          ),
+                                    style: TextStyle(
+                                      fontSize: 11,
+                                      color: subTextColor,
+                                    ),
                                   ),
                                 ),
-                                if (isSK && room.skExpansions.isNotEmpty) ...[
-                                  const SizedBox(width: 6),
+                                if (isSK && room.skExpansions.isNotEmpty)
                                   for (final exp in room.skExpansions)
-                                    Padding(
-                                      padding: const EdgeInsets.only(right: 4),
-                                      child: Container(
-                                        padding: const EdgeInsets.symmetric(
-                                          horizontal: 6,
-                                          vertical: 2,
+                                    Container(
+                                      padding: const EdgeInsets.symmetric(
+                                        horizontal: 6,
+                                        vertical: 2,
+                                      ),
+                                      decoration: BoxDecoration(
+                                        color: const Color(0xFF2D2D3D),
+                                        borderRadius: BorderRadius.circular(6),
+                                        border: Border.all(
+                                          color: const Color(
+                                            0xFFFFD54F,
+                                          ).withValues(alpha: 0.5),
+                                          width: 0.8,
                                         ),
-                                        decoration: BoxDecoration(
-                                          color: const Color(0xFF2D2D3D),
-                                          borderRadius: BorderRadius.circular(
-                                            6,
-                                          ),
-                                          border: Border.all(
-                                            color: const Color(
-                                              0xFFFFD54F,
-                                            ).withValues(alpha: 0.5),
-                                            width: 0.8,
-                                          ),
-                                        ),
-                                        child: Text(
-                                          _skExpansionShortLabel(exp, l10n),
-                                          style: const TextStyle(
-                                            fontSize: 9,
-                                            color: Color(0xFFFFD54F),
-                                            fontWeight: FontWeight.bold,
-                                            height: 1.0,
-                                          ),
+                                      ),
+                                      child: Text(
+                                        _skExpansionShortLabel(exp, l10n),
+                                        style: const TextStyle(
+                                          fontSize: 9,
+                                          color: Color(0xFFFFD54F),
+                                          fontWeight: FontWeight.bold,
+                                          height: 1.0,
                                         ),
                                       ),
                                     ),
-                                ],
                               ],
                             ),
                           ],

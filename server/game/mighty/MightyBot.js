@@ -107,6 +107,26 @@ function _getGovernmentPointCount(game) {
   return points;
 }
 
+/**
+ * True if the opposition is in a "critical endgame": 2 or fewer tricks
+ * remain (the current one included) AND the declarer team has not yet
+ * accumulated enough point cards to make their bid. At that point opp
+ * should stop conserving mighty/joker/trump and play to deny the last
+ * handful of points — letting declarer grab a 1-point trick can be the
+ * difference between a failed and made bid.
+ */
+function _oppCriticalEndgame(game) {
+  const active = game.activePlayerCount || game.playerCount;
+  if (!active) return false;
+  const totalTricks = Math.floor(50 / active);
+  const tricksRemaining = totalTricks - game.tricks.length;
+  if (tricksRemaining > 2) return false;
+  const bidTarget = game.currentBid?.points || 0;
+  if (!bidTarget) return false;
+  const govPoints = _getGovernmentPointCount(game);
+  return govPoints < bidTarget;
+}
+
 /** Count how many point cards remain in all hands (not yet played/discarded) */
 function _countRemainingPointCards(game) {
   const played = _getPlayedCards(game);
@@ -604,7 +624,22 @@ function pickFriendCard(hand, game) {
 
   if (candidates.length > 0) {
     candidates.sort((a, b) => b.score - a.score);
-    return candidates[0].cardId;
+    const winner = candidates[0];
+    // If even the best candidate is poor (e.g., the only option left is a
+    // void-suit A because the declarer is self-sufficient in every other
+    // suit), solo is a better call than a friend who can never actually
+    // win their suit. Threshold 5 sits comfortably between the void-A
+    // floor (2) and the 4+-length-A floor (7).
+    if (winner.score < 5) {
+      if (typeof globalThis.__mightySimHook === 'function') {
+        try { globalThis.__mightySimHook(hand, 'no_friend', candidates.slice(0, 3)); } catch { /* ignore */ }
+      }
+      return 'no_friend';
+    }
+    if (typeof globalThis.__mightySimHook === 'function') {
+      try { globalThis.__mightySimHook(hand, winner.cardId, candidates.slice(0, 3)); } catch { /* ignore */ }
+    }
+    return winner.cardId;
   }
 
   // Fallback: King of any suit where I lack the K
@@ -1042,6 +1077,25 @@ function _oppositionLead(game, botId, legalCards, suitCards, mightyCard) {
   const declarerVoids = voids[game.declarer] || new Set();
   const hasTrump = game.trumpSuit && game.trumpSuit !== 'no_trump';
 
+  // Critical endgame: ≤ 2 tricks left and declarer short of bid. Lead our
+  // strongest available card (sure top, then mighty, then joker, then any
+  // high trump) so the opp side actually takes the trick rather than
+  // setting up a future one we'll never reach. Skips the "avoid declarer
+  // voids" guard — if they ruff it, at least they burn a trump to deny
+  // us, and we're already in endgame.
+  if (_oppCriticalEndgame(game)) {
+    // Try effective-top non-trump first (guaranteed winner if nobody ruffs).
+    for (const [suit, cards] of Object.entries(suitCards)) {
+      if (suit === game.trumpSuit) continue;
+      const sorted = cards.sort((a, b) =>
+        RANK_ORDER[getCardInfo(b).rank] - RANK_ORDER[getCardInfo(a).rank]);
+      if (_isEffectiveTopOfSuit(sorted[0], game)) return sorted[0];
+    }
+    if (legalCards.includes(mightyCard)) return mightyCard;
+    if (legalCards.includes('mighty_joker')) return 'mighty_joker';
+    // Fall through to normal logic if we have no clear winner.
+  }
+
   // Strategy 1: If we have a sure top card, lead it to collect points safely
   for (const [suit, cards] of Object.entries(suitCards)) {
     if (suit === game.trumpSuit) continue;
@@ -1295,6 +1349,15 @@ function oppositionFollow(game, botId, legalCards, winningCards, currentWinner, 
     // End-game: if government already has enough points, don't waste good cards
     if (govPoints >= bidTarget && trickPoints === 0) {
       return getNonPointWeakest(legalCards, game);
+    }
+
+    // Critical endgame override: 2 or fewer tricks remain AND declarer
+    // hasn't made bid yet. Every trick declarer takes here could lock in
+    // success, so spend any winner we have — including mighty/joker on a
+    // 0-point trick. Hoarding specials through the final tricks just lets
+    // government mop up.
+    if (_oppCriticalEndgame(game) && winningCards.length > 0) {
+      return pickSufficientWinner(winningCards, game, isLastPlayer, govBehind);
     }
 
     // Joker snipe: use joker on high-value tricks
@@ -1634,4 +1697,4 @@ function _pickJokerLeadSuit(game, botId) {
   return bestSuit;
 }
 
-module.exports = { decideMightyBotAction };
+module.exports = { decideMightyBotAction, pickFriendCard };

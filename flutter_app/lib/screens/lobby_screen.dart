@@ -1952,6 +1952,7 @@ class _LobbyScreenState extends State<LobbyScreen> {
           ),
           child: IntrinsicHeight(
             child: Row(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
                 // Left color strip — stretches to cell height.
                 Container(

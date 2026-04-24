@@ -741,7 +741,7 @@ class L10nKo extends L10n {
   String get lobbyReady => '준비';
 
   @override
-  String get lobbyReadyDone => '준비 완료!';
+  String get lobbyReadyDone => '준비완료!';
 
   @override
   String lobbyReportTitle(String nickname) {

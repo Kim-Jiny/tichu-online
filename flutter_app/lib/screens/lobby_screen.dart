@@ -2872,12 +2872,18 @@ class _LobbyScreenState extends State<LobbyScreen> {
                 style: ElevatedButton.styleFrom(
                   backgroundColor: _isMyReady(game)
                       ? const Color(0xFFC8E6C9)
-                      : const Color(0xFFF5F5F5),
+                      : const Color(0xFFFFE082),
                   foregroundColor: _isMyReady(game)
                       ? const Color(0xFF2E7D32)
                       : const Color(0xFF5A4038),
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(16),
+                    side: BorderSide(
+                      color: _isMyReady(game)
+                          ? const Color(0xFF43A047)
+                          : const Color(0xFFFFA000),
+                      width: 2.5,
+                    ),
                   ),
                   elevation: 0,
                 ),

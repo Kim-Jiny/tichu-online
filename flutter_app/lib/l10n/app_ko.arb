@@ -245,7 +245,7 @@
   "lobbySkullKingPlayers": "스컬킹 · {count}인",
   "lobbyStartGame": "게임 시작",
   "lobbyReady": "준비",
-  "lobbyReadyDone": "준비 완료!",
+  "lobbyReadyDone": "준비완료!",
   "lobbyReportTitle": "{nickname} 신고",
   "lobbyReportWarning": "신고는 운영팀이 확인합니다.\n허위 신고는 제재될 수 있어요.",
   "lobbySelectReason": "사유 선택",

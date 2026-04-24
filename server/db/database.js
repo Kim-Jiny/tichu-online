@@ -1368,10 +1368,16 @@ async function saveMatchResultWithStats(matchData, players) {
   }
 }
 
-// Get user profile
-async function getUserProfile(nickname) {
+// Get user profile. `locale` picks the display name column for the equipped
+// title; defaults to Korean for legacy callers that don't yet pass one.
+async function getUserProfile(nickname, locale = 'ko') {
   const client = await pool.connect();
   try {
+    // Whitelist the locale-specific column to stay safe against accidental
+    // injection even though the locale only comes from server-side state.
+    const titleCol = locale === 'en' ? 'name_en'
+      : locale === 'de' ? 'name_de'
+      : 'name_ko';
     const result = await client.query(
       `SELECT u.nickname, u.total_games, u.wins, u.losses, u.rating, u.gold, u.leave_count,
               u.season_rating, u.season_games, u.season_wins, u.season_losses,
@@ -1382,7 +1388,7 @@ async function getUserProfile(nickname) {
               u.mighty_total_games, u.mighty_wins, u.mighty_losses, u.mighty_rating,
               u.mighty_season_rating, u.mighty_season_games, u.mighty_season_wins, u.mighty_season_losses,
               e.banner_key, e.theme_key, e.title_key,
-              si.name_ko AS title_name
+              si.${titleCol} AS title_name
        FROM tc_users u
        LEFT JOIN tc_user_equips e ON e.nickname = u.nickname
        LEFT JOIN tc_shop_items si ON si.item_key = e.title_key
@@ -2142,19 +2148,22 @@ async function buyItem(nickname, itemKey) {
 }
 
 // Equip item
-async function equipItem(nickname, itemKey) {
+async function equipItem(nickname, itemKey, locale = 'ko') {
   const client = await pool.connect();
   try {
     await cleanupExpiredItems(client, nickname);
     const itemRes = await client.query(
-      `SELECT category, name_ko FROM tc_shop_items WHERE item_key = $1`,
+      `SELECT category, name_ko, name_en, name_de FROM tc_shop_items WHERE item_key = $1`,
       [itemKey]
     );
     if (itemRes.rows.length === 0) {
       return { success: false, messageKey: 'db_item_not_found' };
     }
     const category = itemRes.rows[0].category;
-    const itemName = itemRes.rows[0].name_ko;
+    const row = itemRes.rows[0];
+    const itemName = locale === 'en' ? (row.name_en || row.name_ko)
+      : locale === 'de' ? (row.name_de || row.name_ko)
+      : row.name_ko;
 
     const owned = await client.query(
       `SELECT 1 FROM tc_user_items
@@ -5641,6 +5650,27 @@ async function insertPushRecipients(historyId, recipients) {
 }
 
 // Get push history detail with recipients (paginated)
+/**
+ * Load every title item's localized names into a single map so broadcast
+ * paths can localize a peer's equipped title per-recipient without an
+ * extra DB round-trip on each send. Returns { titleKey: {ko, en, de} }.
+ */
+async function loadTitleTranslations() {
+  const res = await pool.query(
+    `SELECT item_key, name_ko, name_en, name_de
+     FROM tc_shop_items WHERE category = 'title'`
+  );
+  const map = {};
+  for (const row of res.rows) {
+    map[row.item_key] = {
+      ko: row.name_ko || '',
+      en: row.name_en || row.name_ko || '',
+      de: row.name_de || row.name_ko || '',
+    };
+  }
+  return map;
+}
+
 async function getPushHistoryDetail(id, page = 1, limit = 50) {
   const historyRes = await pool.query(`SELECT * FROM tc_push_history WHERE id = $1`, [id]);
   if (historyRes.rows.length === 0) return null;
@@ -5674,6 +5704,7 @@ module.exports = {
   saveMatchResultWithStats,
   updateUserStats,
   getUserProfile,
+  loadTitleTranslations,
   getRecentMatches,
   getWallet,
   getGoldHistory,

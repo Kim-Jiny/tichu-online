@@ -62,6 +62,7 @@ const {
   insertPushHistory,
   getPushHistory,
   clearInvalidFcmToken,
+  loadTitleTranslations,
 } = require('./db/database');
 
 // Firebase Admin SDK initialization (optional - only if FIREBASE_SERVICE_ACCOUNT is set)
@@ -873,9 +874,33 @@ process.on('unhandledRejection', (reason, promise) => {
   console.error('[UNHANDLED REJECTION]', reason);
 });
 
+// Title translations cache. Populated at boot from tc_shop_items so we can
+// localize a peer's equipped title per-recipient without hitting the DB on
+// every room-state broadcast. Refreshed lazily on cache miss.
+let titleTranslations = {};
+async function refreshTitleTranslations() {
+  try {
+    titleTranslations = await loadTitleTranslations();
+  } catch (e) {
+    console.warn('[titleTranslations] refresh failed:', e?.message || e);
+  }
+}
+
+/** Pick a title's display name for the given locale, falling back to the
+ *  cached titleName (stored at the title-owner's login time) or Korean. */
+function localizeTitleName(titleKey, fallbackName, locale) {
+  if (!titleKey) return fallbackName || null;
+  const entry = titleTranslations[titleKey];
+  if (!entry) return fallbackName || null;
+  if (locale === 'en') return entry.en || entry.ko || fallbackName || null;
+  if (locale === 'de') return entry.de || entry.ko || fallbackName || null;
+  return entry.ko || fallbackName || null;
+}
+
 // Initialize database and start server
 (async () => {
   await initDatabase();
+  await refreshTitleTranslations();
   await loadMaintenanceConfig();
   await ensureSeasonCycle();
 
@@ -1749,8 +1774,9 @@ async function handleGetLinkedSocial(ws) {
 }
 
 async function handleReconnection(ws) {
-  // Fetch user profile to get equipped theme and title
-  const profile = await getUserProfile(ws.nickname);
+  // Fetch user profile to get equipped theme and title (locale-aware so
+  // the self-view of the equipped title matches the app language).
+  const profile = await getUserProfile(ws.nickname, ws.locale || 'ko');
   const themeKey = profile?.themeKey || null;
   const titleKey = profile?.titleKey || null;
   const titleName = profile?.titleName || null;
@@ -2999,7 +3025,9 @@ async function handleGetProfile(ws, data) {
     sendTo(ws, { type: 'error', message: t(ws.locale, 'nickname_required') });
     return;
   }
-  const profile = await getUserProfile(targetNickname);
+  // Viewer's locale picks the title display name; the inspected user's own
+  // locale preference is irrelevant to what the viewer should see.
+  const profile = await getUserProfile(targetNickname, ws.locale || 'ko');
   const recentMatches = await getRecentMatches(targetNickname, 20);
   const isBlocked = (await getBlockedUsers(ws.nickname)).includes(targetNickname);
   sendTo(ws, {
@@ -4166,24 +4194,36 @@ function broadcastGameEvent(roomId, event) {
   }
 }
 
+/** Rewrite each player's titleName in a room state payload so it reflects
+ *  the recipient's locale rather than the title-owner's locale. */
+function localizeRoomStateTitles(state, locale) {
+  if (!state || !Array.isArray(state.players)) return state;
+  const localized = { ...state, players: state.players.map(p => {
+    if (p === null) return null;
+    if (!p.titleKey) return p;
+    return { ...p, titleName: localizeTitleName(p.titleKey, p.titleName, locale) };
+  }) };
+  return localized;
+}
+
 function broadcastRoomState(roomId) {
   const room = lobby.getRoom(roomId);
   if (!room) return;
   const roomState = room.getState();
+  const sendLocalized = (ws) => {
+    const locale = ws?.locale || 'ko';
+    sendTo(ws, { type: 'room_state', room: localizeRoomStateTitles(roomState, locale) });
+  };
   // Send to players (skip null slots)
   for (const player of room.players) {
     if (player === null) continue;
     const ws = findWsByPlayerId(player.id);
-    if (ws) {
-      sendTo(ws, { type: 'room_state', room: roomState });
-    }
+    if (ws) sendLocalized(ws);
   }
   // Send to spectators
   for (const spectator of room.spectators) {
     const ws = findWsByPlayerId(spectator.id);
-    if (ws) {
-      sendTo(ws, { type: 'room_state', room: roomState });
-    }
+    if (ws) sendLocalized(ws);
   }
 }
 
@@ -4979,7 +5019,7 @@ async function handleEquipItem(ws, data) {
     return;
   }
   const itemKey = data.itemKey;
-  const result = await equipItem(ws.nickname, itemKey);
+  const result = await equipItem(ws.nickname, itemKey, ws.locale || 'ko');
   if (result.success && result.category === 'theme') {
     result.themeKey = itemKey;
   }

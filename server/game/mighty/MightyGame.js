@@ -65,6 +65,7 @@ class MightyGame {
     this.lastTrickWinner = null;
     this.lastDealMissEvent = null; // { playerId, playerName, cards, handScore, round } — visible to all; dismiss by tap locally, server clears on next round
     this.lastKillEvent = null; // { declarerId, declarerName, targetCardId, victimId, victimName, wasKitty } — same tap-to-dismiss UX
+    this.lastSettingEvent = null; // { playerId, playerName, cards, round } — set when a player declares 세팅 (skip-remaining-tricks claim); cleared at next round
     this.newlyReceivedCards = {}; // pid → [cardId, ...] highlight for post-kill redistribution; cleared when kitty phase ends
     this.revealGracePeriodEndAt = 0; // when a reveal event fires, bot actions are held until this timestamp (ms since epoch) so players can read the overlay
   }
@@ -104,6 +105,7 @@ class MightyGame {
     this.lastTrickWinner = null;
     this.lastDealMissEvent = null;
     this.lastKillEvent = null;
+    this.lastSettingEvent = null;
     this.newlyReceivedCards = {};
 
     // Restore mode/active count for a fresh round — previous round may have ended in 5p
@@ -157,6 +159,7 @@ class MightyGame {
       case 'raise_bid': return this._handleRaiseBid(playerId, action);
       case 'discard_kitty': return this._handleDiscardKitty(playerId, action);
       case 'play_card': return this._handlePlayCard(playerId, action);
+      case 'declare_setting': return this._handleDeclareSetting(playerId, action);
       case 'next_round': return this._handleNextRound(playerId, action);
       default:
         return { success: false, messageKey: 'mighty_invalid_action' };
@@ -897,6 +900,156 @@ class MightyGame {
     this.state = 'playing';
   }
 
+  // ─── SETTING (세팅) ─────────────────────────────────────
+  //
+  // A player on lead whose remaining hand is unconditionally winning can
+  // declare 세팅: reveal the hand, skip the remaining tricks, and have all
+  // remaining point cards awarded to their collection. Lead-only because
+  // the detection assumes the setter chooses which card enters each trick.
+
+  /**
+   * True iff `playerId` is currently eligible to declare setting:
+   *   - playing phase, leading (empty current trick), their turn
+   *   - not an excluded mighty seat
+   *   - 2+ cards in hand (a 1-card "set" is the last trick itself)
+   *   - every card in their hand is beyond anything the rest of the room
+   *     could legally play against it given the remaining-trick rules.
+   */
+  _canDeclareSetting(playerId) {
+    if (this.state !== 'playing') return false;
+    if (this.currentPlayer !== playerId) return false;
+    if (this.currentTrick.length !== 0) return false;
+    if (this.excludedPlayers.has(playerId)) return false;
+    const hand = this.hands[playerId];
+    if (!hand || hand.length < 2) return false;
+
+    const mightyCard = this.getMightyCard();
+    const trump = this.trumpSuit;
+    const hasTrump = trump && trump !== 'no_trump';
+
+    // Collective pool of everything still in other (active) seats' hands.
+    // Suit-distribution among opponents is unknown, so any "any opp could
+    // ruff" or "any opp could follow-suit higher" situation defeats the
+    // declaration conservatively.
+    const oppPool = new Set();
+    for (const pid of this.playerIds) {
+      if (pid === playerId) continue;
+      if (this.excludedPlayers.has(pid)) continue;
+      for (const c of this.hands[pid] || []) oppPool.add(c);
+    }
+
+    const totalTricks = this._totalTricksThisRound();
+    const lastTrickIdx = totalTricks - 1;
+    const remainingIndices = [];
+    for (let i = 0; i < hand.length; i++) remainingIndices.push(this.tricks.length + i);
+    const weakTrick = (idx) =>
+      (idx === 0 && !this.options.firstTrickJokerPower) ||
+      (idx === lastTrickIdx && !this.options.lastTrickJokerPower);
+    const allRemainingWeak = remainingIndices.every(weakTrick);
+    const anyRemainingStrong = remainingIndices.some(i => !weakTrick(i));
+
+    const rankIdx = (r) => RANK_ORDER[r] || 0;
+
+    for (const cardId of hand) {
+      if (cardId === mightyCard) continue; // unconditional winner
+
+      if (cardId === 'mighty_joker') {
+        if (allRemainingWeak) return false;   // joker can't lead any remaining trick
+        if (oppPool.has(mightyCard)) return false; // opp mighty overcuts
+        continue;
+      }
+
+      const info = getCardInfo(cardId);
+      if (!info) return false;
+      const isTrumpCard = hasTrump && info.suit === trump;
+
+      if (isTrumpCard) {
+        // Any higher trump still out beats us.
+        const myRank = rankIdx(info.rank);
+        for (const r of Object.keys(RANK_ORDER)) {
+          if (rankIdx(r) <= myRank) continue;
+          const id = `mighty_${trump}_${r}`;
+          if (id === mightyCard) continue; // handled separately
+          if (oppPool.has(id)) return false;
+        }
+        if (oppPool.has(mightyCard)) return false;
+        // Joker beats any trump (except mighty). If a non-weak trick remains
+        // and opp holds joker, opp saves it for a non-weak trick.
+        if (oppPool.has('mighty_joker') && anyRemainingStrong) return false;
+        continue;
+      }
+
+      // Non-trump lead.
+      if (oppPool.has(mightyCard)) return false;
+      if (oppPool.has('mighty_joker') && anyRemainingStrong) return false;
+      // Higher same-suit in opp pool → opp follows suit and wins.
+      const myRank = rankIdx(info.rank);
+      for (const r of Object.keys(RANK_ORDER)) {
+        if (rankIdx(r) <= myRank) continue;
+        const id = `mighty_${info.suit}_${r}`;
+        if (id === mightyCard) continue;
+        if (oppPool.has(id)) return false;
+      }
+      // Any trump left in opp pool is a latent ruff: since the setter
+      // holds no more of this suit worth checking (we already covered the
+      // higher-rank follow above) and suit distribution is unknown, at
+      // least one opp may be void and able to ruff. Treat conservatively.
+      if (hasTrump) {
+        for (const c of oppPool) {
+          if (c === 'mighty_joker' || c === mightyCard) continue;
+          const ci = getCardInfo(c);
+          if (ci && ci.suit === trump) return false;
+        }
+      }
+    }
+    return true;
+  }
+
+  _handleDeclareSetting(playerId, _action) {
+    if (!this._canDeclareSetting(playerId)) {
+      return { success: false, messageKey: 'mighty_setting_invalid' };
+    }
+    const hand = this.hands[playerId] || [];
+    const snapshot = sortCards([...hand], this.trumpSuit);
+
+    // Award every remaining point card (across all active hands) to the
+    // setter. Non-point remainders just get discarded — they don't affect
+    // the score calculation.
+    for (const pid of this.playerIds) {
+      if (this.excludedPlayers.has(pid)) continue;
+      for (const cardId of this.hands[pid] || []) {
+        const info = getCardInfo(cardId);
+        if (info && info.point > 0) {
+          this.pointCards[playerId].push(cardId);
+        }
+      }
+      this.hands[pid] = [];
+    }
+
+    // Pad the tricks array so the completed-trick count stays correct for
+    // UI stats (each skipped trick is attributed to the setter).
+    const totalTricks = this._totalTricksThisRound();
+    while (this.tricks.length < totalTricks) {
+      this.tricks.push({
+        leader: playerId,
+        winner: playerId,
+        cards: [],
+        setting: true,
+      });
+    }
+
+    this.lastSettingEvent = {
+      playerId,
+      playerName: this.playerNames[playerId] || playerId,
+      cards: snapshot,
+      round: this.round,
+    };
+    this.revealGracePeriodEndAt = Date.now() + 1000;
+
+    this._endRound();
+    return { success: true };
+  }
+
   _determineTrickWinner(isFirstTrick, isLastTrick) {
     const mightyCard = this.getMightyCard();
     const jokerCallCard = this.getJokerCallCard();
@@ -1114,6 +1267,8 @@ class MightyGame {
       dealMissPool: this.dealMissPool,
       lastDealMissEvent: this.lastDealMissEvent,
       canDeclareDealMiss: this._canDeclareDealMiss(playerId),
+      canDeclareSetting: this._canDeclareSetting(playerId),
+      lastSettingEvent: this.lastSettingEvent,
       mode: this.mode,
       excludedPlayers: [...this.excludedPlayers],
       lastKillEvent: this.lastKillEvent,
@@ -1197,6 +1352,7 @@ class MightyGame {
       lastTrickWinner: this.state === 'trick_end' ? this.lastTrickWinner : null,
       dealMissPool: this.dealMissPool,
       lastDealMissEvent: this.lastDealMissEvent,
+      lastSettingEvent: this.lastSettingEvent,
       mode: this.mode,
       excludedPlayers: [...this.excludedPlayers],
       lastKillEvent: this.lastKillEvent,

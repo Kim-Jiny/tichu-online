@@ -85,6 +85,9 @@ class L10nDe extends L10n {
   String get commonCancel => 'Abbrechen';
 
   @override
+  String get commonTotal => 'Gesamt';
+
+  @override
   String get commonSave => 'Speichern';
 
   @override
@@ -1132,6 +1135,9 @@ class L10nDe extends L10n {
   String skGameLeaderLabel(String name) {
     return 'Startspieler: $name';
   }
+
+  @override
+  String get skGameLeaderLabelShort => 'Startspieler';
 
   @override
   String get skGameMyTurn => 'Mein Zug';
@@ -2735,7 +2741,35 @@ class L10nDe extends L10n {
   String get mtDealMiss => 'Deal-Miss';
 
   @override
+  String get mtDealMissConfirmBody =>
+      'Deal-Miss erklären?\n\nDu verlierst sofort 5 Punkte, die in den Deal-Miss-Pool fließen — der nächste erfolgreiche Alleinspieler sammelt den gesamten Pool ein.';
+
+  @override
+  String get mtBidShort => 'Gebot';
+
+  @override
   String get mtPrevTrick => 'Vorheriger Stich';
+
+  @override
+  String get mtSetting => 'Setting';
+
+  @override
+  String get mtSettingConfirmTitle => 'Setting erklären';
+
+  @override
+  String get mtSettingConfirmBody =>
+      'Erkläre, dass du jeden verbleibenden Stich gewinnst. Deine Hand wird aufgedeckt und die Runde endet sofort.';
+
+  @override
+  String get mtSettingRevealTitle => 'Setting erklärt!';
+
+  @override
+  String mtSettingRevealBody(Object name) {
+    return '$name hat Setting erklärt. Alle verbleibenden Stiche gehen an $name.';
+  }
+
+  @override
+  String get mtSettingTapToClose => 'Zum Schließen tippen';
 
   @override
   String get mtRaiseBidConfirmTitle => 'Gebot erhöhen';

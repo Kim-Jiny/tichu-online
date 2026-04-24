@@ -1130,6 +1130,7 @@ async function handleMessage(ws, data) {
     case 'discard_kitty':
     case 'declare_deal_miss':
     case 'declare_kill':
+    case 'declare_setting':
     // Game actions (Skull King)
     case 'submit_bid':
     case 'play_card':

@@ -29,6 +29,7 @@
 
   "commonOk": "OK",
   "commonCancel": "Cancel",
+  "commonTotal": "Total",
   "commonSave": "Save",
   "commonClose": "Close",
   "commonDelete": "Delete",
@@ -494,6 +495,7 @@
   "skGameLeaveConfirm": "Are you sure you want to leave the game?",
   "skGameLeaveButton": "Leave",
   "skGameLeaderLabel": "Leader: {name}",
+  "skGameLeaderLabelShort": "Leader",
   "@skGameLeaderLabel": {
     "placeholders": {
       "name": { "type": "String" }
@@ -1239,7 +1241,15 @@
   "@mtCurrentBid": { "placeholders": { "points": {}, "suit": {} } },
   "mtPass": "Pass",
   "mtDealMiss": "Deal miss",
+  "mtDealMissConfirmBody": "Declare a deal miss?\n\nYou lose 5 points now, which go into the deal-miss pool — the next declarer who succeeds collects the whole pool.",
+  "mtBidShort": "Bid",
   "mtPrevTrick": "Prev trick",
+  "mtSetting": "Setting",
+  "mtSettingConfirmTitle": "Declare setting",
+  "mtSettingConfirmBody": "Declare that you will win every remaining trick. Your hand will be revealed and the round ends immediately.",
+  "mtSettingRevealTitle": "Setting declared!",
+  "mtSettingRevealBody": "{name} declared setting. All remaining tricks go to {name}.",
+  "mtSettingTapToClose": "Tap to dismiss",
   "mtRaiseBidConfirmTitle": "Raise bid",
   "mtRaiseBidConfirmBody": "Raise the bid to {points}?",
   "mtChangeTrumpConfirmTitle": "Change trump",

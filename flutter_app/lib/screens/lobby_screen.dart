@@ -2088,7 +2088,7 @@ class _LobbyScreenState extends State<LobbyScreen> {
                               ),
                               const SizedBox(width: 4),
                               Text(
-                                l10n.lobbyInProgress(room.spectatorCount),
+                                '${room.spectatorCount}',
                                 style: TextStyle(
                                   fontSize: 12,
                                   color: isSK

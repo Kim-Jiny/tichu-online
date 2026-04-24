@@ -1016,7 +1016,7 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
               decoration: const BoxDecoration(
-                color: Color(0xFF5A4038),
+                color: Color(0xFF1565C0),
                 borderRadius: BorderRadius.only(
                   topLeft: Radius.circular(16),
                   topRight: Radius.circular(16),
@@ -1083,7 +1083,7 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
                   ),
                   IconButton(
                     onPressed: () => _sendChatMessage(game),
-                    icon: const Icon(Icons.send, color: Color(0xFF8D6E63)),
+                    icon: const Icon(Icons.send, color: Color(0xFF1565C0)),
                   ),
                 ],
               ),
@@ -1127,7 +1127,7 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                   decoration: BoxDecoration(
-                    color: isMe ? const Color(0xFF5A4038) : const Color(0xFFF0F0F0),
+                    color: isMe ? const Color(0xFF1565C0) : const Color(0xFFF0F0F0),
                     borderRadius: BorderRadius.circular(16),
                   ),
                   child: Text(

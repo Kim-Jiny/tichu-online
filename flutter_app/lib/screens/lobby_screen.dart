@@ -2725,6 +2725,22 @@ class _LobbyScreenState extends State<LobbyScreen> {
                 ],
               ),
             ),
+            // SK expansion chips: give the waiting-room members visibility
+            // into which expansions the host enabled without having to leave
+            // and re-read the room tile.
+            if (game.currentGameType == 'skull_king'
+                && game.roomSkExpansions.isNotEmpty) ...[
+              const SizedBox(height: 8),
+              Wrap(
+                alignment: WrapAlignment.center,
+                spacing: 6,
+                runSpacing: 4,
+                children: [
+                  for (final exp in game.roomSkExpansions)
+                    _buildSkExpansionChip(exp),
+                ],
+              ),
+            ],
             const SizedBox(height: 12),
             for (int i = 0; i < game.roomPlayers.length; i++) ...[
               _buildClickablePlayerSlot(
@@ -4713,6 +4729,50 @@ class _LobbyScreenState extends State<LobbyScreen> {
       orElse: () => null,
     );
     return me?.isReady ?? false;
+  }
+
+  Widget _buildSkExpansionChip(String expansionKey) {
+    final l10n = L10n.of(context);
+    String label;
+    Color fg;
+    Color bg;
+    switch (expansionKey) {
+      case 'kraken':
+        label = '🐙 ${l10n.lobbyExpKrakenShort}';
+        fg = const Color(0xFF6A1B9A);
+        bg = const Color(0xFFF3E5F5);
+        break;
+      case 'white_whale':
+        label = '🐳 ${l10n.lobbyExpWhaleShort}';
+        fg = const Color(0xFF01579B);
+        bg = const Color(0xFFE1F5FE);
+        break;
+      case 'loot':
+        label = '💰 ${l10n.lobbyExpLootShort}';
+        fg = const Color(0xFFBF7100);
+        bg = const Color(0xFFFFF3E0);
+        break;
+      default:
+        label = expansionKey;
+        fg = const Color(0xFF5A4038);
+        bg = const Color(0xFFEFEBE9);
+    }
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+      decoration: BoxDecoration(
+        color: bg,
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: fg.withValues(alpha: 0.35)),
+      ),
+      child: Text(
+        label,
+        style: TextStyle(
+          fontSize: 11,
+          fontWeight: FontWeight.w700,
+          color: fg,
+        ),
+      ),
+    );
   }
 
   Widget _buildRandomSeatingChip(GameService game) {

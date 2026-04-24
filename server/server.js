@@ -541,6 +541,24 @@ function itemRequiresMightyClient(itemKey) {
   return typeof itemKey === 'string' && itemKey.startsWith('mighty_');
 }
 
+// Non-mighty-prefixed utility items that were added alongside the Mighty
+// release. Legacy (<2.3.0) apps don't have UI handling for these effect
+// types (tichu/sk per-game season-stats resets, and the new full leave-
+// count reset), so show/buy is gated on the same 2.3.0 version check to
+// avoid surfacing half-supported rows in old shops and inventories.
+const V230_UTILITY_ITEM_KEYS = new Set([
+  'tichu_season_stats_reset',
+  'sk_season_stats_reset',
+  'leave_reset',
+]);
+
+/** True for any shop item a <2.3.0 client shouldn't see. Wraps the mighty_
+ *  prefix rule with the extra 2.3.0-era utility keys. */
+function itemRequiresV230Client(itemKey) {
+  if (itemRequiresMightyClient(itemKey)) return true;
+  return typeof itemKey === 'string' && V230_UTILITY_ITEM_KEYS.has(itemKey);
+}
+
 function clientCanAccessRoom(ws, room) {
   if (!room) return true;
   if (room.gameType === 'mighty') return clientSupportsMighty(ws);
@@ -4976,7 +4994,7 @@ async function handleUpdateAdminReportStatus(ws, data) {
 async function handleGetShopItems(ws) {
   const result = await getShopItems();
   if (result.success && Array.isArray(result.items) && !clientSupportsMighty(ws)) {
-    result.items = result.items.filter((item) => !itemRequiresMightyClient(item.item_key));
+    result.items = result.items.filter((item) => !itemRequiresV230Client(item.item_key));
   }
   sendTo(ws, { type: 'shop_items_result', ...result });
 }
@@ -4989,7 +5007,7 @@ async function handleGetInventory(ws) {
   }
   const result = await getUserItems(ws.nickname);
   if (result.success && Array.isArray(result.items) && !clientSupportsMighty(ws)) {
-    result.items = result.items.filter((item) => !itemRequiresMightyClient(item.item_key));
+    result.items = result.items.filter((item) => !itemRequiresV230Client(item.item_key));
   }
   sendTo(ws, { type: 'inventory_result', ...result });
 }
@@ -5000,7 +5018,7 @@ async function handleBuyItem(ws, data) {
     return;
   }
   const itemKey = data.itemKey;
-  if (itemRequiresMightyClient(itemKey) && !clientSupportsMighty(ws)) {
+  if (itemRequiresV230Client(itemKey) && !clientSupportsMighty(ws)) {
     sendTo(ws, {
       type: 'purchase_result',
       success: false,
@@ -5049,7 +5067,7 @@ async function handleUseItem(ws, data) {
     return;
   }
   const itemKey = data.itemKey;
-  if (itemRequiresMightyClient(itemKey) && !clientSupportsMighty(ws)) {
+  if (itemRequiresV230Client(itemKey) && !clientSupportsMighty(ws)) {
     sendTo(ws, {
       type: 'use_item_result',
       success: false,

@@ -318,10 +318,10 @@ function considerTrumpChange(game, botId) {
   const currentScore = currentTrump && currentTrump !== 'no_trump'
     ? (suitScore[currentTrump] || 0) : 0;
 
+  // At the 20-point ceiling: 20 NT blocks all change (handled by early
+  // return above since trumpSuit === 'no_trump'); 20 with a suit only permits
+  // a change to NT, which this bot does not evaluate, so skip.
   if (game.currentBid.points >= 20) {
-    if (bestSuit !== currentTrump && bestScore > currentScore + 5) {
-      return { type: 'change_trump', suit: bestSuit };
-    }
     return null;
   }
 

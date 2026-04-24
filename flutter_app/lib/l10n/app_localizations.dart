@@ -5055,6 +5055,12 @@ abstract class L10n {
   /// **'Change trump to {suit} and raise the bid to {points}?'**
   String mtChangeTrumpConfirmBody(Object points, Object suit);
 
+  /// No description provided for @mtChangeTrumpNoPenaltyBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Change trump to {suit}?'**
+  String mtChangeTrumpNoPenaltyBody(Object suit);
+
   /// No description provided for @mtPrevTrickTitle.
   ///
   /// In en, this message translates to:
@@ -5228,6 +5234,12 @@ abstract class L10n {
   /// In en, this message translates to:
   /// **'Select a card'**
   String get mtSelectCard;
+
+  /// No description provided for @mtJokerSelectSuit.
+  ///
+  /// In en, this message translates to:
+  /// **'Select a joker suit'**
+  String get mtJokerSelectSuit;
 
   /// No description provided for @mtJokerLoses1st.
   ///

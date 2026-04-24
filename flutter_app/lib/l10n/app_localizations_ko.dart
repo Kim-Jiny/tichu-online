@@ -2711,6 +2711,11 @@ class L10nKo extends L10n {
   }
 
   @override
+  String mtChangeTrumpNoPenaltyBody(Object suit) {
+    return '기루다를 $suit(으)로 바꾸시겠습니까?';
+  }
+
+  @override
   String mtPrevTrickTitle(Object number) {
     return '$number번째 트릭';
   }
@@ -2818,6 +2823,9 @@ class L10nKo extends L10n {
 
   @override
   String get mtSelectCard => '카드를 선택하세요';
+
+  @override
+  String get mtJokerSelectSuit => '조커 문양을 선택하세요';
 
   @override
   String get mtJokerLoses1st => '첫 트릭에서 조커가 집니다!';

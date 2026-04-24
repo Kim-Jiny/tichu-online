@@ -2578,9 +2578,6 @@ class _SKGameScreenState extends State<SKGameScreen> {
                                 (pScore['bonus'] as num?)?.toInt() ?? 0;
                             final roundScore =
                                 (pScore['roundScore'] as num?)?.toInt() ?? 0;
-                            final success = bid == 0
-                                ? tricks == 0
-                                : tricks == bid;
                             final scoreColor = roundScore > 0
                                 ? const Color(0xFF247A43)
                                 : roundScore < 0
@@ -2588,7 +2585,7 @@ class _SKGameScreenState extends State<SKGameScreen> {
                                 : const Color(0xFF5A4038);
 
                             return cell(
-                              '${success ? 'O' : 'X'} $bid/$tricks\n'
+                              '$bid/$tricks\n'
                               '${bonus > 0 ? '+$bonus ' : ''}'
                               '${roundScore > 0 ? '+' : ''}$roundScore',
                               fontSize: 9.5,
@@ -2609,7 +2606,7 @@ class _SKGameScreenState extends State<SKGameScreen> {
                       decoration: const BoxDecoration(color: Color(0xFFF4EFEA)),
                       children: [
                         cell(
-                          '합계',
+                          L10n.of(context).commonTotal,
                           fontWeight: FontWeight.w800,
                           color: const Color(0xFF3E312A),
                         ),

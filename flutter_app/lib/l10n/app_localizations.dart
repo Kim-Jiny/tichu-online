@@ -249,6 +249,12 @@ abstract class L10n {
   /// **'Cancel'**
   String get commonCancel;
 
+  /// No description provided for @commonTotal.
+  ///
+  /// In en, this message translates to:
+  /// **'Total'**
+  String get commonTotal;
+
   /// No description provided for @commonSave.
   ///
   /// In en, this message translates to:
@@ -4964,6 +4970,18 @@ abstract class L10n {
   /// In en, this message translates to:
   /// **'Deal miss'**
   String get mtDealMiss;
+
+  /// No description provided for @mtDealMissConfirmBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Declare a deal miss?\n\nYou lose 5 points now, which go into the deal-miss pool — the next declarer who succeeds collects the whole pool.'**
+  String get mtDealMissConfirmBody;
+
+  /// No description provided for @mtBidShort.
+  ///
+  /// In en, this message translates to:
+  /// **'Bid'**
+  String get mtBidShort;
 
   /// No description provided for @mtPrevTrick.
   ///

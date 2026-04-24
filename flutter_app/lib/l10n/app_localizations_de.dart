@@ -85,6 +85,9 @@ class L10nDe extends L10n {
   String get commonCancel => 'Abbrechen';
 
   @override
+  String get commonTotal => 'Gesamt';
+
+  @override
   String get commonSave => 'Speichern';
 
   @override
@@ -2733,6 +2736,13 @@ class L10nDe extends L10n {
 
   @override
   String get mtDealMiss => 'Deal-Miss';
+
+  @override
+  String get mtDealMissConfirmBody =>
+      'Deal-Miss erklären?\n\nDu verlierst sofort 5 Punkte, die in den Deal-Miss-Pool fließen — der nächste erfolgreiche Alleinspieler sammelt den gesamten Pool ein.';
+
+  @override
+  String get mtBidShort => 'Gebot';
 
   @override
   String get mtPrevTrick => 'Vorheriger Stich';

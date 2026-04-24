@@ -84,6 +84,9 @@ class L10nKo extends L10n {
   String get commonCancel => '취소';
 
   @override
+  String get commonTotal => '합계';
+
+  @override
   String get commonSave => '저장';
 
   @override
@@ -2656,6 +2659,13 @@ class L10nKo extends L10n {
 
   @override
   String get mtDealMiss => '딜미스';
+
+  @override
+  String get mtDealMissConfirmBody =>
+      '딜미스를 선언하시겠습니까?\n\n본인 점수에서 5점이 차감되고, 다음에 성공하는 주공이 적립된 딜미스 점수를 모두 가져갑니다.';
+
+  @override
+  String get mtBidShort => '비딩';
 
   @override
   String get mtPrevTrick => '이전 트릭';

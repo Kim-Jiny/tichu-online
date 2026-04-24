@@ -1964,9 +1964,9 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
       context: context,
       builder: (ctx) => AlertDialog(
         title: Text(l10n.mtDealMiss, style: const TextStyle(fontSize: 15, fontWeight: FontWeight.bold)),
-        content: const Text(
-          '딜미스를 선언하시겠습니까?\n\n본인 점수에서 5점이 차감되고, 다음에 성공하는 주공이 적립된 딜미스 점수를 모두 가져갑니다.',
-          style: TextStyle(fontSize: 13),
+        content: Text(
+          l10n.mtDealMissConfirmBody,
+          style: const TextStyle(fontSize: 13),
         ),
         actions: [
           TextButton(onPressed: () => Navigator.pop(ctx, false), child: Text(l10n.mtCancel)),
@@ -4237,9 +4237,9 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
                     child: const Icon(Icons.table_chart_rounded, size: 16, color: Color(0xFF295EA8)),
                   ),
                   const SizedBox(width: 8),
-                  const Text(
-                    '점수 기록',
-                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.w800, color: Color(0xFF233142)),
+                  Text(
+                    L10n.of(context).mtScoreHistory,
+                    style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w800, color: Color(0xFF233142)),
                   ),
                   const SizedBox(width: 8),
                   Container(
@@ -4315,7 +4315,7 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
                       decoration: const BoxDecoration(color: Color(0xFFEAF2FF)),
                       children: [
                         cell('R', fontWeight: FontWeight.w800, fontSize: 10.5, color: const Color(0xFF295EA8)),
-                        cell('비딩', fontWeight: FontWeight.w800, fontSize: 10.5, color: const Color(0xFF295EA8)),
+                        cell(L10n.of(context).mtBidShort, fontWeight: FontWeight.w800, fontSize: 10.5, color: const Color(0xFF295EA8)),
                         ...state.players.map((p) => cell(
                               p.name.length > 2 ? p.name.substring(0, 2) : p.name,
                               fontWeight: FontWeight.w800,
@@ -4366,7 +4366,7 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
                       decoration: const BoxDecoration(color: Color(0xFFF0F4F8)),
                       children: [
                         cell('', fontWeight: FontWeight.w800),
-                        cell('합계', align: TextAlign.left, fontWeight: FontWeight.w800, color: const Color(0xFF233142)),
+                        cell(L10n.of(context).mtTotal, align: TextAlign.left, fontWeight: FontWeight.w800, color: const Color(0xFF233142)),
                         ...state.players.map((p) {
                           final total = cumulativeScores[p.id] ?? 0;
                           return cell(

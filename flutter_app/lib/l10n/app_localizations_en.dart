@@ -85,6 +85,9 @@ class L10nEn extends L10n {
   String get commonCancel => 'Cancel';
 
   @override
+  String get commonTotal => 'Total';
+
+  @override
   String get commonSave => 'Save';
 
   @override
@@ -2718,6 +2721,13 @@ class L10nEn extends L10n {
 
   @override
   String get mtDealMiss => 'Deal miss';
+
+  @override
+  String get mtDealMissConfirmBody =>
+      'Declare a deal miss?\n\nYou lose 5 points now, which go into the deal-miss pool — the next declarer who succeeds collects the whole pool.';
+
+  @override
+  String get mtBidShort => 'Bid';
 
   @override
   String get mtPrevTrick => 'Prev trick';

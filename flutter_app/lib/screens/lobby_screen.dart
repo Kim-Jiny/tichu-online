@@ -1829,11 +1829,17 @@ class _LobbyScreenState extends State<LobbyScreen> {
   }
 
   Widget _buildRoomList(List<Room> rooms) {
+    // Waiting rooms on top, in-progress rooms at the bottom.
+    // Stable sort so server-provided order is preserved within each group.
+    final sorted = [...rooms]..sort((a, b) {
+      if (a.gameInProgress == b.gameInProgress) return 0;
+      return a.gameInProgress ? 1 : -1;
+    });
     return ListView.separated(
-      itemCount: rooms.length,
+      itemCount: sorted.length,
       separatorBuilder: (_, _) => const SizedBox(height: 8),
       itemBuilder: (context, index) {
-        final room = rooms[index];
+        final room = sorted[index];
         return _buildRoomItem(room);
       },
     );

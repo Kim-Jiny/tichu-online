@@ -2844,19 +2844,58 @@ class _LobbyScreenState extends State<LobbyScreen> {
                       : game.playerCount >= game.effectiveRoomMaxPlayers;
               if (!canStart) return const SizedBox.shrink();
               final everyoneReady = _allNonHostReady(game);
-              return SizedBox(
-                width: double.infinity,
+              return FractionallySizedBox(
+                widthFactor: 2 / 3,
+                child: SizedBox(
+                  height: 48,
+                  child: ElevatedButton(
+                    onPressed: () => game.startGame(),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: const Color(0xFFDEDBFA),
+                      foregroundColor: const Color(0xFF4A4080),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(16),
+                        side: everyoneReady
+                            ? const BorderSide(
+                                color: Color(0xFF6C63FF),
+                                width: 2.5,
+                              )
+                            : BorderSide.none,
+                      ),
+                      elevation: 0,
+                    ),
+                    child: Text(
+                      L10n.of(context).lobbyStartGame,
+                      style: const TextStyle(
+                        fontSize: 17,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ),
+                ),
+              );
+            }),
+          ] else
+            FractionallySizedBox(
+              widthFactor: 2 / 3,
+              child: SizedBox(
                 height: 48,
                 child: ElevatedButton(
-                  onPressed: () => game.startGame(),
+                  onPressed: () => game.toggleReady(),
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFFDEDBFA),
-                    foregroundColor: const Color(0xFF4A4080),
+                    backgroundColor: _isMyReady(game)
+                        ? const Color(0xFFC8E6C9)
+                        : const Color(0xFFFFE082),
+                    foregroundColor: _isMyReady(game)
+                        ? const Color(0xFF2E7D32)
+                        : const Color(0xFF5A4038),
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(16),
-                      side: everyoneReady
+                      // Border only on ready — not-ready stays borderless so
+                      // it doesn't compete with host's start-game emphasis.
+                      side: _isMyReady(game)
                           ? const BorderSide(
-                              color: Color(0xFF6C63FF),
+                              color: Color(0xFF43A047),
                               width: 2.5,
                             )
                           : BorderSide.none,
@@ -2864,48 +2903,13 @@ class _LobbyScreenState extends State<LobbyScreen> {
                     elevation: 0,
                   ),
                   child: Text(
-                    L10n.of(context).lobbyStartGame,
+                    _isMyReady(game)
+                        ? L10n.of(context).lobbyReadyDone
+                        : L10n.of(context).lobbyReady,
                     style: const TextStyle(
-                      fontSize: 15,
+                      fontSize: 17,
                       fontWeight: FontWeight.bold,
                     ),
-                  ),
-                ),
-              );
-            }),
-          ] else
-            SizedBox(
-              width: double.infinity,
-              height: 48,
-              child: ElevatedButton(
-                onPressed: () => game.toggleReady(),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: _isMyReady(game)
-                      ? const Color(0xFFC8E6C9)
-                      : const Color(0xFFFFE082),
-                  foregroundColor: _isMyReady(game)
-                      ? const Color(0xFF2E7D32)
-                      : const Color(0xFF5A4038),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(16),
-                    // Border only on ready — not-ready stays borderless so
-                    // it doesn't compete with host's start-game emphasis.
-                    side: _isMyReady(game)
-                        ? const BorderSide(
-                            color: Color(0xFF43A047),
-                            width: 2.5,
-                          )
-                        : BorderSide.none,
-                  ),
-                  elevation: 0,
-                ),
-                child: Text(
-                  _isMyReady(game)
-                      ? L10n.of(context).lobbyReadyDone
-                      : L10n.of(context).lobbyReady,
-                  style: const TextStyle(
-                    fontSize: 15,
-                    fontWeight: FontWeight.bold,
                   ),
                 ),
               ),

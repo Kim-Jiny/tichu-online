@@ -467,6 +467,7 @@ async function initDatabase() {
         ('mighty_season_stats_reset', '마이티 랭킹전적 초기화권', '마이티 랭킹전적 초기화권', 'Mighty Ranked Stats Reset', 'Mighty-Ranglistenstatistik-Reset', 'utility', 700, FALSE, TRUE, NULL, TRUE, 'mighty_season_stats_reset', NULL, '{}'::jsonb),
         ('leave_reset', '탈주 카운트 초기화', '탈주 카운트 초기화', 'Leave Count Reset', 'Flucht-Zähler-Reset', 'utility', 2000, FALSE, TRUE, NULL, TRUE, 'leave_count_reset', NULL, '{}'::jsonb),
         ('mighty_trump_counter_7d', '마이티 기루다 카운터(7일)', '마이티 기루다 카운터(7일)', 'Mighty Trump Counter (7d)', 'Mighty-Trumpfzähler (7T)', 'utility', 1000, FALSE, FALSE, 7, TRUE, NULL, NULL, '{}'::jsonb),
+        ('mighty_prev_trick_7d', '마이티 이전 트릭 확인(7일)', '마이티 이전 트릭 확인(7일)', 'Mighty Previous Trick Viewer (7d)', 'Mighty-Vorheriger-Stich-Anzeige (7T)', 'utility', 1000, FALSE, FALSE, 7, TRUE, NULL, NULL, '{}'::jsonb),
         ('banner_season_gold', '시즌 골드 배너', '시즌 골드 배너', 'Season Gold Banner', 'Saison-Gold-Banner', 'banner', 0, TRUE, FALSE, 30, FALSE, NULL, NULL, '{}'::jsonb),
         ('banner_season_silver', '시즌 실버 배너', '시즌 실버 배너', 'Season Silver Banner', 'Saison-Silber-Banner', 'banner', 0, TRUE, FALSE, 30, FALSE, NULL, NULL, '{}'::jsonb),
         ('banner_season_bronze', '시즌 브론즈 배너', '시즌 브론즈 배너', 'Season Bronze Banner', 'Saison-Bronze-Banner', 'banner', 0, TRUE, FALSE, 30, FALSE, NULL, NULL, '{}'::jsonb)
@@ -1425,6 +1426,15 @@ async function getUserProfile(nickname) {
     );
     const hasMightyTrumpCounter = mightyTrumpRes.rows.length > 0;
 
+    // Check active mighty previous-trick viewer item
+    const mightyPrevTrickRes = await client.query(
+      `SELECT 1 FROM tc_user_items
+       WHERE nickname = $1 AND item_key = 'mighty_prev_trick_7d'
+         AND (expires_at IS NULL OR expires_at >= NOW()) LIMIT 1`,
+      [nickname]
+    );
+    const hasMightyPrevTrick = mightyPrevTrickRes.rows.length > 0;
+
     const skWinRate = user.sk_total_games > 0
       ? Math.round((user.sk_wins / user.sk_total_games) * 100)
       : 0;
@@ -1465,6 +1475,7 @@ async function getUserProfile(nickname) {
       createdAt: user.created_at,
       hasTopCardCounter,
       hasMightyTrumpCounter,
+      hasMightyPrevTrick,
       skTotalGames: user.sk_total_games,
       skWins: user.sk_wins,
       skLosses: user.sk_losses,

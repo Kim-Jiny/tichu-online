@@ -2508,6 +2508,21 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
               padding: const EdgeInsets.only(bottom: 6),
               child: _buildTimeoutResetChip(game),
             ),
+          // Previous-trick viewer button (shop item mighty_prev_trick_7d).
+          // Only shown during active play phases when at least one trick has
+          // resolved. The button floats above the hand on the right side.
+          if (game.hasMightyPrevTrick
+              && state.tricks.isNotEmpty
+              && (state.phase == 'playing'
+                  || state.phase == 'trick_end'
+                  || state.phase == 'round_end'))
+            Padding(
+              padding: const EdgeInsets.only(bottom: 4, right: 4),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.end,
+                children: [_buildPrevTrickButton(state)],
+              ),
+            ),
           // Play button
           if (isPlaying && selectedCard != null && isSelectedLegal)
             Padding(
@@ -3260,6 +3275,151 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
               mainAxisSize: MainAxisSize.min,
               children: rows,
             ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildPrevTrickButton(MightyGameStateData state) {
+    return GestureDetector(
+      onTap: () => _showPrevTrickDialog(state),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+        decoration: BoxDecoration(
+          color: const Color(0xFFE8EAF6),
+          borderRadius: BorderRadius.circular(10),
+          border: Border.all(color: const Color(0xFF9FA8DA)),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Icon(Icons.history, size: 13, color: Color(0xFF3F51B5)),
+            const SizedBox(width: 5),
+            Text(
+              L10n.of(context).mtPrevTrick,
+              style: const TextStyle(
+                fontSize: 11,
+                fontWeight: FontWeight.w700,
+                color: Color(0xFF3F51B5),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Future<void> _showPrevTrickDialog(MightyGameStateData state) async {
+    if (state.tricks.isEmpty) return;
+    final prev = state.tricks.last;
+    final l10n = L10n.of(context);
+    final winnerName = state.players
+        .firstWhere((p) => p.id == prev.winner,
+            orElse: () => MightyPlayer(id: prev.winner, name: prev.winner))
+        .name;
+    await showDialog<void>(
+      context: context,
+      builder: (ctx) => Dialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
+        backgroundColor: const Color(0xFFFFF8F2),
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(18, 16, 18, 14),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  const Icon(Icons.history, size: 18, color: Color(0xFF3F51B5)),
+                  const SizedBox(width: 6),
+                  Text(
+                    l10n.mtPrevTrickTitle(state.tricks.length),
+                    style: const TextStyle(
+                      fontSize: 15,
+                      fontWeight: FontWeight.w800,
+                      color: Color(0xFF3F51B5),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 12),
+              Wrap(
+                alignment: WrapAlignment.center,
+                spacing: 8,
+                runSpacing: 8,
+                children: [
+                  for (final play in prev.cards)
+                    Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Container(
+                          decoration: play.playerId == prev.winner
+                              ? BoxDecoration(
+                                  borderRadius: BorderRadius.circular(10),
+                                  border: Border.all(
+                                      color: const Color(0xFFFFB74D), width: 2),
+                                )
+                              : null,
+                          padding: const EdgeInsets.all(1),
+                          child: PlayingCard(
+                            cardId: _displayCardId(play.cardId),
+                            width: 44,
+                            height: 62,
+                            isInteractive: false,
+                          ),
+                        ),
+                        const SizedBox(height: 3),
+                        SizedBox(
+                          width: 56,
+                          child: Text(
+                            state.players
+                                .firstWhere((p) => p.id == play.playerId,
+                                    orElse: () => MightyPlayer(id: play.playerId, name: play.playerId))
+                                .name,
+                            textAlign: TextAlign.center,
+                            overflow: TextOverflow.ellipsis,
+                            style: TextStyle(
+                              fontSize: 10,
+                              fontWeight: play.playerId == prev.winner
+                                  ? FontWeight.w800
+                                  : FontWeight.w500,
+                              color: play.playerId == prev.winner
+                                  ? const Color(0xFFE65100)
+                                  : const Color(0xFF5A4038),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                ],
+              ),
+              const SizedBox(height: 10),
+              Text(
+                l10n.mtPrevTrickWinner(winnerName),
+                style: const TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w600,
+                  color: Color(0xFF5A4038),
+                ),
+              ),
+              const SizedBox(height: 10),
+              SizedBox(
+                width: double.infinity,
+                height: 34,
+                child: FilledButton(
+                  onPressed: () => Navigator.of(ctx).pop(),
+                  style: FilledButton.styleFrom(
+                    backgroundColor: const Color(0xFFE6F1FF),
+                    foregroundColor: const Color(0xFF355D89),
+                    shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(10)),
+                  ),
+                  child: Text(l10n.commonClose,
+                      style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w700)),
+                ),
+              ),
+            ],
           ),
         ),
       ),

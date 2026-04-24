@@ -2652,6 +2652,19 @@ class L10nKo extends L10n {
   String get mtDealMiss => '딜미스';
 
   @override
+  String get mtPrevTrick => '이전 트릭';
+
+  @override
+  String mtPrevTrickTitle(Object number) {
+    return '$number번째 트릭';
+  }
+
+  @override
+  String mtPrevTrickWinner(Object name) {
+    return '승자: $name';
+  }
+
+  @override
   String mtDealMissPool(Object points) {
     return '딜미스 $points';
   }

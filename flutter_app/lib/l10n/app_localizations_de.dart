@@ -2729,6 +2729,19 @@ class L10nDe extends L10n {
   String get mtDealMiss => 'Deal-Miss';
 
   @override
+  String get mtPrevTrick => 'Vorheriger Stich';
+
+  @override
+  String mtPrevTrickTitle(Object number) {
+    return 'Stich $number';
+  }
+
+  @override
+  String mtPrevTrickWinner(Object name) {
+    return 'Gewinner: $name';
+  }
+
+  @override
   String mtDealMissPool(Object points) {
     return 'Deal-Miss $points';
   }

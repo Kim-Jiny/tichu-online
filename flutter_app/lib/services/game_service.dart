@@ -222,6 +222,8 @@ class GameService extends ChangeNotifier {
 
   // Mighty trump counter
   bool hasMightyTrumpCounter = false;
+  // Mighty previous-trick viewer (shop item, 7-day duration)
+  bool hasMightyPrevTrick = false;
 
   // Social login
   bool needNickname = false;
@@ -436,6 +438,7 @@ class GameService extends ChangeNotifier {
         equippedTitle = data['titleKey'] as String?;
         hasTopCardCounter = data['hasTopCardCounter'] == true;
         hasMightyTrumpCounter = data['hasMightyTrumpCounter'] == true;
+        hasMightyPrevTrick = data['hasMightyPrevTrick'] == true;
         authProvider = data['authProvider'] as String? ?? 'local';
         isAdminUser = data['isAdmin'] == true;
         pushEnabled = data['pushEnabled'] != false;
@@ -1582,6 +1585,10 @@ class GameService extends ChangeNotifier {
               data['itemKey'] == 'mighty_trump_counter_7d') {
             hasMightyTrumpCounter = true;
           }
+          if (data['success'] == true &&
+              data['itemKey'] == 'mighty_prev_trick_7d') {
+            hasMightyPrevTrick = true;
+          }
         }
         if (type == 'equip_result' && data['success'] == true) {
           final themeKey = data['themeKey'] as String?;
@@ -2203,6 +2210,7 @@ class GameService extends ChangeNotifier {
     adminActionSuccess = null;
     hasTopCardCounter = false;
     hasMightyTrumpCounter = false;
+    hasMightyPrevTrick = false;
     dogPlayActive = false;
     dogPlayPlayerName = '';
     inquiryBannerMessage = null;

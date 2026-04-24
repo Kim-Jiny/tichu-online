@@ -1756,6 +1756,7 @@ async function handleReconnection(ws) {
   const titleName = profile?.titleName || null;
   const hasTopCardCounter = profile?.hasTopCardCounter || false;
   const hasMightyTrumpCounter = profile?.hasMightyTrumpCounter || false;
+  const hasMightyPrevTrick = profile?.hasMightyPrevTrick || false;
   ws.titleKey = titleKey;
   ws.titleName = titleName;
 
@@ -1778,6 +1779,7 @@ async function handleReconnection(ws) {
           titleKey,
           hasTopCardCounter,
           hasMightyTrumpCounter,
+          hasMightyPrevTrick,
           authProvider,
           isAdmin: ws.isAdmin === true,
           pushEnabled: ws.pushEnabled !== false,
@@ -1811,6 +1813,7 @@ async function handleReconnection(ws) {
           titleKey,
           hasTopCardCounter,
           hasMightyTrumpCounter,
+          hasMightyPrevTrick,
           authProvider,
           isAdmin: ws.isAdmin === true,
           pushEnabled: ws.pushEnabled !== false,
@@ -1850,6 +1853,7 @@ async function handleReconnection(ws) {
           titleKey,
           hasTopCardCounter,
           hasMightyTrumpCounter,
+          hasMightyPrevTrick,
           authProvider,
           isAdmin: ws.isAdmin === true,
           pushEnabled: ws.pushEnabled !== false,
@@ -1883,6 +1887,7 @@ async function handleReconnection(ws) {
           titleKey,
           hasTopCardCounter,
           hasMightyTrumpCounter,
+          hasMightyPrevTrick,
           authProvider,
           isAdmin: ws.isAdmin === true,
           pushEnabled: ws.pushEnabled !== false,
@@ -1940,6 +1945,8 @@ async function handleReconnection(ws) {
             themeKey,
             titleKey,
             hasTopCardCounter,
+            hasMightyTrumpCounter,
+            hasMightyPrevTrick,
             authProvider,
             isAdmin: ws.isAdmin === true,
             pushEnabled: ws.pushEnabled !== false,
@@ -1982,6 +1989,7 @@ async function handleReconnection(ws) {
           titleKey,
           hasTopCardCounter,
           hasMightyTrumpCounter,
+          hasMightyPrevTrick,
           authProvider,
           isAdmin: ws.isAdmin === true,
           pushEnabled: ws.pushEnabled !== false,
@@ -2011,6 +2019,7 @@ async function handleReconnection(ws) {
     titleKey,
     hasTopCardCounter,
     hasMightyTrumpCounter,
+    hasMightyPrevTrick,
     authProvider,
     isAdmin: ws.isAdmin === true,
     pushEnabled: ws.pushEnabled !== false,

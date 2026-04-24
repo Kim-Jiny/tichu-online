@@ -2714,6 +2714,19 @@ class L10nEn extends L10n {
   String get mtDealMiss => 'Deal miss';
 
   @override
+  String get mtPrevTrick => 'Prev trick';
+
+  @override
+  String mtPrevTrickTitle(Object number) {
+    return 'Trick $number';
+  }
+
+  @override
+  String mtPrevTrickWinner(Object name) {
+    return 'Winner: $name';
+  }
+
+  @override
   String mtDealMissPool(Object points) {
     return 'Deal miss $points';
   }

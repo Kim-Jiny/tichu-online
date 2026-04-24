@@ -4953,6 +4953,24 @@ abstract class L10n {
   /// **'Deal miss'**
   String get mtDealMiss;
 
+  /// No description provided for @mtPrevTrick.
+  ///
+  /// In en, this message translates to:
+  /// **'Prev trick'**
+  String get mtPrevTrick;
+
+  /// No description provided for @mtPrevTrickTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Trick {number}'**
+  String mtPrevTrickTitle(Object number);
+
+  /// No description provided for @mtPrevTrickWinner.
+  ///
+  /// In en, this message translates to:
+  /// **'Winner: {name}'**
+  String mtPrevTrickWinner(Object name);
+
   /// No description provided for @mtDealMissPool.
   ///
   /// In en, this message translates to:

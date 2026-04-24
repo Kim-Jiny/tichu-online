@@ -970,7 +970,9 @@ class _ShopScreenState extends State<ShopScreen> {
     final isActive = item['is_active'] == true;
     final itemKey = item['item_key']?.toString() ?? '';
     final effectType = item['effect_type']?.toString() ?? '';
-    final isPassiveUtility = itemKey.startsWith('top_card_counter') || itemKey.startsWith('mighty_trump_counter');
+    final isPassiveUtility = itemKey.startsWith('top_card_counter')
+        || itemKey.startsWith('mighty_trump_counter')
+        || itemKey.startsWith('mighty_prev_trick');
     final isConsumable = category == 'utility' && !isPassiveUtility;
     final expiresAt = item['expires_at'];
     final expiresText = expiresAt != null ? _formatExpire(context, expiresAt) : null;
@@ -1555,7 +1557,9 @@ class _ShopScreenState extends State<ShopScreen> {
 
     final name = _getLocalizedItemName(item);
     final category = item['category']?.toString() ?? '';
-    final isPassiveUtility = itemKey.startsWith('top_card_counter') || itemKey.startsWith('mighty_trump_counter');
+    final isPassiveUtility = itemKey.startsWith('top_card_counter')
+        || itemKey.startsWith('mighty_trump_counter')
+        || itemKey.startsWith('mighty_prev_trick');
     final isConsumable = category == 'utility' && !isPassiveUtility;
     showDialog(
       context: context,

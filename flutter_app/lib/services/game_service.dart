@@ -2824,9 +2824,13 @@ class GameService extends ChangeNotifier {
     _network.send({'type': 'get_seasons'});
   }
 
-  // Shop
-  void requestAppConfig() {
-    _network.send({'type': 'get_app_config'});
+  // Shop / EULA. `locale` is optional — pass the device/user locale so the
+  // server returns the right-language EULA/privacy on first launch (before
+  // login, ws.locale is still null).
+  void requestAppConfig({String? locale}) {
+    final msg = <String, dynamic>{'type': 'get_app_config'};
+    if (locale != null) msg['locale'] = locale;
+    _network.send(msg);
   }
 
   void sendLocale(String languageCode) {

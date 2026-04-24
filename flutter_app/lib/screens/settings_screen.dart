@@ -7,8 +7,8 @@ import '../l10n/app_localizations.dart';
 import '../l10n/l10n_helpers.dart';
 import '../services/game_service.dart';
 import '../services/auth_service.dart';
-import '../services/session_service.dart';
 import '../services/locale_service.dart';
+import '../services/session_service.dart';
 import '../services/ad_service.dart';
 import 'package:google_mobile_ads/google_mobile_ads.dart';
 import 'admin_center_screen.dart';
@@ -554,8 +554,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
     final game = context.read<GameService>();
     final l10n = L10n.of(context);
     if (content == null || content.isEmpty) {
-      // Fetch from server if not loaded yet
-      game.requestAppConfig();
+      // Fetch from server if not loaded yet. Pass the current UI locale so
+      // the server returns the matching-language EULA/privacy.
+      final locale = context.read<LocaleService>().effectiveLocale.languageCode;
+      game.requestAppConfig(locale: locale);
     }
     showDialog(
       context: context,

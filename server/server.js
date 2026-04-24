@@ -1320,7 +1320,7 @@ async function handleMessage(ws, data) {
       sendTo(ws, { type: 'maintenance_status', ...getMaintenanceStatus(ws.locale) });
       break;
     case 'get_app_config':
-      await handleGetAppConfig(ws);
+      await handleGetAppConfig(ws, data);
       break;
     case 'search_users':
       await handleSearchUsers(ws, data);
@@ -1353,10 +1353,18 @@ async function handleMessage(ws, data) {
   }
 }
 
-async function handleGetAppConfig(ws) {
+async function handleGetAppConfig(ws, data = {}) {
   try {
-    const eulaContent = await getLocalizedConfig('eula_content', ws.locale);
-    const privacyPolicy = await getLocalizedConfig('privacy_policy', ws.locale);
+    // EULA/privacy are fetched on first launch, BEFORE the client has logged
+    // in, so ws.locale isn't set yet. Accept an explicit locale on the
+    // request so the device's UI language still picks the right version;
+    // ws.locale takes over once it's known (re-fetches from settings).
+    const allowed = new Set(['ko', 'en', 'de']);
+    const reqLocale = typeof data.locale === 'string' && allowed.has(data.locale)
+      ? data.locale : null;
+    const effectiveLocale = reqLocale || ws.locale || null;
+    const eulaContent = await getLocalizedConfig('eula_content', effectiveLocale);
+    const privacyPolicy = await getLocalizedConfig('privacy_policy', effectiveLocale);
     const minVersion = await getConfig('min_version');
     const latestVersion = await getConfig('latest_version');
     sendTo(ws, {

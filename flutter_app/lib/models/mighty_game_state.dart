@@ -240,6 +240,7 @@ class MightyGameStateData {
   final String? mightyCard;
   final String? jokerCallCard;
   final bool jokerCallActive;
+  final bool jokerHasPower;
   final String? jokerSuitDeclared;
   final int? turnDeadline;
   final bool kittyReceived;
@@ -280,6 +281,7 @@ class MightyGameStateData {
     this.mightyCard,
     this.jokerCallCard,
     this.jokerCallActive = false,
+    this.jokerHasPower = true,
     this.jokerSuitDeclared,
     this.turnDeadline,
     this.kittyReceived = false,
@@ -367,6 +369,7 @@ class MightyGameStateData {
       mightyCard: json['mightyCard'],
       jokerCallCard: json['jokerCallCard'],
       jokerCallActive: json['jokerCallActive'] == true,
+      jokerHasPower: json['jokerHasPower'] != false,
       jokerSuitDeclared: json['jokerSuitDeclared'] as String?,
       turnDeadline: (json['turnDeadline'] as num?)?.toInt(),
       kittyReceived: json['kittyReceived'] == true,

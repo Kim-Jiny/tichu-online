@@ -3588,7 +3588,6 @@ function scheduleBotActions(roomId) {
               scheduleBotActions(roomId);
               return;
             }
-            console.log(`[BOT] ${botId} action: ${action2.type}`);
             let result2 = r2.game.handleAction(botId, action2);
             if (result2 && !result2.success && r2.game) {
               console.log(`[BOT] ${botId} action failed: ${result2.messageKey || result2.message}, trying fallback`);
@@ -3606,7 +3605,6 @@ function scheduleBotActions(roomId) {
           }, getBotExtraDelay(botSpeed));
           return;
         }
-        console.log(`[BOT] ${botId} action: ${action.type}`);
         let result = r.game.handleAction(botId, action);
         // If bot's action failed (e.g. call obligation), use server's auto-action as fallback
         if (result && !result.success && r.game) {

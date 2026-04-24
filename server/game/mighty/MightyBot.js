@@ -1626,10 +1626,13 @@ function makePlayAction(cardId, game, botId) {
     action.jokerSuit = _pickJokerLeadSuit(game, botId);
   }
 
-  // Joker call: when leading with joker-call card, activate to force joker out
-  // NEVER joker-call in no-trump — joker is too valuable, don't waste tempo
+  // Joker call: when leading with joker-call card, activate to force joker out.
+  // NEVER joker-call in no-trump — joker is too valuable, don't waste tempo.
+  // Also skip when joker has no power in this trick (first/last-trick power
+  // option disabled) — calling it there has no effect.
   if (game.currentTrick.length === 0 && cardId === game.getJokerCallCard()) {
-    if (game.trumpSuit && game.trumpSuit !== 'no_trump') {
+    if (game.trumpSuit && game.trumpSuit !== 'no_trump'
+        && game._currentTrickJokerHasPower()) {
       action.jokerCall = true;
     }
   }

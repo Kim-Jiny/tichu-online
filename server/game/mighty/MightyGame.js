@@ -716,9 +716,13 @@ class MightyGame {
       return { success: false, messageKey: 'mighty_illegal_card' };
     }
 
-    // Joker call: leader plays the joker-call card and declares joker call
+    // Joker call: leader plays the joker-call card and declares joker call.
+    // Ignored when joker has no power in this trick (first/last trick with
+    // their respective *JokerPower option disabled) — calling the joker is
+    // pointless since it can't win there anyway.
     if (this.currentTrick.length === 0) {
-      this.jokerCallActive = jokerCall === true;
+      this.jokerCallActive =
+        jokerCall === true && this._currentTrickJokerHasPower();
     }
 
     // If playing joker as lead, must declare suit (must be an actual suit, not no_trump)
@@ -839,6 +843,19 @@ class MightyGame {
   _totalTricksThisRound() {
     // Total cards in play / active seats. For 5p (or 6p post-kill) this is 10.
     return Math.floor(50 / this.activePlayerCount);
+  }
+
+  // True when joker retains full power in the trick currently being led.
+  // First/last trick joker power is option-gated; when joker has no power
+  // there, joker-call has no meaning and must not be honored.
+  _currentTrickJokerHasPower() {
+    const trickIdx = this.tricks.length;
+    const totalTricks = this._totalTricksThisRound();
+    const isFirst = trickIdx === 0;
+    const isLast = trickIdx === totalTricks - 1;
+    if (isFirst && !this.options.firstTrickJokerPower) return false;
+    if (isLast && !this.options.lastTrickJokerPower) return false;
+    return true;
   }
 
   _resolveTrick() {
@@ -1261,6 +1278,7 @@ class MightyGame {
       mightyCard: this.trumpSuit ? this.getMightyCard() : null,
       jokerCallCard: this.trumpSuit ? this.getJokerCallCard() : null,
       jokerCallActive: this.jokerCallActive,
+      jokerHasPower: this._currentTrickJokerHasPower(),
       jokerSuitDeclared: this.jokerSuitDeclared,
       lastTrickCards: this.state === 'trick_end' ? this.lastTrickCards : [],
       lastTrickWinner: this.state === 'trick_end' ? this.lastTrickWinner : null,
@@ -1347,6 +1365,7 @@ class MightyGame {
       mightyCard: this.trumpSuit ? this.getMightyCard() : null,
       jokerCallCard: this.trumpSuit ? this.getJokerCallCard() : null,
       jokerCallActive: this.jokerCallActive,
+      jokerHasPower: this._currentTrickJokerHasPower(),
       jokerSuitDeclared: this.jokerSuitDeclared,
       lastTrickCards: this.state === 'trick_end' ? this.lastTrickCards : [],
       lastTrickWinner: this.state === 'trick_end' ? this.lastTrickWinner : null,

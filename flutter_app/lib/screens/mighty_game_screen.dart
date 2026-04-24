@@ -2602,7 +2602,7 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
                       jokerSuit: selectedCard == 'mighty_joker'
                           ? (_jokerSuitChoice ?? (state.trumpSuit != null && state.trumpSuit != 'no_trump' ? state.trumpSuit! : 'spade'))
                           : null,
-                      jokerCall: isJokerCallCard && state.currentTrick.isEmpty && _jokerCallChoice,
+                      jokerCall: isJokerCallCard && state.currentTrick.isEmpty && state.jokerHasPower && _jokerCallChoice,
                     );
                     setState(() {
                       _selectedCard = null;
@@ -2682,8 +2682,10 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
           // Joker suit selector
           if (isPlaying && _selectedCard == 'mighty_joker' && state.currentTrick.isEmpty)
             _buildJokerSuitSelector(),
-          // Joker call toggle
-          if (isPlaying && _selectedCard == state.jokerCallCard && state.currentTrick.isEmpty)
+          // Joker call toggle — hidden when joker has no power in this trick
+          // (first/last trick with *JokerPower option disabled), since calling
+          // the joker then is meaningless.
+          if (isPlaying && _selectedCard == state.jokerCallCard && state.currentTrick.isEmpty && state.jokerHasPower)
             _buildJokerCallToggle(),
           // Card rows
           Padding(

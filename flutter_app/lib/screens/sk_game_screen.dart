@@ -1764,11 +1764,19 @@ class _SKGameScreenState extends State<SKGameScreen> {
                                     shape: BoxShape.circle,
                                   ),
                                 ),
+                              if (!p.connected)
+                                const Padding(
+                                  padding: EdgeInsets.only(right: 3),
+                                  child: Icon(Icons.wifi_off,
+                                      size: 12, color: Color(0xFFE53935)),
+                                ),
                               Flexible(
                                 child: Text(
                                   p.name,
                                   style: TextStyle(
-                                    color: const Color(0xFF5A4038),
+                                    color: p.connected
+                                        ? const Color(0xFF5A4038)
+                                        : const Color(0xFFE53935),
                                     fontSize: 11,
                                     fontWeight: isSelf
                                         ? FontWeight.w800

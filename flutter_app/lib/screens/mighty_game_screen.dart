@@ -1293,11 +1293,19 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
                                   margin: const EdgeInsets.only(right: 3),
                                   decoration: const BoxDecoration(color: Color(0xFFE6A800), shape: BoxShape.circle),
                                 ),
+                              if (!p.connected)
+                                const Padding(
+                                  padding: EdgeInsets.only(right: 3),
+                                  child: Icon(Icons.wifi_off,
+                                      size: 11, color: Color(0xFFE53935)),
+                                ),
                               Flexible(
                                 child: Text(
                                   p.name,
                                   style: TextStyle(
-                                    color: const Color(0xFF5A4038),
+                                    color: p.connected
+                                        ? const Color(0xFF5A4038)
+                                        : const Color(0xFFE53935),
                                     fontSize: 10,
                                     fontWeight: isSelf ? FontWeight.w800 : FontWeight.w600,
                                   ),

@@ -283,12 +283,12 @@ class _SKGameScreenState extends State<SKGameScreen> {
                           _buildScoreboard(state, game),
                           if (state.phase != 'bidding')
                             Expanded(
-                              child: Column(
-                                children: [
-                                  const Spacer(),
-                                  _buildTrickArea(state),
-                                  const Spacer(),
-                                ],
+                              child: ClipRect(
+                                child: FittedBox(
+                                  fit: BoxFit.scaleDown,
+                                  alignment: Alignment.center,
+                                  child: _buildTrickArea(state),
+                                ),
                               ),
                             ),
                           if (state.phase == 'bidding') ...[
@@ -1143,11 +1143,19 @@ class _SKGameScreenState extends State<SKGameScreen> {
                                       shape: BoxShape.circle,
                                     ),
                                   ),
+                                if (!p.connected)
+                                  const Padding(
+                                    padding: EdgeInsets.only(right: 3),
+                                    child: Icon(Icons.wifi_off,
+                                        size: 12, color: Color(0xFFE53935)),
+                                  ),
                                 Flexible(
                                   child: Text(
                                     p.name,
-                                    style: const TextStyle(
-                                      color: Color(0xFF5A4038),
+                                    style: TextStyle(
+                                      color: p.connected
+                                          ? const Color(0xFF5A4038)
+                                          : const Color(0xFFE53935),
                                       fontSize: 11,
                                       fontWeight: FontWeight.w600,
                                     ),

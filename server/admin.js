@@ -562,14 +562,16 @@ function toKSTDate(d) {
   return new Date(dt.toLocaleString('en-US', { timeZone: 'Asia/Seoul' }));
 }
 
+// sv-SE locale formats dates as YYYY-MM-DD; combined with an explicit
+// KST timeZone this avoids the toLocaleString→Date round-trip that was
+// silently shifting day labels near the KST-midnight boundary.
+const _kstDateFmt = new Intl.DateTimeFormat('sv-SE', { timeZone: 'Asia/Seoul' });
+
 function formatDateInput(d) {
   if (!d) return '';
-  const dt = toKSTDate(d);
-  if (!dt || isNaN(dt.getTime())) return '';
-  const yyyy = dt.getFullYear();
-  const mm = String(dt.getMonth() + 1).padStart(2, '0');
-  const dd = String(dt.getDate()).padStart(2, '0');
-  return `${yyyy}-${mm}-${dd}`;
+  const dt = new Date(d);
+  if (isNaN(dt.getTime())) return '';
+  return _kstDateFmt.format(dt);
 }
 
 function kstDateKey(d) {
@@ -984,11 +986,14 @@ async function handleAdminRoute(req, res, url, pathname, method, lobby, wss, mai
     const waitingRooms = activeRooms - gamingRooms;
     const totalSpectators = allRooms.reduce((s, r) => s + (r.spectatorCount || 0), 0);
 
-    // Chart data
+    // Chart data — build last-7 slots anchored on KST today, so the
+    // chart's 'today' slot matches the DB's KST-today grouping even when
+    // server wall-clock and KST are on different calendar days.
+    const nowMs = Date.now();
+    const ONE_DAY_MS = 86400000;
     const last7 = [];
     for (let i = 6; i >= 0; i--) {
-      const d = new Date(); d.setDate(d.getDate() - i);
-      last7.push(kstDateKey(d));
+      last7.push(kstDateKey(new Date(nowMs - i * ONE_DAY_MS)));
     }
     const gamesByDay = {};
     const rankedByDay = {};

@@ -1254,6 +1254,7 @@
   "mtRaiseBidConfirmBody": "Raise the bid to {points}?",
   "mtChangeTrumpConfirmTitle": "Change trump",
   "mtChangeTrumpConfirmBody": "Change trump to {suit} and raise the bid to {points}?",
+  "mtChangeTrumpNoPenaltyBody": "Change trump to {suit}?",
   "mtPrevTrickTitle": "Trick {number}",
   "mtPrevTrickWinner": "Winner: {name}",
   "mtDealMissPool": "Deal miss {points}",
@@ -1285,6 +1286,7 @@
   "mtCard": "Card",
   "mtConfirm": "Confirm",
   "mtChangeTrump": "Change Trump",
+  "mtChangeContract": "Change Contract",
   "mtTrumpPenalty": "Bid +{penalty}",
   "@mtTrumpPenalty": {
     "placeholders": {
@@ -1295,6 +1297,7 @@
   "@mtPlayTimer": { "placeholders": { "seconds": {} } },
   "mtPlay": "Play",
   "mtSelectCard": "Select a card",
+  "mtJokerSelectSuit": "Select a joker suit",
   "mtJokerLoses1st": "Joker loses on 1st trick!",
   "mtJokerLosesLast": "Joker loses on last trick!",
   "mtJokerSuit": "Joker suit: ",
@@ -1316,6 +1319,11 @@
   "mtRoundAbbr": "R",
   "mtOpposition": "Defense",
   "mtContract": "Contract",
+  "mtContractWithPoints": "Bid {points}",
+  "@mtContractWithPoints": {
+    "placeholders": { "points": { "type": "int" } }
+  },
+  "mtLead": "Lead",
   "mtResult": "Result",
   "mtTotal": "Total",
   "mtSoloSuffix": "(solo)",

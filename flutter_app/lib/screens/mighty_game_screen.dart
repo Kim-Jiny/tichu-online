@@ -790,18 +790,13 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
     final suitLabel = bidSuit != null ? _suitSymbol(bidSuit.toString()) : '';
     final hasBid = bidPoints != null && (bidPoints is num) && bidPoints > 0;
 
+    // Info bar shows WHICH CARD is the friend, not who the partner is.
+    // The reveal (partner name) is already visible on the scoreboard via
+    // the 'Friend' role badge, so we don't need to duplicate it here.
     String friendLabel = '';
     if (!isBidding) {
       if (state.friendCard != null) {
-        if (state.friendRevealed && state.partner != null) {
-          final partnerName = state.players
-              .where((p) => p.id == state.partner)
-              .map((p) => p.name)
-              .firstOrNull ?? '';
-          friendLabel = '${_friendCardLabel(state.friendCard!)} \u2192 $partnerName';
-        } else {
-          friendLabel = _friendCardLabel(state.friendCard!);
-        }
+        friendLabel = '${_friendCardLabel(state.friendCard!)} ${L10n.of(context).mtFriend}';
       } else {
         friendLabel = L10n.of(context).mtSolo;
       }
@@ -841,11 +836,16 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
                       borderRadius: BorderRadius.circular(6),
                     ),
                     child: Text(
-                      '$suitLabel $bidPoints',
+                      '$suitLabel ${L10n.of(context).mtContractWithPoints(bidPoints.toInt())}',
                       style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.white),
                     ),
                   ),
-                if (!isBidding && !state.friendRevealed) ...[
+                if (!isBidding && friendLabel.isNotEmpty) ...[
+                  const SizedBox(width: 6),
+                  Text(
+                    '/',
+                    style: const TextStyle(fontSize: 11, color: Color(0xFF8A7A72)),
+                  ),
                   const SizedBox(width: 6),
                   Flexible(
                     child: Text(
@@ -1016,7 +1016,7 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
               decoration: const BoxDecoration(
-                color: Color(0xFF5A4038),
+                color: Color(0xFF1565C0),
                 borderRadius: BorderRadius.only(
                   topLeft: Radius.circular(16),
                   topRight: Radius.circular(16),
@@ -1083,7 +1083,7 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
                   ),
                   IconButton(
                     onPressed: () => _sendChatMessage(game),
-                    icon: const Icon(Icons.send, color: Color(0xFF8D6E63)),
+                    icon: const Icon(Icons.send, color: Color(0xFF1565C0)),
                   ),
                 ],
               ),
@@ -1127,7 +1127,7 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                   decoration: BoxDecoration(
-                    color: isMe ? const Color(0xFF5A4038) : const Color(0xFFF0F0F0),
+                    color: isMe ? const Color(0xFF1565C0) : const Color(0xFFF0F0F0),
                     borderRadius: BorderRadius.circular(16),
                   ),
                   child: Text(
@@ -1573,14 +1573,16 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
 
     // Lead suit from first card in trick
     String? leadSuit;
-    if (state.currentTrick.isNotEmpty) {
-      final leadCardId = state.currentTrick.first.cardId;
-      if (leadCardId == 'mighty_joker') {
-        leadSuit = state.jokerSuitDeclared;
-      } else {
-        leadSuit = _getCardSuit(leadCardId);
-      }
+    final leadCardId = state.currentTrick.first.cardId;
+    if (leadCardId == 'mighty_joker') {
+      leadSuit = state.jokerSuitDeclared;
+    } else {
+      leadSuit = _getCardSuit(leadCardId);
     }
+
+    // Declarer's contract (suit + points)
+    final contractPoints = state.currentBid['points'] as int?;
+    final contractSuit = state.currentBid['suit']?.toString();
 
     return Center(
       child: Container(
@@ -1592,38 +1594,53 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Text(
-                  L10n.of(context).mtPlayed(state.currentTrick.length, state.players.length),
-                  style: const TextStyle(
-                    fontSize: 14,
-                    fontWeight: FontWeight.w800,
-                    color: Color(0xFF5A4038),
-                  ),
-                ),
-                if (leadSuit != null) ...[
-                  const SizedBox(width: 8),
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                    decoration: BoxDecoration(
-                      color: const Color(0xFFF5F0EB),
-                      borderRadius: BorderRadius.circular(6),
-                      border: Border.all(color: const Color(0xFFE0D8D4)),
+            // Line 1: contract (declarer's trump + bid points)
+            if (contractPoints != null && contractSuit != null)
+              Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    _suitSymbol(contractSuit),
+                    style: TextStyle(
+                      fontSize: 15,
+                      fontWeight: FontWeight.bold,
+                      color: PlayingCard.suitColors[contractSuit] ?? const Color(0xFF5A4038),
                     ),
-                    child: Text(
+                  ),
+                  const SizedBox(width: 4),
+                  Text(
+                    L10n.of(context).mtContractWithPoints(contractPoints),
+                    style: const TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w800,
+                      color: Color(0xFF5A4038),
+                    ),
+                  ),
+                ],
+              ),
+            // Line 2: lead suit
+            if (leadSuit != null)
+              Padding(
+                padding: const EdgeInsets.only(top: 4),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      '${L10n.of(context).mtLead} ',
+                      style: const TextStyle(fontSize: 11, color: Color(0xFF8A7A72)),
+                    ),
+                    Text(
                       _suitSymbol(leadSuit),
                       style: TextStyle(
-                        fontSize: 14,
+                        fontSize: 13,
                         fontWeight: FontWeight.bold,
                         color: PlayingCard.suitColors[leadSuit] ?? const Color(0xFF5A4038),
                       ),
                     ),
-                  ),
-                ],
-              ],
-            ),
+                  ],
+                ),
+              ),
+            // Line 3: turn timer
             if (_remainingSeconds > 0)
               Padding(
                 padding: const EdgeInsets.only(top: 4),
@@ -1634,16 +1651,6 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
                     fontWeight: FontWeight.bold,
                     color: _remainingSeconds <= 5 ? const Color(0xFFE53935) : const Color(0xFF8A7A72),
                   ),
-                ),
-              ),
-            if (state.friendCard != null)
-              Padding(
-                padding: const EdgeInsets.only(top: 4),
-                child: Text(
-                  state.friendRevealed && state.partner != null
-                      ? L10n.of(context).mtFriendRevealed(_friendCardLabel(state.friendCard!), state.players.where((p) => p.id == state.partner).map((p) => p.name).firstOrNull ?? '')
-                      : L10n.of(context).mtFriendHidden(_friendCardLabel(state.friendCard!)),
-                  style: const TextStyle(fontSize: 11, color: Color(0xFF8A7A72)),
                 ),
               ),
           ],
@@ -2205,8 +2212,88 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
             ),
           ),
         ),
-        // ── Trump change panel (above hand) ──
-        _buildTrumpChangePanel(state, game),
+        // ── Contract change + turn timer row (above hand) ──
+        Padding(
+          padding: const EdgeInsets.fromLTRB(12, 6, 12, 4),
+          child: Row(
+            children: [
+              // Contract change pill button
+              Expanded(
+                child: Material(
+                  color: const Color(0xFFFB8C00),
+                  borderRadius: BorderRadius.circular(14),
+                  elevation: 2,
+                  shadowColor: const Color(0x40FB8C00),
+                  child: InkWell(
+                    onTap: () => _showContractChangeDialog(game),
+                    borderRadius: BorderRadius.circular(14),
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          const Icon(Icons.tune, size: 18, color: Colors.white),
+                          const SizedBox(width: 8),
+                          Text(
+                            L10n.of(context).mtChangeContract,
+                            style: const TextStyle(
+                              fontSize: 13,
+                              fontWeight: FontWeight.w800,
+                              color: Colors.white,
+                              letterSpacing: 0.2,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+              // Kitty-phase turn timer badge (only when seconds remain)
+              if (_remainingSeconds > 0) ...[
+                const SizedBox(width: 8),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                  decoration: BoxDecoration(
+                    color: _remainingSeconds <= 5
+                        ? const Color(0xFFFFEBEE)
+                        : Colors.white.withValues(alpha: 0.95),
+                    borderRadius: BorderRadius.circular(14),
+                    border: Border.all(
+                      color: _remainingSeconds <= 5
+                          ? const Color(0xFFE53935)
+                          : const Color(0xFFE0D8D4),
+                      width: 1.5,
+                    ),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(
+                        Icons.timer_outlined,
+                        size: 16,
+                        color: _remainingSeconds <= 5
+                            ? const Color(0xFFE53935)
+                            : const Color(0xFF8A7A72),
+                      ),
+                      const SizedBox(width: 4),
+                      Text(
+                        '${_remainingSeconds}s',
+                        style: TextStyle(
+                          fontSize: 13,
+                          fontWeight: FontWeight.w800,
+                          color: _remainingSeconds <= 5
+                              ? const Color(0xFFE53935)
+                              : const Color(0xFF5A4038),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ],
+          ),
+        ),
         // Hand for kitty selection
         _buildHandArea(state, game),
       ],
@@ -2259,13 +2346,128 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
     );
   }
 
-  // ── Bid / Trump Adjustment Panel (floats above hand during kitty exchange) ──
-  Widget _buildTrumpChangePanel(MightyGameStateData state, GameService game) {
+  // Opens a popup containing the bid/trump adjustment controls. The popup
+  // auto-closes once the declarer applies a change (server confirms state).
+  void _showContractChangeDialog(GameService game) {
+    showDialog<void>(
+      context: context,
+      barrierDismissible: true,
+      barrierColor: Colors.black.withValues(alpha: 0.45),
+      builder: (dialogCtx) {
+        return Dialog(
+          backgroundColor: Colors.transparent,
+          insetPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 48),
+          child: Consumer<GameService>(
+            builder: (_, g, _) {
+              final s = g.mightyGameState;
+              if (s == null || s.phase != 'kitty_exchange' || !s.isMyTurn) {
+                WidgetsBinding.instance.addPostFrameCallback((_) {
+                  if (Navigator.of(dialogCtx).canPop()) {
+                    Navigator.of(dialogCtx).pop();
+                  }
+                });
+                return const SizedBox.shrink();
+              }
+              void closeDialog() {
+                if (Navigator.of(dialogCtx).canPop()) {
+                  Navigator.of(dialogCtx).pop();
+                }
+              }
+              return Container(
+                constraints: const BoxConstraints(maxWidth: 360),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFFFFBF5),
+                  borderRadius: BorderRadius.circular(20),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withValues(alpha: 0.25),
+                      blurRadius: 24,
+                      offset: const Offset(0, 10),
+                    ),
+                  ],
+                ),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    // Header
+                    Padding(
+                      padding: const EdgeInsets.fromLTRB(18, 16, 10, 12),
+                      child: Row(
+                        children: [
+                          Container(
+                            width: 32,
+                            height: 32,
+                            decoration: BoxDecoration(
+                              color: const Color(0xFFFB8C00).withValues(alpha: 0.15),
+                              borderRadius: BorderRadius.circular(10),
+                            ),
+                            child: const Icon(Icons.tune, size: 18, color: Color(0xFFE65100)),
+                          ),
+                          const SizedBox(width: 10),
+                          Expanded(
+                            child: Text(
+                              L10n.of(dialogCtx).mtChangeContract,
+                              style: const TextStyle(
+                                fontSize: 17,
+                                fontWeight: FontWeight.w800,
+                                color: Color(0xFF5A4038),
+                              ),
+                            ),
+                          ),
+                          IconButton(
+                            onPressed: closeDialog,
+                            icon: const Icon(Icons.close, size: 22),
+                            color: const Color(0xFF8A7A72),
+                            padding: EdgeInsets.zero,
+                            constraints: const BoxConstraints(minWidth: 36, minHeight: 36),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const Divider(height: 1, color: Color(0xFFEFE5DD)),
+                    // Body. StatefulBuilder gives the popup its own rebuild
+                    // channel so suit-chip taps (which update the screen-level
+                    // _selectedTrumpSuit field) refresh the dialog too — the
+                    // dialog lives in a separate Overlay route and wouldn't
+                    // otherwise rebuild when the screen's setState fires.
+                    StatefulBuilder(
+                      builder: (_, setDialogState) => Padding(
+                        padding: const EdgeInsets.fromLTRB(16, 14, 16, 16),
+                        child: _buildTrumpChangePanel(
+                          s,
+                          g,
+                          onApplied: closeDialog,
+                          dialogSetState: setDialogState,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              );
+            },
+          ),
+        );
+      },
+    );
+  }
+
+  // ── Bid / Trump Adjustment Panel (shown inside the contract-change popup) ──
+  Widget _buildTrumpChangePanel(
+    MightyGameStateData state,
+    GameService game, {
+    VoidCallback? onApplied,
+    StateSetter? dialogSetState,
+  }) {
     if (!state.isMyTurn) return const SizedBox.shrink();
     final bidPoints = state.currentBid['points'] as int? ?? 13;
     final isAtCap = bidPoints >= 20;
 
     final trumpSuit = state.trumpSuit ?? 'no_trump';
+    // 20-bid ceiling rules:
+    //   • 20 NT is the hard ceiling — no contract change at all.
+    //   • 20 with a suit — only change to 20 NT is allowed.
+    final isAt20NT = isAtCap && trumpSuit == 'no_trump';
+    final isAt20Suit = isAtCap && trumpSuit != 'no_trump';
     // Whenever the server confirms a trump change, resync our selection so
     // the new suit is highlighted instead of the stale pre-change one.
     if (_lastKnownTrumpSuit != null && _lastKnownTrumpSuit != trumpSuit) {
@@ -2276,143 +2478,229 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
     final isSameTrump = _selectedTrumpSuit == trumpSuit;
     final nextBid = math.min(20, bidPoints + 2);
 
-    return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-      padding: const EdgeInsets.all(10),
-      decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: 0.95),
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: const Color(0xFFE0D8D4)),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // Header: current bid + raise bid button (hide at cap)
-          if (!isAtCap)
-            Row(
-              children: [
-                Text(
-                  L10n.of(context).mtTrumpPenalty(2),
-                  style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Color(0xFF5A4038)),
-                ),
-                const Spacer(),
-                Text(
-                  '$bidPoints',
-                  style: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: Color(0xFF5A4038)),
-                ),
-                const SizedBox(width: 6),
-                SizedBox(
-                  height: 30,
-                  child: FilledButton(
-                    onPressed: () async {
-                      final ok = await _confirmBidAction(
-                        title: L10n.of(context).mtRaiseBidConfirmTitle,
-                        body: L10n.of(context).mtRaiseBidConfirmBody(nextBid.toString()),
-                      );
-                      if (ok) game.mightyRaiseBid();
-                    },
-                    style: FilledButton.styleFrom(
-                      backgroundColor: const Color(0xFF1565C0),
-                      padding: const EdgeInsets.symmetric(horizontal: 10),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-                    ),
-                    child: Text('→ $nextBid', style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
-                  ),
-                ),
-              ],
-            ),
-          if (!isAtCap) const SizedBox(height: 6),
-          // Trump change: suit chips + confirm
-          Row(
+    final l10n = L10n.of(context);
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        // Current contract summary card
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+          decoration: BoxDecoration(
+            color: const Color(0xFFFFF3E0),
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: const Color(0xFFFFE0B2)),
+          ),
+          child: Row(
             children: [
-              for (final entry in [
-                ('spade', '\u2660', const Color(0xFF2B2B2B)),
-                ('heart', '\u2665', const Color(0xFFD24B4B)),
-                ('diamond', '\u2666', const Color(0xFF6FB6E5)),
-                ('club', '\u2663', const Color(0xFF4BAA6A)),
-                ('no_trump', 'NT', const Color(0xFF7B1FA2)),
-              ])
-                Expanded(
-                  child: GestureDetector(
-                    onTap: () => setState(() {
-                      _selectedTrumpSuit = entry.$1;
-                    }),
-                    child: Container(
-                      margin: const EdgeInsets.symmetric(horizontal: 2),
-                      padding: const EdgeInsets.symmetric(vertical: 7),
-                      decoration: BoxDecoration(
-                        color: _selectedTrumpSuit == entry.$1
-                            ? entry.$3.withValues(alpha: 0.15)
-                            : Colors.transparent,
-                        borderRadius: BorderRadius.circular(8),
-                        border: Border.all(
-                          color: _selectedTrumpSuit == entry.$1
-                              ? entry.$3
-                              : entry.$1 == trumpSuit
-                                  ? entry.$3.withValues(alpha: 0.5)
-                                  : const Color(0xFFE0D8D4),
-                          width: _selectedTrumpSuit == entry.$1 ? 2 : 1,
-                        ),
-                      ),
-                      child: Center(
-                        child: entry.$1 == 'no_trump'
-                            ? Text(
-                                entry.$2,
-                                style: TextStyle(
-                                  fontSize: 15,
-                                  color: entry.$3,
-                                  fontWeight: _selectedTrumpSuit == entry.$1 || entry.$1 == trumpSuit
-                                      ? FontWeight.bold : FontWeight.normal,
-                                ),
-                              )
-                            : SuitIcon(suit: entry.$1, size: 18, color: entry.$3),
-                      ),
-                    ),
-                  ),
-                ),
-              const SizedBox(width: 6),
-              SizedBox(
-                height: 34,
-                child: FilledButton(
-                  onPressed: isSameTrump && isAtCap ? null : () async {
-                    final l10n = L10n.of(context);
-                    final ok = isSameTrump
-                        ? await _confirmBidAction(
-                            title: l10n.mtRaiseBidConfirmTitle,
-                            body: l10n.mtRaiseBidConfirmBody(nextBid.toString()),
-                          )
-                        : await _confirmBidAction(
-                            title: l10n.mtChangeTrumpConfirmTitle,
-                            body: l10n.mtChangeTrumpConfirmBody(
-                              _suitLabel(_selectedTrumpSuit!),
-                              nextBid.toString(),
-                            ),
-                          );
-                    if (!ok) return;
-                    if (isSameTrump) {
-                      game.mightyRaiseBid();
-                    } else {
-                      game.mightyChangeTrump(_selectedTrumpSuit!);
-                    }
-                    setState(() => _selectedTrumpSuit = null);
-                  },
-                  style: FilledButton.styleFrom(
-                    backgroundColor: isSameTrump ? const Color(0xFF1565C0) : const Color(0xFFE65100),
-                    padding: const EdgeInsets.symmetric(horizontal: 12),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-                  ),
-                  child: Text(
-                    isAtCap
-                        ? L10n.of(context).mtChangeTrump
-                        : (isSameTrump ? '→ $nextBid' : L10n.of(context).mtChangeTrump),
-                    style: const TextStyle(fontSize: 11),
-                  ),
+              Text(
+                _suitSymbol(trumpSuit),
+                style: TextStyle(
+                  fontSize: 22,
+                  fontWeight: FontWeight.bold,
+                  color: PlayingCard.suitColors[trumpSuit] ?? const Color(0xFF5A4038),
                 ),
               ),
+              const SizedBox(width: 10),
+              Text(
+                l10n.mtContractWithPoints(bidPoints),
+                style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w800, color: Color(0xFF5A4038)),
+              ),
+              const Spacer(),
+              if (isAtCap)
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                  decoration: BoxDecoration(color: const Color(0xFFE53935), borderRadius: BorderRadius.circular(6)),
+                  child: const Text('MAX', style: TextStyle(fontSize: 10, fontWeight: FontWeight.w800, color: Colors.white)),
+                ),
             ],
           ),
+        ),
+        const SizedBox(height: 14),
+        // Raise-bid section (hidden at cap)
+        if (!isAtCap) ...[
+          Text(
+            l10n.mtRaiseBidConfirmTitle,
+            style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: Color(0xFF8A7A72)),
+          ),
+          const SizedBox(height: 6),
+          SizedBox(
+            width: double.infinity,
+            height: 44,
+            child: FilledButton.icon(
+              onPressed: () async {
+                final ok = await _confirmBidAction(
+                  title: l10n.mtRaiseBidConfirmTitle,
+                  body: l10n.mtRaiseBidConfirmBody(nextBid.toString()),
+                );
+                if (ok) {
+                  game.mightyRaiseBid();
+                  onApplied?.call();
+                }
+              },
+              icon: const Icon(Icons.trending_up, size: 18),
+              label: Text(
+                '$bidPoints → $nextBid',
+                style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w800),
+              ),
+              style: FilledButton.styleFrom(
+                backgroundColor: const Color(0xFF1565C0),
+                foregroundColor: Colors.white,
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              ),
+            ),
+          ),
+          const SizedBox(height: 16),
         ],
-      ),
+        // Change-trump section
+        Row(
+          children: [
+            Text(
+              l10n.mtChangeTrump,
+              style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: Color(0xFF8A7A72)),
+            ),
+            const SizedBox(width: 8),
+            // Penalty badge is hidden at 20-point cap — no penalty applies there
+            // (20 suit → 20 NT is free; 20 NT admits no change at all).
+            if (!isAtCap)
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                decoration: BoxDecoration(color: const Color(0xFFFFEBEE), borderRadius: BorderRadius.circular(6)),
+                child: Text(
+                  l10n.mtTrumpPenalty(2),
+                  style: const TextStyle(fontSize: 10, fontWeight: FontWeight.w800, color: Color(0xFFE53935)),
+                ),
+              ),
+          ],
+        ),
+        const SizedBox(height: 8),
+        Row(
+          children: [
+            for (final entry in [
+              ('spade', '♠', const Color(0xFF2B2B2B)),
+              ('heart', '♥', const Color(0xFFD24B4B)),
+              ('diamond', '♦', const Color(0xFF6FB6E5)),
+              ('club', '♣', const Color(0xFF4BAA6A)),
+              ('no_trump', 'NT', const Color(0xFF7B1FA2)),
+            ])
+              Builder(builder: (_) {
+                // Chip lock-out rules at 20-bid ceiling:
+                //   20 NT — every chip disabled (no change allowed).
+                //   20 suit — only the NT chip is tappable.
+                final chipDisabled = isAt20NT ||
+                    (isAt20Suit && entry.$1 != 'no_trump');
+                final isSelected = _selectedTrumpSuit == entry.$1;
+                return Expanded(
+                  child: GestureDetector(
+                    onTap: chipDisabled
+                        ? null
+                        : () {
+                            _selectedTrumpSuit = entry.$1;
+                            // Rebuild both the screen (so the field persists in
+                            // State) and the dialog (so the chip highlight updates).
+                            setState(() {});
+                            dialogSetState?.call(() {});
+                          },
+                    child: Opacity(
+                      opacity: chipDisabled ? 0.35 : 1.0,
+                      child: AnimatedContainer(
+                        duration: const Duration(milliseconds: 120),
+                        margin: const EdgeInsets.symmetric(horizontal: 3),
+                        padding: const EdgeInsets.symmetric(vertical: 12),
+                        decoration: BoxDecoration(
+                          color: isSelected
+                              ? entry.$3.withValues(alpha: 0.16)
+                              : Colors.white,
+                          borderRadius: BorderRadius.circular(10),
+                          border: Border.all(
+                            color: isSelected
+                                ? entry.$3
+                                : entry.$1 == trumpSuit
+                                    ? entry.$3.withValues(alpha: 0.5)
+                                    : const Color(0xFFE0D8D4),
+                            width: isSelected ? 2 : 1,
+                          ),
+                        ),
+                        child: Center(
+                          child: entry.$1 == 'no_trump'
+                              ? Text(
+                                  entry.$2,
+                                  style: TextStyle(
+                                    fontSize: 16,
+                                    color: entry.$3,
+                                    fontWeight: isSelected || entry.$1 == trumpSuit
+                                        ? FontWeight.bold
+                                        : FontWeight.normal,
+                                  ),
+                                )
+                              : SuitIcon(suit: entry.$1, size: 22, color: entry.$3),
+                        ),
+                      ),
+                    ),
+                  ),
+                );
+              }),
+          ],
+        ),
+        const SizedBox(height: 14),
+        SizedBox(
+          width: double.infinity,
+          height: 48,
+          child: Builder(builder: (_) {
+            // Apply-button gating:
+            //   • same trump at cap — nothing to do
+            //   • 20 NT — no contract change of any kind
+            //   • 20 suit — only a switch to NT is permitted
+            final applyDisabled = (isSameTrump && isAtCap) ||
+                isAt20NT ||
+                (isAt20Suit && _selectedTrumpSuit != 'no_trump');
+            return FilledButton(
+              onPressed: applyDisabled
+                  ? null
+                  : () async {
+                      final ok = isSameTrump
+                          ? await _confirmBidAction(
+                              title: l10n.mtRaiseBidConfirmTitle,
+                              body: l10n.mtRaiseBidConfirmBody(nextBid.toString()),
+                            )
+                          : await _confirmBidAction(
+                              title: l10n.mtChangeTrumpConfirmTitle,
+                              // 20 suit → 20 NT is the one change-path at cap —
+                              // server applies no penalty, so the confirm body
+                              // must not say "raise the bid".
+                              body: isAt20Suit
+                                  ? l10n.mtChangeTrumpNoPenaltyBody(_suitLabel(_selectedTrumpSuit!))
+                                  : l10n.mtChangeTrumpConfirmBody(
+                                      _suitLabel(_selectedTrumpSuit!),
+                                      nextBid.toString(),
+                                    ),
+                            );
+                      if (!ok) return;
+                      if (isSameTrump) {
+                        game.mightyRaiseBid();
+                      } else {
+                        game.mightyChangeTrump(_selectedTrumpSuit!);
+                      }
+                      setState(() => _selectedTrumpSuit = null);
+                      onApplied?.call();
+                    },
+              style: FilledButton.styleFrom(
+                backgroundColor: applyDisabled
+                    ? const Color(0xFFBDBDBD)
+                    : (isSameTrump ? const Color(0xFF1565C0) : const Color(0xFFE65100)),
+                foregroundColor: Colors.white,
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+              ),
+              child: Text(
+                isAtCap
+                    ? l10n.mtChangeTrump
+                    : (isSameTrump ? '$bidPoints → $nextBid' : l10n.mtChangeTrump),
+                style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w800),
+              ),
+            );
+          }),
+        ),
+      ],
     );
   }
 
@@ -2587,8 +2875,10 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
                 ],
               ),
             ),
-          // Play button
-          if (isPlaying && selectedCard != null && isSelectedLegal)
+          // Play button — blocked when leading the joker without a declared
+          // suit (the suit selector sits just below the hand; user must pick).
+          if (isPlaying && selectedCard != null && isSelectedLegal &&
+              !(selectedCard == 'mighty_joker' && state.currentTrick.isEmpty && _jokerSuitChoice == null))
             Padding(
               padding: const EdgeInsets.only(bottom: 6, left: 8, right: 8),
               child: SizedBox(
@@ -2599,9 +2889,7 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
                     final isJokerCallCard = selectedCard == state.jokerCallCard;
                     game.mightyPlayCard(
                       selectedCard,
-                      jokerSuit: selectedCard == 'mighty_joker'
-                          ? (_jokerSuitChoice ?? (state.trumpSuit != null && state.trumpSuit != 'no_trump' ? state.trumpSuit! : 'spade'))
-                          : null,
+                      jokerSuit: selectedCard == 'mighty_joker' ? _jokerSuitChoice : null,
                       jokerCall: isJokerCallCard && state.currentTrick.isEmpty && state.jokerHasPower && _jokerCallChoice,
                     );
                     setState(() {
@@ -2630,7 +2918,9 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
                   Text(
-                    L10n.of(context).mtSelectCard,
+                    (selectedCard == 'mighty_joker' && state.currentTrick.isEmpty && _jokerSuitChoice == null)
+                        ? L10n.of(context).mtJokerSelectSuit
+                        : L10n.of(context).mtSelectCard,
                     style: TextStyle(color: Color(0xFF5A4038), fontSize: 14, fontWeight: FontWeight.bold),
                   ),
                   if (_remainingSeconds > 0) ...[
@@ -2741,10 +3031,10 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
                 if (isPlaying) {
                   if (!isLegal) return;
                   _selectedCard = _selectedCard == cardId ? null : cardId;
-                  // Auto-select trump suit when joker is selected for leading
-                  if (_selectedCard == 'mighty_joker' && state != null) {
-                    final ts = state.trumpSuit;
-                    _jokerSuitChoice = (ts != null && ts != 'no_trump') ? ts : 'spade';
+                  // Joker suit is not pre-selected — the player must choose
+                  // explicitly before they are allowed to lead the joker.
+                  if (_selectedCard == 'mighty_joker') {
+                    _jokerSuitChoice = null;
                   }
                 } else if (isKitty) {
                   if (isKittyBlocked) return;
@@ -3521,47 +3811,49 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
                 ],
               ),
               const SizedBox(height: 12),
-              Wrap(
-                alignment: WrapAlignment.center,
-                spacing: 8,
-                runSpacing: 8,
+              Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  for (final play in prev.cards)
+                  for (int i = 0; i < prev.cards.length; i++) ...[
+                    if (i > 0) const SizedBox(width: 3),
                     Column(
                       mainAxisSize: MainAxisSize.min,
                       children: [
                         Container(
-                          decoration: play.playerId == prev.winner
+                          decoration: prev.cards[i].playerId == prev.winner
                               ? BoxDecoration(
-                                  borderRadius: BorderRadius.circular(10),
+                                  borderRadius: BorderRadius.circular(8),
                                   border: Border.all(
                                       color: const Color(0xFFFFB74D), width: 2),
                                 )
                               : null,
                           padding: const EdgeInsets.all(1),
                           child: PlayingCard(
-                            cardId: _displayCardId(play.cardId),
-                            width: 44,
-                            height: 62,
+                            cardId: _displayCardId(prev.cards[i].cardId),
+                            width: 42,
+                            height: 59,
                             isInteractive: false,
                           ),
                         ),
-                        const SizedBox(height: 3),
+                        const SizedBox(height: 2),
                         SizedBox(
-                          width: 56,
+                          width: 46,
                           child: Text(
                             state.players
-                                .firstWhere((p) => p.id == play.playerId,
-                                    orElse: () => MightyPlayer(id: play.playerId, name: play.playerId))
+                                .firstWhere((p) => p.id == prev.cards[i].playerId,
+                                    orElse: () => MightyPlayer(
+                                        id: prev.cards[i].playerId,
+                                        name: prev.cards[i].playerId))
                                 .name,
                             textAlign: TextAlign.center,
                             overflow: TextOverflow.ellipsis,
                             style: TextStyle(
-                              fontSize: 10,
-                              fontWeight: play.playerId == prev.winner
+                              fontSize: 9,
+                              fontWeight: prev.cards[i].playerId == prev.winner
                                   ? FontWeight.w800
                                   : FontWeight.w500,
-                              color: play.playerId == prev.winner
+                              color: prev.cards[i].playerId == prev.winner
                                   ? const Color(0xFFE65100)
                                   : const Color(0xFF5A4038),
                             ),
@@ -3569,6 +3861,7 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
                         ),
                       ],
                     ),
+                  ],
                 ],
               ),
               const SizedBox(height: 10),

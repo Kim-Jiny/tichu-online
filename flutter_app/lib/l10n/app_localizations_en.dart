@@ -2773,6 +2773,11 @@ class L10nEn extends L10n {
   }
 
   @override
+  String mtChangeTrumpNoPenaltyBody(Object suit) {
+    return 'Change trump to $suit?';
+  }
+
+  @override
   String mtPrevTrickTitle(Object number) {
     return 'Trick $number';
   }
@@ -2863,6 +2868,9 @@ class L10nEn extends L10n {
   String get mtChangeTrump => 'Change Trump';
 
   @override
+  String get mtChangeContract => 'Change Contract';
+
+  @override
   String mtTrumpPenalty(int penalty) {
     return 'Bid +$penalty';
   }
@@ -2877,6 +2885,9 @@ class L10nEn extends L10n {
 
   @override
   String get mtSelectCard => 'Select a card';
+
+  @override
+  String get mtJokerSelectSuit => 'Select a joker suit';
 
   @override
   String get mtJokerLoses1st => 'Joker loses on 1st trick!';
@@ -2936,6 +2947,14 @@ class L10nEn extends L10n {
 
   @override
   String get mtContract => 'Contract';
+
+  @override
+  String mtContractWithPoints(int points) {
+    return 'Bid $points';
+  }
+
+  @override
+  String get mtLead => 'Lead';
 
   @override
   String get mtResult => 'Result';

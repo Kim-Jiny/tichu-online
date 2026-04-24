@@ -741,7 +741,7 @@ class L10nKo extends L10n {
   String get lobbyReady => '준비';
 
   @override
-  String get lobbyReadyDone => '준비 완료!';
+  String get lobbyReadyDone => '준비완료!';
 
   @override
   String lobbyReportTitle(String nickname) {
@@ -2711,6 +2711,11 @@ class L10nKo extends L10n {
   }
 
   @override
+  String mtChangeTrumpNoPenaltyBody(Object suit) {
+    return '기루다를 $suit(으)로 바꾸시겠습니까?';
+  }
+
+  @override
   String mtPrevTrickTitle(Object number) {
     return '$number번째 트릭';
   }
@@ -2801,6 +2806,9 @@ class L10nKo extends L10n {
   String get mtChangeTrump => '기루다 변경';
 
   @override
+  String get mtChangeContract => '공약 변경';
+
+  @override
   String mtTrumpPenalty(int penalty) {
     return '비딩 +$penalty';
   }
@@ -2815,6 +2823,9 @@ class L10nKo extends L10n {
 
   @override
   String get mtSelectCard => '카드를 선택하세요';
+
+  @override
+  String get mtJokerSelectSuit => '조커 문양을 선택하세요';
 
   @override
   String get mtJokerLoses1st => '첫 트릭에서 조커가 집니다!';
@@ -2874,6 +2885,14 @@ class L10nKo extends L10n {
 
   @override
   String get mtContract => '공약';
+
+  @override
+  String mtContractWithPoints(int points) {
+    return '$points공약';
+  }
+
+  @override
+  String get mtLead => '리드';
 
   @override
   String get mtResult => '결과';

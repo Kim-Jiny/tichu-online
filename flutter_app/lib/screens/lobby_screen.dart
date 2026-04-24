@@ -2835,59 +2835,81 @@ class _LobbyScreenState extends State<LobbyScreen> {
           ],
           const SizedBox(height: 12),
           if (game.isHost) ...[
-            if (game.currentGameType == 'skull_king' ||
-                    game.currentGameType == 'love_letter'
-                ? game.playerCount >= 2
-                : game.currentGameType == 'mighty'
-                    ? game.playerCount >= 5
-                    : game.playerCount >= game.effectiveRoomMaxPlayers)
-              SizedBox(
-                width: double.infinity,
+            Builder(builder: (_) {
+              final canStart = game.currentGameType == 'skull_king' ||
+                      game.currentGameType == 'love_letter'
+                  ? game.playerCount >= 2
+                  : game.currentGameType == 'mighty'
+                      ? game.playerCount >= 5
+                      : game.playerCount >= game.effectiveRoomMaxPlayers;
+              if (!canStart) return const SizedBox.shrink();
+              final everyoneReady = _allNonHostReady(game);
+              return FractionallySizedBox(
+                widthFactor: 2 / 3,
+                child: SizedBox(
+                  height: 48,
+                  child: ElevatedButton(
+                    onPressed: () => game.startGame(),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: const Color(0xFFDEDBFA),
+                      foregroundColor: const Color(0xFF4A4080),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(16),
+                        side: everyoneReady
+                            ? const BorderSide(
+                                color: Color(0xFF6C63FF),
+                                width: 2.5,
+                              )
+                            : BorderSide.none,
+                      ),
+                      elevation: 0,
+                    ),
+                    child: Text(
+                      L10n.of(context).lobbyStartGame,
+                      style: const TextStyle(
+                        fontSize: 17,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ),
+                ),
+              );
+            }),
+          ] else
+            FractionallySizedBox(
+              widthFactor: 2 / 3,
+              child: SizedBox(
                 height: 48,
                 child: ElevatedButton(
-                  onPressed: () => game.startGame(),
+                  onPressed: () => game.toggleReady(),
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFFDEDBFA),
-                    foregroundColor: const Color(0xFF4A4080),
+                    backgroundColor: _isMyReady(game)
+                        ? const Color(0xFFC8E6C9)
+                        : const Color(0xFFFFE082),
+                    foregroundColor: _isMyReady(game)
+                        ? const Color(0xFF2E7D32)
+                        : const Color(0xFF5A4038),
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(16),
+                      // Border only on ready — not-ready stays borderless so
+                      // it doesn't compete with host's start-game emphasis.
+                      side: _isMyReady(game)
+                          ? const BorderSide(
+                              color: Color(0xFF43A047),
+                              width: 2.5,
+                            )
+                          : BorderSide.none,
                     ),
                     elevation: 0,
                   ),
                   child: Text(
-                    L10n.of(context).lobbyStartGame,
+                    _isMyReady(game)
+                        ? L10n.of(context).lobbyReadyDone
+                        : L10n.of(context).lobbyReady,
                     style: const TextStyle(
-                      fontSize: 15,
+                      fontSize: 17,
                       fontWeight: FontWeight.bold,
                     ),
-                  ),
-                ),
-              ),
-          ] else
-            SizedBox(
-              width: double.infinity,
-              height: 48,
-              child: ElevatedButton(
-                onPressed: () => game.toggleReady(),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: _isMyReady(game)
-                      ? const Color(0xFFC8E6C9)
-                      : const Color(0xFFF5F5F5),
-                  foregroundColor: _isMyReady(game)
-                      ? const Color(0xFF2E7D32)
-                      : const Color(0xFF5A4038),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(16),
-                  ),
-                  elevation: 0,
-                ),
-                child: Text(
-                  _isMyReady(game)
-                      ? L10n.of(context).lobbyReadyDone
-                      : L10n.of(context).lobbyReady,
-                  style: const TextStyle(
-                    fontSize: 15,
-                    fontWeight: FontWeight.bold,
                   ),
                 ),
               ),
@@ -4736,6 +4758,18 @@ class _LobbyScreenState extends State<LobbyScreen> {
       orElse: () => null,
     );
     return me?.isReady ?? false;
+  }
+
+  // True when every seated non-host, non-bot player has toggled ready.
+  // Bots count as always-ready; the host is implicitly ready.
+  bool _allNonHostReady(GameService game) {
+    for (final p in game.roomPlayers) {
+      if (p == null) continue;
+      if (p.id.startsWith('bot_')) continue;
+      if (p.isHost) continue;
+      if (!p.isReady) return false;
+    }
+    return true;
   }
 
   Widget _buildSkExpansionChip(String expansionKey) {

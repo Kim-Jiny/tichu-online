@@ -241,6 +241,8 @@
   "mighty_trump_change_disabled": "Trumpfwechsel sind nicht erlaubt",
   "mighty_same_trump": "Diese Trumpffarbe ist bereits ausgewählt",
   "mighty_bid_at_cap": "Das Gebot ist bereits am Maximum",
+  "mighty_20suit_only_nt": "Bei 20er-Gebot ist nur ein Wechsel auf 20 NT erlaubt",
+  "mighty_joker_suit_required": "Du musst eine Farbe wählen, bevor du den Joker anspielst",
   "mighty_setting_invalid": "Setting ist derzeit nicht möglich",
   "mighty_must_discard_three": "Du musst genau 3 Karten ablegen",
   "mighty_card_not_in_hand": "Diese Karte ist nicht auf deiner Hand",

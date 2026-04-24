@@ -241,6 +241,8 @@
   "mighty_trump_change_disabled": "기루다 변경이 허용되지 않습니다",
   "mighty_same_trump": "이미 선택된 기루다입니다",
   "mighty_bid_at_cap": "비드가 이미 최대치입니다",
+  "mighty_20suit_only_nt": "20 공약에서는 20 NT로만 변경할 수 있습니다",
+  "mighty_joker_suit_required": "조커를 선으로 내기 전에 문양을 선택하세요",
   "mighty_setting_invalid": "지금은 세팅 선언을 할 수 없습니다",
   "mighty_must_discard_three": "정확히 3장을 버려야 합니다",
   "mighty_card_not_in_hand": "손에 없는 카드입니다",

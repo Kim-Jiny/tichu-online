@@ -570,8 +570,16 @@ class MightyGame {
       return { success: false, messageKey: 'mighty_same_trump' };
     }
 
-    // At 20 points: allow trump change without penalty
+    // At the 20-point ceiling:
+    //   • 20 NT is the hard ceiling — no contract change of any kind.
+    //   • 20 with a suit can only be changed to 20 NT (no penalty, no other suit).
     if (this.currentBid.points >= 20) {
+      if (this.currentBid.suit === 'no_trump') {
+        return { success: false, messageKey: 'mighty_bid_at_cap' };
+      }
+      if (suit !== 'no_trump') {
+        return { success: false, messageKey: 'mighty_20suit_only_nt' };
+      }
       this.trumpSuit = suit;
       this.currentBid.suit = suit;
       return { success: true };
@@ -725,15 +733,14 @@ class MightyGame {
         jokerCall === true && this._currentTrickJokerHasPower();
     }
 
-    // If playing joker as lead, must declare suit (must be an actual suit, not no_trump)
+    // If playing joker as lead, a real suit must be declared — no silent
+    // default. The client now blocks the Play button until the user picks;
+    // this is the server-side defense for old or misbehaving clients.
     if (cardId === 'mighty_joker' && this.currentTrick.length === 0) {
       if (!jokerSuit || !SUITS.includes(jokerSuit)) {
-        // Default to trump or spade
-        this.jokerSuitDeclared = this.trumpSuit && this.trumpSuit !== 'no_trump'
-          ? this.trumpSuit : 'spade';
-      } else {
-        this.jokerSuitDeclared = jokerSuit;
+        return { success: false, messageKey: 'mighty_joker_suit_required' };
       }
+      this.jokerSuitDeclared = jokerSuit;
     }
 
     // Play the card

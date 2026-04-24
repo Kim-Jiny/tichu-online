@@ -729,7 +729,7 @@ class _LobbyScreenState extends State<LobbyScreen> {
                               gameFgColor = Colors.white;
                               break;
                             case 'mighty':
-                              gameLabel = 'Mighty';
+                              gameLabel = l10n.lobbyMighty;
                               gameEmoji = '🃑';
                               gameBgColor = const Color(0xFF1565C0);
                               gameFgColor = Colors.white;
@@ -843,7 +843,7 @@ class _LobbyScreenState extends State<LobbyScreen> {
                                           '🃑',
                                           style: TextStyle(fontSize: 20),
                                         ),
-                                        title: const Text('Mighty'),
+                                        title: Text(l10n.lobbyMighty),
                                         trailing:
                                             selectedGameType == 'mighty'
                                             ? const Icon(
@@ -1892,7 +1892,7 @@ class _LobbyScreenState extends State<LobbyScreen> {
       stripColor = const Color(0xFF5C6BC0);
       badgeBgColor = const Color(0xFF5C6BC0);
       badgeTextColor = Colors.white;
-      badgeText = '🃑 Mighty';
+      badgeText = l10n.lobbyMightyBadge;
       nameColor = const Color(0xFF283593);
       subTextColor = const Color(0xFF5C6BC0);
     } else if (isSK) {

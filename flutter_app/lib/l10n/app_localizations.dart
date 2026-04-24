@@ -963,6 +963,12 @@ abstract class L10n {
   /// **'Skull King'**
   String get lobbySkullKing;
 
+  /// No description provided for @lobbyMighty.
+  ///
+  /// In en, this message translates to:
+  /// **'Mighty'**
+  String get lobbyMighty;
+
   /// No description provided for @lobbyMaxPlayers.
   ///
   /// In en, this message translates to:
@@ -1238,6 +1244,12 @@ abstract class L10n {
   /// In en, this message translates to:
   /// **'☠️ Skull King'**
   String get lobbySkullKingBadge;
+
+  /// No description provided for @lobbyMightyBadge.
+  ///
+  /// In en, this message translates to:
+  /// **'🃑 Mighty'**
+  String get lobbyMightyBadge;
 
   /// No description provided for @lobbyTichuBadge.
   ///
@@ -4958,6 +4970,30 @@ abstract class L10n {
   /// In en, this message translates to:
   /// **'Prev trick'**
   String get mtPrevTrick;
+
+  /// No description provided for @mtRaiseBidConfirmTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Raise bid'**
+  String get mtRaiseBidConfirmTitle;
+
+  /// No description provided for @mtRaiseBidConfirmBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Raise the bid to {points}?'**
+  String mtRaiseBidConfirmBody(Object points);
+
+  /// No description provided for @mtChangeTrumpConfirmTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Change trump'**
+  String get mtChangeTrumpConfirmTitle;
+
+  /// No description provided for @mtChangeTrumpConfirmBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Change trump to {suit} and raise the bid to {points}?'**
+  String mtChangeTrumpConfirmBody(Object points, Object suit);
 
   /// No description provided for @mtPrevTrickTitle.
   ///

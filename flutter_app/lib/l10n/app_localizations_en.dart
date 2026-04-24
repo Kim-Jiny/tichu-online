@@ -464,6 +464,9 @@ class L10nEn extends L10n {
   String get lobbySkullKing => 'Skull King';
 
   @override
+  String get lobbyMighty => 'Mighty';
+
+  @override
   String get lobbyMaxPlayers => 'Max Players';
 
   @override
@@ -615,6 +618,9 @@ class L10nEn extends L10n {
 
   @override
   String get lobbySkullKingBadge => '☠️ Skull King';
+
+  @override
+  String get lobbyMightyBadge => '🃑 Mighty';
 
   @override
   String get lobbyTichuBadge => 'Tichu';
@@ -2715,6 +2721,22 @@ class L10nEn extends L10n {
 
   @override
   String get mtPrevTrick => 'Prev trick';
+
+  @override
+  String get mtRaiseBidConfirmTitle => 'Raise bid';
+
+  @override
+  String mtRaiseBidConfirmBody(Object points) {
+    return 'Raise the bid to $points?';
+  }
+
+  @override
+  String get mtChangeTrumpConfirmTitle => 'Change trump';
+
+  @override
+  String mtChangeTrumpConfirmBody(Object points, Object suit) {
+    return 'Change trump to $suit and raise the bid to $points?';
+  }
 
   @override
   String mtPrevTrickTitle(Object number) {

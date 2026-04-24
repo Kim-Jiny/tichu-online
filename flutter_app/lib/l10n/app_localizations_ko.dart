@@ -453,6 +453,9 @@ class L10nKo extends L10n {
   String get lobbySkullKing => '스컬킹';
 
   @override
+  String get lobbyMighty => '마이티';
+
+  @override
   String get lobbyMaxPlayers => '최대 인원';
 
   @override
@@ -594,6 +597,9 @@ class L10nKo extends L10n {
 
   @override
   String get lobbySkullKingBadge => '☠️ 스컬킹';
+
+  @override
+  String get lobbyMightyBadge => '🃑 마이티';
 
   @override
   String get lobbyTichuBadge => '티츄';
@@ -2653,6 +2659,22 @@ class L10nKo extends L10n {
 
   @override
   String get mtPrevTrick => '이전 트릭';
+
+  @override
+  String get mtRaiseBidConfirmTitle => '비딩 올리기';
+
+  @override
+  String mtRaiseBidConfirmBody(Object points) {
+    return '비딩을 $points로 올리시겠습니까?';
+  }
+
+  @override
+  String get mtChangeTrumpConfirmTitle => '기루다 변경';
+
+  @override
+  String mtChangeTrumpConfirmBody(Object points, Object suit) {
+    return '기루다를 $suit(으)로 바꾸고 비딩을 $points(으)로 올리시겠습니까?';
+  }
 
   @override
   String mtPrevTrickTitle(Object number) {

@@ -1927,6 +1927,31 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
     );
   }
 
+  /// Shared Yes/No confirm dialog used by bid-raise and trump-change so the
+  /// player never accidentally bumps their bid with a one-tap slip.
+  Future<bool> _confirmBidAction({
+    required String title,
+    required String body,
+  }) async {
+    final l10n = L10n.of(context);
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Text(title, style: const TextStyle(fontSize: 15, fontWeight: FontWeight.bold)),
+        content: Text(body, style: const TextStyle(fontSize: 13)),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx, false), child: Text(l10n.mtCancel)),
+          FilledButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            style: FilledButton.styleFrom(backgroundColor: const Color(0xFF1565C0)),
+            child: Text(l10n.mtConfirm),
+          ),
+        ],
+      ),
+    );
+    return ok == true;
+  }
+
   Future<void> _confirmDealMiss(GameService game) async {
     final l10n = L10n.of(context);
     final ok = await showDialog<bool>(
@@ -2265,7 +2290,13 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
                 SizedBox(
                   height: 30,
                   child: FilledButton(
-                    onPressed: () => game.mightyRaiseBid(),
+                    onPressed: () async {
+                      final ok = await _confirmBidAction(
+                        title: L10n.of(context).mtRaiseBidConfirmTitle,
+                        body: L10n.of(context).mtRaiseBidConfirmBody(nextBid.toString()),
+                      );
+                      if (ok) game.mightyRaiseBid();
+                    },
                     style: FilledButton.styleFrom(
                       backgroundColor: const Color(0xFF1565C0),
                       padding: const EdgeInsets.symmetric(horizontal: 10),
@@ -2329,7 +2360,21 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
               SizedBox(
                 height: 34,
                 child: FilledButton(
-                  onPressed: isSameTrump && isAtCap ? null : () {
+                  onPressed: isSameTrump && isAtCap ? null : () async {
+                    final l10n = L10n.of(context);
+                    final ok = isSameTrump
+                        ? await _confirmBidAction(
+                            title: l10n.mtRaiseBidConfirmTitle,
+                            body: l10n.mtRaiseBidConfirmBody(nextBid.toString()),
+                          )
+                        : await _confirmBidAction(
+                            title: l10n.mtChangeTrumpConfirmTitle,
+                            body: l10n.mtChangeTrumpConfirmBody(
+                              _suitLabel(_selectedTrumpSuit!),
+                              nextBid.toString(),
+                            ),
+                          );
+                    if (!ok) return;
                     if (isSameTrump) {
                       game.mightyRaiseBid();
                     } else {

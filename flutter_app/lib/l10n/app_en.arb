@@ -185,6 +185,7 @@
   "lobbySelectGameDesc": "Choose the game to play.",
   "lobbyTichu": "Tichu",
   "lobbySkullKing": "Skull King",
+  "lobbyMighty": "Mighty",
   "lobbyMaxPlayers": "Max Players",
   "lobbyPlayerCount": "{count}P",
   "@lobbyPlayerCount": {
@@ -236,6 +237,7 @@
   "lobbyRoomListTitle": "Game Room List",
   "lobbyEmptyRoomList": "No rooms yet!\nWhy not create one?",
   "lobbySkullKingBadge": "☠️ Skull King",
+  "lobbyMightyBadge": "🃑 Mighty",
   "lobbyTichuBadge": "Tichu",
   "lobbyRoomTimeSec": "{seconds}s",
   "@lobbyRoomTimeSec": {
@@ -1238,6 +1240,10 @@
   "mtPass": "Pass",
   "mtDealMiss": "Deal miss",
   "mtPrevTrick": "Prev trick",
+  "mtRaiseBidConfirmTitle": "Raise bid",
+  "mtRaiseBidConfirmBody": "Raise the bid to {points}?",
+  "mtChangeTrumpConfirmTitle": "Change trump",
+  "mtChangeTrumpConfirmBody": "Change trump to {suit} and raise the bid to {points}?",
   "mtPrevTrickTitle": "Trick {number}",
   "mtPrevTrickWinner": "Winner: {name}",
   "mtDealMissPool": "Deal miss {points}",

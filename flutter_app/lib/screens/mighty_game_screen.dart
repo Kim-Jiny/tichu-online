@@ -73,6 +73,8 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
   // Auto-dismiss the kill reveal after a few seconds if the user doesn't tap.
   Timer? _killAutoDismissTimer;
   String? _killAutoDismissKey;
+  // Setting-reveal dismissal (same pattern as deal-miss/kill).
+  String? _dismissedSettingKey;
   String? _selectedKillCard;
   // Kill target picker: currently browsed suit panel (null = joker tab).
   String _killSuitTab = 'spade';
@@ -436,6 +438,10 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
                           _dismissedKillKey !=
                               '${state.round}-${state.lastKillEvent!.targetCardId}')
                         _buildKillRevealOverlay(state, state.lastKillEvent!),
+                      if (state.lastSettingEvent != null &&
+                          _dismissedSettingKey !=
+                              '${state.lastSettingEvent!.round}-${state.lastSettingEvent!.playerId}')
+                        _buildSettingRevealOverlay(state.lastSettingEvent!),
                       if (_contractChangeBanner != null)
                         _buildContractChangeBanner(_contractChangeBanner!),
                     ],
@@ -2553,19 +2559,24 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
               padding: const EdgeInsets.only(bottom: 6),
               child: _buildTimeoutResetChip(game),
             ),
-          // Previous-trick viewer button (shop item mighty_prev_trick_7d).
-          // Only shown during active play phases when at least one trick has
-          // resolved. The button floats above the hand on the right side.
-          if (game.hasMightyPrevTrick
-              && state.tricks.isNotEmpty
-              && (state.phase == 'playing'
-                  || state.phase == 'trick_end'
-                  || state.phase == 'round_end'))
+          // Top-right action strip: previous-trick viewer (shop-gated) and
+          // setting declaration (server-gated on hand strength). Only
+          // shown during active play phases.
+          if (state.phase == 'playing'
+              || state.phase == 'trick_end'
+              || state.phase == 'round_end')
             Padding(
               padding: const EdgeInsets.only(bottom: 4, right: 4),
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.end,
-                children: [_buildPrevTrickButton(state)],
+                children: [
+                  if (state.canDeclareSetting) _buildSettingButton(game),
+                  if (state.canDeclareSetting && game.hasMightyPrevTrick
+                      && state.tricks.isNotEmpty)
+                    const SizedBox(width: 6),
+                  if (game.hasMightyPrevTrick && state.tricks.isNotEmpty)
+                    _buildPrevTrickButton(state),
+                ],
               ),
             ),
           // Play button
@@ -3230,6 +3241,79 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
     return v.toStringAsFixed(1);
   }
 
+  /// Full-screen overlay shown to everyone when a player successfully
+  /// declares 세팅. Reveals the declarer's hand + who they are + a close
+  /// prompt. Dismissed by tapping; keyed on round+playerId so a later
+  /// round's reveal re-shows even if the prior key matches.
+  Widget _buildSettingRevealOverlay(MightySettingEvent event) {
+    final l10n = L10n.of(context);
+    return Positioned.fill(
+      child: GestureDetector(
+        onTap: () => setState(() {
+          _dismissedSettingKey = '${event.round}-${event.playerId}';
+        }),
+        behavior: HitTestBehavior.opaque,
+        child: Container(
+          color: Colors.black.withValues(alpha: 0.55),
+          alignment: Alignment.center,
+          child: Container(
+            margin: const EdgeInsets.symmetric(horizontal: 16),
+            padding: const EdgeInsets.fromLTRB(18, 16, 18, 14),
+            decoration: BoxDecoration(
+              color: const Color(0xFFFFFDE7),
+              borderRadius: BorderRadius.circular(20),
+              border: Border.all(color: const Color(0xFFFFB300), width: 2),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: 0.25),
+                  blurRadius: 14,
+                  offset: const Offset(0, 5),
+                ),
+              ],
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    const Icon(Icons.emoji_events, size: 22, color: Color(0xFFE65100)),
+                    const SizedBox(width: 6),
+                    Text(
+                      l10n.mtSettingRevealTitle,
+                      style: const TextStyle(
+                        fontWeight: FontWeight.w800,
+                        fontSize: 17,
+                        color: Color(0xFFE65100),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  l10n.mtSettingRevealBody(event.playerName),
+                  textAlign: TextAlign.center,
+                  style: const TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w600,
+                    color: Color(0xFF5A4038),
+                  ),
+                ),
+                const SizedBox(height: 12),
+                _buildDealMissCardRows(event.cards, splitAt: 6),
+                const SizedBox(height: 10),
+                Text(
+                  l10n.mtSettingTapToClose,
+                  style: const TextStyle(fontSize: 11, color: Color(0xFF8A7A72)),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
   Widget _buildContractChangeBanner(_ContractChangeInfo info) {
     final l10n = L10n.of(context);
     Widget suitChip(String suit) {
@@ -3324,6 +3408,44 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
         ),
       ),
     );
+  }
+
+  Widget _buildSettingButton(GameService game) {
+    return GestureDetector(
+      onTap: () => _confirmSetting(game),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+        decoration: BoxDecoration(
+          color: const Color(0xFFFFF3E0),
+          borderRadius: BorderRadius.circular(10),
+          border: Border.all(color: const Color(0xFFFFB74D)),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Icon(Icons.emoji_events, size: 13, color: Color(0xFFE65100)),
+            const SizedBox(width: 5),
+            Text(
+              L10n.of(context).mtSetting,
+              style: const TextStyle(
+                fontSize: 11,
+                fontWeight: FontWeight.w800,
+                color: Color(0xFFE65100),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Future<void> _confirmSetting(GameService game) async {
+    final l10n = L10n.of(context);
+    final ok = await _confirmBidAction(
+      title: l10n.mtSettingConfirmTitle,
+      body: l10n.mtSettingConfirmBody,
+    );
+    if (ok) game.mightyDeclareSetting();
   }
 
   Widget _buildPrevTrickButton(MightyGameStateData state) {
@@ -3471,10 +3593,12 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
     );
   }
 
-  Widget _buildDealMissCardRows(List<String> cards) {
-    final splitIndex = (cards.length / 2).ceil();
-    final row1 = cards.take(splitIndex).toList();
-    final row2 = cards.skip(splitIndex).toList();
+  /// Render a small hand-preview. When [splitAt] is null or below the hand
+  /// size, cards are laid out on a single row; otherwise they're split into
+  /// two equal(ish) rows. Deal-miss always splits (full hand ≥ 8 cards is
+  /// awkward in one row), while the setting reveal only splits past the
+  /// ≥ 5-card threshold.
+  Widget _buildDealMissCardRows(List<String> cards, {int? splitAt = 1}) {
     Widget buildRow(List<String> ids) {
       return Row(
         mainAxisAlignment: MainAxisAlignment.center,
@@ -3492,6 +3616,12 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
         ],
       );
     }
+    if (splitAt == null || cards.length < splitAt) {
+      return buildRow(cards);
+    }
+    final splitIndex = (cards.length / 2).ceil();
+    final row1 = cards.take(splitIndex).toList();
+    final row2 = cards.skip(splitIndex).toList();
     return Column(
       mainAxisSize: MainAxisSize.min,
       children: [

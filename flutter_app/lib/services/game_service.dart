@@ -2627,6 +2627,10 @@ class GameService extends ChangeNotifier {
     _network.send({'type': 'declare_deal_miss'});
   }
 
+  void mightyDeclareSetting() {
+    _network.send({'type': 'declare_setting'});
+  }
+
   void mightyDeclareKill(String cardId) {
     _network.send({'type': 'declare_kill', 'cardId': cardId});
   }

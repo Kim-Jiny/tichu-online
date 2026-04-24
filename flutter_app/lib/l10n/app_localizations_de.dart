@@ -2738,6 +2738,27 @@ class L10nDe extends L10n {
   String get mtPrevTrick => 'Vorheriger Stich';
 
   @override
+  String get mtSetting => 'Setting';
+
+  @override
+  String get mtSettingConfirmTitle => 'Setting erklären';
+
+  @override
+  String get mtSettingConfirmBody =>
+      'Erkläre, dass du jeden verbleibenden Stich gewinnst. Deine Hand wird aufgedeckt und die Runde endet sofort.';
+
+  @override
+  String get mtSettingRevealTitle => 'Setting erklärt!';
+
+  @override
+  String mtSettingRevealBody(Object name) {
+    return '$name hat Setting erklärt. Alle verbleibenden Stiche gehen an $name.';
+  }
+
+  @override
+  String get mtSettingTapToClose => 'Zum Schließen tippen';
+
+  @override
   String get mtRaiseBidConfirmTitle => 'Gebot erhöhen';
 
   @override

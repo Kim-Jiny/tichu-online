@@ -4971,6 +4971,42 @@ abstract class L10n {
   /// **'Prev trick'**
   String get mtPrevTrick;
 
+  /// No description provided for @mtSetting.
+  ///
+  /// In en, this message translates to:
+  /// **'Setting'**
+  String get mtSetting;
+
+  /// No description provided for @mtSettingConfirmTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Declare setting'**
+  String get mtSettingConfirmTitle;
+
+  /// No description provided for @mtSettingConfirmBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Declare that you will win every remaining trick. Your hand will be revealed and the round ends immediately.'**
+  String get mtSettingConfirmBody;
+
+  /// No description provided for @mtSettingRevealTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Setting declared!'**
+  String get mtSettingRevealTitle;
+
+  /// No description provided for @mtSettingRevealBody.
+  ///
+  /// In en, this message translates to:
+  /// **'{name} declared setting. All remaining tricks go to {name}.'**
+  String mtSettingRevealBody(Object name);
+
+  /// No description provided for @mtSettingTapToClose.
+  ///
+  /// In en, this message translates to:
+  /// **'Tap to dismiss'**
+  String get mtSettingTapToClose;
+
   /// No description provided for @mtRaiseBidConfirmTitle.
   ///
   /// In en, this message translates to:

@@ -2723,6 +2723,27 @@ class L10nEn extends L10n {
   String get mtPrevTrick => 'Prev trick';
 
   @override
+  String get mtSetting => 'Setting';
+
+  @override
+  String get mtSettingConfirmTitle => 'Declare setting';
+
+  @override
+  String get mtSettingConfirmBody =>
+      'Declare that you will win every remaining trick. Your hand will be revealed and the round ends immediately.';
+
+  @override
+  String get mtSettingRevealTitle => 'Setting declared!';
+
+  @override
+  String mtSettingRevealBody(Object name) {
+    return '$name declared setting. All remaining tricks go to $name.';
+  }
+
+  @override
+  String get mtSettingTapToClose => 'Tap to dismiss';
+
+  @override
   String get mtRaiseBidConfirmTitle => 'Raise bid';
 
   @override

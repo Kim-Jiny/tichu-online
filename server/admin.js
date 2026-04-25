@@ -555,17 +555,27 @@ function formatDate(d) {
   return dt.toLocaleString('ko-KR', { timeZone: 'Asia/Seoul' });
 }
 
-function toKSTDate(d) {
-  if (!d) return null;
-  const dt = new Date(d);
-  if (isNaN(dt.getTime())) return null;
-  return new Date(dt.toLocaleString('en-US', { timeZone: 'Asia/Seoul' }));
-}
-
 // sv-SE locale formats dates as YYYY-MM-DD; combined with an explicit
 // KST timeZone this avoids the toLocaleString→Date round-trip that was
 // silently shifting day labels near the KST-midnight boundary.
 const _kstDateFmt = new Intl.DateTimeFormat('sv-SE', { timeZone: 'Asia/Seoul' });
+
+// Read KST wall-clock components for any input the JS Date constructor
+// accepts. Used wherever we render KST date+time on a non-KST host (prod
+// is UTC) without going through the fragile toLocaleString round-trip.
+const _kstPartsFmt = new Intl.DateTimeFormat('en-GB', {
+  timeZone: 'Asia/Seoul',
+  year: 'numeric', month: '2-digit', day: '2-digit',
+  hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false,
+});
+function kstParts(d) {
+  const dt = new Date(d);
+  if (Number.isNaN(dt.getTime())) return null;
+  const out = {};
+  for (const p of _kstPartsFmt.formatToParts(dt)) out[p.type] = p.value;
+  if (out.hour === '24') out.hour = '00';
+  return out;
+}
 
 function formatDateInput(d) {
   if (!d) return '';
@@ -836,11 +846,9 @@ function renderDashboardActivityTopContent(topPlayers, period = 'week', game = '
 
 function formatDatetimeLocal(d) {
   if (!d) return '';
-  const dt = new Date(d);
-  if (isNaN(dt.getTime())) return '';
-  const pad = n => String(n).padStart(2, '0');
-  const kr = new Date(dt.toLocaleString('en-US', { timeZone: 'Asia/Seoul' }));
-  return `${kr.getFullYear()}-${pad(kr.getMonth() + 1)}-${pad(kr.getDate())}T${pad(kr.getHours())}:${pad(kr.getMinutes())}`;
+  const p = kstParts(d);
+  if (!p) return '';
+  return `${p.year}-${p.month}-${p.day}T${p.hour}:${p.minute}`;
 }
 
 function shopForm(action, values, isEdit = false) {
@@ -1563,14 +1571,24 @@ async function handleAdminRoute(req, res, url, pathname, method, lobby, wss, mai
         </table></div>`
       : '<div class="empty">팔린 아이템이 없습니다</div>';
 
-    // Prepare chart data as JSON
-    const toKST = (d) => new Date(new Date(d).toLocaleString('en-US', { timeZone: 'Asia/Seoul' }));
-    const gameChartLabels = gameSeries.map(r => {
-      const d = toKST(r.bucket_time);
-      return bucket === 'hour'
-        ? `${String(d.getMonth()+1).padStart(2,'0')}/${String(d.getDate()).padStart(2,'0')} ${String(d.getHours()).padStart(2,'0')}시`
-        : `${String(d.getMonth()+1).padStart(2,'0')}/${String(d.getDate()).padStart(2,'0')}`;
+    // Prepare chart data as JSON. bucket_time arrives as a timestamptz at
+    // the KST bucket boundary; format its components in Asia/Seoul via Intl
+    // so labels stay correct regardless of the server process timezone.
+    const _kstChartFmt = new Intl.DateTimeFormat('en-GB', {
+      timeZone: 'Asia/Seoul',
+      year: 'numeric', month: '2-digit', day: '2-digit',
+      hour: '2-digit', minute: '2-digit', hour12: false,
     });
+    const formatBucketLabel = (raw) => {
+      const dt = new Date(raw);
+      if (Number.isNaN(dt.getTime())) return '';
+      const parts = Object.fromEntries(_kstChartFmt.formatToParts(dt).map((p) => [p.type, p.value]));
+      const mm = parts.month;
+      const dd = parts.day;
+      const hh = parts.hour === '24' ? '00' : parts.hour;
+      return bucket === 'hour' ? `${mm}/${dd} ${hh}시` : `${mm}/${dd}`;
+    };
+    const gameChartLabels = gameSeries.map((r) => formatBucketLabel(r.bucket_time));
     const gameChartTichu = gameSeries.map(r => parseInt(r.tichu_cnt) || 0);
     const gameChartSK = gameSeries.map(r => parseInt(r.skull_cnt) || 0);
     const gameChartLL = gameSeries.map(r => parseInt(r.ll_cnt) || 0);
@@ -1579,34 +1597,19 @@ async function handleAdminRoute(req, res, url, pathname, method, lobby, wss, mai
     const gameChartTotal = gameSeries.map(r => parseInt(r.total_cnt) || 0);
     const gameBucketTimes = gameSeries.map(r => r.bucket_time);
 
-    const signupChartLabels = signupSeries.map(r => {
-      const d = toKST(r.bucket_time);
-      return bucket === 'hour'
-        ? `${String(d.getMonth()+1).padStart(2,'0')}/${String(d.getDate()).padStart(2,'0')} ${String(d.getHours()).padStart(2,'0')}시`
-        : `${String(d.getMonth()+1).padStart(2,'0')}/${String(d.getDate()).padStart(2,'0')}`;
-    });
+    const signupChartLabels = signupSeries.map((r) => formatBucketLabel(r.bucket_time));
     const signupChartIOS = signupSeries.map(r => parseInt(r.ios_cnt) || 0);
     const signupChartAOS = signupSeries.map(r => parseInt(r.android_cnt) || 0);
     const signupChartTotal = signupSeries.map(r => parseInt(r.total_cnt) || 0);
     const signupBucketTimes = signupSeries.map(r => r.bucket_time);
 
-    const goldChartLabels = goldSeries.map(r => {
-      const d = toKST(r.bucket_time);
-      return bucket === 'hour'
-        ? `${String(d.getMonth()+1).padStart(2,'0')}/${String(d.getDate()).padStart(2,'0')} ${String(d.getHours()).padStart(2,'0')}시`
-        : `${String(d.getMonth()+1).padStart(2,'0')}/${String(d.getDate()).padStart(2,'0')}`;
-    });
+    const goldChartLabels = goldSeries.map((r) => formatBucketLabel(r.bucket_time));
     const goldChartEarned = goldSeries.map(r => parseInt(r.earned) || 0);
     const goldChartSpent = goldSeries.map(r => parseInt(r.spent) || 0);
     const goldChartNet = goldSeries.map(r => parseInt(r.net) || 0);
     const goldBucketTimes = goldSeries.map(r => r.bucket_time);
 
-    const shopChartLabels = shopSalesSeries.map(r => {
-      const d = toKST(r.bucket_time);
-      return bucket === 'hour'
-        ? `${String(d.getMonth()+1).padStart(2,'0')}/${String(d.getDate()).padStart(2,'0')} ${String(d.getHours()).padStart(2,'0')}시`
-        : `${String(d.getMonth()+1).padStart(2,'0')}/${String(d.getDate()).padStart(2,'0')}`;
-    });
+    const shopChartLabels = shopSalesSeries.map((r) => formatBucketLabel(r.bucket_time));
     const shopChartPurchases = shopSalesSeries.map(r => parseInt(r.purchase_count) || 0);
     const shopChartBuyers = shopSalesSeries.map(r => parseInt(r.buyer_count) || 0);
     const shopChartGoldSpent = shopSalesSeries.map(r => parseInt(r.gold_spent) || 0);
@@ -2919,11 +2922,11 @@ async function handleAdminRoute(req, res, url, pathname, method, lobby, wss, mai
       const badge = h.action === 'set'
         ? '<span class="badge" style="background:#e3f2fd;color:#1565c0">설정</span>'
         : '<span class="badge" style="background:#ffebee;color:#c62828">초기화</span>';
-      const mStart = h.maintenance_start ? new Date(h.maintenance_start).toLocaleString('ko-KR') : '-';
-      const mEnd = h.maintenance_end ? new Date(h.maintenance_end).toLocaleString('ko-KR') : '-';
+      const mStart = h.maintenance_start ? new Date(h.maintenance_start).toLocaleString('ko-KR', { timeZone: 'Asia/Seoul' }) : '-';
+      const mEnd = h.maintenance_end ? new Date(h.maintenance_end).toLocaleString('ko-KR', { timeZone: 'Asia/Seoul' }) : '-';
       const msg = h.message_ko ? escapeHtml(h.message_ko.length > 30 ? h.message_ko.slice(0, 30) + '...' : h.message_ko) : '-';
       const admin = escapeHtml(h.admin_user || '-');
-      const created = new Date(h.created_at).toLocaleString('ko-KR');
+      const created = new Date(h.created_at).toLocaleString('ko-KR', { timeZone: 'Asia/Seoul' });
       return `<tr>
         <td>${history.length - i}</td>
         <td>${badge}</td>
@@ -3494,7 +3497,7 @@ async function handleAdminRoute(req, res, url, pathname, method, lobby, wss, mai
         <div class="chat-log">
           ${chatHistory.map(m => `<div class="chat-msg">
             <span class="sender">${escapeHtml(m.sender)}</span>
-            <span style="color:#aaa;font-size:11px;margin-left:6px">${new Date(m.timestamp).toLocaleTimeString('ko-KR')}</span>
+            <span style="color:#aaa;font-size:11px;margin-left:6px">${new Date(m.timestamp).toLocaleTimeString('ko-KR', { timeZone: 'Asia/Seoul' })}</span>
             <div class="text">${escapeHtml(m.message)}</div>
           </div>`).join('')}
         </div>
@@ -3812,7 +3815,7 @@ async function handleAdminRoute(req, res, url, pathname, method, lobby, wss, mai
             : r.target_filter === 'android' ? '<span class="badge" style="background:#e8f5e9;color:#2e7d32">Android</span>'
             : '<span class="badge" style="background:#f5f5f5;color:#333">전체</span>';
           const bodyTruncated = r.body.length > 40 ? r.body.substring(0, 40) + '...' : r.body;
-          const date = new Date(r.created_at).toLocaleString('ko-KR');
+          const date = new Date(r.created_at).toLocaleString('ko-KR', { timeZone: 'Asia/Seoul' });
           return `<tr>
             <td><a href="/tc-backstage/push/${r.id}">${r.id}</a></td>
             <td>${escapeHtml(r.admin_username)}</td>

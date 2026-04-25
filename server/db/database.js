@@ -11,6 +11,14 @@ const pool = new Pool({
   ssl: isProduction ? { rejectUnauthorized: false } : false,
 });
 
+// Pin every session to UTC so naked TIMESTAMP columns (e.g. created_at)
+// are written/read as UTC wall-clock no matter what the host PG default is.
+// All admin KST conversions assume this; without it, a host configured to
+// Asia/Seoul stores KST wall-clock and the conversions shift by 9h.
+pool.on('connect', (client) => {
+  client.query("SET TIME ZONE 'UTC'").catch(() => {});
+});
+
 // Initialize database tables (tc_ prefix for tichu)
 async function initDatabase() {
   const client = await pool.connect();
@@ -3212,7 +3220,10 @@ async function getUserDetail(nickname) {
     );
     const adRewardCount = await client.query(
       `SELECT COUNT(*) as total,
-              COUNT(*) FILTER (WHERE claimed_at::date = CURRENT_DATE) as today
+              COUNT(*) FILTER (
+                WHERE DATE((claimed_at) AT TIME ZONE 'UTC' AT TIME ZONE 'Asia/Seoul')
+                    = DATE(timezone('Asia/Seoul', NOW()))
+              ) as today
        FROM tc_ad_rewards WHERE nickname = $1`,
       [nickname]
     );
@@ -3241,7 +3252,11 @@ function normalizeDashboardActivityFilters(activityPeriod = 'week', activityGame
 async function queryDashboardActivityTopPlayers(client, activityPeriod = 'week', activityGame = 'all') {
   const { period: safeActivityPeriod, game: safeActivityGame } = normalizeDashboardActivityFilters(activityPeriod, activityGame);
   const kstTodayExpr = `DATE(timezone('Asia/Seoul', NOW()))`;
-  const kstCreatedDate = (column = 'created_at') => `DATE(timezone('Asia/Seoul', ${column}))`;
+  // created_at is TIMESTAMP (no tz) stored as UTC wall-clock by the prod
+  // PG session (timezone=UTC). Tag it as UTC first, then convert to KST —
+  // the older `timezone('Asia/Seoul', ts)` form interpreted the naked value
+  // as already-Seoul and shifted rows into the wrong KST day.
+  const kstCreatedDate = (column = 'created_at') => `DATE((${column}) AT TIME ZONE 'UTC' AT TIME ZONE 'Asia/Seoul')`;
   const activityStartExpr = safeActivityPeriod === 'today'
     ? kstTodayExpr
     : safeActivityPeriod === 'month'
@@ -3346,7 +3361,7 @@ async function getDashboardStats(activityPeriod = 'week', activityGame = 'all') 
   const client = await pool.connect();
   try {
     const kstTodayExpr = `DATE(timezone('Asia/Seoul', NOW()))`;
-    const kstCreatedDate = (column = 'created_at') => `DATE(timezone('Asia/Seoul', ${column}))`;
+    const kstCreatedDate = (column = 'created_at') => `DATE((${column}) AT TIME ZONE 'UTC' AT TIME ZONE 'Asia/Seoul')`;
     const { period: safeActivityPeriod, game: safeActivityGame } = normalizeDashboardActivityFilters(activityPeriod, activityGame);
     // Basic counts
     const totalUsers = await client.query('SELECT COUNT(*) FROM tc_users WHERE is_deleted IS NOT TRUE');
@@ -3478,20 +3493,21 @@ async function getDashboardStats(activityPeriod = 'week', activityGame = 'all') 
     `);
 
     // Ad reward stats
+    const kstClaimedDate = `DATE((claimed_at) AT TIME ZONE 'UTC' AT TIME ZONE 'Asia/Seoul')`;
     const adRewardStats = await client.query(`
       SELECT COUNT(*) as total_claims,
              COUNT(DISTINCT nickname) as unique_users,
-             COUNT(*) FILTER (WHERE DATE(timezone('Asia/Seoul', claimed_at)) = ${kstTodayExpr}) as today_claims,
-             COUNT(DISTINCT nickname) FILTER (WHERE DATE(timezone('Asia/Seoul', claimed_at)) = ${kstTodayExpr}) as today_users
+             COUNT(*) FILTER (WHERE ${kstClaimedDate} = ${kstTodayExpr}) as today_claims,
+             COUNT(DISTINCT nickname) FILTER (WHERE ${kstClaimedDate} = ${kstTodayExpr}) as today_users
       FROM tc_ad_rewards
     `);
 
     // Daily ad rewards (last 7 days)
     const dailyAdRewards = await client.query(`
-      SELECT DATE(timezone('Asia/Seoul', claimed_at)) as day, COUNT(*) as cnt, COUNT(DISTINCT nickname) as users
+      SELECT ${kstClaimedDate} as day, COUNT(*) as cnt, COUNT(DISTINCT nickname) as users
       FROM tc_ad_rewards
-      WHERE DATE(timezone('Asia/Seoul', claimed_at)) >= ${kstTodayExpr} - INTERVAL '6 days'
-      GROUP BY DATE(timezone('Asia/Seoul', claimed_at))
+      WHERE ${kstClaimedDate} >= ${kstTodayExpr} - INTERVAL '6 days'
+      GROUP BY ${kstClaimedDate}
       ORDER BY day
     `);
 
@@ -3600,7 +3616,11 @@ async function getDetailedAdminStats(dateFrom, dateTo, bucket = 'day', options =
   const groupUnit = bucket === 'hour' ? 'hour' : 'day';
   const from = dateFrom || new Date(Date.now() - 6 * 24 * 60 * 60 * 1000).toISOString();
   const to = dateTo || new Date().toISOString();
-  const kstBucketExpr = (column) => `DATE_TRUNC('${groupUnit}', timezone('Asia/Seoul', ${column}))`;
+  // Truncate to the KST wall-clock boundary, then re-attach the Seoul tz so
+  // the value comes back to JS as a timestamptz pointing at the correct UTC
+  // instant. Without the trailing AT TIME ZONE, pg-node would receive a
+  // naked timestamp and parse it as UTC, shifting chart labels by 9h.
+  const kstBucketExpr = (column) => `(DATE_TRUNC('${groupUnit}', (${column}) AT TIME ZONE 'UTC' AT TIME ZONE 'Asia/Seoul')) AT TIME ZONE 'Asia/Seoul'`;
   const platform = ['ios', 'android'].includes(String(options.platform || '').toLowerCase())
     ? String(options.platform).toLowerCase()
     : '';

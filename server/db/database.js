@@ -1,7 +1,26 @@
 const { Pool } = require('pg');
 const bcrypt = require('bcrypt');
+const { VISUAL_BACKFILL } = require('./shop_visuals_seed');
 
 const SALT_ROUNDS = 10;
+
+// Idempotent backfill of tc_shop_items.metadata.visual. Skips any row that
+// already has a `visual` key under metadata, so admin-authored edits remain
+// the source of truth. New items added by admin start with their own visual
+// and are never touched here.
+async function backfillShopVisuals(client) {
+  const entries = Object.entries(VISUAL_BACKFILL);
+  if (entries.length === 0) return;
+  for (const [itemKey, visual] of entries) {
+    await client.query(
+      `UPDATE tc_shop_items
+         SET metadata = jsonb_set(COALESCE(metadata, '{}'::jsonb), '{visual}', $2::jsonb, true)
+       WHERE item_key = $1
+         AND (metadata IS NULL OR metadata->'visual' IS NULL)`,
+      [itemKey, JSON.stringify(visual)]
+    );
+  }
+}
 
 // PostgreSQL connection pool
 const isProduction = process.env.NODE_ENV === 'production';
@@ -200,6 +219,9 @@ async function initDatabase() {
     await client.query(`ALTER TABLE tc_shop_items ADD COLUMN IF NOT EXISTS name_ko VARCHAR(100) NOT NULL DEFAULT ''`);
     await client.query(`ALTER TABLE tc_shop_items ADD COLUMN IF NOT EXISTS name_en VARCHAR(100) NOT NULL DEFAULT ''`);
     await client.query(`ALTER TABLE tc_shop_items ADD COLUMN IF NOT EXISTS name_de VARCHAR(100) NOT NULL DEFAULT ''`);
+    await client.query(`ALTER TABLE tc_shop_items ADD COLUMN IF NOT EXISTS description_ko TEXT NOT NULL DEFAULT ''`);
+    await client.query(`ALTER TABLE tc_shop_items ADD COLUMN IF NOT EXISTS description_en TEXT NOT NULL DEFAULT ''`);
+    await client.query(`ALTER TABLE tc_shop_items ADD COLUMN IF NOT EXISTS description_de TEXT NOT NULL DEFAULT ''`);
     // Restore 'name' column if it was previously renamed away (rollback safety)
     await client.query(`ALTER TABLE tc_shop_items ADD COLUMN IF NOT EXISTS name VARCHAR(100) NOT NULL DEFAULT ''`);
     // Copy name → name_ko for existing rows where name_ko is empty
@@ -489,6 +511,11 @@ async function initDatabase() {
         duration_days = EXCLUDED.duration_days
       `
     );
+
+    // Backfill metadata.visual for items shipped without it. Only writes when
+    // metadata.visual is missing, so admin edits made later are never
+    // clobbered on subsequent boots.
+    await backfillShopVisuals(client);
 
     // Ad rewards table
     await client.query(`
@@ -1993,8 +2020,11 @@ async function getShopItems() {
   try {
     const result = await client.query(
       `
-      SELECT item_key, name_ko, name_ko AS name, name_en, name_de, category, price, is_season, is_permanent,
-             duration_days, is_purchasable, effect_type, effect_value, metadata
+      SELECT item_key, name_ko, name_ko AS name, name_en, name_de,
+             description_ko, description_en, description_de,
+             category, price, is_season, is_permanent,
+             duration_days, is_purchasable, effect_type, effect_value, metadata,
+             sale_start, sale_end
       FROM tc_shop_items
       WHERE is_purchasable = TRUE AND is_season = FALSE
         AND (sale_start IS NULL OR sale_start <= NOW())
@@ -2029,7 +2059,9 @@ async function getUserItems(nickname) {
     const result = await client.query(
       `
       SELECT ui.item_key, ui.acquired_at, ui.expires_at, ui.is_active,
-             si.name_ko, si.name_ko AS name, si.name_en, si.name_de, si.category, si.is_season, si.is_permanent,
+             si.name_ko, si.name_ko AS name, si.name_en, si.name_de,
+             si.description_ko, si.description_en, si.description_de,
+             si.category, si.is_season, si.is_permanent,
              si.duration_days, si.effect_type, si.effect_value, si.metadata
       FROM tc_user_items ui
       JOIN tc_shop_items si ON si.item_key = ui.item_key

@@ -52,6 +52,28 @@ class _ShopScreenState extends State<ShopScreen> {
     return true;
   }
 
+  // Returns a compact sale-window string for the row trailing slot:
+  // "10/01 ~ 10/15" if both bounds set, "~10/15" if only end, "10/01~" if
+  // only start. Returns null when neither is set so the caller can hide
+  // the slot entirely.
+  String? _saleWindowText(Map<String, dynamic> item) {
+    final s = item['sale_start'];
+    final e = item['sale_end'];
+    if (s == null && e == null) return null;
+    String? fmt(dynamic raw) {
+      if (raw == null) return null;
+      final dt = DateTime.tryParse(raw.toString())?.toLocal();
+      if (dt == null) return null;
+      return '${dt.month.toString().padLeft(2, '0')}/${dt.day.toString().padLeft(2, '0')}';
+    }
+    final sf = fmt(s);
+    final ef = fmt(e);
+    if (sf != null && ef != null) return '$sf ~ $ef';
+    if (ef != null) return '~$ef';
+    if (sf != null) return '$sf~';
+    return null;
+  }
+
   @override
   void initState() {
     super.initState();
@@ -783,10 +805,10 @@ class _ShopScreenState extends State<ShopScreen> {
     final isPermanent = item['is_permanent'] == true;
     final durationDays = item['duration_days'];
     final itemKey = item['item_key']?.toString() ?? '';
-    final canBuy = game.gold >= price;
     final owned = game.inventoryItems.any((i) => i['item_key'] == itemKey);
     final ownedPermanent = owned && isPermanent;
     final onSale = _isOnSale(item);
+    final saleWindow = _saleWindowText(item);
 
     return Material(
       color: Colors.white,
@@ -838,53 +860,45 @@ class _ShopScreenState extends State<ShopScreen> {
                       style: const TextStyle(fontSize: 11.5, color: Color(0xFF8A7A72), height: 1.3),
                     ),
                     const SizedBox(height: 8),
+                    // Bottom row: gold price on the left, sale window on the
+                    // right (replaces the inline buy button — purchasing now
+                    // happens in the detail sheet so it's an explicit choice).
                     Row(
                       children: [
                         if (!ownedPermanent) ...[
-                          Icon(Icons.monetization_on, size: 14, color: const Color(0xFFF0B400)),
+                          const Icon(Icons.monetization_on, size: 14, color: Color(0xFFF0B400)),
                           const SizedBox(width: 3),
                           Text('$price', style: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: Color(0xFF4A4080))),
-                          const Spacer(),
-                        ] else
-                          const Spacer(),
-                        SizedBox(
-                          height: 30,
-                          child: ElevatedButton(
-                            onPressed: ownedPermanent
-                                ? null
-                                : (canBuy
-                                    ? () {
-                                        if (owned) {
-                                          _showExtendConfirmDialog(context, game, item);
-                                        } else {
-                                          game.buyItem(itemKey);
-                                        }
-                                      }
-                                    : null),
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: owned ? const Color(0xFFBBDEFB) : const Color(0xFFC7E6D0),
-                              foregroundColor: owned ? const Color(0xFF1565C0) : const Color(0xFF2E5A3A),
-                              disabledBackgroundColor: const Color(0xFFEEEEEE),
-                              disabledForegroundColor: const Color(0xFF9A9A9A),
-                              elevation: 0,
-                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                              padding: const EdgeInsets.symmetric(horizontal: 14),
-                              minimumSize: const Size(0, 30),
-                              tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                            ),
-                            child: Text(
-                              ownedPermanent
-                                  ? l10n.shopItemOwned
-                                  : (owned ? l10n.shopButtonExtend : l10n.shopButtonPurchase),
-                              style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w700),
-                            ),
+                        ],
+                        const Spacer(),
+                        if (saleWindow != null)
+                          Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(Icons.schedule, size: 12, color: onSale ? const Color(0xFFD32F2F) : const Color(0xFF9A8E8A)),
+                              const SizedBox(width: 3),
+                              Text(
+                                saleWindow,
+                                style: TextStyle(
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.w600,
+                                  color: onSale ? const Color(0xFFD32F2F) : const Color(0xFF9A8E8A),
+                                ),
+                              ),
+                            ],
+                          )
+                        else if (!isPermanent && durationDays != null)
+                          Text(
+                            '$durationDays일',
+                            style: const TextStyle(fontSize: 11, color: Color(0xFF9A8E8A), fontWeight: FontWeight.w600),
                           ),
-                        ),
                       ],
                     ),
                   ],
                 ),
               ),
+              const SizedBox(width: 6),
+              const Icon(Icons.chevron_right, size: 20, color: Color(0xFFB0A8A2)),
             ],
           ),
         ),
@@ -1746,6 +1760,23 @@ class _ShopScreenState extends State<ShopScreen> {
                       if (isSeason) _chip(l10n.shopTagSeason),
                     ],
                   ),
+                  if (_saleWindowText(item) != null) ...[
+                    const SizedBox(height: 10),
+                    Row(
+                      children: [
+                        Icon(Icons.schedule, size: 14, color: onSale ? const Color(0xFFD32F2F) : const Color(0xFF9A8E8A)),
+                        const SizedBox(width: 4),
+                        Text(
+                          '판매기간 ${_saleWindowText(item)}',
+                          style: TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w600,
+                            color: onSale ? const Color(0xFFD32F2F) : const Color(0xFF9A8E8A),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
                   const SizedBox(height: 18),
                   Row(
                     children: [

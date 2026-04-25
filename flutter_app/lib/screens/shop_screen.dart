@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import 'package:google_mobile_ads/google_mobile_ads.dart';
 import '../l10n/app_localizations.dart';
 import '../l10n/l10n_helpers.dart';
+import '../models/shop_visual.dart';
 import '../services/game_service.dart';
 import '../services/ad_service.dart';
 
@@ -26,6 +27,29 @@ class _ShopScreenState extends State<ShopScreen> {
     return item['name_$locale']?.toString().isNotEmpty == true
         ? item['name_$locale'].toString()
         : item['name_ko']?.toString() ?? '';
+  }
+
+  String _getLocalizedItemDescription(Map<String, dynamic> item) {
+    final locale = Localizations.localeOf(context).languageCode;
+    final localized = item['description_$locale']?.toString();
+    if (localized != null && localized.isNotEmpty) return localized;
+    return item['description_ko']?.toString() ?? '';
+  }
+
+  bool _isOnSale(Map<String, dynamic> item) {
+    final start = item['sale_start'];
+    final end = item['sale_end'];
+    if (start == null && end == null) return false;
+    final now = DateTime.now();
+    if (start != null) {
+      final st = DateTime.tryParse(start.toString());
+      if (st != null && now.isBefore(st)) return false;
+    }
+    if (end != null) {
+      final et = DateTime.tryParse(end.toString());
+      if (et != null && now.isAfter(et)) return false;
+    }
+    return true;
   }
 
   @override
@@ -735,15 +759,31 @@ class _ShopScreenState extends State<ShopScreen> {
         ),
       );
     }
-    return ListView.separated(
-      padding: const EdgeInsets.fromLTRB(16, 12, 16, 20),
-      itemCount: items.length,
-      separatorBuilder: (_, _) => const SizedBox(height: 8),
-      itemBuilder: (context, index) => _buildShopItem(context, game, items[index]),
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        // 2 columns on phones, 3 on tablets/landscape, 4 on wide.
+        final w = constraints.maxWidth;
+        final cols = w >= 900 ? 4 : (w >= 600 ? 3 : 2);
+        return GridView.builder(
+          padding: const EdgeInsets.fromLTRB(16, 12, 16, 20),
+          gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+            crossAxisCount: cols,
+            crossAxisSpacing: 10,
+            mainAxisSpacing: 10,
+            childAspectRatio: 0.78,
+          ),
+          itemCount: items.length,
+          itemBuilder: (context, index) => _buildShopCard(context, game, items[index]),
+        );
+      },
     );
   }
 
-  Widget _buildShopItem(
+  // Card-style replacement for the previous row layout. Uses the resolved
+  // visual (server config → legacy switch → category default) as the card's
+  // top half, with name/price/CTA stacked below. Sale + owned badges float
+  // over the visual area to stay readable on every gradient.
+  Widget _buildShopCard(
     BuildContext context,
     GameService game,
     Map<String, dynamic> item,
@@ -757,101 +797,140 @@ class _ShopScreenState extends State<ShopScreen> {
     final itemKey = item['item_key']?.toString() ?? '';
     final canBuy = game.gold >= price;
     final owned = game.inventoryItems.any((i) => i['item_key'] == itemKey);
+    final onSale = _isOnSale(item);
+    final l10n = L10n.of(context);
+
+    final visual = _resolveThumbnailStyle(itemKey, category, item);
+    final gradient = (visual['gradient'] as List<Color>?) ?? [Colors.white, Colors.grey.shade100];
+    final iconData = (visual['icon'] as IconData?) ?? Icons.flag;
+    final iconColor = (visual['iconColor'] as Color?) ?? const Color(0xFF888888);
+    final borderColor = (visual['borderColor'] as Color?) ?? const Color(0xFFE0D8D4);
 
     return InkWell(
       onTap: () => _showItemDetailDialog(context, item),
-      borderRadius: BorderRadius.circular(14),
+      borderRadius: BorderRadius.circular(16),
       child: Container(
-        padding: const EdgeInsets.all(14),
         decoration: BoxDecoration(
-          color: Colors.white.withValues(alpha: 0.95),
-          borderRadius: BorderRadius.circular(14),
-          border: Border.all(color: const Color(0xFFE0D8D4)),
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: borderColor.withValues(alpha: 0.6)),
         ),
-        child: Row(
+        clipBehavior: Clip.antiAlias,
+        child: Column(
           children: [
-            _buildItemThumbnail(category, name, isSeason, itemKey),
-            const SizedBox(width: 10),
+            // Visual panel
             Expanded(
+              child: Stack(
+                children: [
+                  Container(
+                    width: double.infinity,
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                        colors: gradient,
+                      ),
+                    ),
+                    child: Center(child: Icon(iconData, color: iconColor, size: 38)),
+                  ),
+                  if (owned)
+                    Positioned(
+                      top: 6,
+                      left: 6,
+                      child: _badge(l10n.shopItemOwned, const Color(0xFF7E57C2), const Color(0xFFEDE7F6)),
+                    ),
+                  if (isSeason)
+                    Positioned(
+                      top: 6,
+                      right: 6,
+                      child: _badge(l10n.shopTagSeason, const Color(0xFF1565C0), const Color(0xFFE3F2FD)),
+                    )
+                  else if (onSale)
+                    Positioned(
+                      top: 6,
+                      right: 6,
+                      child: _badge('SALE', const Color(0xFFD32F2F), const Color(0xFFFFEBEE)),
+                    ),
+                ],
+              ),
+            ),
+            // Footer: name, tag, price, CTA
+            Padding(
+              padding: const EdgeInsets.fromLTRB(8, 6, 8, 8),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
                     name,
-                    style: const TextStyle(
-                      fontSize: 14,
-                      fontWeight: FontWeight.bold,
-                      color: Color(0xFF5A4038),
-                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: Color(0xFF5A4038)),
                   ),
-                  const SizedBox(height: 4),
                   Text(
                     _buildItemTag(context, isSeason, isPermanent, durationDays),
-                    style: const TextStyle(fontSize: 12, color: Color(0xFF8A7A72)),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(fontSize: 10, color: Color(0xFF8A7A72)),
+                  ),
+                  const SizedBox(height: 4),
+                  Row(
+                    crossAxisAlignment: CrossAxisAlignment.center,
+                    children: [
+                      Expanded(
+                        child: owned && isPermanent
+                            ? const SizedBox.shrink()
+                            : Text('$price G',
+                                style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Color(0xFF4A4080))),
+                      ),
+                      SizedBox(
+                        height: 26,
+                        child: ElevatedButton(
+                          onPressed: (owned && isPermanent)
+                              ? null
+                              : (canBuy ? () {
+                                  if (owned) {
+                                    _showExtendConfirmDialog(context, game, item);
+                                  } else {
+                                    game.buyItem(itemKey);
+                                  }
+                                } : null),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: owned ? const Color(0xFFBBDEFB) : const Color(0xFFC7E6D0),
+                            foregroundColor: owned ? const Color(0xFF1565C0) : const Color(0xFF3A5A40),
+                            disabledBackgroundColor: const Color(0xFFE0E0E0),
+                            disabledForegroundColor: const Color(0xFF9A9A9A),
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                            padding: const EdgeInsets.symmetric(horizontal: 10),
+                            minimumSize: const Size(0, 26),
+                            tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                          ),
+                          child: Text(
+                            owned && isPermanent
+                                ? l10n.shopItemOwned
+                                : (owned ? l10n.shopButtonExtend : l10n.shopButtonPurchase),
+                            style: const TextStyle(fontSize: 11),
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
                 ],
               ),
             ),
-            const SizedBox(width: 8),
-            if (owned && isPermanent)
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                decoration: BoxDecoration(
-                  color: const Color(0xFFEDE7F6),
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: Text(
-                  L10n.of(context).shopItemOwned,
-                  style: const TextStyle(fontSize: 12, color: Color(0xFF7E57C2), fontWeight: FontWeight.w600),
-                ),
-              )
-            else
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.end,
-                children: [
-                  Text(
-                    '$price G',
-                    style: const TextStyle(
-                      fontSize: 13,
-                      fontWeight: FontWeight.bold,
-                      color: Color(0xFF4A4080),
-                    ),
-                  ),
-                  const SizedBox(height: 6),
-                  SizedBox(
-                    height: 28,
-                    child: ElevatedButton(
-                      onPressed: canBuy
-                          ? () {
-                              if (owned) {
-                                _showExtendConfirmDialog(context, game, item);
-                              } else {
-                                game.buyItem(itemKey);
-                              }
-                            }
-                          : null,
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: owned
-                            ? const Color(0xFFBBDEFB)
-                            : const Color(0xFFC7E6D0),
-                        foregroundColor: owned
-                            ? const Color(0xFF1565C0)
-                            : const Color(0xFF3A5A40),
-                        disabledBackgroundColor: const Color(0xFFE0E0E0),
-                        disabledForegroundColor: const Color(0xFF9A9A9A),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        padding: const EdgeInsets.symmetric(horizontal: 12),
-                      ),
-                      child: Text(owned ? L10n.of(context).shopButtonExtend : L10n.of(context).shopButtonPurchase, style: const TextStyle(fontSize: 12)),
-                    ),
-                  ),
-                ],
-              ),
           ],
         ),
       ),
+    );
+  }
+
+  Widget _badge(String text, Color fg, Color bg) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
+      decoration: BoxDecoration(
+        color: bg,
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: Text(text, style: TextStyle(fontSize: 10, color: fg, fontWeight: FontWeight.w700)),
     );
   }
 
@@ -986,7 +1065,7 @@ class _ShopScreenState extends State<ShopScreen> {
       ),
       child: Row(
         children: [
-          _buildItemThumbnail(category, name, item['is_season'] == true, item['item_key']?.toString()),
+          _buildItemThumbnail(category, name, item['is_season'] == true, item['item_key']?.toString(), item),
           const SizedBox(width: 10),
           Expanded(
             child: Column(
@@ -1062,8 +1141,8 @@ class _ShopScreenState extends State<ShopScreen> {
     );
   }
 
-  Widget _buildItemThumbnail(String category, String name, bool isSeason, [String? itemKey]) {
-    final style = _thumbnailStyleByKey(itemKey ?? '', category);
+  Widget _buildItemThumbnail(String category, String name, bool isSeason, [String? itemKey, Map<String, dynamic>? item]) {
+    final style = _resolveThumbnailStyle(itemKey ?? '', category, item);
     return Container(
       width: 52,
       height: 52,
@@ -1113,6 +1192,16 @@ class _ShopScreenState extends State<ShopScreen> {
         ],
       ),
     );
+  }
+
+  // Fallback chain: server-driven visual (admin-editable) → legacy hardcoded
+  // switch (kept so v2.3.0+26 items still render even if a backfill row is
+  // missing) → category default.
+  Map<String, Object> _resolveThumbnailStyle(String itemKey, String category, Map<String, dynamic>? item) {
+    final serverVisual = ShopVisual.fromItemMap(item);
+    final fromServer = serverVisual?.thumbnailLegacyMap();
+    if (fromServer != null) return fromServer;
+    return _thumbnailStyleByKey(itemKey, category);
   }
 
   Map<String, Object> _thumbnailStyleByKey(String itemKey, String category) {
@@ -1640,6 +1729,7 @@ class _ShopScreenState extends State<ShopScreen> {
       info.add(l10n.shopEffectMightySeasonStatsReset);
     }
 
+    final description = _getLocalizedItemDescription(item);
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
@@ -1648,7 +1738,15 @@ class _ShopScreenState extends State<ShopScreen> {
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            _buildItemThumbnail(category, name, isSeason, item['item_key']?.toString()),
+            _buildItemThumbnail(category, name, isSeason, item['item_key']?.toString(), item),
+            if (description.isNotEmpty) ...[
+              const SizedBox(height: 12),
+              Text(
+                description,
+                style: const TextStyle(fontSize: 13, color: Color(0xFF5A4038), height: 1.4),
+                textAlign: TextAlign.center,
+              ),
+            ],
             const SizedBox(height: 12),
             ...info.map(
               (t) => Padding(

@@ -886,11 +886,6 @@ class _ShopScreenState extends State<ShopScreen> {
                                 ),
                               ),
                             ],
-                          )
-                        else if (!isPermanent && durationDays != null)
-                          Text(
-                            '$durationDays일',
-                            style: const TextStyle(fontSize: 11, color: Color(0xFF9A8E8A), fontWeight: FontWeight.w600),
                           ),
                       ],
                     ),

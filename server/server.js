@@ -1173,6 +1173,24 @@ process.on('SIGTERM', async () => {
   }
 
   console.log(`[${INSTANCE_NAME}] drain initial pass complete; waiting for in-game rooms to finish`);
+
+  // Poll for full drain — when no rooms remain (all in-game rooms have
+  // finished and migrated), exit. Otherwise we'd sit on the empty
+  // process until docker's stop_grace_period (10 min) hits SIGKILL,
+  // which makes idle deploys feel slow.
+  const drainPoll = setInterval(() => {
+    if (lobby.rooms.size === 0) {
+      clearInterval(drainPoll);
+      console.log(`[${INSTANCE_NAME}] drain complete — closing server and exiting`);
+      try {
+        server.close();
+        wss.close();
+      } catch (_) { /* ignore */ }
+      // Force exit shortly after — server.close() can hang on lingering
+      // sockets even after we've closed individual WS connections.
+      setTimeout(() => process.exit(0), 1000);
+    }
+  }, 2000);
 });
 
 // Season cycle check every hour

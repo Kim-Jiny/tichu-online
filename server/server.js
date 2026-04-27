@@ -1074,16 +1074,96 @@ async function handleAdoptRoomsRequest(req, res) {
   res.end(JSON.stringify({ adopted }));
 }
 
-// SIGTERM handler — entry point for the blue/green drain flow. Step 1
-// just flips isDraining so /health returns 503. Migration of existing
-// rooms (steps 2-4 of the deploy plan) lands in subsequent commits.
+// Migrate one waiting room to the peer instance. No-op outside of drain
+// mode, single-instance deploys (PEER_URL unset), and rooms that still
+// have a game in progress. After a successful peer adopt, we close the
+// human players' WebSockets — their clients reconnect through the LB,
+// land on the peer (since this instance's /health is now 503), and the
+// peer's already-registered playerSessions entry routes them straight
+// into the same-id room. Bot-only rooms have no humans to migrate, so
+// they're just dropped.
+async function maybeMigrateRoom(roomId) {
+  if (!isDraining) return;
+  const room = lobby.getRoom(roomId);
+  if (!room || room.game) return;
+
+  const humans = room.players.filter(p => p && !p.isBot);
+  if (humans.length === 0) {
+    lobby.removeRoom(roomId);
+    return;
+  }
+
+  if (!PEER_URL || !INTERNAL_MIGRATE_TOKEN) {
+    // Single-instance fallback: no peer to migrate to. Best we can do
+    // is close the WS so the client tries to reconnect once we're back.
+    for (const p of humans) findWsByPlayerId(p.id)?.close(1001);
+    lobby.removeRoom(roomId);
+    return;
+  }
+
+  const data = serializeRoom(room);
+  if (!data) {
+    lobby.removeRoom(roomId);
+    return;
+  }
+
+  try {
+    const r = await fetch(`${PEER_URL}/internal/adopt-rooms`, {
+      method: 'POST',
+      headers: {
+        'X-Internal-Token': INTERNAL_MIGRATE_TOKEN,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ rooms: [data] }),
+    });
+    if (!r.ok) throw new Error(`peer responded ${r.status}`);
+    console.log(`[${INSTANCE_NAME}] migrated ${roomId} to peer`);
+  } catch (err) {
+    console.error(`[${INSTANCE_NAME}] migrate ${roomId} failed:`, err.message || err);
+    // Failure is recoverable from the user's POV — when we close their
+    // WS below they'll reconnect to the peer's empty lobby and have to
+    // recreate the room. Game state is unaffected since this room had
+    // no game in progress.
+  }
+
+  for (const p of humans) findWsByPlayerId(p.id)?.close(1001);
+  lobby.removeRoom(roomId);
+}
+
+// SIGTERM handler — entry point for the blue/green drain flow.
+//   1. Flip isDraining so /health flips to 503 (LB stops sending us new
+//      connections; existing WS connections are unaffected).
+//   2. Migrate every waiting room (no game in progress) to the peer.
+//   3. Close every WS that isn't tied to a room — those users go
+//      straight to the peer's lobby on reconnect.
+//   4. Game-in-progress rooms keep playing here. scheduleAutoReturnToRoom
+//      will fire maybeMigrateRoom once each game ends, draining them
+//      one-by-one. The container's stop_grace_period (10m) is the cap.
 process.on('SIGTERM', async () => {
-  if (isDraining) return; // already draining
+  if (isDraining) return;
   console.log(`[${INSTANCE_NAME}] SIGTERM received — entering drain mode`);
   isDraining = true;
-  // No-op for now: the docker-compose stop_grace_period (10 min) gives
-  // us a full window to add the actual migration calls below in later
-  // commits without changing this hook signature.
+
+  // Snapshot first so concurrent room edits during migration don't
+  // mutate the iteration target.
+  const roomIds = [...lobby.rooms.keys()];
+  for (const id of roomIds) {
+    const room = lobby.getRoom(id);
+    if (!room || room.game) continue;
+    try { await maybeMigrateRoom(id); } catch (err) {
+      console.error(`[${INSTANCE_NAME}] drain migrate ${id}:`, err);
+    }
+  }
+
+  // Lobby users (no roomId) are easiest — just close, they'll reconnect
+  // to the peer fresh.
+  for (const ws of wss.clients) {
+    if (!ws.roomId) {
+      try { ws.close(1001); } catch (_) { /* ignore */ }
+    }
+  }
+
+  console.log(`[${INSTANCE_NAME}] drain initial pass complete; waiting for in-game rooms to finish`);
 });
 
 // Season cycle check every hour
@@ -2569,7 +2649,7 @@ function handleReturnToRoom(ws) {
 const autoReturnTimers = {};
 function scheduleAutoReturnToRoom(roomId) {
   if (autoReturnTimers[roomId]) return; // Already scheduled
-  autoReturnTimers[roomId] = setTimeout(() => {
+  autoReturnTimers[roomId] = setTimeout(async () => {
     delete autoReturnTimers[roomId];
     const room = lobby.getRoom(roomId);
     if (!room) return;
@@ -2583,6 +2663,19 @@ function scheduleAutoReturnToRoom(roomId) {
     if (!hasConnectedHuman) {
       removeRoomAndNotifySpectators(roomId);
       broadcastRoomList();
+      return;
+    }
+
+    // Drain hook: a room that's been waiting to migrate (game ended after
+    // SIGTERM) finally has its waiting-room state back. Hand it off to the
+    // peer now and close the players' WS so they end up in the migrated
+    // room on the new instance.
+    if (isDraining) {
+      try {
+        await maybeMigrateRoom(roomId);
+      } catch (err) {
+        console.error(`[${INSTANCE_NAME}] post-game migrate ${roomId}:`, err);
+      }
       return;
     }
 

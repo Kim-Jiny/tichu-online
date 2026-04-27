@@ -1256,8 +1256,20 @@ function _friendLead(game, botId, legalCards, suitCards, mightyCard) {
   // Effective non-trump top: a guaranteed trick the friend can take while
   // saving trump for ruffs later. Beats the trump-draw default — '선
   // 먹었을때 한 트릭이라도 해줄 수 있는 카드'.
+  //
+  // Trump-heavy opp guard: when ≥3 trumps still sit in opposition hands,
+  // leading a top in a suit that's ALREADY been led once invites a ruff
+  // (someone is likely void in that suit by now). Restrict to fresh
+  // (never-led) suits in that state; if no fresh-suit top is available,
+  // fall through to the trump-draw default below instead of taking the
+  // ruff risk. When trump is mostly drained (<3 in opp hands), any top
+  // is safe so the filter is skipped.
+  const oppTrumpCount = _countOpponentTrumps(game, botId);
+  const trumpHeavyOpp = oppTrumpCount >= 3;
+  const ledSuitsForTopGuard = trumpHeavyOpp ? _suitsAlreadyLed(game) : null;
   for (const [suit, cards] of Object.entries(suitCards)) {
     if (suit === game.trumpSuit) continue;
+    if (ledSuitsForTopGuard && ledSuitsForTopGuard.has(suit)) continue;
     const sorted = sortHigh(cards);
     if (_isEffectiveTopOfSuit(sorted[0], game)) return sorted[0];
   }

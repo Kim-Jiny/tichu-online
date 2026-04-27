@@ -1,0 +1,63 @@
+# nginx config template for the blue/green deploy.
+# deploy.sh substitutes {{ACTIVE}} with 'blue' or 'green' and writes the
+# result to /opt/services/proxy/conf/tichu.conf inside the nginx container's
+# config volume, then reloads. Existing WebSocket connections survive a
+# reload; only new connections see the new upstream.
+
+server {
+    listen 80;
+    server_name tichu.jiny.shop;
+
+    location /.well-known/acme-challenge/ {
+        root /var/www/certbot;
+    }
+
+    location / {
+        return 301 https://$host$request_uri;
+    }
+}
+
+upstream tichu_backend {
+    server tichu-online-{{ACTIVE}}:3000;
+    keepalive 16;
+}
+
+server {
+    listen 443 ssl;
+    http2 on;
+    server_name tichu.jiny.shop;
+
+    ssl_certificate /etc/letsencrypt/live/tichu.jiny.shop/fullchain.pem;
+    ssl_certificate_key /etc/letsencrypt/live/tichu.jiny.shop/privkey.pem;
+
+    # Docker's embedded DNS so the upstream container is re-resolved if
+    # the active slot's container is recreated mid-deploy.
+    resolver 127.0.0.11 valid=10s ipv6=off;
+
+    # Internal-only endpoints (room migration). nginx blocks them at the
+    # public edge; the in-network call from the peer container
+    # (http://tichu-online-blue:3000/internal/...) bypasses this since
+    # it never traverses the host's :443 listener.
+    location /internal/ {
+        deny all;
+        return 403;
+    }
+
+    location / {
+        proxy_pass http://tichu_backend;
+        proxy_http_version 1.1;
+
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection "upgrade";
+
+        # Long-lived WebSocket connections — keep idle reads/writes alive
+        # for a day so background-tabbed clients aren't kicked off.
+        proxy_read_timeout 86400;
+        proxy_send_timeout 86400;
+    }
+}

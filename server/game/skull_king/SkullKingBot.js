@@ -24,6 +24,8 @@ function decideSKBotAction(game, botId) {
 function decideBid(game, botId) {
   const hand = game.hands[botId] || [];
   const infos = hand.map(id => getCardInfo(id)).filter(Boolean);
+  const round = game.round;
+  const playerCount = game.playerCount;
 
   // Context for expansion synergy
   const hasWhiteWhale = infos.some(i => i.type === CARD_TYPE.WHITE_WHALE);
@@ -34,6 +36,38 @@ function decideBid(game, botId) {
   // White Whale synergy: nullifies opponents' specials, so high numbers become
   // much more likely to win when we also hold White Whale.
   const whiteWhaleSynergy = hasWhiteWhale && highNumbers.length >= 1;
+
+  // Player-count scaling: each card faces more competition with more players.
+  // 4p table is treated as the baseline; 2-3p inflate confidence, 5+ deflate.
+  // The relationship is sub-linear because high-value specials/blacks scale
+  // less than mid-range numbers.
+  const competitionFactor = (() => {
+    if (playerCount <= 2) return 1.18;
+    if (playerCount === 3) return 1.08;
+    if (playerCount === 4) return 1.00;
+    if (playerCount === 5) return 0.95;
+    if (playerCount === 6) return 0.92;
+    if (playerCount === 7) return 0.88;
+    return 0.85; // 8p
+  })();
+
+  // Round 1 is binary: 1 card, you either win it or you don't. Skip the
+  // continuous estimator and use a strict 'is this a likely winner?' check.
+  if (round === 1) {
+    const c = infos[0];
+    if (!c) return { type: 'submit_bid', bid: 0 };
+    let likelyWin = false;
+    if (c.type === CARD_TYPE.SKULL_KING) likelyWin = true;
+    else if (c.type === CARD_TYPE.PIRATE) likelyWin = true;
+    else if (c.type === CARD_TYPE.MERMAID) likelyWin = playerCount <= 4;
+    else if (c.type === CARD_TYPE.TIGRESS) likelyWin = playerCount <= 4;
+    else if (c.type === CARD_TYPE.NUMBER) {
+      if (c.suit === 'black' && c.value >= 13) likelyWin = true;
+      else if (c.suit === 'black' && c.value >= 11) likelyWin = playerCount <= 5;
+      else if (c.value === 13) likelyWin = playerCount <= 2;
+    }
+    return { type: 'submit_bid', bid: likelyWin ? 1 : 0 };
+  }
 
   let estimatedTricks = 0;
   for (const info of infos) {
@@ -46,8 +80,6 @@ function decideBid(game, botId) {
     } else if (info.type === CARD_TYPE.TIGRESS) {
       estimatedTricks += 0.5;
     } else if (info.type === CARD_TYPE.WHITE_WHALE) {
-      // With high numbers in hand, White Whale nullifies opponents' specials
-      // and our number wins → much more reliable trick.
       estimatedTricks += whiteWhaleSynergy ? 0.5 : 0.15;
     } else if (info.type === CARD_TYPE.NUMBER) {
       if (info.suit === 'black' && info.value >= 10) {
@@ -59,11 +91,60 @@ function decideBid(game, botId) {
       }
     }
     // Escapes, low numbers, Kraken, and Loot contribute 0 to trick count.
-    // Loot adds +20 bonus if bid is met, but doesn't win a trick itself.
   }
 
+  estimatedTricks *= competitionFactor;
+
+  // Position + table-state adjustment: a bidder going LATE sees the prior bids,
+  // and the running sum-of-bids vs total tricks tells them whether tricks are
+  // 'available' or 'over-claimed'. Last bidder gets the strongest signal.
+  const priorBids = [];
+  for (const pid of game.playerIds) {
+    if (pid === botId) continue;
+    const b = game.bids[pid];
+    if (typeof b === 'number') priorBids.push(b);
+  }
+  const biddersBefore = priorBids.length;
+  const isLastBidder = biddersBefore === playerCount - 1;
+  const isLateBidder = biddersBefore >= playerCount - 2 && playerCount >= 4;
+  if (priorBids.length > 0) {
+    const sumPrior = priorBids.reduce((s, b) => s + b, 0);
+    const tricksLeftToClaim = round - sumPrior;
+    const expectedShareLeft = tricksLeftToClaim / (playerCount - biddersBefore);
+    // Strong signal only for the last bidder (full info). Late bidders pull
+    // softly toward the expected share. Pull weight scales with confidence.
+    const pullStrength = isLastBidder ? 0.30 : isLateBidder ? 0.15 : 0;
+    if (pullStrength > 0) {
+      estimatedTricks = estimatedTricks * (1 - pullStrength) + expectedShareLeft * pullStrength;
+    }
+  }
+
+  // Score-gap risk dial: small bias when significantly behind/ahead. Larger
+  // tables produce wider gaps faster, so the thresholds scale with player
+  // count to avoid the dial flipping on every round at high seat counts.
+  if (round >= 3) {
+    const myScore = game.totalScores[botId] || 0;
+    const others = game.playerIds.filter(p => p !== botId);
+    const maxOther = others.reduce((m, p) => Math.max(m, game.totalScores[p] || 0), -Infinity);
+    const minOther = others.reduce((m, p) => Math.min(m, game.totalScores[p] || 0), Infinity);
+    const gapBehindLeader = maxOther - myScore;
+    const gapAheadOfLast = myScore - minOther;
+    const scaleUp = playerCount >= 5 ? 1.5 : 1.0;
+    if (gapBehindLeader >= 100 * scaleUp) estimatedTricks += 0.20;
+    else if (gapBehindLeader >= 50 * scaleUp) estimatedTricks += 0.08;
+    else if (gapAheadOfLast >= 80 * scaleUp) estimatedTricks -= 0.10;
+  }
+
+  // Bid 0 deserves an extra check: the round-bonus for hitting 0 (round*10)
+  // is large in late rounds, so a hand with no real winners should commit
+  // to 0 cleanly rather than risk a 1-bid that turns into a -10 penalty.
+  if (estimatedTricks < 0.4 && round >= 6) {
+    return { type: 'submit_bid', bid: 0 };
+  }
+
+  // Standard rounding, clamped to [0, round].
   const bid = Math.round(estimatedTricks);
-  return { type: 'submit_bid', bid: Math.min(Math.max(bid, 0), game.round) };
+  return { type: 'submit_bid', bid: Math.min(Math.max(bid, 0), round) };
 }
 
 function decidePlay(game, botId) {
@@ -75,18 +156,46 @@ function decidePlay(game, botId) {
   const tricksNeeded = bid - tricksWon;
   const tricksRemaining = (game.hands[botId] || []).length;
 
+  // Urgency mode flags drive how aggressively follow/lead picks burn high
+  // cards vs. preserve them for future tricks.
+  //   • mustWinAll: every remaining trick has to be ours, otherwise the bid
+  //     fails. Burn the strongest card available, every trick.
+  //   • impossible: bid is mathematically out of reach (need more tricks
+  //     than cards left). Stop hunting tricks — minimize damage by dumping
+  //     anything that won't accidentally win.
+  //   • surplus: we already over-met a high bid, or we're a 0-bidder still
+  //     in the safe zone. Avoid winning, period.
+  //   • cushion: we still need tricks but have headroom (tricksRemaining
+  //     bigger than tricksNeeded). Save high cards for when we genuinely
+  //     need them; happy to throw a trick we can't cheaply win.
+  const mustWinAll = tricksNeeded > 0 && tricksNeeded === tricksRemaining;
+  const impossible = tricksNeeded > tricksRemaining;
+  const surplus = bid > 0 && tricksWon > bid;
+  const zeroBidSafe = bid === 0 && tricksWon === 0;
+  const cushion = tricksNeeded > 0 && tricksNeeded < tricksRemaining;
+
+  const playCtx = { game, botId, mustWinAll, impossible, surplus, zeroBidSafe, cushion,
+                    tricksNeeded, tricksRemaining };
+
   // Leading the trick
   if (game.currentTrick.length === 0) {
-    return decideLeadCard(legalCards, tricksNeeded, tricksRemaining);
+    return decideLeadCard(legalCards, tricksNeeded, tricksRemaining, playCtx);
   }
 
   // Following
-  return decideFollowCard(game, botId, legalCards, tricksNeeded);
+  return decideFollowCard(game, botId, legalCards, tricksNeeded, playCtx);
 }
 
-function decideLeadCard(legalCards, tricksNeeded, tricksRemaining) {
+function decideLeadCard(legalCards, tricksNeeded, tricksRemaining, ctx = {}) {
   const infos = legalCards.map(id => ({ id, info: getCardInfo(id) }));
 
+  // Impossible: bid out of reach. Lead a throwaway and stop burning highs —
+  // every trick we accidentally take from here is just damage we already ate.
+  if (ctx.impossible) {
+    return _leadDumpWeakest(infos);
+  }
+
+  // mustWinAll fires the same 'lead strong' branch but with a cleaner reason.
   if (tricksNeeded > 0) {
     // Need tricks: lead strong
     // Prefer SK > Pirate > high black > high number
@@ -140,7 +249,27 @@ function decideLeadCard(legalCards, tricksNeeded, tricksRemaining) {
   return makePlayAction(legalCards[0], getCardInfo(legalCards[0]));
 }
 
-function decideFollowCard(game, botId, legalCards, tricksNeeded) {
+// Shared 'lead something we DON'T want to take' helper: prefers Escape,
+// then Loot, then a low number, then specials we'd rather keep buried.
+function _leadDumpWeakest(infos) {
+  const escape = infos.find(c => c.info.type === CARD_TYPE.ESCAPE);
+  if (escape) return makePlayAction(escape.id, escape.info);
+  const loot = infos.find(c => c.info.type === CARD_TYPE.LOOT);
+  if (loot) return makePlayAction(loot.id, loot.info);
+  const tigress = infos.find(c => c.info.type === CARD_TYPE.TIGRESS);
+  if (tigress) return makePlayAction(tigress.id, tigress.info, 'escape');
+  const numbers = infos
+    .filter(c => c.info.type === CARD_TYPE.NUMBER)
+    .sort((a, b) => a.info.value - b.info.value);
+  if (numbers.length > 0) return makePlayAction(numbers[0].id, numbers[0].info);
+  const kraken = infos.find(c => c.info.type === CARD_TYPE.KRAKEN);
+  if (kraken) return makePlayAction(kraken.id, kraken.info);
+  const whale = infos.find(c => c.info.type === CARD_TYPE.WHITE_WHALE);
+  if (whale) return makePlayAction(whale.id, whale.info);
+  return makePlayAction(infos[0].id, infos[0].info);
+}
+
+function decideFollowCard(game, botId, legalCards, tricksNeeded, ctx = {}) {
   const infos = legalCards.map(id => ({ id, info: getCardInfo(id) }));
 
   // Analyze what's on the table
@@ -341,6 +470,14 @@ function decideFollowCard(game, botId, legalCards, tricksNeeded) {
     return null;
   };
 
+  // Bid mathematically out of reach: stop hunting tricks. We still have
+  // suit-follow obligations, so dump the cheapest legal card.
+  if (ctx.impossible) {
+    const weak = playWeak();
+    if (weak) return weak;
+    return makePlayAction(legalCards[0], getCardInfo(legalCards[0]));
+  }
+
   // Kraken on the table → trick is voided. No card can win, no bonus is paid.
   // Burning a strong card (or our own Kraken/White Whale) is wasted — just
   // dump the weakest card regardless of whether we wanted the trick.
@@ -366,9 +503,9 @@ function decideFollowCard(game, botId, legalCards, tricksNeeded) {
   }
 
   if (tricksNeeded > 0) {
-    // Need to win this trick. When we fail to beat a special, we still need
-    // future tricks — dump while preserving high cards (don't fall back to
-    // playWeak's "highest loser" zero-bid clearance).
+    // Need to win this trick. mustWinAll burns the strongest available card
+    // every trick (no future opportunity to recover). cushion gets to skip
+    // expensive captures and try a cheap winner first; if none, dump.
 
     // SK on the table → play mermaid to capture (+50 bonus)
     if (hasSK) {
@@ -381,6 +518,12 @@ function decideFollowCard(game, botId, legalCards, tricksNeeded) {
     // Pirate on the table → need SK to beat it (or mermaid won't help here)
     if (hasPirate && !hasSK) {
       const sk = infos.find(c => c.info.type === CARD_TYPE.SKULL_KING);
+      // Cushion: burning SK to merely cover a Pirate (no SK+mermaid bonus
+      // here) is wasteful when we still have other tricks to make. Try a
+      // cheap winner first; only spend SK when the bid hangs on this trick.
+      if (sk && !ctx.cushion) return makePlayAction(sk.id, sk.info);
+      const cheap = pickCheapestWinner();
+      if (cheap) return cheap;
       if (sk) return makePlayAction(sk.id, sk.info);
       const dump = dumpPreservingHighs();
       if (dump) return dump;
@@ -389,16 +532,24 @@ function decideFollowCard(game, botId, legalCards, tricksNeeded) {
     // Mermaid on the table → pirate beats it
     if (hasMermaid && !hasSK && !hasPirate) {
       const pirate = infos.find(c => c.info.type === CARD_TYPE.PIRATE);
-      if (pirate) return makePlayAction(pirate.id, pirate.info);
+      if (pirate && !ctx.cushion) return makePlayAction(pirate.id, pirate.info);
       const tigress = infos.find(c => c.info.type === CARD_TYPE.TIGRESS);
+      if (tigress && !ctx.cushion) return makePlayAction(tigress.id, tigress.info, 'pirate');
+      const cheap = pickCheapestWinner();
+      if (cheap) return cheap;
+      if (pirate) return makePlayAction(pirate.id, pirate.info);
       if (tigress) return makePlayAction(tigress.id, tigress.info, 'pirate');
-      // Can't beat mermaid → dump while preserving highs (no number ever beats a mermaid).
       const dump = dumpPreservingHighs();
       if (dump) return dump;
     }
 
-    // No special on table (or only numbers) → play strong
+    // No special on table (or only numbers) → play strong, but cushion
+    // tries cheap winner before burning specials.
     if (!hasSK && !hasPirate && !hasMermaid) {
+      if (ctx.cushion) {
+        const cheap = pickCheapestWinner();
+        if (cheap) return cheap;
+      }
       const sk = infos.find(c => c.info.type === CARD_TYPE.SKULL_KING);
       if (sk) return makePlayAction(sk.id, sk.info);
       const pirate = infos.find(c => c.info.type === CARD_TYPE.PIRATE);

@@ -996,6 +996,23 @@ function _governmentLead(game, botId, legalCards, suitCards, mightyCard) {
   // Phase 1: Mighty (sure winner in all cases)
   if (legalCards.includes(mightyCard)) return mightyCard;
 
+  // Proactive joker lead: joker has no power in the last trick by default,
+  // so hoarding it risks (a) opp's joker-call forcing it out at a bad tempo
+  // or (b) burning into the weak last-trick. If declarer doesn't hold the
+  // joker-call card (or in NT where it doesn't exist), they don't control
+  // the joker-call timing — cash the joker on the very next leading turn
+  // after Mighty (trick 2+) instead. Skipped when the lastTrickJokerPower
+  // house option is on (joker stays viable to the end then).
+  if (legalCards.includes('mighty_joker')
+      && game.tricks.length >= 1
+      && !game.options.lastTrickJokerPower) {
+    const jokerCallCard = game.getJokerCallCard();
+    const hasJokerCallControl = !!jokerCallCard && legalCards.includes(jokerCallCard);
+    if (!hasJokerCallControl) {
+      return 'mighty_joker';
+    }
+  }
+
   // Friend-bait helper: lead a low non-A/non-friend card in the friend-card
   // suit so the friend can cover with their A/K and reveal themselves. Skipped
   // for joker / first-trick / Mighty-friends / no-friend variants where the

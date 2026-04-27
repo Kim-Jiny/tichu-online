@@ -851,6 +851,81 @@ function formatDatetimeLocal(d) {
   return `${p.year}-${p.month}-${p.day}T${p.hour}:${p.minute}`;
 }
 
+// Material icon names exposed in the admin visual editor. Keep in sync with
+// the icon set the Flutter renderer recognises (lib/widgets/shop_visual.dart
+// IconData mapping). Adding a new entry here without registering it on the
+// client will fall back to a default icon.
+const SHOP_VISUAL_ICONS = [
+  'auto_awesome', 'local_florist', 'spa', 'wb_twilight', 'emoji_events',
+  'cake', 'shield', 'flash_on', 'local_fire_department', 'anchor',
+  'psychology', 'star', 'theater_comedy', 'military_tech', 'workspace_premium',
+  'emoji_nature', 'security', 'sentiment_very_dissatisfied', 'visibility_off',
+  'whatshot', 'ac_unit', 'diamond', 'blur_on', 'bolt', 'style', 'elderly',
+  'cloud', 'wb_sunny', 'coffee', 'filter_vintage', 'nights_stay', 'park',
+  'waves', 'icecream', 'brightness_7', 'healing', 'local_hospital',
+  'analytics', 'restart_alt', 'handyman', 'flag', 'badge', 'palette',
+  'card_giftcard', 'celebration', 'verified', 'rocket_launch', 'pets',
+];
+
+// effect_type values the server actually understands. Admin can choose a
+// type from this list and tweak effect_value, but cannot invent a brand new
+// effect category from the form (would need server-side handling).
+const SHOP_EFFECT_TYPES = [
+  'leave_count_reduce', 'leave_count_reset',
+  'nickname_change', 'stats_reset',
+  'season_stats_reset', 'tichu_season_stats_reset',
+  'sk_season_stats_reset', 'mighty_season_stats_reset',
+];
+
+function _normalizeHexColor(input, fallback) {
+  if (typeof input !== 'string') return fallback;
+  const m = input.trim().match(/^#?([0-9a-fA-F]{6})$/);
+  return m ? `#${m[1].toUpperCase()}` : fallback;
+}
+
+// Build the visual JSON object from the form body. Returns null when the
+// form opts out of visual config so the caller can leave metadata.visual
+// untouched (skipping the field in the form preserves admin's previous
+// edits if the route re-submits).
+function buildVisualFromBody(body) {
+  if (body.visual_disabled === 'on') return null;
+  const icon = (body.visual_icon || '').toString().trim();
+  const iconColor   = _normalizeHexColor(body.visual_iconColor,   '#666666');
+  const borderColor = _normalizeHexColor(body.visual_borderColor, '#DDDDDD');
+  const bgKind = body.visual_bg_kind === 'solid' ? 'solid' : 'gradient';
+  const thumbnail = { icon: icon || 'flag', iconColor, borderColor };
+  if (bgKind === 'solid') {
+    thumbnail.background = {
+      kind: 'solid',
+      color: _normalizeHexColor(body.visual_bg_solid, '#FFFFFF'),
+    };
+  } else {
+    const stop0 = _normalizeHexColor(body.visual_bg_stop0, '#FFFFFF');
+    const stop1 = _normalizeHexColor(body.visual_bg_stop1, '#EEEEEE');
+    const angle = parseInt(body.visual_bg_angle, 10);
+    thumbnail.background = {
+      kind: 'gradient',
+      angle: Number.isFinite(angle) ? Math.max(0, Math.min(360, angle)) : 0,
+      stops: [{ color: stop0, at: 0.0 }, { color: stop1, at: 1.0 }],
+    };
+  }
+  const out = { version: 1, thumbnail };
+  if (body.visual_preview_enabled === 'on') {
+    const p0 = _normalizeHexColor(body.visual_preview_stop0, '#FFFFFF');
+    const p1 = _normalizeHexColor(body.visual_preview_stop1, '#EEEEEE');
+    out.preview = {
+      background: {
+        kind: 'gradient', angle: 0,
+        stops: [{ color: p0, at: 0.0 }, { color: p1, at: 1.0 }],
+      },
+    };
+  }
+  if (body.visual_text_color) {
+    out.text = { color: _normalizeHexColor(body.visual_text_color, '#FFFFFF') };
+  }
+  return out;
+}
+
 function shopForm(action, values, isEdit = false) {
   const v = (key, def = '') => {
     const val = values[key];
@@ -868,7 +943,45 @@ function shopForm(action, values, isEdit = false) {
     `<option value="${c}" ${v('category') === c ? 'selected' : ''}>${c}</option>`
   ).join('');
 
-  return `<form method="POST" action="${action}">
+  // Pull existing visual (from row metadata) so the editor pre-fills
+  let visual = null;
+  if (values && values.metadata && typeof values.metadata === 'object') {
+    visual = values.metadata.visual || null;
+  } else if (typeof values?.metadata === 'string') {
+    try { visual = JSON.parse(values.metadata)?.visual || null; } catch (_) { /* noop */ }
+  }
+  // Form fields can also override directly (re-render after validation error)
+  const formVisual = (key, def) => {
+    if (values[`visual_${key}`] !== undefined) return values[`visual_${key}`];
+    return def;
+  };
+  const t = visual?.thumbnail || {};
+  const bg = t.background || { kind: 'gradient', stops: [{}, {}] };
+  const stop0 = bg.stops?.[0]?.color || '#FFFFFF';
+  const stop1 = bg.stops?.[1]?.color || '#EEEEEE';
+  const previewBg = visual?.preview?.background;
+  const pStop0 = previewBg?.stops?.[0]?.color || stop0;
+  const pStop1 = previewBg?.stops?.[1]?.color || stop1;
+
+  const iconName       = formVisual('icon', t.icon || 'flag');
+  const iconColor      = formVisual('iconColor',   t.iconColor   || '#666666');
+  const borderColor    = formVisual('borderColor', t.borderColor || '#DDDDDD');
+  const bgKind         = formVisual('bg_kind', bg.kind || 'gradient');
+  const bgAngle        = formVisual('bg_angle', bg.angle ?? 0);
+  const bgStop0        = formVisual('bg_stop0', stop0);
+  const bgStop1        = formVisual('bg_stop1', stop1);
+  const bgSolid        = formVisual('bg_solid', stop0);
+  const previewEnabled = formVisual('preview_enabled', visual?.preview ? 'on' : '') === 'on';
+  const previewStop0   = formVisual('preview_stop0', pStop0);
+  const previewStop1   = formVisual('preview_stop1', pStop1);
+  const textColor      = formVisual('text_color', visual?.text?.color || '');
+
+  const iconOptions = SHOP_VISUAL_ICONS.map(i => `<option value="${i}">`).join('');
+  const effectOptions = ['', ...SHOP_EFFECT_TYPES].map(e =>
+    `<option value="${e}" ${v('effect_type', '') === e ? 'selected' : ''}>${e || '-'}</option>`
+  ).join('');
+
+  return `<form method="POST" action="${action}" id="shopItemForm">
     <div class="form-grid">
       <label>아이템 키</label>
       <input type="text" name="item_key" value="${escapeHtml(v('item_key'))}" ${isEdit ? 'readonly style="background:#f0f0f0"' : 'required'} placeholder="예: banner_new">
@@ -878,8 +991,14 @@ function shopForm(action, values, isEdit = false) {
       <input type="text" name="name_en" value="${escapeHtml(v('name_en'))}" placeholder="Item name (English)">
       <label>이름 (Deutsch)</label>
       <input type="text" name="name_de" value="${escapeHtml(v('name_de'))}" placeholder="Artikelname (Deutsch)">
+      <label>설명 (한국어)</label>
+      <textarea name="description_ko" rows="2" style="padding:10px;border:1px solid #ddd;border-radius:8px;font-size:14px;font-family:inherit" placeholder="아이템 설명 (선택)">${escapeHtml(v('description_ko'))}</textarea>
+      <label>설명 (English)</label>
+      <textarea name="description_en" rows="2" style="padding:10px;border:1px solid #ddd;border-radius:8px;font-size:14px;font-family:inherit" placeholder="Item description (optional)">${escapeHtml(v('description_en'))}</textarea>
+      <label>설명 (Deutsch)</label>
+      <textarea name="description_de" rows="2" style="padding:10px;border:1px solid #ddd;border-radius:8px;font-size:14px;font-family:inherit" placeholder="Artikelbeschreibung (optional)">${escapeHtml(v('description_de'))}</textarea>
       <label>분류</label>
-      <select name="category" style="padding:10px;border:1px solid #ddd;border-radius:8px;font-size:14px">${categoryOptions}</select>
+      <select name="category" id="shopCategory" style="padding:10px;border:1px solid #ddd;border-radius:8px;font-size:14px">${categoryOptions}</select>
       <label>가격</label>
       <input type="number" name="price" value="${v('price', 0)}" min="0" style="padding:10px;border:1px solid #ddd;border-radius:8px;font-size:14px">
       <label>영구</label>
@@ -891,17 +1010,112 @@ function shopForm(action, values, isEdit = false) {
       <label>시즌 아이템</label>
       <input type="checkbox" name="is_season" ${checked('is_season', false)} style="width:20px;height:20px">
       <label>효과 유형</label>
-      <input type="text" name="effect_type" value="${escapeHtml(v('effect_type', ''))}" placeholder="예: leave_count_reduce">
+      <select name="effect_type" style="padding:10px;border:1px solid #ddd;border-radius:8px;font-size:14px">${effectOptions}</select>
       <label>효과 수치</label>
-      <input type="number" name="effect_value" value="${v('effect_value', '')}" style="padding:10px;border:1px solid #ddd;border-radius:8px;font-size:14px">
+      <input type="number" name="effect_value" value="${v('effect_value', '')}" style="padding:10px;border:1px solid #ddd;border-radius:8px;font-size:14px" placeholder="해당 효과의 수치 (예: 카운트 감소량)">
       <label>판매 시작</label>
       <input type="datetime-local" name="sale_start" value="${formatDatetimeLocal(v('sale_start'))}" style="padding:10px;border:1px solid #ddd;border-radius:8px;font-size:14px">
       <label>판매 종료</label>
       <input type="datetime-local" name="sale_end" value="${formatDatetimeLocal(v('sale_end'))}" style="padding:10px;border:1px solid #ddd;border-radius:8px;font-size:14px">
     </div>
-    <div style="margin-top:16px">
+
+    <h3 style="margin-top:24px;margin-bottom:8px">시각 (썸네일)</h3>
+    <div class="muted" style="margin-bottom:12px">상점 카드 미리보기에 사용. 옛 앱은 무시하니 새 아이템도 안전합니다.</div>
+    <div style="display:grid;grid-template-columns:1fr 220px;gap:24px;align-items:start">
+      <div class="form-grid">
+        <label>아이콘</label>
+        <input list="visualIconList" name="visual_icon" value="${escapeHtml(iconName)}" placeholder="예: auto_awesome" style="padding:10px;border:1px solid #ddd;border-radius:8px;font-size:14px">
+        <datalist id="visualIconList">${iconOptions}</datalist>
+        <label>아이콘 색</label>
+        <input type="color" name="visual_iconColor" value="${escapeHtml(iconColor)}" style="height:40px;width:100%">
+        <label>테두리 색</label>
+        <input type="color" name="visual_borderColor" value="${escapeHtml(borderColor)}" style="height:40px;width:100%">
+        <label>배경 종류</label>
+        <select name="visual_bg_kind" id="visualBgKind" style="padding:10px;border:1px solid #ddd;border-radius:8px;font-size:14px">
+          <option value="gradient" ${bgKind === 'gradient' ? 'selected' : ''}>그라데이션</option>
+          <option value="solid" ${bgKind === 'solid' ? 'selected' : ''}>단색</option>
+        </select>
+        <label class="visualGradientOnly">그라데이션 시작</label>
+        <input type="color" name="visual_bg_stop0" value="${escapeHtml(bgStop0)}" class="visualGradientOnly" style="height:40px;width:100%">
+        <label class="visualGradientOnly">그라데이션 끝</label>
+        <input type="color" name="visual_bg_stop1" value="${escapeHtml(bgStop1)}" class="visualGradientOnly" style="height:40px;width:100%">
+        <label class="visualGradientOnly">각도 (0~360°)</label>
+        <input type="number" name="visual_bg_angle" value="${bgAngle}" min="0" max="360" class="visualGradientOnly" style="padding:10px;border:1px solid #ddd;border-radius:8px;font-size:14px">
+        <label class="visualSolidOnly">단색</label>
+        <input type="color" name="visual_bg_solid" value="${escapeHtml(bgSolid)}" class="visualSolidOnly" style="height:40px;width:100%">
+        <label>제목/라벨 색 (선택)</label>
+        <input type="color" name="visual_text_color" value="${escapeHtml(textColor || '#FFFFFF')}" style="height:40px;width:100%">
+      </div>
+      <div>
+        <div class="muted" style="font-size:11px;margin-bottom:6px">미리보기</div>
+        <div id="visualPreviewCard" style="border-radius:14px;padding:18px;text-align:center;border:2px solid #ddd;min-height:90px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px">
+          <span class="material-icons" id="visualPreviewIcon" style="font-size:36px">flag</span>
+          <div id="visualPreviewLabel" style="font-size:12px;font-weight:600;color:#444">미리보기</div>
+        </div>
+      </div>
+    </div>
+
+    <h3 style="margin-top:20px;margin-bottom:8px">시각 (인게임 미리보기 — 배너 한정)</h3>
+    <label style="display:flex;align-items:center;gap:8px;margin-bottom:8px">
+      <input type="checkbox" name="visual_preview_enabled" ${previewEnabled ? 'checked' : ''} id="visualPreviewToggle">
+      <span>인게임에서 다른 그라데이션을 사용 (체크하지 않으면 썸네일 그라데이션 사용)</span>
+    </label>
+    <div id="visualPreviewSection" class="form-grid" style="${previewEnabled ? '' : 'display:none'}">
+      <label>인게임 시작 색</label>
+      <input type="color" name="visual_preview_stop0" value="${escapeHtml(previewStop0)}" style="height:40px;width:100%">
+      <label>인게임 끝 색</label>
+      <input type="color" name="visual_preview_stop1" value="${escapeHtml(previewStop1)}" style="height:40px;width:100%">
+    </div>
+
+    <div style="margin-top:24px">
       <button type="submit" class="btn btn-primary">${isEdit ? '저장' : '추가'}</button>
     </div>
+
+    <link rel="stylesheet" href="https://fonts.googleapis.com/icon?family=Material+Icons">
+    <script>
+      (function() {
+        const previewCard  = document.getElementById('visualPreviewCard');
+        const previewIcon  = document.getElementById('visualPreviewIcon');
+        const previewLabel = document.getElementById('visualPreviewLabel');
+        const bgKindSel    = document.getElementById('visualBgKind');
+        const previewToggle = document.getElementById('visualPreviewToggle');
+        const previewSection = document.getElementById('visualPreviewSection');
+        const $ = (name) => document.querySelector('[name="' + name + '"]');
+        const setVis = (sel, on) => document.querySelectorAll(sel).forEach(el => el.style.display = on ? '' : 'none');
+        function applyKind() {
+          const kind = bgKindSel.value;
+          setVis('.visualGradientOnly', kind === 'gradient');
+          setVis('.visualSolidOnly',    kind === 'solid');
+          render();
+        }
+        function applyPreviewToggle() {
+          previewSection.style.display = previewToggle.checked ? '' : 'none';
+        }
+        function render() {
+          const icon   = $('visual_icon').value || 'flag';
+          const iconC  = $('visual_iconColor').value;
+          const border = $('visual_borderColor').value;
+          const text   = $('visual_text_color').value;
+          previewIcon.textContent = icon;
+          previewIcon.style.color = iconC;
+          previewCard.style.border = '2px solid ' + border;
+          previewLabel.style.color = text;
+          if (bgKindSel.value === 'solid') {
+            previewCard.style.background = $('visual_bg_solid').value;
+          } else {
+            const a = parseInt($('visual_bg_angle').value, 10) || 0;
+            previewCard.style.background =
+              'linear-gradient(' + a + 'deg, ' + $('visual_bg_stop0').value + ', ' + $('visual_bg_stop1').value + ')';
+          }
+        }
+        bgKindSel.addEventListener('change', applyKind);
+        previewToggle.addEventListener('change', applyPreviewToggle);
+        document.querySelectorAll('[name^="visual_"]').forEach(el => el.addEventListener('input', render));
+        applyKind();
+        applyPreviewToggle();
+        render();
+      })();
+    </script>
   </form>`;
 }
 
@@ -911,6 +1125,9 @@ function parseShopFormBody(body) {
     name_ko: body.name_ko || '',
     name_en: body.name_en || '',
     name_de: body.name_de || '',
+    description_ko: body.description_ko || '',
+    description_en: body.description_en || '',
+    description_de: body.description_de || '',
     category: body.category || 'banner',
     price: parseInt(body.price) || 0,
     is_permanent: body.is_permanent === 'on',
@@ -921,6 +1138,7 @@ function parseShopFormBody(body) {
     effect_value: body.effect_value ? parseInt(body.effect_value) : null,
     sale_start: body.sale_start || null,
     sale_end: body.sale_end || null,
+    visual: buildVisualFromBody(body),
   };
 }
 

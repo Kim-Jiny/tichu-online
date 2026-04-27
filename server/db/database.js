@@ -1,7 +1,26 @@
 const { Pool } = require('pg');
 const bcrypt = require('bcrypt');
+const { VISUAL_BACKFILL } = require('./shop_visuals_seed');
 
 const SALT_ROUNDS = 10;
+
+// Idempotent backfill of tc_shop_items.metadata.visual. Skips any row that
+// already has a `visual` key under metadata, so admin-authored edits remain
+// the source of truth. New items added by admin start with their own visual
+// and are never touched here.
+async function backfillShopVisuals(client) {
+  const entries = Object.entries(VISUAL_BACKFILL);
+  if (entries.length === 0) return;
+  for (const [itemKey, visual] of entries) {
+    await client.query(
+      `UPDATE tc_shop_items
+         SET metadata = jsonb_set(COALESCE(metadata, '{}'::jsonb), '{visual}', $2::jsonb, true)
+       WHERE item_key = $1
+         AND (metadata IS NULL OR metadata->'visual' IS NULL)`,
+      [itemKey, JSON.stringify(visual)]
+    );
+  }
+}
 
 // PostgreSQL connection pool
 const isProduction = process.env.NODE_ENV === 'production';
@@ -200,6 +219,9 @@ async function initDatabase() {
     await client.query(`ALTER TABLE tc_shop_items ADD COLUMN IF NOT EXISTS name_ko VARCHAR(100) NOT NULL DEFAULT ''`);
     await client.query(`ALTER TABLE tc_shop_items ADD COLUMN IF NOT EXISTS name_en VARCHAR(100) NOT NULL DEFAULT ''`);
     await client.query(`ALTER TABLE tc_shop_items ADD COLUMN IF NOT EXISTS name_de VARCHAR(100) NOT NULL DEFAULT ''`);
+    await client.query(`ALTER TABLE tc_shop_items ADD COLUMN IF NOT EXISTS description_ko TEXT NOT NULL DEFAULT ''`);
+    await client.query(`ALTER TABLE tc_shop_items ADD COLUMN IF NOT EXISTS description_en TEXT NOT NULL DEFAULT ''`);
+    await client.query(`ALTER TABLE tc_shop_items ADD COLUMN IF NOT EXISTS description_de TEXT NOT NULL DEFAULT ''`);
     // Restore 'name' column if it was previously renamed away (rollback safety)
     await client.query(`ALTER TABLE tc_shop_items ADD COLUMN IF NOT EXISTS name VARCHAR(100) NOT NULL DEFAULT ''`);
     // Copy name → name_ko for existing rows where name_ko is empty
@@ -489,6 +511,11 @@ async function initDatabase() {
         duration_days = EXCLUDED.duration_days
       `
     );
+
+    // Backfill metadata.visual for items shipped without it. Only writes when
+    // metadata.visual is missing, so admin edits made later are never
+    // clobbered on subsequent boots.
+    await backfillShopVisuals(client);
 
     // Ad rewards table
     await client.query(`
@@ -1993,8 +2020,11 @@ async function getShopItems() {
   try {
     const result = await client.query(
       `
-      SELECT item_key, name_ko, name_ko AS name, name_en, name_de, category, price, is_season, is_permanent,
-             duration_days, is_purchasable, effect_type, effect_value, metadata
+      SELECT item_key, name_ko, name_ko AS name, name_en, name_de,
+             description_ko, description_en, description_de,
+             category, price, is_season, is_permanent,
+             duration_days, is_purchasable, effect_type, effect_value, metadata,
+             sale_start, sale_end
       FROM tc_shop_items
       WHERE is_purchasable = TRUE AND is_season = FALSE
         AND (sale_start IS NULL OR sale_start <= NOW())
@@ -2029,7 +2059,9 @@ async function getUserItems(nickname) {
     const result = await client.query(
       `
       SELECT ui.item_key, ui.acquired_at, ui.expires_at, ui.is_active,
-             si.name_ko, si.name_ko AS name, si.name_en, si.name_de, si.category, si.is_season, si.is_permanent,
+             si.name_ko, si.name_ko AS name, si.name_en, si.name_de,
+             si.description_ko, si.description_en, si.description_de,
+             si.category, si.is_season, si.is_permanent,
              si.duration_days, si.effect_type, si.effect_value, si.metadata
       FROM tc_user_items ui
       JOIN tc_shop_items si ON si.item_key = ui.item_key
@@ -4289,22 +4321,37 @@ async function getAllShopItemsAdmin() {
   }
 }
 
-// Add new shop item
+// Add new shop item. `data.visual` (object or null) populates metadata.visual
+// so the admin form can attach visual config without touching other metadata
+// keys; pass `data.metadata` to set arbitrary metadata directly.
 async function addShopItem(data) {
   const client = await pool.connect();
   try {
+    let metaObj = null;
+    if (data.metadata && typeof data.metadata === 'object') {
+      metaObj = { ...data.metadata };
+    }
+    if (data.visual !== undefined && data.visual !== null) {
+      metaObj = { ...(metaObj || {}), visual: data.visual };
+    }
+    const metadata = metaObj ? JSON.stringify(metaObj) : null;
     const result = await client.query(
       `INSERT INTO tc_shop_items
-        (item_key, name, name_ko, name_en, name_de, category, price, is_permanent, duration_days, is_purchasable, is_season, effect_type, effect_value, sale_start, sale_end)
-       VALUES ($1, $2, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)
+        (item_key, name, name_ko, name_en, name_de,
+         description_ko, description_en, description_de,
+         category, price, is_permanent, duration_days, is_purchasable, is_season,
+         effect_type, effect_value, sale_start, sale_end, metadata)
+       VALUES ($1, $2, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18::jsonb)
        RETURNING *`,
       [
         data.item_key, data.name_ko || '', data.name_en || '', data.name_de || '',
+        data.description_ko || '', data.description_en || '', data.description_de || '',
         data.category, data.price || 0,
         data.is_permanent !== false, data.duration_days || null,
         data.is_purchasable !== false, data.is_season || false,
         data.effect_type || null, data.effect_value || null,
         data.sale_start || null, data.sale_end || null,
+        metadata,
       ]
     );
     return { success: true, item: result.rows[0] };
@@ -4319,25 +4366,42 @@ async function addShopItem(data) {
   }
 }
 
-// Update shop item
+// Update shop item. When `data.visual` is supplied, only the metadata.visual
+// subkey is rewritten via jsonb_set so unrelated metadata (e.g. theme's
+// includesCardSkin flag) survives. Pass `data.visual = null` to clear it.
 async function updateShopItem(id, data) {
   const client = await pool.connect();
   try {
+    const hasVisualUpdate = Object.prototype.hasOwnProperty.call(data, 'visual');
+    let metadataExpr = 'metadata';
+    const params = [
+      id, data.name_ko || '', data.name_en || '', data.name_de || '',
+      data.description_ko || '', data.description_en || '', data.description_de || '',
+      data.category, data.price || 0,
+      data.is_permanent !== false, data.duration_days || null,
+      data.is_purchasable !== false, data.is_season || false,
+      data.effect_type || null, data.effect_value || null,
+      data.sale_start || null, data.sale_end || null,
+    ];
+    if (hasVisualUpdate) {
+      if (data.visual === null) {
+        metadataExpr = `COALESCE(metadata, '{}'::jsonb) #- '{visual}'`;
+      } else {
+        metadataExpr = `jsonb_set(COALESCE(metadata, '{}'::jsonb), '{visual}', $${params.length + 1}::jsonb, true)`;
+        params.push(JSON.stringify(data.visual));
+      }
+    }
     const result = await client.query(
       `UPDATE tc_shop_items
-       SET name = $2, name_ko = $2, name_en = $3, name_de = $4, category = $5, price = $6, is_permanent = $7,
-           duration_days = $8, is_purchasable = $9, is_season = $10,
-           effect_type = $11, effect_value = $12, sale_start = $13, sale_end = $14
+       SET name = $2, name_ko = $2, name_en = $3, name_de = $4,
+           description_ko = $5, description_en = $6, description_de = $7,
+           category = $8, price = $9, is_permanent = $10,
+           duration_days = $11, is_purchasable = $12, is_season = $13,
+           effect_type = $14, effect_value = $15, sale_start = $16, sale_end = $17,
+           metadata = ${metadataExpr}
        WHERE id = $1
        RETURNING *`,
-      [
-        id, data.name_ko || '', data.name_en || '', data.name_de || '',
-        data.category, data.price || 0,
-        data.is_permanent !== false, data.duration_days || null,
-        data.is_purchasable !== false, data.is_season || false,
-        data.effect_type || null, data.effect_value || null,
-        data.sale_start || null, data.sale_end || null,
-      ]
+      params
     );
     if (result.rows.length === 0) {
       return { success: false, messageKey: 'db_item_not_found' };

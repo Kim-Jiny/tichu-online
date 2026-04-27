@@ -1127,6 +1127,15 @@ async function maybeMigrateRoom(roomId) {
   }
 
   for (const p of humans) findWsByPlayerId(p.id)?.close(1001);
+
+  // Spectators don't get pre-registered on the peer (the room migrates
+  // back to a 'waiting' state with no game), so just drop them — their
+  // client reconnects to green's empty lobby. Without this they'd hang
+  // on a dead WS until docker SIGKILL.
+  for (const spectator of room.spectators || []) {
+    findWsByPlayerId(spectator.id)?.close(1001);
+  }
+
   lobby.removeRoom(roomId);
 }
 
@@ -2570,6 +2579,17 @@ async function handleLeaveRoom(ws) {
   }
   sendTo(ws, { type: 'room_left' });
   broadcastRoomList();
+
+  // During drain we want anyone returning to the lobby (player who left
+  // their seat OR spectator who stopped watching) to land on the peer's
+  // lobby instead of this dying instance. Close the WS after the
+  // room_left frame is queued; the client's reconnect logic re-opens
+  // through the LB → peer.
+  if (isDraining) {
+    setTimeout(() => {
+      try { ws.close(1001); } catch (_) { /* ignore */ }
+    }, 50);
+  }
 }
 
 async function handleLeaveGame(ws) {

@@ -805,10 +805,16 @@ class MightyGame {
       leadSuit = leadInfo.suit;
     }
 
-    // Joker call card led with jokerCall active → joker holder must play joker
+    // Joker call card led with jokerCall active → joker holder must play
+    // joker, UNLESS they also hold the Mighty (Mighty defends the call;
+    // joker-call cannot pull the Mighty out). Letting Mighty stand as a
+    // second legal option preserves the standard Korean-Mighty defense.
     const jokerCallCard = this.getJokerCallCard();
     if (leadCard === jokerCallCard && this.jokerCallActive && hand.includes('mighty_joker')) {
-      // Must play joker (unless it's the only card rule - simplified: must play joker)
+      const mightyCardForCall = this.getMightyCard();
+      if (mightyCardForCall && hand.includes(mightyCardForCall)) {
+        return ['mighty_joker', mightyCardForCall];
+      }
       return ['mighty_joker'];
     }
 

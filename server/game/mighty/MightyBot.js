@@ -929,6 +929,29 @@ function decidePlay(game, botId) {
   }
 
   const isLeading = game.currentTrick.length === 0;
+
+  // Joker-call defense: when joker-call is active and we hold both the
+  // joker and the Mighty, play Mighty to absorb the call. The joker-call
+  // can't actually pull the Mighty out — so this is a strict win (we keep
+  // the joker for later, and Mighty was already a 'spend it sometime'
+  // card). Server's _getLegalCards exposes both as legal in this state,
+  // and the bot should prefer Mighty here.
+  if (!isLeading) {
+    const leadCard = game.currentTrick[0]?.cardId;
+    const jokerCallCard = game.getJokerCallCard();
+    const jokerCallLed = leadCard === jokerCallCard
+      && game.jokerCallActive
+      && jokerCallCard != null;
+    if (jokerCallLed) {
+      const mightyCard = game.getMightyCard();
+      if (legalCards.includes('mighty_joker')
+          && mightyCard
+          && legalCards.includes(mightyCard)) {
+        return makePlayAction(mightyCard, game, botId);
+      }
+    }
+  }
+
   if (isLeading) {
     return makePlayAction(decideLeadCard(game, botId, legalCards), game, botId);
   } else {
@@ -1418,6 +1441,19 @@ function governmentFollow(game, botId, legalCards, winningCards, currentWinner, 
       }
       // Can't win — dump the safest card (no points, no trump)
       return getSafeDiscard(legalCards, game);
+    }
+    // Joker-friend reveal: when our friend card IS the joker, the only way
+    // to surface the partnership is to play it. Declarer just led, joker is
+    // legal (joker bypasses suit-follow), and joker beats everything except
+    // mighty — `winningCards.includes('mighty_joker')` already filters out
+    // first/last-trick weak-joker windows AND mighty-on-table windows.
+    // Cashing it here trades the joker for an immediate reveal so the team
+    // can coordinate the rest of the round.
+    if (game.friendCard === 'mighty_joker'
+        && !game.friendRevealed
+        && legalCards.includes('mighty_joker')
+        && winningCards.includes('mighty_joker')) {
+      return 'mighty_joker';
     }
     // Declarer is winning. If their card is an effective top (e.g., non-trump A), it will
     // almost always hold — just dump a non-trump point card. Don't trump-ruff our own ace.

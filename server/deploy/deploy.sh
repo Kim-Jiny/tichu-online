@@ -69,10 +69,12 @@ log "building + starting tichu-online-$INACTIVE"
 docker compose --profile "$INACTIVE" up -d --build "server-$INACTIVE"
 
 # ----- 4. Wait for /health on the new slot -----
+# Probe from inside the target container itself — node:20-alpine ships
+# with BusyBox wget, while the official nginx:latest image does not.
 log "waiting for /health on tichu-online-$INACTIVE (max ${HEALTH_TIMEOUT_SEC}s)"
 HEALTHY=0
 for i in $(seq 1 $HEALTH_TIMEOUT_SEC); do
-  if docker exec nginx wget -q -O- "http://tichu-online-$INACTIVE:3000/health" 2>/dev/null | grep -q OK; then
+  if docker exec "tichu-online-$INACTIVE" wget -q -O- "http://localhost:3000/health" 2>/dev/null | grep -q OK; then
     log "health OK after ${i}s"
     HEALTHY=1
     break

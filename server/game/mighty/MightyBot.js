@@ -1467,11 +1467,18 @@ function governmentFollow(game, botId, legalCards, winningCards, currentWinner, 
       // Can't win — dump the safest card (no points, no trump)
       return getSafeDiscard(legalCards, game);
     }
+    // Declarer is winning. If their card is an effective top (e.g., non-trump A), it will
+    // almost always hold — just dump a non-trump point card. Don't trump-ruff our own ace,
+    // and don't burn the joker just to reveal the partnership.
+    const winnerCard = getWinnerCardId(game);
+    if (_isEffectiveTopOfSuit(winnerCard, game)) {
+      return dumpSafe(legalCards, game);
+    }
     // Joker-friend reveal: when our friend card IS the joker, the only way
-    // to surface the partnership is to play it. Declarer just led, joker is
-    // legal (joker bypasses suit-follow), and joker beats everything except
-    // mighty — `winningCards.includes('mighty_joker')` already filters out
-    // first/last-trick weak-joker windows AND mighty-on-table windows.
+    // to surface the partnership is to play it. Declarer led a non-top card,
+    // joker is legal (joker bypasses suit-follow), and joker beats everything
+    // except mighty — `winningCards.includes('mighty_joker')` already filters
+    // out first/last-trick weak-joker windows AND mighty-on-table windows.
     // Cashing it here trades the joker for an immediate reveal so the team
     // can coordinate the rest of the round.
     if (game.friendCard === 'mighty_joker'
@@ -1479,12 +1486,6 @@ function governmentFollow(game, botId, legalCards, winningCards, currentWinner, 
         && legalCards.includes('mighty_joker')
         && winningCards.includes('mighty_joker')) {
       return 'mighty_joker';
-    }
-    // Declarer is winning. If their card is an effective top (e.g., non-trump A), it will
-    // almost always hold — just dump a non-trump point card. Don't trump-ruff our own ace.
-    const winnerCard = getWinnerCardId(game);
-    if (_isEffectiveTopOfSuit(winnerCard, game)) {
-      return dumpSafe(legalCards, game);
     }
     // Declarer led a non-top card (e.g., ♥10 while ♥J/Q/K/A are still unplayed)
     // and opp is still behind. If we don't cover, opp will cascade their point

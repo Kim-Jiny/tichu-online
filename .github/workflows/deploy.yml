@@ -16,5 +16,6 @@ jobs:
           key: ${{ secrets.SERVER_SSH_KEY }}
           port: ${{ secrets.SERVER_PORT }}
           passphrase: ${{ secrets.SERVER_SSH_PASSPHRASE }}
+          command_timeout: 15m
           script: |
             /opt/services/tichu-online/deploy.sh

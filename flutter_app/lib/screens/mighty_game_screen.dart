@@ -3016,11 +3016,21 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
           // for the receiving player (similar to declarer's kitty-pickup highlight).
           final isRedistCard = !isMightyCard && !isJokerCallCard && !isFriendCard && !isKittyCard
               && (state?.newlyReceivedCards.contains(cardId) ?? false);
-          // Trump suit border
+          // Trump suit border. After bidding, state.trumpSuit is the locked
+          // trump. During bidding it's still null, so fall back to the top
+          // bid's suit so the hand updates the trump preview live with each
+          // bid declared at the table.
           Color? trumpBorder;
-          if (state?.trumpSuit != null && state!.trumpSuit != 'no_trump') {
+          String? effectiveTrump = state?.trumpSuit;
+          if (state != null && state.phase == 'bidding') {
+            final bidSuit = state.currentBid['suit'];
+            if (bidSuit is String && bidSuit.isNotEmpty) {
+              effectiveTrump = bidSuit;
+            }
+          }
+          if (effectiveTrump != null && effectiveTrump != 'no_trump') {
             final cardSuit = _getCardSuit(cardId);
-            if (cardSuit == state.trumpSuit) {
+            if (cardSuit == effectiveTrump) {
               trumpBorder = PlayingCard.suitColors[cardSuit];
             }
           }

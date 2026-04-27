@@ -3206,6 +3206,14 @@ class GameService extends ChangeNotifier {
     }
   }
 
+  /// Mark a single notice as read and persist. No-op if already read.
+  void markNoticeRead(int noticeId) {
+    if (_readNoticeIds.add(noticeId)) {
+      notifyListeners();
+      _saveReadNoticeIds();
+    }
+  }
+
   Future<void> _saveReadNoticeIds() async {
     try {
       final prefs = await SharedPreferences.getInstance();

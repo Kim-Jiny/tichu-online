@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import 'package:google_mobile_ads/google_mobile_ads.dart';
 import '../l10n/app_localizations.dart';
 import '../l10n/l10n_helpers.dart';
+import '../models/shop_visual.dart';
 import '../services/game_service.dart';
 import '../services/ad_service.dart';
 
@@ -26,6 +27,51 @@ class _ShopScreenState extends State<ShopScreen> {
     return item['name_$locale']?.toString().isNotEmpty == true
         ? item['name_$locale'].toString()
         : item['name_ko']?.toString() ?? '';
+  }
+
+  String _getLocalizedItemDescription(Map<String, dynamic> item) {
+    final locale = Localizations.localeOf(context).languageCode;
+    final localized = item['description_$locale']?.toString();
+    if (localized != null && localized.isNotEmpty) return localized;
+    return item['description_ko']?.toString() ?? '';
+  }
+
+  bool _isOnSale(Map<String, dynamic> item) {
+    final start = item['sale_start'];
+    final end = item['sale_end'];
+    if (start == null && end == null) return false;
+    final now = DateTime.now();
+    if (start != null) {
+      final st = DateTime.tryParse(start.toString());
+      if (st != null && now.isBefore(st)) return false;
+    }
+    if (end != null) {
+      final et = DateTime.tryParse(end.toString());
+      if (et != null && now.isAfter(et)) return false;
+    }
+    return true;
+  }
+
+  // Returns a compact sale-window string for the row trailing slot:
+  // "10/01 ~ 10/15" if both bounds set, "~10/15" if only end, "10/01~" if
+  // only start. Returns null when neither is set so the caller can hide
+  // the slot entirely.
+  String? _saleWindowText(Map<String, dynamic> item) {
+    final s = item['sale_start'];
+    final e = item['sale_end'];
+    if (s == null && e == null) return null;
+    String? fmt(dynamic raw) {
+      if (raw == null) return null;
+      final dt = DateTime.tryParse(raw.toString())?.toLocal();
+      if (dt == null) return null;
+      return '${dt.month.toString().padLeft(2, '0')}/${dt.day.toString().padLeft(2, '0')}';
+    }
+    final sf = fmt(s);
+    final ef = fmt(e);
+    if (sf != null && ef != null) return '$sf ~ $ef';
+    if (ef != null) return '~$ef';
+    if (sf != null) return '$sf~';
+    return null;
   }
 
   @override
@@ -736,122 +782,157 @@ class _ShopScreenState extends State<ShopScreen> {
       );
     }
     return ListView.separated(
-      padding: const EdgeInsets.fromLTRB(16, 12, 16, 20),
+      padding: const EdgeInsets.fromLTRB(14, 10, 14, 20),
       itemCount: items.length,
       separatorBuilder: (_, _) => const SizedBox(height: 8),
-      itemBuilder: (context, index) => _buildShopItem(context, game, items[index]),
+      itemBuilder: (context, index) => _buildShopRow(context, game, items[index]),
     );
   }
 
-  Widget _buildShopItem(
+  // Row-style item with inline action: visual square left, content + CTA on
+  // the right. Tap CTA = buy/extend immediately (no double-tap). Tap card =
+  // open detail bottom sheet (drag-dismissable, less heavy than a dialog).
+  Widget _buildShopRow(
     BuildContext context,
     GameService game,
     Map<String, dynamic> item,
   ) {
+    final l10n = L10n.of(context);
     final name = _getLocalizedItemName(item);
+    final description = _getLocalizedItemDescription(item);
     final price = item['price'] ?? 0;
     final isSeason = item['is_season'] == true;
     final isPermanent = item['is_permanent'] == true;
     final durationDays = item['duration_days'];
-    final category = item['category']?.toString() ?? '';
     final itemKey = item['item_key']?.toString() ?? '';
-    final canBuy = game.gold >= price;
     final owned = game.inventoryItems.any((i) => i['item_key'] == itemKey);
+    final ownedPermanent = owned && isPermanent;
+    final onSale = _isOnSale(item);
+    final saleWindow = _saleWindowText(item);
 
-    return InkWell(
-      onTap: () => _showItemDetailDialog(context, item),
+    return Material(
+      color: Colors.white,
       borderRadius: BorderRadius.circular(14),
-      child: Container(
-        padding: const EdgeInsets.all(14),
-        decoration: BoxDecoration(
-          color: Colors.white.withValues(alpha: 0.95),
-          borderRadius: BorderRadius.circular(14),
-          border: Border.all(color: const Color(0xFFE0D8D4)),
-        ),
-        child: Row(
-          children: [
-            _buildItemThumbnail(category, name, isSeason, itemKey),
-            const SizedBox(width: 10),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    name,
-                    style: const TextStyle(
-                      fontSize: 14,
-                      fontWeight: FontWeight.bold,
-                      color: Color(0xFF5A4038),
-                    ),
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    _buildItemTag(context, isSeason, isPermanent, durationDays),
-                    style: const TextStyle(fontSize: 12, color: Color(0xFF8A7A72)),
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(width: 8),
-            if (owned && isPermanent)
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                decoration: BoxDecoration(
-                  color: const Color(0xFFEDE7F6),
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: Text(
-                  L10n.of(context).shopItemOwned,
-                  style: const TextStyle(fontSize: 12, color: Color(0xFF7E57C2), fontWeight: FontWeight.w600),
-                ),
-              )
-            else
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.end,
-                children: [
-                  Text(
-                    '$price G',
-                    style: const TextStyle(
-                      fontSize: 13,
-                      fontWeight: FontWeight.bold,
-                      color: Color(0xFF4A4080),
-                    ),
-                  ),
-                  const SizedBox(height: 6),
-                  SizedBox(
-                    height: 28,
-                    child: ElevatedButton(
-                      onPressed: canBuy
-                          ? () {
-                              if (owned) {
-                                _showExtendConfirmDialog(context, game, item);
-                              } else {
-                                game.buyItem(itemKey);
-                              }
-                            }
-                          : null,
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: owned
-                            ? const Color(0xFFBBDEFB)
-                            : const Color(0xFFC7E6D0),
-                        foregroundColor: owned
-                            ? const Color(0xFF1565C0)
-                            : const Color(0xFF3A5A40),
-                        disabledBackgroundColor: const Color(0xFFE0E0E0),
-                        disabledForegroundColor: const Color(0xFF9A9A9A),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12),
+      child: InkWell(
+        onTap: () => _showItemDetailSheet(context, item),
+        borderRadius: BorderRadius.circular(14),
+        child: Container(
+          padding: const EdgeInsets.all(10),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(14),
+            border: Border.all(color: const Color(0xFFE7E0DC)),
+          ),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              _buildShopRowVisual(item, 72),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Row(
+                      children: [
+                        Expanded(
+                          child: Text(
+                            name,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: Color(0xFF4A3A33)),
+                          ),
                         ),
-                        padding: const EdgeInsets.symmetric(horizontal: 12),
-                      ),
-                      child: Text(owned ? L10n.of(context).shopButtonExtend : L10n.of(context).shopButtonPurchase, style: const TextStyle(fontSize: 12)),
+                        if (ownedPermanent)
+                          _badge(l10n.shopItemOwned, const Color(0xFF7E57C2), const Color(0xFFEDE7F6))
+                        else if (isSeason)
+                          _badge(l10n.shopTagSeason, const Color(0xFF1565C0), const Color(0xFFE3F2FD))
+                        else if (onSale)
+                          _badge('SALE', const Color(0xFFD32F2F), const Color(0xFFFFEBEE)),
+                      ],
                     ),
-                  ),
-                ],
+                    const SizedBox(height: 2),
+                    Text(
+                      description.isNotEmpty
+                          ? description
+                          : _buildItemTag(context, isSeason, isPermanent, durationDays),
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(fontSize: 11.5, color: Color(0xFF8A7A72), height: 1.3),
+                    ),
+                    const SizedBox(height: 8),
+                    // Bottom row: gold price on the left, sale window on the
+                    // right (replaces the inline buy button — purchasing now
+                    // happens in the detail sheet so it's an explicit choice).
+                    Row(
+                      children: [
+                        if (!ownedPermanent) ...[
+                          const Icon(Icons.monetization_on, size: 14, color: Color(0xFFF0B400)),
+                          const SizedBox(width: 3),
+                          Text('$price', style: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: Color(0xFF4A4080))),
+                        ],
+                        const Spacer(),
+                        if (saleWindow != null)
+                          Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(Icons.schedule, size: 12, color: onSale ? const Color(0xFFD32F2F) : const Color(0xFF9A8E8A)),
+                              const SizedBox(width: 3),
+                              Text(
+                                saleWindow,
+                                style: TextStyle(
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.w600,
+                                  color: onSale ? const Color(0xFFD32F2F) : const Color(0xFF9A8E8A),
+                                ),
+                              ),
+                            ],
+                          ),
+                      ],
+                    ),
+                  ],
+                ),
               ),
-          ],
+              const SizedBox(width: 6),
+              const Icon(Icons.chevron_right, size: 20, color: Color(0xFFB0A8A2)),
+            ],
+          ),
         ),
       ),
+    );
+  }
+
+  Widget _buildShopRowVisual(Map<String, dynamic> item, double size) {
+    final category = item['category']?.toString() ?? '';
+    final itemKey = item['item_key']?.toString() ?? '';
+    final visual = _resolveThumbnailStyle(itemKey, category, item);
+    final gradient = (visual['gradient'] as List<Color>?) ?? [Colors.white, Colors.grey.shade100];
+    final iconData = (visual['icon'] as IconData?) ?? Icons.flag;
+    final iconColor = (visual['iconColor'] as Color?) ?? const Color(0xFF888888);
+    final borderColor = (visual['borderColor'] as Color?) ?? const Color(0xFFE0D8D4);
+    return Container(
+      width: size,
+      height: size,
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: gradient,
+        ),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: borderColor.withValues(alpha: 0.7)),
+      ),
+      child: Center(child: Icon(iconData, color: iconColor, size: size * 0.45)),
+    );
+  }
+
+  Widget _badge(String text, Color fg, Color bg) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
+      decoration: BoxDecoration(
+        color: bg,
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: Text(text, style: TextStyle(fontSize: 10, color: fg, fontWeight: FontWeight.w700)),
     );
   }
 
@@ -964,8 +1045,10 @@ class _ShopScreenState extends State<ShopScreen> {
   }
 
   Widget _buildInventoryItem(BuildContext context, Map<String, dynamic> item) {
+    final l10n = L10n.of(context);
     final game = context.read<GameService>();
     final name = _getLocalizedItemName(item);
+    final description = _getLocalizedItemDescription(item);
     final category = item['category']?.toString() ?? '';
     final isActive = item['is_active'] == true;
     final itemKey = item['item_key']?.toString() ?? '';
@@ -976,143 +1059,116 @@ class _ShopScreenState extends State<ShopScreen> {
     final isConsumable = category == 'utility' && !isPassiveUtility;
     final expiresAt = item['expires_at'];
     final expiresText = expiresAt != null ? _formatExpire(context, expiresAt) : null;
+    final equipped = isActive && !isPassiveUtility;
 
-    return Container(
-      padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: 0.95),
+    return Material(
+      color: Colors.white,
+      borderRadius: BorderRadius.circular(14),
+      child: InkWell(
+        onTap: () => _showItemDetailSheet(context, item),
         borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: const Color(0xFFE0D8D4)),
-      ),
-      child: Row(
-        children: [
-          _buildItemThumbnail(category, name, item['is_season'] == true, item['item_key']?.toString()),
-          const SizedBox(width: 10),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  children: [
-                    Expanded(
-                      child: Text(
-                        name,
-                        style: const TextStyle(
-                          fontSize: 14,
-                          fontWeight: FontWeight.bold,
-                          color: Color(0xFF5A4038),
-                        ),
-                      ),
-                    ),
-                    if (isActive || isPassiveUtility)
-                      Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                        decoration: BoxDecoration(
-                          color: const Color(0xFFDDECF7),
-                          borderRadius: BorderRadius.circular(10),
-                        ),
-                        child: Text(
-                          isPassiveUtility ? L10n.of(context).shopStatusActivated : L10n.of(context).shopStatusInUse,
-                          style: const TextStyle(fontSize: 11, color: Color(0xFF3E6D8E)),
-                        ),
-                      ),
-                  ],
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  expiresText ?? L10n.of(context).shopPermanentOwned,
-                  style: const TextStyle(fontSize: 12, color: Color(0xFF8A7A72)),
-                ),
-              ],
+        child: Container(
+          padding: const EdgeInsets.all(10),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(14),
+            border: Border.all(
+              color: equipped ? const Color(0xFF5C9DD6) : const Color(0xFFE7E0DC),
+              width: equipped ? 1.6 : 1,
             ),
           ),
-          const SizedBox(width: 8),
-          if (isPassiveUtility)
-            const SizedBox(width: 60)
-          else
-            SizedBox(
-              height: 28,
-              child: ElevatedButton(
-                onPressed: () {
-                  final key = item['item_key']?.toString() ?? '';
-                  if (effectType == 'nickname_change') {
-                    _showNicknameChangeDialog(context, game);
-                  } else if (isConsumable) {
-                    game.useItem(key);
-                  } else {
-                    game.equipItem(key);
-                  }
-                },
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: isConsumable ? const Color(0xFFFFCC80) : const Color(0xFFB3E5FC),
-                  foregroundColor: const Color(0xFF5A4038),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  padding: const EdgeInsets.symmetric(horizontal: 12),
-                ),
-                child: Text(
-                  isConsumable ? L10n.of(context).shopButtonUse : L10n.of(context).shopButtonEquip,
-                  style: const TextStyle(fontSize: 12),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              _buildShopRowVisual(item, 72),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Row(
+                      children: [
+                        Expanded(
+                          child: Text(
+                            name,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: Color(0xFF4A3A33)),
+                          ),
+                        ),
+                        if (equipped)
+                          _badge(l10n.shopStatusInUse, const Color(0xFF1565C0), const Color(0xFFDDECF7))
+                        else if (isPassiveUtility)
+                          _badge(l10n.shopStatusActivated, const Color(0xFF1565C0), const Color(0xFFDDECF7)),
+                      ],
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      description.isNotEmpty
+                          ? description
+                          : (expiresText ?? l10n.shopPermanentOwned),
+                      maxLines: description.isNotEmpty ? 2 : 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(fontSize: 11.5, color: Color(0xFF8A7A72), height: 1.3),
+                    ),
+                    if (description.isNotEmpty && expiresText != null) ...[
+                      const SizedBox(height: 2),
+                      Text(expiresText, style: const TextStyle(fontSize: 10.5, color: Color(0xFFA0938C))),
+                    ],
+                    const SizedBox(height: 8),
+                    Row(
+                      children: [
+                        const Spacer(),
+                        if (!isPassiveUtility)
+                          SizedBox(
+                            height: 30,
+                            child: ElevatedButton(
+                              onPressed: () {
+                                if (effectType == 'nickname_change') {
+                                  _showNicknameChangeDialog(context, game);
+                                } else if (isConsumable) {
+                                  game.useItem(itemKey);
+                                } else {
+                                  game.equipItem(itemKey);
+                                }
+                              },
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: isConsumable
+                                    ? const Color(0xFFFFE0B2)
+                                    : (equipped ? const Color(0xFFE3F2FD) : const Color(0xFFB3E5FC)),
+                                foregroundColor: const Color(0xFF4A3A33),
+                                elevation: 0,
+                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                                padding: const EdgeInsets.symmetric(horizontal: 14),
+                                minimumSize: const Size(0, 30),
+                                tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                              ),
+                              child: Text(
+                                isConsumable ? l10n.shopButtonUse : l10n.shopButtonEquip,
+                                style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w700),
+                              ),
+                            ),
+                          ),
+                      ],
+                    ),
+                  ],
                 ),
               ),
-            ),
-        ],
+            ],
+          ),
+        ),
       ),
     );
   }
 
-  Widget _buildItemThumbnail(String category, String name, bool isSeason, [String? itemKey]) {
-    final style = _thumbnailStyleByKey(itemKey ?? '', category);
-    return Container(
-      width: 52,
-      height: 52,
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: style['gradient'] as List<Color>,
-        ),
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: (style['borderColor'] as Color?) ?? const Color(0xFFE6DDD8)),
-      ),
-      child: Stack(
-        children: [
-          Center(
-            child: Icon(
-              style['icon'] as IconData,
-              color: style['iconColor'] as Color,
-              size: 26,
-            ),
-          ),
-          if (isSeason)
-            Positioned(
-              right: 2,
-              top: 2,
-              child: Container(
-                width: 16,
-                height: 16,
-                alignment: Alignment.center,
-                decoration: BoxDecoration(
-                  gradient: const LinearGradient(
-                    colors: [Color(0xFFFFD700), Color(0xFFFFA500)],
-                  ),
-                  borderRadius: BorderRadius.circular(8),
-                  border: Border.all(color: const Color(0xFFFFE08A), width: 0.5),
-                ),
-                child: const Text(
-                  'S',
-                  style: TextStyle(
-                    fontSize: 9,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.white,
-                  ),
-                ),
-              ),
-            ),
-        ],
-      ),
-    );
+  // Fallback chain: server-driven visual (admin-editable) → legacy hardcoded
+  // switch (kept so v2.3.0+26 items still render even if a backfill row is
+  // missing) → category default.
+  Map<String, Object> _resolveThumbnailStyle(String itemKey, String category, Map<String, dynamic>? item) {
+    final serverVisual = ShopVisual.fromItemMap(item);
+    final fromServer = serverVisual?.thumbnailLegacyMap();
+    if (fromServer != null) return fromServer;
+    return _thumbnailStyleByKey(itemKey, category);
   }
 
   Map<String, Object> _thumbnailStyleByKey(String itemKey, String category) {
@@ -1606,88 +1662,178 @@ class _ShopScreenState extends State<ShopScreen> {
     );
   }
 
-  void _showItemDetailDialog(BuildContext context, Map<String, dynamic> item) {
+  void _showItemDetailSheet(BuildContext context, Map<String, dynamic> item) {
+    final l10n = L10n.of(context);
+    final game = context.read<GameService>();
     final name = _getLocalizedItemName(item);
-    final price = item['price'] ?? 0;
+    final description = _getLocalizedItemDescription(item);
+    final price = (item['price'] ?? 0) as int;
     final isSeason = item['is_season'] == true;
     final isPermanent = item['is_permanent'] == true;
     final durationDays = item['duration_days'];
     final category = item['category']?.toString() ?? '';
-    final effectType = item['effect_type']?.toString() ?? '';
-    final effectValue = item['effect_value'];
+    final itemKey = item['item_key']?.toString() ?? '';
+    final canBuy = game.gold >= price;
+    final owned = game.inventoryItems.any((i) => i['item_key'] == itemKey);
+    final ownedPermanent = owned && isPermanent;
+    final onSale = _isOnSale(item);
 
-    final l10n = L10n.of(context);
-    final info = <String>[
-      _categoryLabel(context, category),
-      isSeason ? l10n.shopTagSeason : l10n.shopDetailNormalItem,
-      isPermanent ? l10n.shopDetailPermanent : (durationDays != null ? l10n.shopDetailDuration(durationDays as int) : l10n.shopTagDurationOnly),
-    ];
-    if (effectType == 'nickname_change') {
-      info.add(l10n.shopEffectNicknameChange);
-    } else if (effectType == 'leave_count_reduce') {
-      info.add(l10n.shopEffectLeaveReduce('${effectValue ?? 1}'));
-    } else if (effectType == 'leave_count_reset') {
-      info.add(l10n.shopEffectLeaveReset);
-    } else if (effectType == 'stats_reset') {
-      info.add(l10n.shopEffectStatsReset);
-    } else if (effectType == 'season_stats_reset') {
-      info.add(l10n.shopEffectSeasonStatsReset);
-    } else if (effectType == 'tichu_season_stats_reset') {
-      info.add(l10n.shopEffectTichuSeasonStatsReset);
-    } else if (effectType == 'sk_season_stats_reset') {
-      info.add(l10n.shopEffectSKSeasonStatsReset);
-    } else if (effectType == 'mighty_season_stats_reset') {
-      info.add(l10n.shopEffectMightySeasonStatsReset);
-    }
+    final visual = _resolveThumbnailStyle(itemKey, category, item);
+    final gradient = (visual['gradient'] as List<Color>?) ?? [Colors.white, Colors.grey.shade100];
+    final iconData = (visual['icon'] as IconData?) ?? Icons.flag;
+    final iconColor = (visual['iconColor'] as Color?) ?? const Color(0xFF888888);
 
-    showDialog(
+    showModalBottomSheet(
       context: context,
-      builder: (ctx) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: Text(name),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            _buildItemThumbnail(category, name, isSeason, item['item_key']?.toString()),
-            const SizedBox(height: 12),
-            ...info.map(
-              (t) => Padding(
-                padding: const EdgeInsets.only(bottom: 6),
-                child: Row(
-                  children: [
-                    const Icon(Icons.check_circle_outline,
-                        size: 16, color: Color(0xFF9A8E8A)),
-                    const SizedBox(width: 6),
-                    Expanded(
-                      child: Text(
-                        t,
-                        style: const TextStyle(fontSize: 12, color: Color(0xFF6A5A52)),
+      backgroundColor: Colors.transparent,
+      isScrollControlled: true,
+      builder: (ctx) {
+        return DraggableScrollableSheet(
+          initialChildSize: 0.55,
+          minChildSize: 0.35,
+          maxChildSize: 0.9,
+          expand: false,
+          builder: (_, scrollCtl) => Container(
+            decoration: const BoxDecoration(
+              color: Color(0xFFFAF6F2),
+              borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+            ),
+            child: SingleChildScrollView(
+              controller: scrollCtl,
+              padding: const EdgeInsets.fromLTRB(20, 10, 20, 24),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Center(
+                    child: Container(
+                      width: 40, height: 4,
+                      margin: const EdgeInsets.only(bottom: 16),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFD8CEC8),
+                        borderRadius: BorderRadius.circular(2),
                       ),
                     ),
+                  ),
+                  Container(
+                    height: 140,
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        begin: Alignment.topLeft, end: Alignment.bottomRight,
+                        colors: gradient,
+                      ),
+                      borderRadius: BorderRadius.circular(16),
+                    ),
+                    child: Center(child: Icon(iconData, color: iconColor, size: 64)),
+                  ),
+                  const SizedBox(height: 16),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: Text(name,
+                            style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Color(0xFF4A3A33))),
+                      ),
+                      if (ownedPermanent)
+                        _badge(l10n.shopItemOwned, const Color(0xFF7E57C2), const Color(0xFFEDE7F6))
+                      else if (isSeason)
+                        _badge(l10n.shopTagSeason, const Color(0xFF1565C0), const Color(0xFFE3F2FD))
+                      else if (onSale)
+                        _badge('SALE', const Color(0xFFD32F2F), const Color(0xFFFFEBEE)),
+                    ],
+                  ),
+                  if (description.isNotEmpty) ...[
+                    const SizedBox(height: 10),
+                    Text(description,
+                        style: const TextStyle(fontSize: 13.5, color: Color(0xFF5A4038), height: 1.5)),
                   ],
-                ),
+                  const SizedBox(height: 14),
+                  Wrap(
+                    spacing: 6, runSpacing: 6,
+                    children: [
+                      _chip(_categoryLabel(context, category)),
+                      _chip(isPermanent ? l10n.shopDetailPermanent
+                          : (durationDays != null ? l10n.shopDetailDuration(durationDays as int) : l10n.shopTagDurationOnly)),
+                      if (isSeason) _chip(l10n.shopTagSeason),
+                    ],
+                  ),
+                  if (_saleWindowText(item) != null) ...[
+                    const SizedBox(height: 10),
+                    Row(
+                      children: [
+                        Icon(Icons.schedule, size: 14, color: onSale ? const Color(0xFFD32F2F) : const Color(0xFF9A8E8A)),
+                        const SizedBox(width: 4),
+                        Text(
+                          '판매기간 ${_saleWindowText(item)}',
+                          style: TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w600,
+                            color: onSale ? const Color(0xFFD32F2F) : const Color(0xFF9A8E8A),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                  const SizedBox(height: 18),
+                  Row(
+                    children: [
+                      const Icon(Icons.monetization_on, size: 18, color: Color(0xFFF0B400)),
+                      const SizedBox(width: 4),
+                      Text('$price G',
+                          style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Color(0xFF4A4080))),
+                    ],
+                  ),
+                  const SizedBox(height: 14),
+                  SizedBox(
+                    width: double.infinity,
+                    height: 46,
+                    child: ElevatedButton(
+                      onPressed: ownedPermanent
+                          ? null
+                          : (canBuy
+                              ? () {
+                                  Navigator.pop(ctx);
+                                  if (owned) {
+                                    _showExtendConfirmDialog(context, game, item);
+                                  } else {
+                                    game.buyItem(itemKey);
+                                  }
+                                }
+                              : null),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: owned ? const Color(0xFFBBDEFB) : const Color(0xFFC7E6D0),
+                        foregroundColor: owned ? const Color(0xFF1565C0) : const Color(0xFF2E5A3A),
+                        disabledBackgroundColor: const Color(0xFFE5E5E5),
+                        disabledForegroundColor: const Color(0xFF9A9A9A),
+                        elevation: 0,
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                      ),
+                      child: Text(
+                        ownedPermanent
+                            ? l10n.shopItemOwned
+                            : (owned ? l10n.shopButtonExtend : l10n.shopButtonPurchase),
+                        style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w700),
+                      ),
+                    ),
+                  ),
+                ],
               ),
             ),
-            const SizedBox(height: 6),
-            Text(
-              l10n.shopPriceGold(price as int),
-              style: const TextStyle(
-                fontSize: 13,
-                fontWeight: FontWeight.bold,
-                color: Color(0xFF4A4080),
-              ),
-            ),
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx),
-            child: Text(l10n.commonClose),
           ),
-        ],
-      ),
+        );
+      },
     );
   }
+
+  Widget _chip(String label) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+      decoration: BoxDecoration(
+        color: const Color(0xFFEFE7E3),
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: Text(label, style: const TextStyle(fontSize: 11, color: Color(0xFF6A5A52), fontWeight: FontWeight.w600)),
+    );
+  }
+
 
   void _showNicknameChangeDialog(BuildContext context, GameService game) {
     final controller = TextEditingController();

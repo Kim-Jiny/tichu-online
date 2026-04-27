@@ -14,6 +14,12 @@ class NoticesScreen extends StatefulWidget {
 }
 
 class _NoticesScreenState extends State<NoticesScreen> {
+  // IDs the user has opened during this screen visit. We dim their NEW
+  // badge immediately after backing out of the detail view, even though
+  // the global read-set was already updated in initState — widget.unreadIds
+  // is the snapshot we display NEW from, so we mask off opened ones here.
+  final Set<int> _openedThisVisit = <int>{};
+
   @override
   void initState() {
     super.initState();
@@ -127,10 +133,18 @@ class _NoticesScreenState extends State<NoticesScreen> {
     final isPinned = item['is_pinned'] == true;
     final publishedAt = _formatShortDate(item['published_at']);
     final noticeId = item['id'];
-    final isNew = noticeId is int && widget.unreadIds.contains(noticeId);
+    final isNew = noticeId is int &&
+        widget.unreadIds.contains(noticeId) &&
+        !_openedThisVisit.contains(noticeId);
 
     return InkWell(
-      onTap: () => _showNoticeDetail(item, l10n),
+      onTap: () {
+        if (noticeId is int) {
+          context.read<GameService>().markNoticeRead(noticeId);
+          setState(() => _openedThisVisit.add(noticeId));
+        }
+        _showNoticeDetail(item, l10n);
+      },
       borderRadius: BorderRadius.circular(14),
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),

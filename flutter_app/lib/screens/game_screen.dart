@@ -6,6 +6,7 @@ import '../services/network_service.dart';
 import '../services/session_service.dart';
 import '../models/game_state.dart';
 import '../models/player.dart';
+import '../models/shop_visual.dart';
 import '../widgets/playing_card.dart';
 import '../widgets/connection_overlay.dart';
 import '../l10n/app_localizations.dart';
@@ -1539,6 +1540,20 @@ class _GameScreenState extends State<GameScreen> {
   }
 
   _BannerStyle _bannerStyle(String? key) {
+    if (key == null || key.isEmpty) return const _BannerStyle();
+    // Prefer admin-driven visual config: look the banner up in inventory
+    // (joined with shop metadata server-side) and parse `metadata.visual`.
+    final game = context.read<GameService>();
+    Map<String, dynamic>? item;
+    for (final i in game.inventoryItems) {
+      if (i['item_key'] == key) { item = i; break; }
+    }
+    final serverGradient = ShopVisual.fromItemMap(item)?.previewGradient();
+    if (serverGradient != null) {
+      return _BannerStyle(gradient: serverGradient);
+    }
+    // Legacy hardcoded gradients (kept so previously-equipped items render
+    // even when the inventory hasn't loaded yet or backfill is missing).
     switch (key) {
       case 'banner_pastel':
         return const _BannerStyle(gradient: LinearGradient(colors: [Color(0xFFF6C1C9), Color(0xFFF3E7EA)]));

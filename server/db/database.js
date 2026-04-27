@@ -1,7 +1,26 @@
 const { Pool } = require('pg');
 const bcrypt = require('bcrypt');
+const { VISUAL_BACKFILL } = require('./shop_visuals_seed');
 
 const SALT_ROUNDS = 10;
+
+// Idempotent backfill of tc_shop_items.metadata.visual. Skips any row that
+// already has a `visual` key under metadata, so admin-authored edits remain
+// the source of truth. New items added by admin start with their own visual
+// and are never touched here.
+async function backfillShopVisuals(client) {
+  const entries = Object.entries(VISUAL_BACKFILL);
+  if (entries.length === 0) return;
+  for (const [itemKey, visual] of entries) {
+    await client.query(
+      `UPDATE tc_shop_items
+         SET metadata = jsonb_set(COALESCE(metadata, '{}'::jsonb), '{visual}', $2::jsonb, true)
+       WHERE item_key = $1
+         AND (metadata IS NULL OR metadata->'visual' IS NULL)`,
+      [itemKey, JSON.stringify(visual)]
+    );
+  }
+}
 
 // PostgreSQL connection pool
 const isProduction = process.env.NODE_ENV === 'production';
@@ -9,6 +28,14 @@ const DEFAULT_LOCAL_URL = 'postgresql://jiny@localhost:5432/minigame';
 const pool = new Pool({
   connectionString: process.env.DATABASE_URL || DEFAULT_LOCAL_URL,
   ssl: isProduction ? { rejectUnauthorized: false } : false,
+});
+
+// Pin every session to UTC so naked TIMESTAMP columns (e.g. created_at)
+// are written/read as UTC wall-clock no matter what the host PG default is.
+// All admin KST conversions assume this; without it, a host configured to
+// Asia/Seoul stores KST wall-clock and the conversions shift by 9h.
+pool.on('connect', (client) => {
+  client.query("SET TIME ZONE 'UTC'").catch(() => {});
 });
 
 // Initialize database tables (tc_ prefix for tichu)
@@ -192,6 +219,9 @@ async function initDatabase() {
     await client.query(`ALTER TABLE tc_shop_items ADD COLUMN IF NOT EXISTS name_ko VARCHAR(100) NOT NULL DEFAULT ''`);
     await client.query(`ALTER TABLE tc_shop_items ADD COLUMN IF NOT EXISTS name_en VARCHAR(100) NOT NULL DEFAULT ''`);
     await client.query(`ALTER TABLE tc_shop_items ADD COLUMN IF NOT EXISTS name_de VARCHAR(100) NOT NULL DEFAULT ''`);
+    await client.query(`ALTER TABLE tc_shop_items ADD COLUMN IF NOT EXISTS description_ko TEXT NOT NULL DEFAULT ''`);
+    await client.query(`ALTER TABLE tc_shop_items ADD COLUMN IF NOT EXISTS description_en TEXT NOT NULL DEFAULT ''`);
+    await client.query(`ALTER TABLE tc_shop_items ADD COLUMN IF NOT EXISTS description_de TEXT NOT NULL DEFAULT ''`);
     // Restore 'name' column if it was previously renamed away (rollback safety)
     await client.query(`ALTER TABLE tc_shop_items ADD COLUMN IF NOT EXISTS name VARCHAR(100) NOT NULL DEFAULT ''`);
     // Copy name → name_ko for existing rows where name_ko is empty
@@ -468,9 +498,15 @@ async function initDatabase() {
         ('leave_reset', '탈주 카운트 초기화', '탈주 카운트 초기화', 'Leave Count Reset', 'Flucht-Zähler-Reset', 'utility', 2000, FALSE, TRUE, NULL, TRUE, 'leave_count_reset', NULL, '{}'::jsonb),
         ('mighty_trump_counter_7d', '마이티 기루다 카운터(7일)', '마이티 기루다 카운터(7일)', 'Mighty Trump Counter (7d)', 'Mighty-Trumpfzähler (7T)', 'utility', 1000, FALSE, FALSE, 7, TRUE, NULL, NULL, '{}'::jsonb),
         ('mighty_prev_trick_7d', '마이티 이전 트릭 확인(7일)', '마이티 이전 트릭 확인(7일)', 'Mighty Previous Trick Viewer (7d)', 'Mighty-Vorheriger-Stich-Anzeige (7T)', 'utility', 1000, FALSE, FALSE, 7, TRUE, NULL, NULL, '{}'::jsonb),
-        ('banner_season_gold', '시즌 골드 배너', '시즌 골드 배너', 'Season Gold Banner', 'Saison-Gold-Banner', 'banner', 0, TRUE, FALSE, 30, FALSE, NULL, NULL, '{}'::jsonb),
-        ('banner_season_silver', '시즌 실버 배너', '시즌 실버 배너', 'Season Silver Banner', 'Saison-Silber-Banner', 'banner', 0, TRUE, FALSE, 30, FALSE, NULL, NULL, '{}'::jsonb),
-        ('banner_season_bronze', '시즌 브론즈 배너', '시즌 브론즈 배너', 'Season Bronze Banner', 'Saison-Bronze-Banner', 'banner', 0, TRUE, FALSE, 30, FALSE, NULL, NULL, '{}'::jsonb)
+        ('banner_season_gold', '티츄 시즌 골드 배너', '티츄 시즌 골드 배너', 'Tichu Season Gold Banner', 'Tichu-Saison-Gold-Banner', 'banner', 0, TRUE, FALSE, 30, FALSE, NULL, NULL, '{}'::jsonb),
+        ('banner_season_silver', '티츄 시즌 실버 배너', '티츄 시즌 실버 배너', 'Tichu Season Silver Banner', 'Tichu-Saison-Silber-Banner', 'banner', 0, TRUE, FALSE, 30, FALSE, NULL, NULL, '{}'::jsonb),
+        ('banner_season_bronze', '티츄 시즌 브론즈 배너', '티츄 시즌 브론즈 배너', 'Tichu Season Bronze Banner', 'Tichu-Saison-Bronze-Banner', 'banner', 0, TRUE, FALSE, 30, FALSE, NULL, NULL, '{}'::jsonb),
+        ('banner_sk_season_gold', '스컬킹 시즌 골드 배너', '스컬킹 시즌 골드 배너', 'Skull King Season Gold Banner', 'Skull-King-Saison-Gold-Banner', 'banner', 0, TRUE, FALSE, 30, FALSE, NULL, NULL, '{}'::jsonb),
+        ('banner_sk_season_silver', '스컬킹 시즌 실버 배너', '스컬킹 시즌 실버 배너', 'Skull King Season Silver Banner', 'Skull-King-Saison-Silber-Banner', 'banner', 0, TRUE, FALSE, 30, FALSE, NULL, NULL, '{}'::jsonb),
+        ('banner_sk_season_bronze', '스컬킹 시즌 브론즈 배너', '스컬킹 시즌 브론즈 배너', 'Skull King Season Bronze Banner', 'Skull-King-Saison-Bronze-Banner', 'banner', 0, TRUE, FALSE, 30, FALSE, NULL, NULL, '{}'::jsonb),
+        ('banner_mighty_season_gold', '마이티 시즌 골드 배너', '마이티 시즌 골드 배너', 'Mighty Season Gold Banner', 'Mighty-Saison-Gold-Banner', 'banner', 0, TRUE, FALSE, 30, FALSE, NULL, NULL, '{}'::jsonb),
+        ('banner_mighty_season_silver', '마이티 시즌 실버 배너', '마이티 시즌 실버 배너', 'Mighty Season Silver Banner', 'Mighty-Saison-Silber-Banner', 'banner', 0, TRUE, FALSE, 30, FALSE, NULL, NULL, '{}'::jsonb),
+        ('banner_mighty_season_bronze', '마이티 시즌 브론즈 배너', '마이티 시즌 브론즈 배너', 'Mighty Season Bronze Banner', 'Mighty-Saison-Bronze-Banner', 'banner', 0, TRUE, FALSE, 30, FALSE, NULL, NULL, '{}'::jsonb)
       ON CONFLICT (item_key) DO UPDATE SET
         name = EXCLUDED.name_ko,
         name_ko = EXCLUDED.name_ko,
@@ -481,6 +517,11 @@ async function initDatabase() {
         duration_days = EXCLUDED.duration_days
       `
     );
+
+    // Backfill metadata.visual for items shipped without it. Only writes when
+    // metadata.visual is missing, so admin edits made later are never
+    // clobbered on subsequent boots.
+    await backfillShopVisuals(client);
 
     // Ad rewards table
     await client.query(`
@@ -1985,8 +2026,11 @@ async function getShopItems() {
   try {
     const result = await client.query(
       `
-      SELECT item_key, name_ko, name_ko AS name, name_en, name_de, category, price, is_season, is_permanent,
-             duration_days, is_purchasable, effect_type, effect_value, metadata
+      SELECT item_key, name_ko, name_ko AS name, name_en, name_de,
+             description_ko, description_en, description_de,
+             category, price, is_season, is_permanent,
+             duration_days, is_purchasable, effect_type, effect_value, metadata,
+             sale_start, sale_end
       FROM tc_shop_items
       WHERE is_purchasable = TRUE AND is_season = FALSE
         AND (sale_start IS NULL OR sale_start <= NOW())
@@ -2021,7 +2065,9 @@ async function getUserItems(nickname) {
     const result = await client.query(
       `
       SELECT ui.item_key, ui.acquired_at, ui.expires_at, ui.is_active,
-             si.name_ko, si.name_ko AS name, si.name_en, si.name_de, si.category, si.is_season, si.is_permanent,
+             si.name_ko, si.name_ko AS name, si.name_en, si.name_de,
+             si.description_ko, si.description_en, si.description_de,
+             si.category, si.is_season, si.is_permanent,
              si.duration_days, si.effect_type, si.effect_value, si.metadata
       FROM tc_user_items ui
       JOIN tc_shop_items si ON si.item_key = ui.item_key
@@ -2892,27 +2938,48 @@ async function grantSeasonRewards(seasonId) {
       );
     }
 
-    for (let i = 0; i < rewards.length; i++) {
-      const user = top[i];
-      if (!user) continue;
-      const reward = rewards[i];
+    // Per-game-type reward sets. Tichu/SK/Mighty all award the same gold
+    // tier (1000/500/200) and a 30-day banner; only the banner item key
+    // differs so the winner gets a game-themed badge.
+    const rewardSets = [
+      {
+        topRows: top,
+        banners: ['banner_season_gold', 'banner_season_silver', 'banner_season_bronze'],
+      },
+      {
+        topRows: skTopRes.rows.slice(0, 3),
+        banners: ['banner_sk_season_gold', 'banner_sk_season_silver', 'banner_sk_season_bronze'],
+      },
+      {
+        topRows: mightyTopRes.rows.slice(0, 3),
+        banners: ['banner_mighty_season_gold', 'banner_mighty_season_silver', 'banner_mighty_season_bronze'],
+      },
+    ];
 
-      await client.query(
-        `UPDATE tc_users SET gold = gold + $2 WHERE nickname = $1`,
-        [user.nickname, reward.gold]
-      );
+    for (const set of rewardSets) {
+      for (let i = 0; i < rewards.length; i++) {
+        const user = set.topRows[i];
+        if (!user) continue;
+        const banner = set.banners[i];
+        const reward = rewards[i];
 
-      await client.query(
-        `INSERT INTO tc_user_items (nickname, item_key, expires_at, is_active, source)
-         VALUES ($1, $2, NOW() + INTERVAL '30 days', FALSE, 'season')`,
-        [user.nickname, reward.banner]
-      );
+        await client.query(
+          `UPDATE tc_users SET gold = gold + $2 WHERE nickname = $1`,
+          [user.nickname, reward.gold]
+        );
 
-      await client.query(
-        `INSERT INTO tc_season_rewards (season_id, nickname, rank, gold_reward, banner_key)
-         VALUES ($1, $2, $3, $4, $5)`,
-        [seasonId, user.nickname, reward.rank, reward.gold, reward.banner]
-      );
+        await client.query(
+          `INSERT INTO tc_user_items (nickname, item_key, expires_at, is_active, source)
+           VALUES ($1, $2, NOW() + INTERVAL '30 days', FALSE, 'season')`,
+          [user.nickname, banner]
+        );
+
+        await client.query(
+          `INSERT INTO tc_season_rewards (season_id, nickname, rank, gold_reward, banner_key)
+           VALUES ($1, $2, $3, $4, $5)`,
+          [seasonId, user.nickname, reward.rank, reward.gold, banner]
+        );
+      }
     }
 
     await client.query(
@@ -3212,7 +3279,10 @@ async function getUserDetail(nickname) {
     );
     const adRewardCount = await client.query(
       `SELECT COUNT(*) as total,
-              COUNT(*) FILTER (WHERE claimed_at::date = CURRENT_DATE) as today
+              COUNT(*) FILTER (
+                WHERE DATE((claimed_at) AT TIME ZONE 'UTC' AT TIME ZONE 'Asia/Seoul')
+                    = DATE(timezone('Asia/Seoul', NOW()))
+              ) as today
        FROM tc_ad_rewards WHERE nickname = $1`,
       [nickname]
     );
@@ -3241,7 +3311,11 @@ function normalizeDashboardActivityFilters(activityPeriod = 'week', activityGame
 async function queryDashboardActivityTopPlayers(client, activityPeriod = 'week', activityGame = 'all') {
   const { period: safeActivityPeriod, game: safeActivityGame } = normalizeDashboardActivityFilters(activityPeriod, activityGame);
   const kstTodayExpr = `DATE(timezone('Asia/Seoul', NOW()))`;
-  const kstCreatedDate = (column = 'created_at') => `DATE(timezone('Asia/Seoul', ${column}))`;
+  // created_at is TIMESTAMP (no tz) stored as UTC wall-clock by the prod
+  // PG session (timezone=UTC). Tag it as UTC first, then convert to KST —
+  // the older `timezone('Asia/Seoul', ts)` form interpreted the naked value
+  // as already-Seoul and shifted rows into the wrong KST day.
+  const kstCreatedDate = (column = 'created_at') => `DATE((${column}) AT TIME ZONE 'UTC' AT TIME ZONE 'Asia/Seoul')`;
   const activityStartExpr = safeActivityPeriod === 'today'
     ? kstTodayExpr
     : safeActivityPeriod === 'month'
@@ -3346,7 +3420,7 @@ async function getDashboardStats(activityPeriod = 'week', activityGame = 'all') 
   const client = await pool.connect();
   try {
     const kstTodayExpr = `DATE(timezone('Asia/Seoul', NOW()))`;
-    const kstCreatedDate = (column = 'created_at') => `DATE(timezone('Asia/Seoul', ${column}))`;
+    const kstCreatedDate = (column = 'created_at') => `DATE((${column}) AT TIME ZONE 'UTC' AT TIME ZONE 'Asia/Seoul')`;
     const { period: safeActivityPeriod, game: safeActivityGame } = normalizeDashboardActivityFilters(activityPeriod, activityGame);
     // Basic counts
     const totalUsers = await client.query('SELECT COUNT(*) FROM tc_users WHERE is_deleted IS NOT TRUE');
@@ -3478,20 +3552,21 @@ async function getDashboardStats(activityPeriod = 'week', activityGame = 'all') 
     `);
 
     // Ad reward stats
+    const kstClaimedDate = `DATE((claimed_at) AT TIME ZONE 'UTC' AT TIME ZONE 'Asia/Seoul')`;
     const adRewardStats = await client.query(`
       SELECT COUNT(*) as total_claims,
              COUNT(DISTINCT nickname) as unique_users,
-             COUNT(*) FILTER (WHERE DATE(timezone('Asia/Seoul', claimed_at)) = ${kstTodayExpr}) as today_claims,
-             COUNT(DISTINCT nickname) FILTER (WHERE DATE(timezone('Asia/Seoul', claimed_at)) = ${kstTodayExpr}) as today_users
+             COUNT(*) FILTER (WHERE ${kstClaimedDate} = ${kstTodayExpr}) as today_claims,
+             COUNT(DISTINCT nickname) FILTER (WHERE ${kstClaimedDate} = ${kstTodayExpr}) as today_users
       FROM tc_ad_rewards
     `);
 
     // Daily ad rewards (last 7 days)
     const dailyAdRewards = await client.query(`
-      SELECT DATE(timezone('Asia/Seoul', claimed_at)) as day, COUNT(*) as cnt, COUNT(DISTINCT nickname) as users
+      SELECT ${kstClaimedDate} as day, COUNT(*) as cnt, COUNT(DISTINCT nickname) as users
       FROM tc_ad_rewards
-      WHERE DATE(timezone('Asia/Seoul', claimed_at)) >= ${kstTodayExpr} - INTERVAL '6 days'
-      GROUP BY DATE(timezone('Asia/Seoul', claimed_at))
+      WHERE ${kstClaimedDate} >= ${kstTodayExpr} - INTERVAL '6 days'
+      GROUP BY ${kstClaimedDate}
       ORDER BY day
     `);
 
@@ -3600,7 +3675,11 @@ async function getDetailedAdminStats(dateFrom, dateTo, bucket = 'day', options =
   const groupUnit = bucket === 'hour' ? 'hour' : 'day';
   const from = dateFrom || new Date(Date.now() - 6 * 24 * 60 * 60 * 1000).toISOString();
   const to = dateTo || new Date().toISOString();
-  const kstBucketExpr = (column) => `DATE_TRUNC('${groupUnit}', timezone('Asia/Seoul', ${column}))`;
+  // Truncate to the KST wall-clock boundary, then re-attach the Seoul tz so
+  // the value comes back to JS as a timestamptz pointing at the correct UTC
+  // instant. Without the trailing AT TIME ZONE, pg-node would receive a
+  // naked timestamp and parse it as UTC, shifting chart labels by 9h.
+  const kstBucketExpr = (column) => `(DATE_TRUNC('${groupUnit}', (${column}) AT TIME ZONE 'UTC' AT TIME ZONE 'Asia/Seoul')) AT TIME ZONE 'Asia/Seoul'`;
   const platform = ['ios', 'android'].includes(String(options.platform || '').toLowerCase())
     ? String(options.platform).toLowerCase()
     : '';
@@ -4269,22 +4348,37 @@ async function getAllShopItemsAdmin() {
   }
 }
 
-// Add new shop item
+// Add new shop item. `data.visual` (object or null) populates metadata.visual
+// so the admin form can attach visual config without touching other metadata
+// keys; pass `data.metadata` to set arbitrary metadata directly.
 async function addShopItem(data) {
   const client = await pool.connect();
   try {
+    let metaObj = null;
+    if (data.metadata && typeof data.metadata === 'object') {
+      metaObj = { ...data.metadata };
+    }
+    if (data.visual !== undefined && data.visual !== null) {
+      metaObj = { ...(metaObj || {}), visual: data.visual };
+    }
+    const metadata = metaObj ? JSON.stringify(metaObj) : null;
     const result = await client.query(
       `INSERT INTO tc_shop_items
-        (item_key, name, name_ko, name_en, name_de, category, price, is_permanent, duration_days, is_purchasable, is_season, effect_type, effect_value, sale_start, sale_end)
-       VALUES ($1, $2, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)
+        (item_key, name, name_ko, name_en, name_de,
+         description_ko, description_en, description_de,
+         category, price, is_permanent, duration_days, is_purchasable, is_season,
+         effect_type, effect_value, sale_start, sale_end, metadata)
+       VALUES ($1, $2, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18::jsonb)
        RETURNING *`,
       [
         data.item_key, data.name_ko || '', data.name_en || '', data.name_de || '',
+        data.description_ko || '', data.description_en || '', data.description_de || '',
         data.category, data.price || 0,
         data.is_permanent !== false, data.duration_days || null,
         data.is_purchasable !== false, data.is_season || false,
         data.effect_type || null, data.effect_value || null,
         data.sale_start || null, data.sale_end || null,
+        metadata,
       ]
     );
     return { success: true, item: result.rows[0] };
@@ -4299,25 +4393,42 @@ async function addShopItem(data) {
   }
 }
 
-// Update shop item
+// Update shop item. When `data.visual` is supplied, only the metadata.visual
+// subkey is rewritten via jsonb_set so unrelated metadata (e.g. theme's
+// includesCardSkin flag) survives. Pass `data.visual = null` to clear it.
 async function updateShopItem(id, data) {
   const client = await pool.connect();
   try {
+    const hasVisualUpdate = Object.prototype.hasOwnProperty.call(data, 'visual');
+    let metadataExpr = 'metadata';
+    const params = [
+      id, data.name_ko || '', data.name_en || '', data.name_de || '',
+      data.description_ko || '', data.description_en || '', data.description_de || '',
+      data.category, data.price || 0,
+      data.is_permanent !== false, data.duration_days || null,
+      data.is_purchasable !== false, data.is_season || false,
+      data.effect_type || null, data.effect_value || null,
+      data.sale_start || null, data.sale_end || null,
+    ];
+    if (hasVisualUpdate) {
+      if (data.visual === null) {
+        metadataExpr = `COALESCE(metadata, '{}'::jsonb) #- '{visual}'`;
+      } else {
+        metadataExpr = `jsonb_set(COALESCE(metadata, '{}'::jsonb), '{visual}', $${params.length + 1}::jsonb, true)`;
+        params.push(JSON.stringify(data.visual));
+      }
+    }
     const result = await client.query(
       `UPDATE tc_shop_items
-       SET name = $2, name_ko = $2, name_en = $3, name_de = $4, category = $5, price = $6, is_permanent = $7,
-           duration_days = $8, is_purchasable = $9, is_season = $10,
-           effect_type = $11, effect_value = $12, sale_start = $13, sale_end = $14
+       SET name = $2, name_ko = $2, name_en = $3, name_de = $4,
+           description_ko = $5, description_en = $6, description_de = $7,
+           category = $8, price = $9, is_permanent = $10,
+           duration_days = $11, is_purchasable = $12, is_season = $13,
+           effect_type = $14, effect_value = $15, sale_start = $16, sale_end = $17,
+           metadata = ${metadataExpr}
        WHERE id = $1
        RETURNING *`,
-      [
-        id, data.name_ko || '', data.name_en || '', data.name_de || '',
-        data.category, data.price || 0,
-        data.is_permanent !== false, data.duration_days || null,
-        data.is_purchasable !== false, data.is_season || false,
-        data.effect_type || null, data.effect_value || null,
-        data.sale_start || null, data.sale_end || null,
-      ]
+      params
     );
     if (result.rows.length === 0) {
       return { success: false, messageKey: 'db_item_not_found' };

@@ -1314,6 +1314,17 @@ function _friendLead(game, botId, legalCards, suitCards, mightyCard) {
     return sortHigh(suitCards[returnSuit])[0];
   }
 
+  // Friend-suit drain fallback: when 기루 is still rich and we hold any 기루,
+  // lead the highest one even when it's not yet an effective top. Sacrificing
+  // 기루 K to draw out opp's 기루 A still flushes the suit (no ruff possible
+  // in-suit) and beats _leadFromLongest's stale-suit pick — that path lands
+  // on our longest non-trump, often a previously-led suit where opp went
+  // void and is waiting to ruff.
+  if (friendSuitRich && friendCardSuit
+      && suitCards[friendCardSuit] && suitCards[friendCardSuit].length > 0) {
+    return sortHigh(suitCards[friendCardSuit])[0];
+  }
+
   // Fallthrough: play mighty or top card
   if (legalCards.includes(mightyCard)) return mightyCard;
   return _leadFromLongest(suitCards, legalCards);

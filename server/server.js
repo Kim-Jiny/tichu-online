@@ -696,6 +696,36 @@ const server = http.createServer(async (req, res) => {
     return;
   }
 
+  // Internal-only endpoints. nginx must block /internal/* from the public
+  // edge (deny all in tichu.conf). The shared-secret header is a
+  // belt-and-suspenders second line of defense, also required for
+  // local-only deploy testing where no nginx sits in front.
+  if (pathname.startsWith('/internal/')) {
+    if (!INTERNAL_MIGRATE_TOKEN) {
+      res.writeHead(404, { 'Content-Type': 'text/plain' });
+      res.end('not configured');
+      return;
+    }
+    if (req.headers['x-internal-token'] !== INTERNAL_MIGRATE_TOKEN) {
+      res.writeHead(403, { 'Content-Type': 'text/plain' });
+      res.end('forbidden');
+      return;
+    }
+    if (req.method === 'POST' && pathname === '/internal/adopt-rooms') {
+      try {
+        await handleAdoptRoomsRequest(req, res);
+      } catch (err) {
+        console.error('[adopt-rooms] error:', err);
+        res.writeHead(500, { 'Content-Type': 'text/plain' });
+        res.end('error');
+      }
+      return;
+    }
+    res.writeHead(404, { 'Content-Type': 'text/plain' });
+    res.end('not found');
+    return;
+  }
+
   if (pathname === '/health') {
     // 503 while draining so the LB stops sending new connections to this
     // instance. Existing WS connections keep working — they're already
@@ -983,6 +1013,65 @@ function serializeRoom(room) {
       };
     }),
   };
+}
+
+// Read up to 1MB of JSON body from an incoming request. Migration
+// payloads are small (a few rooms × ~1KB each); the cap is a sanity
+// guard against runaway peers, not a real performance setting.
+function readJsonBody(req, limitBytes = 1024 * 1024) {
+  return new Promise((resolve, reject) => {
+    const chunks = [];
+    let total = 0;
+    req.on('data', (chunk) => {
+      total += chunk.length;
+      if (total > limitBytes) {
+        reject(new Error('payload too large'));
+        req.destroy();
+        return;
+      }
+      chunks.push(chunk);
+    });
+    req.on('end', () => {
+      try {
+        resolve(JSON.parse(Buffer.concat(chunks).toString('utf8')));
+      } catch (err) {
+        reject(err);
+      }
+    });
+    req.on('error', reject);
+  });
+}
+
+// /internal/adopt-rooms POST handler. Peer instance sends a list of
+// serialized rooms; we reconstruct each one and pre-register the
+// expected human players in `playerSessions` so the existing reconnect
+// flow drops them straight into the migrated room when their client
+// reconnects to us.
+async function handleAdoptRoomsRequest(req, res) {
+  const body = await readJsonBody(req);
+  const rooms = Array.isArray(body?.rooms) ? body.rooms : [];
+  let adopted = 0;
+  for (const data of rooms) {
+    const room = lobby.adoptRoom(data);
+    if (!room) continue;
+    adopted++;
+    if (Array.isArray(data.players)) {
+      const now = Date.now();
+      for (const p of data.players) {
+        if (!p || p.isBot || !p.nickname) continue;
+        // Register reconnect-pointer keyed by nickname. handleReconnection
+        // already looks this up on every login and re-attaches the WS
+        // to the room; we just need the entry to exist before the
+        // client's reconnect lands.
+        playerSessions.set(p.nickname, {
+          roomId: room.id,
+          disconnectedAt: now,
+        });
+      }
+    }
+  }
+  res.writeHead(200, { 'Content-Type': 'application/json' });
+  res.end(JSON.stringify({ adopted }));
 }
 
 // SIGTERM handler — entry point for the blue/green drain flow. Step 1

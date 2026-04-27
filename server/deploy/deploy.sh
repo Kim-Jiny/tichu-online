@@ -17,6 +17,7 @@ set -e
 BASE_DIR=/opt/services/tichu-online
 APP_DIR="$BASE_DIR/app"
 ACTIVE_FILE="$BASE_DIR/active_slot"
+LOCKFILE="$BASE_DIR/.deploy.lock"
 PROXY_CONF=/opt/services/proxy/conf/tichu.conf
 TEMPLATE="$APP_DIR/server/deploy/tichu.conf.template"
 REPO_URL="https://github.com/Kim-Jiny/tichu-online.git"
@@ -25,6 +26,19 @@ HEALTH_TIMEOUT_SEC=60
 DRAIN_TIMEOUT_SEC=600   # docker stop -t (matches stop_grace_period in compose)
 
 log() { echo "[deploy] $*"; }
+
+# Concurrent-deploy guard. The drain step blocks for up to
+# DRAIN_TIMEOUT_SEC; if a second invocation fires while the first is
+# still in that window it would (a) read a stale active_slot and (b)
+# rebuild whichever container is currently serving traffic, blowing up
+# the in-progress drain. flock + non-blocking serialises invocations.
+mkdir -p "$BASE_DIR"
+exec 200>"$LOCKFILE"
+if ! flock -n 200; then
+  log "another deploy is already running (lock=$LOCKFILE). aborting."
+  log "if you're sure the previous run died, remove $LOCKFILE manually."
+  exit 1
+fi
 
 # ----- 1. Pull latest code -----
 mkdir -p "$APP_DIR"

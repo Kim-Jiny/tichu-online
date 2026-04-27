@@ -174,6 +174,10 @@ bash /opt/services/tichu-online/deploy.sh
 
 에러 시 자동 롤백 (헬스체크 실패하면 비활성 슬롯 컨테이너 정리하고 종료).
 
+### 동시 배포 차단
+
+`deploy.sh`는 `$BASE_DIR/.deploy.lock`에 `flock`을 잡는다. drain 대기(최대 10분) 도중 두 번째 실행은 즉시 거부된다. 직전 실행이 비정상 종료되어 lock이 남았다면 수동으로 `rm $BASE_DIR/.deploy.lock` 후 재시도.
+
 ---
 
 ## 모니터링

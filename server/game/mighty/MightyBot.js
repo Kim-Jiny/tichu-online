@@ -80,6 +80,21 @@ function _getKnownVoids(game) {
   return voids;
 }
 
+/** Count cards of `suit` not in own hand, not played, not discarded —
+ *  i.e., still live in someone else's hand. */
+function _countCardsInSuitOutsideHand(game, botId, suit) {
+  if (!suit || suit === 'no_trump') return 0;
+  const played = _getPlayedCards(game);
+  const myHand = new Set(game.hands[botId] || []);
+  const discarded = new Set(game.discarded || []);
+  let count = 0;
+  for (const rank of ['2', '3', '4', '5', '6', '7', '8', '9', '10', 'J', 'Q', 'K', 'A']) {
+    const cardId = `mighty_${suit}_${rank}`;
+    if (!played.has(cardId) && !myHand.has(cardId) && !discarded.has(cardId)) count++;
+  }
+  return count;
+}
+
 /** Count trump cards remaining in OTHER players' hands */
 function _countOpponentTrumps(game, botId) {
   if (!game.trumpSuit || game.trumpSuit === 'no_trump') return 0;
@@ -1257,16 +1272,27 @@ function _friendLead(game, botId, legalCards, suitCards, mightyCard) {
   // saving trump for ruffs later. Beats the trump-draw default — '선
   // 먹었을때 한 트릭이라도 해줄 수 있는 카드'.
   //
-  // Trump-heavy opp guard: when ≥3 trumps still sit in opposition hands,
-  // leading a top in a suit that's ALREADY been led once invites a ruff
-  // (someone is likely void in that suit by now). Restrict to fresh
-  // (never-led) suits in that state; if no fresh-suit top is available,
-  // fall through to the trump-draw default below instead of taking the
-  // ruff risk. When trump is mostly drained (<3 in opp hands), any top
-  // is safe so the filter is skipped.
+  // Top-of-led-suit guard: leading a top in a suit that's ALREADY been led
+  // once invites a ruff (someone is likely void in that suit by now). Restrict
+  // to fresh (never-led) suits when EITHER ≥3 trumps still sit in opp hands,
+  // OR the friend-card suit (기루) still has 5+ cards live in opp hands —
+  // in the latter case the bot should be flushing 기루 rather than gambling a
+  // top on a stale suit.
   const oppTrumpCount = _countOpponentTrumps(game, botId);
   const trumpHeavyOpp = oppTrumpCount >= 3;
-  const ledSuitsForTopGuard = trumpHeavyOpp ? _suitsAlreadyLed(game) : null;
+  const friendSuitOut = friendCardSuit
+    ? _countCardsInSuitOutsideHand(game, botId, friendCardSuit) : 0;
+  const friendSuitRich = friendSuitOut >= 5;
+
+  // Friend-suit drain: when 기루 is still rich and we hold a top of it,
+  // lead it first to force opp to burn ammo in their fattest suit.
+  if (friendSuitRich && friendCardSuit
+      && suitCards[friendCardSuit] && suitCards[friendCardSuit].length > 0) {
+    const sorted = sortHigh(suitCards[friendCardSuit]);
+    if (_isEffectiveTopOfSuit(sorted[0], game)) return sorted[0];
+  }
+
+  const ledSuitsForTopGuard = (trumpHeavyOpp || friendSuitRich) ? _suitsAlreadyLed(game) : null;
   for (const [suit, cards] of Object.entries(suitCards)) {
     if (suit === game.trumpSuit) continue;
     if (ledSuitsForTopGuard && ledSuitsForTopGuard.has(suit)) continue;
@@ -2001,6 +2027,18 @@ function _pickJokerLeadSuit(game, botId) {
   for (const suit of SUITS) {
     if (oppHoldsSuit[suit]) suitScore[suit] += 50;
     if (suit === trump && trumpDead) suitScore[suit] -= 100;
+  }
+
+  // Government-side joker lead: when the friend-card suit (기루) still has 5+
+  // cards live outside our hand, declaring that suit drains opp ammunition in
+  // the suit they're loaded with. Joker forces a follow (no ruff), so this is
+  // the cheapest way to flush 기루 — strictly better than burning joker on
+  // our own strong off-suit while 기루 still floats around.
+  const friendCardSuit = _getFriendCardSuit(game);
+  const isGovernment = botId === game.declarer || _isFriend(game, botId);
+  if (isGovernment && friendCardSuit && oppHoldsSuit[friendCardSuit]
+      && _countCardsInSuitOutsideHand(game, botId, friendCardSuit) >= 5) {
+    suitScore[friendCardSuit] += 200;
   }
 
   let bestSuit = null;

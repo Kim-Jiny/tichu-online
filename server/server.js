@@ -208,6 +208,16 @@ function resultMessage(result, locale) {
 
 const PORT = process.env.PORT || 8080;
 const INVITE_BASE_URL = process.env.INVITE_BASE_URL || 'https://tichu.jiny.shop';
+
+// Blue/green deploy hooks. Set per-container so the surviving instance
+// (PEER_URL) can adopt rooms migrated from this one when SIGTERM hits.
+// In single-instance setups (legacy), PEER_URL is null and the migration
+// path is skipped entirely — server still works, just with the old
+// "down + restart loses state" behavior.
+const INSTANCE_NAME = process.env.INSTANCE_NAME || 'default';
+const PEER_URL = process.env.PEER_URL || null;
+const INTERNAL_MIGRATE_TOKEN = process.env.INTERNAL_MIGRATE_TOKEN || null;
+let isDraining = false;
 const ANDROID_PACKAGE_NAME = 'com.jiny.tichuOnline';
 const IOS_APP_ID = 'HW9XJ9J5M2.com.jiny.tichuOnline';
 const IOS_STORE_URL = 'https://apps.apple.com/app/tichu-online/id6759035151';
@@ -687,8 +697,16 @@ const server = http.createServer(async (req, res) => {
   }
 
   if (pathname === '/health') {
-    res.writeHead(200, { 'Content-Type': 'text/plain' });
-    res.end('OK');
+    // 503 while draining so the LB stops sending new connections to this
+    // instance. Existing WS connections keep working — they're already
+    // open and won't re-pass through the LB until they reconnect.
+    if (isDraining) {
+      res.writeHead(503, { 'Content-Type': 'text/plain' });
+      res.end('draining');
+    } else {
+      res.writeHead(200, { 'Content-Type': 'text/plain' });
+      res.end('OK');
+    }
   } else if (pathname === '/.well-known/assetlinks.json') {
     const body = JSON.stringify([
       {
@@ -923,9 +941,21 @@ function localizeTitleName(titleKey, fallbackName, locale) {
   await ensureSeasonCycle();
 
   server.listen(PORT, () => {
-    console.log(`Tichu server running on port ${PORT}`);
+    console.log(`Tichu server running on port ${PORT} (instance=${INSTANCE_NAME})`);
   });
 })();
+
+// SIGTERM handler — entry point for the blue/green drain flow. Step 1
+// just flips isDraining so /health returns 503. Migration of existing
+// rooms (steps 2-4 of the deploy plan) lands in subsequent commits.
+process.on('SIGTERM', async () => {
+  if (isDraining) return; // already draining
+  console.log(`[${INSTANCE_NAME}] SIGTERM received — entering drain mode`);
+  isDraining = true;
+  // No-op for now: the docker-compose stop_grace_period (10 min) gives
+  // us a full window to add the actual migration calls below in later
+  // commits without changing this hook signature.
+});
 
 // Season cycle check every hour
 setInterval(() => {

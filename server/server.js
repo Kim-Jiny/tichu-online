@@ -945,6 +945,46 @@ function localizeTitleName(titleKey, fallbackName, locale) {
   });
 })();
 
+// Capture a waiting room's metadata for migration to a peer instance.
+// Only the fields the peer needs to recreate the same room layout —
+// volatile in-memory state (game, chat history, spectator perms,
+// timers) is intentionally dropped. Returns null for rooms that are
+// not safe to migrate (a game is in progress).
+function serializeRoom(room) {
+  if (!room) return null;
+  if (room.game) return null;
+  return {
+    id: room.id,
+    name: room.name,
+    isPrivate: !!room.isPrivate,
+    isRanked: !!room.isRanked,
+    password: room.password || '',
+    gameType: room.gameType,
+    maxPlayers: room.maxPlayers,
+    hostId: room.hostId,
+    hostNickname: room.hostNickname,
+    turnTimeLimit: room.turnTimeLimit,
+    targetScore: room.targetScore,
+    skExpansions: [...(room.skExpansions || [])],
+    blockedSlots: [...(room.blockedSlots || [])],
+    autoBlockedSlots: [...(room.autoBlockedSlots || [])],
+    randomSeating: !!room.randomSeating,
+    players: room.players.map((p, slot) => {
+      if (!p) return null;
+      return {
+        slot,
+        id: p.id,
+        nickname: p.nickname,
+        isBot: !!p.isBot,
+        botSpeed: p.botSpeed || null,
+        ready: !!p.ready,
+        titleKey: p.titleKey || null,
+        titleName: p.titleName || null,
+      };
+    }),
+  };
+}
+
 // SIGTERM handler — entry point for the blue/green drain flow. Step 1
 // just flips isDraining so /health returns 503. Migration of existing
 // rooms (steps 2-4 of the deploy plan) lands in subsequent commits.

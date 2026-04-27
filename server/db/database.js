@@ -498,9 +498,15 @@ async function initDatabase() {
         ('leave_reset', '탈주 카운트 초기화', '탈주 카운트 초기화', 'Leave Count Reset', 'Flucht-Zähler-Reset', 'utility', 2000, FALSE, TRUE, NULL, TRUE, 'leave_count_reset', NULL, '{}'::jsonb),
         ('mighty_trump_counter_7d', '마이티 기루다 카운터(7일)', '마이티 기루다 카운터(7일)', 'Mighty Trump Counter (7d)', 'Mighty-Trumpfzähler (7T)', 'utility', 1000, FALSE, FALSE, 7, TRUE, NULL, NULL, '{}'::jsonb),
         ('mighty_prev_trick_7d', '마이티 이전 트릭 확인(7일)', '마이티 이전 트릭 확인(7일)', 'Mighty Previous Trick Viewer (7d)', 'Mighty-Vorheriger-Stich-Anzeige (7T)', 'utility', 1000, FALSE, FALSE, 7, TRUE, NULL, NULL, '{}'::jsonb),
-        ('banner_season_gold', '시즌 골드 배너', '시즌 골드 배너', 'Season Gold Banner', 'Saison-Gold-Banner', 'banner', 0, TRUE, FALSE, 30, FALSE, NULL, NULL, '{}'::jsonb),
-        ('banner_season_silver', '시즌 실버 배너', '시즌 실버 배너', 'Season Silver Banner', 'Saison-Silber-Banner', 'banner', 0, TRUE, FALSE, 30, FALSE, NULL, NULL, '{}'::jsonb),
-        ('banner_season_bronze', '시즌 브론즈 배너', '시즌 브론즈 배너', 'Season Bronze Banner', 'Saison-Bronze-Banner', 'banner', 0, TRUE, FALSE, 30, FALSE, NULL, NULL, '{}'::jsonb)
+        ('banner_season_gold', '티츄 시즌 골드 배너', '티츄 시즌 골드 배너', 'Tichu Season Gold Banner', 'Tichu-Saison-Gold-Banner', 'banner', 0, TRUE, FALSE, 30, FALSE, NULL, NULL, '{}'::jsonb),
+        ('banner_season_silver', '티츄 시즌 실버 배너', '티츄 시즌 실버 배너', 'Tichu Season Silver Banner', 'Tichu-Saison-Silber-Banner', 'banner', 0, TRUE, FALSE, 30, FALSE, NULL, NULL, '{}'::jsonb),
+        ('banner_season_bronze', '티츄 시즌 브론즈 배너', '티츄 시즌 브론즈 배너', 'Tichu Season Bronze Banner', 'Tichu-Saison-Bronze-Banner', 'banner', 0, TRUE, FALSE, 30, FALSE, NULL, NULL, '{}'::jsonb),
+        ('banner_sk_season_gold', '스컬킹 시즌 골드 배너', '스컬킹 시즌 골드 배너', 'Skull King Season Gold Banner', 'Skull-King-Saison-Gold-Banner', 'banner', 0, TRUE, FALSE, 30, FALSE, NULL, NULL, '{}'::jsonb),
+        ('banner_sk_season_silver', '스컬킹 시즌 실버 배너', '스컬킹 시즌 실버 배너', 'Skull King Season Silver Banner', 'Skull-King-Saison-Silber-Banner', 'banner', 0, TRUE, FALSE, 30, FALSE, NULL, NULL, '{}'::jsonb),
+        ('banner_sk_season_bronze', '스컬킹 시즌 브론즈 배너', '스컬킹 시즌 브론즈 배너', 'Skull King Season Bronze Banner', 'Skull-King-Saison-Bronze-Banner', 'banner', 0, TRUE, FALSE, 30, FALSE, NULL, NULL, '{}'::jsonb),
+        ('banner_mighty_season_gold', '마이티 시즌 골드 배너', '마이티 시즌 골드 배너', 'Mighty Season Gold Banner', 'Mighty-Saison-Gold-Banner', 'banner', 0, TRUE, FALSE, 30, FALSE, NULL, NULL, '{}'::jsonb),
+        ('banner_mighty_season_silver', '마이티 시즌 실버 배너', '마이티 시즌 실버 배너', 'Mighty Season Silver Banner', 'Mighty-Saison-Silber-Banner', 'banner', 0, TRUE, FALSE, 30, FALSE, NULL, NULL, '{}'::jsonb),
+        ('banner_mighty_season_bronze', '마이티 시즌 브론즈 배너', '마이티 시즌 브론즈 배너', 'Mighty Season Bronze Banner', 'Mighty-Saison-Bronze-Banner', 'banner', 0, TRUE, FALSE, 30, FALSE, NULL, NULL, '{}'::jsonb)
       ON CONFLICT (item_key) DO UPDATE SET
         name = EXCLUDED.name_ko,
         name_ko = EXCLUDED.name_ko,
@@ -2932,27 +2938,48 @@ async function grantSeasonRewards(seasonId) {
       );
     }
 
-    for (let i = 0; i < rewards.length; i++) {
-      const user = top[i];
-      if (!user) continue;
-      const reward = rewards[i];
+    // Per-game-type reward sets. Tichu/SK/Mighty all award the same gold
+    // tier (1000/500/200) and a 30-day banner; only the banner item key
+    // differs so the winner gets a game-themed badge.
+    const rewardSets = [
+      {
+        topRows: top,
+        banners: ['banner_season_gold', 'banner_season_silver', 'banner_season_bronze'],
+      },
+      {
+        topRows: skTopRes.rows.slice(0, 3),
+        banners: ['banner_sk_season_gold', 'banner_sk_season_silver', 'banner_sk_season_bronze'],
+      },
+      {
+        topRows: mightyTopRes.rows.slice(0, 3),
+        banners: ['banner_mighty_season_gold', 'banner_mighty_season_silver', 'banner_mighty_season_bronze'],
+      },
+    ];
 
-      await client.query(
-        `UPDATE tc_users SET gold = gold + $2 WHERE nickname = $1`,
-        [user.nickname, reward.gold]
-      );
+    for (const set of rewardSets) {
+      for (let i = 0; i < rewards.length; i++) {
+        const user = set.topRows[i];
+        if (!user) continue;
+        const banner = set.banners[i];
+        const reward = rewards[i];
 
-      await client.query(
-        `INSERT INTO tc_user_items (nickname, item_key, expires_at, is_active, source)
-         VALUES ($1, $2, NOW() + INTERVAL '30 days', FALSE, 'season')`,
-        [user.nickname, reward.banner]
-      );
+        await client.query(
+          `UPDATE tc_users SET gold = gold + $2 WHERE nickname = $1`,
+          [user.nickname, reward.gold]
+        );
 
-      await client.query(
-        `INSERT INTO tc_season_rewards (season_id, nickname, rank, gold_reward, banner_key)
-         VALUES ($1, $2, $3, $4, $5)`,
-        [seasonId, user.nickname, reward.rank, reward.gold, reward.banner]
-      );
+        await client.query(
+          `INSERT INTO tc_user_items (nickname, item_key, expires_at, is_active, source)
+           VALUES ($1, $2, NOW() + INTERVAL '30 days', FALSE, 'season')`,
+          [user.nickname, banner]
+        );
+
+        await client.query(
+          `INSERT INTO tc_season_rewards (season_id, nickname, rank, gold_reward, banner_key)
+           VALUES ($1, $2, $3, $4, $5)`,
+          [seasonId, user.nickname, reward.rank, reward.gold, banner]
+        );
+      }
     }
 
     await client.query(

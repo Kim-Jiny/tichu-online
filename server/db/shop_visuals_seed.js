@@ -86,6 +86,36 @@ const VISUAL_BACKFILL = {
     thumbnail: thumb('emoji_events', '#8D6E63', '#EFEBE9', '#D7CCC8', '#BCAAA4'),
     preview: preview('#D7B59A', '#F4E8DC'),
   },
+  banner_sk_season_gold: {
+    version: 1,
+    thumbnail: thumb('anchor', '#FF8F00', '#FFF8E1', '#FFECB3', '#FFD54F'),
+    preview: preview('#FFE082', '#FFF3C0'),
+  },
+  banner_sk_season_silver: {
+    version: 1,
+    thumbnail: thumb('anchor', '#78909C', '#ECEFF1', '#CFD8DC', '#B0BEC5'),
+    preview: preview('#CFD8DC', '#F1F3F4'),
+  },
+  banner_sk_season_bronze: {
+    version: 1,
+    thumbnail: thumb('anchor', '#8D6E63', '#EFEBE9', '#D7CCC8', '#BCAAA4'),
+    preview: preview('#D7B59A', '#F4E8DC'),
+  },
+  banner_mighty_season_gold: {
+    version: 1,
+    thumbnail: thumb('military_tech', '#FF8F00', '#FFF8E1', '#FFECB3', '#FFD54F'),
+    preview: preview('#FFE082', '#FFF3C0'),
+  },
+  banner_mighty_season_silver: {
+    version: 1,
+    thumbnail: thumb('military_tech', '#78909C', '#ECEFF1', '#CFD8DC', '#B0BEC5'),
+    preview: preview('#CFD8DC', '#F1F3F4'),
+  },
+  banner_mighty_season_bronze: {
+    version: 1,
+    thumbnail: thumb('military_tech', '#8D6E63', '#EFEBE9', '#D7CCC8', '#BCAAA4'),
+    preview: preview('#D7B59A', '#F4E8DC'),
+  },
 
   // ===== Titles =====
   title_sweet:    { version: 1, thumbnail: thumb('cake',                     '#EC407A', '#FCE4EC', '#F8BBD0', '#F48FB1') },

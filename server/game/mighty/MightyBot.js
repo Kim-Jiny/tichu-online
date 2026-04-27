@@ -924,6 +924,19 @@ function getWeakestCard(cards, game) {
 function decidePlay(game, botId) {
   const legalCards = game._getLegalCards(botId);
   if (legalCards.length === 0) return null;
+
+  // Setting (세팅) declaration: when leading, if the server says the
+  // remaining hand is unconditionally winning (`_canDeclareSetting`),
+  // claim every remaining point card via setting instead of playing the
+  // rest of the round trick-by-trick. The server-side check already
+  // handles every edge case (mode, weak-trick gates, opp pool, etc.),
+  // so the bot just defers to it.
+  if (game.currentTrick.length === 0
+      && typeof game._canDeclareSetting === 'function'
+      && game._canDeclareSetting(botId)) {
+    return { type: 'declare_setting' };
+  }
+
   if (legalCards.length === 1) {
     return makePlayAction(legalCards[0], game, botId);
   }

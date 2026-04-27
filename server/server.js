@@ -208,6 +208,16 @@ function resultMessage(result, locale) {
 
 const PORT = process.env.PORT || 8080;
 const INVITE_BASE_URL = process.env.INVITE_BASE_URL || 'https://tichu.jiny.shop';
+
+// Blue/green deploy hooks. Set per-container so the surviving instance
+// (PEER_URL) can adopt rooms migrated from this one when SIGTERM hits.
+// In single-instance setups (legacy), PEER_URL is null and the migration
+// path is skipped entirely — server still works, just with the old
+// "down + restart loses state" behavior.
+const INSTANCE_NAME = process.env.INSTANCE_NAME || 'default';
+const PEER_URL = process.env.PEER_URL || null;
+const INTERNAL_MIGRATE_TOKEN = process.env.INTERNAL_MIGRATE_TOKEN || null;
+let isDraining = false;
 const ANDROID_PACKAGE_NAME = 'com.jiny.tichuOnline';
 const IOS_APP_ID = 'HW9XJ9J5M2.com.jiny.tichuOnline';
 const IOS_STORE_URL = 'https://apps.apple.com/app/tichu-online/id6759035151';
@@ -686,9 +696,47 @@ const server = http.createServer(async (req, res) => {
     return;
   }
 
+  // Internal-only endpoints. nginx must block /internal/* from the public
+  // edge (deny all in tichu.conf). The shared-secret header is a
+  // belt-and-suspenders second line of defense, also required for
+  // local-only deploy testing where no nginx sits in front.
+  if (pathname.startsWith('/internal/')) {
+    if (!INTERNAL_MIGRATE_TOKEN) {
+      res.writeHead(404, { 'Content-Type': 'text/plain' });
+      res.end('not configured');
+      return;
+    }
+    if (req.headers['x-internal-token'] !== INTERNAL_MIGRATE_TOKEN) {
+      res.writeHead(403, { 'Content-Type': 'text/plain' });
+      res.end('forbidden');
+      return;
+    }
+    if (req.method === 'POST' && pathname === '/internal/adopt-rooms') {
+      try {
+        await handleAdoptRoomsRequest(req, res);
+      } catch (err) {
+        console.error('[adopt-rooms] error:', err);
+        res.writeHead(500, { 'Content-Type': 'text/plain' });
+        res.end('error');
+      }
+      return;
+    }
+    res.writeHead(404, { 'Content-Type': 'text/plain' });
+    res.end('not found');
+    return;
+  }
+
   if (pathname === '/health') {
-    res.writeHead(200, { 'Content-Type': 'text/plain' });
-    res.end('OK');
+    // 503 while draining so the LB stops sending new connections to this
+    // instance. Existing WS connections keep working — they're already
+    // open and won't re-pass through the LB until they reconnect.
+    if (isDraining) {
+      res.writeHead(503, { 'Content-Type': 'text/plain' });
+      res.end('draining');
+    } else {
+      res.writeHead(200, { 'Content-Type': 'text/plain' });
+      res.end('OK');
+    }
   } else if (pathname === '/.well-known/assetlinks.json') {
     const body = JSON.stringify([
       {
@@ -923,9 +971,209 @@ function localizeTitleName(titleKey, fallbackName, locale) {
   await ensureSeasonCycle();
 
   server.listen(PORT, () => {
-    console.log(`Tichu server running on port ${PORT}`);
+    console.log(`Tichu server running on port ${PORT} (instance=${INSTANCE_NAME})`);
   });
 })();
+
+// Capture a waiting room's metadata for migration to a peer instance.
+// Only the fields the peer needs to recreate the same room layout —
+// volatile in-memory state (game, chat history, spectator perms,
+// timers) is intentionally dropped. Returns null for rooms that are
+// not safe to migrate (a game is in progress).
+function serializeRoom(room) {
+  if (!room) return null;
+  if (room.game) return null;
+  return {
+    id: room.id,
+    name: room.name,
+    isPrivate: !!room.isPrivate,
+    isRanked: !!room.isRanked,
+    password: room.password || '',
+    gameType: room.gameType,
+    maxPlayers: room.maxPlayers,
+    hostId: room.hostId,
+    hostNickname: room.hostNickname,
+    turnTimeLimit: room.turnTimeLimit,
+    targetScore: room.targetScore,
+    skExpansions: [...(room.skExpansions || [])],
+    blockedSlots: [...(room.blockedSlots || [])],
+    autoBlockedSlots: [...(room.autoBlockedSlots || [])],
+    randomSeating: !!room.randomSeating,
+    players: room.players.map((p, slot) => {
+      if (!p) return null;
+      return {
+        slot,
+        id: p.id,
+        nickname: p.nickname,
+        isBot: !!p.isBot,
+        botSpeed: p.botSpeed || null,
+        ready: !!p.ready,
+        titleKey: p.titleKey || null,
+        titleName: p.titleName || null,
+      };
+    }),
+  };
+}
+
+// Read up to 1MB of JSON body from an incoming request. Migration
+// payloads are small (a few rooms × ~1KB each); the cap is a sanity
+// guard against runaway peers, not a real performance setting.
+function readJsonBody(req, limitBytes = 1024 * 1024) {
+  return new Promise((resolve, reject) => {
+    const chunks = [];
+    let total = 0;
+    req.on('data', (chunk) => {
+      total += chunk.length;
+      if (total > limitBytes) {
+        reject(new Error('payload too large'));
+        req.destroy();
+        return;
+      }
+      chunks.push(chunk);
+    });
+    req.on('end', () => {
+      try {
+        resolve(JSON.parse(Buffer.concat(chunks).toString('utf8')));
+      } catch (err) {
+        reject(err);
+      }
+    });
+    req.on('error', reject);
+  });
+}
+
+// /internal/adopt-rooms POST handler. Peer instance sends a list of
+// serialized rooms; we reconstruct each one and pre-register the
+// expected human players in `playerSessions` so the existing reconnect
+// flow drops them straight into the migrated room when their client
+// reconnects to us.
+async function handleAdoptRoomsRequest(req, res) {
+  const body = await readJsonBody(req);
+  const rooms = Array.isArray(body?.rooms) ? body.rooms : [];
+  let adopted = 0;
+  for (const data of rooms) {
+    const room = lobby.adoptRoom(data);
+    if (!room) continue;
+    adopted++;
+    if (Array.isArray(data.players)) {
+      const now = Date.now();
+      for (const p of data.players) {
+        if (!p || p.isBot || !p.nickname) continue;
+        // Register reconnect-pointer keyed by nickname. handleReconnection
+        // already looks this up on every login and re-attaches the WS
+        // to the room; we just need the entry to exist before the
+        // client's reconnect lands.
+        playerSessions.set(p.nickname, {
+          roomId: room.id,
+          disconnectedAt: now,
+        });
+      }
+    }
+  }
+  res.writeHead(200, { 'Content-Type': 'application/json' });
+  res.end(JSON.stringify({ adopted }));
+}
+
+// Migrate one waiting room to the peer instance. No-op outside of drain
+// mode, single-instance deploys (PEER_URL unset), and rooms that still
+// have a game in progress. After a successful peer adopt, we close the
+// human players' WebSockets — their clients reconnect through the LB,
+// land on the peer (since this instance's /health is now 503), and the
+// peer's already-registered playerSessions entry routes them straight
+// into the same-id room. Bot-only rooms have no humans to migrate, so
+// they're just dropped.
+async function maybeMigrateRoom(roomId) {
+  if (!isDraining) return;
+  const room = lobby.getRoom(roomId);
+  if (!room || room.game) return;
+
+  const humans = room.players.filter(p => p && !p.isBot);
+  if (humans.length === 0) {
+    lobby.removeRoom(roomId);
+    return;
+  }
+
+  if (!PEER_URL || !INTERNAL_MIGRATE_TOKEN) {
+    // Single-instance fallback: no peer to migrate to. Best we can do
+    // is close the WS so the client tries to reconnect once we're back.
+    for (const p of humans) findWsByPlayerId(p.id)?.close(1001);
+    lobby.removeRoom(roomId);
+    return;
+  }
+
+  const data = serializeRoom(room);
+  if (!data) {
+    lobby.removeRoom(roomId);
+    return;
+  }
+
+  try {
+    const r = await fetch(`${PEER_URL}/internal/adopt-rooms`, {
+      method: 'POST',
+      headers: {
+        'X-Internal-Token': INTERNAL_MIGRATE_TOKEN,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ rooms: [data] }),
+    });
+    if (!r.ok) throw new Error(`peer responded ${r.status}`);
+    console.log(`[${INSTANCE_NAME}] migrated ${roomId} to peer`);
+  } catch (err) {
+    console.error(`[${INSTANCE_NAME}] migrate ${roomId} failed:`, err.message || err);
+    // Failure is recoverable from the user's POV — when we close their
+    // WS below they'll reconnect to the peer's empty lobby and have to
+    // recreate the room. Game state is unaffected since this room had
+    // no game in progress.
+  }
+
+  for (const p of humans) findWsByPlayerId(p.id)?.close(1001);
+
+  // Spectators don't get pre-registered on the peer (the room migrates
+  // back to a 'waiting' state with no game), so just drop them — their
+  // client reconnects to green's empty lobby. Without this they'd hang
+  // on a dead WS until docker SIGKILL.
+  for (const spectator of room.spectators || []) {
+    findWsByPlayerId(spectator.id)?.close(1001);
+  }
+
+  lobby.removeRoom(roomId);
+}
+
+// SIGTERM handler — entry point for the blue/green drain flow.
+//   1. Flip isDraining so /health flips to 503 (LB stops sending us new
+//      connections; existing WS connections are unaffected).
+//   2. Migrate every waiting room (no game in progress) to the peer.
+//   3. Close every WS that isn't tied to a room — those users go
+//      straight to the peer's lobby on reconnect.
+//   4. Game-in-progress rooms keep playing here. scheduleAutoReturnToRoom
+//      will fire maybeMigrateRoom once each game ends, draining them
+//      one-by-one. The container's stop_grace_period (10m) is the cap.
+process.on('SIGTERM', async () => {
+  if (isDraining) return;
+  console.log(`[${INSTANCE_NAME}] SIGTERM received — entering drain mode`);
+  isDraining = true;
+
+  // Snapshot first so concurrent room edits during migration don't
+  // mutate the iteration target.
+  const roomIds = [...lobby.rooms.keys()];
+  for (const id of roomIds) {
+    const room = lobby.getRoom(id);
+    if (!room || room.game) continue;
+    try { await maybeMigrateRoom(id); } catch (err) {
+      console.error(`[${INSTANCE_NAME}] drain migrate ${id}:`, err);
+    }
+  }
+
+  // Lobby users (no roomId) are easiest — just close, they'll reconnect
+  // to the peer fresh.
+  for (const ws of wss.clients) {
+    if (!ws.roomId) {
+      try { ws.close(1001); } catch (_) { /* ignore */ }
+    }
+  }
+
+  console.log(`[${INSTANCE_NAME}] drain initial pass complete; waiting for in-game rooms to finish`);
+});
 
 // Season cycle check every hour
 setInterval(() => {
@@ -2331,6 +2579,17 @@ async function handleLeaveRoom(ws) {
   }
   sendTo(ws, { type: 'room_left' });
   broadcastRoomList();
+
+  // During drain we want anyone returning to the lobby (player who left
+  // their seat OR spectator who stopped watching) to land on the peer's
+  // lobby instead of this dying instance. Close the WS after the
+  // room_left frame is queued; the client's reconnect logic re-opens
+  // through the LB → peer.
+  if (isDraining) {
+    setTimeout(() => {
+      try { ws.close(1001); } catch (_) { /* ignore */ }
+    }, 50);
+  }
 }
 
 async function handleLeaveGame(ws) {
@@ -2410,7 +2669,7 @@ function handleReturnToRoom(ws) {
 const autoReturnTimers = {};
 function scheduleAutoReturnToRoom(roomId) {
   if (autoReturnTimers[roomId]) return; // Already scheduled
-  autoReturnTimers[roomId] = setTimeout(() => {
+  autoReturnTimers[roomId] = setTimeout(async () => {
     delete autoReturnTimers[roomId];
     const room = lobby.getRoom(roomId);
     if (!room) return;
@@ -2424,6 +2683,19 @@ function scheduleAutoReturnToRoom(roomId) {
     if (!hasConnectedHuman) {
       removeRoomAndNotifySpectators(roomId);
       broadcastRoomList();
+      return;
+    }
+
+    // Drain hook: a room that's been waiting to migrate (game ended after
+    // SIGTERM) finally has its waiting-room state back. Hand it off to the
+    // peer now and close the players' WS so they end up in the migrated
+    // room on the new instance.
+    if (isDraining) {
+      try {
+        await maybeMigrateRoom(roomId);
+      } catch (err) {
+        console.error(`[${INSTANCE_NAME}] post-game migrate ${roomId}:`, err);
+      }
       return;
     }
 

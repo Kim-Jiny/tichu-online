@@ -1,24 +1,59 @@
 name: tichu
+
+# Two app slots (blue/green) sit behind the shared nginx proxy on
+# `app-network`. nginx routes by container DNS name, so neither slot
+# needs a host port binding — they just expose port 3000 inside the
+# docker network. Profiles control which slot starts:
+#   docker compose --profile blue up -d   # start blue only
+#   docker compose --profile green up -d  # start green only
+# During deploys both run briefly while traffic switches. db has no
+# profile and always runs (shared singleton).
+
+x-server-common: &server-common
+  build: ./server
+  image: tichu-server:latest
+  restart: unless-stopped
+  # SIGTERM grace window. Long-running games on the outgoing slot get
+  # up to 10 minutes to finish (or migrate via /internal/adopt-rooms)
+  # before docker SIGKILL.
+  stop_grace_period: 10m
+  depends_on:
+    db:
+      condition: service_healthy
+  dns:
+    - 8.8.8.8
+    - 8.8.4.4
+  networks:
+    - app-network
+
 services:
-  server:
-    build: ./server
-    container_name: tichu-online
-    restart: unless-stopped
-    ports:
-      - "3000:3000"
+  server-blue:
+    <<: *server-common
+    container_name: tichu-online-blue
+    profiles: ["blue"]
     environment:
       - NODE_ENV=production
       - PORT=3000
+      - INSTANCE_NAME=blue
+      - PEER_URL=http://tichu-online-green:3000
+      - INTERNAL_MIGRATE_TOKEN=${INTERNAL_MIGRATE_TOKEN}
       - DATABASE_URL=${DATABASE_URL}
       - FIREBASE_SERVICE_ACCOUNT=${FIREBASE_SERVICE_ACCOUNT}
-    depends_on:
-      db:
-        condition: service_healthy
-    dns:
-      - 8.8.8.8
-      - 8.8.4.4
-    networks:
-      - app-network
+      - ANDROID_APP_SHA256_FINGERPRINTS=${ANDROID_APP_SHA256_FINGERPRINTS}
+
+  server-green:
+    <<: *server-common
+    container_name: tichu-online-green
+    profiles: ["green"]
+    environment:
+      - NODE_ENV=production
+      - PORT=3000
+      - INSTANCE_NAME=green
+      - PEER_URL=http://tichu-online-blue:3000
+      - INTERNAL_MIGRATE_TOKEN=${INTERNAL_MIGRATE_TOKEN}
+      - DATABASE_URL=${DATABASE_URL}
+      - FIREBASE_SERVICE_ACCOUNT=${FIREBASE_SERVICE_ACCOUNT}
+      - ANDROID_APP_SHA256_FINGERPRINTS=${ANDROID_APP_SHA256_FINGERPRINTS}
 
   db:
     image: postgres:16-alpine

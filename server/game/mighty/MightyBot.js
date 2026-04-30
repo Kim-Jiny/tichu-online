@@ -3,12 +3,19 @@
 const { getCardInfo, RANK_ORDER, SUITS } = require('./MightyDeck');
 
 /**
- * Decide the next action for a Mighty bot.
- * Returns an action object or null if no action needed.
+ * Decide the next action for a Mighty bot. `strategy` selects the policy:
+ * 'heuristic' (default), 'pimc_play', 'pimc_full', or 'expectimax'.
  */
-function decideMightyBotAction(game, botId) {
+function decideMightyBotAction(game, botId, strategy = 'heuristic') {
   if (!game || !game.playerIds.includes(botId)) return null;
+  if (strategy === 'pimc_play') return require('./strategies/pimc_play').decide(game, botId);
+  if (strategy === 'pimc_full') return require('./strategies/pimc_full').decide(game, botId);
+  if (strategy === 'expectimax') return require('./strategies/expectimax').decide(game, botId);
+  if (strategy === 'expectimax_smart') return require('./strategies/expectimax_smart').decide(game, botId);
+  return _heuristicDecide(game, botId);
+}
 
+function _heuristicDecide(game, botId) {
   if (game.state === 'bidding' && game.currentPlayer === botId) {
     return decideBid(game, botId);
   }
@@ -1006,6 +1013,14 @@ function decideLeadCard(game, botId, legalCards) {
     }
   }
 
+  // Joker without power on this trick can't win and gives up the lead for
+  // zero offensive value. Filter it out so role-specific logic doesn't
+  // accidentally lead it. (Penultimate-trick cash-in above already handled
+  // the "spend it before last-trick" case.)
+  if (legalCards.includes('mighty_joker') && !game._currentTrickJokerHasPower() && legalCards.length > 1) {
+    legalCards = legalCards.filter(c => c !== 'mighty_joker');
+  }
+
   // Group cards by suit
   const suitCards = {};
   for (const cardId of legalCards) {
@@ -1198,20 +1213,27 @@ function _friendLead(game, botId, legalCards, suitCards, mightyCard) {
 
   if (!hasTrump) {
     // ═══ NO-TRUMP FRIEND STRATEGY ═══
-    // Per request: dump every effective top first (any suit, no special
-    // ordering), then return the friend-card suit, then joker last.
+    // Priority per user rule:
+    //   1) Call suit (friend-card suit): always feed it back if held — that's
+    //      the suit declarer signalled by naming.
+    //   2) Declarer's inferred strong suit: declarer led K or Q earlier while
+    //      higher rank(s) remain unplayed → declarer probably holds A → keep
+    //      pushing that suit so declarer can cash.
+    //   3) Effective tops elsewhere; mighty / joker as fallback winners.
+    if (friendCardSuit && suitCards[friendCardSuit] && suitCards[friendCardSuit].length > 0) {
+      return sortHigh(suitCards[friendCardSuit])[0];
+    }
+
+    const strongSuit = _declarerStrongSuit(game);
+    if (strongSuit && suitCards[strongSuit] && suitCards[strongSuit].length > 0) {
+      return sortHigh(suitCards[strongSuit])[0];
+    }
+
     if (legalCards.includes(mightyCard)) return mightyCard;
 
     for (const cards of Object.values(suitCards)) {
       const sorted = sortHigh(cards);
       if (_isEffectiveTopOfSuit(sorted[0], game)) return sorted[0];
-    }
-
-    // Friend-card suit return BEFORE joker — '클러버로 친구를 부른 경우 탑카가
-    // 없으면 클러버를 다시 돌려줘'. Joker stays in hand until even the
-    // friend-suit ladder runs dry.
-    if (friendCardSuit && suitCards[friendCardSuit] && suitCards[friendCardSuit].length > 0) {
-      return sortHigh(suitCards[friendCardSuit])[0];
     }
 
     if (legalCards.includes('mighty_joker')) return 'mighty_joker';
@@ -1508,7 +1530,26 @@ function governmentFollow(game, botId, legalCards, winningCards, currentWinner, 
     // almost always hold — just dump a non-trump point card. Don't trump-ruff our own ace,
     // and don't burn the joker just to reveal the partnership.
     const winnerCard = getWinnerCardId(game);
-    if (_isEffectiveTopOfSuit(winnerCard, game)) {
+    const declarerSecure = _isEffectiveTopOfSuit(winnerCard, game);
+
+    // Joker-friend safe-window reveal: when declarer's lead WILL hold (mighty
+    // or other effective top), joker has zero winning utility on this trick
+    // and would be collected by declarer either way. Cashing it here is the
+    // ideal reveal — partnership surfaces at no cost AND it dodges 조커콜
+    // (declarer can't kill a joker that's already on the table). Without
+    // this, joker friend can sit on the joker through every safe window and
+    // get called dead later. Note: this fires BEFORE the secure-lead early
+    // return below, since `winningCards.includes('mighty_joker')` is false on
+    // mighty leads (joker can't beat mighty) and the standard reveal block
+    // would otherwise be skipped entirely.
+    if (declarerSecure
+        && game.friendCard === 'mighty_joker'
+        && !game.friendRevealed
+        && legalCards.includes('mighty_joker')) {
+      return 'mighty_joker';
+    }
+
+    if (declarerSecure) {
       return dumpSafe(legalCards, game);
     }
     // Joker-friend reveal: when our friend card IS the joker, the only way
@@ -1539,13 +1580,40 @@ function governmentFollow(game, botId, legalCards, winningCards, currentWinner, 
       (game.trumpSuit && game.trumpSuit !== 'no_trump' &&
        getCardInfo(leadCard).suit === game.trumpSuit);
 
-    if (!leadIsTrump && oppBehind && winningCards.length > 0) {
-      const cheap = winningCards.filter(c => c !== mightyCard && c !== 'mighty_joker');
-      const sureCheap = cheap.filter(c => _isEffectiveTopOfSuit(c, game));
-      if (sureCheap.length > 0) return getWeakestCard(sureCheap, game);
-      if (winningCards.includes(mightyCard)) return mightyCard;
-      if (winningCards.includes('mighty_joker')) return 'mighty_joker';
-      return pickSufficientWinner(winningCards, game, isLastPlayer, oppBehind);
+    if (winningCards.length > 0) {
+      // "끝까지 이김" check: only commit to a winner if it survives the rest
+      // of the trick. Priority — same suit > trump > joker > mighty. The
+      // safety filter applies to BOTH non-trump and trump leads (a trump
+      // mid-rank can be over-cut by a higher trump just like a side-suit Q
+      // can be over-cut by K/A).
+      const leadSuit = leadCard === 'mighty_joker'
+        ? game.jokerSuitDeclared
+        : getCardInfo(leadCard).suit;
+      const trump = game.trumpSuit;
+      const trumpActive = trump && trump !== 'no_trump';
+
+      if (leadSuit) {
+        const safeSameSuit = winningCards.filter(c => {
+          if (c === mightyCard || c === 'mighty_joker') return false;
+          return getCardInfo(c).suit === leadSuit && _isSafeFriendWinner(c, game, botId);
+        });
+        if (safeSameSuit.length > 0) return getWeakestCard(safeSameSuit, game);
+      }
+
+      if (trumpActive && leadSuit !== trump) {
+        const safeTrump = winningCards.filter(c => {
+          if (c === mightyCard || c === 'mighty_joker') return false;
+          return getCardInfo(c).suit === trump && _isSafeFriendWinner(c, game, botId);
+        });
+        if (safeTrump.length > 0) return getWeakestCard(safeTrump, game);
+      }
+
+      if (winningCards.includes('mighty_joker')
+          && _isSafeFriendWinner('mighty_joker', game, botId)) {
+        return 'mighty_joker';
+      }
+      if (winningCards.includes(mightyCard) && oppBehind) return mightyCard;
+      // No safe winner against opp-behind cut risk → concede cleanly.
     }
     return getSafeDiscard(legalCards, game);
   }
@@ -1833,6 +1901,105 @@ function _isEffectiveTopOfSuit(cardId, game) {
   return true;
 }
 
+/** Suit declarer is likely strong in: declarer led K or Q on a past trick
+ *  while the higher rank(s) are still unplayed → declarer probably holds A. */
+function _declarerStrongSuit(game) {
+  const played = _getPlayedCards(game);
+  for (const trick of (game.tricks || [])) {
+    if (!trick.cards || trick.cards.length === 0) continue;
+    const lead = trick.cards[0];
+    if (lead.pid !== game.declarer) continue;
+    if (lead.cardId === 'mighty_joker') continue;
+    const info = getCardInfo(lead.cardId);
+    if (!info.suit) continue;
+    if (info.rank === 'K') {
+      const ace = `mighty_${info.suit}_A`;
+      if (!played.has(ace)) return info.suit;
+    } else if (info.rank === 'Q') {
+      const ace = `mighty_${info.suit}_A`;
+      const king = `mighty_${info.suit}_K`;
+      if (!played.has(ace) || !played.has(king)) return info.suit;
+    }
+  }
+  return null;
+}
+
+/** How many tricks have led with this suit (including in-progress current trick). */
+function _suitLedCount(game, suit) {
+  if (!suit) return 0;
+  let count = 0;
+  const consider = (lead) => {
+    if (!lead) return;
+    if (lead === 'mighty_joker') {
+      if (game.jokerSuitDeclared === suit) count++;
+      return;
+    }
+    const info = getCardInfo(lead);
+    if (info && info.suit === suit) count++;
+  };
+  for (const t of (game.tricks || [])) {
+    if (t.cards && t.cards.length > 0) consider(t.cards[0].cardId);
+  }
+  if (game.currentTrick.length > 0) consider(game.currentTrick[0].cardId);
+  return count;
+}
+
+/** Will `cardId`, played now, survive the rest of the current trick — i.e.,
+ *  no opp behind us can beat it? Implements the friend-bot reveal rule:
+ *
+ *  - mighty: always safe
+ *  - joker (with power): safe iff mighty isn't waiting in opp behind
+ *  - effective top of trump suit: safe (no higher trump remaining)
+ *  - effective top of non-trump suit: safe iff opp behind can't ruff:
+ *      · no opp behind us → safe
+ *      · trumps remaining outside ≤ 5 → low cut risk → safe
+ *      · 6+ trumps but this is the 1st time the suit was led → safe
+ *        (most still hold the suit, no one can ruff it)
+ *      · 6+ trumps + 2nd round of suit → unsafe (some are void → cut risk)
+ */
+function _isSafeFriendWinner(cardId, game, botId) {
+  const mightyCard = game.getMightyCard();
+  if (cardId === mightyCard) return true;
+  if (cardId === 'mighty_joker') {
+    if (!game._currentTrickJokerHasPower()) return false;
+    // Joker beats everything except mighty. If mighty is still live and
+    // could be in opp-behind hand, joker isn't safe.
+    if (!_isCardStillInPlay(game, mightyCard)) return true;
+    // Approximate: if mighty isn't ours and isn't played, an opp-behind
+    // could hold it.
+    return !getRemainingPlayers(game, botId)
+      .some(pid => (game.hands[pid] || []).includes(mightyCard));
+  }
+
+  if (!_isEffectiveTopOfSuit(cardId, game)) return false;
+
+  const info = getCardInfo(cardId);
+  const trump = game.trumpSuit;
+  const trumpActive = trump && trump !== 'no_trump';
+  // Effective top of trump suit (handled by _isEffectiveTopOfSuit) → no
+  // higher trump can over-ruff → safe.
+  if (trumpActive && info.suit === trump) return true;
+
+  // Non-trump card. Could be cut by trump played by opp behind.
+  // If no opp is behind us, no one will cut.
+  const remaining = getRemainingPlayers(game, botId);
+  const oppBehind = remaining.filter(pid => !isGovernment(game, pid) && pid !== game.declarer);
+  if (oppBehind.length === 0) return true;
+  if (!trumpActive) return true; // No trump suit defined → no cut possible.
+
+  const trumpsOutside = _countOpponentTrumps(game, botId);
+  if (trumpsOutside <= 5) return true;
+
+  // Many trumps left. Ruff risk depends on whether opp is likely void in
+  // lead suit yet. 1st round of this suit → most still have it → safe.
+  const leadCard = game.currentTrick[0]?.cardId;
+  const leadSuit = leadCard === 'mighty_joker'
+    ? game.jokerSuitDeclared
+    : (leadCard ? getCardInfo(leadCard).suit : null);
+  if (!leadSuit) return false;
+  return _suitLedCount(game, leadSuit) <= 1;
+}
+
 /** Get the suit of the friend-declared card */
 function _getFriendCardSuit(game) {
   if (!game.friendCard || game.friendCard === 'no_friend' || game.friendCard === 'first_trick') {
@@ -2062,4 +2229,17 @@ function _pickJokerLeadSuit(game, botId) {
   return bestSuit;
 }
 
-module.exports = { decideMightyBotAction, pickFriendCard };
+module.exports = {
+  decideMightyBotAction,
+  pickFriendCard,
+  // Helpers reused by strategy variants in ./strategies/*.
+  groupMightyCardsBySuit,
+  chooseKittyDiscards,
+  considerTrumpChange,
+  makePlayAction,
+  getKnownVoids: _getKnownVoids,
+  getPlayedCards: _getPlayedCards,
+  isFriend: _isFriend,
+  isSafeFriendWinner: _isSafeFriendWinner,
+  canBeatCurrentWinner,
+};

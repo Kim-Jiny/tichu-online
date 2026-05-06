@@ -941,7 +941,9 @@ class MightyGame {
    * True iff `playerId` is currently eligible to declare setting:
    *   - playing phase, leading (empty current trick), their turn
    *   - not an excluded mighty seat
-   *   - 2+ cards in hand (a 1-card "set" is the last trick itself)
+   *   - hand is non-empty (1-card setting allowed if the card is itself
+   *     unconditional — equivalent UX-wise to playing it on the last
+   *     trick, but exposed as a declaration for consistency)
    *   - every card in their hand is beyond anything the rest of the room
    *     could legally play against it given the remaining-trick rules.
    */
@@ -951,7 +953,7 @@ class MightyGame {
     if (this.currentTrick.length !== 0) return false;
     if (this.excludedPlayers.has(playerId)) return false;
     const hand = this.hands[playerId];
-    if (!hand || hand.length < 2) return false;
+    if (!hand || hand.length === 0) return false;
 
     const mightyCard = this.getMightyCard();
     const trump = this.trumpSuit;
@@ -1606,6 +1608,86 @@ class MightyGame {
     }
 
     return null;
+  }
+
+  /** Public legal-cards accessor for bot strategies. */
+  getLegalCards(playerId) {
+    return this._getLegalCards(playerId);
+  }
+
+  /** Player whose turn it is, including kill_select / kitty_exchange where the
+   *  declarer acts but `currentPlayer` isn't set. */
+  getPendingActor() {
+    if (this.currentPlayer) return this.currentPlayer;
+    if (this.state === 'kill_select' || this.state === 'kitty_exchange') return this.declarer;
+    return null;
+  }
+
+  /** Deep clone for bot search (PIMC, expectimax). Caller may mutate freely.
+   *  Hot path — called O(samples × candidates) per decision. Immutable refs
+   *  (playerIds, playerNames, gameType, playerCount) are shared; everything
+   *  else is deep-copied. */
+  clone() {
+    const c = Object.create(MightyGame.prototype);
+    // Shared (never mutated after construction)
+    c.playerIds = this.playerIds;
+    c.playerNames = this.playerNames;
+    c.gameType = this.gameType;
+    c.playerCount = this.playerCount;
+    // Primitives — copied by value
+    c.state = this.state;
+    c.round = this.round;
+    c.mode = this.mode;
+    c.activePlayerCount = this.activePlayerCount;
+    c.dealMissPool = this.dealMissPool;
+    c.trumpSuit = this.trumpSuit;
+    c.declarer = this.declarer;
+    c.partner = this.partner;
+    c.friendCard = this.friendCard;
+    c.friendRevealed = this.friendRevealed;
+    c.passCount = this.passCount;
+    c.currentBidderIndex = this.currentBidderIndex;
+    c.currentPlayer = this.currentPlayer;
+    c.dealerIndex = this.dealerIndex;
+    c.jokerSuitDeclared = this.jokerSuitDeclared;
+    c.jokerCallActive = this.jokerCallActive;
+    c.lastTrickWinner = this.lastTrickWinner;
+    c.revealGracePeriodEndAt = this.revealGracePeriodEndAt;
+    // Mutable — deep clone. options.minBid mutates on kill so we copy.
+    c.options = { ...this.options };
+    c.kitty = this.kitty.slice();
+    c.bidOrder = this.bidOrder.slice();
+    c.discarded = this.discarded.slice();
+    c.lastTrickCards = this.lastTrickCards.slice();
+    c.bids = { ...this.bids };
+    c.currentBid = { ...this.currentBid };
+    c.scores = { ...this.scores };
+    c.excludedPlayers = new Set(this.excludedPlayers);
+    c.hands = {};
+    for (const pid of this.playerIds) c.hands[pid] = (this.hands[pid] || []).slice();
+    c.pointCards = {};
+    for (const pid of this.playerIds) c.pointCards[pid] = (this.pointCards[pid] || []).slice();
+    c.newlyReceivedCards = {};
+    for (const pid of this.playerIds) {
+      if (this.newlyReceivedCards[pid]) c.newlyReceivedCards[pid] = this.newlyReceivedCards[pid].slice();
+    }
+    // currentTrick: array of {pid, cardId} — shallow-clone the entries
+    c.currentTrick = this.currentTrick.map(p => ({ ...p }));
+    // tricks: array of {leader, winner, cards: [{pid, cardId}, ...]}
+    c.tricks = this.tricks.map(t => ({
+      leader: t.leader,
+      winner: t.winner,
+      cards: t.cards.map(p => ({ ...p })),
+    }));
+    // scoreHistory rarely changes within a round but copy defensively
+    c.scoreHistory = this.scoreHistory.slice();
+    // roundResult is null until round_end — shallow ok (not mutated post-set)
+    c.roundResult = this.roundResult;
+    // Reveal-event payloads: shallow share (not mutated, only replaced)
+    c.lastDealMissEvent = this.lastDealMissEvent;
+    c.lastKillEvent = this.lastKillEvent;
+    c.lastSettingEvent = this.lastSettingEvent;
+    return c;
   }
 }
 

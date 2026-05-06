@@ -1815,6 +1815,66 @@ abstract class L10n {
   /// **'Slow'**
   String get lobbyBotSpeedSlow;
 
+  /// No description provided for @lobbyBotStrategyTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Bot Strategy'**
+  String get lobbyBotStrategyTitle;
+
+  /// No description provided for @lobbyBotStrategyHeuristic.
+  ///
+  /// In en, this message translates to:
+  /// **'Heuristic'**
+  String get lobbyBotStrategyHeuristic;
+
+  /// No description provided for @lobbyBotStrategyPimcPlay.
+  ///
+  /// In en, this message translates to:
+  /// **'PIMC (play)'**
+  String get lobbyBotStrategyPimcPlay;
+
+  /// No description provided for @lobbyBotStrategyPimcFull.
+  ///
+  /// In en, this message translates to:
+  /// **'PIMC (full)'**
+  String get lobbyBotStrategyPimcFull;
+
+  /// No description provided for @lobbyBotStrategyExpectimax.
+  ///
+  /// In en, this message translates to:
+  /// **'Expectimax'**
+  String get lobbyBotStrategyExpectimax;
+
+  /// No description provided for @lobbyBotStrategyExpectimaxSmart.
+  ///
+  /// In en, this message translates to:
+  /// **'Expectimax+ (smart rollout)'**
+  String get lobbyBotStrategyExpectimaxSmart;
+
+  /// No description provided for @lobbyBotStrategyMixexpectimax.
+  ///
+  /// In en, this message translates to:
+  /// **'Mix (rules + expectimax+)'**
+  String get lobbyBotStrategyMixexpectimax;
+
+  /// No description provided for @lobbyAddBotDialogTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Add Bot'**
+  String get lobbyAddBotDialogTitle;
+
+  /// No description provided for @lobbyAddBotConfirm.
+  ///
+  /// In en, this message translates to:
+  /// **'Add'**
+  String get lobbyAddBotConfirm;
+
+  /// No description provided for @lobbyAddBotCancel.
+  ///
+  /// In en, this message translates to:
+  /// **'Cancel'**
+  String get lobbyAddBotCancel;
+
   /// No description provided for @lobbyEmptySlot.
   ///
   /// In en, this message translates to:
@@ -5264,6 +5324,12 @@ abstract class L10n {
   /// In en, this message translates to:
   /// **'Joker Call: '**
   String get mtJokerCall;
+
+  /// No description provided for @mtJokerCallLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Joker Call'**
+  String get mtJokerCallLabel;
 
   /// No description provided for @mtYes.
   ///

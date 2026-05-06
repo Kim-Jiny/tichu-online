@@ -4,7 +4,8 @@ const { getCardInfo, RANK_ORDER, SUITS } = require('./MightyDeck');
 
 /**
  * Decide the next action for a Mighty bot. `strategy` selects the policy:
- * 'heuristic' (default), 'pimc_play', 'pimc_full', or 'expectimax'.
+ * 'heuristic' (default), 'pimc_play', 'pimc_full', 'expectimax',
+ * 'expectimax_smart', or 'mixexpectimax'.
  */
 function decideMightyBotAction(game, botId, strategy = 'heuristic') {
   if (!game || !game.playerIds.includes(botId)) return null;
@@ -12,6 +13,7 @@ function decideMightyBotAction(game, botId, strategy = 'heuristic') {
   if (strategy === 'pimc_full') return require('./strategies/pimc_full').decide(game, botId);
   if (strategy === 'expectimax') return require('./strategies/expectimax').decide(game, botId);
   if (strategy === 'expectimax_smart') return require('./strategies/expectimax_smart').decide(game, botId);
+  if (strategy === 'mixexpectimax') return require('./strategies/mixexpectimax').decide(game, botId);
   return _heuristicDecide(game, botId);
 }
 
@@ -213,23 +215,40 @@ function decideBid(game, botId) {
 
   let suit = bestTrump;
 
-  // No-trump: only in a genuinely dominating hand. Previous criteria
-  // (maxLen ≤ 4 && highCards ≥ 4) had a ~6 % success rate in sims.
-  // Tightened: require joker or mighty, ≥ 5 A/K, and no long side suit.
+  // No-trump: only fire when the hand can credibly take every lead.
+  //   - MUST hold both mighty (♠A in NT) AND joker — those are the two
+  //     unconditional winners.
+  //   - There must be exactly one "missing-A" non-spade suit where we
+  //     hold K AND Q. Calling that A as friend → friend drops it on our
+  //     lead, then our K and Q are the top of that suit.
+  //   - In every OTHER non-spade suit we already hold A — those become
+  //     trick winners on lead.
+  // Together: mighty + joker + 3 side-suit A's + K+Q in the friend suit
+  // covers every lead-winning slot in NT.
   if (game.options.allowNoTrump) {
-    const hasJoker = hand.includes('mighty_joker');
-    const mightyCardForNT = 'mighty_spade_A'; // in NT, spade A is still mighty
-    const hasMighty = hand.includes(mightyCardForNT);
-    const suitCounts = {};
-    let aceKingCount = 0;
-    for (const cardId of hand) {
-      if (cardId === 'mighty_joker') continue;
-      const info = getCardInfo(cardId);
-      suitCounts[info.suit] = (suitCounts[info.suit] || 0) + 1;
-      if (info.rank === 'A' || info.rank === 'K') aceKingCount++;
+    const handSet = new Set(hand);
+    const hasJoker = handSet.has('mighty_joker');
+    const hasMighty = handSet.has('mighty_spade_A');
+
+    let missingASuit = null;
+    for (const s of ['heart', 'diamond', 'club']) {
+      const hasA = handSet.has(`mighty_${s}_A`);
+      const hasK = handSet.has(`mighty_${s}_K`);
+      const hasQ = handSet.has(`mighty_${s}_Q`);
+      if (!hasA && hasK && hasQ) {
+        missingASuit = s;
+        break;
+      }
     }
-    const maxLen = Math.max(...Object.values(suitCounts), 0);
-    if ((hasJoker || hasMighty) && maxLen <= 3 && aceKingCount >= 5) {
+
+    let allOtherAs = false;
+    if (missingASuit) {
+      allOtherAs = ['heart', 'diamond', 'club']
+        .filter(s => s !== missingASuit)
+        .every(s => handSet.has(`mighty_${s}_A`));
+    }
+
+    if (hasMighty && hasJoker && missingASuit && allOtherAs) {
       suit = 'no_trump';
     }
   }
@@ -1282,12 +1301,23 @@ function _friendLead(game, botId, legalCards, suitCards, mightyCard) {
     // fall through to default suited friend logic
   }
 
-  // Joker as the friend's main draw tool: _pickJokerLeadSuit declares
-  // trump when opp still holds it (forces a trump out) or our strongest
-  // non-trump suit when trump is dead in opp hands (forces opp to follow
-  // and burn a high non-trump card).
+  // Joker lead — but only when trump isn't worth draining first. Per
+  // the joker-strategy spec: trump-controllable → drain trump first,
+  // joker later. Trump uncontrollable → lead joker now.
+  //
+  // Heuristic for "trump uncontrollable": opp holds at least as many
+  // trumps as we do, OR we hold no trump at all. In those cases trying
+  // to drain is hopeless and the joker is the better lead.
   if (legalCards.includes('mighty_joker')) {
-    return 'mighty_joker';
+    const myTrumpCount = (game.trumpSuit && game.trumpSuit !== 'no_trump')
+      ? (suitCards[game.trumpSuit] || []).length : 0;
+    const oppTrumpsForJoker = _countOpponentTrumps(game, botId);
+    const trumpUncontrollable = myTrumpCount === 0 || oppTrumpsForJoker >= myTrumpCount;
+    if (trumpUncontrollable) {
+      return 'mighty_joker';
+    }
+    // Otherwise fall through — drain trump first (handled below by the
+    // "default suited friend strategy" trump-lead branch).
   }
 
   // Effective non-trump top: a guaranteed trick the friend can take while
@@ -1532,17 +1562,29 @@ function governmentFollow(game, botId, legalCards, winningCards, currentWinner, 
     const winnerCard = getWinnerCardId(game);
     const declarerSecure = _isEffectiveTopOfSuit(winnerCard, game);
 
-    // Joker-friend safe-window reveal: when declarer's lead WILL hold (mighty
-    // or other effective top), joker has zero winning utility on this trick
-    // and would be collected by declarer either way. Cashing it here is the
-    // ideal reveal — partnership surfaces at no cost AND it dodges 조커콜
-    // (declarer can't kill a joker that's already on the table). Without
-    // this, joker friend can sit on the joker through every safe window and
-    // get called dead later. Note: this fires BEFORE the secure-lead early
-    // return below, since `winningCards.includes('mighty_joker')` is false on
-    // mighty leads (joker can't beat mighty) and the standard reveal block
-    // would otherwise be skipped entirely.
-    if (declarerSecure
+    // Joker-friend safe-window reveal: when declarer's lead is TRULY
+    // unbeatable AND joker has power on this trick, joker can be cashed
+    // for partnership reveal — joker is collected by declarer either way
+    // (mighty beats joker), so we trade joker's future taking utility
+    // for the immediate reveal AND a dodge of 조커콜.
+    //
+    // Gating:
+    //   - joker must have power on this trick. On trick 1 / last trick
+    //     (default options) joker can't take anything anyway, so burning
+    //     it as a "reveal" is just waste — the trick goes to declarer
+    //     regardless of which card we drop. Save joker for a powered
+    //     trick where it might still take.
+    //   - declarer's lead must be truly unbeatable: mighty led, OR bot
+    //     is the last player and declarer is currently winning. Plain
+    //     effective-top A leads can still be over-ruffed mid-trick.
+    //   - trump-active only. NT joker is too valuable.
+    const trumpActiveForReveal = game.trumpSuit && game.trumpSuit !== 'no_trump';
+    const jokerHasPower = typeof game._currentTrickJokerHasPower === 'function'
+      && game._currentTrickJokerHasPower();
+    const mightyLed = winnerCard === mightyCard;
+    const safeRevealWindow = (mightyLed || isLastPlayer) && jokerHasPower;
+    if (safeRevealWindow
+        && trumpActiveForReveal
         && game.friendCard === 'mighty_joker'
         && !game.friendRevealed
         && legalCards.includes('mighty_joker')) {
@@ -2163,15 +2205,33 @@ function makePlayAction(cardId, game, botId) {
  *  trump when only government (and friend) still hold trump — that just lets
  *  opponents discard junk. Fall back to trump only if nothing else works.
  */
+/**
+ * Pick the suit to declare when leading joker.
+ *
+ * Goal (per user spec): pick the suit where we can KEEP winning after the
+ * joker takes its trick. Joker isn't a one-trick winner — it's a "lead-
+ * retaining and continuation" card.
+ *
+ * Scoring components, by priority:
+ *   1. Continuation: do we hold the effective top of the suit (or the
+ *      second-top with the top out)? That guarantees we win the very
+ *      next lead in that suit.
+ *   2. Length: more cards in suit means we can keep cashing it.
+ *   3. Forces opp to spend: opp must hold the suit (otherwise the joker
+ *      call just hands them free discards — explicitly forbidden).
+ *   4. Trump-suit handling: only call trump while opp still has trump.
+ *      A trump-dead joker call is wasted tempo (opp dumps junk).
+ *   5. Government-side flush: when we're government and the friend-card
+ *      suit (기루) still has lots of cards outside our hand AND opp
+ *      holds it, drain that suit first.
+ */
 function _pickJokerLeadSuit(game, botId) {
   const hand = game.hands[botId] || [];
   const trump = game.trumpSuit && game.trumpSuit !== 'no_trump' ? game.trumpSuit : null;
-  // If we can be sure only government holds trump, make calling trump a last resort.
   const trumpDead = trump ? _noRealOppTrumpLeft(game, botId) : false;
+  const mightyCard = game.getMightyCard();
 
-  // Pre-compute: for every suit, do any opponent (non-gov seat that isn't self)
-  // still hold that suit in their hand? If the suit is fully void across opp
-  // seats, joker-calling it just forces free discards.
+  // Which suits do non-government opponents still hold?
   const oppHoldsSuit = {};
   for (const suit of SUITS) oppHoldsSuit[suit] = false;
   for (const pid of game.playerIds) {
@@ -2186,32 +2246,73 @@ function _pickJokerLeadSuit(game, botId) {
     }
   }
 
-  // Score each suit by our own strength in it
-  const suitScore = {};
-  for (const suit of SUITS) suitScore[suit] = 0;
+  // Per-suit hand inventory (skip mighty/joker).
+  const suitCards = {};
+  for (const suit of SUITS) suitCards[suit] = [];
   for (const cardId of hand) {
     if (cardId === 'mighty_joker') continue;
+    if (cardId === mightyCard) continue;
     const info = getCardInfo(cardId);
-    suitScore[info.suit] += RANK_ORDER[info.rank] || 0;
+    if (info.suit) suitCards[info.suit].push(cardId);
   }
-  // Boost suits where some opposition seat is known void (forced discards)
+
+  const suitScore = {};
+  for (const suit of SUITS) {
+    const cards = suitCards[suit];
+    let score = 0;
+
+    // Continuation — the most important factor. After the joker takes
+    // this trick, can we lead the suit again and still win?
+    let hasTop = false;
+    let hasSecondTop = false;
+    if (cards.length > 0) {
+      const sorted = [...cards].sort((a, b) =>
+        (RANK_ORDER[getCardInfo(b).rank] || 0) - (RANK_ORDER[getCardInfo(a).rank] || 0));
+      const top = sorted[0];
+      hasTop = _isEffectiveTopOfSuit(top, game);
+      if (!hasTop && sorted.length > 1) {
+        // Tentatively assume the top card pulls out via the joker call;
+        // if our second-highest then becomes the post-trick effective
+        // top (no other higher unaccounted card), count it as a top.
+        hasSecondTop = _isEffectiveTopOfSuit(sorted[1], game)
+          // OR: my #1 is just below the absolute top, and a higher
+          // card (likely the A) hasn't been played yet — then we
+          // hope the joker call burns it. Approximate as:
+          || (RANK_ORDER[getCardInfo(top).rank] >= RANK_ORDER['Q']);
+      }
+    }
+    if (hasTop) score += 200;
+    else if (hasSecondTop) score += 100;
+    else if (cards.length > 0) score += 20;
+    // else: no card in suit — bot can't continue at all → no bonus
+
+    // Length: more cards = more continuation tricks.
+    score += cards.length * 8;
+
+    // Forces opp to spend. No opp in suit = forbidden "안전한 문양"
+    // (free discards for opp) — heavy penalty.
+    if (oppHoldsSuit[suit]) {
+      score += 30;
+    } else {
+      score -= 200;
+    }
+
+    // Trump-suit specifics.
+    if (suit === trump) {
+      if (trumpDead) score -= 100;
+    }
+
+    suitScore[suit] = score;
+  }
+
+  // Known-void boosts (forced discards from those seats).
   const voids = _getKnownVoids(game);
   for (const pid of game.playerIds) {
     if (pid === botId) continue;
     for (const suit of (voids[pid] || [])) suitScore[suit] += 3;
   }
-  // Huge bonus when opposition still holds the suit — that's the whole point of
-  // calling it with joker. Penalty when calling trump while opp is out of it.
-  for (const suit of SUITS) {
-    if (oppHoldsSuit[suit]) suitScore[suit] += 50;
-    if (suit === trump && trumpDead) suitScore[suit] -= 100;
-  }
 
-  // Government-side joker lead: when the friend-card suit (기루) still has 5+
-  // cards live outside our hand, declaring that suit drains opp ammunition in
-  // the suit they're loaded with. Joker forces a follow (no ruff), so this is
-  // the cheapest way to flush 기루 — strictly better than burning joker on
-  // our own strong off-suit while 기루 still floats around.
+  // Government flush: 기루 still rich + opp still holds it → drain it.
   const friendCardSuit = _getFriendCardSuit(game);
   const isGovernment = botId === game.declarer || _isFriend(game, botId);
   if (isGovernment && friendCardSuit && oppHoldsSuit[friendCardSuit]
@@ -2224,7 +2325,6 @@ function _pickJokerLeadSuit(game, botId) {
   for (const [suit, score] of Object.entries(suitScore)) {
     if (score > bestScore) { bestScore = score; bestSuit = suit; }
   }
-  // Safety fallbacks — trump if it exists, else spade
   if (!bestSuit) bestSuit = trump || 'spade';
   return bestSuit;
 }
@@ -2241,5 +2341,14 @@ module.exports = {
   getPlayedCards: _getPlayedCards,
   isFriend: _isFriend,
   isSafeFriendWinner: _isSafeFriendWinner,
+  isEffectiveTopOfSuit: _isEffectiveTopOfSuit,
+  countOpponentTrumps: _countOpponentTrumps,
+  suitLedCount: _suitLedCount,
   canBeatCurrentWinner,
+  getCurrentTrickWinner,
+  getWinnerCardId,
+  noRealOppTrumpLeft: _noRealOppTrumpLeft,
+  hasOppositionBehind,
+  declarerStrongSuit: _declarerStrongSuit,
+  getFriendCardSuit: _getFriendCardSuit,
 };

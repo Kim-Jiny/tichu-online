@@ -2584,8 +2584,12 @@ class GameService extends ChangeNotifier {
     }
   }
 
-  void addBot({int? targetSlot, String speed = 'normal'}) {
-    final msg = <String, dynamic>{'type': 'add_bot', 'speed': speed};
+  void addBot({int? targetSlot, String speed = 'normal', String strategy = 'heuristic'}) {
+    final msg = <String, dynamic>{
+      'type': 'add_bot',
+      'speed': speed,
+      'strategy': strategy,
+    };
     if (targetSlot != null) msg['targetSlot'] = targetSlot;
     _network.send(msg);
   }

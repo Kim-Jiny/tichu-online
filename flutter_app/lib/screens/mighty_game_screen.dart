@@ -31,6 +31,7 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
   String _friendRank = 'A';
   String? _selectedTrumpSuit; // null = no change
   String? _lastKnownTrumpSuit; // tracks the last trumpSuit we rendered for; used to resync _selectedTrumpSuit when the server confirms a change
+  String? _lastKittyMightyCard; // last mighty card seen while in kitty_exchange — when trump change makes mighty change AND declarer no longer holds it, default the friend pick to mighty-friend
 
   // Kitty-phase contract-change banner: auto-dismissing overlay that
   // highlights trump/bid changes so non-declarers notice them.
@@ -240,6 +241,33 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
                       });
                     }
                     _lastTrickCount = state.tricks.length;
+                  }
+                  // Trump change during kitty_exchange may change which card is
+                  // mighty. If the new mighty isn't in declarer's hand, reset
+                  // the friend pick to mighty-friend so the host doesn't have
+                  // to re-pick manually.
+                  if (state.phase == 'kitty_exchange') {
+                    final currentMighty = state.mightyCard;
+                    if (_lastKittyMightyCard != null
+                        && _lastKittyMightyCard != currentMighty
+                        && currentMighty != null
+                        && !state.myCards.contains(currentMighty)) {
+                      final parts = currentMighty.replaceFirst('mighty_', '').split('_');
+                      final newSuit = parts.isNotEmpty ? parts[0] : 'spade';
+                      final newRank = parts.length > 1 ? parts[1] : 'A';
+                      WidgetsBinding.instance.addPostFrameCallback((_) {
+                        if (!mounted) return;
+                        setState(() {
+                          _friendMode = 'card';
+                          _friendSuit = newSuit;
+                          _friendRank = newRank;
+                          _friendCardSelection = currentMighty;
+                        });
+                      });
+                    }
+                    _lastKittyMightyCard = currentMighty;
+                  } else if (_lastKittyMightyCard != null) {
+                    _lastKittyMightyCard = null;
                   }
                   // Clear stale state on phase change
                   if (_lastPhase != state.phase) {
@@ -1852,7 +1880,16 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
                 final needed = minBidFor(suit);
                 if (needed > 20) return;
                 setState(() {
-                  if (_bidPoints < needed) _bidPoints = needed;
+                  // Switching INTO NT snaps points down to the NT minimum
+                  // (NT can tie a suited bid, so the cheapest NT bid is
+                  // typically a step below what the suited UI was showing).
+                  // For other suits, only raise — preserves any manual
+                  // bump the user made.
+                  if (suit == 'no_trump') {
+                    _bidPoints = needed;
+                  } else if (_bidPoints < needed) {
+                    _bidPoints = needed;
+                  }
                   _bidSuit = suit;
                 });
               }
@@ -3007,27 +3044,39 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
                   ? _discardSelection.contains(cardId)
                   : false;
 
+          // Trump / mighty / joker-call previews. After bidding these come
+          // straight from state; during bidding we derive them from the
+          // current top bid's suit so the hand updates live.
+          //   mighty     : trump=='spade' → ♦A, else → ♠A
+          //   jokerCall  : trump=='club'  → ♠3, else → ♣3 (default; once
+          //                bidding finishes, server-published value wins)
+          String? effectiveTrump = state?.trumpSuit;
+          String? effectiveMighty = state?.mightyCard;
+          String? effectiveJokerCall = state?.jokerCallCard;
+          if (state != null && state.phase == 'bidding') {
+            final bidSuit = state.currentBid['suit'];
+            if (bidSuit is String && bidSuit.isNotEmpty) {
+              effectiveTrump = bidSuit;
+              effectiveMighty = bidSuit == 'spade' ? 'mighty_diamond_A' : 'mighty_spade_A';
+              // Joker-call only fires in suited bidding — skip the preview
+              // in NT so the badge doesn't suggest a power that won't apply.
+              effectiveJokerCall = bidSuit == 'no_trump'
+                  ? null
+                  : (bidSuit == 'club' ? 'mighty_spade_3' : 'mighty_club_3');
+            }
+          }
+
           // Badge: mighty card, joker call card, friend card, or kitty card
-          final isMightyCard = state?.mightyCard != null && cardId == state!.mightyCard;
-          final isJokerCallCard = !isMightyCard && state?.jokerCallCard != null && cardId == state!.jokerCallCard;
+          final isMightyCard = effectiveMighty != null && cardId == effectiveMighty;
+          final isJokerCallCard = !isMightyCard && effectiveJokerCall != null && cardId == effectiveJokerCall;
           final isFriendCard = !isMightyCard && !isJokerCallCard && state?.friendCard != null && cardId == state!.friendCard;
           final isKittyCard = !isMightyCard && !isJokerCallCard && !isFriendCard && isKitty && (state?.kittyCards.contains(cardId) ?? false);
           // Post-kill/suicide: cards received via redistribution get the move_up badge
           // for the receiving player (similar to declarer's kitty-pickup highlight).
           final isRedistCard = !isMightyCard && !isJokerCallCard && !isFriendCard && !isKittyCard
               && (state?.newlyReceivedCards.contains(cardId) ?? false);
-          // Trump suit border. After bidding, state.trumpSuit is the locked
-          // trump. During bidding it's still null, so fall back to the top
-          // bid's suit so the hand updates the trump preview live with each
-          // bid declared at the table.
+          // Trump suit border.
           Color? trumpBorder;
-          String? effectiveTrump = state?.trumpSuit;
-          if (state != null && state.phase == 'bidding') {
-            final bidSuit = state.currentBid['suit'];
-            if (bidSuit is String && bidSuit.isNotEmpty) {
-              effectiveTrump = bidSuit;
-            }
-          }
           if (effectiveTrump != null && effectiveTrump != 'no_trump') {
             final cardSuit = _getCardSuit(cardId);
             if (cardSuit == effectiveTrump) {

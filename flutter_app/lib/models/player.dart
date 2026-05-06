@@ -1,3 +1,13 @@
+class BotStrategy {
+  static const heuristic = 'heuristic';
+  static const pimcPlay = 'pimc_play';
+  static const pimcFull = 'pimc_full';
+  static const expectimax = 'expectimax';
+  static const expectimaxSmart = 'expectimax_smart';
+  static const mixExpectimax = 'mixexpectimax';
+  static const all = [heuristic, pimcPlay, pimcFull, expectimax, expectimaxSmart, mixExpectimax];
+}
+
 class Player {
   final String id;
   final String name;
@@ -15,6 +25,7 @@ class Player {
   final String? titleKey;
   final String? titleName;
   final String? botSpeed;
+  final String? botStrategy;
 
   Player({
     required this.id,
@@ -33,6 +44,7 @@ class Player {
     this.titleKey,
     this.titleName,
     this.botSpeed,
+    this.botStrategy,
   });
 
   factory Player.fromJson(Map<String, dynamic> json) {
@@ -53,6 +65,7 @@ class Player {
       titleKey: json['titleKey'] as String?,
       titleName: json['titleName'] as String?,
       botSpeed: json['botSpeed'] as String?,
+      botStrategy: json['botStrategy'] as String?,
     );
   }
 }

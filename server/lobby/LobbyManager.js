@@ -90,7 +90,9 @@ class LobbyManager {
           // Recreate a fresh bot — game-state learning is empty, but
           // migration only happens between rounds so it doesn't matter.
           const speed = ['fast', 'normal', 'slow'].includes(p.botSpeed) ? p.botSpeed : 'normal';
-          const bot = new BotPlayer(p.id, p.nickname, speed);
+          // BotPlayer normalises strategy itself; pass through and let it
+          // fall back to 'heuristic' on garbage input.
+          const bot = new BotPlayer(p.id, p.nickname, speed, p.botStrategy);
           room.bots.set(p.id, bot);
           room.players[p.slot] = {
             id: p.id,

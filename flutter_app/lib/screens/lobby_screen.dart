@@ -5027,6 +5027,17 @@ class _LobbyScreenState extends State<LobbyScreen> {
                             : const Color(0xFF558B2F),
                       ),
                     ],
+                    if (player.botStrategy != null && player.botStrategy != 'heuristic') ...[
+                      const SizedBox(width: 3),
+                      Text(
+                        _shortStrategyLabel(player.botStrategy!),
+                        style: const TextStyle(
+                          fontSize: 9,
+                          fontWeight: FontWeight.bold,
+                          color: Color(0xFF6A1B9A),
+                        ),
+                      ),
+                    ],
                   ],
                 ),
               ),
@@ -5102,7 +5113,11 @@ class _LobbyScreenState extends State<LobbyScreen> {
             if (isEmpty && game.isHost && !game.isRankedRoom && !isSlotBlocked)
               PopupMenuButton<String>(
                 onSelected: (speed) {
-                  game.addBot(targetSlot: slotIndex, speed: speed);
+                  game.addBot(
+                    targetSlot: slotIndex,
+                    speed: speed,
+                    strategy: BotStrategy.mixExpectimax,
+                  );
                 },
                 itemBuilder: (ctx) {
                   final l10n = L10n.of(ctx);
@@ -5314,6 +5329,23 @@ class _LobbyScreenState extends State<LobbyScreen> {
     }
   }
 
+  String _shortStrategyLabel(String strategy) {
+    switch (strategy) {
+      case BotStrategy.pimcPlay:
+        return 'PIMC·P';
+      case BotStrategy.pimcFull:
+        return 'PIMC·F';
+      case BotStrategy.expectimax:
+        return 'EXMX';
+      case BotStrategy.expectimaxSmart:
+        return 'EXMX+';
+      case BotStrategy.mixExpectimax:
+        return 'MIX';
+      default:
+        return '';
+    }
+  }
+
   void _showKickConfirmDialog(
     String playerName,
     String playerId,
@@ -5352,3 +5384,4 @@ class _BannerStyle {
   const _BannerStyle({this.gradient});
   final LinearGradient? gradient;
 }
+

@@ -937,6 +937,36 @@ class L10nEn extends L10n {
   String get lobbyBotSpeedSlow => 'Slow';
 
   @override
+  String get lobbyBotStrategyTitle => 'Bot Strategy';
+
+  @override
+  String get lobbyBotStrategyHeuristic => 'Heuristic';
+
+  @override
+  String get lobbyBotStrategyPimcPlay => 'PIMC (play)';
+
+  @override
+  String get lobbyBotStrategyPimcFull => 'PIMC (full)';
+
+  @override
+  String get lobbyBotStrategyExpectimax => 'Expectimax';
+
+  @override
+  String get lobbyBotStrategyExpectimaxSmart => 'Expectimax+ (smart rollout)';
+
+  @override
+  String get lobbyBotStrategyMixexpectimax => 'Mix (rules + expectimax+)';
+
+  @override
+  String get lobbyAddBotDialogTitle => 'Add Bot';
+
+  @override
+  String get lobbyAddBotConfirm => 'Add';
+
+  @override
+  String get lobbyAddBotCancel => 'Cancel';
+
+  @override
   String get lobbyEmptySlot => '[Empty]';
 
   @override
@@ -2900,6 +2930,9 @@ class L10nEn extends L10n {
 
   @override
   String get mtJokerCall => 'Joker Call: ';
+
+  @override
+  String get mtJokerCallLabel => 'Joker Call';
 
   @override
   String get mtYes => 'Yes';

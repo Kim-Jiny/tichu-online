@@ -391,7 +391,7 @@ class GameRoom {
 
   // --- Bot management ---
 
-  addBot(targetSlot, locale, speed = 'normal') {
+  addBot(targetSlot, locale, speed = 'normal', strategy = 'heuristic') {
     if (this.getPlayerCount() >= this.getEffectiveMaxPlayers()) {
       return { success: false, messageKey: 'room_full' };
     }
@@ -423,13 +423,16 @@ class GameRoom {
     // Validate speed
     const validSpeeds = ['fast', 'normal', 'slow'];
     const botSpeed = validSpeeds.includes(speed) ? speed : 'normal';
+    // Strategy is only meaningful for Mighty bots; other game types ignore
+    // it but we still persist whatever the host picked so it survives
+    // migrations. BotPlayer normalises invalid strategy → 'heuristic'.
     const botId = `bot_${nextBotNum++}`;
     const { t } = require('../i18n');
     const botNickname = t(locale, 'bot_nickname', { number: this.bots.size + 1 });
-    const bot = new BotPlayer(botId, botNickname, botSpeed);
+    const bot = new BotPlayer(botId, botNickname, botSpeed, strategy);
     this.bots.set(botId, bot);
     this.players[slot] = { id: botId, nickname: botNickname, connected: true, isBot: true, ready: true, botSpeed };
-    console.log(`Bot ${botNickname} (speed: ${botSpeed}) added to room ${this.name} (slot ${slot})`);
+    console.log(`Bot ${botNickname} (speed: ${botSpeed}, strategy: ${bot.strategy}) added to room ${this.name} (slot ${slot})`);
     return { success: true, botId };
   }
 
@@ -805,6 +808,7 @@ class GameRoom {
           titleKey: p.titleKey || null,
           titleName: p.titleName || null,
           botSpeed: p.botSpeed || null,
+          botStrategy: p.isBot ? this.bots.get(p.id)?.strategy || null : null,
         };
       }),
       gameInProgress: !!this.game,

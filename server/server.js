@@ -1007,6 +1007,7 @@ function serializeRoom(room) {
         nickname: p.nickname,
         isBot: !!p.isBot,
         botSpeed: p.botSpeed || null,
+        botStrategy: p.isBot ? room.bots.get(p.id)?.strategy || null : null,
         ready: !!p.ready,
         titleKey: p.titleKey || null,
         titleName: p.titleName || null,
@@ -3195,7 +3196,8 @@ function handleAddBot(ws, data) {
   }
   const targetSlot = typeof data.targetSlot === 'number' ? data.targetSlot : undefined;
   const speed = typeof data.speed === 'string' ? data.speed : 'normal';
-  const result = room.addBot(targetSlot, ws.locale, speed);
+  const strategy = typeof data.strategy === 'string' ? data.strategy : 'heuristic';
+  const result = room.addBot(targetSlot, ws.locale, speed, strategy);
   if (!result.success) {
     sendTo(ws, { type: 'error', message: resultMessage(result, ws.locale) });
     return;
@@ -3820,7 +3822,11 @@ function scheduleBotActions(roomId) {
   const isSK0 = room.gameType === 'skull_king';
   const isLL0 = room.gameType === 'love_letter';
   const isMighty0 = room.gameType === 'mighty';
-  const decideFn0 = isMighty0 ? decideMightyBotAction : isLL0 ? decideLLBotAction : isSK0 ? decideSKBotAction : decideBotAction;
+  const baseDecideFn0 = isMighty0 ? decideMightyBotAction : isLL0 ? decideLLBotAction : isSK0 ? decideSKBotAction : decideBotAction;
+  // Mighty supports per-bot decision strategies; other game types ignore the extra arg.
+  const decideFn0 = isMighty0
+    ? (g, pid) => baseDecideFn0(g, pid, room.bots.get(pid)?.strategy || 'heuristic')
+    : baseDecideFn0;
   let activeBotSpeed = 'normal';
   for (const botId of room.getBotIds()) {
     if (decideFn0(room.game, botId)) {
@@ -3857,7 +3863,13 @@ function scheduleBotActions(roomId) {
     const isSK = r.gameType === 'skull_king';
     const isLL = r.gameType === 'love_letter';
     const isMighty = r.gameType === 'mighty';
-    const decideFn = isMighty ? decideMightyBotAction : isLL ? decideLLBotAction : isSK ? decideSKBotAction : decideBotAction;
+    const baseDecideFn = isMighty ? decideMightyBotAction : isLL ? decideLLBotAction : isSK ? decideSKBotAction : decideBotAction;
+    const decideFn = isMighty
+      ? (g, pid) => {
+          const cur = lobby.getRoom(roomId);
+          return baseDecideFn(g, pid, cur?.bots.get(pid)?.strategy || 'heuristic');
+        }
+      : baseDecideFn;
     for (const botId of r.getBotIds()) {
       let action = decideFn(r.game, botId);
       if (action) {

@@ -947,6 +947,36 @@ class L10nDe extends L10n {
   String get lobbyBotSpeedSlow => 'Langsam';
 
   @override
+  String get lobbyBotStrategyTitle => 'Bot-Strategie';
+
+  @override
+  String get lobbyBotStrategyHeuristic => 'Heuristisch';
+
+  @override
+  String get lobbyBotStrategyPimcPlay => 'PIMC (Spiel)';
+
+  @override
+  String get lobbyBotStrategyPimcFull => 'PIMC (komplett)';
+
+  @override
+  String get lobbyBotStrategyExpectimax => 'Expectimax';
+
+  @override
+  String get lobbyBotStrategyExpectimaxSmart => 'Expectimax+ (smart rollout)';
+
+  @override
+  String get lobbyBotStrategyMixexpectimax => 'Mix (Regeln + Expectimax+)';
+
+  @override
+  String get lobbyAddBotDialogTitle => 'Bot hinzufügen';
+
+  @override
+  String get lobbyAddBotConfirm => 'Hinzufügen';
+
+  @override
+  String get lobbyAddBotCancel => 'Abbrechen';
+
+  @override
   String get lobbyEmptySlot => '[Leer]';
 
   @override
@@ -2915,6 +2945,9 @@ class L10nDe extends L10n {
 
   @override
   String get mtJokerCall => 'Joker-Ruf: ';
+
+  @override
+  String get mtJokerCallLabel => 'Joker-Ruf';
 
   @override
   String get mtYes => 'Ja';

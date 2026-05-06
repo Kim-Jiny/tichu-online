@@ -913,6 +913,36 @@ class L10nKo extends L10n {
   String get lobbyBotSpeedSlow => '느림';
 
   @override
+  String get lobbyBotStrategyTitle => '봇 전략';
+
+  @override
+  String get lobbyBotStrategyHeuristic => '휴리스틱';
+
+  @override
+  String get lobbyBotStrategyPimcPlay => 'PIMC (플레이)';
+
+  @override
+  String get lobbyBotStrategyPimcFull => 'PIMC (전체)';
+
+  @override
+  String get lobbyBotStrategyExpectimax => 'Expectimax';
+
+  @override
+  String get lobbyBotStrategyExpectimaxSmart => 'Expectimax+ (똑똑한 rollout)';
+
+  @override
+  String get lobbyBotStrategyMixexpectimax => '믹스 (룰 + Expectimax+)';
+
+  @override
+  String get lobbyAddBotDialogTitle => '봇 추가';
+
+  @override
+  String get lobbyAddBotConfirm => '추가';
+
+  @override
+  String get lobbyAddBotCancel => '취소';
+
+  @override
   String get lobbyEmptySlot => '[빈 자리]';
 
   @override
@@ -2838,6 +2868,9 @@ class L10nKo extends L10n {
 
   @override
   String get mtJokerCall => '조커콜: ';
+
+  @override
+  String get mtJokerCallLabel => '조커콜';
 
   @override
   String get mtYes => '예';

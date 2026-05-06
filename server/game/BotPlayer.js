@@ -3,12 +3,15 @@
  * Strategic AI for Tichu card game.
  */
 
+const VALID_BOT_STRATEGIES = ['heuristic', 'pimc_play', 'pimc_full', 'expectimax', 'expectimax_smart', 'mixexpectimax'];
+
 class BotPlayer {
-  constructor(id, nickname, speed = 'normal') {
+  constructor(id, nickname, speed = 'normal', strategy = 'heuristic') {
     this.id = id;           // 'bot_1', 'bot_2', ...
     this.nickname = nickname; // '봇 1', '봇 2', ...
     this.isBot = true;
     this.speed = speed;     // 'fast', 'normal', 'slow'
+    this.strategy = VALID_BOT_STRATEGIES.includes(strategy) ? strategy : 'heuristic';
   }
 }
 
@@ -1742,4 +1745,4 @@ function findCallFulfillPlay(comboType, lastValue, lastLength, calledCards, allC
 }
 
 
-module.exports = { BotPlayer, decideBotAction };
+module.exports = { BotPlayer, decideBotAction, VALID_BOT_STRATEGIES };

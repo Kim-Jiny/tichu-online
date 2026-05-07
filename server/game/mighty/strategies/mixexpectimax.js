@@ -371,19 +371,65 @@ function _friendSuitedTopCashRule(game, botId) {
  * reveal block) already produces the right behaviour; mix just makes sure
  * expectimax_smart doesn't override it with a needless over-cut.
  */
-function _friendDeclarerSecureRule(game, botId) {
+/**
+ * Rule 16: friend on declarer-led trick with no safe winner → defer to
+ * heuristic.
+ *
+ * When the bot is forced to follow the lead (e.g., trump-suit lead and
+ * we hold only trump) AND no card in our legal set is a `_isSafeFriendWinner`,
+ * we will inevitably over-trump declarer or lose to an opp behind. The
+ * choice is then between burning a high card (e.g. trump A vulnerable to
+ * joker over-cut) or dumping a low one. The heuristic correctly picks the
+ * low dump (`getSafeDiscard`); expectimax sometimes chases the high one
+ * via rollout score.
+ *
+ * The shared candidate filter (`filterFriendSafeCandidates`) keeps the
+ * full legal set as a fallback when no safe winner exists, so expectimax
+ * sees high winners as candidates. This rule short-circuits that path
+ * when there's no safe winner at all — heuristic's loss-minimisation is
+ * the right call.
+ */
+function _friendNoSafeWinnerRule(game, botId) {
   if (!game.currentTrick || game.currentTrick.length === 0) return null;
   if (!MightyBotInternals.isFriend(game, botId)) return null;
 
   const declarerLed = game.currentTrick[0].pid === game.declarer;
   if (!declarerLed) return null;
 
+  const legal = game.getLegalCards(botId);
+  if (!legal || legal.length === 0) return null;
+
+  for (const cardId of legal) {
+    if (!MightyBotInternals.canBeatCurrentWinner(game, cardId)) continue;
+    if (MightyBotInternals.isSafeFriendWinner(cardId, game, botId)) {
+      return null; // safe winner exists — let expectimax decide
+    }
+  }
+
+  const action = MightyBotInternals.decideMightyBotAction(game, botId, 'heuristic');
+  if (!action || action.type !== 'play_card') return null;
+  return action;
+}
+
+function _friendDeclarerSecureRule(game, botId) {
+  if (!game.currentTrick || game.currentTrick.length === 0) return null;
+  if (!MightyBotInternals.isFriend(game, botId)) return null;
+
   const currentWinner = MightyBotInternals.getCurrentTrickWinner(game);
   if (currentWinner !== game.declarer) return null;
 
   const winnerCard = MightyBotInternals.getWinnerCardId(game);
   if (!winnerCard) return null;
-  if (!MightyBotInternals.isEffectiveTopOfSuit(winnerCard, game)) return null;
+
+  // Two safety paths: declarer's card is the effective top of its suit
+  // (within-suit no over-ruff possible), OR perfect-info shows no opp
+  // behind has any card that beats it. The latter covers cases where
+  // declarer ruffed mid-trump (e.g., ♥10) but no opp seat has a higher
+  // trump or mighty/powered joker — heuristic correctly dumps but
+  // expectimax sometimes burns mighty/joker as a "reinforcement".
+  const winnerIsEffectiveTop = MightyBotInternals.isEffectiveTopOfSuit(winnerCard, game);
+  const winnerWillHold = MightyBotInternals.winnerCardWillHold(game, botId);
+  if (!winnerIsEffectiveTop && !winnerWillHold) return null;
 
   const action = MightyBotInternals.decideMightyBotAction(game, botId, 'heuristic');
   if (!action || action.type !== 'play_card') return null;
@@ -408,8 +454,18 @@ function _friendDeclarerSecureRule(game, botId) {
 function _preserveWeakJokerRule(game, botId) {
   const hand = game.hands[botId] || [];
   if (!hand.includes('mighty_joker')) return null;
-  if (typeof game._currentTrickJokerHasPower !== 'function') return null;
-  if (game._currentTrickJokerHasPower()) return null;
+
+  // Joker is wasted whenever it CAN'T take the current trick — burning
+  // it sacrifices future trick-taking power for nothing. Two cases:
+  //   1. Joker has no power (first/last trick default, or jokerCall
+  //      active) — joker is just a low card.
+  //   2. Mighty is already on the table — joker loses to mighty
+  //      regardless of power, so playing it just hands it to declarer.
+  const jokerHasPower = typeof game._currentTrickJokerHasPower === 'function'
+    && game._currentTrickJokerHasPower();
+  const mightyCard = game.getMightyCard();
+  const mightyOnTable = (game.currentTrick || []).some(p => p.cardId === mightyCard);
+  if (jokerHasPower && !mightyOnTable) return null;
 
   const legal = game.getLegalCards(botId);
   if (!legal || legal.length <= 1) return null;
@@ -853,6 +909,9 @@ function _applyHardRules(game, botId) {
 
   const secureFollow = _friendDeclarerSecureRule(game, botId);
   if (secureFollow) return secureFollow;
+
+  const noSafeWinner = _friendNoSafeWinnerRule(game, botId);
+  if (noSafeWinner) return noSafeWinner;
 
   const weakJoker = _preserveWeakJokerRule(game, botId);
   if (weakJoker) return weakJoker;

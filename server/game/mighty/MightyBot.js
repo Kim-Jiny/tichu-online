@@ -1692,7 +1692,8 @@ function governmentFollow(game, botId, legalCards, winningCards, currentWinner, 
     const isSecure = winnerCard === mightyCard || winnerCard === 'mighty_joker' ||
       _isEffectiveTopOfSuit(winnerCard, game) ||
       (!isNT && winnerCard && getCardInfo(winnerCard).suit === game.trumpSuit &&
-       getCardInfo(winnerCard).rank === 'A');
+       getCardInfo(winnerCard).rank === 'A') ||
+      _winnerCardWillHold(game, botId);
 
     if (isSecure) {
       return dumpSafe(legalCards, game);
@@ -1879,6 +1880,31 @@ function getCurrentTrickWinner(game) {
   return bestPlay ? bestPlay.pid : null;
 }
 
+/**
+ * Perfect-info safety check: will the currently winning card survive
+ * the rest of the trick? Scans every opp seat that hasn't played yet
+ * for any card that could beat the current winner. Used by friend's
+ * follow logic so we don't burn mighty/joker reinforcing a trick that
+ * was always going to hold anyway.
+ */
+function _winnerCardWillHold(game, botId) {
+  const winnerCard = getWinnerCardId(game);
+  if (!winnerCard) return false;
+  const playedPids = new Set((game.currentTrick || []).map(p => p.pid));
+  for (const pid of game.playerIds) {
+    if (pid === botId) continue;
+    if (playedPids.has(pid)) continue;
+    if (game.excludedPlayers && game.excludedPlayers.has(pid)) continue;
+    if (pid === game.declarer) continue;                              // ally
+    if (game.friendRevealed && pid === game.partner) continue;        // ally (revealed)
+    const hand = game.hands[pid] || [];
+    for (const cardId of hand) {
+      if (canBeatCurrentWinner(game, cardId)) return false;
+    }
+  }
+  return true;
+}
+
 function canBeatCurrentWinner(game, cardId) {
   const mightyCard = game.getMightyCard();
   if (cardId === mightyCard) return true;
@@ -2040,9 +2066,23 @@ function _isSafeFriendWinner(cardId, game, botId) {
   const info = getCardInfo(cardId);
   const trump = game.trumpSuit;
   const trumpActive = trump && trump !== 'no_trump';
-  // Effective top of trump suit (handled by _isEffectiveTopOfSuit) → no
-  // higher trump can over-ruff → safe.
-  if (trumpActive && info.suit === trump) return true;
+  // Effective top of trump suit — within-suit no over-ruff possible, but
+  // mighty / powered joker held by opp behind can still beat it. Use
+  // perfect-info (server-side bot has hand visibility): scan remaining
+  // opp seats for either threat.
+  if (trumpActive && info.suit === trump) {
+    const remaining = getRemainingPlayers(game, botId);
+    const jokerHasPower = typeof game._currentTrickJokerHasPower === 'function'
+      && game._currentTrickJokerHasPower();
+    for (const pid of remaining) {
+      if (isGovernment(game, pid)) continue;        // ally, won't over-cut
+      if (pid === game.declarer) continue;
+      const hand = game.hands[pid] || [];
+      if (hand.includes(mightyCard)) return false;
+      if (jokerHasPower && hand.includes('mighty_joker')) return false;
+    }
+    return true;
+  }
 
   // Non-trump card. Could be cut by trump played by opp behind.
   // If no opp is behind us, no one will cut.
@@ -2373,4 +2413,5 @@ module.exports = {
   hasOppositionBehind,
   declarerStrongSuit: _declarerStrongSuit,
   getFriendCardSuit: _getFriendCardSuit,
+  winnerCardWillHold: _winnerCardWillHold,
 };

@@ -412,6 +412,38 @@ function _friendNoSafeWinnerRule(game, botId) {
 }
 
 /**
+ * Rule 19: declarer doesn't over-cut friend's secure win.
+ *
+ * When bot is declarer and the current trick winner is friend (revealed
+ * or pre-reveal but holding friend card) AND friend's winning card is
+ * secure (effective top, or perfect-info confirms no opp behind beats
+ * it), declarer should dump — not over-cut their own ally with mighty
+ * etc. The heuristic handles this via dumpSafe in the winnerOnOurTeam
+ * branch, but expectimax sometimes burns a finisher via rollout noise.
+ *
+ * Mirror of rule 5 for declarer-side perspective.
+ */
+function _declarerSavesAllyWinRule(game, botId) {
+  if (!game.currentTrick || game.currentTrick.length === 0) return null;
+  if (botId !== game.declarer) return null;
+
+  const currentWinner = MightyBotInternals.getCurrentTrickWinner(game);
+  if (!currentWinner || currentWinner === botId) return null;
+  if (!MightyBotInternals.isFriend(game, currentWinner)) return null;
+
+  const winnerCard = MightyBotInternals.getWinnerCardId(game);
+  if (!winnerCard) return null;
+
+  const winnerIsEffectiveTop = MightyBotInternals.isEffectiveTopOfSuit(winnerCard, game);
+  const winnerWillHold = MightyBotInternals.winnerCardWillHold(game, botId);
+  if (!winnerIsEffectiveTop && !winnerWillHold) return null;
+
+  const action = MightyBotInternals.decideMightyBotAction(game, botId, 'heuristic');
+  if (!action || action.type !== 'play_card') return null;
+  return action;
+}
+
+/**
  * Rule 18: friend follow with a safe non-mighty/non-joker winner → defer
  * to heuristic. Stops expectimax from picking mighty/joker as a "winner"
  * via rollout noise when a cheap safe winner exists. Heuristic naturally
@@ -957,6 +989,9 @@ function _applyHardRules(game, botId) {
 
   const reveal = _friendCardRevealRule(game, botId);
   if (reveal) return reveal;
+
+  const declarerSaveAlly = _declarerSavesAllyWinRule(game, botId);
+  if (declarerSaveAlly) return declarerSaveAlly;
 
   const safeCheapWinner = _friendSafeWinnerRule(game, botId);
   if (safeCheapWinner) return safeCheapWinner;

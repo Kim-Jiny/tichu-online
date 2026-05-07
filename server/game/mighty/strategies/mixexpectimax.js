@@ -411,6 +411,72 @@ function _friendNoSafeWinnerRule(game, botId) {
   return action;
 }
 
+/**
+ * Rule 18: friend follow with a safe non-mighty/non-joker winner → defer
+ * to heuristic. Stops expectimax from picking mighty/joker as a "winner"
+ * via rollout noise when a cheap safe winner exists. Heuristic naturally
+ * picks the cheap winner via `safeSameSuit` filter.
+ *
+ * Example: declarer leads ♣4 trick 1, friend holds ♣A + mighty. ♣A is
+ * the textbook safe top of suit (effective top, no opp likely void on
+ * trick 1). Mighty is overkill. Without this rule, expectimax sometimes
+ * burns mighty for no benefit.
+ */
+function _friendSafeWinnerRule(game, botId) {
+  if (!game.currentTrick || game.currentTrick.length === 0) return null;
+  if (!MightyBotInternals.isFriend(game, botId)) return null;
+
+  const declarerLed = game.currentTrick[0].pid === game.declarer;
+  if (!declarerLed) return null;
+
+  const mightyCard = game.getMightyCard();
+  const legal = game.getLegalCards(botId);
+  if (!legal || legal.length === 0) return null;
+
+  let hasSafeCheapWinner = false;
+  for (const cardId of legal) {
+    if (cardId === mightyCard) continue;
+    if (cardId === 'mighty_joker') continue;
+    if (!MightyBotInternals.canBeatCurrentWinner(game, cardId)) continue;
+    if (MightyBotInternals.isSafeFriendWinner(cardId, game, botId)) {
+      hasSafeCheapWinner = true;
+      break;
+    }
+  }
+  if (!hasSafeCheapWinner) return null;
+
+  const action = MightyBotInternals.decideMightyBotAction(game, botId, 'heuristic');
+  if (!action || action.type !== 'play_card') return null;
+  return action;
+}
+
+/**
+ * Rule 17: nobody-can-win → defer to heuristic.
+ *
+ * When NO card in our legal set can beat the current trick winner (e.g.,
+ * joker is on the table and we don't hold mighty), we will lose the
+ * trick no matter what we play. The right move is to dump the cheapest
+ * non-point card so opp doesn't pick up our high cards. The heuristic
+ * does this via `getNonPointWeakest` / `getSafeDiscard`; expectimax
+ * sometimes picks a high card via rollout noise, e.g., burning a trump A
+ * onto a joker-on-table trick.
+ *
+ * Applies to ALL roles (friend / declarer / opposition).
+ */
+function _cantWinDeferRule(game, botId) {
+  if (!game.currentTrick || game.currentTrick.length === 0) return null;
+  const legal = game.getLegalCards(botId);
+  if (!legal || legal.length === 0) return null;
+
+  for (const cardId of legal) {
+    if (MightyBotInternals.canBeatCurrentWinner(game, cardId)) return null;
+  }
+
+  const action = MightyBotInternals.decideMightyBotAction(game, botId, 'heuristic');
+  if (!action || action.type !== 'play_card') return null;
+  return action;
+}
+
 function _friendDeclarerSecureRule(game, botId) {
   if (!game.currentTrick || game.currentTrick.length === 0) return null;
   if (!MightyBotInternals.isFriend(game, botId)) return null;
@@ -616,6 +682,18 @@ function _mightyFriendForceWinRule(game, botId) {
       return null;
     }
     if (!MightyBotInternals.hasOppositionBehind(game, botId)) return null;
+  }
+
+  // Don't burn mighty if a safe non-mighty winner is in our legal set.
+  // E.g., declarer leads ♣4 trick 1 and we hold ♣A — ♣A is the safe
+  // top-of-suit winner; mighty would be over-kill.
+  for (const cardId of legal) {
+    if (cardId === mightyCard) continue;
+    if (cardId === 'mighty_joker') continue;
+    if (!MightyBotInternals.canBeatCurrentWinner(game, cardId)) continue;
+    if (MightyBotInternals.isSafeFriendWinner(cardId, game, botId)) {
+      return null;
+    }
   }
 
   return MightyBotInternals.makePlayAction(mightyCard, game, botId);
@@ -880,6 +958,9 @@ function _applyHardRules(game, botId) {
   const reveal = _friendCardRevealRule(game, botId);
   if (reveal) return reveal;
 
+  const safeCheapWinner = _friendSafeWinnerRule(game, botId);
+  if (safeCheapWinner) return safeCheapWinner;
+
   const jokerCall = _friendJokerCallRule(game, botId);
   if (jokerCall) return jokerCall;
 
@@ -912,6 +993,9 @@ function _applyHardRules(game, botId) {
 
   const noSafeWinner = _friendNoSafeWinnerRule(game, botId);
   if (noSafeWinner) return noSafeWinner;
+
+  const cantWin = _cantWinDeferRule(game, botId);
+  if (cantWin) return cantWin;
 
   const weakJoker = _preserveWeakJokerRule(game, botId);
   if (weakJoker) return weakJoker;

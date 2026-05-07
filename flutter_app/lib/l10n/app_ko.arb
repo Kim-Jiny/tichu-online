@@ -303,7 +303,7 @@
   "lobbyBotStrategyPimcFull": "PIMC (전체)",
   "lobbyBotStrategyExpectimax": "Expectimax",
   "lobbyBotStrategyExpectimaxSmart": "Expectimax+ (똑똑한 rollout)",
-  "lobbyBotStrategyMixexpectimax": "믹스 (룰 + Expectimax+)",
+  "lobbyBotStrategyMixexpectimax": "믹스 오라클 (룰 + Oracle)",
   "lobbyAddBotDialogTitle": "봇 추가",
   "lobbyAddBotConfirm": "추가",
   "lobbyAddBotCancel": "취소",

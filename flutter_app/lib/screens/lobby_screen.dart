@@ -5029,7 +5029,8 @@ class _LobbyScreenState extends State<LobbyScreen> {
                     ],
                     if (player.botStrategy != null
                         && player.botStrategy != 'heuristic'
-                        && player.botStrategy != BotStrategy.mixExpectimax) ...[
+                        && player.botStrategy != BotStrategy.mixOracle
+                        && player.botStrategy != BotStrategy.legacyMixExpectimax) ...[
                       const SizedBox(width: 3),
                       Text(
                         _shortStrategyLabel(player.botStrategy!),
@@ -5118,7 +5119,7 @@ class _LobbyScreenState extends State<LobbyScreen> {
                   game.addBot(
                     targetSlot: slotIndex,
                     speed: speed,
-                    strategy: BotStrategy.mixExpectimax,
+                    strategy: BotStrategy.mixOracle,
                   );
                 },
                 itemBuilder: (ctx) {
@@ -5341,7 +5342,8 @@ class _LobbyScreenState extends State<LobbyScreen> {
         return 'EXMX';
       case BotStrategy.expectimaxSmart:
         return 'EXMX+';
-      case BotStrategy.mixExpectimax:
+      case BotStrategy.mixOracle:
+      case BotStrategy.legacyMixExpectimax:
         return 'MIX';
       default:
         return '';

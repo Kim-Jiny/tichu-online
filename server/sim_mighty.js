@@ -6,7 +6,7 @@
  * Spins up 5 bot players, runs N rounds, and reports per-strategy
  * declarer success rate, average per-round score, and avg decision time.
  * Used to benchmark bot tuning and compare strategy variants
- * (heuristic vs pimc_play vs pimc_full vs expectimax).
+ * (heuristic vs oracle vs mixoracle).
  *
  * Usage:
  *   node sim_mighty.js [rounds] [--strategies <list>]

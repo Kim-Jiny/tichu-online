@@ -427,12 +427,13 @@ class GameRoom {
     // it but we still persist whatever the host picked so it survives
     // migrations. BotPlayer normalises invalid strategy → 'heuristic'.
     if (this.gameType === 'mighty') {
-      // Mighty default is mixexpectimax — hard rules (friend/declarer)
+      // Mighty default is mixoracle — hard rules (friend/declarer)
       // layered on top of the oracle perfect-info evaluator. mix
       // requires the heuristic-encoded user rules so we can't just
       // run oracle bare. UI doesn't offer strategy selection, so any
       // non-mix value is upgraded.
-      if (strategy !== 'mixexpectimax') strategy = 'mixexpectimax';
+      if (strategy !== 'mixoracle' && strategy !== 'mixexpectimax') strategy = 'mixoracle';
+      if (strategy === 'mixexpectimax') strategy = 'mixoracle';
     }
     const botId = `bot_${nextBotNum++}`;
     const { t } = require('../i18n');

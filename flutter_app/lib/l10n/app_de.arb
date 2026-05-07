@@ -311,7 +311,7 @@
   "lobbyBotStrategyPimcFull": "PIMC (komplett)",
   "lobbyBotStrategyExpectimax": "Expectimax",
   "lobbyBotStrategyExpectimaxSmart": "Expectimax+ (smart rollout)",
-  "lobbyBotStrategyMixexpectimax": "Mix (Regeln + Expectimax+)",
+  "lobbyBotStrategyMixexpectimax": "Mix Oracle (Regeln + Oracle)",
   "lobbyAddBotDialogTitle": "Bot hinzufügen",
   "lobbyAddBotConfirm": "Hinzufügen",
   "lobbyAddBotCancel": "Abbrechen",

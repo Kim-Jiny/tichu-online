@@ -6,7 +6,7 @@
 const { createDeck } = require('./Deck');
 const { getComboType, COMBO } = require('./CardValidator');
 
-const VALID_BOT_STRATEGIES = ['heuristic', 'oracle', 'pimc_play', 'pimc_full', 'expectimax', 'expectimax_smart', 'mixexpectimax'];
+const VALID_BOT_STRATEGIES = ['heuristic', 'oracle', 'mixoracle', 'pimc_play', 'pimc_full', 'expectimax', 'expectimax_smart', 'mixexpectimax'];
 
 class BotPlayer {
   constructor(id, nickname, speed = 'normal', strategy = 'heuristic') {
@@ -14,7 +14,9 @@ class BotPlayer {
     this.nickname = nickname; // '봇 1', '봇 2', ...
     this.isBot = true;
     this.speed = speed;     // 'fast', 'normal', 'slow'
-    this.strategy = VALID_BOT_STRATEGIES.includes(strategy) ? strategy : 'heuristic';
+    this.strategy = VALID_BOT_STRATEGIES.includes(strategy)
+      ? (strategy === 'mixexpectimax' ? 'mixoracle' : strategy)
+      : 'heuristic';
   }
 }
 

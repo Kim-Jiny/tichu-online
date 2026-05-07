@@ -1854,7 +1854,7 @@ abstract class L10n {
   /// No description provided for @lobbyBotStrategyMixexpectimax.
   ///
   /// In en, this message translates to:
-  /// **'Mix (rules + expectimax+)'**
+  /// **'Mix Oracle (rules + oracle)'**
   String get lobbyBotStrategyMixexpectimax;
 
   /// No description provided for @lobbyAddBotDialogTitle.

@@ -4,17 +4,18 @@ const { getCardInfo, RANK_ORDER, SUITS } = require('./MightyDeck');
 
 /**
  * Decide the next action for a Mighty bot. `strategy` selects the policy:
- * 'heuristic' (default), 'oracle', 'pimc_play', 'pimc_full', 'expectimax',
- * 'expectimax_smart', or 'mixexpectimax'.
+ * 'heuristic' (default), 'oracle', 'mixoracle', 'pimc_play', 'pimc_full',
+ * 'expectimax', 'expectimax_smart', or the legacy alias 'mixexpectimax'.
  */
 function decideMightyBotAction(game, botId, strategy = 'heuristic') {
   if (!game || !game.playerIds.includes(botId)) return null;
   if (strategy === 'oracle') return require('./strategies/oracle').decide(game, botId);
+  if (strategy === 'mixoracle') return require('./strategies/mixoracle').decide(game, botId);
   if (strategy === 'pimc_play') return require('./strategies/pimc_play').decide(game, botId);
   if (strategy === 'pimc_full') return require('./strategies/pimc_full').decide(game, botId);
   if (strategy === 'expectimax') return require('./strategies/expectimax').decide(game, botId);
   if (strategy === 'expectimax_smart') return require('./strategies/expectimax_smart').decide(game, botId);
-  if (strategy === 'mixexpectimax') return require('./strategies/mixexpectimax').decide(game, botId);
+  if (strategy === 'mixexpectimax') return require('./strategies/mixoracle').decide(game, botId);
   return _heuristicDecide(game, botId);
 }
 
@@ -115,19 +116,26 @@ function _countCardsInSuitOutsideHand(game, botId, suit) {
   return count;
 }
 
-/** Count trump cards remaining in OTHER players' hands */
+/** Count trump threats held by the actual opposing team. */
 function _countOpponentTrumps(game, botId) {
   if (!game.trumpSuit || game.trumpSuit === 'no_trump') return 0;
-  const played = _getPlayedCards(game);
-  const myHand = new Set(game.hands[botId] || []);
-  const discarded = new Set(game.discarded || []);
   let count = 0;
+  const botIsGov = isGovernmentSelf(game, botId);
 
-  for (const rank of ['2', '3', '4', '5', '6', '7', '8', '9', '10', 'J', 'Q', 'K', 'A']) {
-    const cardId = `mighty_${game.trumpSuit}_${rank}`;
-    if (!played.has(cardId) && !myHand.has(cardId) && !discarded.has(cardId)) count++;
+  for (const pid of game.playerIds) {
+    if (pid === botId) continue;
+    if (game.excludedPlayers && game.excludedPlayers.has(pid)) continue;
+    if (isGovernmentSelf(game, pid) === botIsGov) continue;
+
+    for (const cardId of (game.hands[pid] || [])) {
+      if (cardId === 'mighty_joker') {
+        count++;
+        continue;
+      }
+      const info = getCardInfo(cardId);
+      if (info && info.suit === game.trumpSuit) count++;
+    }
   }
-  if (!played.has('mighty_joker') && !myHand.has('mighty_joker') && !discarded.has('mighty_joker')) count++;
   return count;
 }
 
@@ -783,10 +791,8 @@ function hasOppositionBehind(game, botId) {
   const remaining = getRemainingPlayers(game, botId);
   const botIsGov = isGovernmentSelf(game, botId);
   for (const pid of remaining) {
-    const pidIsGov = isGovernment(game, pid);
+    const pidIsGov = isGovernmentSelf(game, pid);
     if (botIsGov !== pidIsGov) return true;
-    if (botIsGov && !game.friendRevealed && pid !== game.declarer) return true;
-    if (!botIsGov && pid === game.declarer) return true;
   }
   return false;
 }
@@ -794,8 +800,7 @@ function hasOppositionBehind(game, botId) {
 function hasGovernmentBehind(game, botId) {
   const remaining = getRemainingPlayers(game, botId);
   for (const pid of remaining) {
-    if (isGovernment(game, pid)) return true;
-    if (!game.friendRevealed && pid === game.declarer) return true;
+    if (isGovernmentSelf(game, pid)) return true;
   }
   return false;
 }
@@ -1902,12 +1907,12 @@ function _winnerCardWillHold(game, botId) {
   const winnerCard = getWinnerCardId(game);
   if (!winnerCard) return false;
   const playedPids = new Set((game.currentTrick || []).map(p => p.pid));
+  const botIsGov = isGovernmentSelf(game, botId);
   for (const pid of game.playerIds) {
     if (pid === botId) continue;
     if (playedPids.has(pid)) continue;
     if (game.excludedPlayers && game.excludedPlayers.has(pid)) continue;
-    if (pid === game.declarer) continue;                              // ally
-    if (game.friendRevealed && pid === game.partner) continue;        // ally (revealed)
+    if (isGovernmentSelf(game, pid) === botIsGov) continue;
     const legal = new Set(game.getLegalCards(pid) || []);
     const hand = game.hands[pid] || [];
     for (const cardId of hand) {
@@ -2003,27 +2008,38 @@ function _isEffectiveTopOfSuit(cardId, game) {
   return true;
 }
 
-/** Suit declarer is likely strong in: declarer led K or Q on a past trick
- *  while the higher rank(s) are still unplayed → declarer probably holds A. */
+/** Declarer's actual strongest continuation side-suit under full information. */
 function _declarerStrongSuit(game) {
-  const played = _getPlayedCards(game);
-  for (const trick of (game.tricks || [])) {
-    if (!trick.cards || trick.cards.length === 0) continue;
-    const lead = trick.cards[0];
-    if (lead.pid !== game.declarer) continue;
-    if (lead.cardId === 'mighty_joker') continue;
-    const info = getCardInfo(lead.cardId);
-    if (!info.suit) continue;
-    if (info.rank === 'K') {
-      const ace = `mighty_${info.suit}_A`;
-      if (!played.has(ace)) return info.suit;
-    } else if (info.rank === 'Q') {
-      const ace = `mighty_${info.suit}_A`;
-      const king = `mighty_${info.suit}_K`;
-      if (!played.has(ace) || !played.has(king)) return info.suit;
+  const hand = game.hands[game.declarer] || [];
+  if (hand.length === 0) return null;
+
+  const mightyCard = game.getMightyCard();
+  let bestSuit = null;
+  let bestScore = -Infinity;
+
+  for (const suit of SUITS) {
+    if (suit === game.trumpSuit) continue;
+    const cards = hand.filter(cardId => {
+      if (cardId === 'mighty_joker' || cardId === mightyCard) return false;
+      const info = getCardInfo(cardId);
+      return info?.suit === suit;
+    });
+    if (cards.length === 0) continue;
+
+    const sorted = cards.sort((a, b) =>
+      (RANK_ORDER[getCardInfo(b).rank] || 0) - (RANK_ORDER[getCardInfo(a).rank] || 0));
+    const top = sorted[0];
+    let score = cards.length * 12 + (RANK_ORDER[getCardInfo(top).rank] || 0);
+    if (_isEffectiveTopOfSuit(top, game)) score += 100;
+    if (cards.length > 1 && _isEffectiveTopOfSuit(sorted[1], game)) score += 30;
+
+    if (score > bestScore) {
+      bestScore = score;
+      bestSuit = suit;
     }
   }
-  return null;
+
+  return bestSuit;
 }
 
 /** How many tricks have led with this suit (including in-progress current trick). */
@@ -2061,74 +2077,36 @@ function _suitLedCount(game, suit) {
   return count;
 }
 
-/** Will `cardId`, played now, survive the rest of the current trick — i.e.,
- *  no opp behind us can beat it? Implements the friend-bot reveal rule:
- *
- *  - mighty: always safe
- *  - joker (with power): safe iff mighty isn't waiting in opp behind
- *  - effective top of trump suit: safe (no higher trump remaining)
- *  - effective top of non-trump suit: safe iff opp behind can't ruff:
- *      · no opp behind us → safe
- *      · trumps remaining outside ≤ 5 → low cut risk → safe
- *      · 6+ trumps but this is the 1st time the suit was led → safe
- *        (most still hold the suit, no one can ruff it)
- *      · 6+ trumps + 2nd round of suit → unsafe (some are void → cut risk)
- */
+/** Will `cardId`, played now, survive the rest of the trick against actual legal opponent replies? */
 function _isSafeFriendWinner(cardId, game, botId) {
-  const mightyCard = game.getMightyCard();
-  if (cardId === mightyCard) return true;
-  if (cardId === 'mighty_joker') {
-    if (!game._currentTrickJokerHasPower()) return false;
-    // Joker beats everything except mighty. If mighty is still live and
-    // could be in opp-behind hand, joker isn't safe.
-    if (!_isCardStillInPlay(game, mightyCard)) return true;
-    // Approximate: if mighty isn't ours and isn't played, an opp-behind
-    // could hold it.
-    return !getRemainingPlayers(game, botId)
-      .some(pid => (game.hands[pid] || []).includes(mightyCard));
-  }
+  if (!game.currentTrick || game.currentTrick.length === 0) return false;
+  const legal = game.getLegalCards(botId) || [];
+  if (!legal.includes(cardId)) return false;
 
-  if (!_isEffectiveTopOfSuit(cardId, game)) return false;
+  const world = game.clone();
+  const action = makePlayAction(cardId, world, botId);
+  const result = world.handleAction(botId, action);
+  if (!result || !result.success) return false;
 
-  const info = getCardInfo(cardId);
-  const trump = game.trumpSuit;
-  const trumpActive = trump && trump !== 'no_trump';
-  // Effective top of trump suit — within-suit no over-ruff possible, but
-  // mighty / powered joker held by opp behind can still beat it. Use
-  // perfect-info (server-side bot has hand visibility): scan remaining
-  // opp seats for either threat.
-  if (trumpActive && info.suit === trump) {
-    const remaining = getRemainingPlayers(game, botId);
-    const jokerHasPower = typeof game._currentTrickJokerHasPower === 'function'
-      && game._currentTrickJokerHasPower();
-    for (const pid of remaining) {
-      if (isGovernment(game, pid)) continue;        // ally, won't over-cut
-      if (pid === game.declarer) continue;
-      const hand = game.hands[pid] || [];
-      if (hand.includes(mightyCard)) return false;
-      if (jokerHasPower && hand.includes('mighty_joker')) return false;
-    }
+  // Trick closed immediately, so nobody is left to answer.
+  if (world.state === 'trick_end' || world.state === 'round_end' || world.state === 'game_end') {
     return true;
   }
 
-  // Non-trump card. Could be cut by trump played by opp behind.
-  // If no opp is behind us, no one will cut.
-  const remaining = getRemainingPlayers(game, botId);
-  const oppBehind = remaining.filter(pid => !isGovernment(game, pid) && pid !== game.declarer);
-  if (oppBehind.length === 0) return true;
-  if (!trumpActive) return true; // No trump suit defined → no cut possible.
+  const currentWinner = getCurrentTrickWinner(world);
+  if (currentWinner !== botId) return false;
 
-  const trumpsOutside = _countOpponentTrumps(game, botId);
-  if (trumpsOutside <= 5) return true;
+  const botIsGov = isGovernmentSelf(world, botId);
+  const remaining = getRemainingPlayers(world, botId);
+  for (const pid of remaining) {
+    if (isGovernmentSelf(world, pid) === botIsGov) continue;
+    const oppLegal = world.getLegalCards(pid) || [];
+    for (const oppCard of oppLegal) {
+      if (canBeatCurrentWinner(world, oppCard)) return false;
+    }
+  }
 
-  // Many trumps left. Ruff risk depends on whether opp is likely void in
-  // lead suit yet. 1st round of this suit → most still have it → safe.
-  const leadCard = game.currentTrick[0]?.cardId;
-  const leadSuit = leadCard === 'mighty_joker'
-    ? game.jokerSuitDeclared
-    : (leadCard ? getCardInfo(leadCard).suit : null);
-  if (!leadSuit) return false;
-  return _suitLedCount(game, leadSuit) <= 1;
+  return true;
 }
 
 /** Get the suit of the friend-declared card */
@@ -2206,10 +2184,10 @@ function _onlyGovernmentHasTrump(game) {
  */
 function _noRealOppTrumpLeft(game, selfPid) {
   if (!game.trumpSuit || game.trumpSuit === 'no_trump') return false;
+  const selfIsGov = isGovernmentSelf(game, selfPid);
   for (const pid of game.playerIds) {
-    if (pid === game.declarer) continue;
     if (pid === selfPid) continue;
-    if (game.friendRevealed && pid === game.partner) continue;
+    if (isGovernmentSelf(game, pid) === selfIsGov) continue;
     const hand = game.hands[pid] || [];
     for (const cardId of hand) {
       if (cardId === 'mighty_joker') continue;
@@ -2318,13 +2296,13 @@ function _pickJokerLeadSuit(game, botId) {
   const trumpDead = trump ? _noRealOppTrumpLeft(game, botId) : false;
   const mightyCard = game.getMightyCard();
 
-  // Which suits do non-government opponents still hold?
+  // Which suits do players on the opposing team still hold?
   const oppHoldsSuit = {};
   for (const suit of SUITS) oppHoldsSuit[suit] = false;
+  const botIsGov = isGovernmentSelf(game, botId);
   for (const pid of game.playerIds) {
     if (pid === botId) continue;
-    if (pid === game.declarer) continue;
-    if (game.friendRevealed && pid === game.partner) continue;
+    if (isGovernmentSelf(game, pid) === botIsGov) continue;
     const h = game.hands[pid] || [];
     for (const cid of h) {
       if (cid === 'mighty_joker') continue;

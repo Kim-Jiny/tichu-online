@@ -931,7 +931,7 @@ class L10nKo extends L10n {
   String get lobbyBotStrategyExpectimaxSmart => 'Expectimax+ (똑똑한 rollout)';
 
   @override
-  String get lobbyBotStrategyMixexpectimax => '믹스 (룰 + Expectimax+)';
+  String get lobbyBotStrategyMixexpectimax => '믹스 오라클 (룰 + Oracle)';
 
   @override
   String get lobbyAddBotDialogTitle => '봇 추가';

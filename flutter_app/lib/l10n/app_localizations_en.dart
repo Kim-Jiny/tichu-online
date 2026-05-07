@@ -955,7 +955,7 @@ class L10nEn extends L10n {
   String get lobbyBotStrategyExpectimaxSmart => 'Expectimax+ (smart rollout)';
 
   @override
-  String get lobbyBotStrategyMixexpectimax => 'Mix (rules + expectimax+)';
+  String get lobbyBotStrategyMixexpectimax => 'Mix Oracle (rules + oracle)';
 
   @override
   String get lobbyAddBotDialogTitle => 'Add Bot';

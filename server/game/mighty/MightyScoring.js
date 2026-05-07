@@ -45,29 +45,20 @@ function calculateRoundScores({ declarer, partner, playerIds, pointCards, bid, t
   const isNoTrump = trumpSuit === 'no_trump';
   const isMaxBid = bid >= 20;
 
-  // Base score = (bid - minBid + 1) * baseMultiplier + distance from the bid.
-  // Success doubles the bid-distance baseline; failure uses ×1 so a missed
-  // declarer isn't crushed before the deficit penalty is even applied.
-  const baseMultiplier = success ? 2 : 1;
-  let baseScore = (bid - minBid + 1) * baseMultiplier;
-  if (success) {
-    baseScore += (declarerTeamPoints - bid);
-  } else {
-    baseScore += (bid - declarerTeamPoints);
-  }
-
-  // Multipliers (run ×2, solo ×2, NT ×2, 20bid ×2) apply on both success
-  // and failure — a failed solo / NT / 20-bid is still a bigger swing.
-  if (isPerfect) baseScore *= 2;
-  if (isSolo) baseScore *= 2;
-  if (isNoTrump) baseScore *= 2;
-  if (isMaxBid) baseScore *= 2;
-
-  // Declarer: ±base × 2, Partner: ±base, Defenders: each ∓base
   const scores = {};
   const defenders = playerIds.filter(pid => pid !== declarer && (isSolo || pid !== partner));
 
   if (success) {
+    // ─── Success: existing formula (unchanged) ───
+    // Base = (bid − minBid + 1) × 2 + surplus(점수 − bid).
+    // Multipliers ×2 for perfect / solo / NT / max-bid stack.
+    let baseScore = (bid - minBid + 1) * 2;
+    baseScore += (declarerTeamPoints - bid);
+    if (isPerfect) baseScore *= 2;
+    if (isSolo) baseScore *= 2;
+    if (isNoTrump) baseScore *= 2;
+    if (isMaxBid) baseScore *= 2;
+
     scores[declarer] = baseScore * 2;
     if (!isSolo && partner) {
       scores[partner] = baseScore;
@@ -76,12 +67,27 @@ function calculateRoundScores({ declarer, partner, playerIds, pointCards, bid, t
       scores[pid] = -baseScore;
     }
   } else {
-    scores[declarer] = -baseScore * 2;
-    if (!isSolo && partner) {
-      scores[partner] = -baseScore;
+    // ─── Failure: deficit-based with backrun ×2 ───
+    // Per-player unit = (bid − declarer team points) × backrunMult.
+    //   - 백런: declarer team got ≤ 10 (opp got ≥ 10) → ×2 to all sides
+    // Distribution:
+    //   - 주공:  −unit × 2  (×2 again if solo / 노프렌즈)
+    //   - 친구:  −unit
+    //   - 야당:  +unit each
+    // Solo (노프렌즈) doubles only the declarer side; each defender still
+    // gets +unit, math balances because there's one extra defender.
+    const deficit = bid - declarerTeamPoints;
+    const backrunMult = declarerTeamPoints <= 10 ? 2 : 1;
+    const unit = deficit * backrunMult;
+
+    if (isSolo) {
+      scores[declarer] = -unit * 4;
+    } else {
+      scores[declarer] = -unit * 2;
+      if (partner) scores[partner] = -unit;
     }
     for (const pid of defenders) {
-      scores[pid] = baseScore;
+      scores[pid] = unit;
     }
   }
 

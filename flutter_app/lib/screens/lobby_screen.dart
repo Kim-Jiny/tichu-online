@@ -5027,7 +5027,9 @@ class _LobbyScreenState extends State<LobbyScreen> {
                             : const Color(0xFF558B2F),
                       ),
                     ],
-                    if (player.botStrategy != null && player.botStrategy != 'heuristic') ...[
+                    if (player.botStrategy != null
+                        && player.botStrategy != 'heuristic'
+                        && player.botStrategy != BotStrategy.mixExpectimax) ...[
                       const SizedBox(width: 3),
                       Text(
                         _shortStrategyLabel(player.botStrategy!),
@@ -5384,4 +5386,3 @@ class _BannerStyle {
   const _BannerStyle({this.gradient});
   final LinearGradient? gradient;
 }
-

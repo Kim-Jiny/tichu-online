@@ -35,10 +35,10 @@
  *      opp's trumps out so later non-trump leads survive.
  *   4) Friend lead in NT — cash all effective tops (mighty included, joker
  *      excluded), highest first; once tops are spent, return the called
- *      suit (부른문양 = friend-card's suit) low-first so declarer can cash
- *      their stoppers there. Only applies to NT (no_trump). Without this,
- *      the heuristic prioritises feeding the call suit before the bot's
- *      own tops, leaving high cards stranded.
+ *      suit (부른문양 = friend-card's suit) HIGH-first so we either keep
+ *      the lead or force opp's high card out. Only applies to NT
+ *      (no_trump). Without this, the heuristic prioritises feeding the
+ *      call suit before the bot's own tops, leaving high cards stranded.
  *   5) Friend on declarer-secure follow — when declarer led, declarer is
  *      currently the trick winner, AND declarer's card is the effective
  *      top of its suit, the trick is locked in. Defer to the heuristic's
@@ -87,6 +87,34 @@
  *      through if no non-point legal alternative exists or trump isn't
  *      active. Specific to non-mighty-friend follow (mighty-friend is
  *      already handled by rule 9).
+ *  12) Friend lead in suited (non-NT) — cash all safe fresh non-trump
+ *      tops first, highest rank first. A "safe fresh top" is the
+ *      effective top of a non-trump suit that nobody has led yet —
+ *      same definition as the gate in rule 3. Rule 3 only fires when
+ *      such tops are absent (it triggers the trump drain), so this
+ *      rule covers the symmetric case: tops PRESENT → cash them
+ *      before falling through. Combined with rule 3's highest-trump
+ *      drain, friend's suited lead now goes:
+ *        1. safe non-trump top (highest first)
+ *        2. high trump (highest first, drains opp)
+ *        3. expectimax / joker / fallbacks
+ *  13) Declarer joker-probe trump — when declarer leads in suited mode
+ *      and our highest non-mighty trump is NOT the effective top of
+ *      the trump suit (i.e., a higher trump is unaccounted for), fire
+ *      the joker declaring trump to bait that high trump out instead
+ *      of leading our suboptimal top. Covers the user's joker-strategy
+ *      cases:
+ *        - no trump A in hand → joker first to drain opp's A
+ *        - have A but K missing → after A is gone, our K isn't safe →
+ *          joker before leading Q
+ *        - any subsequent gap that breaks our drain sequence
+ *  14) Declarer save mighty for last — when leading suited and we hold
+ *      both mighty and a productive trump, trump comes first. Mighty
+ *      is an unconditional winner whose value persists; trump tops are
+ *      time-sensitive (every passing trick risks opp burning theirs).
+ *      Rule fires only when (a) opp still has trump and (b) our top
+ *      non-mighty trump IS the effective top — i.e., a productive
+ *      drain step. When the top isn't safe, we let rule 13 take over.
  *  11) Friend's joker-call to kill opp's joker. Strict gating — we
  *      only fire when ALL of the following hold:
  *        1. non-NT bidding
@@ -273,12 +301,58 @@ function _friendNTLeadRule(game, botId) {
   }
   if (friendSuitCards.length === 0) return null;
 
+  // Called-suit return goes HIGH-first: leading the highest remaining
+  // called-suit card either wins outright (if opp's higher card stays
+  // home) or forces opp's high card out — either way it preserves our
+  // lead. Leading low here lets opp keep their A and stop our flow.
   friendSuitCards.sort((a, b) => {
     const ra = RANK_ORDER[getCardInfo(a).rank] || 0;
     const rb = RANK_ORDER[getCardInfo(b).rank] || 0;
-    return ra - rb;
+    return rb - ra;
   });
   return MightyBotInternals.makePlayAction(friendSuitCards[0], game, botId);
+}
+
+/**
+ * Rule 12: friend lead in suited (non-NT) — cash safe non-trump tops first.
+ *
+ * Pairs with rule 3: rule 3 drains opp trump when there's NO safe fresh
+ * top to cash; this rule cashes the top when there IS one. Without this,
+ * mix falls through to expectimax for the "I have both a safe top AND
+ * high trumps" case, and rollout noise sometimes leaves both unplayed.
+ *
+ * Returns the highest safe fresh non-trump top, else null.
+ */
+function _friendSuitedTopCashRule(game, botId) {
+  if (game.currentTrick && game.currentTrick.length > 0) return null;
+  if (!MightyBotInternals.isFriend(game, botId)) return null;
+
+  const trump = game.trumpSuit;
+  if (!trump || trump === 'no_trump') return null;
+
+  const hand = game.hands[botId] || [];
+  if (hand.length === 0) return null;
+  const mightyCard = game.getMightyCard();
+
+  const tops = [];
+  for (const cardId of hand) {
+    if (cardId === 'mighty_joker') continue;
+    if (cardId === mightyCard) continue;
+    const info = getCardInfo(cardId);
+    if (!info) continue;
+    if (info.suit === trump) continue;
+    if (!MightyBotInternals.isEffectiveTopOfSuit(cardId, game)) continue;
+    if (MightyBotInternals.suitLedCount(game, info.suit) > 0) continue;
+    tops.push(cardId);
+  }
+  if (tops.length === 0) return null;
+
+  tops.sort((a, b) => {
+    const ra = RANK_ORDER[getCardInfo(a).rank] || 0;
+    const rb = RANK_ORDER[getCardInfo(b).rank] || 0;
+    return rb - ra;
+  });
+  return MightyBotInternals.makePlayAction(tops[0], game, botId);
 }
 
 /**
@@ -657,6 +731,93 @@ function _friendJokerCallRule(game, botId) {
   return { type: 'play_card', cardId: jokerCallCard, jokerCall: true };
 }
 
+/**
+ * Rule 13: declarer joker-probe trump.
+ * Fires only when declarer leads suited and the top non-mighty trump in
+ * hand is NOT the effective top of trump suit (a higher trump still
+ * floats). Drops joker declaring trump to drag that gap out. Also fires
+ * if declarer has joker but zero non-mighty trumps — same logic, no
+ * effective top means the lead has to be the joker.
+ */
+function _declarerJokerProbeRule(game, botId) {
+  if (game.currentTrick && game.currentTrick.length > 0) return null;
+  if (botId !== game.declarer) return null;
+
+  const trump = game.trumpSuit;
+  if (!trump || trump === 'no_trump') return null;
+
+  if (typeof game._currentTrickJokerHasPower !== 'function') return null;
+  if (!game._currentTrickJokerHasPower()) return null;
+
+  const hand = game.hands[botId] || [];
+  if (!hand.includes('mighty_joker')) return null;
+
+  const legal = game.getLegalCards(botId);
+  if (!legal.includes('mighty_joker')) return null;
+
+  const mightyCard = game.getMightyCard();
+  const ranks = ['2', '3', '4', '5', '6', '7', '8', '9', '10', 'J', 'Q', 'K', 'A'];
+  let myTopTrump = null;
+  let myTopRankIdx = -1;
+  for (const cardId of hand) {
+    if (cardId === 'mighty_joker') continue;
+    if (cardId === mightyCard) continue;
+    const info = getCardInfo(cardId);
+    if (!info || info.suit !== trump) continue;
+    const idx = ranks.indexOf(info.rank);
+    if (idx > myTopRankIdx) { myTopRankIdx = idx; myTopTrump = cardId; }
+  }
+
+  if (myTopTrump && MightyBotInternals.isEffectiveTopOfSuit(myTopTrump, game)) {
+    return null;
+  }
+  if (MightyBotInternals.noRealOppTrumpLeft(game, botId)) {
+    return null;
+  }
+
+  return { type: 'play_card', cardId: 'mighty_joker', jokerSuit: trump };
+}
+
+/**
+ * Rule 14: declarer saves mighty until trump is drained.
+ * When declarer leads suited with both mighty AND a non-mighty trump
+ * that IS the effective top of trump suit, lead the trump (drain) first
+ * instead of mighty. Mighty's win is preserved for later.
+ */
+function _declarerSaveMightyRule(game, botId) {
+  if (game.currentTrick && game.currentTrick.length > 0) return null;
+  if (botId !== game.declarer) return null;
+
+  const trump = game.trumpSuit;
+  if (!trump || trump === 'no_trump') return null;
+
+  const mightyCard = game.getMightyCard();
+  const hand = game.hands[botId] || [];
+  if (!hand.includes(mightyCard)) return null;
+
+  const legal = game.getLegalCards(botId);
+  if (!legal.includes(mightyCard)) return null;
+
+  if (MightyBotInternals.noRealOppTrumpLeft(game, botId)) return null;
+
+  const ranks = ['2', '3', '4', '5', '6', '7', '8', '9', '10', 'J', 'Q', 'K', 'A'];
+  let trumpLead = null;
+  let topIdx = -1;
+  for (const cardId of hand) {
+    if (cardId === 'mighty_joker') continue;
+    if (cardId === mightyCard) continue;
+    const info = getCardInfo(cardId);
+    if (!info || info.suit !== trump) continue;
+    const idx = ranks.indexOf(info.rank);
+    if (idx > topIdx) { topIdx = idx; trumpLead = cardId; }
+  }
+  if (!trumpLead) return null;
+  if (!MightyBotInternals.isEffectiveTopOfSuit(trumpLead, game)) return null;
+  if (!legal.includes(trumpLead)) return null;
+
+  return MightyBotInternals.makePlayAction(trumpLead, game, botId);
+}
+
 function _applyHardRules(game, botId) {
   if (game.state !== 'playing' || game.currentPlayer !== botId) return null;
 
@@ -672,8 +833,17 @@ function _applyHardRules(game, botId) {
   const conservePoints = _friendConservePointsRule(game, botId);
   if (conservePoints) return conservePoints;
 
+  const declarerSaveMighty = _declarerSaveMightyRule(game, botId);
+  if (declarerSaveMighty) return declarerSaveMighty;
+
+  const declarerJokerProbe = _declarerJokerProbeRule(game, botId);
+  if (declarerJokerProbe) return declarerJokerProbe;
+
   const friendJoker = _friendJokerLeadRule(game, botId);
   if (friendJoker) return friendJoker;
+
+  const suitedTopCash = _friendSuitedTopCashRule(game, botId);
+  if (suitedTopCash) return suitedTopCash;
 
   const drawTrump = _friendDrawTrumpRule(game, botId);
   if (drawTrump) return drawTrump;

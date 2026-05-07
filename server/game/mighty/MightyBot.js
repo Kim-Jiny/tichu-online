@@ -905,8 +905,13 @@ function pickSafeDump(legalCards, game) {
     return info.point > 0 && info.suit !== game.trumpSuit;
   });
   if (nonTrumpPoints.length > 0) {
+    // All Mighty point cards are worth 1 pt each, so when several are
+    // eligible, dump the LOWEST-rank one first. This preserves higher
+    // cards' future trick-taking power (e.g., ♥A vs ♥10 both feed an
+    // ally's winning trick the same 1 pt, but ♥A still wins us
+    // future ♥ tricks if we keep it).
     return nonTrumpPoints.sort((a, b) =>
-      RANK_ORDER[getCardInfo(b).rank] - RANK_ORDER[getCardInfo(a).rank])[0];
+      RANK_ORDER[getCardInfo(a).rank] - RANK_ORDER[getCardInfo(b).rank])[0];
   }
   // No non-trump point card: dump weakest non-trump non-point before touching trump
   const nonTrumpNonPoint = legalCards.filter(c => {
@@ -1081,22 +1086,13 @@ function _governmentLead(game, botId, legalCards, suitCards, mightyCard) {
   // Phase 1: Mighty (sure winner in all cases)
   if (legalCards.includes(mightyCard)) return mightyCard;
 
-  // Proactive joker lead: joker has no power in the last trick by default,
-  // so hoarding it risks (a) opp's joker-call forcing it out at a bad tempo
-  // or (b) burning into the weak last-trick. If declarer doesn't hold the
-  // joker-call card (or in NT where it doesn't exist), they don't control
-  // the joker-call timing — cash the joker on the very next leading turn
-  // after Mighty (trick 2+) instead. Skipped when the lastTrickJokerPower
-  // house option is on (joker stays viable to the end then).
-  if (legalCards.includes('mighty_joker')
-      && game.tricks.length >= 1
-      && !game.options.lastTrickJokerPower) {
-    const jokerCallCard = game.getJokerCallCard();
-    const hasJokerCallControl = !!jokerCallCard && legalCards.includes(jokerCallCard);
-    if (!hasJokerCallControl) {
-      return 'mighty_joker';
-    }
-  }
+  // (Removed: early proactive joker lead.) Burning joker right after
+  // mighty wastes its trick-taking power before we've seen the field.
+  // Optimal sequence in suited play is mighty → trump A → trump K →
+  // joker (only after trump is drained). The post-Phase-3 joker block
+  // below (gated on `_onlyGovernmentHasTrump`) handles the "trump
+  // drained" case. NT path still leads joker after sure tops as one of
+  // the natural high winners.
 
   // Friend-bait helper: lead a low non-A/non-friend card in the friend-card
   // suit so the friend can cover with their A/K and reveal themselves. Skipped

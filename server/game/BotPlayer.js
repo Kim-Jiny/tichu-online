@@ -3,6 +3,9 @@
  * Strategic AI for Tichu card game.
  */
 
+const { createDeck } = require('./Deck');
+const { getComboType, COMBO } = require('./CardValidator');
+
 const VALID_BOT_STRATEGIES = ['heuristic', 'pimc_play', 'pimc_full', 'expectimax', 'expectimax_smart', 'mixexpectimax'];
 
 class BotPlayer {
@@ -286,72 +289,118 @@ function decideSmallTichu(cards, state) {
 // ========== EXCHANGE STRATEGY ==========
 
 function selectExchangeCards(cards) {
-  const normalCards = cards.filter(c => !c.startsWith('special_'));
-  const eval_ = evaluateHand(cards);
   const plans = decomposeHand(cards);
-
-  // Find singles from the decomposed plan
-  const singlePlans = plans.filter(p => p.length === 1).map(p => p[0]);
-
-  // Cards NOT used in multi-card combos (safe to give away)
-  const comboCards = new Set();
+  const bombCards = new Set(findCombos(cards.filter(c => !c.startsWith('special_'))).bombs.flat());
+  const planSizeByCard = new Map();
   for (const plan of plans) {
-    if (plan.length > 1) {
-      for (const c of plan) comboCards.add(c);
+    for (const card of plan) {
+      planSizeByCard.set(card, Math.max(planSizeByCard.get(card) || 0, plan.length));
     }
   }
 
-  const freeCards = normalCards.filter(c => !comboCards.has(c));
-
-  // Sort free cards by value
-  const freeByValue = [...freeCards].sort((a, b) => getCardValue(a) - getCardValue(b));
-  const freeByValueDesc = [...freeCards].sort((a, b) => getCardValue(b) - getCardValue(a));
-
-  // Low cards with no points (for giving to opponents)
-  const lowNoPoints = freeByValue.filter(c => {
-    const rank = getRankFromCard(c);
-    return rank !== '5' && rank !== '10' && rank !== 'K';
+  const meta = cards.map((card) => {
+    const rank = getRankFromCard(card);
+    const value = getCardValue(card);
+    const planSize = planSizeByCard.get(card) || 1;
+    const isSpecial = card.startsWith('special_');
+    const isPointCard = rank === '5' || rank === '10' || rank === 'K';
+    const isAce = rank === 'A';
+    const isKing = rank === 'K';
+    const isBird = card === 'special_bird';
+    const isDog = card === 'special_dog';
+    const isPhoenix = card === 'special_phoenix';
+    const isDragon = card === 'special_dragon';
+    const inMultiPlan = planSize >= 2;
+    return {
+      card,
+      rank,
+      value,
+      planSize,
+      isSpecial,
+      isPointCard,
+      isAce,
+      isKing,
+      isBird,
+      isDog,
+      isPhoenix,
+      isDragon,
+      inMultiPlan,
+      isBombCard: bombCards.has(card),
+    };
   });
 
-  // All cards sorted for fallback
-  const allByValue = [...normalCards].sort((a, b) => getCardValue(a) - getCardValue(b));
-  const allByValueDesc = [...normalCards].sort((a, b) => getCardValue(b) - getCardValue(a));
+  function opponentGivePenalty(info) {
+    let penalty = 0;
+    if (info.isDragon) penalty += 1000;
+    else if (info.isPhoenix) penalty += 900;
+    else if (info.isBird) penalty += 700;
+    else if (info.isDog) penalty += 120;
+    else if (info.isSpecial) penalty += 500;
+
+    if (info.isBombCard) penalty += 700;
+    if (info.inMultiPlan) penalty += 220 + info.planSize * 25;
+    if (info.isAce) penalty += 420;
+    else if (info.isKing) penalty += 220;
+    else penalty += info.value * 20;
+    if (info.isPointCard) penalty += 140;
+
+    // Cheap dead singles are what we actually want to dump to opponents.
+    if (!info.isSpecial && !info.inMultiPlan && !info.isPointCard) {
+      penalty -= 140;
+      if (info.value <= 4) penalty -= 50;
+      else if (info.value <= 7) penalty -= 20;
+    }
+    return penalty;
+  }
+
+  function partnerGiveScore(info) {
+    let score = 0;
+    if (info.isDragon) score += 420;
+    else if (info.isPhoenix) score += 340;
+    else if (info.isBird) score += 120;
+    else if (info.isDog) score += 30;
+    else score += info.value * 16;
+
+    if (info.isAce) score += 120;
+    else if (info.isKing) score += 35;
+    if (info.isPointCard) score += 25;
+
+    // Avoid breaking our own strongest structures unless the card is truly premium.
+    if (info.isBombCard) score -= 260;
+    else if (info.inMultiPlan) score -= 90 + info.planSize * 12;
+
+    // Low trash is poor partner help.
+    if (!info.isSpecial && !info.isPointCard && info.value <= 5) score -= 80;
+    return score;
+  }
 
   const used = new Set();
 
-  function pickCard(candidates, fallback) {
-    for (const c of candidates) {
-      if (!used.has(c)) { used.add(c); return c; }
-    }
-    for (const c of fallback) {
-      if (!used.has(c)) { used.add(c); return c; }
-    }
-    // Ultimate fallback
-    for (const c of cards) {
-      if (!used.has(c)) { used.add(c); return c; }
-    }
-    return cards[0];
+  function pickOpponentCard() {
+    const available = meta
+      .filter(info => !used.has(info.card))
+      .sort((a, b) => opponentGivePenalty(a) - opponentGivePenalty(b));
+    const chosen = available[0] || meta.find(info => !used.has(info.card));
+    if (!chosen) return cards[0];
+    used.add(chosen.card);
+    return chosen.card;
   }
 
-  // PARTNER: Dragon > Phoenix > top card (by value desc)
-  const partnerCandidates = [];
-  if (cards.includes('special_dragon')) partnerCandidates.push('special_dragon');
-  if (cards.includes('special_phoenix')) partnerCandidates.push('special_phoenix');
-  partnerCandidates.push(...allByValueDesc);
+  function pickPartnerCard() {
+    const available = meta
+      .filter(info => !used.has(info.card))
+      .sort((a, b) => partnerGiveScore(b) - partnerGiveScore(a));
+    const chosen = available[0] || meta.find(info => !used.has(info.card));
+    if (!chosen) return cards[0];
+    used.add(chosen.card);
+    return chosen.card;
+  }
 
-  const partner = pickCard(partnerCandidates, allByValueDesc);
-
-  // OPPONENTS: Low cards without points
-  const oppCandidates = [...lowNoPoints];
-  // Fallback: any low cards
-  oppCandidates.push(...allByValue.filter(c => {
-    const rank = getRankFromCard(c);
-    return rank !== '5' && rank !== '10' && rank !== 'K' && c !== 'special_dragon' && c !== 'special_phoenix';
-  }));
-  oppCandidates.push(...allByValue.filter(c => c !== 'special_dragon' && c !== 'special_phoenix'));
-
-  const left = pickCard(oppCandidates, allByValue);
-  const right = pickCard(oppCandidates, allByValue);
+  // Prioritize "do not feed opponents" first; partner gets the best of what's
+  // left, which is much safer than choosing the partner gift first.
+  const left = pickOpponentCard();
+  const right = pickOpponentCard();
+  const partner = pickPartnerCard();
 
   return { left, partner, right };
 }
@@ -1291,9 +1340,377 @@ function findFinishingPlay(comboType, lastValue, lastLength, cards, normalCards,
 }
 
 
+// ========== WIN-RATE SEARCH ==========
+
+const TICHU_SEARCH_MAX_STEPS = 256;
+
+function normalizeTichuStrategy(strategy) {
+  if (strategy === 'heuristic') return 'heuristic';
+  if (strategy === 'winrate') return 'winrate';
+  // Legacy UI values from other game types map to the upgraded Tichu search.
+  return 'winrate';
+}
+
+function getBotTeamKey(game, botId) {
+  return game.teams.teamA.includes(botId) ? 'teamA' : 'teamB';
+}
+
+function getOpposingTeamKey(teamKey) {
+  return teamKey === 'teamA' ? 'teamB' : 'teamA';
+}
+
+function removeCardsOnce(cards, playedCards) {
+  const remaining = cards.slice();
+  for (const card of playedCards) {
+    const idx = remaining.indexOf(card);
+    if (idx !== -1) remaining.splice(idx, 1);
+  }
+  return remaining;
+}
+
+function shuffleArray(arr) {
+  const copy = arr.slice();
+  for (let i = copy.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [copy[i], copy[j]] = [copy[j], copy[i]];
+  }
+  return copy;
+}
+
+function getActionKey(action) {
+  if (!action) return '';
+  if (action.type === 'play_cards') {
+    const cards = (action.cards || []).slice().sort().join(',');
+    return `play:${cards}:${action.callRank || ''}`;
+  }
+  if (action.type === 'exchange_cards') {
+    return `exchange:${action.cards?.left || ''}:${action.cards?.partner || ''}:${action.cards?.right || ''}`;
+  }
+  if (action.type === 'dragon_give') return `dragon:${action.target}`;
+  if (action.type === 'call_rank') return `call:${action.rank}`;
+  return action.type || '';
+}
+
+function getPlayActionStrength(action) {
+  if (!action || action.type !== 'play_cards') return -1;
+  const cards = action.cards || [];
+  return getHighestValue(cards.filter(c => c !== 'special_phoenix'));
+}
+
+function buildPlayAction(cards, allCards, isLead) {
+  if (!cards || cards.length === 0) return null;
+  const action = { type: 'play_cards', cards: cards.slice() };
+  if (isLead && cards.includes('special_bird')) {
+    const remaining = removeCardsOnce(allCards, cards);
+    action.callRank = pickCallRank(remaining);
+  }
+  return action;
+}
+
+function collectRawPlayCandidates(cards, isLead) {
+  const candidates = [];
+  const normalCards = cards.filter(c => !c.startsWith('special_'));
+  const combos = findCombos(normalCards);
+  const phoenixCombos = findCombosWithPhoenix(cards);
+
+  for (const card of cards) {
+    candidates.push(buildPlayAction([card], cards, isLead));
+  }
+
+  const comboGroups = [
+    combos.pairs, combos.triples, combos.straights, combos.fullHouses, combos.steps, combos.bombs,
+    phoenixCombos.pairs, phoenixCombos.triples, phoenixCombos.straights, phoenixCombos.fullHouses, phoenixCombos.steps,
+  ];
+  for (const group of comboGroups) {
+    for (const combo of group) {
+      candidates.push(buildPlayAction(combo, cards, isLead));
+    }
+  }
+
+  const birdStraight = findStraightIncludingBird(cards);
+  if (birdStraight) {
+    candidates.push(buildPlayAction(birdStraight, cards, isLead));
+  }
+
+  const allInPlay = buildPlayAction(cards, cards, isLead);
+  if (allInPlay) candidates.push(allInPlay);
+
+  return candidates.filter(Boolean);
+}
+
+function canApplyAction(game, botId, action) {
+  const clone = game.clone();
+  clone._suppressBotSearchLogs = true;
+  const result = clone.handleAction(botId, action);
+  return !!(result && result.success);
+}
+
+function filterLegalActions(game, botId, actions) {
+  const seen = new Set();
+  const legal = [];
+  for (const action of actions) {
+    const key = getActionKey(action);
+    if (!key || seen.has(key)) continue;
+    seen.add(key);
+    if (canApplyAction(game, botId, action)) {
+      legal.push(action);
+    }
+  }
+  return legal;
+}
+
+function prunePlayCandidates(actions, heuristicAction, handSize) {
+  if (actions.length <= 1) return actions;
+
+  const heuristicKey = getActionKey(heuristicAction);
+  const maxCandidates = handSize <= 4 ? 12 : handSize <= 8 ? 10 : 8;
+  const kept = [];
+  const keptKeys = new Set();
+  const groups = new Map();
+
+  function keep(action) {
+    const key = getActionKey(action);
+    if (!key || keptKeys.has(key)) return;
+    kept.push(action);
+    keptKeys.add(key);
+  }
+
+  for (const action of actions) {
+    if (action.type !== 'play_cards') {
+      keep(action);
+      continue;
+    }
+    const combo = getComboType(action.cards || []);
+    const groupKey = `${combo.type}:${combo.length || (action.cards || []).length}`;
+    if (!groups.has(groupKey)) groups.set(groupKey, []);
+    groups.get(groupKey).push(action);
+
+    if ((action.cards || []).length === handSize || combo.type === COMBO.BOMB_FOUR || combo.type === COMBO.BOMB_STRAIGHT_FLUSH) {
+      keep(action);
+    }
+  }
+
+  if (heuristicAction) keep(heuristicAction);
+
+  for (const group of groups.values()) {
+    group.sort((a, b) => getPlayActionStrength(a) - getPlayActionStrength(b));
+    if (group.length > 0) keep(group[0]);
+    if (group.length > 1) keep(group[group.length - 1]);
+  }
+
+  if (kept.length > maxCandidates) {
+    kept.sort((a, b) => scoreCandidatePriority(b, heuristicKey, handSize) - scoreCandidatePriority(a, heuristicKey, handSize));
+    return kept.slice(0, maxCandidates);
+  }
+
+  if (kept.length < maxCandidates) {
+    const extras = actions
+      .filter(action => !keptKeys.has(getActionKey(action)))
+      .sort((a, b) => scoreCandidatePriority(b, heuristicKey, handSize) - scoreCandidatePriority(a, heuristicKey, handSize));
+    for (const action of extras) {
+      if (kept.length >= maxCandidates) break;
+      keep(action);
+    }
+  }
+
+  return kept;
+}
+
+function scoreCandidatePriority(action, heuristicKey, handSize) {
+  const key = getActionKey(action);
+  if (key === heuristicKey) return 10000;
+  if (action.type === 'pass') return 5000;
+  if (action.type === 'dragon_give') return 5000;
+  if (action.type !== 'play_cards') return 4000;
+
+  const combo = getComboType(action.cards || []);
+  let score = 1000;
+  if ((action.cards || []).length === handSize) score += 8000;
+  if (combo.type === COMBO.BOMB_FOUR || combo.type === COMBO.BOMB_STRAIGHT_FLUSH) score += 4000;
+  score += (action.cards || []).length * 40;
+  score -= getPlayActionStrength(action);
+  return score;
+}
+
+function buildWinrateCandidates(game, botId) {
+  const state = game.getStateForPlayer(botId);
+  const cards = state.myCards || [];
+  if (state.phase !== 'playing') return [];
+
+  if (state.needsToCallRank) {
+    return [{ type: 'call_rank', rank: pickCallRank(cards) }];
+  }
+  if (game.dragonPending && game.dragonDecider === botId) {
+    return [
+      { type: 'dragon_give', target: 'left' },
+      { type: 'dragon_give', target: 'right' },
+    ].filter(action => canApplyAction(game, botId, action));
+  }
+  if (!state.isMyTurn) return [];
+
+  const rawActions = collectRawPlayCandidates(cards, (state.currentTrick || []).length === 0);
+  if ((state.currentTrick || []).length > 0) {
+    rawActions.push({ type: 'pass' });
+  }
+
+  const legalActions = filterLegalActions(game, botId, rawActions);
+  const heuristicAction = autoPlay(state, cards);
+  return prunePlayCandidates(legalActions, heuristicAction, cards.length);
+}
+
+function determinizeGameForBot(game, botId) {
+  const world = game.clone();
+  world._suppressBotSearchLogs = true;
+
+  const knownCards = new Set(world.hands[botId] || []);
+  for (const pile of Object.values(world.trickPiles || {})) {
+    for (const card of pile) knownCards.add(card);
+  }
+  for (const play of (world.currentTrick || [])) {
+    for (const card of play.cards || []) knownCards.add(card);
+  }
+  for (const card of (world.pendingTrickCards || [])) {
+    knownCards.add(card);
+  }
+
+  const unseenCards = createDeck()
+    .map(card => card.id)
+    .filter(cardId => !knownCards.has(cardId));
+  const shuffled = shuffleArray(unseenCards);
+
+  let cursor = 0;
+  for (const pid of world.playerIds) {
+    if (pid === botId) {
+      world.hands[pid] = (game.hands[pid] || []).slice();
+      continue;
+    }
+    const need = (game.hands[pid] || []).length;
+    world.hands[pid] = shuffled.slice(cursor, cursor + need);
+    cursor += need;
+  }
+
+  return world;
+}
+
+function getPendingSimulationActor(game) {
+  if (game.needsToCallRank) return game.needsToCallRank;
+  if (game.dragonPending) return game.dragonDecider;
+  return game.currentPlayer;
+}
+
+function runHeuristicRollout(game) {
+  let steps = 0;
+  while (game.state !== 'round_end' && game.state !== 'game_end' && steps < TICHU_SEARCH_MAX_STEPS) {
+    const actor = getPendingSimulationActor(game);
+    if (!actor) break;
+
+    let action = decideHeuristicBotAction(game, actor);
+    if (!action) action = game.getAutoTimeoutAction(actor);
+    if (!action) break;
+
+    let result = game.handleAction(actor, action);
+    if (!result || !result.success) {
+      const fallback = game.getAutoTimeoutAction(actor);
+      if (!fallback) break;
+      result = game.handleAction(actor, fallback);
+      if (!result || !result.success) break;
+    }
+    steps++;
+  }
+  return game;
+}
+
+function evaluateSimulatedOutcome(game, botId) {
+  const myTeam = getBotTeamKey(game, botId);
+  const oppTeam = getOpposingTeamKey(myTeam);
+  const margin = (game.totalScores[myTeam] || 0) - (game.totalScores[oppTeam] || 0);
+  const roundMargin = game.lastRoundScores
+    ? (game.lastRoundScores[myTeam] || 0) - (game.lastRoundScores[oppTeam] || 0)
+    : margin;
+  const win = margin > 0 ? 1 : margin < 0 ? 0 : 0.5;
+  return { win, margin, roundMargin };
+}
+
+function getSearchSampleCount(cardCount) {
+  if (cardCount <= 3) return 14;
+  if (cardCount <= 6) return 10;
+  if (cardCount <= 9) return 8;
+  return 6;
+}
+
+function chooseBestWinrateAction(game, botId, candidates) {
+  if (candidates.length <= 1) return candidates[0] || null;
+
+  const state = game.getStateForPlayer(botId);
+  const samples = getSearchSampleCount((state.myCards || []).length);
+  const stats = new Map();
+  for (const candidate of candidates) {
+    stats.set(getActionKey(candidate), {
+      action: candidate,
+      winSum: 0,
+      marginSum: 0,
+      roundMarginSum: 0,
+      samples: 0,
+    });
+  }
+
+  for (let sample = 0; sample < samples; sample++) {
+    const baseWorld = determinizeGameForBot(game, botId);
+    for (const candidate of candidates) {
+      const key = getActionKey(candidate);
+      const entry = stats.get(key);
+      const sim = baseWorld.clone();
+      sim._suppressBotSearchLogs = true;
+
+      const result = sim.handleAction(botId, candidate);
+      if (!result || !result.success) continue;
+
+      runHeuristicRollout(sim);
+      const outcome = evaluateSimulatedOutcome(sim, botId);
+      entry.winSum += outcome.win;
+      entry.marginSum += outcome.margin;
+      entry.roundMarginSum += outcome.roundMargin;
+      entry.samples += 1;
+    }
+  }
+
+  let best = null;
+  for (const entry of stats.values()) {
+    if (entry.samples === 0) continue;
+    entry.winRate = entry.winSum / entry.samples;
+    entry.avgMargin = entry.marginSum / entry.samples;
+    entry.avgRoundMargin = entry.roundMarginSum / entry.samples;
+
+    if (!best
+        || entry.winRate > best.winRate
+        || (entry.winRate === best.winRate && entry.avgMargin > best.avgMargin)
+        || (entry.winRate === best.winRate && entry.avgMargin === best.avgMargin && entry.avgRoundMargin > best.avgRoundMargin)
+        || (entry.winRate === best.winRate && entry.avgMargin === best.avgMargin && entry.avgRoundMargin === best.avgRoundMargin
+            && scoreCandidatePriority(entry.action, '', (state.myCards || []).length) > scoreCandidatePriority(best.action, '', (state.myCards || []).length))) {
+      best = entry;
+    }
+  }
+
+  return best ? best.action : candidates[0];
+}
+
+function decideWinrateBotAction(game, botId) {
+  const state = game.getStateForPlayer(botId);
+  if (state.phase !== 'playing') {
+    return decideHeuristicBotAction(game, botId);
+  }
+
+  const candidates = buildWinrateCandidates(game, botId);
+  if (candidates.length === 0) {
+    return decideHeuristicBotAction(game, botId);
+  }
+  return chooseBestWinrateAction(game, botId, candidates);
+}
+
+
 // ========== MAIN DECISION FUNCTION ==========
 
-function decideBotAction(game, botId) {
+function decideHeuristicBotAction(game, botId) {
   const state = game.getStateForPlayer(botId);
   const phase = state.phase;
   const myCards = state.myCards || [];
@@ -1742,6 +2159,10 @@ function findCallFulfillPlay(comboType, lastValue, lastLength, calledCards, allC
   }
 
   return null;
+}
+
+function decideBotAction(game, botId, _strategy = 'heuristic') {
+  return decideHeuristicBotAction(game, botId);
 }
 
 

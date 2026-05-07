@@ -28,6 +28,7 @@ class TichuGame {
     this.targetScore = targetScore;
     this.state = STATE.WAITING;
     this.round = 0;
+    this._suppressBotSearchLogs = false;
 
     // Per-round state
     this.resetRound();
@@ -806,7 +807,9 @@ class TichuGame {
     if (rank === 'none') {
       this.callRank = null;
       this.needsToCallRank = null;
-      console.log(`[DEBUG] call_rank skipped: player chose no call`);
+      if (!this._suppressBotSearchLogs) {
+        console.log(`[DEBUG] call_rank skipped: player chose no call`);
+      }
       return {
         success: true,
         broadcast: {
@@ -826,7 +829,9 @@ class TichuGame {
 
     this.callRank = rank.toString();
     this.needsToCallRank = null;
-    console.log(`[DEBUG] call_rank handled: callRank=${this.callRank}, needsToCallRank=${this.needsToCallRank}`);
+    if (!this._suppressBotSearchLogs) {
+      console.log(`[DEBUG] call_rank handled: callRank=${this.callRank}, needsToCallRank=${this.needsToCallRank}`);
+    }
 
     return {
       success: true,
@@ -991,17 +996,23 @@ class TichuGame {
     const allTrickCards = [];
     for (const [pid, cards] of Object.entries(this.trickPiles)) {
       const pts = cards.reduce((s, c) => s + getCardPoints(c), 0);
-      console.log(`[SCORE DEBUG] trickPile ${pid}: ${cards.length} cards, ${pts} pts`);
+      if (!this._suppressBotSearchLogs) {
+        console.log(`[SCORE DEBUG] trickPile ${pid}: ${cards.length} cards, ${pts} pts`);
+      }
       allTrickCards.push(...cards);
     }
     for (const [pid, cards] of Object.entries(this.hands)) {
       if (cards.length > 0) {
         const pts = cards.reduce((s, c) => s + getCardPoints(c), 0);
-        console.log(`[SCORE DEBUG] remaining hand ${pid}: ${cards.length} cards, ${pts} pts - [${cards.join(', ')}]`);
+        if (!this._suppressBotSearchLogs) {
+          console.log(`[SCORE DEBUG] remaining hand ${pid}: ${cards.length} cards, ${pts} pts - [${cards.join(', ')}]`);
+        }
       }
     }
-    console.log(`[SCORE DEBUG] total tracked cards: ${allTrickCards.length + Object.values(this.hands).reduce((s, h) => s + h.length, 0)} / 56`);
-    console.log(`[SCORE DEBUG] finishOrder: ${JSON.stringify(this.finishOrder)}`);
+    if (!this._suppressBotSearchLogs) {
+      console.log(`[SCORE DEBUG] total tracked cards: ${allTrickCards.length + Object.values(this.hands).reduce((s, h) => s + h.length, 0)} / 56`);
+      console.log(`[SCORE DEBUG] finishOrder: ${JSON.stringify(this.finishOrder)}`);
+    }
 
     const roundScores = calculateRoundScores({
       finishOrder: this.finishOrder,
@@ -1012,7 +1023,9 @@ class TichuGame {
       playerCards: this.hands,
     });
 
-    console.log(`[SCORE DEBUG] result: teamA=${roundScores.teamA}, teamB=${roundScores.teamB}, sum=${roundScores.teamA + roundScores.teamB}`);
+    if (!this._suppressBotSearchLogs) {
+      console.log(`[SCORE DEBUG] result: teamA=${roundScores.teamA}, teamB=${roundScores.teamB}, sum=${roundScores.teamA + roundScores.teamB}`);
+    }
 
     this.totalScores.teamA += roundScores.teamA;
     this.totalScores.teamB += roundScores.teamB;
@@ -1036,6 +1049,66 @@ class TichuGame {
   nextRound() {
     if (this.state === STATE.GAME_END) return;
     this.start();
+  }
+
+  clone() {
+    const c = Object.create(TichuGame.prototype);
+    c.playerIds = this.playerIds;
+    c.playerNames = this.playerNames;
+    c.teams = this.teams;
+    c.targetScore = this.targetScore;
+    c.state = this.state;
+    c.round = this.round;
+    c._suppressBotSearchLogs = this._suppressBotSearchLogs;
+
+    c.totalScores = { ...this.totalScores };
+    c.scoreHistory = this.scoreHistory.map((entry) => ({ ...entry }));
+    c.lastRoundScores = this.lastRoundScores ? { ...this.lastRoundScores } : null;
+
+    c.hands = {};
+    c.trickPiles = {};
+    for (const pid of this.playerIds) {
+      c.hands[pid] = (this.hands[pid] || []).slice();
+      c.trickPiles[pid] = (this.trickPiles[pid] || []).slice();
+    }
+
+    c.largeTichuDeclarations = this.largeTichuDeclarations.slice();
+    c.smallTichuDeclarations = this.smallTichuDeclarations.slice();
+    c.largeTichuResponses = { ...this.largeTichuResponses };
+    c.exchangeDone = { ...this.exchangeDone };
+    c.exchangeCards = {};
+    c.receivedFrom = {};
+    for (const [pid, cards] of Object.entries(this.exchangeCards)) {
+      c.exchangeCards[pid] = { ...cards };
+    }
+    for (const [pid, cards] of Object.entries(this.receivedFrom)) {
+      c.receivedFrom[pid] = { ...cards };
+    }
+
+    c.currentTrick = this.currentTrick.map((play) => ({
+      playerId: play.playerId,
+      cards: play.cards.slice(),
+      combo: play.combo ? { ...play.combo } : play.combo,
+    }));
+    c.lastTrick = this.lastTrick.map((play) => ({
+      playerId: play.playerId,
+      cards: play.cards.slice(),
+      combo: play.combo ? { ...play.combo } : play.combo,
+    }));
+
+    c.currentPlayer = this.currentPlayer;
+    c.passCount = this.passCount;
+    c.lastPlayedBy = this.lastPlayedBy;
+    c.trickStarter = this.trickStarter;
+    c.finishOrder = this.finishOrder.slice();
+    c.callRank = this.callRank;
+    c.needsToCallRank = this.needsToCallRank;
+    c.dragonPending = this.dragonPending;
+    c.dragonDecider = this.dragonDecider;
+    c.pendingTrickCards = this.pendingTrickCards ? this.pendingTrickCards.slice() : null;
+    c.dealData = this.dealData;
+
+    return c;
   }
 
   getStateForPlayer(playerId) {
@@ -1335,7 +1408,9 @@ class TichuGame {
       if (trick.playerId === oldPlayerId) trick.playerId = newPlayerId;
     }
 
-    console.log(`Updated player ID: ${oldPlayerId} -> ${newPlayerId}`);
+    if (!this._suppressBotSearchLogs) {
+      console.log(`Updated player ID: ${oldPlayerId} -> ${newPlayerId}`);
+    }
     return true;
   }
 }

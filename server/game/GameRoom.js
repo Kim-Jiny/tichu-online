@@ -426,6 +426,12 @@ class GameRoom {
     // Strategy is only meaningful for Mighty bots; other game types ignore
     // it but we still persist whatever the host picked so it survives
     // migrations. BotPlayer normalises invalid strategy → 'heuristic'.
+    if (this.gameType === 'mighty') {
+      // Mighty default is mixexpectimax — UI no longer offers strategy
+      // selection, so any non-mix value is treated as "give me the
+      // standard bot" and upgraded.
+      if (strategy !== 'mixexpectimax') strategy = 'mixexpectimax';
+    }
     const botId = `bot_${nextBotNum++}`;
     const { t } = require('../i18n');
     const botNickname = t(locale, 'bot_nickname', { number: this.bots.size + 1 });

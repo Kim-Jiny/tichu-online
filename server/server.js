@@ -3796,17 +3796,17 @@ let pendingBotCheck = {}; // roomId -> true (prevent duplicate scheduling)
 
 function getBotBaseDelay(speed) {
   switch (speed) {
-    case 'fast': return 300 + Math.floor(Math.random() * 300);    // 300-600ms (기존 속도)
-    case 'slow': return 1200 + Math.floor(Math.random() * 600);   // 1200-1800ms
-    default:     return 600 + Math.floor(Math.random() * 400);    // 600-1000ms
+    case 'fast': return 100 + Math.floor(Math.random() * 200);    // 100-300ms (was 300-600)
+    case 'slow': return 900 + Math.floor(Math.random() * 600);    // 900-1500ms (was 1200-1800)
+    default:     return 300 + Math.floor(Math.random() * 400);    // 300-700ms (was 600-1000)
   }
 }
 
 function getBotExtraDelay(speed) {
   switch (speed) {
-    case 'fast': return 200;   // 기존 속도
-    case 'slow': return 800;
-    default:     return 400;
+    case 'fast': return 100;   // was 200
+    case 'slow': return 700;   // was 800
+    default:     return 300;   // was 400
   }
 }
 

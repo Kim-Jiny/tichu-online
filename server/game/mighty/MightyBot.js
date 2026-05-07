@@ -186,27 +186,53 @@ function decideBid(game, botId) {
   const strength = evaluateHandStrength(hand, game);
   const bestTrump = pickBestTrump(hand);
 
-  // Count cards of the chosen trump suit (used both for suit vote and for
-  // capping how high we dare bid).
+  // Count cards of the chosen trump suit + flag non-trump A presence.
+  // "non-trump A" = any A whose suit ≠ bestTrump (includes mighty in
+  // non-spade-trump bidding). It guarantees a credible first-trick
+  // lead (1st trick disallows trump leads), so without one the bot
+  // can't safely commit to a high bid.
   let trumpCount = 0;
+  let hasNonTrumpA = false;
   for (const cardId of hand) {
     if (cardId === 'mighty_joker') continue;
     const info = getCardInfo(cardId);
-    if (info.suit === bestTrump) trumpCount++;
+    if (info.suit === bestTrump) {
+      trumpCount++;
+    } else if (info.rank === 'A') {
+      hasNonTrumpA = true;
+    }
+  }
+
+  // 6p hands are 8 cards (vs 5p's 10), so trump-count thresholds shift
+  // down by one. 6p minBid is also 14 (vs 13).
+  const is6p = game.playerCount === 6;
+  const passThreshold = is6p ? 3 : 4;       // < this → pass
+  const cap1Trump = passThreshold;          // +1 over minBid
+  const cap2Trump = passThreshold + 1;      // +2 over minBid
+  const boostTrump = passThreshold + 3;     // long trump bonus
+
+  // Suited bid gate: refuse to bid when trump support is too thin —
+  // opp drains us before we cash anything.
+  if (trumpCount < passThreshold) {
+    return { type: 'submit_bid', pass: true };
   }
 
   let estimatedPoints = Math.min(20, game.options.minBid + Math.floor(strength / 2.5));
 
-  // Trump length cap — long trump stabilises the bid, short trump forces us
-  // toward the floor (or into a pass) even with a lot of raw high-card power.
-  if (trumpCount <= 3) {
-    estimatedPoints = Math.min(estimatedPoints, game.options.minBid);
-  } else if (trumpCount === 4) {
+  // Trump length cap.
+  if (trumpCount === cap1Trump) {
     estimatedPoints = Math.min(estimatedPoints, game.options.minBid + 1);
-  } else if (trumpCount === 5) {
+  } else if (trumpCount === cap2Trump) {
     estimatedPoints = Math.min(estimatedPoints, game.options.minBid + 2);
-  } else if (trumpCount >= 7) {
+  } else if (trumpCount >= boostTrump) {
     estimatedPoints = Math.min(20, estimatedPoints + 1);
+  }
+
+  // 15+ bid requires a non-trump A — a credible first-trick lead.
+  // Without one, cap at 14 even if strength + trump count would
+  // otherwise allow more.
+  if (!hasNonTrumpA && estimatedPoints >= 15) {
+    estimatedPoints = 14;
   }
 
   if (estimatedPoints < game.options.minBid || estimatedPoints <= game.currentBid.points) {

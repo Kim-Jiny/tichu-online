@@ -434,7 +434,17 @@ class GameRoom {
     }
     const botId = `bot_${nextBotNum++}`;
     const { t } = require('../i18n');
-    const botNickname = t(locale, 'bot_nickname', { number: this.bots.size + 1 });
+    // Pick the smallest unused bot number for the nickname so deletions
+    // free up the slot — `this.bots.size + 1` collided when a middle
+    // bot was kicked (e.g., delete 봇1 then re-add → another 봇2).
+    const usedNumbers = new Set();
+    for (const bot of this.bots.values()) {
+      const m = bot.nickname && bot.nickname.match(/(\d+)/);
+      if (m) usedNumbers.add(parseInt(m[1], 10));
+    }
+    let botNumber = 1;
+    while (usedNumbers.has(botNumber)) botNumber++;
+    const botNickname = t(locale, 'bot_nickname', { number: botNumber });
     const bot = new BotPlayer(botId, botNickname, botSpeed, strategy);
     this.bots.set(botId, bot);
     this.players[slot] = { id: botId, nickname: botNickname, connected: true, isBot: true, ready: true, botSpeed };

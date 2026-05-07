@@ -3818,21 +3818,20 @@ function scheduleBotActions(roomId) {
 
   pendingBotCheck[roomId] = true;
 
-  // Quick check to find which bot needs to act and get its speed
-  const isSK0 = room.gameType === 'skull_king';
-  const isLL0 = room.gameType === 'love_letter';
-  const isMighty0 = room.gameType === 'mighty';
-  const baseDecideFn0 = isMighty0 ? decideMightyBotAction : isLL0 ? decideLLBotAction : isSK0 ? decideSKBotAction : decideBotAction;
-  // Mighty supports per-bot decision strategies; other game types ignore the extra arg.
-  const decideFn0 = isMighty0
-    ? (g, pid) => baseDecideFn0(g, pid, room.bots.get(pid)?.strategy || 'heuristic')
-    : baseDecideFn0;
   let activeBotSpeed = 'normal';
-  for (const botId of room.getBotIds()) {
-    if (decideFn0(room.game, botId)) {
+  const pendingActor0 = typeof room.game.getPendingActor === 'function'
+    ? room.game.getPendingActor()
+    : room.game.currentPlayer;
+  if (pendingActor0 && room.isBot(pendingActor0)) {
+    const bot = room.bots.get(pendingActor0);
+    activeBotSpeed = bot ? bot.speed : 'normal';
+  } else if (room.game.state === 'round_end') {
+    for (const botId of room.getBotIds()) {
       const bot = room.bots.get(botId);
-      activeBotSpeed = bot ? bot.speed : 'normal';
-      break;
+      if (bot) {
+        activeBotSpeed = bot.speed;
+        break;
+      }
     }
   }
 
@@ -3870,7 +3869,14 @@ function scheduleBotActions(roomId) {
           return baseDecideFn(g, pid, cur?.bots.get(pid)?.strategy || 'heuristic');
         }
       : baseDecideFn;
-    for (const botId of r.getBotIds()) {
+    const pendingActor = typeof r.game.getPendingActor === 'function'
+      ? r.game.getPendingActor()
+      : r.game.currentPlayer;
+    const candidateBotIds = (pendingActor && r.isBot(pendingActor))
+      ? [pendingActor]
+      : r.getBotIds();
+
+    for (const botId of candidateBotIds) {
       let action = decideFn(r.game, botId);
       if (action) {
         const bot = r.bots.get(botId);

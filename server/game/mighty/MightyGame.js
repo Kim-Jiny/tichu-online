@@ -901,8 +901,14 @@ class MightyGame {
       this.friendRevealed = true;
     }
 
+    const leadCardId = this.currentTrick[0].cardId;
+    const leadSuit = leadCardId === 'mighty_joker'
+      ? this.jokerSuitDeclared
+      : getCardInfo(leadCardId).suit;
+
     this.tricks.push({
       leader: this.currentTrick[0].pid,
+      leadSuit,
       cards: this.currentTrick.slice(),
       winner,
     });
@@ -1676,6 +1682,7 @@ class MightyGame {
     // tricks: array of {leader, winner, cards: [{pid, cardId}, ...]}
     c.tricks = this.tricks.map(t => ({
       leader: t.leader,
+      leadSuit: t.leadSuit || null,
       winner: t.winner,
       cards: t.cards.map(p => ({ ...p })),
     }));

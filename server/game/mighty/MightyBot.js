@@ -4,11 +4,12 @@ const { getCardInfo, RANK_ORDER, SUITS } = require('./MightyDeck');
 
 /**
  * Decide the next action for a Mighty bot. `strategy` selects the policy:
- * 'heuristic' (default), 'pimc_play', 'pimc_full', 'expectimax',
+ * 'heuristic' (default), 'oracle', 'pimc_play', 'pimc_full', 'expectimax',
  * 'expectimax_smart', or 'mixexpectimax'.
  */
 function decideMightyBotAction(game, botId, strategy = 'heuristic') {
   if (!game || !game.playerIds.includes(botId)) return null;
+  if (strategy === 'oracle') return require('./strategies/oracle').decide(game, botId);
   if (strategy === 'pimc_play') return require('./strategies/pimc_play').decide(game, botId);
   if (strategy === 'pimc_full') return require('./strategies/pimc_full').decide(game, botId);
   if (strategy === 'expectimax') return require('./strategies/expectimax').decide(game, botId);
@@ -68,11 +69,13 @@ function _getKnownVoids(game) {
   for (const pid of game.playerIds) voids[pid] = new Set();
   const mightyCard = game.getMightyCard();
 
-  const analyzeTrick = (cards) => {
+  const analyzeTrick = (trick) => {
+    const cards = trick?.cards || [];
     if (cards.length < 2) return;
     const leadCard = cards[0].cardId;
-    if (leadCard === 'mighty_joker') return;
-    const leadSuit = getCardInfo(leadCard).suit;
+    const leadSuit = trick?.leadSuit
+      || (leadCard === 'mighty_joker' ? game.jokerSuitDeclared : getCardInfo(leadCard).suit);
+    if (!leadSuit) return;
 
     for (let i = 1; i < cards.length; i++) {
       const play = cards[i];
@@ -83,8 +86,16 @@ function _getKnownVoids(game) {
     }
   };
 
-  for (const trick of game.tricks) analyzeTrick(trick.cards);
-  if (game.currentTrick.length > 1) analyzeTrick(game.currentTrick);
+  for (const trick of game.tricks) analyzeTrick(trick);
+  if (game.currentTrick.length > 1) {
+    const leadCardId = game.currentTrick[0]?.cardId;
+    analyzeTrick({
+      cards: game.currentTrick,
+      leadSuit: leadCardId === 'mighty_joker'
+        ? game.jokerSuitDeclared
+        : (leadCardId ? getCardInfo(leadCardId).suit : null),
+    });
+  }
 
   return voids;
 }
@@ -1897,9 +1908,10 @@ function _winnerCardWillHold(game, botId) {
     if (game.excludedPlayers && game.excludedPlayers.has(pid)) continue;
     if (pid === game.declarer) continue;                              // ally
     if (game.friendRevealed && pid === game.partner) continue;        // ally (revealed)
+    const legal = new Set(game.getLegalCards(pid) || []);
     const hand = game.hands[pid] || [];
     for (const cardId of hand) {
-      if (canBeatCurrentWinner(game, cardId)) return false;
+      if (legal.has(cardId) && canBeatCurrentWinner(game, cardId)) return false;
     }
   }
   return true;
@@ -2018,19 +2030,34 @@ function _declarerStrongSuit(game) {
 function _suitLedCount(game, suit) {
   if (!suit) return 0;
   let count = 0;
-  const consider = (lead) => {
-    if (!lead) return;
-    if (lead === 'mighty_joker') {
-      if (game.jokerSuitDeclared === suit) count++;
+  const consider = (trick) => {
+    if (!trick?.leadCardId) return;
+    const leadSuit = trick.leadSuit
+      || (trick.leadCardId === 'mighty_joker' ? game.jokerSuitDeclared : null);
+    if (leadSuit) {
+      if (leadSuit === suit) count++;
       return;
     }
-    const info = getCardInfo(lead);
-    if (info && info.suit === suit) count++;
+    const info = getCardInfo(trick.leadCardId);
+    if (info?.suit === suit) count++;
   };
   for (const t of (game.tricks || [])) {
-    if (t.cards && t.cards.length > 0) consider(t.cards[0].cardId);
+    if (t.cards && t.cards.length > 0) {
+      consider({
+        leadCardId: t.cards[0].cardId,
+        leadSuit: t.leadSuit,
+      });
+    }
   }
-  if (game.currentTrick.length > 0) consider(game.currentTrick[0].cardId);
+  if (game.currentTrick.length > 0) {
+    const leadCardId = game.currentTrick[0].cardId;
+    consider({
+      leadCardId,
+      leadSuit: leadCardId === 'mighty_joker'
+        ? game.jokerSuitDeclared
+        : getCardInfo(leadCardId).suit,
+    });
+  }
   return count;
 }
 
@@ -2201,13 +2228,12 @@ function _suitsAlreadyLed(game) {
   const out = new Set();
   for (const t of game.tricks || []) {
     if (!t.cards || t.cards.length === 0) continue;
-    const leadCardId = t.cards[0].cardId;
-    if (leadCardId === 'mighty_joker') {
-      if (game.jokerSuitDeclared) out.add(game.jokerSuitDeclared);
+    if (t.leadSuit) {
+      out.add(t.leadSuit);
       continue;
     }
-    const info = getCardInfo(leadCardId);
-    if (info && info.suit) out.add(info.suit);
+    const info = getCardInfo(t.cards[0].cardId);
+    if (info?.suit) out.add(info.suit);
   }
   return out;
 }
@@ -2219,9 +2245,8 @@ function _firstTrickLeadSuit(game) {
   if (!game.tricks || game.tricks.length === 0) return null;
   const t = game.tricks[0];
   if (!t.cards || t.cards.length === 0) return null;
-  const leadCardId = t.cards[0].cardId;
-  if (leadCardId === 'mighty_joker') return game.jokerSuitDeclared || null;
-  const info = getCardInfo(leadCardId);
+  if (t.leadSuit) return t.leadSuit;
+  const info = getCardInfo(t.cards[0].cardId);
   return info?.suit || null;
 }
 

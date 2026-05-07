@@ -6,7 +6,7 @@
 const { createDeck } = require('./Deck');
 const { getComboType, COMBO } = require('./CardValidator');
 
-const VALID_BOT_STRATEGIES = ['heuristic', 'pimc_play', 'pimc_full', 'expectimax', 'expectimax_smart', 'mixexpectimax'];
+const VALID_BOT_STRATEGIES = ['heuristic', 'oracle', 'pimc_play', 'pimc_full', 'expectimax', 'expectimax_smart', 'mixexpectimax'];
 
 class BotPlayer {
   constructor(id, nickname, speed = 'normal', strategy = 'heuristic') {

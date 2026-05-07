@@ -18,7 +18,7 @@ const MightyBotInternals = require('../MightyBot');
 const pimcFull = require('./pimc_full');
 const { filterFriendSafeCandidates } = require('./_shared');
 
-const SAMPLES = 40;
+const SAMPLES = 15;
 const MAX_CANDIDATES = 8;
 const OWN_DEPTH = 2;
 

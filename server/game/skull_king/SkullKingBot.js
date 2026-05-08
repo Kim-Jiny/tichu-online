@@ -26,6 +26,7 @@ function decideBid(game, botId) {
   const infos = hand.map(id => getCardInfo(id)).filter(Boolean);
   const round = game.round;
   const playerCount = game.playerCount;
+  const summary = summarizeBidHand(infos);
 
   // Context for expansion synergy
   const hasWhiteWhale = infos.some(i => i.type === CARD_TYPE.WHITE_WHALE);
@@ -95,6 +96,16 @@ function decideBid(game, botId) {
 
   estimatedTricks *= competitionFactor;
 
+  // Control-heavy late hands tend to be under-bid: even if the raw card
+  // values only round to N, a hand with several hard winners and nowhere to
+  // hide often takes N+1 in practice.
+  if (summary.blackCount >= 3) estimatedTricks += 0.15;
+  if (summary.blackHighCount >= 2) estimatedTricks += 0.15;
+  if (summary.controlCards >= 2 && summary.safeDumpCards === 0) estimatedTricks += 0.20;
+  if (round >= 5 && summary.controlCards >= 2 && summary.safeDumpCards <= 1) {
+    estimatedTricks += 0.15;
+  }
+
   // Position + table-state adjustment: a bidder going LATE sees the prior bids,
   // and the running sum-of-bids vs total tricks tells them whether tricks are
   // 'available' or 'over-claimed'. Last bidder gets the strongest signal.
@@ -138,13 +149,64 @@ function decideBid(game, botId) {
   // Bid 0 deserves an extra check: the round-bonus for hitting 0 (round*10)
   // is large in late rounds, so a hand with no real winners should commit
   // to 0 cleanly rather than risk a 1-bid that turns into a -10 penalty.
-  if (estimatedTricks < 0.4 && round >= 6) {
+  if (estimatedTricks < 0.4 && round >= 6
+      && summary.controlCards === 0 && summary.safeDumpCards >= 2) {
     return { type: 'submit_bid', bid: 0 };
   }
 
   // Standard rounding, clamped to [0, round].
-  const bid = Math.round(estimatedTricks);
+  let bid = Math.round(estimatedTricks);
+  const fractional = estimatedTricks - Math.floor(estimatedTricks);
+  if (fractional >= 0.65
+      && summary.controlCards > bid
+      && summary.safeDumpCards <= Math.max(1, Math.floor(round / 4))) {
+    bid++;
+  }
   return { type: 'submit_bid', bid: Math.min(Math.max(bid, 0), round) };
+}
+
+function summarizeBidHand(infos) {
+  const summary = {
+    blackCount: 0,
+    blackHighCount: 0,
+    controlCards: 0,
+    safeDumpCards: 0,
+  };
+
+  for (const info of infos) {
+    if (info.type === CARD_TYPE.NUMBER) {
+      const isBlack = info.suit === 'black';
+      if (isBlack) summary.blackCount++;
+      if (isBlack && info.value >= 10) {
+        summary.blackHighCount++;
+        summary.controlCards++;
+      } else if (!isBlack && info.value >= 13) {
+        summary.controlCards++;
+      }
+
+      if ((!isBlack && info.value <= 5) || (isBlack && info.value <= 4)) {
+        summary.safeDumpCards++;
+      }
+      continue;
+    }
+
+    if (info.type === CARD_TYPE.SKULL_KING || info.type === CARD_TYPE.PIRATE) {
+      summary.controlCards++;
+      continue;
+    }
+
+    if (info.type === CARD_TYPE.TIGRESS) {
+      summary.controlCards++;
+      summary.safeDumpCards++;
+      continue;
+    }
+
+    if (info.type === CARD_TYPE.ESCAPE || info.type === CARD_TYPE.LOOT) {
+      summary.safeDumpCards++;
+    }
+  }
+
+  return summary;
 }
 
 function decidePlay(game, botId) {
@@ -198,6 +260,16 @@ function decideLeadCard(legalCards, tricksNeeded, tricksRemaining, ctx = {}) {
   // mustWinAll fires the same 'lead strong' branch but with a cleaner reason.
   if (tricksNeeded > 0) {
     // Need tricks: lead strong
+    // Prefer probing with a strong NUMBER when we still have cushion, so we
+    // don't cash our guaranteed special winners earlier than necessary.
+    const numbers = infos
+      .filter(c => c.info.type === CARD_TYPE.NUMBER)
+      .sort((a, b) => compareLeadNumbers(a.info, b.info));
+    if (ctx.cushion) {
+      const probe = numbers.find(c => isControlLeadNumber(c.info));
+      if (probe) return makePlayAction(probe.id, probe.info);
+    }
+
     // Prefer SK > Pirate > high black > high number
     const sk = infos.find(c => c.info.type === CARD_TYPE.SKULL_KING);
     if (sk) return makePlayAction(sk.id, sk.info);
@@ -209,13 +281,6 @@ function decideLeadCard(legalCards, tricksNeeded, tricksRemaining, ctx = {}) {
     if (tigress && tricksNeeded >= 1) return makePlayAction(tigress.id, tigress.info, 'pirate');
 
     // High numbered cards
-    const numbers = infos
-      .filter(c => c.info.type === CARD_TYPE.NUMBER)
-      .sort((a, b) => {
-        if (a.info.suit === 'black' && b.info.suit !== 'black') return -1;
-        if (a.info.suit !== 'black' && b.info.suit === 'black') return 1;
-        return b.info.value - a.info.value;
-      });
     if (numbers.length > 0) return makePlayAction(numbers[0].id, numbers[0].info);
   } else if (tricksNeeded <= 0) {
     // Already met or exceeded bid: play weak.
@@ -592,6 +657,18 @@ function makePlayAction(cardId, info, tigressChoice) {
     action.tigressChoice = tigressChoice || 'escape';
   }
   return action;
+}
+
+function compareLeadNumbers(a, b) {
+  if (a.suit === 'black' && b.suit !== 'black') return -1;
+  if (a.suit !== 'black' && b.suit === 'black') return 1;
+  return b.value - a.value;
+}
+
+function isControlLeadNumber(info) {
+  if (!info || info.type !== CARD_TYPE.NUMBER) return false;
+  if (info.suit === 'black') return info.value >= 10;
+  return info.value >= 13;
 }
 
 module.exports = { decideSKBotAction };

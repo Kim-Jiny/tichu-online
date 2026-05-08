@@ -3716,8 +3716,11 @@ function sendGameStateToAll(roomId) {
     return;
   }
 
+  // Skull King bidding is simultaneous, so a human bid should refresh any
+  // pending bot schedule immediately instead of waiting for an older timer.
+  const forceBotReschedule = room.gameType === 'skull_king' && room.game.state === 'bidding';
   // Set timer BEFORE sending state so turnDeadline is included
-  scheduleBotActions(roomId);
+  scheduleBotActions(roomId, forceBotReschedule);
   startTurnTimer(roomId);
 
   _broadcastState(roomId, room);
@@ -3793,6 +3796,7 @@ function _broadcastState(roomId, room) {
 
 // Bot auto-response: schedule a single delayed bot action check
 let pendingBotCheck = {}; // roomId -> true (prevent duplicate scheduling)
+let pendingBotTimers = {}; // roomId -> timeout handle
 
 function getBotBaseDelay(speed) {
   switch (speed) {
@@ -3810,11 +3814,16 @@ function getBotExtraDelay(speed) {
   }
 }
 
-function scheduleBotActions(roomId) {
+function scheduleBotActions(roomId, forceReschedule = false) {
   const room = lobby.getRoom(roomId);
   if (!room || !room.game) return;
   if (room.getBotIds().length === 0) return;
-  if (pendingBotCheck[roomId]) return; // Already scheduled
+  if (pendingBotCheck[roomId] && !forceReschedule) return; // Already scheduled
+  if (forceReschedule && pendingBotTimers[roomId]) {
+    clearTimeout(pendingBotTimers[roomId]);
+    delete pendingBotTimers[roomId];
+    delete pendingBotCheck[roomId];
+  }
 
   pendingBotCheck[roomId] = true;
 
@@ -3853,7 +3862,8 @@ function scheduleBotActions(roomId) {
     }
   }
 
-  setTimeout(() => {
+  pendingBotTimers[roomId] = setTimeout(() => {
+    delete pendingBotTimers[roomId];
     delete pendingBotCheck[roomId];
     const r = lobby.getRoom(roomId);
     if (!r || !r.game) return;
@@ -3869,6 +3879,40 @@ function scheduleBotActions(roomId) {
           return baseDecideFn(g, pid, cur?.bots.get(pid)?.strategy || 'heuristic');
         }
       : baseDecideFn;
+
+    if (isSK && r.game.state === 'bidding') {
+      const pendingBidBots = r.getBotIds().filter(pid => r.game?.bids?.[pid] === null);
+      let progressed = false;
+      for (const botId of pendingBidBots) {
+        let action = decideFn(r.game, botId);
+        if (!action) continue;
+        let result = r.game.handleAction(botId, action);
+        if (result && !result.success && r.game) {
+          console.log(`[BOT] ${botId} action failed: ${result.messageKey || result.message}, trying fallback`);
+          const fallback = r.game.getAutoTimeoutAction(botId);
+          if (fallback) {
+            console.log(`[BOT] ${botId} fallback: ${fallback.type}`);
+            result = r.game.handleAction(botId, fallback);
+          }
+        }
+        if (result && result.success) {
+          if (result.broadcast) broadcastGameEvent(roomId, result.broadcast);
+          progressed = true;
+        } else if (result) {
+          console.log(`[BOT] ${botId} action failed: ${result.message}`);
+        }
+      }
+
+      if (progressed) {
+        if (r.game && r.game.state === 'game_end') {
+          saveGameResult(r);
+          scheduleAutoReturnToRoom(roomId);
+        }
+        sendGameStateToAll(roomId);
+      }
+      return;
+    }
+
     const pendingActor = typeof r.game.getPendingActor === 'function'
       ? r.game.getPendingActor()
       : r.game.currentPlayer;
@@ -3885,7 +3929,8 @@ function scheduleBotActions(roomId) {
         const isCardPlay = action.type === 'play_cards' || action.type === 'pass' || action.type === 'play_card';
         if (isCardPlay) {
           pendingBotCheck[roomId] = true;
-          setTimeout(() => {
+          pendingBotTimers[roomId] = setTimeout(() => {
+            delete pendingBotTimers[roomId];
             delete pendingBotCheck[roomId];
             const r2 = lobby.getRoom(roomId);
             if (!r2 || !r2.game) return;

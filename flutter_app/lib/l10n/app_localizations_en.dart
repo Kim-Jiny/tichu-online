@@ -1331,6 +1331,15 @@ class L10nEn extends L10n {
   String get skGameBidTricks => 'Bid/Won';
 
   @override
+  String get skGameStatBid => 'Bid';
+
+  @override
+  String get skGameStatTricks => 'Won';
+
+  @override
+  String get skGameStatScore => 'Score';
+
+  @override
   String get skGameBonusHeader => 'Bonus';
 
   @override

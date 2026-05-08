@@ -637,6 +637,9 @@
     }
   },
   "skGameBidTricks": "Bid/Won",
+  "skGameStatBid": "Bid",
+  "skGameStatTricks": "Won",
+  "skGameStatScore": "Score",
   "skGameBonusHeader": "Bonus",
   "skGameScoreHeader": "Score",
   "skGameNextRoundPreparing": "Preparing next round...",

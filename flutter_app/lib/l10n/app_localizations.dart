@@ -2505,6 +2505,24 @@ abstract class L10n {
   /// **'Bid/Won'**
   String get skGameBidTricks;
 
+  /// No description provided for @skGameStatBid.
+  ///
+  /// In en, this message translates to:
+  /// **'Bid'**
+  String get skGameStatBid;
+
+  /// No description provided for @skGameStatTricks.
+  ///
+  /// In en, this message translates to:
+  /// **'Won'**
+  String get skGameStatTricks;
+
+  /// No description provided for @skGameStatScore.
+  ///
+  /// In en, this message translates to:
+  /// **'Score'**
+  String get skGameStatScore;
+
   /// No description provided for @skGameBonusHeader.
   ///
   /// In en, this message translates to:

@@ -1340,6 +1340,15 @@ class L10nDe extends L10n {
   String get skGameBidTricks => 'Bid/Gewonnen';
 
   @override
+  String get skGameStatBid => 'Wette';
+
+  @override
+  String get skGameStatTricks => 'Stiche';
+
+  @override
+  String get skGameStatScore => 'Punkte';
+
+  @override
   String get skGameBonusHeader => 'Bonus';
 
   @override

@@ -1303,6 +1303,15 @@ class L10nKo extends L10n {
   String get skGameBidTricks => '예측/획득';
 
   @override
+  String get skGameStatBid => '예측';
+
+  @override
+  String get skGameStatTricks => '획득';
+
+  @override
+  String get skGameStatScore => '점수';
+
+  @override
   String get skGameBonusHeader => '보너스';
 
   @override

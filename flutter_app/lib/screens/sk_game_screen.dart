@@ -251,26 +251,27 @@ class _SKGameScreenState extends State<SKGameScreen> {
                         Column(
                           children: [
                             _buildSpectatorTopBar(state, game),
-                            _buildSpectatorScoreboard(state, game),
-                            Expanded(
-                              child: Column(
-                                children: [
-                                  const Spacer(),
-                                  _buildTrickArea(state),
-                                  const Spacer(),
-                                ],
-                              ),
-                            ),
                             if ([
                               'bidding',
                               'playing',
                               'trick_end',
                             ].contains(state.phase))
-                              _buildSpectatorHandArea(state, game),
+                              _buildBoardStage(
+                                board: _buildSpectatorScoreboard(state, game),
+                                bottomOverlay: _buildSpectatorBottomOverlay(
+                                  _buildSpectatorHandArea(state, game),
+                                ),
+                              ),
                             if (state.phase == 'round_end')
-                              _buildRoundEndUI(state),
+                              _buildBoardStage(
+                                board: _buildSpectatorScoreboard(state, game),
+                                bottomOverlay: _buildRoundEndUI(state),
+                              ),
                             if (state.phase == 'game_end')
-                              _buildGameEndUI(state, game),
+                              _buildBoardStage(
+                                board: _buildSpectatorScoreboard(state, game),
+                                bottomOverlay: _buildGameEndUI(state, game),
+                              ),
                           ],
                         ),
                         if (_moreOpen) _buildMoreMenu(game),
@@ -285,43 +286,30 @@ class _SKGameScreenState extends State<SKGameScreen> {
                       Column(
                         children: [
                           _buildTopBar(state, game),
-                          _buildScoreboard(state, game),
-                          if (state.phase != 'bidding')
-                            Expanded(
-                              child: ClipRect(
-                                child: FittedBox(
-                                  fit: BoxFit.scaleDown,
-                                  alignment: Alignment.center,
-                                  child: _buildTrickArea(state),
-                                ),
-                              ),
-                            ),
                           if (state.phase == 'bidding') ...[
-                            // Keep the trick-area card visible during
-                            // bidding so players can still see who the
-                            // round leader is (the CenterTimerBadge inside
-                            // _buildTrickArea renders "선: {name}" when
-                            // phase == 'bidding').
-                            Padding(
-                              padding: const EdgeInsets.only(top: 8, bottom: 4),
-                              child: _buildTrickArea(state),
-                            ),
-                            Expanded(
-                              child: Align(
-                                alignment: Alignment.bottomCenter,
-                                child: SingleChildScrollView(
-                                  child: _buildBiddingUI(state, game),
-                                ),
+                            _buildBoardStage(
+                              board: _buildScoreboard(state, game),
+                              bottomOverlay: SingleChildScrollView(
+                                child: _buildBiddingUI(state, game),
                               ),
                             ),
                           ],
                           if (state.phase == 'playing' ||
                               state.phase == 'trick_end')
-                            _buildHandArea(state, game),
+                            _buildBoardStage(
+                              board: _buildScoreboard(state, game),
+                              bottomOverlay: _buildHandArea(state, game),
+                            ),
                           if (state.phase == 'round_end')
-                            _buildRoundEndUI(state),
+                            _buildBoardStage(
+                              board: _buildScoreboard(state, game),
+                              bottomOverlay: _buildRoundEndUI(state),
+                            ),
                           if (state.phase == 'game_end')
-                            _buildGameEndUI(state, game),
+                            _buildBoardStage(
+                              board: _buildScoreboard(state, game),
+                              bottomOverlay: _buildGameEndUI(state, game),
+                            ),
                         ],
                       ),
                       if (game.errorMessage != null)
@@ -348,6 +336,30 @@ class _SKGameScreenState extends State<SKGameScreen> {
         ),
       ),
     );
+  }
+
+  Widget _buildBoardStage({required Widget board, Widget? bottomOverlay}) {
+    final bottomPadding = bottomOverlay is _SKSpectatorHandAreaMarker
+        ? 50.0
+        : 120.0;
+    return Expanded(
+      child: Stack(
+        children: [
+          Positioned.fill(
+            child: Padding(
+              padding: EdgeInsets.only(bottom: bottomPadding),
+              child: board,
+            ),
+          ),
+          if (bottomOverlay != null)
+            Align(alignment: Alignment.bottomCenter, child: bottomOverlay),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildSpectatorBottomOverlay(Widget child) {
+    return _SKSpectatorHandAreaMarker(child: child);
   }
 
   Widget _buildRecoveryLoading({required String title}) {
@@ -1194,267 +1206,121 @@ class _SKGameScreenState extends State<SKGameScreen> {
   }
 
   Widget _buildSpectatorScoreboard(SKGameStateData state, GameService game) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 6),
-      margin: const EdgeInsets.only(bottom: 96),
-      child: Row(
-        children: state.players.map((p) {
-          final isCurrentTurn = state.phase == 'bidding'
-              ? p.id == state.roundStarter
-              : p.id == state.currentPlayer;
-          final isPending = game.pendingCardViewRequests.contains(p.id);
-          final isApproved =
-              game.approvedCardViews.contains(p.id) && p.canViewCards;
-          final isViewing = _viewingPlayerId == p.id && isApproved;
-          final trickPlay = state.currentTrick.cast<SKTrickPlay?>().firstWhere(
-            (play) => play?.playerId == p.id,
-            orElse: () => null,
-          );
-          final isTrickWinner =
-              state.phase == 'trick_end' && state.lastTrickWinner == p.id;
-          return Expanded(
-            child: GestureDetector(
-              onTap: () {
-                if (isApproved) {
-                  setState(() {
-                    _viewingPlayerId = _viewingPlayerId == p.id ? null : p.id;
-                  });
-                } else if (isPending) {
-                  // do nothing
-                } else {
-                  _cardViewRequestTimer?.cancel();
-                  game.requestCardView(p.id);
-                  setState(() => _viewingPlayerId = p.id);
-                  _cardViewRequestTimer = Timer(const Duration(seconds: 5), () {
-                    if (!mounted) return;
-                    game.expireCardViewRequest(p.id);
-                  });
-                }
-              },
-              child: SizedBox(
-                width: double.infinity,
-                child: Stack(
-                  clipBehavior: Clip.none,
-                  children: [
-                    AnimatedContainer(
-                      duration: const Duration(milliseconds: 200),
-                      margin: const EdgeInsets.symmetric(horizontal: 2),
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 6,
-                        vertical: 6,
-                      ),
-                      decoration: BoxDecoration(
-                        color: isViewing
-                            ? const Color(0xFFE3EFFF)
-                            : isCurrentTurn
-                            ? const Color(0xFFFFF2B3)
-                            : Colors.white.withValues(alpha: 0.7),
-                        borderRadius: BorderRadius.circular(12),
-                        border: isViewing
-                            ? Border.all(
-                                color: const Color(0xFF64B5F6),
-                                width: 2,
-                              )
-                            : isCurrentTurn
-                            ? Border.all(
-                                color: const Color(0xFFE6C86A),
-                                width: 2,
-                              )
-                            : Border.all(color: const Color(0xFFE0D8D4)),
-                      ),
-                      child: Opacity(
-                        opacity: p.connected ? 1.0 : 0.45,
-                        child: Column(
-                          children: [
-                            // Timeout area (always reserved)
-                            SizedBox(
-                              height: 16,
-                              child: p.timeoutCount > 0
-                                  ? Text(
-                                      '⏱ ${p.timeoutCount}/3',
-                                      style: const TextStyle(
-                                        color: Color(0xFFE65100),
-                                        fontSize: 10,
-                                        fontWeight: FontWeight.w800,
-                                      ),
-                                    )
-                                  : null,
-                            ),
-                            Row(
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              children: [
-                                if (isCurrentTurn)
-                                  Container(
-                                    width: 6,
-                                    height: 6,
-                                    margin: const EdgeInsets.only(right: 4),
-                                    decoration: const BoxDecoration(
-                                      color: Color(0xFFE6A800),
-                                      shape: BoxShape.circle,
-                                    ),
-                                  ),
-                                if (!p.connected)
-                                  const Padding(
-                                    padding: EdgeInsets.only(right: 3),
-                                    child: Icon(
-                                      Icons.wifi_off,
-                                      size: 12,
-                                      color: Color(0xFFE53935),
-                                    ),
-                                  ),
-                                Flexible(
-                                  child: Text(
-                                    p.name,
-                                    style: TextStyle(
-                                      color: p.connected
-                                          ? const Color(0xFF5A4038)
-                                          : const Color(0xFFE53935),
-                                      fontSize: 11,
-                                      fontWeight: FontWeight.w600,
-                                    ),
-                                    maxLines: 1,
-                                    overflow: TextOverflow.ellipsis,
-                                  ),
-                                ),
-                              ],
-                            ),
-                            const SizedBox(height: 2),
-                            Text(
-                              '${p.totalScore}',
-                              style: const TextStyle(
-                                color: Color(0xFF5A4038),
-                                fontSize: 15,
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                            // Bid area (always reserved)
-                            SizedBox(
-                              height: 18,
-                              child: p.hasBid && p.bid != null
-                                  ? Container(
-                                      margin: const EdgeInsets.only(top: 2),
-                                      padding: const EdgeInsets.symmetric(
-                                        horizontal: 6,
-                                        vertical: 1,
-                                      ),
-                                      decoration: BoxDecoration(
-                                        color: p.tricks == p.bid
-                                            ? const Color(0xFFE8F5E9)
-                                            : p.tricks > p.bid!
-                                            ? const Color(0xFFFFF3E0)
-                                            : const Color(0xFFF5F5F5),
-                                        borderRadius: BorderRadius.circular(8),
-                                      ),
-                                      child: Text(
-                                        '${p.tricks}/${p.bid}',
-                                        style: TextStyle(
-                                          color: p.tricks == p.bid
-                                              ? const Color(0xFF4CAF50)
-                                              : p.tricks > p.bid!
-                                              ? const Color(0xFFE65100)
-                                              : const Color(0xFF8A7A72),
-                                          fontSize: 11,
-                                          fontWeight: FontWeight.bold,
-                                        ),
-                                      ),
-                                    )
-                                  : p.hasBid && p.bid == null
-                                  ? Container(
-                                      margin: const EdgeInsets.only(top: 2),
-                                      padding: const EdgeInsets.symmetric(
-                                        horizontal: 6,
-                                        vertical: 1,
-                                      ),
-                                      decoration: BoxDecoration(
-                                        color: const Color(0xFFF0EBF8),
-                                        borderRadius: BorderRadius.circular(8),
-                                      ),
-                                      child: const Icon(
-                                        Icons.check,
-                                        size: 12,
-                                        color: Color(0xFF7A6A95),
-                                      ),
-                                    )
-                                  : null,
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-                    if (isPending)
-                      Positioned(
-                        right: 2,
-                        top: -4,
-                        child: Container(
-                          padding: const EdgeInsets.all(2),
-                          decoration: BoxDecoration(
-                            color: Colors.white,
-                            shape: BoxShape.circle,
-                            border: Border.all(color: const Color(0xFFE0D8D4)),
-                          ),
-                          child: const Icon(
-                            Icons.schedule,
-                            size: 12,
-                            color: Color(0xFFFFB74D),
-                          ),
-                        ),
-                      )
-                    else if (isApproved)
-                      Positioned(
-                        right: 2,
-                        top: -4,
-                        child: Container(
-                          padding: const EdgeInsets.all(2),
-                          decoration: BoxDecoration(
-                            color: Colors.white,
-                            shape: BoxShape.circle,
-                            border: Border.all(color: const Color(0xFF64B5F6)),
-                          ),
-                          child: const Icon(
-                            Icons.visibility,
-                            size: 12,
-                            color: Color(0xFF64B5F6),
-                          ),
-                        ),
-                      )
-                    else
-                      Positioned(
-                        right: 2,
-                        top: -4,
-                        child: Container(
-                          padding: const EdgeInsets.all(2),
-                          decoration: BoxDecoration(
-                            color: Colors.white,
-                            shape: BoxShape.circle,
-                            border: Border.all(color: const Color(0xFFE0D8D4)),
-                          ),
-                          child: Icon(
-                            Icons.visibility_outlined,
-                            size: 12,
-                            color: const Color(
-                              0xFF8A7A72,
-                            ).withValues(alpha: 0.6),
-                          ),
-                        ),
-                      ),
-                    if (trickPlay != null)
-                      Positioned(
-                        left: 0,
-                        right: 0,
-                        bottom: -90,
-                        child: Center(
-                          child: _buildPlayedCardBadge(
-                            trickPlay,
-                            highlighted: isTrickWinner,
-                          ),
-                        ),
-                      ),
-                  ],
-                ),
-              ),
+    final isLandscape =
+        MediaQuery.of(context).orientation == Orientation.landscape;
+    const playedCardWidth = 72 * 0.7;
+    const seatWidth = 110.0;
+    const seatHeight = 82.0;
+
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(8, 6, 8, 8),
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          final width = constraints.maxWidth;
+          final height = constraints.maxHeight;
+          final playerCount = state.players.length;
+          final centerX = width / 2;
+          final centerY = isLandscape ? height * 0.39 : height * 0.41;
+          final maxSeatRadiusX = math.max(0.0, centerX - seatWidth / 2 - 10);
+          final seatRadiusX = math.min(
+            width * _seatRadiusXFactor(playerCount),
+            math.min(
+              _seatRadiusXCap(width, playerCount, spectator: true),
+              maxSeatRadiusX,
             ),
           );
-        }).toList(),
+          final maxSeatRadiusY = math.max(0.0, centerY - seatHeight / 2 - 6);
+          final seatRadiusY = math.min(
+            height * (isLandscape ? 0.34 : 0.35),
+            math.min(_seatRadiusYCap(height, spectator: true), maxSeatRadiusY),
+          );
+
+          return Stack(
+            clipBehavior: Clip.none,
+            children: [
+              Positioned.fill(
+                child: Align(
+                  alignment: Alignment(0, isLandscape ? 0.36 : 0.46),
+                  child: Transform.translate(
+                    offset: Offset(0, isLandscape ? -34 : -42),
+                    child: IgnorePointer(child: _buildTrickArea(state)),
+                  ),
+                ),
+              ),
+              for (int i = 0; i < state.players.length; i++) ...[
+                () {
+                  final p = state.players[i];
+                  final angle = _spectatorSeatAngleForIndex(
+                    i,
+                    state.players.length,
+                  );
+                  final seatLift = _seatVerticalLift(
+                    angle,
+                    isLandscape: isLandscape,
+                    spectatorMode: true,
+                  );
+                  final seatLeft =
+                      centerX + seatRadiusX * math.cos(angle) - seatWidth / 2;
+                  final seatTop =
+                      centerY +
+                      seatRadiusY * math.sin(angle) -
+                      seatHeight / 2 -
+                      seatLift;
+
+                  return Positioned(
+                    left: seatLeft,
+                    top: seatTop,
+                    width: seatWidth,
+                    height: seatHeight,
+                    child: _buildSpectatorSeat(state, game, p),
+                  );
+                }(),
+              ],
+              for (int i = 0; i < state.players.length; i++) ...[
+                () {
+                  final p = state.players[i];
+                  final angle = _spectatorSeatAngleForIndex(
+                    i,
+                    state.players.length,
+                  );
+                  final seatLift = _seatVerticalLift(
+                    angle,
+                    isLandscape: isLandscape,
+                    spectatorMode: true,
+                  );
+                  final seatLeft =
+                      centerX + seatRadiusX * math.cos(angle) - seatWidth / 2;
+                  final seatTop =
+                      centerY +
+                      seatRadiusY * math.sin(angle) -
+                      seatHeight / 2 -
+                      seatLift;
+                  final cardLeft = seatLeft + (seatWidth - playedCardWidth) / 2;
+                  final cardTop = seatTop + seatHeight + 2;
+                  final trickPlay = state.currentTrick
+                      .cast<SKTrickPlay?>()
+                      .firstWhere(
+                        (play) => play?.playerId == p.id,
+                        orElse: () => null,
+                      );
+                  final isTrickWinner =
+                      state.phase == 'trick_end' &&
+                      state.lastTrickWinner == p.id;
+
+                  if (trickPlay == null) return const SizedBox.shrink();
+                  return Positioned(
+                    left: cardLeft,
+                    top: cardTop,
+                    child: _buildPlayedCardBadge(
+                      trickPlay,
+                      highlighted: isTrickWinner,
+                    ),
+                  );
+                }(),
+              ],
+            ],
+          );
+        },
       ),
     );
   }
@@ -1856,201 +1722,732 @@ class _SKGameScreenState extends State<SKGameScreen> {
 
   // ── Scoreboard ──
   Widget _buildScoreboard(SKGameStateData state, GameService game) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 6),
-      margin: const EdgeInsets.only(bottom: 96),
-      child: Row(
-        children: state.players.map((p) {
-          final isCurrentTurn = state.phase == 'bidding'
-              ? p.id == state.roundStarter
-              : p.id == state.currentPlayer;
-          final isSelf = p.position == 'self';
-          final trickPlay = state.currentTrick.cast<SKTrickPlay?>().firstWhere(
-            (play) => play?.playerId == p.id,
+    final isLandscape =
+        MediaQuery.of(context).orientation == Orientation.landscape;
+    const playedCardWidth = 72 * 0.7;
+    const seatWidth = 110.0;
+    const seatHeight = 82.0;
+    final opponents = state.players
+        .where((p) => p.position != 'self')
+        .toList(growable: false);
+    final selfPlayer = state.players.cast<SKPlayer?>().firstWhere(
+      (p) => p?.position == 'self',
+      orElse: () => null,
+    );
+    final selfTrickPlay = selfPlayer == null
+        ? null
+        : state.currentTrick.cast<SKTrickPlay?>().firstWhere(
+            (play) => play?.playerId == selfPlayer.id,
             orElse: () => null,
           );
-          final isTrickWinner =
-              state.phase == 'trick_end' && state.lastTrickWinner == p.id;
-          return Expanded(
-            child: GestureDetector(
-              onTap: isSelf
-                  ? null
-                  : () => _showPlayerProfileDialog(
-                      p.name,
-                      game,
-                      isBot: p.id.startsWith('bot_'),
+    final isSelfTrickWinner =
+        state.phase == 'trick_end' && state.lastTrickWinner == selfPlayer?.id;
+
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(8, 6, 8, 8),
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          final width = constraints.maxWidth;
+          final height = constraints.maxHeight;
+          final opponentCount = opponents.length;
+          final centerX = width / 2;
+          final centerY = isLandscape ? height * 0.39 : height * 0.41;
+          final maxSeatRadiusX = math.max(0.0, centerX - seatWidth / 2 - 10);
+          final seatRadiusX = math.min(
+            width * _seatRadiusXFactor(opponentCount),
+            math.min(
+              _seatRadiusXCap(width, opponentCount, spectator: false),
+              maxSeatRadiusX,
+            ),
+          );
+          final maxSeatRadiusY = math.max(0.0, centerY - seatHeight / 2 - 6);
+          final seatRadiusY = math.min(
+            height * (isLandscape ? 0.35 : 0.36),
+            math.min(_seatRadiusYCap(height, spectator: false), maxSeatRadiusY),
+          );
+          final bottomMostOpponentCardTop = opponents.isEmpty
+              ? centerY
+              : List.generate(
+                  opponents.length,
+                  (i) =>
+                      centerY +
+                      seatRadiusY *
+                          math.sin(_topSeatAngleForIndex(i, opponents.length)) +
+                      seatHeight / 2 +
+                      2,
+                ).reduce(math.max);
+          final trickBoxLowerBound = height * (isLandscape ? 0.60 : 0.64);
+          final selfCardTop = math.min(
+            height - 60,
+            math.max(bottomMostOpponentCardTop + 40, trickBoxLowerBound),
+          );
+
+          return Stack(
+            clipBehavior: Clip.none,
+            children: [
+              Positioned.fill(
+                child: Align(
+                  alignment: Alignment(0, isLandscape ? 0.36 : 0.46),
+                  child: Transform.translate(
+                    offset: Offset(0, isLandscape ? -34 : -42),
+                    child: IgnorePointer(child: _buildTrickArea(state)),
+                  ),
+                ),
+              ),
+              for (int i = 0; i < opponents.length; i++) ...[
+                () {
+                  final p = opponents[i];
+                  final angle = _topSeatAngleForIndex(i, opponents.length);
+                  final seatLift = _seatVerticalLift(
+                    angle,
+                    isLandscape: isLandscape,
+                  );
+                  final seatLeft =
+                      centerX + seatRadiusX * math.cos(angle) - seatWidth / 2;
+                  final seatTop =
+                      centerY +
+                      seatRadiusY * math.sin(angle) -
+                      seatHeight / 2 -
+                      seatLift;
+
+                  return Positioned(
+                    left: seatLeft,
+                    top: seatTop,
+                    width: seatWidth,
+                    height: seatHeight,
+                    child: _buildPlayerSeat(state, game, p, isSelf: false),
+                  );
+                }(),
+              ],
+              for (int i = 0; i < opponents.length; i++) ...[
+                () {
+                  final p = opponents[i];
+                  final angle = _topSeatAngleForIndex(i, opponents.length);
+                  final seatLift = _seatVerticalLift(
+                    angle,
+                    isLandscape: isLandscape,
+                  );
+                  final seatLeft =
+                      centerX + seatRadiusX * math.cos(angle) - seatWidth / 2;
+                  final seatTop =
+                      centerY +
+                      seatRadiusY * math.sin(angle) -
+                      seatHeight / 2 -
+                      seatLift;
+                  final cardLeft = seatLeft + (seatWidth - playedCardWidth) / 2;
+                  final cardTop = seatTop + seatHeight + 2;
+                  final trickPlay = state.currentTrick
+                      .cast<SKTrickPlay?>()
+                      .firstWhere(
+                        (play) => play?.playerId == p.id,
+                        orElse: () => null,
+                      );
+                  final isTrickWinner =
+                      state.phase == 'trick_end' &&
+                      state.lastTrickWinner == p.id;
+
+                  if (trickPlay == null) return const SizedBox.shrink();
+                  return Positioned(
+                    left: cardLeft,
+                    top: cardTop,
+                    child: _buildPlayedCardBadge(
+                      trickPlay,
+                      highlighted: isTrickWinner,
                     ),
-              child: SizedBox(
-                width: double.infinity,
-                child: Stack(
-                  clipBehavior: Clip.none,
-                  children: [
-                    AnimatedContainer(
-                      duration: const Duration(milliseconds: 200),
-                      margin: const EdgeInsets.symmetric(horizontal: 2),
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 6,
-                        vertical: 6,
-                      ),
-                      decoration: BoxDecoration(
-                        color: isSelf
-                            ? Colors.white.withValues(alpha: 0.95)
-                            : isCurrentTurn
-                            ? const Color(0xFFFFF2B3)
-                            : Colors.white.withValues(alpha: 0.7),
-                        borderRadius: BorderRadius.circular(12),
-                        border: isCurrentTurn
-                            ? Border.all(
-                                color: const Color(0xFFE6C86A),
-                                width: 2,
-                              )
-                            : Border.all(color: const Color(0xFFE0D8D4)),
-                        boxShadow: isSelf
-                            ? [
-                                BoxShadow(
-                                  color: Colors.black.withValues(alpha: 0.08),
-                                  blurRadius: 4,
+                  );
+                }(),
+              ],
+              if (selfTrickPlay != null)
+                Positioned(
+                  left: centerX - playedCardWidth / 2,
+                  top: selfCardTop,
+                  child: _buildPlayedCardBadge(
+                    selfTrickPlay,
+                    highlighted: isSelfTrickWinner,
+                  ),
+                ),
+            ],
+          );
+        },
+      ),
+    );
+  }
+
+  double _seatAngleForIndex(
+    int index,
+    int playerCount, {
+    bool includeBottomSeat = true,
+  }) {
+    if (includeBottomSeat) {
+      if (index == 0) return math.pi / 2;
+      final opponents = playerCount - 1;
+      if (opponents <= 1) return math.pi * 1.5;
+      final customOpponentAngles = _customSeatAnglesDeg(opponents);
+      if (customOpponentAngles != null) {
+        return customOpponentAngles[index - 1] * math.pi / 180;
+      }
+      final startDeg = _seatArcStartDeg(opponents);
+      final endDeg = _seatArcEndDeg(opponents);
+      final progress = (index - 1) / (opponents - 1);
+      final angleDeg = startDeg + (endDeg - startDeg) * progress;
+      return angleDeg * math.pi / 180;
+    }
+
+    if (playerCount <= 1) return math.pi * 1.5;
+    final customAngles = _customSeatAnglesDeg(playerCount);
+    if (customAngles != null) {
+      return customAngles[index] * math.pi / 180;
+    }
+    final startDeg = _seatArcStartDeg(playerCount);
+    final endDeg = _seatArcEndDeg(playerCount);
+    final progress = index / (playerCount - 1);
+    final angleDeg = startDeg + (endDeg - startDeg) * progress;
+    return angleDeg * math.pi / 180;
+  }
+
+  double _topSeatAngleForIndex(int index, int playerCount) {
+    if (playerCount <= 1) return math.pi * 1.5;
+    final customAngles = _customSeatAnglesDeg(playerCount);
+    if (customAngles != null) {
+      return customAngles[index] * math.pi / 180;
+    }
+    final startDeg = _seatArcStartDeg(playerCount);
+    final endDeg = _seatArcEndDeg(playerCount);
+    final progress = index / (playerCount - 1);
+    final angleDeg = startDeg + (endDeg - startDeg) * progress;
+    return angleDeg * math.pi / 180;
+  }
+
+  double _spectatorSeatAngleForIndex(int index, int playerCount) {
+    if (playerCount <= 1) return math.pi * 1.5;
+    final customAngles = _customSpectatorSeatAnglesDeg(playerCount);
+    if (customAngles != null) {
+      return customAngles[index] * math.pi / 180;
+    }
+    return _seatAngleForIndex(index, playerCount, includeBottomSeat: false);
+  }
+
+  List<double>? _customSeatAnglesDeg(int count) {
+    switch (count) {
+      case 4:
+        return const [172, 238, 302, 368];
+      default:
+        return null;
+    }
+  }
+
+  List<double>? _customSpectatorSeatAnglesDeg(int count) {
+    switch (count) {
+      case 6:
+        return const [132, 180, 236, 304, 360, 408];
+      default:
+        return null;
+    }
+  }
+
+  double _seatRadiusXFactor(int count) {
+    if (count >= 5) return 0.44;
+    if (count == 4) return 0.43;
+    if (count == 3) return 0.40;
+    return 0.38;
+  }
+
+  double _seatRadiusXCap(double width, int count, {required bool spectator}) {
+    final base = spectator
+        ? (count >= 5 ? 228.0 : 182.0)
+        : (count >= 5 ? 236.0 : 188.0);
+    if (width >= 1200) return base + 130;
+    if (width >= 900) return base + 90;
+    if (width >= 700) return base + 45;
+    return base;
+  }
+
+  double _seatRadiusYCap(double height, {required bool spectator}) {
+    final base = spectator ? 196.0 : 202.0;
+    if (height >= 1100) return base + 90;
+    if (height >= 850) return base + 50;
+    if (height >= 700) return base + 24;
+    return base;
+  }
+
+  double _seatVerticalLift(
+    double angle, {
+    required bool isLandscape,
+    bool spectatorMode = false,
+  }) {
+    final cornerWeight = math.pow(math.cos(angle).abs(), 1.15).toDouble();
+    final lowerCornerWeight = math.max(0.0, math.sin(angle));
+    final baseLift =
+        cornerWeight * (isLandscape ? 24.0 : 30.0) +
+        lowerCornerWeight * (isLandscape ? 10.0 : 14.0);
+    if (!spectatorMode) return baseLift;
+    final upperWeight = math.max(0.0, -math.sin(angle));
+    final reduction = (1 - upperWeight) * (isLandscape ? 12.0 : 18.0);
+    return math.max(0.0, baseLift - reduction);
+  }
+
+  double _seatArcStartDeg(int count) {
+    if (count >= 5) return 145.0;
+    if (count == 4) return 198.0;
+    if (count == 3) return 210.0;
+    return 225.0;
+  }
+
+  double _seatArcEndDeg(int count) {
+    if (count >= 5) return 395.0;
+    if (count == 4) return 342.0;
+    if (count == 3) return 330.0;
+    return 315.0;
+  }
+
+  Widget _buildSpectatorSeat(
+    SKGameStateData state,
+    GameService game,
+    SKPlayer p,
+  ) {
+    final isCurrentTurn = state.phase == 'bidding'
+        ? p.id == state.roundStarter
+        : p.id == state.currentPlayer;
+    final isPending = game.pendingCardViewRequests.contains(p.id);
+    final isApproved = game.approvedCardViews.contains(p.id) && p.canViewCards;
+    final isViewing = _viewingPlayerId == p.id && isApproved;
+
+    return GestureDetector(
+      onTap: () {
+        if (isApproved) {
+          setState(() {
+            _viewingPlayerId = _viewingPlayerId == p.id ? null : p.id;
+          });
+        } else if (isPending) {
+          return;
+        } else {
+          _cardViewRequestTimer?.cancel();
+          game.requestCardView(p.id);
+          setState(() => _viewingPlayerId = p.id);
+          _cardViewRequestTimer = Timer(const Duration(seconds: 5), () {
+            if (!mounted) return;
+            game.expireCardViewRequest(p.id);
+          });
+        }
+      },
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          final compact =
+              constraints.maxHeight <= 72 || constraints.maxWidth <= 98;
+          final horizontalPadding = compact ? 5.0 : 6.0;
+          final verticalPadding = compact ? 4.0 : 6.0;
+          final timeoutHeight = compact ? 12.0 : 16.0;
+          final dotSize = compact ? 5.0 : 6.0;
+          final offlineIconSize = compact ? 10.0 : 12.0;
+          final nameFontSize = compact ? 10.0 : 11.0;
+          final scoreFontSize = compact ? 13.0 : 15.0;
+          final bidHeight = compact ? 14.0 : 18.0;
+          final bidFontSize = compact ? 10.0 : 11.0;
+          final bidHorizontalPadding = compact ? 4.0 : 6.0;
+          final bidTopMargin = compact ? 1.0 : 2.0;
+          final spacing = compact ? 1.0 : 2.0;
+          final contentWidth = math.max(
+            24.0,
+            constraints.maxWidth - horizontalPadding * 2,
+          );
+
+          return Stack(
+            clipBehavior: Clip.none,
+            children: [
+              AnimatedContainer(
+                duration: const Duration(milliseconds: 200),
+                padding: EdgeInsets.symmetric(
+                  horizontal: horizontalPadding,
+                  vertical: verticalPadding,
+                ),
+                decoration: BoxDecoration(
+                  color: isViewing
+                      ? const Color(0xFFE3EFFF)
+                      : isCurrentTurn
+                      ? const Color(0xFFFFF2B3)
+                      : Colors.white.withValues(alpha: 0.78),
+                  borderRadius: BorderRadius.circular(14),
+                  border: isViewing
+                      ? Border.all(color: const Color(0xFF64B5F6), width: 2)
+                      : isCurrentTurn
+                      ? Border.all(color: const Color(0xFFE6C86A), width: 2)
+                      : Border.all(color: const Color(0xFFE0D8D4)),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withValues(alpha: 0.06),
+                      blurRadius: 5,
+                      offset: const Offset(0, 3),
+                    ),
+                  ],
+                ),
+                child: Center(
+                  child: FittedBox(
+                    fit: BoxFit.scaleDown,
+                    alignment: Alignment.topCenter,
+                    child: SizedBox(
+                      width: contentWidth,
+                      child: Opacity(
+                        opacity: p.connected ? 1.0 : 0.45,
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          crossAxisAlignment: CrossAxisAlignment.center,
+                          children: [
+                            SizedBox(
+                              height: timeoutHeight,
+                              child: p.timeoutCount > 0
+                                  ? Text(
+                                      '⏱ ${p.timeoutCount}/3',
+                                      style: TextStyle(
+                                        color: const Color(0xFFE65100),
+                                        fontSize: compact ? 8.5 : 10,
+                                        fontWeight: FontWeight.w800,
+                                      ),
+                                    )
+                                  : null,
+                            ),
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                if (isCurrentTurn)
+                                  Container(
+                                    width: dotSize,
+                                    height: dotSize,
+                                    margin: EdgeInsets.only(
+                                      right: compact ? 3 : 4,
+                                    ),
+                                    decoration: const BoxDecoration(
+                                      color: Color(0xFFE6A800),
+                                      shape: BoxShape.circle,
+                                    ),
+                                  ),
+                                if (!p.connected)
+                                  Padding(
+                                    padding: EdgeInsets.only(
+                                      right: compact ? 2 : 3,
+                                    ),
+                                    child: Icon(
+                                      Icons.wifi_off,
+                                      size: offlineIconSize,
+                                      color: const Color(0xFFE53935),
+                                    ),
+                                  ),
+                                Flexible(
+                                  child: Text(
+                                    p.name,
+                                    style: TextStyle(
+                                      color: p.connected
+                                          ? const Color(0xFF5A4038)
+                                          : const Color(0xFFE53935),
+                                      fontSize: nameFontSize,
+                                      fontWeight: FontWeight.w600,
+                                    ),
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                    textAlign: TextAlign.center,
+                                  ),
                                 ),
-                              ]
+                              ],
+                            ),
+                            SizedBox(height: spacing),
+                            Text(
+                              '${p.totalScore}',
+                              style: TextStyle(
+                                color: const Color(0xFF5A4038),
+                                fontSize: scoreFontSize,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                            SizedBox(
+                              height: bidHeight,
+                              child: p.hasBid && p.bid != null
+                                  ? Container(
+                                      margin: EdgeInsets.only(
+                                        top: bidTopMargin,
+                                      ),
+                                      padding: EdgeInsets.symmetric(
+                                        horizontal: bidHorizontalPadding,
+                                        vertical: compact ? 0 : 1,
+                                      ),
+                                      decoration: BoxDecoration(
+                                        color: p.tricks == p.bid
+                                            ? const Color(0xFFE8F5E9)
+                                            : p.tricks > p.bid!
+                                            ? const Color(0xFFFFF3E0)
+                                            : const Color(0xFFF5F5F5),
+                                        borderRadius: BorderRadius.circular(8),
+                                      ),
+                                      child: Text(
+                                        '${p.tricks}/${p.bid}',
+                                        style: TextStyle(
+                                          color: p.tricks == p.bid
+                                              ? const Color(0xFF4CAF50)
+                                              : p.tricks > p.bid!
+                                              ? const Color(0xFFE65100)
+                                              : const Color(0xFF8A7A72),
+                                          fontSize: bidFontSize,
+                                          fontWeight: FontWeight.bold,
+                                        ),
+                                      ),
+                                    )
+                                  : p.hasBid && p.bid == null
+                                  ? Container(
+                                      margin: EdgeInsets.only(
+                                        top: bidTopMargin,
+                                      ),
+                                      padding: EdgeInsets.symmetric(
+                                        horizontal: bidHorizontalPadding,
+                                        vertical: compact ? 0 : 1,
+                                      ),
+                                      decoration: BoxDecoration(
+                                        color: const Color(0xFFF0EBF8),
+                                        borderRadius: BorderRadius.circular(8),
+                                      ),
+                                      child: Icon(
+                                        Icons.check,
+                                        size: compact ? 10 : 12,
+                                        color: const Color(0xFF7A6A95),
+                                      ),
+                                    )
+                                  : null,
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+              Positioned(
+                right: 2,
+                top: -4,
+                child: Container(
+                  padding: const EdgeInsets.all(2),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    shape: BoxShape.circle,
+                    border: Border.all(
+                      color: isApproved
+                          ? const Color(0xFF64B5F6)
+                          : const Color(0xFFE0D8D4),
+                    ),
+                  ),
+                  child: Icon(
+                    isPending
+                        ? Icons.schedule
+                        : isApproved
+                        ? Icons.visibility
+                        : Icons.visibility_outlined,
+                    size: 12,
+                    color: isPending
+                        ? const Color(0xFFFFB74D)
+                        : isApproved
+                        ? const Color(0xFF64B5F6)
+                        : const Color(0xFF8A7A72).withValues(alpha: 0.6),
+                  ),
+                ),
+              ),
+            ],
+          );
+        },
+      ),
+    );
+  }
+
+  Widget _buildPlayerSeat(
+    SKGameStateData state,
+    GameService game,
+    SKPlayer p, {
+    required bool isSelf,
+  }) {
+    final isCurrentTurn = state.phase == 'bidding'
+        ? p.id == state.roundStarter
+        : p.id == state.currentPlayer;
+
+    return GestureDetector(
+      onTap: isSelf
+          ? null
+          : () => _showPlayerProfileDialog(
+              p.name,
+              game,
+              isBot: p.id.startsWith('bot_'),
+            ),
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          final compact =
+              !isSelf &&
+              (constraints.maxHeight <= 70 || constraints.maxWidth <= 96);
+          final horizontalPadding = compact ? 5.0 : 8.0;
+          final verticalPadding = compact ? 4.0 : 8.0;
+          final timeoutHeight = compact ? 12.0 : 16.0;
+          final dotSize = compact ? 5.0 : 6.0;
+          final offlineIconSize = compact ? 10.0 : 12.0;
+          final nameFontSize = isSelf ? 12.0 : (compact ? 10.0 : 11.0);
+          final scoreFontSize = isSelf ? 16.0 : (compact ? 13.0 : 15.0);
+          final bidHeight = compact ? 14.0 : 18.0;
+          final bidFontSize = compact ? 10.0 : 11.0;
+          final bidHorizontalPadding = compact ? 4.0 : 6.0;
+          final bidTopMargin = compact ? 1.0 : 2.0;
+          final spacing = compact ? 1.0 : 2.0;
+          final contentWidth = math.max(
+            24.0,
+            constraints.maxWidth - horizontalPadding * 2,
+          );
+
+          return AnimatedContainer(
+            duration: const Duration(milliseconds: 220),
+            padding: EdgeInsets.symmetric(
+              horizontal: horizontalPadding,
+              vertical: verticalPadding,
+            ),
+            decoration: BoxDecoration(
+              color: isSelf
+                  ? Colors.white.withValues(alpha: 0.96)
+                  : isCurrentTurn
+                  ? const Color(0xFFFFF2B3)
+                  : Colors.white.withValues(alpha: 0.78),
+              borderRadius: BorderRadius.circular(isSelf ? 16 : 14),
+              border: isCurrentTurn
+                  ? Border.all(color: const Color(0xFFE6C86A), width: 2)
+                  : Border.all(color: const Color(0xFFE0D8D4)),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: isSelf ? 0.10 : 0.06),
+                  blurRadius: isSelf ? 8 : 5,
+                  offset: const Offset(0, 3),
+                ),
+              ],
+            ),
+            child: Center(
+              child: FittedBox(
+                fit: BoxFit.scaleDown,
+                alignment: Alignment.topCenter,
+                child: SizedBox(
+                  width: contentWidth,
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.center,
+                    children: [
+                      SizedBox(
+                        height: timeoutHeight,
+                        child: p.timeoutCount > 0
+                            ? Text(
+                                '⏱ ${p.timeoutCount}/3',
+                                style: TextStyle(
+                                  color: const Color(0xFFE65100),
+                                  fontSize: compact ? 8.5 : 10,
+                                  fontWeight: FontWeight.w800,
+                                ),
+                              )
                             : null,
                       ),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.center,
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        mainAxisSize: MainAxisSize.min,
                         children: [
-                          // Timeout area (always reserved)
-                          SizedBox(
-                            height: 16,
-                            child: p.timeoutCount > 0
-                                ? Text(
-                                    '⏱ ${p.timeoutCount}/3',
-                                    style: const TextStyle(
-                                      color: Color(0xFFE65100),
-                                      fontSize: 10,
-                                      fontWeight: FontWeight.w800,
-                                    ),
-                                  )
-                                : null,
-                          ),
-                          Row(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              if (isCurrentTurn)
-                                Container(
-                                  width: 6,
-                                  height: 6,
-                                  margin: const EdgeInsets.only(right: 4),
-                                  decoration: const BoxDecoration(
-                                    color: Color(0xFFE6A800),
-                                    shape: BoxShape.circle,
-                                  ),
-                                ),
-                              if (!p.connected)
-                                const Padding(
-                                  padding: EdgeInsets.only(right: 3),
-                                  child: Icon(
-                                    Icons.wifi_off,
-                                    size: 12,
-                                    color: Color(0xFFE53935),
-                                  ),
-                                ),
-                              Flexible(
-                                child: Text(
-                                  p.name,
-                                  style: TextStyle(
-                                    color: p.connected
-                                        ? const Color(0xFF5A4038)
-                                        : const Color(0xFFE53935),
-                                    fontSize: 11,
-                                    fontWeight: isSelf
-                                        ? FontWeight.w800
-                                        : FontWeight.w600,
-                                  ),
-                                  maxLines: 1,
-                                  overflow: TextOverflow.ellipsis,
-                                ),
+                          if (isCurrentTurn)
+                            Container(
+                              width: dotSize,
+                              height: dotSize,
+                              margin: EdgeInsets.only(right: compact ? 3 : 4),
+                              decoration: const BoxDecoration(
+                                color: Color(0xFFE6A800),
+                                shape: BoxShape.circle,
                               ),
-                            ],
-                          ),
-                          const SizedBox(height: 2),
-                          Text(
-                            '${p.totalScore}',
-                            style: const TextStyle(
-                              color: Color(0xFF5A4038),
-                              fontSize: 15,
-                              fontWeight: FontWeight.bold,
                             ),
-                          ),
-                          // Bid area (always reserved)
-                          SizedBox(
-                            height: 18,
-                            child: p.hasBid && p.bid != null
-                                ? Container(
-                                    margin: const EdgeInsets.only(top: 2),
-                                    padding: const EdgeInsets.symmetric(
-                                      horizontal: 6,
-                                      vertical: 1,
-                                    ),
-                                    decoration: BoxDecoration(
-                                      color: p.tricks == p.bid
-                                          ? const Color(0xFFE8F5E9)
-                                          : p.tricks > p.bid!
-                                          ? const Color(0xFFFFF3E0)
-                                          : const Color(0xFFF5F5F5),
-                                      borderRadius: BorderRadius.circular(8),
-                                    ),
-                                    child: Text(
-                                      '${p.tricks}/${p.bid}',
-                                      style: TextStyle(
-                                        color: p.tricks == p.bid
-                                            ? const Color(0xFF4CAF50)
-                                            : p.tricks > p.bid!
-                                            ? const Color(0xFFE65100)
-                                            : const Color(0xFF8A7A72),
-                                        fontSize: 11,
-                                        fontWeight: FontWeight.bold,
-                                      ),
-                                    ),
-                                  )
-                                : p.hasBid && p.bid == null
-                                ? Container(
-                                    margin: const EdgeInsets.only(top: 2),
-                                    padding: const EdgeInsets.symmetric(
-                                      horizontal: 6,
-                                      vertical: 1,
-                                    ),
-                                    decoration: BoxDecoration(
-                                      color: const Color(0xFFF0EBF8),
-                                      borderRadius: BorderRadius.circular(8),
-                                    ),
-                                    child: const Icon(
-                                      Icons.check,
-                                      size: 12,
-                                      color: Color(0xFF7A6A95),
-                                    ),
-                                  )
-                                : null,
+                          if (!p.connected)
+                            Padding(
+                              padding: EdgeInsets.only(right: compact ? 2 : 3),
+                              child: Icon(
+                                Icons.wifi_off,
+                                size: offlineIconSize,
+                                color: const Color(0xFFE53935),
+                              ),
+                            ),
+                          Flexible(
+                            child: Text(
+                              p.name,
+                              style: TextStyle(
+                                color: p.connected
+                                    ? const Color(0xFF5A4038)
+                                    : const Color(0xFFE53935),
+                                fontSize: nameFontSize,
+                                fontWeight: isSelf
+                                    ? FontWeight.w800
+                                    : FontWeight.w600,
+                              ),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              textAlign: TextAlign.center,
+                            ),
                           ),
                         ],
                       ),
-                    ),
-                    if (trickPlay != null)
-                      Positioned(
-                        left: 0,
-                        right: 0,
-                        bottom: -90,
-                        child: Center(
-                          child: _buildPlayedCardBadge(
-                            trickPlay,
-                            highlighted: isTrickWinner,
-                          ),
+                      SizedBox(height: spacing),
+                      Text(
+                        '${p.totalScore}',
+                        style: TextStyle(
+                          color: const Color(0xFF5A4038),
+                          fontSize: scoreFontSize,
+                          fontWeight: FontWeight.bold,
                         ),
                       ),
-                  ],
+                      SizedBox(
+                        height: bidHeight,
+                        child: p.hasBid && p.bid != null
+                            ? Container(
+                                margin: EdgeInsets.only(top: bidTopMargin),
+                                padding: EdgeInsets.symmetric(
+                                  horizontal: bidHorizontalPadding,
+                                  vertical: compact ? 0 : 1,
+                                ),
+                                decoration: BoxDecoration(
+                                  color: p.tricks == p.bid
+                                      ? const Color(0xFFE8F5E9)
+                                      : p.tricks > p.bid!
+                                      ? const Color(0xFFFFF3E0)
+                                      : const Color(0xFFF5F5F5),
+                                  borderRadius: BorderRadius.circular(8),
+                                ),
+                                child: Text(
+                                  '${p.tricks}/${p.bid}',
+                                  style: TextStyle(
+                                    color: p.tricks == p.bid
+                                        ? const Color(0xFF4CAF50)
+                                        : p.tricks > p.bid!
+                                        ? const Color(0xFFE65100)
+                                        : const Color(0xFF8A7A72),
+                                    fontSize: bidFontSize,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                              )
+                            : p.hasBid && p.bid == null
+                            ? Container(
+                                margin: EdgeInsets.only(top: bidTopMargin),
+                                padding: EdgeInsets.symmetric(
+                                  horizontal: bidHorizontalPadding,
+                                  vertical: compact ? 0 : 1,
+                                ),
+                                decoration: BoxDecoration(
+                                  color: const Color(0xFFF0EBF8),
+                                  borderRadius: BorderRadius.circular(8),
+                                ),
+                                child: Icon(
+                                  Icons.check,
+                                  size: compact ? 10 : 12,
+                                  color: const Color(0xFF7A6A95),
+                                ),
+                              )
+                            : null,
+                      ),
+                    ],
+                  ),
                 ),
               ),
             ),
           );
-        }).toList(),
+        },
       ),
     );
   }
@@ -3087,6 +3484,10 @@ class _SKGameScreenState extends State<SKGameScreen> {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
+            Padding(
+              padding: const EdgeInsets.only(bottom: 10),
+              child: _buildSelfRoundStatus(selfPlayer, compact: isLandscape),
+            ),
             Text(
               L10n.of(context).skGameBidDone(selfPlayer.bid ?? 0),
               style: const TextStyle(
@@ -3131,6 +3532,10 @@ class _SKGameScreenState extends State<SKGameScreen> {
                 child: _buildTimeoutResetChip(game),
               ),
             ),
+          Padding(
+            padding: const EdgeInsets.only(bottom: 8),
+            child: _buildSelfRoundStatus(selfPlayer, compact: isLandscape),
+          ),
           Text(
             L10n.of(context).skGameBidPrompt,
             style: TextStyle(
@@ -3210,6 +3615,10 @@ class _SKGameScreenState extends State<SKGameScreen> {
   Widget _buildHandArea(SKGameStateData state, GameService game) {
     final isLandscape =
         MediaQuery.of(context).orientation == Orientation.landscape;
+    final selfPlayer = state.players.firstWhere(
+      (p) => p.position == 'self',
+      orElse: () => state.players.first,
+    );
     final selectedCard = _selectedCard;
     final isSelectedLegal =
         selectedCard != null && state.legalCards.contains(selectedCard);
@@ -3253,6 +3662,10 @@ class _SKGameScreenState extends State<SKGameScreen> {
                 child: _buildTimeoutResetChip(game),
               ),
             ),
+          Padding(
+            padding: const EdgeInsets.only(bottom: 8, left: 4, right: 4),
+            child: _buildSelfRoundStatus(selfPlayer, compact: isLandscape),
+          ),
           // Play button above cards
           if (state.isMyTurn && selectedCard != null && isSelectedLegal)
             Padding(
@@ -3312,6 +3725,81 @@ class _SKGameScreenState extends State<SKGameScreen> {
           ),
         ],
       ),
+    );
+  }
+
+  Widget _buildSelfRoundStatus(SKPlayer selfPlayer, {required bool compact}) {
+    final l10n = L10n.of(context);
+    Widget statChip({
+      required IconData icon,
+      required String label,
+      required String value,
+      required Color backgroundColor,
+      required Color foregroundColor,
+    }) {
+      return Container(
+        padding: EdgeInsets.symmetric(
+          horizontal: compact ? 9 : 10,
+          vertical: compact ? 5 : 6,
+        ),
+        decoration: BoxDecoration(
+          color: backgroundColor,
+          borderRadius: BorderRadius.circular(999),
+          border: Border.all(color: foregroundColor.withValues(alpha: 0.15)),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(icon, size: compact ? 13 : 14, color: foregroundColor),
+            SizedBox(width: compact ? 4 : 5),
+            Text(
+              '$label $value',
+              style: TextStyle(
+                color: foregroundColor,
+                fontSize: compact ? 11 : 12,
+                fontWeight: FontWeight.w800,
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+
+    return Wrap(
+      alignment: WrapAlignment.center,
+      spacing: compact ? 6 : 8,
+      runSpacing: 6,
+      children: [
+        statChip(
+          icon: Icons.flag_outlined,
+          label: l10n.skGameStatBid,
+          value: selfPlayer.hasBid && selfPlayer.bid != null
+              ? '${selfPlayer.bid}'
+              : '-',
+          backgroundColor: const Color(0xFFE8F1FF),
+          foregroundColor: const Color(0xFF355D89),
+        ),
+        statChip(
+          icon: Icons.workspace_premium_outlined,
+          label: l10n.skGameStatTricks,
+          value: '${selfPlayer.tricks}',
+          backgroundColor:
+              selfPlayer.hasBid && selfPlayer.bid == selfPlayer.tricks
+              ? const Color(0xFFE8F5E9)
+              : const Color(0xFFFFF6E5),
+          foregroundColor:
+              selfPlayer.hasBid && selfPlayer.bid == selfPlayer.tricks
+              ? const Color(0xFF2E7D32)
+              : const Color(0xFFC17A20),
+        ),
+        statChip(
+          icon: Icons.stars_rounded,
+          label: l10n.skGameStatScore,
+          value: '${selfPlayer.totalScore}',
+          backgroundColor: const Color(0xFFF6EFE8),
+          foregroundColor: const Color(0xFF6A4B3A),
+        ),
+      ],
     );
   }
 
@@ -4841,4 +5329,13 @@ class _SkSuitPainter extends CustomPainter {
   bool shouldRepaint(covariant _SkSuitPainter oldDelegate) {
     return suit != oldDelegate.suit || color != oldDelegate.color;
   }
+}
+
+class _SKSpectatorHandAreaMarker extends StatelessWidget {
+  const _SKSpectatorHandAreaMarker({required this.child});
+
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) => child;
 }

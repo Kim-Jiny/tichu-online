@@ -1443,7 +1443,9 @@ class _LobbyScreenState extends State<LobbyScreen> {
   Widget _buildLobbyView(GameService game, {required bool isLandscape}) {
     if (isLandscape) {
       final hasTopNotices =
-          game.hasMaintenanceNotice || game.inquiryBannerMessage != null;
+          game.hasMaintenanceNotice ||
+          game.inquiryBannerMessage != null ||
+          game.errorMessage != null;
       final hasBanner = _bannerAd != null && _bannerAdLoaded;
       return Column(
         children: [
@@ -1484,6 +1486,7 @@ class _LobbyScreenState extends State<LobbyScreen> {
         // Maintenance notice banner
         if (game.hasMaintenanceNotice) _buildMaintenanceBanner(game),
         if (game.inquiryBannerMessage != null) _buildInquiryBanner(game),
+        if (game.errorMessage != null) _buildErrorBanner(game.errorMessage!),
 
         // Room list or Friends panel
         Expanded(child: _buildRoomListPanel(game)),
@@ -1500,7 +1503,9 @@ class _LobbyScreenState extends State<LobbyScreen> {
 
   Widget _buildLandscapeLobbyUtilityBar(GameService game) {
     final hasTopNotices =
-        game.hasMaintenanceNotice || game.inquiryBannerMessage != null;
+        game.hasMaintenanceNotice ||
+        game.inquiryBannerMessage != null ||
+        game.errorMessage != null;
 
     return Container(
       padding: const EdgeInsets.all(12),
@@ -1520,6 +1525,8 @@ class _LobbyScreenState extends State<LobbyScreen> {
                   if (game.hasMaintenanceNotice) _buildMaintenanceBanner(game),
                   if (game.inquiryBannerMessage != null)
                     _buildInquiryBanner(game),
+                  if (game.errorMessage != null)
+                    _buildErrorBanner(game.errorMessage!),
                 ],
               ),
             ),
@@ -1771,6 +1778,34 @@ class _LobbyScreenState extends State<LobbyScreen> {
               Icons.refresh,
               size: 18,
               color: Color(0xFF1E88E5),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildErrorBanner(String message) {
+    return Container(
+      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+      decoration: BoxDecoration(
+        color: const Color(0xFFFFEBEE),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: const Color(0xFFEF9A9A)),
+      ),
+      child: Row(
+        children: [
+          const Icon(Icons.warning, color: Color(0xFFC62828), size: 20),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Text(
+              localizeServiceMessage(message, L10n.of(context)),
+              style: const TextStyle(
+                color: Color(0xFFC62828),
+                fontSize: 13,
+                fontWeight: FontWeight.w600,
+              ),
             ),
           ),
         ],
@@ -2305,33 +2340,7 @@ class _LobbyScreenState extends State<LobbyScreen> {
           if (game.hasMaintenanceNotice) _buildMaintenanceBanner(game),
 
           // Error message banner
-          if (game.errorMessage != null)
-            Container(
-              margin: const EdgeInsets.symmetric(horizontal: 16),
-              padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(
-                color: const Color(0xFFFFEBEE),
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: Row(
-                children: [
-                  const Icon(Icons.warning, color: Color(0xFFC62828), size: 18),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: Text(
-                      localizeServiceMessage(
-                        game.errorMessage!,
-                        L10n.of(context),
-                      ),
-                      style: const TextStyle(
-                        color: Color(0xFFC62828),
-                        fontSize: 13,
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ),
+          if (game.errorMessage != null) _buildErrorBanner(game.errorMessage!),
 
           // Scrollable content area
           Expanded(
@@ -4095,11 +4104,7 @@ class _LobbyScreenState extends State<LobbyScreen> {
             chips: [
               _buildStatChip(
                 l10n.lobbyStatRecord,
-                l10n.lobbyRecordFormat(
-                  totalGames as int,
-                  wins as int,
-                  losses as int,
-                ),
+                l10n.lobbyRecordFormat(totalGames, wins, losses),
               ),
               _buildStatChip(l10n.lobbyStatWinRate, '$winRate%'),
             ],

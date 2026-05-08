@@ -2831,6 +2831,13 @@ class GameService extends ChangeNotifier {
     _prevMightyGameState = null;
     errorMessage = 'room_restore_fallback';
     notifyListeners();
+    Future.delayed(const Duration(seconds: 3), () {
+      if (_disposed) return;
+      if (errorMessage == 'room_restore_fallback') {
+        errorMessage = null;
+        notifyListeners();
+      }
+    });
   }
 
   // Rankings

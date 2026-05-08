@@ -63,7 +63,6 @@ class _AdminCenterScreenState extends State<AdminCenterScreen> {
   Widget build(BuildContext context) {
     final themeColors = context.watch<GameService>().themeGradient;
     final isCompact = MediaQuery.sizeOf(context).width < 600;
-    final l = L10n.of(context);
     return Scaffold(
       body: GestureDetector(
         behavior: HitTestBehavior.translucent,
@@ -713,7 +712,7 @@ class _AdminCenterScreenState extends State<AdminCenterScreen> {
           child: ListView.separated(
             padding: EdgeInsets.fromLTRB(isCompact ? 12 : 16, 0, isCompact ? 12 : 16, 16),
             itemCount: filtered.length,
-            separatorBuilder: (_, __) => const SizedBox(height: 10),
+            separatorBuilder: (_, _) => const SizedBox(height: 10),
             itemBuilder: (context, index) => _buildMatchCell(filtered[index], isCompact),
           ),
         ),

@@ -1541,7 +1541,6 @@ class GameService extends ChangeNotifier {
         notifyListeners();
         break;
       case 'admin_set_user_result':
-      case 'admin_adjust_gold_result':
       case 'admin_inquiry_resolve_result':
       case 'admin_report_status_result':
         adminActionSuccess = data['success'] == true;
@@ -1550,14 +1549,6 @@ class GameService extends ChangeNotifier {
             (adminActionSuccess == true
                 ? 'admin_action_success'
                 : 'admin_action_failed');
-        if (type == 'admin_adjust_gold_result' &&
-            adminActionSuccess == true &&
-            adminUserDetail?['nickname'] == data['nickname']) {
-          adminUserDetail = {
-            ...?adminUserDetail,
-            'gold': data['newGold'] ?? adminUserDetail?['gold'],
-          };
-        }
         notifyListeners();
         break;
       case 'admin_notice':
@@ -2367,14 +2358,6 @@ class GameService extends ChangeNotifier {
     });
   }
 
-  void adjustAdminGold(String nickname, int amount) {
-    _network.send({
-      'type': 'admin_adjust_gold',
-      'nickname': nickname,
-      'amount': amount,
-    });
-  }
-
   void requestAdminInquiries({int page = 1, int limit = 50}) {
     adminInquiriesLoading = true;
     adminInquiriesError = null;
@@ -2411,7 +2394,7 @@ class GameService extends ChangeNotifier {
     notifyListeners();
     _network.send({
       'type': 'get_admin_today_matches',
-      if (ranked != null) 'ranked': ranked,
+      'ranked': ?ranked,
       'limit': limit,
     });
   }

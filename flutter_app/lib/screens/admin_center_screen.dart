@@ -65,7 +65,10 @@ class _AdminCenterScreenState extends State<AdminCenterScreen> {
     final isCompact = MediaQuery.sizeOf(context).width < 600;
     final l = L10n.of(context);
     return Scaffold(
-      body: Container(
+      body: GestureDetector(
+        behavior: HitTestBehavior.translucent,
+        onTap: () => FocusManager.instance.primaryFocus?.unfocus(),
+        child: Container(
         decoration: BoxDecoration(
           gradient: LinearGradient(
             begin: Alignment.topCenter,
@@ -108,6 +111,7 @@ class _AdminCenterScreenState extends State<AdminCenterScreen> {
               );
             },
           ),
+        ),
         ),
       ),
     );

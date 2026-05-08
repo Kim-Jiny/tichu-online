@@ -53,6 +53,7 @@ const {
   getCurrentMightySeasonRankings,
   getMightySeasonRankings,
   getDashboardStats,
+  getTodayMatches,
   getAdminGoldHistory,
   adminAdjustGold,
   setAdminMemo,
@@ -1558,6 +1559,9 @@ async function handleMessage(ws, data) {
       break;
     case 'admin_adjust_gold':
       await handleAdminAdjustGold(ws, data);
+      break;
+    case 'get_admin_today_matches':
+      await handleGetAdminTodayMatches(ws, data);
       break;
     case 'get_admin_inquiries':
       await handleGetAdminInquiries(ws, data);
@@ -5177,7 +5181,13 @@ async function handleGetAdminDashboard(ws) {
       totalUsers: stats.totalUsers || 0,
       pendingInquiries: stats.pendingInquiries || 0,
       pendingReports: stats.pendingReports || 0,
+      totalInquiries: stats.totalInquiries || 0,
+      totalReports: stats.totalReports || 0,
+      newUsersToday: stats.newUsersToday || 0,
+      activeUsers7d: stats.activeUsers7d || 0,
       activeUsers: getActiveUsersSnapshot().length,
+      todayGames: stats.todayGames || 0,
+      todayRankedGames: stats.rankedMatchesToday || 0,
       serverStartedAt,
     },
   });
@@ -5198,7 +5208,7 @@ async function handleGetAdminUsers(ws, data) {
   const search = (data?.search || '').toString();
   const page = typeof data?.page === 'number' ? data.page : 1;
   const limit = typeof data?.limit === 'number' ? Math.min(data.limit, 100) : 50;
-  const result = await getUsers(search, page, limit, { sort: data?.sort || 'login_desc' });
+  const result = await getUsers(search, page, limit, { sort: data?.sort || 'login_desc', excludeDeleted: true });
   const activeMap = new Map(getActiveUsersSnapshot().map((row) => [row.nickname, row]));
   sendTo(ws, {
     type: 'admin_users_result',
@@ -5282,6 +5292,19 @@ async function handleAdminAdjustGold(ws, data) {
   }
   const result = await adminAdjustGold(nickname, amount, ws.nickname || 'admin');
   sendTo(ws, { type: 'admin_adjust_gold_result', ...result, nickname, amount });
+}
+
+async function handleGetAdminTodayMatches(ws, data) {
+  if (!await ensureAdmin(ws, 'admin_today_matches_result')) return;
+  const ranked = data?.ranked === true ? true : data?.ranked === false ? false : null;
+  const limit = typeof data?.limit === 'number' ? data.limit : 100;
+  const result = await getTodayMatches({ ranked, limit });
+  sendTo(ws, {
+    type: 'admin_today_matches_result',
+    success: true,
+    ranked,
+    rows: result.rows,
+  });
 }
 
 async function handleGetAdminInquiries(ws, data) {

@@ -30,8 +30,10 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
   String _friendSuit = 'spade';
   String _friendRank = 'A';
   String? _selectedTrumpSuit; // null = no change
-  String? _lastKnownTrumpSuit; // tracks the last trumpSuit we rendered for; used to resync _selectedTrumpSuit when the server confirms a change
-  String? _lastKittyMightyCard; // last mighty card seen while in kitty_exchange — when trump change makes mighty change AND declarer no longer holds it, default the friend pick to mighty-friend
+  String?
+  _lastKnownTrumpSuit; // tracks the last trumpSuit we rendered for; used to resync _selectedTrumpSuit when the server confirms a change
+  String?
+  _lastKittyMightyCard; // last mighty card seen while in kitty_exchange — when trump change makes mighty change AND declarer no longer holds it, default the friend pick to mighty-friend
 
   // Kitty-phase contract-change banner: auto-dismissing overlay that
   // highlights trump/bid changes so non-declarers notice them.
@@ -86,6 +88,9 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
 
   // Chat
   bool _chatOpen = false;
+  bool _soundPanelOpen = false;
+  bool _viewersOpen = false;
+  bool _moreOpen = false;
   int _readChatCount = 0;
   final TextEditingController _chatController = TextEditingController();
   final ScrollController _chatScrollController = ScrollController();
@@ -155,8 +160,9 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
       _gameEndCountdownActive = true;
       _gameEndCountdown = 3;
       _gameEndCountdownTimer?.cancel();
-      _gameEndCountdownTimer =
-          Timer.periodic(const Duration(seconds: 1), (timer) {
+      _gameEndCountdownTimer = Timer.periodic(const Duration(seconds: 1), (
+        timer,
+      ) {
         if (!mounted) {
           timer.cancel();
           return;
@@ -203,7 +209,9 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
                 builder: (context, game, _) {
                   final state = game.mightyGameState;
                   if (state == null) {
-                    if (game.isSpectator && game.hasRoom && !game.hasActiveGame) {
+                    if (game.isSpectator &&
+                        game.hasRoom &&
+                        !game.hasActiveGame) {
                       return _buildSpectatorWaiting(game);
                     }
                     return const Center(child: CircularProgressIndicator());
@@ -214,7 +222,8 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
                   // wiped by pruneCardViewPermissions.
                   {
                     final myId = game.playerId;
-                    final isSelfExcluded = myId.isNotEmpty && state.excludedPlayers.contains(myId);
+                    final isSelfExcluded =
+                        myId.isNotEmpty && state.excludedPlayers.contains(myId);
                     if (_wasSelfExcluded && !isSelfExcluded) {
                       WidgetsBinding.instance.addPostFrameCallback((_) {
                         if (!mounted) return;
@@ -248,11 +257,13 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
                   // to re-pick manually.
                   if (state.phase == 'kitty_exchange') {
                     final currentMighty = state.mightyCard;
-                    if (_lastKittyMightyCard != null
-                        && _lastKittyMightyCard != currentMighty
-                        && currentMighty != null
-                        && !state.myCards.contains(currentMighty)) {
-                      final parts = currentMighty.replaceFirst('mighty_', '').split('_');
+                    if (_lastKittyMightyCard != null &&
+                        _lastKittyMightyCard != currentMighty &&
+                        currentMighty != null &&
+                        !state.myCards.contains(currentMighty)) {
+                      final parts = currentMighty
+                          .replaceFirst('mighty_', '')
+                          .split('_');
                       final newSuit = parts.isNotEmpty ? parts[0] : 'spade';
                       final newRank = parts.length > 1 ? parts[1] : 'A';
                       WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -307,20 +318,26 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
                           final mightyCard = state.mightyCard;
                           final trump = state.trumpSuit ?? 'spade';
                           final isNT = trump == 'no_trump';
-                          final hasMighty = mightyCard != null && myCards.contains(mightyCard);
+                          final hasMighty =
+                              mightyCard != null &&
+                              myCards.contains(mightyCard);
                           final hasJoker = myCards.contains('mighty_joker');
                           final trumpAce = isNT ? null : 'mighty_${trump}_A';
-                          final hasTrumpAce = trumpAce != null && myCards.contains(trumpAce);
+                          final hasTrumpAce =
+                              trumpAce != null && myCards.contains(trumpAce);
 
                           if (hasMighty && hasJoker) {
                             _friendMode = 'first_trick';
                             _friendCardSelection = 'first_trick';
                           } else if (mightyCard != null && !hasMighty) {
-                            final parts = mightyCard.replaceFirst('mighty_', '').split('_');
+                            final parts = mightyCard
+                                .replaceFirst('mighty_', '')
+                                .split('_');
                             _friendMode = 'card';
                             _friendSuit = parts.isNotEmpty ? parts[0] : 'spade';
                             _friendRank = parts.length > 1 ? parts[1] : 'A';
-                            _friendCardSelection = 'mighty_${_friendSuit}_$_friendRank';
+                            _friendCardSelection =
+                                'mighty_${_friendSuit}_$_friendRank';
                           } else if (trumpAce != null && !hasTrumpAce) {
                             _friendMode = 'card';
                             _friendSuit = trump;
@@ -339,7 +356,8 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
                   }
 
                   // Clear selected card if it's no longer in hand
-                  if (_selectedCard != null && !state.myCards.contains(_selectedCard)) {
+                  if (_selectedCard != null &&
+                      !state.myCards.contains(_selectedCard)) {
                     WidgetsBinding.instance.addPostFrameCallback((_) {
                       if (mounted) setState(() => _selectedCard = null);
                     });
@@ -351,15 +369,19 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
                   // taps it. Keyed by round+targetCard so replaying the same
                   // event in a later round re-arms the timer.
                   if (state.lastKillEvent != null) {
-                    final killKey = '${state.round}-${state.lastKillEvent!.targetCardId}';
+                    final killKey =
+                        '${state.round}-${state.lastKillEvent!.targetCardId}';
                     final isActive = _dismissedKillKey != killKey;
                     if (isActive && _killAutoDismissKey != killKey) {
                       _killAutoDismissKey = killKey;
                       _killAutoDismissTimer?.cancel();
-                      _killAutoDismissTimer = Timer(const Duration(seconds: 4), () {
-                        if (!mounted) return;
-                        setState(() => _dismissedKillKey = killKey);
-                      });
+                      _killAutoDismissTimer = Timer(
+                        const Duration(seconds: 4),
+                        () {
+                          if (!mounted) return;
+                          setState(() => _dismissedKillKey = killKey);
+                        },
+                      );
                     } else if (!isActive && _killAutoDismissKey == killKey) {
                       _killAutoDismissTimer?.cancel();
                     }
@@ -368,12 +390,17 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
                   // Kitty-phase contract-change detection: flash a banner when
                   // the declarer changes trump or raises the bid so the other
                   // players notice the contract shift.
-                  if (state.phase == 'kitty_exchange' && state.declarer != null) {
+                  if (state.phase == 'kitty_exchange' &&
+                      state.declarer != null) {
                     final currTrump = state.trumpSuit;
-                    final currBid = (state.currentBid['points'] as num?)?.toInt();
-                    if (_kittyContractTrump != null && _kittyContractBid != null) {
-                      final trumpChanged = currTrump != null && currTrump != _kittyContractTrump;
-                      final bidRaised = currBid != null && currBid > _kittyContractBid!;
+                    final currBid = (state.currentBid['points'] as num?)
+                        ?.toInt();
+                    if (_kittyContractTrump != null &&
+                        _kittyContractBid != null) {
+                      final trumpChanged =
+                          currTrump != null && currTrump != _kittyContractTrump;
+                      final bidRaised =
+                          currBid != null && currBid > _kittyContractBid!;
                       if (trumpChanged || bidRaised) {
                         final info = _ContractChangeInfo(
                           oldTrump: trumpChanged ? _kittyContractTrump : null,
@@ -385,17 +412,21 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
                           if (!mounted) return;
                           setState(() => _contractChangeBanner = info);
                           _contractChangeTimer?.cancel();
-                          _contractChangeTimer = Timer(const Duration(milliseconds: 2600), () {
-                            if (!mounted) return;
-                            setState(() => _contractChangeBanner = null);
-                          });
+                          _contractChangeTimer = Timer(
+                            const Duration(milliseconds: 2600),
+                            () {
+                              if (!mounted) return;
+                              setState(() => _contractChangeBanner = null);
+                            },
+                          );
                         });
                       }
                     }
                     _kittyContractTrump = currTrump;
                     _kittyContractBid = currBid;
                   } else {
-                    if (_kittyContractTrump != null || _kittyContractBid != null) {
+                    if (_kittyContractTrump != null ||
+                        _kittyContractBid != null) {
                       _kittyContractTrump = null;
                       _kittyContractBid = null;
                     }
@@ -407,15 +438,20 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
                         children: [
                           _buildTopBar(state, game),
                           _buildScoreboard(state, game),
-                          if (state.phase == 'playing' || state.phase == 'trick_end' || state.phase == 'round_end')
+                          if (state.phase == 'playing' ||
+                              state.phase == 'trick_end' ||
+                              state.phase == 'round_end')
                             _buildOppositionPointBar(state),
-                          if (state.phase == 'playing' || state.phase == 'trick_end')
+                          if (state.phase == 'playing' ||
+                              state.phase == 'trick_end')
                             _buildPlayedCardsRow(state),
                           if (state.phase == 'bidding') ...[
                             Expanded(
                               child: Align(
                                 alignment: Alignment.bottomCenter,
-                                child: SingleChildScrollView(child: _buildBiddingUI(state, game)),
+                                child: SingleChildScrollView(
+                                  child: _buildBiddingUI(state, game),
+                                ),
                               ),
                             ),
                             _buildHandArea(state, game),
@@ -426,8 +462,7 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
                           ],
                           if (state.phase == 'kitty_exchange') ...[
                             Expanded(child: _buildKittyUI(game, state)),
-                            if (!state.isMyTurn)
-                              _buildHandArea(state, game),
+                            if (!state.isMyTurn) _buildHandArea(state, game),
                           ],
                           if (state.phase == 'playing')
                             Expanded(
@@ -446,11 +481,22 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
                           if (state.phase == 'trick_end')
                             _buildHandArea(state, game),
                           if (state.phase == 'round_end')
-                            Expanded(child: SingleChildScrollView(child: _buildRoundEndUI(state))),
+                            Expanded(
+                              child: SingleChildScrollView(
+                                child: _buildRoundEndUI(state),
+                              ),
+                            ),
                           if (state.phase == 'game_end')
-                            Expanded(child: SingleChildScrollView(child: _buildGameEndUI(state, game))),
+                            Expanded(
+                              child: SingleChildScrollView(
+                                child: _buildGameEndUI(state, game),
+                              ),
+                            ),
                         ],
                       ),
+                      if (_moreOpen) _buildMoreMenu(game),
+                      if (_viewersOpen) _buildViewersPanel(game),
+                      if (_soundPanelOpen) _buildSoundPanel(game),
                       if (_chatOpen) _buildChatPanel(game),
                       if (game.hasIncomingCardViewRequests)
                         _buildCardViewRequestPopup(game),
@@ -507,7 +553,10 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
                 ),
                 const SizedBox(width: 6),
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 10,
+                    vertical: 5,
+                  ),
                   decoration: BoxDecoration(
                     color: const Color(0xFF2E7D32).withValues(alpha: 0.12),
                     borderRadius: BorderRadius.circular(999),
@@ -537,7 +586,12 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
                 _buildTopActionButton(
                   icon: Icons.chat_bubble_outline,
                   active: _chatOpen,
-                  badgeCount: _chatOpen ? 0 : (game.chatMessages.length - _readChatCount).clamp(0, 99),
+                  badgeCount: _chatOpen
+                      ? 0
+                      : (game.chatMessages.length - _readChatCount).clamp(
+                          0,
+                          99,
+                        ),
                   onTap: () {
                     setState(() {
                       _chatOpen = !_chatOpen;
@@ -567,15 +621,20 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
                         builder: (context, constraints) {
                           final wide = constraints.maxWidth > 620;
                           return GridView.builder(
-                            gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-                              crossAxisCount: wide ? 2 : 1,
-                              mainAxisSpacing: 10,
-                              crossAxisSpacing: 12,
-                              childAspectRatio: wide ? 2.4 : 4.0,
-                            ),
+                            gridDelegate:
+                                SliverGridDelegateWithFixedCrossAxisCount(
+                                  crossAxisCount: wide ? 2 : 1,
+                                  mainAxisSpacing: 10,
+                                  crossAxisSpacing: 12,
+                                  childAspectRatio: wide ? 2.4 : 4.0,
+                                ),
                             itemCount: slots.length,
                             itemBuilder: (context, index) {
-                              return _buildWaitingSlot(game, slots[index], index);
+                              return _buildWaitingSlot(
+                                game,
+                                slots[index],
+                                index,
+                              );
                             },
                           );
                         },
@@ -584,7 +643,10 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
                     const SizedBox(height: 14),
                     Text(
                       l10n.spectatorWaitingForGame,
-                      style: const TextStyle(color: Color(0xFF8A8A8A), fontSize: 13),
+                      style: const TextStyle(
+                        color: Color(0xFF8A8A8A),
+                        fontSize: 13,
+                      ),
                     ),
                   ],
                 ),
@@ -611,9 +673,7 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
           border: Border.all(color: const Color(0xFFD8CFCB)),
         ),
         child: const Row(
-          children: [
-            Icon(Icons.block, size: 24, color: Color(0xFFBDB5B0)),
-          ],
+          children: [Icon(Icons.block, size: 24, color: Color(0xFFBDB5B0))],
         ),
       );
     }
@@ -632,11 +692,19 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
             ),
             child: Row(
               children: [
-                const Icon(Icons.person_add, size: 24, color: Color(0xFF9AA7B0)),
+                const Icon(
+                  Icons.person_add,
+                  size: 24,
+                  color: Color(0xFF9AA7B0),
+                ),
                 const SizedBox(width: 10),
                 Text(
                   L10n.of(context).spectatorSit,
-                  style: const TextStyle(color: Color(0xFF9AA7B0), fontSize: 13, fontWeight: FontWeight.w600),
+                  style: const TextStyle(
+                    color: Color(0xFF9AA7B0),
+                    fontSize: 13,
+                    fontWeight: FontWeight.w600,
+                  ),
                 ),
               ],
             ),
@@ -646,7 +714,11 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
     }
     final isReady = player.isReady;
     return GestureDetector(
-      onTap: () => _showPlayerProfileDialog(player.name, game, isBot: player.id.startsWith('bot_')),
+      onTap: () => _showPlayerProfileDialog(
+        player.name,
+        game,
+        isBot: player.id.startsWith('bot_'),
+      ),
       child: Container(
         padding: const EdgeInsets.all(12),
         decoration: BoxDecoration(
@@ -663,12 +735,16 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
               width: 36,
               height: 36,
               decoration: BoxDecoration(
-                color: player.isHost ? const Color(0xFFFFF2B3) : const Color(0xFFE8F5E9),
+                color: player.isHost
+                    ? const Color(0xFFFFF2B3)
+                    : const Color(0xFFE8F5E9),
                 borderRadius: BorderRadius.circular(12),
               ),
               child: Icon(
                 player.isHost ? Icons.star : Icons.person,
-                color: player.isHost ? const Color(0xFFE6A800) : const Color(0xFF2E7D32),
+                color: player.isHost
+                    ? const Color(0xFFE6A800)
+                    : const Color(0xFF2E7D32),
                 size: 20,
               ),
             ),
@@ -676,7 +752,11 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
             Expanded(
               child: Text(
                 player.name,
-                style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: Color(0xFF3E312A)),
+                style: const TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w700,
+                  color: Color(0xFF3E312A),
+                ),
                 overflow: TextOverflow.ellipsis,
               ),
             ),
@@ -687,7 +767,14 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
                   color: const Color(0xFFE8F5E9),
                   borderRadius: BorderRadius.circular(8),
                 ),
-                child: const Text('READY', style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: Color(0xFF4CAF50))),
+                child: const Text(
+                  'READY',
+                  style: TextStyle(
+                    fontSize: 10,
+                    fontWeight: FontWeight.bold,
+                    color: Color(0xFF4CAF50),
+                  ),
+                ),
               ),
           ],
         ),
@@ -701,9 +788,12 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
         ? (state.trumpSuit == 'no_trump' ? 'NT' : _suitSymbol(state.trumpSuit!))
         : '';
     final hasCurrentBidder = state.currentBid['bidder'] != null;
-    final showContractInfo = (state.declarer != null &&
-            state.phase != 'bidding' && state.phase != 'dealing') ||
-        (state.phase == 'bidding' && (hasCurrentBidder || state.dealMissPool > 0));
+    final showContractInfo =
+        (state.declarer != null &&
+            state.phase != 'bidding' &&
+            state.phase != 'dealing') ||
+        (state.phase == 'bidding' &&
+            (hasCurrentBidder || state.dealMissPool > 0));
 
     return Column(
       children: [
@@ -712,7 +802,10 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
           child: Row(
             children: [
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 10,
+                  vertical: 5,
+                ),
                 decoration: BoxDecoration(
                   color: Colors.white.withValues(alpha: 0.9),
                   borderRadius: BorderRadius.circular(12),
@@ -726,7 +819,10 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
                     Text(
                       state.phase == 'round_end'
                           ? 'R${state.round}'
-                          : L10n.of(context).mtRoundPhase(state.round.toString(), _phaseLabel(state.phase)),
+                          : L10n.of(context).mtRoundPhase(
+                              state.round.toString(),
+                              _phaseLabel(state.phase),
+                            ),
                       style: const TextStyle(
                         fontSize: 13,
                         fontWeight: FontWeight.bold,
@@ -736,7 +832,10 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
                     if (trumpLabel.isNotEmpty) ...[
                       const SizedBox(width: 6),
                       Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 5,
+                          vertical: 1,
+                        ),
                         decoration: BoxDecoration(
                           color: const Color(0xFFFFF8E1),
                           borderRadius: BorderRadius.circular(6),
@@ -746,9 +845,12 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
                           style: TextStyle(
                             fontWeight: FontWeight.bold,
                             fontSize: 13,
-                            color: state.trumpSuit == null || state.trumpSuit == 'no_trump'
+                            color:
+                                state.trumpSuit == null ||
+                                    state.trumpSuit == 'no_trump'
                                 ? const Color(0xFF7B1FA2)
-                                : (PlayingCard.suitColors[state.trumpSuit!] ?? const Color(0xFF5A4038)),
+                                : (PlayingCard.suitColors[state.trumpSuit!] ??
+                                      const Color(0xFF5A4038)),
                           ),
                         ),
                       ),
@@ -769,23 +871,22 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
               Padding(
                 padding: const EdgeInsets.only(right: 6),
                 child: _buildTopActionButton(
-                  icon: Icons.people_alt,
-                  active: false,
-                  badgeCount: game.spectators.length,
-                  onTap: () => _showSpectatorListDialog(game),
-                ),
-              ),
-              Padding(
-                padding: const EdgeInsets.only(right: 6),
-                child: _buildTopActionButton(
                   icon: Icons.chat_bubble_outline,
                   active: _chatOpen,
-                  badgeCount: _chatOpen ? 0 : (game.chatMessages.length - _readChatCount).clamp(0, 99),
+                  badgeCount: _chatOpen
+                      ? 0
+                      : (game.chatMessages.length - _readChatCount).clamp(
+                          0,
+                          99,
+                        ),
                   onTap: () {
                     setState(() {
                       _chatOpen = !_chatOpen;
                       if (_chatOpen) {
                         _readChatCount = game.chatMessages.length;
+                        _moreOpen = false;
+                        _viewersOpen = false;
+                        _soundPanelOpen = false;
                         _scrollChatToBottom();
                       }
                     });
@@ -793,26 +894,268 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
                 ),
               ),
               _buildTopActionButton(
-                icon: Icons.exit_to_app,
-                active: false,
-                iconColor: const Color(0xFFE53935),
-                onTap: () => _showExitConfirmDialog(game),
+                icon: Icons.more_horiz,
+                active: _moreOpen,
+                onTap: () {
+                  setState(() {
+                    _moreOpen = !_moreOpen;
+                    if (_moreOpen) {
+                      _chatOpen = false;
+                      _viewersOpen = false;
+                      _soundPanelOpen = false;
+                    } else {
+                      _soundPanelOpen = false;
+                    }
+                  });
+                },
               ),
             ],
           ),
         ),
-        if (showContractInfo)
-          _buildContractInfoBar(state, game),
+        if (showContractInfo) _buildContractInfoBar(state, game),
       ],
+    );
+  }
+
+  Widget _buildSoundPanel(GameService game) {
+    final l10n = L10n.of(context);
+    final title = game.isSpectator
+        ? l10n.spectatorSoundEffects
+        : l10n.gameSoundEffects;
+
+    return Positioned(
+      top: 120,
+      right: 8,
+      child: Container(
+        width: 190,
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+        decoration: BoxDecoration(
+          color: Colors.white.withValues(alpha: 0.97),
+          borderRadius: BorderRadius.circular(14),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.15),
+              blurRadius: 8,
+              offset: const Offset(0, 3),
+            ),
+          ],
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              title,
+              style: const TextStyle(
+                fontSize: 12,
+                fontWeight: FontWeight.bold,
+                color: Color(0xFF5A4038),
+              ),
+            ),
+            Slider(
+              value: game.sfxVolume,
+              onChanged: (value) => game.setSfxVolume(value),
+              onChangeEnd: (value) => game.setSfxVolume(value, persist: true),
+              min: 0,
+              max: 1,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildViewersPanel(GameService game) {
+    return Positioned(
+      top: 56,
+      right: 8,
+      child: Container(
+        width: 210,
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+        decoration: BoxDecoration(
+          color: Colors.white.withValues(alpha: 0.97),
+          borderRadius: BorderRadius.circular(14),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.15),
+              blurRadius: 8,
+              offset: const Offset(0, 3),
+            ),
+          ],
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                const Icon(
+                  Icons.visibility,
+                  size: 16,
+                  color: Color(0xFF5A4038),
+                ),
+                const SizedBox(width: 6),
+                Expanded(
+                  child: Text(
+                    L10n.of(context).gameViewingMyCards,
+                    style: const TextStyle(
+                      fontSize: 13,
+                      fontWeight: FontWeight.bold,
+                      color: Color(0xFF5A4038),
+                    ),
+                  ),
+                ),
+                GestureDetector(
+                  onTap: () => setState(() => _viewersOpen = false),
+                  child: const Icon(
+                    Icons.close,
+                    size: 18,
+                    color: Color(0xFF999999),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 8),
+            if (game.cardViewers.isEmpty)
+              Text(
+                L10n.of(context).skGameNoViewers,
+                style: const TextStyle(fontSize: 12, color: Color(0xFF999999)),
+              )
+            else
+              ...game.cardViewers.map((viewer) {
+                final nickname = viewer['nickname'] ?? '';
+                final spectatorId = viewer['id'] ?? '';
+                return Padding(
+                  padding: const EdgeInsets.only(bottom: 6),
+                  child: Row(
+                    children: [
+                      const Icon(
+                        Icons.person,
+                        size: 16,
+                        color: Color(0xFF888888),
+                      ),
+                      const SizedBox(width: 6),
+                      Expanded(
+                        child: Text(
+                          nickname,
+                          style: const TextStyle(fontSize: 13),
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                      GestureDetector(
+                        onTap: () => game.revokeCardView(spectatorId),
+                        child: Container(
+                          padding: const EdgeInsets.all(4),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFFFEBEE),
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: const Icon(
+                            Icons.close,
+                            size: 14,
+                            color: Color(0xFFE53935),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                );
+              }),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildMoreMenu(GameService game) {
+    final hasViewers = game.cardViewers.isNotEmpty;
+    return Positioned(
+      top: 56,
+      right: 8,
+      child: Container(
+        width: hasViewers ? 210 : 170,
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+        decoration: BoxDecoration(
+          color: Colors.white.withValues(alpha: 0.97),
+          borderRadius: BorderRadius.circular(14),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.15),
+              blurRadius: 8,
+              offset: const Offset(0, 3),
+            ),
+          ],
+        ),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            _buildTopActionButton(
+              icon: Icons.people_alt,
+              active: false,
+              badgeCount: game.spectators.length,
+              onTap: () {
+                setState(() {
+                  _moreOpen = false;
+                  _soundPanelOpen = false;
+                });
+                _showSpectatorListDialog(game);
+              },
+            ),
+            if (hasViewers)
+              _buildTopActionButton(
+                icon: Icons.visibility,
+                active: _viewersOpen,
+                badgeCount: game.cardViewers.length,
+                onTap: () {
+                  setState(() {
+                    _moreOpen = false;
+                    _soundPanelOpen = false;
+                    _viewersOpen = !_viewersOpen;
+                  });
+                },
+              ),
+            _buildTopActionButton(
+              icon: game.sfxVolume <= 0.01 ? Icons.volume_off : Icons.volume_up,
+              active: _soundPanelOpen,
+              onTap: () {
+                setState(() {
+                  _soundPanelOpen = !_soundPanelOpen;
+                  if (_soundPanelOpen) {
+                    _viewersOpen = false;
+                  }
+                });
+              },
+            ),
+            _buildTopActionButton(
+              icon: Icons.exit_to_app,
+              active: false,
+              iconColor: const Color(0xFFE53935),
+              onTap: () {
+                setState(() {
+                  _moreOpen = false;
+                  _soundPanelOpen = false;
+                });
+                _showExitConfirmDialog(game);
+              },
+            ),
+          ],
+        ),
+      ),
     );
   }
 
   Widget _buildContractInfoBar(MightyGameStateData state, GameService game) {
     final isBidding = state.phase == 'bidding';
-    final leaderId = isBidding ? state.currentBid['bidder'] as String? : state.declarer;
+    final leaderId = isBidding
+        ? state.currentBid['bidder'] as String?
+        : state.declarer;
     final leaderName = leaderId == null
         ? ''
-        : (state.players.where((p) => p.id == leaderId).map((p) => p.name).firstOrNull ?? '');
+        : (state.players
+                  .where((p) => p.id == leaderId)
+                  .map((p) => p.name)
+                  .firstOrNull ??
+              '');
     final bidPoints = state.currentBid['points'];
     final bidSuit = state.currentBid['suit'];
     final suitLabel = bidSuit != null ? _suitSymbol(bidSuit.toString()) : '';
@@ -824,13 +1167,15 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
     String friendLabel = '';
     if (!isBidding) {
       if (state.friendCard != null) {
-        friendLabel = '${_friendCardLabel(state.friendCard!)} ${L10n.of(context).mtFriend}';
+        friendLabel =
+            '${_friendCardLabel(state.friendCard!)} ${L10n.of(context).mtFriend}';
       } else {
         friendLabel = L10n.of(context).mtSolo;
       }
     }
 
-    final showTrumpCounter = state.remainingTrumps != null && game.hasMightyTrumpCounter;
+    final showTrumpCounter =
+        state.remainingTrumps != null && game.hasMightyTrumpCounter;
 
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
@@ -853,32 +1198,49 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
                 if (leaderName.isNotEmpty)
                   Text(
                     leaderName,
-                    style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: Color(0xFF5A4038)),
+                    style: const TextStyle(
+                      fontSize: 11,
+                      fontWeight: FontWeight.w600,
+                      color: Color(0xFF5A4038),
+                    ),
                   ),
                 if (leaderName.isNotEmpty && hasBid) const SizedBox(width: 6),
                 if (hasBid)
                   Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 6,
+                      vertical: 1,
+                    ),
                     decoration: BoxDecoration(
                       color: const Color(0xFF1565C0),
                       borderRadius: BorderRadius.circular(6),
                     ),
                     child: Text(
                       '$suitLabel ${L10n.of(context).mtContractWithPoints(bidPoints.toInt())}',
-                      style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.white),
+                      style: const TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.white,
+                      ),
                     ),
                   ),
                 if (!isBidding && friendLabel.isNotEmpty) ...[
                   const SizedBox(width: 6),
                   Text(
                     '/',
-                    style: const TextStyle(fontSize: 11, color: Color(0xFF8A7A72)),
+                    style: const TextStyle(
+                      fontSize: 11,
+                      color: Color(0xFF8A7A72),
+                    ),
                   ),
                   const SizedBox(width: 6),
                   Flexible(
                     child: Text(
                       friendLabel,
-                      style: const TextStyle(fontSize: 10, color: Color(0xFF8A7A72)),
+                      style: const TextStyle(
+                        fontSize: 10,
+                        color: Color(0xFF8A7A72),
+                      ),
                       overflow: TextOverflow.ellipsis,
                     ),
                   ),
@@ -925,7 +1287,6 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
       ),
     );
   }
-
 
   Widget _buildTopActionButton({
     required IconData icon,
@@ -993,7 +1354,9 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
   void _scrollChatToBottom() {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (_chatScrollController.hasClients) {
-        _chatScrollController.jumpTo(_chatScrollController.position.maxScrollExtent);
+        _chatScrollController.jumpTo(
+          _chatScrollController.position.maxScrollExtent,
+        );
       }
     });
   }
@@ -1063,7 +1426,11 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
                   const Spacer(),
                   GestureDetector(
                     onTap: () => setState(() => _chatOpen = false),
-                    child: const Icon(Icons.close, color: Colors.white, size: 20),
+                    child: const Icon(
+                      Icons.close,
+                      color: Colors.white,
+                      size: 20,
+                    ),
                   ),
                 ],
               ),
@@ -1103,7 +1470,9 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
                       decoration: InputDecoration(
                         hintText: L10n.of(context).mtTypeMessage,
                         border: InputBorder.none,
-                        contentPadding: const EdgeInsets.symmetric(horizontal: 12),
+                        contentPadding: const EdgeInsets.symmetric(
+                          horizontal: 12,
+                        ),
                       ),
                       style: const TextStyle(fontSize: 14),
                       onSubmitted: (_) => _sendChatMessage(game),
@@ -1126,7 +1495,9 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
     return Padding(
       padding: const EdgeInsets.only(bottom: 8),
       child: Row(
-        mainAxisAlignment: isMe ? MainAxisAlignment.end : MainAxisAlignment.start,
+        mainAxisAlignment: isMe
+            ? MainAxisAlignment.end
+            : MainAxisAlignment.start,
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           if (!isMe && sender.isNotEmpty) ...[
@@ -1142,20 +1513,30 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
           ],
           Flexible(
             child: Column(
-              crossAxisAlignment: isMe ? CrossAxisAlignment.end : CrossAxisAlignment.start,
+              crossAxisAlignment: isMe
+                  ? CrossAxisAlignment.end
+                  : CrossAxisAlignment.start,
               children: [
                 if (!isMe && sender.isNotEmpty)
                   Padding(
                     padding: const EdgeInsets.only(bottom: 2),
                     child: Text(
                       sender,
-                      style: const TextStyle(fontSize: 11, color: Color(0xFF8A8A8A)),
+                      style: const TextStyle(
+                        fontSize: 11,
+                        color: Color(0xFF8A8A8A),
+                      ),
                     ),
                   ),
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 12,
+                    vertical: 8,
+                  ),
                   decoration: BoxDecoration(
-                    color: isMe ? const Color(0xFF1565C0) : const Color(0xFFF0F0F0),
+                    color: isMe
+                        ? const Color(0xFF1565C0)
+                        : const Color(0xFFF0F0F0),
                     borderRadius: BorderRadius.circular(16),
                   ),
                   child: Text(
@@ -1181,13 +1562,19 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
         title: Text(L10n.of(context).mtLeaveGame),
         content: Text(L10n.of(context).mtLeaveConfirm),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx), child: Text(L10n.of(context).mtCancel)),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: Text(L10n.of(context).mtCancel),
+          ),
           TextButton(
             onPressed: () {
               Navigator.pop(ctx);
               game.leaveRoom();
             },
-            child: Text(L10n.of(context).mtLeave, style: const TextStyle(color: Colors.red)),
+            child: Text(
+              L10n.of(context).mtLeave,
+              style: const TextStyle(color: Colors.red),
+            ),
           ),
         ],
       ),
@@ -1200,7 +1587,12 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
     if (bid == 'pass') {
       return const Text(
         'PASS',
-        style: TextStyle(fontSize: 9, fontWeight: FontWeight.w800, color: Color(0xFF9E9E9E), letterSpacing: 0.5),
+        style: TextStyle(
+          fontSize: 9,
+          fontWeight: FontWeight.w800,
+          color: Color(0xFF9E9E9E),
+          letterSpacing: 0.5,
+        ),
       );
     }
     if (bid is Map) {
@@ -1209,7 +1601,11 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
       final sym = _suitSymbol(suit);
       return Text(
         '$sym$points',
-        style: const TextStyle(fontSize: 9, fontWeight: FontWeight.w800, color: Color(0xFF1565C0)),
+        style: const TextStyle(
+          fontSize: 9,
+          fontWeight: FontWeight.w800,
+          color: Color(0xFF1565C0),
+        ),
       );
     }
     return null;
@@ -1219,7 +1615,8 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
   Widget _buildScoreboard(MightyGameStateData state, GameService game) {
     final isSpectator = game.isSpectator;
     final myId = game.playerId;
-    final isSelfExcluded = myId.isNotEmpty && state.excludedPlayers.contains(myId);
+    final isSelfExcluded =
+        myId.isNotEmpty && state.excludedPlayers.contains(myId);
     // Killed-mighty player acts as pseudo-spectator for the rest of the round.
     final canRequestCardView = isSpectator || isSelfExcluded;
     return Container(
@@ -1233,186 +1630,280 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
           final isPartner = state.friendRevealed && p.id == state.partner;
           final isExcluded = state.excludedPlayers.contains(p.id);
           // Card-view state: real spectator OR killed-mighty player peeking.
-          final isPending = canRequestCardView && game.pendingCardViewRequests.contains(p.id);
-          final isApproved = canRequestCardView && game.approvedCardViews.contains(p.id) && p.canViewCards;
+          final isPending =
+              canRequestCardView && game.pendingCardViewRequests.contains(p.id);
+          final isApproved =
+              canRequestCardView &&
+              game.approvedCardViews.contains(p.id) &&
+              p.canViewCards;
 
           // Opposition = not declarer and not revealed partner → can show pointCards
-          final isGovt = p.id == state.declarer || (state.friendRevealed && p.id == state.partner);
+          final isGovt =
+              p.id == state.declarer ||
+              (state.friendRevealed && p.id == state.partner);
           final hasPointCards = !isGovt && p.pointCards.isNotEmpty;
 
           return Expanded(
             child: Opacity(
               opacity: isExcluded ? 0.45 : 1.0,
               child: GestureDetector(
-              onTap: () {
-                // Self-tile always shows own profile (no request flow).
-                if (isSelf) {
-                  _showPlayerProfileDialog(p.name, game, isBot: p.id.startsWith('bot_'));
-                  return;
-                }
-                if (canRequestCardView) {
-                  if (isApproved) {
-                    setState(() => _viewingPlayerId = p.id);
-                  } else if (!isPending) {
-                    _cardViewRequestTimer?.cancel();
-                    game.requestCardView(p.id);
-                    setState(() => _viewingPlayerId = p.id);
-                    _cardViewRequestTimer = Timer(const Duration(seconds: 5), () {
-                      if (!mounted) return;
-                      game.expireCardViewRequest(p.id);
-                    });
+                onTap: () {
+                  // Self-tile always shows own profile (no request flow).
+                  if (isSelf) {
+                    _showPlayerProfileDialog(
+                      p.name,
+                      game,
+                      isBot: p.id.startsWith('bot_'),
+                    );
+                    return;
                   }
-                } else if (hasPointCards && (state.phase == 'playing' || state.phase == 'trick_end' || state.phase == 'round_end')) {
-                  _showPointCardsDialog(p);
-                } else {
-                  _showPlayerProfileDialog(p.name, game, isBot: p.id.startsWith('bot_'));
-                }
-              },
-              child: SizedBox(
-                width: double.infinity,
-                child: Stack(
-                  clipBehavior: Clip.none,
-                  children: [
-                    AnimatedContainer(
-                      duration: const Duration(milliseconds: 200),
-                      margin: const EdgeInsets.symmetric(horizontal: 2),
-                      padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 6),
-                      decoration: BoxDecoration(
-                        color: isSelf
-                            ? Colors.white.withValues(alpha: 0.95)
-                            : isCurrentTurn
-                                ? const Color(0xFFFFF2B3)
-                                : Colors.white.withValues(alpha: 0.7),
-                        borderRadius: BorderRadius.circular(12),
-                        border: isCurrentTurn
-                            ? Border.all(color: const Color(0xFFE6C86A), width: 2)
-                            : isDeclarer
-                                ? Border.all(color: const Color(0xFFFF8A00), width: 2)
-                                : isPartner
-                                    ? Border.all(color: const Color(0xFF4CAF50), width: 2)
-                                    : Border.all(color: const Color(0xFFE0D8D4)),
-                        boxShadow: isSelf
-                            ? [BoxShadow(color: Colors.black.withValues(alpha: 0.08), blurRadius: 4)]
-                            : null,
-                      ),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.center,
-                        children: [
-                          // Role badge — during bidding show the pass/bid
-                          // chip, after bidding show the declarer/friend role.
-                          SizedBox(
-                            height: 14,
-                            child: isExcluded
-                                ? Text(L10n.of(context).mtKillExcluded, style: const TextStyle(fontSize: 9, fontWeight: FontWeight.w800, color: Color(0xFFD84315)))
-                                : isDeclarer
-                                    ? Text(L10n.of(context).mtDeclarer, style: const TextStyle(fontSize: 9, fontWeight: FontWeight.w800, color: Color(0xFFFF8A00)))
-                                    : isPartner
-                                        ? Text(L10n.of(context).mtFriend, style: const TextStyle(fontSize: 9, fontWeight: FontWeight.w800, color: Color(0xFF4CAF50)))
-                                        : (state.phase == 'bidding' && p.bid != null)
-                                            ? _bidScoreboardBadge(p.bid)
-                                            : null,
-                          ),
-                          Row(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              if (isCurrentTurn)
-                                Container(
-                                  width: 6, height: 6,
-                                  margin: const EdgeInsets.only(right: 3),
-                                  decoration: const BoxDecoration(color: Color(0xFFE6A800), shape: BoxShape.circle),
-                                ),
-                              if (!p.connected)
-                                const Padding(
-                                  padding: EdgeInsets.only(right: 3),
-                                  child: Icon(Icons.wifi_off,
-                                      size: 11, color: Color(0xFFE53935)),
-                                ),
-                              Flexible(
-                                child: Text(
-                                  p.name,
-                                  style: TextStyle(
-                                    color: p.connected
-                                        ? const Color(0xFF5A4038)
-                                        : const Color(0xFFE53935),
-                                    fontSize: 10,
-                                    fontWeight: isSelf ? FontWeight.w800 : FontWeight.w600,
+                  if (canRequestCardView) {
+                    if (isApproved) {
+                      setState(() {
+                        _viewingPlayerId = _viewingPlayerId == p.id
+                            ? null
+                            : p.id;
+                      });
+                    } else if (!isPending) {
+                      _cardViewRequestTimer?.cancel();
+                      game.requestCardView(p.id);
+                      setState(() => _viewingPlayerId = p.id);
+                      _cardViewRequestTimer = Timer(
+                        const Duration(seconds: 5),
+                        () {
+                          if (!mounted) return;
+                          game.expireCardViewRequest(p.id);
+                        },
+                      );
+                    }
+                  } else if (hasPointCards &&
+                      (state.phase == 'playing' ||
+                          state.phase == 'trick_end' ||
+                          state.phase == 'round_end')) {
+                    _showPointCardsDialog(p);
+                  } else {
+                    _showPlayerProfileDialog(
+                      p.name,
+                      game,
+                      isBot: p.id.startsWith('bot_'),
+                    );
+                  }
+                },
+                child: SizedBox(
+                  width: double.infinity,
+                  child: Stack(
+                    clipBehavior: Clip.none,
+                    children: [
+                      AnimatedContainer(
+                        duration: const Duration(milliseconds: 200),
+                        margin: const EdgeInsets.symmetric(horizontal: 2),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 4,
+                          vertical: 6,
+                        ),
+                        decoration: BoxDecoration(
+                          color: isSelf
+                              ? Colors.white.withValues(alpha: 0.95)
+                              : isCurrentTurn
+                              ? const Color(0xFFFFF2B3)
+                              : Colors.white.withValues(alpha: 0.7),
+                          borderRadius: BorderRadius.circular(12),
+                          border: isCurrentTurn
+                              ? Border.all(
+                                  color: const Color(0xFFE6C86A),
+                                  width: 2,
+                                )
+                              : isDeclarer
+                              ? Border.all(
+                                  color: const Color(0xFFFF8A00),
+                                  width: 2,
+                                )
+                              : isPartner
+                              ? Border.all(
+                                  color: const Color(0xFF4CAF50),
+                                  width: 2,
+                                )
+                              : Border.all(color: const Color(0xFFE0D8D4)),
+                          boxShadow: isSelf
+                              ? [
+                                  BoxShadow(
+                                    color: Colors.black.withValues(alpha: 0.08),
+                                    blurRadius: 4,
                                   ),
-                                  maxLines: 1,
-                                  overflow: TextOverflow.ellipsis,
+                                ]
+                              : null,
+                        ),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.center,
+                          children: [
+                            // Role badge — during bidding show the pass/bid
+                            // chip, after bidding show the declarer/friend role.
+                            SizedBox(
+                              height: 14,
+                              child: isExcluded
+                                  ? Text(
+                                      L10n.of(context).mtKillExcluded,
+                                      style: const TextStyle(
+                                        fontSize: 9,
+                                        fontWeight: FontWeight.w800,
+                                        color: Color(0xFFD84315),
+                                      ),
+                                    )
+                                  : isDeclarer
+                                  ? Text(
+                                      L10n.of(context).mtDeclarer,
+                                      style: const TextStyle(
+                                        fontSize: 9,
+                                        fontWeight: FontWeight.w800,
+                                        color: Color(0xFFFF8A00),
+                                      ),
+                                    )
+                                  : isPartner
+                                  ? Text(
+                                      L10n.of(context).mtFriend,
+                                      style: const TextStyle(
+                                        fontSize: 9,
+                                        fontWeight: FontWeight.w800,
+                                        color: Color(0xFF4CAF50),
+                                      ),
+                                    )
+                                  : (state.phase == 'bidding' && p.bid != null)
+                                  ? _bidScoreboardBadge(p.bid)
+                                  : null,
+                            ),
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                if (isCurrentTurn)
+                                  Container(
+                                    width: 6,
+                                    height: 6,
+                                    margin: const EdgeInsets.only(right: 3),
+                                    decoration: const BoxDecoration(
+                                      color: Color(0xFFE6A800),
+                                      shape: BoxShape.circle,
+                                    ),
+                                  ),
+                                if (!p.connected)
+                                  const Padding(
+                                    padding: EdgeInsets.only(right: 3),
+                                    child: Icon(
+                                      Icons.wifi_off,
+                                      size: 11,
+                                      color: Color(0xFFE53935),
+                                    ),
+                                  ),
+                                Flexible(
+                                  child: Text(
+                                    p.name,
+                                    style: TextStyle(
+                                      color: p.connected
+                                          ? const Color(0xFF5A4038)
+                                          : const Color(0xFFE53935),
+                                      fontSize: 10,
+                                      fontWeight: isSelf
+                                          ? FontWeight.w800
+                                          : FontWeight.w600,
+                                    ),
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
                                 ),
+                              ],
+                            ),
+                            const SizedBox(height: 2),
+                            Text(
+                              '${state.scores[p.id] ?? 0}',
+                              style: const TextStyle(
+                                color: Color(0xFF5A4038),
+                                fontSize: 14,
+                                fontWeight: FontWeight.bold,
                               ),
-                            ],
-                          ),
-                          const SizedBox(height: 2),
-                          Text(
-                            '${state.scores[p.id] ?? 0}',
-                            style: const TextStyle(
-                              color: Color(0xFF5A4038),
-                              fontSize: 14,
-                              fontWeight: FontWeight.bold,
+                            ),
+                            SizedBox(
+                              height: 14,
+                              child: p.timeoutCount > 0
+                                  ? Text(
+                                      '⏱ ${p.timeoutCount}/3',
+                                      style: const TextStyle(
+                                        color: Color(0xFFE65100),
+                                        fontSize: 10,
+                                        fontWeight: FontWeight.w800,
+                                      ),
+                                    )
+                                  : null,
+                            ),
+                            const SizedBox(height: 2),
+                          ],
+                        ),
+                      ),
+                      // Card view badges for spectators AND killed-mighty peekers
+                      if (canRequestCardView && !isSelf && isPending)
+                        Positioned(
+                          right: 2,
+                          top: -4,
+                          child: Container(
+                            padding: const EdgeInsets.all(2),
+                            decoration: BoxDecoration(
+                              color: Colors.white,
+                              shape: BoxShape.circle,
+                              border: Border.all(
+                                color: const Color(0xFFE0D8D4),
+                              ),
+                            ),
+                            child: const Icon(
+                              Icons.schedule,
+                              size: 12,
+                              color: Color(0xFFFFB74D),
                             ),
                           ),
-                          SizedBox(
-                            height: 14,
-                            child: p.timeoutCount > 0
-                                ? Text(
-                                    '⏱ ${p.timeoutCount}/3',
-                                    style: const TextStyle(
-                                      color: Color(0xFFE65100),
-                                      fontSize: 10,
-                                      fontWeight: FontWeight.w800,
-                                    ),
-                                  )
-                                : null,
+                        )
+                      else if (canRequestCardView && !isSelf && isApproved)
+                        Positioned(
+                          right: 2,
+                          top: -4,
+                          child: Container(
+                            padding: const EdgeInsets.all(2),
+                            decoration: BoxDecoration(
+                              color: Colors.white,
+                              shape: BoxShape.circle,
+                              border: Border.all(
+                                color: const Color(0xFF64B5F6),
+                              ),
+                            ),
+                            child: const Icon(
+                              Icons.visibility,
+                              size: 12,
+                              color: Color(0xFF64B5F6),
+                            ),
                           ),
-                          const SizedBox(height: 2),
-                        ],
-                      ),
-                    ),
-                    // Card view badges for spectators AND killed-mighty peekers
-                    if (canRequestCardView && !isSelf && isPending)
-                      Positioned(
-                        right: 2, top: -4,
-                        child: Container(
-                          padding: const EdgeInsets.all(2),
-                          decoration: BoxDecoration(
-                            color: Colors.white,
-                            shape: BoxShape.circle,
-                            border: Border.all(color: const Color(0xFFE0D8D4)),
+                        )
+                      else if (canRequestCardView && !isSelf)
+                        Positioned(
+                          right: 2,
+                          top: -4,
+                          child: Container(
+                            padding: const EdgeInsets.all(2),
+                            decoration: BoxDecoration(
+                              color: Colors.white,
+                              shape: BoxShape.circle,
+                              border: Border.all(
+                                color: const Color(0xFFE0D8D4),
+                              ),
+                            ),
+                            child: Icon(
+                              Icons.visibility_outlined,
+                              size: 12,
+                              color: const Color(
+                                0xFF8A7A72,
+                              ).withValues(alpha: 0.6),
+                            ),
                           ),
-                          child: const Icon(Icons.schedule, size: 12, color: Color(0xFFFFB74D)),
                         ),
-                      )
-                    else if (canRequestCardView && !isSelf && isApproved)
-                      Positioned(
-                        right: 2, top: -4,
-                        child: Container(
-                          padding: const EdgeInsets.all(2),
-                          decoration: BoxDecoration(
-                            color: Colors.white,
-                            shape: BoxShape.circle,
-                            border: Border.all(color: const Color(0xFF64B5F6)),
-                          ),
-                          child: const Icon(Icons.visibility, size: 12, color: Color(0xFF64B5F6)),
-                        ),
-                      )
-                    else if (canRequestCardView && !isSelf)
-                      Positioned(
-                        right: 2, top: -4,
-                        child: Container(
-                          padding: const EdgeInsets.all(2),
-                          decoration: BoxDecoration(
-                            color: Colors.white,
-                            shape: BoxShape.circle,
-                            border: Border.all(color: const Color(0xFFE0D8D4)),
-                          ),
-                          child: Icon(Icons.visibility_outlined, size: 12, color: const Color(0xFF8A7A72).withValues(alpha: 0.6)),
-                        ),
-                      ),
-                  ],
+                    ],
+                  ),
                 ),
               ),
-            ),
             ),
           );
         }).toList(),
@@ -1432,7 +1923,9 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
       child: Row(
         children: state.players.map((p) {
           final trickPlay = tricks.cast<MightyTrickPlay?>().firstWhere(
-              (play) => play?.playerId == p.id, orElse: () => null);
+            (play) => play?.playerId == p.id,
+            orElse: () => null,
+          );
           final isWinner = winnerId != null && p.id == winnerId;
 
           return Expanded(
@@ -1442,7 +1935,14 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
                       decoration: isWinner
                           ? BoxDecoration(
                               borderRadius: BorderRadius.circular(6),
-                              boxShadow: [BoxShadow(color: const Color(0xFF4CAF50).withValues(alpha: 0.4), blurRadius: 8)],
+                              boxShadow: [
+                                BoxShadow(
+                                  color: const Color(
+                                    0xFF4CAF50,
+                                  ).withValues(alpha: 0.4),
+                                  blurRadius: 8,
+                                ),
+                              ],
                             )
                           : null,
                       child: PlayingCard(
@@ -1450,14 +1950,26 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
                         width: 38,
                         height: 53,
                         isInteractive: false,
-                        borderColor: (state.trumpSuit != null && state.trumpSuit != 'no_trump' && _getCardSuit(trickPlay.cardId) == state.trumpSuit)
-                            ? PlayingCard.suitColors[_getCardSuit(trickPlay.cardId)]
+                        borderColor:
+                            (state.trumpSuit != null &&
+                                state.trumpSuit != 'no_trump' &&
+                                _getCardSuit(trickPlay.cardId) ==
+                                    state.trumpSuit)
+                            ? PlayingCard.suitColors[_getCardSuit(
+                                trickPlay.cardId,
+                              )]
                             : null,
-                        badgeIcon: trickPlay.cardId == state.mightyCard ? Icons.star
-                            : (state.jokerCallActive && trickPlay.cardId == state.jokerCallCard) ? Icons.gps_fixed
+                        badgeIcon: trickPlay.cardId == state.mightyCard
+                            ? Icons.star
+                            : (state.jokerCallActive &&
+                                  trickPlay.cardId == state.jokerCallCard)
+                            ? Icons.gps_fixed
                             : null,
-                        badgeColor: trickPlay.cardId == state.mightyCard ? const Color(0xFFFFB300)
-                            : (state.jokerCallActive && trickPlay.cardId == state.jokerCallCard) ? const Color(0xFFE53935)
+                        badgeColor: trickPlay.cardId == state.mightyCard
+                            ? const Color(0xFFFFB300)
+                            : (state.jokerCallActive &&
+                                  trickPlay.cardId == state.jokerCallCard)
+                            ? const Color(0xFFE53935)
                             : null,
                       ),
                     )
@@ -1474,7 +1986,9 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
     final oppCards = <String>[];
     int oppPoints = 0;
     for (final p in state.players) {
-      final isGovt = p.id == state.declarer || (state.friendRevealed && p.id == state.partner);
+      final isGovt =
+          p.id == state.declarer ||
+          (state.friendRevealed && p.id == state.partner);
       if (!isGovt) {
         oppCards.addAll(p.pointCards);
         oppPoints += p.pointCount;
@@ -1507,7 +2021,11 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
             ),
             child: Text(
               L10n.of(context).mtOpposition,
-              style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Colors.white),
+              style: const TextStyle(
+                fontSize: 11,
+                fontWeight: FontWeight.bold,
+                color: Colors.white,
+              ),
             ),
           ),
           const SizedBox(width: 6),
@@ -1516,15 +2034,19 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
             child: SingleChildScrollView(
               scrollDirection: Axis.horizontal,
               child: Row(
-                children: oppCards.map((cardId) => Padding(
-                  padding: const EdgeInsets.only(right: 3),
-                  child: PlayingCard(
-                    cardId: _displayCardId(cardId),
-                    width: 24,
-                    height: 34,
-                    isInteractive: false,
-                  ),
-                )).toList(),
+                children: oppCards
+                    .map(
+                      (cardId) => Padding(
+                        padding: const EdgeInsets.only(right: 3),
+                        child: PlayingCard(
+                          cardId: _displayCardId(cardId),
+                          width: 24,
+                          height: 34,
+                          isInteractive: false,
+                        ),
+                      ),
+                    )
+                    .toList(),
               ),
             ),
           ),
@@ -1537,21 +2059,31 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: Text(L10n.of(context).mtPointCardsTitle(p.name, p.pointCount), style: const TextStyle(fontSize: 15)),
+        title: Text(
+          L10n.of(context).mtPointCardsTitle(p.name, p.pointCount),
+          style: const TextStyle(fontSize: 15),
+        ),
         content: p.pointCards.isEmpty
             ? Text(L10n.of(context).mtNoPointCards)
             : Wrap(
                 spacing: 6,
                 runSpacing: 6,
-                children: p.pointCards.map((cardId) => PlayingCard(
-                  cardId: _displayCardId(cardId),
-                  width: 42,
-                  height: 59,
-                  isInteractive: false,
-                )).toList(),
+                children: p.pointCards
+                    .map(
+                      (cardId) => PlayingCard(
+                        cardId: _displayCardId(cardId),
+                        width: 42,
+                        height: 59,
+                        isInteractive: false,
+                      ),
+                    )
+                    .toList(),
               ),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx), child: Text(L10n.of(context).mtClose)),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: Text(L10n.of(context).mtClose),
+          ),
         ],
       ),
     );
@@ -1574,7 +2106,9 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
               const Icon(Icons.style, size: 20, color: Color(0xFF8A7A72)),
               const SizedBox(height: 4),
               Text(
-                state.isMyTurn ? L10n.of(context).mtYourTurn : L10n.of(context).mtWaiting,
+                state.isMyTurn
+                    ? L10n.of(context).mtYourTurn
+                    : L10n.of(context).mtWaiting,
                 style: const TextStyle(
                   fontSize: 13,
                   fontWeight: FontWeight.bold,
@@ -1589,7 +2123,9 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
                     style: TextStyle(
                       fontSize: 12,
                       fontWeight: FontWeight.bold,
-                      color: _remainingSeconds <= 5 ? const Color(0xFFE53935) : const Color(0xFF8A7A72),
+                      color: _remainingSeconds <= 5
+                          ? const Color(0xFFE53935)
+                          : const Color(0xFF8A7A72),
                     ),
                   ),
                 ),
@@ -1632,7 +2168,9 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
                     style: TextStyle(
                       fontSize: 15,
                       fontWeight: FontWeight.bold,
-                      color: PlayingCard.suitColors[contractSuit] ?? const Color(0xFF5A4038),
+                      color:
+                          PlayingCard.suitColors[contractSuit] ??
+                          const Color(0xFF5A4038),
                     ),
                   ),
                   const SizedBox(width: 4),
@@ -1655,14 +2193,19 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
                   children: [
                     Text(
                       '${L10n.of(context).mtLead} ',
-                      style: const TextStyle(fontSize: 11, color: Color(0xFF8A7A72)),
+                      style: const TextStyle(
+                        fontSize: 11,
+                        color: Color(0xFF8A7A72),
+                      ),
                     ),
                     Text(
                       _suitSymbol(leadSuit),
                       style: TextStyle(
                         fontSize: 13,
                         fontWeight: FontWeight.bold,
-                        color: PlayingCard.suitColors[leadSuit] ?? const Color(0xFF5A4038),
+                        color:
+                            PlayingCard.suitColors[leadSuit] ??
+                            const Color(0xFF5A4038),
                       ),
                     ),
                   ],
@@ -1677,7 +2220,9 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
                   style: TextStyle(
                     fontSize: 12,
                     fontWeight: FontWeight.bold,
-                    color: _remainingSeconds <= 5 ? const Color(0xFFE53935) : const Color(0xFF8A7A72),
+                    color: _remainingSeconds <= 5
+                        ? const Color(0xFFE53935)
+                        : const Color(0xFF8A7A72),
                   ),
                 ),
               ),
@@ -1689,10 +2234,12 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
 
   // ── Trick End Area ──
   Widget _buildTrickEndArea(MightyGameStateData state) {
-    final winnerName = state.players
-        .where((p) => p.id == state.lastTrickWinner)
-        .map((p) => p.name)
-        .firstOrNull ?? '';
+    final winnerName =
+        state.players
+            .where((p) => p.id == state.lastTrickWinner)
+            .map((p) => p.name)
+            .firstOrNull ??
+        '';
     return Center(
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
@@ -1723,9 +2270,21 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
                 padding: const EdgeInsets.only(top: 6),
                 child: Text(
                   state.friendRevealed && state.partner != null
-                      ? L10n.of(context).mtFriendRevealed(_friendCardLabel(state.friendCard!), state.players.where((p) => p.id == state.partner).map((p) => p.name).firstOrNull ?? '')
-                      : L10n.of(context).mtFriendHidden(_friendCardLabel(state.friendCard!)),
-                  style: const TextStyle(fontSize: 11, color: Color(0xFF8A7A72)),
+                      ? L10n.of(context).mtFriendRevealed(
+                          _friendCardLabel(state.friendCard!),
+                          state.players
+                                  .where((p) => p.id == state.partner)
+                                  .map((p) => p.name)
+                                  .firstOrNull ??
+                              '',
+                        )
+                      : L10n.of(
+                          context,
+                        ).mtFriendHidden(_friendCardLabel(state.friendCard!)),
+                  style: const TextStyle(
+                    fontSize: 11,
+                    color: Color(0xFF8A7A72),
+                  ),
                 ),
               ),
           ],
@@ -1753,7 +2312,9 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
               style: TextStyle(
                 fontSize: 13,
                 fontWeight: FontWeight.bold,
-                color: _remainingSeconds <= 5 ? const Color(0xFFE53935) : const Color(0xFF8A7A72),
+                color: _remainingSeconds <= 5
+                    ? const Color(0xFFE53935)
+                    : const Color(0xFF8A7A72),
               ),
             ),
             const SizedBox(height: 6),
@@ -1769,29 +2330,53 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
                 border: Border.all(color: const Color(0xFFFFE082)),
               ),
               child: Text(
-                L10n.of(context).mtCurrentBid(state.currentBid['points'].toString(), _suitLabel(state.currentBid['suit'])),
-                style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: Color(0xFF5A4038)),
+                L10n.of(context).mtCurrentBid(
+                  state.currentBid['points'].toString(),
+                  _suitLabel(state.currentBid['suit']),
+                ),
+                style: const TextStyle(
+                  fontWeight: FontWeight.bold,
+                  fontSize: 13,
+                  color: Color(0xFF5A4038),
+                ),
               ),
             ),
           // Bid history
           if (state.bids.isNotEmpty) ...[
             ...state.bids.entries.map((e) {
-              final name = state.players
-                  .where((p) => p.id == e.key)
-                  .map((p) => p.name)
-                  .firstOrNull ?? e.key;
+              final name =
+                  state.players
+                      .where((p) => p.id == e.key)
+                      .map((p) => p.name)
+                      .firstOrNull ??
+                  e.key;
               final bidText = e.value == 'pass'
                   ? L10n.of(context).mtPass
                   : e.value is Map
-                    ? '${e.value['points']} ${_suitLabel(e.value['suit'])}'
-                    : '${e.value}';
+                  ? '${e.value['points']} ${_suitLabel(e.value['suit'])}'
+                  : '${e.value}';
               return Padding(
                 padding: const EdgeInsets.symmetric(vertical: 1),
                 child: Row(
                   children: [
-                    Text(name, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: Color(0xFF5A4038))),
+                    Text(
+                      name,
+                      style: const TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600,
+                        color: Color(0xFF5A4038),
+                      ),
+                    ),
                     const SizedBox(width: 8),
-                    Text(bidText, style: TextStyle(fontSize: 12, color: e.value == 'pass' ? const Color(0xFF8A7A72) : const Color(0xFF1565C0))),
+                    Text(
+                      bidText,
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: e.value == 'pass'
+                            ? const Color(0xFF8A7A72)
+                            : const Color(0xFF1565C0),
+                      ),
+                    ),
                   ],
                 ),
               );
@@ -1801,182 +2386,290 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
           // Bid controls
           if (state.isMyTurn) ...[
             // Points row
-            Builder(builder: (context) {
-              final currentBidPoints = (state.currentBid['points'] as num?)?.toInt() ?? 0;
-              final currentBidSuit = state.currentBid['suit'] as String?;
-              // Minimum bid depends on the effective mode: 5p=13, 6p kill-mighty=14.
-              final modeMin = state.mode == '6p' ? 14 : 13;
-              // Same points allowed if bidding no_trump over a suited bid
-              final canBidSamePoints = currentBidSuit != null && currentBidSuit != 'no_trump' && _bidSuit == 'no_trump';
-              final minBid = canBidSamePoints
-                  ? currentBidPoints.clamp(modeMin, 20)
-                  : (currentBidPoints + 1).clamp(modeMin, 20);
-              if (_bidPoints < minBid) {
-                WidgetsBinding.instance.addPostFrameCallback((_) {
-                  if (mounted) setState(() => _bidPoints = minBid);
-                });
-              }
-              if (minBid >= 20) {
-                // Max bid reached - show fixed value, no slider
-                WidgetsBinding.instance.addPostFrameCallback((_) {
-                  if (mounted && _bidPoints != 20) setState(() => _bidPoints = 20);
-                });
+            Builder(
+              builder: (context) {
+                final currentBidPoints =
+                    (state.currentBid['points'] as num?)?.toInt() ?? 0;
+                final currentBidSuit = state.currentBid['suit'] as String?;
+                // Minimum bid depends on the effective mode: 5p=13, 6p kill-mighty=14.
+                final modeMin = state.mode == '6p' ? 14 : 13;
+                // Same points allowed if bidding no_trump over a suited bid
+                final canBidSamePoints =
+                    currentBidSuit != null &&
+                    currentBidSuit != 'no_trump' &&
+                    _bidSuit == 'no_trump';
+                final minBid = canBidSamePoints
+                    ? currentBidPoints.clamp(modeMin, 20)
+                    : (currentBidPoints + 1).clamp(modeMin, 20);
+                if (_bidPoints < minBid) {
+                  WidgetsBinding.instance.addPostFrameCallback((_) {
+                    if (mounted) setState(() => _bidPoints = minBid);
+                  });
+                }
+                if (minBid >= 20) {
+                  // Max bid reached - show fixed value, no slider
+                  WidgetsBinding.instance.addPostFrameCallback((_) {
+                    if (mounted && _bidPoints != 20) {
+                      setState(() => _bidPoints = 20);
+                    }
+                  });
+                  return Row(
+                    children: [
+                      Text(
+                        L10n.of(context).mtPoints,
+                        style: const TextStyle(
+                          fontSize: 12,
+                          color: Color(0xFF5A4038),
+                        ),
+                      ),
+                      const Spacer(),
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 12,
+                          vertical: 4,
+                        ),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFE3F2FD),
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: const Text(
+                          '20',
+                          style: TextStyle(
+                            fontWeight: FontWeight.bold,
+                            fontSize: 16,
+                            color: Color(0xFF1565C0),
+                          ),
+                        ),
+                      ),
+                    ],
+                  );
+                }
                 return Row(
                   children: [
-                    Text(L10n.of(context).mtPoints, style: const TextStyle(fontSize: 12, color: Color(0xFF5A4038))),
-                    const Spacer(),
+                    Text(
+                      L10n.of(context).mtPoints,
+                      style: const TextStyle(
+                        fontSize: 12,
+                        color: Color(0xFF5A4038),
+                      ),
+                    ),
+                    Expanded(
+                      child: Slider(
+                        value: _bidPoints.toDouble().clamp(
+                          minBid.toDouble(),
+                          20,
+                        ),
+                        min: minBid.toDouble(),
+                        max: 20,
+                        divisions: 20 - minBid,
+                        label: '${_bidPoints.clamp(minBid, 20)}',
+                        onChanged: (v) =>
+                            setState(() => _bidPoints = v.toInt()),
+                      ),
+                    ),
                     Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 8,
+                        vertical: 4,
+                      ),
                       decoration: BoxDecoration(
                         color: const Color(0xFFE3F2FD),
                         borderRadius: BorderRadius.circular(8),
                       ),
-                      child: const Text('20', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: Color(0xFF1565C0))),
+                      child: Text(
+                        '$_bidPoints',
+                        style: const TextStyle(
+                          fontWeight: FontWeight.bold,
+                          fontSize: 16,
+                          color: Color(0xFF1565C0),
+                        ),
+                      ),
                     ),
                   ],
                 );
-              }
-              return Row(
-              children: [
-                Text(L10n.of(context).mtPoints, style: const TextStyle(fontSize: 12, color: Color(0xFF5A4038))),
-                Expanded(
-                  child: Slider(
-                    value: _bidPoints.toDouble().clamp(minBid.toDouble(), 20),
-                    min: minBid.toDouble(),
-                    max: 20,
-                    divisions: 20 - minBid,
-                    label: '${_bidPoints.clamp(minBid, 20)}',
-                    onChanged: (v) => setState(() => _bidPoints = v.toInt()),
-                  ),
-                ),
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFFE3F2FD),
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: Text('$_bidPoints', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: Color(0xFF1565C0))),
-                ),
-              ],
-            );
-            }),
+              },
+            ),
             // Suit selection
-            Builder(builder: (context) {
-              final cbPoints = (state.currentBid['points'] as num?)?.toInt() ?? 0;
-              final cbSuit = state.currentBid['suit'] as String?;
-              final modeMin = state.mode == '6p' ? 14 : 13;
-              // Minimum bid points needed to pick this suit given the current
-              // table bid. NT over a suited bid can tie; anything else must
-              // strictly raise the points. Returns > 20 when unreachable.
-              int minBidFor(String suit) {
-                if (cbPoints == 0) return modeMin;
-                final raw = (suit == 'no_trump' && cbSuit != null && cbSuit != 'no_trump')
-                    ? cbPoints
-                    : cbPoints + 1;
-                return raw < modeMin ? modeMin : raw;
-              }
-              bool suitAvailable(String suit) => minBidFor(suit) <= 20;
-              void selectSuit(String suit) {
-                final needed = minBidFor(suit);
-                if (needed > 20) return;
-                setState(() {
-                  // Switching INTO NT snaps points down to the NT minimum
-                  // (NT can tie a suited bid, so the cheapest NT bid is
-                  // typically a step below what the suited UI was showing).
-                  // For other suits, only raise — preserves any manual
-                  // bump the user made.
-                  if (suit == 'no_trump') {
-                    _bidPoints = needed;
-                  } else if (_bidPoints < needed) {
-                    _bidPoints = needed;
-                  }
-                  _bidSuit = suit;
-                });
-              }
-              // Auto-switch away from an unreachable suit (e.g., suit cap-out
-              // at 20). Previously the user could get stuck on a grayed suit.
-              if (!suitAvailable(_bidSuit)) {
-                final fallback = ['no_trump', 'spade', 'heart', 'diamond', 'club']
-                    .firstWhere((s) => suitAvailable(s), orElse: () => 'no_trump');
-                WidgetsBinding.instance.addPostFrameCallback((_) {
-                  if (mounted) setState(() => _bidSuit = fallback);
-                });
-              }
-              return Padding(
-                padding: const EdgeInsets.symmetric(vertical: 6),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                  children: [
-                    _buildSuitChip('spade', '\u2660', const Color(0xFF2B2B2B),
-                      enabled: suitAvailable('spade'), onTap: () => selectSuit('spade')),
-                    _buildSuitChip('heart', '\u2665', const Color(0xFFD24B4B),
-                      enabled: suitAvailable('heart'), onTap: () => selectSuit('heart')),
-                    _buildSuitChip('diamond', '\u2666', const Color(0xFF6FB6E5),
-                      enabled: suitAvailable('diamond'), onTap: () => selectSuit('diamond')),
-                    _buildSuitChip('club', '\u2663', const Color(0xFF4BAA6A),
-                      enabled: suitAvailable('club'), onTap: () => selectSuit('club')),
-                    _buildSuitChip('no_trump', 'NT', const Color(0xFF7B1FA2),
-                      enabled: suitAvailable('no_trump'), onTap: () => selectSuit('no_trump')),
-                  ],
-                ),
-              );
-            }),
+            Builder(
+              builder: (context) {
+                final cbPoints =
+                    (state.currentBid['points'] as num?)?.toInt() ?? 0;
+                final cbSuit = state.currentBid['suit'] as String?;
+                final modeMin = state.mode == '6p' ? 14 : 13;
+                // Minimum bid points needed to pick this suit given the current
+                // table bid. NT over a suited bid can tie; anything else must
+                // strictly raise the points. Returns > 20 when unreachable.
+                int minBidFor(String suit) {
+                  if (cbPoints == 0) return modeMin;
+                  final raw =
+                      (suit == 'no_trump' &&
+                          cbSuit != null &&
+                          cbSuit != 'no_trump')
+                      ? cbPoints
+                      : cbPoints + 1;
+                  return raw < modeMin ? modeMin : raw;
+                }
+
+                bool suitAvailable(String suit) => minBidFor(suit) <= 20;
+                void selectSuit(String suit) {
+                  final needed = minBidFor(suit);
+                  if (needed > 20) return;
+                  setState(() {
+                    // Switching INTO NT snaps points down to the NT minimum
+                    // (NT can tie a suited bid, so the cheapest NT bid is
+                    // typically a step below what the suited UI was showing).
+                    // For other suits, only raise — preserves any manual
+                    // bump the user made.
+                    if (suit == 'no_trump') {
+                      _bidPoints = needed;
+                    } else if (_bidPoints < needed) {
+                      _bidPoints = needed;
+                    }
+                    _bidSuit = suit;
+                  });
+                }
+
+                // Auto-switch away from an unreachable suit (e.g., suit cap-out
+                // at 20). Previously the user could get stuck on a grayed suit.
+                if (!suitAvailable(_bidSuit)) {
+                  final fallback =
+                      [
+                        'no_trump',
+                        'spade',
+                        'heart',
+                        'diamond',
+                        'club',
+                      ].firstWhere(
+                        (s) => suitAvailable(s),
+                        orElse: () => 'no_trump',
+                      );
+                  WidgetsBinding.instance.addPostFrameCallback((_) {
+                    if (mounted) setState(() => _bidSuit = fallback);
+                  });
+                }
+                return Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 6),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                    children: [
+                      _buildSuitChip(
+                        'spade',
+                        '\u2660',
+                        const Color(0xFF2B2B2B),
+                        enabled: suitAvailable('spade'),
+                        onTap: () => selectSuit('spade'),
+                      ),
+                      _buildSuitChip(
+                        'heart',
+                        '\u2665',
+                        const Color(0xFFD24B4B),
+                        enabled: suitAvailable('heart'),
+                        onTap: () => selectSuit('heart'),
+                      ),
+                      _buildSuitChip(
+                        'diamond',
+                        '\u2666',
+                        const Color(0xFF6FB6E5),
+                        enabled: suitAvailable('diamond'),
+                        onTap: () => selectSuit('diamond'),
+                      ),
+                      _buildSuitChip(
+                        'club',
+                        '\u2663',
+                        const Color(0xFF4BAA6A),
+                        enabled: suitAvailable('club'),
+                        onTap: () => selectSuit('club'),
+                      ),
+                      _buildSuitChip(
+                        'no_trump',
+                        'NT',
+                        const Color(0xFF7B1FA2),
+                        enabled: suitAvailable('no_trump'),
+                        onTap: () => selectSuit('no_trump'),
+                      ),
+                    ],
+                  ),
+                );
+              },
+            ),
             const SizedBox(height: 6),
             // Bid / Pass / Deal miss
-            Builder(builder: (context) {
-              final currentBidPoints = (state.currentBid['points'] as num?)?.toInt() ?? 0;
-              final currentBidSuit = state.currentBid['suit'] as String?;
-              // True ceiling is 20 NT. 20+suit can still be tied by 20 NT,
-              // so we only disable when no further raise is legal.
-              final isTrueCeiling = currentBidPoints >= 20 &&
-                  currentBidSuit == 'no_trump';
-              final canTieWithNT = currentBidPoints >= 20 &&
-                  currentBidSuit != null &&
-                  currentBidSuit != 'no_trump' &&
-                  _bidSuit == 'no_trump';
-              final canBid = !isTrueCeiling &&
-                  (currentBidPoints < 20 || canTieWithNT);
-              return Row(
-                children: [
-                  Expanded(
-                    child: FilledButton(
-                      onPressed: canBid ? () => game.mightySubmitBid(_bidPoints, _bidSuit) : null,
-                      style: FilledButton.styleFrom(
-                        backgroundColor: const Color(0xFF1565C0),
-                        disabledBackgroundColor: const Color(0xFFBDBDBD),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            Builder(
+              builder: (context) {
+                final currentBidPoints =
+                    (state.currentBid['points'] as num?)?.toInt() ?? 0;
+                final currentBidSuit = state.currentBid['suit'] as String?;
+                // True ceiling is 20 NT. 20+suit can still be tied by 20 NT,
+                // so we only disable when no further raise is legal.
+                final isTrueCeiling =
+                    currentBidPoints >= 20 && currentBidSuit == 'no_trump';
+                final canTieWithNT =
+                    currentBidPoints >= 20 &&
+                    currentBidSuit != null &&
+                    currentBidSuit != 'no_trump' &&
+                    _bidSuit == 'no_trump';
+                final canBid =
+                    !isTrueCeiling && (currentBidPoints < 20 || canTieWithNT);
+                return Row(
+                  children: [
+                    Expanded(
+                      child: FilledButton(
+                        onPressed: canBid
+                            ? () => game.mightySubmitBid(_bidPoints, _bidSuit)
+                            : null,
+                        style: FilledButton.styleFrom(
+                          backgroundColor: const Color(0xFF1565C0),
+                          disabledBackgroundColor: const Color(0xFFBDBDBD),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                        ),
+                        child: Text(
+                          L10n.of(
+                            context,
+                          ).mtBid(_bidPoints, _suitLabel(_bidSuit)),
+                        ),
                       ),
-                      child: Text(L10n.of(context).mtBid(_bidPoints, _suitLabel(_bidSuit))),
                     ),
-                  ),
-                  const SizedBox(width: 8),
-                  OutlinedButton(
-                    onPressed: () => game.mightyPass(),
-                    style: OutlinedButton.styleFrom(
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                    ),
-                    child: Text(L10n.of(context).mtPass),
-                  ),
-                  if (state.canDeclareDealMiss) ...[
                     const SizedBox(width: 8),
                     OutlinedButton(
-                      onPressed: () => _confirmDealMiss(game),
+                      onPressed: () => game.mightyPass(),
                       style: OutlinedButton.styleFrom(
-                        foregroundColor: const Color(0xFFD84315),
-                        side: const BorderSide(color: Color(0xFFFF7043)),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
                       ),
-                      child: Text(L10n.of(context).mtDealMiss),
+                      child: Text(L10n.of(context).mtPass),
                     ),
+                    if (state.canDeclareDealMiss) ...[
+                      const SizedBox(width: 8),
+                      OutlinedButton(
+                        onPressed: () => _confirmDealMiss(game),
+                        style: OutlinedButton.styleFrom(
+                          foregroundColor: const Color(0xFFD84315),
+                          side: const BorderSide(color: Color(0xFFFF7043)),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                        ),
+                        child: Text(L10n.of(context).mtDealMiss),
+                      ),
+                    ],
                   ],
-                ],
-              );
-            }),
+                );
+              },
+            ),
           ] else
             Padding(
               padding: const EdgeInsets.all(8),
               child: Text(
-                L10n.of(context).mtWaitingFor(state.players.where((p) => p.id == state.currentPlayer).map((p) => p.name).firstOrNull ?? '...'),
+                L10n.of(context).mtWaitingFor(
+                  state.players
+                          .where((p) => p.id == state.currentPlayer)
+                          .map((p) => p.name)
+                          .firstOrNull ??
+                      '...',
+                ),
                 style: const TextStyle(fontSize: 13, color: Color(0xFF8A7A72)),
               ),
             ),
@@ -1995,13 +2688,21 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
     final ok = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: Text(title, style: const TextStyle(fontSize: 15, fontWeight: FontWeight.bold)),
+        title: Text(
+          title,
+          style: const TextStyle(fontSize: 15, fontWeight: FontWeight.bold),
+        ),
         content: Text(body, style: const TextStyle(fontSize: 13)),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx, false), child: Text(l10n.mtCancel)),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: Text(l10n.mtCancel),
+          ),
           FilledButton(
             onPressed: () => Navigator.pop(ctx, true),
-            style: FilledButton.styleFrom(backgroundColor: const Color(0xFF1565C0)),
+            style: FilledButton.styleFrom(
+              backgroundColor: const Color(0xFF1565C0),
+            ),
             child: Text(l10n.mtConfirm),
           ),
         ],
@@ -2015,16 +2716,24 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
     final ok = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: Text(l10n.mtDealMiss, style: const TextStyle(fontSize: 15, fontWeight: FontWeight.bold)),
+        title: Text(
+          l10n.mtDealMiss,
+          style: const TextStyle(fontSize: 15, fontWeight: FontWeight.bold),
+        ),
         content: Text(
           l10n.mtDealMissConfirmBody,
           style: const TextStyle(fontSize: 13),
         ),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx, false), child: Text(l10n.mtCancel)),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: Text(l10n.mtCancel),
+          ),
           FilledButton(
             onPressed: () => Navigator.pop(ctx, true),
-            style: FilledButton.styleFrom(backgroundColor: const Color(0xFFD84315)),
+            style: FilledButton.styleFrom(
+              backgroundColor: const Color(0xFFD84315),
+            ),
             child: Text(l10n.mtDealMiss),
           ),
         ],
@@ -2035,18 +2744,24 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
     }
   }
 
-  Widget _buildSuitChip(String suit, String label, Color color, {bool enabled = true, VoidCallback? onTap}) {
+  Widget _buildSuitChip(
+    String suit,
+    String label,
+    Color color, {
+    bool enabled = true,
+    VoidCallback? onTap,
+  }) {
     final isSelected = _bidSuit == suit;
     final effectiveColor = enabled ? color : const Color(0xFFBDBDBD);
     return GestureDetector(
-      onTap: enabled
-          ? (onTap ?? () => setState(() => _bidSuit = suit))
-          : null,
+      onTap: enabled ? (onTap ?? () => setState(() => _bidSuit = suit)) : null,
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 150),
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
         decoration: BoxDecoration(
-          color: isSelected && enabled ? color.withValues(alpha: 0.12) : Colors.transparent,
+          color: isSelected && enabled
+              ? color.withValues(alpha: 0.12)
+              : Colors.transparent,
           borderRadius: BorderRadius.circular(10),
           border: Border.all(
             color: isSelected && enabled ? color : const Color(0xFFE0D8D4),
@@ -2059,7 +2774,9 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
                 style: TextStyle(
                   fontSize: 18,
                   color: effectiveColor,
-                  fontWeight: isSelected && enabled ? FontWeight.bold : FontWeight.normal,
+                  fontWeight: isSelected && enabled
+                      ? FontWeight.bold
+                      : FontWeight.normal,
                 ),
               )
             : SuitIcon(suit: suit, size: 20, color: effectiveColor),
@@ -2102,17 +2819,30 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
                 children: [
                   Row(
                     children: [
-                      const Icon(Icons.swap_horiz, size: 18, color: Color(0xFF5A4038)),
+                      const Icon(
+                        Icons.swap_horiz,
+                        size: 18,
+                        color: Color(0xFF5A4038),
+                      ),
                       const SizedBox(width: 6),
                       Text(
                         L10n.of(context).mtDiscard3,
-                        style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: Color(0xFF5A4038)),
+                        style: TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.bold,
+                          color: Color(0xFF5A4038),
+                        ),
                       ),
                       const Spacer(),
                       Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 8,
+                          vertical: 3,
+                        ),
                         decoration: BoxDecoration(
-                          color: _discardSelection.length == 3 ? const Color(0xFFE8F5E9) : const Color(0xFFF5F5F5),
+                          color: _discardSelection.length == 3
+                              ? const Color(0xFFE8F5E9)
+                              : const Color(0xFFF5F5F5),
                           borderRadius: BorderRadius.circular(8),
                         ),
                         child: Text(
@@ -2120,22 +2850,37 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
                           style: TextStyle(
                             fontSize: 12,
                             fontWeight: FontWeight.bold,
-                            color: _discardSelection.length == 3 ? const Color(0xFF4CAF50) : const Color(0xFF8A7A72),
+                            color: _discardSelection.length == 3
+                                ? const Color(0xFF4CAF50)
+                                : const Color(0xFF8A7A72),
                           ),
                         ),
                       ),
                     ],
                   ),
                   const SizedBox(height: 12),
-                  Text(L10n.of(context).mtFriendColon, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Color(0xFF5A4038))),
+                  Text(
+                    L10n.of(context).mtFriendColon,
+                    style: const TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.bold,
+                      color: Color(0xFF5A4038),
+                    ),
+                  ),
                   const SizedBox(height: 6),
                   // Step 1: Friend mode
                   Wrap(
                     spacing: 6,
                     runSpacing: 6,
                     children: [
-                      _buildFriendModeChip('no_friend', L10n.of(context).mtNoFriend),
-                      _buildFriendModeChip('first_trick', L10n.of(context).mt1stTrick),
+                      _buildFriendModeChip(
+                        'no_friend',
+                        L10n.of(context).mtNoFriend,
+                      ),
+                      _buildFriendModeChip(
+                        'first_trick',
+                        L10n.of(context).mt1stTrick,
+                      ),
                       _buildFriendModeChip('joker', L10n.of(context).mtJoker),
                       _buildFriendModeChip('card', L10n.of(context).mtCard),
                     ],
@@ -2146,7 +2891,12 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
                     // Suit row
                     Row(
                       children: [
-                        for (final suit in ['spade', 'heart', 'diamond', 'club'])
+                        for (final suit in [
+                          'spade',
+                          'heart',
+                          'diamond',
+                          'club',
+                        ])
                           Expanded(
                             child: GestureDetector(
                               onTap: () => setState(() {
@@ -2154,13 +2904,21 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
                                 _syncFriendCardSelection(state);
                               }),
                               child: Container(
-                                margin: const EdgeInsets.symmetric(horizontal: 2),
-                                padding: const EdgeInsets.symmetric(vertical: 8),
+                                margin: const EdgeInsets.symmetric(
+                                  horizontal: 2,
+                                ),
+                                padding: const EdgeInsets.symmetric(
+                                  vertical: 8,
+                                ),
                                 decoration: BoxDecoration(
-                                  color: _friendSuit == suit ? const Color(0xFFE3F2FD) : const Color(0xFFF5F5F5),
+                                  color: _friendSuit == suit
+                                      ? const Color(0xFFE3F2FD)
+                                      : const Color(0xFFF5F5F5),
                                   borderRadius: BorderRadius.circular(8),
                                   border: Border.all(
-                                    color: _friendSuit == suit ? const Color(0xFF1565C0) : const Color(0xFFE0D8D4),
+                                    color: _friendSuit == suit
+                                        ? const Color(0xFF1565C0)
+                                        : const Color(0xFFE0D8D4),
                                     width: _friendSuit == suit ? 2 : 1,
                                   ),
                                 ),
@@ -2178,7 +2936,21 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
                       spacing: 4,
                       runSpacing: 4,
                       children: [
-                        for (final rank in ['A', 'K', 'Q', 'J', '10', '9', '8', '7', '6', '5', '4', '3', '2'])
+                        for (final rank in [
+                          'A',
+                          'K',
+                          'Q',
+                          'J',
+                          '10',
+                          '9',
+                          '8',
+                          '7',
+                          '6',
+                          '5',
+                          '4',
+                          '3',
+                          '2',
+                        ])
                           GestureDetector(
                             onTap: () {
                               setState(() {
@@ -2206,7 +2978,9 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
                                   rank,
                                   style: TextStyle(
                                     fontSize: 11,
-                                    fontWeight: _friendRank == rank ? FontWeight.bold : FontWeight.normal,
+                                    fontWeight: _friendRank == rank
+                                        ? FontWeight.bold
+                                        : FontWeight.normal,
                                     color: const Color(0xFF5A4038),
                                   ),
                                 ),
@@ -2220,7 +2994,11 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
                       const SizedBox(height: 6),
                       Text(
                         _friendCardLabel(_friendCardSelection),
-                        style: const TextStyle(fontSize: 11, color: Color(0xFF1565C0), fontWeight: FontWeight.w600),
+                        style: const TextStyle(
+                          fontSize: 11,
+                          color: Color(0xFF1565C0),
+                          fontWeight: FontWeight.w600,
+                        ),
                       ),
                     ],
                   ],
@@ -2229,17 +3007,23 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
                     width: double.infinity,
                     height: 44,
                     child: FilledButton(
-                      onPressed: _discardSelection.length == 3
-                              && _friendMode.isNotEmpty
-                              && _friendCardSelection.isNotEmpty
+                      onPressed:
+                          _discardSelection.length == 3 &&
+                              _friendMode.isNotEmpty &&
+                              _friendCardSelection.isNotEmpty
                           ? () {
-                              game.mightyDiscardKitty(_discardSelection.toList(), _friendCardSelection);
+                              game.mightyDiscardKitty(
+                                _discardSelection.toList(),
+                                _friendCardSelection,
+                              );
                               setState(() => _discardSelection.clear());
                             }
                           : null,
                       style: FilledButton.styleFrom(
                         backgroundColor: const Color(0xFF1565C0),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
                       ),
                       child: Text(L10n.of(context).mtConfirm),
                     ),
@@ -2265,7 +3049,10 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
                     onTap: () => _showContractChangeDialog(game),
                     borderRadius: BorderRadius.circular(14),
                     child: Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 14,
+                        vertical: 10,
+                      ),
                       child: Row(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
@@ -2290,7 +3077,10 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
               if (_remainingSeconds > 0) ...[
                 const SizedBox(width: 8),
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 12,
+                    vertical: 8,
+                  ),
                   decoration: BoxDecoration(
                     color: _remainingSeconds <= 5
                         ? const Color(0xFFFFEBEE)
@@ -2367,7 +3157,9 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
           color: isSelected ? const Color(0xFFE3F2FD) : const Color(0xFFF5F5F5),
           borderRadius: BorderRadius.circular(8),
           border: Border.all(
-            color: isSelected ? const Color(0xFF1565C0) : const Color(0xFFE0D8D4),
+            color: isSelected
+                ? const Color(0xFF1565C0)
+                : const Color(0xFFE0D8D4),
             width: isSelected ? 2 : 1,
           ),
         ),
@@ -2376,7 +3168,9 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
           style: TextStyle(
             fontSize: 12,
             fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
-            color: isSelected ? const Color(0xFF1565C0) : const Color(0xFF5A4038),
+            color: isSelected
+                ? const Color(0xFF1565C0)
+                : const Color(0xFF5A4038),
           ),
         ),
       ),
@@ -2393,7 +3187,10 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
       builder: (dialogCtx) {
         return Dialog(
           backgroundColor: Colors.transparent,
-          insetPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 48),
+          insetPadding: const EdgeInsets.symmetric(
+            horizontal: 24,
+            vertical: 48,
+          ),
           child: Consumer<GameService>(
             builder: (_, g, _) {
               final s = g.mightyGameState;
@@ -2410,6 +3207,7 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
                   Navigator.of(dialogCtx).pop();
                 }
               }
+
               return Container(
                 constraints: const BoxConstraints(maxWidth: 360),
                 decoration: BoxDecoration(
@@ -2435,10 +3233,16 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
                             width: 32,
                             height: 32,
                             decoration: BoxDecoration(
-                              color: const Color(0xFFFB8C00).withValues(alpha: 0.15),
+                              color: const Color(
+                                0xFFFB8C00,
+                              ).withValues(alpha: 0.15),
                               borderRadius: BorderRadius.circular(10),
                             ),
-                            child: const Icon(Icons.tune, size: 18, color: Color(0xFFE65100)),
+                            child: const Icon(
+                              Icons.tune,
+                              size: 18,
+                              color: Color(0xFFE65100),
+                            ),
                           ),
                           const SizedBox(width: 10),
                           Expanded(
@@ -2456,7 +3260,10 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
                             icon: const Icon(Icons.close, size: 22),
                             color: const Color(0xFF8A7A72),
                             padding: EdgeInsets.zero,
-                            constraints: const BoxConstraints(minWidth: 36, minHeight: 36),
+                            constraints: const BoxConstraints(
+                              minWidth: 36,
+                              minHeight: 36,
+                            ),
                           ),
                         ],
                       ),
@@ -2535,20 +3342,39 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
                 style: TextStyle(
                   fontSize: 22,
                   fontWeight: FontWeight.bold,
-                  color: PlayingCard.suitColors[trumpSuit] ?? const Color(0xFF5A4038),
+                  color:
+                      PlayingCard.suitColors[trumpSuit] ??
+                      const Color(0xFF5A4038),
                 ),
               ),
               const SizedBox(width: 10),
               Text(
                 l10n.mtContractWithPoints(bidPoints),
-                style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w800, color: Color(0xFF5A4038)),
+                style: const TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.w800,
+                  color: Color(0xFF5A4038),
+                ),
               ),
               const Spacer(),
               if (isAtCap)
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                  decoration: BoxDecoration(color: const Color(0xFFE53935), borderRadius: BorderRadius.circular(6)),
-                  child: const Text('MAX', style: TextStyle(fontSize: 10, fontWeight: FontWeight.w800, color: Colors.white)),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 8,
+                    vertical: 3,
+                  ),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFE53935),
+                    borderRadius: BorderRadius.circular(6),
+                  ),
+                  child: const Text(
+                    'MAX',
+                    style: TextStyle(
+                      fontSize: 10,
+                      fontWeight: FontWeight.w800,
+                      color: Colors.white,
+                    ),
+                  ),
                 ),
             ],
           ),
@@ -2558,7 +3384,11 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
         if (!isAtCap) ...[
           Text(
             l10n.mtRaiseBidConfirmTitle,
-            style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: Color(0xFF8A7A72)),
+            style: const TextStyle(
+              fontSize: 12,
+              fontWeight: FontWeight.w700,
+              color: Color(0xFF8A7A72),
+            ),
           ),
           const SizedBox(height: 6),
           SizedBox(
@@ -2578,12 +3408,17 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
               icon: const Icon(Icons.trending_up, size: 18),
               label: Text(
                 '$bidPoints → $nextBid',
-                style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w800),
+                style: const TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w800,
+                ),
               ),
               style: FilledButton.styleFrom(
                 backgroundColor: const Color(0xFF1565C0),
                 foregroundColor: Colors.white,
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
               ),
             ),
           ),
@@ -2594,7 +3429,11 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
           children: [
             Text(
               l10n.mtChangeTrump,
-              style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: Color(0xFF8A7A72)),
+              style: const TextStyle(
+                fontSize: 12,
+                fontWeight: FontWeight.w700,
+                color: Color(0xFF8A7A72),
+              ),
             ),
             const SizedBox(width: 8),
             // Penalty badge is hidden at 20-point cap — no penalty applies there
@@ -2602,10 +3441,17 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
             if (!isAtCap)
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                decoration: BoxDecoration(color: const Color(0xFFFFEBEE), borderRadius: BorderRadius.circular(6)),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFFFEBEE),
+                  borderRadius: BorderRadius.circular(6),
+                ),
                 child: Text(
                   l10n.mtTrumpPenalty(2),
-                  style: const TextStyle(fontSize: 10, fontWeight: FontWeight.w800, color: Color(0xFFE53935)),
+                  style: const TextStyle(
+                    fontSize: 10,
+                    fontWeight: FontWeight.w800,
+                    color: Color(0xFFE53935),
+                  ),
                 ),
               ),
           ],
@@ -2620,122 +3466,145 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
               ('club', '♣', const Color(0xFF4BAA6A)),
               ('no_trump', 'NT', const Color(0xFF7B1FA2)),
             ])
-              Builder(builder: (_) {
-                // Chip lock-out rules at 20-bid ceiling:
-                //   20 NT — every chip disabled (no change allowed).
-                //   20 suit — only the NT chip is tappable.
-                final chipDisabled = isAt20NT ||
-                    (isAt20Suit && entry.$1 != 'no_trump');
-                final isSelected = _selectedTrumpSuit == entry.$1;
-                return Expanded(
-                  child: GestureDetector(
-                    onTap: chipDisabled
-                        ? null
-                        : () {
-                            _selectedTrumpSuit = entry.$1;
-                            // Rebuild both the screen (so the field persists in
-                            // State) and the dialog (so the chip highlight updates).
-                            setState(() {});
-                            dialogSetState?.call(() {});
-                          },
-                    child: Opacity(
-                      opacity: chipDisabled ? 0.35 : 1.0,
-                      child: AnimatedContainer(
-                        duration: const Duration(milliseconds: 120),
-                        margin: const EdgeInsets.symmetric(horizontal: 3),
-                        padding: const EdgeInsets.symmetric(vertical: 12),
-                        decoration: BoxDecoration(
-                          color: isSelected
-                              ? entry.$3.withValues(alpha: 0.16)
-                              : Colors.white,
-                          borderRadius: BorderRadius.circular(10),
-                          border: Border.all(
+              Builder(
+                builder: (_) {
+                  // Chip lock-out rules at 20-bid ceiling:
+                  //   20 NT — every chip disabled (no change allowed).
+                  //   20 suit — only the NT chip is tappable.
+                  final chipDisabled =
+                      isAt20NT || (isAt20Suit && entry.$1 != 'no_trump');
+                  final isSelected = _selectedTrumpSuit == entry.$1;
+                  return Expanded(
+                    child: GestureDetector(
+                      onTap: chipDisabled
+                          ? null
+                          : () {
+                              _selectedTrumpSuit = entry.$1;
+                              // Rebuild both the screen (so the field persists in
+                              // State) and the dialog (so the chip highlight updates).
+                              setState(() {});
+                              dialogSetState?.call(() {});
+                            },
+                      child: Opacity(
+                        opacity: chipDisabled ? 0.35 : 1.0,
+                        child: AnimatedContainer(
+                          duration: const Duration(milliseconds: 120),
+                          margin: const EdgeInsets.symmetric(horizontal: 3),
+                          padding: const EdgeInsets.symmetric(vertical: 12),
+                          decoration: BoxDecoration(
                             color: isSelected
-                                ? entry.$3
-                                : entry.$1 == trumpSuit
-                                    ? entry.$3.withValues(alpha: 0.5)
-                                    : const Color(0xFFE0D8D4),
-                            width: isSelected ? 2 : 1,
+                                ? entry.$3.withValues(alpha: 0.16)
+                                : Colors.white,
+                            borderRadius: BorderRadius.circular(10),
+                            border: Border.all(
+                              color: isSelected
+                                  ? entry.$3
+                                  : entry.$1 == trumpSuit
+                                  ? entry.$3.withValues(alpha: 0.5)
+                                  : const Color(0xFFE0D8D4),
+                              width: isSelected ? 2 : 1,
+                            ),
                           ),
-                        ),
-                        child: Center(
-                          child: entry.$1 == 'no_trump'
-                              ? Text(
-                                  entry.$2,
-                                  style: TextStyle(
-                                    fontSize: 16,
+                          child: Center(
+                            child: entry.$1 == 'no_trump'
+                                ? Text(
+                                    entry.$2,
+                                    style: TextStyle(
+                                      fontSize: 16,
+                                      color: entry.$3,
+                                      fontWeight:
+                                          isSelected || entry.$1 == trumpSuit
+                                          ? FontWeight.bold
+                                          : FontWeight.normal,
+                                    ),
+                                  )
+                                : SuitIcon(
+                                    suit: entry.$1,
+                                    size: 22,
                                     color: entry.$3,
-                                    fontWeight: isSelected || entry.$1 == trumpSuit
-                                        ? FontWeight.bold
-                                        : FontWeight.normal,
                                   ),
-                                )
-                              : SuitIcon(suit: entry.$1, size: 22, color: entry.$3),
+                          ),
                         ),
                       ),
                     ),
-                  ),
-                );
-              }),
+                  );
+                },
+              ),
           ],
         ),
         const SizedBox(height: 14),
         SizedBox(
           width: double.infinity,
           height: 48,
-          child: Builder(builder: (_) {
-            // Apply-button gating:
-            //   • same trump at cap — nothing to do
-            //   • 20 NT — no contract change of any kind
-            //   • 20 suit — only a switch to NT is permitted
-            final applyDisabled = (isSameTrump && isAtCap) ||
-                isAt20NT ||
-                (isAt20Suit && _selectedTrumpSuit != 'no_trump');
-            return FilledButton(
-              onPressed: applyDisabled
-                  ? null
-                  : () async {
-                      final ok = isSameTrump
-                          ? await _confirmBidAction(
-                              title: l10n.mtRaiseBidConfirmTitle,
-                              body: l10n.mtRaiseBidConfirmBody(nextBid.toString()),
-                            )
-                          : await _confirmBidAction(
-                              title: l10n.mtChangeTrumpConfirmTitle,
-                              // 20 suit → 20 NT is the one change-path at cap —
-                              // server applies no penalty, so the confirm body
-                              // must not say "raise the bid".
-                              body: isAt20Suit
-                                  ? l10n.mtChangeTrumpNoPenaltyBody(_suitLabel(_selectedTrumpSuit!))
-                                  : l10n.mtChangeTrumpConfirmBody(
-                                      _suitLabel(_selectedTrumpSuit!),
-                                      nextBid.toString(),
-                                    ),
-                            );
-                      if (!ok) return;
-                      if (isSameTrump) {
-                        game.mightyRaiseBid();
-                      } else {
-                        game.mightyChangeTrump(_selectedTrumpSuit!);
-                      }
-                      setState(() => _selectedTrumpSuit = null);
-                      onApplied?.call();
-                    },
-              style: FilledButton.styleFrom(
-                backgroundColor: applyDisabled
-                    ? const Color(0xFFBDBDBD)
-                    : (isSameTrump ? const Color(0xFF1565C0) : const Color(0xFFE65100)),
-                foregroundColor: Colors.white,
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-              ),
-              child: Text(
-                isAtCap
-                    ? l10n.mtChangeTrump
-                    : (isSameTrump ? '$bidPoints → $nextBid' : l10n.mtChangeTrump),
-                style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w800),
-              ),
-            );
-          }),
+          child: Builder(
+            builder: (_) {
+              // Apply-button gating:
+              //   • same trump at cap — nothing to do
+              //   • 20 NT — no contract change of any kind
+              //   • 20 suit — only a switch to NT is permitted
+              final applyDisabled =
+                  (isSameTrump && isAtCap) ||
+                  isAt20NT ||
+                  (isAt20Suit && _selectedTrumpSuit != 'no_trump');
+              return FilledButton(
+                onPressed: applyDisabled
+                    ? null
+                    : () async {
+                        final ok = isSameTrump
+                            ? await _confirmBidAction(
+                                title: l10n.mtRaiseBidConfirmTitle,
+                                body: l10n.mtRaiseBidConfirmBody(
+                                  nextBid.toString(),
+                                ),
+                              )
+                            : await _confirmBidAction(
+                                title: l10n.mtChangeTrumpConfirmTitle,
+                                // 20 suit → 20 NT is the one change-path at cap —
+                                // server applies no penalty, so the confirm body
+                                // must not say "raise the bid".
+                                body: isAt20Suit
+                                    ? l10n.mtChangeTrumpNoPenaltyBody(
+                                        _suitLabel(_selectedTrumpSuit!),
+                                      )
+                                    : l10n.mtChangeTrumpConfirmBody(
+                                        _suitLabel(_selectedTrumpSuit!),
+                                        nextBid.toString(),
+                                      ),
+                              );
+                        if (!ok) return;
+                        if (isSameTrump) {
+                          game.mightyRaiseBid();
+                        } else {
+                          game.mightyChangeTrump(_selectedTrumpSuit!);
+                        }
+                        setState(() => _selectedTrumpSuit = null);
+                        onApplied?.call();
+                      },
+                style: FilledButton.styleFrom(
+                  backgroundColor: applyDisabled
+                      ? const Color(0xFFBDBDBD)
+                      : (isSameTrump
+                            ? const Color(0xFF1565C0)
+                            : const Color(0xFFE65100)),
+                  foregroundColor: Colors.white,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(14),
+                  ),
+                ),
+                child: Text(
+                  isAtCap
+                      ? l10n.mtChangeTrump
+                      : (isSameTrump
+                            ? '$bidPoints → $nextBid'
+                            : l10n.mtChangeTrump),
+                  style: const TextStyle(
+                    fontSize: 15,
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
+              );
+            },
+          ),
         ),
       ],
     );
@@ -2746,13 +3615,15 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
     final viewingPlayer = _viewingPlayerId == null
         ? null
         : state.players.cast<MightyPlayer?>().firstWhere(
-              (p) => p?.id == _viewingPlayerId,
-              orElse: () => null,
-            );
-    final isApproved = viewingPlayer != null &&
+            (p) => p?.id == _viewingPlayerId,
+            orElse: () => null,
+          );
+    final isApproved =
+        viewingPlayer != null &&
         game.approvedCardViews.contains(viewingPlayer.id) &&
         viewingPlayer.canViewCards;
-    final isPending = viewingPlayer != null &&
+    final isPending =
+        viewingPlayer != null &&
         game.pendingCardViewRequests.contains(viewingPlayer.id);
 
     final baseDeco = BoxDecoration(
@@ -2768,7 +3639,11 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
         child: Text(
           L10n.of(context).skGameTapToRequestCards,
           textAlign: TextAlign.center,
-          style: const TextStyle(color: Color(0xFF8A7A72), fontSize: 13, fontWeight: FontWeight.w600),
+          style: const TextStyle(
+            color: Color(0xFF8A7A72),
+            fontSize: 13,
+            fontWeight: FontWeight.w600,
+          ),
         ),
       );
     }
@@ -2780,11 +3655,22 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
         child: Row(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            const SizedBox(width: 14, height: 14, child: CircularProgressIndicator(strokeWidth: 2, color: Color(0xFFFFB74D))),
+            const SizedBox(
+              width: 14,
+              height: 14,
+              child: CircularProgressIndicator(
+                strokeWidth: 2,
+                color: Color(0xFFFFB74D),
+              ),
+            ),
             const SizedBox(width: 8),
             Text(
               L10n.of(context).skGameRequestingCardView(viewingPlayer.name),
-              style: const TextStyle(color: Color(0xFF8A7A72), fontSize: 13, fontWeight: FontWeight.w600),
+              style: const TextStyle(
+                color: Color(0xFF8A7A72),
+                fontSize: 13,
+                fontWeight: FontWeight.w600,
+              ),
             ),
           ],
         ),
@@ -2804,9 +3690,38 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
           children: [
             Padding(
               padding: const EdgeInsets.only(bottom: 4),
-              child: Text(
-                L10n.of(context).skGamePlayerHand(viewingPlayer.name),
-                style: const TextStyle(color: Color(0xFF5A4038), fontSize: 13, fontWeight: FontWeight.w700),
+              child: Row(
+                children: [
+                  const SizedBox(width: 32),
+                  Expanded(
+                    child: Text(
+                      L10n.of(context).skGamePlayerHand(viewingPlayer.name),
+                      textAlign: TextAlign.center,
+                      style: const TextStyle(
+                        color: Color(0xFF5A4038),
+                        fontSize: 13,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                  ),
+                  SizedBox(
+                    width: 32,
+                    height: 32,
+                    child: IconButton(
+                      tooltip: MaterialLocalizations.of(
+                        context,
+                      ).closeButtonTooltip,
+                      padding: EdgeInsets.zero,
+                      splashRadius: 18,
+                      icon: const Icon(
+                        Icons.close,
+                        size: 18,
+                        color: Color(0xFF8A7A72),
+                      ),
+                      onPressed: () => setState(() => _viewingPlayerId = null),
+                    ),
+                  ),
+                ],
               ),
             ),
             if (viewingPlayer.cards.isEmpty)
@@ -2814,13 +3729,22 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
                 padding: const EdgeInsets.symmetric(vertical: 8),
                 child: Text(
                   L10n.of(context).skGameNoCards,
-                  style: const TextStyle(color: Color(0xFF8A7A72), fontSize: 12),
+                  style: const TextStyle(
+                    color: Color(0xFF8A7A72),
+                    fontSize: 12,
+                  ),
                 ),
               )
             else
               Padding(
                 padding: const EdgeInsets.symmetric(vertical: 4),
-                child: _buildHandRows(viewingPlayer.cards, legalCards: const {}, isPlaying: false, isKitty: false, state: state),
+                child: _buildHandRows(
+                  viewingPlayer.cards,
+                  legalCards: const {},
+                  isPlaying: false,
+                  isKitty: false,
+                  state: state,
+                ),
               ),
           ],
         ),
@@ -2834,7 +3758,11 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
       child: Text(
         L10n.of(context).skGameCardViewRejected(viewingPlayer.name),
         textAlign: TextAlign.center,
-        style: const TextStyle(color: Color(0xFF8A7A72), fontSize: 13, fontWeight: FontWeight.w600),
+        style: const TextStyle(
+          color: Color(0xFF8A7A72),
+          fontSize: 13,
+          fontWeight: FontWeight.w600,
+        ),
       ),
     );
   }
@@ -2860,14 +3788,16 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
     // compute which cards WOULD be legal (based on the already-known lead
     // suit) and let the user queue one up. When the turn arrives, the server
     // will confirm legality via state.legalCards.
-    final canPreselect = state.phase == 'playing'
-        && !state.isMyTurn
-        && state.currentTrick.isNotEmpty;
+    final canPreselect =
+        state.phase == 'playing' &&
+        !state.isMyTurn &&
+        state.currentTrick.isNotEmpty;
     final legalCards = state.isMyTurn
         ? state.legalCards.toSet()
         : (canPreselect ? _previewLegalCards(state) : <String>{});
     final selectedCard = _selectedCard;
-    final isSelectedLegal = selectedCard != null && legalCards.contains(selectedCard);
+    final isSelectedLegal =
+        selectedCard != null && legalCards.contains(selectedCard);
 
     return Container(
       padding: const EdgeInsets.fromLTRB(8, 8, 8, 12),
@@ -2895,17 +3825,18 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
           // Top-right action strip: previous-trick viewer (shop-gated) and
           // setting declaration (server-gated on hand strength). Only
           // shown during active play phases.
-          if (state.phase == 'playing'
-              || state.phase == 'trick_end'
-              || state.phase == 'round_end')
+          if (state.phase == 'playing' ||
+              state.phase == 'trick_end' ||
+              state.phase == 'round_end')
             Padding(
               padding: const EdgeInsets.only(bottom: 4, right: 4),
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.end,
                 children: [
                   if (state.canDeclareSetting) _buildSettingButton(game),
-                  if (state.canDeclareSetting && game.hasMightyPrevTrick
-                      && state.tricks.isNotEmpty)
+                  if (state.canDeclareSetting &&
+                      game.hasMightyPrevTrick &&
+                      state.tricks.isNotEmpty)
                     const SizedBox(width: 6),
                   if (game.hasMightyPrevTrick && state.tricks.isNotEmpty)
                     _buildPrevTrickButton(state),
@@ -2914,8 +3845,12 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
             ),
           // Play button — blocked when leading the joker without a declared
           // suit (the suit selector sits just below the hand; user must pick).
-          if (isPlaying && selectedCard != null && isSelectedLegal &&
-              !(selectedCard == 'mighty_joker' && state.currentTrick.isEmpty && _jokerSuitChoice == null))
+          if (isPlaying &&
+              selectedCard != null &&
+              isSelectedLegal &&
+              !(selectedCard == 'mighty_joker' &&
+                  state.currentTrick.isEmpty &&
+                  _jokerSuitChoice == null))
             Padding(
               padding: const EdgeInsets.only(bottom: 6, left: 8, right: 8),
               child: SizedBox(
@@ -2926,8 +3861,14 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
                     final isJokerCallCard = selectedCard == state.jokerCallCard;
                     game.mightyPlayCard(
                       selectedCard,
-                      jokerSuit: selectedCard == 'mighty_joker' ? _jokerSuitChoice : null,
-                      jokerCall: isJokerCallCard && state.currentTrick.isEmpty && state.jokerHasPower && _jokerCallChoice,
+                      jokerSuit: selectedCard == 'mighty_joker'
+                          ? _jokerSuitChoice
+                          : null,
+                      jokerCall:
+                          isJokerCallCard &&
+                          state.currentTrick.isEmpty &&
+                          state.jokerHasPower &&
+                          _jokerCallChoice,
                     );
                     setState(() {
                       _selectedCard = null;
@@ -2938,12 +3879,19 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
                   style: FilledButton.styleFrom(
                     backgroundColor: const Color(0xFFE6F1FF),
                     foregroundColor: const Color(0xFF355D89),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
                   ),
                   icon: const Icon(Icons.play_arrow, size: 20),
                   label: Text(
-                    _remainingSeconds > 0 ? L10n.of(context).mtPlayTimer(_remainingSeconds) : L10n.of(context).mtPlay,
-                    style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
+                    _remainingSeconds > 0
+                        ? L10n.of(context).mtPlayTimer(_remainingSeconds)
+                        : L10n.of(context).mtPlay,
+                    style: const TextStyle(
+                      fontWeight: FontWeight.bold,
+                      fontSize: 15,
+                    ),
                   ),
                 ),
               ),
@@ -2955,10 +3903,16 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
                   Text(
-                    (selectedCard == 'mighty_joker' && state.currentTrick.isEmpty && _jokerSuitChoice == null)
+                    (selectedCard == 'mighty_joker' &&
+                            state.currentTrick.isEmpty &&
+                            _jokerSuitChoice == null)
                         ? L10n.of(context).mtJokerSelectSuit
                         : L10n.of(context).mtSelectCard,
-                    style: TextStyle(color: Color(0xFF5A4038), fontSize: 14, fontWeight: FontWeight.bold),
+                    style: TextStyle(
+                      color: Color(0xFF5A4038),
+                      fontSize: 14,
+                      fontWeight: FontWeight.bold,
+                    ),
                   ),
                   if (_remainingSeconds > 0) ...[
                     const SizedBox(width: 8),
@@ -2967,7 +3921,9 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
                       style: TextStyle(
                         fontSize: 14,
                         fontWeight: FontWeight.bold,
-                        color: _remainingSeconds <= 5 ? const Color(0xFFE53935) : const Color(0xFF8A7A72),
+                        color: _remainingSeconds <= 5
+                            ? const Color(0xFFE53935)
+                            : const Color(0xFF8A7A72),
                       ),
                     ),
                   ],
@@ -2981,14 +3937,19 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
           // in 6p mode, mis-flagging the joker warning.
           if (isPlaying && _selectedCard == 'mighty_joker') ...[
             if (() {
-              final active = state.players.length - state.excludedPlayers.length;
+              final active =
+                  state.players.length - state.excludedPlayers.length;
               if (active <= 0) return false;
               final totalTricks = 50 ~/ active;
-              return state.tricks.isEmpty || state.tricks.length == totalTricks - 1;
+              return state.tricks.isEmpty ||
+                  state.tricks.length == totalTricks - 1;
             }())
               Container(
                 margin: const EdgeInsets.only(bottom: 6, left: 8, right: 8),
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 10,
+                  vertical: 6,
+                ),
                 decoration: BoxDecoration(
                   color: const Color(0xFFFFF3E0),
                   borderRadius: BorderRadius.circular(8),
@@ -2996,53 +3957,86 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
                 ),
                 child: Row(
                   children: [
-                    const Icon(Icons.warning_amber_rounded, size: 16, color: Color(0xFFE65100)),
+                    const Icon(
+                      Icons.warning_amber_rounded,
+                      size: 16,
+                      color: Color(0xFFE65100),
+                    ),
                     const SizedBox(width: 6),
                     Text(
-                      state.tricks.isEmpty ? L10n.of(context).mtJokerLoses1st : L10n.of(context).mtJokerLosesLast,
-                      style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Color(0xFFE65100)),
+                      state.tricks.isEmpty
+                          ? L10n.of(context).mtJokerLoses1st
+                          : L10n.of(context).mtJokerLosesLast,
+                      style: const TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.bold,
+                        color: Color(0xFFE65100),
+                      ),
                     ),
                   ],
                 ),
               ),
           ],
           // Joker suit selector
-          if (isPlaying && _selectedCard == 'mighty_joker' && state.currentTrick.isEmpty)
+          if (isPlaying &&
+              _selectedCard == 'mighty_joker' &&
+              state.currentTrick.isEmpty)
             _buildJokerSuitSelector(),
           // Joker call toggle — hidden when joker has no power in this trick
           // (first/last trick with *JokerPower option disabled), since calling
           // the joker then is meaningless.
-          if (isPlaying && _selectedCard == state.jokerCallCard && state.currentTrick.isEmpty && state.jokerHasPower)
+          if (isPlaying &&
+              _selectedCard == state.jokerCallCard &&
+              state.currentTrick.isEmpty &&
+              state.jokerHasPower)
             _buildJokerCallToggle(),
           // Card rows
           Padding(
             padding: const EdgeInsets.symmetric(vertical: 4),
-            child: _buildHandRows(cards, legalCards: legalCards, isPlaying: isPlaying || canPreselect, isKitty: isKitty, state: state),
+            child: _buildHandRows(
+              cards,
+              legalCards: legalCards,
+              isPlaying: isPlaying || canPreselect,
+              isKitty: isKitty,
+              state: state,
+            ),
           ),
         ],
       ),
     );
   }
 
-  Widget _buildHandRows(List<String> cards, {required Set<String> legalCards, required bool isPlaying, required bool isKitty, MightyGameStateData? state}) {
+  Widget _buildHandRows(
+    List<String> cards, {
+    required Set<String> legalCards,
+    required bool isPlaying,
+    required bool isKitty,
+    MightyGameStateData? state,
+  }) {
     return LayoutBuilder(
       builder: (context, constraints) {
         final availableWidth = constraints.maxWidth - 24;
-        final perRow = cards.length <= 7 ? cards.length : (cards.length / 2).ceil();
+        final perRow = cards.length <= 7
+            ? cards.length
+            : (cards.length / 2).ceil();
         final cardPadding = cards.length >= 8 ? 1.5 : 3.0;
         final totalPadding = perRow * cardPadding * 2;
-        final cardWidth = ((availableWidth - totalPadding) / perRow).clamp(0.0, 52.0);
+        final cardWidth = ((availableWidth - totalPadding) / perRow).clamp(
+          0.0,
+          52.0,
+        );
         final cardHeight = (cardWidth * 1.4).clamp(52.0, 73.0);
 
         Widget buildCard(String cardId) {
-          final isLegal = !isPlaying || legalCards.isEmpty || legalCards.contains(cardId);
+          final isLegal =
+              !isPlaying || legalCards.isEmpty || legalCards.contains(cardId);
           // Kitty: block mighty, joker, and friend card from discard
           final isKittyBlocked = isKitty && _isKittyBlockedCard(cardId, state);
           final isSelected = isPlaying
               ? _selectedCard == cardId
               : isKitty
-                  ? _discardSelection.contains(cardId)
-                  : false;
+              ? _discardSelection.contains(cardId)
+              : false;
 
           // Trump / mighty / joker-call previews. After bidding these come
           // straight from state; during bidding we derive them from the
@@ -3057,7 +4051,9 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
             final bidSuit = state.currentBid['suit'];
             if (bidSuit is String && bidSuit.isNotEmpty) {
               effectiveTrump = bidSuit;
-              effectiveMighty = bidSuit == 'spade' ? 'mighty_diamond_A' : 'mighty_spade_A';
+              effectiveMighty = bidSuit == 'spade'
+                  ? 'mighty_diamond_A'
+                  : 'mighty_spade_A';
               // Joker-call only fires in suited bidding — skip the preview
               // in NT so the badge doesn't suggest a power that won't apply.
               effectiveJokerCall = bidSuit == 'no_trump'
@@ -3067,14 +4063,31 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
           }
 
           // Badge: mighty card, joker call card, friend card, or kitty card
-          final isMightyCard = effectiveMighty != null && cardId == effectiveMighty;
-          final isJokerCallCard = !isMightyCard && effectiveJokerCall != null && cardId == effectiveJokerCall;
-          final isFriendCard = !isMightyCard && !isJokerCallCard && state?.friendCard != null && cardId == state!.friendCard;
-          final isKittyCard = !isMightyCard && !isJokerCallCard && !isFriendCard && isKitty && (state?.kittyCards.contains(cardId) ?? false);
+          final isMightyCard =
+              effectiveMighty != null && cardId == effectiveMighty;
+          final isJokerCallCard =
+              !isMightyCard &&
+              effectiveJokerCall != null &&
+              cardId == effectiveJokerCall;
+          final isFriendCard =
+              !isMightyCard &&
+              !isJokerCallCard &&
+              state?.friendCard != null &&
+              cardId == state!.friendCard;
+          final isKittyCard =
+              !isMightyCard &&
+              !isJokerCallCard &&
+              !isFriendCard &&
+              isKitty &&
+              (state?.kittyCards.contains(cardId) ?? false);
           // Post-kill/suicide: cards received via redistribution get the move_up badge
           // for the receiving player (similar to declarer's kitty-pickup highlight).
-          final isRedistCard = !isMightyCard && !isJokerCallCard && !isFriendCard && !isKittyCard
-              && (state?.newlyReceivedCards.contains(cardId) ?? false);
+          final isRedistCard =
+              !isMightyCard &&
+              !isJokerCallCard &&
+              !isFriendCard &&
+              !isKittyCard &&
+              (state?.newlyReceivedCards.contains(cardId) ?? false);
           // Trump suit border.
           Color? trumpBorder;
           if (effectiveTrump != null && effectiveTrump != 'no_trump') {
@@ -3116,7 +4129,9 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
                           borderRadius: BorderRadius.circular(10),
                           boxShadow: [
                             BoxShadow(
-                              color: const Color(0xFF355D89).withValues(alpha: 0.4),
+                              color: const Color(
+                                0xFF355D89,
+                              ).withValues(alpha: 0.4),
                               blurRadius: 8,
                               offset: const Offset(0, 2),
                             ),
@@ -3131,8 +4146,28 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
                       height: cardHeight,
                       isSelected: isSelected,
                       isInteractive: false,
-                      badgeIcon: isMightyCard ? Icons.star : isJokerCallCard ? Icons.gps_fixed : isFriendCard ? Icons.people : isKittyCard ? Icons.move_up : isRedistCard ? Icons.move_up : null,
-                      badgeColor: isMightyCard ? const Color(0xFFFFB300) : isJokerCallCard ? const Color(0xFFE53935) : isFriendCard ? const Color(0xFF4CAF50) : isKittyCard ? const Color(0xFF7B1FA2) : isRedistCard ? const Color(0xFF7B1FA2) : null,
+                      badgeIcon: isMightyCard
+                          ? Icons.star
+                          : isJokerCallCard
+                          ? Icons.gps_fixed
+                          : isFriendCard
+                          ? Icons.people
+                          : isKittyCard
+                          ? Icons.move_up
+                          : isRedistCard
+                          ? Icons.move_up
+                          : null,
+                      badgeColor: isMightyCard
+                          ? const Color(0xFFFFB300)
+                          : isJokerCallCard
+                          ? const Color(0xFFE53935)
+                          : isFriendCard
+                          ? const Color(0xFF4CAF50)
+                          : isKittyCard
+                          ? const Color(0xFF7B1FA2)
+                          : isRedistCard
+                          ? const Color(0xFF7B1FA2)
+                          : null,
                       borderColor: trumpBorder,
                     ),
                   ),
@@ -3160,9 +4195,15 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
           padding: const EdgeInsets.symmetric(horizontal: 12),
           child: Column(
             children: [
-              Row(mainAxisAlignment: MainAxisAlignment.center, children: firstRow.map(buildCard).toList()),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: firstRow.map(buildCard).toList(),
+              ),
               const SizedBox(height: 4),
-              Row(mainAxisAlignment: MainAxisAlignment.center, children: secondRow.map(buildCard).toList()),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: secondRow.map(buildCard).toList(),
+              ),
             ],
           ),
         );
@@ -3176,7 +4217,10 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
       child: Row(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Text(L10n.of(context).mtJokerSuit, style: const TextStyle(fontSize: 12, color: Color(0xFF5A4038))),
+          Text(
+            L10n.of(context).mtJokerSuit,
+            style: const TextStyle(fontSize: 12, color: Color(0xFF5A4038)),
+          ),
           ...[
             ('spade', '\u2660', const Color(0xFF2B2B2B)),
             ('heart', '\u2665', const Color(0xFFD24B4B)),
@@ -3188,11 +4232,19 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
               onTap: () => setState(() => _jokerSuitChoice = s.$1),
               child: Container(
                 margin: const EdgeInsets.symmetric(horizontal: 3),
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 10,
+                  vertical: 5,
+                ),
                 decoration: BoxDecoration(
-                  color: selected ? s.$3.withValues(alpha: 0.12) : const Color(0xFFF5F5F5),
+                  color: selected
+                      ? s.$3.withValues(alpha: 0.12)
+                      : const Color(0xFFF5F5F5),
                   borderRadius: BorderRadius.circular(8),
-                  border: Border.all(color: selected ? s.$3 : const Color(0xFFE0D8D4), width: selected ? 2 : 1),
+                  border: Border.all(
+                    color: selected ? s.$3 : const Color(0xFFE0D8D4),
+                    width: selected ? 2 : 1,
+                  ),
                 ),
                 child: Text(s.$2, style: TextStyle(fontSize: 16, color: s.$3)),
               ),
@@ -3226,7 +4278,11 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
             ),
             child: Text(
               L10n.of(context).mtRoundResult(state.round),
-              style: const TextStyle(color: Color(0xFF5A4038), fontSize: 16, fontWeight: FontWeight.w800),
+              style: const TextStyle(
+                color: Color(0xFF5A4038),
+                fontSize: 16,
+                fontWeight: FontWeight.w800,
+              ),
             ),
           ),
           const SizedBox(height: 8),
@@ -3234,15 +4290,23 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
               decoration: BoxDecoration(
-                color: result['success'] == true ? const Color(0xFFE8F5E9) : const Color(0xFFFFEBEE),
+                color: result['success'] == true
+                    ? const Color(0xFFE8F5E9)
+                    : const Color(0xFFFFEBEE),
                 borderRadius: BorderRadius.circular(8),
               ),
               child: Text(
-                result['success'] == true ? L10n.of(context).mtDeclarerWins(result['declarerPoints']) : L10n.of(context).mtDeclarerFails(result['declarerPoints']),
+                result['success'] == true
+                    ? L10n.of(context).mtDeclarerWins(result['declarerPoints'])
+                    : L10n.of(
+                        context,
+                      ).mtDeclarerFails(result['declarerPoints']),
                 style: TextStyle(
                   fontSize: 13,
                   fontWeight: FontWeight.bold,
-                  color: result['success'] == true ? const Color(0xFF4CAF50) : const Color(0xFFE53935),
+                  color: result['success'] == true
+                      ? const Color(0xFF4CAF50)
+                      : const Color(0xFFE53935),
                 ),
               ),
             ),
@@ -3256,35 +4320,61 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
             return Container(
               padding: const EdgeInsets.symmetric(vertical: 4),
               decoration: BoxDecoration(
-                color: p.position == 'self' ? const Color(0xFFF7F1EC) : Colors.transparent,
+                color: p.position == 'self'
+                    ? const Color(0xFFF7F1EC)
+                    : Colors.transparent,
                 borderRadius: BorderRadius.circular(6),
               ),
               child: Row(
                 children: [
-                  if (isDeclarer) const Text('\u2605 ', style: TextStyle(fontSize: 12, color: Color(0xFFFF8A00))),
+                  if (isDeclarer)
+                    const Text(
+                      '\u2605 ',
+                      style: TextStyle(fontSize: 12, color: Color(0xFFFF8A00)),
+                    ),
                   Expanded(
-                    child: Text(p.name, style: TextStyle(
-                      fontSize: 13,
-                      fontWeight: p.position == 'self' ? FontWeight.bold : FontWeight.normal,
-                      color: const Color(0xFF5A4038),
-                    )),
+                    child: Text(
+                      p.name,
+                      style: TextStyle(
+                        fontSize: 13,
+                        fontWeight: p.position == 'self'
+                            ? FontWeight.bold
+                            : FontWeight.normal,
+                        color: const Color(0xFF5A4038),
+                      ),
+                    ),
                   ),
                   if (roundScore != null)
                     Text(
                       '${roundScore > 0 ? '+' : ''}$roundScore',
                       style: TextStyle(
-                        fontSize: 13, fontWeight: FontWeight.bold,
-                        color: roundScore > 0 ? const Color(0xFF4CAF50) : roundScore < 0 ? const Color(0xFFE53935) : const Color(0xFF5A4038),
+                        fontSize: 13,
+                        fontWeight: FontWeight.bold,
+                        color: roundScore > 0
+                            ? const Color(0xFF4CAF50)
+                            : roundScore < 0
+                            ? const Color(0xFFE53935)
+                            : const Color(0xFF5A4038),
                       ),
                     ),
                   const SizedBox(width: 12),
-                  Text('$totalScore', style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: Color(0xFF5A4038))),
+                  Text(
+                    '$totalScore',
+                    style: const TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.bold,
+                      color: Color(0xFF5A4038),
+                    ),
+                  ),
                 ],
               ),
             );
           }),
           const SizedBox(height: 8),
-          Text(L10n.of(context).mtNextRound, style: const TextStyle(color: Color(0xFF8A7A72), fontSize: 12)),
+          Text(
+            L10n.of(context).mtNextRound,
+            style: const TextStyle(color: Color(0xFF8A7A72), fontSize: 12),
+          ),
         ],
       ),
     );
@@ -3293,7 +4383,9 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
   // ── Game End (SK-style) ──
   Widget _buildGameEndUI(MightyGameStateData state, GameService game) {
     final sorted = List<MightyPlayer>.from(state.players)
-      ..sort((a, b) => (state.scores[b.id] ?? 0).compareTo(state.scores[a.id] ?? 0));
+      ..sort(
+        (a, b) => (state.scores[b.id] ?? 0).compareTo(state.scores[a.id] ?? 0),
+      );
 
     return Container(
       padding: const EdgeInsets.all(16),
@@ -3313,7 +4405,14 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
               borderRadius: BorderRadius.circular(12),
               border: Border.all(color: const Color(0xFFE7DBD4)),
             ),
-            child: Text(L10n.of(context).mtGameOver, style: const TextStyle(color: Color(0xFF5A4038), fontSize: 18, fontWeight: FontWeight.w800)),
+            child: Text(
+              L10n.of(context).mtGameOver,
+              style: const TextStyle(
+                color: Color(0xFF5A4038),
+                fontSize: 18,
+                fontWeight: FontWeight.w800,
+              ),
+            ),
           ),
           const SizedBox(height: 16),
           ...sorted.asMap().entries.map((entry) {
@@ -3325,28 +4424,64 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
               padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 8),
               margin: const EdgeInsets.only(bottom: 4),
               decoration: BoxDecoration(
-                color: isWinner ? const Color(0xFFFFF8E1) : Colors.white.withValues(alpha: 0.7),
+                color: isWinner
+                    ? const Color(0xFFFFF8E1)
+                    : Colors.white.withValues(alpha: 0.7),
                 borderRadius: BorderRadius.circular(10),
-                border: isWinner ? Border.all(color: const Color(0xFFFFD700)) : null,
+                border: isWinner
+                    ? Border.all(color: const Color(0xFFFFD700))
+                    : null,
               ),
               child: Row(
                 children: [
                   Container(
-                    width: 28, height: 28,
+                    width: 28,
+                    height: 28,
                     decoration: BoxDecoration(
-                      color: isWinner ? const Color(0xFFFFD700) : const Color(0xFFF5F5F5),
+                      color: isWinner
+                          ? const Color(0xFFFFD700)
+                          : const Color(0xFFF5F5F5),
                       shape: BoxShape.circle,
-                      border: Border.all(color: isWinner ? const Color(0xFFFFB300) : const Color(0xFFE0D8D4)),
+                      border: Border.all(
+                        color: isWinner
+                            ? const Color(0xFFFFB300)
+                            : const Color(0xFFE0D8D4),
+                      ),
                     ),
-                    child: Center(child: Text('$rank', style: TextStyle(
-                      color: isWinner ? Colors.black : const Color(0xFF5A4038), fontWeight: FontWeight.bold, fontSize: 14,
-                    ))),
+                    child: Center(
+                      child: Text(
+                        '$rank',
+                        style: TextStyle(
+                          color: isWinner
+                              ? Colors.black
+                              : const Color(0xFF5A4038),
+                          fontWeight: FontWeight.bold,
+                          fontSize: 14,
+                        ),
+                      ),
+                    ),
                   ),
                   const SizedBox(width: 12),
-                  Expanded(child: Text(p.name, style: TextStyle(
-                    color: const Color(0xFF5A4038), fontSize: isWinner ? 16 : 14, fontWeight: isWinner ? FontWeight.bold : FontWeight.normal,
-                  ))),
-                  Text('$score', style: TextStyle(color: const Color(0xFF5A4038), fontSize: isWinner ? 18 : 15, fontWeight: FontWeight.bold)),
+                  Expanded(
+                    child: Text(
+                      p.name,
+                      style: TextStyle(
+                        color: const Color(0xFF5A4038),
+                        fontSize: isWinner ? 16 : 14,
+                        fontWeight: isWinner
+                            ? FontWeight.bold
+                            : FontWeight.normal,
+                      ),
+                    ),
+                  ),
+                  Text(
+                    '$score',
+                    style: TextStyle(
+                      color: const Color(0xFF5A4038),
+                      fontSize: isWinner ? 18 : 15,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
                 ],
               ),
             );
@@ -3361,9 +4496,15 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
               border: Border.all(color: const Color(0xFFC7DCF8)),
             ),
             child: Text(
-              _gameEndCountdown > 0 ? L10n.of(context).mtReturningIn(_gameEndCountdown) : L10n.of(context).mtReturningToRoom,
+              _gameEndCountdown > 0
+                  ? L10n.of(context).mtReturningIn(_gameEndCountdown)
+                  : L10n.of(context).mtReturningToRoom,
               textAlign: TextAlign.center,
-              style: const TextStyle(color: Color(0xFF355D89), fontSize: 14, fontWeight: FontWeight.w700),
+              style: const TextStyle(
+                color: Color(0xFF355D89),
+                fontSize: 14,
+                fontWeight: FontWeight.w700,
+              ),
             ),
           ),
         ],
@@ -3375,7 +4516,8 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
   Widget _buildCardViewRequestPopup(GameService game) {
     final request = game.firstIncomingCardViewRequest;
     if (request == null) return const SizedBox.shrink();
-    final spectatorNickname = request['spectatorNickname'] ?? L10n.of(context).gameSpectator;
+    final spectatorNickname =
+        request['spectatorNickname'] ?? L10n.of(context).gameSpectator;
     final spectatorId = request['spectatorId'] ?? '';
 
     return Positioned(
@@ -3419,7 +4561,8 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
               children: [
                 Expanded(
                   child: OutlinedButton(
-                    onPressed: () => game.respondCardViewRequest(spectatorId, false),
+                    onPressed: () =>
+                        game.respondCardViewRequest(spectatorId, false),
                     style: OutlinedButton.styleFrom(
                       foregroundColor: const Color(0xFFCC6666),
                       side: const BorderSide(color: Color(0xFFCC6666)),
@@ -3431,7 +4574,8 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
                 const SizedBox(width: 8),
                 Expanded(
                   child: ElevatedButton(
-                    onPressed: () => game.respondCardViewRequest(spectatorId, true),
+                    onPressed: () =>
+                        game.respondCardViewRequest(spectatorId, true),
                     style: ElevatedButton.styleFrom(
                       backgroundColor: const Color(0xFF6A9BD1),
                       foregroundColor: Colors.white,
@@ -3453,7 +4597,10 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
                       side: const BorderSide(color: Color(0xFFCCCCCC)),
                       padding: const EdgeInsets.symmetric(vertical: 10),
                     ),
-                    child: Text(L10n.of(context).gameAlwaysReject, style: const TextStyle(fontSize: 13)),
+                    child: Text(
+                      L10n.of(context).gameAlwaysReject,
+                      style: const TextStyle(fontSize: 13),
+                    ),
                   ),
                 ),
                 const SizedBox(width: 8),
@@ -3468,7 +4615,10 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
                       side: const BorderSide(color: Color(0xFF4CAF50)),
                       padding: const EdgeInsets.symmetric(vertical: 10),
                     ),
-                    child: Text(L10n.of(context).gameAlwaysAllow, style: const TextStyle(fontSize: 13)),
+                    child: Text(
+                      L10n.of(context).gameAlwaysAllow,
+                      style: const TextStyle(fontSize: 13),
+                    ),
                   ),
                 ),
               ],
@@ -3493,16 +4643,28 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Icon(Icons.timer_off_outlined, size: 15, color: Color(0xFFE65100)),
+            const Icon(
+              Icons.timer_off_outlined,
+              size: 15,
+              color: Color(0xFFE65100),
+            ),
             const SizedBox(width: 5),
             Text(
               '${game.myTimeoutCount}/3',
-              style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w800, color: Color(0xFFE65100)),
+              style: const TextStyle(
+                fontSize: 12,
+                fontWeight: FontWeight.w800,
+                color: Color(0xFFE65100),
+              ),
             ),
             const SizedBox(width: 4),
             Text(
               L10n.of(context).gameReset,
-              style: const TextStyle(fontSize: 11, color: Color(0xFFE65100), fontWeight: FontWeight.w700),
+              style: const TextStyle(
+                fontSize: 11,
+                color: Color(0xFFE65100),
+                fontWeight: FontWeight.w700,
+              ),
             ),
           ],
         ),
@@ -3529,7 +4691,11 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
             Expanded(
               child: Text(
                 L10n.of(context).gameTimeout(playerName),
-                style: const TextStyle(color: Color(0xFFE65100), fontWeight: FontWeight.bold, fontSize: 14),
+                style: const TextStyle(
+                  color: Color(0xFFE65100),
+                  fontWeight: FontWeight.bold,
+                  fontSize: 14,
+                ),
               ),
             ),
           ],
@@ -3557,7 +4723,11 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
               borderRadius: BorderRadius.circular(18),
               border: Border.all(color: const Color(0xFFFFAB91), width: 2),
               boxShadow: [
-                BoxShadow(color: Colors.black.withValues(alpha: 0.2), blurRadius: 12, offset: const Offset(0, 4)),
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: 0.2),
+                  blurRadius: 12,
+                  offset: const Offset(0, 4),
+                ),
               ],
             ),
             child: Column(
@@ -3566,26 +4736,44 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
                 Row(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    const Icon(Icons.warning_amber_rounded, size: 20, color: Color(0xFFD84315)),
+                    const Icon(
+                      Icons.warning_amber_rounded,
+                      size: 20,
+                      color: Color(0xFFD84315),
+                    ),
                     const SizedBox(width: 6),
                     Text(
                       l10n.mtDealMiss,
-                      style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 16, color: Color(0xFFD84315)),
+                      style: const TextStyle(
+                        fontWeight: FontWeight.w800,
+                        fontSize: 16,
+                        color: Color(0xFFD84315),
+                      ),
                     ),
                   ],
                 ),
                 const SizedBox(height: 6),
                 Text(
-                  l10n.mtDealMissReveal(event.playerName, _formatHandScore(event.handScore)),
+                  l10n.mtDealMissReveal(
+                    event.playerName,
+                    _formatHandScore(event.handScore),
+                  ),
                   textAlign: TextAlign.center,
-                  style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: Color(0xFF5A4038)),
+                  style: const TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w600,
+                    color: Color(0xFF5A4038),
+                  ),
                 ),
                 const SizedBox(height: 10),
                 _buildDealMissCardRows(event.cards),
                 const SizedBox(height: 10),
                 Text(
                   l10n.mtDealMissTapToClose,
-                  style: const TextStyle(fontSize: 11, color: Color(0xFF8A7A72)),
+                  style: const TextStyle(
+                    fontSize: 11,
+                    color: Color(0xFF8A7A72),
+                  ),
                 ),
               ],
             ),
@@ -3636,7 +4824,11 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
                 Row(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    const Icon(Icons.emoji_events, size: 22, color: Color(0xFFE65100)),
+                    const Icon(
+                      Icons.emoji_events,
+                      size: 22,
+                      color: Color(0xFFE65100),
+                    ),
                     const SizedBox(width: 6),
                     Text(
                       l10n.mtSettingRevealTitle,
@@ -3663,7 +4855,10 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
                 const SizedBox(height: 10),
                 Text(
                   l10n.mtSettingTapToClose,
-                  style: const TextStyle(fontSize: 11, color: Color(0xFF8A7A72)),
+                  style: const TextStyle(
+                    fontSize: 11,
+                    color: Color(0xFF8A7A72),
+                  ),
                 ),
               ],
             ),
@@ -3685,7 +4880,11 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
           ),
           child: const Text(
             'NT',
-            style: TextStyle(fontSize: 14, fontWeight: FontWeight.w800, color: Color(0xFF7B1FA2)),
+            style: TextStyle(
+              fontSize: 14,
+              fontWeight: FontWeight.w800,
+              color: Color(0xFF7B1FA2),
+            ),
           ),
         );
       }
@@ -3703,42 +4902,70 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
 
     final rows = <Widget>[];
     if (info.oldTrump != null && info.newTrump != null) {
-      rows.add(Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Text(
-            l10n.mtChangeTrump,
-            style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: Color(0xFF4E342E)),
-          ),
-          const SizedBox(width: 8),
-          suitChip(info.oldTrump!),
-          const SizedBox(width: 6),
-          const Icon(Icons.arrow_forward_rounded, size: 16, color: Color(0xFF8D6E63)),
-          const SizedBox(width: 6),
-          suitChip(info.newTrump!),
-        ],
-      ));
+      rows.add(
+        Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(
+              l10n.mtChangeTrump,
+              style: const TextStyle(
+                fontSize: 13,
+                fontWeight: FontWeight.w700,
+                color: Color(0xFF4E342E),
+              ),
+            ),
+            const SizedBox(width: 8),
+            suitChip(info.oldTrump!),
+            const SizedBox(width: 6),
+            const Icon(
+              Icons.arrow_forward_rounded,
+              size: 16,
+              color: Color(0xFF8D6E63),
+            ),
+            const SizedBox(width: 6),
+            suitChip(info.newTrump!),
+          ],
+        ),
+      );
     }
     if (info.oldBid != null && info.newBid != null) {
       if (rows.isNotEmpty) rows.add(const SizedBox(height: 6));
-      rows.add(Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          const Icon(Icons.trending_up_rounded, size: 16, color: Color(0xFFC62828)),
-          const SizedBox(width: 6),
-          Text(
-            '${info.oldBid}',
-            style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: Color(0xFF8A7A72)),
-          ),
-          const SizedBox(width: 6),
-          const Icon(Icons.arrow_forward_rounded, size: 16, color: Color(0xFF8D6E63)),
-          const SizedBox(width: 6),
-          Text(
-            '${info.newBid}',
-            style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w800, color: Color(0xFFC62828)),
-          ),
-        ],
-      ));
+      rows.add(
+        Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Icon(
+              Icons.trending_up_rounded,
+              size: 16,
+              color: Color(0xFFC62828),
+            ),
+            const SizedBox(width: 6),
+            Text(
+              '${info.oldBid}',
+              style: const TextStyle(
+                fontSize: 14,
+                fontWeight: FontWeight.w700,
+                color: Color(0xFF8A7A72),
+              ),
+            ),
+            const SizedBox(width: 6),
+            const Icon(
+              Icons.arrow_forward_rounded,
+              size: 16,
+              color: Color(0xFF8D6E63),
+            ),
+            const SizedBox(width: 6),
+            Text(
+              '${info.newBid}',
+              style: const TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.w800,
+                color: Color(0xFFC62828),
+              ),
+            ),
+          ],
+        ),
+      );
     }
     if (rows.isEmpty) return const SizedBox.shrink();
 
@@ -3756,13 +4983,14 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
               borderRadius: BorderRadius.circular(14),
               border: Border.all(color: const Color(0xFFFFB74D), width: 2),
               boxShadow: [
-                BoxShadow(color: Colors.black.withValues(alpha: 0.18), blurRadius: 10, offset: const Offset(0, 4)),
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: 0.18),
+                  blurRadius: 10,
+                  offset: const Offset(0, 4),
+                ),
               ],
             ),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: rows,
-            ),
+            child: Column(mainAxisSize: MainAxisSize.min, children: rows),
           ),
         ),
       ),
@@ -3841,8 +5069,10 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
     final prev = state.tricks.last;
     final l10n = L10n.of(context);
     final winnerName = state.players
-        .firstWhere((p) => p.id == prev.winner,
-            orElse: () => MightyPlayer(id: prev.winner, name: prev.winner))
+        .firstWhere(
+          (p) => p.id == prev.winner,
+          orElse: () => MightyPlayer(id: prev.winner, name: prev.winner),
+        )
         .name;
     await showDialog<void>(
       context: context,
@@ -3884,7 +5114,9 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
                               ? BoxDecoration(
                                   borderRadius: BorderRadius.circular(8),
                                   border: Border.all(
-                                      color: const Color(0xFFFFB74D), width: 2),
+                                    color: const Color(0xFFFFB74D),
+                                    width: 2,
+                                  ),
                                 )
                               : null,
                           padding: const EdgeInsets.all(1),
@@ -3900,10 +5132,13 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
                           width: 46,
                           child: Text(
                             state.players
-                                .firstWhere((p) => p.id == prev.cards[i].playerId,
-                                    orElse: () => MightyPlayer(
-                                        id: prev.cards[i].playerId,
-                                        name: prev.cards[i].playerId))
+                                .firstWhere(
+                                  (p) => p.id == prev.cards[i].playerId,
+                                  orElse: () => MightyPlayer(
+                                    id: prev.cards[i].playerId,
+                                    name: prev.cards[i].playerId,
+                                  ),
+                                )
                                 .name,
                             textAlign: TextAlign.center,
                             overflow: TextOverflow.ellipsis,
@@ -3942,10 +5177,16 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
                     backgroundColor: const Color(0xFFE6F1FF),
                     foregroundColor: const Color(0xFF355D89),
                     shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(10)),
+                      borderRadius: BorderRadius.circular(10),
+                    ),
                   ),
-                  child: Text(l10n.commonClose,
-                      style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w700)),
+                  child: Text(
+                    l10n.commonClose,
+                    style: const TextStyle(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
                 ),
               ),
             ],
@@ -3978,6 +5219,7 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
         ],
       );
     }
+
     if (splitAt == null || cards.length < splitAt) {
       return buildRow(cards);
     }
@@ -3988,10 +5230,7 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
       mainAxisSize: MainAxisSize.min,
       children: [
         buildRow(row1),
-        if (row2.isNotEmpty) ...[
-          const SizedBox(height: 4),
-          buildRow(row2),
-        ],
+        if (row2.isNotEmpty) ...[const SizedBox(height: 4), buildRow(row2)],
       ],
     );
   }
@@ -4001,10 +5240,12 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
     final l10n = L10n.of(context);
     final isDeclarer = state.isMyTurn;
     if (!isDeclarer) {
-      final declarerName = state.players
-          .where((p) => p.id == state.declarer)
-          .map((p) => p.name)
-          .firstOrNull ?? '...';
+      final declarerName =
+          state.players
+              .where((p) => p.id == state.declarer)
+              .map((p) => p.name)
+              .firstOrNull ??
+          '...';
       return Center(
         child: Container(
           padding: const EdgeInsets.all(20),
@@ -4021,7 +5262,11 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
               Text(
                 l10n.mtKillPhaseWait(declarerName),
                 textAlign: TextAlign.center,
-                style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: Color(0xFF5A4038)),
+                style: const TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w600,
+                  color: Color(0xFF5A4038),
+                ),
               ),
             ],
           ),
@@ -4035,7 +5280,21 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
     // all 53 cards at once.
     final ownHand = state.myCards.toSet();
     const suits = ['spade', 'heart', 'diamond', 'club'];
-    const ranks = ['A', 'K', 'Q', 'J', '10', '9', '8', '7', '6', '5', '4', '3', '2'];
+    const ranks = [
+      'A',
+      'K',
+      'Q',
+      'J',
+      '10',
+      '9',
+      '8',
+      '7',
+      '6',
+      '5',
+      '4',
+      '3',
+      '2',
+    ];
 
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
@@ -4057,7 +5316,11 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
                 Expanded(
                   child: Text(
                     l10n.mtKillPhasePrompt,
-                    style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: Color(0xFFD84315)),
+                    style: const TextStyle(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w700,
+                      color: Color(0xFFD84315),
+                    ),
                   ),
                 ),
               ],
@@ -4079,19 +5342,20 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
                       padding: const EdgeInsets.symmetric(vertical: 10),
                       decoration: BoxDecoration(
                         color: _killSuitTab == suit
-                            ? (PlayingCard.suitColors[suit] ?? const Color(0xFF5A4038)).withValues(alpha: 0.12)
+                            ? (PlayingCard.suitColors[suit] ??
+                                      const Color(0xFF5A4038))
+                                  .withValues(alpha: 0.12)
                             : Colors.white,
                         borderRadius: BorderRadius.circular(10),
                         border: Border.all(
                           color: _killSuitTab == suit
-                              ? (PlayingCard.suitColors[suit] ?? const Color(0xFF5A4038))
+                              ? (PlayingCard.suitColors[suit] ??
+                                    const Color(0xFF5A4038))
                               : const Color(0xFFE0D8D4),
                           width: _killSuitTab == suit ? 2 : 1,
                         ),
                       ),
-                      child: Center(
-                        child: SuitIcon(suit: suit, size: 22),
-                      ),
+                      child: Center(child: SuitIcon(suit: suit, size: 22)),
                     ),
                   ),
                 ),
@@ -4105,7 +5369,8 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
             runSpacing: 6,
             alignment: WrapAlignment.center,
             children: [
-              for (final rank in ranks) _buildKillCardChip(ownHand, 'mighty_${_killSuitTab}_$rank'),
+              for (final rank in ranks)
+                _buildKillCardChip(ownHand, 'mighty_${_killSuitTab}_$rank'),
             ],
           ),
           const SizedBox(height: 14),
@@ -4119,10 +5384,15 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
             style: FilledButton.styleFrom(
               backgroundColor: const Color(0xFFD84315),
               disabledBackgroundColor: const Color(0xFFBDBDBD),
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
               padding: const EdgeInsets.symmetric(vertical: 12),
             ),
-            child: Text(l10n.mtKillConfirm, style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 15)),
+            child: Text(
+              l10n.mtKillConfirm,
+              style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 15),
+            ),
           ),
         ],
       ),
@@ -4151,17 +5421,22 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 120),
         width: isJoker ? double.infinity : 52,
-        padding: EdgeInsets.symmetric(horizontal: isJoker ? 12 : 4, vertical: isJoker ? 12 : 8),
+        padding: EdgeInsets.symmetric(
+          horizontal: isJoker ? 12 : 4,
+          vertical: isJoker ? 12 : 8,
+        ),
         alignment: Alignment.center,
         decoration: BoxDecoration(
           color: inHand
               ? const Color(0xFFECEFF1)
               : isSelected
-                  ? const Color(0xFFFFEBEE)
-                  : Colors.white,
+              ? const Color(0xFFFFEBEE)
+              : Colors.white,
           borderRadius: BorderRadius.circular(8),
           border: Border.all(
-            color: isSelected ? const Color(0xFFD84315) : const Color(0xFFE0D8D4),
+            color: isSelected
+                ? const Color(0xFFD84315)
+                : const Color(0xFFE0D8D4),
             width: isSelected ? 2 : 1,
           ),
         ),
@@ -4172,7 +5447,9 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
                   fontSize: 14,
                   fontWeight: FontWeight.bold,
                   color: inHand ? const Color(0xFFBDBDBD) : textColor,
-                  decoration: inHand ? TextDecoration.lineThrough : TextDecoration.none,
+                  decoration: inHand
+                      ? TextDecoration.lineThrough
+                      : TextDecoration.none,
                   letterSpacing: 1.5,
                 ),
               )
@@ -4192,7 +5469,9 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
                       fontSize: 14,
                       fontWeight: FontWeight.bold,
                       color: inHand ? const Color(0xFFBDBDBD) : textColor,
-                      decoration: inHand ? TextDecoration.lineThrough : TextDecoration.none,
+                      decoration: inHand
+                          ? TextDecoration.lineThrough
+                          : TextDecoration.none,
                     ),
                   ),
                 ],
@@ -4201,7 +5480,10 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
     );
   }
 
-  Widget _buildKillRevealOverlay(MightyGameStateData state, MightyKillEvent event) {
+  Widget _buildKillRevealOverlay(
+    MightyGameStateData state,
+    MightyKillEvent event,
+  ) {
     final l10n = L10n.of(context);
     String cardLabel;
     if (event.targetCardId == 'mighty_joker') {
@@ -4227,7 +5509,11 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
               borderRadius: BorderRadius.circular(20),
               border: Border.all(color: const Color(0xFFFF7043), width: 2),
               boxShadow: [
-                BoxShadow(color: Colors.black.withValues(alpha: 0.25), blurRadius: 14, offset: const Offset(0, 5)),
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: 0.25),
+                  blurRadius: 14,
+                  offset: const Offset(0, 5),
+                ),
               ],
             ),
             child: Column(
@@ -4236,11 +5522,19 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
                 Row(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    const Icon(Icons.gps_fixed, size: 22, color: Color(0xFFD84315)),
+                    const Icon(
+                      Icons.gps_fixed,
+                      size: 22,
+                      color: Color(0xFFD84315),
+                    ),
                     const SizedBox(width: 6),
                     Text(
                       l10n.mtKillPhase,
-                      style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 17, color: Color(0xFFD84315)),
+                      style: const TextStyle(
+                        fontWeight: FontWeight.w800,
+                        fontSize: 17,
+                        color: Color(0xFFD84315),
+                      ),
                     ),
                   ],
                 ),
@@ -4248,14 +5542,25 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
                 Text(
                   event.wasKitty
                       ? l10n.mtKillResultSuicide(event.declarerName, cardLabel)
-                      : l10n.mtKillResultKilled(event.declarerName, cardLabel, event.victimName ?? '?'),
+                      : l10n.mtKillResultKilled(
+                          event.declarerName,
+                          cardLabel,
+                          event.victimName ?? '?',
+                        ),
                   textAlign: TextAlign.center,
-                  style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: Color(0xFF5A4038)),
+                  style: const TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w600,
+                    color: Color(0xFF5A4038),
+                  ),
                 ),
                 const SizedBox(height: 10),
                 Text(
                   l10n.mtDealMissTapToClose,
-                  style: const TextStyle(fontSize: 11, color: Color(0xFF8A7A72)),
+                  style: const TextStyle(
+                    fontSize: 11,
+                    color: Color(0xFF8A7A72),
+                  ),
                 ),
               ],
             ),
@@ -4277,7 +5582,14 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
           borderRadius: BorderRadius.circular(12),
           border: Border.all(color: const Color(0xFFE53935)),
         ),
-        child: Text(message, style: const TextStyle(color: Color(0xFFE53935), fontWeight: FontWeight.bold, fontSize: 13)),
+        child: Text(
+          message,
+          style: const TextStyle(
+            color: Color(0xFFE53935),
+            fontWeight: FontWeight.bold,
+            fontSize: 13,
+          ),
+        ),
       ),
     );
   }
@@ -4286,25 +5598,39 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
   String _phaseLabel(String phase) {
     final l10n = L10n.of(context);
     switch (phase) {
-      case 'bidding': return l10n.mtPhaseBidding;
-      case 'kill_select': return l10n.mtKillPhase;
-      case 'kitty_exchange': return l10n.mtPhaseKitty;
-      case 'playing': return l10n.mtPhasePlaying;
-      case 'trick_end': return l10n.mtPhasePlaying;
-      case 'round_end': return l10n.mtPhaseRoundEnd;
-      case 'game_end': return l10n.mtPhaseGameEnd;
-      default: return phase;
+      case 'bidding':
+        return l10n.mtPhaseBidding;
+      case 'kill_select':
+        return l10n.mtKillPhase;
+      case 'kitty_exchange':
+        return l10n.mtPhaseKitty;
+      case 'playing':
+        return l10n.mtPhasePlaying;
+      case 'trick_end':
+        return l10n.mtPhasePlaying;
+      case 'round_end':
+        return l10n.mtPhaseRoundEnd;
+      case 'game_end':
+        return l10n.mtPhaseGameEnd;
+      default:
+        return phase;
     }
   }
 
   String _suitSymbol(String suit) {
     switch (suit) {
-      case 'spade': return '\u2660';
-      case 'heart': return '\u2665';
-      case 'diamond': return '\u2666';
-      case 'club': return '\u2663';
-      case 'no_trump': return 'NT';
-      default: return suit;
+      case 'spade':
+        return '\u2660';
+      case 'heart':
+        return '\u2665';
+      case 'diamond':
+        return '\u2666';
+      case 'club':
+        return '\u2663';
+      case 'no_trump':
+        return 'NT';
+      default:
+        return suit;
     }
   }
 
@@ -4362,7 +5688,6 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
     return legal;
   }
 
-
   bool _isKittyBlockedCard(String cardId, MightyGameStateData? state) {
     if (state == null) return false;
     // Block mighty card
@@ -4385,25 +5710,39 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
       child: Row(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Text(L10n.of(context).mtJokerCall, style: const TextStyle(fontSize: 12, color: Color(0xFF5A4038))),
+          Text(
+            L10n.of(context).mtJokerCall,
+            style: const TextStyle(fontSize: 12, color: Color(0xFF5A4038)),
+          ),
           GestureDetector(
             onTap: () => setState(() => _jokerCallChoice = true),
             child: Container(
               margin: const EdgeInsets.symmetric(horizontal: 3),
               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
               decoration: BoxDecoration(
-                color: _jokerCallChoice ? const Color(0xFFE8F5E9) : const Color(0xFFF5F5F5),
+                color: _jokerCallChoice
+                    ? const Color(0xFFE8F5E9)
+                    : const Color(0xFFF5F5F5),
                 borderRadius: BorderRadius.circular(8),
                 border: Border.all(
-                  color: _jokerCallChoice ? const Color(0xFF4CAF50) : const Color(0xFFE0D8D4),
+                  color: _jokerCallChoice
+                      ? const Color(0xFF4CAF50)
+                      : const Color(0xFFE0D8D4),
                   width: _jokerCallChoice ? 2 : 1,
                 ),
               ),
-              child: Text(L10n.of(context).mtYes, style: TextStyle(
-                fontSize: 13,
-                fontWeight: _jokerCallChoice ? FontWeight.bold : FontWeight.normal,
-                color: _jokerCallChoice ? const Color(0xFF4CAF50) : const Color(0xFF5A4038),
-              )),
+              child: Text(
+                L10n.of(context).mtYes,
+                style: TextStyle(
+                  fontSize: 13,
+                  fontWeight: _jokerCallChoice
+                      ? FontWeight.bold
+                      : FontWeight.normal,
+                  color: _jokerCallChoice
+                      ? const Color(0xFF4CAF50)
+                      : const Color(0xFF5A4038),
+                ),
+              ),
             ),
           ),
           GestureDetector(
@@ -4412,18 +5751,29 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
               margin: const EdgeInsets.symmetric(horizontal: 3),
               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
               decoration: BoxDecoration(
-                color: !_jokerCallChoice ? const Color(0xFFFFEBEE) : const Color(0xFFF5F5F5),
+                color: !_jokerCallChoice
+                    ? const Color(0xFFFFEBEE)
+                    : const Color(0xFFF5F5F5),
                 borderRadius: BorderRadius.circular(8),
                 border: Border.all(
-                  color: !_jokerCallChoice ? const Color(0xFFE53935) : const Color(0xFFE0D8D4),
+                  color: !_jokerCallChoice
+                      ? const Color(0xFFE53935)
+                      : const Color(0xFFE0D8D4),
                   width: !_jokerCallChoice ? 2 : 1,
                 ),
               ),
-              child: Text(L10n.of(context).mtNo, style: TextStyle(
-                fontSize: 13,
-                fontWeight: !_jokerCallChoice ? FontWeight.bold : FontWeight.normal,
-                color: !_jokerCallChoice ? const Color(0xFFE53935) : const Color(0xFF5A4038),
-              )),
+              child: Text(
+                L10n.of(context).mtNo,
+                style: TextStyle(
+                  fontSize: 13,
+                  fontWeight: !_jokerCallChoice
+                      ? FontWeight.bold
+                      : FontWeight.normal,
+                  color: !_jokerCallChoice
+                      ? const Color(0xFFE53935)
+                      : const Color(0xFF5A4038),
+                ),
+              ),
             ),
           ),
         ],
@@ -4458,11 +5808,15 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
                 height: 220,
                 child: ListView.separated(
                   itemCount: spectators.length,
-                  separatorBuilder: (_, __) => const SizedBox(height: 6),
+                  separatorBuilder: (context, index) =>
+                      const SizedBox(height: 6),
                   itemBuilder: (context, index) {
                     final nickname = spectators[index]['nickname'] ?? '';
                     return Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 12,
+                        vertical: 10,
+                      ),
                       decoration: BoxDecoration(
                         color: const Color(0xFFF1F1F1),
                         borderRadius: BorderRadius.circular(12),
@@ -4470,12 +5824,20 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
                       ),
                       child: Row(
                         children: [
-                          const Icon(Icons.person, size: 16, color: Color(0xFF6A5A52)),
+                          const Icon(
+                            Icons.person,
+                            size: 16,
+                            color: Color(0xFF6A5A52),
+                          ),
                           const SizedBox(width: 8),
                           Expanded(
                             child: Text(
                               nickname,
-                              style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: Color(0xFF5A4038)),
+                              style: const TextStyle(
+                                fontSize: 13,
+                                fontWeight: FontWeight.w600,
+                                color: Color(0xFF5A4038),
+                              ),
                               overflow: TextOverflow.ellipsis,
                             ),
                           ),
@@ -4498,18 +5860,27 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
                         setDialogState(() {});
                       },
                       child: Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 10,
+                          vertical: 6,
+                        ),
                         decoration: BoxDecoration(
-                          color: game.autoAcceptCardView ? const Color(0xFFE8F5E9) : const Color(0xFFF5F5F5),
+                          color: game.autoAcceptCardView
+                              ? const Color(0xFFE8F5E9)
+                              : const Color(0xFFF5F5F5),
                           borderRadius: BorderRadius.circular(8),
                         ),
                         child: Row(
                           mainAxisSize: MainAxisSize.min,
                           children: [
                             Icon(
-                              game.autoAcceptCardView ? Icons.check_circle : Icons.check_circle_outline,
+                              game.autoAcceptCardView
+                                  ? Icons.check_circle
+                                  : Icons.check_circle_outline,
                               size: 16,
-                              color: game.autoAcceptCardView ? const Color(0xFF4CAF50) : const Color(0xFF999999),
+                              color: game.autoAcceptCardView
+                                  ? const Color(0xFF4CAF50)
+                                  : const Color(0xFF999999),
                             ),
                             const SizedBox(width: 4),
                             Text(
@@ -4517,7 +5888,9 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
                               style: TextStyle(
                                 fontSize: 12,
                                 fontWeight: FontWeight.bold,
-                                color: game.autoAcceptCardView ? const Color(0xFF4CAF50) : const Color(0xFF999999),
+                                color: game.autoAcceptCardView
+                                    ? const Color(0xFF4CAF50)
+                                    : const Color(0xFF999999),
                               ),
                             ),
                           ],
@@ -4531,18 +5904,27 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
                         setDialogState(() {});
                       },
                       child: Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 10,
+                          vertical: 6,
+                        ),
                         decoration: BoxDecoration(
-                          color: game.autoRejectCardView ? const Color(0xFFFFEBEE) : const Color(0xFFF5F5F5),
+                          color: game.autoRejectCardView
+                              ? const Color(0xFFFFEBEE)
+                              : const Color(0xFFF5F5F5),
                           borderRadius: BorderRadius.circular(8),
                         ),
                         child: Row(
                           mainAxisSize: MainAxisSize.min,
                           children: [
                             Icon(
-                              game.autoRejectCardView ? Icons.block : Icons.block_outlined,
+                              game.autoRejectCardView
+                                  ? Icons.block
+                                  : Icons.block_outlined,
                               size: 16,
-                              color: game.autoRejectCardView ? const Color(0xFFE53935) : const Color(0xFF999999),
+                              color: game.autoRejectCardView
+                                  ? const Color(0xFFE53935)
+                                  : const Color(0xFF999999),
                             ),
                             const SizedBox(width: 4),
                             Text(
@@ -4550,7 +5932,9 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
                               style: TextStyle(
                                 fontSize: 12,
                                 fontWeight: FontWeight.bold,
-                                color: game.autoRejectCardView ? const Color(0xFFE53935) : const Color(0xFF999999),
+                                color: game.autoRejectCardView
+                                    ? const Color(0xFFE53935)
+                                    : const Color(0xFF999999),
                               ),
                             ),
                           ],
@@ -4572,10 +5956,16 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
 
   void _showScoreHistoryDialog(MightyGameStateData state, GameService game) {
     final suitSymbol = {
-      'spade': '♠', 'heart': '♥', 'diamond': '♦', 'club': '♣', 'no_trump': 'NT',
+      'spade': '♠',
+      'heart': '♥',
+      'diamond': '♦',
+      'club': '♣',
+      'no_trump': 'NT',
     };
 
-    final cumulativeScores = <String, int>{for (final p in state.players) p.id: 0};
+    final cumulativeScores = <String, int>{
+      for (final p in state.players) p.id: 0,
+    };
 
     showDialog(
       context: context,
@@ -4596,16 +5986,27 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
                       color: const Color(0xFFEAF2FF),
                       borderRadius: BorderRadius.circular(8),
                     ),
-                    child: const Icon(Icons.table_chart_rounded, size: 16, color: Color(0xFF295EA8)),
+                    child: const Icon(
+                      Icons.table_chart_rounded,
+                      size: 16,
+                      color: Color(0xFF295EA8),
+                    ),
                   ),
                   const SizedBox(width: 8),
                   Text(
                     L10n.of(context).mtScoreHistory,
-                    style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w800, color: Color(0xFF233142)),
+                    style: const TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w800,
+                      color: Color(0xFF233142),
+                    ),
                   ),
                   const SizedBox(width: 8),
                   Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 8,
+                      vertical: 3,
+                    ),
                     decoration: BoxDecoration(
                       color: const Color(0xFFEAF2FF),
                       borderRadius: BorderRadius.circular(999),
@@ -4625,7 +6026,11 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
             ),
             Text(
               '${state.scoreHistory.length}R',
-              style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: Color(0xFF6B7A90)),
+              style: const TextStyle(
+                fontSize: 12,
+                fontWeight: FontWeight.w700,
+                color: Color(0xFF6B7A90),
+              ),
             ),
           ],
         ),
@@ -4641,7 +6046,10 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
                   FontWeight fontWeight = FontWeight.w600,
                   Color color = const Color(0xFF5A4038),
                   double fontSize = 10,
-                  EdgeInsets padding = const EdgeInsets.symmetric(horizontal: 3, vertical: 8),
+                  EdgeInsets padding = const EdgeInsets.symmetric(
+                    horizontal: 3,
+                    vertical: 8,
+                  ),
                 }) {
                   return Padding(
                     padding: padding,
@@ -4660,15 +6068,22 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
                 }
 
                 final border = TableBorder.symmetric(
-                  inside: const BorderSide(color: Color(0xFFDCE4EE), width: 0.6),
-                  outside: const BorderSide(color: Color(0xFFDCE4EE), width: 0.8),
+                  inside: const BorderSide(
+                    color: Color(0xFFDCE4EE),
+                    width: 0.6,
+                  ),
+                  outside: const BorderSide(
+                    color: Color(0xFFDCE4EE),
+                    width: 0.8,
+                  ),
                 );
 
                 return Table(
                   columnWidths: {
                     0: const FlexColumnWidth(0.7),
                     1: const FlexColumnWidth(1.5),
-                    for (int i = 0; i < state.players.length; i++) i + 2: const FlexColumnWidth(1),
+                    for (int i = 0; i < state.players.length; i++)
+                      i + 2: const FlexColumnWidth(1),
                   },
                   defaultVerticalAlignment: TableCellVerticalAlignment.middle,
                   border: border,
@@ -4676,24 +6091,41 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
                     TableRow(
                       decoration: const BoxDecoration(color: Color(0xFFEAF2FF)),
                       children: [
-                        cell('R', fontWeight: FontWeight.w800, fontSize: 10.5, color: const Color(0xFF295EA8)),
-                        cell(L10n.of(context).mtBidShort, fontWeight: FontWeight.w800, fontSize: 10.5, color: const Color(0xFF295EA8)),
-                        ...state.players.map((p) => cell(
-                              p.name.length > 2 ? p.name.substring(0, 2) : p.name,
-                              fontWeight: FontWeight.w800,
-                              fontSize: 9.5,
-                              color: const Color(0xFF295EA8),
-                            )),
+                        cell(
+                          'R',
+                          fontWeight: FontWeight.w800,
+                          fontSize: 10.5,
+                          color: const Color(0xFF295EA8),
+                        ),
+                        cell(
+                          L10n.of(context).mtBidShort,
+                          fontWeight: FontWeight.w800,
+                          fontSize: 10.5,
+                          color: const Color(0xFF295EA8),
+                        ),
+                        ...state.players.map(
+                          (p) => cell(
+                            p.name.length > 2 ? p.name.substring(0, 2) : p.name,
+                            fontWeight: FontWeight.w800,
+                            fontSize: 9.5,
+                            color: const Color(0xFF295EA8),
+                          ),
+                        ),
                       ],
                     ),
                     ...state.scoreHistory.map((entry) {
-                      final trump = suitSymbol[entry.trumpSuit] ?? entry.trumpSuit ?? '?';
+                      final trump =
+                          suitSymbol[entry.trumpSuit] ?? entry.trumpSuit ?? '?';
                       for (final p in state.players) {
-                        cumulativeScores[p.id] = (cumulativeScores[p.id] ?? 0) + (entry.scores[p.id] ?? 0);
+                        cumulativeScores[p.id] =
+                            (cumulativeScores[p.id] ?? 0) +
+                            (entry.scores[p.id] ?? 0);
                       }
                       final rowTint = entry.dealMiss
                           ? const Color(0xFFFFF4E5)
-                          : (entry.success ? const Color(0xFFF4FBF6) : const Color(0xFFFFF6F7));
+                          : (entry.success
+                                ? const Color(0xFFF4FBF6)
+                                : const Color(0xFFFFF6F7));
                       final bidText = entry.dealMiss
                           ? L10n.of(context).mtDealMiss
                           : '$trump${entry.bid}${entry.success ? '✓' : '✗'}';
@@ -4705,20 +6137,27 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
                             bidText,
                             align: TextAlign.left,
                             fontWeight: FontWeight.w700,
-                            color: entry.dealMiss ? const Color(0xFFB56A1D) : const Color(0xFF233142),
+                            color: entry.dealMiss
+                                ? const Color(0xFFB56A1D)
+                                : const Color(0xFF233142),
                           ),
                           ...state.players.map((p) {
                             final diff = entry.scores[p.id] ?? 0;
-                            final isDeclTeam = !entry.dealMiss && (p.id == entry.declarer || p.id == entry.partner);
+                            final isDeclTeam =
+                                !entry.dealMiss &&
+                                (p.id == entry.declarer ||
+                                    p.id == entry.partner);
                             return cell(
                               diff == 0 ? '0' : (diff > 0 ? '+$diff' : '$diff'),
                               fontSize: 9.5,
-                              fontWeight: isDeclTeam || diff != 0 ? FontWeight.w700 : FontWeight.w500,
+                              fontWeight: isDeclTeam || diff != 0
+                                  ? FontWeight.w700
+                                  : FontWeight.w500,
                               color: diff > 0
                                   ? const Color(0xFF1F8B4C)
                                   : diff < 0
-                                      ? const Color(0xFFD04A5B)
-                                      : const Color(0xFF425466),
+                                  ? const Color(0xFFD04A5B)
+                                  : const Color(0xFF425466),
                             );
                           }),
                         ],
@@ -4728,13 +6167,20 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
                       decoration: const BoxDecoration(color: Color(0xFFF0F4F8)),
                       children: [
                         cell('', fontWeight: FontWeight.w800),
-                        cell(L10n.of(context).mtTotal, align: TextAlign.left, fontWeight: FontWeight.w800, color: const Color(0xFF233142)),
+                        cell(
+                          L10n.of(context).mtTotal,
+                          align: TextAlign.left,
+                          fontWeight: FontWeight.w800,
+                          color: const Color(0xFF233142),
+                        ),
                         ...state.players.map((p) {
                           final total = cumulativeScores[p.id] ?? 0;
                           return cell(
                             '$total',
                             fontWeight: FontWeight.w800,
-                            color: total >= 0 ? const Color(0xFF1F8B4C) : const Color(0xFFD04A5B),
+                            color: total >= 0
+                                ? const Color(0xFF1F8B4C)
+                                : const Color(0xFFD04A5B),
                           );
                         }),
                       ],
@@ -4746,14 +6192,21 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
           ),
         ),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx), child: Text(L10n.of(context).mtClose)),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: Text(L10n.of(context).mtClose),
+          ),
         ],
       ),
     );
   }
 
   // ── Player Profile Dialog ──
-  void _showPlayerProfileDialog(String nickname, GameService game, {bool isBot = false}) {
+  void _showPlayerProfileDialog(
+    String nickname,
+    GameService game, {
+    bool isBot = false,
+  }) {
     game.requestProfile(nickname);
     showDialog(
       context: context,
@@ -4761,13 +6214,16 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
         return Consumer<GameService>(
           builder: (ctx, game, _) {
             final profile = game.profileFor(nickname);
-            final isLoading = profile == null || profile['nickname'] != nickname;
+            final isLoading =
+                profile == null || profile['nickname'] != nickname;
             final isMe = nickname == game.playerName;
             final isBlockedUser = game.isBlocked(nickname);
             final l10n = L10n.of(context);
 
             return AlertDialog(
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(24),
+              ),
               titlePadding: const EdgeInsets.fromLTRB(18, 18, 18, 0),
               contentPadding: const EdgeInsets.fromLTRB(18, 14, 18, 10),
               title: Container(
@@ -4789,7 +6245,10 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
                             color: const Color(0xFFE8F5E9),
                             borderRadius: BorderRadius.circular(12),
                           ),
-                          child: const Icon(Icons.person_outline, color: Color(0xFF2E7D32)),
+                          child: const Icon(
+                            Icons.person_outline,
+                            color: Color(0xFF2E7D32),
+                          ),
                         ),
                         const SizedBox(width: 12),
                         Expanded(
@@ -4798,13 +6257,22 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
                             children: [
                               Text(
                                 nickname,
-                                style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w800, color: Color(0xFF3E312A)),
+                                style: const TextStyle(
+                                  fontSize: 17,
+                                  fontWeight: FontWeight.w800,
+                                  color: Color(0xFF3E312A),
+                                ),
                                 overflow: TextOverflow.ellipsis,
                               ),
                               const SizedBox(height: 2),
                               Text(
-                                isMe ? l10n.gameMyProfile : l10n.gamePlayerProfile,
-                                style: const TextStyle(fontSize: 12, color: Color(0xFF84766E)),
+                                isMe
+                                    ? l10n.gameMyProfile
+                                    : l10n.gamePlayerProfile,
+                                style: const TextStyle(
+                                  fontSize: 12,
+                                  color: Color(0xFF84766E),
+                                ),
                               ),
                             ],
                           ),
@@ -4818,33 +6286,63 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
                         runSpacing: 8,
                         children: [
                           if (game.friends.contains(nickname))
-                            _buildProfileIconBtn(Icons.check, const Color(0xFFBDBDBD), l10n.gameAlreadyFriend, () {})
+                            _buildProfileIconBtn(
+                              Icons.check,
+                              const Color(0xFFBDBDBD),
+                              l10n.gameAlreadyFriend,
+                              () {},
+                            )
                           else if (game.sentFriendRequests.contains(nickname))
-                            _buildProfileIconBtn(Icons.hourglass_top, const Color(0xFFBDBDBD), l10n.gameRequestPending, () {})
+                            _buildProfileIconBtn(
+                              Icons.hourglass_top,
+                              const Color(0xFFBDBDBD),
+                              l10n.gameRequestPending,
+                              () {},
+                            )
                           else
-                            _buildProfileIconBtn(Icons.person_add, const Color(0xFF81C784), l10n.gameAddFriend, () {
-                              game.addFriendAction(nickname);
-                              Navigator.pop(ctx);
-                              ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(l10n.gameFriendRequestSent)));
-                            }),
+                            _buildProfileIconBtn(
+                              Icons.person_add,
+                              const Color(0xFF81C784),
+                              l10n.gameAddFriend,
+                              () {
+                                game.addFriendAction(nickname);
+                                Navigator.pop(ctx);
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(
+                                    content: Text(l10n.gameFriendRequestSent),
+                                  ),
+                                );
+                              },
+                            ),
                           _buildProfileIconBtn(
                             isBlockedUser ? Icons.block : Icons.shield_outlined,
-                            isBlockedUser ? const Color(0xFF64B5F6) : const Color(0xFFFF8A65),
+                            isBlockedUser
+                                ? const Color(0xFF64B5F6)
+                                : const Color(0xFFFF8A65),
                             isBlockedUser ? l10n.gameUnblock : l10n.gameBlock,
                             () {
                               if (isBlockedUser) {
                                 game.unblockUserAction(nickname);
-                                ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(l10n.gameUnblocked)));
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(content: Text(l10n.gameUnblocked)),
+                                );
                               } else {
                                 game.blockUserAction(nickname);
-                                ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(l10n.gameBlocked)));
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(content: Text(l10n.gameBlocked)),
+                                );
                               }
                             },
                           ),
-                          _buildProfileIconBtn(Icons.flag, const Color(0xFFE57373), l10n.gameReport, () {
-                            Navigator.pop(ctx);
-                            _showReportDialog(nickname, game);
-                          }),
+                          _buildProfileIconBtn(
+                            Icons.flag,
+                            const Color(0xFFE57373),
+                            l10n.gameReport,
+                            () {
+                              Navigator.pop(ctx);
+                              _showReportDialog(nickname, game);
+                            },
+                          ),
                         ],
                       ),
                     ],
@@ -4852,13 +6350,25 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
                 ),
               ),
               content: isLoading
-                  ? const SizedBox(height: 140, width: 360, child: Center(child: CircularProgressIndicator()))
+                  ? const SizedBox(
+                      height: 140,
+                      width: 360,
+                      child: Center(child: CircularProgressIndicator()),
+                    )
                   : ConstrainedBox(
-                      constraints: const BoxConstraints(maxWidth: 420, maxHeight: 560),
-                      child: SingleChildScrollView(child: _buildProfileContent(profile)),
+                      constraints: const BoxConstraints(
+                        maxWidth: 420,
+                        maxHeight: 560,
+                      ),
+                      child: SingleChildScrollView(
+                        child: _buildProfileContent(profile),
+                      ),
                     ),
               actions: [
-                TextButton(onPressed: () => Navigator.pop(ctx), child: Text(l10n.gameClose)),
+                TextButton(
+                  onPressed: () => Navigator.pop(ctx),
+                  child: Text(l10n.gameClose),
+                ),
               ],
             );
           },
@@ -4867,7 +6377,12 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
     );
   }
 
-  Widget _buildProfileIconBtn(IconData icon, Color color, String tooltip, VoidCallback onTap) {
+  Widget _buildProfileIconBtn(
+    IconData icon,
+    Color color,
+    String tooltip,
+    VoidCallback onTap,
+  ) {
     return Tooltip(
       message: tooltip,
       child: InkWell(
@@ -4920,7 +6435,11 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
       children: [
         _buildProfileHeader(level as int, expTotal as int, bannerKey),
         const SizedBox(height: 8),
-        _buildMannerLeaveRow(totalGames: totalGames as int, reportCount: reportCount as int, leaveCount: leaveCount as int),
+        _buildMannerLeaveRow(
+          totalGames: totalGames as int,
+          reportCount: reportCount as int,
+          leaveCount: leaveCount as int,
+        ),
         const SizedBox(height: 10),
         _buildProfileSection(
           title: l10n.rankingMightySeasonRanked,
@@ -4930,7 +6449,14 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
           iconColor: const Color(0xFFFFD54F),
           mainText: '$mightySeasonRating',
           chips: [
-            _buildStatChip(l10n.gameStatRecord, l10n.gameRecordFormat(mightySeasonGames as int, mightySeasonWins as int, mightySeasonLosses as int)),
+            _buildStatChip(
+              l10n.gameStatRecord,
+              l10n.gameRecordFormat(
+                mightySeasonGames as int,
+                mightySeasonWins as int,
+                mightySeasonLosses as int,
+              ),
+            ),
             _buildStatChip(l10n.gameStatWinRate, '$mightySeasonWinRate%'),
           ],
         ),
@@ -4943,7 +6469,14 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
           iconColor: const Color(0xFF4CAF50),
           mainText: '',
           chips: [
-            _buildStatChip(l10n.gameStatRecord, l10n.gameRecordFormat(mightyTotalGames as int, mightyWins as int, mightyLosses as int)),
+            _buildStatChip(
+              l10n.gameStatRecord,
+              l10n.gameRecordFormat(
+                mightyTotalGames as int,
+                mightyWins as int,
+                mightyLosses as int,
+              ),
+            ),
             _buildStatChip(l10n.gameStatWinRate, '$mightyWinRate%'),
           ],
         ),
@@ -4967,7 +6500,14 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
       ),
       child: Row(
         children: [
-          Text('Lv.$level', style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: Color(0xFF5A4038))),
+          Text(
+            'Lv.$level',
+            style: const TextStyle(
+              fontSize: 14,
+              fontWeight: FontWeight.bold,
+              color: Color(0xFF5A4038),
+            ),
+          ),
           const SizedBox(width: 12),
           Expanded(
             child: Column(
@@ -4983,7 +6523,10 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
                   ),
                 ),
                 const SizedBox(height: 2),
-                Text('$expInLevel/100 EXP', style: const TextStyle(fontSize: 9, color: Color(0xFF9A8E8A))),
+                Text(
+                  '$expInLevel/100 EXP',
+                  style: const TextStyle(fontSize: 9, color: Color(0xFF9A8E8A)),
+                ),
               ],
             ),
           ),
@@ -4994,14 +6537,36 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
 
   LinearGradient? _bannerGradient(String? key) {
     switch (key) {
-      case 'banner_pastel': return const LinearGradient(colors: [Color(0xFFF6C1C9), Color(0xFFF3E7EA)]);
-      case 'banner_blossom': return const LinearGradient(colors: [Color(0xFFF7D6D0), Color(0xFFF3E9E6)]);
-      case 'banner_mint': return const LinearGradient(colors: [Color(0xFFCDEBD8), Color(0xFFEFF8F2)]);
-      case 'banner_sunset_7d': return const LinearGradient(colors: [Color(0xFFFFC3A0), Color(0xFFFFE5B4)]);
-      case 'banner_season_gold': return const LinearGradient(colors: [Color(0xFFFFE082), Color(0xFFFFF3C0)]);
-      case 'banner_season_silver': return const LinearGradient(colors: [Color(0xFFCFD8DC), Color(0xFFF1F3F4)]);
-      case 'banner_season_bronze': return const LinearGradient(colors: [Color(0xFFD7B59A), Color(0xFFF4E8DC)]);
-      default: return null;
+      case 'banner_pastel':
+        return const LinearGradient(
+          colors: [Color(0xFFF6C1C9), Color(0xFFF3E7EA)],
+        );
+      case 'banner_blossom':
+        return const LinearGradient(
+          colors: [Color(0xFFF7D6D0), Color(0xFFF3E9E6)],
+        );
+      case 'banner_mint':
+        return const LinearGradient(
+          colors: [Color(0xFFCDEBD8), Color(0xFFEFF8F2)],
+        );
+      case 'banner_sunset_7d':
+        return const LinearGradient(
+          colors: [Color(0xFFFFC3A0), Color(0xFFFFE5B4)],
+        );
+      case 'banner_season_gold':
+        return const LinearGradient(
+          colors: [Color(0xFFFFE082), Color(0xFFFFF3C0)],
+        );
+      case 'banner_season_silver':
+        return const LinearGradient(
+          colors: [Color(0xFFCFD8DC), Color(0xFFF1F3F4)],
+        );
+      case 'banner_season_bronze':
+        return const LinearGradient(
+          colors: [Color(0xFFD7B59A), Color(0xFFF4E8DC)],
+        );
+      default:
+        return null;
     }
   }
 
@@ -5013,13 +6578,24 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
     return score.clamp(0, 1000);
   }
 
-  Widget _buildMannerLeaveRow({required int totalGames, required int reportCount, required int leaveCount}) {
+  Widget _buildMannerLeaveRow({
+    required int totalGames,
+    required int reportCount,
+    required int leaveCount,
+  }) {
     final manner = _calcMannerScore(totalGames, leaveCount, reportCount);
     final Color color;
     final IconData icon;
-    if (manner >= 800) { color = const Color(0xFF4CAF50); icon = Icons.sentiment_very_satisfied; }
-    else if (manner >= 500) { color = const Color(0xFFFF9800); icon = Icons.sentiment_neutral; }
-    else { color = const Color(0xFFE53935); icon = Icons.sentiment_very_dissatisfied; }
+    if (manner >= 800) {
+      color = const Color(0xFF4CAF50);
+      icon = Icons.sentiment_very_satisfied;
+    } else if (manner >= 500) {
+      color = const Color(0xFFFF9800);
+      icon = Icons.sentiment_neutral;
+    } else {
+      color = const Color(0xFFE53935);
+      icon = Icons.sentiment_very_dissatisfied;
+    }
     final l10n = L10n.of(context);
     final boxDeco = BoxDecoration(
       color: Colors.white.withValues(alpha: 0.95),
@@ -5032,11 +6608,24 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
           child: Container(
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
             decoration: boxDeco,
-            child: Row(mainAxisAlignment: MainAxisAlignment.center, children: [
-              Icon(icon, color: color, size: 16),
-              const SizedBox(width: 6),
-              Flexible(child: Text('${l10n.rankingMannerScore} $manner', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: color), overflow: TextOverflow.ellipsis)),
-            ]),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(icon, color: color, size: 16),
+                const SizedBox(width: 6),
+                Flexible(
+                  child: Text(
+                    '${l10n.rankingMannerScore} $manner',
+                    style: TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.bold,
+                      color: color,
+                    ),
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
+              ],
+            ),
           ),
         ),
         const SizedBox(width: 8),
@@ -5044,11 +6633,28 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
           child: Container(
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
             decoration: boxDeco,
-            child: Row(mainAxisAlignment: MainAxisAlignment.center, children: [
-              const Icon(Icons.warning_amber_rounded, color: Color(0xFFE57373), size: 16),
-              const SizedBox(width: 6),
-              Flexible(child: Text(l10n.gameDesertions(leaveCount), style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Color(0xFF9A6A6A)), overflow: TextOverflow.ellipsis)),
-            ]),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                const Icon(
+                  Icons.warning_amber_rounded,
+                  color: Color(0xFFE57373),
+                  size: 16,
+                ),
+                const SizedBox(width: 6),
+                Flexible(
+                  child: Text(
+                    l10n.gameDesertions(leaveCount),
+                    style: const TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.bold,
+                      color: Color(0xFF9A6A6A),
+                    ),
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
+              ],
+            ),
           ),
         ),
       ],
@@ -5077,14 +6683,33 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
             children: [
               Icon(icon, color: iconColor, size: 16),
               const SizedBox(width: 6),
-              Text(title, style: TextStyle(fontSize: 12, color: accent, fontWeight: FontWeight.bold)),
+              Text(
+                title,
+                style: TextStyle(
+                  fontSize: 12,
+                  color: accent,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
               const Spacer(),
               if (mainText.isNotEmpty)
-                Text(mainText, style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: accent)),
+                Text(
+                  mainText,
+                  style: TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                    color: accent,
+                  ),
+                ),
             ],
           ),
           const SizedBox(height: 8),
-          Wrap(spacing: 6, runSpacing: 6, alignment: WrapAlignment.center, children: chips),
+          Wrap(
+            spacing: 6,
+            runSpacing: 6,
+            alignment: WrapAlignment.center,
+            children: chips,
+          ),
         ],
       ),
     );
@@ -5101,15 +6726,28 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Text(label, style: const TextStyle(fontSize: 10, color: Color(0xFF8A8A8A))),
+          Text(
+            label,
+            style: const TextStyle(fontSize: 10, color: Color(0xFF8A8A8A)),
+          ),
           const SizedBox(width: 4),
-          Text(value, style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Color(0xFF5A4038))),
+          Text(
+            value,
+            style: const TextStyle(
+              fontSize: 11,
+              fontWeight: FontWeight.bold,
+              color: Color(0xFF5A4038),
+            ),
+          ),
         ],
       ),
     );
   }
 
-  Widget _buildRecentMatchesList(List<dynamic> matches, String profileNickname) {
+  Widget _buildRecentMatchesList(
+    List<dynamic> matches,
+    String profileNickname,
+  ) {
     final l10n = L10n.of(context);
     return Container(
       width: double.infinity,
@@ -5122,13 +6760,22 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(l10n.gameRecentMatchesThree, style: const TextStyle(fontSize: 12, color: Color(0xFF8A8A8A))),
+          Text(
+            l10n.gameRecentMatchesThree,
+            style: const TextStyle(fontSize: 12, color: Color(0xFF8A8A8A)),
+          ),
           const SizedBox(height: 8),
           if (matches.isEmpty)
-            Text(l10n.gameNoRecentMatches, style: const TextStyle(fontSize: 12, color: Color(0xFF9A8E8A)))
+            Text(
+              l10n.gameNoRecentMatches,
+              style: const TextStyle(fontSize: 12, color: Color(0xFF9A8E8A)),
+            )
           else
             Column(
-              children: matches.take(3).map<Widget>((match) => _buildMatchRow(match)).toList(),
+              children: matches
+                  .take(3)
+                  .map<Widget>((match) => _buildMatchRow(match))
+                  .toList(),
             ),
         ],
       ),
@@ -5161,27 +6808,50 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
     final playerText = players.map((p) => p['nickname'] ?? '?').join(', ');
     final scoreText = isDesertionLoss
         ? ''
-        : l10n.lobbyRankAndScore(myRank.toString(), (myScore as num?)?.toInt() ?? 0);
+        : l10n.lobbyRankAndScore(
+            myRank.toString(),
+            (myScore as num?)?.toInt() ?? 0,
+          );
 
     return Padding(
       padding: const EdgeInsets.only(bottom: 6),
       child: Row(
         children: [
           Container(
-            width: 24, height: 24, alignment: Alignment.center,
-            decoration: BoxDecoration(color: badgeColor, shape: BoxShape.circle),
-            child: Text(badge, style: const TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.bold)),
+            width: 24,
+            height: 24,
+            alignment: Alignment.center,
+            decoration: BoxDecoration(
+              color: badgeColor,
+              shape: BoxShape.circle,
+            ),
+            child: Text(
+              badge,
+              style: const TextStyle(
+                color: Colors.white,
+                fontSize: 11,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
           ),
           const SizedBox(width: 4),
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
             decoration: BoxDecoration(
-              color: isRanked ? const Color(0xFFFFF3E0) : const Color(0xFFF5F5F5),
+              color: isRanked
+                  ? const Color(0xFFFFF3E0)
+                  : const Color(0xFFF5F5F5),
               borderRadius: BorderRadius.circular(4),
             ),
             child: Text(
               isRanked ? l10n.lobbyMatchTypeRanked : l10n.lobbyMatchTypeNormal,
-              style: TextStyle(fontSize: 8, fontWeight: FontWeight.bold, color: isRanked ? const Color(0xFFE65100) : const Color(0xFF9E9E9E)),
+              style: TextStyle(
+                fontSize: 8,
+                fontWeight: FontWeight.bold,
+                color: isRanked
+                    ? const Color(0xFFE65100)
+                    : const Color(0xFF9E9E9E),
+              ),
             ),
           ),
           const SizedBox(width: 8),
@@ -5189,18 +6859,35 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(date, style: const TextStyle(fontSize: 11, color: Color(0xFF8A8A8A))),
+                Text(
+                  date,
+                  style: const TextStyle(
+                    fontSize: 11,
+                    color: Color(0xFF8A8A8A),
+                  ),
+                ),
                 const SizedBox(height: 2),
                 Text(
                   playerText,
-                  style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Color(0xFF5A4038)),
+                  style: const TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.bold,
+                    color: Color(0xFF5A4038),
+                  ),
                   overflow: TextOverflow.ellipsis,
                 ),
               ],
             ),
           ),
           if (scoreText.isNotEmpty)
-            Text(scoreText, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Color(0xFF5A4038))),
+            Text(
+              scoreText,
+              style: const TextStyle(
+                fontSize: 12,
+                fontWeight: FontWeight.bold,
+                color: Color(0xFF5A4038),
+              ),
+            ),
         ],
       ),
     );
@@ -5237,18 +6924,27 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
             curve: Curves.easeOut,
             padding: EdgeInsets.only(bottom: media.viewInsets.bottom),
             child: AlertDialog(
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(20),
+              ),
               title: Row(
                 children: [
                   const Icon(Icons.flag, color: Color(0xFFE57373)),
                   const SizedBox(width: 8),
                   Expanded(
-                    child: Text(l10n.gameReportTitle(nickname), style: const TextStyle(fontWeight: FontWeight.bold), overflow: TextOverflow.ellipsis),
+                    child: Text(
+                      l10n.gameReportTitle(nickname),
+                      style: const TextStyle(fontWeight: FontWeight.bold),
+                      overflow: TextOverflow.ellipsis,
+                    ),
                   ),
                 ],
               ),
               content: ConstrainedBox(
-                constraints: BoxConstraints(maxWidth: 420, maxHeight: media.size.height * 0.55),
+                constraints: BoxConstraints(
+                  maxWidth: 420,
+                  maxHeight: media.size.height * 0.55,
+                ),
                 child: SingleChildScrollView(
                   child: Column(
                     mainAxisSize: MainAxisSize.min,
@@ -5261,12 +6957,26 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
                           borderRadius: BorderRadius.circular(12),
                           border: Border.all(color: const Color(0xFFF0C7C7)),
                         ),
-                        child: Text(l10n.gameReportWarning, style: const TextStyle(fontSize: 12, color: Color(0xFF9A4A4A), height: 1.4)),
+                        child: Text(
+                          l10n.gameReportWarning,
+                          style: const TextStyle(
+                            fontSize: 12,
+                            color: Color(0xFF9A4A4A),
+                            height: 1.4,
+                          ),
+                        ),
                       ),
                       const SizedBox(height: 12),
                       Align(
                         alignment: Alignment.centerLeft,
-                        child: Text(l10n.gameSelectReason, style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.grey.shade700)),
+                        child: Text(
+                          l10n.gameSelectReason,
+                          style: TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.grey.shade700,
+                          ),
+                        ),
                       ),
                       const SizedBox(height: 6),
                       Wrap(
@@ -5275,11 +6985,20 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
                         children: reasons.map((r) {
                           final isSelected = selectedReason == r;
                           return ChoiceChip(
-                            label: Text(r, style: TextStyle(fontSize: 12, color: isSelected ? Colors.white : const Color(0xFF5A4038))),
+                            label: Text(
+                              r,
+                              style: TextStyle(
+                                fontSize: 12,
+                                color: isSelected
+                                    ? Colors.white
+                                    : const Color(0xFF5A4038),
+                              ),
+                            ),
                             selected: isSelected,
                             selectedColor: const Color(0xFFE57373),
                             backgroundColor: const Color(0xFFF5F0EB),
-                            onSelected: (_) => setState(() => selectedReason = r),
+                            onSelected: (_) =>
+                                setState(() => selectedReason = r),
                           );
                         }).toList(),
                       ),
@@ -5291,7 +7010,9 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
                         decoration: InputDecoration(
                           hintText: l10n.gameReportDetailHint,
                           hintStyle: const TextStyle(fontSize: 12),
-                          border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
                         ),
                       ),
                     ],
@@ -5299,13 +7020,18 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
                 ),
               ),
               actions: [
-                TextButton(onPressed: () => Navigator.pop(ctx), child: Text(l10n.gameClose)),
+                TextButton(
+                  onPressed: () => Navigator.pop(ctx),
+                  child: Text(l10n.gameClose),
+                ),
                 ElevatedButton(
                   onPressed: selectedReason == null
                       ? null
                       : () {
                           final detail = reasonController.text.trim();
-                          final reason = detail.isEmpty ? selectedReason! : '${selectedReason!} / $detail';
+                          final reason = detail.isEmpty
+                              ? selectedReason!
+                              : '${selectedReason!} / $detail';
                           Navigator.pop(ctx);
                           game.reportUserAction(nickname, reason);
                         },

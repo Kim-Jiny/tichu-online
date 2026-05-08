@@ -28,6 +28,8 @@ class _SKGameScreenState extends State<SKGameScreen> {
   // drop a queued card when a new trick starts (lead suit changes).
   int _lastSkTrickNumber = -1;
   bool _chatOpen = false;
+  bool _soundPanelOpen = false;
+  bool _moreOpen = false;
   int _readChatCount = 0;
   bool _viewersOpen = false;
   final TextEditingController _chatController = TextEditingController();
@@ -214,11 +216,12 @@ class _SKGameScreenState extends State<SKGameScreen> {
                     _lastBiddingRound = state.round;
                     if (_selectedCard != null || _selectedBid != null) {
                       WidgetsBinding.instance.addPostFrameCallback((_) {
-                        if (mounted)
+                        if (mounted) {
                           setState(() {
                             _selectedCard = null;
                             _selectedBid = null;
                           });
+                        }
                       });
                     }
                   }
@@ -270,6 +273,8 @@ class _SKGameScreenState extends State<SKGameScreen> {
                               _buildGameEndUI(state, game),
                           ],
                         ),
+                        if (_moreOpen) _buildMoreMenu(game),
+                        if (_soundPanelOpen) _buildSoundPanel(game),
                         if (_chatOpen) _buildChatPanel(game),
                       ],
                     );
@@ -330,7 +335,9 @@ class _SKGameScreenState extends State<SKGameScreen> {
                         ),
                       if (game.hasIncomingCardViewRequests)
                         _buildCardViewRequestPopup(game),
+                      if (_moreOpen) _buildMoreMenu(game),
                       if (_viewersOpen) _buildViewersPanel(game),
+                      if (_soundPanelOpen) _buildSoundPanel(game),
                       if (_chatOpen) _buildChatPanel(game),
                     ],
                   );
@@ -847,7 +854,6 @@ class _SKGameScreenState extends State<SKGameScreen> {
 
   // ── Top Bar ──
   Widget _buildTopBar(SKGameStateData state, GameService game) {
-    final hasViewers = game.cardViewers.isNotEmpty;
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
       child: Row(
@@ -884,19 +890,6 @@ class _SKGameScreenState extends State<SKGameScreen> {
             active: false,
             onTap: () => _showScoreHistoryDialog(state),
           ),
-          if (hasViewers) ...[
-            const SizedBox(width: 6),
-            _buildTopActionButton(
-              icon: Icons.visibility,
-              active: _viewersOpen,
-              badgeCount: game.cardViewers.length,
-              onTap: () {
-                setState(() {
-                  _viewersOpen = !_viewersOpen;
-                });
-              },
-            ),
-          ],
           const SizedBox(width: 6),
           _buildTopActionButton(
             icon: Icons.chat_bubble_outline_rounded,
@@ -909,16 +902,29 @@ class _SKGameScreenState extends State<SKGameScreen> {
                 _chatOpen = !_chatOpen;
                 if (_chatOpen) {
                   _readChatCount = game.chatMessages.length;
+                  _moreOpen = false;
+                  _soundPanelOpen = false;
+                  _viewersOpen = false;
                 }
               });
             },
           ),
           const SizedBox(width: 6),
           _buildTopActionButton(
-            icon: Icons.exit_to_app,
-            active: false,
-            iconColor: const Color(0xFFE53935),
-            onTap: () => _showExitConfirmDialog(game),
+            icon: Icons.more_horiz,
+            active: _moreOpen,
+            onTap: () {
+              setState(() {
+                _moreOpen = !_moreOpen;
+                if (_moreOpen) {
+                  _chatOpen = false;
+                  _soundPanelOpen = false;
+                  _viewersOpen = false;
+                } else {
+                  _soundPanelOpen = false;
+                }
+              });
+            },
           ),
         ],
       ),
@@ -1029,18 +1035,160 @@ class _SKGameScreenState extends State<SKGameScreen> {
                 _chatOpen = !_chatOpen;
                 if (_chatOpen) {
                   _readChatCount = game.chatMessages.length;
+                  _moreOpen = false;
+                  _soundPanelOpen = false;
                 }
               });
             },
           ),
           const SizedBox(width: 6),
           _buildTopActionButton(
-            icon: Icons.exit_to_app,
-            active: false,
-            iconColor: const Color(0xFFFFC4C4),
-            onTap: () => game.leaveRoom(),
+            icon: Icons.more_horiz,
+            active: _moreOpen,
+            onTap: () {
+              setState(() {
+                _moreOpen = !_moreOpen;
+                if (_moreOpen) {
+                  _chatOpen = false;
+                  _soundPanelOpen = false;
+                } else {
+                  _soundPanelOpen = false;
+                }
+              });
+            },
           ),
         ],
+      ),
+    );
+  }
+
+  Widget _buildMoreMenu(GameService game) {
+    final hasViewers = game.cardViewers.isNotEmpty;
+    return Positioned(
+      top: 58,
+      right: 8,
+      child: Container(
+        width: hasViewers ? 210 : 170,
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+        decoration: BoxDecoration(
+          color: Colors.white.withValues(alpha: 0.97),
+          borderRadius: BorderRadius.circular(14),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.15),
+              blurRadius: 8,
+              offset: const Offset(0, 3),
+            ),
+          ],
+        ),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            _buildTopActionButton(
+              icon: Icons.people_alt,
+              active: false,
+              badgeCount: game.spectators.length,
+              onTap: () {
+                setState(() {
+                  _moreOpen = false;
+                  _soundPanelOpen = false;
+                });
+                _showSpectatorListDialog(game);
+              },
+            ),
+            if (hasViewers)
+              _buildTopActionButton(
+                icon: Icons.visibility,
+                active: _viewersOpen,
+                badgeCount: game.cardViewers.length,
+                onTap: () {
+                  setState(() {
+                    _moreOpen = false;
+                    _soundPanelOpen = false;
+                    _viewersOpen = !_viewersOpen;
+                  });
+                },
+              ),
+            _buildTopActionButton(
+              icon: game.sfxVolume <= 0.01 ? Icons.volume_off : Icons.volume_up,
+              active: _soundPanelOpen,
+              onTap: () {
+                setState(() {
+                  _soundPanelOpen = !_soundPanelOpen;
+                  if (_soundPanelOpen) {
+                    _viewersOpen = false;
+                  }
+                });
+              },
+            ),
+            _buildTopActionButton(
+              icon: Icons.exit_to_app,
+              active: false,
+              iconColor: game.isSpectator
+                  ? const Color(0xFFFFC4C4)
+                  : const Color(0xFFE53935),
+              onTap: () {
+                setState(() {
+                  _moreOpen = false;
+                  _soundPanelOpen = false;
+                });
+                if (game.isSpectator) {
+                  game.leaveRoom();
+                } else {
+                  _showExitConfirmDialog(game);
+                }
+              },
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildSoundPanel(GameService game) {
+    final l10n = L10n.of(context);
+    final title = game.isSpectator
+        ? l10n.spectatorSoundEffects
+        : l10n.gameSoundEffects;
+
+    return Positioned(
+      top: 122,
+      right: 8,
+      child: Container(
+        width: 190,
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+        decoration: BoxDecoration(
+          color: Colors.white.withValues(alpha: 0.97),
+          borderRadius: BorderRadius.circular(14),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.15),
+              blurRadius: 8,
+              offset: const Offset(0, 3),
+            ),
+          ],
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              title,
+              style: const TextStyle(
+                fontSize: 12,
+                fontWeight: FontWeight.bold,
+                color: Color(0xFF5A4038),
+              ),
+            ),
+            Slider(
+              value: game.sfxVolume,
+              onChanged: (value) => game.setSfxVolume(value),
+              onChangeEnd: (value) => game.setSfxVolume(value, persist: true),
+              min: 0,
+              max: 1,
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -1068,7 +1216,9 @@ class _SKGameScreenState extends State<SKGameScreen> {
             child: GestureDetector(
               onTap: () {
                 if (isApproved) {
-                  setState(() => _viewingPlayerId = p.id);
+                  setState(() {
+                    _viewingPlayerId = _viewingPlayerId == p.id ? null : p.id;
+                  });
                 } else if (isPending) {
                   // do nothing
                 } else {
@@ -1146,8 +1296,11 @@ class _SKGameScreenState extends State<SKGameScreen> {
                                 if (!p.connected)
                                   const Padding(
                                     padding: EdgeInsets.only(right: 3),
-                                    child: Icon(Icons.wifi_off,
-                                        size: 12, color: Color(0xFFE53935)),
+                                    child: Icon(
+                                      Icons.wifi_off,
+                                      size: 12,
+                                      color: Color(0xFFE53935),
+                                    ),
                                   ),
                                 Flexible(
                                   child: Text(
@@ -1391,13 +1544,38 @@ class _SKGameScreenState extends State<SKGameScreen> {
           children: [
             Padding(
               padding: const EdgeInsets.only(bottom: 4),
-              child: Text(
-                L10n.of(context).skGamePlayerHand(viewingPlayer.name),
-                style: const TextStyle(
-                  color: Color(0xFF5A4038),
-                  fontSize: 13,
-                  fontWeight: FontWeight.w700,
-                ),
+              child: Row(
+                children: [
+                  const SizedBox(width: 32),
+                  Expanded(
+                    child: Text(
+                      L10n.of(context).skGamePlayerHand(viewingPlayer.name),
+                      textAlign: TextAlign.center,
+                      style: const TextStyle(
+                        color: Color(0xFF5A4038),
+                        fontSize: 13,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                  ),
+                  SizedBox(
+                    width: 32,
+                    height: 32,
+                    child: IconButton(
+                      tooltip: MaterialLocalizations.of(
+                        context,
+                      ).closeButtonTooltip,
+                      padding: EdgeInsets.zero,
+                      splashRadius: 18,
+                      icon: const Icon(
+                        Icons.close,
+                        size: 18,
+                        color: Color(0xFF8A7A72),
+                      ),
+                      onPressed: () => setState(() => _viewingPlayerId = null),
+                    ),
+                  ),
+                ],
               ),
             ),
             if (viewingPlayer.cards.isEmpty)
@@ -1442,8 +1620,9 @@ class _SKGameScreenState extends State<SKGameScreen> {
   }
 
   Widget _buildCenterTimerBadge(SKGameStateData state) {
-    if (_remainingSeconds <= 0 || state.players.isEmpty)
+    if (_remainingSeconds <= 0 || state.players.isEmpty) {
       return const SizedBox.shrink();
+    }
 
     final timerId = state.phase == 'bidding'
         ? state.roundStarter
@@ -1455,8 +1634,9 @@ class _SKGameScreenState extends State<SKGameScreen> {
         ? '${currentPlayerName.substring(0, 8)}…'
         : currentPlayerName;
     final urgent = _remainingSeconds <= 10;
-    final primaryColor =
-        urgent ? const Color(0xFFCC4444) : const Color(0xFF5A4038);
+    final primaryColor = urgent
+        ? const Color(0xFFCC4444)
+        : const Color(0xFF5A4038);
     final timerText = L10n.of(context).skGameSecondsShort(_remainingSeconds);
 
     final boxDecoration = BoxDecoration(
@@ -1767,8 +1947,11 @@ class _SKGameScreenState extends State<SKGameScreen> {
                               if (!p.connected)
                                 const Padding(
                                   padding: EdgeInsets.only(right: 3),
-                                  child: Icon(Icons.wifi_off,
-                                      size: 12, color: Color(0xFFE53935)),
+                                  child: Icon(
+                                    Icons.wifi_off,
+                                    size: 12,
+                                    color: Color(0xFFE53935),
+                                  ),
                                 ),
                               Flexible(
                                 child: Text(

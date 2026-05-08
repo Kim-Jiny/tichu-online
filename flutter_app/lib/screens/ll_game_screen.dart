@@ -22,6 +22,7 @@ class _LLGameScreenState extends State<LLGameScreen> {
   String? _selectedTarget;
   String? _selectedGuess;
   bool _chatOpen = false;
+  bool _soundPanelOpen = false;
   int _readChatCount = 0;
   final TextEditingController _chatController = TextEditingController();
   final ScrollController _chatScrollController = ScrollController();
@@ -81,7 +82,8 @@ class _LLGameScreenState extends State<LLGameScreen> {
     if (llState == null) return;
     final deadline = llState.turnDeadline;
     if (deadline != null && deadline > 0) {
-      final remaining = ((deadline - DateTime.now().millisecondsSinceEpoch) / 1000).ceil();
+      final remaining =
+          ((deadline - DateTime.now().millisecondsSinceEpoch) / 1000).ceil();
       if (remaining != _remainingSeconds) {
         setState(() => _remainingSeconds = remaining.clamp(0, 999));
       }
@@ -119,7 +121,9 @@ class _LLGameScreenState extends State<LLGameScreen> {
           _gameEndCountdownActive = true;
           _gameEndCountdown = 5;
           _gameEndCountdownTimer?.cancel();
-          _gameEndCountdownTimer = Timer.periodic(const Duration(seconds: 1), (_) {
+          _gameEndCountdownTimer = Timer.periodic(const Duration(seconds: 1), (
+            _,
+          ) {
             if (!mounted) return;
             setState(() => _gameEndCountdown--);
             if (_gameEndCountdown <= 0) {
@@ -133,7 +137,8 @@ class _LLGameScreenState extends State<LLGameScreen> {
         }
 
         // Clear stale selections when leaving effect_resolve
-        if (llState.phase != 'effect_resolve' || llState.pendingEffect == null) {
+        if (llState.phase != 'effect_resolve' ||
+            llState.pendingEffect == null) {
           _selectedTarget = null;
           _selectedGuess = null;
         }
@@ -164,13 +169,15 @@ class _LLGameScreenState extends State<LLGameScreen> {
                         _buildBottomArea(context, gs, llState),
                       ],
                     ),
-                    if (llState.phase == 'effect_resolve' && llState.pendingEffect != null)
+                    if (llState.phase == 'effect_resolve' &&
+                        llState.pendingEffect != null)
                       Positioned(
                         left: 0,
                         right: 0,
                         bottom: 0,
                         child: _buildEffectResolve(context, gs, llState),
                       ),
+                    if (_soundPanelOpen) _buildSoundPanel(gs),
                     if (_chatOpen) _buildChatPanel(context, gs),
                   ],
                 ),
@@ -211,7 +218,10 @@ class _LLGameScreenState extends State<LLGameScreen> {
                   children: [
                     // Header bar
                     Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 14,
+                        vertical: 12,
+                      ),
                       decoration: BoxDecoration(
                         color: Colors.white.withValues(alpha: 0.90),
                         borderRadius: BorderRadius.circular(18),
@@ -221,13 +231,21 @@ class _LLGameScreenState extends State<LLGameScreen> {
                         children: [
                           IconButton(
                             onPressed: () => gs.leaveRoom(),
-                            icon: const Icon(Icons.arrow_back, color: Color(0xFF5A4038)),
+                            icon: const Icon(
+                              Icons.arrow_back,
+                              color: Color(0xFF5A4038),
+                            ),
                           ),
                           const SizedBox(width: 6),
                           Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 10,
+                              vertical: 5,
+                            ),
                             decoration: BoxDecoration(
-                              color: const Color(0xFFE91E63).withValues(alpha: 0.12),
+                              color: const Color(
+                                0xFFE91E63,
+                              ).withValues(alpha: 0.12),
                               borderRadius: BorderRadius.circular(999),
                             ),
                             child: Text(
@@ -255,11 +273,16 @@ class _LLGameScreenState extends State<LLGameScreen> {
                           _buildHeaderActionButton(
                             icon: Icons.chat_bubble_outline_rounded,
                             active: _chatOpen,
-                            badgeCount: _chatOpen ? 0 : (gs.chatMessages.length - _readChatCount).clamp(0, 99),
+                            badgeCount: _chatOpen
+                                ? 0
+                                : (gs.chatMessages.length - _readChatCount)
+                                      .clamp(0, 99),
                             onTap: () {
                               setState(() {
                                 _chatOpen = !_chatOpen;
-                                if (_chatOpen) _readChatCount = gs.chatMessages.length;
+                                if (_chatOpen) {
+                                  _readChatCount = gs.chatMessages.length;
+                                }
                               });
                             },
                           ),
@@ -285,15 +308,20 @@ class _LLGameScreenState extends State<LLGameScreen> {
                                   builder: (context, gridConstraints) {
                                     final wide = gridConstraints.maxWidth > 620;
                                     return GridView.builder(
-                                      gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-                                        crossAxisCount: wide ? 2 : 1,
-                                        mainAxisSpacing: 10,
-                                        crossAxisSpacing: 12,
-                                        childAspectRatio: wide ? 2.4 : 4.0,
-                                      ),
+                                      gridDelegate:
+                                          SliverGridDelegateWithFixedCrossAxisCount(
+                                            crossAxisCount: wide ? 2 : 1,
+                                            mainAxisSpacing: 10,
+                                            crossAxisSpacing: 12,
+                                            childAspectRatio: wide ? 2.4 : 4.0,
+                                          ),
                                       itemCount: slots.length,
                                       itemBuilder: (context, index) {
-                                        return _buildLLSpectatorSlot(gs, slots[index], index);
+                                        return _buildLLSpectatorSlot(
+                                          gs,
+                                          slots[index],
+                                          index,
+                                        );
                                       },
                                     );
                                   },
@@ -338,10 +366,16 @@ class _LLGameScreenState extends State<LLGameScreen> {
             width: 36,
             height: 36,
             decoration: BoxDecoration(
-              color: active ? const Color(0xFFE91E63).withValues(alpha: 0.15) : const Color(0xFFF2ECE8),
+              color: active
+                  ? const Color(0xFFE91E63).withValues(alpha: 0.15)
+                  : const Color(0xFFF2ECE8),
               shape: BoxShape.circle,
             ),
-            child: Icon(icon, size: 18, color: active ? const Color(0xFFE91E63) : const Color(0xFF6A5A52)),
+            child: Icon(
+              icon,
+              size: 18,
+              color: active ? const Color(0xFFE91E63) : const Color(0xFF6A5A52),
+            ),
           ),
           if (badgeCount > 0)
             Positioned(
@@ -355,7 +389,11 @@ class _LLGameScreenState extends State<LLGameScreen> {
                 ),
                 child: Text(
                   '$badgeCount',
-                  style: const TextStyle(color: Colors.white, fontSize: 9, fontWeight: FontWeight.bold),
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 9,
+                    fontWeight: FontWeight.bold,
+                  ),
                 ),
               ),
             ),
@@ -364,7 +402,11 @@ class _LLGameScreenState extends State<LLGameScreen> {
     );
   }
 
-  Widget _buildLLSpectatorSlot(GameService game, Player? player, int slotIndex) {
+  Widget _buildLLSpectatorSlot(
+    GameService game,
+    Player? player,
+    int slotIndex,
+  ) {
     final bool isBlocked = game.roomBlockedSlots.contains(slotIndex);
     final bool isEmpty = player == null;
 
@@ -380,10 +422,7 @@ class _LLGameScreenState extends State<LLGameScreen> {
           children: [
             Icon(Icons.block, size: 24, color: Color(0xFFBDB5B0)),
             SizedBox(width: 10),
-            Text(
-              '',
-              style: TextStyle(color: Color(0xFFBDB5B0), fontSize: 13),
-            ),
+            Text('', style: TextStyle(color: Color(0xFFBDB5B0), fontSize: 13)),
           ],
         ),
       );
@@ -405,7 +444,11 @@ class _LLGameScreenState extends State<LLGameScreen> {
             ),
             child: Row(
               children: [
-                const Icon(Icons.person_add, size: 24, color: Color(0xFF9AA7B0)),
+                const Icon(
+                  Icons.person_add,
+                  size: 24,
+                  color: Color(0xFF9AA7B0),
+                ),
                 const SizedBox(width: 10),
                 Text(
                   L10n.of(context).spectatorSit,
@@ -476,15 +519,17 @@ class _LLGameScreenState extends State<LLGameScreen> {
                   Text(
                     p.isHost
                         ? L10n.of(context).spectatorHost
-                        : (isReady ? L10n.of(context).spectatorReady : L10n.of(context).spectatorWaiting),
+                        : (isReady
+                              ? L10n.of(context).spectatorReady
+                              : L10n.of(context).spectatorWaiting),
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                     style: TextStyle(
                       color: p.isHost
                           ? const Color(0xFFE6A800)
                           : isReady
-                              ? const Color(0xFF4BAA6A)
-                              : const Color(0xFF9A8E8A),
+                          ? const Color(0xFF4BAA6A)
+                          : const Color(0xFF9A8E8A),
                       fontSize: 12,
                       fontWeight: FontWeight.w600,
                     ),
@@ -500,9 +545,14 @@ class _LLGameScreenState extends State<LLGameScreen> {
 
   // ====================== TOP BAR ======================
 
-  Widget _buildTopBar(BuildContext context, GameService gs, LLGameStateData state) {
+  Widget _buildTopBar(
+    BuildContext context,
+    GameService gs,
+    LLGameStateData state,
+  ) {
     final l10n = L10n.of(context);
     final unread = gs.chatMessages.length - _readChatCount;
+    final hasMuted = gs.sfxVolume <= 0.01;
 
     return Container(
       decoration: BoxDecoration(
@@ -512,7 +562,6 @@ class _LLGameScreenState extends State<LLGameScreen> {
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
       child: Row(
         children: [
-          // Round info
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
             decoration: BoxDecoration(
@@ -521,11 +570,14 @@ class _LLGameScreenState extends State<LLGameScreen> {
             ),
             child: Text(
               '${l10n.llRound} ${state.round}',
-              style: const TextStyle(color: Color(0xFF5A4038), fontSize: 13, fontWeight: FontWeight.w600),
+              style: const TextStyle(
+                color: Color(0xFF5A4038),
+                fontSize: 13,
+                fontWeight: FontWeight.w600,
+              ),
             ),
           ),
           const SizedBox(width: 8),
-          // Draw pile count
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
             decoration: BoxDecoration(
@@ -539,58 +591,184 @@ class _LLGameScreenState extends State<LLGameScreen> {
                 const SizedBox(width: 4),
                 Text(
                   '${state.drawPileCount}',
-                  style: const TextStyle(color: Color(0xFF8A7A72), fontSize: 12),
+                  style: const TextStyle(
+                    color: Color(0xFF8A7A72),
+                    fontSize: 12,
+                  ),
                 ),
               ],
             ),
           ),
           const Spacer(),
-          // Card guide button
-          IconButton(
-            icon: const Icon(Icons.help_outline, color: Color(0xFF8A7A72), size: 20),
-            onPressed: () => _showCardGuide(context),
-            padding: EdgeInsets.zero,
-            constraints: const BoxConstraints(minWidth: 36, minHeight: 36),
+          _buildTopActionButton(
+            icon: Icons.help_outline,
+            active: false,
+            onTap: () {
+              setState(() => _soundPanelOpen = false);
+              _showCardGuide(context);
+            },
           ),
-          // Chat button
-          Stack(
-            children: [
-              IconButton(
-                icon: const Icon(Icons.chat_bubble_outline, color: Color(0xFF8A7A72), size: 20),
-                onPressed: () => setState(() {
-                  _chatOpen = !_chatOpen;
-                  if (_chatOpen) _readChatCount = gs.chatMessages.length;
-                }),
-                padding: EdgeInsets.zero,
-                constraints: const BoxConstraints(minWidth: 36, minHeight: 36),
-              ),
-              if (unread > 0 && !_chatOpen)
-                Positioned(
-                  right: 0,
-                  top: 0,
-                  child: Container(
-                    padding: const EdgeInsets.all(4),
-                    decoration: const BoxDecoration(color: Colors.red, shape: BoxShape.circle),
-                    child: Text('$unread', style: const TextStyle(color: Colors.white, fontSize: 9)),
-                  ),
-                ),
-            ],
+          const SizedBox(width: 6),
+          _buildTopActionButton(
+            icon: hasMuted ? Icons.volume_off : Icons.volume_up,
+            active: _soundPanelOpen,
+            onTap: () {
+              setState(() {
+                _soundPanelOpen = !_soundPanelOpen;
+                if (_soundPanelOpen) {
+                  _chatOpen = false;
+                }
+              });
+            },
           ),
-          // Exit button
-          IconButton(
-            icon: const Icon(Icons.exit_to_app, color: Color(0xFF8A7A72), size: 20),
-            onPressed: () => _showExitDialog(context, gs),
-            padding: EdgeInsets.zero,
-            constraints: const BoxConstraints(minWidth: 36, minHeight: 36),
+          const SizedBox(width: 6),
+          _buildTopActionButton(
+            icon: Icons.chat_bubble_outline,
+            active: _chatOpen,
+            badgeCount: _chatOpen ? 0 : unread.clamp(0, 99),
+            onTap: () {
+              setState(() {
+                _chatOpen = !_chatOpen;
+                if (_chatOpen) {
+                  _readChatCount = gs.chatMessages.length;
+                  _soundPanelOpen = false;
+                }
+              });
+            },
+          ),
+          const SizedBox(width: 6),
+          _buildTopActionButton(
+            icon: Icons.exit_to_app,
+            active: false,
+            iconColor: const Color(0xFFE53935),
+            onTap: () {
+              setState(() => _soundPanelOpen = false);
+              _showExitDialog(context, gs);
+            },
           ),
         ],
       ),
     );
   }
 
+  Widget _buildTopActionButton({
+    required IconData icon,
+    required bool active,
+    required VoidCallback onTap,
+    int badgeCount = 0,
+    Color? iconColor,
+  }) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Stack(
+        clipBehavior: Clip.none,
+        children: [
+          AnimatedContainer(
+            duration: const Duration(milliseconds: 180),
+            padding: const EdgeInsets.all(8),
+            decoration: BoxDecoration(
+              color: active
+                  ? const Color(0xFF5A4038).withValues(alpha: 0.92)
+                  : Colors.white.withValues(alpha: 0.85),
+              borderRadius: BorderRadius.circular(10),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: 0.08),
+                  blurRadius: 6,
+                ),
+              ],
+            ),
+            child: Icon(
+              icon,
+              size: 19,
+              color: active
+                  ? Colors.white
+                  : (iconColor ?? const Color(0xFF5A4038)),
+            ),
+          ),
+          if (badgeCount > 0)
+            Positioned(
+              right: -4,
+              top: -4,
+              child: Container(
+                constraints: const BoxConstraints(minWidth: 18),
+                padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFE53935),
+                  borderRadius: BorderRadius.circular(999),
+                  border: Border.all(color: Colors.white, width: 1.2),
+                ),
+                child: Text(
+                  badgeCount > 99 ? '99+' : '$badgeCount',
+                  textAlign: TextAlign.center,
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 9,
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildSoundPanel(GameService gs) {
+    final l10n = L10n.of(context);
+    final title = gs.isSpectator
+        ? l10n.spectatorSoundEffects
+        : l10n.gameSoundEffects;
+
+    return Positioned(
+      top: 54,
+      right: 8,
+      child: Container(
+        width: 190,
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+        decoration: BoxDecoration(
+          color: Colors.white.withValues(alpha: 0.97),
+          borderRadius: BorderRadius.circular(14),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.15),
+              blurRadius: 8,
+              offset: const Offset(0, 3),
+            ),
+          ],
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              title,
+              style: const TextStyle(
+                fontSize: 12,
+                fontWeight: FontWeight.bold,
+                color: Color(0xFF5A4038),
+              ),
+            ),
+            Slider(
+              value: gs.sfxVolume,
+              onChanged: (value) => gs.setSfxVolume(value),
+              onChangeEnd: (value) => gs.setSfxVolume(value, persist: true),
+              min: 0,
+              max: 1,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   // ====================== GAME AREA ======================
 
-  Widget _buildGameArea(BuildContext context, GameService gs, LLGameStateData state) {
+  Widget _buildGameArea(
+    BuildContext context,
+    GameService gs,
+    LLGameStateData state,
+  ) {
     if (state.phase == 'game_end') {
       return _buildGameEnd(context, gs, state);
     }
@@ -610,15 +788,27 @@ class _LLGameScreenState extends State<LLGameScreen> {
     );
   }
 
-  Widget _buildPlayersArea(BuildContext context, GameService gs, LLGameStateData state) {
-    final otherPlayers = state.players.where((p) => p.position != 'self').toList();
+  Widget _buildPlayersArea(
+    BuildContext context,
+    GameService gs,
+    LLGameStateData state,
+  ) {
+    final otherPlayers = state.players
+        .where((p) => p.position != 'self')
+        .toList();
 
     return Column(
-      children: otherPlayers.map((player) => _buildPlayerRow(context, state, player)).toList(),
+      children: otherPlayers
+          .map((player) => _buildPlayerRow(context, state, player))
+          .toList(),
     );
   }
 
-  Widget _buildPlayerRow(BuildContext context, LLGameStateData state, LLPlayer player) {
+  Widget _buildPlayerRow(
+    BuildContext context,
+    LLGameStateData state,
+    LLPlayer player,
+  ) {
     final isCurrent = player.id == state.currentPlayer;
     final isEffectTarget = state.pendingEffect?.targetId == player.id;
 
@@ -629,15 +819,15 @@ class _LLGameScreenState extends State<LLGameScreen> {
         color: isCurrent
             ? const Color(0xFFFFF8E1)
             : isEffectTarget
-                ? const Color(0xFFFFEBEE)
-                : Colors.white.withValues(alpha: 0.7),
+            ? const Color(0xFFFFEBEE)
+            : Colors.white.withValues(alpha: 0.7),
         borderRadius: BorderRadius.circular(12),
         border: Border.all(
           color: isCurrent
               ? const Color(0xFFE6C86A)
               : isEffectTarget
-                  ? const Color(0xFFEF9A9A)
-                  : const Color(0xFFE0D8D4),
+              ? const Color(0xFFEF9A9A)
+              : const Color(0xFFE0D8D4),
         ),
       ),
       child: Row(
@@ -652,28 +842,46 @@ class _LLGameScreenState extends State<LLGameScreen> {
                     Text(
                       player.name,
                       style: TextStyle(
-                        color: player.eliminated ? const Color(0xFFBBAAAA) : const Color(0xFF5A4038),
+                        color: player.eliminated
+                            ? const Color(0xFFBBAAAA)
+                            : const Color(0xFF5A4038),
                         fontSize: 13,
-                        fontWeight: isCurrent ? FontWeight.bold : FontWeight.normal,
-                        decoration: player.eliminated ? TextDecoration.lineThrough : null,
+                        fontWeight: isCurrent
+                            ? FontWeight.bold
+                            : FontWeight.normal,
+                        decoration: player.eliminated
+                            ? TextDecoration.lineThrough
+                            : null,
                       ),
                     ),
                     if (!player.connected)
                       const Padding(
                         padding: EdgeInsets.only(left: 4),
-                        child: Icon(Icons.wifi_off, color: Colors.red, size: 12),
+                        child: Icon(
+                          Icons.wifi_off,
+                          color: Colors.red,
+                          size: 12,
+                        ),
                       ),
                     if (player.protected)
                       const Padding(
                         padding: EdgeInsets.only(left: 4),
-                        child: Icon(Icons.shield, color: Colors.blueAccent, size: 14),
+                        child: Icon(
+                          Icons.shield,
+                          color: Colors.blueAccent,
+                          size: 14,
+                        ),
                       ),
                     if (player.eliminated)
                       Padding(
                         padding: const EdgeInsets.only(left: 4),
                         child: Text(
                           L10n.of(context).llEliminated,
-                          style: TextStyle(color: Colors.red.shade300, fontSize: 10, fontWeight: FontWeight.bold),
+                          style: TextStyle(
+                            color: Colors.red.shade300,
+                            fontSize: 10,
+                            fontWeight: FontWeight.bold,
+                          ),
                         ),
                       ),
                   ],
@@ -687,7 +895,9 @@ class _LLGameScreenState extends State<LLGameScreen> {
                       padding: const EdgeInsets.only(right: 2),
                       child: Icon(
                         Icons.favorite,
-                        color: i < player.tokens ? const Color(0xFFE91E63) : const Color(0xFFE0D8D4),
+                        color: i < player.tokens
+                            ? const Color(0xFFE91E63)
+                            : const Color(0xFFE0D8D4),
                         size: 12,
                       ),
                     ),
@@ -701,20 +911,23 @@ class _LLGameScreenState extends State<LLGameScreen> {
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
               decoration: BoxDecoration(
-                color: _remainingSeconds <= 5 ? Colors.red.shade900 : Colors.amber.withValues(alpha: 0.2),
+                color: _remainingSeconds <= 5
+                    ? Colors.red.shade900
+                    : Colors.amber.withValues(alpha: 0.2),
                 borderRadius: BorderRadius.circular(4),
               ),
               child: Text(
                 '${_remainingSeconds}s',
                 style: TextStyle(
-                  color: _remainingSeconds <= 5 ? Colors.redAccent : Colors.amber,
+                  color: _remainingSeconds <= 5
+                      ? Colors.redAccent
+                      : Colors.amber,
                   fontSize: 12,
                   fontWeight: FontWeight.bold,
                 ),
               ),
             ),
-          if (isCurrent && _remainingSeconds > 0)
-            const SizedBox(width: 6),
+          if (isCurrent && _remainingSeconds > 0) const SizedBox(width: 6),
           // Card count
           if (!player.eliminated)
             Container(
@@ -728,7 +941,13 @@ class _LLGameScreenState extends State<LLGameScreen> {
                 children: [
                   const Icon(Icons.style, color: Color(0xFF8A7A72), size: 12),
                   const SizedBox(width: 2),
-                  Text('${player.cardCount}', style: const TextStyle(color: Color(0xFF8A7A72), fontSize: 11)),
+                  Text(
+                    '${player.cardCount}',
+                    style: const TextStyle(
+                      color: Color(0xFF8A7A72),
+                      fontSize: 11,
+                    ),
+                  ),
                 ],
               ),
             ),
@@ -739,15 +958,20 @@ class _LLGameScreenState extends State<LLGameScreen> {
               height: 60,
               child: Row(
                 mainAxisSize: MainAxisSize.min,
-                children: player.discardPile.reversed.take(4).map((cardId) => Padding(
-                  padding: const EdgeInsets.only(right: 3),
-                  child: LoveLetterCard(
-                    cardId: cardId,
-                    width: 42,
-                    height: 60,
-                    isInteractive: false,
-                  ),
-                )).toList(),
+                children: player.discardPile.reversed
+                    .take(4)
+                    .map(
+                      (cardId) => Padding(
+                        padding: const EdgeInsets.only(right: 3),
+                        child: LoveLetterCard(
+                          cardId: cardId,
+                          width: 42,
+                          height: 60,
+                          isInteractive: false,
+                        ),
+                      ),
+                    )
+                    .toList(),
               ),
             ),
         ],
@@ -757,16 +981,22 @@ class _LLGameScreenState extends State<LLGameScreen> {
 
   // ====================== EFFECT RESOLVE ======================
 
-  Widget _buildEffectResolve(BuildContext context, GameService gs, LLGameStateData state) {
+  Widget _buildEffectResolve(
+    BuildContext context,
+    GameService gs,
+    LLGameStateData state,
+  ) {
     final effect = state.pendingEffect!;
     final l10n = L10n.of(context);
     final isMyEffect = effect.playerId == gs.playerId;
 
     // Find actor name
-    final actorName = state.players.firstWhere(
-      (p) => p.id == effect.playerId,
-      orElse: () => LLPlayer(id: '', name: '?'),
-    ).name;
+    final actorName = state.players
+        .firstWhere(
+          (p) => p.id == effect.playerId,
+          orElse: () => LLPlayer(id: '', name: '?'),
+        )
+        .name;
 
     Widget content;
 
@@ -807,7 +1037,10 @@ class _LLGameScreenState extends State<LLGameScreen> {
             const SizedBox(
               width: 20,
               height: 20,
-              child: CircularProgressIndicator(strokeWidth: 2, color: Color(0xFFE91E63)),
+              child: CircularProgressIndicator(
+                strokeWidth: 2,
+                color: Color(0xFFE91E63),
+              ),
             ),
           ],
         ),
@@ -822,7 +1055,10 @@ class _LLGameScreenState extends State<LLGameScreen> {
   }
 
   Widget _buildGuardTargetAndGuess(
-    BuildContext context, GameService gs, LLGameStateData state, LLPendingEffect effect,
+    BuildContext context,
+    GameService gs,
+    LLGameStateData state,
+    LLPendingEffect effect,
   ) {
     final l10n = L10n.of(context);
 
@@ -838,7 +1074,11 @@ class _LLGameScreenState extends State<LLGameScreen> {
         children: [
           Text(
             l10n.llGuardSelectTarget,
-            style: const TextStyle(color: Color(0xFFE91E63), fontSize: 14, fontWeight: FontWeight.bold),
+            style: const TextStyle(
+              color: Color(0xFFE91E63),
+              fontSize: 14,
+              fontWeight: FontWeight.bold,
+            ),
           ),
           const SizedBox(height: 8),
           // Target buttons
@@ -854,18 +1094,25 @@ class _LLGameScreenState extends State<LLGameScreen> {
               return GestureDetector(
                 onTap: () => setState(() => _selectedTarget = targetId),
                 child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 12,
+                    vertical: 6,
+                  ),
                   decoration: BoxDecoration(
                     color: isSelected ? Colors.amber : const Color(0xFFF0EBE8),
                     borderRadius: BorderRadius.circular(20),
                     border: Border.all(
-                      color: isSelected ? Colors.amber : const Color(0xFFE0D8D4),
+                      color: isSelected
+                          ? Colors.amber
+                          : const Color(0xFFE0D8D4),
                     ),
                   ),
                   child: Text(
                     player.name,
                     style: TextStyle(
-                      color: isSelected ? Colors.black : const Color(0xFF5A4038),
+                      color: isSelected
+                          ? Colors.black
+                          : const Color(0xFF5A4038),
                       fontSize: 13,
                       fontWeight: FontWeight.w600,
                     ),
@@ -892,18 +1139,27 @@ class _LLGameScreenState extends State<LLGameScreen> {
               return GestureDetector(
                 onTap: () => setState(() => _selectedGuess = type),
                 child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 8,
+                    vertical: 6,
+                  ),
                   decoration: BoxDecoration(
                     color: isSelected ? color : const Color(0xFFF0EBE8),
                     borderRadius: BorderRadius.circular(6),
-                    border: Border.all(color: isSelected ? color : const Color(0xFFE0D8D4)),
+                    border: Border.all(
+                      color: isSelected ? color : const Color(0xFFE0D8D4),
+                    ),
                   ),
                   child: Text(
                     '$value $name',
                     style: TextStyle(
-                      color: isSelected ? (type == 'princess' ? Colors.black87 : Colors.white) : const Color(0xFF5A4038),
+                      color: isSelected
+                          ? (type == 'princess' ? Colors.black87 : Colors.white)
+                          : const Color(0xFF5A4038),
                       fontSize: 12,
-                      fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                      fontWeight: isSelected
+                          ? FontWeight.bold
+                          : FontWeight.normal,
                     ),
                   ),
                 ),
@@ -931,13 +1187,18 @@ class _LLGameScreenState extends State<LLGameScreen> {
   }
 
   Widget _buildGuardGuessOnly(
-    BuildContext context, GameService gs, LLGameStateData state, LLPendingEffect effect,
+    BuildContext context,
+    GameService gs,
+    LLGameStateData state,
+    LLPendingEffect effect,
   ) {
     final l10n = L10n.of(context);
-    final targetName = state.players.firstWhere(
-      (p) => p.id == effect.targetId,
-      orElse: () => LLPlayer(id: '', name: '?'),
-    ).name;
+    final targetName = state.players
+        .firstWhere(
+          (p) => p.id == effect.targetId,
+          orElse: () => LLPlayer(id: '', name: '?'),
+        )
+        .name;
 
     return Container(
       margin: const EdgeInsets.all(12),
@@ -951,7 +1212,11 @@ class _LLGameScreenState extends State<LLGameScreen> {
         children: [
           Text(
             '${l10n.llGuardGuessCard} ($targetName)',
-            style: const TextStyle(color: Color(0xFFE91E63), fontSize: 14, fontWeight: FontWeight.bold),
+            style: const TextStyle(
+              color: Color(0xFFE91E63),
+              fontSize: 14,
+              fontWeight: FontWeight.bold,
+            ),
           ),
           const SizedBox(height: 8),
           Wrap(
@@ -965,18 +1230,27 @@ class _LLGameScreenState extends State<LLGameScreen> {
               return GestureDetector(
                 onTap: () => setState(() => _selectedGuess = type),
                 child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 8,
+                    vertical: 6,
+                  ),
                   decoration: BoxDecoration(
                     color: isSelected ? color : const Color(0xFFF0EBE8),
                     borderRadius: BorderRadius.circular(6),
-                    border: Border.all(color: isSelected ? color : const Color(0xFFE0D8D4)),
+                    border: Border.all(
+                      color: isSelected ? color : const Color(0xFFE0D8D4),
+                    ),
                   ),
                   child: Text(
                     '$value $name',
                     style: TextStyle(
-                      color: isSelected ? (type == 'princess' ? Colors.black87 : Colors.white) : const Color(0xFF5A4038),
+                      color: isSelected
+                          ? (type == 'princess' ? Colors.black87 : Colors.white)
+                          : const Color(0xFF5A4038),
                       fontSize: 12,
-                      fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                      fontWeight: isSelected
+                          ? FontWeight.bold
+                          : FontWeight.normal,
                     ),
                   ),
                 ),
@@ -1003,7 +1277,10 @@ class _LLGameScreenState extends State<LLGameScreen> {
   }
 
   Widget _buildTargetSelection(
-    BuildContext context, GameService gs, LLGameStateData state, LLPendingEffect effect,
+    BuildContext context,
+    GameService gs,
+    LLGameStateData state,
+    LLPendingEffect effect,
   ) {
     final l10n = L10n.of(context);
     final effectName = _getCardTypeName(effect.type, l10n);
@@ -1020,7 +1297,11 @@ class _LLGameScreenState extends State<LLGameScreen> {
         children: [
           Text(
             '${l10n.llSelectTargetFor} $effectName',
-            style: const TextStyle(color: Color(0xFFE91E63), fontSize: 14, fontWeight: FontWeight.bold),
+            style: const TextStyle(
+              color: Color(0xFFE91E63),
+              fontSize: 14,
+              fontWeight: FontWeight.bold,
+            ),
           ),
           const SizedBox(height: 12),
           Wrap(
@@ -1047,16 +1328,21 @@ class _LLGameScreenState extends State<LLGameScreen> {
   }
 
   Widget _buildEffectResult(
-    BuildContext context, GameService gs, LLGameStateData state,
-    LLPendingEffect effect, String actorName,
+    BuildContext context,
+    GameService gs,
+    LLGameStateData state,
+    LLPendingEffect effect,
+    String actorName,
   ) {
     final l10n = L10n.of(context);
     final isMyEffect = effect.playerId == gs.playerId;
     final targetName = effect.targetId != null
-        ? state.players.firstWhere(
-            (p) => p.id == effect.targetId,
-            orElse: () => LLPlayer(id: '', name: '?'),
-          ).name
+        ? state.players
+              .firstWhere(
+                (p) => p.id == effect.targetId,
+                orElse: () => LLPlayer(id: '', name: '?'),
+              )
+              .name
         : '';
 
     String resultText = '';
@@ -1078,7 +1364,8 @@ class _LLGameScreenState extends State<LLGameScreen> {
             height: 80,
             isInteractive: false,
           );
-        } else if (effect.targetId == gs.playerId && effect.result?['revealedCard'] != null) {
+        } else if (effect.targetId == gs.playerId &&
+            effect.result?['revealedCard'] != null) {
           resultText = l10n.llSpySawYour(actorName);
         } else {
           resultText = l10n.llSpyPeeked(actorName, targetName);
@@ -1089,23 +1376,42 @@ class _LLGameScreenState extends State<LLGameScreen> {
         if (loser == null) {
           resultText = l10n.llBaronTie(actorName, targetName);
         } else {
-          final loserName = state.players.firstWhere(
-            (p) => p.id == loser,
-            orElse: () => LLPlayer(id: '', name: '?'),
-          ).name;
+          final loserName = state.players
+              .firstWhere(
+                (p) => p.id == loser,
+                orElse: () => LLPlayer(id: '', name: '?'),
+              )
+              .name;
           resultText = l10n.llBaronLose(loserName);
         }
         // Show cards if available
-        if (effect.result?['myCard'] != null && effect.result?['targetCard'] != null && (isMyEffect || effect.targetId == gs.playerId)) {
+        if (effect.result?['myCard'] != null &&
+            effect.result?['targetCard'] != null &&
+            (isMyEffect || effect.targetId == gs.playerId)) {
           extraWidget = Row(
             mainAxisSize: MainAxisSize.min,
             children: [
-              LoveLetterCard(cardId: effect.result!['myCard'], width: 48, height: 68, compact: true, isInteractive: false),
+              LoveLetterCard(
+                cardId: effect.result!['myCard'],
+                width: 48,
+                height: 68,
+                compact: true,
+                isInteractive: false,
+              ),
               const Padding(
                 padding: EdgeInsets.symmetric(horizontal: 8),
-                child: Text('vs', style: TextStyle(color: Color(0xFF8A7A72), fontSize: 12)),
+                child: Text(
+                  'vs',
+                  style: TextStyle(color: Color(0xFF8A7A72), fontSize: 12),
+                ),
               ),
-              LoveLetterCard(cardId: effect.result!['targetCard'], width: 48, height: 68, compact: true, isInteractive: false),
+              LoveLetterCard(
+                cardId: effect.result!['targetCard'],
+                width: 48,
+                height: 68,
+                compact: true,
+                isInteractive: false,
+              ),
             ],
           );
         }
@@ -1148,10 +1454,7 @@ class _LLGameScreenState extends State<LLGameScreen> {
             style: const TextStyle(color: Color(0xFF5A4038), fontSize: 14),
             textAlign: TextAlign.center,
           ),
-          if (extraWidget != null) ...[
-            const SizedBox(height: 12),
-            extraWidget,
-          ],
+          if (extraWidget != null) ...[const SizedBox(height: 12), extraWidget],
           if (isMyEffect) ...[
             const SizedBox(height: 12),
             ElevatedButton(
@@ -1164,7 +1467,14 @@ class _LLGameScreenState extends State<LLGameScreen> {
             ),
           ] else ...[
             const SizedBox(height: 8),
-            const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2, color: Color(0xFF8A7A72))),
+            const SizedBox(
+              width: 20,
+              height: 20,
+              child: CircularProgressIndicator(
+                strokeWidth: 2,
+                color: Color(0xFF8A7A72),
+              ),
+            ),
           ],
         ],
       ),
@@ -1189,10 +1499,19 @@ class _LLGameScreenState extends State<LLGameScreen> {
           const SizedBox(height: 6),
           Row(
             mainAxisAlignment: MainAxisAlignment.center,
-            children: state.faceUpCards.map((cardId) => Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 4),
-              child: LoveLetterCard(cardId: cardId, width: 64, height: 90, isInteractive: false),
-            )).toList(),
+            children: state.faceUpCards
+                .map(
+                  (cardId) => Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 4),
+                    child: LoveLetterCard(
+                      cardId: cardId,
+                      width: 64,
+                      height: 90,
+                      isInteractive: false,
+                    ),
+                  ),
+                )
+                .toList(),
           ),
         ],
       ),
@@ -1201,9 +1520,15 @@ class _LLGameScreenState extends State<LLGameScreen> {
 
   // ====================== ROUND END ======================
 
-  Widget _buildRoundEnd(BuildContext context, GameService gs, LLGameStateData state) {
+  Widget _buildRoundEnd(
+    BuildContext context,
+    GameService gs,
+    LLGameStateData state,
+  ) {
     final l10n = L10n.of(context);
-    final lastRound = state.roundHistory.isNotEmpty ? state.roundHistory.last : null;
+    final lastRound = state.roundHistory.isNotEmpty
+        ? state.roundHistory.last
+        : null;
 
     return Center(
       child: Container(
@@ -1219,7 +1544,11 @@ class _LLGameScreenState extends State<LLGameScreen> {
           children: [
             Text(
               l10n.llRoundEnd,
-              style: const TextStyle(color: Color(0xFFE91E63), fontSize: 18, fontWeight: FontWeight.bold),
+              style: const TextStyle(
+                color: Color(0xFFE91E63),
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
+              ),
             ),
             if (lastRound != null) ...[
               const SizedBox(height: 12),
@@ -1230,10 +1559,12 @@ class _LLGameScreenState extends State<LLGameScreen> {
               if (lastRound.finalHands.isNotEmpty) ...[
                 const SizedBox(height: 12),
                 ...lastRound.finalHands.entries.map((e) {
-                  final playerName = state.players.firstWhere(
-                    (p) => p.id == e.key,
-                    orElse: () => LLPlayer(id: e.key, name: e.key),
-                  ).name;
+                  final playerName = state.players
+                      .firstWhere(
+                        (p) => p.id == e.key,
+                        orElse: () => LLPlayer(id: e.key, name: e.key),
+                      )
+                      .name;
                   return Padding(
                     padding: const EdgeInsets.symmetric(vertical: 2),
                     child: Row(
@@ -1241,7 +1572,10 @@ class _LLGameScreenState extends State<LLGameScreen> {
                       children: [
                         Text(
                           '$playerName: ',
-                          style: const TextStyle(color: Color(0xFF8A7A72), fontSize: 13),
+                          style: const TextStyle(
+                            color: Color(0xFF8A7A72),
+                            fontSize: 13,
+                          ),
                         ),
                         if (e.value != null)
                           LoveLetterCard(
@@ -1259,26 +1593,39 @@ class _LLGameScreenState extends State<LLGameScreen> {
             ],
             const SizedBox(height: 16),
             // Token status
-            ...state.players.map((p) => Padding(
-              padding: const EdgeInsets.symmetric(vertical: 2),
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  SizedBox(
-                    width: 80,
-                    child: Text(p.name, style: const TextStyle(color: Color(0xFF8A7A72), fontSize: 13)),
-                  ),
-                  ...List.generate(state.targetTokens, (i) => Padding(
-                    padding: const EdgeInsets.only(right: 2),
-                    child: Icon(
-                      Icons.favorite,
-                      color: i < p.tokens ? const Color(0xFFE91E63) : const Color(0xFFE0D8D4),
-                      size: 14,
+            ...state.players.map(
+              (p) => Padding(
+                padding: const EdgeInsets.symmetric(vertical: 2),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    SizedBox(
+                      width: 80,
+                      child: Text(
+                        p.name,
+                        style: const TextStyle(
+                          color: Color(0xFF8A7A72),
+                          fontSize: 13,
+                        ),
+                      ),
                     ),
-                  )),
-                ],
+                    ...List.generate(
+                      state.targetTokens,
+                      (i) => Padding(
+                        padding: const EdgeInsets.only(right: 2),
+                        child: Icon(
+                          Icons.favorite,
+                          color: i < p.tokens
+                              ? const Color(0xFFE91E63)
+                              : const Color(0xFFE0D8D4),
+                          size: 14,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
               ),
-            )),
+            ),
             const SizedBox(height: 8),
             Text(
               l10n.llNextRoundAuto,
@@ -1292,9 +1639,14 @@ class _LLGameScreenState extends State<LLGameScreen> {
 
   // ====================== GAME END ======================
 
-  Widget _buildGameEnd(BuildContext context, GameService gs, LLGameStateData state) {
+  Widget _buildGameEnd(
+    BuildContext context,
+    GameService gs,
+    LLGameStateData state,
+  ) {
     final l10n = L10n.of(context);
-    final sorted = [...state.players]..sort((a, b) => b.tokens.compareTo(a.tokens));
+    final sorted = [...state.players]
+      ..sort((a, b) => b.tokens.compareTo(a.tokens));
     final winner = sorted.isNotEmpty ? sorted.first : null;
 
     return Center(
@@ -1311,13 +1663,21 @@ class _LLGameScreenState extends State<LLGameScreen> {
           children: [
             Text(
               l10n.llGameEnd,
-              style: const TextStyle(color: Color(0xFFE91E63), fontSize: 20, fontWeight: FontWeight.bold),
+              style: const TextStyle(
+                color: Color(0xFFE91E63),
+                fontSize: 20,
+                fontWeight: FontWeight.bold,
+              ),
             ),
             const SizedBox(height: 12),
             if (winner != null)
               Text(
                 '${winner.name} ${l10n.llWins}!',
-                style: const TextStyle(color: Color(0xFF5A4038), fontSize: 18, fontWeight: FontWeight.bold),
+                style: const TextStyle(
+                  color: Color(0xFF5A4038),
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                ),
               ),
             const SizedBox(height: 16),
             ...sorted.asMap().entries.map((entry) {
@@ -1325,9 +1685,14 @@ class _LLGameScreenState extends State<LLGameScreen> {
               final p = entry.value;
               return Container(
                 margin: const EdgeInsets.symmetric(vertical: 2),
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 12,
+                  vertical: 6,
+                ),
                 decoration: BoxDecoration(
-                  color: i == 0 ? const Color(0xFFFFF8E1) : const Color(0xFFF0EBE8),
+                  color: i == 0
+                      ? const Color(0xFFFFF8E1)
+                      : const Color(0xFFF0EBE8),
                   borderRadius: BorderRadius.circular(8),
                 ),
                 child: Row(
@@ -1343,16 +1708,27 @@ class _LLGameScreenState extends State<LLGameScreen> {
                     ),
                     SizedBox(
                       width: 80,
-                      child: Text(p.name, style: const TextStyle(color: Color(0xFF5A4038), fontSize: 14)),
-                    ),
-                    ...List.generate(state.targetTokens, (j) => Padding(
-                      padding: const EdgeInsets.only(right: 2),
-                      child: Icon(
-                        Icons.favorite,
-                        color: j < p.tokens ? const Color(0xFFE91E63) : const Color(0xFFE0D8D4),
-                        size: 14,
+                      child: Text(
+                        p.name,
+                        style: const TextStyle(
+                          color: Color(0xFF5A4038),
+                          fontSize: 14,
+                        ),
                       ),
-                    )),
+                    ),
+                    ...List.generate(
+                      state.targetTokens,
+                      (j) => Padding(
+                        padding: const EdgeInsets.only(right: 2),
+                        child: Icon(
+                          Icons.favorite,
+                          color: j < p.tokens
+                              ? const Color(0xFFE91E63)
+                              : const Color(0xFFE0D8D4),
+                          size: 14,
+                        ),
+                      ),
+                    ),
                   ],
                 ),
               );
@@ -1403,17 +1779,23 @@ class _LLGameScreenState extends State<LLGameScreen> {
               const SizedBox(height: 12),
               Text(
                 l10n.llCardGuideTitle,
-                style: const TextStyle(color: Color(0xFF5A4038), fontSize: 16, fontWeight: FontWeight.bold),
+                style: const TextStyle(
+                  color: Color(0xFF5A4038),
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
+                ),
               ),
               const SizedBox(height: 12),
               Flexible(
                 child: ListView.separated(
                   shrinkWrap: true,
                   itemCount: cards.length,
-                  separatorBuilder: (context, index) => const Divider(color: Color(0xFFE0D8D4), height: 1),
+                  separatorBuilder: (context, index) =>
+                      const Divider(color: Color(0xFFE0D8D4), height: 1),
                   itemBuilder: (context, i) {
                     final (type, value, count, desc) = cards[i];
-                    final color = LoveLetterCard.cardColors[type] ?? Colors.grey;
+                    final color =
+                        LoveLetterCard.cardColors[type] ?? Colors.grey;
                     final name = _getCardTypeName(type, l10n);
                     return Padding(
                       padding: const EdgeInsets.symmetric(vertical: 8),
@@ -1434,12 +1816,20 @@ class _LLGameScreenState extends State<LLGameScreen> {
                               children: [
                                 Text(
                                   '$name ($value) ×$count',
-                                  style: TextStyle(color: color, fontSize: 13, fontWeight: FontWeight.bold),
+                                  style: TextStyle(
+                                    color: color,
+                                    fontSize: 13,
+                                    fontWeight: FontWeight.bold,
+                                  ),
                                 ),
                                 const SizedBox(height: 2),
                                 Text(
                                   desc,
-                                  style: const TextStyle(color: Color(0xFF6A5A52), fontSize: 12, height: 1.4),
+                                  style: const TextStyle(
+                                    color: Color(0xFF6A5A52),
+                                    fontSize: 12,
+                                    height: 1.4,
+                                  ),
                                 ),
                               ],
                             ),
@@ -1462,15 +1852,24 @@ class _LLGameScreenState extends State<LLGameScreen> {
     if (type == null) return null;
     final l10n = L10n.of(context);
     switch (type) {
-      case 'guard': return l10n.llDescGuard;
-      case 'spy': return l10n.llDescSpy;
-      case 'baron': return l10n.llDescBaron;
-      case 'handmaid': return l10n.llDescHandmaid;
-      case 'prince': return l10n.llDescPrince;
-      case 'king': return l10n.llDescKing;
-      case 'countess': return l10n.llDescCountess;
-      case 'princess': return l10n.llDescPrincess;
-      default: return null;
+      case 'guard':
+        return l10n.llDescGuard;
+      case 'spy':
+        return l10n.llDescSpy;
+      case 'baron':
+        return l10n.llDescBaron;
+      case 'handmaid':
+        return l10n.llDescHandmaid;
+      case 'prince':
+        return l10n.llDescPrince;
+      case 'king':
+        return l10n.llDescKing;
+      case 'countess':
+        return l10n.llDescCountess;
+      case 'princess':
+        return l10n.llDescPrincess;
+      default:
+        return null;
     }
   }
 
@@ -1487,15 +1886,25 @@ class _LLGameScreenState extends State<LLGameScreen> {
       ),
       child: Text(
         desc,
-        style: const TextStyle(color: Color(0xFF5A4038), fontSize: 11, height: 1.3),
+        style: const TextStyle(
+          color: Color(0xFF5A4038),
+          fontSize: 11,
+          height: 1.3,
+        ),
       ),
     );
   }
 
   // ====================== BOTTOM (MY HAND) ======================
 
-  Widget _buildBottomArea(BuildContext context, GameService gs, LLGameStateData state) {
-    if (state.phase == 'game_end' || state.phase == 'round_end') return const SizedBox.shrink();
+  Widget _buildBottomArea(
+    BuildContext context,
+    GameService gs,
+    LLGameStateData state,
+  ) {
+    if (state.phase == 'game_end' || state.phase == 'round_end') {
+      return const SizedBox.shrink();
+    }
     if (gs.isSpectator) return const SizedBox.shrink();
 
     final selfPlayer = state.players.firstWhere(
@@ -1517,7 +1926,13 @@ class _LLGameScreenState extends State<LLGameScreen> {
           ),
         ),
         boxShadow: isMyTurn
-            ? [BoxShadow(color: const Color(0xFFFFD54F).withValues(alpha: 0.4), blurRadius: 10, offset: const Offset(0, -4))]
+            ? [
+                BoxShadow(
+                  color: const Color(0xFFFFD54F).withValues(alpha: 0.4),
+                  blurRadius: 10,
+                  offset: const Offset(0, -4),
+                ),
+              ]
             : null,
       ),
       padding: const EdgeInsets.fromLTRB(12, 8, 12, 12),
@@ -1528,7 +1943,11 @@ class _LLGameScreenState extends State<LLGameScreen> {
             children: [
               Text(
                 selfPlayer.name,
-                style: const TextStyle(color: Color(0xFF5A4038), fontSize: 13, fontWeight: FontWeight.w600),
+                style: const TextStyle(
+                  color: Color(0xFF5A4038),
+                  fontSize: 13,
+                  fontWeight: FontWeight.w600,
+                ),
               ),
               if (selfPlayer.protected)
                 const Padding(
@@ -1540,22 +1959,33 @@ class _LLGameScreenState extends State<LLGameScreen> {
                   padding: const EdgeInsets.only(left: 4),
                   child: Text(
                     'OUT',
-                    style: TextStyle(color: Colors.red.shade300, fontSize: 10, fontWeight: FontWeight.bold),
+                    style: TextStyle(
+                      color: Colors.red.shade300,
+                      fontSize: 10,
+                      fontWeight: FontWeight.bold,
+                    ),
                   ),
                 ),
               if (state.isMyTurn && _remainingSeconds > 0)
                 Padding(
                   padding: const EdgeInsets.only(left: 8),
                   child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 6,
+                      vertical: 2,
+                    ),
                     decoration: BoxDecoration(
-                      color: _remainingSeconds <= 5 ? Colors.red.shade900 : Colors.amber.withValues(alpha: 0.2),
+                      color: _remainingSeconds <= 5
+                          ? Colors.red.shade900
+                          : Colors.amber.withValues(alpha: 0.2),
                       borderRadius: BorderRadius.circular(4),
                     ),
                     child: Text(
                       '${_remainingSeconds}s',
                       style: TextStyle(
-                        color: _remainingSeconds <= 5 ? Colors.redAccent : Colors.amber,
+                        color: _remainingSeconds <= 5
+                            ? Colors.redAccent
+                            : Colors.amber,
                         fontSize: 12,
                         fontWeight: FontWeight.bold,
                       ),
@@ -1564,14 +1994,19 @@ class _LLGameScreenState extends State<LLGameScreen> {
                 ),
               const Spacer(),
               // Tokens
-              ...List.generate(state.targetTokens, (i) => Padding(
-                padding: const EdgeInsets.only(right: 2),
-                child: Icon(
-                  Icons.favorite,
-                  color: i < selfPlayer.tokens ? const Color(0xFFE91E63) : const Color(0xFFE0D8D4),
-                  size: 14,
+              ...List.generate(
+                state.targetTokens,
+                (i) => Padding(
+                  padding: const EdgeInsets.only(right: 2),
+                  child: Icon(
+                    Icons.favorite,
+                    color: i < selfPlayer.tokens
+                        ? const Color(0xFFE91E63)
+                        : const Color(0xFFE0D8D4),
+                    size: 14,
+                  ),
                 ),
-              )),
+              ),
             ],
           ),
           const SizedBox(height: 8),
@@ -1583,16 +2018,31 @@ class _LLGameScreenState extends State<LLGameScreen> {
                 children: [
                   Padding(
                     padding: const EdgeInsets.only(right: 6),
-                    child: Text(L10n.of(context).llPlayed, style: const TextStyle(color: Color(0xFF8A7A72), fontSize: 11)),
+                    child: Text(
+                      L10n.of(context).llPlayed,
+                      style: const TextStyle(
+                        color: Color(0xFF8A7A72),
+                        fontSize: 11,
+                      ),
+                    ),
                   ),
                   Expanded(
                     child: SingleChildScrollView(
                       scrollDirection: Axis.horizontal,
                       child: Row(
-                        children: selfPlayer.discardPile.map((cardId) => Padding(
-                          padding: const EdgeInsets.only(right: 3),
-                          child: LoveLetterCard(cardId: cardId, width: 42, height: 60, isInteractive: false),
-                        )).toList(),
+                        children: selfPlayer.discardPile
+                            .map(
+                              (cardId) => Padding(
+                                padding: const EdgeInsets.only(right: 3),
+                                child: LoveLetterCard(
+                                  cardId: cardId,
+                                  width: 42,
+                                  height: 60,
+                                  isInteractive: false,
+                                ),
+                              ),
+                            )
+                            .toList(),
                       ),
                     ),
                   ),
@@ -1602,8 +2052,7 @@ class _LLGameScreenState extends State<LLGameScreen> {
             const SizedBox(height: 8),
           ],
           // Card description
-          if (_selectedCard != null)
-            _buildCardDescription(context),
+          if (_selectedCard != null) _buildCardDescription(context),
           // My cards
           Row(
             mainAxisAlignment: MainAxisAlignment.center,
@@ -1650,7 +2099,10 @@ class _LLGameScreenState extends State<LLGameScreen> {
                 ),
                 child: Text(
                   L10n.of(context).llPlay,
-                  style: const TextStyle(fontSize: 15, fontWeight: FontWeight.bold),
+                  style: const TextStyle(
+                    fontSize: 15,
+                    fontWeight: FontWeight.bold,
+                  ),
                 ),
               ),
             ),
@@ -1709,12 +2161,20 @@ class _LLGameScreenState extends State<LLGameScreen> {
                 children: [
                   Text(
                     L10n.of(context).spectatorChat,
-                    style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16),
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontWeight: FontWeight.bold,
+                      fontSize: 16,
+                    ),
                   ),
                   const Spacer(),
                   GestureDetector(
                     onTap: () => setState(() => _chatOpen = false),
-                    child: const Icon(Icons.close, color: Colors.white, size: 20),
+                    child: const Icon(
+                      Icons.close,
+                      color: Colors.white,
+                      size: 20,
+                    ),
                   ),
                 ],
               ),
@@ -1742,7 +2202,9 @@ class _LLGameScreenState extends State<LLGameScreen> {
             Container(
               padding: const EdgeInsets.all(8),
               decoration: BoxDecoration(
-                border: Border(top: BorderSide(color: Colors.grey.withValues(alpha: 0.2))),
+                border: Border(
+                  top: BorderSide(color: Colors.grey.withValues(alpha: 0.2)),
+                ),
               ),
               child: Row(
                 children: [
@@ -1752,7 +2214,9 @@ class _LLGameScreenState extends State<LLGameScreen> {
                       decoration: InputDecoration(
                         hintText: L10n.of(context).spectatorMessageHint,
                         border: InputBorder.none,
-                        contentPadding: const EdgeInsets.symmetric(horizontal: 12),
+                        contentPadding: const EdgeInsets.symmetric(
+                          horizontal: 12,
+                        ),
                       ),
                       style: const TextStyle(fontSize: 14),
                       onSubmitted: (_) => _sendChatMessage(gs),
@@ -1775,33 +2239,57 @@ class _LLGameScreenState extends State<LLGameScreen> {
     return Padding(
       padding: const EdgeInsets.only(bottom: 8),
       child: Row(
-        mainAxisAlignment: isMe ? MainAxisAlignment.end : MainAxisAlignment.start,
+        mainAxisAlignment: isMe
+            ? MainAxisAlignment.end
+            : MainAxisAlignment.start,
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           if (!isMe) ...[
             CircleAvatar(
               radius: 14,
               backgroundColor: const Color(0xFFE0E0E0),
-              child: Text(sender.isNotEmpty ? sender[0] : '?', style: const TextStyle(fontSize: 12, color: Color(0xFF5A4038))),
+              child: Text(
+                sender.isNotEmpty ? sender[0] : '?',
+                style: const TextStyle(fontSize: 12, color: Color(0xFF5A4038)),
+              ),
             ),
             const SizedBox(width: 6),
           ],
           Flexible(
             child: Column(
-              crossAxisAlignment: isMe ? CrossAxisAlignment.end : CrossAxisAlignment.start,
+              crossAxisAlignment: isMe
+                  ? CrossAxisAlignment.end
+                  : CrossAxisAlignment.start,
               children: [
                 if (!isMe)
                   Padding(
                     padding: const EdgeInsets.only(bottom: 2),
-                    child: Text(sender, style: const TextStyle(fontSize: 11, color: Color(0xFF8A8A8A))),
+                    child: Text(
+                      sender,
+                      style: const TextStyle(
+                        fontSize: 11,
+                        color: Color(0xFF8A8A8A),
+                      ),
+                    ),
                   ),
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 12,
+                    vertical: 8,
+                  ),
                   decoration: BoxDecoration(
-                    color: isMe ? const Color(0xFFE91E63) : const Color(0xFFF0F0F0),
+                    color: isMe
+                        ? const Color(0xFFE91E63)
+                        : const Color(0xFFF0F0F0),
                     borderRadius: BorderRadius.circular(16),
                   ),
-                  child: Text(message, style: TextStyle(fontSize: 14, color: isMe ? Colors.white : const Color(0xFF333333))),
+                  child: Text(
+                    message,
+                    style: TextStyle(
+                      fontSize: 14,
+                      color: isMe ? Colors.white : const Color(0xFF333333),
+                    ),
+                  ),
                 ),
               ],
             ),
@@ -1814,7 +2302,9 @@ class _LLGameScreenState extends State<LLGameScreen> {
   void _scrollChatToBottom() {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (_chatScrollController.hasClients) {
-        _chatScrollController.jumpTo(_chatScrollController.position.maxScrollExtent);
+        _chatScrollController.jumpTo(
+          _chatScrollController.position.maxScrollExtent,
+        );
       }
     });
   }
@@ -1872,15 +2362,24 @@ class _LLGameScreenState extends State<LLGameScreen> {
 
   String _getCardTypeName(String type, L10n l10n) {
     switch (type) {
-      case 'guard': return l10n.llCardGuard;
-      case 'spy': return l10n.llCardSpy;
-      case 'baron': return l10n.llCardBaron;
-      case 'handmaid': return l10n.llCardHandmaid;
-      case 'prince': return l10n.llCardPrince;
-      case 'king': return l10n.llCardKing;
-      case 'countess': return l10n.llCardCountess;
-      case 'princess': return l10n.llCardPrincess;
-      default: return type;
+      case 'guard':
+        return l10n.llCardGuard;
+      case 'spy':
+        return l10n.llCardSpy;
+      case 'baron':
+        return l10n.llCardBaron;
+      case 'handmaid':
+        return l10n.llCardHandmaid;
+      case 'prince':
+        return l10n.llCardPrince;
+      case 'king':
+        return l10n.llCardKing;
+      case 'countess':
+        return l10n.llCardCountess;
+      case 'princess':
+        return l10n.llCardPrincess;
+      default:
+        return type;
     }
   }
 
@@ -1895,12 +2394,15 @@ class _LLGameScreenState extends State<LLGameScreen> {
         return Consumer<GameService>(
           builder: (ctx, game, _) {
             final profile = game.profileFor(nickname);
-            final isLoading = profile == null || profile['nickname'] != nickname;
+            final isLoading =
+                profile == null || profile['nickname'] != nickname;
             final isMe = nickname == game.playerName;
             final isBlockedUser = game.isBlocked(nickname);
 
             return AlertDialog(
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(24),
+              ),
               titlePadding: const EdgeInsets.fromLTRB(18, 18, 18, 0),
               contentPadding: const EdgeInsets.fromLTRB(18, 14, 18, 10),
               title: Container(
@@ -1922,7 +2424,10 @@ class _LLGameScreenState extends State<LLGameScreen> {
                             color: const Color(0xFFE8F0F7),
                             borderRadius: BorderRadius.circular(12),
                           ),
-                          child: const Icon(Icons.person_outline, color: Color(0xFF4F6B7A)),
+                          child: const Icon(
+                            Icons.person_outline,
+                            color: Color(0xFF4F6B7A),
+                          ),
                         ),
                         const SizedBox(width: 12),
                         Expanded(
@@ -1931,13 +2436,22 @@ class _LLGameScreenState extends State<LLGameScreen> {
                             children: [
                               Text(
                                 nickname,
-                                style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w800, color: Color(0xFF3E312A)),
+                                style: const TextStyle(
+                                  fontSize: 17,
+                                  fontWeight: FontWeight.w800,
+                                  color: Color(0xFF3E312A),
+                                ),
                                 overflow: TextOverflow.ellipsis,
                               ),
                               const SizedBox(height: 2),
                               Text(
-                                isMe ? L10n.of(context).gameMyProfile : L10n.of(context).gamePlayerProfile,
-                                style: const TextStyle(fontSize: 12, color: Color(0xFF84766E)),
+                                isMe
+                                    ? L10n.of(context).gameMyProfile
+                                    : L10n.of(context).gamePlayerProfile,
+                                style: const TextStyle(
+                                  fontSize: 12,
+                                  color: Color(0xFF84766E),
+                                ),
                               ),
                             ],
                           ),
@@ -1951,9 +2465,19 @@ class _LLGameScreenState extends State<LLGameScreen> {
                         runSpacing: 8,
                         children: [
                           if (game.friends.contains(nickname))
-                            _buildProfileIconButton(icon: Icons.check, color: const Color(0xFFBDBDBD), tooltip: L10n.of(context).gameAlreadyFriend, onTap: () {})
+                            _buildProfileIconButton(
+                              icon: Icons.check,
+                              color: const Color(0xFFBDBDBD),
+                              tooltip: L10n.of(context).gameAlreadyFriend,
+                              onTap: () {},
+                            )
                           else if (game.sentFriendRequests.contains(nickname))
-                            _buildProfileIconButton(icon: Icons.hourglass_top, color: const Color(0xFFBDBDBD), tooltip: L10n.of(context).gameRequestPending, onTap: () {})
+                            _buildProfileIconButton(
+                              icon: Icons.hourglass_top,
+                              color: const Color(0xFFBDBDBD),
+                              tooltip: L10n.of(context).gameRequestPending,
+                              onTap: () {},
+                            )
                           else
                             _buildProfileIconButton(
                               icon: Icons.person_add,
@@ -1962,20 +2486,42 @@ class _LLGameScreenState extends State<LLGameScreen> {
                               onTap: () {
                                 game.addFriendAction(nickname);
                                 Navigator.pop(ctx);
-                                ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(L10n.of(context).gameFriendRequestSent)));
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(
+                                    content: Text(
+                                      L10n.of(context).gameFriendRequestSent,
+                                    ),
+                                  ),
+                                );
                               },
                             ),
                           _buildProfileIconButton(
-                            icon: isBlockedUser ? Icons.block : Icons.shield_outlined,
-                            color: isBlockedUser ? const Color(0xFF64B5F6) : const Color(0xFFFF8A65),
-                            tooltip: isBlockedUser ? L10n.of(context).gameUnblock : L10n.of(context).gameBlock,
+                            icon: isBlockedUser
+                                ? Icons.block
+                                : Icons.shield_outlined,
+                            color: isBlockedUser
+                                ? const Color(0xFF64B5F6)
+                                : const Color(0xFFFF8A65),
+                            tooltip: isBlockedUser
+                                ? L10n.of(context).gameUnblock
+                                : L10n.of(context).gameBlock,
                             onTap: () {
                               if (isBlockedUser) {
                                 game.unblockUserAction(nickname);
-                                ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(L10n.of(context).gameUnblocked)));
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(
+                                    content: Text(
+                                      L10n.of(context).gameUnblocked,
+                                    ),
+                                  ),
+                                );
                               } else {
                                 game.blockUserAction(nickname);
-                                ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(L10n.of(context).gameBlocked)));
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(
+                                    content: Text(L10n.of(context).gameBlocked),
+                                  ),
+                                );
                               }
                             },
                           ),
@@ -1995,13 +2541,25 @@ class _LLGameScreenState extends State<LLGameScreen> {
                 ),
               ),
               content: isLoading
-                  ? const SizedBox(height: 140, width: 360, child: Center(child: CircularProgressIndicator()))
+                  ? const SizedBox(
+                      height: 140,
+                      width: 360,
+                      child: Center(child: CircularProgressIndicator()),
+                    )
                   : ConstrainedBox(
-                      constraints: const BoxConstraints(maxWidth: 420, maxHeight: 560),
-                      child: SingleChildScrollView(child: _buildProfileContent(profile)),
+                      constraints: const BoxConstraints(
+                        maxWidth: 420,
+                        maxHeight: 560,
+                      ),
+                      child: SingleChildScrollView(
+                        child: _buildProfileContent(profile),
+                      ),
                     ),
               actions: [
-                TextButton(onPressed: () => Navigator.pop(ctx), child: Text(L10n.of(context).gameClose)),
+                TextButton(
+                  onPressed: () => Navigator.pop(ctx),
+                  child: Text(L10n.of(context).gameClose),
+                ),
               ],
             );
           },
@@ -2010,14 +2568,20 @@ class _LLGameScreenState extends State<LLGameScreen> {
     );
   }
 
-  Widget _buildProfileIconButton({required IconData icon, required Color color, required String tooltip, required VoidCallback onTap}) {
+  Widget _buildProfileIconButton({
+    required IconData icon,
+    required Color color,
+    required String tooltip,
+    required VoidCallback onTap,
+  }) {
     return Tooltip(
       message: tooltip,
       child: InkWell(
         onTap: onTap,
         borderRadius: BorderRadius.circular(12),
         child: Container(
-          width: 28, height: 28,
+          width: 28,
+          height: 28,
           decoration: BoxDecoration(
             color: color.withValues(alpha: 0.15),
             borderRadius: BorderRadius.circular(10),
@@ -2055,26 +2619,45 @@ class _LLGameScreenState extends State<LLGameScreen> {
       children: [
         _buildProfileHeader(level as int, expTotal as int, bannerKey),
         const SizedBox(height: 8),
-        _buildMannerLeaveRow(reportCount: reportCount as int, leaveCount: leaveCount as int),
+        _buildMannerLeaveRow(
+          reportCount: reportCount as int,
+          leaveCount: leaveCount as int,
+        ),
         const SizedBox(height: 10),
         _buildProfileSectionCard(
           title: L10n.of(context).gameTichuSeasonRanked,
-          accent: const Color(0xFF7A6A95), background: const Color(0xFFF6F3FA),
-          icon: Icons.emoji_events, iconColor: const Color(0xFFFFD54F),
+          accent: const Color(0xFF7A6A95),
+          background: const Color(0xFFF6F3FA),
+          icon: Icons.emoji_events,
+          iconColor: const Color(0xFFFFD54F),
           mainText: '$seasonRating',
           chips: [
-            _buildStatChip(L10n.of(context).gameStatRecord, L10n.of(context).gameRecordFormat(seasonGames as int, seasonWins as int, seasonLosses as int)),
+            _buildStatChip(
+              L10n.of(context).gameStatRecord,
+              L10n.of(context).gameRecordFormat(
+                seasonGames as int,
+                seasonWins as int,
+                seasonLosses as int,
+              ),
+            ),
             _buildStatChip(L10n.of(context).gameStatWinRate, '$seasonWinRate%'),
           ],
         ),
         const SizedBox(height: 10),
         _buildProfileSectionCard(
           title: L10n.of(context).gameOverallRecord,
-          accent: const Color(0xFF5A4038), background: const Color(0xFFF5F5F5),
-          icon: Icons.star, iconColor: const Color(0xFFFFB74D),
+          accent: const Color(0xFF5A4038),
+          background: const Color(0xFFF5F5F5),
+          icon: Icons.star,
+          iconColor: const Color(0xFFFFB74D),
           mainText: '',
           chips: [
-            _buildStatChip(L10n.of(context).gameStatRecord, L10n.of(context).gameRecordFormat(totalGames as int, wins as int, losses as int)),
+            _buildStatChip(
+              L10n.of(context).gameStatRecord,
+              L10n.of(
+                context,
+              ).gameRecordFormat(totalGames as int, wins as int, losses as int),
+            ),
             _buildStatChip(L10n.of(context).gameStatWinRate, '$winRate%'),
           ],
         ),
@@ -2098,7 +2681,14 @@ class _LLGameScreenState extends State<LLGameScreen> {
       ),
       child: Row(
         children: [
-          Text('Lv.$level', style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: Color(0xFF5A4038))),
+          Text(
+            'Lv.$level',
+            style: const TextStyle(
+              fontSize: 14,
+              fontWeight: FontWeight.bold,
+              color: Color(0xFF5A4038),
+            ),
+          ),
           const SizedBox(width: 12),
           Expanded(
             child: Column(
@@ -2106,10 +2696,18 @@ class _LLGameScreenState extends State<LLGameScreen> {
               children: [
                 ClipRRect(
                   borderRadius: BorderRadius.circular(6),
-                  child: LinearProgressIndicator(value: expPercent, minHeight: 6, backgroundColor: const Color(0xFFEFE7E3), valueColor: const AlwaysStoppedAnimation(Color(0xFF64B5F6))),
+                  child: LinearProgressIndicator(
+                    value: expPercent,
+                    minHeight: 6,
+                    backgroundColor: const Color(0xFFEFE7E3),
+                    valueColor: const AlwaysStoppedAnimation(Color(0xFF64B5F6)),
+                  ),
                 ),
                 const SizedBox(height: 2),
-                Text('$expInLevel/100 EXP', style: const TextStyle(fontSize: 9, color: Color(0xFF9A8E8A))),
+                Text(
+                  '$expInLevel/100 EXP',
+                  style: const TextStyle(fontSize: 9, color: Color(0xFF9A8E8A)),
+                ),
               ],
             ),
           ),
@@ -2120,115 +2718,326 @@ class _LLGameScreenState extends State<LLGameScreen> {
 
   LinearGradient? _bannerGradient(String? key) {
     switch (key) {
-      case 'banner_pastel': return const LinearGradient(colors: [Color(0xFFF6C1C9), Color(0xFFF3E7EA)]);
-      case 'banner_blossom': return const LinearGradient(colors: [Color(0xFFF7D6D0), Color(0xFFF3E9E6)]);
-      case 'banner_mint': return const LinearGradient(colors: [Color(0xFFCDEBD8), Color(0xFFEFF8F2)]);
-      case 'banner_sunset_7d': return const LinearGradient(colors: [Color(0xFFFFC3A0), Color(0xFFFFE5B4)]);
-      case 'banner_season_gold': return const LinearGradient(colors: [Color(0xFFFFE082), Color(0xFFFFF3C0)]);
-      case 'banner_season_silver': return const LinearGradient(colors: [Color(0xFFCFD8DC), Color(0xFFF1F3F4)]);
-      case 'banner_season_bronze': return const LinearGradient(colors: [Color(0xFFD7B59A), Color(0xFFF4E8DC)]);
-      default: return null;
+      case 'banner_pastel':
+        return const LinearGradient(
+          colors: [Color(0xFFF6C1C9), Color(0xFFF3E7EA)],
+        );
+      case 'banner_blossom':
+        return const LinearGradient(
+          colors: [Color(0xFFF7D6D0), Color(0xFFF3E9E6)],
+        );
+      case 'banner_mint':
+        return const LinearGradient(
+          colors: [Color(0xFFCDEBD8), Color(0xFFEFF8F2)],
+        );
+      case 'banner_sunset_7d':
+        return const LinearGradient(
+          colors: [Color(0xFFFFC3A0), Color(0xFFFFE5B4)],
+        );
+      case 'banner_season_gold':
+        return const LinearGradient(
+          colors: [Color(0xFFFFE082), Color(0xFFFFF3C0)],
+        );
+      case 'banner_season_silver':
+        return const LinearGradient(
+          colors: [Color(0xFFCFD8DC), Color(0xFFF1F3F4)],
+        );
+      case 'banner_season_bronze':
+        return const LinearGradient(
+          colors: [Color(0xFFD7B59A), Color(0xFFF4E8DC)],
+        );
+      default:
+        return null;
     }
   }
 
-  Widget _buildMannerLeaveRow({required int reportCount, required int leaveCount}) {
+  Widget _buildMannerLeaveRow({
+    required int reportCount,
+    required int leaveCount,
+  }) {
     final l10n = L10n.of(context);
-    String label; Color color; IconData icon;
-    if (reportCount <= 1) { label = l10n.gameMannerGood; color = const Color(0xFF66BB6A); icon = Icons.sentiment_satisfied_alt; }
-    else if (reportCount <= 3) { label = l10n.gameMannerNormal; color = const Color(0xFF8D9E56); icon = Icons.sentiment_neutral; }
-    else if (reportCount <= 6) { label = l10n.gameMannerBad; color = const Color(0xFFFFA726); icon = Icons.sentiment_dissatisfied; }
-    else if (reportCount <= 10) { label = l10n.gameMannerVeryBad; color = const Color(0xFFEF5350); icon = Icons.sentiment_very_dissatisfied; }
-    else { label = l10n.gameMannerWorst; color = const Color(0xFFB71C1C); icon = Icons.sentiment_very_dissatisfied; }
+    String label;
+    Color color;
+    IconData icon;
+    if (reportCount <= 1) {
+      label = l10n.gameMannerGood;
+      color = const Color(0xFF66BB6A);
+      icon = Icons.sentiment_satisfied_alt;
+    } else if (reportCount <= 3) {
+      label = l10n.gameMannerNormal;
+      color = const Color(0xFF8D9E56);
+      icon = Icons.sentiment_neutral;
+    } else if (reportCount <= 6) {
+      label = l10n.gameMannerBad;
+      color = const Color(0xFFFFA726);
+      icon = Icons.sentiment_dissatisfied;
+    } else if (reportCount <= 10) {
+      label = l10n.gameMannerVeryBad;
+      color = const Color(0xFFEF5350);
+      icon = Icons.sentiment_very_dissatisfied;
+    } else {
+      label = l10n.gameMannerWorst;
+      color = const Color(0xFFB71C1C);
+      icon = Icons.sentiment_very_dissatisfied;
+    }
     final compact = MediaQuery.of(context).size.width < 400;
-    final boxDeco = BoxDecoration(color: Colors.white.withValues(alpha: 0.95), borderRadius: BorderRadius.circular(12), border: Border.all(color: const Color(0xFFE0D8D4)));
+    final boxDeco = BoxDecoration(
+      color: Colors.white.withValues(alpha: 0.95),
+      borderRadius: BorderRadius.circular(12),
+      border: Border.all(color: const Color(0xFFE0D8D4)),
+    );
     return Row(
       children: [
-        Expanded(child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-          decoration: boxDeco,
-          child: compact
-              ? Column(children: [
-                  Row(mainAxisAlignment: MainAxisAlignment.center, children: [
-                    Icon(icon, color: color, size: 16), const SizedBox(width: 4),
-                    Flexible(child: Text(l10n.rankingMannerScore, style: const TextStyle(fontSize: 11, color: Color(0xFF8A8A8A)), overflow: TextOverflow.ellipsis)),
-                  ]),
-                  const SizedBox(height: 2),
-                  Text(label, style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: color)),
-                ])
-              : Row(mainAxisAlignment: MainAxisAlignment.center, children: [
-                  Icon(icon, color: color, size: 16), const SizedBox(width: 6),
-                  Flexible(child: Text(l10n.gameManner(label), style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: color), overflow: TextOverflow.ellipsis)),
-                ]),
-        )),
+        Expanded(
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+            decoration: boxDeco,
+            child: compact
+                ? Column(
+                    children: [
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(icon, color: color, size: 16),
+                          const SizedBox(width: 4),
+                          Flexible(
+                            child: Text(
+                              l10n.rankingMannerScore,
+                              style: const TextStyle(
+                                fontSize: 11,
+                                color: Color(0xFF8A8A8A),
+                              ),
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        label,
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                          color: color,
+                        ),
+                      ),
+                    ],
+                  )
+                : Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(icon, color: color, size: 16),
+                      const SizedBox(width: 6),
+                      Flexible(
+                        child: Text(
+                          l10n.gameManner(label),
+                          style: TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.bold,
+                            color: color,
+                          ),
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                    ],
+                  ),
+          ),
+        ),
         const SizedBox(width: 8),
-        Expanded(child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-          decoration: boxDeco,
-          child: compact
-              ? Column(children: [
-                  Row(mainAxisAlignment: MainAxisAlignment.center, children: [
-                    const Icon(Icons.warning_amber_rounded, color: Color(0xFFE57373), size: 16), const SizedBox(width: 4),
-                    Flexible(child: Text(l10n.gameDesertionLabel, style: const TextStyle(fontSize: 11, color: Color(0xFF8A8A8A)), overflow: TextOverflow.ellipsis)),
-                  ]),
-                  const SizedBox(height: 2),
-                  Text('$leaveCount', style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Color(0xFF9A6A6A))),
-                ])
-              : Row(mainAxisAlignment: MainAxisAlignment.center, children: [
-                  const Icon(Icons.warning_amber_rounded, color: Color(0xFFE57373), size: 16), const SizedBox(width: 6),
-                  Flexible(child: Text(l10n.gameDesertions(leaveCount), style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Color(0xFF9A6A6A)), overflow: TextOverflow.ellipsis)),
-                ]),
-        )),
+        Expanded(
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+            decoration: boxDeco,
+            child: compact
+                ? Column(
+                    children: [
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          const Icon(
+                            Icons.warning_amber_rounded,
+                            color: Color(0xFFE57373),
+                            size: 16,
+                          ),
+                          const SizedBox(width: 4),
+                          Flexible(
+                            child: Text(
+                              l10n.gameDesertionLabel,
+                              style: const TextStyle(
+                                fontSize: 11,
+                                color: Color(0xFF8A8A8A),
+                              ),
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        '$leaveCount',
+                        style: const TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                          color: Color(0xFF9A6A6A),
+                        ),
+                      ),
+                    ],
+                  )
+                : Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      const Icon(
+                        Icons.warning_amber_rounded,
+                        color: Color(0xFFE57373),
+                        size: 16,
+                      ),
+                      const SizedBox(width: 6),
+                      Flexible(
+                        child: Text(
+                          l10n.gameDesertions(leaveCount),
+                          style: const TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.bold,
+                            color: Color(0xFF9A6A6A),
+                          ),
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                    ],
+                  ),
+          ),
+        ),
       ],
     );
   }
 
-  Widget _buildProfileSectionCard({required String title, required Color accent, required Color background, required IconData icon, required Color iconColor, required String mainText, required List<Widget> chips}) {
+  Widget _buildProfileSectionCard({
+    required String title,
+    required Color accent,
+    required Color background,
+    required IconData icon,
+    required Color iconColor,
+    required String mainText,
+    required List<Widget> chips,
+  }) {
     return Container(
       padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(color: background, borderRadius: BorderRadius.circular(12), border: Border.all(color: background.withValues(alpha: 0.6))),
-      child: Column(children: [
-        Row(children: [
-          Icon(icon, color: iconColor, size: 16), const SizedBox(width: 6),
-          Text(title, style: TextStyle(fontSize: 12, color: accent, fontWeight: FontWeight.bold)),
-          const Spacer(),
-          if (mainText.isNotEmpty) Text(mainText, style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: accent)),
-        ]),
-        const SizedBox(height: 8),
-        Wrap(spacing: 6, runSpacing: 6, alignment: WrapAlignment.center, children: chips),
-      ]),
+      decoration: BoxDecoration(
+        color: background,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: background.withValues(alpha: 0.6)),
+      ),
+      child: Column(
+        children: [
+          Row(
+            children: [
+              Icon(icon, color: iconColor, size: 16),
+              const SizedBox(width: 6),
+              Text(
+                title,
+                style: TextStyle(
+                  fontSize: 12,
+                  color: accent,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              const Spacer(),
+              if (mainText.isNotEmpty)
+                Text(
+                  mainText,
+                  style: TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                    color: accent,
+                  ),
+                ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          Wrap(
+            spacing: 6,
+            runSpacing: 6,
+            alignment: WrapAlignment.center,
+            children: chips,
+          ),
+        ],
+      ),
     );
   }
 
   Widget _buildStatChip(String label, String value) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-      decoration: BoxDecoration(color: Colors.white.withValues(alpha: 0.9), borderRadius: BorderRadius.circular(10), border: Border.all(color: const Color(0xFFE0D8D4))),
-      child: Row(mainAxisSize: MainAxisSize.min, children: [
-        Text(label, style: const TextStyle(fontSize: 10, color: Color(0xFF8A8A8A))),
-        const SizedBox(width: 4),
-        Text(value, style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Color(0xFF5A4038))),
-      ]),
+      decoration: BoxDecoration(
+        color: Colors.white.withValues(alpha: 0.9),
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: const Color(0xFFE0D8D4)),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text(
+            label,
+            style: const TextStyle(fontSize: 10, color: Color(0xFF8A8A8A)),
+          ),
+          const SizedBox(width: 4),
+          Text(
+            value,
+            style: const TextStyle(
+              fontSize: 11,
+              fontWeight: FontWeight.bold,
+              color: Color(0xFF5A4038),
+            ),
+          ),
+        ],
+      ),
     );
   }
 
-  Widget _buildRecentMatches(List<dynamic> recentMatches, String profileNickname) {
+  Widget _buildRecentMatches(
+    List<dynamic> recentMatches,
+    String profileNickname,
+  ) {
     return Container(
-      width: double.infinity, padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(color: Colors.white.withValues(alpha: 0.95), borderRadius: BorderRadius.circular(12), border: Border.all(color: const Color(0xFFE0D8D4))),
-      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        Text(L10n.of(context).gameRecentMatchesThree, style: const TextStyle(fontSize: 12, color: Color(0xFF8A8A8A))),
-        const SizedBox(height: 8),
-        if (recentMatches.isEmpty)
-          Text(L10n.of(context).gameNoRecentMatches, style: const TextStyle(fontSize: 12, color: Color(0xFF9A8E8A)))
-        else
-          Column(children: recentMatches.take(3).map<Widget>((m) => _buildMatchRow(m, profileNickname)).toList()),
-      ]),
+      width: double.infinity,
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: Colors.white.withValues(alpha: 0.95),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: const Color(0xFFE0D8D4)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            L10n.of(context).gameRecentMatchesThree,
+            style: const TextStyle(fontSize: 12, color: Color(0xFF8A8A8A)),
+          ),
+          const SizedBox(height: 8),
+          if (recentMatches.isEmpty)
+            Text(
+              L10n.of(context).gameNoRecentMatches,
+              style: const TextStyle(fontSize: 12, color: Color(0xFF9A8E8A)),
+            )
+          else
+            Column(
+              children: recentMatches
+                  .take(3)
+                  .map<Widget>((m) => _buildMatchRow(m, profileNickname))
+                  .toList(),
+            ),
+        ],
+      ),
     );
   }
 
   Widget _buildMatchRow(dynamic match, String profileNickname) {
     final deserterNickname = match['deserterNickname']?.toString();
-    final isDesertionLoss = match['isDesertionLoss'] == true || (deserterNickname != null && deserterNickname.isNotEmpty && deserterNickname == profileNickname);
+    final isDesertionLoss =
+        match['isDesertionLoss'] == true ||
+        (deserterNickname != null &&
+            deserterNickname.isNotEmpty &&
+            deserterNickname == profileNickname);
     final isDraw = match['isDraw'] == true;
     final won = !isDraw && match['won'] == true;
     final teamAScore = match['teamAScore'] ?? 0;
@@ -2238,34 +3047,107 @@ class _LLGameScreenState extends State<LLGameScreen> {
     final date = _formatShortDate(match['createdAt']);
     final isRanked = match['isRanked'] == true;
     final l10n = L10n.of(context);
-    final Color badgeColor; final String badgeText;
-    if (isDesertionLoss) { badgeColor = const Color(0xFFFFB74D); badgeText = l10n.gameMatchDesertion; }
-    else if (isDraw) { badgeColor = const Color(0xFFBDBDBD); badgeText = l10n.gameMatchDraw; }
-    else if (won) { badgeColor = const Color(0xFF81C784); badgeText = l10n.gameMatchWin; }
-    else { badgeColor = const Color(0xFFE57373); badgeText = l10n.gameMatchLoss; }
+    final Color badgeColor;
+    final String badgeText;
+    if (isDesertionLoss) {
+      badgeColor = const Color(0xFFFFB74D);
+      badgeText = l10n.gameMatchDesertion;
+    } else if (isDraw) {
+      badgeColor = const Color(0xFFBDBDBD);
+      badgeText = l10n.gameMatchDraw;
+    } else if (won) {
+      badgeColor = const Color(0xFF81C784);
+      badgeText = l10n.gameMatchWin;
+    } else {
+      badgeColor = const Color(0xFFE57373);
+      badgeText = l10n.gameMatchLoss;
+    }
 
     return Padding(
       padding: const EdgeInsets.only(bottom: 6),
-      child: Row(children: [
-        Container(width: 24, height: 24, alignment: Alignment.center, decoration: BoxDecoration(color: badgeColor, shape: BoxShape.circle),
-          child: Text(badgeText, style: const TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.bold))),
-        const SizedBox(width: 8),
-        Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          Row(children: [
-            Text(date, style: const TextStyle(fontSize: 11, color: Color(0xFF8A8A8A))),
-            const SizedBox(width: 6),
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
-              decoration: BoxDecoration(color: isRanked ? const Color(0xFFFFF3E0) : const Color(0xFFF5F5F5), borderRadius: BorderRadius.circular(6)),
-              child: Text(isRanked ? l10n.gameMatchTypeRanked : l10n.gameMatchTypeNormal,
-                style: TextStyle(fontSize: 9, fontWeight: FontWeight.bold, color: isRanked ? const Color(0xFFE65100) : const Color(0xFF9E9E9E))),
+      child: Row(
+        children: [
+          Container(
+            width: 24,
+            height: 24,
+            alignment: Alignment.center,
+            decoration: BoxDecoration(
+              color: badgeColor,
+              shape: BoxShape.circle,
             ),
-          ]),
-          const SizedBox(height: 2),
-          Text('$teamA : $teamB', style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Color(0xFF5A4038)), overflow: TextOverflow.ellipsis),
-        ])),
-        Text('$teamAScore : $teamBScore', style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Color(0xFF5A4038))),
-      ]),
+            child: Text(
+              badgeText,
+              style: const TextStyle(
+                color: Colors.white,
+                fontSize: 11,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+          ),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Text(
+                      date,
+                      style: const TextStyle(
+                        fontSize: 11,
+                        color: Color(0xFF8A8A8A),
+                      ),
+                    ),
+                    const SizedBox(width: 6),
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 5,
+                        vertical: 1,
+                      ),
+                      decoration: BoxDecoration(
+                        color: isRanked
+                            ? const Color(0xFFFFF3E0)
+                            : const Color(0xFFF5F5F5),
+                        borderRadius: BorderRadius.circular(6),
+                      ),
+                      child: Text(
+                        isRanked
+                            ? l10n.gameMatchTypeRanked
+                            : l10n.gameMatchTypeNormal,
+                        style: TextStyle(
+                          fontSize: 9,
+                          fontWeight: FontWeight.bold,
+                          color: isRanked
+                              ? const Color(0xFFE65100)
+                              : const Color(0xFF9E9E9E),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  '$teamA : $teamB',
+                  style: const TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.bold,
+                    color: Color(0xFF5A4038),
+                  ),
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ],
+            ),
+          ),
+          Text(
+            '$teamAScore : $teamBScore',
+            style: const TextStyle(
+              fontSize: 12,
+              fontWeight: FontWeight.bold,
+              color: Color(0xFF5A4038),
+            ),
+          ),
+        ],
+      ),
     );
   }
 
@@ -2273,13 +3155,21 @@ class _LLGameScreenState extends State<LLGameScreen> {
     try {
       final dt = DateTime.parse(value.toString()).toLocal();
       return '${dt.year}.${dt.month.toString().padLeft(2, '0')}.${dt.day.toString().padLeft(2, '0')}';
-    } catch (_) { return '-'; }
+    } catch (_) {
+      return '-';
+    }
   }
 
   void _showReportDialog(String nickname, GameService game) {
     final reasonController = TextEditingController();
     final l10n = L10n.of(context);
-    final reasons = [l10n.gameReportReasonAbuse, l10n.gameReportReasonSpam, l10n.gameReportReasonNickname, l10n.gameReportReasonGameplay, l10n.gameReportReasonOther];
+    final reasons = [
+      l10n.gameReportReasonAbuse,
+      l10n.gameReportReasonSpam,
+      l10n.gameReportReasonNickname,
+      l10n.gameReportReasonGameplay,
+      l10n.gameReportReasonOther,
+    ];
     String? selectedReason;
     showDialog(
       context: context,
@@ -2287,64 +3177,187 @@ class _LLGameScreenState extends State<LLGameScreen> {
         builder: (ctx, setState) {
           final media = MediaQuery.of(ctx);
           return AnimatedPadding(
-            duration: const Duration(milliseconds: 180), curve: Curves.easeOut,
+            duration: const Duration(milliseconds: 180),
+            curve: Curves.easeOut,
             padding: EdgeInsets.only(bottom: media.viewInsets.bottom),
             child: AlertDialog(
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-              title: Row(children: [
-                const Icon(Icons.flag, color: Color(0xFFE57373)), const SizedBox(width: 8),
-                Expanded(child: Text(L10n.of(context).gameReportTitle(nickname), style: const TextStyle(fontWeight: FontWeight.bold), overflow: TextOverflow.ellipsis)),
-              ]),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(20),
+              ),
+              title: Row(
+                children: [
+                  const Icon(Icons.flag, color: Color(0xFFE57373)),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      L10n.of(context).gameReportTitle(nickname),
+                      style: const TextStyle(fontWeight: FontWeight.bold),
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                ],
+              ),
               content: ConstrainedBox(
-                constraints: BoxConstraints(maxWidth: 420, maxHeight: media.size.height * 0.55),
-                child: SingleChildScrollView(child: Column(mainAxisSize: MainAxisSize.min, children: [
-                  Container(width: double.infinity, padding: const EdgeInsets.all(10),
-                    decoration: BoxDecoration(color: const Color(0xFFFFF1F1), borderRadius: BorderRadius.circular(12), border: Border.all(color: const Color(0xFFF0C7C7))),
-                    child: Text(L10n.of(context).gameReportWarning, style: const TextStyle(fontSize: 12, color: Color(0xFF9A4A4A), height: 1.4))),
-                  const SizedBox(height: 12),
-                  Align(alignment: Alignment.centerLeft, child: Text(L10n.of(context).gameSelectReason, style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.grey.shade700))),
-                  const SizedBox(height: 6),
-                  Wrap(spacing: 8, runSpacing: 8, children: reasons.map((r) {
-                    final sel = selectedReason == r;
-                    return InkWell(onTap: () => setState(() => selectedReason = r), borderRadius: BorderRadius.circular(16),
-                      child: Container(padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                        decoration: BoxDecoration(color: sel ? const Color(0xFFDDECF7) : const Color(0xFFF6F2F0), borderRadius: BorderRadius.circular(16),
-                          border: Border.all(color: sel ? const Color(0xFF9EC5E6) : const Color(0xFFE2D8D4))),
-                        child: Text(r, style: TextStyle(fontSize: 12, color: sel ? const Color(0xFF3E6D8E) : const Color(0xFF6A5A52), fontWeight: sel ? FontWeight.bold : FontWeight.normal))));
-                  }).toList()),
-                  const SizedBox(height: 12),
-                  TextField(controller: reasonController, maxLines: 3, decoration: InputDecoration(
-                    hintText: L10n.of(context).gameReportDetailHint, filled: true, fillColor: const Color(0xFFF7F2F0),
-                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: Color(0xFFE0D6D1))),
-                    enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: Color(0xFFE0D6D1))),
-                    focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: Color(0xFFB9A8A1))))),
-                ])),
+                constraints: BoxConstraints(
+                  maxWidth: 420,
+                  maxHeight: media.size.height * 0.55,
+                ),
+                child: SingleChildScrollView(
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Container(
+                        width: double.infinity,
+                        padding: const EdgeInsets.all(10),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFFFF1F1),
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(color: const Color(0xFFF0C7C7)),
+                        ),
+                        child: Text(
+                          L10n.of(context).gameReportWarning,
+                          style: const TextStyle(
+                            fontSize: 12,
+                            color: Color(0xFF9A4A4A),
+                            height: 1.4,
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+                      Align(
+                        alignment: Alignment.centerLeft,
+                        child: Text(
+                          L10n.of(context).gameSelectReason,
+                          style: TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.grey.shade700,
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 6),
+                      Wrap(
+                        spacing: 8,
+                        runSpacing: 8,
+                        children: reasons.map((r) {
+                          final sel = selectedReason == r;
+                          return InkWell(
+                            onTap: () => setState(() => selectedReason = r),
+                            borderRadius: BorderRadius.circular(16),
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 12,
+                                vertical: 6,
+                              ),
+                              decoration: BoxDecoration(
+                                color: sel
+                                    ? const Color(0xFFDDECF7)
+                                    : const Color(0xFFF6F2F0),
+                                borderRadius: BorderRadius.circular(16),
+                                border: Border.all(
+                                  color: sel
+                                      ? const Color(0xFF9EC5E6)
+                                      : const Color(0xFFE2D8D4),
+                                ),
+                              ),
+                              child: Text(
+                                r,
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  color: sel
+                                      ? const Color(0xFF3E6D8E)
+                                      : const Color(0xFF6A5A52),
+                                  fontWeight: sel
+                                      ? FontWeight.bold
+                                      : FontWeight.normal,
+                                ),
+                              ),
+                            ),
+                          );
+                        }).toList(),
+                      ),
+                      const SizedBox(height: 12),
+                      TextField(
+                        controller: reasonController,
+                        maxLines: 3,
+                        decoration: InputDecoration(
+                          hintText: L10n.of(context).gameReportDetailHint,
+                          filled: true,
+                          fillColor: const Color(0xFFF7F2F0),
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12),
+                            borderSide: const BorderSide(
+                              color: Color(0xFFE0D6D1),
+                            ),
+                          ),
+                          enabledBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12),
+                            borderSide: const BorderSide(
+                              color: Color(0xFFE0D6D1),
+                            ),
+                          ),
+                          focusedBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12),
+                            borderSide: const BorderSide(
+                              color: Color(0xFFB9A8A1),
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
               ),
               actions: [
-                TextButton(onPressed: () => Navigator.pop(ctx), child: Text(L10n.of(context).gameCancel)),
+                TextButton(
+                  onPressed: () => Navigator.pop(ctx),
+                  child: Text(L10n.of(context).gameCancel),
+                ),
                 ElevatedButton(
-                  onPressed: selectedReason == null ? null : () {
-                    final detail = reasonController.text.trim();
-                    final reason = detail.isEmpty ? selectedReason! : '${selectedReason!} / $detail';
-                    Navigator.pop(ctx);
-                    game.reportResultSuccess = null; game.reportResultMessage = null;
-                    game.reportUserAction(nickname, reason);
-                    late void Function() listener; Timer? cleanupTimer;
-                    listener = () {
-                      if (game.reportResultMessage != null) {
-                        game.removeListener(listener); cleanupTimer?.cancel();
-                        if (mounted) {
-                          ScaffoldMessenger.of(this.context).showSnackBar(SnackBar(
-                            content: Text(game.reportResultMessage!),
-                            backgroundColor: game.reportResultSuccess == true ? null : const Color(0xFFE57373)));
-                        }
-                        game.reportResultSuccess = null; game.reportResultMessage = null;
-                      }
-                    };
-                    game.addListener(listener);
-                    cleanupTimer = Timer(const Duration(seconds: 10), () => game.removeListener(listener));
-                  },
-                  style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFFE57373), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12))),
+                  onPressed: selectedReason == null
+                      ? null
+                      : () {
+                          final detail = reasonController.text.trim();
+                          final reason = detail.isEmpty
+                              ? selectedReason!
+                              : '${selectedReason!} / $detail';
+                          Navigator.pop(ctx);
+                          game.reportResultSuccess = null;
+                          game.reportResultMessage = null;
+                          game.reportUserAction(nickname, reason);
+                          late void Function() listener;
+                          Timer? cleanupTimer;
+                          listener = () {
+                            if (game.reportResultMessage != null) {
+                              game.removeListener(listener);
+                              cleanupTimer?.cancel();
+                              if (mounted) {
+                                ScaffoldMessenger.of(this.context).showSnackBar(
+                                  SnackBar(
+                                    content: Text(game.reportResultMessage!),
+                                    backgroundColor:
+                                        game.reportResultSuccess == true
+                                        ? null
+                                        : const Color(0xFFE57373),
+                                  ),
+                                );
+                              }
+                              game.reportResultSuccess = null;
+                              game.reportResultMessage = null;
+                            }
+                          };
+                          game.addListener(listener);
+                          cleanupTimer = Timer(
+                            const Duration(seconds: 10),
+                            () => game.removeListener(listener),
+                          );
+                        },
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFFE57373),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                  ),
                   child: Text(L10n.of(context).gameReportSubmit),
                 ),
               ],

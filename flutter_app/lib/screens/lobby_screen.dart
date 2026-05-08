@@ -133,7 +133,12 @@ class _LobbyScreenState extends State<LobbyScreen> {
           children: [
             const Icon(Icons.mail, color: Color(0xFF7E57C2)),
             const SizedBox(width: 8),
-            Flexible(child: Text(l10n.lobbyRoomInviteTitle, overflow: TextOverflow.ellipsis)),
+            Flexible(
+              child: Text(
+                l10n.lobbyRoomInviteTitle,
+                overflow: TextOverflow.ellipsis,
+              ),
+            ),
           ],
         ),
         content: Column(
@@ -212,7 +217,12 @@ class _LobbyScreenState extends State<LobbyScreen> {
               children: [
                 const Icon(Icons.person_add, color: Color(0xFF7E57C2)),
                 const SizedBox(width: 8),
-                Flexible(child: Text(l10n.lobbyInviteFriendsTitle, overflow: TextOverflow.ellipsis)),
+                Flexible(
+                  child: Text(
+                    l10n.lobbyInviteFriendsTitle,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
               ],
             ),
             content: onlineFriends.isEmpty
@@ -327,7 +337,12 @@ class _LobbyScreenState extends State<LobbyScreen> {
           children: [
             const Icon(Icons.visibility, color: Color(0xFF4A4080)),
             const SizedBox(width: 8),
-            Flexible(child: Text(l10n.lobbySpectatorListTitle, overflow: TextOverflow.ellipsis)),
+            Flexible(
+              child: Text(
+                l10n.lobbySpectatorListTitle,
+                overflow: TextOverflow.ellipsis,
+              ),
+            ),
           ],
         ),
         content: spectators.isEmpty
@@ -404,7 +419,12 @@ class _LobbyScreenState extends State<LobbyScreen> {
           children: [
             const Icon(Icons.settings, color: Color(0xFF1E88E5)),
             const SizedBox(width: 8),
-            Flexible(child: Text(l10n.lobbyRoomSettingsTitle, overflow: TextOverflow.ellipsis)),
+            Flexible(
+              child: Text(
+                l10n.lobbyRoomSettingsTitle,
+                overflow: TextOverflow.ellipsis,
+              ),
+            ),
           ],
         ),
         content: TextField(
@@ -844,8 +864,7 @@ class _LobbyScreenState extends State<LobbyScreen> {
                                           style: TextStyle(fontSize: 20),
                                         ),
                                         title: Text(l10n.lobbyMighty),
-                                        trailing:
-                                            selectedGameType == 'mighty'
+                                        trailing: selectedGameType == 'mighty'
                                             ? const Icon(
                                                 Icons.check,
                                                 color: Color(0xFF1565C0),
@@ -1074,7 +1093,11 @@ class _LobbyScreenState extends State<LobbyScreen> {
                               foregroundColor: accent,
                             ),
                             icon: const Icon(Icons.casino_outlined, size: 16),
-                            label: Text(l10n.lobbyRandom, overflow: TextOverflow.ellipsis, maxLines: 1),
+                            label: Text(
+                              l10n.lobbyRandom,
+                              overflow: TextOverflow.ellipsis,
+                              maxLines: 1,
+                            ),
                           ),
                         ],
                       ),
@@ -1110,8 +1133,8 @@ class _LobbyScreenState extends State<LobbyScreen> {
                           description: selectedGameType == 'skull_king'
                               ? l10n.lobbyRankedDescSk
                               : selectedGameType == 'mighty'
-                                  ? l10n.lobbyRankedDescMighty
-                                  : l10n.lobbyRankedDesc,
+                              ? l10n.lobbyRankedDescMighty
+                              : l10n.lobbyRankedDesc,
                           value: isRanked,
                           onChanged: (v) => setState(() {
                             isRanked = v;
@@ -1127,7 +1150,8 @@ class _LobbyScreenState extends State<LobbyScreen> {
                       const SizedBox(height: 16),
                       sectionTitle(
                         l10n.lobbyGameSettings,
-                        (selectedGameType == 'tichu' || selectedGameType == 'mighty')
+                        (selectedGameType == 'tichu' ||
+                                selectedGameType == 'mighty')
                             ? l10n.lobbyGameSettingsDescTichu
                             : l10n.lobbyGameSettingsDescSk,
                       ),
@@ -1162,7 +1186,8 @@ class _LobbyScreenState extends State<LobbyScreen> {
                               ],
                             ),
                           ),
-                          if (selectedGameType == 'tichu' || selectedGameType == 'mighty') ...[
+                          if (selectedGameType == 'tichu' ||
+                              selectedGameType == 'mighty') ...[
                             const SizedBox(width: 10),
                             Expanded(
                               child: Column(
@@ -1188,11 +1213,11 @@ class _LobbyScreenState extends State<LobbyScreen> {
                                     decoration: fieldDecoration(
                                       isRanked
                                           ? (selectedGameType == 'mighty'
-                                              ? l10n.lobbyTargetScoreFixedMighty
-                                              : l10n.lobbyTargetScoreFixed)
+                                                ? l10n.lobbyTargetScoreFixedMighty
+                                                : l10n.lobbyTargetScoreFixed)
                                           : (selectedGameType == 'mighty'
-                                              ? l10n.lobbyTargetScoreRangeMighty
-                                              : l10n.lobbyTargetScoreRange),
+                                                ? l10n.lobbyTargetScoreRangeMighty
+                                                : l10n.lobbyTargetScoreRange),
                                       suffixText: l10n.lobbySuffixPoints,
                                     ),
                                   ),
@@ -1216,15 +1241,15 @@ class _LobbyScreenState extends State<LobbyScreen> {
                         child: Text(
                           isRanked
                               ? (selectedGameType == 'skull_king'
-                                  ? l10n.lobbyRankedInfoSk
-                                  : selectedGameType == 'mighty'
-                                      ? l10n.lobbyRankedInfoMighty
-                                      : l10n.lobbyRankedFixedScoreInfo)
+                                    ? l10n.lobbyRankedInfoSk
+                                    : selectedGameType == 'mighty'
+                                    ? l10n.lobbyRankedInfoMighty
+                                    : l10n.lobbyRankedFixedScoreInfo)
                               : (selectedGameType == 'mighty'
-                                  ? l10n.lobbyNormalSettingsInfoMighty
-                                  : selectedGameType == 'tichu'
-                                      ? l10n.lobbyNormalSettingsInfo
-                                      : l10n.lobbyNormalSettingsInfoTimeOnly),
+                                    ? l10n.lobbyNormalSettingsInfoMighty
+                                    : selectedGameType == 'tichu'
+                                    ? l10n.lobbyNormalSettingsInfo
+                                    : l10n.lobbyNormalSettingsInfoTimeOnly),
                           style: const TextStyle(
                             fontSize: 11,
                             color: Color(0xFF6D615B),
@@ -1288,10 +1313,11 @@ class _LobbyScreenState extends State<LobbyScreen> {
                   final targetScore = isRanked
                       ? (selectedGameType == 'mighty' ? 50 : 1000)
                       : selectedGameType == 'mighty'
-                          ? (int.tryParse(targetScoreController.text.trim()) ?? 50)
-                              .clamp(10, 500)
-                          : (int.tryParse(targetScoreController.text.trim()) ?? 1000)
-                              .clamp(100, 20000);
+                      ? (int.tryParse(targetScoreController.text.trim()) ?? 50)
+                            .clamp(10, 500)
+                      : (int.tryParse(targetScoreController.text.trim()) ??
+                                1000)
+                            .clamp(100, 20000);
                   context.read<GameService>().createRoom(
                     name,
                     password: isPrivate ? password : '',
@@ -1326,7 +1352,11 @@ class _LobbyScreenState extends State<LobbyScreen> {
                   ),
                 ),
                 icon: const Icon(Icons.check_circle_outline, size: 18),
-                label: Text(l10n.lobbyCreateRoom, overflow: TextOverflow.ellipsis, maxLines: 1),
+                label: Text(
+                  l10n.lobbyCreateRoom,
+                  overflow: TextOverflow.ellipsis,
+                  maxLines: 1,
+                ),
               ),
             ],
           );
@@ -1831,10 +1861,11 @@ class _LobbyScreenState extends State<LobbyScreen> {
   Widget _buildRoomList(List<Room> rooms) {
     // Waiting rooms on top, in-progress rooms at the bottom.
     // Stable sort so server-provided order is preserved within each group.
-    final sorted = [...rooms]..sort((a, b) {
-      if (a.gameInProgress == b.gameInProgress) return 0;
-      return a.gameInProgress ? 1 : -1;
-    });
+    final sorted = [...rooms]
+      ..sort((a, b) {
+        if (a.gameInProgress == b.gameInProgress) return 0;
+        return a.gameInProgress ? 1 : -1;
+      });
     return ListView.separated(
       itemCount: sorted.length,
       separatorBuilder: (_, _) => const SizedBox(height: 8),
@@ -1972,192 +2003,194 @@ class _LobbyScreenState extends State<LobbyScreen> {
                   ),
                 ),
                 Expanded(
-                child: Padding(
-                  padding: const EdgeInsets.fromLTRB(12, 14, 16, 14),
-                  child: Row(
-                    children: [
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Row(
-                              children: [
-                                Container(
-                                  padding: const EdgeInsets.symmetric(
-                                    horizontal: 7,
-                                    vertical: 3,
-                                  ),
-                                  margin: const EdgeInsets.only(right: 8),
-                                  decoration: BoxDecoration(
-                                    color: badgeBgColor,
-                                    borderRadius: BorderRadius.circular(8),
-                                  ),
-                                  child: Text(
-                                    badgeText,
-                                    style: TextStyle(
-                                      fontSize: 11,
-                                      fontWeight: FontWeight.bold,
-                                      color: badgeTextColor,
-                                    ),
-                                  ),
-                                ),
-                                Expanded(
-                                  child: Text(
-                                    '${room.isPrivate ? '🔒 ' : ''}${room.isRanked ? '🏆 ' : ''}${room.name}',
-                                    style: TextStyle(
-                                      fontSize: 16,
-                                      fontWeight: FontWeight.w500,
-                                      color: nameColor,
-                                    ),
-                                    maxLines: 1,
-                                    overflow: TextOverflow.ellipsis,
-                                  ),
-                                ),
-                              ],
-                            ),
-                            const SizedBox(height: 2),
-                            Wrap(
-                              spacing: 4,
-                              runSpacing: 2,
-                              crossAxisAlignment: WrapCrossAlignment.center,
-                              children: [
-                                Padding(
-                                  padding: const EdgeInsets.only(right: 2),
-                                  child: Text(
-                                    (isSK || isLL)
-                                        ? l10n.lobbyRoomTimeSec(
-                                            room.turnTimeLimit,
-                                          )
-                                        : l10n.lobbyRoomTimeAndScore(
-                                            room.turnTimeLimit,
-                                            room.targetScore,
-                                          ),
-                                    style: TextStyle(
-                                      fontSize: 11,
-                                      color: subTextColor,
-                                    ),
-                                  ),
-                                ),
-                                if (isSK && room.skExpansions.isNotEmpty)
-                                  for (final exp in room.skExpansions)
-                                    Container(
-                                      padding: const EdgeInsets.symmetric(
-                                        horizontal: 6,
-                                        vertical: 2,
-                                      ),
-                                      decoration: BoxDecoration(
-                                        color: const Color(0xFF2D2D3D),
-                                        borderRadius: BorderRadius.circular(6),
-                                        border: Border.all(
-                                          color: const Color(
-                                            0xFFFFD54F,
-                                          ).withValues(alpha: 0.5),
-                                          width: 0.8,
-                                        ),
-                                      ),
-                                      child: Text(
-                                        _skExpansionShortLabel(exp, l10n),
-                                        style: const TextStyle(
-                                          fontSize: 9,
-                                          color: Color(0xFFFFD54F),
-                                          fontWeight: FontWeight.bold,
-                                          height: 1.0,
-                                        ),
-                                      ),
-                                    ),
-                              ],
-                            ),
-                          ],
-                        ),
-                      ),
-                      if (isInProgress)
-                        Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 10,
-                            vertical: 6,
-                          ),
-                          margin: const EdgeInsets.only(right: 8),
-                          decoration: BoxDecoration(
-                            color: isSK
-                                ? const Color(0xFFCCD0DD)
-                                : const Color(0xFFD8CCF6),
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          child: Row(
+                  child: Padding(
+                    padding: const EdgeInsets.fromLTRB(12, 14, 16, 14),
+                    child: Row(
+                      children: [
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              Icon(
-                                Icons.visibility,
-                                size: 14,
-                                color: isSK
-                                    ? const Color(0xFF3A3A50)
-                                    : const Color(0xFF6C63FF),
+                              Row(
+                                children: [
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 7,
+                                      vertical: 3,
+                                    ),
+                                    margin: const EdgeInsets.only(right: 8),
+                                    decoration: BoxDecoration(
+                                      color: badgeBgColor,
+                                      borderRadius: BorderRadius.circular(8),
+                                    ),
+                                    child: Text(
+                                      badgeText,
+                                      style: TextStyle(
+                                        fontSize: 11,
+                                        fontWeight: FontWeight.bold,
+                                        color: badgeTextColor,
+                                      ),
+                                    ),
+                                  ),
+                                  Expanded(
+                                    child: Text(
+                                      '${room.isPrivate ? '🔒 ' : ''}${room.isRanked ? '🏆 ' : ''}${room.name}',
+                                      style: TextStyle(
+                                        fontSize: 16,
+                                        fontWeight: FontWeight.w500,
+                                        color: nameColor,
+                                      ),
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
+                                  ),
+                                ],
                               ),
-                              const SizedBox(width: 4),
-                              Text(
-                                '${room.spectatorCount}',
-                                style: TextStyle(
-                                  fontSize: 12,
-                                  color: isSK
-                                      ? const Color(0xFF3A3A50)
-                                      : const Color(0xFF6C63FF),
-                                  fontWeight: FontWeight.bold,
-                                ),
+                              const SizedBox(height: 2),
+                              Wrap(
+                                spacing: 4,
+                                runSpacing: 2,
+                                crossAxisAlignment: WrapCrossAlignment.center,
+                                children: [
+                                  Padding(
+                                    padding: const EdgeInsets.only(right: 2),
+                                    child: Text(
+                                      (isSK || isLL)
+                                          ? l10n.lobbyRoomTimeSec(
+                                              room.turnTimeLimit,
+                                            )
+                                          : l10n.lobbyRoomTimeAndScore(
+                                              room.turnTimeLimit,
+                                              room.targetScore,
+                                            ),
+                                      style: TextStyle(
+                                        fontSize: 11,
+                                        color: subTextColor,
+                                      ),
+                                    ),
+                                  ),
+                                  if (isSK && room.skExpansions.isNotEmpty)
+                                    for (final exp in room.skExpansions)
+                                      Container(
+                                        padding: const EdgeInsets.symmetric(
+                                          horizontal: 6,
+                                          vertical: 2,
+                                        ),
+                                        decoration: BoxDecoration(
+                                          color: const Color(0xFF2D2D3D),
+                                          borderRadius: BorderRadius.circular(
+                                            6,
+                                          ),
+                                          border: Border.all(
+                                            color: const Color(
+                                              0xFFFFD54F,
+                                            ).withValues(alpha: 0.5),
+                                            width: 0.8,
+                                          ),
+                                        ),
+                                        child: Text(
+                                          _skExpansionShortLabel(exp, l10n),
+                                          style: const TextStyle(
+                                            fontSize: 9,
+                                            color: Color(0xFFFFD54F),
+                                            fontWeight: FontWeight.bold,
+                                            height: 1.0,
+                                          ),
+                                        ),
+                                      ),
+                                ],
                               ),
                             ],
                           ),
                         ),
-                      if (!isInProgress)
-                        GestureDetector(
-                          onTap: () {
-                            _spectateWithPasswordCheck(room);
-                          },
-                          child: Container(
-                            padding: const EdgeInsets.all(8),
+                        if (isInProgress)
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 10,
+                              vertical: 6,
+                            ),
                             margin: const EdgeInsets.only(right: 8),
                             decoration: BoxDecoration(
                               color: isSK
-                                  ? const Color(0xFFD8DAE4)
-                                  : const Color(0xFFE0D8F4),
+                                  ? const Color(0xFFCCD0DD)
+                                  : const Color(0xFFD8CCF6),
                               borderRadius: BorderRadius.circular(12),
                             ),
-                            child: Icon(
-                              Icons.visibility,
-                              size: 18,
+                            child: Row(
+                              children: [
+                                Icon(
+                                  Icons.visibility,
+                                  size: 14,
+                                  color: isSK
+                                      ? const Color(0xFF3A3A50)
+                                      : const Color(0xFF6C63FF),
+                                ),
+                                const SizedBox(width: 4),
+                                Text(
+                                  '${room.spectatorCount}',
+                                  style: TextStyle(
+                                    fontSize: 12,
+                                    color: isSK
+                                        ? const Color(0xFF3A3A50)
+                                        : const Color(0xFF6C63FF),
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        if (!isInProgress)
+                          GestureDetector(
+                            onTap: () {
+                              _spectateWithPasswordCheck(room);
+                            },
+                            child: Container(
+                              padding: const EdgeInsets.all(8),
+                              margin: const EdgeInsets.only(right: 8),
+                              decoration: BoxDecoration(
+                                color: isSK
+                                    ? const Color(0xFFD8DAE4)
+                                    : const Color(0xFFE0D8F4),
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              child: Icon(
+                                Icons.visibility,
+                                size: 18,
+                                color: isSK
+                                    ? const Color(0xFF3A3A50)
+                                    : const Color(0xFF6C63FF),
+                              ),
+                            ),
+                          ),
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 12,
+                            vertical: 6,
+                          ),
+                          decoration: BoxDecoration(
+                            color: isInProgress
+                                ? (isSK
+                                      ? const Color(0xFFD4D8E4)
+                                      : const Color(0xFFD4CCF0))
+                                : (isSK
+                                      ? const Color(0xFFD8DAE4)
+                                      : const Color(0xFFE0D8F4)),
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: Text(
+                            '${room.playerCount}/${room.effectiveMaxPlayers}',
+                            style: TextStyle(
+                              fontSize: 14,
                               color: isSK
                                   ? const Color(0xFF3A3A50)
-                                  : const Color(0xFF6C63FF),
+                                  : const Color(0xFF4A4070),
                             ),
                           ),
                         ),
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 12,
-                          vertical: 6,
-                        ),
-                        decoration: BoxDecoration(
-                          color: isInProgress
-                              ? (isSK
-                                    ? const Color(0xFFD4D8E4)
-                                    : const Color(0xFFD4CCF0))
-                              : (isSK
-                                    ? const Color(0xFFD8DAE4)
-                                    : const Color(0xFFE0D8F4)),
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        child: Text(
-                          '${room.playerCount}/${room.effectiveMaxPlayers}',
-                          style: TextStyle(
-                            fontSize: 14,
-                            color: isSK
-                                ? const Color(0xFF3A3A50)
-                                : const Color(0xFF4A4070),
-                          ),
-                        ),
-                      ),
-                    ],
+                      ],
+                    ),
                   ),
                 ),
-              ),
               ],
             ),
           ),
@@ -2667,8 +2700,8 @@ class _LobbyScreenState extends State<LobbyScreen> {
                     game.currentGameType == 'skull_king'
                         ? L10n.of(context).lobbySkullKingRanked
                         : game.currentGameType == 'mighty'
-                            ? L10n.of(context).lobbyMightyRanked
-                            : L10n.of(context).lobbyTichuRanked,
+                        ? L10n.of(context).lobbyMightyRanked
+                        : L10n.of(context).lobbyTichuRanked,
                     style: const TextStyle(
                       fontSize: 13,
                       fontWeight: FontWeight.bold,
@@ -2696,8 +2729,8 @@ class _LobbyScreenState extends State<LobbyScreen> {
                 color: game.currentGameType == 'love_letter'
                     ? const Color(0xFF8B1A1A)
                     : game.currentGameType == 'mighty'
-                        ? const Color(0xFF1565C0)
-                        : const Color(0xFF2D2D3D),
+                    ? const Color(0xFF1565C0)
+                    : const Color(0xFF2D2D3D),
                 borderRadius: BorderRadius.circular(12),
               ),
               child: Row(
@@ -2707,8 +2740,8 @@ class _LobbyScreenState extends State<LobbyScreen> {
                     game.currentGameType == 'love_letter'
                         ? Icons.favorite
                         : game.currentGameType == 'mighty'
-                            ? Icons.style
-                            : Icons.anchor,
+                        ? Icons.style
+                        : Icons.anchor,
                     size: 14,
                     color: Colors.white,
                   ),
@@ -2719,10 +2752,10 @@ class _LobbyScreenState extends State<LobbyScreen> {
                             context,
                           ).lobbyLoveLetterPlayers(game.roomMaxPlayers)
                         : game.currentGameType == 'mighty'
-                            ? 'Mighty ${game.playerCount}/${game.effectiveRoomMaxPlayers}'
-                            : L10n.of(
-                                context,
-                              ).lobbySkullKingPlayers(game.roomMaxPlayers),
+                        ? 'Mighty ${game.playerCount}/${game.effectiveRoomMaxPlayers}'
+                        : L10n.of(
+                            context,
+                          ).lobbySkullKingPlayers(game.roomMaxPlayers),
                     style: const TextStyle(
                       fontSize: 13,
                       fontWeight: FontWeight.bold,
@@ -2735,8 +2768,8 @@ class _LobbyScreenState extends State<LobbyScreen> {
             // SK expansion chips: give the waiting-room members visibility
             // into which expansions the host enabled without having to leave
             // and re-read the room tile.
-            if (game.currentGameType == 'skull_king'
-                && game.roomSkExpansions.isNotEmpty) ...[
+            if (game.currentGameType == 'skull_king' &&
+                game.roomSkExpansions.isNotEmpty) ...[
               const SizedBox(height: 8),
               Wrap(
                 alignment: WrapAlignment.center,
@@ -2835,46 +2868,49 @@ class _LobbyScreenState extends State<LobbyScreen> {
           ],
           const SizedBox(height: 12),
           if (game.isHost) ...[
-            Builder(builder: (_) {
-              final canStart = game.currentGameType == 'skull_king' ||
-                      game.currentGameType == 'love_letter'
-                  ? game.playerCount >= 2
-                  : game.currentGameType == 'mighty'
-                      ? game.playerCount >= 5
-                      : game.playerCount >= game.effectiveRoomMaxPlayers;
-              if (!canStart) return const SizedBox.shrink();
-              final everyoneReady = _allNonHostReady(game);
-              return FractionallySizedBox(
-                widthFactor: 2 / 3,
-                child: SizedBox(
-                  height: 48,
-                  child: ElevatedButton(
-                    onPressed: () => game.startGame(),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: const Color(0xFFDEDBFA),
-                      foregroundColor: const Color(0xFF4A4080),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(16),
-                        side: everyoneReady
-                            ? const BorderSide(
-                                color: Color(0xFF6C63FF),
-                                width: 2.5,
-                              )
-                            : BorderSide.none,
+            Builder(
+              builder: (_) {
+                final canStart =
+                    game.currentGameType == 'skull_king' ||
+                        game.currentGameType == 'love_letter'
+                    ? game.playerCount >= 2
+                    : game.currentGameType == 'mighty'
+                    ? game.playerCount >= 5
+                    : game.playerCount >= game.effectiveRoomMaxPlayers;
+                if (!canStart) return const SizedBox.shrink();
+                final everyoneReady = _allNonHostReady(game);
+                return FractionallySizedBox(
+                  widthFactor: 2 / 3,
+                  child: SizedBox(
+                    height: 48,
+                    child: ElevatedButton(
+                      onPressed: () => game.startGame(),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: const Color(0xFFDEDBFA),
+                        foregroundColor: const Color(0xFF4A4080),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(16),
+                          side: everyoneReady
+                              ? const BorderSide(
+                                  color: Color(0xFF6C63FF),
+                                  width: 2.5,
+                                )
+                              : BorderSide.none,
+                        ),
+                        elevation: 0,
                       ),
-                      elevation: 0,
-                    ),
-                    child: Text(
-                      L10n.of(context).lobbyStartGame,
-                      style: const TextStyle(
-                        fontSize: 17,
-                        fontWeight: FontWeight.bold,
+                      child: Text(
+                        L10n.of(context).lobbyStartGame,
+                        style: const TextStyle(
+                          fontSize: 17,
+                          fontWeight: FontWeight.bold,
+                        ),
                       ),
                     ),
                   ),
-                ),
-              );
-            }),
+                );
+              },
+            ),
           ] else
             FractionallySizedBox(
               widthFactor: 2 / 3,
@@ -4125,7 +4161,10 @@ class _LobbyScreenState extends State<LobbyScreen> {
                   (profile['mightySeasonLosses'] ?? 0) as int,
                 ),
               ),
-              _buildStatChip(l10n.lobbyStatWinRate, '${profile['mightySeasonWinRate'] ?? 0}%'),
+              _buildStatChip(
+                l10n.lobbyStatWinRate,
+                '${profile['mightySeasonWinRate'] ?? 0}%',
+              ),
             ],
           ),
           const SizedBox(height: 10),
@@ -4145,7 +4184,10 @@ class _LobbyScreenState extends State<LobbyScreen> {
                   (profile['mightyLosses'] ?? 0) as int,
                 ),
               ),
-              _buildStatChip(l10n.lobbyStatWinRate, '${profile['mightyWinRate'] ?? 0}%'),
+              _buildStatChip(
+                l10n.lobbyStatWinRate,
+                '${profile['mightyWinRate'] ?? 0}%',
+              ),
             ],
           ),
         ] else ...[
@@ -4401,20 +4443,54 @@ class _LobbyScreenState extends State<LobbyScreen> {
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
             decoration: boxDeco,
             child: compact
-                ? Column(children: [
-                    Row(mainAxisAlignment: MainAxisAlignment.center, children: [
+                ? Column(
+                    children: [
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(icon, color: color, size: 16),
+                          const SizedBox(width: 4),
+                          Flexible(
+                            child: Text(
+                              l10n.rankingMannerScore,
+                              style: const TextStyle(
+                                fontSize: 11,
+                                color: Color(0xFF8A8A8A),
+                              ),
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        '$manner',
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                          color: color,
+                        ),
+                      ),
+                    ],
+                  )
+                : Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
                       Icon(icon, color: color, size: 16),
-                      const SizedBox(width: 4),
-                      Flexible(child: Text(l10n.rankingMannerScore, style: const TextStyle(fontSize: 11, color: Color(0xFF8A8A8A)), overflow: TextOverflow.ellipsis)),
-                    ]),
-                    const SizedBox(height: 2),
-                    Text('$manner', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: color)),
-                  ])
-                : Row(mainAxisAlignment: MainAxisAlignment.center, children: [
-                    Icon(icon, color: color, size: 16),
-                    const SizedBox(width: 6),
-                    Flexible(child: Text('${l10n.rankingMannerScore} $manner', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: color), overflow: TextOverflow.ellipsis)),
-                  ]),
+                      const SizedBox(width: 6),
+                      Flexible(
+                        child: Text(
+                          '${l10n.rankingMannerScore} $manner',
+                          style: TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.bold,
+                            color: color,
+                          ),
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                    ],
+                  ),
           ),
         ),
         const SizedBox(width: 8),
@@ -4423,20 +4499,62 @@ class _LobbyScreenState extends State<LobbyScreen> {
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
             decoration: boxDeco,
             child: compact
-                ? Column(children: [
-                    Row(mainAxisAlignment: MainAxisAlignment.center, children: [
-                      const Icon(Icons.warning_amber_rounded, color: Color(0xFFE57373), size: 16),
-                      const SizedBox(width: 4),
-                      Flexible(child: Text(l10n.gameDesertionLabel, style: const TextStyle(fontSize: 11, color: Color(0xFF8A8A8A)), overflow: TextOverflow.ellipsis)),
-                    ]),
-                    const SizedBox(height: 2),
-                    Text('$leaveCount', style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Color(0xFF9A6A6A))),
-                  ])
-                : Row(mainAxisAlignment: MainAxisAlignment.center, children: [
-                    const Icon(Icons.warning_amber_rounded, color: Color(0xFFE57373), size: 16),
-                    const SizedBox(width: 6),
-                    Flexible(child: Text(l10n.lobbyDesertions(leaveCount), style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Color(0xFF9A6A6A)), overflow: TextOverflow.ellipsis)),
-                  ]),
+                ? Column(
+                    children: [
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          const Icon(
+                            Icons.warning_amber_rounded,
+                            color: Color(0xFFE57373),
+                            size: 16,
+                          ),
+                          const SizedBox(width: 4),
+                          Flexible(
+                            child: Text(
+                              l10n.gameDesertionLabel,
+                              style: const TextStyle(
+                                fontSize: 11,
+                                color: Color(0xFF8A8A8A),
+                              ),
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        '$leaveCount',
+                        style: const TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                          color: Color(0xFF9A6A6A),
+                        ),
+                      ),
+                    ],
+                  )
+                : Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      const Icon(
+                        Icons.warning_amber_rounded,
+                        color: Color(0xFFE57373),
+                        size: 16,
+                      ),
+                      const SizedBox(width: 6),
+                      Flexible(
+                        child: Text(
+                          l10n.lobbyDesertions(leaveCount),
+                          style: const TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.bold,
+                            color: Color(0xFF9A6A6A),
+                          ),
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                    ],
+                  ),
           ),
         ),
       ],
@@ -4688,27 +4806,30 @@ class _LobbyScreenState extends State<LobbyScreen> {
                     ),
                     const SizedBox(width: 6),
                     if (!isLL)
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
-                      decoration: BoxDecoration(
-                        color: isRanked
-                            ? const Color(0xFFFFF3E0)
-                            : const Color(0xFFF5F5F5),
-                        borderRadius: BorderRadius.circular(6),
-                      ),
-                      child: Text(
-                        isRanked
-                            ? l10n.lobbyMatchTypeRanked
-                            : l10n.lobbyMatchTypeNormal,
-                        style: TextStyle(
-                          fontSize: 9,
-                          fontWeight: FontWeight.bold,
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 5,
+                          vertical: 1,
+                        ),
+                        decoration: BoxDecoration(
                           color: isRanked
-                              ? const Color(0xFFE65100)
-                              : const Color(0xFF9E9E9E),
+                              ? const Color(0xFFFFF3E0)
+                              : const Color(0xFFF5F5F5),
+                          borderRadius: BorderRadius.circular(6),
+                        ),
+                        child: Text(
+                          isRanked
+                              ? l10n.lobbyMatchTypeRanked
+                              : l10n.lobbyMatchTypeNormal,
+                          style: TextStyle(
+                            fontSize: 9,
+                            fontWeight: FontWeight.bold,
+                            color: isRanked
+                                ? const Color(0xFFE65100)
+                                : const Color(0xFF9E9E9E),
+                          ),
                         ),
                       ),
-                    ),
                   ],
                 ),
                 const SizedBox(height: 2),
@@ -4807,11 +4928,7 @@ class _LobbyScreenState extends State<LobbyScreen> {
       ),
       child: Text(
         label,
-        style: TextStyle(
-          fontSize: 11,
-          fontWeight: FontWeight.w700,
-          color: fg,
-        ),
+        style: TextStyle(fontSize: 11, fontWeight: FontWeight.w700, color: fg),
       ),
     );
   }
@@ -4839,7 +4956,11 @@ class _LobbyScreenState extends State<LobbyScreen> {
           const SizedBox(width: 6),
           Text(
             label,
-            style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: fg),
+            style: TextStyle(
+              fontSize: 12,
+              fontWeight: FontWeight.w700,
+              color: fg,
+            ),
           ),
         ],
       ),
@@ -4882,7 +5003,8 @@ class _LobbyScreenState extends State<LobbyScreen> {
         isEmpty &&
         !isSlotBlocked &&
         isFlexibleGame &&
-        (game.roomMaxPlayers - game.roomBlockedSlots.length - 1 >= minEffective);
+        (game.roomMaxPlayers - game.roomBlockedSlots.length - 1 >=
+            minEffective);
     final canUnblockSlot = game.isHost && isSlotBlocked;
     // Can only move to empty slots (no swapping, no blocked)
     final canMove =
@@ -5015,7 +5137,8 @@ class _LobbyScreenState extends State<LobbyScreen> {
                         color: Color(0xFF3949AB),
                       ),
                     ),
-                    if (player.botSpeed != null && player.botSpeed != 'normal') ...[
+                    if (player.botSpeed != null &&
+                        player.botSpeed != 'normal') ...[
                       const SizedBox(width: 3),
                       Icon(
                         player.botSpeed == 'fast'
@@ -5027,10 +5150,12 @@ class _LobbyScreenState extends State<LobbyScreen> {
                             : const Color(0xFF558B2F),
                       ),
                     ],
-                    if (player.botStrategy != null
-                        && player.botStrategy != 'heuristic'
-                        && player.botStrategy != BotStrategy.mixOracle
-                        && player.botStrategy != BotStrategy.legacyMixExpectimax) ...[
+                    if (player.botStrategy != null &&
+                        player.botStrategy != BotStrategy.heuristic &&
+                        player.botStrategy != BotStrategy.winrate &&
+                        player.botStrategy != BotStrategy.mixOracle &&
+                        player.botStrategy !=
+                            BotStrategy.legacyMixExpectimax) ...[
                       const SizedBox(width: 3),
                       Text(
                         _shortStrategyLabel(player.botStrategy!),
@@ -5116,10 +5241,15 @@ class _LobbyScreenState extends State<LobbyScreen> {
             if (isEmpty && game.isHost && !game.isRankedRoom && !isSlotBlocked)
               PopupMenuButton<String>(
                 onSelected: (speed) {
+                  final defaultStrategy = game.currentGameType == 'tichu'
+                      ? BotStrategy.winrate
+                      : game.currentGameType == 'mighty'
+                      ? BotStrategy.mixOracle
+                      : BotStrategy.heuristic;
                   game.addBot(
                     targetSlot: slotIndex,
                     speed: speed,
-                    strategy: BotStrategy.mixOracle,
+                    strategy: defaultStrategy,
                   );
                 },
                 itemBuilder: (ctx) {
@@ -5130,9 +5260,18 @@ class _LobbyScreenState extends State<LobbyScreen> {
                       child: Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          const Icon(Icons.fast_forward, size: 16, color: Color(0xFFE65100)),
+                          const Icon(
+                            Icons.fast_forward,
+                            size: 16,
+                            color: Color(0xFFE65100),
+                          ),
                           const SizedBox(width: 8),
-                          Flexible(child: Text(l10n.lobbyBotSpeedFast, overflow: TextOverflow.ellipsis)),
+                          Flexible(
+                            child: Text(
+                              l10n.lobbyBotSpeedFast,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
                         ],
                       ),
                     ),
@@ -5141,9 +5280,18 @@ class _LobbyScreenState extends State<LobbyScreen> {
                       child: Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          const Icon(Icons.play_arrow, size: 16, color: Color(0xFF3949AB)),
+                          const Icon(
+                            Icons.play_arrow,
+                            size: 16,
+                            color: Color(0xFF3949AB),
+                          ),
                           const SizedBox(width: 8),
-                          Flexible(child: Text(l10n.lobbyBotSpeedNormal, overflow: TextOverflow.ellipsis)),
+                          Flexible(
+                            child: Text(
+                              l10n.lobbyBotSpeedNormal,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
                         ],
                       ),
                     ),
@@ -5152,9 +5300,18 @@ class _LobbyScreenState extends State<LobbyScreen> {
                       child: Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          const Icon(Icons.slow_motion_video, size: 16, color: Color(0xFF558B2F)),
+                          const Icon(
+                            Icons.slow_motion_video,
+                            size: 16,
+                            color: Color(0xFF558B2F),
+                          ),
                           const SizedBox(width: 8),
-                          Flexible(child: Text(l10n.lobbyBotSpeedSlow, overflow: TextOverflow.ellipsis)),
+                          Flexible(
+                            child: Text(
+                              l10n.lobbyBotSpeedSlow,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
                         ],
                       ),
                     ),
@@ -5334,6 +5491,8 @@ class _LobbyScreenState extends State<LobbyScreen> {
 
   String _shortStrategyLabel(String strategy) {
     switch (strategy) {
+      case BotStrategy.winrate:
+        return 'WR';
       case BotStrategy.pimcPlay:
         return 'PIMC·P';
       case BotStrategy.pimcFull:

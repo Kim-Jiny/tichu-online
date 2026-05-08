@@ -6,7 +6,7 @@
 const { createDeck } = require('./Deck');
 const { getComboType, COMBO } = require('./CardValidator');
 
-const VALID_BOT_STRATEGIES = ['heuristic', 'oracle', 'mixoracle', 'pimc_play', 'pimc_full', 'expectimax', 'expectimax_smart', 'mixexpectimax'];
+const VALID_BOT_STRATEGIES = ['heuristic', 'winrate', 'oracle', 'mixoracle', 'pimc_play', 'pimc_full', 'expectimax', 'expectimax_smart', 'mixexpectimax'];
 
 class BotPlayer {
   constructor(id, nickname, speed = 'normal', strategy = 'heuristic') {
@@ -447,6 +447,14 @@ function decideDragonGive(state) {
 
   // Tie: random
   return Math.random() > 0.5 ? 'left' : 'right';
+}
+
+function isPartnerTichuLive(state, partner) {
+  if (!partner || partner.hasFinished) return false;
+  if (!partner.hasSmallTichu && !partner.hasLargeTichu) return false;
+  const players = state.players || [];
+  const someoneElseFinishedFirst = players.some(p => p.id !== partner.id && p.finishPosition === 1);
+  return !someoneElseFinishedFirst;
 }
 
 
@@ -993,10 +1001,16 @@ function followTrick(state, cards, normalCards, combos) {
     .filter(o => !o.hasFinished)
     .reduce((min, o) => Math.min(min, o.cardCount), Infinity);
 
-  const partnerTichu = partner && !partner.hasFinished && (partner.hasSmallTichu || partner.hasLargeTichu);
+  const partnerTichu = isPartnerTichuLive(state, partner);
 
   // === PARTNER PLAYED: usually pass, unless we can finish ===
   if (partnerPlayed) {
+    // Never overtake a live tichu from partner. If we go out first or steal
+    // their trick, we are effectively forcing their declaration to fail.
+    if (partnerTichu) {
+      return { type: 'pass' };
+    }
+
     // Check if we can finish by beating partner
     const finishPlay = findFinishingPlay(comboType, lastValue, lastLength, cards, normalCards, combos);
     if (finishPlay) return { type: 'play_cards', cards: finishPlay };
@@ -1016,9 +1030,6 @@ function followTrick(state, cards, normalCards, combos) {
   // === PARTNER DECLARED TICHU: stay passive, let partner take the lead ===
   // But if partner already passed, we should take the trick to prevent opponents from winning it
   if (partnerTichu) {
-    const finishPlay = findFinishingPlay(comboType, lastValue, lastLength, cards, normalCards, combos);
-    if (finishPlay) return { type: 'play_cards', cards: finishPlay };
-
     // Check if partner already passed (passCount >= 1 means at least one person passed)
     // If partner is not the last player and trick doesn't contain partner's play, partner passed
     const partnerPlayedInTrick = trick.some(t => t.playerId === partner.id);
@@ -2163,7 +2174,11 @@ function findCallFulfillPlay(comboType, lastValue, lastLength, calledCards, allC
   return null;
 }
 
-function decideBotAction(game, botId, _strategy = 'heuristic') {
+function decideBotAction(game, botId, strategy = 'heuristic') {
+  const normalized = normalizeTichuStrategy(strategy);
+  if (normalized === 'winrate') {
+    return decideWinrateBotAction(game, botId);
+  }
   return decideHeuristicBotAction(game, botId);
 }
 

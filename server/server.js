@@ -3873,12 +3873,10 @@ function scheduleBotActions(roomId, forceReschedule = false) {
     const isLL = r.gameType === 'love_letter';
     const isMighty = r.gameType === 'mighty';
     const baseDecideFn = isMighty ? decideMightyBotAction : isLL ? decideLLBotAction : isSK ? decideSKBotAction : decideBotAction;
-    const decideFn = isMighty
-      ? (g, pid) => {
-          const cur = lobby.getRoom(roomId);
-          return baseDecideFn(g, pid, cur?.bots.get(pid)?.strategy || 'heuristic');
-        }
-      : baseDecideFn;
+    const decideFn = (g, pid) => {
+      const cur = lobby.getRoom(roomId);
+      return baseDecideFn(g, pid, cur?.bots.get(pid)?.strategy || 'heuristic');
+    };
 
     if (isSK && r.game.state === 'bidding') {
       const pendingBidBots = r.getBotIds().filter(pid => r.game?.bids?.[pid] === null);

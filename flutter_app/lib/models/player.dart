@@ -1,5 +1,6 @@
 class BotStrategy {
   static const heuristic = 'heuristic';
+  static const winrate = 'winrate';
   static const oracle = 'oracle';
   static const mixOracle = 'mixoracle';
   static const legacyMixExpectimax = 'mixexpectimax';
@@ -7,7 +8,17 @@ class BotStrategy {
   static const pimcFull = 'pimc_full';
   static const expectimax = 'expectimax';
   static const expectimaxSmart = 'expectimax_smart';
-  static const all = [heuristic, oracle, mixOracle, pimcPlay, pimcFull, expectimax, expectimaxSmart, legacyMixExpectimax];
+  static const all = [
+    heuristic,
+    winrate,
+    oracle,
+    mixOracle,
+    pimcPlay,
+    pimcFull,
+    expectimax,
+    expectimaxSmart,
+    legacyMixExpectimax,
+  ];
 }
 
 class Player {

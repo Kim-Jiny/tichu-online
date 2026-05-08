@@ -9,6 +9,7 @@ class LoveLetterCard extends StatelessWidget {
   final double width;
   final double height;
   final bool compact;
+  final double borderRadius;
 
   const LoveLetterCard({
     super.key,
@@ -20,15 +21,16 @@ class LoveLetterCard extends StatelessWidget {
     this.width = 70,
     this.height = 100,
     this.compact = false,
+    this.borderRadius = 14,
   });
 
   static const Map<String, Color> cardColors = {
-    'guard': Color(0xFF78909C),    // blue grey
-    'spy': Color(0xFF42A5F5),   // blue
-    'baron': Color(0xFF66BB6A),    // green
+    'guard': Color(0xFF78909C), // blue grey
+    'spy': Color(0xFF42A5F5), // blue
+    'baron': Color(0xFF66BB6A), // green
     'handmaid': Color(0xFFAB47BC), // purple
-    'prince': Color(0xFFEF5350),   // red
-    'king': Color(0xFFFFA726),     // orange
+    'prince': Color(0xFFEF5350), // red
+    'king': Color(0xFFFFA726), // orange
     'countess': Color(0xFFEC407A), // pink
     'princess': Color(0xFFFFEE58), // yellow
   };
@@ -94,7 +96,7 @@ class LoveLetterCard extends StatelessWidget {
       return Container(
         decoration: BoxDecoration(
           color: const Color(0xFF8B1A1A),
-          borderRadius: BorderRadius.circular(14),
+          borderRadius: BorderRadius.circular(borderRadius),
           border: Border.all(color: const Color(0xFFB8860B), width: 1.5),
         ),
         child: const Center(
@@ -112,17 +114,32 @@ class LoveLetterCard extends StatelessWidget {
     return Container(
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(14),
+        borderRadius: BorderRadius.circular(borderRadius),
         border: Border.all(
-          color: isSelected ? const Color(0xFF4D99FF) : color.withValues(alpha: 0.5),
+          color: isSelected
+              ? const Color(0xFF4D99FF)
+              : color.withValues(alpha: 0.5),
           width: isSelected ? 2.5 : 1.5,
         ),
         boxShadow: isSelected
-            ? [BoxShadow(color: const Color(0xFF4D99FF).withValues(alpha: 0.3), blurRadius: 6)]
-            : [BoxShadow(color: const Color(0xFFE1D7E6).withValues(alpha: 0.4), blurRadius: 6, offset: const Offset(0, 1))],
+            ? [
+                BoxShadow(
+                  color: const Color(0xFF4D99FF).withValues(alpha: 0.3),
+                  blurRadius: 6,
+                ),
+              ]
+            : [
+                BoxShadow(
+                  color: const Color(0xFFE1D7E6).withValues(alpha: 0.4),
+                  blurRadius: 6,
+                  offset: const Offset(0, 1),
+                ),
+              ],
       ),
       child: ClipRRect(
-        borderRadius: BorderRadius.circular(13),
+        borderRadius: BorderRadius.circular(
+          (borderRadius - 1).clamp(0, borderRadius),
+        ),
         child: Image.asset(
           assetPath,
           fit: BoxFit.cover,

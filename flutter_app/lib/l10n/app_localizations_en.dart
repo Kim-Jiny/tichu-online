@@ -3857,6 +3857,11 @@ class L10nEn extends L10n {
   String get llCardGuideTitle => 'Card Guide';
 
   @override
+  String llDiscardedCardsTitle(String playerName) {
+    return '$playerName\'s discards';
+  }
+
+  @override
   String get llDescGuard =>
       '1 · Guard: Name a player and guess their card. If correct, they\'re eliminated!';
 

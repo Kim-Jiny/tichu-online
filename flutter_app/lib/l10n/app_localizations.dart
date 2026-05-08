@@ -6921,6 +6921,12 @@ abstract class L10n {
   /// **'Card Guide'**
   String get llCardGuideTitle;
 
+  /// No description provided for @llDiscardedCardsTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'{playerName}\'s discards'**
+  String llDiscardedCardsTitle(String playerName);
+
   /// No description provided for @llDescGuard.
   ///
   /// In en, this message translates to:

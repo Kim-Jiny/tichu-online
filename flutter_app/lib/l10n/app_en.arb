@@ -1768,6 +1768,12 @@
   "llCardPrincess": "Princess",
 
   "llCardGuideTitle": "Card Guide",
+  "llDiscardedCardsTitle": "{playerName}'s discards",
+  "@llDiscardedCardsTitle": {
+    "placeholders": {
+      "playerName": {"type": "String"}
+    }
+  },
   "llDescGuard": "1 · Guard: Name a player and guess their card. If correct, they're eliminated!",
   "llDescSpy": "2 · Spy: Secretly look at another player's card.",
   "llDescBaron": "3 · Baron: Compare cards with a player. Lower card is eliminated!",

@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../services/game_service.dart';
@@ -776,207 +777,627 @@ class _LLGameScreenState extends State<LLGameScreen> {
       return _buildRoundEnd(context, gs, state);
     }
 
-    return SingleChildScrollView(
-      child: Column(
-        children: [
-          const SizedBox(height: 8),
-          if (state.faceUpCards.isNotEmpty) _buildFaceUpCards(state),
-          _buildPlayersArea(context, gs, state),
-          const SizedBox(height: 8),
-        ],
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(8, 8, 8, 8),
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          final width = constraints.maxWidth;
+          final height = constraints.maxHeight;
+          final visiblePlayers = gs.isSpectator
+              ? state.players
+              : state.players.where((p) => p.position != 'self').toList();
+          final centerX = width / 2;
+          final centerY = gs.isSpectator ? height * 0.50 : height * 0.45;
+          final seatWidth = gs.isSpectator ? 116.0 : 122.0;
+          final seatHeight = gs.isSpectator ? 112.0 : 118.0;
+          final maxSeatRadiusX = math.max(0.0, centerX - seatWidth / 2 - 10);
+          final seatRadiusX = math.min(
+            width * (gs.isSpectator ? 0.39 : 0.36),
+            maxSeatRadiusX,
+          );
+          final maxSeatRadiusY = math.max(0.0, centerY - seatHeight / 2 - 8);
+          final seatRadiusY = math.min(
+            height * (gs.isSpectator ? 0.34 : 0.30),
+            maxSeatRadiusY,
+          );
+
+          return Stack(
+            clipBehavior: Clip.none,
+            children: [
+              Positioned.fill(
+                child: Align(
+                  alignment: Alignment(0, gs.isSpectator ? 0.08 : -0.02),
+                  child: _buildCenterBoard(context, state),
+                ),
+              ),
+              for (int i = 0; i < visiblePlayers.length; i++) ...[
+                () {
+                  final player = visiblePlayers[i];
+                  final angle = gs.isSpectator
+                      ? _llSpectatorSeatAngleForIndex(i, visiblePlayers.length)
+                      : _llSeatAngleForIndex(i, visiblePlayers.length);
+                  final seatLeft =
+                      centerX + seatRadiusX * math.cos(angle) - seatWidth / 2;
+                  final seatTop =
+                      centerY + seatRadiusY * math.sin(angle) - seatHeight / 2;
+                  return Positioned(
+                    left: seatLeft,
+                    top: seatTop,
+                    width: seatWidth,
+                    height: seatHeight,
+                    child: _buildPlayerSeatCard(
+                      context,
+                      state,
+                      player,
+                      compact: gs.isSpectator,
+                    ),
+                  );
+                }(),
+              ],
+            ],
+          );
+        },
       ),
     );
   }
 
-  Widget _buildPlayersArea(
-    BuildContext context,
-    GameService gs,
-    LLGameStateData state,
-  ) {
-    final otherPlayers = state.players
-        .where((p) => p.position != 'self')
-        .toList();
-
-    return Column(
-      children: otherPlayers
-          .map((player) => _buildPlayerRow(context, state, player))
-          .toList(),
+  Widget _buildCenterBoard(BuildContext context, LLGameStateData state) {
+    final currentPlayer = state.players.cast<LLPlayer?>().firstWhere(
+      (p) => p?.id == state.currentPlayer,
+      orElse: () => null,
     );
-  }
-
-  Widget _buildPlayerRow(
-    BuildContext context,
-    LLGameStateData state,
-    LLPlayer player,
-  ) {
-    final isCurrent = player.id == state.currentPlayer;
-    final isEffectTarget = state.pendingEffect?.targetId == player.id;
 
     return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-      padding: const EdgeInsets.all(8),
+      constraints: const BoxConstraints(maxWidth: 300),
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
       decoration: BoxDecoration(
-        color: isCurrent
-            ? const Color(0xFFFFF8E1)
-            : isEffectTarget
-            ? const Color(0xFFFFEBEE)
-            : Colors.white.withValues(alpha: 0.7),
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(
-          color: isCurrent
-              ? const Color(0xFFE6C86A)
-              : isEffectTarget
-              ? const Color(0xFFEF9A9A)
-              : const Color(0xFFE0D8D4),
-        ),
+        color: Colors.white.withValues(alpha: 0.78),
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.6)),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.08),
+            blurRadius: 12,
+            offset: const Offset(0, 4),
+          ),
+        ],
       ),
-      child: Row(
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
         children: [
-          // Name and status
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
+          Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 5),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFF6EEE8),
+                  borderRadius: BorderRadius.circular(999),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
                   children: [
+                    const Icon(Icons.style, size: 14, color: Color(0xFF8A7A72)),
+                    const SizedBox(width: 4),
                     Text(
-                      player.name,
-                      style: TextStyle(
-                        color: player.eliminated
-                            ? const Color(0xFFBBAAAA)
-                            : const Color(0xFF5A4038),
-                        fontSize: 13,
-                        fontWeight: isCurrent
-                            ? FontWeight.bold
-                            : FontWeight.normal,
-                        decoration: player.eliminated
-                            ? TextDecoration.lineThrough
-                            : null,
+                      '${state.drawPileCount}',
+                      style: const TextStyle(
+                        color: Color(0xFF8A7A72),
+                        fontSize: 12,
+                        fontWeight: FontWeight.w700,
                       ),
                     ),
-                    if (!player.connected)
-                      const Padding(
-                        padding: EdgeInsets.only(left: 4),
-                        child: Icon(
-                          Icons.wifi_off,
-                          color: Colors.red,
-                          size: 12,
-                        ),
-                      ),
-                    if (player.protected)
-                      const Padding(
-                        padding: EdgeInsets.only(left: 4),
-                        child: Icon(
-                          Icons.shield,
-                          color: Colors.blueAccent,
-                          size: 14,
-                        ),
-                      ),
-                    if (player.eliminated)
-                      Padding(
-                        padding: const EdgeInsets.only(left: 4),
-                        child: Text(
-                          L10n.of(context).llEliminated,
-                          style: TextStyle(
-                            color: Colors.red.shade300,
-                            fontSize: 10,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                      ),
                   ],
                 ),
-                const SizedBox(height: 2),
-                // Token display
-                Row(
-                  children: List.generate(
-                    state.targetTokens,
-                    (i) => Padding(
-                      padding: const EdgeInsets.only(right: 2),
-                      child: Icon(
-                        Icons.favorite,
-                        color: i < player.tokens
-                            ? const Color(0xFFE91E63)
-                            : const Color(0xFFE0D8D4),
-                        size: 12,
-                      ),
+              ),
+              if (currentPlayer != null) ...[
+                const SizedBox(width: 8),
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 10,
+                    vertical: 5,
+                  ),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFFFF3D8),
+                    borderRadius: BorderRadius.circular(999),
+                    border: Border.all(color: const Color(0xFFE6C86A)),
+                  ),
+                  child: Text(
+                    currentPlayer.name,
+                    style: const TextStyle(
+                      color: Color(0xFF5A4038),
+                      fontSize: 12,
+                      fontWeight: FontWeight.w800,
                     ),
                   ),
                 ),
               ],
-            ),
+            ],
           ),
-          // Timer for current player
-          if (isCurrent && _remainingSeconds > 0)
+          if (state.faceUpCards.isNotEmpty) ...[
+            const SizedBox(height: 10),
+            Text(
+              L10n.of(context).llSetAsideFaceUp,
+              style: const TextStyle(
+                color: Color(0xFF8A7A72),
+                fontSize: 11,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+            const SizedBox(height: 6),
+            Wrap(
+              alignment: WrapAlignment.center,
+              spacing: 6,
+              runSpacing: 6,
+              children: state.faceUpCards
+                  .map(
+                    (cardId) => LoveLetterCard(
+                      cardId: cardId,
+                      width: 52,
+                      height: 74,
+                      isInteractive: false,
+                    ),
+                  )
+                  .toList(),
+            ),
+          ],
+          if (state.pendingEffect != null &&
+              state.phase == 'effect_resolve') ...[
+            const SizedBox(height: 10),
             Container(
-              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
               decoration: BoxDecoration(
-                color: _remainingSeconds <= 5
-                    ? Colors.red.shade900
-                    : Colors.amber.withValues(alpha: 0.2),
-                borderRadius: BorderRadius.circular(4),
+                color: const Color(0xFFFFEDF3),
+                borderRadius: BorderRadius.circular(12),
               ),
               child: Text(
-                '${_remainingSeconds}s',
-                style: TextStyle(
-                  color: _remainingSeconds <= 5
-                      ? Colors.redAccent
-                      : Colors.amber,
+                _getEffectDescription(
+                  state.pendingEffect!.type,
+                  currentPlayer?.name ?? '?',
+                  L10n.of(context),
+                ),
+                textAlign: TextAlign.center,
+                style: const TextStyle(
+                  color: Color(0xFFE91E63),
                   fontSize: 12,
-                  fontWeight: FontWeight.bold,
+                  fontWeight: FontWeight.w700,
                 ),
               ),
             ),
-          if (isCurrent && _remainingSeconds > 0) const SizedBox(width: 6),
-          // Card count
-          if (!player.eliminated)
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-              decoration: BoxDecoration(
-                color: const Color(0xFFF0EBE8),
-                borderRadius: BorderRadius.circular(4),
-              ),
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  const Icon(Icons.style, color: Color(0xFF8A7A72), size: 12),
-                  const SizedBox(width: 2),
-                  Text(
-                    '${player.cardCount}',
-                    style: const TextStyle(
-                      color: Color(0xFF8A7A72),
-                      fontSize: 11,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          const SizedBox(width: 8),
-          // Discard pile
-          if (player.discardPile.isNotEmpty)
-            SizedBox(
-              height: 60,
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: player.discardPile.reversed
-                    .take(4)
-                    .map(
-                      (cardId) => Padding(
-                        padding: const EdgeInsets.only(right: 3),
-                        child: LoveLetterCard(
-                          cardId: cardId,
-                          width: 42,
-                          height: 60,
-                          isInteractive: false,
-                        ),
-                      ),
-                    )
-                    .toList(),
-              ),
-            ),
+          ],
         ],
       ),
     );
+  }
+
+  Widget _buildPlayerSeatCard(
+    BuildContext context,
+    LLGameStateData state,
+    LLPlayer player, {
+    required bool compact,
+  }) {
+    final isCurrent = player.id == state.currentPlayer;
+    final isEffectTarget = state.pendingEffect?.targetId == player.id;
+
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final ultraTight =
+            constraints.maxHeight <= 100 || constraints.maxWidth <= 104;
+        final tight =
+            ultraTight ||
+            constraints.maxHeight <= 104 ||
+            constraints.maxWidth <= 108;
+        final horizontalPadding = ultraTight
+            ? 4.0
+            : (tight ? 5.0 : (compact ? 7.0 : 8.0));
+        final verticalPadding = ultraTight
+            ? 4.0
+            : (tight ? 5.0 : (compact ? 6.0 : 8.0));
+        final nameFontSize = ultraTight
+            ? 9.0
+            : (tight ? 10.0 : (compact ? 11.0 : 12.0));
+        final tokenSize = ultraTight
+            ? 9.0
+            : (tight ? 11.0 : (compact ? 12.0 : 13.0));
+        final spacing = ultraTight ? 1.0 : (tight ? 2.0 : 4.0);
+        final chipFontSize = ultraTight ? 8.0 : (tight ? 9.0 : 10.0);
+        final statusIconSize = ultraTight ? 10.0 : (tight ? 11.0 : 12.0);
+        final discardCardWidth = ultraTight
+            ? 24.0
+            : (tight ? 30.0 : (compact ? 32.0 : 34.0));
+        final discardCardHeight = ultraTight
+            ? 34.0
+            : (tight ? 42.0 : (compact ? 46.0 : 50.0));
+        final contentWidth = math.max(
+          24.0,
+          constraints.maxWidth - horizontalPadding * 2,
+        );
+        final showDiscardPreview = !ultraTight && player.discardPile.isNotEmpty;
+        final showCardCountChip = !player.eliminated && !ultraTight;
+        final seatColor = player.eliminated
+            ? const Color(0xFFE8E1E0)
+            : isCurrent
+            ? const Color(0xFFFFF8E1)
+            : isEffectTarget
+            ? const Color(0xFFFFEBEE)
+            : Colors.white.withValues(alpha: 0.76);
+        final seatBorderColor = player.eliminated
+            ? const Color(0xFFC7B7B4)
+            : isCurrent
+            ? const Color(0xFFE6C86A)
+            : isEffectTarget
+            ? const Color(0xFFEF9A9A)
+            : const Color(0xFFE0D8D4);
+        final seatShadowColor = player.eliminated
+            ? const Color(0xFF6D5C58).withValues(alpha: 0.10)
+            : Colors.black.withValues(alpha: 0.06);
+
+        return AnimatedContainer(
+          duration: const Duration(milliseconds: 180),
+          padding: EdgeInsets.symmetric(
+            horizontal: horizontalPadding,
+            vertical: verticalPadding,
+          ),
+          decoration: BoxDecoration(
+            color: seatColor,
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(color: seatBorderColor),
+            boxShadow: [
+              BoxShadow(
+                color: seatShadowColor,
+                blurRadius: 6,
+                offset: const Offset(0, 3),
+              ),
+            ],
+          ),
+          child: Center(
+            child: FittedBox(
+              fit: BoxFit.scaleDown,
+              alignment: Alignment.topCenter,
+              child: SizedBox(
+                width: contentWidth,
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.center,
+                  children: [
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        if (isCurrent)
+                          Container(
+                            width: ultraTight ? 5 : 6,
+                            height: ultraTight ? 5 : 6,
+                            margin: EdgeInsets.only(right: ultraTight ? 3 : 4),
+                            decoration: const BoxDecoration(
+                              color: Color(0xFFE6A800),
+                              shape: BoxShape.circle,
+                            ),
+                          ),
+                        Flexible(
+                          child: Text(
+                            player.name,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            textAlign: TextAlign.center,
+                            style: TextStyle(
+                              color: player.eliminated
+                                  ? const Color(0xFFBBAAAA)
+                                  : const Color(0xFF5A4038),
+                              fontSize: nameFontSize,
+                              fontWeight: isCurrent
+                                  ? FontWeight.w800
+                                  : FontWeight.w700,
+                              decoration: player.eliminated
+                                  ? TextDecoration.lineThrough
+                                  : null,
+                            ),
+                          ),
+                        ),
+                        if (!player.connected)
+                          Padding(
+                            padding: const EdgeInsets.only(left: 3),
+                            child: Icon(
+                              Icons.wifi_off,
+                              color: Colors.red,
+                              size: statusIconSize,
+                            ),
+                          ),
+                        if (player.protected)
+                          Padding(
+                            padding: const EdgeInsets.only(left: 3),
+                            child: Icon(
+                              Icons.shield,
+                              color: Colors.blueAccent,
+                              size: statusIconSize,
+                            ),
+                          ),
+                      ],
+                    ),
+                    if (player.eliminated)
+                      Padding(
+                        padding: EdgeInsets.only(top: ultraTight ? 1 : 2),
+                        child: Text(
+                          L10n.of(context).llEliminated,
+                          style: TextStyle(
+                            color: Colors.red.shade300,
+                            fontSize: ultraTight ? 9 : 10,
+                            fontWeight: FontWeight.w800,
+                          ),
+                        ),
+                      ),
+                    SizedBox(height: spacing),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      mainAxisSize: MainAxisSize.min,
+                      children: List.generate(
+                        state.targetTokens,
+                        (i) => Padding(
+                          padding: EdgeInsets.only(right: ultraTight ? 1 : 2),
+                          child: Icon(
+                            Icons.favorite,
+                            color: i < player.tokens
+                                ? player.eliminated
+                                      ? const Color(0xFFB98B95)
+                                      : const Color(0xFFE91E63)
+                                : const Color(0xFFE0D8D4),
+                            size: tokenSize,
+                          ),
+                        ),
+                      ),
+                    ),
+                    SizedBox(height: spacing),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        if (isCurrent && _remainingSeconds > 0)
+                          Container(
+                            margin: EdgeInsets.only(right: ultraTight ? 4 : 5),
+                            padding: EdgeInsets.symmetric(
+                              horizontal: ultraTight ? 4 : 5,
+                              vertical: ultraTight ? 1 : 2,
+                            ),
+                            decoration: BoxDecoration(
+                              color: _remainingSeconds <= 5
+                                  ? Colors.red.shade900
+                                  : Colors.amber.withValues(alpha: 0.2),
+                              borderRadius: BorderRadius.circular(999),
+                            ),
+                            child: Text(
+                              '${_remainingSeconds}s',
+                              style: TextStyle(
+                                color: _remainingSeconds <= 5
+                                    ? Colors.redAccent
+                                    : Colors.amber.shade900,
+                                fontSize: chipFontSize,
+                                fontWeight: FontWeight.w800,
+                              ),
+                            ),
+                          ),
+                        if (showCardCountChip)
+                          Container(
+                            padding: EdgeInsets.symmetric(
+                              horizontal: ultraTight ? 5 : 6,
+                              vertical: ultraTight ? 1 : 2,
+                            ),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFFF0EBE8),
+                              borderRadius: BorderRadius.circular(999),
+                            ),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Icon(
+                                  Icons.style,
+                                  color: const Color(0xFF8A7A72),
+                                  size: ultraTight ? 10 : 11,
+                                ),
+                                SizedBox(width: ultraTight ? 1 : 2),
+                                Text(
+                                  '${player.cardCount}',
+                                  style: TextStyle(
+                                    color: const Color(0xFF8A7A72),
+                                    fontSize: chipFontSize,
+                                    fontWeight: FontWeight.w700,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                      ],
+                    ),
+                    if (showDiscardPreview) ...[
+                      SizedBox(height: ultraTight ? 2 : (tight ? 4 : 6)),
+                      SizedBox(
+                        height: discardCardHeight,
+                        child: _buildSeatDiscardPreview(
+                          context: context,
+                          playerName: player.name,
+                          cards: player.discardPile.reversed.toList(),
+                          availableWidth: contentWidth,
+                          cardWidth: discardCardWidth,
+                          cardHeight: discardCardHeight,
+                          borderRadius: ultraTight ? 7 : 8,
+                        ),
+                      ),
+                    ],
+                  ],
+                ),
+              ),
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildSeatDiscardPreview({
+    required BuildContext context,
+    required String playerName,
+    required List<String> cards,
+    required double availableWidth,
+    required double cardWidth,
+    required double cardHeight,
+    required double borderRadius,
+  }) {
+    if (cards.isEmpty) return const SizedBox.shrink();
+
+    final count = cards.length;
+    final usableWidth = math.max(cardWidth, availableWidth);
+    final step = count <= 1
+        ? 0.0
+        : ((usableWidth - cardWidth) / (count - 1)).clamp(
+            6.0,
+            cardWidth * 0.58,
+          );
+    final stackWidth = count <= 1 ? cardWidth : cardWidth + step * (count - 1);
+    final leftInset = math.max(0.0, (usableWidth - stackWidth) / 2);
+
+    return GestureDetector(
+      onTap: () => _showDiscardPileDialog(context, playerName, cards),
+      child: SizedBox(
+        width: usableWidth,
+        height: cardHeight,
+        child: Stack(
+          clipBehavior: Clip.none,
+          children: [
+            for (var i = 0; i < count; i++)
+              Positioned(
+                left: leftInset + step * i,
+                child: LoveLetterCard(
+                  cardId: cards[i],
+                  width: cardWidth,
+                  height: cardHeight,
+                  borderRadius: borderRadius,
+                  compact: true,
+                  isInteractive: false,
+                ),
+              ),
+            Positioned(
+              right: 0,
+              bottom: 0,
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 2),
+                decoration: BoxDecoration(
+                  color: Colors.black.withValues(alpha: 0.62),
+                  borderRadius: BorderRadius.circular(999),
+                ),
+                child: Text(
+                  '$count',
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 10,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _showDiscardPileDialog(
+    BuildContext context,
+    String playerName,
+    List<String> cards,
+  ) {
+    if (cards.isEmpty) return;
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: const Color(0xFFFFFBF8),
+        title: Text(
+          L10n.of(context).llDiscardedCardsTitle(playerName),
+          style: const TextStyle(
+            color: Color(0xFF5A4038),
+            fontSize: 16,
+            fontWeight: FontWeight.w700,
+          ),
+        ),
+        content: SizedBox(
+          width: 320,
+          child: Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: cards
+                .map(
+                  (cardId) => LoveLetterCard(
+                    cardId: cardId,
+                    width: 54,
+                    height: 78,
+                    borderRadius: 10,
+                    compact: true,
+                    isInteractive: false,
+                  ),
+                )
+                .toList(),
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(),
+            child: Text(L10n.of(context).llOk),
+          ),
+        ],
+      ),
+    );
+  }
+
+  double _llSeatAngleForIndex(int index, int count) {
+    final custom = _llSeatAnglesDeg(count);
+    if (custom != null) return custom[index] * math.pi / 180;
+    if (count <= 1) return math.pi * 1.5;
+    const startDeg = 210.0;
+    const endDeg = 330.0;
+    final progress = index / (count - 1);
+    return (startDeg + (endDeg - startDeg) * progress) * math.pi / 180;
+  }
+
+  double _llSpectatorSeatAngleForIndex(int index, int count) {
+    final custom = _llSpectatorSeatAnglesDeg(count);
+    if (custom != null) return custom[index] * math.pi / 180;
+    if (count <= 1) return math.pi * 1.5;
+    const startDeg = 165.0;
+    const endDeg = 375.0;
+    final progress = index / (count - 1);
+    return (startDeg + (endDeg - startDeg) * progress) * math.pi / 180;
+  }
+
+  List<double>? _llSeatAnglesDeg(int count) {
+    switch (count) {
+      case 1:
+        return const [270];
+      case 2:
+        return const [228, 312];
+      case 3:
+        return const [210, 270, 330];
+      case 4:
+        return const [176, 235, 305, 364];
+      case 5:
+        return const [150, 205, 270, 335, 390];
+      default:
+        return null;
+    }
+  }
+
+  List<double>? _llSpectatorSeatAnglesDeg(int count) {
+    switch (count) {
+      case 2:
+        return const [220, 320];
+      case 3:
+        return const [195, 270, 345];
+      case 4:
+        return const [170, 230, 310, 370];
+      case 5:
+        return const [152, 208, 270, 332, 388];
+      case 6:
+        return const [142, 188, 236, 304, 352, 398];
+      default:
+        return null;
+    }
   }
 
   // ====================== EFFECT RESOLVE ======================
@@ -1127,45 +1548,7 @@ class _LLGameScreenState extends State<LLGameScreen> {
             style: const TextStyle(color: Color(0xFFE91E63), fontSize: 13),
           ),
           const SizedBox(height: 8),
-          // Guess buttons
-          Wrap(
-            spacing: 6,
-            runSpacing: 6,
-            children: state.guessableCards.map((type) {
-              final isSelected = _selectedGuess == type;
-              final color = LoveLetterCard.cardColors[type] ?? Colors.grey;
-              final value = LoveLetterCard.cardValues[type] ?? 0;
-              final name = _getCardTypeName(type, l10n);
-              return GestureDetector(
-                onTap: () => setState(() => _selectedGuess = type),
-                child: Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 8,
-                    vertical: 6,
-                  ),
-                  decoration: BoxDecoration(
-                    color: isSelected ? color : const Color(0xFFF0EBE8),
-                    borderRadius: BorderRadius.circular(6),
-                    border: Border.all(
-                      color: isSelected ? color : const Color(0xFFE0D8D4),
-                    ),
-                  ),
-                  child: Text(
-                    '$value $name',
-                    style: TextStyle(
-                      color: isSelected
-                          ? (type == 'princess' ? Colors.black87 : Colors.white)
-                          : const Color(0xFF5A4038),
-                      fontSize: 12,
-                      fontWeight: isSelected
-                          ? FontWeight.bold
-                          : FontWeight.normal,
-                    ),
-                  ),
-                ),
-              );
-            }).toList(),
-          ),
+          _buildGuardGuessGrid(context, state),
           const SizedBox(height: 12),
           ElevatedButton(
             onPressed: (_selectedTarget != null && _selectedGuess != null)
@@ -1219,44 +1602,7 @@ class _LLGameScreenState extends State<LLGameScreen> {
             ),
           ),
           const SizedBox(height: 8),
-          Wrap(
-            spacing: 6,
-            runSpacing: 6,
-            children: state.guessableCards.map((type) {
-              final isSelected = _selectedGuess == type;
-              final color = LoveLetterCard.cardColors[type] ?? Colors.grey;
-              final value = LoveLetterCard.cardValues[type] ?? 0;
-              final name = _getCardTypeName(type, l10n);
-              return GestureDetector(
-                onTap: () => setState(() => _selectedGuess = type),
-                child: Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 8,
-                    vertical: 6,
-                  ),
-                  decoration: BoxDecoration(
-                    color: isSelected ? color : const Color(0xFFF0EBE8),
-                    borderRadius: BorderRadius.circular(6),
-                    border: Border.all(
-                      color: isSelected ? color : const Color(0xFFE0D8D4),
-                    ),
-                  ),
-                  child: Text(
-                    '$value $name',
-                    style: TextStyle(
-                      color: isSelected
-                          ? (type == 'princess' ? Colors.black87 : Colors.white)
-                          : const Color(0xFF5A4038),
-                      fontSize: 12,
-                      fontWeight: isSelected
-                          ? FontWeight.bold
-                          : FontWeight.normal,
-                    ),
-                  ),
-                ),
-              );
-            }).toList(),
-          ),
+          _buildGuardGuessGrid(context, state),
           const SizedBox(height: 12),
           ElevatedButton(
             onPressed: _selectedGuess != null
@@ -1273,6 +1619,95 @@ class _LLGameScreenState extends State<LLGameScreen> {
           ),
         ],
       ),
+    );
+  }
+
+  Widget _buildGuardGuessGrid(BuildContext context, LLGameStateData state) {
+    final l10n = L10n.of(context);
+    return Wrap(
+      spacing: 8,
+      runSpacing: 8,
+      alignment: WrapAlignment.center,
+      children: state.guessableCards.map((type) {
+        final isSelected = _selectedGuess == type;
+        final color = LoveLetterCard.cardColors[type] ?? Colors.grey;
+        final value = LoveLetterCard.cardValues[type] ?? 0;
+        final name = _getCardTypeName(type, l10n);
+        final selectedTextColor = type == 'princess'
+            ? Colors.black87
+            : Colors.white;
+        return GestureDetector(
+          onTap: () => setState(() => _selectedGuess = type),
+          child: AnimatedContainer(
+            duration: const Duration(milliseconds: 140),
+            width: 76,
+            padding: const EdgeInsets.fromLTRB(6, 6, 6, 7),
+            decoration: BoxDecoration(
+              color: isSelected
+                  ? color.withValues(alpha: 0.94)
+                  : const Color(0xFFF7F1EE),
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(
+                color: isSelected ? color : const Color(0xFFE0D8D4),
+                width: isSelected ? 2 : 1,
+              ),
+              boxShadow: isSelected
+                  ? [
+                      BoxShadow(
+                        color: color.withValues(alpha: 0.24),
+                        blurRadius: 10,
+                        offset: const Offset(0, 3),
+                      ),
+                    ]
+                  : [
+                      BoxShadow(
+                        color: Colors.black.withValues(alpha: 0.04),
+                        blurRadius: 6,
+                        offset: const Offset(0, 2),
+                      ),
+                    ],
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                LoveLetterCard(
+                  cardId: 'll_$type',
+                  width: 42,
+                  height: 60,
+                  borderRadius: 9,
+                  compact: true,
+                  isInteractive: false,
+                ),
+                const SizedBox(height: 6),
+                Text(
+                  '$value',
+                  style: TextStyle(
+                    color: isSelected
+                        ? selectedTextColor
+                        : const Color(0xFF8A7A72),
+                    fontSize: 11,
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
+                const SizedBox(height: 1),
+                Text(
+                  name,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    color: isSelected
+                        ? selectedTextColor
+                        : const Color(0xFF5A4038),
+                    fontSize: 11,
+                    fontWeight: isSelected ? FontWeight.w700 : FontWeight.w600,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+      }).toList(),
     );
   }
 
@@ -1476,43 +1911,6 @@ class _LLGameScreenState extends State<LLGameScreen> {
               ),
             ),
           ],
-        ],
-      ),
-    );
-  }
-
-  Widget _buildFaceUpCards(LLGameStateData state) {
-    return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-      padding: const EdgeInsets.all(10),
-      decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: 0.7),
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: const Color(0xFFE0D8D4)),
-      ),
-      child: Column(
-        children: [
-          Text(
-            L10n.of(context).llSetAsideFaceUp,
-            style: const TextStyle(color: Color(0xFF8A7A72), fontSize: 12),
-          ),
-          const SizedBox(height: 6),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: state.faceUpCards
-                .map(
-                  (cardId) => Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 4),
-                    child: LoveLetterCard(
-                      cardId: cardId,
-                      width: 64,
-                      height: 90,
-                      isInteractive: false,
-                    ),
-                  ),
-                )
-                .toList(),
-          ),
         ],
       ),
     );

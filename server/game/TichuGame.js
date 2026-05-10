@@ -1,6 +1,7 @@
 const { createDeck, deal, getCardValue, sortCards } = require('./Deck');
 const { getComboType, canBeat, isBomb, arrangeCardsWithPhoenix, COMBO } = require('./CardValidator');
 const { calculateRoundScores, calculateTrickPoints, getCardPoints } = require('./ScoreCalculator');
+const { logScoreDebug, scoreDebugLogsEnabled } = require('../logger');
 
 const STATE = {
   WAITING: 'waiting',
@@ -996,22 +997,22 @@ class TichuGame {
     const allTrickCards = [];
     for (const [pid, cards] of Object.entries(this.trickPiles)) {
       const pts = cards.reduce((s, c) => s + getCardPoints(c), 0);
-      if (!this._suppressBotSearchLogs) {
-        console.log(`[SCORE DEBUG] trickPile ${pid}: ${cards.length} cards, ${pts} pts`);
+      if (!this._suppressBotSearchLogs && scoreDebugLogsEnabled) {
+        logScoreDebug(`[SCORE DEBUG] trickPile ${pid}: ${cards.length} cards, ${pts} pts`);
       }
       allTrickCards.push(...cards);
     }
     for (const [pid, cards] of Object.entries(this.hands)) {
       if (cards.length > 0) {
         const pts = cards.reduce((s, c) => s + getCardPoints(c), 0);
-        if (!this._suppressBotSearchLogs) {
-          console.log(`[SCORE DEBUG] remaining hand ${pid}: ${cards.length} cards, ${pts} pts - [${cards.join(', ')}]`);
+        if (!this._suppressBotSearchLogs && scoreDebugLogsEnabled) {
+          logScoreDebug(`[SCORE DEBUG] remaining hand ${pid}: ${cards.length} cards, ${pts} pts - [${cards.join(', ')}]`);
         }
       }
     }
-    if (!this._suppressBotSearchLogs) {
-      console.log(`[SCORE DEBUG] total tracked cards: ${allTrickCards.length + Object.values(this.hands).reduce((s, h) => s + h.length, 0)} / 56`);
-      console.log(`[SCORE DEBUG] finishOrder: ${JSON.stringify(this.finishOrder)}`);
+    if (!this._suppressBotSearchLogs && scoreDebugLogsEnabled) {
+      logScoreDebug(`[SCORE DEBUG] total tracked cards: ${allTrickCards.length + Object.values(this.hands).reduce((s, h) => s + h.length, 0)} / 56`);
+      logScoreDebug(`[SCORE DEBUG] finishOrder: ${JSON.stringify(this.finishOrder)}`);
     }
 
     const roundScores = calculateRoundScores({
@@ -1023,8 +1024,8 @@ class TichuGame {
       playerCards: this.hands,
     });
 
-    if (!this._suppressBotSearchLogs) {
-      console.log(`[SCORE DEBUG] result: teamA=${roundScores.teamA}, teamB=${roundScores.teamB}, sum=${roundScores.teamA + roundScores.teamB}`);
+    if (!this._suppressBotSearchLogs && scoreDebugLogsEnabled) {
+      logScoreDebug(`[SCORE DEBUG] result: teamA=${roundScores.teamA}, teamB=${roundScores.teamB}, sum=${roundScores.teamA + roundScores.teamB}`);
     }
 
     this.totalScores.teamA += roundScores.teamA;

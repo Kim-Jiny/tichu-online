@@ -7143,6 +7143,48 @@ abstract class L10n {
   /// **'Total users'**
   String get adminTotalUsers;
 
+  /// No description provided for @adminNewUsersToday.
+  ///
+  /// In en, this message translates to:
+  /// **'New today'**
+  String get adminNewUsersToday;
+
+  /// No description provided for @adminWeeklyActives.
+  ///
+  /// In en, this message translates to:
+  /// **'Weekly actives'**
+  String get adminWeeklyActives;
+
+  /// No description provided for @adminCasualGames.
+  ///
+  /// In en, this message translates to:
+  /// **'Casual games'**
+  String get adminCasualGames;
+
+  /// No description provided for @adminRankedGames.
+  ///
+  /// In en, this message translates to:
+  /// **'Ranked games'**
+  String get adminRankedGames;
+
+  /// No description provided for @adminJoinedAt.
+  ///
+  /// In en, this message translates to:
+  /// **'Joined'**
+  String get adminJoinedAt;
+
+  /// No description provided for @adminLastLogin.
+  ///
+  /// In en, this message translates to:
+  /// **'Last login'**
+  String get adminLastLogin;
+
+  /// No description provided for @adminNoUsers.
+  ///
+  /// In en, this message translates to:
+  /// **'No users to show'**
+  String get adminNoUsers;
+
   /// No description provided for @adminSearchHint.
   ///
   /// In en, this message translates to:

@@ -3189,6 +3189,10 @@ async function getUsers(search = '', page = 1, limit = 20, options = {}) {
     const countParams = [];
     let paramIdx = 1;
 
+    if (options.excludeDeleted) {
+      conditions.push('is_deleted IS NOT TRUE');
+    }
+
     if (search) {
       conditions.push(`(nickname ILIKE $${paramIdx} OR username ILIKE $${paramIdx})`);
       countParams.push(`%${search}%`);
@@ -3416,6 +3420,58 @@ async function getDashboardActivityTopPlayers(activityPeriod = 'week', activityG
 }
 
 // Get dashboard stats
+/** Today's matches across all game types, optionally filtered by ranked-ness. */
+async function getTodayMatches(options = {}) {
+  const client = await pool.connect();
+  try {
+    const kstTodayExpr = `DATE(timezone('Asia/Seoul', NOW()))`;
+    const kstCreatedDate = `DATE((created_at) AT TIME ZONE 'UTC' AT TIME ZONE 'Asia/Seoul')`;
+    const rankedFilter = options.ranked === true
+      ? 'AND is_ranked = TRUE'
+      : options.ranked === false
+        ? 'AND (is_ranked IS NOT TRUE)'
+        : '';
+    const limit = Math.max(1, Math.min(parseInt(options.limit, 10) || 100, 500));
+    const result = await client.query(`
+      (SELECT id, 'tichu'::text as game_type, winner_team, team_a_score, team_b_score,
+        player_a1, player_a2, player_b1, player_b2, is_ranked, end_reason, deserter_nickname, created_at
+       FROM tc_match_history
+       WHERE ${kstCreatedDate} = ${kstTodayExpr} ${rankedFilter})
+      UNION ALL
+      (SELECT h.id, 'skull_king'::text as game_type, NULL as winner_team, NULL::int as team_a_score, NULL::int as team_b_score,
+        (SELECT string_agg(p.nickname || '(' || p.score || '점)', ', ' ORDER BY p.rank)
+         FROM tc_sk_match_players p WHERE p.match_id = h.id) as player_a1,
+        h.player_count::text as player_a2, NULL as player_b1, NULL as player_b2,
+        h.is_ranked, h.end_reason, h.deserter_nickname, h.created_at
+       FROM tc_sk_match_history h
+       WHERE DATE((h.created_at) AT TIME ZONE 'UTC' AT TIME ZONE 'Asia/Seoul') = ${kstTodayExpr} ${rankedFilter.replace(/is_ranked/g, 'h.is_ranked')})
+      UNION ALL
+      (SELECT h.id, 'love_letter'::text as game_type, NULL as winner_team, NULL::int as team_a_score, NULL::int as team_b_score,
+        (SELECT string_agg(p.nickname || '(' || p.score || '점)', ', ' ORDER BY p.rank)
+         FROM tc_ll_match_players p WHERE p.match_id = h.id) as player_a1,
+        h.player_count::text as player_a2, NULL as player_b1, NULL as player_b2,
+        h.is_ranked, h.end_reason, h.deserter_nickname, h.created_at
+       FROM tc_ll_match_history h
+       WHERE DATE((h.created_at) AT TIME ZONE 'UTC' AT TIME ZONE 'Asia/Seoul') = ${kstTodayExpr} ${rankedFilter.replace(/is_ranked/g, 'h.is_ranked')})
+      UNION ALL
+      (SELECT h.id, 'mighty'::text as game_type, NULL as winner_team, NULL::int as team_a_score, NULL::int as team_b_score,
+        (SELECT string_agg(p.nickname || '(' || p.score || '점)', ', ' ORDER BY p.rank)
+         FROM tc_mighty_match_players p WHERE p.match_id = h.id) as player_a1,
+        h.player_count::text as player_a2, NULL as player_b1, NULL as player_b2,
+        h.is_ranked, h.end_reason, h.deserter_nickname, h.created_at
+       FROM tc_mighty_match_history h
+       WHERE DATE((h.created_at) AT TIME ZONE 'UTC' AT TIME ZONE 'Asia/Seoul') = ${kstTodayExpr} ${rankedFilter.replace(/is_ranked/g, 'h.is_ranked')})
+      ORDER BY created_at DESC LIMIT ${limit}
+    `);
+    return { rows: result.rows };
+  } catch (err) {
+    console.error('Get today matches error:', err);
+    return { rows: [] };
+  } finally {
+    client.release();
+  }
+}
+
 async function getDashboardStats(activityPeriod = 'week', activityGame = 'all') {
   const client = await pool.connect();
   try {
@@ -3426,6 +3482,8 @@ async function getDashboardStats(activityPeriod = 'week', activityGame = 'all') 
     const totalUsers = await client.query('SELECT COUNT(*) FROM tc_users WHERE is_deleted IS NOT TRUE');
     const pendingInquiries = await client.query(`SELECT COUNT(*) FROM tc_inquiries WHERE status = 'pending'`);
     const pendingReports = await client.query(`SELECT COUNT(*) FROM tc_reports WHERE status = 'pending'`);
+    const totalInquiries = await client.query(`SELECT COUNT(*) FROM tc_inquiries`);
+    const totalReports = await client.query(`SELECT COUNT(*) FROM tc_reports`);
     const todayGames = await client.query(`
       SELECT
         (SELECT COUNT(*) FROM tc_match_history WHERE ${kstCreatedDate()} = ${kstTodayExpr}) as tichu,
@@ -3574,6 +3632,8 @@ async function getDashboardStats(activityPeriod = 'week', activityGame = 'all') 
       totalUsers: parseInt(totalUsers.rows[0].count),
       pendingInquiries: parseInt(pendingInquiries.rows[0].count),
       pendingReports: parseInt(pendingReports.rows[0].count),
+      totalInquiries: parseInt(totalInquiries.rows[0].count),
+      totalReports: parseInt(totalReports.rows[0].count),
       todayGames: parseInt(todayGames.rows[0].tichu) + parseInt(todayGames.rows[0].sk) + parseInt(todayGames.rows[0].ll) + parseInt(todayGames.rows[0].mighty),
       todayTichuGames: parseInt(todayGames.rows[0].tichu),
       todaySKGames: parseInt(todayGames.rows[0].sk),
@@ -3600,7 +3660,7 @@ async function getDashboardStats(activityPeriod = 'week', activityGame = 'all') 
   } catch (err) {
     console.error('Get dashboard stats error:', err);
     return {
-      totalUsers: 0, pendingInquiries: 0, pendingReports: 0, todayGames: 0, todayTichuGames: 0, todaySKGames: 0, todayLLGames: 0, todayMightyGames: 0,
+      totalUsers: 0, pendingInquiries: 0, pendingReports: 0, totalInquiries: 0, totalReports: 0, todayGames: 0, todayTichuGames: 0, todaySKGames: 0, todayLLGames: 0, todayMightyGames: 0,
       recentMatches: [], newUsersToday: 0, activeUsers24h: 0, activeUsers7d: 0,
       totalMatches: 0, rankedMatchesToday: 0, dailyGames: [], dailySignups: [],
       topPlayers: [], topPlayersPeriod: 'week', topPlayersGame: 'all', goldStats: {}, shopStats: {}, leaveStats: {}, reportStats30d: {},
@@ -5852,6 +5912,7 @@ module.exports = {
   getUsers,
   getUserDetail,
   getDashboardStats,
+  getTodayMatches,
   getDashboardActivityTopPlayers,
   getAdminRecentMatches,
   getDetailedAdminStats,

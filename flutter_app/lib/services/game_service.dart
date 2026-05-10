@@ -218,6 +218,10 @@ class GameService extends ChangeNotifier {
   List<Map<String, dynamic>> adminReports = [];
   bool adminReportsLoading = false;
   String? adminReportsError;
+  List<Map<String, dynamic>> adminTodayMatches = [];
+  bool adminTodayMatchesLoading = false;
+  String? adminTodayMatchesError;
+  bool? _adminTodayMatchesRanked; // tracks last requested filter
   List<Map<String, dynamic>> adminReportGroup = [];
   bool adminReportGroupLoading = false;
   String? adminReportGroupError;
@@ -1510,6 +1514,19 @@ class GameService extends ChangeNotifier {
         }
         notifyListeners();
         break;
+      case 'admin_today_matches_result':
+        adminTodayMatchesLoading = false;
+        if (data['success'] == true) {
+          adminTodayMatches = (data['rows'] as List? ?? [])
+              .map((e) => Map<String, dynamic>.from(e))
+              .toList();
+          adminTodayMatchesError = null;
+        } else {
+          adminTodayMatchesError =
+              data['message'] as String? ?? 'admin_matches_load_failed';
+        }
+        notifyListeners();
+        break;
       case 'admin_report_group_result':
         adminReportGroupLoading = false;
         if (data['success'] == true) {
@@ -2384,6 +2401,21 @@ class GameService extends ChangeNotifier {
     _network.send({'type': 'get_admin_reports', 'page': page, 'limit': limit});
   }
 
+  void requestAdminTodayMatches({bool? ranked, int limit = 100}) {
+    // Reuse cached data when filter unchanged.
+    if (_adminTodayMatchesRanked == ranked && adminTodayMatches.isNotEmpty) return;
+    _adminTodayMatchesRanked = ranked;
+    adminTodayMatchesLoading = true;
+    adminTodayMatchesError = null;
+    adminTodayMatches = const [];
+    notifyListeners();
+    _network.send({
+      'type': 'get_admin_today_matches',
+      if (ranked != null) 'ranked': ranked,
+      'limit': limit,
+    });
+  }
+
   void requestAdminReportGroup(String target, String roomId) {
     adminReportGroupLoading = true;
     adminReportGroupError = null;
@@ -2799,6 +2831,13 @@ class GameService extends ChangeNotifier {
     _prevMightyGameState = null;
     errorMessage = 'room_restore_fallback';
     notifyListeners();
+    Future.delayed(const Duration(seconds: 3), () {
+      if (_disposed) return;
+      if (errorMessage == 'room_restore_fallback') {
+        errorMessage = null;
+        notifyListeners();
+      }
+    });
   }
 
   // Rankings

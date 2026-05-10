@@ -4020,6 +4020,27 @@ class L10nDe extends L10n {
   String get adminTotalUsers => 'Nutzer gesamt';
 
   @override
+  String get adminNewUsersToday => 'Neu heute';
+
+  @override
+  String get adminWeeklyActives => 'Aktive (Woche)';
+
+  @override
+  String get adminCasualGames => 'Casual-Spiele';
+
+  @override
+  String get adminRankedGames => 'Rangspiele';
+
+  @override
+  String get adminJoinedAt => 'Registriert';
+
+  @override
+  String get adminLastLogin => 'Letzte Anmeldung';
+
+  @override
+  String get adminNoUsers => 'Keine Nutzer anzuzeigen';
+
+  @override
   String get adminSearchHint => 'Nach Nickname suchen';
 
   @override

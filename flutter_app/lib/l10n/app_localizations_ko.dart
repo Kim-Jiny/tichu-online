@@ -3895,6 +3895,27 @@ class L10nKo extends L10n {
   String get adminTotalUsers => '전체 유저';
 
   @override
+  String get adminNewUsersToday => '오늘 가입자';
+
+  @override
+  String get adminWeeklyActives => '주간 활성자';
+
+  @override
+  String get adminCasualGames => '일반 게임';
+
+  @override
+  String get adminRankedGames => '랭크 게임';
+
+  @override
+  String get adminJoinedAt => '가입일시';
+
+  @override
+  String get adminLastLogin => '최근 로그인';
+
+  @override
+  String get adminNoUsers => '표시할 유저가 없습니다';
+
+  @override
   String get adminSearchHint => '닉네임으로 검색';
 
   @override

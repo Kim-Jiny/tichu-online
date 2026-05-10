@@ -3984,6 +3984,27 @@ class L10nEn extends L10n {
   String get adminTotalUsers => 'Total users';
 
   @override
+  String get adminNewUsersToday => 'New today';
+
+  @override
+  String get adminWeeklyActives => 'Weekly actives';
+
+  @override
+  String get adminCasualGames => 'Casual games';
+
+  @override
+  String get adminRankedGames => 'Ranked games';
+
+  @override
+  String get adminJoinedAt => 'Joined';
+
+  @override
+  String get adminLastLogin => 'Last login';
+
+  @override
+  String get adminNoUsers => 'No users to show';
+
+  @override
   String get adminSearchHint => 'Search by nickname';
 
   @override

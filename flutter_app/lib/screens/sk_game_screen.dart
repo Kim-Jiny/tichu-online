@@ -897,6 +897,14 @@ class _SKGameScreenState extends State<SKGameScreen> {
             ),
           ),
           const Spacer(),
+          if (state.expansions.isNotEmpty) ...[
+            _buildTopActionButton(
+              icon: Icons.help_outline,
+              active: false,
+              onTap: () => _showExpansionGuide(state),
+            ),
+            const SizedBox(width: 6),
+          ],
           _buildTopActionButton(
             icon: Icons.history_rounded,
             active: false,
@@ -1030,6 +1038,14 @@ class _SKGameScreenState extends State<SKGameScreen> {
               ],
             ),
           ),
+          if (state.expansions.isNotEmpty) ...[
+            _buildTopActionButton(
+              icon: Icons.help_outline,
+              active: false,
+              onTap: () => _showExpansionGuide(state),
+            ),
+            const SizedBox(width: 6),
+          ],
           _buildTopActionButton(
             icon: Icons.history_rounded,
             active: false,
@@ -1235,6 +1251,12 @@ class _SKGameScreenState extends State<SKGameScreen> {
             math.min(_seatRadiusYCap(height, spectator: true), maxSeatRadiusY),
           );
 
+          // 3-player game spectator: drop the trick box a bit so it sits below
+          // the opponents' played cards.
+          final threePlayerSpectatorDrop = state.players.length == 3
+              ? (isLandscape ? 18.0 : 24.0)
+              : 0.0;
+
           return Stack(
             clipBehavior: Clip.none,
             children: [
@@ -1242,7 +1264,10 @@ class _SKGameScreenState extends State<SKGameScreen> {
                 child: Align(
                   alignment: Alignment(0, isLandscape ? 0.36 : 0.46),
                   child: Transform.translate(
-                    offset: Offset(0, isLandscape ? -34 : -42),
+                    offset: Offset(
+                      0,
+                      (isLandscape ? -34 : -42) + threePlayerSpectatorDrop,
+                    ),
                     child: IgnorePointer(child: _buildTrickArea(state)),
                   ),
                 ),
@@ -1679,6 +1704,118 @@ class _SKGameScreenState extends State<SKGameScreen> {
     );
   }
 
+  void _showExpansionGuide(SKGameStateData state) {
+    final l10n = L10n.of(context);
+    final entries = <({String cardId, String name, String desc})>[
+      for (final id in state.expansions)
+        switch (id) {
+          'kraken' => (
+            cardId: 'sk_kraken',
+            name: l10n.rulesSkExpKraken,
+            desc: l10n.rulesSkExpKrakenDesc,
+          ),
+          'white_whale' => (
+            cardId: 'sk_white_whale',
+            name: l10n.rulesSkExpWhiteWhale,
+            desc: l10n.rulesSkExpWhiteWhaleDesc,
+          ),
+          'loot' => (
+            cardId: 'sk_loot_1',
+            name: l10n.rulesSkExpLoot,
+            desc: l10n.rulesSkExpLootDesc,
+          ),
+          _ => (cardId: '', name: id, desc: ''),
+        },
+    ];
+    if (entries.isEmpty) return;
+    showModalBottomSheet(
+      context: context,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (ctx) => SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                width: 36,
+                height: 4,
+                decoration: BoxDecoration(
+                  color: Colors.grey[300],
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+              const SizedBox(height: 12),
+              Text(
+                l10n.rulesSkExpansionTitle,
+                style: const TextStyle(
+                  color: Color(0xFF5A4038),
+                  fontSize: 17,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              const SizedBox(height: 14),
+              Flexible(
+                child: ListView.separated(
+                  shrinkWrap: true,
+                  itemCount: entries.length,
+                  separatorBuilder: (_, _) => const SizedBox(height: 12),
+                  itemBuilder: (_, i) {
+                    final e = entries[i];
+                    return Container(
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFFBF6F2),
+                        borderRadius: BorderRadius.circular(14),
+                        border: Border.all(color: const Color(0xFFEDE3DD)),
+                      ),
+                      child: Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          if (e.cardId.isNotEmpty)
+                            _buildCard(e.cardId, size: 86),
+                          if (e.cardId.isNotEmpty) const SizedBox(width: 12),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  e.name,
+                                  style: const TextStyle(
+                                    color: Color(0xFF3E312A),
+                                    fontSize: 15,
+                                    fontWeight: FontWeight.w800,
+                                  ),
+                                ),
+                                if (e.desc.isNotEmpty) ...[
+                                  const SizedBox(height: 6),
+                                  Text(
+                                    e.desc,
+                                    style: const TextStyle(
+                                      color: Color(0xFF6A5A52),
+                                      fontSize: 12,
+                                      height: 1.45,
+                                    ),
+                                  ),
+                                ],
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
+                    );
+                  },
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
   void _showExitConfirmDialog(GameService game) {
     showDialog(
       context: context,
@@ -1782,6 +1919,12 @@ class _SKGameScreenState extends State<SKGameScreen> {
             math.max(bottomMostOpponentCardTop + 40, trickBoxLowerBound),
           );
 
+          // 3-player game (2 opponents): drop the trick box below the
+          // opponents' played cards so it doesn't crowd the seat row.
+          final twoOpponentTrickDrop = opponents.length == 2
+              ? (isLandscape ? 18.0 : 24.0)
+              : 0.0;
+
           return Stack(
             clipBehavior: Clip.none,
             children: [
@@ -1789,7 +1932,10 @@ class _SKGameScreenState extends State<SKGameScreen> {
                 child: Align(
                   alignment: Alignment(0, isLandscape ? 0.36 : 0.46),
                   child: Transform.translate(
-                    offset: Offset(0, isLandscape ? -34 : -42),
+                    offset: Offset(
+                      0,
+                      (isLandscape ? -34 : -42) + twoOpponentTrickDrop,
+                    ),
                     child: IgnorePointer(child: _buildTrickArea(state)),
                   ),
                 ),
@@ -2048,9 +2194,14 @@ class _SKGameScreenState extends State<SKGameScreen> {
           final spacing = compact ? 1.0 : 2.0;
           final contentWidth = math.max(
             24.0,
-            constraints.maxWidth - horizontalPadding * 2,
+            (constraints.maxWidth - horizontalPadding * 2) * 0.7,
           );
 
+          final labelTint = isViewing
+              ? const Color(0xFFE3EFFF).withValues(alpha: 0.88)
+              : isCurrentTurn
+              ? const Color(0xFFFFF0C9).withValues(alpha: 0.88)
+              : const Color(0xFFFFFCFA).withValues(alpha: 0.62);
           return Stack(
             clipBehavior: Clip.none,
             children: [
@@ -2060,35 +2211,36 @@ class _SKGameScreenState extends State<SKGameScreen> {
                   horizontal: horizontalPadding,
                   vertical: verticalPadding,
                 ),
-                decoration: BoxDecoration(
-                  color: isViewing
-                      ? const Color(0xFFE3EFFF)
-                      : isCurrentTurn
-                      ? const Color(0xFFFFF2B3)
-                      : Colors.white.withValues(alpha: 0.78),
-                  borderRadius: BorderRadius.circular(14),
-                  border: isViewing
-                      ? Border.all(color: const Color(0xFF64B5F6), width: 2)
-                      : isCurrentTurn
-                      ? Border.all(color: const Color(0xFFE6C86A), width: 2)
-                      : Border.all(color: const Color(0xFFE0D8D4)),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withValues(alpha: 0.06),
-                      blurRadius: 5,
-                      offset: const Offset(0, 3),
-                    ),
-                  ],
-                ),
+                decoration: const BoxDecoration(),
                 child: Center(
                   child: FittedBox(
                     fit: BoxFit.scaleDown,
                     alignment: Alignment.topCenter,
-                    child: SizedBox(
-                      width: contentWidth,
-                      child: Opacity(
-                        opacity: p.connected ? 1.0 : 0.45,
-                        child: Column(
+                    child: Container(
+                      padding: EdgeInsets.symmetric(
+                        horizontal: compact ? 6 : 8,
+                        vertical: compact ? 4 : 5,
+                      ),
+                      decoration: BoxDecoration(
+                        color: labelTint,
+                        borderRadius: BorderRadius.circular(14),
+                        border: isViewing
+                            ? Border.all(
+                                color: const Color(0xFF64B5F6),
+                                width: 1.5,
+                              )
+                            : isCurrentTurn
+                            ? Border.all(
+                                color: const Color(0xFFE6C86A),
+                                width: 1.5,
+                              )
+                            : null,
+                      ),
+                      child: SizedBox(
+                        width: contentWidth,
+                        child: Opacity(
+                          opacity: p.connected ? 1.0 : 0.45,
+                          child: Column(
                           mainAxisSize: MainAxisSize.min,
                           crossAxisAlignment: CrossAxisAlignment.center,
                           children: [
@@ -2213,6 +2365,7 @@ class _SKGameScreenState extends State<SKGameScreen> {
                             ),
                           ],
                         ),
+                        ),
                       ),
                     ),
                   ),
@@ -2291,40 +2444,43 @@ class _SKGameScreenState extends State<SKGameScreen> {
           final spacing = compact ? 1.0 : 2.0;
           final contentWidth = math.max(
             24.0,
-            constraints.maxWidth - horizontalPadding * 2,
+            (constraints.maxWidth - horizontalPadding * 2) * 0.7,
           );
 
+          final labelTint = isSelf
+              ? Colors.white.withValues(alpha: 0.96)
+              : isCurrentTurn
+              ? const Color(0xFFFFF0C9).withValues(alpha: 0.88)
+              : const Color(0xFFFFFCFA).withValues(alpha: 0.62);
           return AnimatedContainer(
             duration: const Duration(milliseconds: 220),
             padding: EdgeInsets.symmetric(
               horizontal: horizontalPadding,
               vertical: verticalPadding,
             ),
-            decoration: BoxDecoration(
-              color: isSelf
-                  ? Colors.white.withValues(alpha: 0.96)
-                  : isCurrentTurn
-                  ? const Color(0xFFFFF2B3)
-                  : Colors.white.withValues(alpha: 0.78),
-              borderRadius: BorderRadius.circular(isSelf ? 16 : 14),
-              border: isCurrentTurn
-                  ? Border.all(color: const Color(0xFFE6C86A), width: 2)
-                  : Border.all(color: const Color(0xFFE0D8D4)),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withValues(alpha: isSelf ? 0.10 : 0.06),
-                  blurRadius: isSelf ? 8 : 5,
-                  offset: const Offset(0, 3),
-                ),
-              ],
-            ),
+            decoration: const BoxDecoration(),
             child: Center(
               child: FittedBox(
                 fit: BoxFit.scaleDown,
                 alignment: Alignment.topCenter,
-                child: SizedBox(
-                  width: contentWidth,
-                  child: Column(
+                child: Container(
+                  padding: EdgeInsets.symmetric(
+                    horizontal: compact ? 6 : 8,
+                    vertical: compact ? 4 : 5,
+                  ),
+                  decoration: BoxDecoration(
+                    color: labelTint,
+                    borderRadius: BorderRadius.circular(isSelf ? 16 : 14),
+                    border: isCurrentTurn
+                        ? Border.all(
+                            color: const Color(0xFFE6C86A),
+                            width: 1.5,
+                          )
+                        : null,
+                  ),
+                  child: SizedBox(
+                    width: contentWidth,
+                    child: Column(
                     mainAxisSize: MainAxisSize.min,
                     crossAxisAlignment: CrossAxisAlignment.center,
                     children: [
@@ -2442,6 +2598,7 @@ class _SKGameScreenState extends State<SKGameScreen> {
                             : null,
                       ),
                     ],
+                  ),
                   ),
                 ),
               ),
@@ -3486,7 +3643,11 @@ class _SKGameScreenState extends State<SKGameScreen> {
           children: [
             Padding(
               padding: const EdgeInsets.only(bottom: 10),
-              child: _buildSelfRoundStatus(selfPlayer, compact: isLandscape),
+              child: _buildSelfStatusRow(
+                selfPlayer,
+                game,
+                compact: isLandscape,
+              ),
             ),
             Text(
               L10n.of(context).skGameBidDone(selfPlayer.bid ?? 0),
@@ -3524,17 +3685,13 @@ class _SKGameScreenState extends State<SKGameScreen> {
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          if (game.myTimeoutCount > 0)
-            Padding(
-              padding: const EdgeInsets.only(bottom: 6),
-              child: Align(
-                alignment: Alignment.centerLeft,
-                child: _buildTimeoutResetChip(game),
-              ),
-            ),
           Padding(
             padding: const EdgeInsets.only(bottom: 8),
-            child: _buildSelfRoundStatus(selfPlayer, compact: isLandscape),
+            child: _buildSelfStatusRow(
+              selfPlayer,
+              game,
+              compact: isLandscape,
+            ),
           ),
           Text(
             L10n.of(context).skGameBidPrompt,
@@ -3654,17 +3811,13 @@ class _SKGameScreenState extends State<SKGameScreen> {
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          if (game.myTimeoutCount > 0)
-            Padding(
-              padding: const EdgeInsets.only(bottom: 6, left: 8, right: 8),
-              child: Align(
-                alignment: Alignment.centerLeft,
-                child: _buildTimeoutResetChip(game),
-              ),
-            ),
           Padding(
-            padding: const EdgeInsets.only(bottom: 8, left: 4, right: 4),
-            child: _buildSelfRoundStatus(selfPlayer, compact: isLandscape),
+            padding: const EdgeInsets.only(bottom: 8, left: 8, right: 8),
+            child: _buildSelfStatusRow(
+              selfPlayer,
+              game,
+              compact: isLandscape,
+            ),
           ),
           // Play button above cards
           if (state.isMyTurn && selectedCard != null && isSelectedLegal)
@@ -3728,35 +3881,54 @@ class _SKGameScreenState extends State<SKGameScreen> {
     );
   }
 
-  Widget _buildSelfRoundStatus(SKPlayer selfPlayer, {required bool compact}) {
-    final l10n = L10n.of(context);
-    Widget statChip({
+  // Single-row status: timeout reset (left) + tricks/bid + score (right).
+  Widget _buildSelfStatusRow(
+    SKPlayer selfPlayer,
+    GameService game, {
+    required bool compact,
+  }) {
+    final tricks = selfPlayer.tricks;
+    final bid = selfPlayer.bid;
+    final hasBid = selfPlayer.hasBid && bid != null;
+    final matches = hasBid && tricks == bid;
+    final exceeds = hasBid && tricks > bid;
+
+    final trickBidBg = matches
+        ? const Color(0xFFE8F5E9)
+        : exceeds
+        ? const Color(0xFFFFF3E0)
+        : const Color(0xFFE8F1FF);
+    final trickBidFg = matches
+        ? const Color(0xFF2E7D32)
+        : exceeds
+        ? const Color(0xFFE65100)
+        : const Color(0xFF355D89);
+
+    Widget chip({
       required IconData icon,
-      required String label,
       required String value,
-      required Color backgroundColor,
-      required Color foregroundColor,
+      required Color bg,
+      required Color fg,
     }) {
       return Container(
         padding: EdgeInsets.symmetric(
-          horizontal: compact ? 9 : 10,
-          vertical: compact ? 5 : 6,
+          horizontal: compact ? 8 : 10,
+          vertical: compact ? 4 : 5,
         ),
         decoration: BoxDecoration(
-          color: backgroundColor,
-          borderRadius: BorderRadius.circular(999),
-          border: Border.all(color: foregroundColor.withValues(alpha: 0.15)),
+          color: bg,
+          borderRadius: BorderRadius.circular(12),
         ),
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(icon, size: compact ? 13 : 14, color: foregroundColor),
-            SizedBox(width: compact ? 4 : 5),
+            Icon(icon, size: compact ? 14 : 16, color: fg),
+            const SizedBox(width: 4),
             Text(
-              '$label $value',
+              value,
               style: TextStyle(
-                color: foregroundColor,
-                fontSize: compact ? 11 : 12,
+                color: fg,
+                fontSize: compact ? 13 : 14,
                 fontWeight: FontWeight.w800,
               ),
             ),
@@ -3765,39 +3937,22 @@ class _SKGameScreenState extends State<SKGameScreen> {
       );
     }
 
-    return Wrap(
-      alignment: WrapAlignment.center,
-      spacing: compact ? 6 : 8,
-      runSpacing: 6,
+    return Row(
       children: [
-        statChip(
-          icon: Icons.flag_outlined,
-          label: l10n.skGameStatBid,
-          value: selfPlayer.hasBid && selfPlayer.bid != null
-              ? '${selfPlayer.bid}'
-              : '-',
-          backgroundColor: const Color(0xFFE8F1FF),
-          foregroundColor: const Color(0xFF355D89),
-        ),
-        statChip(
+        if (game.myTimeoutCount > 0) _buildTimeoutResetChip(game),
+        const Spacer(),
+        chip(
           icon: Icons.workspace_premium_outlined,
-          label: l10n.skGameStatTricks,
-          value: '${selfPlayer.tricks}',
-          backgroundColor:
-              selfPlayer.hasBid && selfPlayer.bid == selfPlayer.tricks
-              ? const Color(0xFFE8F5E9)
-              : const Color(0xFFFFF6E5),
-          foregroundColor:
-              selfPlayer.hasBid && selfPlayer.bid == selfPlayer.tricks
-              ? const Color(0xFF2E7D32)
-              : const Color(0xFFC17A20),
+          value: '$tricks/${hasBid ? bid : "-"}',
+          bg: trickBidBg,
+          fg: trickBidFg,
         ),
-        statChip(
+        const SizedBox(width: 8),
+        chip(
           icon: Icons.stars_rounded,
-          label: l10n.skGameStatScore,
           value: '${selfPlayer.totalScore}',
-          backgroundColor: const Color(0xFFF6EFE8),
-          foregroundColor: const Color(0xFF6A4B3A),
+          bg: const Color(0xFFF6EFE8),
+          fg: const Color(0xFF6A4B3A),
         ),
       ],
     );

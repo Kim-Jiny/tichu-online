@@ -106,97 +106,113 @@ class _LLGameScreenState extends State<LLGameScreen> {
         builder: (context, gs, _) {
           final llState = gs.llGameState;
 
-        // Waiting room or no game state yet
-        if (llState == null) {
-          if (gs.isSpectator && gs.hasRoom && !gs.hasActiveGame) {
-            return _buildSpectatorWaiting(context, gs);
-          }
-          if (_waitingForRoomRecovery) {
+          // Waiting room or no game state yet
+          if (llState == null) {
+            if (gs.isSpectator && gs.hasRoom && !gs.hasActiveGame) {
+              return _buildSpectatorWaiting(context, gs);
+            }
+            if (_waitingForRoomRecovery) {
+              return const Scaffold(
+                body: Center(child: CircularProgressIndicator()),
+              );
+            }
+            WidgetsBinding.instance.addPostFrameCallback((_) {
+              if (mounted) _recoverRoomState();
+            });
             return const Scaffold(
               body: Center(child: CircularProgressIndicator()),
             );
           }
-          WidgetsBinding.instance.addPostFrameCallback((_) {
-            if (mounted) _recoverRoomState();
-          });
-          return const Scaffold(
-            body: Center(child: CircularProgressIndicator()),
-          );
-        }
 
-        // Game end countdown
-        if (llState.phase == 'game_end' && !_gameEndCountdownActive) {
-          _gameEndCountdownActive = true;
-          _gameEndCountdown = 5;
-          _gameEndCountdownTimer?.cancel();
-          _gameEndCountdownTimer = Timer.periodic(const Duration(seconds: 1), (
-            _,
-          ) {
-            if (!mounted) return;
-            setState(() => _gameEndCountdown--);
-            if (_gameEndCountdown <= 0) {
-              _gameEndCountdownTimer?.cancel();
-            }
-          });
-        }
-        if (llState.phase != 'game_end') {
-          _gameEndCountdownActive = false;
-          _gameEndCountdownTimer?.cancel();
-        }
+          // Game end countdown
+          if (llState.phase == 'game_end' && !_gameEndCountdownActive) {
+            _gameEndCountdownActive = true;
+            _gameEndCountdown = 5;
+            _gameEndCountdownTimer?.cancel();
+            _gameEndCountdownTimer = Timer.periodic(
+              const Duration(seconds: 1),
+              (_) {
+                if (!mounted) return;
+                setState(() => _gameEndCountdown--);
+                if (_gameEndCountdown <= 0) {
+                  _gameEndCountdownTimer?.cancel();
+                }
+              },
+            );
+          }
+          if (llState.phase != 'game_end') {
+            _gameEndCountdownActive = false;
+            _gameEndCountdownTimer?.cancel();
+          }
 
-        // Clear stale selections when leaving effect_resolve
-        if (llState.phase != 'effect_resolve' ||
-            llState.pendingEffect == null) {
-          _selectedTarget = null;
-          _selectedGuess = null;
-        }
-        // Clear card selection when it's no longer in hand
-        if (_selectedCard != null && !llState.myCards.contains(_selectedCard)) {
-          _selectedCard = null;
-        }
+          // Clear stale selections when leaving effect_resolve
+          if (llState.phase != 'effect_resolve' ||
+              llState.pendingEffect == null) {
+            _selectedTarget = null;
+            _selectedGuess = null;
+          }
+          // Clear card selection when it's no longer in hand
+          if (_selectedCard != null &&
+              !llState.myCards.contains(_selectedCard)) {
+            _selectedCard = null;
+          }
 
-        final themeColors = gs.themeGradient;
+          final themeColors = gs.themeGradient;
 
-        return Scaffold(
-          body: Container(
-            decoration: BoxDecoration(
-              gradient: LinearGradient(
-                begin: Alignment.topCenter,
-                end: Alignment.bottomCenter,
-                colors: themeColors,
+          return Scaffold(
+            body: Container(
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.topCenter,
+                  end: Alignment.bottomCenter,
+                  colors: themeColors,
+                ),
               ),
-            ),
-            child: SafeArea(
-              child: ConnectionOverlay(
-                child: Stack(
-                  children: [
-                    Column(
-                      children: [
-                        _buildTopBar(context, gs, llState),
-                        Expanded(child: _buildGameArea(context, gs, llState)),
-                        _buildBottomArea(context, gs, llState),
-                      ],
-                    ),
-                    if (llState.phase == 'effect_resolve' &&
-                        llState.pendingEffect != null)
-                      Positioned(
-                        left: 0,
-                        right: 0,
-                        bottom: 0,
-                        child: _buildEffectResolve(context, gs, llState),
+              child: SafeArea(
+                child: ConnectionOverlay(
+                  child: Stack(
+                    children: [
+                      Column(
+                        children: [
+                          _buildTopBar(context, gs, llState),
+                          Expanded(child: _buildGameArea(context, gs, llState)),
+                          if (gs.isSpectator &&
+                              llState.phase != 'game_end' &&
+                              llState.phase != 'round_end')
+                            const SizedBox(height: 100)
+                          else
+                            _buildBottomArea(context, gs, llState),
+                        ],
                       ),
-                    if (gs.hasIncomingCardViewRequests)
-                      _buildCardViewRequestPopup(gs),
-                    if (_viewersOpen) _buildViewersPanel(gs),
-                    if (_soundPanelOpen) _buildSoundPanel(gs),
-                    if (_chatOpen) _buildChatPanel(context, gs),
-                  ],
+                      if (gs.isSpectator &&
+                          llState.phase != 'game_end' &&
+                          llState.phase != 'round_end')
+                        Positioned(
+                          left: 0,
+                          right: 0,
+                          bottom: 0,
+                          child: _buildBottomArea(context, gs, llState),
+                        ),
+                      if (llState.phase == 'effect_resolve' &&
+                          llState.pendingEffect != null)
+                        Positioned(
+                          left: 0,
+                          right: 0,
+                          bottom: 0,
+                          child: _buildEffectResolve(context, gs, llState),
+                        ),
+                      if (gs.hasIncomingCardViewRequests)
+                        _buildCardViewRequestPopup(gs),
+                      if (_viewersOpen) _buildViewersPanel(gs),
+                      if (_soundPanelOpen) _buildSoundPanel(gs),
+                      if (_chatOpen) _buildChatPanel(context, gs),
+                    ],
+                  ),
                 ),
               ),
             ),
-          ),
-        );
-      },
+          );
+        },
       ),
     );
   }
@@ -924,6 +940,8 @@ class _LLGameScreenState extends State<LLGameScreen> {
               : state.players.where((p) => p.position != 'self').toList();
           final isThreeOpponentPlayLayout =
               !gs.isSpectator && visiblePlayers.length == 3;
+          final isFourSpectatorLayout =
+              gs.isSpectator && visiblePlayers.length == 4;
           final centerX = width / 2;
           final centerY = gs.isSpectator ? height * 0.50 : height * 0.45;
           final seatWidth = gs.isSpectator ? 116.0 : 126.0;
@@ -951,16 +969,25 @@ class _LLGameScreenState extends State<LLGameScreen> {
                 !gs.isSpectator && visiblePlayers.length == 3 && i != 1
                 ? 28.0
                 : 0.0;
+            final spectatorSeatLift = isFourSpectatorLayout ? 28.0 : 0.0;
+            final bottomSpectatorLift =
+                isFourSpectatorLayout && math.sin(angle) > 0 ? 16.0 : 0.0;
             final seatTop =
                 centerY +
                 seatRadiusY * math.sin(angle) -
                 seatHeight / 2 +
-                sideSeatDrop;
+                sideSeatDrop -
+                spectatorSeatLift -
+                bottomSpectatorLift;
             final discardCardHeight =
-                (seatHeight * (gs.isSpectator ? 0.42 : 0.44)).clamp(
-                  52.0,
-                  gs.isSpectator ? 58.0 : 64.0,
-                );
+                ((seatHeight + (isFourSpectatorLayout ? 12.0 : 0.0)) *
+                        (gs.isSpectator ? 0.46 : 0.48))
+                    .clamp(
+                      gs.isSpectator ? 58.0 : 60.0,
+                      isFourSpectatorLayout
+                          ? 70.0
+                          : (gs.isSpectator ? 66.0 : 72.0),
+                    );
             seatLayouts.add(
               _LLSeatLayout(
                 player: player,
@@ -983,7 +1010,9 @@ class _LLGameScreenState extends State<LLGameScreen> {
                   alignment: Alignment(
                     0,
                     gs.isSpectator
-                        ? (visiblePlayers.length == 3 ? 0.32 : 0.08)
+                        ? (visiblePlayers.length == 3
+                              ? 0.32
+                              : (isFourSpectatorLayout ? -0.04 : 0.08))
                         : (isThreeOpponentPlayLayout ? 0.26 : 0.12),
                   ),
                   child: _buildCenterBoard(context, state),
@@ -1707,7 +1736,7 @@ class _LLGameScreenState extends State<LLGameScreen> {
       case 3:
         return const [195, 270, 345];
       case 4:
-        return const [170, 230, 310, 370];
+        return const [128, 228, 312, 52];
       case 5:
         return const [152, 208, 270, 332, 388];
       case 6:

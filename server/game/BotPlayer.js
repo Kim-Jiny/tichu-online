@@ -1360,8 +1360,9 @@ const TICHU_SEARCH_MAX_STEPS = 256;
 function normalizeTichuStrategy(strategy) {
   if (strategy === 'heuristic') return 'heuristic';
   if (strategy === 'winrate') return 'winrate';
-  // Legacy UI values from other game types map to the upgraded Tichu search.
-  return 'winrate';
+  // Tichu rooms should stay on the lightweight heuristic bot unless the
+  // caller explicitly requests the heavier search-based strategy.
+  return 'heuristic';
 }
 
 function getBotTeamKey(game, botId) {

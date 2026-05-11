@@ -1183,7 +1183,7 @@
   "rulesLlFlowBody": "1. Remove 1 card face-down from the deck. (In a 2-player game, 3 additional cards are removed face-up.)\n2. Deal 1 card to each player.\n3. On your turn, draw 1 card from the deck, then play 1 of your 2 cards and resolve its effect.\n4. After resolving the effect, play passes to the next player.\n5. The round ends when only 1 player remains or the deck is empty.",
 
   "rulesLlWinTitle": "Victory Condition",
-  "rulesLlWinBody": "When the round ends, the surviving player with the highest card (ties broken by total card value) wins a token.\n\nTokens needed to win:\n• 2 players: 4 tokens\n• 3 players: 3 tokens\n• 4 players: 2 tokens",
+  "rulesLlWinBody": "When the round ends, the surviving player with the highest card wins a token. Tiebreakers (in order):\n1. Highest total value of cards played during the round.\n2. If still tied, all tied players win a token.\n\nTokens needed to win:\n• 2 players: 4 tokens\n• 3 players: 3 tokens\n• 4 players: 2 tokens",
 
   "rulesTabMighty": "Mighty",
   "rulesMtGoalTitle": "Game Objective",
@@ -1757,6 +1757,7 @@
   "@llKingSwap": { "placeholders": { "actor": { "type": "String" }, "target": { "type": "String" } } },
   "llEliminated": "OUT",
   "llSetAsideFaceUp": "Set aside (face-up)",
+  "llSetAsideHidden": "Set aside (hidden)",
   "llPlayed": "Played:",
   "llCardGuard": "Guard",
   "llCardSpy": "Spy",

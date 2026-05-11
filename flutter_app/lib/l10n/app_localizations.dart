@@ -4692,7 +4692,7 @@ abstract class L10n {
   /// No description provided for @rulesLlWinBody.
   ///
   /// In en, this message translates to:
-  /// **'When the round ends, the surviving player with the highest card (ties broken by total card value) wins a token.\n\nTokens needed to win:\n• 2 players: 4 tokens\n• 3 players: 3 tokens\n• 4 players: 2 tokens'**
+  /// **'When the round ends, the surviving player with the highest card wins a token. Tiebreakers (in order):\n1. Highest total value of cards played during the round.\n2. If still tied, all tied players win a token.\n\nTokens needed to win:\n• 2 players: 4 tokens\n• 3 players: 3 tokens\n• 4 players: 2 tokens'**
   String get rulesLlWinBody;
 
   /// No description provided for @rulesTabMighty.
@@ -6860,6 +6860,12 @@ abstract class L10n {
   /// In en, this message translates to:
   /// **'Set aside (face-up)'**
   String get llSetAsideFaceUp;
+
+  /// No description provided for @llSetAsideHidden.
+  ///
+  /// In en, this message translates to:
+  /// **'Set aside (hidden)'**
+  String get llSetAsideHidden;
 
   /// No description provided for @llPlayed.
   ///

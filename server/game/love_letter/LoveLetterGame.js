@@ -67,6 +67,7 @@ class LoveLetterGame {
 
     this.drawPile = result.drawPile.map(c => c.id);
     this.setAside = result.setAside.id;
+    this.originalSetAside = this.setAside;
     this.faceUpCards = result.faceUpCards.map(c => c.id);
     this.pendingEffect = null;
     this.hasDrawn = false;
@@ -504,48 +505,64 @@ class LoveLetterGame {
 
   _endRound() {
     const alive = this._getAlivePlayers();
-    let roundWinner = null;
+    let roundWinners = [];
 
     if (alive.length === 1) {
-      roundWinner = alive[0];
+      roundWinners = [alive[0]];
     } else if (alive.length > 1) {
-      // Compare hands: highest card wins; tie → highest discard pile sum wins
-      let bestValue = -1;
-      let bestDiscardSum = -1;
-      let bestPlayer = null;
-      for (const pid of alive) {
-        const hand = this.hands[pid];
-        if (hand.length > 0) {
-          const info = getCardInfo(hand[0]);
+      // Compare hands: highest card wins; tie → highest discard pile sum wins;
+      // still tied → all tied players win.
+      const scores = alive
+        .filter(pid => this.hands[pid].length > 0)
+        .map(pid => {
+          const info = getCardInfo(this.hands[pid][0]);
           const value = info ? info.value : 0;
           const discardSum = this.discardPiles[pid].reduce((sum, cid) => {
             const ci = getCardInfo(cid);
             return sum + (ci ? ci.value : 0);
           }, 0);
-          if (value > bestValue || (value === bestValue && discardSum > bestDiscardSum)) {
-            bestValue = value;
-            bestDiscardSum = discardSum;
-            bestPlayer = pid;
-          }
+          return { pid, value, discardSum };
+        });
+
+      let bestValue = -1;
+      for (const s of scores) {
+        if (s.value > bestValue) bestValue = s.value;
+      }
+      let bestDiscardSum = -1;
+      for (const s of scores) {
+        if (s.value === bestValue && s.discardSum > bestDiscardSum) {
+          bestDiscardSum = s.discardSum;
         }
       }
-      roundWinner = bestPlayer;
+      roundWinners = scores
+        .filter(s => s.value === bestValue && s.discardSum === bestDiscardSum)
+        .map(s => s.pid);
     }
 
-    if (roundWinner) {
-      this.tokens[roundWinner]++;
-      this.currentPlayer = roundWinner; // Winner leads next round
+    if (roundWinners.length > 0) {
+      for (const pid of roundWinners) {
+        this.tokens[pid]++;
+      }
+      this.currentPlayer = roundWinners[0]; // First winner leads next round
     }
+
+    const winnerNames = roundWinners
+      .map(pid => this.playerNames[pid])
+      .filter(n => n);
 
     this.roundHistory.push({
       round: this.round,
-      winner: roundWinner,
-      winnerName: roundWinner ? this.playerNames[roundWinner] : null,
+      winner: roundWinners[0] || null,
+      winnerName: winnerNames.length > 0 ? winnerNames.join(' & ') : null,
+      winners: [...roundWinners],
+      winnerNames,
       // Final hands of alive players for display
       finalHands: alive.reduce((acc, pid) => {
         acc[pid] = this.hands[pid][0] || null;
         return acc;
       }, {}),
+      setAside: this.originalSetAside || null,
+      faceUpCards: [...(this.faceUpCards || [])],
     });
 
     // Check for game winner

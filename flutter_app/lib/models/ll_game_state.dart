@@ -90,12 +90,16 @@ class LLRoundHistory {
   final String? winner;
   final String? winnerName;
   final Map<String, String?> finalHands;
+  final String? setAside;
+  final List<String> faceUpCards;
 
   LLRoundHistory({
     required this.round,
     this.winner,
     this.winnerName,
     this.finalHands = const {},
+    this.setAside,
+    this.faceUpCards = const [],
   });
 
   factory LLRoundHistory.fromJson(Map<String, dynamic> json) {
@@ -110,6 +114,8 @@ class LLRoundHistory {
       winner: json['winner'] as String?,
       winnerName: json['winnerName'] as String?,
       finalHands: hands,
+      setAside: json['setAside'] as String?,
+      faceUpCards: List<String>.from(json['faceUpCards'] ?? const []),
     );
   }
 }

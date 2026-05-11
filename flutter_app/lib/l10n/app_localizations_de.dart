@@ -2565,7 +2565,7 @@ class L10nDe extends L10n {
 
   @override
   String get rulesLlWinBody =>
-      'Am Ende der Runde gewinnt der überlebende Spieler mit der höchsten Karte (bei Gleichstand entscheidet die Gesamtkartensumme) ein Token.\n\nBenötigte Token zum Sieg:\n• 2 Spieler: 4 Token\n• 3 Spieler: 3 Token\n• 4 Spieler: 2 Token';
+      'Am Ende der Runde gewinnt der überlebende Spieler mit der höchsten Karte ein Token. Bei Gleichstand (in dieser Reihenfolge):\n1. Höhere Gesamtsumme der in dieser Runde gespielten Karten gewinnt.\n2. Bleibt es gleich, gewinnen alle Gleichplatzierten ein Token.\n\nBenötigte Token zum Sieg:\n• 2 Spieler: 4 Token\n• 3 Spieler: 3 Token\n• 4 Spieler: 2 Token';
 
   @override
   String get rulesTabMighty => 'Mighty';
@@ -3859,6 +3859,9 @@ class L10nDe extends L10n {
 
   @override
   String get llSetAsideFaceUp => 'Beiseitegelegt (offen)';
+
+  @override
+  String get llSetAsideHidden => 'Beiseitegelegt (verdeckt)';
 
   @override
   String get llPlayed => 'Gespielt:';

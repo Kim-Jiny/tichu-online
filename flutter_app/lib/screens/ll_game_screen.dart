@@ -194,7 +194,8 @@ class _LLGameScreenState extends State<LLGameScreen> {
                           child: _buildBottomArea(context, gs, llState),
                         ),
                       if (llState.phase == 'effect_resolve' &&
-                          llState.pendingEffect != null)
+                          llState.pendingEffect != null &&
+                          _isEffectInteractive(llState.pendingEffect!, gs))
                         Positioned(
                           left: 0,
                           right: 0,
@@ -934,16 +935,47 @@ class _LLGameScreenState extends State<LLGameScreen> {
       child: LayoutBuilder(
         builder: (context, constraints) {
           final width = constraints.maxWidth;
-          final height = constraints.maxHeight;
           final visiblePlayers = gs.isSpectator
               ? state.players
               : state.players.where((p) => p.position != 'self').toList();
           final isThreeOpponentPlayLayout =
               !gs.isSpectator && visiblePlayers.length == 3;
+          final isOneOpponentPlayLayout =
+              !gs.isSpectator && visiblePlayers.length == 1;
           final isFourSpectatorLayout =
               gs.isSpectator && visiblePlayers.length == 4;
+          final mq = MediaQuery.of(context);
+          final safeH = mq.size.height - mq.padding.top - mq.padding.bottom;
+          final isSmallDevice = safeH < 700;
+          // Card size scales with screen width (reference: iPhone 14 ~390pt).
+          final cardScale = (mq.size.width / 390.0).clamp(0.88, 1.55);
+
+          // Stable layout height — independent of BottomArea size, so trick box
+          // and seat positions don't jitter when the hand grows/shrinks.
+          const topBarRefH = 48.0;
+          const gameAreaPadH = 8.0;
+          const bottomAreaRefH = 240.0;
+          final stableLayoutH = math.max(
+            0.0,
+            safeH - topBarRefH - bottomAreaRefH - gameAreaPadH * 2,
+          );
+          final trickBoxAlignmentY = gs.isSpectator
+              ? (visiblePlayers.length == 3
+                    ? 0.56
+                    : isFourSpectatorLayout
+                    ? -0.04
+                    : visiblePlayers.length == 2
+                    ? 0.52
+                    : 0.08)
+              : (isThreeOpponentPlayLayout
+                    ? (isSmallDevice ? 0.52 : 0.36)
+                    : isOneOpponentPlayLayout
+                    ? (isSmallDevice ? 0.30 : 0.12)
+                    : 0.12);
           final centerX = width / 2;
-          final centerY = gs.isSpectator ? height * 0.50 : height * 0.45;
+          final centerY = gs.isSpectator
+              ? stableLayoutH * 0.50
+              : stableLayoutH * 0.45;
           final seatWidth = gs.isSpectator ? 116.0 : 126.0;
           final seatHeight = gs.isSpectator ? 104.0 : 114.0;
           final maxSeatRadiusX = math.max(0.0, centerX - seatWidth / 2 - 10);
@@ -953,7 +985,7 @@ class _LLGameScreenState extends State<LLGameScreen> {
           );
           final maxSeatRadiusY = math.max(0.0, centerY - seatHeight / 2 - 8);
           final seatRadiusY = math.min(
-            height * (gs.isSpectator ? 0.35 : 0.32),
+            stableLayoutH * (gs.isSpectator ? 0.35 : 0.32),
             maxSeatRadiusY,
           );
           final seatLayouts = <_LLSeatLayout>[];
@@ -967,9 +999,13 @@ class _LLGameScreenState extends State<LLGameScreen> {
                 centerX + seatRadiusX * math.cos(angle) - seatWidth / 2;
             final sideSeatDrop =
                 !gs.isSpectator && visiblePlayers.length == 3 && i != 1
-                ? 28.0
+                ? 44.0
                 : 0.0;
-            final spectatorSeatLift = isFourSpectatorLayout ? 28.0 : 0.0;
+            final isTwoSpectatorLayout =
+                gs.isSpectator && visiblePlayers.length == 2;
+            final spectatorSeatLift = isFourSpectatorLayout
+                ? 28.0
+                : (isTwoSpectatorLayout ? 36.0 : 0.0);
             final bottomSpectatorLift =
                 isFourSpectatorLayout && math.sin(angle) > 0 ? 16.0 : 0.0;
             final seatTop =
@@ -979,15 +1015,13 @@ class _LLGameScreenState extends State<LLGameScreen> {
                 sideSeatDrop -
                 spectatorSeatLift -
                 bottomSpectatorLift;
-            final discardCardHeight =
-                ((seatHeight + (isFourSpectatorLayout ? 12.0 : 0.0)) *
-                        (gs.isSpectator ? 0.46 : 0.48))
-                    .clamp(
-                      gs.isSpectator ? 58.0 : 60.0,
-                      isFourSpectatorLayout
-                          ? 70.0
-                          : (gs.isSpectator ? 66.0 : 72.0),
-                    );
+            final baseDiscardH = gs.isSpectator
+                ? (isFourSpectatorLayout ? 80.0 : 72.0)
+                : 78.0;
+            final discardCardHeight = (baseDiscardH * cardScale).clamp(
+              62.0,
+              108.0,
+            );
             seatLayouts.add(
               _LLSeatLayout(
                 player: player,
@@ -1005,17 +1039,16 @@ class _LLGameScreenState extends State<LLGameScreen> {
           return Stack(
             clipBehavior: Clip.none,
             children: [
-              Positioned.fill(
-                child: Align(
-                  alignment: Alignment(
-                    0,
-                    gs.isSpectator
-                        ? (visiblePlayers.length == 3
-                              ? 0.32
-                              : (isFourSpectatorLayout ? -0.04 : 0.08))
-                        : (isThreeOpponentPlayLayout ? 0.26 : 0.12),
+              Positioned(
+                left: 0,
+                right: 0,
+                top: 0,
+                height: stableLayoutH,
+                child: IgnorePointer(
+                  child: Align(
+                    alignment: Alignment(0, trickBoxAlignmentY),
+                    child: _buildCenterBoard(context, state),
                   ),
-                  child: _buildCenterBoard(context, state),
                 ),
               ),
               for (final seat in seatLayouts)
@@ -1165,29 +1198,57 @@ class _LLGameScreenState extends State<LLGameScreen> {
             ),
           ],
           if (state.pendingEffect != null &&
-              state.phase == 'effect_resolve') ...[
-            const SizedBox(height: 8),
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 5),
-              decoration: BoxDecoration(
-                color: const Color(0xFFFFEDF3).withValues(alpha: 0.92),
-                borderRadius: BorderRadius.circular(10),
-              ),
-              child: Text(
-                _getEffectDescription(
-                  state.pendingEffect!.type,
-                  currentPlayer?.name ?? '?',
-                  L10n.of(context),
+              state.phase == 'effect_resolve') ...() {
+            final statusLines = _getEffectStatusLines(
+              state,
+              context.read<GameService>(),
+              L10n.of(context),
+            );
+            if (statusLines.isEmpty) return const <Widget>[];
+            return [
+              const SizedBox(height: 8),
+              Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 10,
+                  vertical: 6,
                 ),
-                textAlign: TextAlign.center,
-                style: const TextStyle(
-                  color: Color(0xFFE91E63),
-                  fontSize: 11,
-                  fontWeight: FontWeight.w700,
+                decoration: BoxDecoration(
+                  color: const Color(0xFFFFEDF3).withValues(alpha: 0.92),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    for (var i = 0; i < statusLines.length; i++) ...[
+                      if (i > 0) const SizedBox(height: 2),
+                      RichText(
+                        textAlign: TextAlign.center,
+                        text: TextSpan(
+                          style: const TextStyle(
+                            color: Color(0xFF5A4038),
+                            fontSize: 11,
+                            fontWeight: FontWeight.w600,
+                          ),
+                          children: [
+                            for (final seg in statusLines[i])
+                              TextSpan(
+                                text: seg.text,
+                                style: seg.emphasized
+                                    ? const TextStyle(
+                                        color: Color(0xFFE91E63),
+                                        fontWeight: FontWeight.w800,
+                                      )
+                                    : null,
+                              ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ],
                 ),
               ),
-            ),
-          ],
+            ];
+          }(),
         ],
       ),
     );
@@ -1385,7 +1446,7 @@ class _LLGameScreenState extends State<LLGameScreen> {
         final statusIconSize = ultraTight ? 10.0 : (tight ? 11.0 : 12.0);
         final contentWidth = math.max(
           24.0,
-          constraints.maxWidth - horizontalPadding * 2,
+          (constraints.maxWidth - horizontalPadding * 2) * 0.7,
         );
         final showCardCountChip = !player.eliminated && !ultraTight;
         final labelTint = player.eliminated
@@ -1484,6 +1545,18 @@ class _LLGameScreenState extends State<LLGameScreen> {
                             L10n.of(context).llEliminated,
                             style: TextStyle(
                               color: Colors.red.shade300,
+                              fontSize: ultraTight ? 9 : 10,
+                              fontWeight: FontWeight.w800,
+                            ),
+                          ),
+                        ),
+                      if (player.timeoutCount > 0 && !player.eliminated)
+                        Padding(
+                          padding: EdgeInsets.only(top: ultraTight ? 1 : 2),
+                          child: Text(
+                            '⏱ ${player.timeoutCount}/3',
+                            style: TextStyle(
+                              color: const Color(0xFFE65100),
                               fontSize: ultraTight ? 9 : 10,
                               fontWeight: FontWeight.w800,
                             ),
@@ -1639,10 +1712,12 @@ class _LLGameScreenState extends State<LLGameScreen> {
     required double boardCenterX,
     required double boardCenterY,
   }) {
-    final previewWidth = seat.width;
+    const previewWidthScale = 1.25;
+    final previewWidth = seat.width * previewWidthScale;
+    final previewLeft = seat.left - (previewWidth - seat.width) / 2;
     final gap = seat.compact ? -10.0 : -14.0;
     final top = seat.top + seat.height + gap;
-    return Rect.fromLTWH(seat.left, top, previewWidth, seat.discardCardHeight);
+    return Rect.fromLTWH(previewLeft, top, previewWidth, seat.discardCardHeight);
   }
 
   void _showDiscardPileDialog(
@@ -2375,6 +2450,174 @@ class _LLGameScreenState extends State<LLGameScreen> {
 
   // ====================== ROUND END ======================
 
+  // Shared "last round details" widgets used by both round end and game end.
+  // Contains: winner line, set-aside / face-up cards box, per-player final hand
+  // + discards rows. Caller wraps with surrounding header/standings UI.
+  List<Widget> _buildRoundDetailsContent(
+    BuildContext context,
+    LLGameStateData state,
+    LLRoundHistory lastRound,
+    L10n l10n,
+  ) {
+    return [
+      const SizedBox(height: 12),
+      Text(
+        '${l10n.llRoundWinner}: ${lastRound.winnerName ?? "?"}',
+        style: const TextStyle(color: Color(0xFF5A4038), fontSize: 16),
+      ),
+      if (lastRound.setAside != null || lastRound.faceUpCards.isNotEmpty) ...[
+        const SizedBox(height: 10),
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+          decoration: BoxDecoration(
+            color: const Color(0xFFFBF6F2),
+            borderRadius: BorderRadius.circular(10),
+            border: Border.all(color: const Color(0xFFEDE3DD)),
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              if (lastRound.setAside != null)
+                Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    SizedBox(
+                      width: 110,
+                      child: Text(
+                        l10n.llSetAsideHidden,
+                        style: const TextStyle(
+                          color: Color(0xFF8A7A72),
+                          fontSize: 12,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 6),
+                    LoveLetterCard(
+                      cardId: lastRound.setAside!,
+                      width: 38,
+                      height: 54,
+                      borderRadius: 6,
+                      compact: true,
+                      isInteractive: false,
+                    ),
+                  ],
+                ),
+              if (lastRound.setAside != null &&
+                  lastRound.faceUpCards.isNotEmpty)
+                const SizedBox(height: 6),
+              if (lastRound.faceUpCards.isNotEmpty)
+                Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    SizedBox(
+                      width: 110,
+                      child: Text(
+                        l10n.llSetAsideFaceUp,
+                        style: const TextStyle(
+                          color: Color(0xFF8A7A72),
+                          fontSize: 12,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 6),
+                    for (final cardId in lastRound.faceUpCards)
+                      Padding(
+                        padding: const EdgeInsets.only(right: 3),
+                        child: LoveLetterCard(
+                          cardId: cardId,
+                          width: 38,
+                          height: 54,
+                          borderRadius: 6,
+                          compact: true,
+                          isInteractive: false,
+                        ),
+                      ),
+                  ],
+                ),
+            ],
+          ),
+        ),
+      ],
+      const SizedBox(height: 12),
+      ...state.players.map((p) {
+        final lastHand = lastRound.finalHands[p.id];
+        final discards = p.discardPile;
+        if (lastHand == null && discards.isEmpty) {
+          return const SizedBox.shrink();
+        }
+        return Padding(
+          padding: const EdgeInsets.symmetric(vertical: 3),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              SizedBox(
+                width: 76,
+                child: Text(
+                  '${p.name}:',
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  textAlign: TextAlign.right,
+                  style: TextStyle(
+                    color: p.eliminated
+                        ? const Color(0xFFB0A39E)
+                        : const Color(0xFF8A7A72),
+                    fontSize: 13,
+                    decoration: p.eliminated
+                        ? TextDecoration.lineThrough
+                        : null,
+                  ),
+                ),
+              ),
+              const SizedBox(width: 8),
+              if (lastHand != null)
+                LoveLetterCard(
+                  cardId: lastHand,
+                  width: 44,
+                  height: 62,
+                  borderRadius: 8,
+                  compact: true,
+                  isInteractive: false,
+                )
+              else
+                const SizedBox(width: 44, height: 62),
+              if (discards.isNotEmpty) ...[
+                const SizedBox(width: 8),
+                Container(
+                  width: 1,
+                  height: 48,
+                  color: const Color(0xFFE0D8D4),
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: SingleChildScrollView(
+                    scrollDirection: Axis.horizontal,
+                    child: Row(
+                      children: [
+                        for (final cardId in discards)
+                          Padding(
+                            padding: const EdgeInsets.only(right: 3),
+                            child: LoveLetterCard(
+                              cardId: cardId,
+                              width: 38,
+                              height: 54,
+                              borderRadius: 6,
+                              compact: true,
+                              isInteractive: false,
+                            ),
+                          ),
+                      ],
+                    ),
+                  ),
+                ),
+              ],
+            ],
+          ),
+        );
+      }),
+    ];
+  }
+
   Widget _buildRoundEnd(
     BuildContext context,
     GameService gs,
@@ -2387,6 +2630,7 @@ class _LLGameScreenState extends State<LLGameScreen> {
 
     return Center(
       child: Container(
+        constraints: const BoxConstraints(maxWidth: 380),
         margin: const EdgeInsets.all(24),
         padding: const EdgeInsets.all(20),
         decoration: BoxDecoration(
@@ -2405,54 +2649,8 @@ class _LLGameScreenState extends State<LLGameScreen> {
                 fontWeight: FontWeight.bold,
               ),
             ),
-            if (lastRound != null) ...[
-              const SizedBox(height: 12),
-              Text(
-                '${l10n.llRoundWinner}: ${lastRound.winnerName ?? "?"}',
-                style: const TextStyle(color: Color(0xFF5A4038), fontSize: 16),
-              ),
-              if (lastRound.finalHands.isNotEmpty) ...[
-                const SizedBox(height: 12),
-                ...lastRound.finalHands.entries.map((e) {
-                  final playerName = state.players
-                      .firstWhere(
-                        (p) => p.id == e.key,
-                        orElse: () => LLPlayer(id: e.key, name: e.key),
-                      )
-                      .name;
-                  return Padding(
-                    padding: const EdgeInsets.symmetric(vertical: 2),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        SizedBox(
-                          width: 92,
-                          child: Text(
-                            '$playerName:',
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            textAlign: TextAlign.right,
-                            style: const TextStyle(
-                              color: Color(0xFF8A7A72),
-                              fontSize: 13,
-                            ),
-                          ),
-                        ),
-                        const SizedBox(width: 8),
-                        if (e.value != null)
-                          LoveLetterCard(
-                            cardId: e.value!,
-                            width: 36,
-                            height: 50,
-                            compact: true,
-                            isInteractive: false,
-                          ),
-                      ],
-                    ),
-                  );
-                }),
-              ],
-            ],
+            if (lastRound != null)
+              ..._buildRoundDetailsContent(context, state, lastRound, l10n),
             const SizedBox(height: 16),
             // Token status
             ...state.players.map(
@@ -2510,38 +2708,50 @@ class _LLGameScreenState extends State<LLGameScreen> {
     final sorted = [...state.players]
       ..sort((a, b) => b.tokens.compareTo(a.tokens));
     final winner = sorted.isNotEmpty ? sorted.first : null;
+    final lastRound = state.roundHistory.isNotEmpty
+        ? state.roundHistory.last
+        : null;
 
     return Center(
-      child: Container(
-        margin: const EdgeInsets.all(24),
-        padding: const EdgeInsets.all(20),
-        decoration: BoxDecoration(
-          color: Colors.white.withValues(alpha: 0.95),
-          borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: const Color(0xFFE0D8D4)),
-        ),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Text(
-              l10n.llGameEnd,
-              style: const TextStyle(
-                color: Color(0xFFE91E63),
-                fontSize: 20,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-            const SizedBox(height: 12),
-            if (winner != null)
+      child: SingleChildScrollView(
+        child: Container(
+          constraints: const BoxConstraints(maxWidth: 380),
+          margin: const EdgeInsets.all(24),
+          padding: const EdgeInsets.all(20),
+          decoration: BoxDecoration(
+            color: Colors.white.withValues(alpha: 0.95),
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(color: const Color(0xFFE0D8D4)),
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
               Text(
-                '${winner.name} ${l10n.llWins}!',
+                l10n.llGameEnd,
                 style: const TextStyle(
-                  color: Color(0xFF5A4038),
-                  fontSize: 18,
+                  color: Color(0xFFE91E63),
+                  fontSize: 20,
                   fontWeight: FontWeight.bold,
                 ),
               ),
-            const SizedBox(height: 16),
+              const SizedBox(height: 12),
+              if (winner != null)
+                Text(
+                  '${winner.name} ${l10n.llWins}!',
+                  style: const TextStyle(
+                    color: Color(0xFF5A4038),
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              if (lastRound != null)
+                ..._buildRoundDetailsContent(
+                  context,
+                  state,
+                  lastRound,
+                  l10n,
+                ),
+              const SizedBox(height: 16),
             ...sorted.asMap().entries.map((entry) {
               final i = entry.key;
               final p = entry.value;
@@ -2595,13 +2805,17 @@ class _LLGameScreenState extends State<LLGameScreen> {
                 ),
               );
             }),
-            const SizedBox(height: 16),
-            if (_gameEndCountdown > 0)
-              Text(
-                '${l10n.llReturnIn} $_gameEndCountdown...',
-                style: const TextStyle(color: Color(0xFF8A7A72), fontSize: 12),
-              ),
-          ],
+              const SizedBox(height: 16),
+              if (_gameEndCountdown > 0)
+                Text(
+                  '${l10n.llReturnIn} $_gameEndCountdown...',
+                  style: const TextStyle(
+                    color: Color(0xFF8A7A72),
+                    fontSize: 12,
+                  ),
+                ),
+            ],
+          ),
         ),
       ),
     );
@@ -2854,6 +3068,44 @@ class _LLGameScreenState extends State<LLGameScreen> {
                     ),
                   ),
                 ),
+              if (gs.myTimeoutCount > 0) ...[
+                const SizedBox(width: 8),
+                GestureDetector(
+                  onTap: () => gs.resetTimeout(),
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 8,
+                      vertical: 3,
+                    ),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFFFF3E0),
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: const Color(0xFFFFB74D)),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text(
+                          '${gs.myTimeoutCount}/3',
+                          style: const TextStyle(
+                            fontSize: 11,
+                            fontWeight: FontWeight.bold,
+                            color: Color(0xFFE65100),
+                          ),
+                        ),
+                        const SizedBox(width: 4),
+                        Text(
+                          L10n.of(context).gameNotAfk,
+                          style: const TextStyle(
+                            fontSize: 10,
+                            color: Color(0xFFE65100),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ],
               const Spacer(),
               // Tokens
               ...List.generate(
@@ -3346,6 +3598,135 @@ class _LLGameScreenState extends State<LLGameScreen> {
         ],
       ),
     );
+  }
+
+  // True only when the current player needs to act on the effect
+  // (pick target, guess, or click OK). For non-interactive cases we show
+  // the description in the trick box instead of a popup over the hand.
+  bool _isEffectInteractive(LLPendingEffect effect, GameService gs) {
+    return effect.playerId == gs.playerId;
+  }
+
+  // Split text into segments, emphasizing each occurrence of any name.
+  List<_EffectStatusSegment> _splitNamesIntoSegments(
+    String text,
+    List<String> names,
+  ) {
+    final segs = <_EffectStatusSegment>[];
+    String remaining = text;
+    while (remaining.isNotEmpty) {
+      int earliestIdx = -1;
+      String? earliestName;
+      for (final name in names) {
+        if (name.isEmpty) continue;
+        final idx = remaining.indexOf(name);
+        if (idx != -1 && (earliestIdx == -1 || idx < earliestIdx)) {
+          earliestIdx = idx;
+          earliestName = name;
+        }
+      }
+      if (earliestName == null || earliestIdx == -1) {
+        segs.add(_EffectStatusSegment(remaining));
+        break;
+      }
+      if (earliestIdx > 0) {
+        segs.add(_EffectStatusSegment(remaining.substring(0, earliestIdx)));
+      }
+      segs.add(_EffectStatusSegment(earliestName, emphasized: true));
+      remaining = remaining.substring(earliestIdx + earliestName.length);
+    }
+    return segs;
+  }
+
+  // Build 1-2 lines of styled status segments for the trick box.
+  List<List<_EffectStatusSegment>> _getEffectStatusLines(
+    LLGameStateData state,
+    GameService gs,
+    L10n l10n,
+  ) {
+    final effect = state.pendingEffect;
+    if (effect == null || state.phase != 'effect_resolve') return const [];
+
+    final actor = state.players
+        .firstWhere(
+          (p) => p.id == effect.playerId,
+          orElse: () => LLPlayer(id: '', name: '?'),
+        )
+        .name;
+    final targetName = effect.targetId != null
+        ? state.players
+              .firstWhere(
+                (p) => p.id == effect.targetId,
+                orElse: () => LLPlayer(id: '', name: '?'),
+              )
+              .name
+        : '';
+
+    final names = <String>[actor, if (targetName.isNotEmpty) targetName];
+    final lines = <List<_EffectStatusSegment>>[];
+    lines.add(
+      _splitNamesIntoSegments(
+        _getEffectDescription(effect.type, actor, l10n),
+        names,
+      ),
+    );
+
+    if (effect.resolved) {
+      final isMyEffect = effect.playerId == gs.playerId;
+      String result = '';
+      switch (effect.type) {
+        case 'guard':
+          if (effect.result != null) {
+            final correct = effect.result?['correct'] == true;
+            result = correct
+                ? l10n.llGuardCorrect(actor, targetName)
+                : l10n.llGuardWrong(actor, targetName);
+          }
+          break;
+        case 'spy':
+          // Server omits result for observers, but targetId is set.
+          if (effect.targetId != null) {
+            if (effect.targetId == gs.playerId && !isMyEffect) {
+              result = l10n.llSpySawYour(actor);
+            } else {
+              result = l10n.llSpyPeeked(actor, targetName);
+            }
+          }
+          break;
+        case 'baron':
+          if (effect.result != null) {
+            final loser = effect.result?['loser'];
+            if (loser == null) {
+              result = l10n.llBaronTie(actor, targetName);
+            } else {
+              final loserName = state.players
+                  .firstWhere(
+                    (p) => p.id == loser,
+                    orElse: () => LLPlayer(id: '', name: '?'),
+                  )
+                  .name;
+              result = l10n.llBaronLose(loserName);
+            }
+          }
+          break;
+        case 'prince':
+          if (effect.result != null) {
+            final eliminated = effect.result?['eliminated'] == true;
+            result = eliminated
+                ? l10n.llPrinceEliminated(targetName)
+                : l10n.llPrinceDiscard(targetName);
+          }
+          break;
+        case 'king':
+          result = l10n.llKingSwap(actor, targetName);
+          break;
+      }
+      if (result.isNotEmpty) {
+        lines.add(_splitNamesIntoSegments(result, names));
+      }
+    }
+
+    return lines;
   }
 
   String _getEffectDescription(String type, String actorName, L10n l10n) {
@@ -4372,6 +4753,12 @@ class _LLGameScreenState extends State<LLGameScreen> {
       ),
     );
   }
+}
+
+class _EffectStatusSegment {
+  final String text;
+  final bool emphasized;
+  const _EffectStatusSegment(this.text, {this.emphasized = false});
 }
 
 class _LLSeatLayout {

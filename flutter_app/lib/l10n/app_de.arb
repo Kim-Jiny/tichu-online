@@ -837,7 +837,7 @@
   "rulesLlFlowBody": "1. Entferne 1 Karte verdeckt aus dem Deck. (Bei 2 Spielern werden 3 zusätzliche Karten offen entfernt.)\n2. Teile jedem Spieler 1 Karte aus.\n3. Ziehe in deinem Zug 1 Karte vom Deck und spiele dann 1 deiner 2 Karten aus, um ihren Effekt auszulösen.\n4. Nach dem Effekt geht der Zug an den nächsten Spieler.\n5. Die Runde endet, wenn nur 1 Spieler übrig ist oder das Deck leer ist.",
 
   "rulesLlWinTitle": "Siegbedingung",
-  "rulesLlWinBody": "Am Ende der Runde gewinnt der überlebende Spieler mit der höchsten Karte (bei Gleichstand entscheidet die Gesamtkartensumme) ein Token.\n\nBenötigte Token zum Sieg:\n• 2 Spieler: 4 Token\n• 3 Spieler: 3 Token\n• 4 Spieler: 2 Token",
+  "rulesLlWinBody": "Am Ende der Runde gewinnt der überlebende Spieler mit der höchsten Karte ein Token. Bei Gleichstand (in dieser Reihenfolge):\n1. Höhere Gesamtsumme der in dieser Runde gespielten Karten gewinnt.\n2. Bleibt es gleich, gewinnen alle Gleichplatzierten ein Token.\n\nBenötigte Token zum Sieg:\n• 2 Spieler: 4 Token\n• 3 Spieler: 3 Token\n• 4 Spieler: 2 Token",
 
   "rulesTabMighty": "Mighty",
   "rulesMtGoalTitle": "Spielziel",
@@ -1315,6 +1315,7 @@
   "@llKingSwap": { "placeholders": { "actor": { "type": "String" }, "target": { "type": "String" } } },
   "llEliminated": "RAUS",
   "llSetAsideFaceUp": "Beiseitegelegt (offen)",
+  "llSetAsideHidden": "Beiseitegelegt (verdeckt)",
   "llPlayed": "Gespielt:",
   "llCardGuard": "Wache",
   "llCardSpy": "Spion",

@@ -2489,7 +2489,7 @@ class L10nKo extends L10n {
 
   @override
   String get rulesLlWinBody =>
-      '라운드 종료 시 생존자 중 가장 높은 카드를 가진 플레이어(동점 시 카드 숫자 합이 높은 쪽)가 토큰을 획득합니다.\n\n필요 토큰 수:\n• 2인: 4토큰\n• 3인: 3토큰\n• 4인: 2토큰';
+      '라운드 종료 시 생존자 중 가장 높은 카드를 가진 플레이어가 토큰을 획득합니다. 동률 시 처리 순서:\n1. 그 라운드 동안 낸 카드들의 숫자 합이 더 큰 쪽이 승리.\n2. 그것도 같으면 동률인 모두가 토큰 획득.\n\n필요 토큰 수:\n• 2인: 4토큰\n• 3인: 3토큰\n• 4인: 2토큰';
 
   @override
   String get rulesTabMighty => '마이티';
@@ -3742,6 +3742,9 @@ class L10nKo extends L10n {
 
   @override
   String get llSetAsideFaceUp => '공개 제외 카드';
+
+  @override
+  String get llSetAsideHidden => '비공개 제외 카드';
 
   @override
   String get llPlayed => '사용한 카드:';

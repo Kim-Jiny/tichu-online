@@ -4389,6 +4389,12 @@ abstract class L10n {
   /// **'Expansions (Optional)'**
   String get rulesSkExpansionTitle;
 
+  /// No description provided for @skGameIncludedExpansions.
+  ///
+  /// In en, this message translates to:
+  /// **'Included Expansions'**
+  String get skGameIncludedExpansions;
+
   /// No description provided for @rulesSkExpansionBody.
   ///
   /// In en, this message translates to:

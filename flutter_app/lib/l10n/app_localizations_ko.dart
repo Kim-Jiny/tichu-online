@@ -2327,6 +2327,9 @@ class L10nKo extends L10n {
   String get rulesSkExpansionTitle => '확장팩 (선택)';
 
   @override
+  String get skGameIncludedExpansions => '포함된 확장팩';
+
+  @override
   String get rulesSkExpansionBody =>
       '방 생성 시 각 확장팩을 개별적으로 선택할 수 있습니다. 확장팩 카드는 기본 덱에 추가로 섞입니다.';
 

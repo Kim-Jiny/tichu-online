@@ -2392,6 +2392,9 @@ class L10nDe extends L10n {
   String get rulesSkExpansionTitle => 'Erweiterungen (Optional)';
 
   @override
+  String get skGameIncludedExpansions => 'Enthaltene Erweiterungen';
+
+  @override
   String get rulesSkExpansionBody =>
       'Jede Erweiterung kann beim Erstellen eines Raums einzeln ausgewählt werden. Erweiterungskarten werden in das Basisdeck gemischt.';
 

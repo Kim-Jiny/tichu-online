@@ -1128,6 +1128,7 @@
   "rulesSkWinBody": "After all 10 rounds, the player with the highest cumulative score wins.",
 
   "rulesSkExpansionTitle": "Expansions (Optional)",
+  "skGameIncludedExpansions": "Included Expansions",
   "rulesSkExpansionBody": "Each expansion can be individually selected when creating a room. Expansion cards are shuffled into the base deck.",
   "rulesSkExpKraken": "\uD83D\uDC19 Kraken",
   "rulesSkExpKrakenDesc": "A trick containing the Kraken is voided. No one wins the trick and no bonuses are awarded. The player who would have won without the Kraken leads the next trick.",

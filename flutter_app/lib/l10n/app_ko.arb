@@ -774,6 +774,7 @@
   "rulesSkWinBody": "10 라운드가 모두 끝난 후 누적 점수가 가장 높은 플레이어가 승리합니다.",
 
   "rulesSkExpansionTitle": "확장팩 (선택)",
+  "skGameIncludedExpansions": "포함된 확장팩",
   "rulesSkExpansionBody": "방 생성 시 각 확장팩을 개별적으로 선택할 수 있습니다. 확장팩 카드는 기본 덱에 추가로 섞입니다.",
   "rulesSkExpKraken": "🐙 크라켄",
   "rulesSkExpKrakenDesc": "크라켄이 포함된 트릭은 무효가 됩니다. 아무도 트릭을 얻지 못하고 보너스도 지급되지 않습니다. 크라켄이 없었다면 이겼을 플레이어가 다음 트릭을 리드합니다.",

@@ -2381,6 +2381,9 @@ class L10nEn extends L10n {
   String get rulesSkExpansionTitle => 'Expansions (Optional)';
 
   @override
+  String get skGameIncludedExpansions => 'Included Expansions';
+
+  @override
   String get rulesSkExpansionBody =>
       'Each expansion can be individually selected when creating a room. Expansion cards are shuffled into the base deck.';
 

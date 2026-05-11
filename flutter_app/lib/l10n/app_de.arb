@@ -782,6 +782,7 @@
   "rulesSkWinBody": "Nach allen 10 Runden gewinnt der Spieler mit der höchsten Gesamtpunktzahl.",
 
   "rulesSkExpansionTitle": "Erweiterungen (Optional)",
+  "skGameIncludedExpansions": "Enthaltene Erweiterungen",
   "rulesSkExpansionBody": "Jede Erweiterung kann beim Erstellen eines Raums einzeln ausgewählt werden. Erweiterungskarten werden in das Basisdeck gemischt.",
   "rulesSkExpKraken": "\uD83D\uDC19 Kraken",
   "rulesSkExpKrakenDesc": "Ein Stich mit dem Kraken wird ungültig. Niemand gewinnt den Stich und keine Boni werden vergeben. Der Spieler, der ohne Kraken gewonnen hätte, führt den nächsten Stich an.",

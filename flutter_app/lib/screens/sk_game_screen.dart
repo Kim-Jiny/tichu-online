@@ -1749,7 +1749,7 @@ class _SKGameScreenState extends State<SKGameScreen> {
               ),
               const SizedBox(height: 12),
               Text(
-                l10n.rulesSkExpansionTitle,
+                l10n.skGameIncludedExpansions,
                 style: const TextStyle(
                   color: Color(0xFF5A4038),
                   fontSize: 17,

@@ -2553,6 +2553,12 @@ class GameService extends ChangeNotifier {
 
   void leaveRoom() {
     _network.send({'type': 'leave_room'});
+    // If we're offline the send is a no-op and the server can't reply with
+    // a state change. Clear locally so the user isn't stranded on a stale
+    // game screen with no way out.
+    if (!_network.isConnected) {
+      _clearRoomState();
+    }
   }
 
   void leaveGame() {

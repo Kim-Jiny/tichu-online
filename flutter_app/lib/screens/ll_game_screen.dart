@@ -100,9 +100,11 @@ class _LLGameScreenState extends State<LLGameScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Consumer<GameService>(
-      builder: (context, gs, _) {
-        final llState = gs.llGameState;
+    return PopScope(
+      canPop: false,
+      child: Consumer<GameService>(
+        builder: (context, gs, _) {
+          final llState = gs.llGameState;
 
         // Waiting room or no game state yet
         if (llState == null) {
@@ -195,6 +197,7 @@ class _LLGameScreenState extends State<LLGameScreen> {
           ),
         );
       },
+      ),
     );
   }
 

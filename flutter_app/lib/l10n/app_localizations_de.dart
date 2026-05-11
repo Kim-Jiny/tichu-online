@@ -3891,6 +3891,9 @@ class L10nDe extends L10n {
   String get llCardGuideTitle => 'Kartenübersicht';
 
   @override
+  String get llGuardPeek => 'Schauen';
+
+  @override
   String llDiscardedCardsTitle(String playerName) {
     return 'Abgelegte Karten von $playerName';
   }

@@ -3774,6 +3774,9 @@ class L10nKo extends L10n {
   String get llCardGuideTitle => '카드 설명';
 
   @override
+  String get llGuardPeek => '보기';
+
+  @override
   String llDiscardedCardsTitle(String playerName) {
     return '$playerName 사용 카드';
   }

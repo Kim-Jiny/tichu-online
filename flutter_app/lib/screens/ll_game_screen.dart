@@ -22,6 +22,9 @@ class _LLGameScreenState extends State<LLGameScreen> {
   String? _selectedCard;
   String? _selectedTarget;
   String? _selectedGuess;
+  String? _viewingPlayerId;
+  bool _guardPeekActive = false;
+  bool _viewersOpen = false;
   bool _chatOpen = false;
   bool _soundPanelOpen = false;
   int _readChatCount = 0;
@@ -31,6 +34,7 @@ class _LLGameScreenState extends State<LLGameScreen> {
 
   Timer? _countdownTimer;
   Timer? _gameEndCountdownTimer;
+  Timer? _cardViewRequestTimer;
   int _remainingSeconds = 0;
   int _gameEndCountdown = 3;
   bool _gameEndCountdownActive = false;
@@ -68,6 +72,7 @@ class _LLGameScreenState extends State<LLGameScreen> {
 
   @override
   void dispose() {
+    _cardViewRequestTimer?.cancel();
     _countdownTimer?.cancel();
     _gameEndCountdownTimer?.cancel();
     _chatController.dispose();
@@ -178,6 +183,9 @@ class _LLGameScreenState extends State<LLGameScreen> {
                         bottom: 0,
                         child: _buildEffectResolve(context, gs, llState),
                       ),
+                    if (gs.hasIncomingCardViewRequests)
+                      _buildCardViewRequestPopup(gs),
+                    if (_viewersOpen) _buildViewersPanel(gs),
                     if (_soundPanelOpen) _buildSoundPanel(gs),
                     if (_chatOpen) _buildChatPanel(context, gs),
                   ],
@@ -554,6 +562,7 @@ class _LLGameScreenState extends State<LLGameScreen> {
     final l10n = L10n.of(context);
     final unread = gs.chatMessages.length - _readChatCount;
     final hasMuted = gs.sfxVolume <= 0.01;
+    final hasViewers = gs.cardViewers.isNotEmpty;
 
     return Container(
       decoration: BoxDecoration(
@@ -637,13 +646,36 @@ class _LLGameScreenState extends State<LLGameScreen> {
               });
             },
           ),
+          if (!gs.isSpectator) ...[
+            const SizedBox(width: 6),
+            _buildTopActionButton(
+              icon: Icons.visibility,
+              active: _viewersOpen,
+              badgeCount: gs.cardViewers.length,
+              iconColor: hasViewers
+                  ? const Color(0xFF6A9BD1)
+                  : const Color(0xFF5A4038),
+              onTap: () {
+                setState(() {
+                  _viewersOpen = !_viewersOpen;
+                  if (_viewersOpen) {
+                    _chatOpen = false;
+                    _soundPanelOpen = false;
+                  }
+                });
+              },
+            ),
+          ],
           const SizedBox(width: 6),
           _buildTopActionButton(
             icon: Icons.exit_to_app,
             active: false,
             iconColor: const Color(0xFFE53935),
             onTap: () {
-              setState(() => _soundPanelOpen = false);
+              setState(() {
+                _soundPanelOpen = false;
+                _viewersOpen = false;
+              });
               _showExitDialog(context, gs);
             },
           ),
@@ -763,6 +795,107 @@ class _LLGameScreenState extends State<LLGameScreen> {
     );
   }
 
+  Widget _buildViewersPanel(GameService game) {
+    return Positioned(
+      top: 54,
+      right: 8,
+      child: Container(
+        width: 220,
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(
+          color: Colors.white.withValues(alpha: 0.97),
+          borderRadius: BorderRadius.circular(14),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.15),
+              blurRadius: 8,
+              offset: const Offset(0, 3),
+            ),
+          ],
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Row(
+              children: [
+                const Icon(
+                  Icons.visibility,
+                  size: 18,
+                  color: Color(0xFF6A9BD1),
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    L10n.of(context).gameViewingMyCards,
+                    style: const TextStyle(
+                      fontSize: 13,
+                      fontWeight: FontWeight.bold,
+                      color: Color(0xFF5A4038),
+                    ),
+                  ),
+                ),
+                GestureDetector(
+                  onTap: () => setState(() => _viewersOpen = false),
+                  child: const Icon(
+                    Icons.close,
+                    size: 18,
+                    color: Color(0xFF999999),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 8),
+            if (game.cardViewers.isEmpty)
+              Text(
+                L10n.of(context).skGameNoViewers,
+                style: const TextStyle(fontSize: 12, color: Color(0xFF999999)),
+              )
+            else
+              ...game.cardViewers.map((viewer) {
+                final nickname = viewer['nickname'] ?? '';
+                final spectatorId = viewer['id'] ?? '';
+                return Padding(
+                  padding: const EdgeInsets.only(bottom: 6),
+                  child: Row(
+                    children: [
+                      const Icon(
+                        Icons.person,
+                        size: 16,
+                        color: Color(0xFF888888),
+                      ),
+                      const SizedBox(width: 6),
+                      Expanded(
+                        child: Text(
+                          nickname,
+                          style: const TextStyle(fontSize: 13),
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                      GestureDetector(
+                        onTap: () => game.revokeCardView(spectatorId),
+                        child: Container(
+                          padding: const EdgeInsets.all(4),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFFFEBEE),
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: const Icon(
+                            Icons.close,
+                            size: 14,
+                            color: Color(0xFFE53935),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                );
+              }),
+          ],
+        ),
+      ),
+    );
+  }
+
   // ====================== GAME AREA ======================
 
   Widget _buildGameArea(
@@ -790,7 +923,7 @@ class _LLGameScreenState extends State<LLGameScreen> {
               !gs.isSpectator && visiblePlayers.length == 3;
           final centerX = width / 2;
           final centerY = gs.isSpectator ? height * 0.50 : height * 0.45;
-          final seatWidth = gs.isSpectator ? 128.0 : 140.0;
+          final seatWidth = gs.isSpectator ? 116.0 : 126.0;
           final seatHeight = gs.isSpectator ? 104.0 : 114.0;
           final maxSeatRadiusX = math.max(0.0, centerX - seatWidth / 2 - 10);
           final seatRadiusX = math.min(
@@ -847,7 +980,7 @@ class _LLGameScreenState extends State<LLGameScreen> {
                   alignment: Alignment(
                     0,
                     gs.isSpectator
-                        ? 0.08
+                        ? (visiblePlayers.length == 3 ? 0.32 : 0.08)
                         : (isThreeOpponentPlayLayout ? 0.26 : 0.12),
                   ),
                   child: _buildCenterBoard(context, state),
@@ -859,12 +992,14 @@ class _LLGameScreenState extends State<LLGameScreen> {
                   top: seat.top,
                   width: seat.width,
                   height: seat.height,
-                  child: _buildPlayerSeatCard(
-                    context,
-                    state,
-                    seat.player,
-                    compact: seat.compact,
-                  ),
+                  child: gs.isSpectator
+                      ? _buildSpectatorSeat(state, gs, seat)
+                      : _buildPlayerSeatCard(
+                          context,
+                          state,
+                          seat.player,
+                          compact: seat.compact,
+                        ),
                 ),
               for (final seat in seatLayouts)
                 if (seat.player.discardPile.isNotEmpty)
@@ -882,7 +1017,7 @@ class _LLGameScreenState extends State<LLGameScreen> {
                       child: _buildSeatDiscardPreview(
                         context: context,
                         playerName: seat.player.name,
-                        cards: seat.player.discardPile.reversed.toList(),
+                        cards: seat.player.discardPile.toList(),
                         availableWidth: previewRect.width,
                         cardWidth: seat.discardCardWidth,
                         cardHeight: seat.discardCardHeight,
@@ -1026,11 +1161,170 @@ class _LLGameScreenState extends State<LLGameScreen> {
     );
   }
 
+  Widget _buildCardViewRequestPopup(GameService game) {
+    final request = game.firstIncomingCardViewRequest;
+    if (request == null) return const SizedBox.shrink();
+
+    final spectatorId = request['spectatorId'] ?? '';
+    final spectatorNickname = request['spectatorNickname'] ?? '?';
+
+    return Positioned(
+      left: 16,
+      right: 16,
+      top: 72,
+      child: Material(
+        color: Colors.transparent,
+        child: Container(
+          padding: const EdgeInsets.all(14),
+          decoration: BoxDecoration(
+            color: const Color(0xFFF3F7FF).withValues(alpha: 0.98),
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(color: const Color(0xFFCBDCF7)),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.10),
+                blurRadius: 12,
+                offset: const Offset(0, 4),
+              ),
+            ],
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Row(
+                children: [
+                  const Icon(Icons.visibility, color: Color(0xFF6A9BD1)),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      L10n.of(context).skGameCardViewRequest(spectatorNickname),
+                      style: const TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.bold,
+                        color: Color(0xFF4A4080),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 12),
+              Row(
+                children: [
+                  Expanded(
+                    child: OutlinedButton(
+                      onPressed: () =>
+                          game.respondCardViewRequest(spectatorId, false),
+                      style: OutlinedButton.styleFrom(
+                        foregroundColor: const Color(0xFFCC6666),
+                        side: const BorderSide(color: Color(0xFFCC6666)),
+                        padding: const EdgeInsets.symmetric(vertical: 10),
+                      ),
+                      child: Text(L10n.of(context).skGameReject),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: ElevatedButton(
+                      onPressed: () =>
+                          game.respondCardViewRequest(spectatorId, true),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: const Color(0xFF6A9BD1),
+                        foregroundColor: Colors.white,
+                        padding: const EdgeInsets.symmetric(vertical: 10),
+                      ),
+                      child: Text(L10n.of(context).skGameAllow),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 8),
+              Row(
+                children: [
+                  Expanded(
+                    child: OutlinedButton(
+                      onPressed: game.rejectAllCardViewRequests,
+                      style: OutlinedButton.styleFrom(
+                        foregroundColor: const Color(0xFF999999),
+                        side: const BorderSide(color: Color(0xFFCCCCCC)),
+                        padding: const EdgeInsets.symmetric(vertical: 10),
+                      ),
+                      child: Text(
+                        L10n.of(context).skGameAlwaysReject,
+                        style: const TextStyle(fontSize: 13),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: OutlinedButton(
+                      onPressed: () {
+                        game.respondCardViewRequest(spectatorId, true);
+                        game.setAutoAcceptCardView(true);
+                      },
+                      style: OutlinedButton.styleFrom(
+                        foregroundColor: const Color(0xFF4CAF50),
+                        side: const BorderSide(color: Color(0xFF4CAF50)),
+                        padding: const EdgeInsets.symmetric(vertical: 10),
+                      ),
+                      child: Text(
+                        L10n.of(context).skGameAlwaysAccept,
+                        style: const TextStyle(fontSize: 13),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildSpectatorSeat(
+    LLGameStateData state,
+    GameService game,
+    _LLSeatLayout seat,
+  ) {
+    final p = seat.player;
+    final isPending = game.pendingCardViewRequests.contains(p.id);
+    final isApproved = game.approvedCardViews.contains(p.id) && p.canViewCards;
+    final isViewing = _viewingPlayerId == p.id && isApproved;
+
+    return GestureDetector(
+      onTap: () {
+        if (isApproved) {
+          setState(() {
+            _viewingPlayerId = _viewingPlayerId == p.id ? null : p.id;
+          });
+        } else if (isPending) {
+          return;
+        } else {
+          _cardViewRequestTimer?.cancel();
+          game.requestCardView(p.id);
+          setState(() => _viewingPlayerId = p.id);
+          _cardViewRequestTimer = Timer(const Duration(seconds: 5), () {
+            if (!mounted) return;
+            game.expireCardViewRequest(p.id);
+          });
+        }
+      },
+      child: _buildPlayerSeatCard(
+        context,
+        state,
+        p,
+        compact: seat.compact,
+        highlighted: isViewing,
+      ),
+    );
+  }
+
   Widget _buildPlayerSeatCard(
     BuildContext context,
     LLGameStateData state,
     LLPlayer player, {
     required bool compact,
+    bool highlighted = false,
   }) {
     final isCurrent = player.id == state.currentPlayer;
 
@@ -1064,6 +1358,8 @@ class _LLGameScreenState extends State<LLGameScreen> {
         final showCardCountChip = !player.eliminated && !ultraTight;
         final labelTint = player.eliminated
             ? const Color(0xFFE9DFDE).withValues(alpha: 0.78)
+            : highlighted
+            ? const Color(0xFFFFF0C9).withValues(alpha: 0.94)
             : isCurrent
             ? const Color(0xFFFFF0C9).withValues(alpha: 0.88)
             : const Color(0xFFFFFCFA).withValues(alpha: 0.62);
@@ -1486,8 +1782,12 @@ class _LLGameScreenState extends State<LLGameScreen> {
       );
     }
 
+    final isGuardActionPanel =
+        isMyEffect && effect.type == 'guard' && effect.needsGuess;
     return Container(
-      color: Colors.black.withValues(alpha: 0.3),
+      color: Colors.black.withValues(
+        alpha: isGuardActionPanel ? (_guardPeekActive ? 0.02 : 0.10) : 0.3,
+      ),
       padding: const EdgeInsets.only(bottom: 8),
       child: content,
     );
@@ -1501,88 +1801,125 @@ class _LLGameScreenState extends State<LLGameScreen> {
   ) {
     final l10n = L10n.of(context);
 
-    return Container(
-      margin: const EdgeInsets.all(12),
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: 0.95),
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: const Color(0xFFE0D8D4)),
-      ),
-      child: Column(
-        children: [
-          Text(
-            l10n.llGuardSelectTarget,
-            style: const TextStyle(
-              color: Color(0xFFE91E63),
-              fontSize: 14,
-              fontWeight: FontWeight.bold,
-            ),
-          ),
-          const SizedBox(height: 8),
-          // Target buttons
-          Wrap(
-            spacing: 8,
-            runSpacing: 6,
-            children: effect.validTargets.map((targetId) {
-              final player = state.players.firstWhere(
-                (p) => p.id == targetId,
-                orElse: () => LLPlayer(id: targetId, name: targetId),
-              );
-              final isSelected = _selectedTarget == targetId;
-              return GestureDetector(
-                onTap: () => setState(() => _selectedTarget = targetId),
-                child: Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 12,
-                    vertical: 6,
-                  ),
-                  decoration: BoxDecoration(
-                    color: isSelected ? Colors.amber : const Color(0xFFF0EBE8),
-                    borderRadius: BorderRadius.circular(20),
-                    border: Border.all(
-                      color: isSelected
-                          ? Colors.amber
-                          : const Color(0xFFE0D8D4),
-                    ),
-                  ),
+    return AnimatedOpacity(
+      duration: const Duration(milliseconds: 120),
+      opacity: _guardPeekActive ? 0.34 : 1.0,
+      child: Container(
+        margin: const EdgeInsets.all(12),
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(
+          color: Colors.white.withValues(alpha: 0.95),
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: const Color(0xFFE0D8D4)),
+        ),
+        child: Column(
+          children: [
+            Row(
+              children: [
+                Expanded(
                   child: Text(
-                    player.name,
-                    style: TextStyle(
-                      color: isSelected
-                          ? Colors.black
-                          : const Color(0xFF5A4038),
-                      fontSize: 13,
-                      fontWeight: FontWeight.w600,
+                    l10n.llGuardSelectTarget,
+                    style: const TextStyle(
+                      color: Color(0xFFE91E63),
+                      fontSize: 14,
+                      fontWeight: FontWeight.bold,
                     ),
                   ),
                 ),
-              );
-            }).toList(),
-          ),
-          const SizedBox(height: 12),
-          Text(
-            l10n.llGuardGuessCard,
-            style: const TextStyle(color: Color(0xFFE91E63), fontSize: 13),
-          ),
-          const SizedBox(height: 8),
-          _buildGuardGuessGrid(context, state),
-          const SizedBox(height: 12),
-          ElevatedButton(
-            onPressed: (_selectedTarget != null && _selectedGuess != null)
-                ? () {
-                    gs.llGuardGuess(_selectedTarget!, _selectedGuess!);
-                    _selectedTarget = null;
-                    _selectedGuess = null;
-                  }
-                : null,
-            style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.amber,
-              foregroundColor: Colors.black,
+                if (_remainingSeconds > 0)
+                  Container(
+                    margin: const EdgeInsets.only(right: 8),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 7,
+                      vertical: 3,
+                    ),
+                    decoration: BoxDecoration(
+                      color: _remainingSeconds <= 5
+                          ? Colors.red.shade900
+                          : Colors.amber.withValues(alpha: 0.22),
+                      borderRadius: BorderRadius.circular(999),
+                    ),
+                    child: Text(
+                      '${_remainingSeconds}s',
+                      style: TextStyle(
+                        color: _remainingSeconds <= 5
+                            ? Colors.redAccent
+                            : Colors.amber.shade900,
+                        fontSize: 11,
+                        fontWeight: FontWeight.w800,
+                      ),
+                    ),
+                  ),
+                _buildGuardPeekButton(context),
+              ],
             ),
-            child: Text(l10n.llConfirm),
-          ),
-        ],
+            const SizedBox(height: 8),
+            // Target buttons
+            Wrap(
+              spacing: 8,
+              runSpacing: 6,
+              children: effect.validTargets.map((targetId) {
+                final player = state.players.firstWhere(
+                  (p) => p.id == targetId,
+                  orElse: () => LLPlayer(id: targetId, name: targetId),
+                );
+                final isSelected = _selectedTarget == targetId;
+                return GestureDetector(
+                  onTap: () => setState(() => _selectedTarget = targetId),
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 12,
+                      vertical: 6,
+                    ),
+                    decoration: BoxDecoration(
+                      color: isSelected
+                          ? Colors.amber
+                          : const Color(0xFFF0EBE8),
+                      borderRadius: BorderRadius.circular(20),
+                      border: Border.all(
+                        color: isSelected
+                            ? Colors.amber
+                            : const Color(0xFFE0D8D4),
+                      ),
+                    ),
+                    child: Text(
+                      player.name,
+                      style: TextStyle(
+                        color: isSelected
+                            ? Colors.black
+                            : const Color(0xFF5A4038),
+                        fontSize: 13,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ),
+                );
+              }).toList(),
+            ),
+            const SizedBox(height: 12),
+            Text(
+              l10n.llGuardGuessCard,
+              style: const TextStyle(color: Color(0xFFE91E63), fontSize: 13),
+            ),
+            const SizedBox(height: 8),
+            _buildGuardGuessGrid(context, state),
+            const SizedBox(height: 12),
+            ElevatedButton(
+              onPressed: (_selectedTarget != null && _selectedGuess != null)
+                  ? () {
+                      gs.llGuardGuess(_selectedTarget!, _selectedGuess!);
+                      _selectedTarget = null;
+                      _selectedGuess = null;
+                    }
+                  : null,
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.amber,
+                foregroundColor: Colors.black,
+              ),
+              child: Text(l10n.llConfirm),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -1601,41 +1938,111 @@ class _LLGameScreenState extends State<LLGameScreen> {
         )
         .name;
 
-    return Container(
-      margin: const EdgeInsets.all(12),
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: 0.95),
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: const Color(0xFFE0D8D4)),
+    return AnimatedOpacity(
+      duration: const Duration(milliseconds: 120),
+      opacity: _guardPeekActive ? 0.34 : 1.0,
+      child: Container(
+        margin: const EdgeInsets.all(12),
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(
+          color: Colors.white.withValues(alpha: 0.95),
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: const Color(0xFFE0D8D4)),
+        ),
+        child: Column(
+          children: [
+            Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    '${l10n.llGuardGuessCard} ($targetName)',
+                    style: const TextStyle(
+                      color: Color(0xFFE91E63),
+                      fontSize: 14,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ),
+                if (_remainingSeconds > 0)
+                  Container(
+                    margin: const EdgeInsets.only(right: 8),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 7,
+                      vertical: 3,
+                    ),
+                    decoration: BoxDecoration(
+                      color: _remainingSeconds <= 5
+                          ? Colors.red.shade900
+                          : Colors.amber.withValues(alpha: 0.22),
+                      borderRadius: BorderRadius.circular(999),
+                    ),
+                    child: Text(
+                      '${_remainingSeconds}s',
+                      style: TextStyle(
+                        color: _remainingSeconds <= 5
+                            ? Colors.redAccent
+                            : Colors.amber.shade900,
+                        fontSize: 11,
+                        fontWeight: FontWeight.w800,
+                      ),
+                    ),
+                  ),
+                _buildGuardPeekButton(context),
+              ],
+            ),
+            const SizedBox(height: 8),
+            _buildGuardGuessGrid(context, state),
+            const SizedBox(height: 12),
+            ElevatedButton(
+              onPressed: _selectedGuess != null
+                  ? () {
+                      gs.llGuardGuess(effect.targetId!, _selectedGuess!);
+                      _selectedGuess = null;
+                    }
+                  : null,
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.amber,
+                foregroundColor: Colors.black,
+              ),
+              child: Text(l10n.llConfirm),
+            ),
+          ],
+        ),
       ),
-      child: Column(
-        children: [
-          Text(
-            '${l10n.llGuardGuessCard} ($targetName)',
-            style: const TextStyle(
-              color: Color(0xFFE91E63),
-              fontSize: 14,
-              fontWeight: FontWeight.bold,
+    );
+  }
+
+  Widget _buildGuardPeekButton(BuildContext context) {
+    return Listener(
+      onPointerDown: (_) => setState(() => _guardPeekActive = true),
+      onPointerUp: (_) => setState(() => _guardPeekActive = false),
+      onPointerCancel: (_) => setState(() => _guardPeekActive = false),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+        decoration: BoxDecoration(
+          color: const Color(0xFFF3ECE8),
+          borderRadius: BorderRadius.circular(10),
+          border: Border.all(color: const Color(0xFFE0D8D4)),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Icon(
+              Icons.visibility_outlined,
+              size: 14,
+              color: Color(0xFF8A7A72),
             ),
-          ),
-          const SizedBox(height: 8),
-          _buildGuardGuessGrid(context, state),
-          const SizedBox(height: 12),
-          ElevatedButton(
-            onPressed: _selectedGuess != null
-                ? () {
-                    gs.llGuardGuess(effect.targetId!, _selectedGuess!);
-                    _selectedGuess = null;
-                  }
-                : null,
-            style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.amber,
-              foregroundColor: Colors.black,
+            const SizedBox(width: 4),
+            Text(
+              L10n.of(context).llGuardPeek,
+              style: const TextStyle(
+                color: Color(0xFF8A7A72),
+                fontSize: 11,
+                fontWeight: FontWeight.w700,
+              ),
             ),
-            child: Text(l10n.llConfirm),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
@@ -2328,7 +2735,7 @@ class _LLGameScreenState extends State<LLGameScreen> {
     if (state.phase == 'game_end' || state.phase == 'round_end') {
       return const SizedBox.shrink();
     }
-    if (gs.isSpectator) return const SizedBox.shrink();
+    if (gs.isSpectator) return _buildSpectatorHandArea(state, gs);
 
     final selfPlayer = state.players.firstWhere(
       (p) => p.position == 'self',
@@ -2532,6 +2939,149 @@ class _LLGameScreenState extends State<LLGameScreen> {
         ],
       ),
     );
+  }
+
+  Widget _buildSpectatorHandArea(LLGameStateData state, GameService game) {
+    final viewingPlayer = _viewingPlayerId == null
+        ? null
+        : state.players.cast<LLPlayer?>().firstWhere(
+            (p) => p?.id == _viewingPlayerId,
+            orElse: () => null,
+          );
+    final isApproved =
+        viewingPlayer != null &&
+        game.approvedCardViews.contains(viewingPlayer.id) &&
+        viewingPlayer.canViewCards;
+    final isPending =
+        viewingPlayer != null &&
+        game.pendingCardViewRequests.contains(viewingPlayer.id);
+
+    if (viewingPlayer == null) {
+      return Container(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+        decoration: BoxDecoration(
+          color: Colors.white.withValues(alpha: 0.85),
+          borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+          border: const Border(top: BorderSide(color: Color(0xFFE0D8D4))),
+        ),
+        child: Text(
+          L10n.of(context).skGameTapToRequestCards,
+          textAlign: TextAlign.center,
+          style: const TextStyle(
+            color: Color(0xFF8A7A72),
+            fontSize: 13,
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+      );
+    }
+
+    if (isPending && !isApproved) {
+      return Container(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+        decoration: BoxDecoration(
+          color: Colors.white.withValues(alpha: 0.85),
+          borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+          border: const Border(top: BorderSide(color: Color(0xFFE0D8D4))),
+        ),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            const SizedBox(
+              width: 14,
+              height: 14,
+              child: CircularProgressIndicator(
+                strokeWidth: 2,
+                color: Color(0xFFFFB74D),
+              ),
+            ),
+            const SizedBox(width: 8),
+            Text(
+              L10n.of(context).skGameRequestingCardView(viewingPlayer.name),
+              style: const TextStyle(
+                color: Color(0xFF8A7A72),
+                fontSize: 13,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+
+    if (isApproved) {
+      return Container(
+        padding: const EdgeInsets.fromLTRB(8, 8, 8, 12),
+        decoration: BoxDecoration(
+          color: Colors.white.withValues(alpha: 0.92),
+          borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+          border: const Border(top: BorderSide(color: Color(0xFFE0D8D4))),
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Padding(
+              padding: const EdgeInsets.only(bottom: 4),
+              child: Row(
+                children: [
+                  const SizedBox(width: 32),
+                  Expanded(
+                    child: Text(
+                      L10n.of(context).skGamePlayerHand(viewingPlayer.name),
+                      textAlign: TextAlign.center,
+                      style: const TextStyle(
+                        color: Color(0xFF5A4038),
+                        fontSize: 13,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                  ),
+                  SizedBox(
+                    width: 32,
+                    height: 32,
+                    child: IconButton(
+                      tooltip: MaterialLocalizations.of(
+                        context,
+                      ).closeButtonTooltip,
+                      padding: EdgeInsets.zero,
+                      splashRadius: 18,
+                      icon: const Icon(
+                        Icons.close,
+                        size: 18,
+                        color: Color(0xFF8A7A72),
+                      ),
+                      onPressed: () => setState(() => _viewingPlayerId = null),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            SingleChildScrollView(
+              scrollDirection: Axis.horizontal,
+              child: Row(
+                children: viewingPlayer.cards
+                    .map(
+                      (cardId) => Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 3),
+                        child: LoveLetterCard(
+                          cardId: cardId,
+                          width: 52,
+                          height: 74,
+                          borderRadius: 11,
+                          compact: true,
+                          isInteractive: false,
+                        ),
+                      ),
+                    )
+                    .toList(),
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+
+    return const SizedBox.shrink();
   }
 
   // ====================== CHAT ======================

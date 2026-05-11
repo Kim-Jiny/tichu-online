@@ -1768,6 +1768,7 @@
   "llCardPrincess": "Princess",
 
   "llCardGuideTitle": "Card Guide",
+  "llGuardPeek": "Peek",
   "llDiscardedCardsTitle": "{playerName}'s discards",
   "@llDiscardedCardsTitle": {
     "placeholders": {

@@ -1185,6 +1185,7 @@
   "serviceAdRewardSuccess": "50 Gold erhalten! (Verbleibend: {remaining})",
 
   "llCardGuideTitle": "Kartenübersicht",
+  "llGuardPeek": "Schauen",
   "llDiscardedCardsTitle": "Abgelegte Karten von {playerName}",
   "llDescGuard": "1 · Wache: Nenne einen Spieler und rate seine Karte. Richtig = eliminiert!",
   "llDescSpy": "2 · Spion: Sieh dir heimlich die Karte eines Spielers an.",

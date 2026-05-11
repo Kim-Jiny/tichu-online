@@ -1244,6 +1244,7 @@
   "llCardPrincess": "공주",
 
   "llCardGuideTitle": "카드 설명",
+  "llGuardPeek": "보기",
   "llDiscardedCardsTitle": "{playerName} 사용 카드",
   "llDescGuard": "1 · 가드: 상대를 지목하고 카드를 추측합니다. 맞으면 탈락!",
   "llDescSpy": "2 · 스파이: 상대의 카드를 몰래 확인합니다.",

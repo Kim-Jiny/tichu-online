@@ -6921,6 +6921,12 @@ abstract class L10n {
   /// **'Card Guide'**
   String get llCardGuideTitle;
 
+  /// No description provided for @llGuardPeek.
+  ///
+  /// In en, this message translates to:
+  /// **'Peek'**
+  String get llGuardPeek;
+
   /// No description provided for @llDiscardedCardsTitle.
   ///
   /// In en, this message translates to:

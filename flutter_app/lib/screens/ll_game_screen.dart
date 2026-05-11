@@ -786,54 +786,111 @@ class _LLGameScreenState extends State<LLGameScreen> {
           final visiblePlayers = gs.isSpectator
               ? state.players
               : state.players.where((p) => p.position != 'self').toList();
+          final isThreeOpponentPlayLayout =
+              !gs.isSpectator && visiblePlayers.length == 3;
           final centerX = width / 2;
           final centerY = gs.isSpectator ? height * 0.50 : height * 0.45;
-          final seatWidth = gs.isSpectator ? 116.0 : 122.0;
-          final seatHeight = gs.isSpectator ? 112.0 : 118.0;
+          final seatWidth = gs.isSpectator ? 128.0 : 140.0;
+          final seatHeight = gs.isSpectator ? 104.0 : 114.0;
           final maxSeatRadiusX = math.max(0.0, centerX - seatWidth / 2 - 10);
           final seatRadiusX = math.min(
-            width * (gs.isSpectator ? 0.39 : 0.36),
+            width * (gs.isSpectator ? 0.41 : 0.39),
             maxSeatRadiusX,
           );
           final maxSeatRadiusY = math.max(0.0, centerY - seatHeight / 2 - 8);
           final seatRadiusY = math.min(
-            height * (gs.isSpectator ? 0.34 : 0.30),
+            height * (gs.isSpectator ? 0.35 : 0.32),
             maxSeatRadiusY,
           );
+          final seatLayouts = <_LLSeatLayout>[];
+
+          for (int i = 0; i < visiblePlayers.length; i++) {
+            final player = visiblePlayers[i];
+            final angle = gs.isSpectator
+                ? _llSpectatorSeatAngleForIndex(i, visiblePlayers.length)
+                : _llSeatAngleForIndex(i, visiblePlayers.length);
+            final seatLeft =
+                centerX + seatRadiusX * math.cos(angle) - seatWidth / 2;
+            final sideSeatDrop =
+                !gs.isSpectator && visiblePlayers.length == 3 && i != 1
+                ? 28.0
+                : 0.0;
+            final seatTop =
+                centerY +
+                seatRadiusY * math.sin(angle) -
+                seatHeight / 2 +
+                sideSeatDrop;
+            final discardCardHeight =
+                (seatHeight * (gs.isSpectator ? 0.42 : 0.44)).clamp(
+                  52.0,
+                  gs.isSpectator ? 58.0 : 64.0,
+                );
+            seatLayouts.add(
+              _LLSeatLayout(
+                player: player,
+                left: seatLeft,
+                top: seatTop,
+                width: seatWidth,
+                height: seatHeight,
+                discardCardWidth: discardCardHeight * 0.7,
+                discardCardHeight: discardCardHeight,
+                compact: gs.isSpectator,
+              ),
+            );
+          }
 
           return Stack(
             clipBehavior: Clip.none,
             children: [
               Positioned.fill(
                 child: Align(
-                  alignment: Alignment(0, gs.isSpectator ? 0.08 : -0.02),
+                  alignment: Alignment(
+                    0,
+                    gs.isSpectator
+                        ? 0.08
+                        : (isThreeOpponentPlayLayout ? 0.26 : 0.12),
+                  ),
                   child: _buildCenterBoard(context, state),
                 ),
               ),
-              for (int i = 0; i < visiblePlayers.length; i++) ...[
-                () {
-                  final player = visiblePlayers[i];
-                  final angle = gs.isSpectator
-                      ? _llSpectatorSeatAngleForIndex(i, visiblePlayers.length)
-                      : _llSeatAngleForIndex(i, visiblePlayers.length);
-                  final seatLeft =
-                      centerX + seatRadiusX * math.cos(angle) - seatWidth / 2;
-                  final seatTop =
-                      centerY + seatRadiusY * math.sin(angle) - seatHeight / 2;
-                  return Positioned(
-                    left: seatLeft,
-                    top: seatTop,
-                    width: seatWidth,
-                    height: seatHeight,
-                    child: _buildPlayerSeatCard(
-                      context,
-                      state,
-                      player,
-                      compact: gs.isSpectator,
-                    ),
-                  );
-                }(),
-              ],
+              for (final seat in seatLayouts)
+                Positioned(
+                  left: seat.left,
+                  top: seat.top,
+                  width: seat.width,
+                  height: seat.height,
+                  child: _buildPlayerSeatCard(
+                    context,
+                    state,
+                    seat.player,
+                    compact: seat.compact,
+                  ),
+                ),
+              for (final seat in seatLayouts)
+                if (seat.player.discardPile.isNotEmpty)
+                  () {
+                    final previewRect = _getSeatDiscardPreviewRect(
+                      seat: seat,
+                      boardCenterX: centerX,
+                      boardCenterY: centerY,
+                    );
+                    return Positioned(
+                      left: previewRect.left,
+                      top: previewRect.top,
+                      width: previewRect.width,
+                      height: previewRect.height,
+                      child: _buildSeatDiscardPreview(
+                        context: context,
+                        playerName: seat.player.name,
+                        cards: seat.player.discardPile.reversed.toList(),
+                        availableWidth: previewRect.width,
+                        cardWidth: seat.discardCardWidth,
+                        cardHeight: seat.discardCardHeight,
+                        borderRadius: 8,
+                        gapTight: isThreeOpponentPlayLayout,
+                      ),
+                    );
+                  }(),
             ],
           );
         },
@@ -848,17 +905,16 @@ class _LLGameScreenState extends State<LLGameScreen> {
     );
 
     return Container(
-      constraints: const BoxConstraints(maxWidth: 300),
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+      constraints: const BoxConstraints(maxWidth: 252),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
       decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: 0.78),
-        borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: Colors.white.withValues(alpha: 0.6)),
+        color: const Color(0xFFFFFCFA).withValues(alpha: 0.68),
+        borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: 0.08),
-            blurRadius: 12,
-            offset: const Offset(0, 4),
+            color: Colors.black.withValues(alpha: 0.05),
+            blurRadius: 8,
+            offset: const Offset(0, 3),
           ),
         ],
       ),
@@ -869,21 +925,21 @@ class _LLGameScreenState extends State<LLGameScreen> {
             mainAxisSize: MainAxisSize.min,
             children: [
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 5),
+                padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 4),
                 decoration: BoxDecoration(
-                  color: const Color(0xFFF6EEE8),
+                  color: const Color(0xFFF5EDE7).withValues(alpha: 0.9),
                   borderRadius: BorderRadius.circular(999),
                 ),
                 child: Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    const Icon(Icons.style, size: 14, color: Color(0xFF8A7A72)),
-                    const SizedBox(width: 4),
+                    const Icon(Icons.style, size: 13, color: Color(0xFF8A7A72)),
+                    const SizedBox(width: 3),
                     Text(
                       '${state.drawPileCount}',
                       style: const TextStyle(
                         color: Color(0xFF8A7A72),
-                        fontSize: 12,
+                        fontSize: 11,
                         fontWeight: FontWeight.w700,
                       ),
                     ),
@@ -894,19 +950,18 @@ class _LLGameScreenState extends State<LLGameScreen> {
                 const SizedBox(width: 8),
                 Container(
                   padding: const EdgeInsets.symmetric(
-                    horizontal: 10,
-                    vertical: 5,
+                    horizontal: 9,
+                    vertical: 4,
                   ),
                   decoration: BoxDecoration(
-                    color: const Color(0xFFFFF3D8),
+                    color: const Color(0xFFFFF0CF).withValues(alpha: 0.96),
                     borderRadius: BorderRadius.circular(999),
-                    border: Border.all(color: const Color(0xFFE6C86A)),
                   ),
                   child: Text(
                     currentPlayer.name,
                     style: const TextStyle(
                       color: Color(0xFF5A4038),
-                      fontSize: 12,
+                      fontSize: 11,
                       fontWeight: FontWeight.w800,
                     ),
                   ),
@@ -915,26 +970,27 @@ class _LLGameScreenState extends State<LLGameScreen> {
             ],
           ),
           if (state.faceUpCards.isNotEmpty) ...[
-            const SizedBox(height: 10),
+            const SizedBox(height: 8),
             Text(
               L10n.of(context).llSetAsideFaceUp,
               style: const TextStyle(
                 color: Color(0xFF8A7A72),
-                fontSize: 11,
+                fontSize: 10,
                 fontWeight: FontWeight.w600,
               ),
             ),
-            const SizedBox(height: 6),
+            const SizedBox(height: 5),
             Wrap(
               alignment: WrapAlignment.center,
-              spacing: 6,
-              runSpacing: 6,
+              spacing: 5,
+              runSpacing: 5,
               children: state.faceUpCards
                   .map(
                     (cardId) => LoveLetterCard(
                       cardId: cardId,
-                      width: 52,
-                      height: 74,
+                      width: 44,
+                      height: 63,
+                      borderRadius: 10,
                       isInteractive: false,
                     ),
                   )
@@ -943,12 +999,12 @@ class _LLGameScreenState extends State<LLGameScreen> {
           ],
           if (state.pendingEffect != null &&
               state.phase == 'effect_resolve') ...[
-            const SizedBox(height: 10),
+            const SizedBox(height: 8),
             Container(
-              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+              padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 5),
               decoration: BoxDecoration(
-                color: const Color(0xFFFFEDF3),
-                borderRadius: BorderRadius.circular(12),
+                color: const Color(0xFFFFEDF3).withValues(alpha: 0.92),
+                borderRadius: BorderRadius.circular(10),
               ),
               child: Text(
                 _getEffectDescription(
@@ -959,7 +1015,7 @@ class _LLGameScreenState extends State<LLGameScreen> {
                 textAlign: TextAlign.center,
                 style: const TextStyle(
                   color: Color(0xFFE91E63),
-                  fontSize: 12,
+                  fontSize: 11,
                   fontWeight: FontWeight.w700,
                 ),
               ),
@@ -977,7 +1033,6 @@ class _LLGameScreenState extends State<LLGameScreen> {
     required bool compact,
   }) {
     final isCurrent = player.id == state.currentPlayer;
-    final isEffectTarget = state.pendingEffect?.targetId == player.id;
 
     return LayoutBuilder(
       builder: (context, constraints) {
@@ -1002,227 +1057,197 @@ class _LLGameScreenState extends State<LLGameScreen> {
         final spacing = ultraTight ? 1.0 : (tight ? 2.0 : 4.0);
         final chipFontSize = ultraTight ? 8.0 : (tight ? 9.0 : 10.0);
         final statusIconSize = ultraTight ? 10.0 : (tight ? 11.0 : 12.0);
-        final discardCardWidth = ultraTight
-            ? 24.0
-            : (tight ? 30.0 : (compact ? 32.0 : 34.0));
-        final discardCardHeight = ultraTight
-            ? 34.0
-            : (tight ? 42.0 : (compact ? 46.0 : 50.0));
         final contentWidth = math.max(
           24.0,
           constraints.maxWidth - horizontalPadding * 2,
         );
-        final showDiscardPreview = !ultraTight && player.discardPile.isNotEmpty;
         final showCardCountChip = !player.eliminated && !ultraTight;
-        final seatColor = player.eliminated
-            ? const Color(0xFFE8E1E0)
+        final labelTint = player.eliminated
+            ? const Color(0xFFE9DFDE).withValues(alpha: 0.78)
             : isCurrent
-            ? const Color(0xFFFFF8E1)
-            : isEffectTarget
-            ? const Color(0xFFFFEBEE)
-            : Colors.white.withValues(alpha: 0.76);
-        final seatBorderColor = player.eliminated
-            ? const Color(0xFFC7B7B4)
-            : isCurrent
-            ? const Color(0xFFE6C86A)
-            : isEffectTarget
-            ? const Color(0xFFEF9A9A)
-            : const Color(0xFFE0D8D4);
-        final seatShadowColor = player.eliminated
-            ? const Color(0xFF6D5C58).withValues(alpha: 0.10)
-            : Colors.black.withValues(alpha: 0.06);
-
+            ? const Color(0xFFFFF0C9).withValues(alpha: 0.88)
+            : const Color(0xFFFFFCFA).withValues(alpha: 0.62);
         return AnimatedContainer(
           duration: const Duration(milliseconds: 180),
           padding: EdgeInsets.symmetric(
             horizontal: horizontalPadding,
             vertical: verticalPadding,
           ),
-          decoration: BoxDecoration(
-            color: seatColor,
-            borderRadius: BorderRadius.circular(16),
-            border: Border.all(color: seatBorderColor),
-            boxShadow: [
-              BoxShadow(
-                color: seatShadowColor,
-                blurRadius: 6,
-                offset: const Offset(0, 3),
-              ),
-            ],
-          ),
+          decoration: const BoxDecoration(),
           child: Center(
             child: FittedBox(
               fit: BoxFit.scaleDown,
               alignment: Alignment.topCenter,
-              child: SizedBox(
-                width: contentWidth,
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.center,
-                  children: [
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        if (isCurrent)
-                          Container(
-                            width: ultraTight ? 5 : 6,
-                            height: ultraTight ? 5 : 6,
-                            margin: EdgeInsets.only(right: ultraTight ? 3 : 4),
-                            decoration: const BoxDecoration(
-                              color: Color(0xFFE6A800),
-                              shape: BoxShape.circle,
+              child: Container(
+                padding: EdgeInsets.symmetric(
+                  horizontal: ultraTight ? 6 : 8,
+                  vertical: ultraTight ? 4 : 5,
+                ),
+                decoration: BoxDecoration(
+                  color: labelTint,
+                  borderRadius: BorderRadius.circular(14),
+                ),
+                child: SizedBox(
+                  width: contentWidth,
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.center,
+                    children: [
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          if (isCurrent)
+                            Container(
+                              width: ultraTight ? 5 : 6,
+                              height: ultraTight ? 5 : 6,
+                              margin: EdgeInsets.only(
+                                right: ultraTight ? 3 : 4,
+                              ),
+                              decoration: const BoxDecoration(
+                                color: Color(0xFFE6A800),
+                                shape: BoxShape.circle,
+                              ),
                             ),
-                          ),
-                        Flexible(
-                          child: Text(
-                            player.name,
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            textAlign: TextAlign.center,
-                            style: TextStyle(
-                              color: player.eliminated
-                                  ? const Color(0xFFBBAAAA)
-                                  : const Color(0xFF5A4038),
-                              fontSize: nameFontSize,
-                              fontWeight: isCurrent
-                                  ? FontWeight.w800
-                                  : FontWeight.w700,
-                              decoration: player.eliminated
-                                  ? TextDecoration.lineThrough
-                                  : null,
-                            ),
-                          ),
-                        ),
-                        if (!player.connected)
-                          Padding(
-                            padding: const EdgeInsets.only(left: 3),
-                            child: Icon(
-                              Icons.wifi_off,
-                              color: Colors.red,
-                              size: statusIconSize,
-                            ),
-                          ),
-                        if (player.protected)
-                          Padding(
-                            padding: const EdgeInsets.only(left: 3),
-                            child: Icon(
-                              Icons.shield,
-                              color: Colors.blueAccent,
-                              size: statusIconSize,
-                            ),
-                          ),
-                      ],
-                    ),
-                    if (player.eliminated)
-                      Padding(
-                        padding: EdgeInsets.only(top: ultraTight ? 1 : 2),
-                        child: Text(
-                          L10n.of(context).llEliminated,
-                          style: TextStyle(
-                            color: Colors.red.shade300,
-                            fontSize: ultraTight ? 9 : 10,
-                            fontWeight: FontWeight.w800,
-                          ),
-                        ),
-                      ),
-                    SizedBox(height: spacing),
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      mainAxisSize: MainAxisSize.min,
-                      children: List.generate(
-                        state.targetTokens,
-                        (i) => Padding(
-                          padding: EdgeInsets.only(right: ultraTight ? 1 : 2),
-                          child: Icon(
-                            Icons.favorite,
-                            color: i < player.tokens
-                                ? player.eliminated
-                                      ? const Color(0xFFB98B95)
-                                      : const Color(0xFFE91E63)
-                                : const Color(0xFFE0D8D4),
-                            size: tokenSize,
-                          ),
-                        ),
-                      ),
-                    ),
-                    SizedBox(height: spacing),
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        if (isCurrent && _remainingSeconds > 0)
-                          Container(
-                            margin: EdgeInsets.only(right: ultraTight ? 4 : 5),
-                            padding: EdgeInsets.symmetric(
-                              horizontal: ultraTight ? 4 : 5,
-                              vertical: ultraTight ? 1 : 2,
-                            ),
-                            decoration: BoxDecoration(
-                              color: _remainingSeconds <= 5
-                                  ? Colors.red.shade900
-                                  : Colors.amber.withValues(alpha: 0.2),
-                              borderRadius: BorderRadius.circular(999),
-                            ),
+                          Flexible(
                             child: Text(
-                              '${_remainingSeconds}s',
+                              player.name,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              textAlign: TextAlign.center,
                               style: TextStyle(
-                                color: _remainingSeconds <= 5
-                                    ? Colors.redAccent
-                                    : Colors.amber.shade900,
-                                fontSize: chipFontSize,
-                                fontWeight: FontWeight.w800,
+                                color: player.eliminated
+                                    ? const Color(0xFFBBAAAA)
+                                    : const Color(0xFF5A4038),
+                                fontSize: nameFontSize,
+                                fontWeight: isCurrent
+                                    ? FontWeight.w800
+                                    : FontWeight.w700,
+                                decoration: player.eliminated
+                                    ? TextDecoration.lineThrough
+                                    : null,
                               ),
                             ),
                           ),
-                        if (showCardCountChip)
-                          Container(
-                            padding: EdgeInsets.symmetric(
-                              horizontal: ultraTight ? 5 : 6,
-                              vertical: ultraTight ? 1 : 2,
+                          if (!player.connected)
+                            Padding(
+                              padding: const EdgeInsets.only(left: 3),
+                              child: Icon(
+                                Icons.wifi_off,
+                                color: Colors.red,
+                                size: statusIconSize,
+                              ),
                             ),
-                            decoration: BoxDecoration(
-                              color: const Color(0xFFF0EBE8),
-                              borderRadius: BorderRadius.circular(999),
+                          if (player.protected)
+                            Padding(
+                              padding: const EdgeInsets.only(left: 3),
+                              child: Icon(
+                                Icons.shield,
+                                color: Colors.blueAccent,
+                                size: statusIconSize,
+                              ),
                             ),
-                            child: Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                Icon(
-                                  Icons.style,
-                                  color: const Color(0xFF8A7A72),
-                                  size: ultraTight ? 10 : 11,
-                                ),
-                                SizedBox(width: ultraTight ? 1 : 2),
-                                Text(
-                                  '${player.cardCount}',
-                                  style: TextStyle(
-                                    color: const Color(0xFF8A7A72),
-                                    fontSize: chipFontSize,
-                                    fontWeight: FontWeight.w700,
-                                  ),
-                                ),
-                              ],
+                        ],
+                      ),
+                      if (player.eliminated)
+                        Padding(
+                          padding: EdgeInsets.only(top: ultraTight ? 1 : 2),
+                          child: Text(
+                            L10n.of(context).llEliminated,
+                            style: TextStyle(
+                              color: Colors.red.shade300,
+                              fontSize: ultraTight ? 9 : 10,
+                              fontWeight: FontWeight.w800,
                             ),
                           ),
-                      ],
-                    ),
-                    if (showDiscardPreview) ...[
-                      SizedBox(height: ultraTight ? 2 : (tight ? 4 : 6)),
-                      SizedBox(
-                        height: discardCardHeight,
-                        child: _buildSeatDiscardPreview(
-                          context: context,
-                          playerName: player.name,
-                          cards: player.discardPile.reversed.toList(),
-                          availableWidth: contentWidth,
-                          cardWidth: discardCardWidth,
-                          cardHeight: discardCardHeight,
-                          borderRadius: ultraTight ? 7 : 8,
+                        ),
+                      SizedBox(height: spacing),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        mainAxisSize: MainAxisSize.min,
+                        children: List.generate(
+                          state.targetTokens,
+                          (i) => Padding(
+                            padding: EdgeInsets.only(right: ultraTight ? 1 : 2),
+                            child: Icon(
+                              Icons.favorite,
+                              color: i < player.tokens
+                                  ? player.eliminated
+                                        ? const Color(0xFFB98B95)
+                                        : const Color(0xFFE91E63)
+                                  : const Color(0xFFE0D8D4),
+                              size: tokenSize,
+                            ),
+                          ),
                         ),
                       ),
+                      SizedBox(height: spacing),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          if (isCurrent && _remainingSeconds > 0)
+                            Container(
+                              margin: EdgeInsets.only(
+                                right: ultraTight ? 4 : 5,
+                              ),
+                              padding: EdgeInsets.symmetric(
+                                horizontal: ultraTight ? 4 : 5,
+                                vertical: ultraTight ? 1 : 2,
+                              ),
+                              decoration: BoxDecoration(
+                                color: _remainingSeconds <= 5
+                                    ? Colors.red.shade900
+                                    : Colors.amber.withValues(alpha: 0.2),
+                                borderRadius: BorderRadius.circular(999),
+                              ),
+                              child: Text(
+                                '${_remainingSeconds}s',
+                                style: TextStyle(
+                                  color: _remainingSeconds <= 5
+                                      ? Colors.redAccent
+                                      : Colors.amber.shade900,
+                                  fontSize: chipFontSize,
+                                  fontWeight: FontWeight.w800,
+                                ),
+                              ),
+                            ),
+                          if (showCardCountChip)
+                            Container(
+                              padding: EdgeInsets.symmetric(
+                                horizontal: ultraTight ? 5 : 6,
+                                vertical: ultraTight ? 1 : 2,
+                              ),
+                              decoration: BoxDecoration(
+                                color: const Color(
+                                  0xFFF0EBE8,
+                                ).withValues(alpha: 0.92),
+                                borderRadius: BorderRadius.circular(999),
+                              ),
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Icon(
+                                    Icons.style,
+                                    color: const Color(0xFF8A7A72),
+                                    size: ultraTight ? 10 : 11,
+                                  ),
+                                  SizedBox(width: ultraTight ? 1 : 2),
+                                  Text(
+                                    '${player.cardCount}',
+                                    style: TextStyle(
+                                      color: const Color(0xFF8A7A72),
+                                      fontSize: chipFontSize,
+                                      fontWeight: FontWeight.w700,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                        ],
+                      ),
                     ],
-                  ],
+                  ),
                 ),
               ),
             ),
@@ -1240,6 +1265,7 @@ class _LLGameScreenState extends State<LLGameScreen> {
     required double cardWidth,
     required double cardHeight,
     required double borderRadius,
+    bool gapTight = false,
   }) {
     if (cards.isEmpty) return const SizedBox.shrink();
 
@@ -1248,8 +1274,8 @@ class _LLGameScreenState extends State<LLGameScreen> {
     final step = count <= 1
         ? 0.0
         : ((usableWidth - cardWidth) / (count - 1)).clamp(
-            6.0,
-            cardWidth * 0.58,
+            gapTight ? 8.0 : 6.0,
+            cardWidth * 0.72,
           );
     final stackWidth = count <= 1 ? cardWidth : cardWidth + step * (count - 1);
     final leftInset = math.max(0.0, (usableWidth - stackWidth) / 2);
@@ -1274,29 +1300,21 @@ class _LLGameScreenState extends State<LLGameScreen> {
                   isInteractive: false,
                 ),
               ),
-            Positioned(
-              right: 0,
-              bottom: 0,
-              child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 2),
-                decoration: BoxDecoration(
-                  color: Colors.black.withValues(alpha: 0.62),
-                  borderRadius: BorderRadius.circular(999),
-                ),
-                child: Text(
-                  '$count',
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontSize: 10,
-                    fontWeight: FontWeight.w700,
-                  ),
-                ),
-              ),
-            ),
           ],
         ),
       ),
     );
+  }
+
+  Rect _getSeatDiscardPreviewRect({
+    required _LLSeatLayout seat,
+    required double boardCenterX,
+    required double boardCenterY,
+  }) {
+    final previewWidth = seat.width;
+    final gap = seat.compact ? -10.0 : -14.0;
+    final top = seat.top + seat.height + gap;
+    return Rect.fromLTWH(seat.left, top, previewWidth, seat.discardCardHeight);
   }
 
   void _showDiscardPileDialog(
@@ -1968,13 +1986,20 @@ class _LLGameScreenState extends State<LLGameScreen> {
                     child: Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        Text(
-                          '$playerName: ',
-                          style: const TextStyle(
-                            color: Color(0xFF8A7A72),
-                            fontSize: 13,
+                        SizedBox(
+                          width: 92,
+                          child: Text(
+                            '$playerName:',
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            textAlign: TextAlign.right,
+                            style: const TextStyle(
+                              color: Color(0xFF8A7A72),
+                              fontSize: 13,
+                            ),
                           ),
                         ),
+                        const SizedBox(width: 8),
                         if (e.value != null)
                           LoveLetterCard(
                             cardId: e.value!,
@@ -3765,4 +3790,26 @@ class _LLGameScreenState extends State<LLGameScreen> {
       ),
     );
   }
+}
+
+class _LLSeatLayout {
+  final LLPlayer player;
+  final double left;
+  final double top;
+  final double width;
+  final double height;
+  final double discardCardWidth;
+  final double discardCardHeight;
+  final bool compact;
+
+  const _LLSeatLayout({
+    required this.player,
+    required this.left,
+    required this.top,
+    required this.width,
+    required this.height,
+    required this.discardCardWidth,
+    required this.discardCardHeight,
+    required this.compact,
+  });
 }

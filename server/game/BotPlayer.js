@@ -3,6 +3,7 @@
  * Strategic AI for Tichu card game.
  */
 
+const { performance } = require('perf_hooks');
 const { createDeck } = require('./Deck');
 const { getComboType, COMBO } = require('./CardValidator');
 
@@ -1355,14 +1356,13 @@ function findFinishingPlay(comboType, lastValue, lastLength, cards, normalCards,
 
 // ========== WIN-RATE SEARCH ==========
 
-const TICHU_SEARCH_MAX_STEPS = 256;
+const TICHU_SEARCH_MAX_STEPS = 192;
 
 function normalizeTichuStrategy(strategy) {
   if (strategy === 'heuristic') return 'heuristic';
   if (strategy === 'winrate') return 'winrate';
-  // Tichu rooms should stay on the lightweight heuristic bot unless the
-  // caller explicitly requests the heavier search-based strategy.
-  return 'heuristic';
+  // Legacy UI values from other game types map to the upgraded Tichu search.
+  return 'winrate';
 }
 
 function getBotTeamKey(game, botId) {
@@ -1646,17 +1646,56 @@ function evaluateSimulatedOutcome(game, botId) {
 }
 
 function getSearchSampleCount(cardCount) {
-  if (cardCount <= 3) return 14;
-  if (cardCount <= 6) return 10;
-  if (cardCount <= 9) return 8;
-  return 6;
+  if (cardCount <= 3) return 8;
+  if (cardCount <= 6) return 6;
+  if (cardCount <= 9) return 4;
+  return 3;
+}
+
+function getWinrateSearchBudget(game, state, candidateCount) {
+  const handSize = (state.myCards || []).length;
+  const trickSize = (state.currentTrick || []).length;
+  const hasActiveCall = !!state.callRank && trickSize > 0;
+
+  let samples = getSearchSampleCount(handSize);
+  let timeBudgetMs = 120;
+
+  if (trickSize === 0) {
+    timeBudgetMs = 140;
+  }
+  if (hasActiveCall) {
+    samples = Math.max(2, samples - 1);
+    timeBudgetMs = 90;
+  }
+  if (candidateCount >= 8) {
+    samples = Math.max(2, samples - 1);
+    timeBudgetMs = Math.min(timeBudgetMs, 100);
+  }
+  if (handSize <= 4) {
+    timeBudgetMs += 20;
+  }
+
+  return { samples, timeBudgetMs };
+}
+
+function rankWinrateEntry(entry, heuristicKey, handSize) {
+  if (!entry || entry.samples === 0) return -Infinity;
+  const winRate = entry.winSum / entry.samples;
+  const avgMargin = entry.marginSum / entry.samples;
+  const avgRoundMargin = entry.roundMarginSum / entry.samples;
+  const priority = scoreCandidatePriority(entry.action, heuristicKey, handSize);
+  return (winRate * 1000000) + (avgMargin * 1000) + avgRoundMargin + (priority / 1000000);
 }
 
 function chooseBestWinrateAction(game, botId, candidates) {
   if (candidates.length <= 1) return candidates[0] || null;
 
   const state = game.getStateForPlayer(botId);
-  const samples = getSearchSampleCount((state.myCards || []).length);
+  const handSize = (state.myCards || []).length;
+  const heuristicAction = autoPlay(state, state.myCards || []);
+  const heuristicKey = getActionKey(heuristicAction);
+  const { samples, timeBudgetMs } = getWinrateSearchBudget(game, state, candidates.length);
+  const deadline = performance.now() + timeBudgetMs;
   const stats = new Map();
   for (const candidate of candidates) {
     stats.set(getActionKey(candidate), {
@@ -1668,15 +1707,22 @@ function chooseBestWinrateAction(game, botId, candidates) {
     });
   }
 
-  for (let sample = 0; sample < samples; sample++) {
+  let activeKeys = candidates
+    .slice()
+    .sort((a, b) => scoreCandidatePriority(b, heuristicKey, handSize) - scoreCandidatePriority(a, heuristicKey, handSize))
+    .map(getActionKey);
+
+  for (let sample = 0; sample < samples && activeKeys.length > 0; sample++) {
+    if (performance.now() >= deadline) break;
     const baseWorld = determinizeGameForBot(game, botId);
-    for (const candidate of candidates) {
-      const key = getActionKey(candidate);
+    for (const key of activeKeys) {
+      if (performance.now() >= deadline) break;
       const entry = stats.get(key);
+      if (!entry) continue;
       const sim = baseWorld.clone();
       sim._suppressBotSearchLogs = true;
 
-      const result = sim.handleAction(botId, candidate);
+      const result = sim.handleAction(botId, entry.action);
       if (!result || !result.success) continue;
 
       runHeuristicRollout(sim);
@@ -1685,6 +1731,17 @@ function chooseBestWinrateAction(game, botId, candidates) {
       entry.marginSum += outcome.margin;
       entry.roundMarginSum += outcome.roundMargin;
       entry.samples += 1;
+    }
+
+    // Successive halving: after each round, keep only the best-performing
+    // candidates so we don't spend the entire budget evaluating dominated lines.
+    if (activeKeys.length > 3 && performance.now() < deadline) {
+      activeKeys = activeKeys
+        .map(key => stats.get(key))
+        .filter(entry => entry && entry.samples > 0)
+        .sort((a, b) => rankWinrateEntry(b, heuristicKey, handSize) - rankWinrateEntry(a, heuristicKey, handSize))
+        .slice(0, sample === 0 ? Math.max(4, Math.ceil(activeKeys.length / 2)) : 3)
+        .map(entry => getActionKey(entry.action));
     }
   }
 
@@ -1700,12 +1757,16 @@ function chooseBestWinrateAction(game, botId, candidates) {
         || (entry.winRate === best.winRate && entry.avgMargin > best.avgMargin)
         || (entry.winRate === best.winRate && entry.avgMargin === best.avgMargin && entry.avgRoundMargin > best.avgRoundMargin)
         || (entry.winRate === best.winRate && entry.avgMargin === best.avgMargin && entry.avgRoundMargin === best.avgRoundMargin
-            && scoreCandidatePriority(entry.action, '', (state.myCards || []).length) > scoreCandidatePriority(best.action, '', (state.myCards || []).length))) {
+            && scoreCandidatePriority(entry.action, heuristicKey, handSize) > scoreCandidatePriority(best.action, heuristicKey, handSize))) {
       best = entry;
     }
   }
 
-  return best ? best.action : candidates[0];
+  if (!best) {
+    return heuristicAction || candidates[0];
+  }
+
+  return best.action;
 }
 
 function decideWinrateBotAction(game, botId) {

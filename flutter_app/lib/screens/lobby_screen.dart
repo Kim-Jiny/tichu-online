@@ -5242,7 +5242,7 @@ class _LobbyScreenState extends State<LobbyScreen> {
               PopupMenuButton<String>(
                 onSelected: (speed) {
                   final defaultStrategy = game.currentGameType == 'tichu'
-                      ? BotStrategy.heuristic
+                      ? BotStrategy.winrate
                       : game.currentGameType == 'mighty'
                       ? BotStrategy.mixOracle
                       : BotStrategy.heuristic;

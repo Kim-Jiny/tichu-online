@@ -1,5 +1,6 @@
 const TichuGame = require('./TichuGame');
 const { BotPlayer } = require('./BotPlayer');
+const { logVerboseConnection } = require('../logger');
 let SkullKingGame; // Lazy-loaded to avoid circular dependency
 let LoveLetterGame; // Lazy-loaded
 let MightyGame; // Lazy-loaded
@@ -97,7 +98,7 @@ class GameRoom {
       return { success: false, message: 'Room is full' };
     }
     this.players[emptySlot] = { id: playerId, nickname: nickname, connected: true, ready: false };
-    console.log(`${nickname} joined room ${this.name} (slot ${emptySlot})`);
+    logVerboseConnection(`${nickname} joined room ${this.name} (slot ${emptySlot})`);
     return { success: true };
   }
 
@@ -118,7 +119,7 @@ class GameRoom {
         delete this.cardRequestTimers[timerKey];
       }
     }
-    console.log(`${removed.nickname} left room ${this.name}`);
+    logVerboseConnection(`${removed.nickname} left room ${this.name}`);
     // If host left, assign new host (first non-null human player, skip bots)
     if (this.hostId === playerId) {
       const nextHost = this.players.find((p) => p !== null && !p.isBot);
@@ -160,7 +161,7 @@ class GameRoom {
     const player = this.players.find((p) => p !== null && p.id === playerId);
     if (player) {
       player.connected = false;
-      console.log(`${player.nickname} disconnected in room ${this.name}`);
+      logVerboseConnection(`${player.nickname} disconnected in room ${this.name}`);
       return true;
     }
     return false;
@@ -181,7 +182,7 @@ class GameRoom {
       if (this.hostId === oldPlayerId) {
         this.hostId = newPlayerId;
       }
-      console.log(`${nickname} reconnected in room ${this.name}`);
+      logVerboseConnection(`${nickname} reconnected in room ${this.name}`);
       return { success: true, oldPlayerId };
     }
     return { success: false };
@@ -205,7 +206,7 @@ class GameRoom {
       return { success: false, message: 'Already spectating' };
     }
     this.spectators.push({ id: odId, nickname });
-    console.log(`${nickname} is now spectating room ${this.name}`);
+    logVerboseConnection(`${nickname} is now spectating room ${this.name}`);
     return { success: true };
   }
 
@@ -213,7 +214,7 @@ class GameRoom {
     const idx = this.spectators.findIndex((s) => s.id === odId);
     if (idx !== -1) {
       const removed = this.spectators.splice(idx, 1)[0];
-      console.log(`${removed.nickname} stopped spectating room ${this.name}`);
+      logVerboseConnection(`${removed.nickname} stopped spectating room ${this.name}`);
       this.removeSpectatorPermissions(odId);
     }
   }
@@ -520,7 +521,7 @@ class GameRoom {
       }
     }
 
-    console.log(`${nickname} switched to spectator in room ${this.name}`);
+    logVerboseConnection(`${nickname} switched to spectator in room ${this.name}`);
     return { success: true };
   }
 
@@ -559,7 +560,7 @@ class GameRoom {
       this.hostNickname = nickname;
     }
 
-    console.log(`${nickname} switched to player in room ${this.name} (slot ${targetSlot})`);
+    logVerboseConnection(`${nickname} switched to player in room ${this.name} (slot ${targetSlot})`);
     return { success: true };
   }
 
@@ -585,7 +586,7 @@ class GameRoom {
     // Move player to target slot
     this.players[targetSlot] = this.players[currentIndex];
     this.players[currentIndex] = null;
-    console.log(`Player ${playerId} moved to slot ${targetSlot}`);
+    logVerboseConnection(`Player ${playerId} moved to slot ${targetSlot}`);
     return { success: true };
   }
 

@@ -172,6 +172,7 @@ async function sendBroadcastPush(tokenRows, title, body) {
 
 const { handleAdminRoute } = require('./admin');
 const { t } = require('./i18n');
+const { logAdminAccess, logVerboseConnection } = require('./logger');
 
 async function sendFriendRequestPush(targetNickname, fromNickname) {
   try {
@@ -683,7 +684,7 @@ const server = http.createServer(async (req, res) => {
 
   // Debug: log admin route attempts
   if (pathname.startsWith('/tc-backstage') || pathname.includes('backstage')) {
-    console.log(`[ADMIN] ${req.method} ${pathname}`);
+    logAdminAccess(`[ADMIN] ${req.method} ${pathname}`);
   }
 
   if (pathname.startsWith('/tc-backstage')) {
@@ -921,14 +922,16 @@ setInterval(() => {
 // Terminated sockets fire the `close` event, which runs the normal disconnect flow
 // (marks player disconnected and starts the 30s waiting-room removal timer).
 const HEARTBEAT_INTERVAL_MS = 15000;
+const HEARTBEAT_MISS_THRESHOLD = 2;
 const heartbeatInterval = setInterval(() => {
   wss.clients.forEach((ws) => {
-    if (ws.isAlive === false) {
-      console.log(`[Heartbeat] Terminating zombie connection: ${ws.nickname || '-'} (${ws.playerId || '-'})`);
+    if ((ws.missedHeartbeats || 0) >= HEARTBEAT_MISS_THRESHOLD) {
+      logVerboseConnection(`[Heartbeat] Terminating zombie connection: ${ws.nickname || '-'} (${ws.playerId || '-'})`);
       try { ws.terminate(); } catch (_) {}
       return;
     }
     ws.isAlive = false;
+    ws.missedHeartbeats = (ws.missedHeartbeats || 0) + 1;
     try { ws.ping(); } catch (_) {}
   });
 }, HEARTBEAT_INTERVAL_MS);
@@ -1209,9 +1212,13 @@ wss.on('connection', (ws, req) => {
 
   // Heartbeat: mark alive initially, refresh on pong
   ws.isAlive = true;
-  ws.on('pong', () => { ws.isAlive = true; });
+  ws.missedHeartbeats = 0;
+  ws.on('pong', () => {
+    ws.isAlive = true;
+    ws.missedHeartbeats = 0;
+  });
 
-  console.log('New connection established');
+  logVerboseConnection('New connection established');
 
   ws._messageQueue = Promise.resolve();
   ws.on('message', (raw) => {
@@ -1230,7 +1237,7 @@ wss.on('connection', (ws, req) => {
   });
 
   ws.on('close', () => {
-    console.log(`Player disconnected: ${ws.nickname} (${ws.playerId})`);
+    logVerboseConnection(`Player disconnected: ${ws.nickname} (${ws.playerId})`);
     // Notify friends of offline status
     if (ws.nickname) {
       notifyFriendsOfStatusChange(ws.nickname, false);
@@ -1799,7 +1806,7 @@ async function handleLogin(ws, data) {
   const deviceInfo = data.deviceInfo || {};
   ws.appVersion = deviceInfo.appVersion || null;
   ws.locale = deviceInfo.locale || null;
-  console.log(`Player logged in: ${ws.nickname} (${ws.playerId})`);
+  logVerboseConnection(`Player logged in: ${ws.nickname} (${ws.playerId})`);
 
   // Notify friends of online status
   notifyFriendsOfStatusChange(ws.nickname, true);
@@ -1901,7 +1908,7 @@ async function handleSocialLogin(ws, data) {
       const socialDeviceInfo = data.deviceInfo || {};
       ws.appVersion = socialDeviceInfo.appVersion || null;
       ws.locale = socialDeviceInfo.locale || null;
-      console.log(`Player logged in (social/${provider}): ${ws.nickname} (${ws.playerId})`);
+      logVerboseConnection(`Player logged in (social/${provider}): ${ws.nickname} (${ws.playerId})`);
 
       notifyFriendsOfStatusChange(ws.nickname, true);
       await handleReconnection(ws);
@@ -1994,7 +2001,7 @@ async function handleSocialRegister(ws, data) {
     const regDeviceInfo = data.deviceInfo || {};
     ws.appVersion = regDeviceInfo.appVersion || null;
     ws.locale = regDeviceInfo.locale || null;
-    console.log(`Player registered & logged in (social/${provider}): ${ws.nickname} (${ws.playerId})`);
+    logVerboseConnection(`Player registered & logged in (social/${provider}): ${ws.nickname} (${ws.playerId})`);
 
     notifyFriendsOfStatusChange(ws.nickname, true);
     await handleReconnection(ws);
@@ -2127,7 +2134,7 @@ async function handleReconnection(ws) {
       if (result.success) {
         ws.roomId = room.id;
         playerSessions.delete(ws.nickname);
-        console.log(`Player ${ws.nickname} reconnected to room ${room.name}`);
+        logVerboseConnection(`Player ${ws.nickname} reconnected to room ${room.name}`);
 
         sendTo(ws, {
           type: 'login_success',
@@ -2201,7 +2208,7 @@ async function handleReconnection(ws) {
         ws.roomId = room.id;
         ws.isSpectator = true;
         spectatorSessions.delete(ws.nickname);
-        console.log(`Spectator ${ws.nickname} reconnected to room ${room.name}`);
+        logVerboseConnection(`Spectator ${ws.nickname} reconnected to room ${room.name}`);
 
         sendTo(ws, {
           type: 'login_success',
@@ -4207,7 +4214,7 @@ async function handleTurnTimeout(roomId, playerId) {
   if (!timeoutCounts[roomId][nickname]) timeoutCounts[roomId][nickname] = 0;
   timeoutCounts[roomId][nickname]++;
 
-  console.log(`[TIMEOUT] ${nickname} (${playerId}) timeout #${timeoutCounts[roomId][nickname]}`);
+  logVerboseConnection(`[TIMEOUT] ${nickname} (${playerId}) timeout #${timeoutCounts[roomId][nickname]}`);
 
   // 3 timeouts → desertion (S2: await async handleDesertion)
   if (timeoutCounts[roomId][nickname] >= 3) {
@@ -4275,7 +4282,7 @@ async function handleTurnTimeout(roomId, playerId) {
           sendGameStateToAll(roomId);
         }
       } else {
-        console.log(`[TIMEOUT] Auto action failed for ${nickname}: ${result?.message}`);
+        logVerboseConnection(`[TIMEOUT] Auto action failed for ${nickname}: ${result?.message}`);
         if (!runSkullKingFallback() && room.gameType === 'tichu') {
           // Force play call cards to prevent game from getting stuck (Tichu only)
           try {
@@ -4296,7 +4303,7 @@ async function handleTurnTimeout(roomId, playerId) {
         }
       }
     } else {
-      console.log(`[TIMEOUT] No auto action for ${nickname} (currentPlayer: ${room.game.currentPlayer})`);
+      logVerboseConnection(`[TIMEOUT] No auto action for ${nickname} (currentPlayer: ${room.game.currentPlayer})`);
       runSkullKingFallback();
     }
   } catch (err) {
@@ -4320,7 +4327,7 @@ function handleResetTimeout(ws) {
   const nickname = ws.nickname;
   if (!timeoutCounts[roomId][nickname] || timeoutCounts[roomId][nickname] === 0) return;
   timeoutCounts[roomId][nickname] = 0;
-  console.log(`[TIMEOUT] ${nickname} reset timeout count`);
+  logVerboseConnection(`[TIMEOUT] ${nickname} reset timeout count`);
   sendTo(ws, { type: 'timeout_reset', count: 0 });
 }
 

@@ -6729,6 +6729,12 @@ abstract class L10n {
   /// **'Round Winner'**
   String get llRoundWinner;
 
+  /// No description provided for @llRoundSharedWinners.
+  ///
+  /// In en, this message translates to:
+  /// **'Shared winners'**
+  String get llRoundSharedWinners;
+
   /// No description provided for @llNextRoundAuto.
   ///
   /// In en, this message translates to:

@@ -3765,6 +3765,9 @@ class L10nDe extends L10n {
   String get llRoundWinner => 'Rundensieger';
 
   @override
+  String get llRoundSharedWinners => 'Geteilte Sieger';
+
+  @override
   String get llNextRoundAuto => 'Nächste Runde beginnt bald...';
 
   @override

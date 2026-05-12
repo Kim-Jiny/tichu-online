@@ -89,6 +89,8 @@ class LLRoundHistory {
   final int round;
   final String? winner;
   final String? winnerName;
+  final List<String> winners;
+  final List<String> winnerNames;
   final Map<String, String?> finalHands;
   final String? setAside;
   final List<String> faceUpCards;
@@ -97,10 +99,14 @@ class LLRoundHistory {
     required this.round,
     this.winner,
     this.winnerName,
+    this.winners = const [],
+    this.winnerNames = const [],
     this.finalHands = const {},
     this.setAside,
     this.faceUpCards = const [],
   });
+
+  bool get isShared => winners.length > 1;
 
   factory LLRoundHistory.fromJson(Map<String, dynamic> json) {
     Map<String, String?> hands = {};
@@ -109,10 +115,28 @@ class LLRoundHistory {
         hands[k.toString()] = v as String?;
       });
     }
+    final winnersList = json['winners'] is List
+        ? List<String>.from(json['winners'])
+        : <String>[];
+    final winnerNamesList = json['winnerNames'] is List
+        ? List<String>.from(json['winnerNames'])
+        : <String>[];
+    final singleWinner = json['winner'] as String?;
+    final singleWinnerName = json['winnerName'] as String?;
+    // Older servers only emit the singular fields; backfill the arrays so the
+    // UI can read uniformly.
+    final mergedWinners = winnersList.isNotEmpty
+        ? winnersList
+        : (singleWinner != null ? [singleWinner] : <String>[]);
+    final mergedWinnerNames = winnerNamesList.isNotEmpty
+        ? winnerNamesList
+        : (singleWinnerName != null ? [singleWinnerName] : <String>[]);
     return LLRoundHistory(
       round: json['round'] ?? 0,
-      winner: json['winner'] as String?,
-      winnerName: json['winnerName'] as String?,
+      winner: singleWinner,
+      winnerName: singleWinnerName,
+      winners: mergedWinners,
+      winnerNames: mergedWinnerNames,
       finalHands: hands,
       setAside: json['setAside'] as String?,
       faceUpCards: List<String>.from(json['faceUpCards'] ?? const []),

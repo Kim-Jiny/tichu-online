@@ -2459,11 +2459,23 @@ class _LLGameScreenState extends State<LLGameScreen> {
     LLRoundHistory lastRound,
     L10n l10n,
   ) {
+    final winnerLabel = lastRound.isShared
+        ? l10n.llRoundSharedWinners
+        : l10n.llRoundWinner;
+    final winnerText = lastRound.winnerNames.isNotEmpty
+        ? lastRound.winnerNames.join(', ')
+        : (lastRound.winnerName ?? '?');
     return [
       const SizedBox(height: 12),
       Text(
-        '${l10n.llRoundWinner}: ${lastRound.winnerName ?? "?"}',
-        style: const TextStyle(color: Color(0xFF5A4038), fontSize: 16),
+        '$winnerLabel: $winnerText',
+        style: TextStyle(
+          color: const Color(0xFF5A4038),
+          fontSize: 16,
+          fontWeight: lastRound.isShared
+              ? FontWeight.w800
+              : FontWeight.normal,
+        ),
       ),
       if (lastRound.setAside != null || lastRound.faceUpCards.isNotEmpty) ...[
         const SizedBox(height: 10),

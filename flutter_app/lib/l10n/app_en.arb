@@ -1717,6 +1717,7 @@
   "llOk": "OK",
   "llRoundEnd": "Round Over",
   "llRoundWinner": "Round Winner",
+  "llRoundSharedWinners": "Shared winners",
   "llNextRoundAuto": "Next round starting soon...",
   "llGameEnd": "Game Over",
   "llWins": "Wins",

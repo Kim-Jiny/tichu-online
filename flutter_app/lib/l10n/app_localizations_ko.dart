@@ -3648,6 +3648,9 @@ class L10nKo extends L10n {
   String get llRoundWinner => '라운드 승자';
 
   @override
+  String get llRoundSharedWinners => '공동 우승';
+
+  @override
   String get llNextRoundAuto => '잠시 후 다음 라운드가 시작됩니다...';
 
   @override

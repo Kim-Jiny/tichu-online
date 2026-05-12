@@ -1278,6 +1278,7 @@
   "llOk": "OK",
   "llRoundEnd": "Runde beendet",
   "llRoundWinner": "Rundensieger",
+  "llRoundSharedWinners": "Geteilte Sieger",
   "llNextRoundAuto": "Nächste Runde beginnt bald...",
   "llGameEnd": "Spiel beendet",
   "llWins": "Siege",

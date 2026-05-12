@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Sky-blue base for launch splash, sampled to roughly match the top
+         portion of assets/splash.png so the centered bitmap blends into
+         margin space on tall phones. -->
+    <color name="splash_bg">#AEDDF1</color>
+</resources>

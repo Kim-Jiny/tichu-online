@@ -1193,6 +1193,7 @@
   "llOk": "확인",
   "llRoundEnd": "라운드 종료",
   "llRoundWinner": "라운드 승자",
+  "llRoundSharedWinners": "공동 우승",
   "llNextRoundAuto": "잠시 후 다음 라운드가 시작됩니다...",
   "llGameEnd": "게임 종료",
   "llWins": "승리",

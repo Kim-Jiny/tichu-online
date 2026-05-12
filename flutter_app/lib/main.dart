@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:firebase_analytics/firebase_analytics.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:kakao_flutter_sdk_user/kakao_flutter_sdk_user.dart' as kakao;
@@ -30,6 +31,10 @@ import 'screens/maintenance_screen.dart';
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
+  // Firebase Analytics: enabled by default once the package is wired up.
+  // Calling this explicitly makes the intent visible and protects against
+  // builds where collection was previously disabled.
+  await FirebaseAnalytics.instance.setAnalyticsCollectionEnabled(true);
   kakao.KakaoSdk.init(nativeAppKey: 'd9b4b3cfc86537fed9a80a659641ad30');
   await InviteLinkService.instance.initialize();
   MobileAds.instance.updateRequestConfiguration(

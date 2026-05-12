@@ -9,6 +9,7 @@ import '../models/game_state.dart';
 import '../models/sk_game_state.dart';
 import '../models/ll_game_state.dart';
 import '../models/mighty_game_state.dart';
+import 'analytics_service.dart';
 import 'network_service.dart';
 import 'profile_store.dart';
 import 'restore_sync_tracker.dart';
@@ -465,6 +466,10 @@ class GameService extends ChangeNotifier {
           data['maintenanceStatus'] as Map<String, dynamic>?,
         );
         _savePushPrefs();
+        // Analytics: standard login event + bind userId so we can slice
+        // funnels per player without leaking PII (nickname stays private).
+        AnalyticsService.instance.logLogin(authProvider);
+        AnalyticsService.instance.setUserId(playerId.isNotEmpty ? playerId : null);
         // Async FCM token update - don't block login
         _sendFcmTokenAsync();
         // Prefetch notices so the unread badge is accurate immediately.
@@ -2148,6 +2153,9 @@ class GameService extends ChangeNotifier {
     _prevGameState = null;
     _prevSKGameState = null;
     _prevLLGameState = null;
+    // Unbind the analytics user id on session reset so the next login binds
+    // a fresh playerId.
+    AnalyticsService.instance.setUserId(null);
     playerId = '';
     playerName = '';
     equippedTheme = null;
@@ -2537,6 +2545,11 @@ class GameService extends ChangeNotifier {
       msg['maxPlayers'] = maxPlayers;
     }
     _network.send(msg);
+    AnalyticsService.instance.logRoomCreate(
+      gameType: gameType,
+      isRanked: isRanked,
+      maxPlayers: maxPlayers,
+    );
   }
 
   void joinRoom(String roomId, {String password = ''}) {
@@ -2545,6 +2558,16 @@ class GameService extends ChangeNotifier {
       'roomId': roomId,
       'password': password,
     });
+    // Use the cached room metadata when available; the join request itself
+    // doesn't include game type so we look it up from the lobby list.
+    final cached = roomList.firstWhere(
+      (r) => r.id == roomId,
+      orElse: () => Room(id: roomId, name: ''),
+    );
+    AnalyticsService.instance.logRoomJoin(
+      gameType: cached.gameType,
+      isRanked: cached.isRanked,
+    );
   }
 
   void joinRoomByInviteToken(String token) {
@@ -2633,6 +2656,11 @@ class GameService extends ChangeNotifier {
 
   void startGame() {
     _network.send({'type': 'start_game'});
+    AnalyticsService.instance.logGameStart(
+      gameType: currentGameType,
+      isRanked: isRankedRoom,
+      playerCount: playerCount,
+    );
   }
 
   // SK actions

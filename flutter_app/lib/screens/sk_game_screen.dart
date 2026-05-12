@@ -2202,21 +2202,21 @@ class _SKGameScreenState extends State<SKGameScreen> {
               : isCurrentTurn
               ? const Color(0xFFFFF0C9).withValues(alpha: 0.88)
               : const Color(0xFFFFFCFA).withValues(alpha: 0.62);
-          return Stack(
-            clipBehavior: Clip.none,
-            children: [
-              AnimatedContainer(
-                duration: const Duration(milliseconds: 200),
-                padding: EdgeInsets.symmetric(
-                  horizontal: horizontalPadding,
-                  vertical: verticalPadding,
-                ),
-                decoration: const BoxDecoration(),
-                child: Center(
-                  child: FittedBox(
-                    fit: BoxFit.scaleDown,
-                    alignment: Alignment.topCenter,
-                    child: Container(
+          return AnimatedContainer(
+            duration: const Duration(milliseconds: 200),
+            padding: EdgeInsets.symmetric(
+              horizontal: horizontalPadding,
+              vertical: verticalPadding,
+            ),
+            decoration: const BoxDecoration(),
+            child: Center(
+              child: FittedBox(
+                fit: BoxFit.scaleDown,
+                alignment: Alignment.topCenter,
+                child: Stack(
+                  clipBehavior: Clip.none,
+                  children: [
+                    Container(
                       padding: EdgeInsets.symmetric(
                         horizontal: compact ? 6 : 8,
                         vertical: compact ? 4 : 5,
@@ -2368,39 +2368,39 @@ class _SKGameScreenState extends State<SKGameScreen> {
                         ),
                       ),
                     ),
-                  ),
-                ),
-              ),
-              Positioned(
-                right: 2,
-                top: -4,
-                child: Container(
-                  padding: const EdgeInsets.all(2),
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    shape: BoxShape.circle,
-                    border: Border.all(
-                      color: isApproved
-                          ? const Color(0xFF64B5F6)
-                          : const Color(0xFFE0D8D4),
+                    Positioned(
+                      right: -6,
+                      top: -6,
+                      child: Container(
+                        padding: const EdgeInsets.all(2),
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          shape: BoxShape.circle,
+                          border: Border.all(
+                            color: isApproved
+                                ? const Color(0xFF64B5F6)
+                                : const Color(0xFFE0D8D4),
+                          ),
+                        ),
+                        child: Icon(
+                          isPending
+                              ? Icons.schedule
+                              : isApproved
+                              ? Icons.visibility
+                              : Icons.visibility_outlined,
+                          size: 12,
+                          color: isPending
+                              ? const Color(0xFFFFB74D)
+                              : isApproved
+                              ? const Color(0xFF64B5F6)
+                              : const Color(0xFF8A7A72).withValues(alpha: 0.6),
+                        ),
+                      ),
                     ),
-                  ),
-                  child: Icon(
-                    isPending
-                        ? Icons.schedule
-                        : isApproved
-                        ? Icons.visibility
-                        : Icons.visibility_outlined,
-                    size: 12,
-                    color: isPending
-                        ? const Color(0xFFFFB74D)
-                        : isApproved
-                        ? const Color(0xFF64B5F6)
-                        : const Color(0xFF8A7A72).withValues(alpha: 0.6),
-                  ),
+                  ],
                 ),
               ),
-            ],
+            ),
           );
         },
       ),

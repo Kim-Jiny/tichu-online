@@ -977,6 +977,9 @@ class L10nDe extends L10n {
   String get lobbyAddBotCancel => 'Abbrechen';
 
   @override
+  String get lobbyFillEmptyWithBots => 'Leere Plätze mit Bots füllen';
+
+  @override
   String get lobbyEmptySlot => '[Leer]';
 
   @override

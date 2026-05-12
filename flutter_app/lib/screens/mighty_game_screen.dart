@@ -619,12 +619,13 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
                         builder: (context, constraints) {
                           final wide = constraints.maxWidth > 620;
                           return GridView.builder(
+                            padding: const EdgeInsets.only(top: 6),
                             gridDelegate:
                                 SliverGridDelegateWithFixedCrossAxisCount(
                                   crossAxisCount: wide ? 2 : 1,
                                   mainAxisSpacing: 10,
                                   crossAxisSpacing: 12,
-                                  childAspectRatio: wide ? 2.4 : 4.0,
+                                  childAspectRatio: wide ? 4.8 : 4.4,
                                 ),
                             itemCount: slots.length,
                             itemBuilder: (context, index) {

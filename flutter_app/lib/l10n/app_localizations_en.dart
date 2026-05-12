@@ -967,6 +967,9 @@ class L10nEn extends L10n {
   String get lobbyAddBotCancel => 'Cancel';
 
   @override
+  String get lobbyFillEmptyWithBots => 'Fill empty seats with bots';
+
+  @override
   String get lobbyEmptySlot => '[Empty]';
 
   @override

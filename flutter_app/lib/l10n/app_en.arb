@@ -416,6 +416,7 @@
   "lobbyAddBotDialogTitle": "Add Bot",
   "lobbyAddBotConfirm": "Add",
   "lobbyAddBotCancel": "Cancel",
+  "lobbyFillEmptyWithBots": "Fill empty seats with bots",
   "lobbyEmptySlot": "[Empty]",
   "lobbySlotBlocked": "[Blocked]",
   "lobbyMaintenanceDefault": "Server maintenance scheduled",

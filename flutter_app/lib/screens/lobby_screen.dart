@@ -2878,6 +2878,12 @@ class _LobbyScreenState extends State<LobbyScreen> {
               ),
           ],
           const SizedBox(height: 12),
+          if (game.isHost &&
+              !game.isRankedRoom &&
+              _hasFillableEmptySlot(game)) ...[
+            _buildFillEmptyBotsRow(game),
+            const SizedBox(height: 12),
+          ],
           if (game.isHost) ...[
             Builder(
               builder: (_) {
@@ -4886,6 +4892,113 @@ class _LobbyScreenState extends State<LobbyScreen> {
       orElse: () => null,
     );
     return me?.isReady ?? false;
+  }
+
+  // Empty (player == null) and not host-blocked → eligible to be filled
+  // by the bulk "fill empty seats" button.
+  bool _hasFillableEmptySlot(GameService game) {
+    for (int i = 0; i < game.roomPlayers.length; i++) {
+      if (game.roomPlayers[i] == null &&
+          !game.roomBlockedSlots.contains(i)) {
+        return true;
+      }
+    }
+    return false;
+  }
+
+  // Bulk-fill all eligible empty slots with bots at the given speed. Uses
+  // the game-specific default strategy that matches the per-slot popup.
+  void _fillEmptySlotsWithBots(GameService game, String speed) {
+    final defaultStrategy = game.currentGameType == 'tichu'
+        ? BotStrategy.winrate
+        : game.currentGameType == 'mighty'
+        ? BotStrategy.mixOracle
+        : BotStrategy.heuristic;
+    for (int i = 0; i < game.roomPlayers.length; i++) {
+      if (game.roomPlayers[i] == null &&
+          !game.roomBlockedSlots.contains(i)) {
+        game.addBot(
+          targetSlot: i,
+          speed: speed,
+          strategy: defaultStrategy,
+        );
+      }
+    }
+  }
+
+  Widget _buildFillEmptyBotsRow(GameService game) {
+    final l10n = L10n.of(context);
+    Widget speedBtn(String speed, IconData icon, Color color, String tooltip) {
+      return Tooltip(
+        message: tooltip,
+        child: Material(
+          color: Colors.transparent,
+          child: InkWell(
+            onTap: () => _fillEmptySlotsWithBots(game, speed),
+            borderRadius: BorderRadius.circular(10),
+            child: Container(
+              padding: const EdgeInsets.all(6),
+              decoration: BoxDecoration(
+                color: color.withValues(alpha: 0.12),
+                borderRadius: BorderRadius.circular(10),
+                border: Border.all(color: color.withValues(alpha: 0.5)),
+              ),
+              child: Icon(icon, size: 18, color: color),
+            ),
+          ),
+        ),
+      );
+    }
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      decoration: BoxDecoration(
+        color: const Color(0xFFF5F5F8),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: const Color(0xFFE0E0E8)),
+      ),
+      child: Row(
+        children: [
+          const Icon(
+            Icons.smart_toy,
+            size: 16,
+            color: Color(0xFF3949AB),
+          ),
+          const SizedBox(width: 6),
+          Expanded(
+            child: Text(
+              l10n.lobbyFillEmptyWithBots,
+              style: const TextStyle(
+                fontSize: 12,
+                fontWeight: FontWeight.w700,
+                color: Color(0xFF3949AB),
+              ),
+              overflow: TextOverflow.ellipsis,
+            ),
+          ),
+          speedBtn(
+            'fast',
+            Icons.fast_forward,
+            const Color(0xFFE65100),
+            l10n.lobbyBotSpeedFast,
+          ),
+          const SizedBox(width: 6),
+          speedBtn(
+            'normal',
+            Icons.play_arrow,
+            const Color(0xFF3949AB),
+            l10n.lobbyBotSpeedNormal,
+          ),
+          const SizedBox(width: 6),
+          speedBtn(
+            'slow',
+            Icons.slow_motion_video,
+            const Color(0xFF558B2F),
+            l10n.lobbyBotSpeedSlow,
+          ),
+        ],
+      ),
+    );
   }
 
   // True when every seated non-host, non-bot player has toggled ready.

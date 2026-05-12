@@ -441,12 +441,16 @@ class _SKGameScreenState extends State<SKGameScreen> {
                             builder: (context, gridConstraints) {
                               final wide = gridConstraints.maxWidth > 620;
                               return GridView.builder(
+                                // Top padding gives the host 👑 overhang on
+                                // the first row room to render without being
+                                // clipped by GridView's default Clip.hardEdge.
+                                padding: const EdgeInsets.only(top: 6),
                                 gridDelegate:
                                     SliverGridDelegateWithFixedCrossAxisCount(
                                       crossAxisCount: wide ? 2 : 1,
                                       mainAxisSpacing: 10,
                                       crossAxisSpacing: 12,
-                                      childAspectRatio: wide ? 2.4 : 4.0,
+                                      childAspectRatio: wide ? 4.8 : 4.4,
                                     ),
                                 itemCount: slots.length,
                                 itemBuilder: (context, index) {

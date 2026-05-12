@@ -307,6 +307,7 @@
   "lobbyAddBotDialogTitle": "봇 추가",
   "lobbyAddBotConfirm": "추가",
   "lobbyAddBotCancel": "취소",
+  "lobbyFillEmptyWithBots": "빈 자리 봇으로 채우기",
   "lobbyEmptySlot": "[빈 자리]",
   "lobbySlotBlocked": "[막힘]",
   "lobbyMaintenanceDefault": "서버 점검 예정",

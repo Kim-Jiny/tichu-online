@@ -943,6 +943,9 @@ class L10nKo extends L10n {
   String get lobbyAddBotCancel => '취소';
 
   @override
+  String get lobbyFillEmptyWithBots => '빈 자리 봇으로 채우기';
+
+  @override
   String get lobbyEmptySlot => '[빈 자리]';
 
   @override

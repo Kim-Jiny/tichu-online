@@ -1875,6 +1875,12 @@ abstract class L10n {
   /// **'Cancel'**
   String get lobbyAddBotCancel;
 
+  /// No description provided for @lobbyFillEmptyWithBots.
+  ///
+  /// In en, this message translates to:
+  /// **'Fill empty seats with bots'**
+  String get lobbyFillEmptyWithBots;
+
   /// No description provided for @lobbyEmptySlot.
   ///
   /// In en, this message translates to:

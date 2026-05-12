@@ -315,6 +315,7 @@
   "lobbyAddBotDialogTitle": "Bot hinzufügen",
   "lobbyAddBotConfirm": "Hinzufügen",
   "lobbyAddBotCancel": "Abbrechen",
+  "lobbyFillEmptyWithBots": "Leere Plätze mit Bots füllen",
   "lobbyEmptySlot": "[Leer]",
   "lobbySlotBlocked": "[Gesperrt]",
   "lobbyMaintenanceDefault": "Serverwartung geplant",

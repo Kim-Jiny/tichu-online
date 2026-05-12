@@ -1015,6 +1015,7 @@ function serializeRoom(room) {
         ready: !!p.ready,
         titleKey: p.titleKey || null,
         titleName: p.titleName || null,
+        level: p.isBot ? null : (p.level || 1),
       };
     }),
   };
@@ -2090,6 +2091,7 @@ async function handleReconnection(ws) {
   const hasMightyPrevTrick = profile?.hasMightyPrevTrick || false;
   ws.titleKey = titleKey;
   ws.titleName = titleName;
+  ws.level = (profile && Number.isFinite(profile.level)) ? profile.level : 1;
 
   const socialInfo = await getLinkedSocial(ws.userId);
   const authProvider = socialInfo?.provider || 'local';
@@ -2451,11 +2453,12 @@ function handleCreateRoom(ws, data) {
     skExpansions
   );
   ws.roomId = room.id;
-  // Set title on host player
+  // Set title + level on host player
   if (ws.titleKey) {
     room.players[0].titleKey = ws.titleKey;
     room.players[0].titleName = ws.titleName;
   }
+  room.players[0].level = ws.level || 1;
 
   sendTo(ws, { type: 'room_joined', roomId: room.id, roomName: room.name });
   broadcastRoomState(room.id);
@@ -2500,12 +2503,15 @@ async function handleJoinRoom(ws, data) {
     return;
   }
   ws.roomId = room.id;
-  // Set title on joined player
-  if (ws.titleKey) {
+  // Set title + level on joined player
+  {
     const p = room.players.find(p => p !== null && p.id === ws.playerId);
     if (p) {
-      p.titleKey = ws.titleKey;
-      p.titleName = ws.titleName;
+      if (ws.titleKey) {
+        p.titleKey = ws.titleKey;
+        p.titleName = ws.titleName;
+      }
+      p.level = ws.level || 1;
     }
   }
   sendTo(ws, { type: 'room_joined', roomId: room.id, roomName: room.name });
@@ -3330,12 +3336,15 @@ function handleSwitchToPlayer(ws, data) {
     return;
   }
   ws.isSpectator = false;
-  // Set title on player slot
-  if (ws.titleKey) {
+  // Set title + level on player slot
+  {
     const p = room.players[targetSlot];
     if (p) {
-      p.titleKey = ws.titleKey;
-      p.titleName = ws.titleName;
+      if (ws.titleKey) {
+        p.titleKey = ws.titleKey;
+        p.titleName = ws.titleName;
+      }
+      p.level = ws.level || 1;
     }
   }
   sendTo(ws, { type: 'switched_to_player', roomId: room.id, roomName: room.name });

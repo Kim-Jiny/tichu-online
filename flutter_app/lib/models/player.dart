@@ -39,6 +39,9 @@ class Player {
   final String? titleName;
   final String? botSpeed;
   final String? botStrategy;
+  /// Player's account level. Null for bots and (transitionally) for old
+  /// server responses that haven't redeployed level support yet.
+  final int? level;
 
   Player({
     required this.id,
@@ -58,6 +61,7 @@ class Player {
     this.titleName,
     this.botSpeed,
     this.botStrategy,
+    this.level,
   });
 
   factory Player.fromJson(Map<String, dynamic> json) {
@@ -79,6 +83,7 @@ class Player {
       titleName: json['titleName'] as String?,
       botSpeed: json['botSpeed'] as String?,
       botStrategy: json['botStrategy'] as String?,
+      level: (json['level'] as num?)?.toInt(),
     );
   }
 }

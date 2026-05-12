@@ -16,6 +16,8 @@ import 'settings_screen.dart';
 import 'rules_screen.dart';
 import 'friends_screen.dart';
 import '../widgets/connection_overlay.dart';
+import '../widgets/level_badge.dart';
+import '../widgets/title_chip.dart';
 import '../services/ad_service.dart';
 import '../services/kakao_invite_share_service.dart';
 import 'package:google_mobile_ads/google_mobile_ads.dart';
@@ -5031,96 +5033,82 @@ class _LobbyScreenState extends State<LobbyScreen> {
           _showUserProfileDialog(player.name, game);
         }
       },
-      child: Container(
-        width: double.infinity,
-        height: 56,
-        padding: const EdgeInsets.symmetric(horizontal: 12),
-        decoration: BoxDecoration(
-          color: isSlotBlocked
-              ? const Color(0xFFEDE9E6)
-              : isReady
-              ? const Color(0xFFE8F5E9)
-              : isMySlot
-              ? const Color(0xFFE8F0E8)
-              : isBot
-              ? const Color(0xFFE8EAF6)
-              : isBlockedPlayer
-              ? const Color(0xFFFAF0F0)
-              : const Color(0xFFFAF6F4),
-          borderRadius: BorderRadius.circular(16),
-          border: Border.all(
-            color: isSlotBlocked
-                ? const Color(0xFFBBB1A8)
-                : isReady
-                ? const Color(0xFF66BB6A)
-                : isMySlot
-                ? const Color(0xFFA8D4A8)
-                : isBot
-                ? const Color(0xFFC5CAE9)
-                : isBlockedPlayer
-                ? const Color(0xFFE0B0B0)
-                : const Color(0xFFDDD0CC),
-            width: isReady ? 2 : 1,
-          ),
-        ),
-        child: Row(
-          children: [
-            // Left-side block X button (host, empty, SK/LL)
-            if (canBlockSlot)
-              GestureDetector(
-                behavior: HitTestBehavior.opaque,
-                onTap: () => game.blockSlot(slotIndex),
-                child: Container(
-                  margin: const EdgeInsets.only(right: 8),
-                  padding: const EdgeInsets.all(4),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFFFFE0E0),
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: const Icon(
-                    Icons.close,
-                    size: 14,
-                    color: Color(0xFFC62828),
-                  ),
-                ),
+      child: Stack(
+        clipBehavior: Clip.none,
+        children: [
+          Container(
+            width: double.infinity,
+            height: 56,
+            padding: const EdgeInsets.symmetric(horizontal: 12),
+            decoration: BoxDecoration(
+              color: isSlotBlocked
+                  ? const Color(0xFFEDE9E6)
+                  : isReady
+                  ? const Color(0xFFE8F5E9)
+                  : isMySlot
+                  ? const Color(0xFFE8F0E8)
+                  : isBot
+                  ? const Color(0xFFE8EAF6)
+                  : isBlockedPlayer
+                  ? const Color(0xFFFAF0F0)
+                  : const Color(0xFFFAF6F4),
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(
+                color: isSlotBlocked
+                    ? const Color(0xFFBBB1A8)
+                    : isReady
+                    ? const Color(0xFF66BB6A)
+                    : isMySlot
+                    ? const Color(0xFFA8D4A8)
+                    : isBot
+                    ? const Color(0xFFC5CAE9)
+                    : isBlockedPlayer
+                    ? const Color(0xFFE0B0B0)
+                    : const Color(0xFFDDD0CC),
+                width: isReady ? 2 : 1,
               ),
-            // Blocked slot indicator
-            if (isSlotBlocked)
-              const Padding(
-                padding: EdgeInsets.only(right: 6),
-                child: Icon(
-                  Icons.lock_outline,
-                  size: 16,
-                  color: Color(0xFF8A7A72),
-                ),
-              ),
-            // Ready check icon
-            if (isReady)
-              const Padding(
-                padding: EdgeInsets.only(right: 6),
-                child: Icon(
-                  Icons.check_circle,
-                  size: 16,
-                  color: Color(0xFF43A047),
-                ),
-              ),
-            // Host badge
-            if (player != null && player.isHost)
-              Container(
-                margin: const EdgeInsets.only(right: 6),
-                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                decoration: BoxDecoration(
-                  color: const Color(0xFFFFE082),
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: Text(
-                  L10n.of(context).lobbyHost,
-                  style: const TextStyle(
-                    fontSize: 10,
-                    fontWeight: FontWeight.bold,
-                    color: Color(0xFF8D6E00),
-                  ),
-                ),
+            ),
+            child: Row(
+                  children: [
+                    // Left-side block X button (host, empty, SK/LL)
+                    if (canBlockSlot)
+                      GestureDetector(
+                        behavior: HitTestBehavior.opaque,
+                        onTap: () => game.blockSlot(slotIndex),
+                        child: Container(
+                          margin: const EdgeInsets.only(right: 8),
+                          padding: const EdgeInsets.all(4),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFFFE0E0),
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: const Icon(
+                            Icons.close,
+                            size: 14,
+                            color: Color(0xFFC62828),
+                          ),
+                        ),
+                      ),
+                    // Blocked slot indicator
+                    if (isSlotBlocked)
+                      const Padding(
+                        padding: EdgeInsets.only(right: 6),
+                        child: Icon(
+                          Icons.lock_outline,
+                          size: 16,
+                          color: Color(0xFF8A7A72),
+                        ),
+                      ),
+                    // Ready state is now conveyed by the background check
+                    // watermark (see Stack below) so the inline check icon is
+                    // removed to keep the row layout stable.
+            // Level badge takes the previous host-pill spot. The host
+            // indicator itself is now a 👑 emoji overhanging the top-left
+            // corner (see Positioned below).
+            if (player != null && !isBot && player.level != null)
+              Padding(
+                padding: const EdgeInsets.only(right: 6),
+                child: LevelBadge(level: player.level, size: 28),
               ),
             // Bot badge with speed indicator
             if (isBot)
@@ -5189,30 +5177,15 @@ class _LobbyScreenState extends State<LobbyScreen> {
             Expanded(
               child: Column(
                 mainAxisSize: MainAxisSize.min,
+                mainAxisAlignment: MainAxisAlignment.center,
                 crossAxisAlignment: CrossAxisAlignment.center,
                 children: [
                   if (player != null && player.titleName != null)
                     Padding(
                       padding: const EdgeInsets.only(bottom: 2),
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Icon(
-                            _getTitleIcon(player.titleKey),
-                            size: 11,
-                            color: _getTitleColor(player.titleKey),
-                          ),
-                          const SizedBox(width: 3),
-                          Text(
-                            player.titleName!,
-                            style: TextStyle(
-                              fontSize: 11,
-                              color: _getTitleColor(player.titleKey),
-                              fontWeight: FontWeight.w600,
-                            ),
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                        ],
+                      child: TitleChip(
+                        titleKey: player.titleKey,
+                        titleName: player.titleName,
                       ),
                     ),
                   Text(
@@ -5378,121 +5351,35 @@ class _LobbyScreenState extends State<LobbyScreen> {
                   ),
                 ),
               ),
-          ],
-        ),
+                  ],
+                ),
+          ),
+          if (isReady)
+            Positioned.fill(
+              child: IgnorePointer(
+                child: Center(
+                  child: Icon(
+                    Icons.check_circle,
+                    size: 56,
+                    color: const Color(0xFF43A047).withValues(alpha: 0.18),
+                  ),
+                ),
+              ),
+            ),
+          if (player != null && !isBot && player.isHost)
+            const Positioned(
+              left: -2,
+              top: -6,
+              child: Text(
+                '👑',
+                style: TextStyle(fontSize: 18, height: 1.0),
+              ),
+            ),
+        ],
       ),
     );
   }
 
-  IconData _getTitleIcon(String? titleKey) {
-    switch (titleKey) {
-      case 'title_sweet':
-        return Icons.cake;
-      case 'title_steady':
-        return Icons.shield;
-      case 'title_flash_30d':
-        return Icons.flash_on;
-      case 'title_dragon':
-        return Icons.local_fire_department;
-      case 'title_phoenix':
-        return Icons.local_fire_department;
-      case 'title_pirate':
-        return Icons.anchor;
-      case 'title_tactician':
-        return Icons.psychology;
-      case 'title_lucky':
-        return Icons.star;
-      case 'title_bluffer':
-        return Icons.theater_comedy;
-      case 'title_ace':
-        return Icons.military_tech;
-      case 'title_king':
-        return Icons.workspace_premium;
-      case 'title_rookie':
-        return Icons.emoji_nature;
-      case 'title_veteran':
-        return Icons.security;
-      case 'title_sensitive':
-        return Icons.sentiment_very_dissatisfied;
-      case 'title_shadow':
-        return Icons.visibility_off;
-      case 'title_flame':
-        return Icons.whatshot;
-      case 'title_ice':
-        return Icons.ac_unit;
-      case 'title_crown':
-        return Icons.diamond;
-      case 'title_diamond':
-        return Icons.diamond;
-      case 'title_ghost':
-        return Icons.blur_on;
-      case 'title_thunder':
-        return Icons.bolt;
-      case 'title_topcard':
-        return Icons.style;
-      case 'title_legend':
-        return Icons.auto_awesome;
-      case 'title_boomer':
-        return Icons.elderly;
-      default:
-        return Icons.star;
-    }
-  }
-
-  Color _getTitleColor(String? titleKey) {
-    switch (titleKey) {
-      case 'title_sweet':
-        return const Color(0xFFEC407A);
-      case 'title_steady':
-        return const Color(0xFF5C6BC0);
-      case 'title_flash_30d':
-        return const Color(0xFFFFA000);
-      case 'title_dragon':
-        return const Color(0xFFD32F2F);
-      case 'title_phoenix':
-        return const Color(0xFFFF6F00);
-      case 'title_pirate':
-        return const Color(0xFF37474F);
-      case 'title_tactician':
-        return const Color(0xFF00695C);
-      case 'title_lucky':
-        return const Color(0xFFFFD600);
-      case 'title_bluffer':
-        return const Color(0xFF6A1B9A);
-      case 'title_ace':
-        return const Color(0xFFC62828);
-      case 'title_king':
-        return const Color(0xFFFF8F00);
-      case 'title_rookie':
-        return const Color(0xFF66BB6A);
-      case 'title_veteran':
-        return const Color(0xFF1565C0);
-      case 'title_sensitive':
-        return const Color(0xFFE91E63);
-      case 'title_shadow':
-        return const Color(0xFF424242);
-      case 'title_flame':
-        return const Color(0xFFFF5722);
-      case 'title_ice':
-        return const Color(0xFF0288D1);
-      case 'title_crown':
-        return const Color(0xFFE65100);
-      case 'title_diamond':
-        return const Color(0xFF00BCD4);
-      case 'title_ghost':
-        return const Color(0xFF78909C);
-      case 'title_thunder':
-        return const Color(0xFFFFAB00);
-      case 'title_topcard':
-        return const Color(0xFF00897B);
-      case 'title_legend':
-        return const Color(0xFFFF6D00);
-      case 'title_boomer':
-        return const Color(0xFF795548);
-      default:
-        return const Color(0xFF7E57C2);
-    }
-  }
 
   String _shortStrategyLabel(String strategy) {
     switch (strategy) {

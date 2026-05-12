@@ -8,6 +8,8 @@ import '../services/game_service.dart';
 import '../services/session_service.dart';
 import '../widgets/playing_card.dart';
 import '../widgets/connection_overlay.dart';
+import '../widgets/level_badge.dart';
+import '../widgets/title_chip.dart';
 
 class SpectatorScreen extends StatefulWidget {
   const SpectatorScreen({super.key});
@@ -380,7 +382,6 @@ class _SpectatorScreenState extends State<SpectatorScreen> {
     final bool isEmpty = player == null;
     final String name = isEmpty ? '' : player.name;
     final bool isReady = isEmpty ? false : player.isReady;
-    final bool isHost = isEmpty ? false : player.isHost;
 
     final content = Container(
       width: 130,
@@ -402,35 +403,86 @@ class _SpectatorScreenState extends State<SpectatorScreen> {
         children: [
           Icon(
             isEmpty ? Icons.person_add : Icons.person,
-            color: isEmpty ? const Color(0xFF9AA7B0) : const Color(0xFF6A5A52),
-            size: 30,
+            color: isEmpty
+                ? const Color(0xFF9AA7B0)
+                : const Color(0xFF6A5A52),
+            size: 28,
           ),
-          const SizedBox(height: 8),
-          Text(
-            isEmpty ? L10n.of(context).spectatorSit : name,
-            style: TextStyle(
-              color: isEmpty ? const Color(0xFF9AA7B0) : const Color(0xFF5A4038),
-              fontSize: 12,
-              fontWeight: FontWeight.w500,
+          const SizedBox(height: 6),
+          if (!isEmpty && player.titleName != null) ...[
+            TitleChip(
+              titleKey: player.titleKey,
+              titleName: player.titleName,
+              fontSize: 10,
+              iconSize: 10,
             ),
-            overflow: TextOverflow.ellipsis,
-          ),
-          if (!isEmpty) ...[
-            const SizedBox(height: 4),
-            Text(
-              isHost ? L10n.of(context).spectatorHost : (isReady ? L10n.of(context).spectatorReady : L10n.of(context).spectatorWaiting),
-              style: TextStyle(
-                color: isHost
-                    ? const Color(0xFFE6A800)
-                    : isReady
-                        ? const Color(0xFF4BAA6A)
-                        : const Color(0xFF9A8E8A),
-                fontSize: 10,
-              ),
-            ),
+            const SizedBox(height: 2),
           ],
+          if (isEmpty)
+            Text(
+              L10n.of(context).spectatorSit,
+              style: const TextStyle(
+                color: Color(0xFF9AA7B0),
+                fontSize: 12,
+                fontWeight: FontWeight.w500,
+              ),
+              overflow: TextOverflow.ellipsis,
+            )
+          else
+            Row(
+              mainAxisSize: MainAxisSize.min,
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                if (player.level != null) ...[
+                  LevelBadge(level: player.level, size: 18),
+                  const SizedBox(width: 4),
+                ],
+                Flexible(
+                  child: Text(
+                    name,
+                    style: const TextStyle(
+                      color: Color(0xFF5A4038),
+                      fontSize: 12,
+                      fontWeight: FontWeight.w500,
+                    ),
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
+              ],
+            ),
+          // Host status is conveyed by the 👑 overhang on the top-left and
+          // ready status by the subtle check watermark behind the slot — no
+          // textual status line is rendered so the layout doesn't shift.
         ],
       ),
+    );
+
+    final stacked = Stack(
+      clipBehavior: Clip.none,
+      children: [
+        content,
+        if (!isEmpty && isReady)
+          Positioned.fill(
+            child: IgnorePointer(
+              child: Center(
+                child: Icon(
+                  Icons.check_circle,
+                  size: 56,
+                  color: const Color(0xFF4CAF50).withValues(alpha: 0.18),
+                ),
+              ),
+            ),
+          ),
+        if (!isEmpty && player.isHost)
+          const Positioned(
+            left: -2,
+            top: -6,
+            child: Text(
+              '👑',
+              style: TextStyle(fontSize: 18, height: 1.0),
+            ),
+          ),
+      ],
     );
 
     if (isEmpty) {
@@ -440,14 +492,14 @@ class _SpectatorScreenState extends State<SpectatorScreen> {
           onTap: () => game.switchToPlayer(slotIndex),
           borderRadius: BorderRadius.circular(16),
           splashColor: Colors.blue.withValues(alpha: 0.2),
-          child: content,
+          child: stacked,
         ),
       );
     }
 
     return GestureDetector(
       onTap: () => _showPlayerProfileDialog(name, game),
-      child: content,
+      child: stacked,
     );
   }
 

@@ -8,6 +8,7 @@ import '../models/player.dart';
 import '../models/ll_game_state.dart';
 import '../widgets/love_letter_card.dart';
 import '../widgets/connection_overlay.dart';
+import '../widgets/level_badge.dart';
 import '../l10n/app_localizations.dart';
 import '../l10n/l10n_helpers.dart';
 
@@ -498,76 +499,86 @@ class _LLGameScreenState extends State<LLGameScreen> {
     final bool isReady = p.isReady;
     return GestureDetector(
       onTap: () => _showPlayerProfileDialog(p.name, game),
-      child: Container(
-        padding: const EdgeInsets.all(12),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(16),
-          border: Border.all(
-            color: isReady ? const Color(0xFF9ED6A5) : const Color(0xFFE0D8D4),
-            width: isReady ? 2 : 1,
+      child: Stack(
+        clipBehavior: Clip.none,
+        children: [
+          Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(
+                color: isReady
+                    ? const Color(0xFF9ED6A5)
+                    : const Color(0xFFE0D8D4),
+                width: isReady ? 2 : 1,
+              ),
+            ),
+            child: Row(
+              children: [
+                if (p.level != null)
+                  LevelBadge(level: p.level, size: 36)
+                else
+                  Container(
+                    width: 36,
+                    height: 36,
+                    decoration: const BoxDecoration(
+                      color: Color(0xFFF2ECE8),
+                      shape: BoxShape.circle,
+                    ),
+                    child: const Icon(
+                      Icons.person,
+                      size: 18,
+                      color: Color(0xFF6A5A52),
+                    ),
+                  ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        p.name,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(
+                          color: Color(0xFF3E312A),
+                          fontSize: 14,
+                          fontWeight: FontWeight.w800,
+                        ),
+                      ),
+                      // Host = 👑 overhang, ready = background check watermark.
+                      // No textual status line so the layout stays stable.
+                    ],
+                  ),
+                ),
+              ],
+            ),
           ),
-        ),
-        child: Row(
-          children: [
-            Container(
-              width: 36,
-              height: 36,
-              decoration: BoxDecoration(
-                color: p.isHost
-                    ? const Color(0xFFFFF2B3)
-                    : const Color(0xFFF2ECE8),
-                shape: BoxShape.circle,
-              ),
-              child: Icon(
-                p.isHost ? Icons.emoji_events : Icons.person,
-                size: 18,
-                color: p.isHost
-                    ? const Color(0xFFE6A800)
-                    : const Color(0xFF6A5A52),
+          if (isReady)
+            Positioned.fill(
+              child: IgnorePointer(
+                child: Center(
+                  child: Icon(
+                    Icons.check_circle,
+                    size: 56,
+                    color: const Color(0xFF4CAF50).withValues(alpha: 0.18),
+                  ),
+                ),
               ),
             ),
-            const SizedBox(width: 10),
-            Expanded(
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                mainAxisAlignment: MainAxisAlignment.center,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    p.name,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(
-                      color: Color(0xFF3E312A),
-                      fontSize: 14,
-                      fontWeight: FontWeight.w800,
-                    ),
-                  ),
-                  const SizedBox(height: 2),
-                  Text(
-                    p.isHost
-                        ? L10n.of(context).spectatorHost
-                        : (isReady
-                              ? L10n.of(context).spectatorReady
-                              : L10n.of(context).spectatorWaiting),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: TextStyle(
-                      color: p.isHost
-                          ? const Color(0xFFE6A800)
-                          : isReady
-                          ? const Color(0xFF4BAA6A)
-                          : const Color(0xFF9A8E8A),
-                      fontSize: 12,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                ],
+          if (p.isHost)
+            const Positioned(
+              left: -2,
+              top: -6,
+              child: Text(
+                '👑',
+                style: TextStyle(fontSize: 18, height: 1.0),
               ),
             ),
-          ],
-        ),
+        ],
       ),
     );
   }

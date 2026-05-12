@@ -8,6 +8,7 @@ import '../models/mighty_game_state.dart';
 import '../models/player.dart';
 import '../widgets/playing_card.dart';
 import '../widgets/connection_overlay.dart';
+import '../widgets/level_badge.dart';
 import '../l10n/app_localizations.dart';
 import '../l10n/l10n_helpers.dart';
 
@@ -716,65 +717,79 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
         game,
         isBot: player.id.startsWith('bot_'),
       ),
-      child: Container(
-        padding: const EdgeInsets.all(12),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(16),
-          border: Border.all(
-            color: isReady ? const Color(0xFF9ED6A5) : const Color(0xFFE0D8D4),
-            width: isReady ? 2 : 1,
+      child: Stack(
+        clipBehavior: Clip.none,
+        children: [
+          Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(
+                color: isReady
+                    ? const Color(0xFF9ED6A5)
+                    : const Color(0xFFE0D8D4),
+                width: isReady ? 2 : 1,
+              ),
+            ),
+            child: Row(
+              children: [
+                if (player.level != null)
+                  LevelBadge(level: player.level, size: 36)
+                else
+                  Container(
+                    width: 36,
+                    height: 36,
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFE8F5E9),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: const Icon(
+                      Icons.person,
+                      color: Color(0xFF2E7D32),
+                      size: 20,
+                    ),
+                  ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Text(
+                    player.name,
+                    style: const TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w700,
+                      color: Color(0xFF3E312A),
+                    ),
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
+                // Ready state is conveyed via the background check watermark
+                // (see Stack below), so the inline READY chip is removed —
+                // keeps the name area from getting squeezed when ready toggles.
+              ],
+            ),
           ),
-        ),
-        child: Row(
-          children: [
-            Container(
-              width: 36,
-              height: 36,
-              decoration: BoxDecoration(
-                color: player.isHost
-                    ? const Color(0xFFFFF2B3)
-                    : const Color(0xFFE8F5E9),
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: Icon(
-                player.isHost ? Icons.star : Icons.person,
-                color: player.isHost
-                    ? const Color(0xFFE6A800)
-                    : const Color(0xFF2E7D32),
-                size: 20,
-              ),
-            ),
-            const SizedBox(width: 10),
-            Expanded(
-              child: Text(
-                player.name,
-                style: const TextStyle(
-                  fontSize: 14,
-                  fontWeight: FontWeight.w700,
-                  color: Color(0xFF3E312A),
-                ),
-                overflow: TextOverflow.ellipsis,
-              ),
-            ),
-            if (isReady)
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                decoration: BoxDecoration(
-                  color: const Color(0xFFE8F5E9),
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: const Text(
-                  'READY',
-                  style: TextStyle(
-                    fontSize: 10,
-                    fontWeight: FontWeight.bold,
-                    color: Color(0xFF4CAF50),
+          if (isReady)
+            Positioned.fill(
+              child: IgnorePointer(
+                child: Center(
+                  child: Icon(
+                    Icons.check_circle,
+                    size: 56,
+                    color: const Color(0xFF4CAF50).withValues(alpha: 0.18),
                   ),
                 ),
               ),
-          ],
-        ),
+            ),
+          if (player.isHost)
+            const Positioned(
+              left: -2,
+              top: -6,
+              child: Text(
+                '👑',
+                style: TextStyle(fontSize: 18, height: 1.0),
+              ),
+            ),
+        ],
       ),
     );
   }

@@ -829,6 +829,7 @@ class GameRoom {
           titleName: p.titleName || null,
           botSpeed: p.botSpeed || null,
           botStrategy: p.isBot ? this.bots.get(p.id)?.strategy || null : null,
+          level: p.isBot ? null : (p.level || null),
         };
       }),
       gameInProgress: !!this.game,

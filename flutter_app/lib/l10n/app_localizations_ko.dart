@@ -2622,7 +2622,12 @@ class L10nKo extends L10n {
 
   @override
   String mtRoundPhase(Object round, Object phase) {
-    return 'R$round $phase';
+    return '라운드 $round · $phase';
+  }
+
+  @override
+  String mtRoundOnly(Object round) {
+    return '라운드 $round';
   }
 
   @override
@@ -2697,6 +2702,16 @@ class L10nKo extends L10n {
   @override
   String mtCurrentBid(Object points, Object suit) {
     return '현재 비딩: $points $suit';
+  }
+
+  @override
+  String mtCurrentBidPoints(Object points) {
+    return '현재 비딩: $points';
+  }
+
+  @override
+  String mtBidPoints(Object points) {
+    return '비딩 $points';
   }
 
   @override

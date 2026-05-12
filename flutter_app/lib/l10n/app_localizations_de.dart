@@ -2699,7 +2699,12 @@ class L10nDe extends L10n {
 
   @override
   String mtRoundPhase(Object round, Object phase) {
-    return 'R$round $phase';
+    return 'Runde $round · $phase';
+  }
+
+  @override
+  String mtRoundOnly(Object round) {
+    return 'Runde $round';
   }
 
   @override
@@ -2774,6 +2779,16 @@ class L10nDe extends L10n {
   @override
   String mtCurrentBid(Object points, Object suit) {
     return 'Aktuelles Gebot: $points $suit';
+  }
+
+  @override
+  String mtCurrentBidPoints(Object points) {
+    return 'Aktuelles Gebot: $points';
+  }
+
+  @override
+  String mtBidPoints(Object points) {
+    return 'Bieten $points';
   }
 
   @override

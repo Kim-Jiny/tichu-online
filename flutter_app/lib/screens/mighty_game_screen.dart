@@ -204,8 +204,26 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
                 colors: themeColors,
               ),
             ),
-            child: SafeArea(
-              child: Consumer<GameService>(
+            child: Stack(
+              children: [
+                SafeArea(child: _buildMainContent()),
+                // Edge-to-edge dim + result UI for round_end / game_end so the
+                // dim layer extends into status bar / nav bar regions instead
+                // of being clipped by SafeArea.
+                Consumer<GameService>(
+                  builder: (context, game, _) =>
+                      _buildEndPhaseOverlay(context, game),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildMainContent() {
+    return Consumer<GameService>(
                 builder: (context, game, _) {
                   final state = game.mightyGameState;
                   if (state == null) {
@@ -471,11 +489,40 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
                     ],
                   );
                 },
-              ),
+              );
+  }
+
+  Widget _buildEndPhaseOverlay(BuildContext context, GameService game) {
+    final state = game.mightyGameState;
+    if (state == null) return const SizedBox.shrink();
+    final isRoundEnd = state.phase == 'round_end';
+    final isGameEnd = state.phase == 'game_end';
+    if (!isRoundEnd && !isGameEnd) return const SizedBox.shrink();
+    return Stack(
+      children: [
+        // Full-bleed dim (extends into status bar / nav bar regions).
+        Positioned.fill(
+          child: IgnorePointer(
+            child: ColoredBox(color: Colors.black.withValues(alpha: 0.10)),
+          ),
+        ),
+        // Result UI inside its own SafeArea so the content stays readable.
+        SafeArea(
+          child: Align(
+            alignment: isRoundEnd
+                ? Alignment.bottomCenter
+                : Alignment.center,
+            child: SingleChildScrollView(
+              padding: isRoundEnd
+                  ? const EdgeInsets.fromLTRB(12, 20, 12, 20)
+                  : const EdgeInsets.fromLTRB(12, 20, 12, 24),
+              child: isRoundEnd
+                  ? _buildRoundEndUI(state)
+                  : _buildGameEndUI(state, game),
             ),
           ),
         ),
-      ),
+      ],
     );
   }
 
@@ -734,9 +781,6 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
 
   // ── Top Bar (SK-style) ──
   Widget _buildTopBar(MightyGameStateData state, GameService game) {
-    final trumpLabel = state.trumpSuit != null
-        ? (state.trumpSuit == 'no_trump' ? 'NT' : _suitSymbol(state.trumpSuit!))
-        : '';
     final hasCurrentBidder = state.currentBid['bidder'] != null;
     final showContractInfo =
         (state.declarer != null &&
@@ -768,7 +812,9 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
                     const SizedBox(width: 5),
                     Text(
                       state.phase == 'round_end'
-                          ? 'R${state.round}'
+                          ? L10n.of(
+                              context,
+                            ).mtRoundOnly(state.round.toString())
                           : L10n.of(context).mtRoundPhase(
                               state.round.toString(),
                               _phaseLabel(state.phase),
@@ -779,32 +825,6 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
                         color: Color(0xFF5A4038),
                       ),
                     ),
-                    if (trumpLabel.isNotEmpty) ...[
-                      const SizedBox(width: 6),
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 5,
-                          vertical: 1,
-                        ),
-                        decoration: BoxDecoration(
-                          color: const Color(0xFFFFF8E1),
-                          borderRadius: BorderRadius.circular(6),
-                        ),
-                        child: Text(
-                          trumpLabel,
-                          style: TextStyle(
-                            fontWeight: FontWeight.bold,
-                            fontSize: 13,
-                            color:
-                                state.trumpSuit == null ||
-                                    state.trumpSuit == 'no_trump'
-                                ? const Color(0xFF7B1FA2)
-                                : (PlayingCard.suitColors[state.trumpSuit!] ??
-                                      const Color(0xFF5A4038)),
-                          ),
-                        ),
-                      ),
-                    ],
                   ],
                 ),
               ),
@@ -1108,117 +1128,219 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
               '');
     final bidPoints = state.currentBid['points'];
     final bidSuit = state.currentBid['suit'];
-    final suitLabel = bidSuit != null ? _suitSymbol(bidSuit.toString()) : '';
     final hasBid = bidPoints != null && (bidPoints is num) && bidPoints > 0;
 
     // Info bar shows WHICH CARD is the friend, not who the partner is.
     // The reveal (partner name) is already visible on the scoreboard via
     // the 'Friend' role badge, so we don't need to duplicate it here.
-    String friendLabel = '';
+    String? friendCardSuit;
+    String? friendCardRank;
+    String friendSuffixText = '';
+    String? friendSpecialText;
     if (!isBidding) {
-      if (state.friendCard != null) {
-        friendLabel =
-            '${_friendCardLabel(state.friendCard!)} ${L10n.of(context).mtFriend}';
+      final friendCard = state.friendCard;
+      if (friendCard == null) {
+        friendSpecialText = L10n.of(context).mtSolo;
+      } else if (friendCard == 'mighty_joker') {
+        friendSpecialText = L10n.of(context).mtFriendCardJoker;
+        friendSuffixText = ' ${L10n.of(context).mtFriend}';
+      } else if (friendCard == 'no_friend') {
+        friendSpecialText = L10n.of(context).mtFriendCardSolo;
+      } else if (friendCard == 'first_trick') {
+        friendSpecialText = L10n.of(context).mtFriendCard1st;
+        friendSuffixText = ' ${L10n.of(context).mtFriend}';
       } else {
-        friendLabel = L10n.of(context).mtSolo;
+        final parts = friendCard.replaceFirst('mighty_', '').split('_');
+        if (parts.length == 2) {
+          friendCardSuit = parts[0];
+          friendCardRank = parts[1];
+          friendSuffixText = ' ${L10n.of(context).mtFriend}';
+        }
       }
     }
+    final hasFriendInfo =
+        friendCardSuit != null || friendSpecialText != null;
+    // Plain-text version used only for width estimation below.
+    final friendEstimateText = friendCardSuit != null
+        ? '$friendCardRank$friendSuffixText'
+        : '${friendSpecialText ?? ''}$friendSuffixText';
 
     final showTrumpCounter =
         state.remainingTrumps != null && game.hasMightyTrumpCounter;
 
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-      margin: const EdgeInsets.symmetric(horizontal: 8),
-      decoration: BoxDecoration(
-        color: const Color(0xFFFFF8E1).withValues(alpha: 0.9),
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: const Color(0xFFFFE082)),
-      ),
-      child: Row(
-        children: [
-          if (showTrumpCounter) ...[
-            _buildTrumpCounterLabel(state),
-            const SizedBox(width: 8),
-          ],
-          Expanded(
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                if (leaderName.isNotEmpty)
-                  Text(
-                    leaderName,
-                    style: const TextStyle(
-                      fontSize: 11,
-                      fontWeight: FontWeight.w600,
-                      color: Color(0xFF5A4038),
-                    ),
+    // Estimate the center content's width using rough per-character widths.
+    // CJK glyphs are roughly em-wide; ASCII a bit narrower. Used only to decide
+    // whether the right-side deal-miss chip would overlap the centered info,
+    // not for layout — Stack handles the actual positioning.
+    double estimateTextWidth(String text, double charWidth) =>
+        text.runes.length * charWidth;
+    double centerEstimate = 0;
+    if (leaderName.isNotEmpty) {
+      centerEstimate += estimateTextWidth(leaderName, 11) + 6;
+    }
+    if (hasBid) {
+      // SuitIcon(11) + gap(3) + "{points}공약" (Korean) ~ 4 glyphs after points
+      final bidPointsText =
+          L10n.of(context).mtContractWithPoints(bidPoints.toInt());
+      centerEstimate +=
+          14 + estimateTextWidth(bidPointsText, 12) + 12; // padding
+    }
+    if (!isBidding && hasFriendInfo) {
+      centerEstimate +=
+          estimateTextWidth(friendEstimateText, 10) +
+          (friendCardSuit != null ? 12 : 0) + // SuitIcon
+          18; // separator + spacing
+    }
+
+    final dealMissFullWidth = state.dealMissPool > 0
+        ? estimateTextWidth(
+                L10n.of(
+                  context,
+                ).mtDealMissPool(state.dealMissPool.toString()),
+                10,
+              ) +
+              16
+        : 0.0;
+
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(8, 4, 8, 4),
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          final width = constraints.maxWidth;
+          // Half-center span occupies width/2 ± centerEstimate/2.
+          final centerRight = (width + centerEstimate) / 2;
+          final dealMissLeftIfFull = width - dealMissFullWidth;
+          final useCompactDealMiss =
+              state.dealMissPool > 0 &&
+              centerRight > dealMissLeftIfFull - 6;
+
+          final centerContent = Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              if (leaderName.isNotEmpty)
+                Text(
+                  leaderName,
+                  style: const TextStyle(
+                    fontSize: 11,
+                    fontWeight: FontWeight.w600,
+                    color: Color(0xFF5A4038),
                   ),
-                if (leaderName.isNotEmpty && hasBid) const SizedBox(width: 6),
-                if (hasBid)
-                  Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 6,
-                      vertical: 1,
-                    ),
-                    decoration: BoxDecoration(
-                      color: const Color(0xFF1565C0),
-                      borderRadius: BorderRadius.circular(6),
-                    ),
-                    child: Text(
-                      '$suitLabel ${L10n.of(context).mtContractWithPoints(bidPoints.toInt())}',
-                      style: const TextStyle(
-                        fontSize: 12,
-                        fontWeight: FontWeight.bold,
+                ),
+              if (leaderName.isNotEmpty && hasBid) const SizedBox(width: 6),
+              if (hasBid)
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 6,
+                    vertical: 2,
+                  ),
+                  decoration: BoxDecoration(
+                    color: _bidAccentColor(bidSuit?.toString()),
+                    borderRadius: BorderRadius.circular(6),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.center,
+                    children: [
+                      SuitIcon(
+                        suit: bidSuit?.toString() ?? '',
+                        size: 11,
                         color: Colors.white,
                       ),
-                    ),
+                      const SizedBox(width: 3),
+                      Text(
+                        L10n.of(
+                          context,
+                        ).mtContractWithPoints(bidPoints.toInt()),
+                        style: const TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.white,
+                        ),
+                      ),
+                    ],
                   ),
-                if (!isBidding && friendLabel.isNotEmpty) ...[
-                  const SizedBox(width: 6),
+                ),
+              if (!isBidding && hasFriendInfo) ...[
+                const SizedBox(width: 6),
+                const Text(
+                  '/',
+                  style: TextStyle(fontSize: 11, color: Color(0xFF8A7A72)),
+                ),
+                const SizedBox(width: 6),
+                if (friendCardSuit != null) ...[
+                  SuitIcon(
+                    suit: friendCardSuit,
+                    size: 10,
+                    color: _bidAccentColor(friendCardSuit),
+                  ),
+                  const SizedBox(width: 2),
                   Text(
-                    '/',
+                    '$friendCardRank$friendSuffixText',
+                    style: TextStyle(
+                      fontSize: 10,
+                      fontWeight: FontWeight.w600,
+                      color: _bidAccentColor(friendCardSuit),
+                    ),
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ] else
+                  Text(
+                    '${friendSpecialText ?? ''}$friendSuffixText',
                     style: const TextStyle(
-                      fontSize: 11,
+                      fontSize: 10,
                       color: Color(0xFF8A7A72),
                     ),
+                    overflow: TextOverflow.ellipsis,
                   ),
-                  const SizedBox(width: 6),
-                  Flexible(
-                    child: Text(
-                      friendLabel,
-                      style: const TextStyle(
-                        fontSize: 10,
-                        color: Color(0xFF8A7A72),
-                      ),
-                      overflow: TextOverflow.ellipsis,
+              ],
+            ],
+          );
+
+          final dealMissChip = state.dealMissPool > 0
+              ? Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 6,
+                    vertical: 1,
+                  ),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFFFEBEE),
+                    borderRadius: BorderRadius.circular(6),
+                    border: Border.all(color: const Color(0xFFFFAB91)),
+                  ),
+                  child: Text(
+                    useCompactDealMiss
+                        ? state.dealMissPool.toString()
+                        : L10n.of(
+                            context,
+                          ).mtDealMissPool(state.dealMissPool.toString()),
+                    style: const TextStyle(
+                      fontWeight: FontWeight.bold,
+                      fontSize: 11,
+                      color: Color(0xFFD84315),
                     ),
                   ),
-                ],
-              ],
-            ),
-          ),
-          if (state.dealMissPool > 0) ...[
-            const SizedBox(width: 6),
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
-              decoration: BoxDecoration(
-                color: const Color(0xFFFFEBEE),
-                borderRadius: BorderRadius.circular(6),
-                border: Border.all(color: const Color(0xFFFFAB91)),
-              ),
-              child: Text(
-                L10n.of(context).mtDealMissPool(state.dealMissPool.toString()),
-                style: const TextStyle(
-                  fontWeight: FontWeight.bold,
-                  fontSize: 11,
-                  color: Color(0xFFD84315),
+                )
+              : null;
+
+          return Stack(
+            alignment: Alignment.center,
+            children: [
+              // Center content sits at the true row center regardless of the
+              // side chips' widths.
+              centerContent,
+              if (showTrumpCounter)
+                Align(
+                  alignment: Alignment.centerLeft,
+                  child: _buildTrumpCounterLabel(state),
                 ),
-              ),
-            ),
-          ] else if (showTrumpCounter)
-            const SizedBox(width: 8),
-        ],
+              if (dealMissChip != null)
+                Align(
+                  alignment: Alignment.centerRight,
+                  child: dealMissChip,
+                ),
+            ],
+          );
+        },
       ),
     );
   }
@@ -1228,13 +1350,22 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
     final count = (trumps['count'] as num?)?.toInt() ?? 0;
     final suit = trumps['suit']?.toString() ?? '';
     final isZero = count == 0;
-    return Text(
-      '${_suitSymbol(suit)}$count',
-      style: TextStyle(
-        fontSize: 12,
-        fontWeight: FontWeight.bold,
-        color: isZero ? const Color(0xFFE53935) : const Color(0xFF1565C0),
-      ),
+    final tone = isZero ? const Color(0xFFE53935) : _bidAccentColor(suit);
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.center,
+      children: [
+        SuitIcon(suit: suit, size: 12, color: tone),
+        const SizedBox(width: 2),
+        Text(
+          '$count',
+          style: TextStyle(
+            fontSize: 12,
+            fontWeight: FontWeight.bold,
+            color: tone,
+          ),
+        ),
+      ],
     );
   }
 
@@ -1548,14 +1679,22 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
     if (bid is Map) {
       final points = bid['points'];
       final suit = bid['suit']?.toString() ?? '';
-      final sym = _suitSymbol(suit);
-      return Text(
-        '$sym$points',
-        style: const TextStyle(
-          fontSize: 9,
-          fontWeight: FontWeight.w800,
-          color: Color(0xFF1565C0),
-        ),
+      final accent = _bidAccentColor(suit);
+      return Row(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.center,
+        children: [
+          SuitIcon(suit: suit, size: 9, color: accent),
+          const SizedBox(width: 1),
+          Text(
+            '$points',
+            style: TextStyle(
+              fontSize: 9,
+              fontWeight: FontWeight.w800,
+              color: accent,
+            ),
+          ),
+        ],
       );
     }
     return null;
@@ -1940,34 +2079,8 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
             child: _buildTableBoard(state, game),
           ),
         ),
-        if (state.phase == 'round_end')
-          Positioned.fill(
-            child: IgnorePointer(
-              ignoring: false,
-              child: Container(
-                color: Colors.black.withValues(alpha: 0.10),
-                alignment: Alignment.bottomCenter,
-                child: SingleChildScrollView(
-                  padding: const EdgeInsets.fromLTRB(12, 20, 12, 20),
-                  child: _buildRoundEndUI(state),
-                ),
-              ),
-            ),
-          ),
-        if (state.phase == 'game_end')
-          Positioned.fill(
-            child: IgnorePointer(
-              ignoring: false,
-              child: Container(
-                color: Colors.black.withValues(alpha: 0.10),
-                alignment: Alignment.center,
-                child: SingleChildScrollView(
-                  padding: const EdgeInsets.fromLTRB(12, 20, 12, 24),
-                  child: _buildGameEndUI(state, game),
-                ),
-              ),
-            ),
-          ),
+        // round_end / game_end dim + result UI are rendered at the body-level
+        // Stack so the dim extends edge-to-edge through the SafeArea.
         if (state.phase == 'kitty_exchange')
           Positioned(
             left: 12,
@@ -2004,7 +2117,6 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
         player.canViewCards;
 
     Widget? roleLabel;
-    Color roleColor = const Color(0xFF8A7A72);
     if (isExcluded) {
       roleLabel = Text(
         L10n.of(context).mtKillExcluded,
@@ -2015,7 +2127,6 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
         ),
       );
     } else if (isDeclarer) {
-      roleColor = const Color(0xFFFF8A00);
       roleLabel = Text(
         L10n.of(context).mtDeclarer,
         style: const TextStyle(
@@ -2025,7 +2136,6 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
         ),
       );
     } else if (isPartner) {
-      roleColor = const Color(0xFF4CAF50);
       roleLabel = Text(
         L10n.of(context).mtFriend,
         style: const TextStyle(
@@ -2190,16 +2300,6 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
                                               color: const Color(0xFFE65100),
                                             ),
                                           )
-                                        : (hasPointCards &&
-                                              player.pointCount > 0)
-                                        ? Text(
-                                            'P ${player.pointCount}',
-                                            style: TextStyle(
-                                              fontSize: metaFontSize,
-                                              fontWeight: FontWeight.w700,
-                                              color: roleColor,
-                                            ),
-                                          )
                                         : null,
                                   ),
                                 ],
@@ -2235,6 +2335,41 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
                                       : const Color(
                                           0xFF8A7A72,
                                         ).withValues(alpha: 0.6),
+                                ),
+                              ),
+                            ),
+                          // Captured-points badge (top-left), mirroring the
+                          // card-view eye on the top-right. Only shown for
+                          // opposition players who have actually captured at
+                          // least one point card.
+                          if (hasPointCards && player.pointCount > 0)
+                            Positioned(
+                              left: -4,
+                              top: -4,
+                              child: Container(
+                                constraints: const BoxConstraints(
+                                  minWidth: 16,
+                                  minHeight: 16,
+                                ),
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 4,
+                                  vertical: 1,
+                                ),
+                                alignment: Alignment.center,
+                                decoration: BoxDecoration(
+                                  color: Colors.white,
+                                  borderRadius: BorderRadius.circular(10),
+                                  border: Border.all(
+                                    color: const Color(0xFFE53935),
+                                  ),
+                                ),
+                                child: Text(
+                                  '${player.pointCount}',
+                                  style: const TextStyle(
+                                    fontSize: 9,
+                                    fontWeight: FontWeight.w800,
+                                    color: Color(0xFFE53935),
+                                  ),
                                 ),
                               ),
                             ),
@@ -2523,7 +2658,7 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
       ),
       child: Row(
         children: [
-          // Label with opposition points
+          // Label with opposition points captured (e.g. "야당 13")
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
             decoration: BoxDecoration(
@@ -2533,7 +2668,7 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
               borderRadius: BorderRadius.circular(6),
             ),
             child: Text(
-              L10n.of(context).mtOpposition,
+              '${L10n.of(context).mtOpposition} $oppPoints',
               style: const TextStyle(
                 fontSize: 11,
                 fontWeight: FontWeight.bold,
@@ -2676,23 +2811,18 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
               Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  Text(
-                    _suitSymbol(contractSuit),
-                    style: TextStyle(
-                      fontSize: 15,
-                      fontWeight: FontWeight.bold,
-                      color:
-                          PlayingCard.suitColors[contractSuit] ??
-                          const Color(0xFF5A4038),
-                    ),
+                  SuitIcon(
+                    suit: contractSuit,
+                    size: 15,
+                    color: _bidAccentColor(contractSuit),
                   ),
                   const SizedBox(width: 4),
                   Text(
                     L10n.of(context).mtContractWithPoints(contractPoints),
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontSize: 14,
                       fontWeight: FontWeight.w800,
-                      color: Color(0xFF5A4038),
+                      color: _bidAccentColor(contractSuit),
                     ),
                   ),
                 ],
@@ -2706,20 +2836,16 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
                   children: [
                     Text(
                       '${L10n.of(context).mtLead} ',
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontSize: 11,
-                        color: Color(0xFF8A7A72),
+                        fontWeight: FontWeight.w600,
+                        color: _bidAccentColor(leadSuit),
                       ),
                     ),
-                    Text(
-                      _suitSymbol(leadSuit),
-                      style: TextStyle(
-                        fontSize: 13,
-                        fontWeight: FontWeight.bold,
-                        color:
-                            PlayingCard.suitColors[leadSuit] ??
-                            const Color(0xFF5A4038),
-                      ),
+                    SuitIcon(
+                      suit: leadSuit,
+                      size: 13,
+                      color: _bidAccentColor(leadSuit),
                     ),
                   ],
                 ),
@@ -2781,27 +2907,178 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
             if (state.friendCard != null)
               Padding(
                 padding: const EdgeInsets.only(top: 6),
-                child: Text(
-                  state.friendRevealed && state.partner != null
-                      ? L10n.of(context).mtFriendRevealed(
-                          _friendCardLabel(state.friendCard!),
-                          state.players
-                                  .where((p) => p.id == state.partner)
-                                  .map((p) => p.name)
-                                  .firstOrNull ??
-                              '',
-                        )
-                      : L10n.of(
-                          context,
-                        ).mtFriendHidden(_friendCardLabel(state.friendCard!)),
-                  style: const TextStyle(
-                    fontSize: 11,
-                    color: Color(0xFF8A7A72),
-                  ),
-                ),
+                child: _buildFriendRevealLine(state),
               ),
           ],
         ),
+      ),
+    );
+  }
+
+  /// Renders a friend card (e.g. selected friend in the kitty UI) as a small
+  /// Row of SuitIcon + rank text, falling back to a plain Text widget for
+  /// special variants (joker / no-friend / first-trick) where no suit applies.
+  Widget _buildFriendCardInline(
+    String cardId, {
+    double fontSize = 11,
+    FontWeight fontWeight = FontWeight.w600,
+  }) {
+    final l10n = L10n.of(context);
+    if (cardId == 'mighty_joker') {
+      return Text(
+        l10n.mtFriendCardJoker,
+        style: TextStyle(
+          fontSize: fontSize,
+          fontWeight: fontWeight,
+          color: const Color(0xFF7B1FA2),
+        ),
+      );
+    }
+    if (cardId == 'no_friend') {
+      return Text(
+        l10n.mtFriendCardSolo,
+        style: TextStyle(
+          fontSize: fontSize,
+          fontWeight: fontWeight,
+          color: const Color(0xFF8A7A72),
+        ),
+      );
+    }
+    if (cardId == 'first_trick') {
+      return Text(
+        l10n.mtFriendCard1st,
+        style: TextStyle(
+          fontSize: fontSize,
+          fontWeight: fontWeight,
+          color: const Color(0xFF1565C0),
+        ),
+      );
+    }
+    final parts = cardId.replaceFirst('mighty_', '').split('_');
+    if (parts.length != 2) {
+      return Text(
+        cardId,
+        style: TextStyle(
+          fontSize: fontSize,
+          fontWeight: fontWeight,
+          color: const Color(0xFF5A4038),
+        ),
+      );
+    }
+    final suit = parts[0];
+    final rank = parts[1];
+    final accent = _bidAccentColor(suit);
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.center,
+      children: [
+        SuitIcon(suit: suit, size: fontSize, color: accent),
+        const SizedBox(width: 2),
+        Text(
+          rank,
+          style: TextStyle(
+            fontSize: fontSize,
+            fontWeight: fontWeight,
+            color: accent,
+          ),
+        ),
+      ],
+    );
+  }
+
+  /// Builds the friend-card line shown in the trick-end area. Uses SuitIcon
+  /// + suit-colored text when the friend is a regular card; falls back to
+  /// neutral text for joker / no-friend / first-trick variants.
+  Widget _buildFriendRevealLine(MightyGameStateData state) {
+    final l10n = L10n.of(context);
+    final friendCard = state.friendCard!;
+    final partnerName = state.partner == null
+        ? ''
+        : state.players
+                  .where((p) => p.id == state.partner)
+                  .map((p) => p.name)
+                  .firstOrNull ??
+              '';
+    final showReveal = state.friendRevealed && state.partner != null;
+
+    String? suit;
+    String? rank;
+    String specialLabel = '';
+    if (friendCard == 'mighty_joker') {
+      specialLabel = l10n.mtFriendCardJoker;
+    } else if (friendCard == 'no_friend') {
+      specialLabel = l10n.mtFriendCardSolo;
+    } else if (friendCard == 'first_trick') {
+      specialLabel = l10n.mtFriendCard1st;
+    } else {
+      final parts = friendCard.replaceFirst('mighty_', '').split('_');
+      if (parts.length == 2) {
+        suit = parts[0];
+        rank = parts[1];
+      } else {
+        specialLabel = friendCard;
+      }
+    }
+    final accent = suit != null
+        ? _bidAccentColor(suit)
+        : const Color(0xFF8A7A72);
+    final baseStyle = TextStyle(
+      fontSize: 11,
+      fontWeight: FontWeight.w600,
+      color: accent,
+    );
+    const cardSentinel = 'CARD';
+    final template = showReveal
+        ? l10n.mtFriendRevealed(cardSentinel, partnerName)
+        : l10n.mtFriendHidden(cardSentinel);
+    final parts = template.split(cardSentinel);
+    return RichText(
+      textAlign: TextAlign.center,
+      text: TextSpan(
+        style: baseStyle,
+        children: [
+          if (parts.isNotEmpty) TextSpan(text: parts[0]),
+          if (suit != null) ...[
+            WidgetSpan(
+              alignment: PlaceholderAlignment.middle,
+              child: SuitIcon(suit: suit, size: 11, color: accent),
+            ),
+            TextSpan(text: rank!),
+          ] else
+            TextSpan(text: specialLabel),
+          if (parts.length > 1) TextSpan(text: parts[1]),
+        ],
+      ),
+    );
+  }
+
+  // Sentinel used to insert a SuitIcon into a localized message that takes
+  // a {suit} placeholder. Picked so it won't collide with real translations.
+  static const String _trumpChangeSentinel = ' SUIT ';
+
+  /// Builds an alert-dialog body for the trump-change confirm flow. The
+  /// localized text contains [_trumpChangeSentinel] where the suit should
+  /// appear; we split on that and inject a SuitIcon inline.
+  Widget _buildTrumpChangeConfirmBody({
+    required String suit,
+    required String bodyText,
+  }) {
+    final parts = bodyText.split(_trumpChangeSentinel);
+    return RichText(
+      text: TextSpan(
+        style: const TextStyle(fontSize: 13, color: Color(0xFF5A4038)),
+        children: [
+          if (parts.isNotEmpty) TextSpan(text: parts[0]),
+          WidgetSpan(
+            alignment: PlaceholderAlignment.middle,
+            child: SuitIcon(
+              suit: suit,
+              size: 13,
+              color: _bidAccentColor(suit),
+            ),
+          ),
+          if (parts.length > 1) TextSpan(text: parts[1]),
+        ],
       ),
     );
   }
@@ -2810,7 +3087,7 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
   /// player never accidentally bumps their bid with a one-tap slip.
   Future<bool> _confirmBidAction({
     required String title,
-    required String body,
+    required Widget body,
   }) async {
     final l10n = L10n.of(context);
     final ok = await showDialog<bool>(
@@ -2820,7 +3097,10 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
           title,
           style: const TextStyle(fontSize: 15, fontWeight: FontWeight.bold),
         ),
-        content: Text(body, style: const TextStyle(fontSize: 13)),
+        content: DefaultTextStyle.merge(
+          style: const TextStyle(fontSize: 13, color: Color(0xFF5A4038)),
+          child: body,
+        ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx, false),
@@ -2870,6 +3150,14 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
     if (ok == true) {
       game.mightyDeclareDealMiss();
     }
+  }
+
+  // Accent color for bid-related UI elements. Maps each suit to its card
+  // color, NT to a distinct purple, and an unknown/missing suit to a neutral
+  // brown so the call sites don't have to repeat the ternary.
+  Color _bidAccentColor(String? suit) {
+    if (suit == 'no_trump') return const Color(0xFF7B1FA2);
+    return PlayingCard.suitColors[suit] ?? const Color(0xFF5A4038);
   }
 
   Widget _buildSuitChip(
@@ -3159,17 +3447,10 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
                   ),
               ],
             ),
-            // Show selected card label
+            // Show selected card label (with SuitIcon for regular cards).
             if (_friendCardSelection.isNotEmpty) ...[
               const SizedBox(height: 6),
-              Text(
-                _friendCardLabel(_friendCardSelection),
-                style: const TextStyle(
-                  fontSize: 11,
-                  color: Color(0xFF1565C0),
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
+              _buildFriendCardInline(_friendCardSelection),
             ],
           ],
           const SizedBox(height: 12),
@@ -3413,23 +3694,18 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
           ),
           child: Row(
             children: [
-              Text(
-                _suitSymbol(trumpSuit),
-                style: TextStyle(
-                  fontSize: 22,
-                  fontWeight: FontWeight.bold,
-                  color:
-                      PlayingCard.suitColors[trumpSuit] ??
-                      const Color(0xFF5A4038),
-                ),
+              SuitIcon(
+                suit: trumpSuit,
+                size: 22,
+                color: _bidAccentColor(trumpSuit),
               ),
               const SizedBox(width: 10),
               Text(
                 l10n.mtContractWithPoints(bidPoints),
-                style: const TextStyle(
+                style: TextStyle(
                   fontSize: 18,
                   fontWeight: FontWeight.w800,
-                  color: Color(0xFF5A4038),
+                  color: _bidAccentColor(trumpSuit),
                 ),
               ),
               const Spacer(),
@@ -3474,7 +3750,7 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
               onPressed: () async {
                 final ok = await _confirmBidAction(
                   title: l10n.mtRaiseBidConfirmTitle,
-                  body: l10n.mtRaiseBidConfirmBody(nextBid.toString()),
+                  body: Text(l10n.mtRaiseBidConfirmBody(nextBid.toString())),
                 );
                 if (ok) {
                   game.mightyRaiseBid();
@@ -3629,8 +3905,10 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
                         final ok = isSameTrump
                             ? await _confirmBidAction(
                                 title: l10n.mtRaiseBidConfirmTitle,
-                                body: l10n.mtRaiseBidConfirmBody(
-                                  nextBid.toString(),
+                                body: Text(
+                                  l10n.mtRaiseBidConfirmBody(
+                                    nextBid.toString(),
+                                  ),
                                 ),
                               )
                             : await _confirmBidAction(
@@ -3638,14 +3916,17 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
                                 // 20 suit → 20 NT is the one change-path at cap —
                                 // server applies no penalty, so the confirm body
                                 // must not say "raise the bid".
-                                body: isAt20Suit
-                                    ? l10n.mtChangeTrumpNoPenaltyBody(
-                                        _suitLabel(_selectedTrumpSuit!),
-                                      )
-                                    : l10n.mtChangeTrumpConfirmBody(
-                                        _suitLabel(_selectedTrumpSuit!),
-                                        nextBid.toString(),
-                                      ),
+                                body: _buildTrumpChangeConfirmBody(
+                                  suit: _selectedTrumpSuit!,
+                                  bodyText: isAt20Suit
+                                      ? l10n.mtChangeTrumpNoPenaltyBody(
+                                          _trumpChangeSentinel,
+                                        )
+                                      : l10n.mtChangeTrumpConfirmBody(
+                                          _trumpChangeSentinel,
+                                          nextBid.toString(),
+                                        ),
+                                ),
                               );
                         if (!ok) return;
                         if (isSameTrump) {
@@ -4120,21 +4401,46 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
               const Icon(Icons.gavel, size: 16, color: Color(0xFF1565C0)),
               const SizedBox(width: 6),
               Expanded(
-                child: Text(
-                  currentBidderName == null
-                      ? L10n.of(context).mtBidInProgress
-                      : L10n.of(context).mtCurrentBid(
-                          state.currentBid['points'].toString(),
-                          _suitLabel(state.currentBid['suit']),
+                child: currentBidderName == null
+                    ? Text(
+                        L10n.of(context).mtBidInProgress,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(
+                          fontSize: 13,
+                          fontWeight: FontWeight.w800,
+                          color: Color(0xFF5A4038),
                         ),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(
-                    fontSize: 13,
-                    fontWeight: FontWeight.w800,
-                    color: Color(0xFF5A4038),
-                  ),
-                ),
+                      )
+                    : Row(
+                        mainAxisSize: MainAxisSize.min,
+                        crossAxisAlignment: CrossAxisAlignment.center,
+                        children: [
+                          Flexible(
+                            child: Text(
+                              L10n.of(context).mtCurrentBidPoints(
+                                state.currentBid['points'].toString(),
+                              ),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: const TextStyle(
+                                fontSize: 13,
+                                fontWeight: FontWeight.w800,
+                                color: Color(0xFF5A4038),
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: 5),
+                          SuitIcon(
+                            suit:
+                                state.currentBid['suit']?.toString() ?? '',
+                            size: 13,
+                            color: _bidAccentColor(
+                              state.currentBid['suit']?.toString(),
+                            ),
+                          ),
+                        ],
+                      ),
               ),
               if (_remainingSeconds > 0)
                 Text(
@@ -4250,15 +4556,15 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
               decoration: BoxDecoration(
-                color: const Color(0xFFE3F2FD),
+                color: _bidAccentColor(_bidSuit).withValues(alpha: 0.12),
                 borderRadius: BorderRadius.circular(8),
               ),
               child: Text(
                 '${_bidPoints.clamp(minBid, 20)}',
-                style: const TextStyle(
+                style: TextStyle(
                   fontWeight: FontWeight.w800,
                   fontSize: 15,
-                  color: Color(0xFF1565C0),
+                  color: _bidAccentColor(_bidSuit),
                 ),
               ),
             ),
@@ -4318,14 +4624,23 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
                   ? () => game.mightySubmitBid(_bidPoints, _bidSuit)
                   : null,
               style: FilledButton.styleFrom(
-                backgroundColor: const Color(0xFF1565C0),
+                backgroundColor: _bidAccentColor(_bidSuit),
                 disabledBackgroundColor: const Color(0xFFBDBDBD),
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(12),
                 ),
               ),
-              child: Text(
-                L10n.of(context).mtBid(_bidPoints, _suitLabel(_bidSuit)),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(L10n.of(context).mtBidPoints(_bidPoints)),
+                  const SizedBox(width: 5),
+                  SuitIcon(
+                    suit: _bidSuit,
+                    size: 14,
+                    color: Colors.white,
+                  ),
+                ],
               ),
             ),
             OutlinedButton(
@@ -5511,7 +5826,7 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
     final l10n = L10n.of(context);
     final ok = await _confirmBidAction(
       title: l10n.mtSettingConfirmTitle,
-      body: l10n.mtSettingConfirmBody,
+      body: Text(l10n.mtSettingConfirmBody),
     );
     if (ok) game.mightyDeclareSetting();
   }
@@ -5802,13 +6117,56 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
     MightyKillEvent event,
   ) {
     final l10n = L10n.of(context);
+    String? targetSuit;
     String cardLabel;
     if (event.targetCardId == 'mighty_joker') {
       cardLabel = 'JOKER';
     } else {
       final parts = event.targetCardId.replaceFirst('mighty_', '').split('_');
-      cardLabel = '${_suitSymbol(parts[0])}${parts[1]}';
+      targetSuit = parts.length > 1 ? parts[0] : null;
+      cardLabel = parts.length > 1 ? parts[1] : event.targetCardId;
     }
+    // Build the kill-result body as inline runs so the suit symbol can render
+    // as a SuitIcon (consistent on Android) instead of a Unicode glyph.
+    const cardSentinel = 'CARD';
+    final body = event.wasKitty
+        ? l10n.mtKillResultSuicide(event.declarerName, cardSentinel)
+        : l10n.mtKillResultKilled(
+            event.declarerName,
+            cardSentinel,
+            event.victimName ?? '?',
+          );
+    final bodyParts = body.split(cardSentinel);
+    const bodyStyle = TextStyle(
+      fontSize: 14,
+      fontWeight: FontWeight.w600,
+      color: Color(0xFF5A4038),
+    );
+    final bodyWidget = targetSuit == null
+        ? Text(
+            body.replaceAll(cardSentinel, cardLabel),
+            textAlign: TextAlign.center,
+            style: bodyStyle,
+          )
+        : RichText(
+            textAlign: TextAlign.center,
+            text: TextSpan(
+              style: bodyStyle,
+              children: [
+                if (bodyParts.isNotEmpty) TextSpan(text: bodyParts[0]),
+                WidgetSpan(
+                  alignment: PlaceholderAlignment.middle,
+                  child: SuitIcon(
+                    suit: targetSuit,
+                    size: 14,
+                    color: _bidAccentColor(targetSuit),
+                  ),
+                ),
+                TextSpan(text: cardLabel),
+                if (bodyParts.length > 1) TextSpan(text: bodyParts[1]),
+              ],
+            ),
+          );
     return Positioned.fill(
       child: GestureDetector(
         onTap: () => setState(() {
@@ -5856,21 +6214,7 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
                   ],
                 ),
                 const SizedBox(height: 10),
-                Text(
-                  event.wasKitty
-                      ? l10n.mtKillResultSuicide(event.declarerName, cardLabel)
-                      : l10n.mtKillResultKilled(
-                          event.declarerName,
-                          cardLabel,
-                          event.victimName ?? '?',
-                        ),
-                  textAlign: TextAlign.center,
-                  style: const TextStyle(
-                    fontSize: 14,
-                    fontWeight: FontWeight.w600,
-                    color: Color(0xFF5A4038),
-                  ),
-                ),
+                bodyWidget,
                 const SizedBox(height: 10),
                 Text(
                   l10n.mtDealMissTapToClose,
@@ -5932,38 +6276,6 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
       default:
         return phase;
     }
-  }
-
-  String _suitSymbol(String suit) {
-    switch (suit) {
-      case 'spade':
-        return '\u2660';
-      case 'heart':
-        return '\u2665';
-      case 'diamond':
-        return '\u2666';
-      case 'club':
-        return '\u2663';
-      case 'no_trump':
-        return 'NT';
-      default:
-        return suit;
-    }
-  }
-
-  String _suitLabel(dynamic suit) {
-    if (suit == null) return '';
-    return _suitSymbol(suit.toString());
-  }
-
-  String _friendCardLabel(String cardId) {
-    final l10n = L10n.of(context);
-    if (cardId == 'mighty_joker') return l10n.mtFriendCardJoker;
-    if (cardId == 'no_friend') return l10n.mtFriendCardSolo;
-    if (cardId == 'first_trick') return l10n.mtFriendCard1st;
-    final parts = cardId.replaceFirst('mighty_', '').split('_');
-    if (parts.length == 2) return '${_suitSymbol(parts[0])}${parts[1]}';
-    return cardId;
   }
 
   String? _getCardSuit(String cardId) {
@@ -6384,6 +6696,54 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
                   );
                 }
 
+                // Bid cell renders the trump as a SuitIcon (Android-safe)
+                // alongside the bid value + success/fail mark.
+                Widget bidCell({
+                  required String? trumpSuit,
+                  required String label,
+                  Color color = const Color(0xFF233142),
+                  bool dealMiss = false,
+                }) {
+                  if (dealMiss || trumpSuit == null) {
+                    return cell(
+                      label,
+                      align: TextAlign.left,
+                      fontWeight: FontWeight.w700,
+                      color: color,
+                    );
+                  }
+                  return Padding(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 3,
+                      vertical: 8,
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      crossAxisAlignment: CrossAxisAlignment.center,
+                      children: [
+                        SuitIcon(
+                          suit: trumpSuit,
+                          size: 10,
+                          color: _bidAccentColor(trumpSuit),
+                        ),
+                        const SizedBox(width: 3),
+                        Flexible(
+                          child: Text(
+                            label,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: TextStyle(
+                              fontSize: 10,
+                              fontWeight: FontWeight.w700,
+                              color: color,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  );
+                }
+
                 final border = TableBorder.symmetric(
                   inside: const BorderSide(
                     color: Color(0xFFDCE4EE),
@@ -6443,20 +6803,28 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
                           : (entry.success
                                 ? const Color(0xFFF4FBF6)
                                 : const Color(0xFFFFF6F7));
-                      final bidText = entry.dealMiss
-                          ? L10n.of(context).mtDealMiss
+                      final dealMissLabel = L10n.of(context).mtDealMiss;
+                      // For NT contracts, fall back to "NT" inline (no suit
+                      // glyph). Other contracts render the suit via SuitIcon.
+                      final trumpKey = entry.trumpSuit;
+                      final showSuitIcon =
+                          trumpKey != null && trumpKey != 'no_trump';
+                      final bidLabel = entry.dealMiss
+                          ? dealMissLabel
+                          : showSuitIcon
+                          ? '${entry.bid}${entry.success ? '✓' : '✗'}'
                           : '$trump${entry.bid}${entry.success ? '✓' : '✗'}';
                       return TableRow(
                         decoration: BoxDecoration(color: rowTint),
                         children: [
                           cell('${entry.round}', fontWeight: FontWeight.w700),
-                          cell(
-                            bidText,
-                            align: TextAlign.left,
-                            fontWeight: FontWeight.w700,
+                          bidCell(
+                            trumpSuit: showSuitIcon ? trumpKey : null,
+                            label: bidLabel,
                             color: entry.dealMiss
                                 ? const Color(0xFFB56A1D)
                                 : const Color(0xFF233142),
+                            dealMiss: entry.dealMiss,
                           ),
                           ...state.players.map((p) {
                             final diff = entry.scores[p.id] ?? 0;

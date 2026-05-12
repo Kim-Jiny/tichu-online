@@ -4926,8 +4926,14 @@ abstract class L10n {
   /// No description provided for @mtRoundPhase.
   ///
   /// In en, this message translates to:
-  /// **'R{round} {phase}'**
+  /// **'Round {round} · {phase}'**
   String mtRoundPhase(Object round, Object phase);
+
+  /// No description provided for @mtRoundOnly.
+  ///
+  /// In en, this message translates to:
+  /// **'Round {round}'**
+  String mtRoundOnly(Object round);
 
   /// No description provided for @mtSolo.
   ///
@@ -5048,6 +5054,18 @@ abstract class L10n {
   /// In en, this message translates to:
   /// **'Current bid: {points} {suit}'**
   String mtCurrentBid(Object points, Object suit);
+
+  /// No description provided for @mtCurrentBidPoints.
+  ///
+  /// In en, this message translates to:
+  /// **'Current bid: {points}'**
+  String mtCurrentBidPoints(Object points);
+
+  /// No description provided for @mtBidPoints.
+  ///
+  /// In en, this message translates to:
+  /// **'Bid {points}'**
+  String mtBidPoints(Object points);
 
   /// No description provided for @mtBidInProgress.
   ///

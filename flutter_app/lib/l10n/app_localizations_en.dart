@@ -2762,6 +2762,9 @@ class L10nEn extends L10n {
   }
 
   @override
+  String get mtBidInProgress => 'Bidding in progress';
+
+  @override
   String get mtPass => 'Pass';
 
   @override

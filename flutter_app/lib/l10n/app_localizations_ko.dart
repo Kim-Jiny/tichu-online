@@ -2700,6 +2700,9 @@ class L10nKo extends L10n {
   }
 
   @override
+  String get mtBidInProgress => '입찰 진행 중';
+
+  @override
   String get mtPass => '패스';
 
   @override

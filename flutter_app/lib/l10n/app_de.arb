@@ -899,6 +899,7 @@
   "mtFriendHidden": "Freund: {card}",
   "mtWins": "{name} gewinnt!",
   "mtCurrentBid": "Aktuelles Gebot: {points} {suit}",
+  "mtBidInProgress": "Gebotsphase läuft",
   "mtPass": "Passen",
   "mtDealMiss": "Deal-Miss",
   "mtDealMissConfirmBody": "Deal-Miss erklären?\n\nDu verlierst sofort 5 Punkte, die in den Deal-Miss-Pool fließen — der nächste erfolgreiche Alleinspieler sammelt den gesamten Pool ein.",

@@ -437,61 +437,11 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
                       Column(
                         children: [
                           _buildTopBar(state, game),
-                          _buildScoreboard(state, game),
                           if (state.phase == 'playing' ||
                               state.phase == 'trick_end' ||
                               state.phase == 'round_end')
                             _buildOppositionPointBar(state),
-                          if (state.phase == 'playing' ||
-                              state.phase == 'trick_end')
-                            _buildPlayedCardsRow(state),
-                          if (state.phase == 'bidding') ...[
-                            Expanded(
-                              child: Align(
-                                alignment: Alignment.bottomCenter,
-                                child: SingleChildScrollView(
-                                  child: _buildBiddingUI(state, game),
-                                ),
-                              ),
-                            ),
-                            _buildHandArea(state, game),
-                          ],
-                          if (state.phase == 'kill_select') ...[
-                            Expanded(child: _buildKillSelectUI(state, game)),
-                            _buildHandArea(state, game),
-                          ],
-                          if (state.phase == 'kitty_exchange') ...[
-                            Expanded(child: _buildKittyUI(game, state)),
-                            if (!state.isMyTurn) _buildHandArea(state, game),
-                          ],
-                          if (state.phase == 'playing')
-                            Expanded(
-                              child: Column(
-                                children: [
-                                  const Spacer(),
-                                  _buildTrickArea(state, game),
-                                  const Spacer(),
-                                ],
-                              ),
-                            ),
-                          if (state.phase == 'playing')
-                            _buildHandArea(state, game),
-                          if (state.phase == 'trick_end')
-                            Expanded(child: _buildTrickEndArea(state)),
-                          if (state.phase == 'trick_end')
-                            _buildHandArea(state, game),
-                          if (state.phase == 'round_end')
-                            Expanded(
-                              child: SingleChildScrollView(
-                                child: _buildRoundEndUI(state),
-                              ),
-                            ),
-                          if (state.phase == 'game_end')
-                            Expanded(
-                              child: SingleChildScrollView(
-                                child: _buildGameEndUI(state, game),
-                              ),
-                            ),
+                          Expanded(child: _buildActiveBoardStage(state, game)),
                         ],
                       ),
                       if (_moreOpen) _buildMoreMenu(game),
@@ -1611,374 +1561,904 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
     return null;
   }
 
-  // ── Scoreboard (SK-style) ──
-  Widget _buildScoreboard(MightyGameStateData state, GameService game) {
-    final isSpectator = game.isSpectator;
+  Widget _buildTableBoard(MightyGameStateData state, GameService game) {
+    final isLandscape =
+        MediaQuery.of(context).orientation == Orientation.landscape;
     final myId = game.playerId;
     final isSelfExcluded =
         myId.isNotEmpty && state.excludedPlayers.contains(myId);
-    // Killed-mighty player acts as pseudo-spectator for the rest of the round.
-    final canRequestCardView = isSpectator || isSelfExcluded;
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 6),
-      margin: EdgeInsets.zero,
-      child: Row(
-        children: state.players.map((p) {
-          final isCurrentTurn = p.id == state.currentPlayer;
-          final isSelf = p.position == 'self';
-          final isDeclarer = p.id == state.declarer;
-          final isPartner = state.friendRevealed && p.id == state.partner;
-          final isExcluded = state.excludedPlayers.contains(p.id);
-          // Card-view state: real spectator OR killed-mighty player peeking.
-          final isPending =
-              canRequestCardView && game.pendingCardViewRequests.contains(p.id);
-          final isApproved =
-              canRequestCardView &&
-              game.approvedCardViews.contains(p.id) &&
-              p.canViewCards;
+    final showAllSeats = game.isSpectator;
+    final canRequestCardView = game.isSpectator || isSelfExcluded;
+    final isBidding = state.phase == 'bidding';
+    final isKillSelect = state.phase == 'kill_select';
+    final visiblePlayers = showAllSeats
+        ? state.players
+        : state.players.where((p) => p.position != 'self').toList();
+    final activeTrick = state.phase == 'trick_end'
+        ? state.lastTrickCards
+        : state.currentTrick;
+    final winnerId = state.phase == 'trick_end' ? state.lastTrickWinner : null;
+    final selfPlay = showAllSeats
+        ? null
+        : activeTrick.cast<MightyTrickPlay?>().firstWhere(
+            (play) => play?.playerId == myId,
+            orElse: () => null,
+          );
 
-          // Opposition = not declarer and not revealed partner → can show pointCards
-          final isGovt =
-              p.id == state.declarer ||
-              (state.friendRevealed && p.id == state.partner);
-          final hasPointCards = !isGovt && p.pointCards.isNotEmpty;
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(8, 10, 8, 8),
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          final width = constraints.maxWidth;
+          final height = constraints.maxHeight;
+          final centerX = width / 2;
+          const seatWidth = 106.0;
+          const seatHeight = 78.0;
+          const playedCardWidth = 72 * 0.7;
+          const playedCardHeight = 72.0;
 
-          return Expanded(
-            child: Opacity(
-              opacity: isExcluded ? 0.45 : 1.0,
-              child: GestureDetector(
-                onTap: () {
-                  // Self-tile always shows own profile (no request flow).
-                  if (isSelf) {
-                    _showPlayerProfileDialog(
-                      p.name,
-                      game,
-                      isBot: p.id.startsWith('bot_'),
-                    );
-                    return;
-                  }
-                  if (canRequestCardView) {
-                    if (isApproved) {
-                      setState(() {
-                        _viewingPlayerId = _viewingPlayerId == p.id
-                            ? null
-                            : p.id;
-                      });
-                    } else if (!isPending) {
-                      _cardViewRequestTimer?.cancel();
-                      game.requestCardView(p.id);
-                      setState(() => _viewingPlayerId = p.id);
-                      _cardViewRequestTimer = Timer(
-                        const Duration(seconds: 5),
-                        () {
-                          if (!mounted) return;
-                          game.expireCardViewRequest(p.id);
-                        },
-                      );
-                    }
-                  } else if (hasPointCards &&
-                      (state.phase == 'playing' ||
-                          state.phase == 'trick_end' ||
-                          state.phase == 'round_end')) {
-                    _showPointCardsDialog(p);
-                  } else {
-                    _showPlayerProfileDialog(
-                      p.name,
-                      game,
-                      isBot: p.id.startsWith('bot_'),
-                    );
-                  }
-                },
-                child: SizedBox(
-                  width: double.infinity,
-                  child: Stack(
-                    clipBehavior: Clip.none,
-                    children: [
-                      AnimatedContainer(
-                        duration: const Duration(milliseconds: 200),
-                        margin: const EdgeInsets.symmetric(horizontal: 2),
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 4,
-                          vertical: 6,
-                        ),
-                        decoration: BoxDecoration(
-                          color: isSelf
-                              ? Colors.white.withValues(alpha: 0.95)
-                              : isCurrentTurn
-                              ? const Color(0xFFFFF2B3)
-                              : Colors.white.withValues(alpha: 0.7),
-                          borderRadius: BorderRadius.circular(12),
-                          border: isCurrentTurn
-                              ? Border.all(
-                                  color: const Color(0xFFE6C86A),
-                                  width: 2,
-                                )
-                              : isDeclarer
-                              ? Border.all(
-                                  color: const Color(0xFFFF8A00),
-                                  width: 2,
-                                )
-                              : isPartner
-                              ? Border.all(
-                                  color: const Color(0xFF4CAF50),
-                                  width: 2,
-                                )
-                              : Border.all(color: const Color(0xFFE0D8D4)),
-                          boxShadow: isSelf
-                              ? [
-                                  BoxShadow(
-                                    color: Colors.black.withValues(alpha: 0.08),
-                                    blurRadius: 4,
-                                  ),
-                                ]
-                              : null,
-                        ),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.center,
-                          children: [
-                            // Role badge — during bidding show the pass/bid
-                            // chip, after bidding show the declarer/friend role.
-                            SizedBox(
-                              height: 14,
-                              child: isExcluded
-                                  ? Text(
-                                      L10n.of(context).mtKillExcluded,
-                                      style: const TextStyle(
-                                        fontSize: 9,
-                                        fontWeight: FontWeight.w800,
-                                        color: Color(0xFFD84315),
-                                      ),
-                                    )
-                                  : isDeclarer
-                                  ? Text(
-                                      L10n.of(context).mtDeclarer,
-                                      style: const TextStyle(
-                                        fontSize: 9,
-                                        fontWeight: FontWeight.w800,
-                                        color: Color(0xFFFF8A00),
-                                      ),
-                                    )
-                                  : isPartner
-                                  ? Text(
-                                      L10n.of(context).mtFriend,
-                                      style: const TextStyle(
-                                        fontSize: 9,
-                                        fontWeight: FontWeight.w800,
-                                        color: Color(0xFF4CAF50),
-                                      ),
-                                    )
-                                  : (state.phase == 'bidding' && p.bid != null)
-                                  ? _bidScoreboardBadge(p.bid)
-                                  : null,
-                            ),
-                            Row(
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              children: [
-                                if (isCurrentTurn)
-                                  Container(
-                                    width: 6,
-                                    height: 6,
-                                    margin: const EdgeInsets.only(right: 3),
-                                    decoration: const BoxDecoration(
-                                      color: Color(0xFFE6A800),
-                                      shape: BoxShape.circle,
-                                    ),
-                                  ),
-                                if (!p.connected)
-                                  const Padding(
-                                    padding: EdgeInsets.only(right: 3),
-                                    child: Icon(
-                                      Icons.wifi_off,
-                                      size: 11,
-                                      color: Color(0xFFE53935),
-                                    ),
-                                  ),
-                                Flexible(
-                                  child: Text(
-                                    p.name,
-                                    style: TextStyle(
-                                      color: p.connected
-                                          ? const Color(0xFF5A4038)
-                                          : const Color(0xFFE53935),
-                                      fontSize: 10,
-                                      fontWeight: isSelf
-                                          ? FontWeight.w800
-                                          : FontWeight.w600,
-                                    ),
-                                    maxLines: 1,
-                                    overflow: TextOverflow.ellipsis,
-                                  ),
-                                ),
-                              ],
-                            ),
-                            const SizedBox(height: 2),
-                            Text(
-                              '${state.scores[p.id] ?? 0}',
-                              style: const TextStyle(
-                                color: Color(0xFF5A4038),
-                                fontSize: 14,
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                            SizedBox(
-                              height: 14,
-                              child: p.timeoutCount > 0
-                                  ? Text(
-                                      '⏱ ${p.timeoutCount}/3',
-                                      style: const TextStyle(
-                                        color: Color(0xFFE65100),
-                                        fontSize: 10,
-                                        fontWeight: FontWeight.w800,
-                                      ),
-                                    )
-                                  : null,
-                            ),
-                            const SizedBox(height: 2),
-                          ],
-                        ),
-                      ),
-                      // Card view badges for spectators AND killed-mighty peekers
-                      if (canRequestCardView && !isSelf && isPending)
-                        Positioned(
-                          right: 2,
-                          top: -4,
-                          child: Container(
-                            padding: const EdgeInsets.all(2),
-                            decoration: BoxDecoration(
-                              color: Colors.white,
-                              shape: BoxShape.circle,
-                              border: Border.all(
-                                color: const Color(0xFFE0D8D4),
-                              ),
-                            ),
-                            child: const Icon(
-                              Icons.schedule,
-                              size: 12,
-                              color: Color(0xFFFFB74D),
+          if (showAllSeats) {
+            final playerCount = state.players.length;
+            final centerY = isLandscape ? height * 0.39 : height * 0.41;
+            final maxSeatRadiusX = math.max(0.0, centerX - seatWidth / 2 - 10);
+            final seatRadiusX = math.min(
+              width * _mightySeatRadiusXFactor(playerCount),
+              math.min(
+                _mightySeatRadiusXCap(width, playerCount, spectator: true),
+                maxSeatRadiusX,
+              ),
+            );
+            final maxSeatRadiusY = math.max(0.0, centerY - seatHeight / 2 - 6);
+            final seatRadiusY = math.min(
+              height * (isLandscape ? 0.34 : 0.35),
+              math.min(
+                _mightySeatRadiusYCap(height, spectator: true),
+                maxSeatRadiusY,
+              ),
+            );
+
+            return Stack(
+              clipBehavior: Clip.none,
+              children: [
+                Positioned.fill(
+                  child: Align(
+                    alignment: Alignment(
+                      0,
+                      isBidding || isKillSelect
+                          ? 0.10
+                          : (isLandscape ? 0.36 : 0.46),
+                    ),
+                    child: isBidding || isKillSelect
+                        ? const SizedBox.shrink()
+                        : Transform.translate(
+                            offset: Offset(0, isLandscape ? -18 : -26),
+                            child: ConstrainedBox(
+                              constraints: const BoxConstraints(maxWidth: 260),
+                              child: state.phase == 'trick_end'
+                                  ? _buildTrickEndArea(state)
+                                  : _buildTrickArea(state, game),
                             ),
                           ),
-                        )
-                      else if (canRequestCardView && !isSelf && isApproved)
-                        Positioned(
-                          right: 2,
-                          top: -4,
-                          child: Container(
-                            padding: const EdgeInsets.all(2),
-                            decoration: BoxDecoration(
-                              color: Colors.white,
-                              shape: BoxShape.circle,
-                              border: Border.all(
-                                color: const Color(0xFF64B5F6),
-                              ),
-                            ),
-                            child: const Icon(
-                              Icons.visibility,
-                              size: 12,
-                              color: Color(0xFF64B5F6),
-                            ),
-                          ),
-                        )
-                      else if (canRequestCardView && !isSelf)
-                        Positioned(
-                          right: 2,
-                          top: -4,
-                          child: Container(
-                            padding: const EdgeInsets.all(2),
-                            decoration: BoxDecoration(
-                              color: Colors.white,
-                              shape: BoxShape.circle,
-                              border: Border.all(
-                                color: const Color(0xFFE0D8D4),
-                              ),
-                            ),
-                            child: Icon(
-                              Icons.visibility_outlined,
-                              size: 12,
-                              color: const Color(
-                                0xFF8A7A72,
-                              ).withValues(alpha: 0.6),
-                            ),
-                          ),
-                        ),
-                    ],
                   ),
                 ),
-              ),
+                for (int i = 0; i < state.players.length; i++) ...[
+                  () {
+                    final p = state.players[i];
+                    final angle = _mightySpectatorSeatAngleForIndex(
+                      i,
+                      state.players.length,
+                    );
+                    final seatLift = _mightySeatVerticalLift(
+                      angle,
+                      isLandscape: isLandscape,
+                      spectatorMode: true,
+                    );
+                    final seatLeft =
+                        centerX + seatRadiusX * math.cos(angle) - seatWidth / 2;
+                    final seatTop =
+                        centerY +
+                        seatRadiusY * math.sin(angle) -
+                        seatHeight / 2 -
+                        seatLift;
+                    return Positioned(
+                      left: seatLeft,
+                      top: seatTop,
+                      width: seatWidth,
+                      height: seatHeight,
+                      child: _buildTableSeatCard(
+                        state,
+                        game,
+                        p,
+                        canRequestCardView: canRequestCardView,
+                        highlighted:
+                            _viewingPlayerId == p.id &&
+                            game.approvedCardViews.contains(p.id) &&
+                            p.canViewCards,
+                      ),
+                    );
+                  }(),
+                ],
+                if (!isBidding)
+                  for (int i = 0; i < state.players.length; i++) ...[
+                    () {
+                      final p = state.players[i];
+                      final angle = _mightySpectatorSeatAngleForIndex(
+                        i,
+                        state.players.length,
+                      );
+                      final seatLift = _mightySeatVerticalLift(
+                        angle,
+                        isLandscape: isLandscape,
+                        spectatorMode: true,
+                      );
+                      final seatLeft =
+                          centerX +
+                          seatRadiusX * math.cos(angle) -
+                          seatWidth / 2;
+                      final seatTop =
+                          centerY +
+                          seatRadiusY * math.sin(angle) -
+                          seatHeight / 2 -
+                          seatLift;
+                      final trickPlay = activeTrick
+                          .cast<MightyTrickPlay?>()
+                          .firstWhere(
+                            (play) => play?.playerId == p.id,
+                            orElse: () => null,
+                          );
+                      if (trickPlay == null) return const SizedBox.shrink();
+                      return Positioned(
+                        left: seatLeft + (seatWidth - playedCardWidth) / 2,
+                        top: seatTop + seatHeight + 2,
+                        child: _buildTablePlayedCard(
+                          state,
+                          trickPlay,
+                          width: playedCardWidth,
+                          height: playedCardHeight,
+                          isWinner:
+                              winnerId != null &&
+                              trickPlay.playerId == winnerId,
+                        ),
+                      );
+                    }(),
+                  ],
+              ],
+            );
+          }
+
+          final opponents = visiblePlayers;
+          final opponentCount = opponents.length;
+          final centerY = isLandscape ? height * 0.39 : height * 0.41;
+          final maxSeatRadiusX = math.max(0.0, centerX - seatWidth / 2 - 10);
+          final seatRadiusX = math.min(
+            width * _mightySeatRadiusXFactor(opponentCount),
+            math.min(
+              _mightySeatRadiusXCap(width, opponentCount, spectator: false),
+              maxSeatRadiusX,
             ),
           );
-        }).toList(),
+          final maxSeatRadiusY = math.max(0.0, centerY - seatHeight / 2 - 6);
+          final seatRadiusY = math.min(
+            height * (isLandscape ? 0.35 : 0.36),
+            math.min(
+              _mightySeatRadiusYCap(height, spectator: false),
+              maxSeatRadiusY,
+            ),
+          );
+          final bottomMostOpponentCardTop = opponents.isEmpty
+              ? centerY
+              : List.generate(
+                  opponents.length,
+                  (i) =>
+                      centerY +
+                      seatRadiusY *
+                          math.sin(
+                            _mightyTopSeatAngleForIndex(i, opponents.length),
+                          ) +
+                      _mightySmallDeviceSideSeatDrop(
+                        _mightyTopSeatAngleForIndex(i, opponents.length),
+                        width: width,
+                        playerCount: opponents.length,
+                        spectatorMode: false,
+                        isLandscape: isLandscape,
+                      ) +
+                      seatHeight / 2 +
+                      2,
+                ).reduce(math.max);
+          final centerLowerBound = height * (isLandscape ? 0.60 : 0.64);
+          final selfCardTop = math.min(
+            height - 60,
+            math.max(bottomMostOpponentCardTop + 40, centerLowerBound),
+          );
+
+          return Stack(
+            clipBehavior: Clip.none,
+            children: [
+              Positioned.fill(
+                child: Align(
+                  alignment: Alignment(
+                    0,
+                    isBidding || isKillSelect
+                        ? 0.10
+                        : (isLandscape ? 0.36 : 0.46),
+                  ),
+                  child: isBidding || isKillSelect
+                      ? const SizedBox.shrink()
+                      : Transform.translate(
+                          offset: Offset(0, isLandscape ? -18 : -26),
+                          child: ConstrainedBox(
+                            constraints: const BoxConstraints(maxWidth: 260),
+                            child: state.phase == 'trick_end'
+                                ? _buildTrickEndArea(state)
+                                : _buildTrickArea(state, game),
+                          ),
+                        ),
+                ),
+              ),
+              for (int i = 0; i < opponents.length; i++) ...[
+                () {
+                  final p = opponents[i];
+                  final angle = _mightyTopSeatAngleForIndex(
+                    i,
+                    opponents.length,
+                  );
+                  final seatLift = _mightySeatVerticalLift(
+                    angle,
+                    isLandscape: isLandscape,
+                  );
+                  final seatLeft =
+                      centerX + seatRadiusX * math.cos(angle) - seatWidth / 2;
+                  final seatTop =
+                      centerY +
+                      seatRadiusY * math.sin(angle) -
+                      seatHeight / 2 -
+                      seatLift +
+                      _mightySmallDeviceSideSeatDrop(
+                        angle,
+                        width: width,
+                        playerCount: opponents.length,
+                        spectatorMode: false,
+                        isLandscape: isLandscape,
+                      );
+                  return Positioned(
+                    left: seatLeft,
+                    top: seatTop,
+                    width: seatWidth,
+                    height: seatHeight,
+                    child: _buildTableSeatCard(
+                      state,
+                      game,
+                      p,
+                      canRequestCardView: canRequestCardView,
+                    ),
+                  );
+                }(),
+              ],
+              if (!isBidding)
+                for (int i = 0; i < opponents.length; i++) ...[
+                  () {
+                    final p = opponents[i];
+                    final angle = _mightyTopSeatAngleForIndex(
+                      i,
+                      opponents.length,
+                    );
+                    final seatLift = _mightySeatVerticalLift(
+                      angle,
+                      isLandscape: isLandscape,
+                    );
+                    final seatLeft =
+                        centerX + seatRadiusX * math.cos(angle) - seatWidth / 2;
+                    final seatTop =
+                        centerY +
+                        seatRadiusY * math.sin(angle) -
+                        seatHeight / 2 -
+                        seatLift +
+                        _mightySmallDeviceSideSeatDrop(
+                          angle,
+                          width: width,
+                          playerCount: opponents.length,
+                          spectatorMode: false,
+                          isLandscape: isLandscape,
+                        );
+                    final trickPlay = activeTrick
+                        .cast<MightyTrickPlay?>()
+                        .firstWhere(
+                          (play) => play?.playerId == p.id,
+                          orElse: () => null,
+                        );
+                    if (trickPlay == null) return const SizedBox.shrink();
+                    return Positioned(
+                      left: seatLeft + (seatWidth - playedCardWidth) / 2,
+                      top: seatTop + seatHeight + 2,
+                      child: _buildTablePlayedCard(
+                        state,
+                        trickPlay,
+                        width: playedCardWidth,
+                        height: playedCardHeight,
+                        isWinner:
+                            winnerId != null && trickPlay.playerId == winnerId,
+                      ),
+                    );
+                  }(),
+                ],
+              if (!isBidding && selfPlay != null)
+                Positioned(
+                  left: centerX - playedCardWidth / 2,
+                  top: selfCardTop,
+                  child: _buildTablePlayedCard(
+                    state,
+                    selfPlay,
+                    width: playedCardWidth,
+                    height: playedCardHeight,
+                    isWinner: winnerId != null && selfPlay.playerId == winnerId,
+                  ),
+                ),
+            ],
+          );
+        },
       ),
     );
   }
 
-  Widget _buildPlayedCardsRow(MightyGameStateData state) {
-    final isEnd = state.phase == 'trick_end';
-    final tricks = isEnd ? state.lastTrickCards : state.currentTrick;
-    final winnerId = isEnd ? state.lastTrickWinner : null;
+  Widget _buildActiveBoardStage(MightyGameStateData state, GameService game) {
+    final showBottomOverlay = state.phase != 'game_end';
+    final bottomOverlay = showBottomOverlay
+        ? _buildHandArea(state, game)
+        : const SizedBox.shrink();
+    final bottomInset = !showBottomOverlay
+        ? 0.0
+        : game.isSpectator
+        ? 110.0
+        : 230.0;
 
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 6),
-      margin: const EdgeInsets.only(top: 8),
-      height: 60,
-      child: Row(
-        children: state.players.map((p) {
-          final trickPlay = tricks.cast<MightyTrickPlay?>().firstWhere(
-            (play) => play?.playerId == p.id,
-            orElse: () => null,
-          );
-          final isWinner = winnerId != null && p.id == winnerId;
-
-          return Expanded(
-            child: Center(
-              child: trickPlay != null
-                  ? Container(
-                      decoration: isWinner
-                          ? BoxDecoration(
-                              borderRadius: BorderRadius.circular(6),
-                              boxShadow: [
-                                BoxShadow(
-                                  color: const Color(
-                                    0xFF4CAF50,
-                                  ).withValues(alpha: 0.4),
-                                  blurRadius: 8,
-                                ),
-                              ],
-                            )
-                          : null,
-                      child: PlayingCard(
-                        cardId: _displayCardId(trickPlay.cardId),
-                        width: 38,
-                        height: 53,
-                        isInteractive: false,
-                        borderColor:
-                            (state.trumpSuit != null &&
-                                state.trumpSuit != 'no_trump' &&
-                                _getCardSuit(trickPlay.cardId) ==
-                                    state.trumpSuit)
-                            ? PlayingCard.suitColors[_getCardSuit(
-                                trickPlay.cardId,
-                              )]
-                            : null,
-                        badgeIcon: trickPlay.cardId == state.mightyCard
-                            ? Icons.star
-                            : (state.jokerCallActive &&
-                                  trickPlay.cardId == state.jokerCallCard)
-                            ? Icons.gps_fixed
-                            : null,
-                        badgeColor: trickPlay.cardId == state.mightyCard
-                            ? const Color(0xFFFFB300)
-                            : (state.jokerCallActive &&
-                                  trickPlay.cardId == state.jokerCallCard)
-                            ? const Color(0xFFE53935)
-                            : null,
-                      ),
-                    )
-                  : const SizedBox.shrink(),
+    return Stack(
+      children: [
+        Positioned.fill(
+          child: Padding(
+            padding: EdgeInsets.only(bottom: bottomInset),
+            child: _buildTableBoard(state, game),
+          ),
+        ),
+        if (state.phase == 'round_end')
+          Positioned.fill(
+            child: IgnorePointer(
+              ignoring: false,
+              child: Container(
+                color: Colors.black.withValues(alpha: 0.10),
+                alignment: Alignment.bottomCenter,
+                child: SingleChildScrollView(
+                  padding: const EdgeInsets.fromLTRB(12, 20, 12, 20),
+                  child: _buildRoundEndUI(state),
+                ),
+              ),
             ),
-          );
-        }).toList(),
+          ),
+        if (state.phase == 'game_end')
+          Positioned.fill(
+            child: IgnorePointer(
+              ignoring: false,
+              child: Container(
+                color: Colors.black.withValues(alpha: 0.10),
+                alignment: Alignment.center,
+                child: SingleChildScrollView(
+                  padding: const EdgeInsets.fromLTRB(12, 20, 12, 24),
+                  child: _buildGameEndUI(state, game),
+                ),
+              ),
+            ),
+          ),
+        if (state.phase == 'kitty_exchange')
+          Positioned(
+            left: 12,
+            right: 12,
+            bottom: game.isSpectator ? 120 : 210,
+            child: _buildKittyUI(game, state),
+          ),
+        if (showBottomOverlay)
+          Align(alignment: Alignment.bottomCenter, child: bottomOverlay),
+      ],
+    );
+  }
+
+  Widget _buildTableSeatCard(
+    MightyGameStateData state,
+    GameService game,
+    MightyPlayer player, {
+    required bool canRequestCardView,
+    bool highlighted = false,
+  }) {
+    final isCurrentTurn = player.id == state.currentPlayer;
+    final isDeclarer = player.id == state.declarer;
+    final isPartner = state.friendRevealed && player.id == state.partner;
+    final isExcluded = state.excludedPlayers.contains(player.id);
+    final isGovt =
+        player.id == state.declarer ||
+        (state.friendRevealed && player.id == state.partner);
+    final hasPointCards = !isGovt && player.pointCards.isNotEmpty;
+    final isPending =
+        canRequestCardView && game.pendingCardViewRequests.contains(player.id);
+    final isApproved =
+        canRequestCardView &&
+        game.approvedCardViews.contains(player.id) &&
+        player.canViewCards;
+
+    Widget? roleLabel;
+    Color roleColor = const Color(0xFF8A7A72);
+    if (isExcluded) {
+      roleLabel = Text(
+        L10n.of(context).mtKillExcluded,
+        style: const TextStyle(
+          fontSize: 8,
+          fontWeight: FontWeight.w800,
+          color: Color(0xFFD84315),
+        ),
+      );
+    } else if (isDeclarer) {
+      roleColor = const Color(0xFFFF8A00);
+      roleLabel = Text(
+        L10n.of(context).mtDeclarer,
+        style: const TextStyle(
+          fontSize: 8,
+          fontWeight: FontWeight.w800,
+          color: Color(0xFFFF8A00),
+        ),
+      );
+    } else if (isPartner) {
+      roleColor = const Color(0xFF4CAF50);
+      roleLabel = Text(
+        L10n.of(context).mtFriend,
+        style: const TextStyle(
+          fontSize: 8,
+          fontWeight: FontWeight.w800,
+          color: Color(0xFF4CAF50),
+        ),
+      );
+    } else if (state.phase == 'bidding' && player.bid != null) {
+      roleLabel = _bidScoreboardBadge(player.bid);
+    }
+
+    return Opacity(
+      opacity: isExcluded ? 0.45 : 1.0,
+      child: GestureDetector(
+        onTap: () => _handleTableSeatTap(
+          state,
+          game,
+          player,
+          canRequestCardView: canRequestCardView,
+          hasPointCards: hasPointCards,
+          isApproved: isApproved,
+          isPending: isPending,
+        ),
+        child: LayoutBuilder(
+          builder: (context, constraints) {
+            final compact =
+                constraints.maxHeight <= 70 || constraints.maxWidth <= 96;
+            final horizontalPadding = compact ? 5.0 : 7.0;
+            final verticalPadding = compact ? 4.0 : 6.0;
+            final timeoutHeight = compact ? 11.0 : 12.0;
+            final dotSize = compact ? 5.0 : 6.0;
+            final offlineIconSize = compact ? 10.0 : 11.0;
+            final nameFontSize = compact ? 10.0 : 11.0;
+            final scoreFontSize = compact ? 13.0 : 15.0;
+            final metaFontSize = compact ? 8.0 : 8.5;
+            final spacing = compact ? 1.0 : 2.0;
+            final contentWidth = math.max(
+              28.0,
+              (constraints.maxWidth - horizontalPadding * 2) * 0.7,
+            );
+            final labelTint = highlighted
+                ? const Color(0xFFE7F2FF).withValues(alpha: 0.92)
+                : isCurrentTurn
+                ? const Color(0xFFFFF0C9).withValues(alpha: 0.88)
+                : const Color(0xFFFFFCFA).withValues(alpha: 0.64);
+
+            return Stack(
+              clipBehavior: Clip.none,
+              children: [
+                AnimatedContainer(
+                  duration: const Duration(milliseconds: 180),
+                  padding: EdgeInsets.symmetric(
+                    horizontal: horizontalPadding,
+                    vertical: verticalPadding,
+                  ),
+                  decoration: const BoxDecoration(),
+                  child: Center(
+                    child: FittedBox(
+                      fit: BoxFit.scaleDown,
+                      alignment: Alignment.topCenter,
+                      child: Stack(
+                        clipBehavior: Clip.none,
+                        children: [
+                          Container(
+                            padding: EdgeInsets.symmetric(
+                              horizontal: compact ? 6 : 8,
+                              vertical: compact ? 4 : 5,
+                            ),
+                            decoration: BoxDecoration(
+                              color: labelTint,
+                              borderRadius: BorderRadius.circular(14),
+                              border:
+                                  isCurrentTurn ||
+                                      isDeclarer ||
+                                      isPartner ||
+                                      highlighted
+                                  ? Border.all(
+                                      color: isCurrentTurn
+                                          ? const Color(0xFFE6C86A)
+                                          : isDeclarer
+                                          ? const Color(0xFFFF8A00)
+                                          : isPartner
+                                          ? const Color(0xFF4CAF50)
+                                          : const Color(0xFF64B5F6),
+                                      width: 1.5,
+                                    )
+                                  : null,
+                            ),
+                            child: SizedBox(
+                              width: contentWidth,
+                              child: Column(
+                                mainAxisSize: MainAxisSize.min,
+                                crossAxisAlignment: CrossAxisAlignment.center,
+                                children: [
+                                  SizedBox(
+                                    height: timeoutHeight,
+                                    child: Center(child: roleLabel),
+                                  ),
+                                  Row(
+                                    mainAxisAlignment: MainAxisAlignment.center,
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      if (isCurrentTurn)
+                                        Container(
+                                          width: dotSize,
+                                          height: dotSize,
+                                          margin: EdgeInsets.only(
+                                            right: compact ? 3 : 4,
+                                          ),
+                                          decoration: const BoxDecoration(
+                                            color: Color(0xFFE6A800),
+                                            shape: BoxShape.circle,
+                                          ),
+                                        ),
+                                      if (!player.connected)
+                                        Padding(
+                                          padding: EdgeInsets.only(
+                                            right: compact ? 2 : 3,
+                                          ),
+                                          child: Icon(
+                                            Icons.wifi_off,
+                                            size: offlineIconSize,
+                                            color: const Color(0xFFE53935),
+                                          ),
+                                        ),
+                                      Flexible(
+                                        child: Text(
+                                          player.name,
+                                          maxLines: 1,
+                                          overflow: TextOverflow.ellipsis,
+                                          textAlign: TextAlign.center,
+                                          style: TextStyle(
+                                            color: player.connected
+                                                ? const Color(0xFF5A4038)
+                                                : const Color(0xFFE53935),
+                                            fontSize: nameFontSize,
+                                            fontWeight: FontWeight.w700,
+                                          ),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                  SizedBox(height: spacing),
+                                  Text(
+                                    '${state.scores[player.id] ?? 0}',
+                                    style: TextStyle(
+                                      color: const Color(0xFF5A4038),
+                                      fontSize: scoreFontSize,
+                                      fontWeight: FontWeight.w800,
+                                    ),
+                                  ),
+                                  SizedBox(height: spacing),
+                                  SizedBox(
+                                    height: timeoutHeight,
+                                    child: player.timeoutCount > 0
+                                        ? Text(
+                                            '⏱ ${player.timeoutCount}/3',
+                                            style: TextStyle(
+                                              fontSize: metaFontSize,
+                                              fontWeight: FontWeight.w800,
+                                              color: const Color(0xFFE65100),
+                                            ),
+                                          )
+                                        : (hasPointCards &&
+                                              player.pointCount > 0)
+                                        ? Text(
+                                            'P ${player.pointCount}',
+                                            style: TextStyle(
+                                              fontSize: metaFontSize,
+                                              fontWeight: FontWeight.w700,
+                                              color: roleColor,
+                                            ),
+                                          )
+                                        : null,
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                          if (canRequestCardView)
+                            Positioned(
+                              right: -4,
+                              top: -4,
+                              child: Container(
+                                padding: const EdgeInsets.all(2),
+                                decoration: BoxDecoration(
+                                  color: Colors.white,
+                                  shape: BoxShape.circle,
+                                  border: Border.all(
+                                    color: isApproved
+                                        ? const Color(0xFF64B5F6)
+                                        : const Color(0xFFE0D8D4),
+                                  ),
+                                ),
+                                child: Icon(
+                                  isPending
+                                      ? Icons.schedule
+                                      : isApproved
+                                      ? Icons.visibility
+                                      : Icons.visibility_outlined,
+                                  size: 12,
+                                  color: isPending
+                                      ? const Color(0xFFFFB74D)
+                                      : isApproved
+                                      ? const Color(0xFF64B5F6)
+                                      : const Color(
+                                          0xFF8A7A72,
+                                        ).withValues(alpha: 0.6),
+                                ),
+                              ),
+                            ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            );
+          },
+        ),
       ),
     );
+  }
+
+  void _handleTableSeatTap(
+    MightyGameStateData state,
+    GameService game,
+    MightyPlayer player, {
+    required bool canRequestCardView,
+    required bool hasPointCards,
+    required bool isApproved,
+    required bool isPending,
+  }) {
+    if (canRequestCardView) {
+      if (isApproved) {
+        setState(() {
+          _viewingPlayerId = _viewingPlayerId == player.id ? null : player.id;
+        });
+      } else if (!isPending) {
+        _cardViewRequestTimer?.cancel();
+        game.requestCardView(player.id);
+        setState(() => _viewingPlayerId = player.id);
+        _cardViewRequestTimer = Timer(const Duration(seconds: 5), () {
+          if (!mounted) return;
+          game.expireCardViewRequest(player.id);
+        });
+      }
+      return;
+    }
+
+    if (hasPointCards &&
+        (state.phase == 'playing' ||
+            state.phase == 'trick_end' ||
+            state.phase == 'round_end')) {
+      _showPointCardsDialog(player);
+      return;
+    }
+
+    _showPlayerProfileDialog(
+      player.name,
+      game,
+      isBot: player.id.startsWith('bot_'),
+    );
+  }
+
+  Widget _buildTablePlayedCard(
+    MightyGameStateData state,
+    MightyTrickPlay trickPlay, {
+    required double width,
+    required double height,
+    required bool isWinner,
+  }) {
+    return Container(
+      decoration: isWinner
+          ? BoxDecoration(
+              borderRadius: BorderRadius.circular(8),
+              boxShadow: [
+                BoxShadow(
+                  color: const Color(0xFF4CAF50).withValues(alpha: 0.35),
+                  blurRadius: 10,
+                ),
+              ],
+            )
+          : null,
+      child: PlayingCard(
+        cardId: _displayCardId(trickPlay.cardId),
+        width: width,
+        height: height,
+        isInteractive: false,
+        borderColor:
+            (state.trumpSuit != null &&
+                state.trumpSuit != 'no_trump' &&
+                _getCardSuit(trickPlay.cardId) == state.trumpSuit)
+            ? PlayingCard.suitColors[_getCardSuit(trickPlay.cardId)]
+            : null,
+        badgeIcon: trickPlay.cardId == state.mightyCard
+            ? Icons.star
+            : (state.jokerCallActive && trickPlay.cardId == state.jokerCallCard)
+            ? Icons.gps_fixed
+            : null,
+        badgeColor: trickPlay.cardId == state.mightyCard
+            ? const Color(0xFFFFB300)
+            : (state.jokerCallActive && trickPlay.cardId == state.jokerCallCard)
+            ? const Color(0xFFE53935)
+            : null,
+      ),
+    );
+  }
+
+  double _mightySpectatorSeatAngleForIndex(int index, int count) {
+    final custom = _mightyCustomSpectatorSeatAnglesDeg(count);
+    if (custom != null) return custom[index] * math.pi / 180;
+    if (count <= 1) return math.pi * 1.5;
+    return _mightySeatAngleForIndex(index, count, includeBottomSeat: false);
+  }
+
+  double _mightySeatAngleForIndex(
+    int index,
+    int playerCount, {
+    bool includeBottomSeat = true,
+  }) {
+    if (includeBottomSeat) {
+      if (index == 0) return math.pi / 2;
+      final opponents = playerCount - 1;
+      if (opponents <= 1) return math.pi * 1.5;
+      final customOpponentAngles = _mightyCustomSeatAnglesDeg(opponents);
+      if (customOpponentAngles != null) {
+        return customOpponentAngles[index - 1] * math.pi / 180;
+      }
+      final startDeg = _mightySeatArcStartDeg(opponents);
+      final endDeg = _mightySeatArcEndDeg(opponents);
+      final progress = (index - 1) / (opponents - 1);
+      final angleDeg = startDeg + (endDeg - startDeg) * progress;
+      return angleDeg * math.pi / 180;
+    }
+
+    if (playerCount <= 1) return math.pi * 1.5;
+    final customAngles = _mightyCustomSeatAnglesDeg(playerCount);
+    if (customAngles != null) {
+      return customAngles[index] * math.pi / 180;
+    }
+    final startDeg = _mightySeatArcStartDeg(playerCount);
+    final endDeg = _mightySeatArcEndDeg(playerCount);
+    final progress = index / (playerCount - 1);
+    final angleDeg = startDeg + (endDeg - startDeg) * progress;
+    return angleDeg * math.pi / 180;
+  }
+
+  double _mightyTopSeatAngleForIndex(int index, int playerCount) {
+    if (playerCount <= 1) return math.pi * 1.5;
+    final customAngles = _mightyCustomSeatAnglesDeg(playerCount);
+    if (customAngles != null) {
+      return customAngles[index] * math.pi / 180;
+    }
+    final startDeg = _mightySeatArcStartDeg(playerCount);
+    final endDeg = _mightySeatArcEndDeg(playerCount);
+    final progress = index / (playerCount - 1);
+    final angleDeg = startDeg + (endDeg - startDeg) * progress;
+    return angleDeg * math.pi / 180;
+  }
+
+  List<double>? _mightyCustomSeatAnglesDeg(int count) {
+    switch (count) {
+      case 4:
+        return const [172, 238, 302, 368];
+      default:
+        return null;
+    }
+  }
+
+  List<double>? _mightyCustomSpectatorSeatAnglesDeg(int count) {
+    switch (count) {
+      case 6:
+        return const [142, 188, 236, 304, 352, 398];
+      default:
+        return null;
+    }
+  }
+
+  double _mightySeatRadiusXFactor(int count) {
+    if (count >= 5) return 0.44;
+    if (count == 4) return 0.43;
+    if (count == 3) return 0.40;
+    return 0.38;
+  }
+
+  double _mightySeatRadiusXCap(
+    double width,
+    int count, {
+    required bool spectator,
+  }) {
+    final base = spectator
+        ? (count >= 5 ? 228.0 : 182.0)
+        : (count >= 5 ? 236.0 : 188.0);
+    if (width >= 1200) return base + 130;
+    if (width >= 900) return base + 90;
+    if (width >= 700) return base + 45;
+    return base;
+  }
+
+  double _mightySeatRadiusYCap(double height, {required bool spectator}) {
+    final base = spectator ? 196.0 : 202.0;
+    if (height >= 1100) return base + 90;
+    if (height >= 850) return base + 50;
+    if (height >= 700) return base + 24;
+    return base;
+  }
+
+  double _mightySeatVerticalLift(
+    double angle, {
+    required bool isLandscape,
+    bool spectatorMode = false,
+  }) {
+    final cornerWeight = math.pow(math.cos(angle).abs(), 1.15).toDouble();
+    final lowerCornerWeight = math.max(0.0, math.sin(angle));
+    final baseLift =
+        cornerWeight * (isLandscape ? 24.0 : 30.0) +
+        lowerCornerWeight * (isLandscape ? 10.0 : 14.0);
+    if (!spectatorMode) return baseLift;
+    final upperWeight = math.max(0.0, -math.sin(angle));
+    final reduction = (1 - upperWeight) * (isLandscape ? 12.0 : 18.0);
+    return math.max(0.0, baseLift - reduction);
+  }
+
+  double _mightySmallDeviceSideSeatDrop(
+    double angle, {
+    required double width,
+    required int playerCount,
+    required bool spectatorMode,
+    required bool isLandscape,
+  }) {
+    if (spectatorMode || isLandscape || playerCount != 4 || width > 430) {
+      return 0.0;
+    }
+    final horizontalWeight = (1 - (math.sin(angle).abs() / 0.45)).clamp(
+      0.0,
+      1.0,
+    );
+    return 10.0 * horizontalWeight;
+  }
+
+  double _mightySeatArcStartDeg(int count) {
+    if (count >= 5) return 145.0;
+    if (count == 4) return 198.0;
+    if (count == 3) return 210.0;
+    return 225.0;
+  }
+
+  double _mightySeatArcEndDeg(int count) {
+    if (count >= 5) return 395.0;
+    if (count == 4) return 342.0;
+    if (count == 3) return 330.0;
+    return 315.0;
   }
 
   Widget _buildOppositionPointBar(MightyGameStateData state) {
@@ -2293,391 +2773,6 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
     );
   }
 
-  // ── Bidding UI ──
-  Widget _buildBiddingUI(MightyGameStateData state, GameService game) {
-    return Container(
-      padding: const EdgeInsets.all(12),
-      margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-      decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: 0.95),
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: const Color(0xFFE0D8D4)),
-      ),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          if (_remainingSeconds > 0) ...[
-            Text(
-              '${_remainingSeconds}s',
-              style: TextStyle(
-                fontSize: 13,
-                fontWeight: FontWeight.bold,
-                color: _remainingSeconds <= 5
-                    ? const Color(0xFFE53935)
-                    : const Color(0xFF8A7A72),
-              ),
-            ),
-            const SizedBox(height: 6),
-          ],
-          // Current bid display
-          if (state.currentBid['bidder'] != null)
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-              margin: const EdgeInsets.only(bottom: 8),
-              decoration: BoxDecoration(
-                color: const Color(0xFFFFF8E1),
-                borderRadius: BorderRadius.circular(10),
-                border: Border.all(color: const Color(0xFFFFE082)),
-              ),
-              child: Text(
-                L10n.of(context).mtCurrentBid(
-                  state.currentBid['points'].toString(),
-                  _suitLabel(state.currentBid['suit']),
-                ),
-                style: const TextStyle(
-                  fontWeight: FontWeight.bold,
-                  fontSize: 13,
-                  color: Color(0xFF5A4038),
-                ),
-              ),
-            ),
-          // Bid history
-          if (state.bids.isNotEmpty) ...[
-            ...state.bids.entries.map((e) {
-              final name =
-                  state.players
-                      .where((p) => p.id == e.key)
-                      .map((p) => p.name)
-                      .firstOrNull ??
-                  e.key;
-              final bidText = e.value == 'pass'
-                  ? L10n.of(context).mtPass
-                  : e.value is Map
-                  ? '${e.value['points']} ${_suitLabel(e.value['suit'])}'
-                  : '${e.value}';
-              return Padding(
-                padding: const EdgeInsets.symmetric(vertical: 1),
-                child: Row(
-                  children: [
-                    Text(
-                      name,
-                      style: const TextStyle(
-                        fontSize: 12,
-                        fontWeight: FontWeight.w600,
-                        color: Color(0xFF5A4038),
-                      ),
-                    ),
-                    const SizedBox(width: 8),
-                    Text(
-                      bidText,
-                      style: TextStyle(
-                        fontSize: 12,
-                        color: e.value == 'pass'
-                            ? const Color(0xFF8A7A72)
-                            : const Color(0xFF1565C0),
-                      ),
-                    ),
-                  ],
-                ),
-              );
-            }),
-            const Divider(height: 16),
-          ],
-          // Bid controls
-          if (state.isMyTurn) ...[
-            // Points row
-            Builder(
-              builder: (context) {
-                final currentBidPoints =
-                    (state.currentBid['points'] as num?)?.toInt() ?? 0;
-                final currentBidSuit = state.currentBid['suit'] as String?;
-                // Minimum bid depends on the effective mode: 5p=13, 6p kill-mighty=14.
-                final modeMin = state.mode == '6p' ? 14 : 13;
-                // Same points allowed if bidding no_trump over a suited bid
-                final canBidSamePoints =
-                    currentBidSuit != null &&
-                    currentBidSuit != 'no_trump' &&
-                    _bidSuit == 'no_trump';
-                final minBid = canBidSamePoints
-                    ? currentBidPoints.clamp(modeMin, 20)
-                    : (currentBidPoints + 1).clamp(modeMin, 20);
-                if (_bidPoints < minBid) {
-                  WidgetsBinding.instance.addPostFrameCallback((_) {
-                    if (mounted) setState(() => _bidPoints = minBid);
-                  });
-                }
-                if (minBid >= 20) {
-                  // Max bid reached - show fixed value, no slider
-                  WidgetsBinding.instance.addPostFrameCallback((_) {
-                    if (mounted && _bidPoints != 20) {
-                      setState(() => _bidPoints = 20);
-                    }
-                  });
-                  return Row(
-                    children: [
-                      Text(
-                        L10n.of(context).mtPoints,
-                        style: const TextStyle(
-                          fontSize: 12,
-                          color: Color(0xFF5A4038),
-                        ),
-                      ),
-                      const Spacer(),
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 12,
-                          vertical: 4,
-                        ),
-                        decoration: BoxDecoration(
-                          color: const Color(0xFFE3F2FD),
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                        child: const Text(
-                          '20',
-                          style: TextStyle(
-                            fontWeight: FontWeight.bold,
-                            fontSize: 16,
-                            color: Color(0xFF1565C0),
-                          ),
-                        ),
-                      ),
-                    ],
-                  );
-                }
-                return Row(
-                  children: [
-                    Text(
-                      L10n.of(context).mtPoints,
-                      style: const TextStyle(
-                        fontSize: 12,
-                        color: Color(0xFF5A4038),
-                      ),
-                    ),
-                    Expanded(
-                      child: Slider(
-                        value: _bidPoints.toDouble().clamp(
-                          minBid.toDouble(),
-                          20,
-                        ),
-                        min: minBid.toDouble(),
-                        max: 20,
-                        divisions: 20 - minBid,
-                        label: '${_bidPoints.clamp(minBid, 20)}',
-                        onChanged: (v) =>
-                            setState(() => _bidPoints = v.toInt()),
-                      ),
-                    ),
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 8,
-                        vertical: 4,
-                      ),
-                      decoration: BoxDecoration(
-                        color: const Color(0xFFE3F2FD),
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                      child: Text(
-                        '$_bidPoints',
-                        style: const TextStyle(
-                          fontWeight: FontWeight.bold,
-                          fontSize: 16,
-                          color: Color(0xFF1565C0),
-                        ),
-                      ),
-                    ),
-                  ],
-                );
-              },
-            ),
-            // Suit selection
-            Builder(
-              builder: (context) {
-                final cbPoints =
-                    (state.currentBid['points'] as num?)?.toInt() ?? 0;
-                final cbSuit = state.currentBid['suit'] as String?;
-                final modeMin = state.mode == '6p' ? 14 : 13;
-                // Minimum bid points needed to pick this suit given the current
-                // table bid. NT over a suited bid can tie; anything else must
-                // strictly raise the points. Returns > 20 when unreachable.
-                int minBidFor(String suit) {
-                  if (cbPoints == 0) return modeMin;
-                  final raw =
-                      (suit == 'no_trump' &&
-                          cbSuit != null &&
-                          cbSuit != 'no_trump')
-                      ? cbPoints
-                      : cbPoints + 1;
-                  return raw < modeMin ? modeMin : raw;
-                }
-
-                bool suitAvailable(String suit) => minBidFor(suit) <= 20;
-                void selectSuit(String suit) {
-                  final needed = minBidFor(suit);
-                  if (needed > 20) return;
-                  setState(() {
-                    // Switching INTO NT snaps points down to the NT minimum
-                    // (NT can tie a suited bid, so the cheapest NT bid is
-                    // typically a step below what the suited UI was showing).
-                    // For other suits, only raise — preserves any manual
-                    // bump the user made.
-                    if (suit == 'no_trump') {
-                      _bidPoints = needed;
-                    } else if (_bidPoints < needed) {
-                      _bidPoints = needed;
-                    }
-                    _bidSuit = suit;
-                  });
-                }
-
-                // Auto-switch away from an unreachable suit (e.g., suit cap-out
-                // at 20). Previously the user could get stuck on a grayed suit.
-                if (!suitAvailable(_bidSuit)) {
-                  final fallback =
-                      [
-                        'no_trump',
-                        'spade',
-                        'heart',
-                        'diamond',
-                        'club',
-                      ].firstWhere(
-                        (s) => suitAvailable(s),
-                        orElse: () => 'no_trump',
-                      );
-                  WidgetsBinding.instance.addPostFrameCallback((_) {
-                    if (mounted) setState(() => _bidSuit = fallback);
-                  });
-                }
-                return Padding(
-                  padding: const EdgeInsets.symmetric(vertical: 6),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                    children: [
-                      _buildSuitChip(
-                        'spade',
-                        '\u2660',
-                        const Color(0xFF2B2B2B),
-                        enabled: suitAvailable('spade'),
-                        onTap: () => selectSuit('spade'),
-                      ),
-                      _buildSuitChip(
-                        'heart',
-                        '\u2665',
-                        const Color(0xFFD24B4B),
-                        enabled: suitAvailable('heart'),
-                        onTap: () => selectSuit('heart'),
-                      ),
-                      _buildSuitChip(
-                        'diamond',
-                        '\u2666',
-                        const Color(0xFF6FB6E5),
-                        enabled: suitAvailable('diamond'),
-                        onTap: () => selectSuit('diamond'),
-                      ),
-                      _buildSuitChip(
-                        'club',
-                        '\u2663',
-                        const Color(0xFF4BAA6A),
-                        enabled: suitAvailable('club'),
-                        onTap: () => selectSuit('club'),
-                      ),
-                      _buildSuitChip(
-                        'no_trump',
-                        'NT',
-                        const Color(0xFF7B1FA2),
-                        enabled: suitAvailable('no_trump'),
-                        onTap: () => selectSuit('no_trump'),
-                      ),
-                    ],
-                  ),
-                );
-              },
-            ),
-            const SizedBox(height: 6),
-            // Bid / Pass / Deal miss
-            Builder(
-              builder: (context) {
-                final currentBidPoints =
-                    (state.currentBid['points'] as num?)?.toInt() ?? 0;
-                final currentBidSuit = state.currentBid['suit'] as String?;
-                // True ceiling is 20 NT. 20+suit can still be tied by 20 NT,
-                // so we only disable when no further raise is legal.
-                final isTrueCeiling =
-                    currentBidPoints >= 20 && currentBidSuit == 'no_trump';
-                final canTieWithNT =
-                    currentBidPoints >= 20 &&
-                    currentBidSuit != null &&
-                    currentBidSuit != 'no_trump' &&
-                    _bidSuit == 'no_trump';
-                final canBid =
-                    !isTrueCeiling && (currentBidPoints < 20 || canTieWithNT);
-                return Row(
-                  children: [
-                    Expanded(
-                      child: FilledButton(
-                        onPressed: canBid
-                            ? () => game.mightySubmitBid(_bidPoints, _bidSuit)
-                            : null,
-                        style: FilledButton.styleFrom(
-                          backgroundColor: const Color(0xFF1565C0),
-                          disabledBackgroundColor: const Color(0xFFBDBDBD),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                        ),
-                        child: Text(
-                          L10n.of(
-                            context,
-                          ).mtBid(_bidPoints, _suitLabel(_bidSuit)),
-                        ),
-                      ),
-                    ),
-                    const SizedBox(width: 8),
-                    OutlinedButton(
-                      onPressed: () => game.mightyPass(),
-                      style: OutlinedButton.styleFrom(
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                      ),
-                      child: Text(L10n.of(context).mtPass),
-                    ),
-                    if (state.canDeclareDealMiss) ...[
-                      const SizedBox(width: 8),
-                      OutlinedButton(
-                        onPressed: () => _confirmDealMiss(game),
-                        style: OutlinedButton.styleFrom(
-                          foregroundColor: const Color(0xFFD84315),
-                          side: const BorderSide(color: Color(0xFFFF7043)),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                        ),
-                        child: Text(L10n.of(context).mtDealMiss),
-                      ),
-                    ],
-                  ],
-                );
-              },
-            ),
-          ] else
-            Padding(
-              padding: const EdgeInsets.all(8),
-              child: Text(
-                L10n.of(context).mtWaitingFor(
-                  state.players
-                          .where((p) => p.id == state.currentPlayer)
-                          .map((p) => p.name)
-                          .firstOrNull ??
-                      '...',
-                ),
-                style: const TextStyle(fontSize: 13, color: Color(0xFF8A7A72)),
-              ),
-            ),
-        ],
-      ),
-    );
-  }
-
   /// Shared Yes/No confirm dialog used by bid-raise and trump-change so the
   /// player never accidentally bumps their bid with a one-tap slip.
   Future<bool> _confirmBidAction({
@@ -2787,284 +2882,61 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
   // ── Kitty Exchange ──
   Widget _buildKittyUI(GameService game, MightyGameStateData state) {
     if (!state.isMyTurn) {
-      return Center(
-        child: Container(
-          padding: const EdgeInsets.all(20),
-          decoration: BoxDecoration(
-            color: Colors.white.withValues(alpha: 0.7),
-            borderRadius: BorderRadius.circular(16),
-          ),
-          child: Text(
-            L10n.of(context).mtExchangingKitty,
-            style: TextStyle(fontSize: 14, color: Color(0xFF5A4038)),
-          ),
+      return Container(
+        width: double.infinity,
+        margin: const EdgeInsets.fromLTRB(12, 8, 12, 12),
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: Colors.white.withValues(alpha: 0.88),
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: const Color(0xFFE0D8D4)),
+        ),
+        child: Text(
+          L10n.of(context).mtExchangingKitty,
+          textAlign: TextAlign.center,
+          style: const TextStyle(fontSize: 14, color: Color(0xFF5A4038)),
         ),
       );
     }
 
-    return Column(
-      children: [
-        Expanded(
-          child: SingleChildScrollView(
-            padding: const EdgeInsets.all(12),
-            child: Container(
-              padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(
-                color: Colors.white.withValues(alpha: 0.95),
-                borderRadius: BorderRadius.circular(16),
-                border: Border.all(color: const Color(0xFFE0D8D4)),
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    children: [
-                      const Icon(
-                        Icons.swap_horiz,
-                        size: 18,
-                        color: Color(0xFF5A4038),
-                      ),
-                      const SizedBox(width: 6),
-                      Text(
-                        L10n.of(context).mtDiscard3,
-                        style: TextStyle(
-                          fontSize: 14,
-                          fontWeight: FontWeight.bold,
-                          color: Color(0xFF5A4038),
-                        ),
-                      ),
-                      const Spacer(),
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 8,
-                          vertical: 3,
-                        ),
-                        decoration: BoxDecoration(
-                          color: _discardSelection.length == 3
-                              ? const Color(0xFFE8F5E9)
-                              : const Color(0xFFF5F5F5),
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                        child: Text(
-                          '${_discardSelection.length}/3',
-                          style: TextStyle(
-                            fontSize: 12,
-                            fontWeight: FontWeight.bold,
-                            color: _discardSelection.length == 3
-                                ? const Color(0xFF4CAF50)
-                                : const Color(0xFF8A7A72),
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 12),
-                  Text(
-                    L10n.of(context).mtFriendColon,
-                    style: const TextStyle(
-                      fontSize: 12,
-                      fontWeight: FontWeight.bold,
-                      color: Color(0xFF5A4038),
-                    ),
-                  ),
-                  const SizedBox(height: 6),
-                  // Step 1: Friend mode
-                  Wrap(
-                    spacing: 6,
-                    runSpacing: 6,
-                    children: [
-                      _buildFriendModeChip(
-                        'no_friend',
-                        L10n.of(context).mtNoFriend,
-                      ),
-                      _buildFriendModeChip(
-                        'first_trick',
-                        L10n.of(context).mt1stTrick,
-                      ),
-                      _buildFriendModeChip('joker', L10n.of(context).mtJoker),
-                      _buildFriendModeChip('card', L10n.of(context).mtCard),
-                    ],
-                  ),
-                  // Step 2: If card mode, pick suit + rank
-                  if (_friendMode == 'card') ...[
-                    const SizedBox(height: 8),
-                    // Suit row
-                    Row(
-                      children: [
-                        for (final suit in [
-                          'spade',
-                          'heart',
-                          'diamond',
-                          'club',
-                        ])
-                          Expanded(
-                            child: GestureDetector(
-                              onTap: () => setState(() {
-                                _friendSuit = suit;
-                                _syncFriendCardSelection(state);
-                              }),
-                              child: Container(
-                                margin: const EdgeInsets.symmetric(
-                                  horizontal: 2,
-                                ),
-                                padding: const EdgeInsets.symmetric(
-                                  vertical: 8,
-                                ),
-                                decoration: BoxDecoration(
-                                  color: _friendSuit == suit
-                                      ? const Color(0xFFE3F2FD)
-                                      : const Color(0xFFF5F5F5),
-                                  borderRadius: BorderRadius.circular(8),
-                                  border: Border.all(
-                                    color: _friendSuit == suit
-                                        ? const Color(0xFF1565C0)
-                                        : const Color(0xFFE0D8D4),
-                                    width: _friendSuit == suit ? 2 : 1,
-                                  ),
-                                ),
-                                child: Center(
-                                  child: SuitIcon(suit: suit, size: 18),
-                                ),
-                              ),
-                            ),
-                          ),
-                      ],
-                    ),
-                    const SizedBox(height: 6),
-                    // Rank row
-                    Wrap(
-                      spacing: 4,
-                      runSpacing: 4,
-                      children: [
-                        for (final rank in [
-                          'A',
-                          'K',
-                          'Q',
-                          'J',
-                          '10',
-                          '9',
-                          '8',
-                          '7',
-                          '6',
-                          '5',
-                          '4',
-                          '3',
-                          '2',
-                        ])
-                          GestureDetector(
-                            onTap: () {
-                              setState(() {
-                                _friendRank = rank;
-                                _syncFriendCardSelection(state);
-                              });
-                            },
-                            child: Container(
-                              width: 36,
-                              height: 30,
-                              decoration: BoxDecoration(
-                                color: _friendRank == rank
-                                    ? const Color(0xFFE3F2FD)
-                                    : const Color(0xFFF5F5F5),
-                                borderRadius: BorderRadius.circular(6),
-                                border: Border.all(
-                                  color: _friendRank == rank
-                                      ? const Color(0xFF1565C0)
-                                      : const Color(0xFFE0D8D4),
-                                  width: _friendRank == rank ? 2 : 1,
-                                ),
-                              ),
-                              child: Center(
-                                child: Text(
-                                  rank,
-                                  style: TextStyle(
-                                    fontSize: 11,
-                                    fontWeight: _friendRank == rank
-                                        ? FontWeight.bold
-                                        : FontWeight.normal,
-                                    color: const Color(0xFF5A4038),
-                                  ),
-                                ),
-                              ),
-                            ),
-                          ),
-                      ],
-                    ),
-                    // Show selected card label
-                    if (_friendCardSelection.isNotEmpty) ...[
-                      const SizedBox(height: 6),
-                      Text(
-                        _friendCardLabel(_friendCardSelection),
-                        style: const TextStyle(
-                          fontSize: 11,
-                          color: Color(0xFF1565C0),
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                    ],
-                  ],
-                  const SizedBox(height: 12),
-                  SizedBox(
-                    width: double.infinity,
-                    height: 44,
-                    child: FilledButton(
-                      onPressed:
-                          _discardSelection.length == 3 &&
-                              _friendMode.isNotEmpty &&
-                              _friendCardSelection.isNotEmpty
-                          ? () {
-                              game.mightyDiscardKitty(
-                                _discardSelection.toList(),
-                                _friendCardSelection,
-                              );
-                              setState(() => _discardSelection.clear());
-                            }
-                          : null,
-                      style: FilledButton.styleFrom(
-                        backgroundColor: const Color(0xFF1565C0),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                      ),
-                      child: Text(L10n.of(context).mtConfirm),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ),
-        ),
-        // ── Contract change + turn timer row (above hand) ──
-        Padding(
-          padding: const EdgeInsets.fromLTRB(12, 6, 12, 4),
-          child: Row(
+    return Container(
+      width: double.infinity,
+      margin: const EdgeInsets.fromLTRB(12, 8, 12, 12),
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: Colors.white.withValues(alpha: 0.95),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: const Color(0xFFE0D8D4)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
             children: [
-              // Contract change pill button
               Expanded(
                 child: Material(
                   color: const Color(0xFFFB8C00),
-                  borderRadius: BorderRadius.circular(14),
-                  elevation: 2,
-                  shadowColor: const Color(0x40FB8C00),
+                  borderRadius: BorderRadius.circular(12),
+                  elevation: 1,
                   child: InkWell(
                     onTap: () => _showContractChangeDialog(game),
-                    borderRadius: BorderRadius.circular(14),
+                    borderRadius: BorderRadius.circular(12),
                     child: Padding(
                       padding: const EdgeInsets.symmetric(
-                        horizontal: 14,
-                        vertical: 10,
+                        horizontal: 12,
+                        vertical: 9,
                       ),
                       child: Row(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
-                          const Icon(Icons.tune, size: 18, color: Colors.white),
-                          const SizedBox(width: 8),
+                          const Icon(Icons.tune, size: 16, color: Colors.white),
+                          const SizedBox(width: 6),
                           Text(
                             L10n.of(context).mtChangeContract,
                             style: const TextStyle(
-                              fontSize: 13,
+                              fontSize: 12,
                               fontWeight: FontWeight.w800,
                               color: Colors.white,
-                              letterSpacing: 0.2,
                             ),
                           ),
                         ],
@@ -3073,57 +2945,228 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
                   ),
                 ),
               ),
-              // Kitty-phase turn timer badge (only when seconds remain)
               if (_remainingSeconds > 0) ...[
                 const SizedBox(width: 8),
                 Container(
                   padding: const EdgeInsets.symmetric(
-                    horizontal: 12,
+                    horizontal: 10,
                     vertical: 8,
                   ),
                   decoration: BoxDecoration(
                     color: _remainingSeconds <= 5
                         ? const Color(0xFFFFEBEE)
                         : Colors.white.withValues(alpha: 0.95),
-                    borderRadius: BorderRadius.circular(14),
+                    borderRadius: BorderRadius.circular(12),
                     border: Border.all(
                       color: _remainingSeconds <= 5
                           ? const Color(0xFFE53935)
                           : const Color(0xFFE0D8D4),
-                      width: 1.5,
                     ),
                   ),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Icon(
-                        Icons.timer_outlined,
-                        size: 16,
-                        color: _remainingSeconds <= 5
-                            ? const Color(0xFFE53935)
-                            : const Color(0xFF8A7A72),
-                      ),
-                      const SizedBox(width: 4),
-                      Text(
-                        '${_remainingSeconds}s',
-                        style: TextStyle(
-                          fontSize: 13,
-                          fontWeight: FontWeight.w800,
-                          color: _remainingSeconds <= 5
-                              ? const Color(0xFFE53935)
-                              : const Color(0xFF5A4038),
-                        ),
-                      ),
-                    ],
+                  child: Text(
+                    '${_remainingSeconds}s',
+                    style: TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w800,
+                      color: _remainingSeconds <= 5
+                          ? const Color(0xFFE53935)
+                          : const Color(0xFF5A4038),
+                    ),
                   ),
                 ),
               ],
             ],
           ),
-        ),
-        // Hand for kitty selection
-        _buildHandArea(state, game),
-      ],
+          const SizedBox(height: 10),
+          Row(
+            children: [
+              const Icon(Icons.swap_horiz, size: 18, color: Color(0xFF5A4038)),
+              const SizedBox(width: 6),
+              Text(
+                L10n.of(context).mtDiscard3,
+                style: TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.bold,
+                  color: Color(0xFF5A4038),
+                ),
+              ),
+              const Spacer(),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                decoration: BoxDecoration(
+                  color: _discardSelection.length == 3
+                      ? const Color(0xFFE8F5E9)
+                      : const Color(0xFFF5F5F5),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Text(
+                  '${_discardSelection.length}/3',
+                  style: TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.bold,
+                    color: _discardSelection.length == 3
+                        ? const Color(0xFF4CAF50)
+                        : const Color(0xFF8A7A72),
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          Text(
+            L10n.of(context).mtFriendColon,
+            style: const TextStyle(
+              fontSize: 12,
+              fontWeight: FontWeight.bold,
+              color: Color(0xFF5A4038),
+            ),
+          ),
+          const SizedBox(height: 6),
+          // Step 1: Friend mode
+          Wrap(
+            spacing: 6,
+            runSpacing: 6,
+            children: [
+              _buildFriendModeChip('no_friend', L10n.of(context).mtNoFriend),
+              _buildFriendModeChip('first_trick', L10n.of(context).mt1stTrick),
+              _buildFriendModeChip('joker', L10n.of(context).mtJoker),
+              _buildFriendModeChip('card', L10n.of(context).mtCard),
+            ],
+          ),
+          // Step 2: If card mode, pick suit + rank
+          if (_friendMode == 'card') ...[
+            const SizedBox(height: 8),
+            // Suit row
+            Row(
+              children: [
+                for (final suit in ['spade', 'heart', 'diamond', 'club'])
+                  Expanded(
+                    child: GestureDetector(
+                      onTap: () => setState(() {
+                        _friendSuit = suit;
+                        _syncFriendCardSelection(state);
+                      }),
+                      child: Container(
+                        margin: const EdgeInsets.symmetric(horizontal: 2),
+                        padding: const EdgeInsets.symmetric(vertical: 8),
+                        decoration: BoxDecoration(
+                          color: _friendSuit == suit
+                              ? const Color(0xFFE3F2FD)
+                              : const Color(0xFFF5F5F5),
+                          borderRadius: BorderRadius.circular(8),
+                          border: Border.all(
+                            color: _friendSuit == suit
+                                ? const Color(0xFF1565C0)
+                                : const Color(0xFFE0D8D4),
+                            width: _friendSuit == suit ? 2 : 1,
+                          ),
+                        ),
+                        child: Center(child: SuitIcon(suit: suit, size: 18)),
+                      ),
+                    ),
+                  ),
+              ],
+            ),
+            const SizedBox(height: 6),
+            // Rank row
+            Wrap(
+              spacing: 4,
+              runSpacing: 4,
+              children: [
+                for (final rank in [
+                  'A',
+                  'K',
+                  'Q',
+                  'J',
+                  '10',
+                  '9',
+                  '8',
+                  '7',
+                  '6',
+                  '5',
+                  '4',
+                  '3',
+                  '2',
+                ])
+                  GestureDetector(
+                    onTap: () {
+                      setState(() {
+                        _friendRank = rank;
+                        _syncFriendCardSelection(state);
+                      });
+                    },
+                    child: Container(
+                      width: 36,
+                      height: 30,
+                      decoration: BoxDecoration(
+                        color: _friendRank == rank
+                            ? const Color(0xFFE3F2FD)
+                            : const Color(0xFFF5F5F5),
+                        borderRadius: BorderRadius.circular(6),
+                        border: Border.all(
+                          color: _friendRank == rank
+                              ? const Color(0xFF1565C0)
+                              : const Color(0xFFE0D8D4),
+                          width: _friendRank == rank ? 2 : 1,
+                        ),
+                      ),
+                      child: Center(
+                        child: Text(
+                          rank,
+                          style: TextStyle(
+                            fontSize: 11,
+                            fontWeight: _friendRank == rank
+                                ? FontWeight.bold
+                                : FontWeight.normal,
+                            color: const Color(0xFF5A4038),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+              ],
+            ),
+            // Show selected card label
+            if (_friendCardSelection.isNotEmpty) ...[
+              const SizedBox(height: 6),
+              Text(
+                _friendCardLabel(_friendCardSelection),
+                style: const TextStyle(
+                  fontSize: 11,
+                  color: Color(0xFF1565C0),
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ],
+          ],
+          const SizedBox(height: 12),
+          SizedBox(
+            width: double.infinity,
+            height: 44,
+            child: FilledButton(
+              onPressed:
+                  _discardSelection.length == 3 &&
+                      _friendMode.isNotEmpty &&
+                      _friendCardSelection.isNotEmpty
+                  ? () {
+                      game.mightyDiscardKitty(
+                        _discardSelection.toList(),
+                        _friendCardSelection,
+                      );
+                      setState(() => _discardSelection.clear());
+                    }
+                  : null,
+              style: FilledButton.styleFrom(
+                backgroundColor: const Color(0xFF1565C0),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+              ),
+              child: Text(L10n.of(context).mtConfirm),
+            ),
+          ),
+        ],
+      ),
     );
   }
 
@@ -3817,6 +3860,16 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
+          if (state.phase == 'bidding')
+            Padding(
+              padding: const EdgeInsets.only(bottom: 8),
+              child: _buildCompactBiddingPanel(state, game),
+            ),
+          if (state.phase == 'kill_select')
+            Padding(
+              padding: const EdgeInsets.only(bottom: 8),
+              child: _buildCompactKillPanel(state, game),
+            ),
           if (game.myTimeoutCount > 0)
             Padding(
               padding: const EdgeInsets.only(bottom: 6),
@@ -4000,6 +4053,401 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
               isKitty: isKitty,
               state: state,
             ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildCompactBiddingPanel(
+    MightyGameStateData state,
+    GameService game,
+  ) {
+    final currentBidder = state.currentBid['bidder']?.toString();
+    final currentBidderName = currentBidder == null
+        ? null
+        : state.players
+              .where((p) => p.id == currentBidder)
+              .map((p) => p.name)
+              .firstOrNull;
+
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.fromLTRB(12, 10, 12, 10),
+      decoration: BoxDecoration(
+        color: Colors.white.withValues(alpha: 0.92),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: const Color(0xFFE0D8D4)),
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Row(
+            children: [
+              const Icon(Icons.gavel, size: 16, color: Color(0xFF1565C0)),
+              const SizedBox(width: 6),
+              Expanded(
+                child: Text(
+                  currentBidderName == null
+                      ? L10n.of(context).mtBidInProgress
+                      : L10n.of(context).mtCurrentBid(
+                          state.currentBid['points'].toString(),
+                          _suitLabel(state.currentBid['suit']),
+                        ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w800,
+                    color: Color(0xFF5A4038),
+                  ),
+                ),
+              ),
+              if (_remainingSeconds > 0)
+                Text(
+                  '${_remainingSeconds}s',
+                  style: TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w800,
+                    color: _remainingSeconds <= 5
+                        ? const Color(0xFFE53935)
+                        : const Color(0xFF8A7A72),
+                  ),
+                ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          _buildCompactBidControls(state, game),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildCompactBidControls(MightyGameStateData state, GameService game) {
+    if (!state.isMyTurn) {
+      final waitingName =
+          state.players
+              .where((p) => p.id == state.currentPlayer)
+              .map((p) => p.name)
+              .firstOrNull ??
+          '...';
+      return Text(
+        L10n.of(context).mtWaitingFor(waitingName),
+        style: const TextStyle(fontSize: 12, color: Color(0xFF8A7A72)),
+      );
+    }
+
+    final currentBidPoints = (state.currentBid['points'] as num?)?.toInt() ?? 0;
+    final currentBidSuit = state.currentBid['suit'] as String?;
+    final modeMin = state.mode == '6p' ? 14 : 13;
+    final canBidSamePoints =
+        currentBidSuit != null &&
+        currentBidSuit != 'no_trump' &&
+        _bidSuit == 'no_trump';
+    final minBid = canBidSamePoints
+        ? currentBidPoints.clamp(modeMin, 20)
+        : (currentBidPoints + 1).clamp(modeMin, 20);
+    if (_bidPoints < minBid) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) setState(() => _bidPoints = minBid);
+      });
+    }
+
+    int minBidFor(String suit) {
+      if (currentBidPoints == 0) return modeMin;
+      final raw =
+          (suit == 'no_trump' &&
+              currentBidSuit != null &&
+              currentBidSuit != 'no_trump')
+          ? currentBidPoints
+          : currentBidPoints + 1;
+      return raw < modeMin ? modeMin : raw;
+    }
+
+    bool suitAvailable(String suit) => minBidFor(suit) <= 20;
+
+    void selectSuit(String suit) {
+      final needed = minBidFor(suit);
+      if (needed > 20) return;
+      setState(() {
+        if (suit == 'no_trump') {
+          _bidPoints = needed;
+        } else if (_bidPoints < needed) {
+          _bidPoints = needed;
+        }
+        _bidSuit = suit;
+      });
+    }
+
+    final isTrueCeiling =
+        currentBidPoints >= 20 && currentBidSuit == 'no_trump';
+    final canTieWithNT =
+        currentBidPoints >= 20 &&
+        currentBidSuit != null &&
+        currentBidSuit != 'no_trump' &&
+        _bidSuit == 'no_trump';
+    final canBid = !isTrueCeiling && (currentBidPoints < 20 || canTieWithNT);
+
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Row(
+          children: [
+            Text(
+              L10n.of(context).mtPoints,
+              style: const TextStyle(
+                fontSize: 12,
+                fontWeight: FontWeight.w700,
+                color: Color(0xFF5A4038),
+              ),
+            ),
+            if (minBid >= 20)
+              const Spacer()
+            else
+              Expanded(
+                child: Slider(
+                  value: _bidPoints.toDouble().clamp(minBid.toDouble(), 20),
+                  min: minBid.toDouble(),
+                  max: 20,
+                  divisions: 20 - minBid,
+                  label: '${_bidPoints.clamp(minBid, 20)}',
+                  onChanged: (v) => setState(() => _bidPoints = v.toInt()),
+                ),
+              ),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+              decoration: BoxDecoration(
+                color: const Color(0xFFE3F2FD),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Text(
+                '${_bidPoints.clamp(minBid, 20)}',
+                style: const TextStyle(
+                  fontWeight: FontWeight.w800,
+                  fontSize: 15,
+                  color: Color(0xFF1565C0),
+                ),
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 6),
+        Wrap(
+          alignment: WrapAlignment.center,
+          spacing: 8,
+          runSpacing: 8,
+          children: [
+            _buildSuitChip(
+              'spade',
+              '\u2660',
+              const Color(0xFF2B2B2B),
+              enabled: suitAvailable('spade'),
+              onTap: () => selectSuit('spade'),
+            ),
+            _buildSuitChip(
+              'heart',
+              '\u2665',
+              const Color(0xFFD24B4B),
+              enabled: suitAvailable('heart'),
+              onTap: () => selectSuit('heart'),
+            ),
+            _buildSuitChip(
+              'diamond',
+              '\u2666',
+              const Color(0xFF6FB6E5),
+              enabled: suitAvailable('diamond'),
+              onTap: () => selectSuit('diamond'),
+            ),
+            _buildSuitChip(
+              'club',
+              '\u2663',
+              const Color(0xFF4BAA6A),
+              enabled: suitAvailable('club'),
+              onTap: () => selectSuit('club'),
+            ),
+            _buildSuitChip(
+              'no_trump',
+              'NT',
+              const Color(0xFF7B1FA2),
+              enabled: suitAvailable('no_trump'),
+              onTap: () => selectSuit('no_trump'),
+            ),
+          ],
+        ),
+        const SizedBox(height: 8),
+        Wrap(
+          alignment: WrapAlignment.center,
+          spacing: 8,
+          runSpacing: 8,
+          children: [
+            FilledButton(
+              onPressed: canBid
+                  ? () => game.mightySubmitBid(_bidPoints, _bidSuit)
+                  : null,
+              style: FilledButton.styleFrom(
+                backgroundColor: const Color(0xFF1565C0),
+                disabledBackgroundColor: const Color(0xFFBDBDBD),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+              ),
+              child: Text(
+                L10n.of(context).mtBid(_bidPoints, _suitLabel(_bidSuit)),
+              ),
+            ),
+            OutlinedButton(
+              onPressed: () => game.mightyPass(),
+              child: Text(L10n.of(context).mtPass),
+            ),
+            if (state.canDeclareDealMiss)
+              OutlinedButton(
+                onPressed: () => _confirmDealMiss(game),
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: const Color(0xFFD84315),
+                  side: const BorderSide(color: Color(0xFFFF7043)),
+                ),
+                child: Text(L10n.of(context).mtDealMiss),
+              ),
+          ],
+        ),
+      ],
+    );
+  }
+
+  Widget _buildCompactKillPanel(MightyGameStateData state, GameService game) {
+    final l10n = L10n.of(context);
+    final ownHand = state.myCards.toSet();
+    const suits = ['spade', 'heart', 'diamond', 'club'];
+    const ranks = [
+      'A',
+      'K',
+      'Q',
+      'J',
+      '10',
+      '9',
+      '8',
+      '7',
+      '6',
+      '5',
+      '4',
+      '3',
+      '2',
+    ];
+
+    if (!state.isMyTurn) {
+      final declarerName =
+          state.players
+              .where((p) => p.id == state.declarer)
+              .map((p) => p.name)
+              .firstOrNull ??
+          '...';
+      return Container(
+        width: double.infinity,
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+        decoration: BoxDecoration(
+          color: Colors.white.withValues(alpha: 0.92),
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: const Color(0xFFE0D8D4)),
+        ),
+        child: Text(
+          l10n.mtKillPhaseWait(declarerName),
+          textAlign: TextAlign.center,
+          style: const TextStyle(
+            fontSize: 13,
+            fontWeight: FontWeight.w700,
+            color: Color(0xFF5A4038),
+          ),
+        ),
+      );
+    }
+
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.fromLTRB(12, 10, 12, 10),
+      decoration: BoxDecoration(
+        color: Colors.white.withValues(alpha: 0.92),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: const Color(0xFFE0D8D4)),
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Row(
+            children: [
+              const Icon(Icons.gps_fixed, size: 16, color: Color(0xFFD84315)),
+              const SizedBox(width: 6),
+              Expanded(
+                child: Text(
+                  l10n.mtKillPhasePrompt,
+                  style: const TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w800,
+                    color: Color(0xFFD84315),
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          _buildKillCardChip(ownHand, 'mighty_joker'),
+          const SizedBox(height: 8),
+          Row(
+            children: [
+              for (final suit in suits) ...[
+                Expanded(
+                  child: GestureDetector(
+                    onTap: () => setState(() => _killSuitTab = suit),
+                    child: Container(
+                      margin: const EdgeInsets.symmetric(horizontal: 2),
+                      padding: const EdgeInsets.symmetric(vertical: 8),
+                      decoration: BoxDecoration(
+                        color: _killSuitTab == suit
+                            ? (PlayingCard.suitColors[suit] ??
+                                      const Color(0xFF5A4038))
+                                  .withValues(alpha: 0.12)
+                            : Colors.white,
+                        borderRadius: BorderRadius.circular(10),
+                        border: Border.all(
+                          color: _killSuitTab == suit
+                              ? (PlayingCard.suitColors[suit] ??
+                                    const Color(0xFF5A4038))
+                              : const Color(0xFFE0D8D4),
+                          width: _killSuitTab == suit ? 2 : 1,
+                        ),
+                      ),
+                      child: Center(child: SuitIcon(suit: suit, size: 20)),
+                    ),
+                  ),
+                ),
+              ],
+            ],
+          ),
+          const SizedBox(height: 8),
+          Wrap(
+            spacing: 6,
+            runSpacing: 6,
+            alignment: WrapAlignment.center,
+            children: [
+              for (final rank in ranks)
+                _buildKillCardChip(ownHand, 'mighty_${_killSuitTab}_$rank'),
+            ],
+          ),
+          const SizedBox(height: 10),
+          FilledButton(
+            onPressed: _selectedKillCard == null
+                ? null
+                : () {
+                    game.mightyDeclareKill(_selectedKillCard!);
+                    setState(() => _selectedKillCard = null);
+                  },
+            style: FilledButton.styleFrom(
+              backgroundColor: const Color(0xFFD84315),
+              disabledBackgroundColor: const Color(0xFFBDBDBD),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
+            ),
+            child: Text(l10n.mtKillConfirm),
           ),
         ],
       ),
@@ -5232,170 +5680,6 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
         buildRow(row1),
         if (row2.isNotEmpty) ...[const SizedBox(height: 4), buildRow(row2)],
       ],
-    );
-  }
-
-  // ── Kill Phase UI ──
-  Widget _buildKillSelectUI(MightyGameStateData state, GameService game) {
-    final l10n = L10n.of(context);
-    final isDeclarer = state.isMyTurn;
-    if (!isDeclarer) {
-      final declarerName =
-          state.players
-              .where((p) => p.id == state.declarer)
-              .map((p) => p.name)
-              .firstOrNull ??
-          '...';
-      return Center(
-        child: Container(
-          padding: const EdgeInsets.all(20),
-          margin: const EdgeInsets.symmetric(horizontal: 20),
-          decoration: BoxDecoration(
-            color: Colors.white.withValues(alpha: 0.9),
-            borderRadius: BorderRadius.circular(16),
-          ),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              const Icon(Icons.gps_fixed, size: 28, color: Color(0xFFD84315)),
-              const SizedBox(height: 8),
-              Text(
-                l10n.mtKillPhaseWait(declarerName),
-                textAlign: TextAlign.center,
-                style: const TextStyle(
-                  fontSize: 14,
-                  fontWeight: FontWeight.w600,
-                  color: Color(0xFF5A4038),
-                ),
-              ),
-            ],
-          ),
-        ),
-      );
-    }
-
-    // Declarer's selection grid: every card in the deck except cards in own hand.
-    // To keep the panel readable in a single viewport we split it into a
-    // dedicated joker chip plus a suit-tabbed rank row, instead of rendering
-    // all 53 cards at once.
-    final ownHand = state.myCards.toSet();
-    const suits = ['spade', 'heart', 'diamond', 'club'];
-    const ranks = [
-      'A',
-      'K',
-      'Q',
-      'J',
-      '10',
-      '9',
-      '8',
-      '7',
-      '6',
-      '5',
-      '4',
-      '3',
-      '2',
-    ];
-
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-            decoration: BoxDecoration(
-              color: const Color(0xFFFFEBEE),
-              borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: const Color(0xFFFFAB91)),
-            ),
-            child: Row(
-              children: [
-                const Icon(Icons.gps_fixed, size: 18, color: Color(0xFFD84315)),
-                const SizedBox(width: 6),
-                Expanded(
-                  child: Text(
-                    l10n.mtKillPhasePrompt,
-                    style: const TextStyle(
-                      fontSize: 13,
-                      fontWeight: FontWeight.w700,
-                      color: Color(0xFFD84315),
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(height: 10),
-          // Joker — always a separate chip so it can't be hidden behind a tab.
-          _buildKillCardChip(ownHand, 'mighty_joker'),
-          const SizedBox(height: 10),
-          // Suit tabs
-          Row(
-            children: [
-              for (final suit in suits) ...[
-                Expanded(
-                  child: GestureDetector(
-                    onTap: () => setState(() => _killSuitTab = suit),
-                    child: Container(
-                      margin: const EdgeInsets.symmetric(horizontal: 2),
-                      padding: const EdgeInsets.symmetric(vertical: 10),
-                      decoration: BoxDecoration(
-                        color: _killSuitTab == suit
-                            ? (PlayingCard.suitColors[suit] ??
-                                      const Color(0xFF5A4038))
-                                  .withValues(alpha: 0.12)
-                            : Colors.white,
-                        borderRadius: BorderRadius.circular(10),
-                        border: Border.all(
-                          color: _killSuitTab == suit
-                              ? (PlayingCard.suitColors[suit] ??
-                                    const Color(0xFF5A4038))
-                              : const Color(0xFFE0D8D4),
-                          width: _killSuitTab == suit ? 2 : 1,
-                        ),
-                      ),
-                      child: Center(child: SuitIcon(suit: suit, size: 22)),
-                    ),
-                  ),
-                ),
-              ],
-            ],
-          ),
-          const SizedBox(height: 10),
-          // Rank grid for the selected suit — 13 chips fit on two rows.
-          Wrap(
-            spacing: 6,
-            runSpacing: 6,
-            alignment: WrapAlignment.center,
-            children: [
-              for (final rank in ranks)
-                _buildKillCardChip(ownHand, 'mighty_${_killSuitTab}_$rank'),
-            ],
-          ),
-          const SizedBox(height: 14),
-          FilledButton(
-            onPressed: _selectedKillCard == null
-                ? null
-                : () {
-                    game.mightyDeclareKill(_selectedKillCard!);
-                    setState(() => _selectedKillCard = null);
-                  },
-            style: FilledButton.styleFrom(
-              backgroundColor: const Color(0xFFD84315),
-              disabledBackgroundColor: const Color(0xFFBDBDBD),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(12),
-              ),
-              padding: const EdgeInsets.symmetric(vertical: 12),
-            ),
-            child: Text(
-              l10n.mtKillConfirm,
-              style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 15),
-            ),
-          ),
-        ],
-      ),
     );
   }
 

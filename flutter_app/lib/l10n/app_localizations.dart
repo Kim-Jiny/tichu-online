@@ -5049,6 +5049,12 @@ abstract class L10n {
   /// **'Current bid: {points} {suit}'**
   String mtCurrentBid(Object points, Object suit);
 
+  /// No description provided for @mtBidInProgress.
+  ///
+  /// In en, this message translates to:
+  /// **'Bidding in progress'**
+  String get mtBidInProgress;
+
   /// No description provided for @mtPass.
   ///
   /// In en, this message translates to:

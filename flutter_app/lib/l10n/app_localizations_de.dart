@@ -2777,6 +2777,9 @@ class L10nDe extends L10n {
   }
 
   @override
+  String get mtBidInProgress => 'Gebotsphase läuft';
+
+  @override
   String get mtPass => 'Passen';
 
   @override

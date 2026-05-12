@@ -891,6 +891,7 @@
   "mtFriendHidden": "프렌드: {card}",
   "mtWins": "{name} 승리!",
   "mtCurrentBid": "현재 비딩: {points} {suit}",
+  "mtBidInProgress": "입찰 진행 중",
   "mtPass": "패스",
   "mtDealMiss": "딜미스",
   "mtDealMissConfirmBody": "딜미스를 선언하시겠습니까?\n\n본인 점수에서 5점이 차감되고, 다음에 성공하는 주공이 적립된 딜미스 점수를 모두 가져갑니다.",

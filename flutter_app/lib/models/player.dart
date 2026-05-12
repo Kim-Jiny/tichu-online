@@ -42,6 +42,9 @@ class Player {
   /// Player's account level. Null for bots and (transitionally) for old
   /// server responses that haven't redeployed level support yet.
   final int? level;
+  /// Current season rating for the game type this room hosts. Null for bots
+  /// and for older server responses. Used by ranked waiting rooms.
+  final int? seasonRating;
 
   Player({
     required this.id,
@@ -62,6 +65,7 @@ class Player {
     this.botSpeed,
     this.botStrategy,
     this.level,
+    this.seasonRating,
   });
 
   factory Player.fromJson(Map<String, dynamic> json) {
@@ -84,6 +88,7 @@ class Player {
       botSpeed: json['botSpeed'] as String?,
       botStrategy: json['botStrategy'] as String?,
       level: (json['level'] as num?)?.toInt(),
+      seasonRating: (json['seasonRating'] as num?)?.toInt(),
     );
   }
 }

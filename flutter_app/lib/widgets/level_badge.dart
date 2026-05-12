@@ -2,11 +2,11 @@ import 'package:flutter/material.dart';
 
 /// Compact circular level badge rendered next to a nickname in the waiting
 /// rooms. Background varies by tier:
-///   1–5   bronze
-///   6–10  silver
-///   11–15 gold
-///   16–20 diamond
-///   21+   rainbow
+///   1–10  bronze
+///   11–20 silver
+///   21–30 gold
+///   31–40 black
+///   41+   rainbow
 /// Returns `SizedBox.shrink()` for null / non-positive levels so callers can
 /// drop the badge in unconditionally for bots and pre-redeploy clients.
 class LevelBadge extends StatelessWidget {
@@ -72,7 +72,7 @@ class _LevelTier {
 }
 
 _LevelTier _tierFor(int level) {
-  if (level <= 5) {
+  if (level <= 10) {
     // Bronze
     return const _LevelTier(
       gradient: LinearGradient(
@@ -88,7 +88,7 @@ _LevelTier _tierFor(int level) {
       ],
     );
   }
-  if (level <= 10) {
+  if (level <= 20) {
     // Silver
     return const _LevelTier(
       gradient: LinearGradient(
@@ -101,7 +101,7 @@ _LevelTier _tierFor(int level) {
       shadowColor: Color(0x33000000),
     );
   }
-  if (level <= 15) {
+  if (level <= 30) {
     // Gold
     return const _LevelTier(
       gradient: LinearGradient(
@@ -114,20 +114,23 @@ _LevelTier _tierFor(int level) {
       shadowColor: Color(0x33B07700),
     );
   }
-  if (level <= 20) {
-    // Diamond (icy blue)
+  if (level <= 40) {
+    // Black
     return const _LevelTier(
       gradient: LinearGradient(
         begin: Alignment.topLeft,
         end: Alignment.bottomRight,
-        colors: [Color(0xFFE3F8FF), Color(0xFF6FB6E5)],
+        colors: [Color(0xFF3A3A3A), Color(0xFF0A0A0A)],
       ),
-      borderColor: Color(0xFF3A7CA5),
-      textColor: Color(0xFF143E5C),
-      shadowColor: Color(0x336FB6E5),
+      borderColor: Color(0xFF000000),
+      textColor: Color(0xFFFFD700),
+      shadowColor: Color(0x55000000),
+      textShadows: [
+        Shadow(color: Color(0xCC000000), offset: Offset(0, 1), blurRadius: 2),
+      ],
     );
   }
-  // Rainbow (21+)
+  // Rainbow (41+)
   return const _LevelTier(
     gradient: SweepGradient(
       colors: [

@@ -5441,26 +5441,57 @@ class _LobbyScreenState extends State<LobbyScreen> {
                   ),
                 ),
               ),
+            // Season rating chip on the right — only in ranked rooms, only
+            // for humans. Number-only, no emoji.
+            if (player != null &&
+                !isBot &&
+                game.isRankedRoom &&
+                player.seasonRating != null)
+              Padding(
+                padding: const EdgeInsets.only(left: 6),
+                child: Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 8,
+                    vertical: 3,
+                  ),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFFFF3E0),
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(color: const Color(0xFFFFE0B2)),
+                  ),
+                  child: Text(
+                    '${player.seasonRating}',
+                    style: const TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w800,
+                      color: Color(0xFFE65100),
+                    ),
+                  ),
+                ),
+              ),
             // Kick button: show only for host, on other players' occupied slots (including bots)
             if (game.isHost && !isEmpty && !isMySlot)
-              GestureDetector(
-                onTap: () {
-                  if (isBot) {
-                    game.kickPlayer(player.id);
-                  } else {
-                    _showKickConfirmDialog(player.name, player.id, game);
-                  }
-                },
-                child: Container(
-                  padding: const EdgeInsets.all(4),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFFFFCDD2),
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: const Icon(
-                    Icons.close,
-                    size: 16,
-                    color: Color(0xFFC62828),
+              Padding(
+                padding: const EdgeInsets.only(left: 6),
+                child: GestureDetector(
+                  onTap: () {
+                    if (isBot) {
+                      game.kickPlayer(player.id);
+                    } else {
+                      _showKickConfirmDialog(player.name, player.id, game);
+                    }
+                  },
+                  child: Container(
+                    padding: const EdgeInsets.all(4),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFFFCDD2),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: const Icon(
+                      Icons.close,
+                      size: 16,
+                      color: Color(0xFFC62828),
+                    ),
                   ),
                 ),
               ),

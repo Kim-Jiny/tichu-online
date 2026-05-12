@@ -3,7 +3,7 @@ const serverStartedAt = new Date();
 const {
   verifyAdmin, getInquiries, getInquiryById, resolveInquiry,
   getReports, getReportGroup, updateReportGroupStatus,
-  getUsers, getUserDetail, getAdminGoldHistory, getAdminPurchaseHistory, deleteUser, getDashboardStats, getDashboardActivityTopPlayers, getAdminRecentMatches, setChatBan, setAdminMemo, getRecentMatches, adminAdjustGold, setUserAdmin,
+  getUsers, getUserDetail, getAdminGoldHistory, getAdminPurchaseHistory, deleteUser, getDashboardStats, getDashboardActivityTopPlayers, getAdminRecentMatches, setChatBan, setAdminMemo, getRecentMatches, adminAdjustGold, adminAdjustExp, setUserAdmin,
   getDetailedAdminStats,
   getAllShopItemsAdmin, addShopItem, updateShopItem, deleteShopItem, getShopItemById,
   getConfig, updateConfig,
@@ -2734,7 +2734,12 @@ async function handleAdminRoute(req, res, url, pathname, method, lobby, wss, mai
             </form>
           </div>
           <div class="label">계정명</div><div class="value">${escapeHtml(user.username)}</div>
-          <div class="label">레벨</div><div class="value">${user.level || 1}</div>
+          <div class="label">레벨 / 경험치</div><div class="value">Lv.${user.level || 1} <span style="color:#888;font-size:12px;font-weight:400">(${(user.exp_total || 0).toLocaleString()} XP)</span>
+            <form method="POST" action="/tc-backstage/users/${encodeURIComponent(user.nickname)}/exp" style="display:inline-flex;align-items:center;gap:4px;margin-left:12px">
+              <input type="number" name="amount" placeholder="±XP" style="width:80px;padding:4px 8px;border-radius:6px;border:1px solid #ddd;font-size:12px" required>
+              <button type="submit" class="btn btn-primary" style="font-size:11px;padding:4px 10px">지급</button>
+            </form>
+          </div>
           <div class="label">골드</div><div class="value" style="color:#ff9800;font-weight:600">${(user.gold || 0).toLocaleString()}
             <form method="POST" action="/tc-backstage/users/${encodeURIComponent(user.nickname)}/gold" style="display:inline-flex;align-items:center;gap:4px;margin-left:12px">
               <input type="number" name="amount" placeholder="+/-" style="width:80px;padding:4px 8px;border-radius:6px;border:1px solid #ddd;font-size:12px" required>
@@ -3853,6 +3858,22 @@ async function handleAdminRoute(req, res, url, pathname, method, lobby, wss, mai
     const amount = parseInt(body.amount);
     if (!isNaN(amount) && amount !== 0) {
       await adminAdjustGold(nickname, amount, sessionInfo.session.username || 'admin');
+    }
+    const referer = req.headers.referer || '';
+    if (referer.includes('/tc-backstage/users?') || referer.endsWith('/tc-backstage/users')) {
+      return redirect(res, referer);
+    }
+    return redirect(res, `/tc-backstage/users/${encodeURIComponent(nickname)}`);
+  }
+
+  // Admin exp adjustment (auto-recalculates level)
+  const expMatch = pathname.match(/^\/tc-backstage\/users\/([^/]+)\/exp$/);
+  if (expMatch && method === 'POST') {
+    const nickname = decodeURIComponent(expMatch[1]);
+    const body = await parseBody(req);
+    const amount = parseInt(body.amount);
+    if (!isNaN(amount) && amount !== 0) {
+      await adminAdjustExp(nickname, amount, sessionInfo.session.username || 'admin');
     }
     const referer = req.headers.referer || '';
     if (referer.includes('/tc-backstage/users?') || referer.endsWith('/tc-backstage/users')) {

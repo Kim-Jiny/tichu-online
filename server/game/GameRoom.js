@@ -818,6 +818,18 @@ class GameRoom {
       // Send all slots including nulls
       players: this.players.map((p) => {
         if (p === null) return null;
+        // Pick the season rating that matches this room's game type so
+        // ranked waiting rooms can render the relevant ELO.
+        let seasonRating = null;
+        if (!p.isBot) {
+          if (this.gameType === 'skull_king') {
+            seasonRating = p.skSeasonRating ?? null;
+          } else if (this.gameType === 'mighty') {
+            seasonRating = p.mightySeasonRating ?? null;
+          } else if (this.gameType === 'tichu') {
+            seasonRating = p.seasonRating ?? null;
+          }
+        }
         return {
           id: p.id,
           name: p.nickname,
@@ -830,6 +842,7 @@ class GameRoom {
           botSpeed: p.botSpeed || null,
           botStrategy: p.isBot ? this.bots.get(p.id)?.strategy || null : null,
           level: p.isBot ? null : (p.level || null),
+          seasonRating,
         };
       }),
       gameInProgress: !!this.game,

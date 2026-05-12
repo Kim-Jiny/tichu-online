@@ -4876,6 +4876,40 @@ async function adminAdjustGold(nickname, amount, adminActor = 'admin') {
   }
 }
 
+// Admin-only XP adjustment. Mirrors the level=floor(exp/100)+1 derivation used
+// elsewhere so the recomputed level stays consistent with regular reward flows.
+async function adminAdjustExp(nickname, amount, adminActor = 'admin') {
+  const client = await pool.connect();
+  try {
+    await client.query('BEGIN');
+    const result = await client.query(
+      `UPDATE tc_users
+         SET exp_total = GREATEST(0, exp_total + $2),
+             level = GREATEST(1, ((GREATEST(0, exp_total + $2)) / 100) + 1)
+         WHERE nickname = $1
+         RETURNING exp_total, level`,
+      [nickname, amount]
+    );
+    if (result.rows.length === 0) {
+      await client.query('ROLLBACK');
+      return { success: false, message: 'User not found' };
+    }
+    await client.query('COMMIT');
+    return {
+      success: true,
+      newExpTotal: result.rows[0].exp_total,
+      newLevel: result.rows[0].level,
+      adminActor,
+    };
+  } catch (err) {
+    await client.query('ROLLBACK');
+    console.error('Admin adjust exp error:', err);
+    return { success: false, message: err.message };
+  } finally {
+    client.release();
+  }
+}
+
 async function getConfig(key) {
   const client = await pool.connect();
   try {
@@ -5939,6 +5973,7 @@ module.exports = {
   getLocalizedConfig,
   updateConfig,
   adminAdjustGold,
+  adminAdjustExp,
   claimAdReward,
   searchUsers,
   sendDm,

@@ -1901,12 +1901,14 @@ class _SpectatorScreenState extends State<SpectatorScreen> {
                                 overflow: TextOverflow.ellipsis,
                               ),
                               const SizedBox(height: 2),
-                              Text(
-                                isMe ? L10n.of(context).gameMyProfile : L10n.of(context).gamePlayerProfile,
-                                style: const TextStyle(
-                                  fontSize: 12,
-                                  color: Color(0xFF84766E),
-                                ),
+                              Builder(
+                                builder: (_) {
+                                  final inner = profile?['profile'] as Map?;
+                                  return _buildProfileSubtitle(
+                                    (inner?['level'] as int?) ?? 1,
+                                    (inner?['expTotal'] as int?) ?? 0,
+                                  );
+                                },
                               ),
                             ],
                           ),
@@ -2049,19 +2051,14 @@ class _SpectatorScreenState extends State<SpectatorScreen> {
     final seasonWins = profile['seasonWins'] ?? 0;
     final seasonLosses = profile['seasonLosses'] ?? 0;
     final seasonWinRate = profile['seasonWinRate'] ?? 0;
-    final level = profile['level'] ?? 1;
-    final expTotal = profile['expTotal'] ?? 0;
     final leaveCount = profile['leaveCount'] ?? 0;
     final reportCount = profile['reportCount'] ?? 0;
-    final bannerKey = profile['bannerKey']?.toString();
     final recentMatches = data['recentMatches'] as List<dynamic>? ?? [];
     final profileNickname = data['nickname']?.toString() ?? '';
 
     return Column(
       mainAxisSize: MainAxisSize.min,
       children: [
-        _buildProfileHeader(level as int, expTotal as int, bannerKey),
-        const SizedBox(height: 8),
         _buildMannerLeaveRow(totalGames: totalGames as int, reportCount: reportCount as int, leaveCount: leaveCount as int),
         const SizedBox(height: 10),
         _buildProfileSectionCard(
@@ -2095,50 +2092,37 @@ class _SpectatorScreenState extends State<SpectatorScreen> {
     );
   }
 
-  Widget _buildProfileHeader(int level, int expTotal, String? bannerKey) {
+  Widget _buildProfileSubtitle(int level, int expTotal) {
     final expInLevel = expTotal % 100;
     final expPercent = expInLevel / 100;
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-      decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: 0.95),
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: const Color(0xFFE0D8D4)),
-      ),
-      child: Row(
-        children: [
-          Text(
-            'Lv.$level',
-            style: const TextStyle(
-              fontSize: 14,
-              fontWeight: FontWeight.bold,
-              color: Color(0xFF5A4038),
+    return Row(
+      children: [
+        Text(
+          'Lv.$level',
+          style: const TextStyle(
+            fontSize: 12,
+            fontWeight: FontWeight.w700,
+            color: Color(0xFF5A4038),
+          ),
+        ),
+        const SizedBox(width: 8),
+        Expanded(
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(4),
+            child: LinearProgressIndicator(
+              value: expPercent,
+              minHeight: 4,
+              backgroundColor: const Color(0xFFEFE7E3),
+              valueColor: const AlwaysStoppedAnimation(Colors.black),
             ),
           ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                ClipRRect(
-                  borderRadius: BorderRadius.circular(6),
-                  child: LinearProgressIndicator(
-                    value: expPercent,
-                    minHeight: 6,
-                    backgroundColor: const Color(0xFFEFE7E3),
-                    valueColor: const AlwaysStoppedAnimation(Colors.black),
-                  ),
-                ),
-                const SizedBox(height: 2),
-                Text(
-                  '$expInLevel/100 EXP',
-                  style: const TextStyle(fontSize: 9, color: Color(0xFF9A8E8A)),
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
+        ),
+        const SizedBox(width: 6),
+        Text(
+          '$expInLevel/100',
+          style: const TextStyle(fontSize: 9, color: Color(0xFF9A8E8A)),
+        ),
+      ],
     );
   }
 

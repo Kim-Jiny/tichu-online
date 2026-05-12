@@ -3736,14 +3736,14 @@ class _LobbyScreenState extends State<LobbyScreen> {
                                     overflow: TextOverflow.ellipsis,
                                   ),
                                   const SizedBox(height: 2),
-                                  Text(
-                                    isMe
-                                        ? l10n.lobbyMyProfile
-                                        : l10n.lobbyPlayerProfile,
-                                    style: const TextStyle(
-                                      fontSize: 12,
-                                      color: Color(0xFF84766E),
-                                    ),
+                                  Builder(
+                                    builder: (_) {
+                                      final inner = profile?['profile'] as Map?;
+                                      return _buildProfileSubtitle(
+                                        (inner?['level'] as int?) ?? 1,
+                                        (inner?['expTotal'] as int?) ?? 0,
+                                      );
+                                    },
                                   ),
                                 ],
                               ),
@@ -3884,11 +3884,8 @@ class _LobbyScreenState extends State<LobbyScreen> {
     final seasonWins = profile['seasonWins'] ?? 0;
     final seasonLosses = profile['seasonLosses'] ?? 0;
     final seasonWinRate = profile['seasonWinRate'] ?? 0;
-    final level = profile['level'] ?? 1;
-    final expTotal = profile['expTotal'] ?? 0;
     final leaveCount = profile['leaveCount'] ?? 0;
     final reportCount = profile['reportCount'] ?? 0;
-    final bannerKey = profile['bannerKey']?.toString();
     final skGames = profile['skTotalGames'] ?? 0;
     final skWins = profile['skWins'] ?? 0;
     final skLosses = profile['skLosses'] ?? 0;
@@ -3911,8 +3908,6 @@ class _LobbyScreenState extends State<LobbyScreen> {
     return Column(
       mainAxisSize: MainAxisSize.min,
       children: [
-        _buildProfileHeader(nickname, level, expTotal, bannerKey),
-        const SizedBox(height: 8),
         _buildMannerLeaveRow(
           totalGames: totalGames as int,
           reportCount: reportCount as int,
@@ -4255,55 +4250,37 @@ class _LobbyScreenState extends State<LobbyScreen> {
     );
   }
 
-  Widget _buildProfileHeader(
-    String nickname,
-    int level,
-    int expTotal,
-    String? bannerKey,
-  ) {
+  Widget _buildProfileSubtitle(int level, int expTotal) {
     final expInLevel = expTotal % 100;
     final expPercent = expInLevel / 100;
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-      decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: 0.95),
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: const Color(0xFFE0D8D4)),
-      ),
-      child: Row(
-        children: [
-          Text(
-            'Lv.$level',
-            style: const TextStyle(
-              fontSize: 14,
-              fontWeight: FontWeight.bold,
-              color: Color(0xFF5A4038),
+    return Row(
+      children: [
+        Text(
+          'Lv.$level',
+          style: const TextStyle(
+            fontSize: 12,
+            fontWeight: FontWeight.w700,
+            color: Color(0xFF5A4038),
+          ),
+        ),
+        const SizedBox(width: 8),
+        Expanded(
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(4),
+            child: LinearProgressIndicator(
+              value: expPercent,
+              minHeight: 4,
+              backgroundColor: const Color(0xFFEFE7E3),
+              valueColor: const AlwaysStoppedAnimation(Colors.black),
             ),
           ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                ClipRRect(
-                  borderRadius: BorderRadius.circular(6),
-                  child: LinearProgressIndicator(
-                    value: expPercent,
-                    minHeight: 6,
-                    backgroundColor: const Color(0xFFEFE7E3),
-                    valueColor: const AlwaysStoppedAnimation(Colors.black),
-                  ),
-                ),
-                const SizedBox(height: 2),
-                Text(
-                  '$expInLevel/100 EXP',
-                  style: const TextStyle(fontSize: 9, color: Color(0xFF9A8E8A)),
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
+        ),
+        const SizedBox(width: 6),
+        Text(
+          '$expInLevel/100',
+          style: const TextStyle(fontSize: 9, color: Color(0xFF9A8E8A)),
+        ),
+      ],
     );
   }
 

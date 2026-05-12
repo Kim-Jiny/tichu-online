@@ -1596,10 +1596,24 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
           const seatHeight = 78.0;
           const playedCardWidth = 72 * 0.7;
           const playedCardHeight = 72.0;
+          final spectatorBoardDrop = _mightySmallDeviceBoardDrop(
+            width: width,
+            playerCount: state.players.length,
+            spectatorMode: true,
+            isLandscape: isLandscape,
+          );
+          final playerBoardDrop = _mightySmallDeviceBoardDrop(
+            width: width,
+            playerCount: visiblePlayers.length,
+            spectatorMode: false,
+            isLandscape: isLandscape,
+          );
 
           if (showAllSeats) {
             final playerCount = state.players.length;
-            final centerY = isLandscape ? height * 0.39 : height * 0.41;
+            final centerY =
+                (isLandscape ? height * 0.39 : height * 0.41) +
+                spectatorBoardDrop;
             final maxSeatRadiusX = math.max(0.0, centerX - seatWidth / 2 - 10);
             final seatRadiusX = math.min(
               width * _mightySeatRadiusXFactor(playerCount),
@@ -1631,7 +1645,10 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
                     child: isBidding || isKillSelect
                         ? const SizedBox.shrink()
                         : Transform.translate(
-                            offset: Offset(0, isLandscape ? -18 : -26),
+                            offset: Offset(
+                              0,
+                              (isLandscape ? -18 : -26) + spectatorBoardDrop,
+                            ),
                             child: ConstrainedBox(
                               constraints: const BoxConstraints(maxWidth: 260),
                               child: state.phase == 'trick_end'
@@ -1728,7 +1745,8 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
 
           final opponents = visiblePlayers;
           final opponentCount = opponents.length;
-          final centerY = isLandscape ? height * 0.39 : height * 0.41;
+          final centerY =
+              (isLandscape ? height * 0.39 : height * 0.41) + playerBoardDrop;
           final maxSeatRadiusX = math.max(0.0, centerX - seatWidth / 2 - 10);
           final seatRadiusX = math.min(
             width * _mightySeatRadiusXFactor(opponentCount),
@@ -1785,7 +1803,10 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
                   child: isBidding || isKillSelect
                       ? const SizedBox.shrink()
                       : Transform.translate(
-                          offset: Offset(0, isLandscape ? -18 : -26),
+                          offset: Offset(
+                            0,
+                            (isLandscape ? -18 : -26) + playerBoardDrop,
+                          ),
                           child: ConstrainedBox(
                             constraints: const BoxConstraints(maxWidth: 260),
                             child: state.phase == 'trick_end'
@@ -2445,6 +2466,18 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
       1.0,
     );
     return 10.0 * horizontalWeight;
+  }
+
+  double _mightySmallDeviceBoardDrop({
+    required double width,
+    required int playerCount,
+    required bool spectatorMode,
+    required bool isLandscape,
+  }) {
+    if (spectatorMode || isLandscape || width > 430 || playerCount != 5) {
+      return 0.0;
+    }
+    return 18.0;
   }
 
   double _mightySeatArcStartDeg(int count) {

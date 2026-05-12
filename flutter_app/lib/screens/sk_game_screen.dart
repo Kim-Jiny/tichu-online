@@ -3500,6 +3500,7 @@ class _SKGameScreenState extends State<SKGameScreen> {
     String? whaleNullifyLabel;
     int lootBonusPoints = 0;
     bool isKraken = false;
+    bool hasWhiteWhaleEffect = false;
     for (final entry in detail) {
       final type = entry['type'];
       if (type == 'kraken_void') {
@@ -3507,59 +3508,192 @@ class _SKGameScreenState extends State<SKGameScreen> {
         isKraken = true;
       } else if (type == 'white_whale_void') {
         voidReason = L10n.of(context).skGameWhiteWhaleActivated;
+        hasWhiteWhaleEffect = true;
       } else if (type == 'white_whale_nullify') {
         whaleNullifyLabel = L10n.of(context).skGameWhiteWhaleNullify;
+        hasWhiteWhaleEffect = true;
       } else if (type == 'loot_bonus') {
         lootBonusPoints = (entry['winnerPoints'] as num?)?.toInt() ?? 0;
       }
+    }
+    if (isKraken) {
+      voidReason = L10n.of(context).skGameKrakenActivated;
+      hasWhiteWhaleEffect = false;
     }
     final isVoided = state.lastTrickVoided;
 
     // Voided trick → distinct banner
     if (isVoided && state.phase == 'trick_end') {
-      final Color bgColor = isKraken
-          ? const Color(0xFF2B1E3F).withValues(alpha: 0.92)
-          : const Color(0xFF3A6B8F).withValues(alpha: 0.92);
+      final Color accentColor = isKraken
+          ? const Color(0xFFFFD54F)
+          : const Color(0xFFDBF3FF);
+      final List<Color> gradientColors = isKraken
+          ? [
+              const Color(0xFF1A102A).withValues(alpha: 0.97),
+              const Color(0xFF2B1E3F).withValues(alpha: 0.93),
+              const Color(0xFF4A2F63).withValues(alpha: 0.90),
+            ]
+          : [
+              const Color(0xFF163C54).withValues(alpha: 0.97),
+              const Color(0xFF2F6687).withValues(alpha: 0.93),
+              const Color(0xFF6CA6C4).withValues(alpha: 0.90),
+            ];
       return Center(
         child: Container(
+          constraints: const BoxConstraints(maxWidth: 260),
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
           decoration: BoxDecoration(
-            color: bgColor,
+            gradient: LinearGradient(
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              colors: gradientColors,
+            ),
             borderRadius: BorderRadius.circular(16),
             border: Border.all(
-              color: const Color(0xFFFFD54F).withValues(alpha: 0.6),
+              color: accentColor.withValues(alpha: 0.70),
               width: 1.5,
             ),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.18),
+                blurRadius: 16,
+                offset: const Offset(0, 6),
+              ),
+            ],
           ),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Text(
-                L10n.of(context).skGameTrickVoided,
-                style: const TextStyle(
-                  fontSize: 15,
-                  fontWeight: FontWeight.w900,
-                  color: Color(0xFFFFD54F),
-                  letterSpacing: 0.5,
-                ),
+              Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  _buildCard(
+                    isKraken ? 'sk_kraken' : 'sk_white_whale',
+                    size: 50,
+                  ),
+                  const SizedBox(width: 10),
+                  Flexible(
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          L10n.of(context).skGameTrickVoided,
+                          style: TextStyle(
+                            fontSize: 15,
+                            fontWeight: FontWeight.w900,
+                            color: accentColor,
+                            letterSpacing: 0.5,
+                          ),
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          voidReason ?? '',
+                          style: const TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w700,
+                            color: Colors.white,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
               ),
-              const SizedBox(height: 4),
-              Text(
-                voidReason ?? '',
-                style: const TextStyle(
-                  fontSize: 12,
-                  fontWeight: FontWeight.w700,
-                  color: Colors.white,
-                ),
-              ),
-              const SizedBox(height: 4),
+              const SizedBox(height: 8),
               Text(
                 L10n.of(context).skGameLeadPlayer(winnerName),
+                textAlign: TextAlign.center,
                 style: TextStyle(
                   fontSize: 10,
-                  color: Colors.white.withValues(alpha: 0.75),
+                  color: Colors.white.withValues(alpha: 0.82),
                 ),
               ),
+              _buildCenterTimerBadge(state),
+            ],
+          ),
+        ),
+      );
+    }
+
+    if (!isKraken && hasWhiteWhaleEffect && state.phase == 'trick_end') {
+      return Center(
+        child: Container(
+          constraints: const BoxConstraints(maxWidth: 270),
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              colors: [
+                const Color(0xFFE6F6FF).withValues(alpha: 0.98),
+                const Color(0xFFD2ECFA).withValues(alpha: 0.96),
+                const Color(0xFFB7DBEE).withValues(alpha: 0.94),
+              ],
+            ),
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(
+              color: const Color(0xFF4F88A8).withValues(alpha: 0.55),
+            ),
+            boxShadow: [
+              BoxShadow(
+                color: const Color(0xFF2B5C78).withValues(alpha: 0.16),
+                blurRadius: 16,
+                offset: const Offset(0, 6),
+              ),
+            ],
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  _buildCard('sk_white_whale', size: 52),
+                  const SizedBox(width: 10),
+                  Flexible(
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          L10n.of(context).skGameTrickWinner(winnerName),
+                          style: const TextStyle(
+                            fontSize: 14,
+                            fontWeight: FontWeight.w800,
+                            color: Color(0xFF214A62),
+                          ),
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          whaleNullifyLabel ??
+                              L10n.of(context).skGameWhiteWhaleActivated,
+                          style: const TextStyle(
+                            fontSize: 11,
+                            fontWeight: FontWeight.w800,
+                            color: Color(0xFF356B89),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+              if (bonus > 0) ...[
+                const SizedBox(height: 8),
+                Text(
+                  lootBonusPoints > 0
+                      ? L10n.of(
+                          context,
+                        ).skGameBonusWithLoot(bonus, lootBonusPoints)
+                      : L10n.of(context).skGameBonus(bonus),
+                  style: const TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w700,
+                    color: Color(0xFF2E8B57),
+                  ),
+                ),
+              ],
               _buildCenterTimerBadge(state),
             ],
           ),

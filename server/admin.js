@@ -913,9 +913,11 @@ function buildVisualFromBody(body) {
   if (body.visual_preview_enabled === 'on') {
     const p0 = _normalizeHexColor(body.visual_preview_stop0, '#FFFFFF');
     const p1 = _normalizeHexColor(body.visual_preview_stop1, '#EEEEEE');
+    const pAngle = parseInt(body.visual_preview_angle, 10);
     out.preview = {
       background: {
-        kind: 'gradient', angle: 0,
+        kind: 'gradient',
+        angle: Number.isFinite(pAngle) ? Math.max(0, Math.min(360, pAngle)) : 0,
         stops: [{ color: p0, at: 0.0 }, { color: p1, at: 1.0 }],
       },
     };
@@ -974,6 +976,7 @@ function shopForm(action, values, isEdit = false) {
   const previewEnabled = formVisual('preview_enabled', visual?.preview ? 'on' : '') === 'on';
   const previewStop0   = formVisual('preview_stop0', pStop0);
   const previewStop1   = formVisual('preview_stop1', pStop1);
+  const previewAngle   = formVisual('preview_angle', previewBg?.angle ?? bg.angle ?? 0);
   const textColor      = formVisual('text_color', visual?.text?.color || '');
 
   const iconOptions = SHOP_VISUAL_ICONS.map(i => `<option value="${i}">`).join('');
@@ -1065,7 +1068,10 @@ function shopForm(action, values, isEdit = false) {
       <input type="color" name="visual_preview_stop0" value="${escapeHtml(previewStop0)}" style="height:40px;width:100%">
       <label>인게임 끝 색</label>
       <input type="color" name="visual_preview_stop1" value="${escapeHtml(previewStop1)}" style="height:40px;width:100%">
+      <label>인게임 각도 (0~360°)</label>
+      <input type="number" name="visual_preview_angle" value="${previewAngle}" min="0" max="360" style="padding:10px;border:1px solid #ddd;border-radius:8px;font-size:14px">
     </div>
+    <div id="visualPreviewBox" style="margin-top:8px;border-radius:14px;height:64px;border:1px solid #ddd;display:${previewEnabled ? 'block' : 'none'}"></div>
 
     <div style="margin-top:24px">
       <button type="submit" class="btn btn-primary">${isEdit ? '저장' : '추가'}</button>
@@ -1080,6 +1086,7 @@ function shopForm(action, values, isEdit = false) {
         const bgKindSel    = document.getElementById('visualBgKind');
         const previewToggle = document.getElementById('visualPreviewToggle');
         const previewSection = document.getElementById('visualPreviewSection');
+        const previewBox    = document.getElementById('visualPreviewBox');
         const $ = (name) => document.querySelector('[name="' + name + '"]');
         const setVis = (sel, on) => document.querySelectorAll(sel).forEach(el => el.style.display = on ? '' : 'none');
         function applyKind() {
@@ -1089,7 +1096,10 @@ function shopForm(action, values, isEdit = false) {
           render();
         }
         function applyPreviewToggle() {
-          previewSection.style.display = previewToggle.checked ? '' : 'none';
+          const on = previewToggle.checked;
+          previewSection.style.display = on ? '' : 'none';
+          previewBox.style.display = on ? 'block' : 'none';
+          render();
         }
         function render() {
           const icon   = $('visual_icon').value || 'flag';
@@ -1106,6 +1116,11 @@ function shopForm(action, values, isEdit = false) {
             const a = parseInt($('visual_bg_angle').value, 10) || 0;
             previewCard.style.background =
               'linear-gradient(' + a + 'deg, ' + $('visual_bg_stop0').value + ', ' + $('visual_bg_stop1').value + ')';
+          }
+          if (previewToggle.checked) {
+            const pa = parseInt($('visual_preview_angle').value, 10) || 0;
+            previewBox.style.background =
+              'linear-gradient(' + pa + 'deg, ' + $('visual_preview_stop0').value + ', ' + $('visual_preview_stop1').value + ')';
           }
         }
         bgKindSel.addEventListener('change', applyKind);

@@ -37,6 +37,7 @@ class Player {
   final int timeoutCount;
   final String? titleKey;
   final String? titleName;
+  final String? bannerKey;
   final String? botSpeed;
   final String? botStrategy;
   /// Player's account level. Null for bots and (transitionally) for old
@@ -62,6 +63,7 @@ class Player {
     this.timeoutCount = 0,
     this.titleKey,
     this.titleName,
+    this.bannerKey,
     this.botSpeed,
     this.botStrategy,
     this.level,
@@ -85,6 +87,7 @@ class Player {
       timeoutCount: json['timeoutCount'] ?? 0,
       titleKey: json['titleKey'] as String?,
       titleName: json['titleName'] as String?,
+      bannerKey: json['bannerKey'] as String?,
       botSpeed: json['botSpeed'] as String?,
       botStrategy: json['botStrategy'] as String?,
       level: (json['level'] as num?)?.toInt(),

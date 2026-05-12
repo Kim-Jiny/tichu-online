@@ -158,10 +158,9 @@ class _GradientBg extends _Background {
   _GradientBg(this.colors, this.angleDeg);
 
   LinearGradient toLinearGradient() {
-    if (angleDeg == 0) {
-      return LinearGradient(colors: colors);
-    }
-    // 0deg = top→bottom in our admin form (matches CSS-like intuition).
+    // Matches CSS linear-gradient(${angle}deg, ...): 0° flows bottom→top,
+    // 90° left→right, 180° top→bottom, 270° right→left. The first color
+    // anchors at the "begin" side, last color at the "end" side.
     final rad = angleDeg * math.pi / 180.0;
     final dx = math.sin(rad);
     final dy = -math.cos(rad);

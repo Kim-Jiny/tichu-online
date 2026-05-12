@@ -375,7 +375,8 @@ class _RankingScreenState extends State<RankingScreen> {
       _ => const Color(0xFFE8E0DC),
     };
 
-    final banner = _bannerStyle(bannerKey);
+    final bannerGradient =
+        context.read<GameService>().bannerGradient(bannerKey);
     return InkWell(
       onTap: nickname.isEmpty
           ? null
@@ -391,8 +392,8 @@ class _RankingScreenState extends State<RankingScreen> {
       child: Container(
         padding: const EdgeInsets.all(12),
         decoration: BoxDecoration(
-          gradient: banner.gradient,
-          color: banner.gradient == null ? Colors.white.withValues(alpha: 0.95) : null,
+          gradient: bannerGradient,
+          color: bannerGradient == null ? Colors.white.withValues(alpha: 0.95) : null,
           borderRadius: BorderRadius.circular(16),
           border: Border.all(color: const Color(0xFFE0D8D4)),
           boxShadow: [
@@ -881,12 +882,13 @@ class _ProfileHeader extends StatelessWidget {
   Widget build(BuildContext context) {
     final expInLevel = expTotal % 100;
     final expPercent = expInLevel / 100;
-    final banner = _bannerStyle(bannerKey);
+    final bannerGradient =
+        context.read<GameService>().bannerGradient(bannerKey);
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
       decoration: BoxDecoration(
-        gradient: banner.gradient,
-        color: banner.gradient == null ? Colors.white.withValues(alpha: 0.95) : null,
+        gradient: bannerGradient,
+        color: bannerGradient == null ? Colors.white.withValues(alpha: 0.95) : null,
         borderRadius: BorderRadius.circular(14),
         border: Border.all(color: const Color(0xFFE0D8D4)),
       ),
@@ -931,7 +933,7 @@ class _ProfileHeader extends StatelessWidget {
                     value: expPercent,
                     minHeight: 6,
                     backgroundColor: const Color(0xFFEFE7E3),
-                    valueColor: const AlwaysStoppedAnimation(Color(0xFF64B5F6)),
+                    valueColor: const AlwaysStoppedAnimation(Colors.black),
                   ),
                 ),
               ),
@@ -946,60 +948,6 @@ class _ProfileHeader extends StatelessWidget {
       ),
     );
   }
-}
-
-_BannerStyle _bannerStyle(String? key) {
-  switch (key) {
-    case 'banner_pastel':
-      return const _BannerStyle(
-        gradient: LinearGradient(
-          colors: [Color(0xFFF6C1C9), Color(0xFFF3E7EA)],
-        ),
-      );
-    case 'banner_blossom':
-      return const _BannerStyle(
-        gradient: LinearGradient(
-          colors: [Color(0xFFF7D6D0), Color(0xFFF3E9E6)],
-        ),
-      );
-    case 'banner_mint':
-      return const _BannerStyle(
-        gradient: LinearGradient(
-          colors: [Color(0xFFCDEBD8), Color(0xFFEFF8F2)],
-        ),
-      );
-    case 'banner_sunset_7d':
-      return const _BannerStyle(
-        gradient: LinearGradient(
-          colors: [Color(0xFFFFC3A0), Color(0xFFFFE5B4)],
-        ),
-      );
-    case 'banner_season_gold':
-      return const _BannerStyle(
-        gradient: LinearGradient(
-          colors: [Color(0xFFFFE082), Color(0xFFFFF3C0)],
-        ),
-      );
-    case 'banner_season_silver':
-      return const _BannerStyle(
-        gradient: LinearGradient(
-          colors: [Color(0xFFCFD8DC), Color(0xFFF1F3F4)],
-        ),
-      );
-    case 'banner_season_bronze':
-      return const _BannerStyle(
-        gradient: LinearGradient(
-          colors: [Color(0xFFD7B59A), Color(0xFFF4E8DC)],
-        ),
-      );
-    default:
-      return const _BannerStyle();
-  }
-}
-
-class _BannerStyle {
-  const _BannerStyle({this.gradient});
-  final LinearGradient? gradient;
 }
 
 class _ProfileSectionCard extends StatelessWidget {

@@ -8,6 +8,7 @@ import '../models/room.dart';
 import '../models/game_state.dart';
 import '../models/sk_game_state.dart';
 import '../models/ll_game_state.dart';
+import '../models/shop_visual.dart';
 import '../models/mighty_game_state.dart';
 import 'analytics_service.dart';
 import 'network_service.dart';
@@ -42,6 +43,10 @@ class GameService extends ChangeNotifier {
 
   // Room info
   String currentRoomId = '';
+  /// One-shot marker set when we initiate room entry (join/invite) and
+  /// cleared when the first room_state arrives. Used to fire the
+  /// `room_join` analytics event with accurate gameType/isRanked.
+  String? _pendingRoomEntry;
   String currentRoomName = '';
   // Dynamic slot system: maxPlayers elements, null for empty slots
   List<Player?> roomPlayers = [null, null, null, null];
@@ -134,6 +139,11 @@ class GameService extends ChangeNotifier {
   List<Map<String, dynamic>> goldHistory = [];
   List<Map<String, dynamic>> shopItems = [];
   List<Map<String, dynamic>> inventoryItems = [];
+  /// Server-driven visual cache for banners/titles/themes. Populated once
+  /// per login via `requestVisualCatalog()`. Lookup by itemKey → ShopVisual
+  /// so renderers can use admin-edited gradient angle/stops instead of
+  /// hardcoded color pairs.
+  Map<String, ShopVisual> visualCatalog = const {};
   bool shopLoading = false;
   bool goldHistoryLoading = false;
   bool inventoryLoading = false;
@@ -474,6 +484,9 @@ class GameService extends ChangeNotifier {
         _sendFcmTokenAsync();
         // Prefetch notices so the unread badge is accurate immediately.
         requestNotices();
+        // Prefetch the visual catalog so banners/titles/themes render with
+        // the admin-edited gradient config from the moment slots appear.
+        requestVisualCatalog();
         notifyListeners();
         break;
 
@@ -838,6 +851,15 @@ class GameService extends ChangeNotifier {
             _prevMightyGameState = null;
             myTimeoutCount = 0;
           }
+        }
+        // Fire the deferred room_join analytics now that we know gameType /
+        // isRanked from the just-applied room_state.
+        if (_pendingRoomEntry != null && currentRoomId.isNotEmpty) {
+          _pendingRoomEntry = null;
+          AnalyticsService.instance.logRoomJoin(
+            gameType: currentGameType,
+            isRanked: isRankedRoom,
+          );
         }
         notifyListeners();
         break;
@@ -1582,6 +1604,23 @@ class GameService extends ChangeNotifier {
         notifyListeners();
         break;
 
+      case 'visual_catalog_result':
+        if (data['success'] == true) {
+          final list = data['items'] as List? ?? [];
+          final next = <String, ShopVisual>{};
+          for (final raw in list) {
+            if (raw is! Map) continue;
+            final item = Map<String, dynamic>.from(raw);
+            final key = item['item_key'] as String?;
+            if (key == null || key.isEmpty) continue;
+            final visual = ShopVisual.fromItemMap(item);
+            if (visual != null) next[key] = visual;
+          }
+          visualCatalog = next;
+          notifyListeners();
+        }
+        break;
+
       case 'inventory_result':
         inventoryLoading = false;
         if (data['success'] == true) {
@@ -2153,6 +2192,7 @@ class GameService extends ChangeNotifier {
     _prevGameState = null;
     _prevSKGameState = null;
     _prevLLGameState = null;
+    _pendingRoomEntry = null;
     // Unbind the analytics user id on session reset so the next login binds
     // a fresh playerId.
     AnalyticsService.instance.setUserId(null);
@@ -2558,20 +2598,16 @@ class GameService extends ChangeNotifier {
       'roomId': roomId,
       'password': password,
     });
-    // Use the cached room metadata when available; the join request itself
-    // doesn't include game type so we look it up from the lobby list.
-    final cached = roomList.firstWhere(
-      (r) => r.id == roomId,
-      orElse: () => Room(id: roomId, name: ''),
-    );
-    AnalyticsService.instance.logRoomJoin(
-      gameType: cached.gameType,
-      isRanked: cached.isRanked,
-    );
+    // Mark that we're expecting to enter a room; the actual analytics log
+    // fires when the first room_state arrives with the full room metadata
+    // (so invite-token joins, which lack a roomList cache hit, are covered
+    // accurately too).
+    _pendingRoomEntry = 'join';
   }
 
   void joinRoomByInviteToken(String token) {
     _network.send({'type': 'join_room_by_invite', 'token': token});
+    _pendingRoomEntry = 'invite';
   }
 
   void leaveRoom() {
@@ -2958,6 +2994,20 @@ class GameService extends ChangeNotifier {
     shopError = null;
     _network.send({'type': 'get_shop_items'});
     notifyListeners();
+  }
+
+  /// Fetch the visual catalog (banners/titles/themes visual config from
+  /// tc_shop_items.metadata.visual). Cached in [visualCatalog] for the
+  /// lifetime of the login session.
+  void requestVisualCatalog() {
+    _network.send({'type': 'get_visual_catalog'});
+  }
+
+  /// Lookup the banner-style gradient for an item key. Returns null when the
+  /// catalog hasn't been loaded yet or the key isn't registered.
+  LinearGradient? bannerGradient(String? itemKey) {
+    if (itemKey == null) return null;
+    return visualCatalog[itemKey]?.previewGradient();
   }
 
   void requestInventory() {

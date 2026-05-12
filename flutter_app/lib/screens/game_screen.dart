@@ -6,7 +6,6 @@ import '../services/network_service.dart';
 import '../services/session_service.dart';
 import '../models/game_state.dart';
 import '../models/player.dart';
-import '../models/shop_visual.dart';
 import '../widgets/playing_card.dart';
 import '../widgets/connection_overlay.dart';
 import '../l10n/app_localizations.dart';
@@ -1493,12 +1492,10 @@ class _GameScreenState extends State<GameScreen> {
   Widget _buildProfileHeader(int level, int expTotal, String? bannerKey) {
     final expInLevel = expTotal % 100;
     final expPercent = expInLevel / 100;
-    final banner = _bannerStyle(bannerKey);
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
       decoration: BoxDecoration(
-        gradient: banner.gradient,
-        color: banner.gradient == null ? Colors.white.withValues(alpha: 0.95) : null,
+        color: Colors.white.withValues(alpha: 0.95),
         borderRadius: BorderRadius.circular(14),
         border: Border.all(color: const Color(0xFFE0D8D4)),
       ),
@@ -1523,7 +1520,7 @@ class _GameScreenState extends State<GameScreen> {
                     value: expPercent,
                     minHeight: 6,
                     backgroundColor: const Color(0xFFEFE7E3),
-                    valueColor: const AlwaysStoppedAnimation(Color(0xFF64B5F6)),
+                    valueColor: const AlwaysStoppedAnimation(Colors.black),
                   ),
                 ),
                 const SizedBox(height: 2),
@@ -1539,40 +1536,6 @@ class _GameScreenState extends State<GameScreen> {
     );
   }
 
-  _BannerStyle _bannerStyle(String? key) {
-    if (key == null || key.isEmpty) return const _BannerStyle();
-    // Prefer admin-driven visual config: look the banner up in inventory
-    // (joined with shop metadata server-side) and parse `metadata.visual`.
-    final game = context.read<GameService>();
-    Map<String, dynamic>? item;
-    for (final i in game.inventoryItems) {
-      if (i['item_key'] == key) { item = i; break; }
-    }
-    final serverGradient = ShopVisual.fromItemMap(item)?.previewGradient();
-    if (serverGradient != null) {
-      return _BannerStyle(gradient: serverGradient);
-    }
-    // Legacy hardcoded gradients (kept so previously-equipped items render
-    // even when the inventory hasn't loaded yet or backfill is missing).
-    switch (key) {
-      case 'banner_pastel':
-        return const _BannerStyle(gradient: LinearGradient(colors: [Color(0xFFF6C1C9), Color(0xFFF3E7EA)]));
-      case 'banner_blossom':
-        return const _BannerStyle(gradient: LinearGradient(colors: [Color(0xFFF7D6D0), Color(0xFFF3E9E6)]));
-      case 'banner_mint':
-        return const _BannerStyle(gradient: LinearGradient(colors: [Color(0xFFCDEBD8), Color(0xFFEFF8F2)]));
-      case 'banner_sunset_7d':
-        return const _BannerStyle(gradient: LinearGradient(colors: [Color(0xFFFFC3A0), Color(0xFFFFE5B4)]));
-      case 'banner_season_gold':
-        return const _BannerStyle(gradient: LinearGradient(colors: [Color(0xFFFFE082), Color(0xFFFFF3C0)]));
-      case 'banner_season_silver':
-        return const _BannerStyle(gradient: LinearGradient(colors: [Color(0xFFCFD8DC), Color(0xFFF1F3F4)]));
-      case 'banner_season_bronze':
-        return const _BannerStyle(gradient: LinearGradient(colors: [Color(0xFFD7B59A), Color(0xFFF4E8DC)]));
-      default:
-        return const _BannerStyle();
-    }
-  }
 
   Widget _buildProfileSectionCard({
     required String title,
@@ -4919,7 +4882,3 @@ class _ExchangeSummaryItem {
   const _ExchangeSummaryItem(this.name, this.cardId);
 }
 
-class _BannerStyle {
-  const _BannerStyle({this.gradient});
-  final LinearGradient? gradient;
-}

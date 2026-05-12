@@ -1,8 +1,22 @@
-const { Pool } = require('pg');
+const { Pool, types: pgTypes } = require('pg');
 const bcrypt = require('bcrypt');
 const { VISUAL_BACKFILL } = require('./shop_visuals_seed');
 
 const SALT_ROUNDS = 10;
+
+// Interpret TIMESTAMP WITHOUT TIME ZONE (oid 1114) as UTC wall-clock instead
+// of letting node-pg apply the Node process's local TZ. The DB session is
+// pinned to UTC (see pool 'connect' handler), so every value coming out of a
+// naked TIMESTAMP column was already written as UTC; without this override,
+// running the server on a non-UTC host (e.g. an Asia/Seoul dev machine) makes
+// pg produce Date objects shifted by the host's UTC offset, and downstream
+// JSON serialization then sends an ISO string that's hours off. Affects gold
+// history, match history, admin time formatters — anything reading
+// created_at-style columns.
+pgTypes.setTypeParser(pgTypes.builtins.TIMESTAMP, (val) => {
+  if (val == null) return null;
+  return new Date(`${val}Z`);
+});
 
 // Idempotent backfill of tc_shop_items.metadata.visual. Skips any row that
 // already has a `visual` key under metadata, so admin-authored edits remain
@@ -2021,6 +2035,30 @@ async function claimAdReward(nickname) {
 }
 
 // Shop items
+// Returns every shop item that has a visual config under metadata->visual,
+// regardless of category, purchasable, or season flag. Used by the client
+// to render banners/titles/themes consistently with whatever the admin set
+// in the shop tab (gradient angle, stops, icon overrides). Kept lightweight
+// — only the columns needed for rendering.
+async function getVisualCatalog() {
+  const client = await pool.connect();
+  try {
+    const result = await client.query(
+      `
+      SELECT item_key, category, metadata
+      FROM tc_shop_items
+      WHERE metadata IS NOT NULL AND metadata->'visual' IS NOT NULL
+      `
+    );
+    return { success: true, items: result.rows };
+  } catch (err) {
+    console.error('Get visual catalog error:', err);
+    return { success: false, messageKey: 'db_shop_fetch_failed' };
+  } finally {
+    client.release();
+  }
+}
+
 async function getShopItems() {
   const client = await pool.connect();
   try {
@@ -2067,7 +2105,7 @@ async function getUserItems(nickname) {
       SELECT ui.item_key, ui.acquired_at, ui.expires_at, ui.is_active,
              si.name_ko, si.name_ko AS name, si.name_en, si.name_de,
              si.description_ko, si.description_en, si.description_de,
-             si.category, si.is_season, si.is_permanent,
+             si.category, si.is_season, si.is_permanent, si.price,
              si.duration_days, si.effect_type, si.effect_value, si.metadata
       FROM tc_user_items ui
       JOIN tc_shop_items si ON si.item_key = ui.item_key
@@ -2101,6 +2139,13 @@ async function buyItem(nickname, itemKey) {
     }
     const item = itemRes.rows[0];
     if (!item.is_purchasable) {
+      await client.query('ROLLBACK');
+      return { success: false, messageKey: 'db_item_not_purchasable' };
+    }
+    // Season items are reward-only — never purchasable or extendable through
+    // the shop, even if a stale client sends a buy request for one already in
+    // the user's inventory.
+    if (item.is_season) {
       await client.query('ROLLBACK');
       return { success: false, messageKey: 'db_item_not_purchasable' };
     }
@@ -2158,6 +2203,17 @@ async function buyItem(nickname, itemKey) {
         await client.query(
           `UPDATE tc_users SET gold = gold - $2 WHERE nickname = $1`,
           [nickname, item.price]
+        );
+
+        // Record the extend as its own gold-history entry so it shows up at
+        // the correct timestamp. Without this, the history view derives shop
+        // purchases from tc_user_items.acquired_at which is never updated on
+        // extend — so an extend would silently appear at the original buy
+        // time, off by however long ago the item was first acquired.
+        await client.query(
+          `INSERT INTO tc_gold_history (nickname, gold_delta, source, title, description)
+           VALUES ($1, $2, 'shop_purchase', $3, 'shop_purchase')`,
+          [nickname, -item.price, `${item.name_ko}|${item.name_en}|${item.name_de}`]
         );
 
         await client.query('COMMIT');
@@ -5974,6 +6030,7 @@ module.exports = {
   updateConfig,
   adminAdjustGold,
   adminAdjustExp,
+  getVisualCatalog,
   claimAdReward,
   searchUsers,
   sendDm,

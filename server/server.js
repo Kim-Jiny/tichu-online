@@ -15,7 +15,7 @@ const {
   acceptFriendRequest, rejectFriendRequest, removeFriend,
   saveMatchResult, saveMatchResultWithStats, updateUserStats, getUserProfile, getRecentMatches,
   submitInquiry, getUserInquiries, markInquiriesRead, getRankings,
-  getWallet, getGoldHistory, getShopItems, getUserItems, buyItem, equipItem, useItem, changeNickname,
+  getWallet, getGoldHistory, getShopItems, getVisualCatalog, getUserItems, buyItem, equipItem, useItem, changeNickname,
   incrementLeaveCount, setRankedBan, getRankedBan, setChatBan, getChatBan, grantSeasonRewards,
   getActiveSeason, createSeason, getSeasons, getConfig, getLocalizedConfig, updateConfig,
   getCurrentSeasonRankings, getSeasonRankings, resetSeasonStats,
@@ -1494,6 +1494,9 @@ async function handleMessage(ws, data) {
     case 'get_shop_items':
       await handleGetShopItems(ws);
       break;
+    case 'get_visual_catalog':
+      await handleGetVisualCatalog(ws);
+      break;
     case 'get_inventory':
       await handleGetInventory(ws);
       break;
@@ -2086,11 +2089,13 @@ async function handleReconnection(ws) {
   const themeKey = profile?.themeKey || null;
   const titleKey = profile?.titleKey || null;
   const titleName = profile?.titleName || null;
+  const bannerKey = profile?.bannerKey || null;
   const hasTopCardCounter = profile?.hasTopCardCounter || false;
   const hasMightyTrumpCounter = profile?.hasMightyTrumpCounter || false;
   const hasMightyPrevTrick = profile?.hasMightyPrevTrick || false;
   ws.titleKey = titleKey;
   ws.titleName = titleName;
+  ws.bannerKey = bannerKey;
   ws.level = (profile && Number.isFinite(profile.level)) ? profile.level : 1;
   ws.seasonRating = Number.isFinite(profile?.seasonRating) ? profile.seasonRating : null;
   ws.skSeasonRating = Number.isFinite(profile?.skSeasonRating) ? profile.skSeasonRating : null;
@@ -2462,6 +2467,7 @@ function handleCreateRoom(ws, data) {
     room.players[0].titleName = ws.titleName;
   }
   room.players[0].level = ws.level || 1;
+  room.players[0].bannerKey = ws.bannerKey;
   room.players[0].seasonRating = ws.seasonRating;
   room.players[0].skSeasonRating = ws.skSeasonRating;
   room.players[0].mightySeasonRating = ws.mightySeasonRating;
@@ -2518,6 +2524,7 @@ async function handleJoinRoom(ws, data) {
         p.titleName = ws.titleName;
       }
       p.level = ws.level || 1;
+      p.bannerKey = ws.bannerKey;
       p.seasonRating = ws.seasonRating;
       p.skSeasonRating = ws.skSeasonRating;
       p.mightySeasonRating = ws.mightySeasonRating;
@@ -3354,6 +3361,7 @@ function handleSwitchToPlayer(ws, data) {
         p.titleName = ws.titleName;
       }
       p.level = ws.level || 1;
+      p.bannerKey = ws.bannerKey;
       p.seasonRating = ws.seasonRating;
       p.skSeasonRating = ws.skSeasonRating;
       p.mightySeasonRating = ws.mightySeasonRating;
@@ -5408,6 +5416,15 @@ async function handleGetShopItems(ws) {
   sendTo(ws, { type: 'shop_items_result', ...result });
 }
 
+// Visual catalog: every shop item that carries a metadata.visual config so
+// the client can render banners/titles/themes with the admin-edited
+// gradient angle + stops (not its own hardcoded copy). Returned regardless
+// of category, purchasable, or season flag.
+async function handleGetVisualCatalog(ws) {
+  const result = await getVisualCatalog();
+  sendTo(ws, { type: 'visual_catalog_result', ...result });
+}
+
 // Inventory handler
 async function handleGetInventory(ws) {
   if (!ws.nickname) {
@@ -5462,6 +5479,22 @@ async function handleEquipItem(ws, data) {
         if (p) {
           p.titleKey = itemKey;
           p.titleName = ws.titleName;
+        }
+        broadcastRoomState(ws.roomId);
+      }
+    }
+  }
+  if (result.success && result.category === 'banner') {
+    result.bannerKey = itemKey;
+    ws.bannerKey = itemKey;
+    // Reflect the change in any room the user is already sitting in so the
+    // waiting-room slot's gradient updates without requiring a re-join.
+    if (ws.roomId) {
+      const room = lobby.getRoom(ws.roomId);
+      if (room) {
+        const p = room.players.find(p => p !== null && p.id === ws.playerId);
+        if (p) {
+          p.bannerKey = itemKey;
         }
         broadcastRoomState(ws.roomId);
       }

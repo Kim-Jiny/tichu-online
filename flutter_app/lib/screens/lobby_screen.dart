@@ -4263,14 +4263,10 @@ class _LobbyScreenState extends State<LobbyScreen> {
   ) {
     final expInLevel = expTotal % 100;
     final expPercent = expInLevel / 100;
-    final banner = _bannerStyle(bannerKey);
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
       decoration: BoxDecoration(
-        gradient: banner.gradient,
-        color: banner.gradient == null
-            ? Colors.white.withValues(alpha: 0.95)
-            : null,
+        color: Colors.white.withValues(alpha: 0.95),
         borderRadius: BorderRadius.circular(14),
         border: Border.all(color: const Color(0xFFE0D8D4)),
       ),
@@ -4295,7 +4291,7 @@ class _LobbyScreenState extends State<LobbyScreen> {
                     value: expPercent,
                     minHeight: 6,
                     backgroundColor: const Color(0xFFEFE7E3),
-                    valueColor: const AlwaysStoppedAnimation(Color(0xFF64B5F6)),
+                    valueColor: const AlwaysStoppedAnimation(Colors.black),
                   ),
                 ),
                 const SizedBox(height: 2),
@@ -4311,54 +4307,6 @@ class _LobbyScreenState extends State<LobbyScreen> {
     );
   }
 
-  _BannerStyle _bannerStyle(String? key) {
-    switch (key) {
-      case 'banner_pastel':
-        return const _BannerStyle(
-          gradient: LinearGradient(
-            colors: [Color(0xFFF6C1C9), Color(0xFFF3E7EA)],
-          ),
-        );
-      case 'banner_blossom':
-        return const _BannerStyle(
-          gradient: LinearGradient(
-            colors: [Color(0xFFF7D6D0), Color(0xFFF3E9E6)],
-          ),
-        );
-      case 'banner_mint':
-        return const _BannerStyle(
-          gradient: LinearGradient(
-            colors: [Color(0xFFCDEBD8), Color(0xFFEFF8F2)],
-          ),
-        );
-      case 'banner_sunset_7d':
-        return const _BannerStyle(
-          gradient: LinearGradient(
-            colors: [Color(0xFFFFC3A0), Color(0xFFFFE5B4)],
-          ),
-        );
-      case 'banner_season_gold':
-        return const _BannerStyle(
-          gradient: LinearGradient(
-            colors: [Color(0xFFFFE082), Color(0xFFFFF3C0)],
-          ),
-        );
-      case 'banner_season_silver':
-        return const _BannerStyle(
-          gradient: LinearGradient(
-            colors: [Color(0xFFCFD8DC), Color(0xFFF1F3F4)],
-          ),
-        );
-      case 'banner_season_bronze':
-        return const _BannerStyle(
-          gradient: LinearGradient(
-            colors: [Color(0xFFD7B59A), Color(0xFFF4E8DC)],
-          ),
-        );
-      default:
-        return const _BannerStyle();
-    }
-  }
 
   Widget _buildProfileSectionCard({
     required String title,
@@ -5149,38 +5097,50 @@ class _LobbyScreenState extends State<LobbyScreen> {
       child: Stack(
         clipBehavior: Clip.none,
         children: [
-          Container(
-            width: double.infinity,
-            height: 56,
-            padding: const EdgeInsets.symmetric(horizontal: 12),
-            decoration: BoxDecoration(
-              color: isSlotBlocked
+          Builder(
+            builder: (_) {
+              // Equipped banner becomes the slot's background gradient when
+              // the player owns one — overrides the state-based pastel fill.
+              // The gradient comes from the server's visual catalog so it
+              // honors admin-edited angle/stops (not a hardcoded copy).
+              final bannerGradient = (!isEmpty && !isBot)
+                  ? game.bannerGradient(player.bannerKey)
+                  : null;
+              final fallbackColor = isSlotBlocked
                   ? const Color(0xFFEDE9E6)
                   : isReady
                   ? const Color(0xFFE8F5E9)
-                  : isMySlot
-                  ? const Color(0xFFE8F0E8)
                   : isBot
                   ? const Color(0xFFE8EAF6)
                   : isBlockedPlayer
                   ? const Color(0xFFFAF0F0)
-                  : const Color(0xFFFAF6F4),
-              borderRadius: BorderRadius.circular(16),
-              border: Border.all(
-                color: isSlotBlocked
-                    ? const Color(0xFFBBB1A8)
-                    : isReady
-                    ? const Color(0xFF66BB6A)
-                    : isMySlot
-                    ? const Color(0xFFA8D4A8)
-                    : isBot
-                    ? const Color(0xFFC5CAE9)
-                    : isBlockedPlayer
-                    ? const Color(0xFFE0B0B0)
-                    : const Color(0xFFDDD0CC),
-                width: isReady ? 2 : 1,
-              ),
-            ),
+                  : const Color(0xFFFAF6F4);
+              return Container(
+                width: double.infinity,
+                height: 56,
+                padding: const EdgeInsets.symmetric(horizontal: 12),
+                decoration: BoxDecoration(
+                  color: bannerGradient == null ? fallbackColor : null,
+                  gradient: bannerGradient,
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(
+                    // "My slot" is now indicated by a thicker brown-green
+                    // border instead of a tinted background, so the banner
+                    // gradient stays visible.
+                    color: isSlotBlocked
+                        ? const Color(0xFFBBB1A8)
+                        : isMySlot
+                        ? const Color(0xFF66BB6A)
+                        : isReady
+                        ? const Color(0xFF66BB6A)
+                        : isBot
+                        ? const Color(0xFFC5CAE9)
+                        : isBlockedPlayer
+                        ? const Color(0xFFE0B0B0)
+                        : const Color(0xFFDDD0CC),
+                    width: (isMySlot || isReady) ? 2 : 1,
+                  ),
+                ),
             child: Row(
                   children: [
                     // Left-side block X button (host, empty, SK/LL)
@@ -5497,6 +5457,8 @@ class _LobbyScreenState extends State<LobbyScreen> {
               ),
                   ],
                 ),
+              );
+            },
           ),
           if (isReady)
             Positioned.fill(
@@ -5579,7 +5541,3 @@ class _LobbyScreenState extends State<LobbyScreen> {
   }
 }
 
-class _BannerStyle {
-  const _BannerStyle({this.gradient});
-  final LinearGradient? gradient;
-}

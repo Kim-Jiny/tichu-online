@@ -839,6 +839,7 @@ class GameRoom {
           isReady: !!p.isBot || !!p.ready,
           titleKey: p.titleKey || null,
           titleName: p.titleName || null,
+          bannerKey: p.isBot ? null : (p.bannerKey || null),
           botSpeed: p.botSpeed || null,
           botStrategy: p.isBot ? this.bots.get(p.id)?.strategy || null : null,
           level: p.isBot ? null : (p.level || null),

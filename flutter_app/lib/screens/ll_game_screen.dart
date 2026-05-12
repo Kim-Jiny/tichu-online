@@ -4080,12 +4080,10 @@ class _LLGameScreenState extends State<LLGameScreen> {
   Widget _buildProfileHeader(int level, int expTotal, String? bannerKey) {
     final expInLevel = expTotal % 100;
     final expPercent = expInLevel / 100;
-    final gradient = _bannerGradient(bannerKey);
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
       decoration: BoxDecoration(
-        gradient: gradient,
-        color: gradient == null ? Colors.white.withValues(alpha: 0.95) : null,
+        color: Colors.white.withValues(alpha: 0.95),
         borderRadius: BorderRadius.circular(14),
         border: Border.all(color: const Color(0xFFE0D8D4)),
       ),
@@ -4110,7 +4108,7 @@ class _LLGameScreenState extends State<LLGameScreen> {
                     value: expPercent,
                     minHeight: 6,
                     backgroundColor: const Color(0xFFEFE7E3),
-                    valueColor: const AlwaysStoppedAnimation(Color(0xFF64B5F6)),
+                    valueColor: const AlwaysStoppedAnimation(Colors.black),
                   ),
                 ),
                 const SizedBox(height: 2),
@@ -4126,40 +4124,6 @@ class _LLGameScreenState extends State<LLGameScreen> {
     );
   }
 
-  LinearGradient? _bannerGradient(String? key) {
-    switch (key) {
-      case 'banner_pastel':
-        return const LinearGradient(
-          colors: [Color(0xFFF6C1C9), Color(0xFFF3E7EA)],
-        );
-      case 'banner_blossom':
-        return const LinearGradient(
-          colors: [Color(0xFFF7D6D0), Color(0xFFF3E9E6)],
-        );
-      case 'banner_mint':
-        return const LinearGradient(
-          colors: [Color(0xFFCDEBD8), Color(0xFFEFF8F2)],
-        );
-      case 'banner_sunset_7d':
-        return const LinearGradient(
-          colors: [Color(0xFFFFC3A0), Color(0xFFFFE5B4)],
-        );
-      case 'banner_season_gold':
-        return const LinearGradient(
-          colors: [Color(0xFFFFE082), Color(0xFFFFF3C0)],
-        );
-      case 'banner_season_silver':
-        return const LinearGradient(
-          colors: [Color(0xFFCFD8DC), Color(0xFFF1F3F4)],
-        );
-      case 'banner_season_bronze':
-        return const LinearGradient(
-          colors: [Color(0xFFD7B59A), Color(0xFFF4E8DC)],
-        );
-      default:
-        return null;
-    }
-  }
 
   Widget _buildMannerLeaveRow({
     required int reportCount,

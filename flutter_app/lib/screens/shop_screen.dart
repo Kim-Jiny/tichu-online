@@ -1782,37 +1782,45 @@ class _ShopScreenState extends State<ShopScreen> {
                     ],
                   ),
                   const SizedBox(height: 14),
-                  SizedBox(
-                    width: double.infinity,
-                    height: 46,
-                    child: ElevatedButton(
-                      onPressed: ownedPermanent
-                          ? null
-                          : (canBuy
-                              ? () {
-                                  Navigator.pop(ctx);
-                                  if (owned) {
-                                    _showExtendConfirmDialog(context, game, item);
-                                  } else {
-                                    game.buyItem(itemKey);
-                                  }
-                                }
-                              : null),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: owned ? const Color(0xFFBBDEFB) : const Color(0xFFC7E6D0),
-                        foregroundColor: owned ? const Color(0xFF1565C0) : const Color(0xFF2E5A3A),
-                        disabledBackgroundColor: const Color(0xFFE5E5E5),
-                        disabledForegroundColor: const Color(0xFF9A9A9A),
-                        elevation: 0,
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                      ),
-                      child: Text(
-                        ownedPermanent
-                            ? l10n.shopItemOwned
-                            : (owned ? l10n.shopButtonExtend : l10n.shopButtonPurchase),
-                        style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w700),
-                      ),
-                    ),
+                  Builder(
+                    builder: (_) {
+                      // Season banners are reward-only — once owned, they can
+                      // not be re-purchased or extended through the shop. Treat
+                      // owned-season the same as owned-permanent here.
+                      final lockedAsOwned = ownedPermanent || (isSeason && owned);
+                      return SizedBox(
+                        width: double.infinity,
+                        height: 46,
+                        child: ElevatedButton(
+                          onPressed: lockedAsOwned
+                              ? null
+                              : (canBuy
+                                  ? () {
+                                      Navigator.pop(ctx);
+                                      if (owned) {
+                                        _showExtendConfirmDialog(context, game, item);
+                                      } else {
+                                        game.buyItem(itemKey);
+                                      }
+                                    }
+                                  : null),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: owned ? const Color(0xFFBBDEFB) : const Color(0xFFC7E6D0),
+                            foregroundColor: owned ? const Color(0xFF1565C0) : const Color(0xFF2E5A3A),
+                            disabledBackgroundColor: const Color(0xFFE5E5E5),
+                            disabledForegroundColor: const Color(0xFF9A9A9A),
+                            elevation: 0,
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                          ),
+                          child: Text(
+                            lockedAsOwned
+                                ? l10n.shopItemOwned
+                                : (owned ? l10n.shopButtonExtend : l10n.shopButtonPurchase),
+                            style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w700),
+                          ),
+                        ),
+                      );
+                    },
                   ),
                 ],
               ),

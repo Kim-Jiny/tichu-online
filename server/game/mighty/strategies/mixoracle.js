@@ -1074,6 +1074,22 @@ function _oppositionTrumpLeadCensorRule(game, botId, oracleAction) {
 }
 
 function decide(game, botId) {
+  // Setting (세팅) declaration takes precedence over every other decision
+  // path: the server-side `_canDeclareSetting` check already proves the
+  // remaining hand wins unconditionally, so skipping to the round end and
+  // sweeping all leftover point cards is strictly better than playing them
+  // out one trick at a time. Mirrors the heuristic decidePlay's first
+  // gate — kept here too because mixoracle reaches the oracle play path
+  // without going through that gate.
+  if (game.state === 'playing'
+      && game.currentPlayer === botId
+      && game.currentTrick
+      && game.currentTrick.length === 0
+      && typeof game._canDeclareSetting === 'function'
+      && game._canDeclareSetting(botId)) {
+    return { type: 'declare_setting' };
+  }
+
   const ruled = _applyHardRules(game, botId);
   if (ruled) return ruled;
 

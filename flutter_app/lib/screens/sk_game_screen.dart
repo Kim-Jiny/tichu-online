@@ -3330,40 +3330,32 @@ class _SKGameScreenState extends State<SKGameScreen> {
                   );
                 }
 
-                final border = TableBorder.symmetric(
-                  inside: const BorderSide(
-                    color: Color(0xFFE4DBD6),
-                    width: 0.6,
-                  ),
-                  outside: const BorderSide(
-                    color: Color(0xFFE4DBD6),
-                    width: 0.8,
-                  ),
-                );
-
                 return Table(
                   columnWidths: {
-                    0: const FlexColumnWidth(0.7),
+                    0: const FlexColumnWidth(0.6),
                     for (int i = 0; i < state.players.length; i++)
-                      i + 1: const FlexColumnWidth(1.5),
+                      i + 1: const FlexColumnWidth(1),
                   },
                   defaultVerticalAlignment: TableCellVerticalAlignment.middle,
-                  border: border,
                   children: [
                     TableRow(
-                      decoration: const BoxDecoration(color: Color(0xFFFFF1EA)),
+                      decoration: const BoxDecoration(
+                        border: Border(
+                          bottom: BorderSide(color: Color(0xFFE4DBD6), width: 1),
+                        ),
+                      ),
                       children: [
                         cell(
                           'R',
                           fontWeight: FontWeight.w800,
-                          fontSize: 10.5,
+                          fontSize: 11,
                           color: const Color(0xFFC96E34),
                         ),
                         ...state.players.map(
                           (p) => cell(
-                            p.name.length > 3 ? p.name.substring(0, 3) : p.name,
+                            p.name.length > 4 ? p.name.substring(0, 4) : p.name,
                             fontWeight: FontWeight.w800,
-                            fontSize: 9.5,
+                            fontSize: 11,
                             color: p.position == 'self'
                                 ? const Color(0xFF355D89)
                                 : const Color(0xFFC96E34),
@@ -3383,48 +3375,35 @@ class _SKGameScreenState extends State<SKGameScreen> {
                       }
 
                       return TableRow(
-                        decoration: BoxDecoration(
-                          color: (entry['round'] as int? ?? 0).isEven
-                              ? const Color(0xFFFFFBF8)
-                              : Colors.white,
-                        ),
                         children: [
                           cell(
                             '${entry['round']}',
                             fontWeight: FontWeight.w700,
-                            fontSize: 10.5,
+                            fontSize: 11,
+                            color: const Color(0xFF8A7A72),
                           ),
                           ...state.players.map((p) {
                             final pScore =
                                 scores[p.id] as Map<String, dynamic>?;
                             if (pScore == null) {
-                              return cell('-', color: const Color(0xFFB0A39C));
+                              return cell('-', color: const Color(0xFFC9BCB5));
                             }
-                            final bid = (pScore['bid'] as num?)?.toInt() ?? 0;
-                            final tricks =
-                                (pScore['tricks'] as num?)?.toInt() ?? 0;
-                            final bonus =
-                                (pScore['bonus'] as num?)?.toInt() ?? 0;
                             final roundScore =
                                 (pScore['roundScore'] as num?)?.toInt() ?? 0;
-                            final scoreColor = roundScore > 0
-                                ? const Color(0xFF247A43)
-                                : roundScore < 0
+                            final scoreColor = roundScore < 0
                                 ? const Color(0xFFC94256)
-                                : const Color(0xFF5A4038);
+                                : const Color(0xFF3E312A);
 
                             return cell(
-                              '$bid/$tricks\n'
-                              '${bonus > 0 ? '+$bonus ' : ''}'
-                              '${roundScore > 0 ? '+' : ''}$roundScore',
-                              fontSize: 9.5,
+                              '$roundScore',
+                              fontSize: 12,
                               fontWeight: p.position == 'self'
                                   ? FontWeight.w800
-                                  : FontWeight.w700,
+                                  : FontWeight.w600,
                               color: scoreColor,
                               padding: const EdgeInsets.symmetric(
                                 horizontal: 4,
-                                vertical: 7,
+                                vertical: 6,
                               ),
                             );
                           }),
@@ -3432,21 +3411,27 @@ class _SKGameScreenState extends State<SKGameScreen> {
                       );
                     }),
                     TableRow(
-                      decoration: const BoxDecoration(color: Color(0xFFF4EFEA)),
+                      decoration: const BoxDecoration(
+                        border: Border(
+                          top: BorderSide(color: Color(0xFFE4DBD6), width: 1),
+                        ),
+                      ),
                       children: [
                         cell(
                           L10n.of(context).commonTotal,
                           fontWeight: FontWeight.w800,
+                          fontSize: 11,
                           color: const Color(0xFF3E312A),
                         ),
                         ...state.players.map((p) {
                           final total = cumulativeScores[p.id] ?? 0;
                           return cell(
                             '$total',
-                            fontWeight: FontWeight.w800,
-                            color: total >= 0
-                                ? const Color(0xFF247A43)
-                                : const Color(0xFFC94256),
+                            fontWeight: FontWeight.w900,
+                            fontSize: 13,
+                            color: total < 0
+                                ? const Color(0xFFC94256)
+                                : const Color(0xFF3E312A),
                           );
                         }),
                       ],

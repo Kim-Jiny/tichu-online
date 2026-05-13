@@ -5130,7 +5130,7 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
             final totalScore = state.scores[p.id] ?? 0;
             final isDeclarer = p.id == state.declarer;
             return Container(
-              padding: const EdgeInsets.symmetric(vertical: 4),
+              padding: const EdgeInsets.symmetric(vertical: 4, horizontal: 6),
               decoration: BoxDecoration(
                 color: p.position == 'self'
                     ? const Color(0xFFF7F1EC)
@@ -5139,14 +5139,22 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
               ),
               child: Row(
                 children: [
-                  if (isDeclarer)
-                    const Text(
-                      '\u2605 ',
-                      style: TextStyle(fontSize: 12, color: Color(0xFFFF8A00)),
-                    ),
+                  SizedBox(
+                    width: 14,
+                    child: isDeclarer
+                        ? const Text(
+                            '\u2605',
+                            style: TextStyle(
+                              fontSize: 12,
+                              color: Color(0xFFFF8A00),
+                            ),
+                          )
+                        : null,
+                  ),
                   Expanded(
                     child: Text(
                       p.name,
+                      overflow: TextOverflow.ellipsis,
                       style: TextStyle(
                         fontSize: 13,
                         fontWeight: p.position == 'self'
@@ -5156,26 +5164,32 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
                       ),
                     ),
                   ),
-                  if (roundScore != null)
-                    Text(
-                      '${roundScore > 0 ? '+' : ''}$roundScore',
+                  SizedBox(
+                    width: 48,
+                    child: Text(
+                      roundScore == null ? '' : '$roundScore',
+                      textAlign: TextAlign.right,
                       style: TextStyle(
                         fontSize: 13,
                         fontWeight: FontWeight.bold,
-                        color: roundScore > 0
-                            ? const Color(0xFF4CAF50)
-                            : roundScore < 0
+                        color: (roundScore ?? 0) < 0
                             ? const Color(0xFFE53935)
-                            : const Color(0xFF5A4038),
+                            : const Color(0xFF3E312A),
                       ),
                     ),
-                  const SizedBox(width: 12),
-                  Text(
-                    '$totalScore',
-                    style: const TextStyle(
-                      fontSize: 14,
-                      fontWeight: FontWeight.bold,
-                      color: Color(0xFF5A4038),
+                  ),
+                  SizedBox(
+                    width: 56,
+                    child: Text(
+                      '$totalScore',
+                      textAlign: TextAlign.right,
+                      style: TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w900,
+                        color: totalScore < 0
+                            ? const Color(0xFFE53935)
+                            : const Color(0xFF3E312A),
+                      ),
                     ),
                   ),
                 ],
@@ -6760,48 +6774,42 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
                   );
                 }
 
-                final border = TableBorder.symmetric(
-                  inside: const BorderSide(
-                    color: Color(0xFFDCE4EE),
-                    width: 0.6,
-                  ),
-                  outside: const BorderSide(
-                    color: Color(0xFFDCE4EE),
-                    width: 0.8,
-                  ),
-                );
-
                 return Table(
                   columnWidths: {
-                    0: const FlexColumnWidth(0.7),
+                    0: const FlexColumnWidth(0.6),
                     1: const FlexColumnWidth(1.5),
                     for (int i = 0; i < state.players.length; i++)
                       i + 2: const FlexColumnWidth(1),
                   },
                   defaultVerticalAlignment: TableCellVerticalAlignment.middle,
-                  border: border,
                   children: [
                     TableRow(
-                      decoration: const BoxDecoration(color: Color(0xFFEAF2FF)),
+                      decoration: const BoxDecoration(
+                        border: Border(
+                          bottom: BorderSide(color: Color(0xFFDCE4EE), width: 1),
+                        ),
+                      ),
                       children: [
                         cell(
                           'R',
                           fontWeight: FontWeight.w800,
-                          fontSize: 10.5,
+                          fontSize: 11,
                           color: const Color(0xFF295EA8),
                         ),
                         cell(
                           L10n.of(context).mtBidShort,
                           fontWeight: FontWeight.w800,
-                          fontSize: 10.5,
+                          fontSize: 11,
                           color: const Color(0xFF295EA8),
                         ),
                         ...state.players.map(
                           (p) => cell(
-                            p.name.length > 2 ? p.name.substring(0, 2) : p.name,
+                            p.name.length > 3 ? p.name.substring(0, 3) : p.name,
                             fontWeight: FontWeight.w800,
-                            fontSize: 9.5,
-                            color: const Color(0xFF295EA8),
+                            fontSize: 11,
+                            color: p.position == 'self'
+                                ? const Color(0xFF355D89)
+                                : const Color(0xFF295EA8),
                           ),
                         ),
                       ],
@@ -6814,11 +6822,6 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
                             (cumulativeScores[p.id] ?? 0) +
                             (entry.scores[p.id] ?? 0);
                       }
-                      final rowTint = entry.dealMiss
-                          ? const Color(0xFFFFF4E5)
-                          : (entry.success
-                                ? const Color(0xFFF4FBF6)
-                                : const Color(0xFFFFF6F7));
                       final dealMissLabel = L10n.of(context).mtDealMiss;
                       // For NT contracts, fall back to "NT" inline (no suit
                       // glyph). Other contracts render the suit via SuitIcon.
@@ -6831,9 +6834,13 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
                           ? '${entry.bid}${entry.success ? '✓' : '✗'}'
                           : '$trump${entry.bid}${entry.success ? '✓' : '✗'}';
                       return TableRow(
-                        decoration: BoxDecoration(color: rowTint),
                         children: [
-                          cell('${entry.round}', fontWeight: FontWeight.w700),
+                          cell(
+                            '${entry.round}',
+                            fontWeight: FontWeight.w700,
+                            fontSize: 11,
+                            color: const Color(0xFF8A92A0),
+                          ),
                           bidCell(
                             trumpSuit: showSuitIcon ? trumpKey : null,
                             label: bidLabel,
@@ -6844,44 +6851,48 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
                           ),
                           ...state.players.map((p) {
                             final diff = entry.scores[p.id] ?? 0;
-                            final isDeclTeam =
-                                !entry.dealMiss &&
-                                (p.id == entry.declarer ||
-                                    p.id == entry.partner);
                             return cell(
-                              diff == 0 ? '0' : (diff > 0 ? '+$diff' : '$diff'),
-                              fontSize: 9.5,
-                              fontWeight: isDeclTeam || diff != 0
-                                  ? FontWeight.w700
-                                  : FontWeight.w500,
-                              color: diff > 0
-                                  ? const Color(0xFF1F8B4C)
-                                  : diff < 0
+                              '$diff',
+                              fontSize: 12,
+                              fontWeight: p.position == 'self'
+                                  ? FontWeight.w800
+                                  : FontWeight.w600,
+                              color: diff < 0
                                   ? const Color(0xFFD04A5B)
-                                  : const Color(0xFF425466),
+                                  : const Color(0xFF233142),
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 4,
+                                vertical: 6,
+                              ),
                             );
                           }),
                         ],
                       );
                     }),
                     TableRow(
-                      decoration: const BoxDecoration(color: Color(0xFFF0F4F8)),
+                      decoration: const BoxDecoration(
+                        border: Border(
+                          top: BorderSide(color: Color(0xFFDCE4EE), width: 1),
+                        ),
+                      ),
                       children: [
                         cell('', fontWeight: FontWeight.w800),
                         cell(
                           L10n.of(context).mtTotal,
                           align: TextAlign.left,
                           fontWeight: FontWeight.w800,
+                          fontSize: 11,
                           color: const Color(0xFF233142),
                         ),
                         ...state.players.map((p) {
                           final total = cumulativeScores[p.id] ?? 0;
                           return cell(
                             '$total',
-                            fontWeight: FontWeight.w800,
-                            color: total >= 0
-                                ? const Color(0xFF1F8B4C)
-                                : const Color(0xFFD04A5B),
+                            fontWeight: FontWeight.w900,
+                            fontSize: 13,
+                            color: total < 0
+                                ? const Color(0xFFD04A5B)
+                                : const Color(0xFF233142),
                           );
                         }),
                       ],

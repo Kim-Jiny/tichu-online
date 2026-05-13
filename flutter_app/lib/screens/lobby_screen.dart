@@ -5,6 +5,7 @@ import 'package:provider/provider.dart';
 import '../l10n/app_localizations.dart';
 import '../l10n/l10n_helpers.dart';
 import '../services/game_service.dart';
+import '../utils/level_curve.dart';
 import '../services/locale_service.dart';
 import '../services/network_service.dart';
 import '../services/session_service.dart';
@@ -4251,8 +4252,7 @@ class _LobbyScreenState extends State<LobbyScreen> {
   }
 
   Widget _buildProfileSubtitle(int level, int expTotal) {
-    final expInLevel = expTotal % 100;
-    final expPercent = expInLevel / 100;
+    final p = LevelCurve.progress(level, expTotal);
     return Row(
       children: [
         Text(
@@ -4268,7 +4268,7 @@ class _LobbyScreenState extends State<LobbyScreen> {
           child: ClipRRect(
             borderRadius: BorderRadius.circular(4),
             child: LinearProgressIndicator(
-              value: expPercent,
+              value: p.fraction,
               minHeight: 4,
               backgroundColor: const Color(0xFFEFE7E3),
               valueColor: const AlwaysStoppedAnimation(Colors.black),
@@ -4277,7 +4277,7 @@ class _LobbyScreenState extends State<LobbyScreen> {
         ),
         const SizedBox(width: 6),
         Text(
-          '$expInLevel/100',
+          '${p.expInLevel}/${p.expToNext}',
           style: const TextStyle(fontSize: 9, color: Color(0xFF9A8E8A)),
         ),
       ],

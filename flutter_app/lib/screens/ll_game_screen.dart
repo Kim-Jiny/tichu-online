@@ -3,6 +3,7 @@ import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../services/game_service.dart';
+import '../utils/level_curve.dart';
 import '../services/network_service.dart';
 import '../models/player.dart';
 import '../models/ll_game_state.dart';
@@ -4073,8 +4074,7 @@ class _LLGameScreenState extends State<LLGameScreen> {
   }
 
   Widget _buildProfileSubtitle(int level, int expTotal) {
-    final expInLevel = expTotal % 100;
-    final expPercent = expInLevel / 100;
+    final p = LevelCurve.progress(level, expTotal);
     return Row(
       children: [
         Text(
@@ -4090,7 +4090,7 @@ class _LLGameScreenState extends State<LLGameScreen> {
           child: ClipRRect(
             borderRadius: BorderRadius.circular(4),
             child: LinearProgressIndicator(
-              value: expPercent,
+              value: p.fraction,
               minHeight: 4,
               backgroundColor: const Color(0xFFEFE7E3),
               valueColor: const AlwaysStoppedAnimation(Colors.black),
@@ -4099,7 +4099,7 @@ class _LLGameScreenState extends State<LLGameScreen> {
         ),
         const SizedBox(width: 6),
         Text(
-          '$expInLevel/100',
+          '${p.expInLevel}/${p.expToNext}',
           style: const TextStyle(fontSize: 9, color: Color(0xFF9A8E8A)),
         ),
       ],

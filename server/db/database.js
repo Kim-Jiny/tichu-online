@@ -537,6 +537,44 @@ async function initDatabase() {
     // clobbered on subsequent boots.
     await backfillShopVisuals(client);
 
+    // Tiered level curve. Replaces the old linear formula
+    // (level = floor(exp / 100) + 1) with a per-tier progression:
+    //   Lv 1–9   cost = 100 + (L-1)*5    (100, 105, ..., 140)
+    //   Lv 10–19 cost = 150 + (L-10)*10  (150, ..., 240)
+    //   Lv 20–29 cost = 260 + (L-20)*20  (260, ..., 440)
+    //   Lv 30–39 cost = 480 + (L-30)*40  (480, ..., 840)
+    //   Lv 40+   cost = 920 + (L-40)*80
+    // CREATE OR REPLACE so updates to the curve redeploy without a migration.
+    // Marked IMMUTABLE so PostgreSQL can fold it inside UPDATE expressions.
+    await client.query(`
+      CREATE OR REPLACE FUNCTION tc_compute_level(p_exp INT) RETURNS INT AS $$
+      DECLARE
+        v_level INT := 1;
+        v_remaining INT := GREATEST(0, COALESCE(p_exp, 0));
+        v_cost INT;
+      BEGIN
+        LOOP
+          IF v_level BETWEEN 1 AND 9 THEN v_cost := 100 + (v_level - 1) * 5;
+          ELSIF v_level BETWEEN 10 AND 19 THEN v_cost := 150 + (v_level - 10) * 10;
+          ELSIF v_level BETWEEN 20 AND 29 THEN v_cost := 260 + (v_level - 20) * 20;
+          ELSIF v_level BETWEEN 30 AND 39 THEN v_cost := 480 + (v_level - 30) * 40;
+          ELSE v_cost := 920 + (v_level - 40) * 80;
+          END IF;
+          EXIT WHEN v_remaining < v_cost;
+          v_remaining := v_remaining - v_cost;
+          v_level := v_level + 1;
+        END LOOP;
+        RETURN v_level;
+      END;
+      $$ LANGUAGE plpgsql IMMUTABLE;
+    `);
+
+    // One-shot backfill: rederive every user's level from their current
+    // exp_total. Cheap (single UPDATE, no migration row). The function is
+    // IMMUTABLE so PG can compute it per row efficiently. Safe to run on
+    // every boot — converges to the same answer.
+    await client.query(`UPDATE tc_users SET level = tc_compute_level(exp_total) WHERE level IS DISTINCT FROM tc_compute_level(exp_total)`);
+
     // Ad rewards table
     await client.query(`
       CREATE TABLE IF NOT EXISTS tc_ad_rewards (
@@ -1246,7 +1284,7 @@ async function updateUserStats(nickname, won, isRanked = false) {
              season_wins = season_wins + $4,
              season_rating = GREATEST(0, season_rating + $5),
              exp_total = exp_total + $6,
-             level = GREATEST(1, ((exp_total + $6) / 100) + 1)
+             level = tc_compute_level(exp_total + $6)
          WHERE nickname = $1`,
         [
           nickname,
@@ -1268,7 +1306,7 @@ async function updateUserStats(nickname, won, isRanked = false) {
              season_losses = season_losses + $4,
              season_rating = GREATEST(0, season_rating + $5),
              exp_total = exp_total + $6,
-             level = GREATEST(1, ((exp_total + $6) / 100) + 1)
+             level = tc_compute_level(exp_total + $6)
          WHERE nickname = $1`,
         [
           nickname,
@@ -1350,7 +1388,7 @@ async function saveMatchResultWithStats(matchData, players) {
           `UPDATE tc_users
            SET total_games = total_games + 1,
                exp_total = exp_total + $2,
-               level = GREATEST(1, ((exp_total + $2) / 100) + 1)
+               level = tc_compute_level(exp_total + $2)
            WHERE nickname = $1`,
           [player.nickname, expChange]
         );
@@ -1371,7 +1409,7 @@ async function saveMatchResultWithStats(matchData, players) {
                season_wins = season_wins + $4,
                season_rating = GREATEST(0, season_rating + $5),
                exp_total = exp_total + $6,
-               level = GREATEST(1, ((exp_total + $6) / 100) + 1)
+               level = tc_compute_level(exp_total + $6)
            WHERE nickname = $1`,
           [
             player.nickname,
@@ -1398,7 +1436,7 @@ async function saveMatchResultWithStats(matchData, players) {
                season_losses = season_losses + $4,
                season_rating = GREATEST(0, season_rating + $5),
                exp_total = exp_total + $6,
-               level = GREATEST(1, ((exp_total + $6) / 100) + 1)
+               level = tc_compute_level(exp_total + $6)
            WHERE nickname = $1`,
           [
             player.nickname,
@@ -4932,8 +4970,9 @@ async function adminAdjustGold(nickname, amount, adminActor = 'admin') {
   }
 }
 
-// Admin-only XP adjustment. Mirrors the level=floor(exp/100)+1 derivation used
-// elsewhere so the recomputed level stays consistent with regular reward flows.
+// Admin-only XP adjustment. Routes the recomputed level through
+// tc_compute_level so it stays consistent with the tiered curve used by
+// every other EXP-granting flow.
 async function adminAdjustExp(nickname, amount, adminActor = 'admin') {
   const client = await pool.connect();
   try {
@@ -4941,7 +4980,7 @@ async function adminAdjustExp(nickname, amount, adminActor = 'admin') {
     const result = await client.query(
       `UPDATE tc_users
          SET exp_total = GREATEST(0, exp_total + $2),
-             level = GREATEST(1, ((GREATEST(0, exp_total + $2)) / 100) + 1)
+             level = tc_compute_level(GREATEST(0, exp_total + $2))
          WHERE nickname = $1
          RETURNING exp_total, level`,
       [nickname, amount]
@@ -5269,7 +5308,7 @@ async function updateSKUserStats(nickname, won, isRanked) {
         sk_season_rating = GREATEST(0, sk_season_rating + $3),
         gold = gold + $4,
         exp_total = exp_total + $5,
-        level = GREATEST(1, ((exp_total + $5) / 100) + 1)
+        level = tc_compute_level(exp_total + $5)
        WHERE nickname = $1`,
       [nickname, won, isRanked ? ratingChange : 0, goldReward, expGain, isRanked]
     );
@@ -5333,7 +5372,7 @@ async function saveSKMatchResultWithStats(data) {
             sk_total_games = sk_total_games + 1,
             sk_season_games = sk_season_games + CASE WHEN $3 THEN 1 ELSE 0 END,
             exp_total = exp_total + $2,
-            level = GREATEST(1, ((exp_total + $2) / 100) + 1)
+            level = tc_compute_level(exp_total + $2)
            WHERE nickname = $1`,
           [p.nickname, expGain, data.isRanked]
         );
@@ -5360,7 +5399,7 @@ async function saveSKMatchResultWithStats(data) {
             sk_season_rating = GREATEST(0, sk_season_rating + $3),
             gold = gold + $4,
             exp_total = exp_total + $5,
-            level = GREATEST(1, ((exp_total + $5) / 100) + 1)
+            level = tc_compute_level(exp_total + $5)
            WHERE nickname = $1`,
           [p.nickname, won, data.isRanked ? ratingChange : 0, goldReward, expGain, data.isRanked]
         );
@@ -5413,7 +5452,7 @@ async function saveLLMatchResultWithStats(data) {
           `UPDATE tc_users SET
             ll_total_games = ll_total_games + 1,
             exp_total = exp_total + $2,
-            level = GREATEST(1, ((exp_total + $2) / 100) + 1)
+            level = tc_compute_level(exp_total + $2)
            WHERE nickname = $1`,
           [p.nickname, expGain]
         );
@@ -5427,7 +5466,7 @@ async function saveLLMatchResultWithStats(data) {
             ll_losses = ll_losses + CASE WHEN $2 THEN 0 ELSE 1 END,
             gold = gold + $3,
             exp_total = exp_total + $4,
-            level = GREATEST(1, ((exp_total + $4) / 100) + 1)
+            level = tc_compute_level(exp_total + $4)
            WHERE nickname = $1`,
           [p.nickname, won, goldReward, expGain]
         );
@@ -5514,7 +5553,7 @@ async function saveMightyMatchResultWithStats(data) {
             mighty_total_games = mighty_total_games + 1,
             mighty_season_games = mighty_season_games + CASE WHEN $3 THEN 1 ELSE 0 END,
             exp_total = exp_total + $2,
-            level = GREATEST(1, ((exp_total + $2) / 100) + 1)
+            level = tc_compute_level(exp_total + $2)
            WHERE nickname = $1`,
           [p.nickname, expGain, data.isRanked]
         );
@@ -5549,7 +5588,7 @@ async function saveMightyMatchResultWithStats(data) {
             mighty_season_rating = GREATEST(0, mighty_season_rating + $3),
             gold = gold + $4,
             exp_total = exp_total + $5,
-            level = GREATEST(1, ((exp_total + $5) / 100) + 1)
+            level = tc_compute_level(exp_total + $5)
            WHERE nickname = $1`,
           [p.nickname, won, data.isRanked ? ratingChange : 0, goldReward, expGain, data.isRanked]
         );

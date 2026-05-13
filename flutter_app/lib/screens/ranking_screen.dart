@@ -4,6 +4,7 @@ import 'package:google_mobile_ads/google_mobile_ads.dart';
 import '../l10n/app_localizations.dart';
 import '../l10n/l10n_helpers.dart';
 import '../services/game_service.dart';
+import '../utils/level_curve.dart';
 import '../services/ad_service.dart';
 
 class RankingScreen extends StatefulWidget {
@@ -880,8 +881,7 @@ class _ProfileHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final expInLevel = expTotal % 100;
-    final expPercent = expInLevel / 100;
+    final p = LevelCurve.progress(level, expTotal);
     final bannerGradient =
         context.read<GameService>().bannerGradient(bannerKey);
     return Container(
@@ -930,7 +930,7 @@ class _ProfileHeader extends StatelessWidget {
                 child: ClipRRect(
                   borderRadius: BorderRadius.circular(6),
                   child: LinearProgressIndicator(
-                    value: expPercent,
+                    value: p.fraction,
                     minHeight: 6,
                     backgroundColor: const Color(0xFFEFE7E3),
                     valueColor: const AlwaysStoppedAnimation(Colors.black),
@@ -939,7 +939,7 @@ class _ProfileHeader extends StatelessWidget {
               ),
               const SizedBox(height: 2),
               Text(
-                '$expInLevel/100 EXP',
+                '${p.expInLevel}/${p.expToNext} EXP',
                 style: const TextStyle(fontSize: 9, color: Color(0xFF9A8E8A)),
               ),
             ],

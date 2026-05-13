@@ -3464,10 +3464,11 @@ class _LLGameScreenState extends State<LLGameScreen> {
             Expanded(
               child: ListView.builder(
                 controller: _chatScrollController,
+                reverse: true,
                 padding: const EdgeInsets.all(8),
                 itemCount: gs.chatMessages.length,
                 itemBuilder: (context, index) {
-                  final msg = gs.chatMessages[index];
+                  final msg = gs.chatMessages[gs.chatMessages.length - 1 - index];
                   final sender = msg['sender'] as String? ?? '';
                   String message = msg['message'] as String? ?? '';
                   if (message == 'chat_banned') {
@@ -3582,17 +3583,10 @@ class _LLGameScreenState extends State<LLGameScreen> {
   }
 
   void _scrollChatToBottom() {
+    // ListView is reverse:true so offset 0 == bottom.
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!_chatScrollController.hasClients) return;
-      _chatScrollController.jumpTo(
-        _chatScrollController.position.maxScrollExtent,
-      );
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (!_chatScrollController.hasClients) return;
-        _chatScrollController.jumpTo(
-          _chatScrollController.position.maxScrollExtent,
-        );
-      });
+      _chatScrollController.jumpTo(0);
     });
   }
 

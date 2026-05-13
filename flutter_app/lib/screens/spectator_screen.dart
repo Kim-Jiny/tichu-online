@@ -1542,10 +1542,11 @@ class _SpectatorScreenState extends State<SpectatorScreen> {
             Expanded(
               child: ListView.builder(
                 controller: _chatScrollController,
+                reverse: true,
                 padding: const EdgeInsets.all(8),
                 itemCount: game.chatMessages.length,
                 itemBuilder: (context, index) {
-                  final msg = game.chatMessages[index];
+                  final msg = game.chatMessages[game.chatMessages.length - 1 - index];
                   final sender = msg['sender'] as String? ?? '';
                   String message = msg['message'] as String? ?? '';
                   if (message == 'chat_banned') {
@@ -1649,17 +1650,10 @@ class _SpectatorScreenState extends State<SpectatorScreen> {
   }
 
   void _scrollChatToBottom() {
+    // ListView is reverse:true so offset 0 == bottom.
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!_chatScrollController.hasClients) return;
-      _chatScrollController.jumpTo(
-        _chatScrollController.position.maxScrollExtent,
-      );
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (!_chatScrollController.hasClients) return;
-        _chatScrollController.jumpTo(
-          _chatScrollController.position.maxScrollExtent,
-        );
-      });
+      _chatScrollController.jumpTo(0);
     });
   }
 

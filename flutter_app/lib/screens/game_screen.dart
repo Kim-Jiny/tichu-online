@@ -938,14 +938,17 @@ class _GameScreenState extends State<GameScreen> {
                 ],
               ),
             ),
-            // Messages
+            // Messages — reverse:true anchors the scroll at the bottom so
+            // the newest message is always in view regardless of how many
+            // items ListView.builder has lazily laid out.
             Expanded(
               child: ListView.builder(
                 controller: _chatScrollController,
+                reverse: true,
                 padding: const EdgeInsets.all(8),
                 itemCount: game.chatMessages.length,
                 itemBuilder: (context, index) {
-                  final msg = game.chatMessages[index];
+                  final msg = game.chatMessages[game.chatMessages.length - 1 - index];
                   final sender = msg['sender'] as String? ?? '';
                   String message = msg['message'] as String? ?? '';
                   if (message == 'chat_banned') {
@@ -1052,22 +1055,12 @@ class _GameScreenState extends State<GameScreen> {
   }
 
   void _scrollChatToBottom() {
+    // ListView is reverse:true so offset 0 == bottom (newest). Used to
+    // snap the user back when a new message arrives while they were
+    // scrolled up.
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!_chatScrollController.hasClients) return;
-      _chatScrollController.jumpTo(
-        _chatScrollController.position.maxScrollExtent,
-      );
-      // ListView.builder lazily builds items below the viewport, so the
-      // first jumpTo only reaches the bottom of the initially-built range.
-      // A second pass after the new area triggers further builds lands
-      // on the real bottom — fixes "chat opens stuck near the top" when
-      // there are no new messages to retrigger the build delta.
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (!_chatScrollController.hasClients) return;
-        _chatScrollController.jumpTo(
-          _chatScrollController.position.maxScrollExtent,
-        );
-      });
+      _chatScrollController.jumpTo(0);
     });
   }
 

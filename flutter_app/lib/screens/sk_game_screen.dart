@@ -3795,6 +3795,15 @@ class _SKGameScreenState extends State<SKGameScreen> {
               L10n.of(context).skGameWaitingOthers,
               style: const TextStyle(fontSize: 12, color: Color(0xFF8A7A72)),
             ),
+            SizedBox(height: isLandscape ? 8 : 12),
+            // Keep the hand visible while waiting for other bids — the
+            // player has already locked in their bid, no reason to hide
+            // their own cards from themselves.
+            _buildHandRows(
+              state.myCards,
+              interactive: false,
+              compact: isLandscape,
+            ),
           ],
         ),
       );

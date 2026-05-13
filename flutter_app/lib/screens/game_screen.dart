@@ -3175,115 +3175,119 @@ class _GameScreenState extends State<GameScreen> {
     final enemyTotal = myTeam == 'A' ? tB : tA;
     final myLabel = myTeam;
     final enemyLabel = myTeam == 'A' ? 'B' : 'A';
+    const myColor = Color(0xFF4A90D9);
+    const enemyColor = Color(0xFFD24B4B);
+    const textPrimary = Color(0xFF5A4038);
+    const textSubtle = Color(0xFF8A7A72);
 
     showDialog(
       context: context,
       builder: (ctx) => Dialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(22)),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
         child: ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: 360, maxHeight: 560),
+          constraints: const BoxConstraints(maxWidth: 340, maxHeight: 540),
           child: Padding(
-            padding: const EdgeInsets.all(18),
+            padding: const EdgeInsets.fromLTRB(20, 18, 20, 14),
             child: Column(
               mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFFF7F2EF),
-                    borderRadius: BorderRadius.circular(16),
-                    border: Border.all(color: const Color(0xFFE8DDD7)),
-                  ),
-                  child: Row(
-                    children: [
-                      Container(
-                        width: 36,
-                        height: 36,
-                        decoration: BoxDecoration(
-                          color: const Color(0xFFEADFD8),
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        child: const Icon(
-                          Icons.history,
-                          color: Color(0xFF6A5A52),
-                          size: 20,
-                        ),
-                      ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Text(
-                              L10n.of(context).gameScoreHistory,
-                              style: const TextStyle(
-                                fontSize: 16,
-                                fontWeight: FontWeight.bold,
-                                color: Color(0xFF5A4038),
-                              ),
-                            ),
-                            const SizedBox(height: 2),
-                            Text(
-                              L10n.of(context).gameScoreHistorySubtitle,
-                              style: const TextStyle(
-                                fontSize: 12,
-                                color: Color(0xFF8A7A72),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                const SizedBox(height: 14),
+                // Title row — small icon + title only
                 Row(
                   children: [
-                    Expanded(
-                      child: _buildScoreHistoryTotalCard(
-                        label: 'TEAM $myLabel',
-                        score: myTotal,
-                        color: const Color(0xFF4A90D9),
-                        leading: myTotal >= enemyTotal,
-                      ),
-                    ),
-                    const SizedBox(width: 10),
-                    Expanded(
-                      child: _buildScoreHistoryTotalCard(
-                        label: 'TEAM $enemyLabel',
-                        score: enemyTotal,
-                        color: const Color(0xFFD24B4B),
-                        leading: enemyTotal >= myTotal,
+                    const Icon(Icons.history, size: 20, color: textPrimary),
+                    const SizedBox(width: 8),
+                    Text(
+                      L10n.of(context).gameScoreHistory,
+                      style: const TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                        color: textPrimary,
                       ),
                     ),
                   ],
                 ),
                 const SizedBox(height: 14),
+                // Totals — one row, no borders
+                Row(
+                  children: [
+                    Expanded(child: _scoreHistoryTotal(
+                      label: 'TEAM $myLabel',
+                      score: myTotal,
+                      color: myColor,
+                      leading: myTotal >= enemyTotal,
+                    )),
+                    Expanded(child: _scoreHistoryTotal(
+                      label: 'TEAM $enemyLabel',
+                      score: enemyTotal,
+                      color: enemyColor,
+                      leading: enemyTotal >= myTotal,
+                    )),
+                  ],
+                ),
+                const SizedBox(height: 14),
                 if (history.isEmpty)
-                  Container(
-                    width: double.infinity,
-                    padding: const EdgeInsets.symmetric(vertical: 28, horizontal: 16),
-                    decoration: BoxDecoration(
-                      color: const Color(0xFFF9F6F4),
-                      borderRadius: BorderRadius.circular(16),
-                      border: Border.all(color: const Color(0xFFE8DDD7)),
-                    ),
+                  Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 28),
                     child: Text(
                       L10n.of(context).gameNoCompletedRounds,
                       textAlign: TextAlign.center,
-                      style: const TextStyle(
-                        fontSize: 13,
-                        color: Color(0xFF8A7A72),
-                      ),
+                      style: const TextStyle(fontSize: 13, color: textSubtle),
                     ),
                   )
-                else
+                else ...[
+                  // Column header row
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 2),
+                    child: Row(
+                      children: [
+                        const SizedBox(
+                          width: 36,
+                          child: Text(
+                            'R',
+                            style: TextStyle(
+                              fontSize: 11,
+                              fontWeight: FontWeight.bold,
+                              color: textSubtle,
+                            ),
+                          ),
+                        ),
+                        Expanded(
+                          child: Text(
+                            'TEAM $myLabel',
+                            textAlign: TextAlign.right,
+                            style: const TextStyle(
+                              fontSize: 11,
+                              fontWeight: FontWeight.bold,
+                              color: myColor,
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 16),
+                        Expanded(
+                          child: Text(
+                            'TEAM $enemyLabel',
+                            textAlign: TextAlign.right,
+                            style: const TextStyle(
+                              fontSize: 11,
+                              fontWeight: FontWeight.bold,
+                              color: enemyColor,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const Divider(height: 12, thickness: 1, color: Color(0xFFEDE5E0)),
                   Flexible(
                     child: ListView.separated(
                       shrinkWrap: true,
                       itemCount: history.length,
-                      separatorBuilder: (_, _) => const SizedBox(height: 10),
+                      separatorBuilder: (_, _) => const Divider(
+                        height: 1,
+                        thickness: 1,
+                        color: Color(0xFFF2EAE5),
+                      ),
                       itemBuilder: (_, i) {
                         final r = history[i];
                         final round = r['round'] ?? i + 1;
@@ -3293,51 +3297,45 @@ class _GameScreenState extends State<GameScreen> {
                         final rEnemy = myTeam == 'A' ? rawB : rawA;
                         final myWon = rMy > rEnemy;
                         final enemyWon = rEnemy > rMy;
-                        return Container(
+                        return Padding(
                           padding: const EdgeInsets.symmetric(
-                            horizontal: 14,
-                            vertical: 12,
-                          ),
-                          decoration: BoxDecoration(
-                            color: const Color(0xFFFCFAF8),
-                            borderRadius: BorderRadius.circular(16),
-                            border: Border.all(color: const Color(0xFFEAE0DA)),
+                            horizontal: 2,
+                            vertical: 10,
                           ),
                           child: Row(
                             children: [
-                              Container(
-                                width: 52,
-                                padding: const EdgeInsets.symmetric(vertical: 6),
-                                decoration: BoxDecoration(
-                                  color: const Color(0xFFF1E8E2),
-                                  borderRadius: BorderRadius.circular(12),
-                                ),
+                              SizedBox(
+                                width: 36,
                                 child: Text(
                                   'R$round',
-                                  textAlign: TextAlign.center,
                                   style: const TextStyle(
                                     fontSize: 12,
                                     fontWeight: FontWeight.bold,
-                                    color: Color(0xFF7A675E),
+                                    color: textSubtle,
                                   ),
                                 ),
                               ),
-                              const SizedBox(width: 12),
                               Expanded(
-                                child: _buildScoreHistoryDelta(
-                                  label: myLabel,
-                                  score: rMy,
-                                  color: const Color(0xFF4A90D9),
-                                  highlighted: myWon,
+                                child: Text(
+                                  rMy >= 0 ? '+$rMy' : '$rMy',
+                                  textAlign: TextAlign.right,
+                                  style: TextStyle(
+                                    fontSize: 15,
+                                    fontWeight: FontWeight.bold,
+                                    color: myWon ? myColor : textPrimary,
+                                  ),
                                 ),
                               ),
-                              const SizedBox(width: 10),
+                              const SizedBox(width: 16),
                               Expanded(
-                                child: _buildScoreHistoryDelta(
-                                  label: enemyLabel,
-                                  score: rEnemy,
-                                  color: const Color(0xFFD24B4B),
-                                  highlighted: enemyWon,
+                                child: Text(
+                                  rEnemy >= 0 ? '+$rEnemy' : '$rEnemy',
+                                  textAlign: TextAlign.right,
+                                  style: TextStyle(
+                                    fontSize: 15,
+                                    fontWeight: FontWeight.bold,
+                                    color: enemyWon ? enemyColor : textPrimary,
+                                  ),
                                 ),
                               ),
                             ],
@@ -3346,19 +3344,14 @@ class _GameScreenState extends State<GameScreen> {
                       },
                     ),
                   ),
-                const SizedBox(height: 14),
-                SizedBox(
-                  width: double.infinity,
-                  child: TextButton(
-                    onPressed: () => Navigator.of(ctx).pop(),
-                    style: TextButton.styleFrom(
-                      padding: const EdgeInsets.symmetric(vertical: 12),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(14),
-                      ),
-                    ),
-                    child: Text(L10n.of(context).gameClose),
+                ],
+                const SizedBox(height: 10),
+                TextButton(
+                  onPressed: () => Navigator.of(ctx).pop(),
+                  style: TextButton.styleFrom(
+                    padding: const EdgeInsets.symmetric(vertical: 10),
                   ),
+                  child: Text(L10n.of(context).gameClose),
                 ),
               ],
             ),
@@ -3368,78 +3361,33 @@ class _GameScreenState extends State<GameScreen> {
     );
   }
 
-  Widget _buildScoreHistoryTotalCard({
+  Widget _scoreHistoryTotal({
     required String label,
     required int score,
     required Color color,
     required bool leading,
   }) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
-      decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.14),
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: color.withValues(alpha: 0.35)),
-      ),
-      child: Column(
-        children: [
-          Text(
-            label,
-            style: TextStyle(
-              fontSize: 11,
-              fontWeight: FontWeight.bold,
-              color: color,
-            ),
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.center,
+      children: [
+        Text(
+          label,
+          style: TextStyle(
+            fontSize: 11,
+            fontWeight: FontWeight.bold,
+            color: color,
           ),
-          const SizedBox(height: 6),
-          Text(
-            '$score',
-            style: TextStyle(
-              fontSize: 22,
-              fontWeight: FontWeight.bold,
-              color: leading ? color : const Color(0xFF5A4038),
-            ),
+        ),
+        const SizedBox(height: 4),
+        Text(
+          '$score',
+          style: TextStyle(
+            fontSize: 24,
+            fontWeight: FontWeight.bold,
+            color: leading ? color : const Color(0xFF5A4038),
           ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildScoreHistoryDelta({
-    required String label,
-    required int score,
-    required Color color,
-    required bool highlighted,
-  }) {
-    final display = score >= 0 ? '+$score' : '$score';
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
-      decoration: BoxDecoration(
-        color: highlighted ? color.withValues(alpha: 0.12) : const Color(0xFFF7F2EF),
-        borderRadius: BorderRadius.circular(12),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            L10n.of(context).gameTeamLabel(label),
-            style: TextStyle(
-              fontSize: 11,
-              fontWeight: FontWeight.w600,
-              color: color,
-            ),
-          ),
-          const SizedBox(height: 4),
-          Text(
-            display,
-            style: TextStyle(
-              fontSize: 16,
-              fontWeight: FontWeight.bold,
-              color: highlighted ? color : const Color(0xFF5A4038),
-            ),
-          ),
-        ],
-      ),
+        ),
+      ],
     );
   }
 

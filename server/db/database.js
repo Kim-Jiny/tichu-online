@@ -1425,7 +1425,7 @@ async function saveMatchResultWithStats(matchData, players) {
         const oppTeamAvg = player.team === 'A' ? teamBAvg : teamAAvg;
         const ratingChange = player.isRanked ? calcElo(myTeamAvg, oppTeamAvg, false) : 0;
         const goldChange = isDeserter ? 0 : (player.isRanked ? 6 : 3);
-        const expChange = player.isRanked ? 8 : 5;
+        const expChange = isDeserter ? 0 : (player.isRanked ? 8 : 5);
         await client.query(
           `UPDATE tc_users
            SET total_games = total_games + 1,
@@ -5386,7 +5386,7 @@ async function saveSKMatchResultWithStats(data) {
         const goldReward = isDeserter
             ? 0
             : (data.isRanked ? baseGoldReward * 2 : baseGoldReward);
-        const expGain = won ? 15 : 5;
+        const expGain = isDeserter ? 0 : (won ? 15 : 5);
         await client.query(
           `UPDATE tc_users SET
             sk_total_games = sk_total_games + 1,
@@ -5458,7 +5458,7 @@ async function saveLLMatchResultWithStats(data) {
         );
       } else {
         const goldReward = isDeserter ? 0 : (won ? 10 : 3);
-        const expGain = won ? 15 : 5;
+        const expGain = isDeserter ? 0 : (won ? 15 : 5);
         await client.query(
           `UPDATE tc_users SET
             ll_total_games = ll_total_games + 1,
@@ -5575,7 +5575,7 @@ async function saveMightyMatchResultWithStats(data) {
         const goldReward = isDeserter
             ? 0
             : (data.isRanked ? baseGoldReward * 2 : baseGoldReward);
-        const expGain = won ? 15 : 5;
+        const expGain = isDeserter ? 0 : (won ? 15 : 5);
         await client.query(
           `UPDATE tc_users SET
             mighty_total_games = mighty_total_games + 1,

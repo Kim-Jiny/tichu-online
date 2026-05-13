@@ -73,45 +73,68 @@ class _LevelTier {
 
 _LevelTier _tierFor(int level) {
   if (level <= 10) {
-    // Bronze
+    // Bronze — radial shine on upper-left simulates light catching a struck
+    // medallion; deep coppery edge gives it weight.
     return const _LevelTier(
-      gradient: LinearGradient(
-        begin: Alignment.topLeft,
-        end: Alignment.bottomRight,
-        colors: [Color(0xFFE3A772), Color(0xFF8B4513)],
+      gradient: RadialGradient(
+        center: Alignment(-0.4, -0.5),
+        radius: 1.1,
+        colors: [
+          Color(0xFFFFD7A8),
+          Color(0xFFCE7B36),
+          Color(0xFF5A2A0A),
+        ],
+        stops: [0.0, 0.55, 1.0],
       ),
-      borderColor: Color(0xFF6B3410),
+      borderColor: Color(0xFF3C1B05),
       textColor: Colors.white,
-      shadowColor: Color(0x33000000),
+      shadowColor: Color(0x55000000),
       textShadows: [
-        Shadow(color: Color(0x66000000), offset: Offset(0, 1), blurRadius: 1),
+        Shadow(color: Color(0x88000000), offset: Offset(0, 1), blurRadius: 1),
       ],
     );
   }
   if (level <= 20) {
-    // Silver
+    // Silver — cooler highlight, near-white shine, charcoal edge for
+    // medallion contrast.
     return const _LevelTier(
-      gradient: LinearGradient(
-        begin: Alignment.topLeft,
-        end: Alignment.bottomRight,
-        colors: [Color(0xFFF2F2F2), Color(0xFF9A9A9A)],
+      gradient: RadialGradient(
+        center: Alignment(-0.4, -0.5),
+        radius: 1.1,
+        colors: [
+          Color(0xFFFFFFFF),
+          Color(0xFFC2C7CC),
+          Color(0xFF5E646A),
+        ],
+        stops: [0.0, 0.55, 1.0],
       ),
-      borderColor: Color(0xFF6F6F6F),
-      textColor: Color(0xFF333333),
-      shadowColor: Color(0x33000000),
+      borderColor: Color(0xFF2F3338),
+      textColor: Color(0xFF1A1A1A),
+      shadowColor: Color(0x55000000),
+      textShadows: [
+        Shadow(color: Color(0x55FFFFFF), offset: Offset(0, 1), blurRadius: 1),
+      ],
     );
   }
   if (level <= 30) {
-    // Gold
+    // Gold — warm cream highlight grading into rich amber, deep brown edge.
     return const _LevelTier(
-      gradient: LinearGradient(
-        begin: Alignment.topLeft,
-        end: Alignment.bottomRight,
-        colors: [Color(0xFFFFE38A), Color(0xFFC79100)],
+      gradient: RadialGradient(
+        center: Alignment(-0.4, -0.5),
+        radius: 1.1,
+        colors: [
+          Color(0xFFFFF6C2),
+          Color(0xFFE8B948),
+          Color(0xFF8A5E00),
+        ],
+        stops: [0.0, 0.55, 1.0],
       ),
-      borderColor: Color(0xFF8A6500),
-      textColor: Color(0xFF4A3500),
-      shadowColor: Color(0x33B07700),
+      borderColor: Color(0xFF4A3000),
+      textColor: Color(0xFF2E1F00),
+      shadowColor: Color(0x55A47000),
+      textShadows: [
+        Shadow(color: Color(0x66FFFFFF), offset: Offset(0, 1), blurRadius: 1),
+      ],
     );
   }
   if (level <= 40) {

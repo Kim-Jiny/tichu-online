@@ -3376,7 +3376,7 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
             // Suit row
             Row(
               children: [
-                for (final suit in ['spade', 'heart', 'diamond', 'club'])
+                for (final suit in ['spade', 'diamond', 'heart', 'club'])
                   Expanded(
                     child: GestureDetector(
                       onTap: () => setState(() {
@@ -4681,7 +4681,7 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
   Widget _buildCompactKillPanel(MightyGameStateData state, GameService game) {
     final l10n = L10n.of(context);
     final ownHand = state.myCards.toSet();
-    const suits = ['spade', 'heart', 'diamond', 'club'];
+    const suits = ['spade', 'diamond', 'heart', 'club'];
     const ranks = [
       'A',
       'K',
@@ -5035,8 +5035,8 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
           ),
           ...[
             ('spade', '\u2660', const Color(0xFF2B2B2B)),
-            ('heart', '\u2665', const Color(0xFFD24B4B)),
             ('diamond', '\u2666', const Color(0xFF6FB6E5)),
+            ('heart', '\u2665', const Color(0xFFD24B4B)),
             ('club', '\u2663', const Color(0xFF4BAA6A)),
           ].map((s) {
             final selected = _jokerSuitChoice == s.$1;
@@ -6851,19 +6851,65 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
                           ),
                           ...state.players.map((p) {
                             final diff = entry.scores[p.id] ?? 0;
-                            return cell(
-                              '$diff',
-                              fontSize: 12,
-                              fontWeight: p.position == 'self'
-                                  ? FontWeight.w800
-                                  : FontWeight.w600,
-                              color: diff < 0
-                                  ? const Color(0xFFD04A5B)
-                                  : const Color(0xFF233142),
+                            // For the declarer on a successful round, split
+                            // off the deal-miss pool bonus so the user can
+                            // tell the round's "raw" score from the leftover
+                            // pool payout — explains the (48 + 5) = 53 case.
+                            final isDeclarer = p.id == entry.declarer;
+                            final bonus = isDeclarer && entry.success
+                                ? entry.dealMissBonus
+                                : 0;
+                            final base = diff - bonus;
+                            final scoreColor = diff < 0
+                                ? const Color(0xFFD04A5B)
+                                : const Color(0xFF233142);
+                            return Padding(
                               padding: const EdgeInsets.symmetric(
                                 horizontal: 4,
                                 vertical: 6,
                               ),
+                              child: bonus > 0
+                                  ? Column(
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: [
+                                        Text(
+                                          '$base',
+                                          textAlign: TextAlign.center,
+                                          style: TextStyle(
+                                            fontSize: 12,
+                                            fontWeight: p.position == 'self'
+                                                ? FontWeight.w800
+                                                : FontWeight.w600,
+                                            color: scoreColor,
+                                            height: 1.1,
+                                          ),
+                                        ),
+                                        Text(
+                                          '+$bonus',
+                                          textAlign: TextAlign.center,
+                                          style: const TextStyle(
+                                            fontSize: 9,
+                                            fontWeight: FontWeight.w700,
+                                            color: Color(0xFFB56A1D),
+                                            height: 1.1,
+                                          ),
+                                        ),
+                                      ],
+                                    )
+                                  : Text(
+                                      '$diff',
+                                      textAlign: TextAlign.center,
+                                      maxLines: 2,
+                                      overflow: TextOverflow.ellipsis,
+                                      style: TextStyle(
+                                        fontSize: 12,
+                                        fontWeight: p.position == 'self'
+                                            ? FontWeight.w800
+                                            : FontWeight.w600,
+                                        color: scoreColor,
+                                        height: 1.2,
+                                      ),
+                                    ),
                             );
                           }),
                         ],

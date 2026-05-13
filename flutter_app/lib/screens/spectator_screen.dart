@@ -569,27 +569,51 @@ class _SpectatorScreenState extends State<SpectatorScreen> {
     String currentPlayer,
     List currentTrick,
   ) {
-    return Column(
-      children: [
-        if (players.length > 2)
-          _buildPlayerSection(game, players[2], currentPlayer),
-        Expanded(
-          child: Row(
-            crossAxisAlignment: CrossAxisAlignment.center,
-            children: [
-              if (players.length > 3)
-                _buildPlayerSection(game, players[3], currentPlayer, isLeft: true),
-              Expanded(
-                child: _buildTrickArea(currentTrick),
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        // Lock the left/right slot widths so a long nickname can't widen
+        // the side column and pull the trick area off-center. Mirrors the
+        // sideWidth pattern used in the landscape board.
+        final sideWidth = (constraints.maxWidth * 0.22).clamp(76.0, 108.0);
+        return Column(
+          children: [
+            if (players.length > 2)
+              _buildPlayerSection(game, players[2], currentPlayer),
+            Expanded(
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.center,
+                children: [
+                  if (players.length > 3)
+                    SizedBox(
+                      width: sideWidth,
+                      child: _buildPlayerSection(
+                        game,
+                        players[3],
+                        currentPlayer,
+                        isLeft: true,
+                      ),
+                    ),
+                  Expanded(
+                    child: _buildTrickArea(currentTrick),
+                  ),
+                  if (players.length > 1)
+                    SizedBox(
+                      width: sideWidth,
+                      child: _buildPlayerSection(
+                        game,
+                        players[1],
+                        currentPlayer,
+                        isRight: true,
+                      ),
+                    ),
+                ],
               ),
-              if (players.length > 1)
-                _buildPlayerSection(game, players[1], currentPlayer, isRight: true),
-            ],
-          ),
-        ),
-        if (players.isNotEmpty)
-          _buildPlayerSection(game, players[0], currentPlayer),
-      ],
+            ),
+            if (players.isNotEmpty)
+              _buildPlayerSection(game, players[0], currentPlayer),
+          ],
+        );
+      },
     );
   }
 
@@ -1152,7 +1176,9 @@ class _SpectatorScreenState extends State<SpectatorScreen> {
 
     return SizedBox(
       width: cardHeight + 4, // 회전 후 잘림 방지
-      height: totalHeight.clamp(40.0, compact ? 180.0 : 300.0),
+      // Cap at a full 14-card hand height + small buffer. Previous
+      // 180/300 caps clipped the last card when holding a full hand.
+      height: totalHeight.clamp(40.0, compact ? 240.0 : 320.0),
       child: Stack(
         clipBehavior: Clip.none,
         children: [
@@ -1267,9 +1293,12 @@ class _SpectatorScreenState extends State<SpectatorScreen> {
 
     final totalWidth = cardWidth + (cards.length - 1) * overlap;
 
+    // Cap at a full 14-card hand width + small buffer. The previous
+    // 200/280 caps clipped the rightmost card when a player held a full
+    // hand (14 × 20 + 30 = 290 non-compact / 14 × 16 + 24 = 232 compact).
     return SizedBox(
       height: cardHeight,
-      width: totalWidth.clamp(40.0, compact ? 200.0 : 280.0),
+      width: totalWidth.clamp(40.0, compact ? 244.0 : 304.0),
       child: Stack(
         children: [
           for (int i = 0; i < cards.length; i++)

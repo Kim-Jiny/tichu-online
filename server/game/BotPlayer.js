@@ -411,8 +411,19 @@ function selectExchangeCards(cards) {
 
 // ========== CALL RANK (WISH) STRATEGY ==========
 
-/** Pick a rank the bot doesn't have, preferring high ranks to hurt opponents */
-function pickCallRank(cards) {
+/** Pick a rank the bot doesn't have, preferring high ranks to hurt opponents.
+ *  When `state` carries our team's tichu and exchange info, override with the
+ *  rank of the card we gave to the right opp — forces them to spend it and
+ *  helps the declaring teammate reach 1st. */
+function pickCallRank(cards, state) {
+  if (state && isTeamTichuLive(state) && state.exchangeGiven) {
+    const rightCard = state.exchangeGiven.right;
+    if (rightCard && !rightCard.startsWith('special_')) {
+      const rank = getRankFromCard(rightCard);
+      if (rank) return rank;
+    }
+  }
+
   const normalCards = cards.filter(c => !c.startsWith('special_'));
   const myRanks = new Set(normalCards.map(c => getRankFromCard(c)));
 
@@ -456,6 +467,24 @@ function isPartnerTichuLive(state, partner) {
   const players = state.players || [];
   const someoneElseFinishedFirst = players.some(p => p.id !== partner.id && p.finishPosition === 1);
   return !someoneElseFinishedFirst;
+}
+
+/** True when our team (self or partner) has a live tichu declaration —
+ *  the declarer hasn't finished and no other player has taken 1st yet. */
+function isTeamTichuLive(state) {
+  const players = state.players || [];
+  const declarers = players.filter(p =>
+    (p.position === 'self' || p.position === 'partner')
+    && !p.hasFinished
+    && (p.hasSmallTichu || p.hasLargeTichu)
+  );
+  for (const decl of declarers) {
+    const someoneElseFinishedFirst = players.some(
+      p => p.id !== decl.id && p.finishPosition === 1
+    );
+    if (!someoneElseFinishedFirst) return true;
+  }
+  return false;
 }
 
 
@@ -839,11 +868,11 @@ function leadTrick(state, cards, normalCards, combos) {
   if (cards.includes('special_bird')) {
     const birdStraight = findStraightIncludingBird(cards);
     if (birdStraight) {
-      const callRank = pickCallRank(cards.filter(c => !birdStraight.includes(c)));
+      const callRank = pickCallRank(cards.filter(c => !birdStraight.includes(c)), state);
       return { type: 'play_cards', cards: birdStraight, callRank };
     }
     // Play bird as single
-    const callRank = pickCallRank(cards);
+    const callRank = pickCallRank(cards, state);
     return { type: 'play_cards', cards: ['special_bird'], callRank };
   }
 
@@ -1411,24 +1440,24 @@ function getPlayActionStrength(action) {
   return getHighestValue(cards.filter(c => c !== 'special_phoenix'));
 }
 
-function buildPlayAction(cards, allCards, isLead) {
+function buildPlayAction(cards, allCards, isLead, state) {
   if (!cards || cards.length === 0) return null;
   const action = { type: 'play_cards', cards: cards.slice() };
   if (isLead && cards.includes('special_bird')) {
     const remaining = removeCardsOnce(allCards, cards);
-    action.callRank = pickCallRank(remaining);
+    action.callRank = pickCallRank(remaining, state);
   }
   return action;
 }
 
-function collectRawPlayCandidates(cards, isLead) {
+function collectRawPlayCandidates(cards, isLead, state) {
   const candidates = [];
   const normalCards = cards.filter(c => !c.startsWith('special_'));
   const combos = findCombos(normalCards);
   const phoenixCombos = findCombosWithPhoenix(cards);
 
   for (const card of cards) {
-    candidates.push(buildPlayAction([card], cards, isLead));
+    candidates.push(buildPlayAction([card], cards, isLead, state));
   }
 
   const comboGroups = [
@@ -1437,16 +1466,16 @@ function collectRawPlayCandidates(cards, isLead) {
   ];
   for (const group of comboGroups) {
     for (const combo of group) {
-      candidates.push(buildPlayAction(combo, cards, isLead));
+      candidates.push(buildPlayAction(combo, cards, isLead, state));
     }
   }
 
   const birdStraight = findStraightIncludingBird(cards);
   if (birdStraight) {
-    candidates.push(buildPlayAction(birdStraight, cards, isLead));
+    candidates.push(buildPlayAction(birdStraight, cards, isLead, state));
   }
 
-  const allInPlay = buildPlayAction(cards, cards, isLead);
+  const allInPlay = buildPlayAction(cards, cards, isLead, state);
   if (allInPlay) candidates.push(allInPlay);
 
   return candidates.filter(Boolean);
@@ -1552,7 +1581,7 @@ function buildWinrateCandidates(game, botId) {
   if (state.phase !== 'playing') return [];
 
   if (state.needsToCallRank) {
-    return [{ type: 'call_rank', rank: pickCallRank(cards) }];
+    return [{ type: 'call_rank', rank: pickCallRank(cards, state) }];
   }
   if (game.dragonPending && game.dragonDecider === botId) {
     return [
@@ -1562,14 +1591,75 @@ function buildWinrateCandidates(game, botId) {
   }
   if (!state.isMyTurn) return [];
 
-  const rawActions = collectRawPlayCandidates(cards, (state.currentTrick || []).length === 0);
+  const rawActions = collectRawPlayCandidates(cards, (state.currentTrick || []).length === 0, state);
   if ((state.currentTrick || []).length > 0) {
     rawActions.push({ type: 'pass' });
   }
 
-  const legalActions = filterLegalActions(game, botId, rawActions);
+  let legalActions = filterLegalActions(game, botId, rawActions);
   const heuristicAction = autoPlay(state, cards);
+
+  // A3: never bomb partner's trick. Heuristic's shouldBomb returns null
+  // when partner played last, but winrate's candidate list still carries
+  // bomb options — strip them so simulation noise can't pick a bomb that
+  // steals the partner's trick.
+  const partner = getPartner(state);
+  const trick = state.currentTrick || [];
+  const lastPlay = trick[trick.length - 1];
+  if (lastPlay && partner && lastPlay.playerId === partner.id) {
+    legalActions = legalActions.filter(action => {
+      if (action.type !== 'play_cards') return true;
+      const combo = getComboType(action.cards || []);
+      return combo.type !== COMBO.BOMB_FOUR
+        && combo.type !== COMBO.BOMB_STRAIGHT_FLUSH;
+    });
+  }
+
+  // Layer heuristic's strategic rules onto winrate's search. In cases
+  // where the heuristic has a strong tactical preference that the noisy
+  // simulation can mis-weigh (partner tichu protection, 1v1 endgame,
+  // special-card usage), force the search to honor the heuristic's pick
+  // rather than letting rollout noise override it.
+  if (shouldHonorHeuristic(state, heuristicAction)) {
+    return [heuristicAction];
+  }
+
   return prunePlayCandidates(legalActions, heuristicAction, cards.length);
+}
+
+/** True when winrate should defer to the heuristic's chosen action because
+ *  the situation has a known-good tactical answer that simulation noise
+ *  can mis-evaluate. Covers:
+ *    A — partner tichu live (pass on follow, passive lead). The "never
+ *        bomb partner's trick" rule (A3) is enforced separately by
+ *        filtering bomb candidates upstream.
+ *    C — 1v1 endgame (partner finished, only one opponent active).
+ *    D — heuristic chose to play a special card (Bird/Dog/Phoenix/Dragon),
+ *        which have conservative usage rules baked into the heuristic. */
+function shouldHonorHeuristic(state, heuristicAction) {
+  if (!heuristicAction) return false;
+  if (heuristicAction.type !== 'play_cards' && heuristicAction.type !== 'pass') {
+    return false;
+  }
+
+  const partner = getPartner(state);
+  const opponents = getOpponents(state);
+
+  // A: partner tichu live — honor follow pass and passive lead.
+  if (isPartnerTichuLive(state, partner)) return true;
+
+  // C: 1v1 endgame — partner finished, only one opponent active.
+  const partnerFinished = !partner || partner.hasFinished;
+  const activeOpps = opponents.filter(o => !o.hasFinished);
+  if (partnerFinished && activeOpps.length === 1) return true;
+
+  // D: heuristic plays a special card (Bird/Dog/Phoenix/Dragon).
+  if (heuristicAction.type === 'play_cards') {
+    const playedCards = heuristicAction.cards || [];
+    if (playedCards.some(c => c.startsWith('special_'))) return true;
+  }
+
+  return false;
 }
 
 function determinizeGameForBot(game, botId) {
@@ -1818,7 +1908,7 @@ function decideHeuristicBotAction(game, botId) {
 
       // Call rank needed
       if (state.needsToCallRank) {
-        return { type: 'call_rank', rank: pickCallRank(myCards) };
+        return { type: 'call_rank', rank: pickCallRank(myCards, state) };
       }
 
       // Dragon give

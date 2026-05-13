@@ -348,7 +348,10 @@ function selectExchangeCards(cards) {
     if (info.isPointCard) penalty += 140;
 
     // Cheap dead singles are what we actually want to dump to opponents.
-    if (!info.isSpecial && !info.inMultiPlan && !info.isPointCard) {
+    // Aces are NOT cheap — without this guard the -140 bonus made a lone
+    // ace look more dumpable than paired low cards, so all-paired hands
+    // would gift the opponent an A.
+    if (!info.isSpecial && !info.inMultiPlan && !info.isPointCard && !info.isAce) {
       penalty -= 140;
       if (info.value <= 4) penalty -= 50;
       else if (info.value <= 7) penalty -= 20;

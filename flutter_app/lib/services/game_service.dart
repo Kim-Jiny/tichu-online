@@ -3010,6 +3010,14 @@ class GameService extends ChangeNotifier {
     return visualCatalog[itemKey]?.previewGradient();
   }
 
+  /// Server-provided override text color for the banner (admin-editable via
+  /// metadata.visual.text.color). Returns null when not set — caller should
+  /// fall back to its own default text color.
+  Color? bannerTextColor(String? itemKey) {
+    if (itemKey == null) return null;
+    return visualCatalog[itemKey]?.textColor;
+  }
+
   void requestInventory() {
     inventoryLoading = true;
     inventoryError = null;

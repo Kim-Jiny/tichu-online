@@ -5238,14 +5238,18 @@ class _LobbyScreenState extends State<LobbyScreen> {
                         titleName: player.titleName,
                       ),
                     ),
-                  Text(
-                    player?.name ??
-                        (isSlotBlocked
-                            ? L10n.of(context).lobbySlotBlocked
-                            : L10n.of(context).lobbyEmptySlot),
-                    style: TextStyle(
-                      fontSize: 16,
-                      color: isBot
+                  Builder(
+                    builder: (_) {
+                      // When the slot is showing an equipped banner, prefer the
+                      // banner's admin-defined text color (white-on-galaxy,
+                      // etc.) so the nickname stays readable on dark gradients.
+                      // Falls through to the existing state-based palette for
+                      // empty / bot / blocked / disconnected slots.
+                      final bannerTextOverride =
+                          (player != null && !isBot && player.connected)
+                          ? game.bannerTextColor(player.bannerKey)
+                          : null;
+                      final defaultColor = isBot
                           ? const Color(0xFF3949AB)
                           : isBlockedPlayer
                           ? const Color(0xFFBB8888)
@@ -5255,12 +5259,22 @@ class _LobbyScreenState extends State<LobbyScreen> {
                           ? const Color(0xFF5A4038)
                           : isSlotBlocked
                           ? const Color(0xFF8A7A72)
-                          : const Color(0xFFAA9A92),
-                      fontWeight: isMySlot
-                          ? FontWeight.bold
-                          : FontWeight.normal,
-                    ),
-                    overflow: TextOverflow.ellipsis,
+                          : const Color(0xFFAA9A92);
+                      return Text(
+                        player?.name ??
+                            (isSlotBlocked
+                                ? L10n.of(context).lobbySlotBlocked
+                                : L10n.of(context).lobbyEmptySlot),
+                        style: TextStyle(
+                          fontSize: 16,
+                          color: bannerTextOverride ?? defaultColor,
+                          fontWeight: isMySlot
+                              ? FontWeight.bold
+                              : FontWeight.normal,
+                        ),
+                        overflow: TextOverflow.ellipsis,
+                      );
+                    },
                   ),
                 ],
               ),

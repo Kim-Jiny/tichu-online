@@ -73,20 +73,22 @@ class _LevelTier {
 
 _LevelTier _tierFor(int level) {
   if (level <= 10) {
-    // Bronze — radial shine on upper-left simulates light catching a struck
-    // medallion; deep coppery edge gives it weight.
+    // Bronze — warmer, more saturated copper throughout. Cream highlight
+    // was reading as porcelain (바둑알 느낌) so we drop it for a coppery
+    // amber and tighten the contrast band closer to the edge to keep the
+    // 3D feel without the bead vibe.
     return const _LevelTier(
       gradient: RadialGradient(
-        center: Alignment(-0.4, -0.5),
-        radius: 1.1,
+        center: Alignment(-0.35, -0.45),
+        radius: 1.05,
         colors: [
-          Color(0xFFFFD7A8),
-          Color(0xFFCE7B36),
-          Color(0xFF5A2A0A),
+          Color(0xFFF2A86A),
+          Color(0xFFB05A22),
+          Color(0xFF4C1F06),
         ],
-        stops: [0.0, 0.55, 1.0],
+        stops: [0.0, 0.5, 1.0],
       ),
-      borderColor: Color(0xFF3C1B05),
+      borderColor: Color(0xFF2E1303),
       textColor: Colors.white,
       shadowColor: Color(0x55000000),
       textShadows: [

@@ -6,6 +6,7 @@ import '../l10n/l10n_helpers.dart';
 import '../models/shop_visual.dart';
 import '../services/game_service.dart';
 import '../services/ad_service.dart';
+import '../widgets/level_badge.dart';
 
 class ShopScreen extends StatefulWidget {
   const ShopScreen({super.key});
@@ -85,6 +86,11 @@ class _ShopScreenState extends State<ShopScreen> {
       game.requestWallet();
       game.requestShopItems();
       game.requestInventory();
+      // Pull own profile so the banner preview can show the real level badge
+      // (falls back to Lv.1 when not yet cached).
+      if (game.playerName.isNotEmpty) {
+        game.requestProfile(game.playerName);
+      }
     });
   }
 
@@ -1725,6 +1731,72 @@ class _ShopScreenState extends State<ShopScreen> {
                     ),
                     child: Center(child: Icon(iconData, color: iconColor, size: 64)),
                   ),
+                  // For banners, show a waiting-room-slot preview so the user
+                  // can see how the in-game gradient + nickname text color
+                  // actually combine before purchase.
+                  if (category == 'banner') ...[
+                    const SizedBox(height: 14),
+                    const Text(
+                      '대기실 미리보기',
+                      style: TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w700,
+                        color: Color(0xFF8A7A72),
+                      ),
+                    ),
+                    const SizedBox(height: 6),
+                    // Consumer makes the preview reactive — when the profile
+                    // request resolves the level badge swaps in without the
+                    // user having to reopen the sheet.
+                    Consumer<GameService>(
+                      builder: (_, g, _) {
+                        final previewGradient = g.bannerGradient(itemKey);
+                        final previewTextColor = g.bannerTextColor(itemKey);
+                        final fallbackGradient = LinearGradient(
+                          begin: Alignment.topLeft,
+                          end: Alignment.bottomRight,
+                          colors: gradient,
+                        );
+                        final ownData = g.playerName.isNotEmpty
+                            ? g.profileFor(g.playerName)
+                            : null;
+                        final inner = ownData?['profile'] as Map?;
+                        final myLevel = (inner?['level'] as int?) ?? 1;
+                        return Container(
+                          width: double.infinity,
+                          height: 56,
+                          padding: const EdgeInsets.symmetric(horizontal: 12),
+                          decoration: BoxDecoration(
+                            gradient: previewGradient ?? fallbackGradient,
+                            borderRadius: BorderRadius.circular(16),
+                            border: Border.all(
+                              color: const Color(0xFFDDD0CC),
+                            ),
+                          ),
+                          child: Row(
+                            children: [
+                              LevelBadge(level: myLevel, size: 28),
+                              const SizedBox(width: 10),
+                              Expanded(
+                                child: Text(
+                                  g.playerName.isNotEmpty
+                                      ? g.playerName
+                                      : '닉네임',
+                                  overflow: TextOverflow.ellipsis,
+                                  style: TextStyle(
+                                    fontSize: 16,
+                                    fontWeight: FontWeight.bold,
+                                    color: previewTextColor ??
+                                        const Color(0xFF5A4038),
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        );
+                      },
+                    ),
+                  ],
                   const SizedBox(height: 16),
                   Row(
                     children: [

@@ -33,6 +33,23 @@ async function backfillShopVisuals(client) {
          AND (metadata IS NULL OR metadata->'visual' IS NULL)`,
       [itemKey, JSON.stringify(visual)]
     );
+
+    // Per-field patch: if the row already had metadata.visual from a prior
+    // seed run, the UPDATE above no-ops. Splice in newer top-level fields
+    // (text/preview/thumbnail) only when the existing visual is missing
+    // that field, so admin's saved edits stay the source of truth. Currently
+    // exercised by adding text.color to banners that shipped without one.
+    if (visual.text) {
+      await client.query(
+        `UPDATE tc_shop_items
+           SET metadata = jsonb_set(metadata, '{visual,text}', $2::jsonb, true)
+         WHERE item_key = $1
+           AND metadata IS NOT NULL
+           AND metadata->'visual' IS NOT NULL
+           AND metadata->'visual'->'text' IS NULL`,
+        [itemKey, JSON.stringify(visual.text)]
+      );
+    }
   }
 }
 
@@ -463,6 +480,16 @@ async function initDatabase() {
         ('banner_blossom', '블라썸 배너', '블라썸 배너', 'Blossom Banner', 'Blüten-Banner', 'banner', 280, FALSE, FALSE, 30, TRUE, NULL, NULL, '{}'::jsonb),
         ('banner_mint', '민트 배너', '민트 배너', 'Mint Banner', 'Minz-Banner', 'banner', 260, FALSE, FALSE, 30, TRUE, NULL, NULL, '{}'::jsonb),
         ('banner_sunset_7d', '노을 배너', '노을 배너', 'Sunset Banner', 'Sonnenuntergang-Banner', 'banner', 120, FALSE, FALSE, 30, TRUE, NULL, NULL, '{}'::jsonb),
+        ('banner_ocean', '오션 배너', '오션 배너', 'Ocean Banner', 'Ozean-Banner', 'banner', 280, FALSE, FALSE, 30, TRUE, NULL, NULL, '{}'::jsonb),
+        ('banner_forest', '포레스트 배너', '포레스트 배너', 'Forest Banner', 'Wald-Banner', 'banner', 280, FALSE, FALSE, 30, TRUE, NULL, NULL, '{}'::jsonb),
+        ('banner_lavender', '라벤더 배너', '라벤더 배너', 'Lavender Banner', 'Lavendel-Banner', 'banner', 290, FALSE, FALSE, 30, TRUE, NULL, NULL, '{}'::jsonb),
+        ('banner_aurora', '오로라 배너', '오로라 배너', 'Aurora Banner', 'Polarlicht-Banner', 'banner', 320, FALSE, FALSE, 30, TRUE, NULL, NULL, '{}'::jsonb),
+        ('banner_galaxy', '갤럭시 배너', '갤럭시 배너', 'Galaxy Banner', 'Galaxie-Banner', 'banner', 320, FALSE, FALSE, 30, TRUE, NULL, NULL, '{}'::jsonb),
+        ('banner_sakura', '벚꽃 배너', '벚꽃 배너', 'Sakura Banner', 'Sakura-Banner', 'banner', 290, FALSE, FALSE, 30, TRUE, NULL, NULL, '{}'::jsonb),
+        ('banner_coral', '코랄 배너', '코랄 배너', 'Coral Banner', 'Korallen-Banner', 'banner', 260, FALSE, FALSE, 30, TRUE, NULL, NULL, '{}'::jsonb),
+        ('banner_moonlight', '문라이트 배너', '문라이트 배너', 'Moonlight Banner', 'Mondlicht-Banner', 'banner', 290, FALSE, FALSE, 30, TRUE, NULL, NULL, '{}'::jsonb),
+        ('banner_ember', '잔불 배너', '잔불 배너', 'Ember Banner', 'Glut-Banner', 'banner', 270, FALSE, FALSE, 30, TRUE, NULL, NULL, '{}'::jsonb),
+        ('banner_emerald', '에메랄드 배너', '에메랄드 배너', 'Emerald Banner', 'Smaragd-Banner', 'banner', 310, FALSE, FALSE, 30, TRUE, NULL, NULL, '{}'::jsonb),
         ('title_sweet', '존맛탱', '존맛탱', 'Yummy', 'Lecker', 'title', 200, FALSE, FALSE, 10, TRUE, NULL, NULL, '{}'::jsonb),
         ('title_steady', '찐고수', '찐고수', 'True Pro', 'Echte:r Profi', 'title', 240, FALSE, FALSE, 10, TRUE, NULL, NULL, '{}'::jsonb),
         ('title_flash_30d', '광속러', '광속러', 'Speed Demon', 'Blitzschnell', 'title', 180, FALSE, FALSE, 10, TRUE, NULL, NULL, '{}'::jsonb),
@@ -3357,7 +3384,7 @@ async function getUserDetail(nickname) {
   const client = await pool.connect();
   try {
     const userResult = await client.query(
-      `SELECT id, username, nickname, total_games, wins, losses, rating, created_at, last_login, chat_ban_until, leave_count, gold, level, season_rating, admin_memo,
+      `SELECT id, username, nickname, total_games, wins, losses, rating, created_at, last_login, chat_ban_until, leave_count, gold, level, exp_total, season_rating, admin_memo,
               fcm_token, push_enabled, push_admin_inquiry, push_admin_report, is_admin, is_deleted, deleted_at, device_platform, device_model, os_version, app_version, last_ip, locale,
               sk_total_games, sk_wins, sk_losses, ll_total_games, ll_wins, ll_losses,
               mighty_total_games, mighty_wins, mighty_losses, mighty_rating

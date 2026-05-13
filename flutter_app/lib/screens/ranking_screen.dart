@@ -376,8 +376,9 @@ class _RankingScreenState extends State<RankingScreen> {
       _ => const Color(0xFFE8E0DC),
     };
 
-    final bannerGradient =
-        context.read<GameService>().bannerGradient(bannerKey);
+    final game = context.read<GameService>();
+    final bannerGradient = game.bannerGradient(bannerKey);
+    final bannerTextOverride = game.bannerTextColor(bannerKey);
     return InkWell(
       onTap: nickname.isEmpty
           ? null
@@ -430,10 +431,10 @@ class _RankingScreenState extends State<RankingScreen> {
                 children: [
                   Text(
                     nickname,
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontSize: 15,
                       fontWeight: FontWeight.bold,
-                      color: Color(0xFF5A4038),
+                      color: bannerTextOverride ?? const Color(0xFF5A4038),
                     ),
                   ),
                   const SizedBox(height: 4),

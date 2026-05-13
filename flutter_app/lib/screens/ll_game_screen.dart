@@ -3583,11 +3583,16 @@ class _LLGameScreenState extends State<LLGameScreen> {
 
   void _scrollChatToBottom() {
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (_chatScrollController.hasClients) {
+      if (!_chatScrollController.hasClients) return;
+      _chatScrollController.jumpTo(
+        _chatScrollController.position.maxScrollExtent,
+      );
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!_chatScrollController.hasClients) return;
         _chatScrollController.jumpTo(
           _chatScrollController.position.maxScrollExtent,
         );
-      }
+      });
     });
   }
 

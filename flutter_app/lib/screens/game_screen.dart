@@ -1053,11 +1053,21 @@ class _GameScreenState extends State<GameScreen> {
 
   void _scrollChatToBottom() {
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (_chatScrollController.hasClients) {
+      if (!_chatScrollController.hasClients) return;
+      _chatScrollController.jumpTo(
+        _chatScrollController.position.maxScrollExtent,
+      );
+      // ListView.builder lazily builds items below the viewport, so the
+      // first jumpTo only reaches the bottom of the initially-built range.
+      // A second pass after the new area triggers further builds lands
+      // on the real bottom — fixes "chat opens stuck near the top" when
+      // there are no new messages to retrigger the build delta.
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!_chatScrollController.hasClients) return;
         _chatScrollController.jumpTo(
           _chatScrollController.position.maxScrollExtent,
         );
-      }
+      });
     });
   }
 

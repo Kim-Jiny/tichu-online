@@ -3829,8 +3829,8 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
           children: [
             for (final entry in [
               ('spade', '♠', const Color(0xFF2B2B2B)),
-              ('heart', '♥', const Color(0xFFD24B4B)),
               ('diamond', '♦', const Color(0xFF6FB6E5)),
+              ('heart', '♥', const Color(0xFFD24B4B)),
               ('club', '♣', const Color(0xFF4BAA6A)),
               ('no_trump', 'NT', const Color(0xFF7B1FA2)),
             ])
@@ -4600,18 +4600,18 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
               onTap: () => selectSuit('spade'),
             ),
             _buildSuitChip(
-              'heart',
-              '\u2665',
-              const Color(0xFFD24B4B),
-              enabled: suitAvailable('heart'),
-              onTap: () => selectSuit('heart'),
-            ),
-            _buildSuitChip(
               'diamond',
               '\u2666',
               const Color(0xFF6FB6E5),
               enabled: suitAvailable('diamond'),
               onTap: () => selectSuit('diamond'),
+            ),
+            _buildSuitChip(
+              'heart',
+              '\u2665',
+              const Color(0xFFD24B4B),
+              enabled: suitAvailable('heart'),
+              onTap: () => selectSuit('heart'),
             ),
             _buildSuitChip(
               'club',

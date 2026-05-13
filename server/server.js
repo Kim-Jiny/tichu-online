@@ -510,6 +510,11 @@ const LL_MIN_VERSION = '2.2.0';
 const MIGHTY_MIN_VERSION = '2.3.0';
 // Tichu random seating UI shipped with the Mighty client.
 const RANDOM_SEATING_MIN_VERSION = '2.3.0';
+// New banner pack (10 SKUs) shipped with the 2.4.0 client. Pre-2.4.0 apps
+// only hardcode a few legacy banner gradients in the lobby renderer, so a
+// purchased new banner would silently fall back to the default look — gate
+// show/buy on this version to avoid a "bought but invisible" UX.
+const NEW_BANNER_MIN_VERSION = '2.4.0';
 // SK_EXPANSION_UPDATE_MESSAGE removed – now uses t(locale, 'sk_expansion_update_required')
 
 function compareVersions(v1, v2) {
@@ -549,6 +554,10 @@ function clientSupportsRandomSeating(ws) {
   return compareVersions(ws.appVersion, RANDOM_SEATING_MIN_VERSION) >= 0;
 }
 
+function clientSupportsNewBanners(ws) {
+  return compareVersions(ws.appVersion, NEW_BANNER_MIN_VERSION) >= 0;
+}
+
 function itemRequiresMightyClient(itemKey) {
   return typeof itemKey === 'string' && itemKey.startsWith('mighty_');
 }
@@ -569,6 +578,26 @@ const V230_UTILITY_ITEM_KEYS = new Set([
 function itemRequiresV230Client(itemKey) {
   if (itemRequiresMightyClient(itemKey)) return true;
   return typeof itemKey === 'string' && V230_UTILITY_ITEM_KEYS.has(itemKey);
+}
+
+// Banner SKUs introduced in 2.4.0. Pre-2.4.0 lobby renders fall back to a
+// default gradient for unknown banner keys, so we gate show/buy/use on the
+// client version to avoid "bought but invisible".
+const NEW_BANNER_ITEM_KEYS = new Set([
+  'banner_ocean',
+  'banner_forest',
+  'banner_lavender',
+  'banner_aurora',
+  'banner_galaxy',
+  'banner_sakura',
+  'banner_coral',
+  'banner_moonlight',
+  'banner_ember',
+  'banner_emerald',
+]);
+
+function itemRequiresNewBannerClient(itemKey) {
+  return typeof itemKey === 'string' && NEW_BANNER_ITEM_KEYS.has(itemKey);
 }
 
 function clientCanAccessRoom(ws, room) {
@@ -5410,8 +5439,13 @@ async function handleUpdateAdminReportStatus(ws, data) {
 // Shop items handler
 async function handleGetShopItems(ws) {
   const result = await getShopItems();
-  if (result.success && Array.isArray(result.items) && !clientSupportsMighty(ws)) {
-    result.items = result.items.filter((item) => !itemRequiresV230Client(item.item_key));
+  if (result.success && Array.isArray(result.items)) {
+    if (!clientSupportsMighty(ws)) {
+      result.items = result.items.filter((item) => !itemRequiresV230Client(item.item_key));
+    }
+    if (!clientSupportsNewBanners(ws)) {
+      result.items = result.items.filter((item) => !itemRequiresNewBannerClient(item.item_key));
+    }
   }
   sendTo(ws, { type: 'shop_items_result', ...result });
 }
@@ -5432,8 +5466,13 @@ async function handleGetInventory(ws) {
     return;
   }
   const result = await getUserItems(ws.nickname);
-  if (result.success && Array.isArray(result.items) && !clientSupportsMighty(ws)) {
-    result.items = result.items.filter((item) => !itemRequiresV230Client(item.item_key));
+  if (result.success && Array.isArray(result.items)) {
+    if (!clientSupportsMighty(ws)) {
+      result.items = result.items.filter((item) => !itemRequiresV230Client(item.item_key));
+    }
+    if (!clientSupportsNewBanners(ws)) {
+      result.items = result.items.filter((item) => !itemRequiresNewBannerClient(item.item_key));
+    }
   }
   sendTo(ws, { type: 'inventory_result', ...result });
 }
@@ -5450,6 +5489,15 @@ async function handleBuyItem(ws, data) {
       success: false,
       itemKey,
       message: t(ws.locale, 'mighty_update_required'),
+    });
+    return;
+  }
+  if (itemRequiresNewBannerClient(itemKey) && !clientSupportsNewBanners(ws)) {
+    sendTo(ws, {
+      type: 'purchase_result',
+      success: false,
+      itemKey,
+      message: t(ws.locale, 'banner_update_required'),
     });
     return;
   }

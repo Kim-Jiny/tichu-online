@@ -3,20 +3,16 @@
 const { getCardInfo, RANK_ORDER, SUITS } = require('./MightyDeck');
 
 /**
- * Decide the next action for a Mighty bot. `strategy` selects the policy:
- * 'heuristic' (default), 'oracle', 'mixoracle', 'pimc_play', 'pimc_full',
- * 'expectimax', 'expectimax_smart', or the legacy alias 'mixexpectimax'.
+ * Decide the next action for a Mighty bot. Single user-facing strategy:
+ * mixoracle (hard rules layered on top of the oracle perfect-info evaluator).
+ * The internal 'heuristic' branch is still reachable so mixoracle's hard
+ * rules can ask "what would the pure heuristic do here?" without recursing
+ * back into mixoracle.
  */
-function decideMightyBotAction(game, botId, strategy = 'heuristic') {
+function decideMightyBotAction(game, botId, strategy = 'mixoracle') {
   if (!game || !game.playerIds.includes(botId)) return null;
-  if (strategy === 'oracle') return require('./strategies/oracle').decide(game, botId);
-  if (strategy === 'mixoracle') return require('./strategies/mixoracle').decide(game, botId);
-  if (strategy === 'pimc_play') return require('./strategies/pimc_play').decide(game, botId);
-  if (strategy === 'pimc_full') return require('./strategies/pimc_full').decide(game, botId);
-  if (strategy === 'expectimax') return require('./strategies/expectimax').decide(game, botId);
-  if (strategy === 'expectimax_smart') return require('./strategies/expectimax_smart').decide(game, botId);
-  if (strategy === 'mixexpectimax') return require('./strategies/mixoracle').decide(game, botId);
-  return _heuristicDecide(game, botId);
+  if (strategy === 'heuristic') return _heuristicDecide(game, botId);
+  return require('./strategies/mixoracle').decide(game, botId);
 }
 
 function _heuristicDecide(game, botId) {

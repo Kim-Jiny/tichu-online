@@ -1027,10 +1027,60 @@ function _applyHardRules(game, botId) {
   return null;
 }
 
+// Opposition lead censor — guards against oracle picking a trump-suit lead
+// when the bot is on the defending side and the lead has no guaranteed
+// upside. Three pass-through conditions (Option B):
+//   (a) Lead card is the mighty card (always wins the trick).
+//   (b) Lead card is the effective top of the trump suit (mighty already
+//       played + bot holds the highest remaining trump).
+//   (c) Declarer team has ≤1 trumps left (so this lead drains them dry).
+// Otherwise replace the oracle's trump lead with the heuristic's non-trump
+// lead. This avoids the common "야당이 괜히 기루다 던져서 declarer 무료 회수"
+// failure mode where oracle's perfect-info eval picks a marginal trump lead.
+function _oppositionTrumpLeadCensorRule(game, botId, oracleAction) {
+  if (game.state !== 'playing' || game.currentPlayer !== botId) return null;
+  if (!game.currentTrick || game.currentTrick.length !== 0) return null;
+  if (!game.trumpSuit || game.trumpSuit === 'no_trump') return null;
+  if (_isGovernmentTeam(game, botId)) return null;
+  if (!oracleAction || oracleAction.type !== 'play_card') return null;
+
+  const cardId = oracleAction.cardId;
+  if (!cardId || cardId === 'mighty_joker') return null;
+
+  const mightyCard = game.getMightyCard();
+  if (cardId === mightyCard) return null; // (a) mighty lead is always fine
+
+  const info = getCardInfo(cardId);
+  if (!info || info.suit !== game.trumpSuit) return null;
+
+  // (b) effective top of trump suit — no higher trump remains
+  if (MightyBotInternals.isEffectiveTopOfSuit(cardId, game)) return null;
+
+  // (c) declarer team is nearly trump-empty — this lead drains them
+  const oppTrumpsLeft = MightyBotInternals.countOpponentTrumps(game, botId);
+  if (oppTrumpsLeft <= 1) return null;
+
+  // Not advantageous — substitute the heuristic's lead, which already
+  // explicitly avoids trump for opposition (only its longest-suit fallback
+  // can pick trump; verify before swapping).
+  const alt = _heuristicPlayAction(game, botId);
+  if (!alt) return null;
+  if (alt.cardId === cardId) return null;
+  if (alt.cardId !== 'mighty_joker') {
+    const altInfo = getCardInfo(alt.cardId);
+    if (altInfo && altInfo.suit === game.trumpSuit) return null;
+  }
+  return alt;
+}
+
 function decide(game, botId) {
   const ruled = _applyHardRules(game, botId);
   if (ruled) return ruled;
-  return oracle.decide(game, botId);
+
+  const oracleAction = oracle.decide(game, botId);
+  const censored = _oppositionTrumpLeadCensorRule(game, botId, oracleAction);
+  if (censored) return censored;
+  return oracleAction;
 }
 
 module.exports = { decide };

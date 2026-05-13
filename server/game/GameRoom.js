@@ -424,17 +424,10 @@ class GameRoom {
     // Validate speed
     const validSpeeds = ['fast', 'normal', 'slow'];
     const botSpeed = validSpeeds.includes(speed) ? speed : 'normal';
-    // Strategy is only meaningful for Mighty bots; other game types ignore
-    // it but we still persist whatever the host picked so it survives
-    // migrations. BotPlayer normalises invalid strategy → 'heuristic'.
+    // Mighty only ships a single bot strategy (mixoracle). Force it here
+    // so host-provided values from older clients don't end up as orphans.
     if (this.gameType === 'mighty') {
-      // Mighty default is mixoracle — hard rules (friend/declarer)
-      // layered on top of the oracle perfect-info evaluator. mix
-      // requires the heuristic-encoded user rules so we can't just
-      // run oracle bare. UI doesn't offer strategy selection, so any
-      // non-mix value is upgraded.
-      if (strategy !== 'mixoracle' && strategy !== 'mixexpectimax') strategy = 'mixoracle';
-      if (strategy === 'mixexpectimax') strategy = 'mixoracle';
+      strategy = 'mixoracle';
     }
     const botId = `bot_${nextBotNum++}`;
     const { t } = require('../i18n');

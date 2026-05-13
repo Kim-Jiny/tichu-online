@@ -105,6 +105,9 @@ class LobbyManager {
         } else {
           // Human player — placeholder; the real WS arrives on reconnect
           // and handleReconnection rebinds it to this slot via nickname.
+          // Carry over the lobby-rendering fields (level/banner/seasonRating)
+          // so peer adoption doesn't blank out the slot until the user
+          // re-joins from scratch.
           room.players[p.slot] = {
             id: p.id || null,
             nickname: p.nickname,
@@ -112,6 +115,11 @@ class LobbyManager {
             ready: !!p.ready,
             titleKey: p.titleKey || null,
             titleName: p.titleName || null,
+            level: typeof p.level === 'number' ? p.level : null,
+            bannerKey: p.bannerKey || null,
+            seasonRating: typeof p.seasonRating === 'number' ? p.seasonRating : null,
+            skSeasonRating: typeof p.skSeasonRating === 'number' ? p.skSeasonRating : null,
+            mightySeasonRating: typeof p.mightySeasonRating === 'number' ? p.mightySeasonRating : null,
           };
         }
       }

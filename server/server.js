@@ -1045,6 +1045,10 @@ function serializeRoom(room) {
         titleKey: p.titleKey || null,
         titleName: p.titleName || null,
         level: p.isBot ? null : (p.level || 1),
+        bannerKey: p.isBot ? null : (p.bannerKey || null),
+        seasonRating: p.isBot ? null : (p.seasonRating ?? null),
+        skSeasonRating: p.isBot ? null : (p.skSeasonRating ?? null),
+        mightySeasonRating: p.isBot ? null : (p.mightySeasonRating ?? null),
       };
     }),
   };
@@ -2345,6 +2349,18 @@ async function handleReconnection(ws) {
         const oldId = player.id;
         player.id = ws.playerId;
         player.connected = true;
+        // Refresh slot metadata from the freshly loaded profile (ws.*)
+        // so peer-adopted waiting rooms self-heal level/banner/rating
+        // even if the migration snapshot was missing those fields.
+        if (ws.titleKey) {
+          player.titleKey = ws.titleKey;
+          player.titleName = ws.titleName;
+        }
+        player.level = ws.level || 1;
+        player.bannerKey = ws.bannerKey;
+        player.seasonRating = ws.seasonRating;
+        player.skSeasonRating = ws.skSeasonRating;
+        player.mightySeasonRating = ws.mightySeasonRating;
         if (room.hostId === oldId) {
           room.hostId = ws.playerId;
           room.hostNickname = ws.nickname;

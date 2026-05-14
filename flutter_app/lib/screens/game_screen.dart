@@ -42,6 +42,12 @@ class _GameScreenState extends State<GameScreen> {
   final ScrollController _chatScrollController = ScrollController();
   int _lastChatMessageCount = 0;
 
+  // Rolling per-trick play log (top-left overlay under the timer). Each
+  // new currentTrick entry adds a one-line summary, reset when the trick
+  // clears (currentTrick empties after a win) or when phase != 'playing'.
+  final List<String> _trickPlayLog = [];
+  final List<String> _trickPlayLogKeys = [];
+
   // 턴 타이머
   Timer? _countdownTimer;
   int _remainingSeconds = 0;
@@ -581,6 +587,7 @@ class _GameScreenState extends State<GameScreen> {
           bottom: 0,
           child: Column(
             mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               if (state.phase == 'card_exchange' && !state.exchangeDone)
                 Padding(
@@ -592,8 +599,27 @@ class _GameScreenState extends State<GameScreen> {
                   padding: const EdgeInsets.only(bottom: 8),
                   child: _buildDragonGivenInline(game.dragonGivenMessage!),
                 ),
-              if (_canShowSmallTichu(state))
-                _buildSmallTichuInline(game),
+              // Counter and small-tichu button sit ABOVE the hand box,
+              // outside its rounded card area, on opposite sides.
+              if ((game.hasTopCardCounter && state.phase == 'playing') ||
+                  _canShowSmallTichu(state))
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  crossAxisAlignment: CrossAxisAlignment.end,
+                  children: [
+                    if (game.hasTopCardCounter && state.phase == 'playing')
+                      Padding(
+                        padding: const EdgeInsets.only(left: 12, bottom: 4),
+                        child: _buildTopCardCounter(state),
+                      )
+                    else
+                      const SizedBox.shrink(),
+                    if (_canShowSmallTichu(state))
+                      _buildSmallTichuInline(game)
+                    else
+                      const SizedBox.shrink(),
+                  ],
+                ),
               _buildBottomArea(state, game),
             ],
           ),
@@ -604,15 +630,14 @@ class _GameScreenState extends State<GameScreen> {
             left: 12,
             child: timerBadge,
           ),
-        // Top-card counter overlay — fixed position below the timer slot so
-        // both stack cleanly. When the timer is hidden the counter still
-        // sits at the same Y to keep its position predictable across turns.
-        if (game.hasTopCardCounter && state.phase == 'playing')
-          Positioned(
-            top: 82,
-            left: 12,
-            child: IgnorePointer(child: _buildTopCardCounter(state)),
-          ),
+        // Trick-play log overlay (LL-style) — what was played in the
+        // current trick. Clears between tricks. Sits below the timer.
+        Positioned(
+          top: 82,
+          left: 12,
+          right: 12,
+          child: IgnorePointer(child: _buildTrickLogOverlay(state)),
+        ),
       ],
     );
   }
@@ -3508,30 +3533,70 @@ class _GameScreenState extends State<GameScreen> {
             overflow: TextOverflow.ellipsis,
           ),
           const SizedBox(height: 4),
-          _buildOverlappedTrick(lastPlay.cards),
+          _buildOverlappedTrick(lastPlay.cards, lastPlay: lastPlay),
         ],
       ),
     );
   }
 
-  Widget _buildOverlappedTrick(List<String> cards) {
+  Widget _buildOverlappedTrick(List<String> cards, {TrickPlay? lastPlay}) {
     const double cardW = 36;
     const double cardH = 50;
     const double minOverlap = 20;
     const double maxOverlap = 30;
 
+    // Phoenix-as-single → overlay a chip on the card showing what rank
+    // it beat (e.g. "↑Q"), so the table can read the play at a glance.
+    final isPhoenixSingleTrick = lastPlay != null
+        && lastPlay.combo == 'single'
+        && cards.length == 1
+        && cards[0] == 'special_phoenix'
+        && lastPlay.comboValue > 1;
+    final phoenixBeatLabel = isPhoenixSingleTrick
+        ? _phoenixBeatLabel(lastPlay.comboValue)
+        : null;
+
+    Widget playingCard(String cardId) {
+      final card = PlayingCard(
+        cardId: cardId,
+        width: cardW,
+        height: cardH,
+        isInteractive: false,
+      );
+      if (cardId != 'special_phoenix' || phoenixBeatLabel == null) return card;
+      return Stack(
+        clipBehavior: Clip.none,
+        children: [
+          card,
+          Positioned(
+            right: -4,
+            bottom: -4,
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
+              decoration: BoxDecoration(
+                color: const Color(0xFFFFC107),
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: Colors.white, width: 1.5),
+              ),
+              child: Text(
+                phoenixBeatLabel,
+                style: const TextStyle(
+                  fontSize: 9,
+                  fontWeight: FontWeight.bold,
+                  color: Color(0xFF5A4038),
+                ),
+              ),
+            ),
+          ),
+        ],
+      );
+    }
+
     if (cards.length <= 4) {
       return Wrap(
         alignment: WrapAlignment.center,
         spacing: 3,
-        children: cards
-            .map((cardId) => PlayingCard(
-                  cardId: cardId,
-                  width: cardW,
-                  height: cardH,
-                  isInteractive: false,
-                ))
-            .toList(),
+        children: cards.map(playingCard).toList(),
       );
     }
 
@@ -3557,12 +3622,7 @@ class _GameScreenState extends State<GameScreen> {
                   for (int i = 0; i < cards.length; i++)
                     Positioned(
                       left: i * overlap,
-                      child: PlayingCard(
-                        cardId: cards[i],
-                        width: cardW,
-                        height: cardH,
-                        isInteractive: false,
-                      ),
+                      child: playingCard(cards[i]),
                     ),
                 ],
               ),
@@ -3589,12 +3649,7 @@ class _GameScreenState extends State<GameScreen> {
                 for (int i = 0; i < rowCards.length; i++)
                   Positioned(
                     left: i * overlap,
-                    child: PlayingCard(
-                      cardId: rowCards[i],
-                      width: cardW,
-                      height: cardH,
-                      isInteractive: false,
-                    ),
+                    child: playingCard(rowCards[i]),
                   ),
               ],
             ),
@@ -3847,41 +3902,150 @@ class _GameScreenState extends State<GameScreen> {
     );
   }
 
-  Widget _buildSmallTichuInline(GameService game) {
-    return Container(
-      padding: const EdgeInsets.symmetric(vertical: 4),
-      child: ElevatedButton(
-        onPressed: () {
-          showDialog(
-            context: context,
-            builder: (ctx) => AlertDialog(
-              title: Text(L10n.of(context).gameSmallTichuConfirmTitle),
-              content: Text(L10n.of(context).gameSmallTichuConfirmContent),
-              actions: [
-                TextButton(
-                  onPressed: () => Navigator.of(ctx).pop(),
-                  child: Text(L10n.of(context).gameCancel),
-                ),
-                ElevatedButton(
-                  onPressed: () {
-                    Navigator.of(ctx).pop();
-                    game.declareSmallTichu();
-                  },
-                  child: Text(L10n.of(context).gameDeclareButton),
-                ),
-              ],
+  Widget _buildTrickLogOverlay(GameStateData state) {
+    if (state.phase != 'playing' || state.currentTrick.isEmpty) {
+      if (_trickPlayLog.isNotEmpty) {
+        _trickPlayLog.clear();
+        _trickPlayLogKeys.clear();
+      }
+      return const SizedBox.shrink();
+    }
+    final trick = state.currentTrick;
+    for (var i = 0; i < trick.length; i++) {
+      final play = trick[i];
+      final key = '${trick.length}/$i/${play.playerId}/${play.cards.join(",")}';
+      if (_trickPlayLogKeys.contains(key)) continue;
+      _trickPlayLog.add(_formatPlayLine(play));
+      _trickPlayLogKeys.add(key);
+      while (_trickPlayLog.length > 4) {
+        _trickPlayLog.removeAt(0);
+        _trickPlayLogKeys.removeAt(0);
+      }
+    }
+    if (_trickPlayLog.isEmpty) return const SizedBox.shrink();
+    final reversed = _trickPlayLog.reversed.toList();
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        for (var i = 0; i < reversed.length; i++) ...[
+          if (i > 0) const SizedBox(height: 2),
+          Text(
+            reversed[i],
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: TextStyle(
+              color: const Color(0xFF5A4038),
+              fontSize: i == 0 ? 13 : 11,
+              fontWeight: i == 0 ? FontWeight.w700 : FontWeight.w600,
             ),
-          );
-        },
-        style: ElevatedButton.styleFrom(
-          backgroundColor: const Color(0xFFFFE4B5),
-          foregroundColor: const Color(0xFF8B6914),
-          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 6),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(12),
+          ),
+        ],
+      ],
+    );
+  }
+
+  String _formatPlayLine(TrickPlay play) {
+    final name = play.playerName.length > 6
+        ? '${play.playerName.substring(0, 6)}…'
+        : play.playerName;
+    return '$name: ${_comboShortDesc(play)}';
+  }
+
+  String _comboShortDesc(TrickPlay play) {
+    final cards = play.cards;
+    if (cards.length == 1) {
+      final cid = cards[0];
+      if (cid == 'special_phoenix' && play.comboValue > 1) {
+        return '봉황 ${_phoenixBeatLabel(play.comboValue)}';
+      }
+      if (cid == 'special_dragon') return '드래곤';
+      if (cid == 'special_phoenix') return '봉황';
+      if (cid == 'special_bird') return '새';
+      if (cid == 'special_dog') return '개';
+      return _rankFromCardId(cid);
+    }
+    switch (play.combo) {
+      case 'pair':
+        return '${_rankFromCardId(cards[0])} 페어';
+      case 'triple':
+        return '${_rankFromCardId(cards[0])} 트리플';
+      case 'full_house':
+        return '${_rankFromCardId(cards[0])} 풀하우스';
+      case 'straight':
+        return '스트레이트 ${cards.length}장';
+      case 'steps':
+        return '스텝 ${cards.length}장';
+      case 'bomb_four':
+        return '폭탄(4)';
+      case 'bomb_straight_flush':
+        return '스플 폭탄';
+      default:
+        return '${cards.length}장';
+    }
+  }
+
+  String _rankFromCardId(String cardId) {
+    if (cardId.startsWith('special_')) return cardId.split('_')[1];
+    final parts = cardId.split('_');
+    return parts.length >= 2 ? parts[1] : cardId;
+  }
+
+  String _phoenixBeatLabel(double comboValue) {
+    final beat = comboValue.floor();
+    if (beat >= 14) return '↑A';
+    if (beat == 13) return '↑K';
+    if (beat == 12) return '↑Q';
+    if (beat == 11) return '↑J';
+    return '↑$beat';
+  }
+
+  Widget _buildSmallTichuInline(GameService game) {
+    // Small chip-style button anchored to the right edge — mirrors the
+    // top-card counter on the opposite side so the row above the hand
+    // box stays visually balanced.
+    return Padding(
+      padding: const EdgeInsets.only(right: 12, bottom: 4),
+      child: Align(
+        alignment: Alignment.centerRight,
+        child: ElevatedButton(
+          onPressed: () {
+            showDialog(
+              context: context,
+              builder: (ctx) => AlertDialog(
+                title: Text(L10n.of(context).gameSmallTichuConfirmTitle),
+                content: Text(L10n.of(context).gameSmallTichuConfirmContent),
+                actions: [
+                  TextButton(
+                    onPressed: () => Navigator.of(ctx).pop(),
+                    child: Text(L10n.of(context).gameCancel),
+                  ),
+                  ElevatedButton(
+                    onPressed: () {
+                      Navigator.of(ctx).pop();
+                      game.declareSmallTichu();
+                    },
+                    child: Text(L10n.of(context).gameDeclareButton),
+                  ),
+                ],
+              ),
+            );
+          },
+          style: ElevatedButton.styleFrom(
+            backgroundColor: const Color(0xFFFFE4B5),
+            foregroundColor: const Color(0xFF8B6914),
+            padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 10),
+            minimumSize: Size.zero,
+            tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(14),
+            ),
+          ),
+          child: Text(
+            L10n.of(context).gameSmallTichuDeclare,
+            style: const TextStyle(fontSize: 15, fontWeight: FontWeight.bold),
           ),
         ),
-        child: Text(L10n.of(context).gameSmallTichuDeclare, style: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold)),
       ),
     );
   }

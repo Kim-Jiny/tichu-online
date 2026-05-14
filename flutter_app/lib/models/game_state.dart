@@ -5,12 +5,17 @@ class TrickPlay {
   final String playerName;
   final List<String> cards;
   final String combo;
+  /// Effective rank value of the play (e.g. 12 for Q-single, 5.5 for the
+  /// Phoenix played as a single beating a 5). UI overlays the fractional
+  /// value on a Phoenix-as-single card so the table knows what it beat.
+  final double comboValue;
 
   TrickPlay({
     required this.playerId,
     required this.playerName,
     required this.cards,
     required this.combo,
+    this.comboValue = 0,
   });
 
   factory TrickPlay.fromJson(Map<String, dynamic> json) {
@@ -19,6 +24,7 @@ class TrickPlay {
       playerName: json['playerName'] ?? '',
       cards: List<String>.from(json['cards'] ?? []),
       combo: json['combo'] ?? '',
+      comboValue: (json['comboValue'] as num?)?.toDouble() ?? 0,
     );
   }
 }

@@ -1672,6 +1672,25 @@ class L10nEn extends L10n {
   String get gameAlwaysAllow => 'Always Allow';
 
   @override
+  String get gameCardViewPolicyTitle => 'Card-view policy';
+
+  @override
+  String get gameCardViewPolicyAsk => 'Ask each time';
+
+  @override
+  String get gameCardViewPolicyAllow => 'Always allow';
+
+  @override
+  String get gameCardViewPolicyDeny => 'Always deny';
+
+  @override
+  String get settingsCardViewPolicy => 'Spectator card-view policy';
+
+  @override
+  String get settingsCardViewPolicyDescription =>
+      'Choose how requests to view your hand are handled. The setting persists across games.';
+
+  @override
   String get gameSpectatorList => 'Spectator List';
 
   @override

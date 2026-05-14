@@ -13,7 +13,7 @@ const {
   blockUser, unblockUser, getBlockedUsers, reportUser,
   addFriend, getFriends, getPendingFriendRequests,
   acceptFriendRequest, rejectFriendRequest, removeFriend,
-  saveMatchResult, saveMatchResultWithStats, updateUserStats, getUserProfile, getRecentMatches,
+  saveMatchResult, saveMatchResultWithStats, updateUserStats, getUserProfile, getRecentMatches, updateCardViewPref,
   submitInquiry, getUserInquiries, markInquiriesRead, getRankings,
   getWallet, getGoldHistory, getShopItems, getVisualCatalog, getUserItems, buyItem, equipItem, useItem, changeNickname,
   incrementLeaveCount, setRankedBan, getRankedBan, setChatBan, getChatBan, grantSeasonRewards,
@@ -1462,6 +1462,9 @@ async function handleMessage(ws, data) {
     case 'revoke_card_view':
       handleRevokeCardView(ws, data);
       break;
+    case 'set_card_view_pref':
+      handleSetCardViewPref(ws, data);
+      break;
     // Chat
     case 'chat_message':
       await handleChatMessage(ws, data);
@@ -2133,6 +2136,7 @@ async function handleReconnection(ws) {
   ws.seasonRating = Number.isFinite(profile?.seasonRating) ? profile.seasonRating : null;
   ws.skSeasonRating = Number.isFinite(profile?.skSeasonRating) ? profile.skSeasonRating : null;
   ws.mightySeasonRating = Number.isFinite(profile?.mightySeasonRating) ? profile.mightySeasonRating : null;
+  ws.cardViewPref = (profile?.cardViewPref) || 'ask';
 
   const socialInfo = await getLinkedSocial(ws.userId);
   const authProvider = socialInfo?.provider || 'local';
@@ -2161,6 +2165,7 @@ async function handleReconnection(ws) {
           pushAdminInquiry: ws.pushAdminInquiry !== false,
           pushAdminReport: ws.pushAdminReport !== false,
           maintenanceStatus: getMaintenanceStatus(ws.locale),
+          cardViewPref: ws.cardViewPref || 'ask',
         });
         sendTo(ws, {
           type: 'error',
@@ -2195,6 +2200,7 @@ async function handleReconnection(ws) {
           pushAdminInquiry: ws.pushAdminInquiry !== false,
           pushAdminReport: ws.pushAdminReport !== false,
           maintenanceStatus: getMaintenanceStatus(ws.locale),
+          cardViewPref: ws.cardViewPref || 'ask',
         });
         sendTo(ws, {
           type: 'reconnected',
@@ -2235,6 +2241,7 @@ async function handleReconnection(ws) {
           pushAdminInquiry: ws.pushAdminInquiry !== false,
           pushAdminReport: ws.pushAdminReport !== false,
           maintenanceStatus: getMaintenanceStatus(ws.locale),
+          cardViewPref: ws.cardViewPref || 'ask',
         });
         sendTo(ws, {
           type: 'error',
@@ -2269,6 +2276,7 @@ async function handleReconnection(ws) {
           pushAdminInquiry: ws.pushAdminInquiry !== false,
           pushAdminReport: ws.pushAdminReport !== false,
           maintenanceStatus: getMaintenanceStatus(ws.locale),
+          cardViewPref: ws.cardViewPref || 'ask',
         });
         sendTo(ws, {
           type: 'spectate_joined',
@@ -2328,6 +2336,7 @@ async function handleReconnection(ws) {
             pushAdminInquiry: ws.pushAdminInquiry !== false,
             pushAdminReport: ws.pushAdminReport !== false,
             maintenanceStatus: getMaintenanceStatus(ws.locale),
+            cardViewPref: ws.cardViewPref || 'ask',
           });
           sendTo(ws, {
             type: 'error',
@@ -2383,6 +2392,7 @@ async function handleReconnection(ws) {
           pushAdminInquiry: ws.pushAdminInquiry !== false,
           pushAdminReport: ws.pushAdminReport !== false,
           maintenanceStatus: getMaintenanceStatus(ws.locale),
+          cardViewPref: ws.cardViewPref || 'ask',
         });
         sendTo(ws, {
           type: 'room_joined',
@@ -2413,6 +2423,7 @@ async function handleReconnection(ws) {
     pushAdminInquiry: ws.pushAdminInquiry !== false,
     pushAdminReport: ws.pushAdminReport !== false,
     maintenanceStatus: getMaintenanceStatus(ws.locale),
+    cardViewPref: ws.cardViewPref || 'ask',
   });
   sendTo(ws, {
     type: 'room_list',
@@ -2945,8 +2956,47 @@ function handleRequestCardView(ws, data) {
     return;
   }
 
-  // Notify the human player about the request
+  // Look up the target player's persistent card-view preference. If they
+  // have set 'always_allow' or 'always_deny', resolve the request right
+  // away without bothering them with a popup.
   const playerWs = findWsByPlayerId(playerId);
+  const targetPref = (playerWs && playerWs.cardViewPref) || 'ask';
+  if (targetPref === 'always_allow' || targetPref === 'always_deny') {
+    const allow = targetPref === 'always_allow';
+    room.respondCardViewRequest(playerId, ws.playerId, allow);
+    const playerNickname = playerWs ? (playerWs.nickname || '') : '';
+    sendTo(ws, {
+      type: 'card_view_response',
+      playerId,
+      playerNickname,
+      allowed: allow,
+    });
+    if (!allow) {
+      // Surface the deny explicitly so the spectator knows their request
+      // wasn't silently lost — the target has set always-deny.
+      sendTo(ws, {
+        type: 'error',
+        message: t(ws.locale, 'card_view_denied_pref', { name: playerNickname }),
+      });
+    }
+    if (allow && room.game) {
+      const permittedPlayers = room.getPermittedPlayers(ws.playerId);
+      if (isKilledMighty) {
+        const state = room.game.getStateForPlayer(ws.playerId, permittedPlayers);
+        state.spectators = room.spectators.map((s) => ({ id: s.id, nickname: s.nickname }));
+        state.spectatorCount = room.spectators.length;
+        sendTo(ws, { type: 'game_state', state });
+      } else {
+        const state = room.game.getStateForSpectator(permittedPlayers);
+        state.spectators = room.spectators.map((s) => ({ id: s.id, nickname: s.nickname }));
+        state.spectatorCount = room.spectators.length;
+        sendTo(ws, { type: 'spectator_game_state', state });
+      }
+    }
+    return;
+  }
+
+  // 'ask' (default) — notify the human player about the request.
   if (playerWs) {
     sendTo(playerWs, {
       type: 'card_view_request',
@@ -2975,6 +3025,21 @@ function handleRequestCardView(ws, data) {
   }, 5000);
 
   sendTo(ws, { type: 'card_view_requested', playerId });
+}
+
+async function handleSetCardViewPref(ws, data) {
+  if (!ws.nickname) {
+    sendTo(ws, { type: 'error', message: t(ws.locale, 'login_required') });
+    return;
+  }
+  const pref = (data && data.pref) || 'ask';
+  const result = await updateCardViewPref(ws.nickname, pref);
+  if (!result.success) {
+    sendTo(ws, { type: 'card_view_pref_result', success: false });
+    return;
+  }
+  ws.cardViewPref = result.pref;
+  sendTo(ws, { type: 'card_view_pref_result', success: true, pref: result.pref });
 }
 
 function handleRespondCardView(ws, data) {

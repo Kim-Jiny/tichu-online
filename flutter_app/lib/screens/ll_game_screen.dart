@@ -930,9 +930,95 @@ class _LLGameScreenState extends State<LLGameScreen> {
                   ),
                 );
               }),
+            const Divider(height: 16, color: Color(0xFFEDE5E0)),
+            _buildCardViewPrefSection(game),
           ],
         ),
       ),
+    );
+  }
+
+  Widget _buildCardViewPrefSection(GameService game) {
+    final l10n = L10n.of(context);
+    Widget radio({
+      required String value,
+      required String label,
+      required IconData icon,
+      required Color color,
+    }) {
+      final selected = game.cardViewPref == value;
+      return GestureDetector(
+        onTap: () => game.setCardViewPref(value),
+        child: Container(
+          margin: const EdgeInsets.only(bottom: 4),
+          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+          decoration: BoxDecoration(
+            color: selected
+                ? color.withValues(alpha: 0.12)
+                : Colors.transparent,
+            borderRadius: BorderRadius.circular(8),
+            border: Border.all(
+              color: selected ? color : const Color(0xFFE6DCE8),
+              width: selected ? 1.5 : 1,
+            ),
+          ),
+          child: Row(
+            children: [
+              Icon(
+                icon,
+                size: 14,
+                color: selected ? color : const Color(0xFF999999),
+              ),
+              const SizedBox(width: 6),
+              Expanded(
+                child: Text(
+                  label,
+                  style: TextStyle(
+                    fontSize: 12,
+                    fontWeight: selected ? FontWeight.bold : FontWeight.w500,
+                    color: selected ? color : const Color(0xFF5A4038),
+                  ),
+                ),
+              ),
+              if (selected) Icon(Icons.check, size: 14, color: color),
+            ],
+          ),
+        ),
+      );
+    }
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Text(
+          l10n.gameCardViewPolicyTitle,
+          style: const TextStyle(
+            fontSize: 12,
+            fontWeight: FontWeight.bold,
+            color: Color(0xFF5A4038),
+          ),
+        ),
+        const SizedBox(height: 6),
+        radio(
+          value: 'ask',
+          label: l10n.gameCardViewPolicyAsk,
+          icon: Icons.help_outline,
+          color: const Color(0xFF6A6090),
+        ),
+        radio(
+          value: 'always_allow',
+          label: l10n.gameCardViewPolicyAllow,
+          icon: Icons.check_circle,
+          color: const Color(0xFF4CAF50),
+        ),
+        radio(
+          value: 'always_deny',
+          label: l10n.gameCardViewPolicyDeny,
+          icon: Icons.block,
+          color: const Color(0xFFE53935),
+        ),
+      ],
     );
   }
 
@@ -1301,43 +1387,9 @@ class _LLGameScreenState extends State<LLGameScreen> {
                   ),
                 ],
               ),
-              const SizedBox(height: 8),
-              Row(
-                children: [
-                  Expanded(
-                    child: OutlinedButton(
-                      onPressed: game.rejectAllCardViewRequests,
-                      style: OutlinedButton.styleFrom(
-                        foregroundColor: const Color(0xFF999999),
-                        side: const BorderSide(color: Color(0xFFCCCCCC)),
-                        padding: const EdgeInsets.symmetric(vertical: 10),
-                      ),
-                      child: Text(
-                        L10n.of(context).skGameAlwaysReject,
-                        style: const TextStyle(fontSize: 13),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: OutlinedButton(
-                      onPressed: () {
-                        game.respondCardViewRequest(spectatorId, true);
-                        game.setAutoAcceptCardView(true);
-                      },
-                      style: OutlinedButton.styleFrom(
-                        foregroundColor: const Color(0xFF4CAF50),
-                        side: const BorderSide(color: Color(0xFF4CAF50)),
-                        padding: const EdgeInsets.symmetric(vertical: 10),
-                      ),
-                      child: Text(
-                        L10n.of(context).skGameAlwaysAccept,
-                        style: const TextStyle(fontSize: 13),
-                      ),
-                    ),
-                  ),
-                ],
-              ),
+              // Always-allow / always-deny moved to app settings + the
+              // eye-icon viewers panel since it's a per-account policy
+              // about "my cards", not a per-request choice.
             ],
           ),
         ),

@@ -23,6 +23,7 @@
   "invite_in_game": "게임 진행 중에는 초대를 보낼 수 없습니다",
   "invite_cooldown": "이미 초대를 보냈습니다. 잠시 후 다시 시도해 주세요",
   "card_view_timeout": "패 보기 요청 응답 시간이 지났습니다",
+  "card_view_denied_pref": "{name}님이 패 보기 요청을 항상 거부로 설정해 두었습니다",
   "duplicate_login": "다른 기기에서 로그인되었습니다",
   "social_login_failed": "소셜 로그인에 실패했습니다",
   "social_register_failed": "소셜 회원가입에 실패했습니다",

@@ -25,6 +25,7 @@
   "invite_in_game": "Während des Spiels können keine Einladungen gesendet werden",
   "invite_cooldown": "Einladung bereits gesendet. Bitte versuche es später erneut",
   "card_view_timeout": "Die Anfrage zum Ansehen der Karten ist abgelaufen",
+  "card_view_denied_pref": "{name} hat Karteneinsicht-Anfragen auf „immer ablehnen“ gestellt",
   "duplicate_login": "Von einem anderen Gerät angemeldet",
   "social_login_failed": "Social-Login fehlgeschlagen",
   "social_register_failed": "Social-Registrierung fehlgeschlagen",

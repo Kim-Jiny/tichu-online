@@ -3135,6 +3135,42 @@ abstract class L10n {
   /// **'Always Allow'**
   String get gameAlwaysAllow;
 
+  /// No description provided for @gameCardViewPolicyTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Card-view policy'**
+  String get gameCardViewPolicyTitle;
+
+  /// No description provided for @gameCardViewPolicyAsk.
+  ///
+  /// In en, this message translates to:
+  /// **'Ask each time'**
+  String get gameCardViewPolicyAsk;
+
+  /// No description provided for @gameCardViewPolicyAllow.
+  ///
+  /// In en, this message translates to:
+  /// **'Always allow'**
+  String get gameCardViewPolicyAllow;
+
+  /// No description provided for @gameCardViewPolicyDeny.
+  ///
+  /// In en, this message translates to:
+  /// **'Always deny'**
+  String get gameCardViewPolicyDeny;
+
+  /// No description provided for @settingsCardViewPolicy.
+  ///
+  /// In en, this message translates to:
+  /// **'Spectator card-view policy'**
+  String get settingsCardViewPolicy;
+
+  /// No description provided for @settingsCardViewPolicyDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'Choose how requests to view your hand are handled. The setting persists across games.'**
+  String get settingsCardViewPolicyDescription;
+
   /// No description provided for @gameSpectatorList.
   ///
   /// In en, this message translates to:

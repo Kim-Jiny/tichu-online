@@ -1640,6 +1640,25 @@ class L10nKo extends L10n {
   String get gameAlwaysAllow => '항상 승인';
 
   @override
+  String get gameCardViewPolicyTitle => '패 보기 요청 정책';
+
+  @override
+  String get gameCardViewPolicyAsk => '매번 확인';
+
+  @override
+  String get gameCardViewPolicyAllow => '항상 허용';
+
+  @override
+  String get gameCardViewPolicyDeny => '항상 거부';
+
+  @override
+  String get settingsCardViewPolicy => '패 보기 요청 정책';
+
+  @override
+  String get settingsCardViewPolicyDescription =>
+      '관전자가 내 패를 볼 수 있게 할지 정책을 설정합니다. 게임을 바꿔도 유지됩니다.';
+
+  @override
   String get gameSpectatorList => '관전자 목록';
 
   @override

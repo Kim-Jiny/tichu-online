@@ -1682,6 +1682,25 @@ class L10nDe extends L10n {
   String get gameAlwaysAllow => 'Immer erlauben';
 
   @override
+  String get gameCardViewPolicyTitle => 'Karteneinsicht-Richtlinie';
+
+  @override
+  String get gameCardViewPolicyAsk => 'Jedes Mal fragen';
+
+  @override
+  String get gameCardViewPolicyAllow => 'Immer erlauben';
+
+  @override
+  String get gameCardViewPolicyDeny => 'Immer ablehnen';
+
+  @override
+  String get settingsCardViewPolicy => 'Zuschauer-Karteneinsicht';
+
+  @override
+  String get settingsCardViewPolicyDescription =>
+      'Lege fest, wie Anfragen zum Ansehen deiner Hand behandelt werden. Bleibt zwischen Partien erhalten.';
+
+  @override
   String get gameSpectatorList => 'Zuschauerliste';
 
   @override

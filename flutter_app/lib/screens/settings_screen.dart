@@ -550,6 +550,125 @@ class _SettingsScreenState extends State<SettingsScreen> {
     }
   }
 
+  String _cardViewPrefLabel(L10n l10n, String pref) {
+    switch (pref) {
+      case 'always_allow':
+        return l10n.gameCardViewPolicyAllow;
+      case 'always_deny':
+        return l10n.gameCardViewPolicyDeny;
+      case 'ask':
+      default:
+        return l10n.gameCardViewPolicyAsk;
+    }
+  }
+
+  void _showCardViewPrefDialog(
+    BuildContext context,
+    GameService game,
+    L10n l10n,
+  ) {
+    showDialog<void>(
+      context: context,
+      builder: (ctx) {
+        return StatefulBuilder(
+          builder: (ctx, setDialogState) {
+            Widget option({
+              required String value,
+              required String label,
+              required IconData icon,
+              required Color color,
+            }) {
+              final selected = game.cardViewPref == value;
+              return InkWell(
+                onTap: () {
+                  game.setCardViewPref(value);
+                  setDialogState(() {});
+                  Navigator.pop(ctx);
+                },
+                borderRadius: BorderRadius.circular(10),
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 8,
+                    vertical: 10,
+                  ),
+                  child: Row(
+                    children: [
+                      Icon(icon, size: 20, color: color),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Text(
+                          label,
+                          style: TextStyle(
+                            fontSize: 14,
+                            fontWeight: selected
+                                ? FontWeight.bold
+                                : FontWeight.w500,
+                            color: const Color(0xFF5A4038),
+                          ),
+                        ),
+                      ),
+                      if (selected) Icon(Icons.check, color: color, size: 20),
+                    ],
+                  ),
+                ),
+              );
+            }
+
+            return Dialog(
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(16),
+              ),
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(18, 18, 18, 12),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    Text(
+                      l10n.settingsCardViewPolicy,
+                      style: const TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                        color: Color(0xFF5A4038),
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      l10n.settingsCardViewPolicyDescription,
+                      style: const TextStyle(
+                        fontSize: 12,
+                        color: Color(0xFF8A7A72),
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    option(
+                      value: 'ask',
+                      label: l10n.gameCardViewPolicyAsk,
+                      icon: Icons.help_outline,
+                      color: const Color(0xFF6A6090),
+                    ),
+                    option(
+                      value: 'always_allow',
+                      label: l10n.gameCardViewPolicyAllow,
+                      icon: Icons.check_circle,
+                      color: const Color(0xFF4CAF50),
+                    ),
+                    option(
+                      value: 'always_deny',
+                      label: l10n.gameCardViewPolicyDeny,
+                      icon: Icons.block,
+                      color: const Color(0xFFE53935),
+                    ),
+                  ],
+                ),
+              ),
+            );
+          },
+        );
+      },
+    );
+  }
+
   void _showTextViewDialog(String title, String? content, {bool isTermsOfService = false}) {
     final game = context.read<GameService>();
     final l10n = L10n.of(context);
@@ -855,6 +974,30 @@ class _SettingsScreenState extends State<SettingsScreen> {
                                   ),
                                 ),
                               ],
+                            ],
+                          ),
+                          const SizedBox(height: 12),
+                          _buildSection(
+                            l10n.settingsCardViewPolicy,
+                            [
+                              _buildRow(
+                                icon: Icons.visibility_outlined,
+                                iconColor: const Color(0xFF6A6090),
+                                title: l10n.settingsCardViewPolicy,
+                                subtitle: _cardViewPrefLabel(
+                                  l10n,
+                                  game.cardViewPref,
+                                ),
+                                trailing: const Icon(
+                                  Icons.chevron_right,
+                                  color: Color(0xFFB0A8A4),
+                                ),
+                                onTap: () => _showCardViewPrefDialog(
+                                  context,
+                                  game,
+                                  l10n,
+                                ),
+                              ),
                             ],
                           ),
                           if (game.isAdminUser) ...[

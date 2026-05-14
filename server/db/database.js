@@ -753,6 +753,11 @@ async function initDatabase() {
     await client.query(`ALTER TABLE tc_users ADD COLUMN IF NOT EXISTS sk_season_wins INT DEFAULT 0`);
     await client.query(`ALTER TABLE tc_users ADD COLUMN IF NOT EXISTS sk_season_losses INT DEFAULT 0`);
 
+    // Persistent card-view policy: how the user's cards may be shown to
+    // spectators. 'ask' (default) prompts each time. 'always_allow' /
+    // 'always_deny' bypass the prompt across games/sessions.
+    await client.query(`ALTER TABLE tc_users ADD COLUMN IF NOT EXISTS card_view_pref VARCHAR(20) NOT NULL DEFAULT 'ask'`);
+
     // Add game_type to season rankings for SK support
     await client.query(`ALTER TABLE tc_season_rankings ADD COLUMN IF NOT EXISTS game_type VARCHAR(20) DEFAULT 'tichu'`);
     // Drop old unique constraint and add new one with game_type
@@ -1507,6 +1512,7 @@ async function getUserProfile(nickname, locale = 'ko') {
               u.ll_total_games, u.ll_wins, u.ll_losses,
               u.mighty_total_games, u.mighty_wins, u.mighty_losses, u.mighty_rating,
               u.mighty_season_rating, u.mighty_season_games, u.mighty_season_wins, u.mighty_season_losses,
+              u.card_view_pref,
               e.banner_key, e.theme_key, e.title_key,
               si.${titleCol} AS title_name
        FROM tc_users u
@@ -1626,6 +1632,7 @@ async function getUserProfile(nickname, locale = 'ko') {
       mightySeasonWins: user.mighty_season_wins,
       mightySeasonLosses: user.mighty_season_losses,
       mightySeasonWinRate,
+      cardViewPref: user.card_view_pref || 'ask',
     };
   } catch (err) {
     console.error('Get user profile error:', err);
@@ -5998,6 +6005,26 @@ async function loadTitleTranslations() {
   return map;
 }
 
+async function updateCardViewPref(nickname, pref) {
+  const valid = new Set(['ask', 'always_allow', 'always_deny']);
+  if (!valid.has(pref)) {
+    return { success: false, message: 'invalid card view pref' };
+  }
+  const client = await pool.connect();
+  try {
+    await client.query(
+      `UPDATE tc_users SET card_view_pref = $1 WHERE nickname = $2`,
+      [pref, nickname]
+    );
+    return { success: true, pref };
+  } catch (err) {
+    console.error('updateCardViewPref error:', err);
+    return { success: false, message: 'db error' };
+  } finally {
+    client.release();
+  }
+}
+
 async function getPushHistoryDetail(id, page = 1, limit = 50) {
   const historyRes = await pool.query(`SELECT * FROM tc_push_history WHERE id = $1`, [id]);
   if (historyRes.rows.length === 0) return null;
@@ -6130,5 +6157,6 @@ module.exports = {
   clearInvalidFcmToken,
   insertPushRecipients,
   getPushHistoryDetail,
+  updateCardViewPref,
   pool,
 };

@@ -23,6 +23,7 @@
   "invite_in_game": "Cannot send invites during a game",
   "invite_cooldown": "Invite already sent. Please try again later",
   "card_view_timeout": "Card view request has timed out",
+  "card_view_denied_pref": "{name} has set card-view requests to always deny",
   "duplicate_login": "Logged in from another device",
   "social_login_failed": "Social login failed",
   "social_register_failed": "Social sign-up failed",

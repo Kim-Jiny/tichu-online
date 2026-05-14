@@ -771,103 +771,6 @@ class _SKGameScreenState extends State<SKGameScreen> {
                 ),
               ),
         actions: [
-          if (!game.isSpectator)
-            StatefulBuilder(
-              builder: (context, setDialogState) {
-                return Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    GestureDetector(
-                      onTap: () {
-                        game.setAutoAcceptCardView(!game.autoAcceptCardView);
-                        setDialogState(() {});
-                      },
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 10,
-                          vertical: 6,
-                        ),
-                        decoration: BoxDecoration(
-                          color: game.autoAcceptCardView
-                              ? const Color(0xFFE8F5E9)
-                              : const Color(0xFFF5F5F5),
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Icon(
-                              game.autoAcceptCardView
-                                  ? Icons.check_circle
-                                  : Icons.check_circle_outline,
-                              size: 16,
-                              color: game.autoAcceptCardView
-                                  ? const Color(0xFF4CAF50)
-                                  : const Color(0xFF999999),
-                            ),
-                            const SizedBox(width: 4),
-                            Text(
-                              L10n.of(context).skGameAlwaysAccept,
-                              style: TextStyle(
-                                fontSize: 12,
-                                fontWeight: FontWeight.bold,
-                                color: game.autoAcceptCardView
-                                    ? const Color(0xFF4CAF50)
-                                    : const Color(0xFF999999),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-                    const SizedBox(width: 6),
-                    GestureDetector(
-                      onTap: () {
-                        game.setAutoRejectCardView(!game.autoRejectCardView);
-                        setDialogState(() {});
-                      },
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 10,
-                          vertical: 6,
-                        ),
-                        decoration: BoxDecoration(
-                          color: game.autoRejectCardView
-                              ? const Color(0xFFFFEBEE)
-                              : const Color(0xFFF5F5F5),
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Icon(
-                              game.autoRejectCardView
-                                  ? Icons.block
-                                  : Icons.block_outlined,
-                              size: 16,
-                              color: game.autoRejectCardView
-                                  ? const Color(0xFFE53935)
-                                  : const Color(0xFF999999),
-                            ),
-                            const SizedBox(width: 4),
-                            Text(
-                              L10n.of(context).skGameAlwaysReject,
-                              style: TextStyle(
-                                fontSize: 12,
-                                fontWeight: FontWeight.bold,
-                                color: game.autoRejectCardView
-                                    ? const Color(0xFFE53935)
-                                    : const Color(0xFF999999),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-                  ],
-                );
-              },
-            ),
           TextButton(
             onPressed: () => Navigator.pop(ctx),
             child: Text(L10n.of(context).commonClose),
@@ -1137,19 +1040,21 @@ class _SKGameScreenState extends State<SKGameScreen> {
                 _showSpectatorListDialog(game);
               },
             ),
-            if (hasViewers)
-              _buildTopActionButton(
-                icon: Icons.visibility,
-                active: _viewersOpen,
-                badgeCount: game.cardViewers.length,
-                onTap: () {
-                  setState(() {
-                    _moreOpen = false;
-                    _soundPanelOpen = false;
-                    _viewersOpen = !_viewersOpen;
-                  });
-                },
-              ),
+            // Always show so users can reach the card-view-policy
+            // controls even when nobody is currently viewing (esp. for
+            // always_deny users who would otherwise have no in-game UI).
+            _buildTopActionButton(
+              icon: Icons.visibility,
+              active: _viewersOpen,
+              badgeCount: hasViewers ? game.cardViewers.length : 0,
+              onTap: () {
+                setState(() {
+                  _moreOpen = false;
+                  _soundPanelOpen = false;
+                  _viewersOpen = !_viewersOpen;
+                });
+              },
+            ),
             _buildTopActionButton(
               icon: game.sfxVolume <= 0.01 ? Icons.volume_off : Icons.volume_up,
               active: _soundPanelOpen,
@@ -2837,43 +2742,9 @@ class _SKGameScreenState extends State<SKGameScreen> {
                   ),
                 ],
               ),
-              const SizedBox(height: 8),
-              Row(
-                children: [
-                  Expanded(
-                    child: OutlinedButton(
-                      onPressed: game.rejectAllCardViewRequests,
-                      style: OutlinedButton.styleFrom(
-                        foregroundColor: const Color(0xFF999999),
-                        side: const BorderSide(color: Color(0xFFCCCCCC)),
-                        padding: const EdgeInsets.symmetric(vertical: 10),
-                      ),
-                      child: Text(
-                        L10n.of(context).skGameAlwaysReject,
-                        style: const TextStyle(fontSize: 13),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: OutlinedButton(
-                      onPressed: () {
-                        game.respondCardViewRequest(spectatorId, true);
-                        game.setAutoAcceptCardView(true);
-                      },
-                      style: OutlinedButton.styleFrom(
-                        foregroundColor: const Color(0xFF4CAF50),
-                        side: const BorderSide(color: Color(0xFF4CAF50)),
-                        padding: const EdgeInsets.symmetric(vertical: 10),
-                      ),
-                      child: Text(
-                        L10n.of(context).skGameAlwaysAccept,
-                        style: const TextStyle(fontSize: 13),
-                      ),
-                    ),
-                  ),
-                ],
-              ),
+              // Always-allow / always-deny moved to app settings + the
+              // eye-icon viewers panel since it's a per-account policy
+              // about "my cards", not a per-request choice.
             ],
           ),
         ),
@@ -3099,9 +2970,98 @@ class _SKGameScreenState extends State<SKGameScreen> {
                   ),
                 );
               }),
+            const Divider(height: 16, color: Color(0xFFEDE5E0)),
+            _buildCardViewPrefSection(game),
           ],
         ),
       ),
+    );
+  }
+
+  /// 3-option (ask / always_allow / always_deny) toggle pinned to the
+  /// bottom of the viewers panel so users can change their card-view
+  /// policy without leaving the game.
+  Widget _buildCardViewPrefSection(GameService game) {
+    final l10n = L10n.of(context);
+    Widget radio({
+      required String value,
+      required String label,
+      required IconData icon,
+      required Color color,
+    }) {
+      final selected = game.cardViewPref == value;
+      return GestureDetector(
+        onTap: () => game.setCardViewPref(value),
+        child: Container(
+          margin: const EdgeInsets.only(bottom: 4),
+          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+          decoration: BoxDecoration(
+            color: selected
+                ? color.withValues(alpha: 0.12)
+                : Colors.transparent,
+            borderRadius: BorderRadius.circular(8),
+            border: Border.all(
+              color: selected ? color : const Color(0xFFE6DCE8),
+              width: selected ? 1.5 : 1,
+            ),
+          ),
+          child: Row(
+            children: [
+              Icon(
+                icon,
+                size: 14,
+                color: selected ? color : const Color(0xFF999999),
+              ),
+              const SizedBox(width: 6),
+              Expanded(
+                child: Text(
+                  label,
+                  style: TextStyle(
+                    fontSize: 12,
+                    fontWeight: selected ? FontWeight.bold : FontWeight.w500,
+                    color: selected ? color : const Color(0xFF5A4038),
+                  ),
+                ),
+              ),
+              if (selected) Icon(Icons.check, size: 14, color: color),
+            ],
+          ),
+        ),
+      );
+    }
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Text(
+          l10n.gameCardViewPolicyTitle,
+          style: const TextStyle(
+            fontSize: 12,
+            fontWeight: FontWeight.bold,
+            color: Color(0xFF5A4038),
+          ),
+        ),
+        const SizedBox(height: 6),
+        radio(
+          value: 'ask',
+          label: l10n.gameCardViewPolicyAsk,
+          icon: Icons.help_outline,
+          color: const Color(0xFF6A6090),
+        ),
+        radio(
+          value: 'always_allow',
+          label: l10n.gameCardViewPolicyAllow,
+          icon: Icons.check_circle,
+          color: const Color(0xFF4CAF50),
+        ),
+        radio(
+          value: 'always_deny',
+          label: l10n.gameCardViewPolicyDeny,
+          icon: Icons.block,
+          color: const Color(0xFFE53935),
+        ),
+      ],
     );
   }
 

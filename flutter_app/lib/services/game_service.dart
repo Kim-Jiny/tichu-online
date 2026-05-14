@@ -81,8 +81,12 @@ class GameService extends ChangeNotifier {
   // Incoming card view requests (for players)
   List<Map<String, String>> incomingCardViewRequests =
       []; // [{spectatorId, spectatorNickname}]
-  bool autoRejectCardView = false; // 패 보기 요청 항상 거절
-  bool autoAcceptCardView = false; // 패 보기 요청 항상 승인
+
+  // Persistent card-view policy synced with the server. Values:
+  //   'ask'           - prompt the player on every incoming request (default)
+  //   'always_allow'  - server auto-grants without notifying the player
+  //   'always_deny'   - server auto-rejects without notifying the player
+  String cardViewPref = 'ask';
 
   // Spectators currently viewing my cards
   List<Map<String, String>> cardViewers = []; // [{id, nickname}]
@@ -471,6 +475,7 @@ class GameService extends ChangeNotifier {
         pushFriendInviteEnabled = data['pushFriendInvite'] != false;
         pushAdminInquiryEnabled = data['pushAdminInquiry'] != false;
         pushAdminReportEnabled = data['pushAdminReport'] != false;
+        cardViewPref = (data['cardViewPref'] as String?) ?? 'ask';
         loginError = null;
         _parseMaintenanceStatus(
           data['maintenanceStatus'] as Map<String, dynamic>?,
@@ -679,26 +684,27 @@ class GameService extends ChangeNotifier {
         break;
 
       case 'card_view_request':
-        // A spectator is requesting to see our cards
+        // Server only forwards a request when our cardViewPref == 'ask',
+        // so we always queue it for the user to decide.
         final spectatorId = data['spectatorId'] as String?;
         final spectatorNickname = data['spectatorNickname'] as String?;
         if (spectatorId != null && spectatorNickname != null) {
-          if (autoRejectCardView) {
-            respondCardViewRequest(spectatorId, false);
-          } else if (autoAcceptCardView) {
-            respondCardViewRequest(spectatorId, true);
-          } else {
-            // Remove duplicate if exists
-            incomingCardViewRequests.removeWhere(
-              (r) => r['spectatorId'] == spectatorId,
-            );
-            incomingCardViewRequests.add({
-              'spectatorId': spectatorId,
-              'spectatorNickname': spectatorNickname,
-            });
-          }
+          incomingCardViewRequests.removeWhere(
+            (r) => r['spectatorId'] == spectatorId,
+          );
+          incomingCardViewRequests.add({
+            'spectatorId': spectatorId,
+            'spectatorNickname': spectatorNickname,
+          });
         }
         notifyListeners();
+        break;
+
+      case 'card_view_pref_result':
+        if (data['success'] == true && data['pref'] is String) {
+          cardViewPref = data['pref'] as String;
+          notifyListeners();
+        }
         break;
 
       case 'room_left':
@@ -732,8 +738,6 @@ class GameService extends ChangeNotifier {
     roomSkExpansions = const [];
         roomSkExpansions = const [];
         chatMessages = [];
-        autoRejectCardView = false;
-        autoAcceptCardView = false;
         if (isDuplicateLogin) {
           playerId = '';
           playerName = '';
@@ -781,8 +785,6 @@ class GameService extends ChangeNotifier {
         chatMessages = [];
         desertedPlayerName = null;
         desertedReason = null;
-        autoRejectCardView = false;
-        autoAcceptCardView = false;
         notifyListeners();
         break;
 
@@ -2246,8 +2248,6 @@ class GameService extends ChangeNotifier {
     myRank = null;
     adRewardResult = null;
     adRewardSuccess = null;
-    autoRejectCardView = false;
-    autoAcceptCardView = false;
     myRankData = null;
     seasons = [];
     gold = 0;
@@ -2515,30 +2515,13 @@ class GameService extends ChangeNotifier {
     notifyListeners();
   }
 
-  void rejectAllCardViewRequests() {
-    for (final req in List<Map<String, String>>.from(
-      incomingCardViewRequests,
-    )) {
-      respondCardViewRequest(req['spectatorId'] ?? '', false);
+  /// Update the persistent card-view policy on the server. Local state
+  /// updates only after the server confirms via `card_view_pref_result`.
+  void setCardViewPref(String pref) {
+    if (pref != 'ask' && pref != 'always_allow' && pref != 'always_deny') {
+      return;
     }
-    incomingCardViewRequests.clear();
-    autoRejectCardView = true;
-    autoAcceptCardView = false;
-    notifyListeners();
-  }
-
-  void setAutoRejectCardView(bool value) {
-    if (autoRejectCardView == value) return;
-    autoRejectCardView = value;
-    if (value) autoAcceptCardView = false;
-    notifyListeners();
-  }
-
-  void setAutoAcceptCardView(bool value) {
-    if (autoAcceptCardView == value) return;
-    autoAcceptCardView = value;
-    if (value) autoRejectCardView = false;
-    notifyListeners();
+    _network.send({'type': 'set_card_view_pref', 'pref': pref});
   }
 
   bool get hasIncomingCardViewRequests => incomingCardViewRequests.isNotEmpty;
@@ -2650,8 +2633,6 @@ class GameService extends ChangeNotifier {
     pendingCardViewRequests = {};
     approvedCardViews = {};
     incomingCardViewRequests = [];
-    autoRejectCardView = false;
-    autoAcceptCardView = false;
     cardViewers = [];
     spectators = [];
     chatMessages = [];

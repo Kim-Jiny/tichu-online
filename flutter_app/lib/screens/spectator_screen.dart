@@ -1822,6 +1822,8 @@ class _SpectatorScreenState extends State<SpectatorScreen> {
     final lastPlay = currentTrick.last;
     final playerName = lastPlay['playerName'] ?? '';
     final cards = (lastPlay['cards'] as List?) ?? [];
+    final lastCombo = (lastPlay['combo'] ?? '') as String;
+    final lastComboValue = (lastPlay['comboValue'] as num?)?.toDouble() ?? 0;
 
     // Alternate colors based on play index (even = blue, odd = pink)
     final playIndex = currentTrick.length - 1;
@@ -1865,6 +1867,8 @@ class _SpectatorScreenState extends State<SpectatorScreen> {
               cards,
               compact: compact,
               forceSingleRow: landscapeCompact,
+              combo: lastCombo,
+              comboValue: lastComboValue,
             ),
           ],
         ),
@@ -1876,24 +1880,62 @@ class _SpectatorScreenState extends State<SpectatorScreen> {
     List cards, {
     bool compact = false,
     bool forceSingleRow = false,
+    String combo = '',
+    double comboValue = 0,
   }) {
     final double cardW = compact ? 24 : 36;
     final double cardH = compact ? 34 : 50;
     final double minOverlap = compact ? 10 : 20;
     final double maxOverlap = compact ? 18 : 30;
 
+    final isPhoenixSingleTrick = combo == 'single'
+        && cards.length == 1
+        && cards[0].toString() == 'special_phoenix'
+        && comboValue > 1;
+    final String? phoenixBeatLabel =
+        isPhoenixSingleTrick ? _phoenixBeatLabel(comboValue) : null;
+
+    Widget playingCard(String cardId) {
+      final card = PlayingCard(
+        cardId: cardId,
+        width: cardW,
+        height: cardH,
+        isInteractive: false,
+      );
+      if (cardId != 'special_phoenix' || phoenixBeatLabel == null) return card;
+      return Stack(
+        clipBehavior: Clip.none,
+        children: [
+          card,
+          Positioned(
+            right: -4,
+            bottom: -4,
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
+              decoration: BoxDecoration(
+                color: const Color(0xFFFFC107),
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: Colors.white, width: 1.5),
+              ),
+              child: Text(
+                phoenixBeatLabel,
+                style: TextStyle(
+                  fontSize: compact ? 8 : 9,
+                  fontWeight: FontWeight.bold,
+                  color: const Color(0xFF5A4038),
+                ),
+              ),
+            ),
+          ),
+        ],
+      );
+    }
+
     if (cards.length <= 4) {
       return Wrap(
         alignment: WrapAlignment.center,
         spacing: 3,
-        children: cards
-            .map((cardId) => PlayingCard(
-                  cardId: cardId.toString(),
-                  width: cardW,
-                  height: cardH,
-                  isInteractive: false,
-                ))
-            .toList(),
+        children: cards.map((c) => playingCard(c.toString())).toList(),
       );
     }
 
@@ -1972,6 +2014,15 @@ class _SpectatorScreenState extends State<SpectatorScreen> {
         );
       },
     );
+  }
+
+  String _phoenixBeatLabel(double comboValue) {
+    final beat = comboValue.floor();
+    if (beat >= 14) return '↑A';
+    if (beat == 13) return '↑K';
+    if (beat == 12) return '↑Q';
+    if (beat == 11) return '↑J';
+    return '↑$beat';
   }
 
   // ====================== PROFILE DIALOG ======================

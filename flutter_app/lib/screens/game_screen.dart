@@ -47,6 +47,7 @@ class _GameScreenState extends State<GameScreen> {
   // clears (currentTrick empties after a win) or when phase != 'playing'.
   final List<String> _trickPlayLog = [];
   final List<String> _trickPlayLogKeys = [];
+  final List<bool> _trickPlayLogIsMine = [];
 
   // 턴 타이머
   Timer? _countdownTimer;
@@ -3907,23 +3908,27 @@ class _GameScreenState extends State<GameScreen> {
       if (_trickPlayLog.isNotEmpty) {
         _trickPlayLog.clear();
         _trickPlayLogKeys.clear();
+        _trickPlayLogIsMine.clear();
       }
       return const SizedBox.shrink();
     }
     final trick = state.currentTrick;
     for (var i = 0; i < trick.length; i++) {
       final play = trick[i];
-      final key = '${trick.length}/$i/${play.playerId}/${play.cards.join(",")}';
+      final key = '$i/${play.playerId}/${play.cards.join(",")}';
       if (_trickPlayLogKeys.contains(key)) continue;
       _trickPlayLog.add(_formatPlayLine(play));
       _trickPlayLogKeys.add(key);
+      _trickPlayLogIsMine.add(_isMyTeamPlay(state, play.playerId));
       while (_trickPlayLog.length > 4) {
         _trickPlayLog.removeAt(0);
         _trickPlayLogKeys.removeAt(0);
+        _trickPlayLogIsMine.removeAt(0);
       }
     }
     if (_trickPlayLog.isEmpty) return const SizedBox.shrink();
     final reversed = _trickPlayLog.reversed.toList();
+    final reversedMine = _trickPlayLogIsMine.reversed.toList();
     return Column(
       mainAxisSize: MainAxisSize.min,
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -3935,7 +3940,9 @@ class _GameScreenState extends State<GameScreen> {
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
             style: TextStyle(
-              color: const Color(0xFF5A4038),
+              color: reversedMine[i]
+                  ? const Color(0xFF2F6FC4)
+                  : const Color(0xFFB23A3A),
               fontSize: i == 0 ? 13 : 11,
               fontWeight: i == 0 ? FontWeight.w700 : FontWeight.w600,
             ),
@@ -3943,6 +3950,15 @@ class _GameScreenState extends State<GameScreen> {
         ],
       ],
     );
+  }
+
+  bool _isMyTeamPlay(GameStateData state, String playerId) {
+    for (final p in state.players) {
+      if (p.id == playerId) {
+        return p.position == 'self' || p.position == 'partner';
+      }
+    }
+    return true;
   }
 
   String _formatPlayLine(TrickPlay play) {

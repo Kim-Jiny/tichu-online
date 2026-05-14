@@ -845,6 +845,41 @@ function shouldBomb(state, cards, combos) {
 
 // ========== LEAD TRICK STRATEGY ==========
 
+// A "lock play" is one we expect to win uncontested in lead. Used to
+// decide whether burning a high combo is justified: only do it if every
+// leftover play is also a guaranteed winner (i.e. we chain-finish).
+function isLockPlay(plan) {
+  if (!plan || plan.length === 0) return false;
+  if (plan.length === 1) {
+    const cid = plan[0];
+    if (cid === 'special_dragon') return true;
+    if (getCardValue(cid) >= 14) return true; // A single
+    return false;
+  }
+  const hv = getHighestValue(plan);
+  if (plan.length === 2) return hv >= 13;     // K-pair or higher
+  return hv >= 12;                              // longer combos: Q+ is safe
+}
+
+// Returns true if playing `combo` lets us chain-finish — every leftover
+// play wins the lead (lock), except at most ONE non-lock play that empties
+// the hand (going out cancels the need to win that final trick). So
+// [A,A,K,K,3] after AA chain-finishes (KK is a lock, 3 empties the hand);
+// but [3,9,A,A] after AA does not (both 3 and 9 are non-locks).
+function canChainOut(combo, cards) {
+  if (combo.length === cards.length) return true;
+  const remaining = cards.filter(c => !combo.includes(c));
+  if (remaining.length === 0) return true;
+  const remainingPlans = decomposeHand(remaining);
+  if (remainingPlans.length === 0) return false;
+  let nonLock = 0;
+  for (const p of remainingPlans) {
+    if (!isLockPlay(p)) nonLock++;
+    if (nonLock > 1) return false;
+  }
+  return true;
+}
+
 function leadTrick(state, cards, normalCards, combos) {
   const partner = getPartner(state);
   const opponents = getOpponents(state);
@@ -970,27 +1005,29 @@ function leadTrick(state, cards, normalCards, combos) {
     multiCardPlans.sort((a, b) => {
       return getHighestValue(a) - getHighestValue(b);
     });
-    // Skip high-value combos (A=14, K=13): save them for later
-    // Only play A/K combos when we have few cards left
+    // Skip high-value combos (A=14, K=13) unless they're part of a chain-out.
+    // Burning an A-pair or K-pair early is wasted leverage if the bot can't
+    // finish the hand in one go — the leftover low cards just hand the lead
+    // back to the opponents anyway.
     const safePlans = multiCardPlans.filter(p => {
       const hv = getHighestValue(p);
-      if (hv >= 14) return cards.length <= 2; // A combo: only as the final play
-      if (hv >= 13) return cards.length <= 6; // K combo: only in late game
+      if (hv >= 13) return canChainOut(p, cards);  // A/K combo: chain-out only
+      if (hv >= 12) return cards.length <= 8;       // Q combo: late game only
       return true;
     });
     if (safePlans.length > 0) {
       return { type: 'play_cards', cards: safePlans[0] };
     }
-    // No safe combo available. Prefer leading a LOW single (≤10) over burning
-    // a high combo (e.g. AA pair with [3,4,A,A]). Low singles will lose
-    // anyway, but the A's stay in hand as guaranteed late-game trick winners.
-    // We only reroute for LOW singles though — burning a lone A/K single to
-    // save a combo would be strictly worse.
-    const lowSinglePlans = singlePlans.filter(p => getCardValue(p[0]) <= 10);
-    if (lowSinglePlans.length > 0) {
-      return { type: 'play_cards', cards: [lowSinglePlans[0][0]] };
+    // No safe combo. Prefer leading a non-high single (≤Q=12) over burning
+    // a high combo — the high pair/triple stays in hand as future trick
+    // winners. Even J/Q single loses cheaper than burning AA/KK on a hopeful
+    // chain that won't materialize.
+    const nonHighSinglePlans = singlePlans.filter(p => getCardValue(p[0]) <= 12);
+    if (nonHighSinglePlans.length > 0) {
+      return { type: 'play_cards', cards: [nonHighSinglePlans[0][0]] };
     }
-    // No low singles: play the high combo (better than burning K/A singles).
+    // Only high singles + high combos left — play the lowest combo since
+    // burning a lone A/K single would be strictly worse.
     return { type: 'play_cards', cards: multiCardPlans[0] };
   }
 

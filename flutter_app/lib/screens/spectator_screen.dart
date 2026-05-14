@@ -1076,7 +1076,6 @@ class _SpectatorScreenState extends State<SpectatorScreen> {
     final cards = (player['cards'] as List?) ?? [];
     final cardCount = player['cardCount'] ?? 0;
     final canSeeCards = player['canSeeCards'] == true;
-    final team = player['team'] ?? '';
     final isCurrentTurn = playerId == currentPlayerId;
     final hasFinished = player['hasFinished'] ?? false;
     final finishPosition = player['finishPosition'] ?? 0;
@@ -1086,7 +1085,6 @@ class _SpectatorScreenState extends State<SpectatorScreen> {
     final vertical = isLeft || isRight;
 
     final isPending = game.pendingCardViewRequests.contains(playerId);
-    final teamColor = team == 'A' ? const Color(0xFF6A9BD1) : const Color(0xFFF5B8C0);
 
     return Container(
       margin: EdgeInsets.all(compact ? 2 : 4),
@@ -1118,16 +1116,6 @@ class _SpectatorScreenState extends State<SpectatorScreen> {
                 const Padding(
                   padding: EdgeInsets.only(right: 4),
                   child: Icon(Icons.wifi_off, size: 12, color: Colors.red),
-                )
-              else
-                Container(
-                  width: 8,
-                  height: 8,
-                  margin: const EdgeInsets.only(right: 4),
-                  decoration: BoxDecoration(
-                    color: teamColor,
-                    shape: BoxShape.circle,
-                  ),
                 ),
               Flexible(
                 child: Text(

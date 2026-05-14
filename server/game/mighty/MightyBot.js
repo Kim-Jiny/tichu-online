@@ -1421,6 +1421,27 @@ function _oppositionLead(game, botId, legalCards, suitCards, mightyCard) {
   const declarerVoids = voids[game.declarer] || new Set();
   const hasTrump = game.trumpSuit && game.trumpSuit !== 'no_trump';
 
+  // First-trick-friend (초구 프렌즈) lead: if any opposition bot ends up
+  // leading the very first trick, they should try to lock in the friend
+  // slot by leading a guaranteed winner. Prefer effective non-trump tops
+  // (cheap commitments), fall back to mighty / top trump if needed.
+  if (game.friendCard === 'first_trick' && game.tricks.length === 0
+      && botId !== game.declarer) {
+    for (const [suit, cards] of Object.entries(suitCards)) {
+      if (suit === game.trumpSuit) continue;
+      const sorted = cards.sort((a, b) =>
+        RANK_ORDER[getCardInfo(b).rank] - RANK_ORDER[getCardInfo(a).rank]);
+      if (_isEffectiveTopOfSuit(sorted[0], game)) return sorted[0];
+    }
+    if (legalCards.includes(mightyCard)) return mightyCard;
+    if (hasTrump && suitCards[game.trumpSuit] && suitCards[game.trumpSuit].length > 0) {
+      const sortedTrump = suitCards[game.trumpSuit].sort((a, b) =>
+        RANK_ORDER[getCardInfo(b).rank] - RANK_ORDER[getCardInfo(a).rank]);
+      if (_isEffectiveTopOfSuit(sortedTrump[0], game)) return sortedTrump[0];
+    }
+    // No clear winner — fall through to default opposition lead.
+  }
+
   // Critical endgame: ≤ 2 tricks left and declarer short of bid. Lead our
   // strongest available card (sure top, then mighty, then joker, then any
   // high trump) so the opp side actually takes the trick rather than
@@ -1530,15 +1551,13 @@ function decideFollowCard(game, botId, legalCards) {
   const winningCards = legalCards.filter(cardId => canBeatCurrentWinner(game, cardId));
 
   // First-trick-friend (초구 프렌즈): the first-trick winner becomes declarer's
-  // partner. If the bot isn't the declarer, it actively tries to win the first
-  // trick whenever it holds an effective-top A-equivalent or is the last player
-  // able to take the pot. This overrides the usual "conserve mighty" logic.
+  // partner. Any non-declarer bot holding a card that beats the current
+  // winner actively tries — gates on "sureWinner only" or "last player only"
+  // skipped too many tries even when overtake risk was acceptable. Pick the
+  // weakest beating card so we don't burn premium cards if we lose anyway.
   if (game.friendCard === 'first_trick' && game.tricks.length === 0
       && botId !== game.declarer && winningCards.length > 0) {
-    const isLastPlayer = game.currentTrick.length === game.activePlayerCount - 1;
-    const sureWinners = winningCards.filter(c => _isEffectiveTopOfSuit(c, game));
-    if (sureWinners.length > 0) return getWeakestCard(sureWinners, game);
-    if (isLastPlayer) return getWeakestCard(winningCards, game);
+    return getWeakestCard(winningCards, game);
   }
 
   const winnerOnOurTeam = botIsGov

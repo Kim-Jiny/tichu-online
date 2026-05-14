@@ -170,14 +170,25 @@ class LoveLetterGame {
         return this._advanceTurnOrEndRound();
 
       case CARD_TYPE.HANDMAID:
-        // Protection until next turn
+        // Protection until next turn. Emit a self-resolved pending effect
+        // so the client log records "X used Handmaid" before the auto-ack
+        // timer advances the turn.
         this.protected[playerId] = true;
-        return this._advanceTurnOrEndRound();
+        this.state = 'effect_resolve';
+        this.pendingEffect = {
+          type: 'handmaid',
+          playerId,
+          cardId,
+          resolved: true,
+        };
+        return { success: true };
 
       case CARD_TYPE.GUARD:
         if (targetable.length === 0) {
-          // No valid target, effect fizzles
-          return this._advanceTurnOrEndRound();
+          // All opponents protected (or no opponents alive). Emit a
+          // self-resolved 'blocked' effect so the client log can show
+          // "X's Guard was blocked".
+          return this._emitBlockedEffect(playerId, cardId, 'guard');
         }
         // Need target + guess; auto-select if only one target
         this.state = 'effect_resolve';
@@ -196,7 +207,7 @@ class LoveLetterGame {
 
       case CARD_TYPE.SPY:
         if (targetable.length === 0) {
-          return this._advanceTurnOrEndRound();
+          return this._emitBlockedEffect(playerId, cardId, 'spy');
         }
         this.state = 'effect_resolve';
         this.pendingEffect = {
@@ -214,7 +225,7 @@ class LoveLetterGame {
 
       case CARD_TYPE.BARON:
         if (targetable.length === 0) {
-          return this._advanceTurnOrEndRound();
+          return this._emitBlockedEffect(playerId, cardId, 'baron');
         }
         this.state = 'effect_resolve';
         this.pendingEffect = {
@@ -255,7 +266,7 @@ class LoveLetterGame {
 
       case CARD_TYPE.KING:
         if (targetable.length === 0) {
-          return this._advanceTurnOrEndRound();
+          return this._emitBlockedEffect(playerId, cardId, 'king');
         }
         this.state = 'effect_resolve';
         this.pendingEffect = {
@@ -355,6 +366,21 @@ class LoveLetterGame {
       return { success: false, messageKey: 'll_not_round_end' };
     }
     this.startNextRound();
+    return { success: true };
+  }
+
+  // Creates a self-resolved 'blocked' pending effect so the client log
+  // can show "X's <card> was blocked" (typically by Handmaid protection).
+  // The auto-ack timer in server.js advances the turn after ~2.5s.
+  _emitBlockedEffect(playerId, cardId, originalType) {
+    this.state = 'effect_resolve';
+    this.pendingEffect = {
+      type: 'blocked',
+      originalType,
+      playerId,
+      cardId,
+      resolved: true,
+    };
     return { success: true };
   }
 
@@ -607,6 +633,7 @@ class LoveLetterGame {
         validTargets: this.pendingEffect.validTargets || [],
         resolved: !!this.pendingEffect.resolved,
         guess: this.pendingEffect.guess || null,
+        originalType: this.pendingEffect.originalType || null,
       };
 
       // Show result only to involved players
@@ -675,6 +702,7 @@ class LoveLetterGame {
         validTargets: this.pendingEffect.validTargets || [],
         resolved: !!this.pendingEffect.resolved,
         guess: this.pendingEffect.guess || null,
+        originalType: this.pendingEffect.originalType || null,
       };
       if (this.pendingEffect.resolved && this.pendingEffect.result) {
         pendingEffect.result = this.pendingEffect.result;

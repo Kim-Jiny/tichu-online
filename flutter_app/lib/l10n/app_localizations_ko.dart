@@ -3718,6 +3718,16 @@ class L10nKo extends L10n {
   }
 
   @override
+  String llHandmaidEffect(String name) {
+    return '$name이(가) 시녀를 사용했습니다';
+  }
+
+  @override
+  String llBlockedByHandmaid(String name, String card) {
+    return '$name의 $card이(가) 시녀에 막혔습니다';
+  }
+
+  @override
   String llGuardCorrect(String actor, String target) {
     return '$actor이(가) $target의 카드를 맞혔습니다! 탈락!';
   }
@@ -3748,8 +3758,8 @@ class L10nKo extends L10n {
   }
 
   @override
-  String llBaronLose(String loser) {
-    return '$loser이(가) 남작 비교에서 탈락했습니다';
+  String llBaronLose(String loser, String winner) {
+    return '$loser이(가) $winner와(과)의 남작 비교에서 탈락했습니다';
   }
 
   @override

@@ -6837,6 +6837,18 @@ abstract class L10n {
   /// **'{name} is using King...'**
   String llKingEffect(String name);
 
+  /// No description provided for @llHandmaidEffect.
+  ///
+  /// In en, this message translates to:
+  /// **'{name} used Handmaid'**
+  String llHandmaidEffect(String name);
+
+  /// No description provided for @llBlockedByHandmaid.
+  ///
+  /// In en, this message translates to:
+  /// **'{name}\'s {card} was blocked by Handmaid'**
+  String llBlockedByHandmaid(String name, String card);
+
   /// No description provided for @llGuardCorrect.
   ///
   /// In en, this message translates to:
@@ -6876,8 +6888,8 @@ abstract class L10n {
   /// No description provided for @llBaronLose.
   ///
   /// In en, this message translates to:
-  /// **'{loser} was eliminated by Baron comparison'**
-  String llBaronLose(String loser);
+  /// **'{loser} was eliminated by Baron comparison with {winner}'**
+  String llBaronLose(String loser, String winner);
 
   /// No description provided for @llPrinceEliminated.
   ///

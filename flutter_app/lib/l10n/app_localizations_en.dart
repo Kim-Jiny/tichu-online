@@ -3801,6 +3801,16 @@ class L10nEn extends L10n {
   }
 
   @override
+  String llHandmaidEffect(String name) {
+    return '$name used Handmaid';
+  }
+
+  @override
+  String llBlockedByHandmaid(String name, String card) {
+    return '$name\'s $card was blocked by Handmaid';
+  }
+
+  @override
   String llGuardCorrect(String actor, String target) {
     return '$actor guessed $target\'s card correctly! Eliminated!';
   }
@@ -3831,8 +3841,8 @@ class L10nEn extends L10n {
   }
 
   @override
-  String llBaronLose(String loser) {
-    return '$loser was eliminated by Baron comparison';
+  String llBaronLose(String loser, String winner) {
+    return '$loser was eliminated by Baron comparison with $winner';
   }
 
   @override

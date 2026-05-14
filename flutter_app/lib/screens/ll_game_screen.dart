@@ -45,6 +45,13 @@ class _LLGameScreenState extends State<LLGameScreen> {
   GameService? _gameService;
   NetworkService? _networkService;
 
+  // Rolling log of recent center-board status lines so the latest
+  // action stays visible after the effect resolves — feels like the
+  // text stacks instead of disappearing. Cleared on round change.
+  final List<List<_EffectStatusSegment>> _llCenterLog = [];
+  final List<String> _llCenterLogHashes = [];
+  int _llCenterLogRound = -1;
+
   @override
   void initState() {
     super.initState();
@@ -1104,6 +1111,7 @@ class _LLGameScreenState extends State<LLGameScreen> {
                       ),
                     );
                   }(),
+              _buildLLEventLogOverlay(state, gs, L10n.of(context)),
             ],
           );
         },
@@ -1210,58 +1218,8 @@ class _LLGameScreenState extends State<LLGameScreen> {
                   .toList(),
             ),
           ],
-          if (state.pendingEffect != null &&
-              state.phase == 'effect_resolve') ...() {
-            final statusLines = _getEffectStatusLines(
-              state,
-              context.read<GameService>(),
-              L10n.of(context),
-            );
-            if (statusLines.isEmpty) return const <Widget>[];
-            return [
-              const SizedBox(height: 8),
-              Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 10,
-                  vertical: 6,
-                ),
-                decoration: BoxDecoration(
-                  color: const Color(0xFFFFEDF3).withValues(alpha: 0.92),
-                  borderRadius: BorderRadius.circular(10),
-                ),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    for (var i = 0; i < statusLines.length; i++) ...[
-                      if (i > 0) const SizedBox(height: 2),
-                      RichText(
-                        textAlign: TextAlign.center,
-                        text: TextSpan(
-                          style: const TextStyle(
-                            color: Color(0xFF5A4038),
-                            fontSize: 11,
-                            fontWeight: FontWeight.w600,
-                          ),
-                          children: [
-                            for (final seg in statusLines[i])
-                              TextSpan(
-                                text: seg.text,
-                                style: seg.emphasized
-                                    ? const TextStyle(
-                                        color: Color(0xFFE91E63),
-                                        fontWeight: FontWeight.w800,
-                                      )
-                                    : null,
-                              ),
-                          ],
-                        ),
-                      ),
-                    ],
-                  ],
-                ),
-              ),
-            ];
-          }(),
+          // Event log is rendered as a top-left overlay in the game area
+          // (see _buildLLEventLogOverlay). Center board stays clean.
         ],
       ),
     );
@@ -1461,7 +1419,6 @@ class _LLGameScreenState extends State<LLGameScreen> {
           24.0,
           (constraints.maxWidth - horizontalPadding * 2) * 0.7,
         );
-        final showCardCountChip = !player.eliminated && !ultraTight;
         final labelTint = player.eliminated
             ? const Color(0xFFE9DFDE).withValues(alpha: 0.78)
             : highlighted
@@ -1624,38 +1581,6 @@ class _LLGameScreenState extends State<LLGameScreen> {
                                   fontSize: chipFontSize,
                                   fontWeight: FontWeight.w800,
                                 ),
-                              ),
-                            ),
-                          if (showCardCountChip)
-                            Container(
-                              padding: EdgeInsets.symmetric(
-                                horizontal: ultraTight ? 5 : 6,
-                                vertical: ultraTight ? 1 : 2,
-                              ),
-                              decoration: BoxDecoration(
-                                color: const Color(
-                                  0xFFF0EBE8,
-                                ).withValues(alpha: 0.92),
-                                borderRadius: BorderRadius.circular(999),
-                              ),
-                              child: Row(
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  Icon(
-                                    Icons.style,
-                                    color: const Color(0xFF8A7A72),
-                                    size: ultraTight ? 10 : 11,
-                                  ),
-                                  SizedBox(width: ultraTight ? 1 : 2),
-                                  Text(
-                                    '${player.cardCount}',
-                                    style: TextStyle(
-                                      color: const Color(0xFF8A7A72),
-                                      fontSize: chipFontSize,
-                                      fontWeight: FontWeight.w700,
-                                    ),
-                                  ),
-                                ],
                               ),
                             ),
                         ],
@@ -2356,13 +2281,10 @@ class _LLGameScreenState extends State<LLGameScreen> {
         if (loser == null) {
           resultText = l10n.llBaronTie(actorName, targetName);
         } else {
-          final loserName = state.players
-              .firstWhere(
-                (p) => p.id == loser,
-                orElse: () => LLPlayer(id: '', name: '?'),
-              )
-              .name;
-          resultText = l10n.llBaronLose(loserName);
+          final loserIsActor = loser == effect.playerId;
+          final loserName = loserIsActor ? actorName : targetName;
+          final winnerName = loserIsActor ? targetName : actorName;
+          resultText = l10n.llBaronLose(loserName, winnerName);
         }
         // Show cards if available
         if (effect.result?['myCard'] != null &&
@@ -2663,60 +2585,65 @@ class _LLGameScreenState extends State<LLGameScreen> {
           borderRadius: BorderRadius.circular(16),
           border: Border.all(color: const Color(0xFFE0D8D4)),
         ),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Text(
-              l10n.llRoundEnd,
-              style: const TextStyle(
-                color: Color(0xFFE91E63),
-                fontSize: 18,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-            if (lastRound != null)
-              ..._buildRoundDetailsContent(context, state, lastRound, l10n),
-            const SizedBox(height: 16),
-            // Token status
-            ...state.players.map(
-              (p) => Padding(
-                padding: const EdgeInsets.symmetric(vertical: 2),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    SizedBox(
-                      width: 80,
-                      child: Text(
-                        p.name,
-                        style: const TextStyle(
-                          color: Color(0xFF8A7A72),
-                          fontSize: 13,
-                        ),
-                      ),
-                    ),
-                    ...List.generate(
-                      state.targetTokens,
-                      (i) => Padding(
-                        padding: const EdgeInsets.only(right: 2),
-                        child: Icon(
-                          Icons.favorite,
-                          color: i < p.tokens
-                              ? const Color(0xFFE91E63)
-                              : const Color(0xFFE0D8D4),
-                          size: 14,
-                        ),
-                      ),
-                    ),
-                  ],
+        // SingleChildScrollView lets the panel scroll on short screens
+        // where the round details + token rows + next-round notice would
+        // otherwise overflow the available height by a hair.
+        child: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                l10n.llRoundEnd,
+                style: const TextStyle(
+                  color: Color(0xFFE91E63),
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
                 ),
               ),
-            ),
-            const SizedBox(height: 8),
-            Text(
-              l10n.llNextRoundAuto,
-              style: const TextStyle(color: Color(0xFF8A7A72), fontSize: 11),
-            ),
-          ],
+              if (lastRound != null)
+                ..._buildRoundDetailsContent(context, state, lastRound, l10n),
+              const SizedBox(height: 16),
+              // Token status
+              ...state.players.map(
+                (p) => Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 2),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      SizedBox(
+                        width: 80,
+                        child: Text(
+                          p.name,
+                          style: const TextStyle(
+                            color: Color(0xFF8A7A72),
+                            fontSize: 13,
+                          ),
+                        ),
+                      ),
+                      ...List.generate(
+                        state.targetTokens,
+                        (i) => Padding(
+                          padding: const EdgeInsets.only(right: 2),
+                          child: Icon(
+                            Icons.favorite,
+                            color: i < p.tokens
+                                ? const Color(0xFFE91E63)
+                                : const Color(0xFFE0D8D4),
+                            size: 14,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                l10n.llNextRoundAuto,
+                style: const TextStyle(color: Color(0xFF8A7A72), fontSize: 11),
+              ),
+            ],
+          ),
         ),
       ),
     );
@@ -3662,6 +3589,88 @@ class _LLGameScreenState extends State<LLGameScreen> {
     return segs;
   }
 
+  // Top-left overlay log of recent center-board events. Updates the rolling
+  // log from the current effect resolution, then renders it left-aligned
+  // with the newest line on top (slightly larger for emphasis).
+  Widget _buildLLEventLogOverlay(
+    LLGameStateData state,
+    GameService gs,
+    L10n l10n,
+  ) {
+    if (state.round != _llCenterLogRound) {
+      _llCenterLog.clear();
+      _llCenterLogHashes.clear();
+      _llCenterLogRound = state.round;
+    }
+    if (state.pendingEffect != null && state.phase == 'effect_resolve') {
+      final fresh = _getEffectStatusLines(state, gs, l10n);
+      for (final line in fresh) {
+        final hash = line.map((s) => s.text).join('|');
+        if (_llCenterLogHashes.contains(hash)) continue;
+        _llCenterLog.add(line);
+        _llCenterLogHashes.add(hash);
+        while (_llCenterLog.length > 4) {
+          _llCenterLog.removeAt(0);
+          _llCenterLogHashes.removeAt(0);
+        }
+      }
+    }
+    if (_llCenterLog.isEmpty) {
+      // Always return a Positioned so the Stack doesn't pick up a
+      // non-positioned SizedBox child and resize / re-align siblings
+      // (which would shift seats and the trick box).
+      return const Positioned(
+        top: 0,
+        left: 0,
+        right: 0,
+        child: SizedBox.shrink(),
+      );
+    }
+    final reversed = _llCenterLog.reversed.toList();
+    return Positioned(
+      top: 0,
+      left: 0,
+      right: 0,
+      child: IgnorePointer(
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+          child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                for (var i = 0; i < reversed.length; i++) ...[
+                  if (i > 0) const SizedBox(height: 2),
+                  RichText(
+                    textAlign: TextAlign.left,
+                    text: TextSpan(
+                      style: TextStyle(
+                        color: const Color(0xFF5A4038),
+                        fontSize: i == 0 ? 13 : 11,
+                        fontWeight:
+                            i == 0 ? FontWeight.w700 : FontWeight.w600,
+                      ),
+                      children: [
+                        for (final seg in reversed[i])
+                          TextSpan(
+                            text: seg.text,
+                            style: seg.emphasized
+                                ? const TextStyle(
+                                    color: Color(0xFFE91E63),
+                                    fontWeight: FontWeight.w800,
+                                  )
+                                : null,
+                          ),
+                      ],
+                    ),
+                  ),
+                ],
+              ],
+            ),
+          ),
+        ),
+      );
+  }
+
   // Build 1-2 lines of styled status segments for the trick box.
   List<List<_EffectStatusSegment>> _getEffectStatusLines(
     LLGameStateData state,
@@ -3688,6 +3697,21 @@ class _LLGameScreenState extends State<LLGameScreen> {
 
     final names = <String>[actor, if (targetName.isNotEmpty) targetName];
     final lines = <List<_EffectStatusSegment>>[];
+
+    // 'blocked' is a synthetic effect emitted when a Guard/Spy/Baron/King
+    // play fizzles (all opponents protected). originalType tells which
+    // card was played; show "X's <card> was blocked by Handmaid".
+    if (effect.type == 'blocked') {
+      final cardName = _getCardTypeName(effect.originalType ?? '', l10n);
+      lines.add(
+        _splitNamesIntoSegments(
+          l10n.llBlockedByHandmaid(actor, cardName),
+          names,
+        ),
+      );
+      return lines;
+    }
+
     lines.add(
       _splitNamesIntoSegments(
         _getEffectDescription(effect.type, actor, l10n),
@@ -3723,13 +3747,12 @@ class _LLGameScreenState extends State<LLGameScreen> {
             if (loser == null) {
               result = l10n.llBaronTie(actor, targetName);
             } else {
-              final loserName = state.players
-                  .firstWhere(
-                    (p) => p.id == loser,
-                    orElse: () => LLPlayer(id: '', name: '?'),
-                  )
-                  .name;
-              result = l10n.llBaronLose(loserName);
+              // Loser is one of actor/target; the other one is the
+              // comparison opponent (winner of the swap).
+              final loserIsActor = loser == effect.playerId;
+              final loserName = loserIsActor ? actor : targetName;
+              final winnerName = loserIsActor ? targetName : actor;
+              result = l10n.llBaronLose(loserName, winnerName);
             }
           }
           break;
@@ -3765,6 +3788,8 @@ class _LLGameScreenState extends State<LLGameScreen> {
         return l10n.llPrinceEffect(actorName);
       case 'king':
         return l10n.llKingEffect(actorName);
+      case 'handmaid':
+        return l10n.llHandmaidEffect(actorName);
       default:
         return actorName;
     }

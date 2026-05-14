@@ -55,6 +55,9 @@ class LLPendingEffect {
   final bool resolved;
   final String? guess;
   final Map<String, dynamic>? result;
+  /// When type == 'blocked', this carries the card that fizzled
+  /// (guard / spy / baron / king). Null otherwise.
+  final String? originalType;
 
   LLPendingEffect({
     required this.type,
@@ -66,6 +69,7 @@ class LLPendingEffect {
     this.resolved = false,
     this.guess,
     this.result,
+    this.originalType,
   });
 
   factory LLPendingEffect.fromJson(Map<String, dynamic> json) {
@@ -81,6 +85,7 @@ class LLPendingEffect {
       result: json['result'] != null
           ? Map<String, dynamic>.from(json['result'])
           : null,
+      originalType: json['originalType'] as String?,
     );
   }
 }

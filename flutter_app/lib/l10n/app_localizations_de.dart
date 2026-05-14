@@ -3835,6 +3835,16 @@ class L10nDe extends L10n {
   }
 
   @override
+  String llHandmaidEffect(String name) {
+    return '$name hat die Zofe gespielt';
+  }
+
+  @override
+  String llBlockedByHandmaid(String name, String card) {
+    return '${name}s $card wurde durch die Zofe geblockt';
+  }
+
+  @override
   String llGuardCorrect(String actor, String target) {
     return '$actor hat die Karte von $target richtig erraten! Eliminiert!';
   }
@@ -3865,8 +3875,8 @@ class L10nDe extends L10n {
   }
 
   @override
-  String llBaronLose(String loser) {
-    return '$loser wurde durch den Baron-Vergleich eliminiert';
+  String llBaronLose(String loser, String winner) {
+    return '$loser wurde durch den Baron-Vergleich mit $winner eliminiert';
   }
 
   @override

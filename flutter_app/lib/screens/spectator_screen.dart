@@ -386,6 +386,10 @@ class _SpectatorScreenState extends State<SpectatorScreen> {
 
     final content = Container(
       width: 130,
+      // Fixed height equalizes empty / filled-no-title / filled-with-title
+      // states. Without this the title row added ~18px so empty slots
+      // looked shorter than seated ones.
+      height: 100,
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 14),
       decoration: BoxDecoration(
         color: isEmpty ? const Color(0xFFF7F2F0) : Colors.white,
@@ -401,6 +405,7 @@ class _SpectatorScreenState extends State<SpectatorScreen> {
       ),
       child: Column(
         mainAxisSize: MainAxisSize.min,
+        mainAxisAlignment: MainAxisAlignment.center,
         children: [
           Icon(
             isEmpty ? Icons.person_add : Icons.person,

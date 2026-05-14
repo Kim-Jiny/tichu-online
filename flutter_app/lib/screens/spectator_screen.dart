@@ -521,6 +521,7 @@ class _SpectatorScreenState extends State<SpectatorScreen> {
     final totalScores = state['totalScores'] as Map<String, dynamic>? ?? {};
     final currentPlayer = state['currentPlayer'] ?? '';
     final round = state['round'] ?? 1;
+    final callRank = state['callRank'] as String?;
 
     return Stack(
       children: [
@@ -554,6 +555,50 @@ class _SpectatorScreenState extends State<SpectatorScreen> {
             ),
           ],
         ),
+
+        // Mahjong/Bird "call" badge — shown when a player has called a
+        // rank and other players must follow. The main game screen has
+        // this in its center board; the spectator board centers cards in
+        // the same area so we float the badge above the topbar instead.
+        if (callRank != null && callRank.isNotEmpty)
+          Positioned(
+            top: isLandscape ? 8 : 56,
+            left: 0,
+            right: 0,
+            child: IgnorePointer(
+              child: Center(
+                child: Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 10,
+                    vertical: 4,
+                  ),
+                  decoration: BoxDecoration(
+                    color: const Color(0x33FF4444),
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(
+                      color: const Color(0xFFFF4444),
+                      width: 1.5,
+                    ),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const Text('🐦', style: TextStyle(fontSize: 14)),
+                      const SizedBox(width: 4),
+                      Text(
+                        L10n.of(context).gameCall(callRank),
+                        style: const TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.bold,
+                          color: Color(0xFFFF4444),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          ),
 
         // Sound panel overlay
         if (_soundPanelOpen) _buildSoundPanel(game),

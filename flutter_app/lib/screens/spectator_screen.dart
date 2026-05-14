@@ -544,61 +544,25 @@ class _SpectatorScreenState extends State<SpectatorScreen> {
                         players,
                         currentPlayer,
                         currentTrick,
+                        callRank: callRank,
                       )
                     : _buildPortraitSpectatorBoard(
                         game,
                         players,
                         currentPlayer,
                         currentTrick,
+                        callRank: callRank,
                       ),
               ),
             ),
           ],
         ),
 
-        // Mahjong/Bird "call" badge — shown when a player has called a
-        // rank and other players must follow. The main game screen has
-        // this in its center board; the spectator board centers cards in
-        // the same area so we float the badge above the topbar instead.
-        if (callRank != null && callRank.isNotEmpty)
-          Positioned(
-            top: isLandscape ? 8 : 56,
-            left: 0,
-            right: 0,
-            child: IgnorePointer(
-              child: Center(
-                child: Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 10,
-                    vertical: 4,
-                  ),
-                  decoration: BoxDecoration(
-                    color: const Color(0x33FF4444),
-                    borderRadius: BorderRadius.circular(12),
-                    border: Border.all(
-                      color: const Color(0xFFFF4444),
-                      width: 1.5,
-                    ),
-                  ),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      const Text('🐦', style: TextStyle(fontSize: 14)),
-                      const SizedBox(width: 4),
-                      Text(
-                        L10n.of(context).gameCall(callRank),
-                        style: const TextStyle(
-                          fontSize: 14,
-                          fontWeight: FontWeight.bold,
-                          color: Color(0xFFFF4444),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-            ),
-          ),
+        // Server error banner (e.g. "X has set always-deny" when a
+        // card-view request fizzles). Plays the role of the in-game
+        // _buildErrorBanner so spectators don't get silent no-ops.
+        if (game.errorMessage != null)
+          _buildSpectatorErrorBanner(game.errorMessage!),
 
         // Sound panel overlay
         if (_soundPanelOpen) _buildSoundPanel(game),
@@ -613,12 +577,55 @@ class _SpectatorScreenState extends State<SpectatorScreen> {
     );
   }
 
+  Widget _buildSpectatorErrorBanner(String message) {
+    return Positioned(
+      bottom: 80,
+      left: 20,
+      right: 20,
+      child: IgnorePointer(
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+          decoration: BoxDecoration(
+            color: const Color(0xFFFFEBEE),
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: const Color(0xFFE57373)),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.1),
+                blurRadius: 8,
+                offset: const Offset(0, 3),
+              ),
+            ],
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Icon(Icons.info_outline, size: 16, color: Color(0xFFC62828)),
+              const SizedBox(width: 8),
+              Flexible(
+                child: Text(
+                  localizeServiceMessage(message, L10n.of(context)),
+                  style: const TextStyle(
+                    fontSize: 13,
+                    color: Color(0xFFC62828),
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
   Widget _buildPortraitSpectatorBoard(
     GameService game,
     List players,
     String currentPlayer,
-    List currentTrick,
-  ) {
+    List currentTrick, {
+    String? callRank,
+  }) {
     return LayoutBuilder(
       builder: (context, constraints) {
         // Lock the left/right slot widths so a long nickname can't widen
@@ -644,7 +651,10 @@ class _SpectatorScreenState extends State<SpectatorScreen> {
                       ),
                     ),
                   Expanded(
-                    child: _buildTrickArea(currentTrick),
+                    child: _buildTrickArea(
+                      currentTrick,
+                      callRank: callRank,
+                    ),
                   ),
                   if (players.length > 1)
                     SizedBox(
@@ -671,8 +681,9 @@ class _SpectatorScreenState extends State<SpectatorScreen> {
     GameService game,
     List players,
     String currentPlayer,
-    List currentTrick,
-  ) {
+    List currentTrick, {
+    String? callRank,
+  }) {
     return LayoutBuilder(
       builder: (context, constraints) {
         final cramped = constraints.maxHeight < 390;
@@ -729,6 +740,7 @@ class _SpectatorScreenState extends State<SpectatorScreen> {
                           currentTrick,
                           compact: compact,
                           landscapeCompact: compact,
+                          callRank: callRank,
                         ),
                       ),
                     ),
@@ -1086,11 +1098,21 @@ class _SpectatorScreenState extends State<SpectatorScreen> {
 
     final isPending = game.pendingCardViewRequests.contains(playerId);
 
+    // Faint team tint as the slot background (replaces the removed dot
+    // indicator) so spectators can still tell which team each player is on
+    // at a glance. Team A → cool blue, Team B → warm rose.
+    final team = player['team']?.toString() ?? '';
+    final slotBg = team == 'A'
+        ? const Color(0xFFE9F2FB)
+        : team == 'B'
+            ? const Color(0xFFFBECEF)
+            : Colors.white.withValues(alpha: 0.98);
+
     return Container(
       margin: EdgeInsets.all(compact ? 2 : 4),
       padding: EdgeInsets.all(compact ? 6 : 8),
       decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: 0.98),
+        color: slotBg,
         borderRadius: BorderRadius.circular(12),
         border: Border.all(
           color: isCurrentTurn ? const Color(0xFFF3C97A) : const Color(0xFFE6DDD8),
@@ -1736,7 +1758,36 @@ class _SpectatorScreenState extends State<SpectatorScreen> {
     List currentTrick, {
     bool compact = false,
     bool landscapeCompact = false,
+    String? callRank,
   }) {
+    final hasCall = callRank != null && callRank.isNotEmpty;
+
+    Widget callBadge() {
+      return Container(
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+        decoration: BoxDecoration(
+          color: const Color(0x33FF4444),
+          borderRadius: BorderRadius.circular(10),
+          border: Border.all(color: const Color(0xFFFF4444), width: 1.2),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Text('🐦', style: TextStyle(fontSize: 11)),
+            const SizedBox(width: 3),
+            Text(
+              L10n.of(context).gameCall(callRank!),
+              style: const TextStyle(
+                fontSize: 12,
+                fontWeight: FontWeight.bold,
+                color: Color(0xFFFF4444),
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+
     if (currentTrick.isEmpty) {
       return Center(
         child: Container(
@@ -1748,12 +1799,21 @@ class _SpectatorScreenState extends State<SpectatorScreen> {
             color: Colors.white.withValues(alpha: 0.6),
             borderRadius: BorderRadius.circular(12),
           ),
-          child: Text(
-            L10n.of(context).spectatorNewTrick,
-            style: TextStyle(
-              color: const Color(0xFF9A8E8A),
-              fontSize: compact ? 12 : 14,
-            ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                L10n.of(context).spectatorNewTrick,
+                style: TextStyle(
+                  color: const Color(0xFF9A8E8A),
+                  fontSize: compact ? 12 : 14,
+                ),
+              ),
+              if (hasCall) ...[
+                SizedBox(height: compact ? 4 : 6),
+                callBadge(),
+              ],
+            ],
           ),
         ),
       );
@@ -1784,6 +1844,10 @@ class _SpectatorScreenState extends State<SpectatorScreen> {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
+            if (hasCall) ...[
+              callBadge(),
+              SizedBox(height: compact ? 4 : 6),
+            ],
             Text(
               L10n.of(context).spectatorPlayedCards(
                 playerName.length > 8 ? '${playerName.substring(0, 8)}..' : playerName,

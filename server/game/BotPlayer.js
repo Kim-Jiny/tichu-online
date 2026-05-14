@@ -97,6 +97,22 @@ function getRankFromCard(cardId) {
  * Priority: bombs → straights → steps → full houses → triples → pairs → singles
  * Returns array of card arrays representing planned plays.
  */
+/** True when the play is a 5+ same-suit consecutive run — i.e. a straight
+ *  flush bomb. findCombos/decomposeHand only flag 4-of-a-kind as bombs, so
+ *  without this check straight flushes leak into `plans` as regular
+ *  straights and the bot burns them on free leads. */
+function isStraightFlushBomb(cardIds) {
+  if (!cardIds || cardIds.length < 5) return false;
+  if (cardIds.some(c => c.startsWith('special_'))) return false;
+  const suit = cardIds[0].split('_')[0];
+  if (!cardIds.every(c => c.split('_')[0] === suit)) return false;
+  const values = cardIds.map(c => getCardValue(c)).sort((a, b) => a - b);
+  for (let i = 1; i < values.length; i++) {
+    if (values[i] !== values[i - 1] + 1) return false;
+  }
+  return true;
+}
+
 function decomposeHand(cards) {
   const normalCards = cards.filter(c => !c.startsWith('special_'));
   const specialCards = cards.filter(c => c.startsWith('special_'));
@@ -934,11 +950,15 @@ function leadTrick(state, cards, normalCards, combos) {
 
   // 5. Plan-based play: follow decomposed hand plan
   // Play lowest multi-card combo first, then singles
-  // Filter out bombs from lead plays - bombs should be saved for defensive use
+  // Filter out bombs from lead plays — bombs should be saved for defensive use.
+  // findCombos only flags 4-of-a-kind in `combos.bombs`, so we additionally
+  // detect straight-flush bombs (5+ same-suit consecutive) inline; otherwise
+  // they leak in as a normal straight and the bot burns them on a free lead.
   const bombSet = new Set(combos.bombs.flat());
   const multiCardPlans = plans.filter(p =>
     p.length >= 2 && !p.includes('special_dog') && !p.includes('special_bird') &&
-    !(p.length === 4 && p.every(c => bombSet.has(c)))
+    !(p.length === 4 && p.every(c => bombSet.has(c))) &&
+    !isStraightFlushBomb(p)
   );
   const singlePlans = plans.filter(p =>
     p.length === 1 && !p[0].startsWith('special_')

@@ -38,11 +38,22 @@ function decidePlay(game, botId) {
     return { type: 'play_card', cardId: countess.id };
   }
 
-  // Don't play Princess if possible
-  const nonPrincess = sorted.filter(c => c.info?.type !== CARD_TYPE.PRINCESS);
-  if (nonPrincess.length > 0) {
-    // Play lowest non-Princess card
-    return { type: 'play_card', cardId: nonPrincess[0].id };
+  const hasPrincess = sorted.some(c => c.info?.type === CARD_TYPE.PRINCESS);
+
+  // Don't play Princess if possible. When holding the Princess, also
+  // avoid Prince (can force self-discard if all opponents are protected)
+  // and King (swap gives the Princess away), unless they're the only
+  // playable options.
+  let playable = sorted.filter(c => c.info?.type !== CARD_TYPE.PRINCESS);
+  if (hasPrincess) {
+    const safer = playable.filter(c =>
+      c.info?.type !== CARD_TYPE.PRINCE && c.info?.type !== CARD_TYPE.KING
+    );
+    if (safer.length > 0) playable = safer;
+  }
+  if (playable.length > 0) {
+    // Play lowest among the chosen pool
+    return { type: 'play_card', cardId: playable[0].id };
   }
 
   // Only Princess left
@@ -64,7 +75,15 @@ function decideEffect(game, botId) {
   }
 
   if (eff.needsTarget) {
-    const target = pickRandomTarget(eff.validTargets);
+    // Prince includes self in validTargets. Targeting self discards
+    // our own card — catastrophic when holding the Princess. Prefer
+    // opponents and only fall back to self if no opponent is valid.
+    let targets = eff.validTargets;
+    if (eff.type === 'prince') {
+      const opponents = targets.filter(t => t !== botId);
+      if (opponents.length > 0) targets = opponents;
+    }
+    const target = pickRandomTarget(targets);
     return { type: 'select_target', targetId: target };
   }
 

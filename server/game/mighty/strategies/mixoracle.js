@@ -574,6 +574,63 @@ function _cantWinDeferRule(game, botId) {
   return action;
 }
 
+/**
+ * NT (노기루다) follow-dump rule: revealed friend following a declarer-led
+ * trick in no-trump mode dumps HIGH first (highest legal card that
+ * doesn't beat declarer). Reason: in NT the highest card of the led
+ * suit wins; if the friend keeps high cards, they may accidentally
+ * steal a future trick (a weaker declarer lead the friend can't help
+ * winning), forcing declarer to give up their planned play. Burning
+ * high cards while declarer is leading keeps friend's later cards
+ * "naturally low" — they can't outbid declarer's next lead.
+ *
+ * Fires before _friendDeclarerSecureRule (which would dump low via the
+ * heuristic) so NT specifically gets the HIGH-first behavior.
+ */
+function _friendNTFollowDumpHighRule(game, botId) {
+  if (game.trumpSuit && game.trumpSuit !== 'no_trump') return null;
+  if (!game.currentTrick || game.currentTrick.length === 0) return null;
+  if (!game.friendRevealed) return null;
+  if (!MightyBotInternals.isFriend(game, botId)) return null;
+
+  const ledPlay = game.currentTrick[0];
+  if (!ledPlay || ledPlay.playerId !== game.declarer) return null;
+
+  const legal = game.getLegalCards(botId);
+  if (!legal || legal.length <= 1) return null;
+
+  // Joker is too flexible to dump generically — preserve-weak-joker
+  // rule handles its case.
+  const candidates = legal.filter((c) => c !== 'mighty_joker');
+  if (candidates.length === 0) return null;
+
+  // Highest legal card that loses to the current winner (declarer).
+  // Falling back to the highest legal card if all options would win
+  // (forced overtake — unavoidable).
+  let bestNonWinning = null;
+  let bestNonWinningRank = -1;
+  let bestAny = null;
+  let bestAnyRank = -1;
+  for (const cardId of candidates) {
+    const info = getCardInfo(cardId);
+    if (!info) continue;
+    const rank = RANK_ORDER[info.rank] || 0;
+    if (rank > bestAnyRank) {
+      bestAnyRank = rank;
+      bestAny = cardId;
+    }
+    if (!MightyBotInternals.canBeatCurrentWinner(game, cardId)) {
+      if (rank > bestNonWinningRank) {
+        bestNonWinningRank = rank;
+        bestNonWinning = cardId;
+      }
+    }
+  }
+  const pick = bestNonWinning || bestAny;
+  if (!pick) return null;
+  return MightyBotInternals.makePlayAction(pick, game, botId);
+}
+
 function _friendDeclarerSecureRule(game, botId) {
   if (!game.currentTrick || game.currentTrick.length === 0) return null;
   if (!MightyBotInternals.isFriend(game, botId)) return null;
@@ -1008,6 +1065,9 @@ function _applyHardRules(game, botId) {
 
   const ntLead = _friendNTLeadRule(game, botId);
   if (ntLead) return ntLead;
+
+  const ntFollowDumpHigh = _friendNTFollowDumpHighRule(game, botId);
+  if (ntFollowDumpHigh) return ntFollowDumpHigh;
 
   const secureFollow = _friendDeclarerSecureRule(game, botId);
   if (secureFollow) return secureFollow;

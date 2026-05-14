@@ -1012,7 +1012,9 @@ class _SKGameScreenState extends State<SKGameScreen> {
       top: 58,
       right: 8,
       child: Container(
-        width: hasViewers ? 210 : 170,
+        // Always 210 — visibility button now shows regardless of hasViewers
+        // so the menu width must always fit it.
+        width: 210,
         padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
         decoration: BoxDecoration(
           color: Colors.white.withValues(alpha: 0.97),

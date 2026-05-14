@@ -1047,9 +1047,95 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
                   ),
                 );
               }),
+            const Divider(height: 16, color: Color(0xFFEDE5E0)),
+            _buildCardViewPrefSection(game),
           ],
         ),
       ),
+    );
+  }
+
+  Widget _buildCardViewPrefSection(GameService game) {
+    final l10n = L10n.of(context);
+    Widget radio({
+      required String value,
+      required String label,
+      required IconData icon,
+      required Color color,
+    }) {
+      final selected = game.cardViewPref == value;
+      return GestureDetector(
+        onTap: () => game.setCardViewPref(value),
+        child: Container(
+          margin: const EdgeInsets.only(bottom: 4),
+          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+          decoration: BoxDecoration(
+            color: selected
+                ? color.withValues(alpha: 0.12)
+                : Colors.transparent,
+            borderRadius: BorderRadius.circular(8),
+            border: Border.all(
+              color: selected ? color : const Color(0xFFE6DCE8),
+              width: selected ? 1.5 : 1,
+            ),
+          ),
+          child: Row(
+            children: [
+              Icon(
+                icon,
+                size: 14,
+                color: selected ? color : const Color(0xFF999999),
+              ),
+              const SizedBox(width: 6),
+              Expanded(
+                child: Text(
+                  label,
+                  style: TextStyle(
+                    fontSize: 12,
+                    fontWeight: selected ? FontWeight.bold : FontWeight.w500,
+                    color: selected ? color : const Color(0xFF5A4038),
+                  ),
+                ),
+              ),
+              if (selected) Icon(Icons.check, size: 14, color: color),
+            ],
+          ),
+        ),
+      );
+    }
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Text(
+          l10n.gameCardViewPolicyTitle,
+          style: const TextStyle(
+            fontSize: 12,
+            fontWeight: FontWeight.bold,
+            color: Color(0xFF5A4038),
+          ),
+        ),
+        const SizedBox(height: 6),
+        radio(
+          value: 'ask',
+          label: l10n.gameCardViewPolicyAsk,
+          icon: Icons.help_outline,
+          color: const Color(0xFF6A6090),
+        ),
+        radio(
+          value: 'always_allow',
+          label: l10n.gameCardViewPolicyAllow,
+          icon: Icons.check_circle,
+          color: const Color(0xFF4CAF50),
+        ),
+        radio(
+          value: 'always_deny',
+          label: l10n.gameCardViewPolicyDeny,
+          icon: Icons.block,
+          color: const Color(0xFFE53935),
+        ),
+      ],
     );
   }
 
@@ -1059,7 +1145,10 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
       top: 56,
       right: 8,
       child: Container(
-        width: hasViewers ? 210 : 170,
+        // Always wide enough for the visibility button — even when no
+        // one's viewing, the user needs in-game access to the card-view
+        // policy toggle (esp. always_deny users with no incoming requests).
+        width: 210,
         padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
         decoration: BoxDecoration(
           color: Colors.white.withValues(alpha: 0.97),
@@ -1087,19 +1176,18 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
                 _showSpectatorListDialog(game);
               },
             ),
-            if (hasViewers)
-              _buildTopActionButton(
-                icon: Icons.visibility,
-                active: _viewersOpen,
-                badgeCount: game.cardViewers.length,
-                onTap: () {
-                  setState(() {
-                    _moreOpen = false;
-                    _soundPanelOpen = false;
-                    _viewersOpen = !_viewersOpen;
-                  });
-                },
-              ),
+            _buildTopActionButton(
+              icon: Icons.visibility,
+              active: _viewersOpen,
+              badgeCount: hasViewers ? game.cardViewers.length : 0,
+              onTap: () {
+                setState(() {
+                  _moreOpen = false;
+                  _soundPanelOpen = false;
+                  _viewersOpen = !_viewersOpen;
+                });
+              },
+            ),
             _buildTopActionButton(
               icon: game.sfxVolume <= 0.01 ? Icons.volume_off : Icons.volume_up,
               active: _soundPanelOpen,

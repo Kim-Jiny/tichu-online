@@ -837,7 +837,6 @@ class _GameScreenState extends State<GameScreen> {
   }
 
   Widget _buildMoreMenu(GameService game) {
-    final hasViewers = game.cardViewers.isNotEmpty;
     return Positioned(
       top: 56,
       right: 10,
@@ -848,7 +847,11 @@ class _GameScreenState extends State<GameScreen> {
           scale: _moreOpen ? 1 : 0.95,
           duration: const Duration(milliseconds: 160),
           child: Container(
-            width: hasViewers ? 150 : 110,
+            // Always wide enough for all 3 entries — viewers button now
+            // shows regardless of hasViewers so that always_deny users
+            // (who never have any viewer) can still reach the card-view
+            // policy toggle inside the panel.
+            width: 150,
             padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
             decoration: BoxDecoration(
               color: Colors.white.withValues(alpha: 0.97),
@@ -864,7 +867,7 @@ class _GameScreenState extends State<GameScreen> {
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                if (hasViewers) _buildViewersButton(game),
+                _buildViewersButton(game),
                 _buildSoundButton(game),
                 _buildMenuButton(game),
               ],

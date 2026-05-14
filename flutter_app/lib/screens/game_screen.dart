@@ -3917,7 +3917,10 @@ class _GameScreenState extends State<GameScreen> {
       final play = trick[i];
       final key = '$i/${play.playerId}/${play.cards.join(",")}';
       if (_trickPlayLogKeys.contains(key)) continue;
-      _trickPlayLog.add(_formatPlayLine(play));
+      // Bird-only call suffix: append "- 콜N" only on the play that
+      // actually produced the wish (the play containing special_bird).
+      final isBirdPlay = play.cards.contains('special_bird');
+      _trickPlayLog.add(_formatPlayLine(play, isBirdPlay ? state.callRank : null));
       _trickPlayLogKeys.add(key);
       _trickPlayLogIsMine.add(_isMyTeamPlay(state, play.playerId));
       while (_trickPlayLog.length > 4) {
@@ -3961,11 +3964,15 @@ class _GameScreenState extends State<GameScreen> {
     return true;
   }
 
-  String _formatPlayLine(TrickPlay play) {
+  String _formatPlayLine(TrickPlay play, String? callRank) {
     final name = play.playerName.length > 6
         ? '${play.playerName.substring(0, 6)}…'
         : play.playerName;
-    return '$name: ${_comboShortDesc(play)}';
+    final desc = _comboShortDesc(play);
+    if (callRank != null && callRank.isNotEmpty) {
+      return '$name: $desc - 콜$callRank';
+    }
+    return '$name: $desc';
   }
 
   String _comboShortDesc(TrickPlay play) {
@@ -3989,9 +3996,9 @@ class _GameScreenState extends State<GameScreen> {
       case 'full_house':
         return '${_rankFromCardId(cards[0])} 풀하우스';
       case 'straight':
-        return '스트레이트 ${cards.length}장';
+        return '${_rankLabelFromValue(play.comboValue)}스트레이트(${cards.length}장)';
       case 'steps':
-        return '스텝 ${cards.length}장';
+        return '${_rankLabelFromValue(play.comboValue)}스텝(${cards.length}장)';
       case 'bomb_four':
         return '폭탄(4)';
       case 'bomb_straight_flush':
@@ -4014,6 +4021,16 @@ class _GameScreenState extends State<GameScreen> {
     if (beat == 12) return '↑Q';
     if (beat == 11) return '↑J';
     return '↑$beat';
+  }
+
+  String _rankLabelFromValue(double comboValue) {
+    final v = comboValue.floor();
+    if (v >= 14) return 'A';
+    if (v == 13) return 'K';
+    if (v == 12) return 'Q';
+    if (v == 11) return 'J';
+    if (v <= 0) return '';
+    return '$v';
   }
 
   Widget _buildSmallTichuInline(GameService game) {

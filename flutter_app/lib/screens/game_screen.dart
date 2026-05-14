@@ -809,7 +809,10 @@ class _GameScreenState extends State<GameScreen> {
     return GestureDetector(
       onTap: () => setState(() {
         _moreOpen = !_moreOpen;
-        if (!_moreOpen) return;
+        // Sub-panels (sound, viewers) are conceptually "inside" the
+        // more menu — close them whenever more is toggled in either
+        // direction so they don't stay floating after the parent menu
+        // disappears.
         _soundPanelOpen = false;
         _viewersOpen = false;
       }),

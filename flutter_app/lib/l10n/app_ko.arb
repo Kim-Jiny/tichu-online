@@ -419,6 +419,7 @@
   "skGameStatScore": "점수",
   "skGameBonusHeader": "보너스",
   "skGameScoreHeader": "점수",
+  "skGameTotalScoreHeader": "총점",
   "skGameNextRoundPreparing": "다음 라운드 준비 중...",
   "skGameGameOver": "게임 종료",
   "skGameAutoReturnCountdown": "{seconds}초 후 자동으로 대기실로 돌아갑니다",

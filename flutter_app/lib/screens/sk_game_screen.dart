@@ -4420,9 +4420,21 @@ class _SKGameScreenState extends State<SKGameScreen> {
                 ),
               ),
               SizedBox(height: isLandscape ? 8 : 12),
-              // Table header
+              // Table header — rank # / name / bid·tricks / bonus / round / total
               Row(
                 children: [
+                  SizedBox(
+                    width: isLandscape ? 18 : 22,
+                    child: Text(
+                      '#',
+                      textAlign: TextAlign.center,
+                      style: TextStyle(
+                        fontSize: isLandscape ? 9 : 10,
+                        color: const Color(0xFF8A7A72),
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ),
                   const Expanded(
                     flex: 3,
                     child: Text('', style: TextStyle(fontSize: 11)),
@@ -4440,7 +4452,7 @@ class _SKGameScreenState extends State<SKGameScreen> {
                     ),
                   ),
                   SizedBox(
-                    width: isLandscape ? 34 : 40,
+                    width: isLandscape ? 30 : 34,
                     child: Text(
                       L10n.of(context).skGameBonusHeader,
                       textAlign: TextAlign.center,
@@ -4452,9 +4464,21 @@ class _SKGameScreenState extends State<SKGameScreen> {
                     ),
                   ),
                   SizedBox(
-                    width: isLandscape ? 44 : 50,
+                    width: isLandscape ? 40 : 44,
                     child: Text(
                       L10n.of(context).skGameScoreHeader,
+                      textAlign: TextAlign.end,
+                      style: TextStyle(
+                        fontSize: isLandscape ? 9 : 10,
+                        color: const Color(0xFF8A7A72),
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ),
+                  SizedBox(
+                    width: isLandscape ? 42 : 46,
+                    child: Text(
+                      L10n.of(context).skGameTotalScoreHeader,
                       textAlign: TextAlign.end,
                       style: TextStyle(
                         fontSize: isLandscape ? 9 : 10,
@@ -4467,95 +4491,135 @@ class _SKGameScreenState extends State<SKGameScreen> {
               ),
               const Divider(height: 8),
               if (scores != null)
-                ...state.players.map((p) {
-                  final pScore = scores[p.id] as Map<String, dynamic>?;
-                  if (pScore == null) return const SizedBox.shrink();
-                  final bid = pScore['bid'] ?? 0;
-                  final tricks = pScore['tricks'] ?? 0;
-                  final bonus = pScore['bonus'] ?? 0;
-                  final roundScore = pScore['roundScore'] ?? 0;
-                  final success = bid == 0 ? tricks == 0 : tricks == bid;
-                  return Container(
-                    padding: EdgeInsets.symmetric(
-                      vertical: isLandscape ? 3 : 4,
-                    ),
-                    decoration: BoxDecoration(
-                      color: p.position == 'self'
-                          ? const Color(0xFFF7F1EC)
-                          : Colors.transparent,
-                      borderRadius: BorderRadius.circular(6),
-                    ),
-                    child: Row(
-                      children: [
-                        Expanded(
-                          flex: 3,
-                          child: Text(
-                            p.name,
-                            style: TextStyle(
-                              color: const Color(0xFF5A4038),
-                              fontSize: isLandscape ? 12 : 13,
-                              fontWeight: p.position == 'self'
-                                  ? FontWeight.bold
-                                  : FontWeight.normal,
+                ...(() {
+                  // Sort by total score desc — keeps the leaderboard ordering
+                  // so rank is immediate. Tiebreaker keeps original order.
+                  final ranked = [...state.players]
+                    ..sort((a, b) => b.totalScore.compareTo(a.totalScore));
+                  return ranked.asMap().entries.map((entry) {
+                    final rank = entry.key + 1;
+                    final p = entry.value;
+                    final pScore = scores[p.id] as Map<String, dynamic>?;
+                    if (pScore == null) return const SizedBox.shrink();
+                    final bid = pScore['bid'] ?? 0;
+                    final tricks = pScore['tricks'] ?? 0;
+                    final bonus = pScore['bonus'] ?? 0;
+                    final roundScore = pScore['roundScore'] ?? 0;
+                    final success = bid == 0 ? tricks == 0 : tricks == bid;
+                    final rankColor = rank == 1
+                        ? const Color(0xFFD4A24A)
+                        : rank == 2
+                            ? const Color(0xFF9A9A9A)
+                            : rank == 3
+                                ? const Color(0xFFB07A4A)
+                                : const Color(0xFFA89A92);
+                    return Container(
+                      padding: EdgeInsets.symmetric(
+                        vertical: isLandscape ? 3 : 4,
+                      ),
+                      decoration: BoxDecoration(
+                        color: p.position == 'self'
+                            ? const Color(0xFFF7F1EC)
+                            : Colors.transparent,
+                        borderRadius: BorderRadius.circular(6),
+                      ),
+                      child: Row(
+                        children: [
+                          SizedBox(
+                            width: isLandscape ? 18 : 22,
+                            child: Text(
+                              '$rank',
+                              textAlign: TextAlign.center,
+                              style: TextStyle(
+                                color: rankColor,
+                                fontSize: isLandscape ? 12 : 13,
+                                fontWeight: FontWeight.bold,
+                              ),
                             ),
                           ),
-                        ),
-                        Expanded(
-                          flex: 2,
-                          child: Row(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              Icon(
-                                success ? Icons.check_circle : Icons.cancel,
-                                size: 12,
-                                color: success
-                                    ? const Color(0xFF4CAF50)
-                                    : const Color(0xFFE53935),
+                          Expanded(
+                            flex: 3,
+                            child: Text(
+                              p.name,
+                              overflow: TextOverflow.ellipsis,
+                              style: TextStyle(
+                                color: const Color(0xFF5A4038),
+                                fontSize: isLandscape ? 12 : 13,
+                                fontWeight: p.position == 'self'
+                                    ? FontWeight.bold
+                                    : FontWeight.normal,
                               ),
-                              const SizedBox(width: 4),
-                              Text(
-                                '$tricks/$bid',
-                                style: const TextStyle(
-                                  color: Color(0xFF5A4038),
-                                  fontSize: 12,
-                                ),
-                                textAlign: TextAlign.center,
-                              ),
-                            ],
+                            ),
                           ),
-                        ),
-                        SizedBox(
-                          width: isLandscape ? 34 : 40,
-                          child: bonus > 0
-                              ? Text(
-                                  '+$bonus',
-                                  style: TextStyle(
-                                    color: Color(0xFFFFB74D),
-                                    fontSize: isLandscape ? 10 : 11,
-                                    fontWeight: FontWeight.bold,
+                          Expanded(
+                            flex: 2,
+                            child: Row(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                Icon(
+                                  success ? Icons.check_circle : Icons.cancel,
+                                  size: 12,
+                                  color: success
+                                      ? const Color(0xFF4CAF50)
+                                      : const Color(0xFFE53935),
+                                ),
+                                const SizedBox(width: 4),
+                                Text(
+                                  '$tricks/$bid',
+                                  style: const TextStyle(
+                                    color: Color(0xFF5A4038),
+                                    fontSize: 12,
                                   ),
                                   textAlign: TextAlign.center,
-                                )
-                              : const SizedBox.shrink(),
-                        ),
-                        SizedBox(
-                          width: isLandscape ? 44 : 50,
-                          child: Text(
-                            '${roundScore > 0 ? '+' : ''}$roundScore',
-                            style: TextStyle(
-                              color: roundScore >= 0
-                                  ? const Color(0xFF4CAF50)
-                                  : const Color(0xFFE53935),
-                              fontSize: isLandscape ? 12 : 14,
-                              fontWeight: FontWeight.bold,
+                                ),
+                              ],
                             ),
-                            textAlign: TextAlign.end,
                           ),
-                        ),
-                      ],
-                    ),
-                  );
-                }),
+                          SizedBox(
+                            width: isLandscape ? 30 : 34,
+                            child: bonus > 0
+                                ? Text(
+                                    '+$bonus',
+                                    style: TextStyle(
+                                      color: Color(0xFFFFB74D),
+                                      fontSize: isLandscape ? 10 : 11,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                    textAlign: TextAlign.center,
+                                  )
+                                : const SizedBox.shrink(),
+                          ),
+                          SizedBox(
+                            width: isLandscape ? 40 : 44,
+                            child: Text(
+                              '${roundScore > 0 ? '+' : ''}$roundScore',
+                              style: TextStyle(
+                                color: roundScore >= 0
+                                    ? const Color(0xFF4CAF50)
+                                    : const Color(0xFFE53935),
+                                fontSize: isLandscape ? 12 : 14,
+                                fontWeight: FontWeight.bold,
+                              ),
+                              textAlign: TextAlign.end,
+                            ),
+                          ),
+                          SizedBox(
+                            width: isLandscape ? 42 : 46,
+                            child: Text(
+                              '${p.totalScore}',
+                              style: TextStyle(
+                                color: const Color(0xFF5A4038),
+                                fontSize: isLandscape ? 12 : 14,
+                                fontWeight: FontWeight.bold,
+                              ),
+                              textAlign: TextAlign.end,
+                            ),
+                          ),
+                        ],
+                      ),
+                    );
+                  });
+                })(),
               SizedBox(height: isLandscape ? 6 : 8),
               Text(
                 L10n.of(context).skGameNextRoundPreparing,

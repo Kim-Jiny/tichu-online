@@ -643,6 +643,7 @@
   "skGameStatScore": "Score",
   "skGameBonusHeader": "Bonus",
   "skGameScoreHeader": "Score",
+  "skGameTotalScoreHeader": "Total",
   "skGameNextRoundPreparing": "Preparing next round...",
   "skGameGameOver": "Game Over",
   "skGameAutoReturnCountdown": "Returning to waiting room in {seconds}s",

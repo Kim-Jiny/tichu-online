@@ -2541,6 +2541,12 @@ abstract class L10n {
   /// **'Score'**
   String get skGameScoreHeader;
 
+  /// No description provided for @skGameTotalScoreHeader.
+  ///
+  /// In en, this message translates to:
+  /// **'Total'**
+  String get skGameTotalScoreHeader;
+
   /// No description provided for @skGameNextRoundPreparing.
   ///
   /// In en, this message translates to:

@@ -1321,6 +1321,9 @@ class L10nKo extends L10n {
   String get skGameScoreHeader => '점수';
 
   @override
+  String get skGameTotalScoreHeader => '총점';
+
+  @override
   String get skGameNextRoundPreparing => '다음 라운드 준비 중...';
 
   @override

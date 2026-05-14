@@ -427,6 +427,7 @@
   "skGameStatScore": "Punkte",
   "skGameBonusHeader": "Bonus",
   "skGameScoreHeader": "Punkte",
+  "skGameTotalScoreHeader": "Gesamt",
   "skGameNextRoundPreparing": "Nächste Runde wird vorbereitet...",
   "skGameGameOver": "Spiel beendet",
   "skGameAutoReturnCountdown": "Zurück zum Warteraum in {seconds}s",

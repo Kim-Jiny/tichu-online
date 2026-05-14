@@ -1358,6 +1358,9 @@ class L10nDe extends L10n {
   String get skGameScoreHeader => 'Punkte';
 
   @override
+  String get skGameTotalScoreHeader => 'Gesamt';
+
+  @override
   String get skGameNextRoundPreparing => 'Nächste Runde wird vorbereitet...';
 
   @override

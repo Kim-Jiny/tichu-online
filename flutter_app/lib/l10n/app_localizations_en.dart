@@ -1349,6 +1349,9 @@ class L10nEn extends L10n {
   String get skGameScoreHeader => 'Score';
 
   @override
+  String get skGameTotalScoreHeader => 'Total';
+
+  @override
   String get skGameNextRoundPreparing => 'Preparing next round...';
 
   @override

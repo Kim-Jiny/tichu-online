@@ -543,26 +543,67 @@ class _GameScreenState extends State<GameScreen> {
   }
 
   Widget _buildPortraitGameLayout(GameStateData state, GameService game) {
-    return Column(
+    // Board (top bar + partner area + middle/trick area) stays in a Column
+    // and fills all available vertical space — middle area never resizes
+    // when the hand height or inline prompts change.
+    //
+    // Hand area and the optional inline prompts (exchange, dragon given,
+    // small tichu) are pulled out into a bottom-anchored overlay so they
+    // can grow/shrink without pushing the board around. They visually sit
+    // on top of the middle area's bottom edge.
+    //
+    // Turn timer is also a separate top-left overlay for the same reason —
+    // its appearance/disappearance can't grow the topbar column.
+    final timerBadge = _buildTimerBadge(state, isLandscape: false);
+    return Stack(
       children: [
-        _buildTopBar(state, game),
-        _buildPartnerArea(state, game),
-        Expanded(
-          child: _buildMiddleArea(state, game),
+        Column(
+          children: [
+            _buildTopBar(state, game),
+            _buildPartnerArea(state, game),
+            Expanded(
+              // Reserve a constant bottom slot equal to the typical max
+              // hand-area height (full 14-card hand + name row + action
+              // buttons ≈ 220–240). This pushes the trick board's vertical
+              // center above the bottom overlay so cards don't sit on top
+              // of it. Below 14 cards the hand shrinks under the reserve
+              // and the board still doesn't move.
+              child: Padding(
+                padding: const EdgeInsets.only(bottom: 220),
+                child: _buildMiddleArea(state, game),
+              ),
+            ),
+          ],
         ),
-        if (state.phase == 'card_exchange' && !state.exchangeDone)
-          Padding(
-            padding: const EdgeInsets.only(bottom: 12),
-            child: _buildExchangeInline(state, game),
+        Positioned(
+          left: 0,
+          right: 0,
+          bottom: 0,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              if (state.phase == 'card_exchange' && !state.exchangeDone)
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 12),
+                  child: _buildExchangeInline(state, game),
+                ),
+              if (game.dragonGivenMessage != null)
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 8),
+                  child: _buildDragonGivenInline(game.dragonGivenMessage!),
+                ),
+              if (_canShowSmallTichu(state))
+                _buildSmallTichuInline(game),
+              _buildBottomArea(state, game),
+            ],
           ),
-        if (game.dragonGivenMessage != null)
-          Padding(
-            padding: const EdgeInsets.only(bottom: 8),
-            child: _buildDragonGivenInline(game.dragonGivenMessage!),
+        ),
+        if (timerBadge != null)
+          Positioned(
+            top: 48,
+            left: 12,
+            child: timerBadge,
           ),
-        if (_canShowSmallTichu(state))
-          _buildSmallTichuInline(game),
-        _buildBottomArea(state, game),
       ],
     );
   }
@@ -2908,14 +2949,13 @@ class _GameScreenState extends State<GameScreen> {
     );
   }
 
-  Widget _buildTopBar(GameStateData state, GameService game) {
-    final isLandscape =
-        MediaQuery.of(context).orientation == Orientation.landscape;
+  Widget? _buildTimerBadge(GameStateData state, {required bool isLandscape}) {
+    if (_remainingSeconds <= 0) return null;
+    final l10n = L10n.of(context);
     final currentPlayerName = _getCurrentPlayerName(state);
     final compactPlayerName = currentPlayerName.length > 4
         ? '${currentPlayerName.substring(0, 4)}…'
         : currentPlayerName;
-    final l10n = L10n.of(context);
     final turnLabel = state.isMyTurn
         ? l10n.gameMyTurnShort
         : (isLandscape ? l10n.gamePlayerTurnShort(compactPlayerName) : l10n.gamePlayerWaiting(currentPlayerName));
@@ -2924,50 +2964,60 @@ class _GameScreenState extends State<GameScreen> {
     final timerPadding = isLandscape
         ? const EdgeInsets.symmetric(horizontal: 8, vertical: 4)
         : const EdgeInsets.symmetric(horizontal: 10, vertical: 5);
-    final timerBadge = _remainingSeconds > 0
-        ? Container(
-            padding: timerPadding,
-            decoration: BoxDecoration(
-              color: _remainingSeconds <= 10
-                  ? const Color(0xFFFFE4E4)
-                  : Colors.white.withValues(alpha: 0.9),
-              borderRadius: BorderRadius.circular(12),
-              border: Border.all(
+    return Container(
+      padding: timerPadding,
+      decoration: BoxDecoration(
+        color: _remainingSeconds <= 10
+            ? const Color(0xFFFFE4E4)
+            : Colors.white.withValues(alpha: 0.9),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(
+          color: _remainingSeconds <= 10
+              ? const Color(0xFFFF6B6B)
+              : const Color(0xFFCCCCCC),
+          width: _remainingSeconds <= 10 ? 2 : 1,
+        ),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(
+            Icons.schedule,
+            size: timerIconSize,
+            color: _remainingSeconds <= 10
+                ? const Color(0xFFCC4444)
+                : const Color(0xFF6A5A52),
+          ),
+          SizedBox(width: 5 * _s),
+          Flexible(
+            child: Text(
+              l10n.gameTimerLabel(turnLabel, _remainingSeconds),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              softWrap: false,
+              style: TextStyle(
+                fontSize: timerFontSize,
+                fontWeight: FontWeight.bold,
                 color: _remainingSeconds <= 10
-                    ? const Color(0xFFFF6B6B)
-                    : const Color(0xFFCCCCCC),
-                width: _remainingSeconds <= 10 ? 2 : 1,
+                    ? const Color(0xFFCC4444)
+                    : const Color(0xFF5A4038),
               ),
             ),
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Icon(
-                  Icons.schedule,
-                  size: timerIconSize,
-                  color: _remainingSeconds <= 10
-                      ? const Color(0xFFCC4444)
-                      : const Color(0xFF6A5A52),
-                ),
-                SizedBox(width: 5 * _s),
-                Flexible(
-                  child: Text(
-                    l10n.gameTimerLabel(turnLabel, _remainingSeconds),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    softWrap: false,
-                    style: TextStyle(
-                      fontSize: timerFontSize,
-                      fontWeight: FontWeight.bold,
-                      color: _remainingSeconds <= 10
-                          ? const Color(0xFFCC4444)
-                          : const Color(0xFF5A4038),
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          )
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildTopBar(GameStateData state, GameService game) {
+    final isLandscape =
+        MediaQuery.of(context).orientation == Orientation.landscape;
+    // Portrait shows the timer as an overlay on top of the game board
+    // (see _buildPortraitGameLayout), so don't include it in the topbar
+    // column there — it caused the whole board to jump in height when the
+    // timer appeared/disappeared between turns.
+    final timerBadge = isLandscape
+        ? _buildTimerBadge(state, isLandscape: true)
         : null;
 
     if (isLandscape) {
@@ -3008,41 +3058,28 @@ class _GameScreenState extends State<GameScreen> {
 
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
+      child: Stack(
+        alignment: Alignment.center,
         children: [
-          Stack(
-            alignment: Alignment.center,
-            children: [
-              _buildScoreBar(state),
-              if (game.hasTopCardCounter && state.phase == 'playing')
-                Align(
-                  alignment: Alignment.centerLeft,
-                  child: _buildTopCardCounter(state),
-                ),
-              Align(
-                alignment: Alignment.centerRight,
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    _buildSpectatorButton(game),
-                    const SizedBox(width: 6),
-                    _buildChatButton(game),
-                    const SizedBox(width: 6),
-                    _buildMoreButton(game),
-                  ],
-                ),
-              ),
-            ],
-          ),
-          if (_remainingSeconds > 0)
-            Padding(
-              padding: const EdgeInsets.only(top: 6),
-              child: Align(
-                alignment: Alignment.centerLeft,
-                child: timerBadge,
-              ),
+          _buildScoreBar(state),
+          if (game.hasTopCardCounter && state.phase == 'playing')
+            Align(
+              alignment: Alignment.centerLeft,
+              child: _buildTopCardCounter(state),
             ),
+          Align(
+            alignment: Alignment.centerRight,
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                _buildSpectatorButton(game),
+                const SizedBox(width: 6),
+                _buildChatButton(game),
+                const SizedBox(width: 6),
+                _buildMoreButton(game),
+              ],
+            ),
+          ),
         ],
       ),
     );

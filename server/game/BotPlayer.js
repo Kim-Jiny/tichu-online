@@ -1044,6 +1044,14 @@ function followTrick(state, cards, normalCards, combos) {
       return { type: 'pass' };
     }
 
+    // Don't step on partner's mid/high combos (comboValue ≥ 9). Even a
+    // finish play here would steal partner's earned points. Skip only
+    // when partner has finished — at that point they can't benefit from
+    // holding the trick.
+    if (lastValue >= 9 && partner && !partner.hasFinished) {
+      return { type: 'pass' };
+    }
+
     // Check if we can finish by beating partner
     const finishPlay = findFinishingPlay(comboType, lastValue, lastLength, cards, normalCards, combos);
     if (finishPlay) return { type: 'play_cards', cards: finishPlay };
@@ -1139,12 +1147,20 @@ function handleFollowSingle(state, cards, normalCards, combos, lastValue, trickP
     return { type: 'play_cards', cards: [beaters[0]] };
   }
 
-  // Phoenix as single: conservative usage
+  // Phoenix as single: conservative usage. Phoenix beats by +0.5 so on a
+  // low single (e.g. 4) it lands at 4.5 and is easily reclaimed by the
+  // next 5+. Reserve it for one of:
+  //   - True endgame (cards ≤ 2): must commit to finish
+  //   - High-card territory (lastValue ≥ 13): hard to beat back (only A/Dragon)
+  //   - Mid-high single (lastValue ≥ 10) with a real reason (valuable trick,
+  //     opp about to finish, or hand running low)
   if (cards.includes('special_phoenix') && lastValue < 14.5) {
     const shouldUsePhoenix = (
-      cards.length <= 3 ||  // few cards left
-      (trickPts >= 15) ||  // valuable trick
-      (minOppCards <= 2)    // opponent almost out
+      cards.length <= 2
+      || lastValue >= 13
+      || (lastValue >= 10 && (
+        cards.length <= 4 || trickPts >= 15 || minOppCards <= 2
+      ))
     );
     if (shouldUsePhoenix) {
       return { type: 'play_cards', cards: ['special_phoenix'] };
@@ -1615,6 +1631,35 @@ function buildWinrateCandidates(game, botId) {
       const combo = getComboType(action.cards || []);
       return combo.type !== COMBO.BOMB_FOUR
         && combo.type !== COMBO.BOMB_STRAIGHT_FLUSH;
+    });
+  }
+
+  // A5: never overtake partner's mid/high plays (comboValue ≥ 9). Even
+  // when there's no tichu in play, stealing a teammate's strong lead
+  // wastes their card and rarely pays off — keep only pass for winrate.
+  // Exception: partner has already finished, so they can't benefit.
+  if (lastPlay
+      && partner
+      && !partner.hasFinished
+      && lastPlay.playerId === partner.id
+      && (lastPlay.comboValue || 0) >= 9) {
+    legalActions = legalActions.filter(action => action.type !== 'play_cards');
+  }
+
+  // D-extra: don't burn Phoenix as a single on a low card. Phoenix as
+  // single becomes lastValue + 0.5 so on a 4 it lands at 4.5 — easily
+  // reclaimed by any 5+. Reserve for high-card territory or true
+  // endgame so winrate's rollouts can't pick the "instant trick win"
+  // line that nukes a 25-point card.
+  if (lastPlay
+      && lastPlay.combo === 'single'
+      && (lastPlay.comboValue || 0) < 10
+      && cards.length > 2
+      && cards.includes('special_phoenix')) {
+    legalActions = legalActions.filter(action => {
+      if (action.type !== 'play_cards') return true;
+      const cardsInAction = action.cards || [];
+      return !(cardsInAction.length === 1 && cardsInAction[0] === 'special_phoenix');
     });
   }
 

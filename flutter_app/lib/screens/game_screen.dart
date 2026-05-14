@@ -604,6 +604,15 @@ class _GameScreenState extends State<GameScreen> {
             left: 12,
             child: timerBadge,
           ),
+        // Top-card counter overlay — fixed position below the timer slot so
+        // both stack cleanly. When the timer is hidden the counter still
+        // sits at the same Y to keep its position predictable across turns.
+        if (game.hasTopCardCounter && state.phase == 'playing')
+          Positioned(
+            top: 82,
+            left: 12,
+            child: IgnorePointer(child: _buildTopCardCounter(state)),
+          ),
       ],
     );
   }
@@ -3054,11 +3063,9 @@ class _GameScreenState extends State<GameScreen> {
         alignment: Alignment.center,
         children: [
           _buildScoreBar(state),
-          if (game.hasTopCardCounter && state.phase == 'playing')
-            Align(
-              alignment: Alignment.centerLeft,
-              child: _buildTopCardCounter(state),
-            ),
+          // Top-card counter is rendered as a floating top-left overlay
+          // (see _buildPortraitGameLayout) so it doesn't compete with
+          // the scoreBar for horizontal space.
           Align(
             alignment: Alignment.centerRight,
             child: Row(

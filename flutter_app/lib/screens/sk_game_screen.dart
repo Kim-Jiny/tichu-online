@@ -4079,22 +4079,33 @@ class _SKGameScreenState extends State<SKGameScreen> {
       );
     }
 
-    return Row(
+    // Center the trick-bid + score chips horizontally; timeout reset
+    // (rare) anchors to the left without pushing the centered chips.
+    return Stack(
+      alignment: Alignment.center,
       children: [
-        if (game.myTimeoutCount > 0) _buildTimeoutResetChip(game),
-        const Spacer(),
-        chip(
-          icon: Icons.workspace_premium_outlined,
-          value: '$tricks/${hasBid ? bid : "-"}',
-          bg: trickBidBg,
-          fg: trickBidFg,
-        ),
-        const SizedBox(width: 8),
-        chip(
-          icon: Icons.stars_rounded,
-          value: '${selfPlayer.totalScore}',
-          bg: const Color(0xFFF6EFE8),
-          fg: const Color(0xFF6A4B3A),
+        if (game.myTimeoutCount > 0)
+          Align(
+            alignment: Alignment.centerLeft,
+            child: _buildTimeoutResetChip(game),
+          ),
+        Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            chip(
+              icon: Icons.workspace_premium_outlined,
+              value: '$tricks/${hasBid ? bid : "-"}',
+              bg: trickBidBg,
+              fg: trickBidFg,
+            ),
+            const SizedBox(width: 8),
+            chip(
+              icon: Icons.stars_rounded,
+              value: '${selfPlayer.totalScore}',
+              bg: const Color(0xFFF6EFE8),
+              fg: const Color(0xFF6A4B3A),
+            ),
+          ],
         ),
       ],
     );

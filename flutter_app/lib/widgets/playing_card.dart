@@ -222,49 +222,17 @@ class PlayingCard extends StatelessWidget {
   }
 
   Widget _buildBackFace(List<Color> cardColors) {
-    final backBg = cardColors[0];
-    final backBorder = cardColors[1];
-    final innerBorder = cardColors[2];
-
-    return Container(
-      decoration: BoxDecoration(
-        color: backBg,
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(
-          color: backBorder,
-          width: 2,
-        ),
-        boxShadow: [
-          BoxShadow(
-            color: const Color(0xFFE1D7E6).withValues(alpha: 0.5),
-            blurRadius: 6,
-            offset: const Offset(0, 3),
-          ),
-        ],
-      ),
-      child: Stack(
-        children: [
-          Center(
-            child: Container(
-              width: width * 0.6,
-              height: height * 0.6,
-              decoration: BoxDecoration(
-                color: Colors.white.withValues(alpha: 0.9),
-                borderRadius: BorderRadius.circular(18),
-                border: Border.all(
-                  color: innerBorder,
-                  width: 1.5,
-                ),
-              ),
-              child: const Center(
-                child: Text(
-                  '🐥',
-                  style: TextStyle(fontSize: 20),
-                ),
-              ),
-            ),
-          ),
-        ],
+    // The outer AnimatedContainer already paints the theme background +
+    // border for the back face. Strip the inner chrome and just drop a
+    // small dragon icon in the center.
+    final iconSize = (width * 0.45).clamp(14.0, 36.0);
+    return Center(
+      child: Image.asset(
+        'assets/dragonIcon.png',
+        width: iconSize,
+        height: iconSize,
+        fit: BoxFit.contain,
+        errorBuilder: (_, _, _) => const SizedBox.shrink(),
       ),
     );
   }

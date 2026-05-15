@@ -2271,6 +2271,12 @@ async function handleReconnection(ws) {
   const hasTopCardCounter = profile?.hasTopCardCounter || false;
   const hasMightyTrumpCounter = profile?.hasMightyTrumpCounter || false;
   const hasMightyPrevTrick = profile?.hasMightyPrevTrick || false;
+  // Immutable account-binding token: derived from the unchanging tc_users.id
+  // (ws.userId), NOT the mutable nickname. The client stamps this onto every
+  // IAP so a receipt redeemed on a different account is detectable, and it
+  // stays stable across renames and sessions (so P1-1 cross-session
+  // reconciliation never false-mismatches). null only if somehow unauthed.
+  const bindingToken = ws.userId != null ? bindingUuid(String(ws.userId)) : null;
   ws.titleKey = titleKey;
   ws.titleName = titleName;
   ws.bannerKey = bannerKey;
@@ -2295,6 +2301,7 @@ async function handleReconnection(ws) {
           type: 'login_success',
           playerId: ws.playerId,
           nickname: ws.nickname,
+          bindingToken,
           themeKey,
           titleKey,
           hasTopCardCounter,
@@ -2330,6 +2337,7 @@ async function handleReconnection(ws) {
           type: 'login_success',
           playerId: ws.playerId,
           nickname: ws.nickname,
+          bindingToken,
           themeKey,
           titleKey,
           hasTopCardCounter,
@@ -2371,6 +2379,7 @@ async function handleReconnection(ws) {
           type: 'login_success',
           playerId: ws.playerId,
           nickname: ws.nickname,
+          bindingToken,
           themeKey,
           titleKey,
           hasTopCardCounter,
@@ -2406,6 +2415,7 @@ async function handleReconnection(ws) {
           type: 'login_success',
           playerId: ws.playerId,
           nickname: ws.nickname,
+          bindingToken,
           themeKey,
           titleKey,
           hasTopCardCounter,
@@ -2466,6 +2476,7 @@ async function handleReconnection(ws) {
             type: 'login_success',
             playerId: ws.playerId,
             nickname: ws.nickname,
+            bindingToken,
             themeKey,
             titleKey,
             hasTopCardCounter,
@@ -2522,6 +2533,7 @@ async function handleReconnection(ws) {
           type: 'login_success',
           playerId: ws.playerId,
           nickname: ws.nickname,
+          bindingToken,
           themeKey,
           titleKey,
           hasTopCardCounter,
@@ -2553,6 +2565,7 @@ async function handleReconnection(ws) {
     type: 'login_success',
     playerId: ws.playerId,
     nickname: ws.nickname,
+    bindingToken,
     themeKey,
     titleKey,
     hasTopCardCounter,
@@ -5435,18 +5448,19 @@ async function handleVerifyIapPurchase(ws, data) {
 
   const environment = v.environment === 'sandbox' ? 'sandbox' : 'production';
 
-  // Account binding (anti receipt-replay): the client stamps the purchase with
-  // bindingUuid(nickname) — appAccountToken on iOS (StoreKit 2 JWS) and
-  // obfuscatedAccountId on Android. The token is bound to a MUTABLE nickname,
-  // so a legit user who renames during a pending (Ask to Buy) or retry window
-  // would mismatch. We therefore do NOT reject on mismatch (rejecting would
-  // consume a paid consumable and lose the user's money) — we still grant,
-  // but flag it in the 검증로그 for fraud review. Replay of an already-consumed
-  // receipt is independently blocked by the globally-unique transaction_id,
-  // so the residual risk is narrow. Enforced on both stores now that SK2
-  // exposes appAccountToken in the verified transaction.
-  if (v.accountId) {
-    const expected = bindingUuid(String(ws.nickname));
+  // Account binding (anti receipt-replay): the client stamps the purchase
+  // with the server-issued bindingToken = bindingUuid(ws.userId) — the
+  // IMMUTABLE tc_users.id, not the mutable nickname — carried as
+  // appAccountToken on iOS (StoreKit 2 JWS) and obfuscatedAccountId on
+  // Android. Because it's immutable and stable across renames/sessions,
+  // mismatches are no longer false-positive-prone. We still GRANT and only
+  // flag (not reject) on mismatch: a paid consumable must never be consumed
+  // without credit (e.g. logged-out→other-account device reconciliation),
+  // and double-grant/consumed-receipt replay is already blocked by the
+  // globally-unique transaction_id. The flag is now a high-signal fraud
+  // indicator (near-zero benign mismatches).
+  if (v.accountId && ws.userId != null) {
+    const expected = bindingUuid(String(ws.userId));
     if (String(v.accountId).toLowerCase() !== String(expected).toLowerCase()) {
       console.warn(`[IAP] account binding mismatch (granted+flagged) nickname=${ws.nickname} product=${productId}`);
       await logIapAttempt({
@@ -5457,7 +5471,7 @@ async function handleVerifyIapPurchase(ws, data) {
         outcome: 'flagged',
         reason: 'binding_mismatch',
         transactionId: null,
-        rawPayload: { expected: 'bindingUuid(nickname)', got: v.accountId },
+        rawPayload: { expected: 'bindingUuid(userId)', got: v.accountId },
       });
       // fall through — grant proceeds.
     }

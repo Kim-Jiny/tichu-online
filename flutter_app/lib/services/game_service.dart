@@ -470,6 +470,10 @@ class GameService extends ChangeNotifier {
       case 'login_success':
         playerId = data['playerId'] ?? '';
         playerName = data['nickname'] ?? '';
+        // Server-issued immutable account-binding token (bindingUuid of the
+        // unchanging tc_users.id). Stamped onto every IAP; stable across
+        // renames/sessions so cross-session reconciliation never mismatches.
+        iapBindingToken = data['bindingToken'] as String?;
         // Start the app-lived IAP listener now that we're authenticated, so
         // any purchase pending from a previous session gets reconciled even
         // without the user opening the shop.
@@ -3029,11 +3033,14 @@ class GameService extends ChangeNotifier {
   IapService? _iap;
   IapService? get iap => _iap;
 
+  /// Server-issued immutable account-binding token (from login_success).
+  String? iapBindingToken;
+
   void ensureIapStarted() {
     if (_iap != null) return;
     final svc = IapService(
       verify: verifyIapPurchase,
-      accountNameProvider: () => playerName,
+      bindingTokenProvider: () => iapBindingToken,
     );
     _iap = svc;
     // Fire-and-forget; init() is idempotent and safe if the store is absent.

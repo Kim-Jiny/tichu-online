@@ -1,7 +1,5 @@
 import 'dart:async';
-import 'dart:convert';
 import 'dart:io' show Platform;
-import 'package:crypto/crypto.dart';
 import 'package:in_app_purchase/in_app_purchase.dart';
 
 /// Thin wrapper around the in_app_purchase plugin.
@@ -25,27 +23,21 @@ typedef IapVerify = Future<Map<String, dynamic>> Function({
 });
 
 class IapService {
-  IapService({required this.verify, this.accountNameProvider});
+  IapService({required this.verify, this.bindingTokenProvider});
 
   /// Sends the store receipt to the server and returns the server verdict.
   final IapVerify verify;
 
-  /// Returns the authenticated user's current nickname (read lazily so a
-  /// rename is always reflected). Hashed into the store account-binding token.
-  final String? Function()? accountNameProvider;
+  /// Returns the server-issued immutable account-binding token (a UUID derived
+  /// from tc_users.id, delivered in login_success). Used AS-IS — never rehash;
+  /// the server compares the exact value it issued.
+  final String? Function()? bindingTokenProvider;
 
-  /// Deterministic account-binding UUID. StoreKit 2's appAccountToken MUST be
-  /// a UUID, so we derive an RFC-4122-shaped UUID from sha256(nickname). Must
-  /// be byte-for-byte identical to the server's accountBinding.bindingUuid().
+  /// StoreKit 2's appAccountToken / Android's obfuscatedAccountId. Already a
+  /// valid UUID from the server; null when unauthenticated.
   String? get _boundAccountId {
-    final n = accountNameProvider?.call();
-    if (n == null || n.isEmpty) return null;
-    final b = List<int>.from(sha256.convert(utf8.encode(n)).bytes.sublist(0, 16));
-    b[6] = (b[6] & 0x0f) | 0x40; // version 4 shape
-    b[8] = (b[8] & 0x3f) | 0x80; // RFC-4122 variant
-    final x = b.map((v) => v.toRadixString(16).padLeft(2, '0')).join();
-    return '${x.substring(0, 8)}-${x.substring(8, 12)}-${x.substring(12, 16)}'
-        '-${x.substring(16, 20)}-${x.substring(20, 32)}';
+    final t = bindingTokenProvider?.call();
+    return (t == null || t.isEmpty) ? null : t;
   }
 
   final InAppPurchase _iap = InAppPurchase.instance;

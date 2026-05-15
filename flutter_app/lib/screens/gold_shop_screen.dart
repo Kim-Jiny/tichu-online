@@ -154,9 +154,11 @@ class _GoldShopScreenState extends State<GoldShopScreen> {
 
           return ListView.separated(
             padding: const EdgeInsets.all(16),
-            itemCount: products.length,
+            // +1 for the legally-required pre-purchase disclosure footer.
+            itemCount: products.length + 1,
             separatorBuilder: (_, _) => const SizedBox(height: 12),
             itemBuilder: (context, i) {
+              if (i == products.length) return _purchaseNotice();
               final p = products[i];
               final id = p['product_id']?.toString() ?? '';
               final base = (p['gold_amount'] ?? 0) as int;
@@ -211,6 +213,42 @@ class _GoldShopScreenState extends State<GoldShopScreen> {
             },
           );
         },
+      ),
+    );
+  }
+
+  // Pre-purchase disclosure required by 전자상거래법 / 콘텐츠이용자보호지침.
+  // Wording is a baseline; the seller is responsible for final/legal review
+  // and for filling real 사업자정보 into the EULA/privacy policy.
+  Widget _purchaseNotice() {
+    const muted = TextStyle(fontSize: 11.5, color: Color(0xFF8A8A8A), height: 1.5);
+    return Container(
+      margin: const EdgeInsets.only(top: 4, bottom: 8),
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: const Color(0xFFFAF7F2),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: const Color(0xFFE6DECF)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: const [
+          Text('구매 전 안내',
+              style: TextStyle(
+                  fontSize: 13,
+                  fontWeight: FontWeight.bold,
+                  color: Color(0xFF5A4038))),
+          SizedBox(height: 8),
+          Text(
+            '• 골드는 게임 내에서만 사용하는 유료 디지털 콘텐츠이며 현금 환전·환급·양도가 불가합니다.\n'
+            '• 결제 즉시 사용 가능한 콘텐츠로, 이미 사용한 골드는 청약철회(환불) 대상에서 제외됩니다.\n'
+            '• 환불·결제취소는 Apple App Store / Google Play의 정책 및 절차에 따릅니다.\n'
+            '• 미성년자는 법정대리인의 동의 후 결제해야 하며, 동의 없는 결제는 취소될 수 있습니다.\n'
+            '• 결제 관련 문의: 설정 > 문의하기 > \'결제·환불\'\n'
+            '• 판매자 정보 및 환불 정책 상세는 설정의 이용약관·개인정보처리방침에 표기됩니다.',
+            style: muted,
+          ),
+        ],
       ),
     );
   }

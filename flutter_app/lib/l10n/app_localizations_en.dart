@@ -215,6 +215,9 @@ class L10nEn extends L10n {
   String get inquiryCategoryOther => 'Other';
 
   @override
+  String get inquiryCategoryPayment => 'Payment/Refund';
+
+  @override
   String get inquiryFieldTitle => 'Title';
 
   @override

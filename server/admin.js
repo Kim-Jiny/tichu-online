@@ -239,6 +239,7 @@ tr:hover td { background: rgba(15,108,92,0.06); }
 .badge-reviewed { background: #e3f2fd; color: #1565c0; }
 .badge-bug { background: #ffebee; color: #c62828; }
 .badge-suggestion { background: #e8eaf6; color: #283593; }
+.badge-payment { background: #fff3e0; color: #e65100; }
 .badge-other { background: #f3e5f5; color: #6a1b9a; }
 .btn { display: inline-block; padding: 9px 16px; border-radius: 12px; font-size: 13px; font-weight: 700; border: none; cursor: pointer; text-decoration: none; transition: all 0.2s; }
 .btn-primary { background: var(--brand); color: #fff; }
@@ -539,7 +540,7 @@ body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; b
 }
 
 function categoryBadge(cat) {
-  const map = { bug: '버그', suggestion: '건의', other: '기타' };
+  const map = { bug: '버그', suggestion: '건의', payment: '결제·환불', other: '기타' };
   return `<span class="badge badge-${cat}">${map[cat] || cat}</span>`;
 }
 

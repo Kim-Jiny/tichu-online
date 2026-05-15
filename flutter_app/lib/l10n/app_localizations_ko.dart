@@ -208,6 +208,9 @@ class L10nKo extends L10n {
   String get inquiryCategoryOther => '기타';
 
   @override
+  String get inquiryCategoryPayment => '결제·환불';
+
+  @override
   String get inquiryFieldTitle => '제목';
 
   @override

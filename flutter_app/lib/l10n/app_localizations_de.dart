@@ -215,6 +215,9 @@ class L10nDe extends L10n {
   String get inquiryCategoryOther => 'Sonstiges';
 
   @override
+  String get inquiryCategoryPayment => 'Zahlung/Erstattung';
+
+  @override
   String get inquiryFieldTitle => 'Titel';
 
   @override

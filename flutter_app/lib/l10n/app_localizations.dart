@@ -489,6 +489,12 @@ abstract class L10n {
   /// **'Other'**
   String get inquiryCategoryOther;
 
+  /// No description provided for @inquiryCategoryPayment.
+  ///
+  /// In en, this message translates to:
+  /// **'Payment/Refund'**
+  String get inquiryCategoryPayment;
+
   /// No description provided for @inquiryFieldTitle.
   ///
   /// In en, this message translates to:

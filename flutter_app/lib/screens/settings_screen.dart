@@ -243,6 +243,18 @@ class _SettingsScreenState extends State<SettingsScreen> {
                       ),
                     ),
                     ChoiceChip(
+                      label: Text(l10n.inquiryCategoryPayment),
+                      selected: selectedCategory == 'payment',
+                      onSelected: (_) => setState(() => selectedCategory = 'payment'),
+                      selectedColor: const Color(0xFFEDE7F6),
+                      labelStyle: TextStyle(
+                        color: selectedCategory == 'payment'
+                            ? const Color(0xFF6A4FA3)
+                            : const Color(0xFF5A4038),
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                    ChoiceChip(
                       label: Text(l10n.inquiryCategoryOther),
                       selected: selectedCategory == 'other',
                       onSelected: (_) => setState(() => selectedCategory = 'other'),
@@ -543,6 +555,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
         return l10n.inquiryCategoryBug;
       case 'suggestion':
         return l10n.inquiryCategorySuggestion;
+      case 'payment':
+        return l10n.inquiryCategoryPayment;
       case 'other':
         return l10n.inquiryCategoryOther;
       default:

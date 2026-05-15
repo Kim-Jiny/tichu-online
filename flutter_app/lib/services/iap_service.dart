@@ -6,6 +6,14 @@ import 'package:in_app_purchase/in_app_purchase.dart';
 
 /// Thin wrapper around the in_app_purchase plugin.
 ///
+/// This service is APP-LIVED (owned by GameService), not screen-scoped: the
+/// purchaseStream listener must stay alive for the whole session so that a
+/// purchase left unfinished after a transient verify failure is re-delivered
+/// and reconciled on the next app launch — even if the user never reopens the
+/// gold shop. The shop screen only attaches UI callbacks while it is visible;
+/// reconciliation (verify + completePurchase + balance update via the WS
+/// iap_purchase_result handler) works with no callbacks attached.
+///
 /// The client never hardcodes product ids: the caller fetches the active list
 /// from the server and passes the ids into [loadProducts]. The store is the
 /// source of truth for price/currency; the server is the source of truth for
@@ -13,28 +21,30 @@ import 'package:in_app_purchase/in_app_purchase.dart';
 typedef IapVerify = Future<Map<String, dynamic>> Function({
   required String productId,
   required String verificationData,
+  String? transactionId,
 });
 
 class IapService {
-  IapService({required this.verify, this.accountName});
+  IapService({required this.verify, this.accountNameProvider});
 
   /// Sends the store receipt to the server and returns the server verdict.
   final IapVerify verify;
 
-  /// Authenticated user's nickname. Stamped onto the purchase (hashed) so the
-  /// server can reject a receipt redeemed on a different account.
-  final String? accountName;
+  /// Returns the authenticated user's current nickname (read lazily so a
+  /// rename is always reflected). Hashed into the store account-binding token.
+  final String? Function()? accountNameProvider;
 
   /// sha256(nickname) hex — the store account-binding token. Must match the
   /// server's crypto.createHash('sha256').update(nickname).digest('hex').
   String? get _boundAccountId {
-    final n = accountName;
+    final n = accountNameProvider?.call();
     if (n == null || n.isEmpty) return null;
     return sha256.convert(utf8.encode(n)).toString();
   }
 
   final InAppPurchase _iap = InAppPurchase.instance;
   StreamSubscription<List<PurchaseDetails>>? _sub;
+  Future<void>? _initFuture;
 
   bool _available = false;
   bool get isAvailable => _available;
@@ -52,7 +62,12 @@ class IapService {
   /// any per-product spinner.
   void Function(String productId)? onSettled;
 
-  Future<void> init() async {
+  /// Idempotent and concurrency-safe: callers share one in-flight future, so
+  /// the purchaseStream listener is attached exactly once even if app
+  /// bootstrap and the shop screen both call init() at the same time.
+  Future<void> init() => _initFuture ??= _doInit();
+
+  Future<void> _doInit() async {
     // macOS is not an IAP sales target. The client would otherwise send the
     // wrong platform string and every purchase would fail after payment —
     // block it outright so the store flow can't even be entered.
@@ -61,7 +76,12 @@ class IapService {
       return;
     }
     _available = await _iap.isAvailable();
-    if (!_available) return;
+    if (!_available) {
+      // Clear the memo so a later attempt (e.g. after connectivity) can retry
+      // and still attach the listener.
+      _initFuture = null;
+      return;
+    }
     _sub = _iap.purchaseStream.listen(
       _onPurchaseUpdates,
       onError: (e) => onError?.call('$e'),
@@ -128,6 +148,9 @@ class IapService {
       final result = await verify(
         productId: p.productID,
         verificationData: p.verificationData.serverVerificationData,
+        // The exact transaction being settled. Lets the server grant only
+        // this one instead of every accumulated receipt entry.
+        transactionId: p.purchaseID,
       ).timeout(const Duration(seconds: 20));
       if (result['success'] == true) {
         mayFinish = true;
@@ -152,5 +175,7 @@ class IapService {
 
   void dispose() {
     _sub?.cancel();
+    _sub = null;
+    _initFuture = null;
   }
 }

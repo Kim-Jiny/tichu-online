@@ -794,13 +794,24 @@ const server = http.createServer(async (req, res) => {
           reason: `apple:${type}${notif.subtype ? ':' + notif.subtype : ''}`,
         });
         console.log(`[AppleNotif] ${type} txn=${t.transactionId} env=${notif.environment} ->`, JSON.stringify(r));
+        // Only a transient post-processing failure (DB error, etc.) should
+        // make Apple retry. success / idempotent / receipt_not_found are
+        // terminal (the last is logged as unmatched for ops) → ack with 200.
+        if (r && r.success === false && r.reason !== 'receipt_not_found') {
+          res.writeHead(503, { 'Content-Type': 'text/plain' });
+          res.end('retry');
+          return;
+        }
       } else {
         console.log(`[AppleNotif] ignored type=${type} subtype=${notif.subtype || '-'}`);
       }
     } catch (err) {
-      // Verified but processing failed — log and still 200 (idempotent on
-      // retry; a 5xx storm from Apple helps nobody).
+      // Verified but processing threw → transient; ask Apple to retry instead
+      // of letting a temporary outage become a permanent refund miss.
       console.error('[AppleNotif] handler error:', err);
+      res.writeHead(503, { 'Content-Type': 'text/plain' });
+      res.end('retry');
+      return;
     }
     res.writeHead(200, { 'Content-Type': 'text/plain' });
     res.end('OK');
@@ -1332,16 +1343,30 @@ setInterval(() => {
 // safe). Apple pushes its refunds to /iap/apple/notifications instead.
 // Auto-disables when the Play service account isn't configured.
 const GOOGLE_VOIDED_POLL_MS = 30 * 60 * 1000;
-function runGoogleVoidedPoll() {
-  pollGoogleVoidedPurchases(autoRefundByTransaction)
-    .then((r) => {
-      if (r && r.ok && r.processed > 0) {
-        console.log(`[GoogleVoided] processed ${r.processed} voided purchase(s)`);
-      } else if (r && !r.ok && r.reason !== 'not_configured') {
-        console.warn('[GoogleVoided] poll not ok:', r.reason);
+const GOOGLE_VOIDED_CURSOR_KEY = 'iap_gvoid_cursor_ms';
+const GOOGLE_VOIDED_OVERLAP_MS = 60 * 60 * 1000; // re-scan 1h before cursor
+async function runGoogleVoidedPoll() {
+  try {
+    // Resume from the persisted cursor so a long outage doesn't drop voids
+    // that happened while we were down (idempotent, overlap is safe).
+    const raw = await getConfig(GOOGLE_VOIDED_CURSOR_KEY);
+    const cursor = raw ? parseInt(raw, 10) : NaN;
+    const startTimeMs = Number.isFinite(cursor)
+      ? cursor - GOOGLE_VOIDED_OVERLAP_MS
+      : null;
+    const r = await pollGoogleVoidedPurchases(autoRefundByTransaction, { startTimeMs });
+    if (r && r.ok) {
+      if (r.processed > 0) console.log(`[GoogleVoided] processed ${r.processed} voided purchase(s)`);
+      if (r.pollStartedAt) {
+        await updateConfig(GOOGLE_VOIDED_CURSOR_KEY, String(r.pollStartedAt));
       }
-    })
-    .catch((e) => console.error('[GoogleVoided] poll threw:', e));
+    } else if (r && r.reason !== 'not_configured') {
+      // Do NOT advance the cursor on failure → next run retries the gap.
+      console.warn('[GoogleVoided] poll not ok:', r.reason);
+    }
+  } catch (e) {
+    console.error('[GoogleVoided] poll threw:', e);
+  }
 }
 setInterval(runGoogleVoidedPoll, GOOGLE_VOIDED_POLL_MS);
 // First run shortly after boot (let env/DB settle).
@@ -5316,6 +5341,13 @@ async function handleVerifyIapPurchase(ws, data) {
   const platform = normalizePlatform(data?.platform);
   const productId = typeof data?.productId === 'string' ? data.productId : null;
   const verificationData = typeof data?.verificationData === 'string' ? data.verificationData : null;
+  // Optional: the specific store transaction the client is currently
+  // delivering. When present we grant ONLY that one instead of every
+  // accumulated transaction in the (Apple) receipt — this bounds the
+  // cross-account "sweep" when one Apple ID is shared by several game
+  // nicknames. Absent on older clients → fall back to grant-all.
+  const claimedTxnId = typeof data?.transactionId === 'string' && data.transactionId
+    ? data.transactionId : null;
 
   // A purchase should be "finished" on the store (consumable consumed /
   // transaction removed) ONLY when it's resolved for good — granted, or the
@@ -5427,9 +5459,17 @@ async function handleVerifyIapPurchase(ws, data) {
   // accumulate purchases; if an earlier verify failed and the user bought
   // again, both are here and both must be credited. grantIapGold is idempotent
   // on transaction_id, so already-granted (and refunded) ones are no-ops.
-  const txns = Array.isArray(v.transactions) ? v.transactions : [];
+  let txns = Array.isArray(v.transactions) ? v.transactions : [];
   if (txns.length === 0) {
     return fail('error', 'no_transactions', 'iap_verify_failed', { environment });
+  }
+  // If the client named the exact transaction it's settling and that
+  // transaction is present in the verified receipt, grant ONLY that one.
+  // (If it's not found — id-format edge — keep grant-all so we never
+  // under-credit a real purchase.)
+  if (claimedTxnId) {
+    const only = txns.filter((t) => t.transactionId === claimedTxnId);
+    if (only.length > 0) txns = only;
   }
 
   let totalNewGold = 0;

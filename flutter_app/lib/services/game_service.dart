@@ -3,6 +3,7 @@ import 'dart:io' show Platform;
 import 'package:flutter/material.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'iap_service.dart';
 import '../models/player.dart';
 import '../models/room.dart';
 import '../models/game_state.dart';
@@ -469,6 +470,10 @@ class GameService extends ChangeNotifier {
       case 'login_success':
         playerId = data['playerId'] ?? '';
         playerName = data['nickname'] ?? '';
+        // Start the app-lived IAP listener now that we're authenticated, so
+        // any purchase pending from a previous session gets reconciled even
+        // without the user opening the shop.
+        ensureIapStarted();
         equippedTheme = data['themeKey'] as String?;
         equippedTitle = data['titleKey'] as String?;
         hasTopCardCounter = data['hasTopCardCounter'] == true;
@@ -2999,6 +3004,7 @@ class GameService extends ChangeNotifier {
   Future<Map<String, dynamic>> verifyIapPurchase({
     required String productId,
     required String verificationData,
+    String? transactionId,
   }) {
     _iapResultCompleter?.complete({
       'success': false,
@@ -3011,8 +3017,27 @@ class GameService extends ChangeNotifier {
       'platform': _iapPlatform,
       'productId': productId,
       'verificationData': verificationData,
+      if (transactionId != null && transactionId.isNotEmpty)
+        'transactionId': transactionId,
     });
     return completer.future;
+  }
+
+  // App-lived IAP service. Created once and kept listening for the whole
+  // session so a purchase left pending after a transient verify failure is
+  // reconciled on the next launch even if the user never reopens the shop.
+  IapService? _iap;
+  IapService? get iap => _iap;
+
+  void ensureIapStarted() {
+    if (_iap != null) return;
+    final svc = IapService(
+      verify: verifyIapPurchase,
+      accountNameProvider: () => playerName,
+    );
+    _iap = svc;
+    // Fire-and-forget; init() is idempotent and safe if the store is absent.
+    svc.init();
   }
 
   // 광고 보상

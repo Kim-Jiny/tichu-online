@@ -22,7 +22,10 @@ function reasonText(v) {
 
 // Lists purchases voided in the last `windowMs` and refunds each via the
 // supplied autoRefund fn. Returns a small stats object; never throws.
-async function pollGoogleVoidedPurchases(autoRefund, { windowMs = 36 * 60 * 60 * 1000 } = {}) {
+// startTimeMs (optional): explicit lower bound, used to resume from a
+// persisted cursor so a long outage doesn't drop voids that happened in the
+// gap. Clamped to Google's ~30-day max lookback. Falls back to now-windowMs.
+async function pollGoogleVoidedPurchases(autoRefund, { windowMs = 36 * 60 * 60 * 1000, startTimeMs = null } = {}) {
   const pkg = process.env.GOOGLE_PLAY_PACKAGE_NAME;
   if (!pkg || !process.env.GOOGLE_PLAY_SA_EMAIL || !process.env.GOOGLE_PLAY_SA_PRIVATE_KEY) {
     return { ok: false, reason: 'not_configured' };
@@ -36,7 +39,10 @@ async function pollGoogleVoidedPurchases(autoRefund, { windowMs = 36 * 60 * 60 *
     return { ok: false, reason: 'token_failed' };
   }
 
-  const startTime = Date.now() - windowMs;
+  const nowMs = Date.now();
+  const MAX_LOOKBACK = 29 * 24 * 60 * 60 * 1000; // Google won't return older
+  let startTime = startTimeMs != null ? startTimeMs : nowMs - windowMs;
+  startTime = Math.max(startTime, nowMs - MAX_LOOKBACK);
   let processed = 0;
   let nextToken = null;
   try {
@@ -69,7 +75,9 @@ async function pollGoogleVoidedPurchases(autoRefund, { windowMs = 36 * 60 * 60 *
     console.error('[GoogleVoided] poll error:', err.message);
     return { ok: false, reason: 'request_failed', processed };
   }
-  return { ok: true, processed };
+  // pollStartedAt = the moment this poll began. The caller persists it as the
+  // next cursor only on ok, so the next run resumes from here (with overlap).
+  return { ok: true, processed, pollStartedAt: nowMs };
 }
 
 module.exports = { pollGoogleVoidedPurchases };

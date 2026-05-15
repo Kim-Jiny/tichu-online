@@ -23,10 +23,11 @@ class _GoldShopScreenState extends State<GoldShopScreen> {
   void initState() {
     super.initState();
     final game = context.read<GameService>();
-    _iap = IapService(
-      verify: game.verifyIapPurchase,
-      accountName: game.playerName,
-    )
+    // Use the APP-LIVED instance (not a screen-scoped one) so pending-purchase
+    // reconciliation keeps working after this screen is closed.
+    game.ensureIapStarted();
+    _iap = game.iap!;
+    _iap
       ..onSuccess = _handleSuccess
       ..onError = _handleError
       ..onPending = () {
@@ -99,7 +100,14 @@ class _GoldShopScreenState extends State<GoldShopScreen> {
 
   @override
   void dispose() {
-    _iap.dispose();
+    // The IAP service is app-lived (owned by GameService) — do NOT dispose it
+    // here or pending-purchase reconciliation would stop. Just detach our UI
+    // callbacks so this screen's State can be GC'd; background reconciliation
+    // (verify + completePurchase + balance update) continues without them.
+    if (identical(_iap.onSuccess, _handleSuccess)) _iap.onSuccess = null;
+    if (identical(_iap.onError, _handleError)) _iap.onError = null;
+    _iap.onPending = null;
+    _iap.onSettled = null;
     super.dispose();
   }
 

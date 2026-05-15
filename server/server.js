@@ -16,6 +16,7 @@ const {
   saveMatchResult, saveMatchResultWithStats, updateUserStats, getUserProfile, getRecentMatches, updateCardViewPref,
   submitInquiry, getUserInquiries, markInquiriesRead, getRankings,
   getWallet, getGoldHistory, getShopItems, getVisualCatalog, getUserItems, buyItem, equipItem, useItem, changeNickname,
+  getActiveGoldProducts, getGoldProductByProductId, grantIapGold,
   incrementLeaveCount, setRankedBan, getRankedBan, setChatBan, getChatBan, grantSeasonRewards,
   getActiveSeason, createSeason, getSeasons, getConfig, getLocalizedConfig, updateConfig,
   getCurrentSeasonRankings, getSeasonRankings, resetSeasonStats,
@@ -65,6 +66,9 @@ const {
   clearInvalidFcmToken,
   loadTitleTranslations,
 } = require('./db/database');
+
+const { verifyApple } = require('./iap/AppleVerify');
+const { verifyGoogle } = require('./iap/GoogleVerify');
 
 // Firebase Admin SDK initialization (optional - only if FIREBASE_SERVICE_ACCOUNT is set)
 let firebaseAdmin = null;
@@ -1526,6 +1530,12 @@ async function handleMessage(ws, data) {
       break;
     case 'get_gold_history':
       await handleGetGoldHistory(ws, data);
+      break;
+    case 'get_gold_products':
+      await handleGetGoldProducts(ws, data);
+      break;
+    case 'verify_iap_purchase':
+      await handleVerifyIapPurchase(ws, data);
       break;
     case 'get_shop_items':
       await handleGetShopItems(ws);
@@ -5173,6 +5183,89 @@ async function handleGetWallet(ws) {
   }
   const result = await getWallet(ws.nickname);
   sendTo(ws, { type: 'wallet_result', ...result });
+}
+
+function normalizePlatform(p) {
+  if (p === 'ios' || p === 'android') return p;
+  return null;
+}
+
+// Active gold products for the client's platform. Prices/currency are NOT
+// returned — the client resolves those from the store at runtime. We only
+// expose which product_ids are live and how much gold each grants.
+async function handleGetGoldProducts(ws, data) {
+  if (!ws.nickname) {
+    sendTo(ws, { type: 'gold_products_result', success: false, message: t(ws.locale, 'login_required') });
+    return;
+  }
+  const platform = normalizePlatform(data?.platform) || 'both';
+  const result = await getActiveGoldProducts(platform);
+  sendTo(ws, { type: 'gold_products_result', ...result });
+}
+
+// Verify a store purchase and grant gold. The client never tells us the gold
+// amount or price — we look the product up server-side and trust only the
+// store's verification response. Idempotent on the store transaction id.
+async function handleVerifyIapPurchase(ws, data) {
+  if (!ws.nickname) {
+    sendTo(ws, { type: 'iap_purchase_result', success: false, message: t(ws.locale, 'login_required') });
+    return;
+  }
+  const platform = normalizePlatform(data?.platform);
+  const productId = typeof data?.productId === 'string' ? data.productId : null;
+  const verificationData = typeof data?.verificationData === 'string' ? data.verificationData : null;
+  if (!platform || !productId || !verificationData) {
+    sendTo(ws, { type: 'iap_purchase_result', success: false, message: t(ws.locale, 'iap_invalid_request') });
+    return;
+  }
+
+  // Product must exist and be active, on a platform that matches.
+  const product = await getGoldProductByProductId(productId);
+  if (!product || product.is_active !== true) {
+    sendTo(ws, { type: 'iap_purchase_result', success: false, message: t(ws.locale, 'iap_product_unavailable') });
+    return;
+  }
+  if (product.platform !== 'both' && product.platform !== platform) {
+    sendTo(ws, { type: 'iap_purchase_result', success: false, message: t(ws.locale, 'iap_product_unavailable') });
+    return;
+  }
+
+  const verifier = platform === 'ios' ? verifyApple : verifyGoogle;
+  let v;
+  try {
+    v = await verifier(verificationData, productId);
+  } catch (err) {
+    console.error('[IAP] verify threw:', err);
+    sendTo(ws, { type: 'iap_purchase_result', success: false, message: t(ws.locale, 'iap_verify_failed') });
+    return;
+  }
+  if (!v || !v.valid) {
+    console.warn(`[IAP] verify rejected nickname=${ws.nickname} product=${productId} reason=${v && v.reason}`);
+    sendTo(ws, { type: 'iap_purchase_result', success: false, message: t(ws.locale, 'iap_verify_failed') });
+    return;
+  }
+
+  const goldTotal = (parseInt(product.gold_amount, 10) || 0) + (parseInt(product.bonus_gold, 10) || 0);
+  const grant = await grantIapGold({
+    nickname: ws.nickname,
+    productId,
+    platform,
+    transactionId: v.transactionId,
+    goldTotal,
+    rawPayload: v.raw,
+  });
+  if (!grant.success) {
+    sendTo(ws, { type: 'iap_purchase_result', success: false, message: t(ws.locale, 'iap_grant_failed') });
+    return;
+  }
+  sendTo(ws, {
+    type: 'iap_purchase_result',
+    success: true,
+    alreadyGranted: grant.alreadyGranted === true,
+    goldGranted: grant.alreadyGranted ? 0 : goldTotal,
+    newGold: grant.newGold,
+    productId,
+  });
 }
 
 // Translate gold history title keys to localized text

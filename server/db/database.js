@@ -6086,6 +6086,94 @@ async function getPushHistoryDetail(id, page = 1, limit = 50) {
   return { history: historyRes.rows[0], recipients: recipientsRes.rows, total, page, limit };
 }
 
+// Active gold IAP products for a platform. 'both' rows always match.
+async function getActiveGoldProducts(platform) {
+  try {
+    const result = await pool.query(
+      `SELECT product_id, gold_amount, bonus_gold, platform,
+              label_ko, label_en, label_de, sort_order
+         FROM tc_gold_products
+        WHERE is_active = TRUE
+          AND (platform = 'both' OR platform = $1)
+        ORDER BY sort_order ASC, id ASC`,
+      [platform]
+    );
+    return { success: true, products: result.rows };
+  } catch (err) {
+    console.error('Get active gold products error:', err);
+    return { success: false, products: [] };
+  }
+}
+
+// Single active product by id — used server-side to decide the gold amount
+// to grant. The client never tells us how much gold it should receive.
+async function getGoldProductByProductId(productId) {
+  try {
+    const result = await pool.query(
+      `SELECT product_id, gold_amount, bonus_gold, platform, is_active
+         FROM tc_gold_products WHERE product_id = $1`,
+      [productId]
+    );
+    return result.rows[0] || null;
+  } catch (err) {
+    console.error('Get gold product error:', err);
+    return null;
+  }
+}
+
+// Idempotently grant IAP gold. transaction_id is the dedupe key: the receipt
+// insert with ON CONFLICT DO NOTHING decides whether this is the first time
+// we've seen the transaction. Gold/history only move on the first insert, so
+// client retries (or store re-delivery) never double-credit.
+async function grantIapGold({ nickname, productId, platform, transactionId, goldTotal, rawPayload }) {
+  const client = await pool.connect();
+  try {
+    await client.query('BEGIN');
+    const ins = await client.query(
+      `INSERT INTO tc_iap_receipts
+         (nickname, product_id, platform, transaction_id, gold_granted, raw_payload)
+       VALUES ($1, $2, $3, $4, $5, $6)
+       ON CONFLICT (transaction_id) DO NOTHING
+       RETURNING id`,
+      [nickname, productId, platform, transactionId, goldTotal,
+       rawPayload ? JSON.stringify(rawPayload) : null]
+    );
+    if (ins.rows.length === 0) {
+      // Already processed this transaction — no-op, report current balance.
+      await client.query('ROLLBACK');
+      const cur = await pool.query(
+        `SELECT gold FROM tc_users WHERE nickname = $1`, [nickname]
+      );
+      return {
+        success: true,
+        alreadyGranted: true,
+        newGold: cur.rows[0] ? cur.rows[0].gold : null,
+      };
+    }
+    const upd = await client.query(
+      `UPDATE tc_users SET gold = gold + $2 WHERE nickname = $1 RETURNING gold`,
+      [nickname, goldTotal]
+    );
+    if (upd.rows.length === 0) {
+      await client.query('ROLLBACK');
+      return { success: false, message: 'User not found' };
+    }
+    await client.query(
+      `INSERT INTO tc_gold_history (nickname, gold_delta, source, title, description)
+       VALUES ($1, $2, 'iap', $3, $4)`,
+      [nickname, goldTotal, 'iap_purchase', productId]
+    );
+    await client.query('COMMIT');
+    return { success: true, alreadyGranted: false, newGold: upd.rows[0].gold };
+  } catch (err) {
+    await client.query('ROLLBACK');
+    console.error('Grant IAP gold error:', err);
+    return { success: false, message: err.message };
+  } finally {
+    client.release();
+  }
+}
+
 module.exports = {
   initDatabase,
   registerUser,
@@ -6206,5 +6294,8 @@ module.exports = {
   insertPushRecipients,
   getPushHistoryDetail,
   updateCardViewPref,
+  getActiveGoldProducts,
+  getGoldProductByProductId,
+  grantIapGold,
   pool,
 };

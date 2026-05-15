@@ -16,7 +16,7 @@ const {
   saveMatchResult, saveMatchResultWithStats, updateUserStats, getUserProfile, getRecentMatches, updateCardViewPref,
   submitInquiry, getUserInquiries, markInquiriesRead, getRankings,
   getWallet, getGoldHistory, getShopItems, getVisualCatalog, getUserItems, buyItem, equipItem, useItem, changeNickname,
-  getActiveGoldProducts, getGoldProductByProductId, grantIapGold, logIapAttempt,
+  getActiveGoldProducts, getGoldProductByProductId, grantIapGold, logIapAttempt, autoRefundByTransaction,
   incrementLeaveCount, setRankedBan, getRankedBan, setChatBan, getChatBan, grantSeasonRewards,
   getActiveSeason, createSeason, getSeasons, getConfig, getLocalizedConfig, updateConfig,
   getCurrentSeasonRankings, getSeasonRankings, resetSeasonStats,
@@ -69,6 +69,8 @@ const {
 
 const { verifyApple } = require('./iap/AppleVerify');
 const { verifyGoogle } = require('./iap/GoogleVerify');
+const { parseAppleNotification } = require('./iap/AppleNotifications');
+const { pollGoogleVoidedPurchases } = require('./iap/GoogleVoided');
 
 // Firebase Admin SDK initialization (optional - only if FIREBASE_SERVICE_ACCOUNT is set)
 let firebaseAdmin = null;
@@ -761,6 +763,50 @@ const server = http.createServer(async (req, res) => {
     return;
   }
 
+  // App Store Server Notifications V2 (public — Apple calls this). Auth is
+  // the JWS signature chain verified inside parseAppleNotification, NOT the
+  // network, so this must stay reachable through the public edge.
+  if (pathname === '/iap/apple/notifications' && req.method === 'POST') {
+    let notif;
+    try {
+      const body = await readJsonBody(req);
+      if (!body || !body.signedPayload) {
+        res.writeHead(400, { 'Content-Type': 'text/plain' });
+        res.end('no signedPayload');
+        return;
+      }
+      notif = parseAppleNotification(body.signedPayload);
+    } catch (err) {
+      // Forged / malformed / wrong-bundle → reject so it's not silently acked.
+      console.warn('[AppleNotif] verify failed:', err.message);
+      res.writeHead(400, { 'Content-Type': 'text/plain' });
+      res.end('invalid');
+      return;
+    }
+    try {
+      const t = notif.transaction || {};
+      const type = notif.notificationType;
+      // REFUND = consumable refunded; REVOKE = Family Sharing access revoked.
+      if (type === 'REFUND' || type === 'REVOKE') {
+        const r = await autoRefundByTransaction({
+          transactionId: t.transactionId,
+          source: 'apple',
+          reason: `apple:${type}${notif.subtype ? ':' + notif.subtype : ''}`,
+        });
+        console.log(`[AppleNotif] ${type} txn=${t.transactionId} env=${notif.environment} ->`, JSON.stringify(r));
+      } else {
+        console.log(`[AppleNotif] ignored type=${type} subtype=${notif.subtype || '-'}`);
+      }
+    } catch (err) {
+      // Verified but processing failed — log and still 200 (idempotent on
+      // retry; a 5xx storm from Apple helps nobody).
+      console.error('[AppleNotif] handler error:', err);
+    }
+    res.writeHead(200, { 'Content-Type': 'text/plain' });
+    res.end('OK');
+    return;
+  }
+
   if (pathname === '/health') {
     // 503 while draining so the LB stops sending new connections to this
     // instance. Existing WS connections keep working — they're already
@@ -1240,6 +1286,26 @@ process.on('SIGTERM', async () => {
 setInterval(() => {
   ensureSeasonCycle();
 }, 60 * 60 * 1000);
+
+// Google has no consumable-refund webhook without Pub/Sub, so we poll the
+// Voided Purchases API every 30 min (idempotent; overlapping windows are
+// safe). Apple pushes its refunds to /iap/apple/notifications instead.
+// Auto-disables when the Play service account isn't configured.
+const GOOGLE_VOIDED_POLL_MS = 30 * 60 * 1000;
+function runGoogleVoidedPoll() {
+  pollGoogleVoidedPurchases(autoRefundByTransaction)
+    .then((r) => {
+      if (r && r.ok && r.processed > 0) {
+        console.log(`[GoogleVoided] processed ${r.processed} voided purchase(s)`);
+      } else if (r && !r.ok && r.reason !== 'not_configured') {
+        console.warn('[GoogleVoided] poll not ok:', r.reason);
+      }
+    })
+    .catch((e) => console.error('[GoogleVoided] poll threw:', e));
+}
+setInterval(runGoogleVoidedPoll, GOOGLE_VOIDED_POLL_MS);
+// First run shortly after boot (let env/DB settle).
+setTimeout(runGoogleVoidedPoll, 60 * 1000);
 
 wss.on('connection', (ws, req) => {
   ws.playerId = null;

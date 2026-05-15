@@ -8,7 +8,7 @@ const {
   getAllShopItemsAdmin, addShopItem, updateShopItem, deleteShopItem, getShopItemById,
   getAllGoldProductsAdmin, getGoldProductById, addGoldProduct, updateGoldProduct, deleteGoldProduct,
   getIapReceipts, getIapReceiptById, refundIapReceipt,
-  getIapAttempts, getIapAttemptById,
+  getIapAttempts, getIapAttemptById, getRefundIssues,
   getConfig, updateConfig,
   getNotices, getNoticeById, createNotice, updateNotice, deleteNotice,
   insertMaintenanceHistory, getMaintenanceHistory,
@@ -482,6 +482,7 @@ input[type="text"], input[type="password"] { width: 100%; padding: 10px 12px; bo
     <a href="/tc-backstage/gold-products" class="${activePage === 'gold-products' ? 'active' : ''}" onclick="closeSidebar()">골드상품</a>
     <a href="/tc-backstage/iap-receipts" class="${activePage === 'iap-receipts' ? 'active' : ''}" onclick="closeSidebar()">결제내역</a>
     <a href="/tc-backstage/iap-attempts" class="${activePage === 'iap-attempts' ? 'active' : ''}" onclick="closeSidebar()">검증로그</a>
+    <a href="/tc-backstage/iap-refund-issues" class="${activePage === 'iap-refund-issues' ? 'active' : ''}" onclick="closeSidebar()">환불문제</a>
   </div>
   <div class="nav-section">
     <div class="nav-section-label">Comms</div>
@@ -1792,6 +1793,10 @@ async function handleAdminRoute(req, res, url, pathname, method, lobby, wss, mai
       ],
       'iap-attempts': [
         { label: '검증로그', href: '/tc-backstage/iap-attempts' },
+        { label: '결제내역', href: '/tc-backstage/iap-receipts' },
+      ],
+      'iap-refund-issues': [
+        { label: '환불문제', href: '/tc-backstage/iap-refund-issues' },
         { label: '결제내역', href: '/tc-backstage/iap-receipts' },
       ],
     };
@@ -3329,7 +3334,7 @@ async function handleAdminRoute(req, res, url, pathname, method, lobby, wss, mai
   // ===== IAP 결제내역 =====
   if (pathname === '/tc-backstage/iap-receipts' && method === 'GET') {
     const envF = ['production', 'sandbox'].includes(url.searchParams.get('env')) ? url.searchParams.get('env') : '';
-    const statusF = ['granted', 'refunded'].includes(url.searchParams.get('status')) ? url.searchParams.get('status') : '';
+    const statusF = ['granted', 'refunded', 'refund_failed'].includes(url.searchParams.get('status')) ? url.searchParams.get('status') : '';
     const platformF = ['ios', 'android'].includes(url.searchParams.get('platform')) ? url.searchParams.get('platform') : '';
     const q = (url.searchParams.get('q') || '').trim().slice(0, 80);
     const page = parseInt(url.searchParams.get('page') || '1', 10) || 1;
@@ -3376,7 +3381,7 @@ async function handleAdminRoute(req, res, url, pathname, method, lobby, wss, mai
         <div><div style="font-size:12px;color:#888">환경</div>
           <select name="env">${opt(envF, '', '전체')}${opt(envF, 'production', '프로덕션')}${opt(envF, 'sandbox', '샌드박스')}</select></div>
         <div><div style="font-size:12px;color:#888">상태</div>
-          <select name="status">${opt(statusF, '', '전체')}${opt(statusF, 'granted', '지급됨')}${opt(statusF, 'refunded', '환불됨')}</select></div>
+          <select name="status">${opt(statusF, '', '전체')}${opt(statusF, 'granted', '지급됨')}${opt(statusF, 'refunded', '환불됨')}${opt(statusF, 'refund_failed', '환불문제')}</select></div>
         <div><div style="font-size:12px;color:#888">플랫폼</div>
           <select name="platform">${opt(platformF, '', '전체')}${opt(platformF, 'ios', 'iOS')}${opt(platformF, 'android', 'Android')}</select></div>
         <div><div style="font-size:12px;color:#888">검색 (닉네임/상품/거래ID)</div>
@@ -3388,9 +3393,11 @@ async function handleAdminRoute(req, res, url, pathname, method, lobby, wss, mai
     const envBadge = (e) => e === 'sandbox'
       ? '<span class="badge" style="background:#fff3e0;color:#e65100">SANDBOX</span>'
       : '<span class="badge" style="background:#e3f2fd;color:#1565c0">PROD</span>';
-    const statusBadge = (st) => st === 'refunded'
-      ? '<span class="badge" style="background:#ffebee;color:#c62828">환불됨</span>'
-      : '<span class="badge" style="background:#e8f5e9;color:#2e7d32">지급됨</span>';
+    const statusBadge = (st) => {
+      if (st === 'refunded') return '<span class="badge" style="background:#ffebee;color:#c62828">환불됨</span>';
+      if (st === 'refund_failed') return '<span class="badge" style="background:#fff3e0;color:#e65100">환불문제</span>';
+      return '<span class="badge" style="background:#e8f5e9;color:#2e7d32">지급됨</span>';
+    };
 
     let table;
     if (data.rows.length > 0) {
@@ -3508,16 +3515,23 @@ async function handleAdminRoute(req, res, url, pathname, method, lobby, wss, mai
   if (iapRefundMatch && method === 'POST') {
     const body = await parseBody(req);
     const allowNegative = body && (body.force === '1' || body.force === 1);
+    // Triage force-minus posts back=issues so we return to the queue.
+    const base = body && body.back === 'issues'
+      ? '/tc-backstage/iap-refund-issues'
+      : '/tc-backstage/iap-receipts';
     const result = await refundIapReceipt({
       id: parseInt(iapRefundMatch[1], 10),
       adminUser: sessionInfo.session.username || 'admin',
       allowNegative,
     });
     if (result.success) {
-      return redirect(res, '/tc-backstage/iap-receipts?msg=refunded');
+      return redirect(res, base + '?msg=refunded');
     }
     if (result.reason === 'already_refunded') {
-      return redirect(res, '/tc-backstage/iap-receipts?msg=already');
+      return redirect(res, base + '?msg=already');
+    }
+    if (result.reason === 'needs_force') {
+      return redirect(res, base + '?msg=needs_force');
     }
     if (result.reason === 'insufficient') {
       const p = new URLSearchParams({
@@ -3529,7 +3543,7 @@ async function handleAdminRoute(req, res, url, pathname, method, lobby, wss, mai
       });
       return redirect(res, '/tc-backstage/iap-receipts?' + p.toString());
     }
-    return redirect(res, '/tc-backstage/iap-receipts?msg=error');
+    return redirect(res, base + '?msg=error');
   }
 
   // ===== IAP 검증로그 (모든 시도) =====
@@ -3659,6 +3673,71 @@ async function handleAdminRoute(req, res, url, pathname, method, lobby, wss, mai
       <a href="/tc-backstage/iap-attempts" class="btn btn-secondary" style="margin-top:14px">목록으로</a>
     `;
     return html(res, layout('검증로그 #' + a.id, content, 'iap-attempts'));
+  }
+
+  // ===== IAP 환불문제 (트리아지 큐) =====
+  if (pathname === '/tc-backstage/iap-refund-issues' && method === 'GET') {
+    const page = parseInt(url.searchParams.get('page') || '1', 10) || 1;
+    const data = await getRefundIssues({ page, limit: 50 });
+
+    const msg = url.searchParams.get('msg');
+    let banner = '';
+    if (msg === 'refunded') banner = `<div class="card" style="border-left:4px solid #2e7d32;margin-bottom:14px">✅ 강제 회수 완료 (잔액 음수 허용). 처리된 건은 목록에서 사라집니다.</div>`;
+    else if (msg === 'already') banner = `<div class="card" style="border-left:4px solid #888;margin-bottom:14px">이미 처리된 건입니다.</div>`;
+    else if (msg === 'error') banner = `<div class="card" style="border-left:4px solid #c62828;margin-bottom:14px">처리 중 오류가 발생했습니다.</div>`;
+
+    const srcBadge = (s) => {
+      if (s === 'apple') return '<span class="badge" style="background:#e3f2fd;color:#1565c0">Apple</span>';
+      if (s === 'google') return '<span class="badge" style="background:#e8f5e9;color:#2e7d32">Google</span>';
+      return `<span class="badge" style="background:#f5f5f5;color:#888">${escapeHtml(s || '-')}</span>`;
+    };
+
+    let table;
+    if (data.rows.length > 0) {
+      table = `<div class="table-wrap"><table>
+        <tr><th>감지(KST)</th><th>닉네임</th><th>상품</th><th>플랫폼</th><th>환경</th><th>회수실패 골드</th><th>출처</th><th>사유</th><th>거래ID</th><th></th></tr>
+        ${data.rows.map(r => {
+          const dt = r.refund_detected_at ? new Date(r.refund_detected_at).toLocaleString('ko-KR', { timeZone: 'Asia/Seoul' }) : '-';
+          const txn = escapeHtml(String(r.transaction_id || ''));
+          const txnShort = txn.length > 24 ? txn.slice(0, 24) + '…' : txn;
+          return `<tr>
+            <td style="font-size:12px;white-space:nowrap">${dt}</td>
+            <td>${escapeHtml(r.nickname)}</td>
+            <td style="font-family:monospace;font-size:12px">${escapeHtml(r.product_id)}</td>
+            <td>${escapeHtml(r.platform)}</td>
+            <td>${r.environment === 'sandbox'
+              ? '<span class="badge" style="background:#fff3e0;color:#e65100">SANDBOX</span>'
+              : '<span class="badge" style="background:#e3f2fd;color:#1565c0">PROD</span>'}</td>
+            <td><b style="color:#c62828">${formatNumber(r.gold_granted)}</b></td>
+            <td>${srcBadge(r.refund_source)}</td>
+            <td style="font-family:monospace;font-size:11px">${escapeHtml(r.refund_reason || '')}</td>
+            <td style="font-family:monospace;font-size:11px" title="${txn}"><a href="/tc-backstage/iap-receipts/${r.id}">${txnShort}</a></td>
+            <td>
+              <form method="POST" action="/tc-backstage/iap-receipts/${r.id}/refund"
+                    onsubmit="return confirm('${escapeHtml(r.nickname)} 님 잔액을 음수로 만들면서 ${formatNumber(r.gold_granted)}G를 강제 회수합니다.\\n스토어가 이미 현금을 환불한 건에만 사용하세요. 계속할까요?')">
+                <input type="hidden" name="force" value="1">
+                <input type="hidden" name="back" value="issues">
+                <button type="submit" class="btn btn-danger">마이너스 강제회수</button>
+              </form>
+            </td>
+          </tr>`;
+        }).join('')}
+      </table></div>`;
+    } else {
+      table = '<div class="empty">처리할 환불문제 없음 — 깨끗합니다 👍</div>';
+    }
+
+    const content = `
+      ${pageHeader('환불문제 트리아지',
+        '스토어(Apple/Google)가 <b>현금은 환불</b>했으나 유저가 골드를 이미 사용해 <b>자동 회수에 실패</b>한 건입니다. 기본 정책상 회수 불가지만, 손실을 감수하고 잔액을 음수로 만들어 강제 회수할 수 있습니다.')}
+      ${summaryStrip([
+        { label: '미처리 환불문제', value: formatNumber(data.total), valueColor: data.total > 0 ? '#c62828' : '#2e8b57' },
+      ])}
+      ${banner}
+      <div class="card">${table}</div>
+      ${pagination(data.page, data.total, data.limit, '/tc-backstage/iap-refund-issues')}
+    `;
+    return html(res, layout('환불문제', content, 'iap-refund-issues'));
   }
 
   // ===== Maintenance =====

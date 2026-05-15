@@ -53,11 +53,11 @@ async function verifyApple(receiptData, expectedProductId) {
   }
 
   if (body.status !== 0) {
-    return { valid: false, reason: `apple_status_${body.status}` };
+    return { valid: false, reason: `apple_status_${body.status}`, raw: body };
   }
   const receipt = body.receipt || {};
   if (receipt.bundle_id && receipt.bundle_id !== bundleId) {
-    return { valid: false, reason: 'bundle_mismatch' };
+    return { valid: false, reason: 'bundle_mismatch', raw: body };
   }
 
   // Consumables live in in_app / latest_receipt_info. The base64 app receipt
@@ -73,7 +73,7 @@ async function verifyApple(receiptData, expectedProductId) {
     .concat(Array.isArray(receipt.in_app) ? receipt.in_app : [])
     .filter((it) => it && it.product_id === expectedProductId);
   if (matches.length === 0) {
-    return { valid: false, reason: 'product_not_in_receipt' };
+    return { valid: false, reason: 'product_not_in_receipt', raw: body };
   }
   const ms = (it) => parseInt(it.purchase_date_ms, 10) || 0;
   const match = matches.reduce((a, b) => (ms(b) >= ms(a) ? b : a));

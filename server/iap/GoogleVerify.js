@@ -113,7 +113,7 @@ async function verifyGoogle(purchaseToken, expectedProductId) {
 
   // purchaseState: 0 = purchased, 1 = canceled, 2 = pending.
   if (body.purchaseState !== 0) {
-    return { valid: false, reason: `purchase_state_${body.purchaseState}` };
+    return { valid: false, reason: `purchase_state_${body.purchaseState}`, raw: body };
   }
 
   // purchaseType is ONLY present for non-standard buys: 0=Test (license
@@ -133,4 +133,4 @@ async function verifyGoogle(purchaseToken, expectedProductId) {
   };
 }
 
-module.exports = { verifyGoogle };
+module.exports = { verifyGoogle, getAccessToken };

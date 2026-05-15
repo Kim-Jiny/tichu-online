@@ -370,6 +370,13 @@ async function initDatabase() {
     await client.query(`ALTER TABLE tc_iap_receipts ADD COLUMN IF NOT EXISTS status VARCHAR(12) NOT NULL DEFAULT 'granted'`);
     await client.query(`ALTER TABLE tc_iap_receipts ADD COLUMN IF NOT EXISTS refunded_at TIMESTAMP`);
     await client.query(`ALTER TABLE tc_iap_receipts ADD COLUMN IF NOT EXISTS refund_admin VARCHAR(100)`);
+    // status: 'granted' | 'refunded' | 'refund_failed'. refund_failed = store
+    // refunded the money but we could NOT claw back gold (user spent it) →
+    // lands in the admin triage queue. refund_detected_at = when the store
+    // refund was seen/processed; refunded_at = when gold was actually pulled.
+    await client.query(`ALTER TABLE tc_iap_receipts ADD COLUMN IF NOT EXISTS refund_source VARCHAR(12)`);
+    await client.query(`ALTER TABLE tc_iap_receipts ADD COLUMN IF NOT EXISTS refund_reason VARCHAR(160)`);
+    await client.query(`ALTER TABLE tc_iap_receipts ADD COLUMN IF NOT EXISTS refund_detected_at TIMESTAMP`);
 
     // Every verify_iap_purchase attempt is appended here regardless of outcome
     // (granted / already_granted / rejected / error). No idempotency key — this
@@ -6476,9 +6483,71 @@ async function getIapReceiptById(id) {
   }
 }
 
-// already spent the gold (currentGold < granted); pass allowNegative to force
-// the clawback into the negative anyway (use when the store already refunded
-// the money and eating the gold loss is worse).
+// Shared refund core. `rec` is a FOR UPDATE-locked tc_iap_receipts row.
+// Money is NOT moved here — Apple/Google decide/execute the cash refund. This
+// only claws back the gold we granted and records who/when/why.
+//
+// autoMode (store webhook/poll triggered): if the user already spent the gold
+// we DON'T silently go negative — we park the row as 'refund_failed' so it
+// surfaces in the admin triage queue. allowNegative (admin "force") overrides
+// and pulls the balance negative on purpose (use when the store already
+// refunded the cash and eating the gold loss is worse).
+async function _refundCore(client, rec, { allowNegative, autoMode, source, reason, actor }) {
+  const id = rec.id;
+  const granted = parseInt(rec.gold_granted, 10) || 0;
+
+  const userRes = await client.query(
+    `SELECT gold FROM tc_users WHERE nickname = $1 FOR UPDATE`, [rec.nickname]
+  );
+  const userExists = userRes.rows.length > 0;
+  const currentGold = userExists ? (parseInt(userRes.rows[0].gold, 10) || 0) : 0;
+
+  if (userExists && currentGold < granted && !allowNegative) {
+    if (!autoMode) {
+      // Manual click: keep the receipt as-is, let admin decide (force or skip).
+      await client.query('ROLLBACK');
+      return { success: false, reason: 'insufficient', currentGold, granted, nickname: rec.nickname };
+    }
+    // Auto path: park in the triage queue, do NOT touch the balance.
+    await client.query(
+      `UPDATE tc_iap_receipts
+          SET status = 'refund_failed', refund_detected_at = CURRENT_TIMESTAMP,
+              refund_source = $2, refund_reason = $3, refund_admin = $4
+        WHERE id = $1`,
+      [id, source || null, (reason || 'insufficient_balance').slice(0, 160), actor || null]
+    );
+    await client.query('COMMIT');
+    return { success: true, marked: 'refund_failed', currentGold, granted, nickname: rec.nickname };
+  }
+
+  let newGold = null;
+  if (userExists) {
+    const upd = await client.query(
+      `UPDATE tc_users SET gold = gold - $2 WHERE nickname = $1 RETURNING gold`,
+      [rec.nickname, granted]
+    );
+    newGold = upd.rows[0] ? upd.rows[0].gold : null;
+    await client.query(
+      `INSERT INTO tc_gold_history (nickname, gold_delta, source, title, description)
+       VALUES ($1, $2, 'iap_refund', 'iap_refund', $3)`,
+      [rec.nickname, -granted, rec.product_id]
+    );
+  }
+  await client.query(
+    `UPDATE tc_iap_receipts
+        SET status = 'refunded', refunded_at = CURRENT_TIMESTAMP,
+            refund_detected_at = COALESCE(refund_detected_at, CURRENT_TIMESTAMP),
+            refund_source = COALESCE(refund_source, $2), refund_reason = COALESCE(refund_reason, $3),
+            refund_admin = $4
+      WHERE id = $1`,
+    [id, source || null, reason ? String(reason).slice(0, 160) : null, actor || null]
+  );
+  await client.query('COMMIT');
+  return { success: true, newGold, granted, nickname: rec.nickname, userExists };
+}
+
+// Admin manual refund (by receipt id). Accepts 'granted' rows and, with
+// allowNegative, 'refund_failed' rows from the triage queue (force-minus).
 async function refundIapReceipt({ id, adminUser, allowNegative = false }) {
   const client = await pool.connect();
   try {
@@ -6493,56 +6562,85 @@ async function refundIapReceipt({ id, adminUser, allowNegative = false }) {
       return { success: false, reason: 'not_found' };
     }
     const rec = recRes.rows[0];
-    if (rec.status !== 'granted') {
+    if (rec.status === 'refunded') {
       await client.query('ROLLBACK');
       return { success: false, reason: 'already_refunded' };
     }
-    const granted = parseInt(rec.gold_granted, 10) || 0;
-
-    const userRes = await client.query(
-      `SELECT gold FROM tc_users WHERE nickname = $1 FOR UPDATE`, [rec.nickname]
-    );
-    const userExists = userRes.rows.length > 0;
-    const currentGold = userExists ? (parseInt(userRes.rows[0].gold, 10) || 0) : 0;
-
-    if (userExists && currentGold < granted && !allowNegative) {
+    if (rec.status === 'refund_failed' && !allowNegative) {
+      // Triage rows can only be cleared via the explicit force-minus action.
       await client.query('ROLLBACK');
-      return {
-        success: false,
-        reason: 'insufficient',
-        currentGold,
-        granted,
-        nickname: rec.nickname,
-      };
+      return { success: false, reason: 'needs_force' };
     }
-
-    let newGold = null;
-    if (userExists) {
-      const upd = await client.query(
-        `UPDATE tc_users SET gold = gold - $2 WHERE nickname = $1 RETURNING gold`,
-        [rec.nickname, granted]
-      );
-      newGold = upd.rows[0] ? upd.rows[0].gold : null;
-      await client.query(
-        `INSERT INTO tc_gold_history (nickname, gold_delta, source, title, description)
-         VALUES ($1, $2, 'iap_refund', 'iap_refund', $3)`,
-        [rec.nickname, -granted, rec.product_id]
-      );
-    }
-    await client.query(
-      `UPDATE tc_iap_receipts
-          SET status = 'refunded', refunded_at = CURRENT_TIMESTAMP, refund_admin = $2
-        WHERE id = $1`,
-      [id, adminUser || 'admin']
-    );
-    await client.query('COMMIT');
-    return { success: true, newGold, granted, nickname: rec.nickname, userExists };
+    return await _refundCore(client, rec, {
+      allowNegative, autoMode: false, source: 'manual',
+      reason: rec.status === 'refund_failed' ? 'admin_force' : 'admin_manual',
+      actor: adminUser || 'admin',
+    });
   } catch (err) {
     await client.query('ROLLBACK');
     console.error('Refund IAP receipt error:', err);
     return { success: false, reason: 'error', message: err.message };
   } finally {
     client.release();
+  }
+}
+
+// Store-triggered auto refund (Apple webhook / Google voided-purchases poll),
+// keyed by the store transaction id. Idempotent: re-delivery of the same
+// refund is a no-op once the row is refunded/refund_failed.
+async function autoRefundByTransaction({ transactionId, source, reason }) {
+  if (!transactionId) return { success: false, reason: 'missing_transaction_id' };
+  const client = await pool.connect();
+  try {
+    await client.query('BEGIN');
+    const recRes = await client.query(
+      `SELECT id, nickname, product_id, gold_granted, status
+         FROM tc_iap_receipts WHERE transaction_id = $1 FOR UPDATE`,
+      [String(transactionId)]
+    );
+    if (recRes.rows.length === 0) {
+      await client.query('ROLLBACK');
+      return { success: false, reason: 'receipt_not_found' };
+    }
+    const rec = recRes.rows[0];
+    if (rec.status === 'refunded' || rec.status === 'refund_failed') {
+      await client.query('ROLLBACK');
+      return { success: true, idempotent: true, status: rec.status };
+    }
+    return await _refundCore(client, rec, {
+      allowNegative: false, autoMode: true,
+      source: source || 'store', reason: reason || 'store_refund',
+      actor: `system:${source || 'store'}`,
+    });
+  } catch (err) {
+    await client.query('ROLLBACK');
+    console.error('Auto refund error:', err);
+    return { success: false, reason: 'error', message: err.message };
+  } finally {
+    client.release();
+  }
+}
+
+// Triage queue: store refunded the cash but we couldn't claw back gold.
+async function getRefundIssues({ page = 1, limit = 50 } = {}) {
+  try {
+    const lim = Math.max(1, Math.min(parseInt(limit, 10) || 50, 200));
+    const pg = Math.max(1, parseInt(page, 10) || 1);
+    const offset = (pg - 1) * lim;
+    const countRes = await pool.query(`SELECT COUNT(*) FROM tc_iap_receipts WHERE status = 'refund_failed'`);
+    const total = parseInt(countRes.rows[0].count, 10) || 0;
+    const rows = await pool.query(
+      `SELECT id, nickname, product_id, platform, environment, gold_granted,
+              transaction_id, refund_source, refund_reason, refund_detected_at, verified_at
+         FROM tc_iap_receipts
+        WHERE status = 'refund_failed'
+        ORDER BY refund_detected_at DESC NULLS LAST, id DESC
+        LIMIT ${lim} OFFSET ${offset}`
+    );
+    return { rows: rows.rows, total, page: pg, limit: lim };
+  } catch (err) {
+    console.error('Get refund issues error:', err);
+    return { rows: [], total: 0, page: 1, limit: 50 };
   }
 }
 
@@ -6677,6 +6775,8 @@ module.exports = {
   getIapReceipts,
   getIapReceiptById,
   refundIapReceipt,
+  autoRefundByTransaction,
+  getRefundIssues,
   logIapAttempt,
   getIapAttempts,
   getIapAttemptById,

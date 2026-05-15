@@ -6350,6 +6350,17 @@ async function getIapReceipts({ environment, status, platform, search, page = 1,
 // Claw back IAP-granted gold. This does NOT move money — Apple/Google decide
 // and execute the cash refund (especially for consumables). This only reverses
 // the gold we credited and records who/when. By default we REFUSE if the user
+// Full single receipt incl. raw_payload — for the admin detail/audit view.
+async function getIapReceiptById(id) {
+  try {
+    const r = await pool.query(`SELECT * FROM tc_iap_receipts WHERE id = $1`, [id]);
+    return r.rows[0] || null;
+  } catch (err) {
+    console.error('Get IAP receipt by id error:', err);
+    return null;
+  }
+}
+
 // already spent the gold (currentGold < granted); pass allowNegative to force
 // the clawback into the negative anyway (use when the store already refunded
 // the money and eating the gold loss is worse).
@@ -6549,6 +6560,7 @@ module.exports = {
   updateGoldProduct,
   deleteGoldProduct,
   getIapReceipts,
+  getIapReceiptById,
   refundIapReceipt,
   pool,
 };

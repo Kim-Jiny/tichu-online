@@ -7,7 +7,7 @@ const {
   getDetailedAdminStats,
   getAllShopItemsAdmin, addShopItem, updateShopItem, deleteShopItem, getShopItemById,
   getAllGoldProductsAdmin, getGoldProductById, addGoldProduct, updateGoldProduct, deleteGoldProduct,
-  getIapReceipts, refundIapReceipt,
+  getIapReceipts, getIapReceiptById, refundIapReceipt,
   getConfig, updateConfig,
   getNotices, getNoticeById, createNotice, updateNotice, deleteNotice,
   insertMaintenanceHistory, getMaintenanceHistory,
@@ -3407,9 +3407,9 @@ async function handleAdminRoute(req, res, url, pathname, method, lobby, wss, mai
             <td>${escapeHtml(r.platform)}</td>
             <td>${envBadge(r.environment)}</td>
             <td><b>${formatNumber(r.gold_granted)}</b></td>
-            <td style="font-family:monospace;font-size:11px" title="${txn}">${txnShort}</td>
+            <td style="font-family:monospace;font-size:11px" title="${txn}"><a href="/tc-backstage/iap-receipts/${r.id}">${txnShort}</a></td>
             <td>${statusBadge(r.status)}</td>
-            <td>${action}</td>
+            <td><a href="/tc-backstage/iap-receipts/${r.id}" class="btn btn-secondary" style="margin-right:6px">상세</a>${action}</td>
           </tr>`;
         }).join('')}
       </table></div>`;
@@ -3442,6 +3442,60 @@ async function handleAdminRoute(req, res, url, pathname, method, lobby, wss, mai
       ${pagination(data.page, data.total, data.limit, baseUrl)}
     `;
     return html(res, layout('결제내역', content, 'iap-receipts'));
+  }
+
+  const iapDetailMatch = pathname.match(/^\/tc-backstage\/iap-receipts\/(\d+)$/);
+  if (iapDetailMatch && method === 'GET') {
+    const r = await getIapReceiptById(parseInt(iapDetailMatch[1], 10));
+    if (!r) return html(res, layout('찾을 수 없음', '<div class="empty">영수증을 찾을 수 없습니다</div>', 'iap-receipts'), 404);
+
+    const fmtDt = (d) => d ? new Date(d).toLocaleString('ko-KR', { timeZone: 'Asia/Seoul' }) : '-';
+    let rawStr;
+    try {
+      rawStr = r.raw_payload == null ? '(없음)'
+        : JSON.stringify(typeof r.raw_payload === 'string' ? JSON.parse(r.raw_payload) : r.raw_payload, null, 2);
+    } catch (_) {
+      rawStr = String(r.raw_payload);
+    }
+
+    const row = (k, v) => `<tr><td style="color:#888;white-space:nowrap;padding-right:18px">${k}</td><td>${v}</td></tr>`;
+    const refundBlock = r.status === 'granted'
+      ? `<form method="POST" action="/tc-backstage/iap-receipts/${r.id}/refund" style="margin-top:14px"
+              onsubmit="return confirm('지급 골드 ${formatNumber(r.gold_granted)}G를 회수합니다. (실제 결제금 환불은 스토어가 별도 처리)\\n계속할까요?')">
+           <button type="submit" class="btn btn-danger">환불 처리 (골드 회수)</button>
+         </form>`
+      : `<div class="card" style="margin-top:14px;border-left:4px solid #c62828">
+           환불됨 · 처리자 <b>${escapeHtml(r.refund_admin || '-')}</b> · ${fmtDt(r.refunded_at)}
+         </div>`;
+
+    const content = `
+      ${pageHeader('영수증 상세 #' + r.id, '스토어 원본 검증응답(raw_payload) 포함 — 검증 통과 사유 감사용')}
+      <div class="card">
+        <table>
+          ${row('닉네임', escapeHtml(r.nickname))}
+          ${row('product_id', `<span style="font-family:monospace">${escapeHtml(r.product_id)}</span>`)}
+          ${row('플랫폼', escapeHtml(r.platform))}
+          ${row('환경', r.environment === 'sandbox'
+            ? '<span class="badge" style="background:#fff3e0;color:#e65100">SANDBOX</span>'
+            : '<span class="badge" style="background:#e3f2fd;color:#1565c0">PRODUCTION</span>')}
+          ${row('지급 골드', `<b>${formatNumber(r.gold_granted)}</b>`)}
+          ${row('상태', r.status === 'refunded'
+            ? '<span class="badge" style="background:#ffebee;color:#c62828">환불됨</span>'
+            : '<span class="badge" style="background:#e8f5e9;color:#2e7d32">지급됨</span>')}
+          ${row('거래ID', `<span style="font-family:monospace;font-size:12px;word-break:break-all">${escapeHtml(String(r.transaction_id))}</span>`)}
+          ${row('검증 일시', fmtDt(r.verified_at))}
+          ${row('환불 일시', fmtDt(r.refunded_at))}
+          ${row('환불 처리자', escapeHtml(r.refund_admin || '-'))}
+        </table>
+        ${refundBlock}
+      </div>
+      <div class="card" style="margin-top:14px">
+        <div style="color:#888;margin-bottom:8px">raw_payload (스토어 원본 응답)</div>
+        <pre style="overflow:auto;background:#0d1117;color:#c9d1d9;padding:14px;border-radius:8px;font-size:12px;max-height:480px">${escapeHtml(rawStr)}</pre>
+      </div>
+      <a href="/tc-backstage/iap-receipts" class="btn btn-secondary" style="margin-top:14px">목록으로</a>
+    `;
+    return html(res, layout('영수증 #' + r.id, content, 'iap-receipts'));
   }
 
   const iapRefundMatch = pathname.match(/^\/tc-backstage\/iap-receipts\/(\d+)\/refund$/);

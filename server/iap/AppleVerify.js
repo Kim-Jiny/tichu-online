@@ -60,21 +60,35 @@ async function verifyApple(receiptData, expectedProductId) {
     return { valid: false, reason: 'bundle_mismatch' };
   }
 
-  // Consumables live in in_app / latest_receipt_info. Find the line item that
-  // matches the product the client claims it bought.
-  const items = []
+  // Consumables live in in_app / latest_receipt_info. The base64 app receipt
+  // ACCUMULATES every past purchase of the product, so a naive .find() returns
+  // the OLDEST transaction — meaning the 2nd purchase of the same gold pack
+  // would resolve to the 1st transaction_id and get deduped as "already
+  // granted" (user pays, gets nothing). Pick the LATEST matching transaction
+  // by purchase_date_ms instead; the client verifies right after each purchase
+  // so the newest line item is the one being claimed. Re-verifies stay
+  // idempotent because the same latest transaction_id maps to the same receipt.
+  const matches = []
     .concat(Array.isArray(body.latest_receipt_info) ? body.latest_receipt_info : [])
-    .concat(Array.isArray(receipt.in_app) ? receipt.in_app : []);
-  const match = items.find((it) => it && it.product_id === expectedProductId);
-  if (!match) {
+    .concat(Array.isArray(receipt.in_app) ? receipt.in_app : [])
+    .filter((it) => it && it.product_id === expectedProductId);
+  if (matches.length === 0) {
     return { valid: false, reason: 'product_not_in_receipt' };
   }
+  const ms = (it) => parseInt(it.purchase_date_ms, 10) || 0;
+  const match = matches.reduce((a, b) => (ms(b) >= ms(a) ? b : a));
+
+  // body.environment is "Sandbox" during TestFlight/sandbox, "Production" live.
+  const environment = String(body.environment || '').toLowerCase() === 'sandbox'
+    ? 'sandbox'
+    : 'production';
 
   // transaction_id is unique per purchase; this is our idempotency key.
   return {
     valid: true,
     transactionId: String(match.transaction_id),
     productId: match.product_id,
+    environment,
     raw: match,
   };
 }

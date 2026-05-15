@@ -356,10 +356,20 @@ async function initDatabase() {
         platform VARCHAR(10) NOT NULL,
         transaction_id VARCHAR(255) UNIQUE NOT NULL,
         gold_granted INT NOT NULL,
+        environment VARCHAR(12) NOT NULL DEFAULT 'production',
+        status VARCHAR(12) NOT NULL DEFAULT 'granted',
+        refunded_at TIMESTAMP,
+        refund_admin VARCHAR(100),
         verified_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         raw_payload JSONB
       )
     `);
+    // Idempotent guards for dev DBs that already had the pre-refund schema.
+    // production table is created fresh so these are no-ops there.
+    await client.query(`ALTER TABLE tc_iap_receipts ADD COLUMN IF NOT EXISTS environment VARCHAR(12) NOT NULL DEFAULT 'production'`);
+    await client.query(`ALTER TABLE tc_iap_receipts ADD COLUMN IF NOT EXISTS status VARCHAR(12) NOT NULL DEFAULT 'granted'`);
+    await client.query(`ALTER TABLE tc_iap_receipts ADD COLUMN IF NOT EXISTS refunded_at TIMESTAMP`);
+    await client.query(`ALTER TABLE tc_iap_receipts ADD COLUMN IF NOT EXISTS refund_admin VARCHAR(100)`);
 
     // Seed the 5 agreed tiers, inactive by default. ON CONFLICT DO NOTHING so
     // re-runs never clobber admin-edited gold/bonus/active values.
@@ -6125,17 +6135,18 @@ async function getGoldProductByProductId(productId) {
 // insert with ON CONFLICT DO NOTHING decides whether this is the first time
 // we've seen the transaction. Gold/history only move on the first insert, so
 // client retries (or store re-delivery) never double-credit.
-async function grantIapGold({ nickname, productId, platform, transactionId, goldTotal, rawPayload }) {
+async function grantIapGold({ nickname, productId, platform, transactionId, environment, goldTotal, rawPayload }) {
+  const env = environment === 'sandbox' ? 'sandbox' : 'production';
   const client = await pool.connect();
   try {
     await client.query('BEGIN');
     const ins = await client.query(
       `INSERT INTO tc_iap_receipts
-         (nickname, product_id, platform, transaction_id, gold_granted, raw_payload)
-       VALUES ($1, $2, $3, $4, $5, $6::jsonb)
+         (nickname, product_id, platform, transaction_id, gold_granted, environment, raw_payload)
+       VALUES ($1, $2, $3, $4, $5, $6, $7::jsonb)
        ON CONFLICT (transaction_id) DO NOTHING
        RETURNING id`,
-      [nickname, productId, platform, transactionId, goldTotal,
+      [nickname, productId, platform, transactionId, goldTotal, env,
        rawPayload ? JSON.stringify(rawPayload) : null]
     );
     if (ins.rows.length === 0) {
@@ -6269,6 +6280,146 @@ async function deleteGoldProduct(id) {
   }
 }
 
+// ---- IAP receipt ledger (admin) ----
+
+// Paginated receipt list with optional filters, plus a global summary strip
+// (computed over the whole table, not the filtered view, so the operator
+// always sees true totals regardless of the current filter).
+async function getIapReceipts({ environment, status, platform, search, page = 1, limit = 50 } = {}) {
+  try {
+    const where = [];
+    const params = [];
+    if (environment === 'sandbox' || environment === 'production') {
+      params.push(environment); where.push(`environment = $${params.length}`);
+    }
+    if (status === 'granted' || status === 'refunded') {
+      params.push(status); where.push(`status = $${params.length}`);
+    }
+    if (platform === 'ios' || platform === 'android') {
+      params.push(platform); where.push(`platform = $${params.length}`);
+    }
+    if (search) {
+      params.push(`%${search}%`);
+      where.push(`(nickname ILIKE $${params.length} OR product_id ILIKE $${params.length} OR transaction_id ILIKE $${params.length})`);
+    }
+    const whereSql = where.length ? `WHERE ${where.join(' AND ')}` : '';
+
+    const countRes = await pool.query(`SELECT COUNT(*) FROM tc_iap_receipts ${whereSql}`, params);
+    const total = parseInt(countRes.rows[0].count, 10) || 0;
+
+    const lim = Math.max(1, Math.min(parseInt(limit, 10) || 50, 200));
+    const pg = Math.max(1, parseInt(page, 10) || 1);
+    const offset = (pg - 1) * lim;
+    const rowsRes = await pool.query(
+      `SELECT id, nickname, product_id, platform, transaction_id, gold_granted,
+              environment, status, refunded_at, refund_admin, verified_at
+         FROM tc_iap_receipts ${whereSql}
+        ORDER BY verified_at DESC, id DESC
+        LIMIT ${lim} OFFSET ${offset}`,
+      params
+    );
+
+    const sumRes = await pool.query(`
+      SELECT
+        COUNT(*)                                                              AS total,
+        COUNT(*) FILTER (WHERE environment = 'production')                     AS prod_cnt,
+        COUNT(*) FILTER (WHERE environment = 'sandbox')                        AS sandbox_cnt,
+        COUNT(*) FILTER (WHERE status = 'refunded')                            AS refunded_cnt,
+        COALESCE(SUM(gold_granted) FILTER (WHERE status = 'granted' AND environment = 'production'), 0) AS prod_gold
+      FROM tc_iap_receipts`);
+    const s = sumRes.rows[0] || {};
+    return {
+      rows: rowsRes.rows,
+      total,
+      page: pg,
+      limit: lim,
+      summary: {
+        total: parseInt(s.total, 10) || 0,
+        prodCount: parseInt(s.prod_cnt, 10) || 0,
+        sandboxCount: parseInt(s.sandbox_cnt, 10) || 0,
+        refundedCount: parseInt(s.refunded_cnt, 10) || 0,
+        prodGold: parseInt(s.prod_gold, 10) || 0,
+      },
+    };
+  } catch (err) {
+    console.error('Get IAP receipts error:', err);
+    return { rows: [], total: 0, page: 1, limit: 50, summary: { total: 0, prodCount: 0, sandboxCount: 0, refundedCount: 0, prodGold: 0 } };
+  }
+}
+
+// Claw back IAP-granted gold. This does NOT move money — Apple/Google decide
+// and execute the cash refund (especially for consumables). This only reverses
+// the gold we credited and records who/when. By default we REFUSE if the user
+// already spent the gold (currentGold < granted); pass allowNegative to force
+// the clawback into the negative anyway (use when the store already refunded
+// the money and eating the gold loss is worse).
+async function refundIapReceipt({ id, adminUser, allowNegative = false }) {
+  const client = await pool.connect();
+  try {
+    await client.query('BEGIN');
+    const recRes = await client.query(
+      `SELECT id, nickname, product_id, gold_granted, status
+         FROM tc_iap_receipts WHERE id = $1 FOR UPDATE`,
+      [id]
+    );
+    if (recRes.rows.length === 0) {
+      await client.query('ROLLBACK');
+      return { success: false, reason: 'not_found' };
+    }
+    const rec = recRes.rows[0];
+    if (rec.status !== 'granted') {
+      await client.query('ROLLBACK');
+      return { success: false, reason: 'already_refunded' };
+    }
+    const granted = parseInt(rec.gold_granted, 10) || 0;
+
+    const userRes = await client.query(
+      `SELECT gold FROM tc_users WHERE nickname = $1 FOR UPDATE`, [rec.nickname]
+    );
+    const userExists = userRes.rows.length > 0;
+    const currentGold = userExists ? (parseInt(userRes.rows[0].gold, 10) || 0) : 0;
+
+    if (userExists && currentGold < granted && !allowNegative) {
+      await client.query('ROLLBACK');
+      return {
+        success: false,
+        reason: 'insufficient',
+        currentGold,
+        granted,
+        nickname: rec.nickname,
+      };
+    }
+
+    let newGold = null;
+    if (userExists) {
+      const upd = await client.query(
+        `UPDATE tc_users SET gold = gold - $2 WHERE nickname = $1 RETURNING gold`,
+        [rec.nickname, granted]
+      );
+      newGold = upd.rows[0] ? upd.rows[0].gold : null;
+      await client.query(
+        `INSERT INTO tc_gold_history (nickname, gold_delta, source, title, description)
+         VALUES ($1, $2, 'iap_refund', 'iap_refund', $3)`,
+        [rec.nickname, -granted, rec.product_id]
+      );
+    }
+    await client.query(
+      `UPDATE tc_iap_receipts
+          SET status = 'refunded', refunded_at = CURRENT_TIMESTAMP, refund_admin = $2
+        WHERE id = $1`,
+      [id, adminUser || 'admin']
+    );
+    await client.query('COMMIT');
+    return { success: true, newGold, granted, nickname: rec.nickname, userExists };
+  } catch (err) {
+    await client.query('ROLLBACK');
+    console.error('Refund IAP receipt error:', err);
+    return { success: false, reason: 'error', message: err.message };
+  } finally {
+    client.release();
+  }
+}
+
 module.exports = {
   initDatabase,
   registerUser,
@@ -6397,5 +6548,7 @@ module.exports = {
   addGoldProduct,
   updateGoldProduct,
   deleteGoldProduct,
+  getIapReceipts,
+  refundIapReceipt,
   pool,
 };

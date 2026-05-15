@@ -116,6 +116,11 @@ async function verifyGoogle(purchaseToken, expectedProductId) {
     return { valid: false, reason: `purchase_state_${body.purchaseState}` };
   }
 
+  // purchaseType is ONLY present for non-standard buys: 0=Test (license
+  // tester), 1=Promo, 2=Rewarded. A normal paid purchase omits it entirely.
+  // Treat 0 as sandbox; everything else (incl. absent) is real money.
+  const environment = body.purchaseType === 0 ? 'sandbox' : 'production';
+
   // orderId is the unique transaction reference — our idempotency key. Fall
   // back to the purchase token if Google omits orderId (rare, e.g. promos).
   const transactionId = body.orderId || `gpa_${purchaseToken.slice(0, 64)}`;
@@ -123,6 +128,7 @@ async function verifyGoogle(purchaseToken, expectedProductId) {
     valid: true,
     transactionId: String(transactionId),
     productId: expectedProductId,
+    environment,
     raw: body,
   };
 }

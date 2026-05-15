@@ -5251,6 +5251,7 @@ async function handleVerifyIapPurchase(ws, data) {
     productId,
     platform,
     transactionId: v.transactionId,
+    environment: v.environment === 'sandbox' ? 'sandbox' : 'production',
     goldTotal,
     rawPayload: v.raw,
   });
@@ -5279,7 +5280,7 @@ const goldTitleKeys = {
     sk_casual_loss: '스컬킹 일반 패배',
     ll_leave_defeat: '러브레터 탈주 패배', ll_win: '러브레터 승리', ll_loss: '러브레터 패배',
     admin_grant: '관리자 지급', admin_deduct: '관리자 차감',
-    iap_purchase: '골드 충전',
+    iap_purchase: '골드 충전', iap_refund: '결제 환불',
   },
   en: {
     leave_defeat: 'Desertion', ranked_win: 'Ranked Win', casual_win: 'Casual Win',
@@ -5290,7 +5291,7 @@ const goldTitleKeys = {
     sk_casual_loss: 'SK Casual Loss',
     ll_leave_defeat: 'LL Desertion', ll_win: 'LL Win', ll_loss: 'LL Loss',
     admin_grant: 'Admin Grant', admin_deduct: 'Admin Deduct',
-    iap_purchase: 'Gold Top-up',
+    iap_purchase: 'Gold Top-up', iap_refund: 'Purchase Refund',
   },
   de: {
     leave_defeat: 'Verlassen', ranked_win: 'Rang-Sieg', casual_win: 'Sieg',
@@ -5301,7 +5302,7 @@ const goldTitleKeys = {
     sk_casual_loss: 'SK Niederlage',
     ll_leave_defeat: 'LL Verlassen', ll_win: 'LL Sieg', ll_loss: 'LL Niederlage',
     admin_grant: 'Admin-Gutschrift', admin_deduct: 'Admin-Abzug',
-    iap_purchase: 'Gold-Aufladung',
+    iap_purchase: 'Gold-Aufladung', iap_refund: 'Kauf-Rückerstattung',
   },
 };
 

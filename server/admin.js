@@ -7,6 +7,7 @@ const {
   getDetailedAdminStats,
   getAllShopItemsAdmin, addShopItem, updateShopItem, deleteShopItem, getShopItemById,
   getAllGoldProductsAdmin, getGoldProductById, addGoldProduct, updateGoldProduct, deleteGoldProduct,
+  getIapReceipts, refundIapReceipt,
   getConfig, updateConfig,
   getNotices, getNoticeById, createNotice, updateNotice, deleteNotice,
   insertMaintenanceHistory, getMaintenanceHistory,
@@ -478,6 +479,7 @@ input[type="text"], input[type="password"] { width: 100%; padding: 10px 12px; bo
     <a href="/tc-backstage/users" class="${activePage === 'users' ? 'active' : ''}" onclick="closeSidebar()">유저</a>
     <a href="/tc-backstage/shop" class="${activePage === 'shop' ? 'active' : ''}" onclick="closeSidebar()">상점</a>
     <a href="/tc-backstage/gold-products" class="${activePage === 'gold-products' ? 'active' : ''}" onclick="closeSidebar()">골드상품</a>
+    <a href="/tc-backstage/iap-receipts" class="${activePage === 'iap-receipts' ? 'active' : ''}" onclick="closeSidebar()">결제내역</a>
   </div>
   <div class="nav-section">
     <div class="nav-section-label">Comms</div>
@@ -1781,6 +1783,10 @@ async function handleAdminRoute(req, res, url, pathname, method, lobby, wss, mai
       'gold-products': [
         { label: '골드상품 관리', href: '/tc-backstage/gold-products' },
         { label: '상점 관리', href: '/tc-backstage/shop' },
+      ],
+      'iap-receipts': [
+        { label: '결제내역', href: '/tc-backstage/iap-receipts' },
+        { label: '골드상품 관리', href: '/tc-backstage/gold-products' },
       ],
     };
 
@@ -3312,6 +3318,158 @@ async function handleAdminRoute(req, res, url, pathname, method, lobby, wss, mai
   if (goldDeleteMatch && method === 'POST') {
     await deleteGoldProduct(parseInt(goldDeleteMatch[1]));
     return redirect(res, '/tc-backstage/gold-products');
+  }
+
+  // ===== IAP 결제내역 =====
+  if (pathname === '/tc-backstage/iap-receipts' && method === 'GET') {
+    const envF = ['production', 'sandbox'].includes(url.searchParams.get('env')) ? url.searchParams.get('env') : '';
+    const statusF = ['granted', 'refunded'].includes(url.searchParams.get('status')) ? url.searchParams.get('status') : '';
+    const platformF = ['ios', 'android'].includes(url.searchParams.get('platform')) ? url.searchParams.get('platform') : '';
+    const q = (url.searchParams.get('q') || '').trim().slice(0, 80);
+    const page = parseInt(url.searchParams.get('page') || '1', 10) || 1;
+
+    const data = await getIapReceipts({
+      environment: envF || undefined,
+      status: statusF || undefined,
+      platform: platformF || undefined,
+      search: q || undefined,
+      page,
+      limit: 50,
+    });
+
+    // Banner from a prior refund POST redirect.
+    const warn = url.searchParams.get('warn');
+    const msg = url.searchParams.get('msg');
+    let banner = '';
+    if (msg === 'refunded') {
+      banner = `<div class="card" style="border-left:4px solid #2e7d32;margin-bottom:14px">✅ 골드 회수 완료. 실제 결제금 환불은 Apple/Google이 별도로 처리합니다.</div>`;
+    } else if (msg === 'already') {
+      banner = `<div class="card" style="border-left:4px solid #888;margin-bottom:14px">이미 환불 처리된 건입니다.</div>`;
+    } else if (msg === 'error') {
+      banner = `<div class="card" style="border-left:4px solid #c62828;margin-bottom:14px">처리 중 오류가 발생했습니다.</div>`;
+    } else if (warn === 'insufficient') {
+      const rid = parseInt(url.searchParams.get('rid') || '0', 10) || 0;
+      const cur = formatNumber(url.searchParams.get('cur') || 0);
+      const grt = formatNumber(url.searchParams.get('grt') || 0);
+      const nk = escapeHtml(url.searchParams.get('nick') || '');
+      banner = `<div class="card" style="border-left:4px solid #c62828;margin-bottom:14px">
+        <b>회수 불가</b> — <b>${nk}</b> 님이 지급 골드를 이미 사용했습니다 (보유 ${cur} / 지급 ${grt}).
+        구매한 골드를 사용한 경우 회수되지 않습니다.<br>
+        <span style="color:#888;font-size:13px">Apple/Google이 실제 결제금을 이미 환불했다면, 아래로 음수 허용 강제 회수가 가능합니다.</span>
+        <form method="POST" action="/tc-backstage/iap-receipts/${rid}/refund" style="margin-top:10px"
+              onsubmit="return confirm('보유 골드보다 많이 차감되어 잔액이 음수가 됩니다. 강제 회수할까요?')">
+          <input type="hidden" name="force" value="1">
+          <button type="submit" class="btn btn-danger">음수 허용 강제 회수</button>
+        </form>
+      </div>`;
+    }
+
+    const opt = (cur, v, label) => `<option value="${v}"${cur === v ? ' selected' : ''}>${label}</option>`;
+    const filterForm = `
+      <form method="GET" action="/tc-backstage/iap-receipts" class="card" style="margin-bottom:14px;display:flex;gap:10px;flex-wrap:wrap;align-items:flex-end">
+        <div><div style="font-size:12px;color:#888">환경</div>
+          <select name="env">${opt(envF, '', '전체')}${opt(envF, 'production', '프로덕션')}${opt(envF, 'sandbox', '샌드박스')}</select></div>
+        <div><div style="font-size:12px;color:#888">상태</div>
+          <select name="status">${opt(statusF, '', '전체')}${opt(statusF, 'granted', '지급됨')}${opt(statusF, 'refunded', '환불됨')}</select></div>
+        <div><div style="font-size:12px;color:#888">플랫폼</div>
+          <select name="platform">${opt(platformF, '', '전체')}${opt(platformF, 'ios', 'iOS')}${opt(platformF, 'android', 'Android')}</select></div>
+        <div><div style="font-size:12px;color:#888">검색 (닉네임/상품/거래ID)</div>
+          <input type="text" name="q" value="${escapeHtml(q)}" placeholder="검색어" style="min-width:200px"></div>
+        <button type="submit" class="btn btn-primary">필터</button>
+        <a href="/tc-backstage/iap-receipts" class="btn btn-secondary">초기화</a>
+      </form>`;
+
+    const envBadge = (e) => e === 'sandbox'
+      ? '<span class="badge" style="background:#fff3e0;color:#e65100">SANDBOX</span>'
+      : '<span class="badge" style="background:#e3f2fd;color:#1565c0">PROD</span>';
+    const statusBadge = (st) => st === 'refunded'
+      ? '<span class="badge" style="background:#ffebee;color:#c62828">환불됨</span>'
+      : '<span class="badge" style="background:#e8f5e9;color:#2e7d32">지급됨</span>';
+
+    let table;
+    if (data.rows.length > 0) {
+      table = `<div class="table-wrap"><table>
+        <tr><th>일시(KST)</th><th>닉네임</th><th>상품</th><th>플랫폼</th><th>환경</th><th>골드</th><th>거래ID</th><th>상태</th><th></th></tr>
+        ${data.rows.map(r => {
+          const dt = new Date(r.verified_at).toLocaleString('ko-KR', { timeZone: 'Asia/Seoul' });
+          const txn = escapeHtml(String(r.transaction_id || ''));
+          const txnShort = txn.length > 28 ? txn.slice(0, 28) + '…' : txn;
+          const action = r.status === 'granted'
+            ? `<form method="POST" action="/tc-backstage/iap-receipts/${r.id}/refund"
+                     onsubmit="return confirm('이 결제의 지급 골드 ${formatNumber(r.gold_granted)}G를 회수합니다. (실제 결제금 환불은 스토어가 별도 처리)\\n계속할까요?')">
+                 <button type="submit" class="btn btn-danger">환불 처리</button>
+               </form>`
+            : `<span style="color:#888;font-size:12px">${r.refund_admin ? escapeHtml(r.refund_admin) : ''}${r.refunded_at ? '<br>' + new Date(r.refunded_at).toLocaleString('ko-KR', { timeZone: 'Asia/Seoul' }) : ''}</span>`;
+          return `<tr>
+            <td style="font-size:12px;white-space:nowrap">${dt}</td>
+            <td>${escapeHtml(r.nickname)}</td>
+            <td style="font-family:monospace;font-size:12px">${escapeHtml(r.product_id)}</td>
+            <td>${escapeHtml(r.platform)}</td>
+            <td>${envBadge(r.environment)}</td>
+            <td><b>${formatNumber(r.gold_granted)}</b></td>
+            <td style="font-family:monospace;font-size:11px" title="${txn}">${txnShort}</td>
+            <td>${statusBadge(r.status)}</td>
+            <td>${action}</td>
+          </tr>`;
+        }).join('')}
+      </table></div>`;
+    } else {
+      table = '<div class="empty">결제 내역 없음</div>';
+    }
+
+    const qs = new URLSearchParams();
+    if (envF) qs.set('env', envF);
+    if (statusF) qs.set('status', statusF);
+    if (platformF) qs.set('platform', platformF);
+    if (q) qs.set('q', q);
+    const baseUrl = '/tc-backstage/iap-receipts' + (qs.toString() ? '?' + qs.toString() : '');
+
+    const content = `
+      ${pageHeader(
+        'IAP 결제내역',
+        '인앱결제 영수증 원장. <b>환불 처리</b>는 지급한 골드를 회수할 뿐 실제 결제금은 Apple/Google이 별도로 환불합니다. 이미 사용한 골드는 회수되지 않습니다(강제 회수 시 음수 허용).'
+      )}
+      ${summaryStrip([
+        { label: '전체 영수증', value: formatNumber(data.summary.total) },
+        { label: '프로덕션', value: formatNumber(data.summary.prodCount), valueColor: '#1565c0' },
+        { label: '샌드박스', value: formatNumber(data.summary.sandboxCount), valueColor: '#e65100' },
+        { label: '환불됨', value: formatNumber(data.summary.refundedCount), valueColor: '#c62828' },
+        { label: '프로덕션 지급 골드(순)', value: formatNumber(data.summary.prodGold), valueColor: '#2e8b57' },
+      ])}
+      ${banner}
+      ${filterForm}
+      <div class="card">${table}</div>
+      ${pagination(data.page, data.total, data.limit, baseUrl)}
+    `;
+    return html(res, layout('결제내역', content, 'iap-receipts'));
+  }
+
+  const iapRefundMatch = pathname.match(/^\/tc-backstage\/iap-receipts\/(\d+)\/refund$/);
+  if (iapRefundMatch && method === 'POST') {
+    const body = await parseBody(req);
+    const allowNegative = body && (body.force === '1' || body.force === 1);
+    const result = await refundIapReceipt({
+      id: parseInt(iapRefundMatch[1], 10),
+      adminUser: sessionInfo.session.username || 'admin',
+      allowNegative,
+    });
+    if (result.success) {
+      return redirect(res, '/tc-backstage/iap-receipts?msg=refunded');
+    }
+    if (result.reason === 'already_refunded') {
+      return redirect(res, '/tc-backstage/iap-receipts?msg=already');
+    }
+    if (result.reason === 'insufficient') {
+      const p = new URLSearchParams({
+        warn: 'insufficient',
+        rid: String(iapRefundMatch[1]),
+        cur: String(result.currentGold),
+        grt: String(result.granted),
+        nick: result.nickname || '',
+      });
+      return redirect(res, '/tc-backstage/iap-receipts?' + p.toString());
+    }
+    return redirect(res, '/tc-backstage/iap-receipts?msg=error');
   }
 
   // ===== Maintenance =====

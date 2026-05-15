@@ -1354,7 +1354,7 @@ function parseGoldProductFormBody(body) {
 // ===== Route handler =====
 
 async function handleAdminRoute(req, res, url, pathname, method, lobby, wss, maintenanceFns = {}) {
-  const { getMaintenanceConfig, setMaintenanceConfig, getMaintenanceStatus, sendPushNotification, sendBroadcastPush } = maintenanceFns;
+  const { getMaintenanceConfig, setMaintenanceConfig, getMaintenanceStatus, sendPushNotification, sendBroadcastPush, runGoogleVoidedPoll } = maintenanceFns;
   // Login page (no auth required)
   if (pathname === '/tc-backstage/login') {
     if (method === 'GET') {
@@ -3860,6 +3860,22 @@ async function handleAdminRoute(req, res, url, pathname, method, lobby, wss, mai
   }
 
   // ===== IAP 환불문제 (트리아지 큐) =====
+  // Manual Google voided-purchase poll. Google has no refund webhook, so
+  // normally we wait up to 30 min for the scheduled poll — this fires it now
+  // to shorten the local/sandbox refund test loop. Watch /tc-backstage/logs
+  // for the [GoogleVoided] result lines.
+  if (pathname === '/tc-backstage/iap-refund-issues/poll-google' && method === 'POST') {
+    if (typeof runGoogleVoidedPoll === 'function') {
+      try {
+        await runGoogleVoidedPoll();
+      } catch (_) {
+        return redirect(res, '/tc-backstage/iap-refund-issues?msg=poll_err');
+      }
+      return redirect(res, '/tc-backstage/iap-refund-issues?msg=polled');
+    }
+    return redirect(res, '/tc-backstage/iap-refund-issues?msg=poll_na');
+  }
+
   if (pathname === '/tc-backstage/iap-refund-issues' && method === 'GET') {
     const page = parseInt(url.searchParams.get('page') || '1', 10) || 1;
     const data = await getRefundIssues({ page, limit: 50 });
@@ -3869,6 +3885,9 @@ async function handleAdminRoute(req, res, url, pathname, method, lobby, wss, mai
     if (msg === 'refunded') banner = `<div class="card" style="border-left:4px solid #2e7d32;margin-bottom:14px">✅ 강제 회수 완료 (잔액 음수 허용). 처리된 건은 목록에서 사라집니다.</div>`;
     else if (msg === 'already') banner = `<div class="card" style="border-left:4px solid #888;margin-bottom:14px">이미 처리된 건입니다.</div>`;
     else if (msg === 'error') banner = `<div class="card" style="border-left:4px solid #c62828;margin-bottom:14px">처리 중 오류가 발생했습니다.</div>`;
+    else if (msg === 'polled') banner = `<div class="card" style="border-left:4px solid #1565c0;margin-bottom:14px">▶ Google voided 폴링을 실행했습니다. 결과는 <a href="/tc-backstage/logs">서버 로그</a>의 <code>[GoogleVoided]</code> 줄에서 확인하세요. 회수된 건은 이 목록/원장에 반영됩니다.</div>`;
+    else if (msg === 'poll_err') banner = `<div class="card" style="border-left:4px solid #c62828;margin-bottom:14px">폴링 실행 중 오류. 서버 로그를 확인하세요.</div>`;
+    else if (msg === 'poll_na') banner = `<div class="card" style="border-left:4px solid #888;margin-bottom:14px">폴링 트리거를 사용할 수 없습니다 (서버 배선 누락).</div>`;
 
     const srcBadge = (s) => {
       if (s === 'apple') return '<span class="badge" style="background:#e3f2fd;color:#1565c0">Apple</span>';
@@ -3918,6 +3937,12 @@ async function handleAdminRoute(req, res, url, pathname, method, lobby, wss, mai
         { label: '미처리 환불문제', value: formatNumber(data.total), valueColor: data.total > 0 ? '#c62828' : '#2e8b57' },
       ])}
       ${banner}
+      <div class="card" style="margin-bottom:14px;display:flex;align-items:center;gap:12px;flex-wrap:wrap">
+        <form method="POST" action="/tc-backstage/iap-refund-issues/poll-google" style="margin:0">
+          <button type="submit" class="btn">▶ Google 환불 즉시 폴링</button>
+        </form>
+        <span style="font-size:13px;opacity:.7">Google은 환불 웹훅이 없어 평소 30분 주기로 조회합니다. 샌드박스/로컬 테스트 때 기다리지 않고 지금 실행 → 결과는 서버 로그에서 확인.</span>
+      </div>
       <div class="card">${table}</div>
       ${pagination(data.page, data.total, data.limit, '/tc-backstage/iap-refund-issues')}
     `;

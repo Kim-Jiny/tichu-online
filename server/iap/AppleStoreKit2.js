@@ -16,8 +16,8 @@
 const { verifyJws } = require('./AppleNotifications');
 
 // A compact JWS is exactly three base64url segments and its header declares
-// an alg. The legacy receipt is a single base64 blob (no dots), so this
-// cleanly distinguishes the two during the SK1→SK2 transition.
+// an alg. Used as a cheap shape guard so a non-JWS blob is rejected with a
+// clear reason instead of failing deep inside JWS verification.
 function looksLikeJws(s) {
   if (typeof s !== 'string') return false;
   const parts = s.split('.');

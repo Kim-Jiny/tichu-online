@@ -5365,6 +5365,14 @@ async function handleVerifyIapPurchase(ws, data) {
       || reason === 'missing_receipt'
       || reason === 'missing_purchase_token'
       || reason === 'missing_product_id'
+      // StoreKit 2 terminal verdicts — the server can NEVER turn these into a
+      // grant, so the client must finish the transaction or it re-delivers
+      // every launch forever. (sk2_jws_* is deliberately NOT here: a JWS that
+      // fails our chain check may be our verifier bug — keep it retryable so a
+      // server-side fix can still recover the purchase on a later launch.)
+      || reason === 'revoked'
+      || reason === 'product_mismatch'
+      || reason === 'no_transaction_id'
       || /^apple_status_/.test(reason)
       || /^purchase_state_/.test(reason);
   };

@@ -51,6 +51,8 @@ class IapService {
   final InAppPurchase _iap = InAppPurchase.instance;
   StreamSubscription<List<PurchaseDetails>>? _sub;
   Future<void>? _initFuture;
+  // Global serialization gate for verification (see _onPurchaseUpdates).
+  Future<void> _verifyChain = Future<void>.value();
 
   bool _available = false;
   bool get isAvailable => _available;
@@ -135,7 +137,16 @@ class IapService {
           break;
         case PurchaseStatus.purchased:
         case PurchaseStatus.restored:
-          await _verifyAndComplete(p);
+          // Serialize ALL verifications globally. The plugin can emit a new
+          // stream event (a fresh user purchase) while a background
+          // reconciliation of a prior pending purchase is still awaiting the
+          // server; running them concurrently would race the single
+          // server-side result completer and cross-wire results. Chaining
+          // guarantees strictly one verify in flight at a time.
+          _verifyChain = _verifyChain
+              .then((_) => _verifyAndComplete(p))
+              .catchError((_) {});
+          await _verifyChain;
           break;
       }
     }

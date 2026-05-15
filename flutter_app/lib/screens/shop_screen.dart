@@ -7,6 +7,7 @@ import '../models/shop_visual.dart';
 import '../services/game_service.dart';
 import '../services/ad_service.dart';
 import '../widgets/level_badge.dart';
+import 'gold_shop_screen.dart';
 
 class ShopScreen extends StatefulWidget {
   const ShopScreen({super.key});
@@ -262,6 +263,39 @@ class _ShopScreenState extends State<ShopScreen> {
                     size: 18,
                     color: Color(0xFFB89C76),
                   ),
+                ],
+              ),
+            ),
+          ),
+          const SizedBox(width: 8),
+          InkWell(
+            borderRadius: BorderRadius.circular(12),
+            onTap: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                    builder: (_) => const GoldShopScreen()),
+              );
+            },
+            child: Container(
+              padding:
+                  const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+              decoration: BoxDecoration(
+                color: const Color(0xFFFFE9B0),
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: const Color(0xFFE7B84B)),
+              ),
+              child: const Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(Icons.add_circle,
+                      size: 16, color: Color(0xFFB07A12)),
+                  SizedBox(width: 4),
+                  Text('충전',
+                      style: TextStyle(
+                          fontSize: 13,
+                          fontWeight: FontWeight.bold,
+                          color: Color(0xFFB07A12))),
                 ],
               ),
             ),

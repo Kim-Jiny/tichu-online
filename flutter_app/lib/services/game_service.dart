@@ -141,6 +141,11 @@ class GameService extends ChangeNotifier {
   int gold = 0;
   int leaveCount = 0;
   List<Map<String, dynamic>> goldHistory = [];
+  // IAP gold products (server-driven; product_ids resolved at runtime, never
+  // hardcoded in the client). Keyed list of {product_id, gold_amount,
+  // bonus_gold, label_*}. Store price/currency is merged in by IapService.
+  List<Map<String, dynamic>> goldProducts = [];
+  bool goldProductsLoading = false;
   List<Map<String, dynamic>> shopItems = [];
   List<Map<String, dynamic>> inventoryItems = [];
   /// Server-driven visual cache for banners/titles/themes. Populated once
@@ -1480,6 +1485,23 @@ class GameService extends ChangeNotifier {
           goldHistoryError =
               data['message'] as String? ?? 'gold_history_load_failed';
         }
+        notifyListeners();
+        break;
+      case 'gold_products_result':
+        goldProductsLoading = false;
+        if (data['success'] == true) {
+          final list = data['products'] as List? ?? [];
+          goldProducts =
+              list.map((e) => Map<String, dynamic>.from(e)).toList();
+        }
+        notifyListeners();
+        break;
+      case 'iap_purchase_result':
+        if (data['success'] == true && data['newGold'] != null) {
+          gold = data['newGold'];
+        }
+        _iapResultCompleter?.complete(Map<String, dynamic>.from(data));
+        _iapResultCompleter = null;
         notifyListeners();
         break;
       case 'admin_dashboard_result':
@@ -2959,6 +2981,38 @@ class GameService extends ChangeNotifier {
     goldHistoryError = null;
     notifyListeners();
     _network.send({'type': 'get_gold_history', 'limit': limit});
+  }
+
+  String get _iapPlatform => Platform.isIOS ? 'ios' : 'android';
+
+  void requestGoldProducts() {
+    goldProductsLoading = true;
+    notifyListeners();
+    _network.send({'type': 'get_gold_products', 'platform': _iapPlatform});
+  }
+
+  Completer<Map<String, dynamic>>? _iapResultCompleter;
+
+  // Sends the store verification payload to the server and resolves with the
+  // server's verdict. Purchases are processed one at a time by IapService, so
+  // a single in-flight completer is sufficient.
+  Future<Map<String, dynamic>> verifyIapPurchase({
+    required String productId,
+    required String verificationData,
+  }) {
+    _iapResultCompleter?.complete({
+      'success': false,
+      'message': 'superseded',
+    });
+    final completer = Completer<Map<String, dynamic>>();
+    _iapResultCompleter = completer;
+    _network.send({
+      'type': 'verify_iap_purchase',
+      'platform': _iapPlatform,
+      'productId': productId,
+      'verificationData': verificationData,
+    });
+    return completer.future;
   }
 
   // 광고 보상

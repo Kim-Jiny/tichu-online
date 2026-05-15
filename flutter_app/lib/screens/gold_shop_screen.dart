@@ -1,0 +1,224 @@
+import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+import 'package:in_app_purchase/in_app_purchase.dart';
+import '../services/game_service.dart';
+import '../services/iap_service.dart';
+
+class GoldShopScreen extends StatefulWidget {
+  const GoldShopScreen({super.key});
+
+  @override
+  State<GoldShopScreen> createState() => _GoldShopScreenState();
+}
+
+class _GoldShopScreenState extends State<GoldShopScreen> {
+  late final IapService _iap;
+  bool _storeReady = false;
+  bool _storeUnavailable = false;
+  bool _detailsRequested = false;
+  String? _busyProductId;
+  Map<String, ProductDetails> _details = {};
+
+  @override
+  void initState() {
+    super.initState();
+    final game = context.read<GameService>();
+    _iap = IapService(verify: game.verifyIapPurchase)
+      ..onSuccess = _handleSuccess
+      ..onError = _handleError
+      ..onPending = () {
+        _toast('결제 처리 중입니다...');
+      }
+      ..onSettled = (_) {
+        if (mounted) setState(() => _busyProductId = null);
+      };
+    _initStore();
+    game.requestGoldProducts();
+  }
+
+  Future<void> _initStore() async {
+    await _iap.init();
+    if (!mounted) return;
+    setState(() {
+      _storeReady = _iap.isAvailable;
+      _storeUnavailable = !_iap.isAvailable;
+    });
+  }
+
+  // Server list arrives via WS after requestGoldProducts(); once we have the
+  // product ids, resolve their store price/currency exactly once.
+  Future<void> _loadStoreDetails(List<Map<String, dynamic>> products) async {
+    if (_detailsRequested || !_storeReady || products.isEmpty) return;
+    _detailsRequested = true;
+    final ids = products
+        .map((p) => p['product_id']?.toString() ?? '')
+        .where((s) => s.isNotEmpty)
+        .toList();
+    final details = await _iap.loadProducts(ids);
+    if (!mounted) return;
+    setState(() {
+      _details = {for (final d in details) d.id: d};
+    });
+  }
+
+  void _handleSuccess(int granted, int newGold) {
+    if (!mounted) return;
+    _toast(granted > 0 ? '$granted 골드가 지급되었습니다!' : '이미 처리된 결제입니다.');
+  }
+
+  void _handleError(String message) {
+    if (!mounted) return;
+    _toast('결제 실패: $message');
+  }
+
+  void _toast(String msg) {
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(msg), duration: const Duration(seconds: 3)),
+    );
+  }
+
+  Future<void> _buy(Map<String, dynamic> product) async {
+    final id = product['product_id']?.toString() ?? '';
+    final pd = _details[id];
+    if (pd == null) {
+      _toast('스토어에서 상품 정보를 불러오지 못했습니다.');
+      return;
+    }
+    setState(() => _busyProductId = id);
+    try {
+      await _iap.buy(pd);
+    } catch (e) {
+      if (mounted) setState(() => _busyProductId = null);
+      _toast('결제를 시작할 수 없습니다: $e');
+    }
+  }
+
+  @override
+  void dispose() {
+    _iap.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text('골드 충전'),
+        actions: [
+          Consumer<GameService>(
+            builder: (_, game, _) => Center(
+              child: Padding(
+                padding: const EdgeInsets.only(right: 16),
+                child: Row(
+                  children: [
+                    const Icon(Icons.monetization_on,
+                        color: Color(0xFFFFC107), size: 20),
+                    const SizedBox(width: 4),
+                    Text('${game.gold}',
+                        style:
+                            const TextStyle(fontWeight: FontWeight.bold)),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+      body: Consumer<GameService>(
+        builder: (context, game, _) {
+          if (_storeUnavailable) {
+            return const Center(
+              child: Padding(
+                padding: EdgeInsets.all(24),
+                child: Text(
+                  '이 기기에서는 인앱결제를 사용할 수 없습니다.',
+                  textAlign: TextAlign.center,
+                ),
+              ),
+            );
+          }
+          if (game.goldProductsLoading && game.goldProducts.isEmpty) {
+            return const Center(child: CircularProgressIndicator());
+          }
+          final products = game.goldProducts;
+          if (products.isEmpty) {
+            return const Center(child: Text('판매 중인 골드 상품이 없습니다.'));
+          }
+          // Trigger store lookup after the server list is in.
+          WidgetsBinding.instance.addPostFrameCallback(
+              (_) => _loadStoreDetails(products));
+
+          return ListView.separated(
+            padding: const EdgeInsets.all(16),
+            itemCount: products.length,
+            separatorBuilder: (_, _) => const SizedBox(height: 12),
+            itemBuilder: (context, i) {
+              final p = products[i];
+              final id = p['product_id']?.toString() ?? '';
+              final base = (p['gold_amount'] ?? 0) as int;
+              final bonus = (p['bonus_gold'] ?? 0) as int;
+              final total = base + bonus;
+              final pd = _details[id];
+              final priceText = pd?.price ?? '...';
+              final busy = _busyProductId == id;
+              final locale =
+                  Localizations.localeOf(context).languageCode;
+              final label = (p['label_$locale']?.toString().isNotEmpty ==
+                          true
+                      ? p['label_$locale']
+                      : p['label_ko'])
+                  ?.toString();
+
+              return Card(
+                child: ListTile(
+                  leading: const Icon(Icons.monetization_on,
+                      color: Color(0xFFFFC107), size: 36),
+                  title: Text(
+                    '${_fmt(total)} 골드',
+                    style: const TextStyle(
+                        fontWeight: FontWeight.bold, fontSize: 18),
+                  ),
+                  subtitle: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      if (bonus > 0)
+                        Text('기본 ${_fmt(base)} + 보너스 ${_fmt(bonus)}',
+                            style: const TextStyle(
+                                color: Color(0xFF2E7D32), fontSize: 12)),
+                      if (label != null && label.isNotEmpty)
+                        Text(label,
+                            style: const TextStyle(fontSize: 12)),
+                    ],
+                  ),
+                  trailing: ElevatedButton(
+                    onPressed:
+                        (busy || pd == null) ? null : () => _buy(p),
+                    child: busy
+                        ? const SizedBox(
+                            width: 18,
+                            height: 18,
+                            child: CircularProgressIndicator(
+                                strokeWidth: 2),
+                          )
+                        : Text(priceText),
+                  ),
+                ),
+              );
+            },
+          );
+        },
+      ),
+    );
+  }
+
+  String _fmt(int n) {
+    final s = n.toString();
+    final buf = StringBuffer();
+    for (int i = 0; i < s.length; i++) {
+      if (i > 0 && (s.length - i) % 3 == 0) buf.write(',');
+      buf.write(s[i]);
+    }
+    return buf.toString();
+  }
+}

@@ -3472,14 +3472,34 @@ async function handleAdminRoute(req, res, url, pathname, method, lobby, wss, mai
     }
 
     const row = (k, v) => `<tr><td style="color:#888;white-space:nowrap;padding-right:18px">${k}</td><td>${v}</td></tr>`;
-    const refundBlock = r.status === 'granted'
-      ? `<form method="POST" action="/tc-backstage/iap-receipts/${r.id}/refund" style="margin-top:14px"
+    let refundBlock;
+    if (r.status === 'granted') {
+      refundBlock = `<form method="POST" action="/tc-backstage/iap-receipts/${r.id}/refund" style="margin-top:14px"
               onsubmit="return confirm('지급 골드 ${formatNumber(r.gold_granted)}G를 회수합니다. (실제 결제금 환불은 스토어가 별도 처리)\\n계속할까요?')">
            <button type="submit" class="btn btn-danger">환불 처리 (골드 회수)</button>
-         </form>`
-      : `<div class="card" style="margin-top:14px;border-left:4px solid #c62828">
-           환불됨 · 처리자 <b>${escapeHtml(r.refund_admin || '-')}</b> · ${fmtDt(r.refunded_at)}
+         </form>`;
+    } else if (r.status === 'refund_failed') {
+      refundBlock = `<div class="card" style="margin-top:14px;border-left:4px solid #e65100">
+           <b>⚠ 환불문제 (자동 회수 실패)</b> — 스토어는 현금을 환불했으나 유저가 골드를 이미 사용해 회수하지 못했습니다.
+           출처 <b>${escapeHtml(r.refund_source || '-')}</b> · 사유 <span style="font-family:monospace">${escapeHtml(r.refund_reason || '-')}</span> · 감지 ${fmtDt(r.refund_detected_at)}
+           <form method="POST" action="/tc-backstage/iap-receipts/${r.id}/refund" style="margin-top:10px"
+                 onsubmit="return confirm('${escapeHtml(r.nickname)} 님 잔액을 음수로 만들면서 ${formatNumber(r.gold_granted)}G를 강제 회수합니다.\\n계속할까요?')">
+             <input type="hidden" name="force" value="1">
+             <button type="submit" class="btn btn-danger">마이너스 강제회수</button>
+           </form>
+           <a href="/tc-backstage/iap-refund-issues" class="btn btn-secondary" style="margin-top:10px">환불문제 큐로</a>
          </div>`;
+    } else { // refunded
+      refundBlock = `<div class="card" style="margin-top:14px;border-left:4px solid #c62828">
+           환불 완료 · 출처 <b>${escapeHtml(r.refund_source || '-')}</b> · 처리자 <b>${escapeHtml(r.refund_admin || '-')}</b> · ${fmtDt(r.refunded_at)}
+           ${r.refund_reason ? `· 사유 <span style="font-family:monospace">${escapeHtml(r.refund_reason)}</span>` : ''}
+         </div>`;
+    }
+    const statusBadgeD = r.status === 'refunded'
+      ? '<span class="badge" style="background:#ffebee;color:#c62828">환불됨</span>'
+      : (r.status === 'refund_failed'
+        ? '<span class="badge" style="background:#fff3e0;color:#e65100">환불문제</span>'
+        : '<span class="badge" style="background:#e8f5e9;color:#2e7d32">지급됨</span>');
 
     const content = `
       ${pageHeader('영수증 상세 #' + r.id, '스토어 원본 검증응답(raw_payload) 포함 — 검증 통과 사유 감사용')}
@@ -3492,12 +3512,12 @@ async function handleAdminRoute(req, res, url, pathname, method, lobby, wss, mai
             ? '<span class="badge" style="background:#fff3e0;color:#e65100">SANDBOX</span>'
             : '<span class="badge" style="background:#e3f2fd;color:#1565c0">PRODUCTION</span>')}
           ${row('지급 골드', `<b>${formatNumber(r.gold_granted)}</b>`)}
-          ${row('상태', r.status === 'refunded'
-            ? '<span class="badge" style="background:#ffebee;color:#c62828">환불됨</span>'
-            : '<span class="badge" style="background:#e8f5e9;color:#2e7d32">지급됨</span>')}
+          ${row('상태', statusBadgeD)}
           ${row('거래ID', `<span style="font-family:monospace;font-size:12px;word-break:break-all">${escapeHtml(String(r.transaction_id))}</span>`)}
           ${row('검증 일시', fmtDt(r.verified_at))}
-          ${row('환불 일시', fmtDt(r.refunded_at))}
+          ${row('환불 감지', fmtDt(r.refund_detected_at))}
+          ${row('환불 완료', fmtDt(r.refunded_at))}
+          ${row('환불 출처', escapeHtml(r.refund_source || '-'))}
           ${row('환불 처리자', escapeHtml(r.refund_admin || '-'))}
         </table>
         ${refundBlock}

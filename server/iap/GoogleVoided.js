@@ -43,7 +43,7 @@ async function pollGoogleVoidedPurchases(autoRefund, { windowMs = 36 * 60 * 60 *
     do {
       const params = new URLSearchParams({
         startTime: String(startTime),
-        type: '1', // 1 = include voided products (not just subscriptions)
+        type: '1', // 0 = in-app voids only; 1 = in-app + subscription voids (superset, safe)
         'maxResults': '100',
       });
       if (nextToken) params.set('token', nextToken);

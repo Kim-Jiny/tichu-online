@@ -6600,6 +6600,19 @@ async function autoRefundByTransaction({ transactionId, source, reason }) {
     );
     if (recRes.rows.length === 0) {
       await client.query('ROLLBACK');
+      // Store confirmed a refund for a transaction we have no grant for (e.g.
+      // a purchase whose verify failed, or an id-format mismatch). Don't drop
+      // it silently — surface it in the 검증로그 so ops can investigate.
+      await logIapAttempt({
+        nickname: null,
+        platform: source === 'apple' ? 'ios' : (source === 'google' ? 'android' : null),
+        productId: null,
+        environment: null,
+        outcome: 'error',
+        reason: `refund_unmatched:${source || 'store'}`,
+        transactionId: String(transactionId),
+        rawPayload: { reason },
+      });
       return { success: false, reason: 'receipt_not_found' };
     }
     const rec = recRes.rows[0];

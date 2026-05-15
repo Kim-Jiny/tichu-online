@@ -5362,6 +5362,9 @@ async function handleVerifyIapPurchase(ws, data) {
   // nicknames. Absent on older clients → fall back to grant-all.
   const claimedTxnId = typeof data?.transactionId === 'string' && data.transactionId
     ? data.transactionId : null;
+  // Echoed back in iap_purchase_result so the client matches THIS request's
+  // response (a late post-timeout reply must not resolve another purchase).
+  const requestId = typeof data?.requestId === 'string' ? data.requestId : null;
 
   // A purchase should be "finished" on the store (consumable consumed /
   // transaction removed) ONLY when it's resolved for good — granted, or the
@@ -5406,6 +5409,7 @@ async function handleVerifyIapPurchase(ws, data) {
     sendTo(ws, {
       type: 'iap_purchase_result',
       success: false,
+      requestId,
       // Tell the client whether to finish the store transaction or keep it
       // pending for retry. Default to "keep" (false) for anything not clearly
       // permanent — never risk silently dropping a paid consumable.
@@ -5540,6 +5544,7 @@ async function handleVerifyIapPurchase(ws, data) {
   sendTo(ws, {
     type: 'iap_purchase_result',
     success: true,
+    requestId,
     finish: true, // resolved for good — client may finish the store txn
     alreadyGranted: !anyNewlyGranted,
     goldGranted: totalNewGold,

@@ -1506,11 +1506,21 @@ class GameService extends ChangeNotifier {
         notifyListeners();
         break;
       case 'iap_purchase_result':
+        // Balance is server-authoritative; apply it from any result even if
+        // the request already timed out (keeps the displayed gold correct).
         if (data['success'] == true && data['newGold'] != null) {
           gold = data['newGold'];
         }
-        _iapResultCompleter?.complete(Map<String, dynamic>.from(data));
-        _iapResultCompleter = null;
+        // Resolve ONLY the matching request. Unknown/late ids are ignored
+        // (the request already timed out and was cleaned up), so a late
+        // response can never complete a different purchase's future.
+        final rid = data['requestId'] as String?;
+        if (rid != null) {
+          final c = _iapPending.remove(rid);
+          if (c != null && !c.isCompleted) {
+            c.complete(Map<String, dynamic>.from(data));
+          }
+        }
         notifyListeners();
         break;
       case 'admin_dashboard_result':
@@ -3000,31 +3010,41 @@ class GameService extends ChangeNotifier {
     _network.send({'type': 'get_gold_products', 'platform': _iapPlatform});
   }
 
-  Completer<Map<String, dynamic>>? _iapResultCompleter;
+  // Correlated pending verifications keyed by a per-request id echoed by the
+  // server. A single completer is NOT safe: after a 20s local timeout the
+  // server may still respond late, and without correlation that late response
+  // would resolve the NEXT purchase's completer (cross-wiring finish/toasts).
+  final Map<String, Completer<Map<String, dynamic>>> _iapPending = {};
+  int _iapReqSeq = 0;
 
-  // Sends the store verification payload to the server and resolves with the
-  // server's verdict. Purchases are processed one at a time by IapService, so
-  // a single in-flight completer is sufficient.
+  // Sends the store verification payload and resolves with the server's
+  // verdict for THIS request only (matched by requestId). Self-times-out and
+  // cleans up its map entry so a late response can never complete another
+  // request.
   Future<Map<String, dynamic>> verifyIapPurchase({
     required String productId,
     required String verificationData,
     String? transactionId,
   }) {
-    _iapResultCompleter?.complete({
-      'success': false,
-      'message': 'superseded',
-    });
+    final reqId = '${DateTime.now().microsecondsSinceEpoch}_${_iapReqSeq++}';
     final completer = Completer<Map<String, dynamic>>();
-    _iapResultCompleter = completer;
+    _iapPending[reqId] = completer;
     _network.send({
       'type': 'verify_iap_purchase',
+      'requestId': reqId,
       'platform': _iapPlatform,
       'productId': productId,
       'verificationData': verificationData,
       if (transactionId != null && transactionId.isNotEmpty)
         'transactionId': transactionId,
     });
-    return completer.future;
+    return completer.future.timeout(
+      const Duration(seconds: 25),
+      onTimeout: () {
+        _iapPending.remove(reqId);
+        return {'success': false, 'message': 'timeout'};
+      },
+    );
   }
 
   // App-lived IAP service. Created once and kept listening for the whole

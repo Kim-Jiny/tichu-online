@@ -154,13 +154,16 @@ class IapService {
     // retry verification then (server grant is idempotent).
     bool mayFinish = false;
     try {
+      // verify() self-times-out (25s) and resolves with a failure map plus
+      // correlation cleanup — no local .timeout() here, which would otherwise
+      // abandon the request while a late response could still mis-resolve it.
       final result = await verify(
         productId: p.productID,
         verificationData: p.verificationData.serverVerificationData,
         // The exact transaction being settled. Lets the server grant only
         // this one instead of every accumulated receipt entry.
         transactionId: p.purchaseID,
-      ).timeout(const Duration(seconds: 20));
+      );
       if (result['success'] == true) {
         mayFinish = true;
         final granted = (result['goldGranted'] ?? 0) as int;

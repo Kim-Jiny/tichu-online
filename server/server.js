@@ -879,6 +879,46 @@ const server = http.createServer(async (req, res) => {
     });
     res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' });
     res.end(html);
+  } else if (pathname === '/privacy' || pathname === '/terms') {
+    // Public, no-auth policy pages. App Store Connect / Google Play require a
+    // publicly reachable Privacy Policy URL; the in-app copy is WS-only, so
+    // serve the SAME admin-managed config here to keep them in sync.
+    // ?lang=ko|en|de (defaults to ko).
+    const langParam = url.searchParams.get('lang');
+    const lang = ['ko', 'en', 'de'].includes(langParam) ? langParam : 'ko';
+    const isPrivacy = pathname === '/privacy';
+    const baseKey = isPrivacy ? 'privacy_policy' : 'eula_content';
+    let body = '';
+    try {
+      body = (await getLocalizedConfig(baseKey, lang)) || '';
+    } catch (err) {
+      console.error('policy page error:', err);
+    }
+    const T = {
+      ko: { privacy: '개인정보처리방침', terms: '이용약관' },
+      en: { privacy: 'Privacy Policy', terms: 'Terms of Service' },
+      de: { privacy: 'Datenschutzrichtlinie', terms: 'Nutzungsbedingungen' },
+    };
+    const pageTitle = isPrivacy ? T[lang].privacy : T[lang].terms;
+    const otherLabel = isPrivacy ? T[lang].terms : T[lang].privacy;
+    const html = `<!DOCTYPE html><html lang="${lang}"><head>`
+      + `<meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">`
+      + `<meta name="robots" content="all"><title>${escapeHtml(pageTitle)} · Tichu Online</title>`
+      + `<style>body{margin:0;background:#f6f4ef;color:#2b2b2b;`
+      + `font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,'Noto Sans KR',sans-serif;line-height:1.7}`
+      + `.wrap{max-width:760px;margin:0 auto;padding:40px 22px 80px}`
+      + `h1{font-size:22px;margin:0 0 6px}.nav{font-size:13px;margin:0 0 24px}`
+      + `.nav a{color:#7a6a4f;text-decoration:none;margin-right:14px}`
+      + `pre{white-space:pre-wrap;word-break:break-word;font:inherit;margin:0}</style></head>`
+      + `<body><div class="wrap"><h1>${escapeHtml(pageTitle)}</h1>`
+      + `<div class="nav"><a href="${isPrivacy ? '/privacy' : '/terms'}?lang=ko">한국어</a>`
+      + `<a href="${isPrivacy ? '/privacy' : '/terms'}?lang=en">English</a>`
+      + `<a href="${isPrivacy ? '/privacy' : '/terms'}?lang=de">Deutsch</a>`
+      + ` · <a href="${isPrivacy ? '/terms' : '/privacy'}?lang=${lang}">${escapeHtml(otherLabel)}</a></div>`
+      + `<pre>${escapeHtml(body || (lang === 'ko' ? '내용이 준비 중입니다.' : 'Content is being prepared.'))}</pre>`
+      + `</div></body></html>`;
+    res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' });
+    res.end(html);
   } else if (pathname === '/debug-path') {
     res.writeHead(200, { 'Content-Type': 'text/plain' });
     res.end(`pathname=${req.url} | hasAdmin=${typeof handleAdminRoute}`);

@@ -7,7 +7,6 @@ import '../l10n/l10n_helpers.dart';
 import '../services/game_service.dart';
 import '../utils/level_curve.dart';
 import '../services/locale_service.dart';
-import '../services/network_service.dart';
 import '../services/session_service.dart';
 import '../models/player.dart';
 import '../models/room.dart';
@@ -32,8 +31,6 @@ class LobbyScreen extends StatefulWidget {
 
 class _LobbyScreenState extends State<LobbyScreen> {
   bool _inRoom = false;
-  bool _wasDisconnected = false;
-  NetworkService? _networkService; // C6: Cache for safe dispose
 
   // 채팅
   final TextEditingController _chatController = TextEditingController();
@@ -87,34 +84,11 @@ class _LobbyScreenState extends State<LobbyScreen> {
       game.requestFriends();
       game.requestPendingFriendRequests();
       game.requestInquiries();
-      _networkService = context.read<NetworkService>();
-      _networkService!.addListener(_onNetworkChanged);
     });
-  }
-
-  void _onNetworkChanged() {
-    if (!mounted) return;
-    final network = _networkService;
-    if (network == null) return;
-    if (!network.isConnected) {
-      _wasDisconnected = true;
-    } else if (_wasDisconnected && network.isConnected) {
-      _wasDisconnected = false;
-      final game = context.read<GameService>();
-      if (_inRoom) {
-        game.checkRoom();
-      } else {
-        // Reload room list after reconnection
-        game.requestRoomList();
-        game.requestSpectatableRooms();
-      }
-    }
   }
 
   @override
   void dispose() {
-    // C6: Use cached reference instead of context.read in dispose
-    _networkService?.removeListener(_onNetworkChanged);
     _chatController.dispose();
     _chatScrollController.dispose();
     _bannerAd?.dispose();

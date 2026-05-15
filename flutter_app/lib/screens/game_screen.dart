@@ -3,7 +3,6 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../services/game_service.dart';
 import '../utils/level_curve.dart';
-import '../services/network_service.dart';
 import '../services/session_service.dart';
 import '../models/game_state.dart';
 import '../models/player.dart';
@@ -53,12 +52,10 @@ class _GameScreenState extends State<GameScreen> {
   Timer? _countdownTimer;
   int _remainingSeconds = 0;
   int _lastTickSoundSecond = 999;
-  bool _wasDisconnected = false;
   bool _birdCallDialogOpen = false;
   bool _roundEndReady = false; // delay before showing round end dialog
   bool _waitingForRoomRecovery = false;
   GameService? _gameService;
-  NetworkService? _networkService; // C6: Cache for safe dispose
   bool _profileRequested = false; // C8: Prevent requestProfile loop
   int _lastSeenMessageCount = -1; // -1 = not yet initialized
 
@@ -69,24 +66,10 @@ class _GameScreenState extends State<GameScreen> {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _gameService = context.read<GameService>();
       _gameService!.requestBlockedUsers();
-      _networkService = context.read<NetworkService>();
-      _networkService!.addListener(_onNetworkChanged);
     });
     _countdownTimer = Timer.periodic(const Duration(seconds: 1), (_) {
       _updateCountdown();
     });
-  }
-
-  void _onNetworkChanged() {
-    if (!mounted) return;
-    final network = _networkService;
-    if (network == null) return;
-    if (!network.isConnected) {
-      _wasDisconnected = true;
-    } else if (_wasDisconnected && network.isConnected) {
-      _wasDisconnected = false;
-      context.read<GameService>().checkRoom();
-    }
   }
 
   Future<void> _recoverRoomState() async {
@@ -154,8 +137,6 @@ class _GameScreenState extends State<GameScreen> {
 
   @override
   void dispose() {
-    // C6: Use cached reference instead of context.read in dispose
-    _networkService?.removeListener(_onNetworkChanged);
     _chatController.dispose();
     _chatScrollController.dispose();
     _countdownTimer?.cancel();
@@ -1162,6 +1143,15 @@ class _GameScreenState extends State<GameScreen> {
       builder: (ctx) {
         return Consumer<GameService>(
           builder: (ctx, game, _) {
+            // Auto-dismiss when the game ends so the round/result screen isn't hidden behind the dialog.
+            final gs = game.gameState;
+            if (gs == null || gs.phase == 'game_end') {
+              WidgetsBinding.instance.addPostFrameCallback((_) {
+                if (!ctx.mounted) return;
+                final route = ModalRoute.of(ctx);
+                if (route != null && route.isCurrent) Navigator.of(ctx).pop();
+              });
+            }
             final profile = game.profileFor(nickname);
             final isLoading = profile == null || profile['nickname'] != nickname;
             final isMe = nickname == game.playerName;

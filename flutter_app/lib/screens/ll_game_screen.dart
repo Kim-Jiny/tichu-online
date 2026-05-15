@@ -4,7 +4,6 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../services/game_service.dart';
 import '../utils/level_curve.dart';
-import '../services/network_service.dart';
 import '../models/player.dart';
 import '../models/ll_game_state.dart';
 import '../widgets/love_letter_card.dart';
@@ -40,10 +39,8 @@ class _LLGameScreenState extends State<LLGameScreen> {
   int _remainingSeconds = 0;
   int _gameEndCountdown = 3;
   bool _gameEndCountdownActive = false;
-  bool _wasDisconnected = false;
   bool _waitingForRoomRecovery = false;
   GameService? _gameService;
-  NetworkService? _networkService;
 
   // Rolling log of recent center-board status lines so the latest
   // action stays visible after the effect resolves — feels like the
@@ -58,25 +55,11 @@ class _LLGameScreenState extends State<LLGameScreen> {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _gameService = context.read<GameService>();
       _gameService!.requestBlockedUsers();
-      _networkService = context.read<NetworkService>();
-      _networkService!.addListener(_onNetworkChanged);
       _readChatCount = _gameService!.chatMessages.length;
     });
     _countdownTimer = Timer.periodic(const Duration(seconds: 1), (_) {
       _updateCountdown();
     });
-  }
-
-  void _onNetworkChanged() {
-    if (!mounted) return;
-    final network = _networkService;
-    if (network == null) return;
-    if (!network.isConnected) {
-      _wasDisconnected = true;
-    } else if (_wasDisconnected && network.isConnected) {
-      _wasDisconnected = false;
-      context.read<GameService>().checkRoom();
-    }
   }
 
   @override
@@ -86,7 +69,6 @@ class _LLGameScreenState extends State<LLGameScreen> {
     _gameEndCountdownTimer?.cancel();
     _chatController.dispose();
     _chatScrollController.dispose();
-    _networkService?.removeListener(_onNetworkChanged);
     super.dispose();
   }
 
@@ -3880,6 +3862,15 @@ class _LLGameScreenState extends State<LLGameScreen> {
       builder: (ctx) {
         return Consumer<GameService>(
           builder: (ctx, game, _) {
+            // Auto-dismiss when the game ends so the round/result screen isn't hidden behind the dialog.
+            final ll = game.llGameState;
+            if (ll == null || ll.phase == 'game_end') {
+              WidgetsBinding.instance.addPostFrameCallback((_) {
+                if (!ctx.mounted) return;
+                final route = ModalRoute.of(ctx);
+                if (route != null && route.isCurrent) Navigator.of(ctx).pop();
+              });
+            }
             final profile = game.profileFor(nickname);
             final isLoading =
                 profile == null || profile['nickname'] != nickname;

@@ -1,0 +1,72 @@
+Tichu Online Nutzungsbedingungen
+
+Artikel 1 (Zweck)
+Diese Bedingungen regeln die Rechte, Pflichten und Verantwortlichkeiten zwischen dem Diensteanbieter und den Nutzern im Zusammenhang mit der Nutzung von Tichu Online (der „Dienst").
+
+Artikel 2 (Definitionen)
+1. „Dienst" bezeichnet alle von Tichu Online bereitgestellten Spiele und zugehörigen Funktionen.
+2. „Nutzer" bezeichnet eine Person, die den Dienst gemäß diesen Bedingungen nutzt.
+3. „Inhalt" bezeichnet Texte, Nicknamen, Chatnachrichten und Ähnliches, die ein Nutzer innerhalb des Dienstes erstellt oder teilt.
+
+Artikel 3 (Wirksamkeit und Änderung der Bedingungen)
+1. Diese Bedingungen werden wirksam, indem sie auf dem Dienstbildschirm veröffentlicht oder den Nutzern anderweitig mitgeteilt werden.
+2. Der Diensteanbieter kann diese Bedingungen bei Bedarf ändern; geänderte Bedingungen werden nach Bekanntgabe wirksam.
+
+Artikel 4 (Pflichten des Nutzers)
+1. Ein Nutzer darf nicht:
+  - Informationen einer anderen Person missbräuchlich verwenden
+  - den Betrieb des Dienstes stören
+  - beleidigende, verleumderische, diskriminierende oder hasserfüllte Sprache gegenüber anderen verwenden
+  - obszöne oder gewalttätige Inhalte veröffentlichen
+  - den Dienst für rechtswidrige oder unlautere Zwecke nutzen
+  - In-Game-Fehler ausnutzen oder das Spiel auf abnormale Weise spielen
+2. Verstößt ein Nutzer gegen die oben genannten Pflichten, kann die Nutzung des Dienstes eingeschränkt werden.
+
+Artikel 5 (Bereitstellung und Änderung des Dienstes)
+1. Der Diensteanbieter kann die Inhalte des Dienstes ändern oder einstellen.
+2. Der Diensteanbieter kündigt Änderungen des Dienstes vorab an.
+
+Artikel 6 (Verwaltung von Beiträgen)
+1. Das Urheberrecht an von einem Nutzer erstellten Beiträgen (Chatnachrichten, Nicknamen usw.) liegt bei diesem Nutzer.
+2. Der Diensteanbieter kann ohne vorherige Ankündigung Beiträge löschen oder einschränken, die:
+  - andere Nutzer verleumden oder deren Ruf schädigen
+  - gegen die öffentliche Ordnung und die guten Sitten verstoßen
+  - mit Straftaten in Zusammenhang stehen
+  - das Urheberrecht oder andere Schutzrechte des Diensteanbieters verletzen
+
+Artikel 7 (Schutz personenbezogener Daten)
+Der Diensteanbieter bemüht sich um den Schutz der personenbezogenen Daten der Nutzer und verarbeitet sie gemäß den geltenden Gesetzen.
+
+Artikel 8 (Kostenpflichtiger Dienst und Gold)
+1. „Gold" ist kostenpflichtiger digitaler Inhalt zur Nutzung innerhalb des Dienstes; Nutzer können es per In-App-Kauf erwerben.
+2. Preis und Währung von Gold richten sich nach der Anzeige des Apple App Store bzw. Google Play (die „Stores"); die Zahlung wird über den jeweiligen Store abgewickelt.
+3. Gold kann nur innerhalb des Spiels verwendet werden und kann nicht in Bargeld umgetauscht, in bar erstattet oder an Dritte übertragen werden.
+4. Der Umgang mit ungenutztem Gold bei Einstellung des Dienstes wird in der Einstellungsmitteilung gesondert bekannt gegeben.
+
+Artikel 9 (Widerruf und Erstattung)
+1. Ein Nutzer kann innerhalb der gesetzlich vorgeschriebenen Frist ab dem Zahlungsdatum den Widerruf verlangen. Inhalte, deren Nutzen sofort entsteht und verbraucht wird, wie bereits verwendetes Gold, sind jedoch gemäß Artikel 17 Absatz 2 des koreanischen Gesetzes zum Verbraucherschutz im elektronischen Handel vom Widerruf ausgeschlossen.
+2. Genehmigung und Durchführung von Erstattungen und Zahlungsstornierungen richten sich nach den Richtlinien und Verfahren des jeweiligen Stores (Apple/Google). Der Diensteanbieter kann bereits gewährtes Gold gemäß der Erstattungsentscheidung des Stores zurückfordern.
+3. Zahlungsbezogene Anfragen werden über die In-App-Einstellungen > Kontakt > „Zahlung/Erstattung" oder den Kontakt in Artikel 13 entgegengenommen und gemäß den geltenden Gesetzen bearbeitet.
+
+Artikel 10 (Käufe durch Minderjährige)
+1. Tätigt ein Minderjähriger eine Zahlung ohne Zustimmung eines gesetzlichen Vertreters, können der Minderjährige oder der gesetzliche Vertreter diese Zahlung gemäß Artikel 5 des koreanischen Zivilgesetzes stornieren.
+2. Ein Minderjähriger muss vor einer Zahlung die Zustimmung eines gesetzlichen Vertreters einholen.
+
+Artikel 11 (Haftungsausschluss)
+1. Der Diensteanbieter haftet nicht, wenn er den Dienst aufgrund höherer Gewalt wie Naturkatastrophen oder Krieg nicht bereitstellen kann.
+2. Der Diensteanbieter haftet nicht für Dienstunterbrechungen, die vom Nutzer zu vertreten sind.
+
+Artikel 12 (Streitbeilegung)
+Streitigkeiten im Zusammenhang mit diesen Bedingungen werden nach dem Recht der Republik Korea beigelegt.
+
+Artikel 13 (Unternehmensinformationen)
+- Firmenname: Jinsoft
+- Vertreter: Mijin Kim
+- Gewerbeanmeldenummer: 827-53-01093
+- Versandhandels-Meldenummer: 2026-Goyang Deogyang-gu-0658
+- Geschäftsadresse: 303-508, 138 Chunggyeong-ro, Deogyang-gu, Goyang-si, Gyeonggi-do, Republik Korea
+- Kundensupport: kjinyz@naver.com (In-App-Einstellungen > Kontakt > „Zahlung/Erstattung")
+- Hosting-Anbieter: Contabo GmbH (Deutschland)
+
+Anhang
+Diese Bedingungen treten am 15. Mai 2026 in Kraft.

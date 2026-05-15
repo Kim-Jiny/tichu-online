@@ -1,0 +1,72 @@
+Tichu Online Terms of Service
+
+Article 1 (Purpose)
+These Terms govern the rights, obligations, and responsibilities between the service provider and users in connection with the use of Tichu Online (the "Service").
+
+Article 2 (Definitions)
+1. "Service" means all games and related features provided by Tichu Online.
+2. "User" means a person who uses the Service under these Terms.
+3. "Content" means text, nicknames, chat messages, and similar items created or shared by a User within the Service.
+
+Article 3 (Effect and Amendment of Terms)
+1. These Terms take effect by being posted on the Service screen or otherwise notified to Users.
+2. The service provider may amend these Terms when necessary; amended Terms take effect after notice.
+
+Article 4 (User Obligations)
+1. A User shall not:
+  - Misappropriate another person's information
+  - Interfere with the operation of the Service
+  - Use abusive, defamatory, discriminatory, or hateful language toward others
+  - Post obscene or violent content
+  - Use the Service for illegal or improper purposes
+  - Exploit in-game bugs or play the game in an abnormal manner
+2. If a User breaches the above obligations, use of the Service may be restricted.
+
+Article 5 (Provision and Change of the Service)
+1. The service provider may change or discontinue the contents of the Service.
+2. The service provider will give prior notice of any change to the Service.
+
+Article 6 (Management of Postings)
+1. Copyright in postings created by a User (chat messages, nicknames, etc.) belongs to that User.
+2. The service provider may delete or restrict, without prior notice, postings that:
+  - Defame or damage the reputation of other Users
+  - Violate public order and good morals
+  - Are related to crime
+  - Infringe the service provider's copyright or other intellectual property rights
+
+Article 7 (Protection of Personal Information)
+The service provider strives to protect Users' personal information and processes it in accordance with applicable laws.
+
+Article 8 (Paid Service and Gold)
+1. "Gold" is paid digital content used within the Service; Users may purchase it via in-app purchase.
+2. The price and currency of Gold are as displayed by the Apple App Store or Google Play (the "Stores"), and payment is processed through each Store.
+3. Gold may be used only within the game and cannot be exchanged for cash, refunded as cash, or transferred to third parties.
+4. The handling of unused Gold upon termination of the Service will be separately announced in the termination notice.
+
+Article 9 (Withdrawal of Subscription and Refund)
+1. A User may request withdrawal of subscription within the period prescribed by applicable law from the payment date. However, content whose utility arises and is exhausted immediately, such as Gold that has already been used, is excluded from withdrawal of subscription pursuant to Article 17(2) of the Act on Consumer Protection in Electronic Commerce.
+2. Approval and execution of refunds and payment cancellations follow the policies and procedures of each Store (Apple/Google). The service provider may reclaim Gold already granted in accordance with the Store's refund decision.
+3. Payment-related inquiries are received via the in-app Settings > Contact Us > "Payment/Refund" or the contact in Article 13 below, and are handled in accordance with applicable laws.
+
+Article 10 (Purchases by Minors)
+1. If a minor makes a payment without the consent of a legal representative, the minor or the legal representative may cancel that payment pursuant to Article 5 of the Civil Act.
+2. A minor must obtain the consent of a legal representative before making a payment.
+
+Article 11 (Disclaimer)
+1. The service provider is not liable where it cannot provide the Service due to force majeure such as natural disaster or war.
+2. The service provider is not liable for service disruptions attributable to the User.
+
+Article 12 (Dispute Resolution)
+Disputes related to these Terms shall be resolved in accordance with the laws of the Republic of Korea.
+
+Article 13 (Business Information)
+- Business name: Jinsoft
+- Representative: Mijin Kim
+- Business registration number: 827-53-01093
+- Mail-order business report number: 2026-Goyang Deogyang-gu-0658
+- Business address: 303-508, 138 Chunggyeong-ro, Deogyang-gu, Goyang-si, Gyeonggi-do, Republic of Korea
+- Customer support: kjinyz@naver.com (in-app Settings > Contact Us > "Payment/Refund")
+- Hosting provider: Contabo GmbH (Germany)
+
+Addendum
+These Terms take effect on May 15, 2026.

@@ -1,0 +1,48 @@
+Privacy Policy
+
+1. Personal Information Collected
+The Service collects the following information for sign-up and use of the Service:
+- Required: ID, nickname, password
+- Optional: email and social account identifier when using social login
+- Automatically collected: device information (model, OS version), app version, IP address
+- Payment information: transaction ID, product identifier, purchase/refund history, store account binding value (nickname hash)
+  Note: Payment instrument details such as card numbers are processed by Apple/Google; the Service does not collect or store them.
+
+2. Purpose of Collection and Use
+- Member identification and provision of the Service
+- Game matchmaking and record management
+- Prevention of misuse and handling of reports
+- In-app purchase processing, receipt verification, refunds, and payment dispute handling
+- Sending push notifications (with user consent)
+- Service improvement and statistical analysis
+
+3. Retention and Use Period
+- Deleted immediately upon membership withdrawal.
+- However, pursuant to the Act on Consumer Protection in Electronic Commerce, records on payment and supply of goods, and records on withdrawal of subscription, contracts, consumer complaints, and dispute resolution are retained for 5 years.
+- Where other applicable laws require retention, the information is kept for the corresponding period.
+
+4. Provision to Third Parties and Outsourcing of Processing
+The Service does not, in principle, provide users' personal information to third parties. However, for service operation and payment processing, information is processed/exchanged as follows:
+- Apple Inc. / Google LLC: in-app purchase processing, receipt verification, and refund confirmation (incidental to the use of Store payment systems)
+- Contabo GmbH (Germany): hosting of the Service's servers and database (the Service infrastructure is operated through Contabo GmbH located in Germany, and accordingly personal information is processed and stored overseas)
+- Where required by law
+
+5. Destruction of Personal Information
+Upon membership withdrawal or expiration of the retention period, information in electronic file form is deleted irrecoverably. (Items subject to the statutory retention in Section 3 are destroyed after the retention period elapses.)
+
+6. Rights of Users
+Users may view, modify, or delete their personal information at any time, and may request processing through membership withdrawal.
+
+7. Technical Measures for Protecting Personal Information
+- Encrypted storage of passwords
+- SSL/TLS encrypted communication
+- Access privilege management
+
+8. Personal Information Protection Officer and Business Information
+- Business name: Jinsoft / Representative (Personal Information Protection Officer): Mijin Kim
+- Business registration number: 827-53-01093
+- Mail-order business report number: 2026-Goyang Deogyang-gu-0658
+- Address: 303-508, 138 Chunggyeong-ro, Deogyang-gu, Goyang-si, Gyeonggi-do, Republic of Korea
+- Contact: kjinyz@naver.com (available via in-app Settings > Contact Us)
+
+Effective date: May 15, 2026

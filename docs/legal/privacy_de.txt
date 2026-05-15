@@ -1,0 +1,48 @@
+Datenschutzrichtlinie
+
+1. Erhobene personenbezogene Daten
+Der Dienst erhebt für die Registrierung und Nutzung des Dienstes folgende Daten:
+- Erforderlich: ID, Nickname, Passwort
+- Optional: E-Mail und Social-Account-Kennung bei Social-Login
+- Automatisch erhoben: Geräteinformationen (Modell, OS-Version), App-Version, IP-Adresse
+- Zahlungsinformationen: Transaktions-ID, Produktkennung, Kauf-/Erstattungsverlauf, Store-Kontobindungswert (Nickname-Hash)
+  Hinweis: Zahlungsmitteldaten wie Kartennummern werden von Apple/Google verarbeitet; der Dienst erhebt oder speichert sie nicht.
+
+2. Zweck der Erhebung und Nutzung
+- Identifikation der Mitglieder und Bereitstellung des Dienstes
+- Spiel-Matchmaking und Verwaltung von Spielständen
+- Verhinderung von Missbrauch und Bearbeitung von Meldungen
+- Abwicklung von In-App-Käufen, Beleg-Verifizierung, Erstattungen und Bearbeitung von Zahlungsstreitigkeiten
+- Versand von Push-Benachrichtigungen (mit Zustimmung des Nutzers)
+- Verbesserung des Dienstes und statistische Analyse
+
+3. Aufbewahrungs- und Nutzungsdauer
+- Wird bei Kündigung der Mitgliedschaft unverzüglich gelöscht.
+- Gemäß dem koreanischen Gesetz zum Verbraucherschutz im elektronischen Handel werden jedoch Aufzeichnungen über Zahlung und Lieferung von Waren sowie über Widerruf, Verträge, Verbraucherbeschwerden und Streitbeilegung 5 Jahre lang aufbewahrt.
+- Soweit andere geltende Gesetze eine Aufbewahrung verlangen, werden die Daten für den entsprechenden Zeitraum gespeichert.
+
+4. Weitergabe an Dritte und Auftragsverarbeitung
+Der Dienst gibt personenbezogene Daten der Nutzer grundsätzlich nicht an Dritte weiter. Für den Betrieb des Dienstes und die Zahlungsabwicklung werden Daten jedoch wie folgt verarbeitet/ausgetauscht:
+- Apple Inc. / Google LLC: Abwicklung von In-App-Käufen, Beleg-Verifizierung und Erstattungsbestätigung (verbunden mit der Nutzung der Store-Zahlungssysteme)
+- Contabo GmbH (Deutschland): Hosting der Server und Datenbank des Dienstes (die Dienstinfrastruktur wird über die in Deutschland ansässige Contabo GmbH betrieben, wodurch personenbezogene Daten im Ausland verarbeitet und gespeichert werden)
+- Soweit gesetzlich erforderlich
+
+5. Vernichtung personenbezogener Daten
+Bei Kündigung der Mitgliedschaft oder Ablauf der Aufbewahrungsfrist werden Daten in elektronischer Dateiform unwiederbringlich gelöscht. (Die der gesetzlichen Aufbewahrung nach Abschnitt 3 unterliegenden Daten werden nach Ablauf der Aufbewahrungsfrist vernichtet.)
+
+6. Rechte der Nutzer
+Nutzer können ihre personenbezogenen Daten jederzeit einsehen, ändern oder löschen und die Verarbeitung durch Kündigung der Mitgliedschaft beantragen.
+
+7. Technische Maßnahmen zum Schutz personenbezogener Daten
+- Verschlüsselte Speicherung von Passwörtern
+- SSL/TLS-verschlüsselte Kommunikation
+- Verwaltung von Zugriffsrechten
+
+8. Datenschutzbeauftragter und Unternehmensinformationen
+- Firmenname: Jinsoft / Vertreter (Datenschutzbeauftragter): Mijin Kim
+- Gewerbeanmeldenummer: 827-53-01093
+- Versandhandels-Meldenummer: 2026-Goyang Deogyang-gu-0658
+- Adresse: 303-508, 138 Chunggyeong-ro, Deogyang-gu, Goyang-si, Gyeonggi-do, Republik Korea
+- Kontakt: kjinyz@naver.com (verfügbar über In-App-Einstellungen > Kontakt)
+
+Datum des Inkrafttretens: 15. Mai 2026

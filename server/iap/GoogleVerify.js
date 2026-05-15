@@ -126,9 +126,12 @@ async function verifyGoogle(purchaseToken, expectedProductId) {
   const transactionId = body.orderId || `gpa_${purchaseToken.slice(0, 64)}`;
   // One purchaseToken = one purchase (no accumulation like Apple receipts), so
   // a single-element list keeps the caller's grant loop uniform across stores.
+  // obfuscatedExternalAccountId is the account-binding token the client set at
+  // purchase time (anti receipt-replay); null for pre-binding clients.
   return {
     valid: true,
     environment,
+    accountId: body.obfuscatedExternalAccountId || null,
     transactions: [{
       transactionId: String(transactionId),
       productId: expectedProductId,

@@ -5277,6 +5277,26 @@ async function handleVerifyIapPurchase(ws, data) {
   const productId = typeof data?.productId === 'string' ? data.productId : null;
   const verificationData = typeof data?.verificationData === 'string' ? data.verificationData : null;
 
+  // A purchase should be "finished" on the store (consumable consumed /
+  // transaction removed) ONLY when it's resolved for good — granted, or the
+  // store itself says the receipt is invalid. Transient failures (our infra,
+  // login timing, product temporarily inactive) must stay UNFINISHED so the
+  // plugin re-delivers them on the next launch and we retry — otherwise a
+  // consumable bought while the server is down is lost forever (no restore for
+  // consumables). These store-says-bad reasons are the only safe "drop it".
+  const PERMANENT = (reason) => {
+    if (!reason) return false;
+    return reason === 'bundle_mismatch'
+      || reason === 'product_not_in_receipt'
+      || reason === 'purchase_not_found'
+      || reason === 'missing_receipt'
+      || reason === 'missing_purchase_token'
+      || reason === 'missing_product_id'
+      || reason === 'account_mismatch'
+      || /^apple_status_/.test(reason)
+      || /^purchase_state_/.test(reason);
+  };
+
   // Every exit path logs an attempt row. logIapAttempt is best-effort and
   // never throws, so this can't break the purchase flow.
   const fail = async (outcome, reason, msgKey, extra = {}) => {
@@ -5290,7 +5310,15 @@ async function handleVerifyIapPurchase(ws, data) {
       transactionId: extra.transactionId || null,
       rawPayload: extra.rawPayload || null,
     });
-    sendTo(ws, { type: 'iap_purchase_result', success: false, message: t(ws.locale, msgKey) });
+    sendTo(ws, {
+      type: 'iap_purchase_result',
+      success: false,
+      // Tell the client whether to finish the store transaction or keep it
+      // pending for retry. Default to "keep" (false) for anything not clearly
+      // permanent — never risk silently dropping a paid consumable.
+      finish: PERMANENT(reason),
+      message: t(ws.locale, msgKey),
+    });
   };
 
   if (!ws.nickname) {
@@ -5326,6 +5354,23 @@ async function handleVerifyIapPurchase(ws, data) {
   }
 
   const environment = v.environment === 'sandbox' ? 'sandbox' : 'production';
+
+  // Account binding (anti receipt-replay): the client stamps the purchase with
+  // sha256(nickname) as the store account id. If the store echoes one and it
+  // doesn't match this authenticated user, someone is redeeming another
+  // person's receipt — reject. Apple's legacy verifyReceipt does NOT echo the
+  // token, so this is enforceable for Google only; iOS relies on the
+  // one-time-global transaction_id until we move to the App Store Server API.
+  if (v.accountId) {
+    const expected = crypto.createHash('sha256').update(String(ws.nickname)).digest('hex');
+    if (v.accountId !== expected) {
+      console.warn(`[IAP] account binding mismatch nickname=${ws.nickname} product=${productId}`);
+      return fail('rejected', 'account_mismatch', 'iap_verify_failed', {
+        environment, rawPayload: { expectedHashOf: 'nickname', got: v.accountId },
+      });
+    }
+  }
+
   const goldTotal = (parseInt(product.gold_amount, 10) || 0) + (parseInt(product.bonus_gold, 10) || 0);
 
   // Grant EVERY transaction in the receipt, not just the latest. Apple receipts
@@ -5381,6 +5426,7 @@ async function handleVerifyIapPurchase(ws, data) {
   sendTo(ws, {
     type: 'iap_purchase_result',
     success: true,
+    finish: true, // resolved for good — client may finish the store txn
     alreadyGranted: !anyNewlyGranted,
     goldGranted: totalNewGold,
     newGold: latestGold,

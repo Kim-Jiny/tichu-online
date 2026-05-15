@@ -23,7 +23,10 @@ class _GoldShopScreenState extends State<GoldShopScreen> {
   void initState() {
     super.initState();
     final game = context.read<GameService>();
-    _iap = IapService(verify: game.verifyIapPurchase)
+    _iap = IapService(
+      verify: game.verifyIapPurchase,
+      accountName: game.playerName,
+    )
       ..onSuccess = _handleSuccess
       ..onError = _handleError
       ..onPending = () {

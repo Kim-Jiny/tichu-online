@@ -327,6 +327,54 @@ async function initDatabase() {
       )
     `);
 
+    // Gold IAP products — real-money → in-game gold. Server is the single
+    // source of truth for which product_ids are active and how much gold each
+    // grants; the actual money price/currency comes from the store at runtime.
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS tc_gold_products (
+        id SERIAL PRIMARY KEY,
+        product_id VARCHAR(80) UNIQUE NOT NULL,
+        gold_amount INT NOT NULL DEFAULT 0,
+        bonus_gold INT NOT NULL DEFAULT 0,
+        platform VARCHAR(10) NOT NULL DEFAULT 'both',
+        label_ko VARCHAR(100) NOT NULL DEFAULT '',
+        label_en VARCHAR(100) NOT NULL DEFAULT '',
+        label_de VARCHAR(100) NOT NULL DEFAULT '',
+        sort_order INT NOT NULL DEFAULT 0,
+        is_active BOOLEAN NOT NULL DEFAULT FALSE,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      )
+    `);
+
+    // IAP receipt ledger. transaction_id is the idempotency key: a verified
+    // store transaction grants gold exactly once even if the client retries.
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS tc_iap_receipts (
+        id SERIAL PRIMARY KEY,
+        nickname VARCHAR(50) NOT NULL,
+        product_id VARCHAR(80) NOT NULL,
+        platform VARCHAR(10) NOT NULL,
+        transaction_id VARCHAR(255) UNIQUE NOT NULL,
+        gold_granted INT NOT NULL,
+        verified_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        raw_payload JSONB
+      )
+    `);
+
+    // Seed the 5 agreed tiers, inactive by default. ON CONFLICT DO NOTHING so
+    // re-runs never clobber admin-edited gold/bonus/active values.
+    await client.query(`
+      INSERT INTO tc_gold_products
+        (product_id, gold_amount, bonus_gold, platform, label_ko, sort_order, is_active)
+      VALUES
+        ('jiny.tichu.gold1', 2000,   0,     'both', '골드 2,000',   1, FALSE),
+        ('jiny.tichu.gold2', 6500,   300,   'both', '골드 6,800',   2, FALSE),
+        ('jiny.tichu.gold3', 16500,  2000,  'both', '골드 18,500',  3, FALSE),
+        ('jiny.tichu.gold4', 48300,  9700,  'both', '골드 58,000',  4, FALSE),
+        ('jiny.tichu.gold5', 165000, 49500, 'both', '골드 214,500', 5, FALSE)
+      ON CONFLICT (product_id) DO NOTHING
+    `);
+
     // App config table (EULA, etc.)
     await client.query(`
       CREATE TABLE IF NOT EXISTS tc_config (

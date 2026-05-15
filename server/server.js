@@ -16,7 +16,7 @@ const {
   saveMatchResult, saveMatchResultWithStats, updateUserStats, getUserProfile, getRecentMatches, updateCardViewPref,
   submitInquiry, getUserInquiries, markInquiriesRead, getRankings,
   getWallet, getGoldHistory, getShopItems, getVisualCatalog, getUserItems, buyItem, equipItem, useItem, changeNickname,
-  getActiveGoldProducts, getGoldProductByProductId, grantIapGold,
+  getActiveGoldProducts, getGoldProductByProductId, grantIapGold, logIapAttempt,
   incrementLeaveCount, setRankedBan, getRankedBan, setChatBan, getChatBan, grantSeasonRewards,
   getActiveSeason, createSeason, getSeasons, getConfig, getLocalizedConfig, updateConfig,
   getCurrentSeasonRankings, getSeasonRankings, resetSeasonStats,
@@ -5207,27 +5207,40 @@ async function handleGetGoldProducts(ws, data) {
 // amount or price — we look the product up server-side and trust only the
 // store's verification response. Idempotent on the store transaction id.
 async function handleVerifyIapPurchase(ws, data) {
-  if (!ws.nickname) {
-    sendTo(ws, { type: 'iap_purchase_result', success: false, message: t(ws.locale, 'login_required') });
-    return;
-  }
   const platform = normalizePlatform(data?.platform);
   const productId = typeof data?.productId === 'string' ? data.productId : null;
   const verificationData = typeof data?.verificationData === 'string' ? data.verificationData : null;
+
+  // Every exit path logs an attempt row. logIapAttempt is best-effort and
+  // never throws, so this can't break the purchase flow.
+  const fail = async (outcome, reason, msgKey, extra = {}) => {
+    await logIapAttempt({
+      nickname: ws.nickname || null,
+      platform,
+      productId,
+      environment: extra.environment || null,
+      outcome,
+      reason,
+      transactionId: extra.transactionId || null,
+      rawPayload: extra.rawPayload || null,
+    });
+    sendTo(ws, { type: 'iap_purchase_result', success: false, message: t(ws.locale, msgKey) });
+  };
+
+  if (!ws.nickname) {
+    return fail('rejected', 'login_required', 'login_required');
+  }
   if (!platform || !productId || !verificationData) {
-    sendTo(ws, { type: 'iap_purchase_result', success: false, message: t(ws.locale, 'iap_invalid_request') });
-    return;
+    return fail('rejected', 'invalid_request', 'iap_invalid_request');
   }
 
   // Product must exist and be active, on a platform that matches.
   const product = await getGoldProductByProductId(productId);
   if (!product || product.is_active !== true) {
-    sendTo(ws, { type: 'iap_purchase_result', success: false, message: t(ws.locale, 'iap_product_unavailable') });
-    return;
+    return fail('rejected', 'product_unavailable', 'iap_product_unavailable');
   }
   if (product.platform !== 'both' && product.platform !== platform) {
-    sendTo(ws, { type: 'iap_purchase_result', success: false, message: t(ws.locale, 'iap_product_unavailable') });
-    return;
+    return fail('rejected', 'product_platform_mismatch', 'iap_product_unavailable');
   }
 
   const verifier = platform === 'ios' ? verifyApple : verifyGoogle;
@@ -5236,29 +5249,43 @@ async function handleVerifyIapPurchase(ws, data) {
     v = await verifier(verificationData, productId);
   } catch (err) {
     console.error('[IAP] verify threw:', err);
-    sendTo(ws, { type: 'iap_purchase_result', success: false, message: t(ws.locale, 'iap_verify_failed') });
-    return;
+    return fail('error', 'verify_threw', 'iap_verify_failed');
   }
   if (!v || !v.valid) {
     console.warn(`[IAP] verify rejected nickname=${ws.nickname} product=${productId} reason=${v && v.reason}`);
-    sendTo(ws, { type: 'iap_purchase_result', success: false, message: t(ws.locale, 'iap_verify_failed') });
-    return;
+    return fail('rejected', (v && v.reason) || 'verify_invalid', 'iap_verify_failed', {
+      environment: v && v.environment,
+      rawPayload: v && v.raw,
+    });
   }
 
+  const environment = v.environment === 'sandbox' ? 'sandbox' : 'production';
   const goldTotal = (parseInt(product.gold_amount, 10) || 0) + (parseInt(product.bonus_gold, 10) || 0);
   const grant = await grantIapGold({
     nickname: ws.nickname,
     productId,
     platform,
     transactionId: v.transactionId,
-    environment: v.environment === 'sandbox' ? 'sandbox' : 'production',
+    environment,
     goldTotal,
     rawPayload: v.raw,
   });
   if (!grant.success) {
-    sendTo(ws, { type: 'iap_purchase_result', success: false, message: t(ws.locale, 'iap_grant_failed') });
-    return;
+    return fail('error', 'grant_failed', 'iap_grant_failed', {
+      environment, transactionId: v.transactionId, rawPayload: v.raw,
+    });
   }
+
+  await logIapAttempt({
+    nickname: ws.nickname,
+    platform,
+    productId,
+    environment,
+    outcome: grant.alreadyGranted ? 'already_granted' : 'granted',
+    reason: null,
+    transactionId: v.transactionId,
+    rawPayload: v.raw,
+  });
   sendTo(ws, {
     type: 'iap_purchase_result',
     success: true,

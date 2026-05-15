@@ -371,6 +371,26 @@ async function initDatabase() {
     await client.query(`ALTER TABLE tc_iap_receipts ADD COLUMN IF NOT EXISTS refunded_at TIMESTAMP`);
     await client.query(`ALTER TABLE tc_iap_receipts ADD COLUMN IF NOT EXISTS refund_admin VARCHAR(100)`);
 
+    // Every verify_iap_purchase attempt is appended here regardless of outcome
+    // (granted / already_granted / rejected / error). No idempotency key — this
+    // is an audit trail, one row per attempt. Lets the operator diagnose why a
+    // sandbox/live purchase failed verification from the admin web.
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS tc_iap_attempts (
+        id SERIAL PRIMARY KEY,
+        nickname VARCHAR(50),
+        platform VARCHAR(10),
+        product_id VARCHAR(80),
+        environment VARCHAR(12),
+        outcome VARCHAR(20) NOT NULL,
+        reason VARCHAR(80),
+        transaction_id VARCHAR(255),
+        raw_payload JSONB,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      )
+    `);
+    await client.query(`CREATE INDEX IF NOT EXISTS idx_iap_attempts_created ON tc_iap_attempts (created_at DESC)`);
+
     // Seed the 5 agreed tiers, inactive by default. ON CONFLICT DO NOTHING so
     // re-runs never clobber admin-edited gold/bonus/active values.
     await client.query(`
@@ -6350,6 +6370,101 @@ async function getIapReceipts({ environment, status, platform, search, page = 1,
 // Claw back IAP-granted gold. This does NOT move money — Apple/Google decide
 // and execute the cash refund (especially for consumables). This only reverses
 // the gold we credited and records who/when. By default we REFUSE if the user
+// Best-effort audit log of a single verify attempt. Never throws — a logging
+// failure must not break the purchase flow.
+async function logIapAttempt({ nickname, platform, productId, environment, outcome, reason, transactionId, rawPayload }) {
+  try {
+    await pool.query(
+      `INSERT INTO tc_iap_attempts
+         (nickname, platform, product_id, environment, outcome, reason, transaction_id, raw_payload)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8::jsonb)`,
+      [
+        nickname || null,
+        platform || null,
+        productId || null,
+        environment || null,
+        String(outcome || 'unknown').slice(0, 20),
+        reason ? String(reason).slice(0, 80) : null,
+        transactionId ? String(transactionId).slice(0, 255) : null,
+        rawPayload ? JSON.stringify(rawPayload) : null,
+      ]
+    );
+  } catch (err) {
+    console.error('Log IAP attempt error:', err.message);
+  }
+}
+
+// Paginated attempt log with optional filters + global outcome summary.
+async function getIapAttempts({ outcome, environment, platform, search, page = 1, limit = 50 } = {}) {
+  try {
+    const where = [];
+    const params = [];
+    if (outcome) { params.push(outcome); where.push(`outcome = $${params.length}`); }
+    if (environment === 'sandbox' || environment === 'production') {
+      params.push(environment); where.push(`environment = $${params.length}`);
+    }
+    if (platform === 'ios' || platform === 'android') {
+      params.push(platform); where.push(`platform = $${params.length}`);
+    }
+    if (search) {
+      params.push(`%${search}%`);
+      where.push(`(nickname ILIKE $${params.length} OR product_id ILIKE $${params.length} OR reason ILIKE $${params.length} OR transaction_id ILIKE $${params.length})`);
+    }
+    const whereSql = where.length ? `WHERE ${where.join(' AND ')}` : '';
+
+    const countRes = await pool.query(`SELECT COUNT(*) FROM tc_iap_attempts ${whereSql}`, params);
+    const total = parseInt(countRes.rows[0].count, 10) || 0;
+
+    const lim = Math.max(1, Math.min(parseInt(limit, 10) || 50, 200));
+    const pg = Math.max(1, parseInt(page, 10) || 1);
+    const offset = (pg - 1) * lim;
+    const rowsRes = await pool.query(
+      `SELECT id, nickname, platform, product_id, environment, outcome, reason,
+              transaction_id, created_at
+         FROM tc_iap_attempts ${whereSql}
+        ORDER BY created_at DESC, id DESC
+        LIMIT ${lim} OFFSET ${offset}`,
+      params
+    );
+
+    const sumRes = await pool.query(`
+      SELECT
+        COUNT(*)                                                   AS total,
+        COUNT(*) FILTER (WHERE outcome = 'granted')                AS granted_cnt,
+        COUNT(*) FILTER (WHERE outcome = 'already_granted')        AS dup_cnt,
+        COUNT(*) FILTER (WHERE outcome = 'rejected')               AS rejected_cnt,
+        COUNT(*) FILTER (WHERE outcome = 'error')                  AS error_cnt
+      FROM tc_iap_attempts`);
+    const s = sumRes.rows[0] || {};
+    return {
+      rows: rowsRes.rows,
+      total,
+      page: pg,
+      limit: lim,
+      summary: {
+        total: parseInt(s.total, 10) || 0,
+        granted: parseInt(s.granted_cnt, 10) || 0,
+        dup: parseInt(s.dup_cnt, 10) || 0,
+        rejected: parseInt(s.rejected_cnt, 10) || 0,
+        error: parseInt(s.error_cnt, 10) || 0,
+      },
+    };
+  } catch (err) {
+    console.error('Get IAP attempts error:', err);
+    return { rows: [], total: 0, page: 1, limit: 50, summary: { total: 0, granted: 0, dup: 0, rejected: 0, error: 0 } };
+  }
+}
+
+async function getIapAttemptById(id) {
+  try {
+    const r = await pool.query(`SELECT * FROM tc_iap_attempts WHERE id = $1`, [id]);
+    return r.rows[0] || null;
+  } catch (err) {
+    console.error('Get IAP attempt by id error:', err);
+    return null;
+  }
+}
+
 // Full single receipt incl. raw_payload — for the admin detail/audit view.
 async function getIapReceiptById(id) {
   try {
@@ -6562,5 +6677,8 @@ module.exports = {
   getIapReceipts,
   getIapReceiptById,
   refundIapReceipt,
+  logIapAttempt,
+  getIapAttempts,
+  getIapAttemptById,
   pool,
 };

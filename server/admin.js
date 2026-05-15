@@ -8,6 +8,7 @@ const {
   getAllShopItemsAdmin, addShopItem, updateShopItem, deleteShopItem, getShopItemById,
   getAllGoldProductsAdmin, getGoldProductById, addGoldProduct, updateGoldProduct, deleteGoldProduct,
   getIapReceipts, getIapReceiptById, refundIapReceipt,
+  getIapAttempts, getIapAttemptById,
   getConfig, updateConfig,
   getNotices, getNoticeById, createNotice, updateNotice, deleteNotice,
   insertMaintenanceHistory, getMaintenanceHistory,
@@ -480,6 +481,7 @@ input[type="text"], input[type="password"] { width: 100%; padding: 10px 12px; bo
     <a href="/tc-backstage/shop" class="${activePage === 'shop' ? 'active' : ''}" onclick="closeSidebar()">상점</a>
     <a href="/tc-backstage/gold-products" class="${activePage === 'gold-products' ? 'active' : ''}" onclick="closeSidebar()">골드상품</a>
     <a href="/tc-backstage/iap-receipts" class="${activePage === 'iap-receipts' ? 'active' : ''}" onclick="closeSidebar()">결제내역</a>
+    <a href="/tc-backstage/iap-attempts" class="${activePage === 'iap-attempts' ? 'active' : ''}" onclick="closeSidebar()">검증로그</a>
   </div>
   <div class="nav-section">
     <div class="nav-section-label">Comms</div>
@@ -1786,7 +1788,11 @@ async function handleAdminRoute(req, res, url, pathname, method, lobby, wss, mai
       ],
       'iap-receipts': [
         { label: '결제내역', href: '/tc-backstage/iap-receipts' },
-        { label: '골드상품 관리', href: '/tc-backstage/gold-products' },
+        { label: '검증로그', href: '/tc-backstage/iap-attempts' },
+      ],
+      'iap-attempts': [
+        { label: '검증로그', href: '/tc-backstage/iap-attempts' },
+        { label: '결제내역', href: '/tc-backstage/iap-receipts' },
       ],
     };
 
@@ -3524,6 +3530,135 @@ async function handleAdminRoute(req, res, url, pathname, method, lobby, wss, mai
       return redirect(res, '/tc-backstage/iap-receipts?' + p.toString());
     }
     return redirect(res, '/tc-backstage/iap-receipts?msg=error');
+  }
+
+  // ===== IAP 검증로그 (모든 시도) =====
+  if (pathname === '/tc-backstage/iap-attempts' && method === 'GET') {
+    const OUTCOMES = ['granted', 'already_granted', 'rejected', 'error'];
+    const outcomeF = OUTCOMES.includes(url.searchParams.get('outcome')) ? url.searchParams.get('outcome') : '';
+    const envF = ['production', 'sandbox'].includes(url.searchParams.get('env')) ? url.searchParams.get('env') : '';
+    const platformF = ['ios', 'android'].includes(url.searchParams.get('platform')) ? url.searchParams.get('platform') : '';
+    const q = (url.searchParams.get('q') || '').trim().slice(0, 80);
+    const page = parseInt(url.searchParams.get('page') || '1', 10) || 1;
+
+    const data = await getIapAttempts({
+      outcome: outcomeF || undefined,
+      environment: envF || undefined,
+      platform: platformF || undefined,
+      search: q || undefined,
+      page,
+      limit: 50,
+    });
+
+    const opt = (cur, v, label) => `<option value="${v}"${cur === v ? ' selected' : ''}>${label}</option>`;
+    const filterForm = `
+      <form method="GET" action="/tc-backstage/iap-attempts" class="card" style="margin-bottom:14px;display:flex;gap:10px;flex-wrap:wrap;align-items:flex-end">
+        <div><div style="font-size:12px;color:#888">결과</div>
+          <select name="outcome">${opt(outcomeF, '', '전체')}${opt(outcomeF, 'granted', '지급')}${opt(outcomeF, 'already_granted', '중복(이미지급)')}${opt(outcomeF, 'rejected', '거부')}${opt(outcomeF, 'error', '오류')}</select></div>
+        <div><div style="font-size:12px;color:#888">환경</div>
+          <select name="env">${opt(envF, '', '전체')}${opt(envF, 'production', '프로덕션')}${opt(envF, 'sandbox', '샌드박스')}</select></div>
+        <div><div style="font-size:12px;color:#888">플랫폼</div>
+          <select name="platform">${opt(platformF, '', '전체')}${opt(platformF, 'ios', 'iOS')}${opt(platformF, 'android', 'Android')}</select></div>
+        <div><div style="font-size:12px;color:#888">검색 (닉네임/상품/사유/거래ID)</div>
+          <input type="text" name="q" value="${escapeHtml(q)}" placeholder="검색어" style="min-width:200px"></div>
+        <button type="submit" class="btn btn-primary">필터</button>
+        <a href="/tc-backstage/iap-attempts" class="btn btn-secondary">초기화</a>
+      </form>`;
+
+    const outcomeBadge = (o) => {
+      if (o === 'granted') return '<span class="badge" style="background:#e8f5e9;color:#2e7d32">지급</span>';
+      if (o === 'already_granted') return '<span class="badge" style="background:#e3f2fd;color:#1565c0">중복</span>';
+      if (o === 'error') return '<span class="badge" style="background:#fff3e0;color:#e65100">오류</span>';
+      return '<span class="badge" style="background:#ffebee;color:#c62828">거부</span>';
+    };
+    const envBadge = (e) => e === 'sandbox'
+      ? '<span class="badge" style="background:#fff3e0;color:#e65100">SANDBOX</span>'
+      : (e === 'production' ? '<span class="badge" style="background:#e3f2fd;color:#1565c0">PROD</span>' : '<span style="color:#bbb">-</span>');
+
+    let table;
+    if (data.rows.length > 0) {
+      table = `<div class="table-wrap"><table>
+        <tr><th>일시(KST)</th><th>닉네임</th><th>상품</th><th>플랫폼</th><th>환경</th><th>결과</th><th>사유</th><th>거래ID</th><th></th></tr>
+        ${data.rows.map(a => {
+          const dt = new Date(a.created_at).toLocaleString('ko-KR', { timeZone: 'Asia/Seoul' });
+          const txn = escapeHtml(String(a.transaction_id || ''));
+          const txnShort = txn.length > 22 ? txn.slice(0, 22) + '…' : (txn || '-');
+          return `<tr>
+            <td style="font-size:12px;white-space:nowrap">${dt}</td>
+            <td>${escapeHtml(a.nickname || '-')}</td>
+            <td style="font-family:monospace;font-size:12px">${escapeHtml(a.product_id || '-')}</td>
+            <td>${escapeHtml(a.platform || '-')}</td>
+            <td>${envBadge(a.environment)}</td>
+            <td>${outcomeBadge(a.outcome)}</td>
+            <td style="font-family:monospace;font-size:12px;color:#c62828">${escapeHtml(a.reason || '')}</td>
+            <td style="font-family:monospace;font-size:11px" title="${txn}">${txnShort}</td>
+            <td><a href="/tc-backstage/iap-attempts/${a.id}" class="btn btn-secondary">상세</a></td>
+          </tr>`;
+        }).join('')}
+      </table></div>`;
+    } else {
+      table = '<div class="empty">검증 시도 기록 없음</div>';
+    }
+
+    const qs = new URLSearchParams();
+    if (outcomeF) qs.set('outcome', outcomeF);
+    if (envF) qs.set('env', envF);
+    if (platformF) qs.set('platform', platformF);
+    if (q) qs.set('q', q);
+    const baseUrl = '/tc-backstage/iap-attempts' + (qs.toString() ? '?' + qs.toString() : '');
+
+    const content = `
+      ${pageHeader('IAP 검증로그', '<b>모든</b> verify_iap_purchase 시도를 결과와 무관하게 기록합니다 (지급/중복/거부/오류). 샌드박스·실결제 검증 실패 원인 진단용. 골드 지급은 결제내역(원장)을 보세요.')}
+      ${summaryStrip([
+        { label: '전체 시도', value: formatNumber(data.summary.total) },
+        { label: '지급', value: formatNumber(data.summary.granted), valueColor: '#2e7d32' },
+        { label: '중복', value: formatNumber(data.summary.dup), valueColor: '#1565c0' },
+        { label: '거부', value: formatNumber(data.summary.rejected), valueColor: '#c62828' },
+        { label: '오류', value: formatNumber(data.summary.error), valueColor: '#e65100' },
+      ])}
+      ${filterForm}
+      <div class="card">${table}</div>
+      ${pagination(data.page, data.total, data.limit, baseUrl)}
+    `;
+    return html(res, layout('검증로그', content, 'iap-attempts'));
+  }
+
+  const iapAttemptDetailMatch = pathname.match(/^\/tc-backstage\/iap-attempts\/(\d+)$/);
+  if (iapAttemptDetailMatch && method === 'GET') {
+    const a = await getIapAttemptById(parseInt(iapAttemptDetailMatch[1], 10));
+    if (!a) return html(res, layout('찾을 수 없음', '<div class="empty">기록을 찾을 수 없습니다</div>', 'iap-attempts'), 404);
+
+    let rawStr;
+    try {
+      rawStr = a.raw_payload == null ? '(없음 — 스토어 응답 전 단계에서 거부됨)'
+        : JSON.stringify(typeof a.raw_payload === 'string' ? JSON.parse(a.raw_payload) : a.raw_payload, null, 2);
+    } catch (_) {
+      rawStr = String(a.raw_payload);
+    }
+    const fmtDt = (d) => d ? new Date(d).toLocaleString('ko-KR', { timeZone: 'Asia/Seoul' }) : '-';
+    const rowR = (k, v) => `<tr><td style="color:#888;white-space:nowrap;padding-right:18px">${k}</td><td>${v}</td></tr>`;
+
+    const content = `
+      ${pageHeader('검증 시도 상세 #' + a.id, '검증 거부/오류 원인 감사 — reason과 raw_payload로 진단')}
+      <div class="card">
+        <table>
+          ${rowR('일시', fmtDt(a.created_at))}
+          ${rowR('닉네임', escapeHtml(a.nickname || '-'))}
+          ${rowR('product_id', `<span style="font-family:monospace">${escapeHtml(a.product_id || '-')}</span>`)}
+          ${rowR('플랫폼', escapeHtml(a.platform || '-'))}
+          ${rowR('환경', escapeHtml(a.environment || '-'))}
+          ${rowR('결과(outcome)', `<b>${escapeHtml(a.outcome)}</b>`)}
+          ${rowR('사유(reason)', `<span style="font-family:monospace;color:#c62828">${escapeHtml(a.reason || '-')}</span>`)}
+          ${rowR('거래ID', `<span style="font-family:monospace;font-size:12px;word-break:break-all">${escapeHtml(String(a.transaction_id || '-'))}</span>`)}
+        </table>
+      </div>
+      <div class="card" style="margin-top:14px">
+        <div style="color:#888;margin-bottom:8px">raw_payload (스토어 원본 응답)</div>
+        <pre style="overflow:auto;background:#0d1117;color:#c9d1d9;padding:14px;border-radius:8px;font-size:12px;max-height:480px">${escapeHtml(rawStr)}</pre>
+      </div>
+      <a href="/tc-backstage/iap-attempts" class="btn btn-secondary" style="margin-top:14px">목록으로</a>
+    `;
+    return html(res, layout('검증로그 #' + a.id, content, 'iap-attempts'));
   }
 
   // ===== Maintenance =====

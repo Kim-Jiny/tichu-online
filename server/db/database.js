@@ -6132,7 +6132,7 @@ async function grantIapGold({ nickname, productId, platform, transactionId, gold
     const ins = await client.query(
       `INSERT INTO tc_iap_receipts
          (nickname, product_id, platform, transaction_id, gold_granted, raw_payload)
-       VALUES ($1, $2, $3, $4, $5, $6)
+       VALUES ($1, $2, $3, $4, $5, $6::jsonb)
        ON CONFLICT (transaction_id) DO NOTHING
        RETURNING id`,
       [nickname, productId, platform, transactionId, goldTotal,

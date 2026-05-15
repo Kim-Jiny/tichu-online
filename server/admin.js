@@ -1,5 +1,6 @@
 const crypto = require('crypto');
 const serverStartedAt = new Date();
+const logBuffer = require('./logBuffer');
 const {
   verifyAdmin, getInquiries, getInquiryById, resolveInquiry,
   getReports, getReportGroup, updateReportGroupStatus,
@@ -492,6 +493,7 @@ input[type="text"], input[type="password"] { width: 100%; padding: 10px 12px; bo
   </div>
   <div class="nav-section">
     <div class="nav-section-label">System</div>
+    <a href="/tc-backstage/logs" class="${activePage === 'logs' ? 'active' : ''}" onclick="closeSidebar()">서버로그</a>
     <a href="/tc-backstage/maintenance" class="${activePage === 'maintenance' ? 'active' : ''}" onclick="closeSidebar()">점검</a>
     <a href="/tc-backstage/settings" class="${activePage === 'settings' ? 'active' : ''}" onclick="closeSidebar()">설정</a>
   </div>
@@ -507,6 +509,133 @@ ${content}
 <script>function closeSidebar(){document.querySelector('.sidebar').classList.remove('open');document.querySelector('.sidebar-overlay').classList.remove('open')}</script>
 </body>
 </html>`;
+}
+
+function serverLogsPage() {
+  const instance = process.env.INSTANCE_NAME || 'unknown';
+  const content = `
+  <div class="hero" style="margin-bottom:16px">
+    <h1 style="margin:0">서버 로그 <span style="font-size:13px;font-weight:500;opacity:.7">(실시간)</span></h1>
+    <div style="font-size:13px;opacity:.75;margin-top:8px;line-height:1.6">
+      인스턴스 <b>${escapeHtml(instance)}</b> · 메모리 링버퍼 <b>최근 ${logBuffer.MAX_LINES}줄</b> · 재시작 시 초기화.
+      블루/그린 배포 중에는 nginx가 현재 라우팅하는 인스턴스의 로그만 보입니다.
+      전체 이력은 호스팅 플랫폼 로그(Render/docker logs)를 보세요.
+    </div>
+  </div>
+  <div class="card" style="padding:14px">
+    <div style="display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin-bottom:10px">
+      <span id="logConn" style="font-size:12px;padding:4px 10px;border-radius:999px;background:#fff3e0;color:#e65100">연결 중…</span>
+      <label style="font-size:13px"><input type="checkbox" class="lvl" value="info" checked> info</label>
+      <label style="font-size:13px"><input type="checkbox" class="lvl" value="warn" checked> warn</label>
+      <label style="font-size:13px"><input type="checkbox" class="lvl" value="error" checked> error</label>
+      <label style="font-size:13px"><input type="checkbox" class="lvl" value="debug" checked> debug</label>
+      <input id="logFilter" type="text" placeholder="텍스트 필터…" style="flex:1;min-width:160px;padding:7px 10px;border:1px solid #ddd;border-radius:8px;font-size:13px">
+      <button id="logPause" class="btn">일시정지</button>
+      <label style="font-size:13px"><input type="checkbox" id="logAutoscroll" checked> 자동 스크롤</label>
+      <button id="logClear" class="btn">지우기</button>
+      <span id="logCount" style="font-size:12px;opacity:.6"></span>
+    </div>
+    <pre id="logView" style="margin:0;height:68vh;overflow:auto;background:#0d1117;color:#c9d1d9;padding:12px;border-radius:8px;font-size:12px;line-height:1.5;white-space:pre-wrap;word-break:break-word"></pre>
+  </div>
+  <script>
+  (function(){
+    var view=document.getElementById('logView');
+    var conn=document.getElementById('logConn');
+    var countEl=document.getElementById('logCount');
+    var filterEl=document.getElementById('logFilter');
+    var pauseBtn=document.getElementById('logPause');
+    var autoscroll=document.getElementById('logAutoscroll');
+    var MAX_DOM=4000;
+    var paused=false, total=0;
+    var COLOR={info:'#c9d1d9',warn:'#e3b341',error:'#f85149',debug:'#8b949e'};
+    function levels(){
+      var s={};
+      document.querySelectorAll('.lvl').forEach(function(c){s[c.value]=c.checked;});
+      return s;
+    }
+    function matches(el){
+      var lv=levels();
+      if(!lv[el.dataset.level]) return false;
+      var f=filterEl.value.trim().toLowerCase();
+      if(f && el.textContent.toLowerCase().indexOf(f)<0) return false;
+      return true;
+    }
+    function relayout(){
+      var shown=0;
+      var rows=view.children;
+      for(var i=0;i<rows.length;i++){
+        var ok=matches(rows[i]);
+        rows[i].style.display=ok?'':'none';
+        if(ok) shown++;
+      }
+      countEl.textContent=shown+' / '+total+' 줄';
+    }
+    function pad(n){return n<10?'0'+n:''+n;}
+    function append(e){
+      total++;
+      var d=new Date(e.ts);
+      var ts=pad(d.getHours())+':'+pad(d.getMinutes())+':'+pad(d.getSeconds());
+      var row=document.createElement('div');
+      row.dataset.level=e.level;
+      row.style.color=COLOR[e.level]||'#c9d1d9';
+      var tag=document.createElement('span');
+      tag.style.opacity='.55';
+      tag.textContent=ts+' ['+e.level+'] ';
+      row.appendChild(tag);
+      row.appendChild(document.createTextNode(e.line));
+      var ok=matches(row);
+      row.style.display=ok?'':'none';
+      view.appendChild(row);
+      while(view.children.length>MAX_DOM) view.removeChild(view.firstChild);
+      if(ok){
+        var n=countEl.textContent;
+        if(autoscroll.checked && !paused) view.scrollTop=view.scrollHeight;
+      }
+      // Cheap counter update without full relayout on every line.
+      relayoutThrottled();
+    }
+    var relayoutPending=false;
+    function relayoutThrottled(){
+      if(relayoutPending) return;
+      relayoutPending=true;
+      requestAnimationFrame(function(){relayoutPending=false;relayout();});
+    }
+    var buffered=[];
+    function flush(){
+      if(!buffered.length) return;
+      var b=buffered;buffered=[];
+      b.forEach(append);
+    }
+    setInterval(function(){ if(!paused) flush(); },300);
+    pauseBtn.onclick=function(){
+      paused=!paused;
+      pauseBtn.textContent=paused?'재개':'일시정지';
+      pauseBtn.style.background=paused?'#e65100':'';
+      pauseBtn.style.color=paused?'#fff':'';
+      if(!paused) flush();
+    };
+    document.getElementById('logClear').onclick=function(){
+      view.innerHTML='';total=0;relayout();
+    };
+    filterEl.oninput=relayout;
+    document.querySelectorAll('.lvl').forEach(function(c){c.onchange=relayout;});
+    var es;
+    function connect(){
+      es=new EventSource('/tc-backstage/logs/stream');
+      es.onopen=function(){conn.textContent='● 연결됨';conn.style.background='#e8f5e9';conn.style.color='#2e7d32';};
+      es.addEventListener('log',function(ev){
+        try{ buffered.push(JSON.parse(ev.data)); }catch(_){}
+      });
+      es.onerror=function(){
+        conn.textContent='● 재연결 중…';conn.style.background='#fff3e0';conn.style.color='#e65100';
+        // EventSource auto-reconnects (sends Last-Event-ID); nothing to do.
+      };
+    }
+    connect();
+    window.addEventListener('beforeunload',function(){ if(es) es.close(); });
+  })();
+  </script>`;
+  return layout('서버 로그', content, 'logs');
 }
 
 function loginPage(error = '') {
@@ -1260,6 +1389,38 @@ async function handleAdminRoute(req, res, url, pathname, method, lobby, wss, mai
   }
   sessionInfo.session.createdAt = Date.now();
   setSessionCookie(res, sessionInfo.token);
+
+  // Live server log stream (Server-Sent Events). Inherits the admin cookie
+  // auth gate above. X-Accel-Buffering:no defeats nginx proxy buffering so
+  // lines arrive immediately without any nginx config change.
+  if (pathname === '/tc-backstage/logs/stream' && method === 'GET') {
+    res.writeHead(200, {
+      'Content-Type': 'text/event-stream; charset=utf-8',
+      'Cache-Control': 'no-cache, no-transform',
+      Connection: 'keep-alive',
+      'X-Accel-Buffering': 'no',
+    });
+    // EventSource auto-resends the last id it saw on reconnect; replay only
+    // what was missed so a dropped connection doesn't lose or duplicate lines.
+    const lastId = parseInt(req.headers['last-event-id'], 10) || 0;
+    const send = (e) => {
+      res.write(`id: ${e.seq}\nevent: log\ndata: ${JSON.stringify(e)}\n\n`);
+    };
+    for (const e of logBuffer.snapshot(lastId)) send(e);
+    const unsubscribe = logBuffer.subscribe(send);
+    const heartbeat = setInterval(() => res.write(': ping\n\n'), 25000);
+    const cleanup = () => {
+      clearInterval(heartbeat);
+      unsubscribe();
+    };
+    req.on('close', cleanup);
+    req.on('error', cleanup);
+    return;
+  }
+
+  if (pathname === '/tc-backstage/logs' && method === 'GET') {
+    return html(res, serverLogsPage());
+  }
 
   if (pathname === '/tc-backstage/dashboard/activity-top' && method === 'GET') {
     const activityPeriod = ['today', 'week', 'month'].includes(url.searchParams.get('activity'))

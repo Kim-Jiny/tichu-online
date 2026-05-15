@@ -1,3 +1,7 @@
+// Install console capture FIRST so the admin live-log viewer also sees
+// bootstrap/startup logs (ring buffer + SSE fan-out; stdout is untouched).
+require('./logBuffer').installConsoleCapture();
+
 const { WebSocketServer } = require('ws');
 const crypto = require('crypto');
 const http = require('http');

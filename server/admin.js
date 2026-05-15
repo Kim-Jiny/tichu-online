@@ -6,6 +6,7 @@ const {
   getUsers, getUserDetail, getAdminGoldHistory, getAdminPurchaseHistory, deleteUser, getDashboardStats, getDashboardActivityTopPlayers, getAdminRecentMatches, setChatBan, setAdminMemo, getRecentMatches, adminAdjustGold, adminAdjustExp, setUserAdmin,
   getDetailedAdminStats,
   getAllShopItemsAdmin, addShopItem, updateShopItem, deleteShopItem, getShopItemById,
+  getAllGoldProductsAdmin, getGoldProductById, addGoldProduct, updateGoldProduct, deleteGoldProduct,
   getConfig, updateConfig,
   getNotices, getNoticeById, createNotice, updateNotice, deleteNotice,
   insertMaintenanceHistory, getMaintenanceHistory,
@@ -476,6 +477,7 @@ input[type="text"], input[type="password"] { width: 100%; padding: 10px 12px; bo
     <a href="/tc-backstage/reports" class="${activePage === 'reports' ? 'active' : ''}" onclick="closeSidebar()">신고</a>
     <a href="/tc-backstage/users" class="${activePage === 'users' ? 'active' : ''}" onclick="closeSidebar()">유저</a>
     <a href="/tc-backstage/shop" class="${activePage === 'shop' ? 'active' : ''}" onclick="closeSidebar()">상점</a>
+    <a href="/tc-backstage/gold-products" class="${activePage === 'gold-products' ? 'active' : ''}" onclick="closeSidebar()">골드상품</a>
   </div>
   <div class="nav-section">
     <div class="nav-section-label">Comms</div>
@@ -1157,6 +1159,63 @@ function parseShopFormBody(body) {
   };
 }
 
+const GOLD_PRODUCT_MSG = {
+  db_product_id_exists: '이미 존재하는 product_id 입니다',
+  db_product_add_failed: '상품 추가에 실패했습니다',
+  db_product_update_failed: '상품 수정에 실패했습니다',
+  db_product_delete_failed: '상품 삭제에 실패했습니다',
+  db_product_not_found: '상품을 찾을 수 없습니다',
+};
+
+function goldProductForm(action, v = {}, isEdit = false) {
+  const val = (k, d = '') => (v[k] === undefined || v[k] === null ? d : v[k]);
+  const platform = val('platform', 'both');
+  const platformOpt = (p, label) =>
+    `<option value="${p}" ${platform === p ? 'selected' : ''}>${label}</option>`;
+  const activeChecked = (v.is_active === true || v.is_active === 'on' || v.is_active === 't') ? 'checked' : '';
+  return `<form method="POST" action="${action}" id="goldProductForm">
+    <div class="form-grid">
+      <label>Product ID</label>
+      <input type="text" name="product_id" value="${escapeHtml(String(val('product_id')))}" ${isEdit ? '' : 'required'}
+             placeholder="예: jiny.tichu.gold1" style="padding:10px;border:1px solid #ddd;border-radius:8px;font-size:14px;font-family:monospace">
+      <label>기본 골드</label>
+      <input type="number" name="gold_amount" value="${val('gold_amount', 0)}" min="0" style="padding:10px;border:1px solid #ddd;border-radius:8px;font-size:14px">
+      <label>보너스 골드</label>
+      <input type="number" name="bonus_gold" value="${val('bonus_gold', 0)}" min="0" style="padding:10px;border:1px solid #ddd;border-radius:8px;font-size:14px">
+      <label>플랫폼</label>
+      <select name="platform" style="padding:10px;border:1px solid #ddd;border-radius:8px;font-size:14px">
+        ${platformOpt('both', '양쪽(both)')}${platformOpt('ios', 'iOS')}${platformOpt('android', 'Android')}
+      </select>
+      <label>라벨 (한국어)</label>
+      <input type="text" name="label_ko" value="${escapeHtml(String(val('label_ko')))}" placeholder="예: 골드 2,000" style="padding:10px;border:1px solid #ddd;border-radius:8px;font-size:14px">
+      <label>라벨 (English)</label>
+      <input type="text" name="label_en" value="${escapeHtml(String(val('label_en')))}" placeholder="2,000 Gold" style="padding:10px;border:1px solid #ddd;border-radius:8px;font-size:14px">
+      <label>라벨 (Deutsch)</label>
+      <input type="text" name="label_de" value="${escapeHtml(String(val('label_de')))}" placeholder="2.000 Gold" style="padding:10px;border:1px solid #ddd;border-radius:8px;font-size:14px">
+      <label>노출 순서</label>
+      <input type="number" name="sort_order" value="${val('sort_order', 0)}" style="padding:10px;border:1px solid #ddd;border-radius:8px;font-size:14px">
+      <label>활성화 (체크해야 앱에 노출)</label>
+      <input type="checkbox" name="is_active" ${activeChecked} style="width:20px;height:20px">
+    </div>
+    <p style="color:#777;font-size:12px;margin-top:10px">가격·통화는 스토어 콘솔에서 설정되며 앱이 런타임에 조회합니다. 여기서는 product_id와 지급 골드만 관리합니다. 비활성 상품은 앱에 노출되지 않습니다.</p>
+    <button type="submit" class="btn btn-primary" style="margin-top:14px">${isEdit ? '수정 저장' : '상품 추가'}</button>
+  </form>`;
+}
+
+function parseGoldProductFormBody(body) {
+  return {
+    product_id: (body.product_id || '').trim(),
+    gold_amount: parseInt(body.gold_amount) || 0,
+    bonus_gold: parseInt(body.bonus_gold) || 0,
+    platform: ['both', 'ios', 'android'].includes(body.platform) ? body.platform : 'both',
+    label_ko: body.label_ko || '',
+    label_en: body.label_en || '',
+    label_de: body.label_de || '',
+    sort_order: parseInt(body.sort_order) || 0,
+    is_active: body.is_active === 'on',
+  };
+}
+
 // ===== Route handler =====
 
 async function handleAdminRoute(req, res, url, pathname, method, lobby, wss, maintenanceFns = {}) {
@@ -1718,6 +1777,10 @@ async function handleAdminRoute(req, res, url, pathname, method, lobby, wss, mai
       shop: [
         { label: '상점 관리', href: '/tc-backstage/shop' },
         { label: '유저 목록 보기', href: '/tc-backstage/users' },
+      ],
+      'gold-products': [
+        { label: '골드상품 관리', href: '/tc-backstage/gold-products' },
+        { label: '상점 관리', href: '/tc-backstage/shop' },
       ],
     };
 
@@ -3141,6 +3204,114 @@ async function handleAdminRoute(req, res, url, pathname, method, lobby, wss, mai
   if (shopDeleteMatch && method === 'POST') {
     await deleteShopItem(parseInt(shopDeleteMatch[1]));
     return redirect(res, '/tc-backstage/shop');
+  }
+
+  // ===== Gold products (IAP) =====
+  if (pathname === '/tc-backstage/gold-products' && method === 'GET') {
+    const products = await getAllGoldProductsAdmin();
+    const activeCount = products.filter(p => p.is_active).length;
+
+    let tableContent;
+    if (products.length > 0) {
+      tableContent = `<div class="table-wrap"><table>
+        <tr><th>순서</th><th>Product ID</th><th>라벨(KO)</th><th>기본</th><th>보너스</th><th>합계</th><th>플랫폼</th><th>상태</th><th></th></tr>
+        ${products.map(p => `<tr>
+          <td>${p.sort_order}</td>
+          <td style="font-family:monospace;font-size:12px">${escapeHtml(p.product_id)}</td>
+          <td>${escapeHtml(p.label_ko || '')}</td>
+          <td>${formatNumber(p.gold_amount)}</td>
+          <td>${formatNumber(p.bonus_gold)}</td>
+          <td><b>${formatNumber((parseInt(p.gold_amount) || 0) + (parseInt(p.bonus_gold) || 0))}</b></td>
+          <td>${escapeHtml(p.platform)}</td>
+          <td>${p.is_active
+            ? '<span class="badge" style="background:#e8f5e9;color:#2e7d32">활성</span>'
+            : '<span class="badge" style="background:#f5f5f5;color:#888">비활성</span>'}</td>
+          <td><a href="/tc-backstage/gold-products/${p.id}" class="btn btn-secondary">수정</a></td>
+        </tr>`).join('')}
+      </table></div>`;
+    } else {
+      tableContent = '<div class="empty">골드 상품 없음</div>';
+    }
+
+    const content = `
+      ${pageHeader(
+        '골드 상품 (인앱결제)',
+        '활성 상품만 앱에 노출됩니다. 가격·통화는 스토어 콘솔이 통제하며 앱이 런타임에 조회합니다. 여기서는 product_id와 지급 골드량만 관리합니다.',
+        `<a href="/tc-backstage/gold-products/add" class="btn btn-primary">+ 상품 추가</a>`
+      )}
+      ${summaryStrip([
+        { label: '전체 상품', value: formatNumber(products.length) },
+        { label: '활성 (앱 노출)', value: formatNumber(activeCount), valueColor: '#2e8b57' },
+      ])}
+      <div class="card">${tableContent}</div>
+    `;
+    return html(res, layout('골드상품', content, 'gold-products'));
+  }
+
+  if (pathname === '/tc-backstage/gold-products/add' && method === 'GET') {
+    const content = `
+      <h1 class="page-title">골드 상품 추가</h1>
+      <div class="card">${goldProductForm('/tc-backstage/gold-products/add', {})}</div>
+      <a href="/tc-backstage/gold-products" class="btn btn-secondary" style="margin-top:12px">목록으로</a>
+    `;
+    return html(res, layout('골드 상품 추가', content, 'gold-products'));
+  }
+
+  if (pathname === '/tc-backstage/gold-products/add' && method === 'POST') {
+    const body = await parseBody(req);
+    const data = parseGoldProductFormBody(body);
+    const result = await addGoldProduct(data);
+    if (!result.success) {
+      const msg = GOLD_PRODUCT_MSG[result.messageKey] || '추가에 실패했습니다';
+      const content = `
+        <h1 class="page-title">골드 상품 추가</h1>
+        <div style="color:#e53935;margin-bottom:12px">${escapeHtml(msg)}</div>
+        <div class="card">${goldProductForm('/tc-backstage/gold-products/add', body)}</div>
+        <a href="/tc-backstage/gold-products" class="btn btn-secondary" style="margin-top:12px">목록으로</a>
+      `;
+      return html(res, layout('골드 상품 추가', content, 'gold-products'));
+    }
+    return redirect(res, '/tc-backstage/gold-products');
+  }
+
+  const goldEditMatch = pathname.match(/^\/tc-backstage\/gold-products\/(\d+)$/);
+  if (goldEditMatch && method === 'GET') {
+    const product = await getGoldProductById(parseInt(goldEditMatch[1]));
+    if (!product) return html(res, layout('찾을 수 없음', '<div class="empty">상품을 찾을 수 없습니다</div>', 'gold-products'), 404);
+    const content = `
+      <h1 class="page-title">수정: ${escapeHtml(product.product_id)}</h1>
+      <div class="card">${goldProductForm('/tc-backstage/gold-products/' + product.id, product, true)}</div>
+      <form method="POST" action="/tc-backstage/gold-products/${product.id}/delete"
+            onsubmit="return confirm('정말 이 상품을 삭제하시겠습니까? 결제 영수증 기록(tc_iap_receipts)은 보존됩니다.')"
+            style="margin-top:12px;display:inline-block">
+        <button type="submit" class="btn btn-danger">상품 삭제</button>
+      </form>
+      <a href="/tc-backstage/gold-products" class="btn btn-secondary" style="margin-top:12px;margin-left:8px">목록으로</a>
+    `;
+    return html(res, layout(`수정: ${escapeHtml(product.product_id)}`, content, 'gold-products'));
+  }
+
+  if (goldEditMatch && method === 'POST') {
+    const body = await parseBody(req);
+    const data = parseGoldProductFormBody(body);
+    const result = await updateGoldProduct(parseInt(goldEditMatch[1]), data);
+    if (!result.success) {
+      const msg = GOLD_PRODUCT_MSG[result.messageKey] || '수정에 실패했습니다';
+      const content = `
+        <h1 class="page-title">수정</h1>
+        <div style="color:#e53935;margin-bottom:12px">${escapeHtml(msg)}</div>
+        <div class="card">${goldProductForm('/tc-backstage/gold-products/' + goldEditMatch[1], body, true)}</div>
+        <a href="/tc-backstage/gold-products" class="btn btn-secondary" style="margin-top:12px">목록으로</a>
+      `;
+      return html(res, layout('수정', content, 'gold-products'));
+    }
+    return redirect(res, '/tc-backstage/gold-products/' + goldEditMatch[1]);
+  }
+
+  const goldDeleteMatch = pathname.match(/^\/tc-backstage\/gold-products\/(\d+)\/delete$/);
+  if (goldDeleteMatch && method === 'POST') {
+    await deleteGoldProduct(parseInt(goldDeleteMatch[1]));
+    return redirect(res, '/tc-backstage/gold-products');
   }
 
   // ===== Maintenance =====

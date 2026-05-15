@@ -6174,6 +6174,101 @@ async function grantIapGold({ nickname, productId, platform, transactionId, gold
   }
 }
 
+// ---- Gold product admin CRUD ----
+
+async function getAllGoldProductsAdmin() {
+  try {
+    const result = await pool.query(
+      `SELECT * FROM tc_gold_products ORDER BY sort_order ASC, id ASC`
+    );
+    return result.rows;
+  } catch (err) {
+    console.error('Get all gold products admin error:', err);
+    return [];
+  }
+}
+
+async function getGoldProductById(id) {
+  try {
+    const result = await pool.query(
+      `SELECT * FROM tc_gold_products WHERE id = $1`, [id]
+    );
+    return result.rows[0] || null;
+  } catch (err) {
+    console.error('Get gold product by id error:', err);
+    return null;
+  }
+}
+
+async function addGoldProduct(data) {
+  try {
+    const result = await pool.query(
+      `INSERT INTO tc_gold_products
+        (product_id, gold_amount, bonus_gold, platform,
+         label_ko, label_en, label_de, sort_order, is_active)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+       RETURNING *`,
+      [
+        data.product_id, data.gold_amount || 0, data.bonus_gold || 0,
+        data.platform || 'both',
+        data.label_ko || '', data.label_en || '', data.label_de || '',
+        data.sort_order || 0, data.is_active === true,
+      ]
+    );
+    return { success: true, product: result.rows[0] };
+  } catch (err) {
+    console.error('Add gold product error:', err);
+    if (err.code === '23505') {
+      return { success: false, messageKey: 'db_product_id_exists' };
+    }
+    return { success: false, messageKey: 'db_product_add_failed' };
+  }
+}
+
+async function updateGoldProduct(id, data) {
+  try {
+    const result = await pool.query(
+      `UPDATE tc_gold_products
+       SET product_id = $2, gold_amount = $3, bonus_gold = $4, platform = $5,
+           label_ko = $6, label_en = $7, label_de = $8,
+           sort_order = $9, is_active = $10
+       WHERE id = $1
+       RETURNING *`,
+      [
+        id, data.product_id, data.gold_amount || 0, data.bonus_gold || 0,
+        data.platform || 'both',
+        data.label_ko || '', data.label_en || '', data.label_de || '',
+        data.sort_order || 0, data.is_active === true,
+      ]
+    );
+    if (result.rows.length === 0) {
+      return { success: false, messageKey: 'db_product_not_found' };
+    }
+    return { success: true, product: result.rows[0] };
+  } catch (err) {
+    console.error('Update gold product error:', err);
+    if (err.code === '23505') {
+      return { success: false, messageKey: 'db_product_id_exists' };
+    }
+    return { success: false, messageKey: 'db_product_update_failed' };
+  }
+}
+
+async function deleteGoldProduct(id) {
+  try {
+    const result = await pool.query(
+      `DELETE FROM tc_gold_products WHERE id = $1`, [id]
+    );
+    if (result.rowCount === 0) {
+      return { success: false, messageKey: 'db_product_not_found' };
+    }
+    return { success: true };
+  } catch (err) {
+    console.error('Delete gold product error:', err);
+    return { success: false, messageKey: 'db_product_delete_failed' };
+  }
+}
+
 module.exports = {
   initDatabase,
   registerUser,
@@ -6297,5 +6392,10 @@ module.exports = {
   getActiveGoldProducts,
   getGoldProductByProductId,
   grantIapGold,
+  getAllGoldProductsAdmin,
+  getGoldProductById,
+  addGoldProduct,
+  updateGoldProduct,
+  deleteGoldProduct,
   pool,
 };

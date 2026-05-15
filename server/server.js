@@ -5456,28 +5456,23 @@ async function handleVerifyIapPurchase(ws, data) {
   // with the server-issued bindingToken = bindingUuid(ws.userId) — the
   // IMMUTABLE tc_users.id, not the mutable nickname — carried as
   // appAccountToken on iOS (StoreKit 2 JWS) and obfuscatedAccountId on
-  // Android. Because it's immutable and stable across renames/sessions,
-  // mismatches are no longer false-positive-prone. We still GRANT and only
-  // flag (not reject) on mismatch: a paid consumable must never be consumed
-  // without credit (e.g. logged-out→other-account device reconciliation),
-  // and double-grant/consumed-receipt replay is already blocked by the
-  // globally-unique transaction_id. The flag is now a high-signal fraud
-  // indicator (near-zero benign mismatches).
+  // Android. Because the key is immutable and stable across renames/sessions,
+  // benign mismatches are near-zero, so we REJECT on mismatch: do NOT grant,
+  // do NOT record the transaction_id, and tell the client NOT to finish
+  // (finish=false via the non-permanent 'binding_mismatch' reason). A thief
+  // replaying a victim's receipt onto their own account is denied and earns
+  // nothing; the legitimate owner's own device matches and is granted
+  // normally on its later verify (the txn was never recorded, so recovery is
+  // not blocked). Logged as outcome 'flagged' for fraud review. accountId
+  // absent (legacy / older edge) → check skipped, grant proceeds.
   if (v.accountId && ws.userId != null) {
     const expected = bindingUuid(String(ws.userId));
     if (String(v.accountId).toLowerCase() !== String(expected).toLowerCase()) {
-      console.warn(`[IAP] account binding mismatch (granted+flagged) nickname=${ws.nickname} product=${productId}`);
-      await logIapAttempt({
-        nickname: ws.nickname,
-        platform,
-        productId,
+      console.warn(`[IAP] account binding mismatch (rejected) nickname=${ws.nickname} product=${productId}`);
+      return fail('flagged', 'binding_mismatch', 'iap_verify_failed', {
         environment,
-        outcome: 'flagged',
-        reason: 'binding_mismatch',
-        transactionId: null,
         rawPayload: { expected: 'bindingUuid(userId)', got: v.accountId },
       });
-      // fall through — grant proceeds.
     }
   }
 

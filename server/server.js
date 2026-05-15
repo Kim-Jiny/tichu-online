@@ -5327,37 +5327,63 @@ async function handleVerifyIapPurchase(ws, data) {
 
   const environment = v.environment === 'sandbox' ? 'sandbox' : 'production';
   const goldTotal = (parseInt(product.gold_amount, 10) || 0) + (parseInt(product.bonus_gold, 10) || 0);
-  const grant = await grantIapGold({
-    nickname: ws.nickname,
-    productId,
-    platform,
-    transactionId: v.transactionId,
-    environment,
-    goldTotal,
-    rawPayload: v.raw,
-  });
-  if (!grant.success) {
-    return fail('error', 'grant_failed', 'iap_grant_failed', {
-      environment, transactionId: v.transactionId, rawPayload: v.raw,
+
+  // Grant EVERY transaction in the receipt, not just the latest. Apple receipts
+  // accumulate purchases; if an earlier verify failed and the user bought
+  // again, both are here and both must be credited. grantIapGold is idempotent
+  // on transaction_id, so already-granted (and refunded) ones are no-ops.
+  const txns = Array.isArray(v.transactions) ? v.transactions : [];
+  if (txns.length === 0) {
+    return fail('error', 'no_transactions', 'iap_verify_failed', { environment });
+  }
+
+  let totalNewGold = 0;
+  let anyNewlyGranted = false;
+  let latestGold = null;
+  let grantError = null;
+  for (const tx of txns) {
+    const grant = await grantIapGold({
+      nickname: ws.nickname,
+      productId,
+      platform,
+      transactionId: tx.transactionId,
+      environment,
+      goldTotal,
+      rawPayload: tx.raw,
+    });
+    if (!grant.success) {
+      grantError = grant;
+      await logIapAttempt({
+        nickname: ws.nickname, platform, productId, environment,
+        outcome: 'error', reason: 'grant_failed',
+        transactionId: tx.transactionId, rawPayload: tx.raw,
+      });
+      continue;
+    }
+    if (grant.newGold != null) latestGold = grant.newGold;
+    if (!grant.alreadyGranted) {
+      anyNewlyGranted = true;
+      totalNewGold += goldTotal;
+    }
+    await logIapAttempt({
+      nickname: ws.nickname, platform, productId, environment,
+      outcome: grant.alreadyGranted ? 'already_granted' : 'granted',
+      reason: null, transactionId: tx.transactionId, rawPayload: tx.raw,
     });
   }
 
-  await logIapAttempt({
-    nickname: ws.nickname,
-    platform,
-    productId,
-    environment,
-    outcome: grant.alreadyGranted ? 'already_granted' : 'granted',
-    reason: null,
-    transactionId: v.transactionId,
-    rawPayload: v.raw,
-  });
+  // Every transaction failed to grant (e.g. DB error) — surface as failure so
+  // the client can retry; nothing was credited.
+  if (grantError && !anyNewlyGranted && latestGold == null) {
+    return fail('error', 'grant_failed', 'iap_grant_failed', { environment });
+  }
+
   sendTo(ws, {
     type: 'iap_purchase_result',
     success: true,
-    alreadyGranted: grant.alreadyGranted === true,
-    goldGranted: grant.alreadyGranted ? 0 : goldTotal,
-    newGold: grant.newGold,
+    alreadyGranted: !anyNewlyGranted,
+    goldGranted: totalNewGold,
+    newGold: latestGold,
     productId,
   });
 }

@@ -61,35 +61,42 @@ async function verifyApple(receiptData, expectedProductId) {
   }
 
   // Consumables live in in_app / latest_receipt_info. The base64 app receipt
-  // ACCUMULATES every past purchase of the product, so a naive .find() returns
-  // the OLDEST transaction — meaning the 2nd purchase of the same gold pack
-  // would resolve to the 1st transaction_id and get deduped as "already
-  // granted" (user pays, gets nothing). Pick the LATEST matching transaction
-  // by purchase_date_ms instead; the client verifies right after each purchase
-  // so the newest line item is the one being claimed. Re-verifies stay
-  // idempotent because the same latest transaction_id maps to the same receipt.
+  // ACCUMULATES every purchase of the product. We must NOT pick just one line
+  // item: if an earlier purchase's verify failed and the user bought again,
+  // the receipt holds 2+ ungranted transactions. Return ALL of them and let
+  // the caller grant each unseen transaction_id (idempotent on conflict), so
+  // every paid purchase is credited exactly once and none is lost.
+  // De-dupe by transaction_id and sort oldest→newest for stable processing.
+  const seen = new Set();
   const matches = []
     .concat(Array.isArray(body.latest_receipt_info) ? body.latest_receipt_info : [])
     .concat(Array.isArray(receipt.in_app) ? receipt.in_app : [])
-    .filter((it) => it && it.product_id === expectedProductId);
+    .filter((it) => {
+      if (!it || it.product_id !== expectedProductId) return false;
+      const tid = String(it.transaction_id);
+      if (seen.has(tid)) return false;
+      seen.add(tid);
+      return true;
+    });
   if (matches.length === 0) {
     return { valid: false, reason: 'product_not_in_receipt', raw: body };
   }
   const ms = (it) => parseInt(it.purchase_date_ms, 10) || 0;
-  const match = matches.reduce((a, b) => (ms(b) >= ms(a) ? b : a));
+  matches.sort((a, b) => ms(a) - ms(b));
 
   // body.environment is "Sandbox" during TestFlight/sandbox, "Production" live.
   const environment = String(body.environment || '').toLowerCase() === 'sandbox'
     ? 'sandbox'
     : 'production';
 
-  // transaction_id is unique per purchase; this is our idempotency key.
   return {
     valid: true,
-    transactionId: String(match.transaction_id),
-    productId: match.product_id,
     environment,
-    raw: match,
+    transactions: matches.map((it) => ({
+      transactionId: String(it.transaction_id),
+      productId: it.product_id,
+      raw: it,
+    })),
   };
 }
 

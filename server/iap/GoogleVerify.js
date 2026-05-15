@@ -124,12 +124,16 @@ async function verifyGoogle(purchaseToken, expectedProductId) {
   // orderId is the unique transaction reference — our idempotency key. Fall
   // back to the purchase token if Google omits orderId (rare, e.g. promos).
   const transactionId = body.orderId || `gpa_${purchaseToken.slice(0, 64)}`;
+  // One purchaseToken = one purchase (no accumulation like Apple receipts), so
+  // a single-element list keeps the caller's grant loop uniform across stores.
   return {
     valid: true,
-    transactionId: String(transactionId),
-    productId: expectedProductId,
     environment,
-    raw: body,
+    transactions: [{
+      transactionId: String(transactionId),
+      productId: expectedProductId,
+      raw: body,
+    }],
   };
 }
 

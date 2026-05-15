@@ -34,12 +34,18 @@ class IapService {
   /// rename is always reflected). Hashed into the store account-binding token.
   final String? Function()? accountNameProvider;
 
-  /// sha256(nickname) hex — the store account-binding token. Must match the
-  /// server's crypto.createHash('sha256').update(nickname).digest('hex').
+  /// Deterministic account-binding UUID. StoreKit 2's appAccountToken MUST be
+  /// a UUID, so we derive an RFC-4122-shaped UUID from sha256(nickname). Must
+  /// be byte-for-byte identical to the server's accountBinding.bindingUuid().
   String? get _boundAccountId {
     final n = accountNameProvider?.call();
     if (n == null || n.isEmpty) return null;
-    return sha256.convert(utf8.encode(n)).toString();
+    final b = List<int>.from(sha256.convert(utf8.encode(n)).bytes.sublist(0, 16));
+    b[6] = (b[6] & 0x0f) | 0x40; // version 4 shape
+    b[8] = (b[8] & 0x3f) | 0x80; // RFC-4122 variant
+    final x = b.map((v) => v.toRadixString(16).padLeft(2, '0')).join();
+    return '${x.substring(0, 8)}-${x.substring(8, 12)}-${x.substring(12, 16)}'
+        '-${x.substring(16, 20)}-${x.substring(20, 32)}';
   }
 
   final InAppPurchase _iap = InAppPurchase.instance;

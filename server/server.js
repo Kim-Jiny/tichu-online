@@ -70,6 +70,7 @@ const {
 const { verifyApple } = require('./iap/AppleVerify');
 const { verifyGoogle } = require('./iap/GoogleVerify');
 const { parseAppleNotification } = require('./iap/AppleNotifications');
+const { bindingUuid } = require('./iap/accountBinding');
 const { pollGoogleVoidedPurchases } = require('./iap/GoogleVoided');
 
 // Firebase Admin SDK initialization (optional - only if FIREBASE_SERVICE_ACCOUNT is set)
@@ -5427,17 +5428,18 @@ async function handleVerifyIapPurchase(ws, data) {
   const environment = v.environment === 'sandbox' ? 'sandbox' : 'production';
 
   // Account binding (anti receipt-replay): the client stamps the purchase with
-  // sha256(nickname) as the store account id. The token is bound to a MUTABLE
-  // nickname, so a legit user who renames during a pending (Ask to Buy) or
-  // retry window would mismatch. We therefore do NOT reject on mismatch
-  // (rejecting would consume a paid consumable and lose the user's money) —
-  // we still grant, but flag it in the 검증로그 for fraud review. Replay of an
-  // already-consumed receipt is independently blocked by the globally-unique
-  // transaction_id, so the residual risk here is narrow. (Apple's legacy
-  // verifyReceipt doesn't echo the token; this only ever triggers on Google.)
+  // bindingUuid(nickname) — appAccountToken on iOS (StoreKit 2 JWS) and
+  // obfuscatedAccountId on Android. The token is bound to a MUTABLE nickname,
+  // so a legit user who renames during a pending (Ask to Buy) or retry window
+  // would mismatch. We therefore do NOT reject on mismatch (rejecting would
+  // consume a paid consumable and lose the user's money) — we still grant,
+  // but flag it in the 검증로그 for fraud review. Replay of an already-consumed
+  // receipt is independently blocked by the globally-unique transaction_id,
+  // so the residual risk is narrow. Enforced on both stores now that SK2
+  // exposes appAccountToken in the verified transaction.
   if (v.accountId) {
-    const expected = crypto.createHash('sha256').update(String(ws.nickname)).digest('hex');
-    if (v.accountId !== expected) {
+    const expected = bindingUuid(String(ws.nickname));
+    if (String(v.accountId).toLowerCase() !== String(expected).toLowerCase()) {
       console.warn(`[IAP] account binding mismatch (granted+flagged) nickname=${ws.nickname} product=${productId}`);
       await logIapAttempt({
         nickname: ws.nickname,
@@ -5447,7 +5449,7 @@ async function handleVerifyIapPurchase(ws, data) {
         outcome: 'flagged',
         reason: 'binding_mismatch',
         transactionId: null,
-        rawPayload: { expectedHashOf: 'nickname', got: v.accountId },
+        rawPayload: { expected: 'bindingUuid(nickname)', got: v.accountId },
       });
       // fall through — grant proceeds.
     }

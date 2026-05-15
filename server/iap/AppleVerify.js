@@ -30,8 +30,24 @@ async function callApple(url, receiptData, secret) {
   return res.json();
 }
 
-// Returns { valid, transactionId, productId, raw } or { valid:false, reason }.
-async function verifyApple(receiptData, expectedProductId) {
+const { verifyAppleTransaction, looksLikeJws } = require('./AppleStoreKit2');
+
+// Dispatcher. StoreKit 2 (current plugin default) sends a JWS-signed
+// transaction; StoreKit 1 / older builds send the base64 app receipt. We
+// detect the format and route accordingly — JWS is verified offline, the
+// legacy receipt still goes to verifyReceipt as a transition fallback.
+async function verifyApple(verificationData, expectedProductId) {
+  if (typeof verificationData !== 'string' || !verificationData) {
+    return { valid: false, reason: 'missing_receipt' };
+  }
+  if (looksLikeJws(verificationData)) {
+    return verifyAppleTransaction(verificationData, expectedProductId);
+  }
+  return verifyAppleLegacyReceipt(verificationData, expectedProductId);
+}
+
+// Legacy StoreKit 1 verifyReceipt path (kept as a transition fallback).
+async function verifyAppleLegacyReceipt(receiptData, expectedProductId) {
   const secret = process.env.APPLE_IAP_SHARED_SECRET;
   const bundleId = process.env.APPLE_BUNDLE_ID;
   if (!secret || !bundleId) {

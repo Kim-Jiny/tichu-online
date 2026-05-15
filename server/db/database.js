@@ -6440,7 +6440,8 @@ async function getIapAttempts({ outcome, environment, platform, search, page = 1
         COUNT(*) FILTER (WHERE outcome = 'granted')                AS granted_cnt,
         COUNT(*) FILTER (WHERE outcome = 'already_granted')        AS dup_cnt,
         COUNT(*) FILTER (WHERE outcome = 'rejected')               AS rejected_cnt,
-        COUNT(*) FILTER (WHERE outcome = 'error')                  AS error_cnt
+        COUNT(*) FILTER (WHERE outcome = 'error')                  AS error_cnt,
+        COUNT(*) FILTER (WHERE outcome = 'flagged')                AS flagged_cnt
       FROM tc_iap_attempts`);
     const s = sumRes.rows[0] || {};
     return {
@@ -6454,11 +6455,12 @@ async function getIapAttempts({ outcome, environment, platform, search, page = 1
         dup: parseInt(s.dup_cnt, 10) || 0,
         rejected: parseInt(s.rejected_cnt, 10) || 0,
         error: parseInt(s.error_cnt, 10) || 0,
+        flagged: parseInt(s.flagged_cnt, 10) || 0,
       },
     };
   } catch (err) {
     console.error('Get IAP attempts error:', err);
-    return { rows: [], total: 0, page: 1, limit: 50, summary: { total: 0, granted: 0, dup: 0, rejected: 0, error: 0 } };
+    return { rows: [], total: 0, page: 1, limit: 50, summary: { total: 0, granted: 0, dup: 0, rejected: 0, error: 0, flagged: 0 } };
   }
 }
 

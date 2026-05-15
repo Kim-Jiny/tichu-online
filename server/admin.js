@@ -3569,7 +3569,7 @@ async function handleAdminRoute(req, res, url, pathname, method, lobby, wss, mai
 
   // ===== IAP 검증로그 (모든 시도) =====
   if (pathname === '/tc-backstage/iap-attempts' && method === 'GET') {
-    const OUTCOMES = ['granted', 'already_granted', 'rejected', 'error'];
+    const OUTCOMES = ['granted', 'already_granted', 'rejected', 'error', 'flagged'];
     const outcomeF = OUTCOMES.includes(url.searchParams.get('outcome')) ? url.searchParams.get('outcome') : '';
     const envF = ['production', 'sandbox'].includes(url.searchParams.get('env')) ? url.searchParams.get('env') : '';
     const platformF = ['ios', 'android'].includes(url.searchParams.get('platform')) ? url.searchParams.get('platform') : '';
@@ -3589,7 +3589,7 @@ async function handleAdminRoute(req, res, url, pathname, method, lobby, wss, mai
     const filterForm = `
       <form method="GET" action="/tc-backstage/iap-attempts" class="card" style="margin-bottom:14px;display:flex;gap:10px;flex-wrap:wrap;align-items:flex-end">
         <div><div style="font-size:12px;color:#888">결과</div>
-          <select name="outcome">${opt(outcomeF, '', '전체')}${opt(outcomeF, 'granted', '지급')}${opt(outcomeF, 'already_granted', '중복(이미지급)')}${opt(outcomeF, 'rejected', '거부')}${opt(outcomeF, 'error', '오류')}</select></div>
+          <select name="outcome">${opt(outcomeF, '', '전체')}${opt(outcomeF, 'granted', '지급')}${opt(outcomeF, 'already_granted', '중복(이미지급)')}${opt(outcomeF, 'rejected', '거부')}${opt(outcomeF, 'error', '오류')}${opt(outcomeF, 'flagged', '플래그(바인딩)')}</select></div>
         <div><div style="font-size:12px;color:#888">환경</div>
           <select name="env">${opt(envF, '', '전체')}${opt(envF, 'production', '프로덕션')}${opt(envF, 'sandbox', '샌드박스')}</select></div>
         <div><div style="font-size:12px;color:#888">플랫폼</div>
@@ -3604,6 +3604,7 @@ async function handleAdminRoute(req, res, url, pathname, method, lobby, wss, mai
       if (o === 'granted') return '<span class="badge" style="background:#e8f5e9;color:#2e7d32">지급</span>';
       if (o === 'already_granted') return '<span class="badge" style="background:#e3f2fd;color:#1565c0">중복</span>';
       if (o === 'error') return '<span class="badge" style="background:#fff3e0;color:#e65100">오류</span>';
+      if (o === 'flagged') return '<span class="badge" style="background:#fce4ec;color:#ad1457">플래그</span>';
       return '<span class="badge" style="background:#ffebee;color:#c62828">거부</span>';
     };
     const envBadge = (e) => e === 'sandbox'
@@ -3650,6 +3651,7 @@ async function handleAdminRoute(req, res, url, pathname, method, lobby, wss, mai
         { label: '중복', value: formatNumber(data.summary.dup), valueColor: '#1565c0' },
         { label: '거부', value: formatNumber(data.summary.rejected), valueColor: '#c62828' },
         { label: '오류', value: formatNumber(data.summary.error), valueColor: '#e65100' },
+        { label: '플래그(바인딩)', value: formatNumber(data.summary.flagged), valueColor: '#ad1457' },
       ])}
       ${filterForm}
       <div class="card">${table}</div>

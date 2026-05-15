@@ -5332,7 +5332,6 @@ async function handleVerifyIapPurchase(ws, data) {
       || reason === 'missing_receipt'
       || reason === 'missing_purchase_token'
       || reason === 'missing_product_id'
-      || reason === 'account_mismatch'
       || /^apple_status_/.test(reason)
       || /^purchase_state_/.test(reason);
   };
@@ -5396,18 +5395,29 @@ async function handleVerifyIapPurchase(ws, data) {
   const environment = v.environment === 'sandbox' ? 'sandbox' : 'production';
 
   // Account binding (anti receipt-replay): the client stamps the purchase with
-  // sha256(nickname) as the store account id. If the store echoes one and it
-  // doesn't match this authenticated user, someone is redeeming another
-  // person's receipt — reject. Apple's legacy verifyReceipt does NOT echo the
-  // token, so this is enforceable for Google only; iOS relies on the
-  // one-time-global transaction_id until we move to the App Store Server API.
+  // sha256(nickname) as the store account id. The token is bound to a MUTABLE
+  // nickname, so a legit user who renames during a pending (Ask to Buy) or
+  // retry window would mismatch. We therefore do NOT reject on mismatch
+  // (rejecting would consume a paid consumable and lose the user's money) —
+  // we still grant, but flag it in the 검증로그 for fraud review. Replay of an
+  // already-consumed receipt is independently blocked by the globally-unique
+  // transaction_id, so the residual risk here is narrow. (Apple's legacy
+  // verifyReceipt doesn't echo the token; this only ever triggers on Google.)
   if (v.accountId) {
     const expected = crypto.createHash('sha256').update(String(ws.nickname)).digest('hex');
     if (v.accountId !== expected) {
-      console.warn(`[IAP] account binding mismatch nickname=${ws.nickname} product=${productId}`);
-      return fail('rejected', 'account_mismatch', 'iap_verify_failed', {
-        environment, rawPayload: { expectedHashOf: 'nickname', got: v.accountId },
+      console.warn(`[IAP] account binding mismatch (granted+flagged) nickname=${ws.nickname} product=${productId}`);
+      await logIapAttempt({
+        nickname: ws.nickname,
+        platform,
+        productId,
+        environment,
+        outcome: 'flagged',
+        reason: 'binding_mismatch',
+        transactionId: null,
+        rawPayload: { expectedHashOf: 'nickname', got: v.accountId },
       });
+      // fall through — grant proceeds.
     }
   }
 

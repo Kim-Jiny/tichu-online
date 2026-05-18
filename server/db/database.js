@@ -405,10 +405,10 @@ async function initDatabase() {
         (product_id, gold_amount, bonus_gold, platform, label_ko, sort_order, is_active)
       VALUES
         ('jiny.tichu.gold1', 2000,   0,     'both', '골드 2,000',   1, FALSE),
-        ('jiny.tichu.gold2', 6500,   300,   'both', '골드 6,800',   2, FALSE),
-        ('jiny.tichu.gold3', 16500,  2000,  'both', '골드 18,500',  3, FALSE),
-        ('jiny.tichu.gold4', 48300,  9700,  'both', '골드 58,000',  4, FALSE),
-        ('jiny.tichu.gold5', 165000, 49500, 'both', '골드 214,500', 5, FALSE)
+        ('jiny.tichu.gold2', 6500,   500,   'both', '골드 7,000',   2, FALSE),
+        ('jiny.tichu.gold3', 16500,  3000,  'both', '골드 19,500',  3, FALSE),
+        ('jiny.tichu.gold4', 48300,  14700, 'both', '골드 63,000',  4, FALSE),
+        ('jiny.tichu.gold5', 165000, 75000, 'both', '골드 240,000', 5, FALSE)
       ON CONFLICT (product_id) DO NOTHING
     `);
 

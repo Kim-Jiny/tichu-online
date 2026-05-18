@@ -46,6 +46,14 @@ class IapService {
   // Global serialization gate for verification (see _onPurchaseUpdates).
   Future<void> _verifyChain = Future<void>.value();
 
+  // Transaction ids already verified+granted this session. iOS in_app_purchase
+  // re-emits the same purchase on purchaseStream (notably the first purchase),
+  // which would otherwise trigger a second server verify — harmless for gold
+  // (server is idempotent on transaction_id) but it litters the IAP attempt
+  // log with a duplicate "already_granted" row. Skip the redundant round-trip
+  // and just finish the store transaction.
+  final Set<String> _settledTxns = {};
+
   bool _available = false;
   bool get isAvailable => _available;
 
@@ -145,6 +153,18 @@ class IapService {
   }
 
   Future<void> _verifyAndComplete(PurchaseDetails p) async {
+    // Already verified+granted this transaction this session (duplicate
+    // purchaseStream emission): don't re-hit the server. Still finish the
+    // store transaction so the plugin stops re-delivering it.
+    final txnId = p.purchaseID;
+    if (txnId != null && txnId.isNotEmpty && _settledTxns.contains(txnId)) {
+      onSettled?.call(p.productID);
+      if (p.pendingCompletePurchase) {
+        await _iap.completePurchase(p);
+      }
+      return;
+    }
+
     // Only finish the store transaction when the purchase is resolved for
     // good: server granted it, OR server says the receipt is permanently
     // invalid (result['finish'] == true). On a transient failure/timeout we
@@ -166,6 +186,7 @@ class IapService {
       );
       if (result['success'] == true) {
         mayFinish = true;
+        if (txnId != null && txnId.isNotEmpty) _settledTxns.add(txnId);
         final granted = (result['goldGranted'] ?? 0) as int;
         final newGold = (result['newGold'] ?? 0) as int;
         onSuccess?.call(granted, newGold);

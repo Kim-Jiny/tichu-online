@@ -404,11 +404,11 @@ async function initDatabase() {
       INSERT INTO tc_gold_products
         (product_id, gold_amount, bonus_gold, platform, label_ko, sort_order, is_active)
       VALUES
-        ('jiny.tichu.gold1', 2000,   0,     'both', '골드 2,000',   1, FALSE),
-        ('jiny.tichu.gold2', 6500,   500,   'both', '골드 7,000',   2, FALSE),
-        ('jiny.tichu.gold3', 16500,  3000,  'both', '골드 19,500',  3, FALSE),
-        ('jiny.tichu.gold4', 48300,  14700, 'both', '골드 63,000',  4, FALSE),
-        ('jiny.tichu.gold5', 165000, 75000, 'both', '골드 240,000', 5, FALSE)
+        ('jiny.tichu.gold1', 2000,   0,     'both', '골드 2,000',          1, FALSE),
+        ('jiny.tichu.gold2', 6500,   500,   'both', '골드 7,000 (+8%)',    2, FALSE),
+        ('jiny.tichu.gold3', 16500,  3500,   'both', '골드 20,000 (+21%)',  3, FALSE),
+        ('jiny.tichu.gold4', 48300,  16700,  'both', '골드 65,000 (+35%)',  4, FALSE),
+        ('jiny.tichu.gold5', 165000, 135000, 'both', '골드 300,000 (+82%)', 5, FALSE)
       ON CONFLICT (product_id) DO NOTHING
     `);
 
@@ -6147,7 +6147,8 @@ async function getActiveGoldProducts(platform) {
 async function getGoldProductByProductId(productId) {
   try {
     const result = await pool.query(
-      `SELECT product_id, gold_amount, bonus_gold, platform, is_active
+      `SELECT product_id, gold_amount, bonus_gold, platform, is_active,
+              label_ko, label_en, label_de
          FROM tc_gold_products WHERE product_id = $1`,
       [productId]
     );
@@ -6162,7 +6163,7 @@ async function getGoldProductByProductId(productId) {
 // insert with ON CONFLICT DO NOTHING decides whether this is the first time
 // we've seen the transaction. Gold/history only move on the first insert, so
 // client retries (or store re-delivery) never double-credit.
-async function grantIapGold({ nickname, productId, platform, transactionId, environment, goldTotal, rawPayload }) {
+async function grantIapGold({ nickname, productId, platform, transactionId, environment, goldTotal, rawPayload, historyTitle }) {
   const env = environment === 'sandbox' ? 'sandbox' : 'production';
   const client = await pool.connect();
   try {
@@ -6199,7 +6200,13 @@ async function grantIapGold({ nickname, productId, platform, transactionId, envi
     await client.query(
       `INSERT INTO tc_gold_history (nickname, gold_delta, source, title, description)
        VALUES ($1, $2, 'iap', $3, $4)`,
-      [nickname, goldTotal, 'iap_purchase', productId]
+      // title is the localized product name in "ko|en|de" form (same scheme
+      // as shop_purchase, resolved client-side). Fall back to the legacy
+      // marker if a label is somehow missing so the row stays renderable.
+      [nickname, goldTotal,
+       (historyTitle && historyTitle.replace(/\|/g, '').trim())
+         ? historyTitle : 'iap_purchase',
+       productId]
     );
     await client.query('COMMIT');
     return { success: true, alreadyGranted: false, newGold: upd.rows[0].gold };

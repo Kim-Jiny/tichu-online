@@ -71,6 +71,7 @@
   "inquiryCategory": "카테고리",
   "inquiryCategoryBug": "버그 신고",
   "inquiryCategorySuggestion": "건의사항",
+  "inquiryCategoryPayment": "결제/환불",
   "inquiryCategoryOther": "기타",
   "inquiryFieldTitle": "제목",
   "inquiryFieldTitleHint": "제목을 입력해주세요",
@@ -1285,6 +1286,8 @@
   "maintenanceEnded": "점검 종료, 재연결 중...",
 
   "goldHistoryShopPurchase": "상점 구매",
+  "goldHistoryIapPurchase": "골드 충전",
+  "goldHistoryIapRefund": "골드 환불",
   "goldHistoryLeaveDefeat": "탈주 패배",
   "goldHistoryRankedWin": "랭크전 승리",
   "goldHistoryCasualWin": "일반전 승리",

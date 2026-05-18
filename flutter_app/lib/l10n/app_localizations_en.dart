@@ -212,10 +212,10 @@ class L10nEn extends L10n {
   String get inquiryCategorySuggestion => 'Suggestion';
 
   @override
-  String get inquiryCategoryOther => 'Other';
+  String get inquiryCategoryPayment => 'Payment / Refund';
 
   @override
-  String get inquiryCategoryPayment => 'Payment/Refund';
+  String get inquiryCategoryOther => 'Other';
 
   @override
   String get inquiryFieldTitle => 'Title';
@@ -3975,6 +3975,12 @@ class L10nEn extends L10n {
 
   @override
   String get goldHistoryShopPurchase => 'Shop purchase';
+
+  @override
+  String get goldHistoryIapPurchase => 'Gold top-up';
+
+  @override
+  String get goldHistoryIapRefund => 'Gold refund';
 
   @override
   String get goldHistoryLeaveDefeat => 'Forfeit loss';

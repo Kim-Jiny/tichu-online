@@ -205,10 +205,10 @@ class L10nKo extends L10n {
   String get inquiryCategorySuggestion => '건의사항';
 
   @override
-  String get inquiryCategoryOther => '기타';
+  String get inquiryCategoryPayment => '결제/환불';
 
   @override
-  String get inquiryCategoryPayment => '결제·환불';
+  String get inquiryCategoryOther => '기타';
 
   @override
   String get inquiryFieldTitle => '제목';
@@ -3886,6 +3886,12 @@ class L10nKo extends L10n {
 
   @override
   String get goldHistoryShopPurchase => '상점 구매';
+
+  @override
+  String get goldHistoryIapPurchase => '골드 충전';
+
+  @override
+  String get goldHistoryIapRefund => '골드 환불';
 
   @override
   String get goldHistoryLeaveDefeat => '탈주 패배';

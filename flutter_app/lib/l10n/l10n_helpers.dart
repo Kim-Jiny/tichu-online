@@ -164,6 +164,12 @@ String localizeGoldTitle(String? title, String? source, L10n l10n, String locale
       return l10n.goldHistorySeasonReward;
     case 'shop_purchase':
       return l10n.goldHistoryShopPurchase;
+    // Legacy IAP rows stored the marker 'iap_purchase'. New rows carry the
+    // "ko|en|de" product label and are handled by the pipe branch above.
+    case 'iap_purchase':
+      return l10n.goldHistoryIapPurchase;
+    case 'iap_refund':
+      return l10n.goldHistoryIapRefund;
     case 'sk_leave_defeat':
       return l10n.goldHistorySkLeaveDefeat;
     case 'sk_ranked_win':
@@ -207,6 +213,13 @@ String localizeGoldDescription(String? desc, String? source, L10n l10n) {
       return desc;
     case 'shop_purchase':
       return l10n.goldHistoryShopPurchase;
+    // desc holds the raw product id — never show it; the title already carries
+    // the localized product name.
+    case 'iap':
+      return l10n.goldHistoryIapPurchase;
+    // desc holds the raw product id — show the localized refund label instead.
+    case 'iap_refund':
+      return l10n.goldHistoryIapRefund;
     case 'admin_adjust':
       return l10n.goldHistoryAdminBy(desc);
     default:

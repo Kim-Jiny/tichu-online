@@ -37,7 +37,14 @@ class _GoldShopScreenState extends State<GoldShopScreen> {
         if (mounted) setState(() => _busyProductId = null);
       };
     _initStore();
-    game.requestGoldProducts();
+    // requestGoldProducts() calls notifyListeners() synchronously. initState
+    // can run mid-build (e.g. this screen re-inflated during a GameService-
+    // triggered ShopScreen rebuild after a prior purchase), so defer it to
+    // after the current frame to avoid "notifyListeners during build".
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      game.requestGoldProducts();
+    });
   }
 
   Future<void> _initStore() async {
@@ -172,38 +179,91 @@ class _GoldShopScreenState extends State<GoldShopScreen> {
               final base = (p['gold_amount'] ?? 0) as int;
               final bonus = (p['bonus_gold'] ?? 0) as int;
               final total = base + bonus;
+              // Computed from base/bonus so the % is always correct and
+              // shown even if the admin label omits it.
+              final bonusPct =
+                  base > 0 ? ((bonus / base) * 100).round() : 0;
               final pd = _details[id];
               final priceText = pd?.price ?? '...';
               final busy = _busyProductId == id;
-              final locale =
-                  Localizations.localeOf(context).languageCode;
-              final label = (p['label_$locale']?.toString().isNotEmpty ==
-                          true
-                      ? p['label_$locale']
-                      : p['label_ko'])
-                  ?.toString();
 
               return Card(
                 child: ListTile(
                   leading: const Icon(Icons.monetization_on,
                       color: Color(0xFFFFC107), size: 36),
-                  title: Text(
-                    '${_fmt(total)} 골드',
-                    style: const TextStyle(
-                        fontWeight: FontWeight.bold, fontSize: 18),
-                  ),
-                  subtitle: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
+                  title: Row(
                     children: [
-                      if (bonus > 0)
-                        Text('기본 ${_fmt(base)} + 보너스 ${_fmt(bonus)}',
+                      Expanded(
+                        child: LayoutBuilder(
+                          builder: (context, c) {
+                            const numStyle = TextStyle(
+                                fontWeight: FontWeight.bold,
+                                fontSize: 17);
+                            final numStr = _fmt(total);
+                            final fullStr = '$numStr Gold';
+                            double textW(String s) {
+                              final tp = TextPainter(
+                                text: TextSpan(
+                                    text: s, style: numStyle),
+                                maxLines: 1,
+                                textDirection: TextDirection.ltr,
+                              )..layout();
+                              return tp.width;
+                            }
+
+                            // 1) Full "N Gold" fits → show it.
+                            if (textW(fullStr) <= c.maxWidth) {
+                              return Text(fullStr,
+                                  maxLines: 1, style: numStyle);
+                            }
+                            // 2) Drop " Gold", keep the number if it fits.
+                            if (textW(numStr) <= c.maxWidth) {
+                              return Text(numStr,
+                                  maxLines: 1, style: numStyle);
+                            }
+                            // 3) Number alone still too wide → shrink it.
+                            return FittedBox(
+                              fit: BoxFit.scaleDown,
+                              alignment: Alignment.centerLeft,
+                              child: Text(numStr,
+                                  maxLines: 1, style: numStyle),
+                            );
+                          },
+                        ),
+                      ),
+                      if (bonus > 0) ...[
+                        const SizedBox(width: 6),
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 6, vertical: 2),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFE8F5E9),
+                            borderRadius: BorderRadius.circular(6),
+                          ),
+                          child: Text(
+                            '+$bonusPct%',
                             style: const TextStyle(
-                                color: Color(0xFF2E7D32), fontSize: 12)),
-                      if (label != null && label.isNotEmpty)
-                        Text(label,
-                            style: const TextStyle(fontSize: 12)),
+                              color: Color(0xFF2E7D32),
+                              fontWeight: FontWeight.bold,
+                              fontSize: 11,
+                            ),
+                          ),
+                        ),
+                      ],
                     ],
                   ),
+                  subtitle: bonus > 0
+                      ? FittedBox(
+                          fit: BoxFit.scaleDown,
+                          alignment: Alignment.centerLeft,
+                          child: Text(
+                            '기본 ${_fmt(base)} + 보너스 ${_fmt(bonus)}',
+                            maxLines: 1,
+                            style: const TextStyle(
+                                color: Color(0xFF2E7D32), fontSize: 12),
+                          ),
+                        )
+                      : null,
                   trailing: ElevatedButton(
                     onPressed:
                         (busy || pd == null) ? null : () => _buy(p),

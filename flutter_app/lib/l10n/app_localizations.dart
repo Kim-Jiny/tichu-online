@@ -483,17 +483,17 @@ abstract class L10n {
   /// **'Suggestion'**
   String get inquiryCategorySuggestion;
 
+  /// No description provided for @inquiryCategoryPayment.
+  ///
+  /// In en, this message translates to:
+  /// **'Payment / Refund'**
+  String get inquiryCategoryPayment;
+
   /// No description provided for @inquiryCategoryOther.
   ///
   /// In en, this message translates to:
   /// **'Other'**
   String get inquiryCategoryOther;
-
-  /// No description provided for @inquiryCategoryPayment.
-  ///
-  /// In en, this message translates to:
-  /// **'Payment/Refund'**
-  String get inquiryCategoryPayment;
 
   /// No description provided for @inquiryFieldTitle.
   ///
@@ -7118,6 +7118,18 @@ abstract class L10n {
   /// In en, this message translates to:
   /// **'Shop purchase'**
   String get goldHistoryShopPurchase;
+
+  /// No description provided for @goldHistoryIapPurchase.
+  ///
+  /// In en, this message translates to:
+  /// **'Gold top-up'**
+  String get goldHistoryIapPurchase;
+
+  /// No description provided for @goldHistoryIapRefund.
+  ///
+  /// In en, this message translates to:
+  /// **'Gold refund'**
+  String get goldHistoryIapRefund;
 
   /// No description provided for @goldHistoryLeaveDefeat.
   ///

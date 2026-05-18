@@ -215,6 +215,18 @@ class _ShopScreenState extends State<ShopScreen> {
             ),
           ),
           const Spacer(),
+          const Icon(Icons.warning_amber_rounded,
+              color: Color(0xFFE57373), size: 18),
+          const SizedBox(width: 4),
+          Text(
+            L10n.of(context).shopDesertionCount(game.leaveCount),
+            style: const TextStyle(
+              fontSize: 12,
+              color: Color(0xFF9A6A6A),
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+          const SizedBox(width: 4),
           IconButton(
             onPressed: () {
               game.requestWallet();
@@ -240,30 +252,42 @@ class _ShopScreenState extends State<ShopScreen> {
       ),
       child: Row(
         children: [
-          InkWell(
-            borderRadius: BorderRadius.circular(12),
-            onTap: () => _showGoldHistoryDialog(game),
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 4),
-              child: Row(
-                children: [
-                  const Icon(Icons.monetization_on, color: Color(0xFFFFB74D)),
-                  const SizedBox(width: 6),
-                  Text(
-                    L10n.of(context).shopGoldAmount(game.gold),
-                    style: const TextStyle(
-                      fontSize: 14,
-                      fontWeight: FontWeight.bold,
-                      color: Color(0xFF5A4038),
+          Expanded(
+            child: InkWell(
+              borderRadius: BorderRadius.circular(12),
+              onTap: () => _showGoldHistoryDialog(game),
+              child: Padding(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 4, vertical: 4),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const Icon(Icons.monetization_on,
+                        color: Color(0xFFFFB74D)),
+                    const SizedBox(width: 6),
+                    Flexible(
+                      child: FittedBox(
+                        fit: BoxFit.scaleDown,
+                        alignment: Alignment.centerLeft,
+                        child: Text(
+                          L10n.of(context).shopGoldAmount(game.gold),
+                          maxLines: 1,
+                          style: const TextStyle(
+                            fontSize: 14,
+                            fontWeight: FontWeight.bold,
+                            color: Color(0xFF5A4038),
+                          ),
+                        ),
+                      ),
                     ),
-                  ),
-                  const SizedBox(width: 4),
-                  const Icon(
-                    Icons.chevron_right,
-                    size: 18,
-                    color: Color(0xFFB89C76),
-                  ),
-                ],
+                    const SizedBox(width: 4),
+                    const Icon(
+                      Icons.chevron_right,
+                      size: 18,
+                      color: Color(0xFFB89C76),
+                    ),
+                  ],
+                ),
               ),
             ),
           ),
@@ -279,7 +303,7 @@ class _ShopScreenState extends State<ShopScreen> {
             },
             child: Container(
               padding:
-                  const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                  const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
               decoration: BoxDecoration(
                 color: const Color(0xFFFFE9B0),
                 borderRadius: BorderRadius.circular(12),
@@ -290,57 +314,14 @@ class _ShopScreenState extends State<ShopScreen> {
                 children: [
                   Icon(Icons.add_circle,
                       size: 16, color: Color(0xFFB07A12)),
-                  SizedBox(width: 4),
-                  Text('충전',
+                  SizedBox(width: 5),
+                  Text('골드 충전',
                       style: TextStyle(
                           fontSize: 13,
                           fontWeight: FontWeight.bold,
                           color: Color(0xFFB07A12))),
                 ],
               ),
-            ),
-          ),
-          const SizedBox(width: 8),
-          InkWell(
-            borderRadius: BorderRadius.circular(12),
-            onTap: _showGoldGuideDialog,
-            child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
-              decoration: BoxDecoration(
-                color: const Color(0xFFFFF6E7),
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: const Color(0xFFF0D6A6)),
-              ),
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  const Icon(
-                    Icons.lightbulb_outline_rounded,
-                    size: 16,
-                    color: Color(0xFFB67C1D),
-                  ),
-                  const SizedBox(width: 4),
-                  Text(
-                    L10n.of(context).shopHowToEarn,
-                    style: const TextStyle(
-                      fontSize: 12,
-                      fontWeight: FontWeight.w700,
-                      color: Color(0xFF8B6220),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ),
-          const Spacer(),
-          const Icon(Icons.warning_amber_rounded, color: Color(0xFFE57373), size: 18),
-          const SizedBox(width: 4),
-          Text(
-            L10n.of(context).shopDesertionCount(game.leaveCount),
-            style: const TextStyle(
-              fontSize: 12,
-              color: Color(0xFF9A6A6A),
-              fontWeight: FontWeight.w600,
             ),
           ),
         ],
@@ -534,6 +515,46 @@ class _ShopScreenState extends State<ShopScreen> {
                             },
                           );
                         },
+                      ),
+                    ),
+                    const SizedBox(height: 14),
+                    InkWell(
+                      borderRadius: BorderRadius.circular(12),
+                      onTap: _showGoldGuideDialog,
+                      child: Container(
+                        width: double.infinity,
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 12, vertical: 12),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFFFF6E7),
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(color: const Color(0xFFF0D6A6)),
+                        ),
+                        child: Row(
+                          children: [
+                            const Icon(
+                              Icons.lightbulb_outline_rounded,
+                              size: 18,
+                              color: Color(0xFFB67C1D),
+                            ),
+                            const SizedBox(width: 8),
+                            Expanded(
+                              child: Text(
+                                L10n.of(context).shopHowToEarn,
+                                style: const TextStyle(
+                                  fontSize: 13,
+                                  fontWeight: FontWeight.w700,
+                                  color: Color(0xFF8B6220),
+                                ),
+                              ),
+                            ),
+                            const Icon(
+                              Icons.chevron_right,
+                              size: 18,
+                              color: Color(0xFFB89C76),
+                            ),
+                          ],
+                        ),
                       ),
                     ),
                   ],

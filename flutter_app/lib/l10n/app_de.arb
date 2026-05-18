@@ -71,6 +71,7 @@
   "inquiryCategory": "Kategorie",
   "inquiryCategoryBug": "Fehlerbericht",
   "inquiryCategorySuggestion": "Vorschlag",
+  "inquiryCategoryPayment": "Zahlung / Erstattung",
   "inquiryCategoryOther": "Sonstiges",
   "inquiryFieldTitle": "Titel",
   "inquiryFieldTitleHint": "Titel eingeben",
@@ -1220,6 +1221,8 @@
   "maintenanceEnded": "Wartung beendet, Neuverbindung...",
 
   "goldHistoryShopPurchase": "Shop-Kauf",
+  "goldHistoryIapPurchase": "Gold-Aufladung",
+  "goldHistoryIapRefund": "Gold-Rückerstattung",
   "goldHistoryLeaveDefeat": "Aufgabe-Niederlage",
   "goldHistoryRankedWin": "Ranked-Sieg",
   "goldHistoryCasualWin": "Casual-Sieg",

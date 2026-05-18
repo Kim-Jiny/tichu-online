@@ -5481,6 +5481,12 @@ async function handleVerifyIapPurchase(ws, data) {
   }
 
   const goldTotal = (parseInt(product.gold_amount, 10) || 0) + (parseInt(product.bonus_gold, 10) || 0);
+  // "ko|en|de" so the gold-history row shows a localized product name instead
+  // of the raw product id (client resolves via localizeGoldTitle, same as
+  // shop_purchase). Empty locale slots fall back to ko client-side.
+  const historyTitle = [
+    product.label_ko, product.label_en, product.label_de,
+  ].map((s) => (s || '').trim()).join('|');
 
   // Grant EVERY transaction in the receipt, not just the latest. Apple receipts
   // accumulate purchases; if an earlier verify failed and the user bought
@@ -5512,6 +5518,7 @@ async function handleVerifyIapPurchase(ws, data) {
       environment,
       goldTotal,
       rawPayload: tx.raw,
+      historyTitle,
     });
     if (!grant.success) {
       grantError = grant;

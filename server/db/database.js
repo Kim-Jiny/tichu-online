@@ -417,6 +417,9 @@ async function initDatabase() {
     `);
     await client.query(`CREATE INDEX IF NOT EXISTS idx_iap_attempts_created ON tc_iap_attempts (created_at DESC)`);
 
+    // (match-history indexes are created later, AFTER the sk/ll/mighty match
+    // tables exist — see "Recent-matches lookup indexes" below.)
+
     // Apple CONSUMPTION_REQUEST log. Apple asks for consumption info when a
     // user requests a consumable refund; we record every request (idempotent
     // on notification_uuid — Apple retries) and our response outcome.
@@ -851,6 +854,22 @@ async function initDatabase() {
     `);
 
     await client.query(`ALTER TABLE tc_mighty_match_history ADD COLUMN IF NOT EXISTS deserter_nickname VARCHAR(50)`);
+
+    // Recent-matches lookup indexes. MUST be here — after ALL match tables
+    // (tichu/sk/ll/mighty) exist — or CREATE INDEX errors on a missing table
+    // and aborts initDatabase before server.listen() (boot failure).
+    // Without these, "WHERE player=$1 ORDER BY created_at DESC LIMIT 20"
+    // full-scans history every profile open and degrades as data grows.
+    // Non-concurrent (matches existing pattern); one-time, IF NOT EXISTS no-ops.
+    await client.query(`CREATE INDEX IF NOT EXISTS idx_mh_a1_created ON tc_match_history (player_a1, created_at DESC)`);
+    await client.query(`CREATE INDEX IF NOT EXISTS idx_mh_a2_created ON tc_match_history (player_a2, created_at DESC)`);
+    await client.query(`CREATE INDEX IF NOT EXISTS idx_mh_b1_created ON tc_match_history (player_b1, created_at DESC)`);
+    await client.query(`CREATE INDEX IF NOT EXISTS idx_mh_b2_created ON tc_match_history (player_b2, created_at DESC)`);
+    for (const g of ['sk', 'll', 'mighty']) {
+      await client.query(`CREATE INDEX IF NOT EXISTS idx_${g}mh_created ON tc_${g}_match_history (created_at DESC)`);
+      await client.query(`CREATE INDEX IF NOT EXISTS idx_${g}mp_nick_match ON tc_${g}_match_players (nickname, match_id)`);
+      await client.query(`CREATE INDEX IF NOT EXISTS idx_${g}mp_match ON tc_${g}_match_players (match_id)`);
+    }
 
     // LL user stats columns
     await client.query(`ALTER TABLE tc_users ADD COLUMN IF NOT EXISTS ll_total_games INT DEFAULT 0`);
@@ -1774,6 +1793,25 @@ async function getUserProfile(nickname, locale = 'ko') {
 // Get recent matches for a player
 async function getRecentMatches(nickname, limit = 5) {
   const client = await pool.connect();
+  // One batched players fetch per game type instead of one query per match
+  // (was N+1). `table` is a hardcoded internal constant, never user input.
+  const fetchPlayersByMatch = async (table, ids) => {
+    const map = new Map();
+    if (ids.length === 0) return map;
+    const r = await client.query(
+      `SELECT match_id, nickname, score, rank, is_winner, is_bot
+         FROM ${table} WHERE match_id = ANY($1) ORDER BY match_id, rank`,
+      [ids]
+    );
+    for (const p of r.rows) {
+      if (!map.has(p.match_id)) map.set(p.match_id, []);
+      map.get(p.match_id).push({
+        nickname: p.nickname, score: p.score, rank: p.rank,
+        isWinner: p.is_winner, isBot: p.is_bot,
+      });
+    }
+    return map;
+  };
   try {
     // Tichu matches
     const tichuResult = await client.query(
@@ -1817,12 +1855,10 @@ async function getRecentMatches(nickname, limit = 5) {
        LIMIT $2`,
       [nickname, limit]
     );
+    const skPlayers = await fetchPlayersByMatch(
+      'tc_sk_match_players', skResult.rows.map(r => r.id));
     const skMatches = [];
     for (const row of skResult.rows) {
-      const playersRes = await client.query(
-        `SELECT nickname, score, rank, is_winner, is_bot FROM tc_sk_match_players WHERE match_id = $1 ORDER BY rank`,
-        [row.id]
-      );
       const deserterNickname = row.deserter_nickname || null;
       const isDesertionLoss = deserterNickname === nickname;
       const isDraw = deserterNickname != null && deserterNickname !== nickname;
@@ -1838,13 +1874,7 @@ async function getRecentMatches(nickname, limit = 5) {
         playerCount: row.player_count,
         isRanked: row.is_ranked,
         endReason: row.end_reason || 'normal',
-        players: playersRes.rows.map(p => ({
-          nickname: p.nickname,
-          score: p.score,
-          rank: p.rank,
-          isWinner: p.is_winner,
-          isBot: p.is_bot,
-        })),
+        players: skPlayers.get(row.id) || [],
         createdAt: row.created_at,
       });
     }
@@ -1858,12 +1888,10 @@ async function getRecentMatches(nickname, limit = 5) {
        LIMIT $2`,
       [nickname, limit]
     );
+    const llPlayers = await fetchPlayersByMatch(
+      'tc_ll_match_players', llResult.rows.map(r => r.id));
     const llMatches = [];
     for (const row of llResult.rows) {
-      const playersRes = await client.query(
-        `SELECT nickname, score, rank, is_winner, is_bot FROM tc_ll_match_players WHERE match_id = $1 ORDER BY rank`,
-        [row.id]
-      );
       const deserterNickname = row.deserter_nickname || null;
       const isDesertionLoss = deserterNickname === nickname;
       const isDraw = deserterNickname != null && deserterNickname !== nickname;
@@ -1879,13 +1907,7 @@ async function getRecentMatches(nickname, limit = 5) {
         playerCount: row.player_count,
         isRanked: row.is_ranked,
         endReason: row.end_reason || 'normal',
-        players: playersRes.rows.map(p => ({
-          nickname: p.nickname,
-          score: p.score,
-          rank: p.rank,
-          isWinner: p.is_winner,
-          isBot: p.is_bot,
-        })),
+        players: llPlayers.get(row.id) || [],
         createdAt: row.created_at,
       });
     }
@@ -1899,15 +1921,10 @@ async function getRecentMatches(nickname, limit = 5) {
        LIMIT $2`,
       [nickname, limit]
     );
+    const mightyPlayers = await fetchPlayersByMatch(
+      'tc_mighty_match_players', mightyResult.rows.map(r => r.id));
     const mightyMatches = [];
     for (const row of mightyResult.rows) {
-      const playersRes = await client.query(
-        `SELECT nickname, score, rank, is_winner, is_bot
-         FROM tc_mighty_match_players
-         WHERE match_id = $1
-         ORDER BY rank`,
-        [row.id]
-      );
       const deserterNickname = row.deserter_nickname || null;
       const isDesertionLoss = deserterNickname === nickname;
       // When someone else deserts a Mighty match, remaining players are saved
@@ -1933,21 +1950,19 @@ async function getRecentMatches(nickname, limit = 5) {
         declarerTeamPoints: row.declarer_team_points,
         bidPoints: row.bid_points,
         trumpSuit: row.trump_suit,
-        players: playersRes.rows.map(p => ({
-          nickname: p.nickname,
-          score: p.score,
-          rank: p.rank,
-          isWinner: p.is_winner,
-          isBot: p.is_bot,
-        })),
+        players: mightyPlayers.get(row.id) || [],
         createdAt: row.created_at,
       });
     }
 
-    // Merge and sort by date
+    // Merge and sort by date. Each game type is already capped at `limit` by
+    // its SQL LIMIT, so we DON'T globally slice to `limit` here: the client
+    // profile popup filters by the selected game tab, and a global slice
+    // would let the most-played mode crowd out other modes' recent matches
+    // (making less-played tabs look empty / "wiped"). Per-type cap stands.
     const all = [...tichuMatches, ...skMatches, ...llMatches, ...mightyMatches];
     all.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
-    return all.slice(0, limit);
+    return all;
   } catch (err) {
     console.error('Get recent matches error:', err);
     return [];

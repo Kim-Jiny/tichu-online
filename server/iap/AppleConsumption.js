@@ -67,9 +67,15 @@ async function sendConsumptionInfo({ transactionId, environment, fields, appAcco
     return { ok: false, reason: 'token_failed' };
   }
 
-  const host = environment === 'sandbox'
+  // App Store Server Notifications send environment as "Sandbox"/"Production"
+  // (capitalized) — compare case-insensitively or sandbox always hits prod.
+  const host = String(environment || '').toLowerCase() === 'sandbox'
     ? 'https://api.storekit-sandbox.itunes.apple.com'
     : 'https://api.storekit.itunes.apple.com';
+  // App Store Server API "Send Consumption Information" — the v1 endpoint
+  // (only version of this call). Body is ConsumptionRequest with INTEGER
+  // enum fields (incl. deliveryStatus). NOT App Store Server Notifications
+  // V2 (separate spec) — don't switch these fields to strings.
   const url = `${host}/inApps/v1/transactions/consumption/${encodeURIComponent(transactionId)}`;
 
   const body = { ...fields };

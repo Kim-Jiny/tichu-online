@@ -91,6 +91,8 @@ function parseAppleNotification(signedPayload) {
     subtype: payload.subtype || null,
     notificationUUID: payload.notificationUUID || null,
     environment: data.environment || transaction?.environment || null,
+    // Present on CONSUMPTION_REQUEST: why Apple is asking (e.g. 'UNINTENDED_PURCHASE').
+    consumptionRequestReason: data.consumptionRequestReason || null,
     transaction,
   };
 }

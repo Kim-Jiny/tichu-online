@@ -9,7 +9,7 @@ const {
   getAllShopItemsAdmin, addShopItem, updateShopItem, deleteShopItem, getShopItemById,
   getAllGoldProductsAdmin, getGoldProductById, addGoldProduct, updateGoldProduct, deleteGoldProduct,
   getIapReceipts, getIapReceiptById, refundIapReceipt,
-  getIapAttempts, getIapAttemptById, getRefundIssues,
+  getIapAttempts, getIapAttemptById, getRefundIssues, listConsumptionRequests,
   getConfig, updateConfig,
   getNotices, getNoticeById, createNotice, updateNotice, deleteNotice,
   insertMaintenanceHistory, getMaintenanceHistory,
@@ -484,6 +484,7 @@ input[type="text"], input[type="password"] { width: 100%; padding: 10px 12px; bo
     <a href="/tc-backstage/gold-products" class="${activePage === 'gold-products' ? 'active' : ''}" onclick="closeSidebar()">골드상품</a>
     <a href="/tc-backstage/iap-receipts" class="${activePage === 'iap-receipts' ? 'active' : ''}" onclick="closeSidebar()">결제내역</a>
     <a href="/tc-backstage/iap-attempts" class="${activePage === 'iap-attempts' ? 'active' : ''}" onclick="closeSidebar()">검증로그</a>
+    <a href="/tc-backstage/iap-consumption" class="${activePage === 'iap-consumption' ? 'active' : ''}" onclick="closeSidebar()">환불요청</a>
     <a href="/tc-backstage/iap-refund-issues" class="${activePage === 'iap-refund-issues' ? 'active' : ''}" onclick="closeSidebar()">환불문제</a>
   </div>
   <div class="nav-section">
@@ -3910,6 +3911,91 @@ async function handleAdminRoute(req, res, url, pathname, method, lobby, wss, mai
       ${pagination(data.page, data.total, data.limit, baseUrl)}
     `;
     return html(res, layout('검증로그', content, 'iap-attempts'));
+  }
+
+  if (pathname === '/tc-backstage/iap-consumption' && method === 'GET') {
+    const STATUSES = ['received', 'responded', 'failed', 'skipped'];
+    const statusF = STATUSES.includes(url.searchParams.get('status')) ? url.searchParams.get('status') : '';
+    const q = (url.searchParams.get('q') || '').trim().slice(0, 80);
+    const page = parseInt(url.searchParams.get('page') || '1', 10) || 1;
+
+    const data = await listConsumptionRequests({
+      status: statusF || undefined,
+      search: q || undefined,
+      page,
+      limit: 50,
+    });
+
+    const opt = (cur, v, label) => `<option value="${v}"${cur === v ? ' selected' : ''}>${label}</option>`;
+    const filterForm = `
+      <form method="GET" action="/tc-backstage/iap-consumption" class="card" style="margin-bottom:14px;display:flex;gap:10px;flex-wrap:wrap;align-items:flex-end">
+        <div><div style="font-size:12px;color:#888">회신상태</div>
+          <select name="status">${opt(statusF, '', '전체')}${opt(statusF, 'received', '접수')}${opt(statusF, 'responded', '회신완료')}${opt(statusF, 'failed', '회신실패')}${opt(statusF, 'skipped', '생략')}</select></div>
+        <div><div style="font-size:12px;color:#888">검색 (닉네임/상품/거래ID)</div>
+          <input type="text" name="q" value="${escapeHtml(q)}" placeholder="검색어" style="min-width:200px"></div>
+        <button type="submit" class="btn btn-primary">필터</button>
+        <a href="/tc-backstage/iap-consumption" class="btn btn-secondary">초기화</a>
+      </form>`;
+
+    const consStatusLabel = (s) => ({ 0: '미상', 1: '미사용', 2: '일부소비', 3: '전부소비' }[s] ?? '-');
+    const refPrefBadge = (p) => {
+      if (p === 2) return '<span class="badge" style="background:#ffebee;color:#c62828">거절선호</span>';
+      if (p === 1) return '<span class="badge" style="background:#e8f5e9;color:#2e7d32">환불권장</span>';
+      if (p === 3) return '<span class="badge" style="background:#eceff1;color:#546e7a">선호없음</span>';
+      return '<span style="color:#bbb">-</span>';
+    };
+    const respBadge = (s) => {
+      if (s === 'responded') return '<span class="badge" style="background:#e8f5e9;color:#2e7d32">회신완료</span>';
+      if (s === 'failed') return '<span class="badge" style="background:#ffebee;color:#c62828">회신실패</span>';
+      if (s === 'skipped') return '<span class="badge" style="background:#fff3e0;color:#e65100">생략</span>';
+      return '<span class="badge" style="background:#e3f2fd;color:#1565c0">접수</span>';
+    };
+
+    let table;
+    if (data.rows.length > 0) {
+      table = `<div class="table-wrap"><table>
+        <tr><th>일시(KST)</th><th>닉네임</th><th>상품</th><th>사유</th><th>가입일수</th><th>소비상태</th><th>환불선호</th><th>회신</th><th>상세사유</th><th>거래ID</th></tr>
+        ${data.rows.map(c => {
+          const dt = new Date(c.created_at).toLocaleString('ko-KR', { timeZone: 'Asia/Seoul' });
+          const txn = escapeHtml(String(c.transaction_id || ''));
+          const txnShort = txn.length > 20 ? txn.slice(0, 20) + '…' : (txn || '-');
+          return `<tr>
+            <td style="font-size:12px;white-space:nowrap">${dt}</td>
+            <td>${escapeHtml(c.nickname || '-')}</td>
+            <td style="font-family:monospace;font-size:12px">${escapeHtml(c.product_id || '-')}</td>
+            <td style="font-size:12px">${escapeHtml(c.request_reason || '-')}</td>
+            <td style="text-align:right">${c.account_tenure_days != null ? c.account_tenure_days + '일' : '-'}</td>
+            <td>${consStatusLabel(c.consumption_status)}</td>
+            <td>${refPrefBadge(c.refund_preference)}</td>
+            <td>${respBadge(c.response_status)}</td>
+            <td style="font-size:12px;color:#888">${escapeHtml(c.response_detail || '')}</td>
+            <td style="font-family:monospace;font-size:11px" title="${txn}">${txnShort}</td>
+          </tr>`;
+        }).join('')}
+      </table></div>`;
+    } else {
+      table = '<div class="empty">환불 요청(CONSUMPTION_REQUEST) 기록 없음</div>';
+    }
+
+    const qs = new URLSearchParams();
+    if (statusF) qs.set('status', statusF);
+    if (q) qs.set('q', q);
+    const baseUrl = '/tc-backstage/iap-consumption' + (qs.toString() ? '?' + qs.toString() : '');
+
+    const content = `
+      ${pageHeader('IAP 환불요청', 'Apple이 소비성 환불을 심사할 때 보내는 <b>CONSUMPTION_REQUEST</b> 기록입니다. 소비/계정 데이터를 Apple에 회신해 부당 환불을 견제합니다(최종 결정은 Apple). 회신은 App Store Connect API 키(<code>APPLE_ASC_*</code>) 설정 시에만 전송되며, 미설정 시 "생략"으로 기록만 됩니다.')}
+      ${summaryStrip([
+        { label: '전체', value: formatNumber(data.summary ? Object.values(data.summary).reduce((a, b) => a + b, 0) : 0) },
+        { label: '접수', value: formatNumber(data.summary.received || 0), valueColor: '#1565c0' },
+        { label: '회신완료', value: formatNumber(data.summary.responded || 0), valueColor: '#2e7d32' },
+        { label: '회신실패', value: formatNumber(data.summary.failed || 0), valueColor: '#c62828' },
+        { label: '생략', value: formatNumber(data.summary.skipped || 0), valueColor: '#e65100' },
+      ])}
+      ${filterForm}
+      <div class="card">${table}</div>
+      ${pagination(data.page, data.total, data.limit, baseUrl)}
+    `;
+    return html(res, layout('환불요청', content, 'iap-consumption'));
   }
 
   const iapAttemptDetailMatch = pathname.match(/^\/tc-backstage\/iap-attempts\/(\d+)$/);

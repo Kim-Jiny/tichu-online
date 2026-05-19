@@ -417,6 +417,30 @@ async function initDatabase() {
     `);
     await client.query(`CREATE INDEX IF NOT EXISTS idx_iap_attempts_created ON tc_iap_attempts (created_at DESC)`);
 
+    // Apple CONSUMPTION_REQUEST log. Apple asks for consumption info when a
+    // user requests a consumable refund; we record every request (idempotent
+    // on notification_uuid — Apple retries) and our response outcome.
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS tc_iap_consumption_requests (
+        id SERIAL PRIMARY KEY,
+        notification_uuid VARCHAR(64) UNIQUE NOT NULL,
+        transaction_id VARCHAR(255),
+        product_id VARCHAR(80),
+        nickname VARCHAR(50),
+        environment VARCHAR(12),
+        request_reason VARCHAR(40),
+        consumption_status INT,
+        refund_preference INT,
+        account_tenure_days INT,
+        response_status VARCHAR(16) NOT NULL DEFAULT 'received',
+        response_detail VARCHAR(160),
+        snapshot JSONB,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        responded_at TIMESTAMP
+      )
+    `);
+    await client.query(`CREATE INDEX IF NOT EXISTS idx_iap_consumption_created ON tc_iap_consumption_requests (created_at DESC)`);
+
     // Seed the 5 agreed tiers, inactive by default. ON CONFLICT DO NOTHING so
     // re-runs never clobber admin-edited gold/bonus/active values.
     await client.query(`
@@ -6581,6 +6605,209 @@ async function logIapAttempt({ nickname, platform, productId, environment, outco
   }
 }
 
+// Build the Apple ConsumptionRequest data snapshot for a transaction. All
+// values are best-effort estimates from our own records (no store price).
+async function getConsumptionSnapshot(transactionId) {
+  const KRW_PER_USD = 1350; // rough; only used to pick Apple's $ buckets
+  const usdBucket = (krw) => {
+    const usd = (Number(krw) || 0) / KRW_PER_USD;
+    if (usd <= 0) return 1;            // $0
+    if (usd < 50) return 2;            // $0.01–49.99
+    if (usd < 100) return 3;
+    if (usd < 500) return 4;
+    if (usd < 1000) return 5;
+    if (usd < 2000) return 6;
+    return 7;                          // $2000+
+  };
+  const tenureEnum = (days) => {
+    if (days == null) return 0;
+    if (days <= 3) return 1;
+    if (days <= 10) return 2;
+    if (days <= 30) return 3;
+    if (days <= 90) return 4;
+    if (days <= 180) return 5;
+    if (days <= 365) return 6;
+    return 7;
+  };
+  const playTimeEnum = (games) => {
+    const g = Number(games) || 0;
+    if (g === 0) return 1;
+    if (g < 10) return 2;
+    if (g < 50) return 3;
+    if (g < 200) return 4;
+    return 5;
+  };
+  try {
+    const recRes = await pool.query(
+      `SELECT nickname, product_id, gold_granted, environment
+         FROM tc_iap_receipts WHERE transaction_id = $1`,
+      [String(transactionId)]
+    );
+    const rec = recRes.rows[0] || null;
+    const nickname = rec ? rec.nickname : null;
+
+    let accountTenureDays = null;
+    let userStatus = 0;          // undeclared
+    let playTime = 0;
+    let currentGold = null;
+    if (nickname) {
+      const u = await pool.query(
+        `SELECT created_at, gold, is_deleted, total_games
+           FROM tc_users WHERE nickname = $1`,
+        [nickname]
+      );
+      if (u.rows[0]) {
+        const usr = u.rows[0];
+        if (usr.created_at) {
+          accountTenureDays = Math.max(
+            0,
+            Math.floor((Date.now() - new Date(usr.created_at).getTime()) / 86400000)
+          );
+        }
+        userStatus = usr.is_deleted === true ? 3 : 1; // terminated / active
+        playTime = playTimeEnum(usr.total_games);
+        currentGold = parseInt(usr.gold, 10);
+      }
+    }
+
+    // Lifetime IAP totals for this account (production money only).
+    let lifetimeKrw = 0;
+    let lifetimeRefundKrw = 0;
+    let refundCount = 0;
+    if (nickname) {
+      const agg = await pool.query(
+        `SELECT product_id, status FROM tc_iap_receipts
+          WHERE nickname = $1 AND environment = 'production'`,
+        [nickname]
+      );
+      for (const r of agg.rows) {
+        const krw = GOLD_PRODUCT_KRW[r.product_id] || 0;
+        lifetimeKrw += krw;
+        if (r.status === 'refunded') { lifetimeRefundKrw += krw; refundCount += 1; }
+      }
+    }
+
+    // consumptionStatus: did they still hold the granted gold? Heuristic —
+    // current balance below this grant ⇒ treat as fully consumed.
+    let consumptionStatus = 0; // undeclared
+    if (rec && currentGold != null) {
+      consumptionStatus = currentGold >= (parseInt(rec.gold_granted, 10) || 0) ? 1 : 3;
+    }
+
+    // Smart anti-abuse refund preference (Apple only weighs this, decides).
+    let refundPreference = 3; // no preference
+    const shortTenure = accountTenureDays != null && accountTenureDays < 7;
+    if ((consumptionStatus === 3 && shortTenure) || refundCount >= 2) {
+      refundPreference = 2; // prefer decline
+    }
+
+    return {
+      found: !!rec,
+      nickname,
+      productId: rec ? rec.product_id : null,
+      environment: rec ? rec.environment : null,
+      accountTenureDays,
+      fields: {
+        accountTenure: tenureEnum(accountTenureDays),
+        consumptionStatus,
+        customerConsented: true,        // covered by ToS / privacy policy
+        deliveryStatus: 0,              // delivered & working
+        lifetimeDollarsPurchased: usdBucket(lifetimeKrw),
+        lifetimeDollarsRefunded: usdBucket(lifetimeRefundKrw),
+        platform: 1,                    // Apple
+        playTime,
+        refundPreference,
+        sampleContentProvided: false,
+        userStatus,
+      },
+      debug: { lifetimeKrw, lifetimeRefundKrw, refundCount, currentGold },
+    };
+  } catch (err) {
+    console.error('Get consumption snapshot error:', err.message);
+    return { found: false, nickname: null, fields: null };
+  }
+}
+
+// Idempotent on notification_uuid (Apple retries the same notification).
+async function recordConsumptionRequest({
+  notificationUUID, transactionId, productId, nickname, environment,
+  requestReason, snapshot, responseStatus, responseDetail,
+}) {
+  try {
+    const f = snapshot && snapshot.fields ? snapshot.fields : {};
+    await pool.query(
+      `INSERT INTO tc_iap_consumption_requests
+        (notification_uuid, transaction_id, product_id, nickname, environment,
+         request_reason, consumption_status, refund_preference,
+         account_tenure_days, response_status, response_detail, snapshot,
+         responded_at)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12::jsonb,
+         CASE WHEN $10 IN ('responded','failed','skipped') THEN NOW() ELSE NULL END)
+       ON CONFLICT (notification_uuid) DO UPDATE SET
+         response_status = EXCLUDED.response_status,
+         response_detail = EXCLUDED.response_detail,
+         snapshot = EXCLUDED.snapshot,
+         consumption_status = EXCLUDED.consumption_status,
+         refund_preference = EXCLUDED.refund_preference,
+         account_tenure_days = EXCLUDED.account_tenure_days,
+         responded_at = CASE WHEN EXCLUDED.response_status IN ('responded','failed','skipped')
+                              THEN NOW() ELSE tc_iap_consumption_requests.responded_at END`,
+      [
+        String(notificationUUID).slice(0, 64),
+        transactionId ? String(transactionId).slice(0, 255) : null,
+        productId ? String(productId).slice(0, 80) : null,
+        nickname ? String(nickname).slice(0, 50) : null,
+        environment ? String(environment).slice(0, 12) : null,
+        requestReason ? String(requestReason).slice(0, 40) : null,
+        f.consumptionStatus != null ? f.consumptionStatus : null,
+        f.refundPreference != null ? f.refundPreference : null,
+        snapshot && snapshot.accountTenureDays != null ? snapshot.accountTenureDays : null,
+        String(responseStatus || 'received').slice(0, 16),
+        responseDetail ? String(responseDetail).slice(0, 160) : null,
+        snapshot ? JSON.stringify(snapshot) : null,
+      ]
+    );
+  } catch (err) {
+    console.error('Record consumption request error:', err.message);
+  }
+}
+
+async function listConsumptionRequests({ status, search, page = 1, limit = 50 } = {}) {
+  try {
+    const where = [];
+    const params = [];
+    if (status) { params.push(status); where.push(`response_status = $${params.length}`); }
+    if (search) {
+      params.push(`%${search}%`);
+      where.push(`(nickname ILIKE $${params.length} OR product_id ILIKE $${params.length} OR transaction_id ILIKE $${params.length})`);
+    }
+    const whereSql = where.length ? `WHERE ${where.join(' AND ')}` : '';
+    const lim = Math.max(1, Math.min(parseInt(limit, 10) || 50, 200));
+    const pg = Math.max(1, parseInt(page, 10) || 1);
+    const countRes = await pool.query(`SELECT COUNT(*) FROM tc_iap_consumption_requests ${whereSql}`, params);
+    const total = parseInt(countRes.rows[0].count, 10);
+    const rowsRes = await pool.query(
+      `SELECT id, notification_uuid, transaction_id, product_id, nickname,
+              environment, request_reason, consumption_status, refund_preference,
+              account_tenure_days, response_status, response_detail,
+              created_at, responded_at
+         FROM tc_iap_consumption_requests ${whereSql}
+        ORDER BY created_at DESC
+        LIMIT ${lim} OFFSET ${(pg - 1) * lim}`,
+      params
+    );
+    const summaryRes = await pool.query(
+      `SELECT response_status, COUNT(*) FROM tc_iap_consumption_requests GROUP BY response_status`
+    );
+    const summary = {};
+    for (const r of summaryRes.rows) summary[r.response_status] = parseInt(r.count, 10);
+    return { rows: rowsRes.rows, total, page: pg, limit: lim, summary };
+  } catch (err) {
+    console.error('List consumption requests error:', err.message);
+    return { rows: [], total: 0, page: 1, limit: 50, summary: {} };
+  }
+}
+
 // Paginated attempt log with optional filters + global outcome summary.
 async function getIapAttempts({ outcome, environment, platform, search, page = 1, limit = 50 } = {}) {
   try {
@@ -6988,6 +7215,9 @@ module.exports = {
   getRefundIssues,
   logIapAttempt,
   getIapAttempts,
+  getConsumptionSnapshot,
+  recordConsumptionRequest,
+  listConsumptionRequests,
   getIapAttemptById,
   pool,
 };

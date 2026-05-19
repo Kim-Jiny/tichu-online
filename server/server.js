@@ -21,6 +21,7 @@ const {
   submitInquiry, getUserInquiries, markInquiriesRead, getRankings,
   getWallet, getGoldHistory, getShopItems, getVisualCatalog, getUserItems, buyItem, equipItem, useItem, changeNickname,
   getActiveGoldProducts, getGoldProductByProductId, grantIapGold, logIapAttempt, autoRefundByTransaction,
+  getConsumptionSnapshot, recordConsumptionRequest, listConsumptionRequests,
   incrementLeaveCount, setRankedBan, getRankedBan, setChatBan, getChatBan, grantSeasonRewards,
   getActiveSeason, createSeason, getSeasons, getConfig, getLocalizedConfig, updateConfig,
   getCurrentSeasonRankings, getSeasonRankings, resetSeasonStats,
@@ -75,6 +76,7 @@ const {
 const { verifyApple } = require('./iap/AppleVerify');
 const { verifyGoogle } = require('./iap/GoogleVerify');
 const { parseAppleNotification } = require('./iap/AppleNotifications');
+const { sendConsumptionInfo, ascConfigured } = require('./iap/AppleConsumption');
 const { bindingUuid } = require('./iap/accountBinding');
 const { pollGoogleVoidedPurchases } = require('./iap/GoogleVoided');
 
@@ -809,6 +811,41 @@ const server = http.createServer(async (req, res) => {
           res.end('retry');
           return;
         }
+      } else if (type === 'CONSUMPTION_REQUEST') {
+        // Apple is deciding a consumable refund and wants our consumption
+        // data. Always record; respond to Apple only if ASC key configured.
+        const txnId = t.transactionId;
+        const snap = await getConsumptionSnapshot(txnId);
+        let responseStatus = 'received';
+        let responseDetail = null;
+        if (!snap.found) {
+          responseStatus = 'skipped';
+          responseDetail = 'no_matching_receipt';
+        } else if (!ascConfigured()) {
+          responseStatus = 'skipped';
+          responseDetail = 'asc_not_configured';
+        } else {
+          const sent = await sendConsumptionInfo({
+            transactionId: txnId,
+            environment: notif.environment,
+            fields: snap.fields,
+            appAccountToken: t.appAccountToken || null,
+          });
+          responseStatus = sent.ok ? 'responded' : 'failed';
+          responseDetail = sent.reason || null;
+        }
+        await recordConsumptionRequest({
+          notificationUUID: notif.notificationUUID,
+          transactionId: txnId,
+          productId: snap.productId || t.productId || null,
+          nickname: snap.nickname || null,
+          environment: notif.environment,
+          requestReason: notif.consumptionRequestReason,
+          snapshot: snap,
+          responseStatus,
+          responseDetail,
+        });
+        console.log(`[AppleNotif] CONSUMPTION_REQUEST txn=${txnId} -> ${responseStatus}${responseDetail ? ':' + responseDetail : ''}`);
       } else {
         console.log(`[AppleNotif] ignored type=${type} subtype=${notif.subtype || '-'}`);
       }

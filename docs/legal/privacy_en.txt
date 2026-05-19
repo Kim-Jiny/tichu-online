@@ -4,8 +4,8 @@ Privacy Policy
 The Service collects the following information for sign-up and use of the Service:
 - Required: ID, nickname, password
 - Optional: email and social account identifier when using social login
-- Automatically collected: device information (model, OS version), app version, IP address
-- Payment information: transaction ID, product identifier, purchase/refund history, store account binding value (nickname hash)
+- Automatically collected: device information (model, OS version), app version, IP address, push notification token, service usage records, app launch/event information, advertising identifier (within device settings and user consent)
+- Payment information: transaction ID, product identifier, purchase/refund history, store account binding value (user account ID-based hash/UUID)
   Note: Payment instrument details such as card numbers are processed by Apple/Google; the Service does not collect or store them.
 
 2. Purpose of Collection and Use
@@ -14,7 +14,8 @@ The Service collects the following information for sign-up and use of the Servic
 - Prevention of misuse and handling of reports
 - In-app purchase processing, receipt verification, refunds, and payment dispute handling
 - Sending push notifications (with user consent)
-- Service improvement and statistical analysis
+- Service improvement, error diagnosis, and statistical analysis
+- Advertising delivery and advertising performance measurement (within user consent and device settings)
 
 3. Retention and Use Period
 - Deleted immediately upon membership withdrawal.
@@ -24,6 +25,9 @@ The Service collects the following information for sign-up and use of the Servic
 4. Provision to Third Parties and Outsourcing of Processing
 The Service does not, in principle, provide users' personal information to third parties. However, for service operation and payment processing, information is processed/exchanged as follows:
 - Apple Inc. / Google LLC: in-app purchase processing, receipt verification, and refund confirmation (incidental to the use of Store payment systems)
+- Google LLC (Firebase): social login token verification, push notification delivery, app analytics, and error diagnosis
+- Google LLC (Google Mobile Ads/AdMob): advertising delivery and advertising performance measurement
+- Kakao Corp.: account identification and email confirmation when using Kakao social login
 - Contabo GmbH (Germany): hosting of the Service's servers and database (the Service infrastructure is operated through Contabo GmbH located in Germany, and accordingly personal information is processed and stored overseas)
 - Where required by law
 

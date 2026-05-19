@@ -4,8 +4,8 @@ Datenschutzrichtlinie
 Der Dienst erhebt für die Registrierung und Nutzung des Dienstes folgende Daten:
 - Erforderlich: ID, Nickname, Passwort
 - Optional: E-Mail und Social-Account-Kennung bei Social-Login
-- Automatisch erhoben: Geräteinformationen (Modell, OS-Version), App-Version, IP-Adresse
-- Zahlungsinformationen: Transaktions-ID, Produktkennung, Kauf-/Erstattungsverlauf, Store-Kontobindungswert (Nickname-Hash)
+- Automatisch erhoben: Geräteinformationen (Modell, OS-Version), App-Version, IP-Adresse, Push-Benachrichtigungstoken, Nutzungsaufzeichnungen, App-Start- und Ereignisinformationen, Werbekennung (im Rahmen der Geräteeinstellungen und Nutzereinwilligung)
+- Zahlungsinformationen: Transaktions-ID, Produktkennung, Kauf-/Erstattungsverlauf, Store-Kontobindungswert (Hash/UUID auf Basis der Nutzerkonto-ID)
   Hinweis: Zahlungsmitteldaten wie Kartennummern werden von Apple/Google verarbeitet; der Dienst erhebt oder speichert sie nicht.
 
 2. Zweck der Erhebung und Nutzung
@@ -14,7 +14,8 @@ Der Dienst erhebt für die Registrierung und Nutzung des Dienstes folgende Daten
 - Verhinderung von Missbrauch und Bearbeitung von Meldungen
 - Abwicklung von In-App-Käufen, Beleg-Verifizierung, Erstattungen und Bearbeitung von Zahlungsstreitigkeiten
 - Versand von Push-Benachrichtigungen (mit Zustimmung des Nutzers)
-- Verbesserung des Dienstes und statistische Analyse
+- Verbesserung des Dienstes, Fehlerdiagnose und statistische Analyse
+- Bereitstellung von Werbung und Messung der Werbeleistung (im Rahmen der Nutzereinwilligung und Geräteeinstellungen)
 
 3. Aufbewahrungs- und Nutzungsdauer
 - Wird bei Kündigung der Mitgliedschaft unverzüglich gelöscht.
@@ -24,6 +25,9 @@ Der Dienst erhebt für die Registrierung und Nutzung des Dienstes folgende Daten
 4. Weitergabe an Dritte und Auftragsverarbeitung
 Der Dienst gibt personenbezogene Daten der Nutzer grundsätzlich nicht an Dritte weiter. Für den Betrieb des Dienstes und die Zahlungsabwicklung werden Daten jedoch wie folgt verarbeitet/ausgetauscht:
 - Apple Inc. / Google LLC: Abwicklung von In-App-Käufen, Beleg-Verifizierung und Erstattungsbestätigung (verbunden mit der Nutzung der Store-Zahlungssysteme)
+- Google LLC (Firebase): Verifizierung von Social-Login-Token, Versand von Push-Benachrichtigungen, App-Analyse und Fehlerdiagnose
+- Google LLC (Google Mobile Ads/AdMob): Bereitstellung von Werbung und Messung der Werbeleistung
+- Kakao Corp.: Kontoidentifikation und E-Mail-Bestätigung bei Nutzung des Kakao-Social-Logins
 - Contabo GmbH (Deutschland): Hosting der Server und Datenbank des Dienstes (die Dienstinfrastruktur wird über die in Deutschland ansässige Contabo GmbH betrieben, wodurch personenbezogene Daten im Ausland verarbeitet und gespeichert werden)
 - Soweit gesetzlich erforderlich
 

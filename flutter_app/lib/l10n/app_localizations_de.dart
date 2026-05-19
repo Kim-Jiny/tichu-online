@@ -133,6 +133,13 @@ class L10nDe extends L10n {
       'Push bei neuer Meldung erhalten';
 
   @override
+  String get settingsPaymentNotifications => 'Zahlungs-Benachrichtigungen';
+
+  @override
+  String get settingsPaymentNotificationsDesc =>
+      'Push bei Kauf oder Erstattung eines Nutzers erhalten';
+
+  @override
   String get settingsAdminSection => 'Admin';
 
   @override
@@ -4106,6 +4113,9 @@ class L10nDe extends L10n {
 
   @override
   String get adminTotalUsers => 'Nutzer gesamt';
+
+  @override
+  String get adminTodayRevenue => 'Nettoumsatz heute (gesch.)';
 
   @override
   String get adminNewUsersToday => 'Neu heute';

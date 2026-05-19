@@ -4,6 +4,24 @@ const { VISUAL_BACKFILL } = require('./shop_visuals_seed');
 
 const SALT_ROUNDS = 10;
 
+// Approx KRW list price per gold product. The store (not us) controls the real
+// charged price/currency, so this is ONLY for the admin "오늘 순매출(추정)"
+// estimate — base KRW list price, before store cut / FX / foreign currency.
+const GOLD_PRODUCT_KRW = {
+  'jiny.tichu.gold1': 1200,
+  'jiny.tichu.gold2': 3900,
+  'jiny.tichu.gold3': 9900,
+  'jiny.tichu.gold4': 29000,
+  'jiny.tichu.gold5': 99000,
+};
+
+// Store commission per platform, used ONLY for the admin "정산추정액" estimate.
+// Defaults assume Apple Small Business Program (15%) and Google Play reduced
+// service fee for the first $1M/yr (15%). Adjust if the program status changes.
+const APPLE_FEE_RATE = 0.15;
+const GOOGLE_FEE_RATE = 0.15;
+const platformFeeRate = (p) => (p === 'ios' ? APPLE_FEE_RATE : GOOGLE_FEE_RATE);
+
 // Interpret TIMESTAMP WITHOUT TIME ZONE (oid 1114) as UTC wall-clock instead
 // of letting node-pg apply the Node process's local TZ. The DB session is
 // pinned to UTC (see pool 'connect' handler), so every value coming out of a
@@ -196,6 +214,7 @@ async function initDatabase() {
     await client.query(`ALTER TABLE tc_users ADD COLUMN IF NOT EXISTS is_admin BOOLEAN DEFAULT false`);
     await client.query(`ALTER TABLE tc_users ADD COLUMN IF NOT EXISTS push_admin_inquiry BOOLEAN DEFAULT true`);
     await client.query(`ALTER TABLE tc_users ADD COLUMN IF NOT EXISTS push_admin_report BOOLEAN DEFAULT true`);
+    await client.query(`ALTER TABLE tc_users ADD COLUMN IF NOT EXISTS push_admin_payment BOOLEAN DEFAULT true`);
     await client.query(`ALTER TABLE tc_users ADD COLUMN IF NOT EXISTS is_deleted BOOLEAN DEFAULT false`);
     await client.query(`ALTER TABLE tc_users ADD COLUMN IF NOT EXISTS deleted_at TIMESTAMP`);
     await client.query(`ALTER TABLE tc_users ADD COLUMN IF NOT EXISTS device_platform VARCHAR(20)`);
@@ -999,7 +1018,7 @@ async function loginUser(username, password) {
   const client = await pool.connect();
   try {
     const result = await client.query(
-      'SELECT id, password_hash, nickname, is_admin, is_deleted, push_enabled, push_friend_invite, push_admin_inquiry, push_admin_report FROM tc_users WHERE username = $1',
+      'SELECT id, password_hash, nickname, is_admin, is_deleted, push_enabled, push_friend_invite, push_admin_inquiry, push_admin_report, push_admin_payment FROM tc_users WHERE username = $1',
       [username.toLowerCase()]
     );
 
@@ -1034,6 +1053,7 @@ async function loginUser(username, password) {
       pushFriendInvite: user.push_friend_invite !== false,
       pushAdminInquiry: user.push_admin_inquiry !== false,
       pushAdminReport: user.push_admin_report !== false,
+      pushAdminPayment: user.push_admin_payment !== false,
     };
   } catch (err) {
     console.error('Login error:', err);
@@ -3685,6 +3705,36 @@ async function getTodayMatches(options = {}) {
   }
 }
 
+// Today's (KST) IAP receipts for the in-app admin "오늘 순매출" drill-down.
+// All environments so testers see sandbox buys; UI tags env/status. Each row
+// gets an estimated KRW price (store-set price isn't stored) for display.
+async function getTodayPayments(options = {}) {
+  const client = await pool.connect();
+  try {
+    const kstTodayExpr = `DATE(timezone('Asia/Seoul', NOW()))`;
+    const kstDate = (col) => `DATE((${col}) AT TIME ZONE 'UTC' AT TIME ZONE 'Asia/Seoul')`;
+    const limit = Math.max(1, Math.min(parseInt(options.limit, 10) || 100, 500));
+    const result = await client.query(`
+      SELECT nickname, product_id, gold_granted, platform, environment,
+             status, refunded_at, verified_at
+      FROM tc_iap_receipts
+      WHERE ${kstDate('verified_at')} = ${kstTodayExpr}
+      ORDER BY verified_at DESC
+      LIMIT ${limit}
+    `);
+    const rows = result.rows.map((r) => ({
+      ...r,
+      est_krw: GOLD_PRODUCT_KRW[r.product_id] || 0,
+    }));
+    return { rows };
+  } catch (err) {
+    console.error('Get today payments error:', err);
+    return { rows: [] };
+  } finally {
+    client.release();
+  }
+}
+
 async function getDashboardStats(activityPeriod = 'week', activityGame = 'all') {
   const client = await pool.connect();
   try {
@@ -3841,7 +3891,45 @@ async function getDashboardStats(activityPeriod = 'week', activityGame = 'all') 
       ORDER BY day
     `);
 
+    // Today's IAP revenue (production only — sandbox/test buys are not money).
+    // Price isn't stored (store-controlled), so estimate from GOLD_PRODUCT_KRW.
+    const iapPaidToday = await client.query(`
+      SELECT product_id, COUNT(*) AS cnt
+      FROM tc_iap_receipts
+      WHERE environment = 'production'
+        AND ${kstCreatedDate('verified_at')} = ${kstTodayExpr}
+      GROUP BY product_id
+    `);
+    const iapRefundToday = await client.query(`
+      SELECT product_id, COUNT(*) AS cnt
+      FROM tc_iap_receipts
+      WHERE environment = 'production'
+        AND refunded_at IS NOT NULL
+        AND ${kstCreatedDate('refunded_at')} = ${kstTodayExpr}
+      GROUP BY product_id
+    `);
+    const krwOf = (pid) => GOLD_PRODUCT_KRW[pid] || 0;
+    let todayPaidCount = 0;
+    let todayGrossRevenue = 0;
+    for (const r of iapPaidToday.rows) {
+      const c = parseInt(r.cnt, 10) || 0;
+      todayPaidCount += c;
+      todayGrossRevenue += krwOf(r.product_id) * c;
+    }
+    let todayRefundCount = 0;
+    let todayRefundRevenue = 0;
+    for (const r of iapRefundToday.rows) {
+      const c = parseInt(r.cnt, 10) || 0;
+      todayRefundCount += c;
+      todayRefundRevenue += krwOf(r.product_id) * c;
+    }
+
     return {
+      todayPaidCount,
+      todayRefundCount,
+      todayGrossRevenue,
+      todayRefundRevenue,
+      todayNetRevenue: todayGrossRevenue - todayRefundRevenue,
       totalUsers: parseInt(totalUsers.rows[0].count),
       pendingInquiries: parseInt(pendingInquiries.rows[0].count),
       pendingReports: parseInt(pendingReports.rows[0].count),
@@ -4484,11 +4572,83 @@ async function getDetailedAdminStats(dateFrom, dateTo, bucket = 'day', options =
         AND ($3 = '' OR LOWER(device_platform) = $3)
     `, [from, to, platform]);
 
+    // ---- IAP payment stats (production only; price estimated, store-set) ----
+    const iapPaidRows = await client.query(`
+      SELECT platform, product_id,
+             ${kstBucketExpr('verified_at')} AS bucket_time,
+             COUNT(*) AS cnt
+      FROM tc_iap_receipts
+      WHERE environment = 'production'
+        AND verified_at >= $1 AND verified_at < $2
+        AND ($3 = '' OR LOWER(platform) = $3)
+      GROUP BY 1, 2, 3
+    `, [from, to, platform]);
+    const iapRefundRows = await client.query(`
+      SELECT platform, product_id,
+             ${kstBucketExpr('refunded_at')} AS bucket_time,
+             COUNT(*) AS cnt
+      FROM tc_iap_receipts
+      WHERE environment = 'production'
+        AND refunded_at IS NOT NULL
+        AND refunded_at >= $1 AND refunded_at < $2
+        AND ($3 = '' OR LOWER(platform) = $3)
+      GROUP BY 1, 2, 3
+    `, [from, to, platform]);
+
+    const krwOf = (pid) => GOLD_PRODUCT_KRW[pid] || 0;
+    const blankPlat = () => ({ count: 0, gross: 0, refundCount: 0, refundAmount: 0 });
+    const byPlatform = { ios: blankPlat(), android: blankPlat() };
+    const seriesMap = new Map(); // bucketISO -> {paidCount,gross,refundCount,refundAmount}
+    const seriesRow = (k) => {
+      if (!seriesMap.has(k)) seriesMap.set(k, { bucket_time: k, paidCount: 0, gross: 0, refundCount: 0, refundAmount: 0 });
+      return seriesMap.get(k);
+    };
+    for (const r of iapPaidRows.rows) {
+      const plat = String(r.platform || '').toLowerCase() === 'ios' ? 'ios' : 'android';
+      const c = parseInt(r.cnt, 10) || 0;
+      const amt = krwOf(r.product_id) * c;
+      byPlatform[plat].count += c;
+      byPlatform[plat].gross += amt;
+      const sr = seriesRow(new Date(r.bucket_time).toISOString());
+      sr.paidCount += c; sr.gross += amt;
+    }
+    for (const r of iapRefundRows.rows) {
+      const plat = String(r.platform || '').toLowerCase() === 'ios' ? 'ios' : 'android';
+      const c = parseInt(r.cnt, 10) || 0;
+      const amt = krwOf(r.product_id) * c;
+      byPlatform[plat].refundCount += c;
+      byPlatform[plat].refundAmount += amt;
+      const sr = seriesRow(new Date(r.bucket_time).toISOString());
+      sr.refundCount += c; sr.refundAmount += amt;
+    }
+    const settleOf = (p, plat) => Math.round((p.gross - p.refundAmount) * (1 - platformFeeRate(plat)));
+    for (const plat of ['ios', 'android']) {
+      const p = byPlatform[plat];
+      p.feeRate = platformFeeRate(plat);
+      p.net = p.gross - p.refundAmount;
+      p.fee = Math.round(p.net * p.feeRate);
+      p.settlement = settleOf(p, plat);
+    }
+    const iapTotal = {
+      count: byPlatform.ios.count + byPlatform.android.count,
+      gross: byPlatform.ios.gross + byPlatform.android.gross,
+      refundCount: byPlatform.ios.refundCount + byPlatform.android.refundCount,
+      refundAmount: byPlatform.ios.refundAmount + byPlatform.android.refundAmount,
+      net: byPlatform.ios.net + byPlatform.android.net,
+      fee: byPlatform.ios.fee + byPlatform.android.fee,
+      settlement: byPlatform.ios.settlement + byPlatform.android.settlement,
+    };
+    const iapSeries = [...seriesMap.values()]
+      .map((s) => ({ ...s, net: s.gross - s.refundAmount }))
+      .sort((a, b) => new Date(a.bucket_time) - new Date(b.bucket_time));
+
     const summaryRow = gameSummary.rows[0] || {};
     const goldRow = goldSummary.rows[0] || {};
     const shopRow = shopSummary.rows[0] || {};
     const signupRow = signupSummary.rows[0] || {};
     return {
+      iapSummary: { byPlatform, total: iapTotal, feeRates: { ios: APPLE_FEE_RATE, android: GOOGLE_FEE_RATE } },
+      iapSeries,
       success: true,
       summary: {
         totalGames: (parseInt(summaryRow.tichu_games || 0, 10) + parseInt(summaryRow.skull_games || 0, 10) + parseInt(summaryRow.ll_games || 0, 10) + parseInt(summaryRow.mighty_games || 0, 10)),
@@ -4526,6 +4686,15 @@ async function getDetailedAdminStats(dateFrom, dateTo, bucket = 'day', options =
       goldSeries: [],
       shopSalesSeries: [],
       topShopItems: [],
+      iapSummary: {
+        byPlatform: {
+          ios: { count: 0, gross: 0, refundCount: 0, refundAmount: 0, net: 0, fee: 0, settlement: 0, feeRate: APPLE_FEE_RATE },
+          android: { count: 0, gross: 0, refundCount: 0, refundAmount: 0, net: 0, fee: 0, settlement: 0, feeRate: GOOGLE_FEE_RATE },
+        },
+        total: { count: 0, gross: 0, refundCount: 0, refundAmount: 0, net: 0, fee: 0, settlement: 0 },
+        feeRates: { ios: APPLE_FEE_RATE, android: GOOGLE_FEE_RATE },
+      },
+      iapSeries: [],
       range: { from, to, bucket: groupUnit, platform },
     };
   } finally {
@@ -4761,7 +4930,7 @@ async function loginSocial(provider, providerUid) {
   const client = await pool.connect();
   try {
     const result = await client.query(
-      'SELECT id, nickname, is_admin, is_deleted, push_enabled, push_friend_invite, push_admin_inquiry, push_admin_report FROM tc_users WHERE auth_provider = $1 AND provider_uid = $2',
+      'SELECT id, nickname, is_admin, is_deleted, push_enabled, push_friend_invite, push_admin_inquiry, push_admin_report, push_admin_payment FROM tc_users WHERE auth_provider = $1 AND provider_uid = $2',
       [provider, providerUid]
     );
     if (result.rows.length === 0) {
@@ -4784,6 +4953,7 @@ async function loginSocial(provider, providerUid) {
       pushFriendInvite: user.push_friend_invite !== false,
       pushAdminInquiry: user.push_admin_inquiry !== false,
       pushAdminReport: user.push_admin_report !== false,
+      pushAdminPayment: user.push_admin_payment !== false,
     };
   } catch (err) {
     console.error('Social login error:', err);
@@ -4989,7 +5159,7 @@ async function setUserAdmin(nickname, isAdmin) {
       `UPDATE tc_users
        SET is_admin = $2
        WHERE nickname = $1
-       RETURNING nickname, is_admin, push_admin_inquiry, push_admin_report`,
+       RETURNING nickname, is_admin, push_admin_inquiry, push_admin_report, push_admin_payment`,
       [nickname, isAdmin]
     );
     if (result.rows.length === 0) {
@@ -5004,16 +5174,17 @@ async function setUserAdmin(nickname, isAdmin) {
   }
 }
 
-async function setAdminAlertSettings(nickname, inquiryEnabled, reportEnabled) {
+async function setAdminAlertSettings(nickname, inquiryEnabled, reportEnabled, paymentEnabled) {
   const client = await pool.connect();
   try {
     const result = await client.query(
       `UPDATE tc_users
        SET push_admin_inquiry = $2,
-           push_admin_report = $3
+           push_admin_report = $3,
+           push_admin_payment = $4
        WHERE nickname = $1
-       RETURNING push_admin_inquiry, push_admin_report`,
-      [nickname, inquiryEnabled, reportEnabled]
+       RETURNING push_admin_inquiry, push_admin_report, push_admin_payment`,
+      [nickname, inquiryEnabled, reportEnabled, paymentEnabled]
     );
     if (result.rows.length === 0) {
       return { success: false, messageKey: 'db_user_not_found' };
@@ -5023,6 +5194,7 @@ async function setAdminAlertSettings(nickname, inquiryEnabled, reportEnabled) {
       settings: {
         pushAdminInquiry: result.rows[0].push_admin_inquiry !== false,
         pushAdminReport: result.rows[0].push_admin_report !== false,
+        pushAdminPayment: result.rows[0].push_admin_payment !== false,
       },
     };
   } catch (err) {
@@ -5036,7 +5208,8 @@ async function setAdminAlertSettings(nickname, inquiryEnabled, reportEnabled) {
 async function getAdminPushRecipients(kind) {
   const client = await pool.connect();
   try {
-    const column = kind === 'report' ? 'push_admin_report' : 'push_admin_inquiry';
+    const column = { report: 'push_admin_report', payment: 'push_admin_payment' }[kind]
+      || 'push_admin_inquiry';
     const result = await client.query(
       `SELECT nickname, fcm_token
        FROM tc_users
@@ -6597,7 +6770,7 @@ async function refundIapReceipt({ id, adminUser, allowNegative = false }) {
 // Store-triggered auto refund (Apple webhook / Google voided-purchases poll),
 // keyed by the store transaction id. Idempotent: re-delivery of the same
 // refund is a no-op once the row is refunded/refund_failed.
-async function autoRefundByTransaction({ transactionId, source, reason }) {
+async function autoRefundByTransaction({ transactionId, source, reason, onRefunded }) {
   if (!transactionId) return { success: false, reason: 'missing_transaction_id' };
   const client = await pool.connect();
   try {
@@ -6629,11 +6802,24 @@ async function autoRefundByTransaction({ transactionId, source, reason }) {
       await client.query('ROLLBACK');
       return { success: true, idempotent: true, status: rec.status };
     }
-    return await _refundCore(client, rec, {
+    const refundResult = await _refundCore(client, rec, {
       allowNegative: false, autoMode: true,
       source: source || 'store', reason: reason || 'store_refund',
       actor: `system:${source || 'store'}`,
     });
+    // Newly applied refund (idempotent already-refunded case returned above).
+    // Fire-and-forget admin notify; never let it break the refund result.
+    if (refundResult && refundResult.success && typeof onRefunded === 'function') {
+      try {
+        await onRefunded({
+          nickname: rec.nickname,
+          productId: rec.product_id,
+          goldGranted: rec.gold_granted,
+          source: source || 'store',
+        });
+      } catch (_) { /* notify is best-effort */ }
+    }
+    return refundResult;
   } catch (err) {
     await client.query('ROLLBACK');
     console.error('Auto refund error:', err);
@@ -6724,6 +6910,7 @@ module.exports = {
   getUserDetail,
   getDashboardStats,
   getTodayMatches,
+  getTodayPayments,
   getDashboardActivityTopPlayers,
   getAdminRecentMatches,
   getDetailedAdminStats,

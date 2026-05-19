@@ -59,6 +59,7 @@ const {
   getMightySeasonRankings,
   getDashboardStats,
   getTodayMatches,
+  getTodayPayments,
   getAdminGoldHistory,
   adminAdjustGold,
   setAdminMemo,
@@ -797,6 +798,7 @@ const server = http.createServer(async (req, res) => {
           transactionId: t.transactionId,
           source: 'apple',
           reason: `apple:${type}${notif.subtype ? ':' + notif.subtype : ''}`,
+          onRefunded: notifyAdminRefund,
         });
         console.log(`[AppleNotif] ${type} txn=${t.transactionId} env=${notif.environment} ->`, JSON.stringify(r));
         // Only a transient post-processing failure (DB error, etc.) should
@@ -1359,7 +1361,10 @@ async function runGoogleVoidedPoll() {
     const startTimeMs = Number.isFinite(cursor)
       ? cursor - GOOGLE_VOIDED_OVERLAP_MS
       : null;
-    const r = await pollGoogleVoidedPurchases(autoRefundByTransaction, { startTimeMs });
+    const r = await pollGoogleVoidedPurchases(
+      (args) => autoRefundByTransaction({ ...args, onRefunded: notifyAdminRefund }),
+      { startTimeMs },
+    );
     if (r && r.ok) {
       if (r.processed > 0) console.log(`[GoogleVoided] processed ${r.processed} voided purchase(s)`);
       if (r.pollStartedAt) {
@@ -1722,15 +1727,17 @@ async function handleMessage(ws, data) {
         if (data.friendInvite != null) {
           setPushFriendInvite(ws.nickname, data.friendInvite === true);
         }
-        if (ws.isAdmin === true && (data.inquiryAlert != null || data.reportAlert != null)) {
+        if (ws.isAdmin === true && (data.inquiryAlert != null || data.reportAlert != null || data.paymentAlert != null)) {
           const alertResult = await setAdminAlertSettings(
             ws.nickname,
             data.inquiryAlert != null ? data.inquiryAlert === true : ws.pushAdminInquiry !== false,
             data.reportAlert != null ? data.reportAlert === true : ws.pushAdminReport !== false,
+            data.paymentAlert != null ? data.paymentAlert === true : ws.pushAdminPayment !== false,
           );
           if (alertResult.success) {
             ws.pushAdminInquiry = alertResult.settings.pushAdminInquiry === true;
             ws.pushAdminReport = alertResult.settings.pushAdminReport === true;
+            ws.pushAdminPayment = alertResult.settings.pushAdminPayment === true;
           }
         }
       }
@@ -1755,6 +1762,9 @@ async function handleMessage(ws, data) {
       break;
     case 'get_admin_today_matches':
       await handleGetAdminTodayMatches(ws, data);
+      break;
+    case 'get_admin_today_payments':
+      await handleGetAdminTodayPayments(ws, data);
       break;
     case 'get_admin_inquiries':
       await handleGetAdminInquiries(ws, data);
@@ -1989,6 +1999,7 @@ async function handleLogin(ws, data) {
   ws.pushFriendInvite = result.pushFriendInvite !== false;
   ws.pushAdminInquiry = result.pushAdminInquiry !== false;
   ws.pushAdminReport = result.pushAdminReport !== false;
+  ws.pushAdminPayment = result.pushAdminPayment !== false;
   const deviceInfo = data.deviceInfo || {};
   ws.appVersion = deviceInfo.appVersion || null;
   ws.locale = deviceInfo.locale || null;
@@ -2091,6 +2102,7 @@ async function handleSocialLogin(ws, data) {
       ws.pushFriendInvite = result.pushFriendInvite !== false;
       ws.pushAdminInquiry = result.pushAdminInquiry !== false;
       ws.pushAdminReport = result.pushAdminReport !== false;
+      ws.pushAdminPayment = result.pushAdminPayment !== false;
       const socialDeviceInfo = data.deviceInfo || {};
       ws.appVersion = socialDeviceInfo.appVersion || null;
       ws.locale = socialDeviceInfo.locale || null;
@@ -2184,6 +2196,7 @@ async function handleSocialRegister(ws, data) {
     ws.isAdmin = false;
     ws.pushAdminInquiry = true;
     ws.pushAdminReport = true;
+    ws.pushAdminPayment = true;
     const regDeviceInfo = data.deviceInfo || {};
     ws.appVersion = regDeviceInfo.appVersion || null;
     ws.locale = regDeviceInfo.locale || null;
@@ -2317,6 +2330,7 @@ async function handleReconnection(ws) {
           pushFriendInvite: ws.pushFriendInvite !== false,
           pushAdminInquiry: ws.pushAdminInquiry !== false,
           pushAdminReport: ws.pushAdminReport !== false,
+          pushAdminPayment: ws.pushAdminPayment !== false,
           maintenanceStatus: getMaintenanceStatus(ws.locale),
           cardViewPref: ws.cardViewPref || 'ask',
         });
@@ -2353,6 +2367,7 @@ async function handleReconnection(ws) {
           pushFriendInvite: ws.pushFriendInvite !== false,
           pushAdminInquiry: ws.pushAdminInquiry !== false,
           pushAdminReport: ws.pushAdminReport !== false,
+          pushAdminPayment: ws.pushAdminPayment !== false,
           maintenanceStatus: getMaintenanceStatus(ws.locale),
           cardViewPref: ws.cardViewPref || 'ask',
         });
@@ -2395,6 +2410,7 @@ async function handleReconnection(ws) {
           pushFriendInvite: ws.pushFriendInvite !== false,
           pushAdminInquiry: ws.pushAdminInquiry !== false,
           pushAdminReport: ws.pushAdminReport !== false,
+          pushAdminPayment: ws.pushAdminPayment !== false,
           maintenanceStatus: getMaintenanceStatus(ws.locale),
           cardViewPref: ws.cardViewPref || 'ask',
         });
@@ -2431,6 +2447,7 @@ async function handleReconnection(ws) {
           pushFriendInvite: ws.pushFriendInvite !== false,
           pushAdminInquiry: ws.pushAdminInquiry !== false,
           pushAdminReport: ws.pushAdminReport !== false,
+          pushAdminPayment: ws.pushAdminPayment !== false,
           maintenanceStatus: getMaintenanceStatus(ws.locale),
           cardViewPref: ws.cardViewPref || 'ask',
         });
@@ -2492,6 +2509,7 @@ async function handleReconnection(ws) {
             pushFriendInvite: ws.pushFriendInvite !== false,
             pushAdminInquiry: ws.pushAdminInquiry !== false,
             pushAdminReport: ws.pushAdminReport !== false,
+            pushAdminPayment: ws.pushAdminPayment !== false,
             maintenanceStatus: getMaintenanceStatus(ws.locale),
             cardViewPref: ws.cardViewPref || 'ask',
           });
@@ -2549,6 +2567,7 @@ async function handleReconnection(ws) {
           pushFriendInvite: ws.pushFriendInvite !== false,
           pushAdminInquiry: ws.pushAdminInquiry !== false,
           pushAdminReport: ws.pushAdminReport !== false,
+          pushAdminPayment: ws.pushAdminPayment !== false,
           maintenanceStatus: getMaintenanceStatus(ws.locale),
           cardViewPref: ws.cardViewPref || 'ask',
         });
@@ -2581,6 +2600,7 @@ async function handleReconnection(ws) {
     pushFriendInvite: ws.pushFriendInvite !== false,
     pushAdminInquiry: ws.pushAdminInquiry !== false,
     pushAdminReport: ws.pushAdminReport !== false,
+    pushAdminPayment: ws.pushAdminPayment !== false,
     maintenanceStatus: getMaintenanceStatus(ws.locale),
     cardViewPref: ws.cardViewPref || 'ask',
   });
@@ -5557,6 +5577,18 @@ async function handleVerifyIapPurchase(ws, data) {
     newGold: latestGold,
     productId,
   });
+
+  // Notify opted-in admins on a genuinely NEW grant (skip idempotent
+  // re-verifies so duplicate purchaseStream emissions don't double-alert).
+  if (anyNewlyGranted) {
+    const label = (product.label_ko && product.label_ko.trim()) || productId;
+    const envTag = environment === 'sandbox' ? ' [샌드박스]' : '';
+    notifyAdminUsers(
+      'payment',
+      '💰 결제 발생',
+      `${ws.nickname} 님 · ${label} · +${totalNewGold.toLocaleString()}G (${platform})${envTag}`,
+    ).catch(() => {});
+  }
 }
 
 // Translate gold history title keys to localized text
@@ -5704,6 +5736,17 @@ async function notifyAdminUsers(kind, title, body, payload = {}) {
   }
 }
 
+// onRefunded callback for autoRefundByTransaction: alerts opted-in admins when
+// a store (Apple/Google) refund/cancel is applied to a user's grant. Only
+// fires on a NEW refund (idempotent re-detection won't call this).
+function notifyAdminRefund({ nickname, productId, goldGranted, source }) {
+  return notifyAdminUsers(
+    'payment',
+    '↩️ 결제 취소/환불',
+    `${nickname || '?'} 님 · ${productId} · -${Number(goldGranted || 0).toLocaleString()}G 회수 (${source || 'store'})`,
+  ).catch(() => {});
+}
+
 async function handleGetAdminDashboard(ws) {
   if (!await ensureAdmin(ws, 'admin_dashboard_result')) return;
   const stats = await getDashboardStats();
@@ -5712,6 +5755,9 @@ async function handleGetAdminDashboard(ws) {
     success: true,
     dashboard: {
       totalUsers: stats.totalUsers || 0,
+      todayPaidCount: stats.todayPaidCount || 0,
+      todayRefundCount: stats.todayRefundCount || 0,
+      todayNetRevenue: stats.todayNetRevenue || 0,
       pendingInquiries: stats.pendingInquiries || 0,
       pendingReports: stats.pendingReports || 0,
       totalInquiries: stats.totalInquiries || 0,
@@ -5798,13 +5844,16 @@ async function handleSetAdminUser(ws, data) {
       client.isAdmin = isAdmin;
       const pushAdminInquiry = result.user?.push_admin_inquiry !== false;
       const pushAdminReport = result.user?.push_admin_report !== false;
+      const pushAdminPayment = result.user?.push_admin_payment !== false;
       client.pushAdminInquiry = pushAdminInquiry;
       client.pushAdminReport = pushAdminReport;
+      client.pushAdminPayment = pushAdminPayment;
       sendTo(client, {
         type: 'admin_status_changed',
         isAdmin,
         pushAdminInquiry,
         pushAdminReport,
+        pushAdminPayment,
       });
     }
   }
@@ -5836,6 +5885,17 @@ async function handleGetAdminTodayMatches(ws, data) {
     type: 'admin_today_matches_result',
     success: true,
     ranked,
+    rows: result.rows,
+  });
+}
+
+async function handleGetAdminTodayPayments(ws, data) {
+  if (!await ensureAdmin(ws, 'admin_today_payments_result')) return;
+  const limit = typeof data?.limit === 'number' ? data.limit : 100;
+  const result = await getTodayPayments({ limit });
+  sendTo(ws, {
+    type: 'admin_today_payments_result',
+    success: true,
     rows: result.rows,
   });
 }

@@ -222,6 +222,7 @@ class GameService extends ChangeNotifier {
   bool isAdminUser = false;
   bool pushAdminInquiryEnabled = true;
   bool pushAdminReportEnabled = true;
+  bool pushAdminPaymentEnabled = true;
   double sfxVolume = 0.7;
 
   // Admin
@@ -243,6 +244,9 @@ class GameService extends ChangeNotifier {
   bool adminTodayMatchesLoading = false;
   String? adminTodayMatchesError;
   bool? _adminTodayMatchesRanked; // tracks last requested filter
+  List<Map<String, dynamic>> adminTodayPayments = [];
+  bool adminTodayPaymentsLoading = false;
+  String? adminTodayPaymentsError;
   List<Map<String, dynamic>> adminReportGroup = [];
   bool adminReportGroupLoading = false;
   String? adminReportGroupError;
@@ -489,6 +493,7 @@ class GameService extends ChangeNotifier {
         pushFriendInviteEnabled = data['pushFriendInvite'] != false;
         pushAdminInquiryEnabled = data['pushAdminInquiry'] != false;
         pushAdminReportEnabled = data['pushAdminReport'] != false;
+        pushAdminPaymentEnabled = data['pushAdminPayment'] != false;
         cardViewPref = (data['cardViewPref'] as String?) ?? 'ask';
         loginError = null;
         _parseMaintenanceStatus(
@@ -519,6 +524,7 @@ class GameService extends ChangeNotifier {
         isAdminUser = data['isAdmin'] == true;
         pushAdminInquiryEnabled = data['pushAdminInquiry'] != false;
         pushAdminReportEnabled = data['pushAdminReport'] != false;
+        pushAdminPaymentEnabled = data['pushAdminPayment'] != false;
         notifyListeners();
         break;
 
@@ -1597,6 +1603,19 @@ class GameService extends ChangeNotifier {
         }
         notifyListeners();
         break;
+      case 'admin_today_payments_result':
+        adminTodayPaymentsLoading = false;
+        if (data['success'] == true) {
+          adminTodayPayments = (data['rows'] as List? ?? [])
+              .map((e) => Map<String, dynamic>.from(e))
+              .toList();
+          adminTodayPaymentsError = null;
+        } else {
+          adminTodayPaymentsError =
+              data['message'] as String? ?? 'admin_payments_load_failed';
+        }
+        notifyListeners();
+        break;
       case 'admin_report_group_result':
         adminReportGroupLoading = false;
         if (data['success'] == true) {
@@ -2317,6 +2336,7 @@ class GameService extends ChangeNotifier {
     isAdminUser = false;
     pushAdminInquiryEnabled = true;
     pushAdminReportEnabled = true;
+    pushAdminPaymentEnabled = true;
     adminDashboard = null;
     adminDashboardLoading = false;
     adminUsers = [];
@@ -2400,7 +2420,7 @@ class GameService extends ChangeNotifier {
     await Future<void>.delayed(const Duration(milliseconds: 150));
   }
 
-  void setAdminAlertPush({bool? inquiry, bool? report}) {
+  void setAdminAlertPush({bool? inquiry, bool? report, bool? payment}) {
     final payload = <String, dynamic>{'type': 'update_push_setting'};
     if (inquiry != null) {
       pushAdminInquiryEnabled = inquiry;
@@ -2409,6 +2429,10 @@ class GameService extends ChangeNotifier {
     if (report != null) {
       pushAdminReportEnabled = report;
       payload['reportAlert'] = report;
+    }
+    if (payment != null) {
+      pushAdminPaymentEnabled = payment;
+      payload['paymentAlert'] = payment;
     }
     notifyListeners();
     _network.send(payload);
@@ -2486,6 +2510,14 @@ class GameService extends ChangeNotifier {
       'ranked': ?ranked,
       'limit': limit,
     });
+  }
+
+  void requestAdminTodayPayments({int limit = 100}) {
+    adminTodayPaymentsLoading = true;
+    adminTodayPaymentsError = null;
+    adminTodayPayments = const [];
+    notifyListeners();
+    _network.send({'type': 'get_admin_today_payments', 'limit': limit});
   }
 
   void requestAdminReportGroup(String target, String roomId) {

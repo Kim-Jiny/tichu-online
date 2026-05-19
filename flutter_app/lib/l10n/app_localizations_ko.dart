@@ -129,6 +129,12 @@ class L10nKo extends L10n {
   String get settingsReportNotificationsDesc => '새 신고가 들어오면 푸시를 받습니다';
 
   @override
+  String get settingsPaymentNotifications => '결제 알림';
+
+  @override
+  String get settingsPaymentNotificationsDesc => '유저 결제·환불이 발생하면 푸시를 받습니다';
+
+  @override
   String get settingsAdminSection => '관리자';
 
   @override
@@ -3981,6 +3987,9 @@ class L10nKo extends L10n {
 
   @override
   String get adminTotalUsers => '전체 유저';
+
+  @override
+  String get adminTodayRevenue => '오늘 순매출(추정)';
 
   @override
   String get adminNewUsersToday => '오늘 가입자';

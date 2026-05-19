@@ -133,6 +133,13 @@ class L10nEn extends L10n {
       'Receive push when a new report arrives';
 
   @override
+  String get settingsPaymentNotifications => 'Payment Notifications';
+
+  @override
+  String get settingsPaymentNotificationsDesc =>
+      'Receive push when a user purchase or refund occurs';
+
+  @override
   String get settingsAdminSection => 'Admin';
 
   @override
@@ -4070,6 +4077,9 @@ class L10nEn extends L10n {
 
   @override
   String get adminTotalUsers => 'Total users';
+
+  @override
+  String get adminTodayRevenue => 'Net revenue today (est.)';
 
   @override
   String get adminNewUsersToday => 'New today';

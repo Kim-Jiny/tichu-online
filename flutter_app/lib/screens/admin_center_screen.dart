@@ -18,6 +18,14 @@ int _toInt(dynamic v, [int fallback = 0]) {
   return fallback;
 }
 
+String _won(int n) {
+  final s = n.abs().toString().replaceAllMapped(
+        RegExp(r'(\d)(?=(\d{3})+$)'),
+        (m) => '${m[1]},',
+      );
+  return '${n < 0 ? '-' : ''}₩$s';
+}
+
 String _formatTimestamp(dynamic v) {
   if (v == null) return '-';
   DateTime? dt;
@@ -129,6 +137,8 @@ class _AdminCenterScreenState extends State<AdminCenterScreen> {
         return _buildMatchesList(game, isCompact, rankedOnly: false);
       case 'rankedGames':
         return _buildMatchesList(game, isCompact, rankedOnly: true);
+      case 'revenue':
+        return _buildPaymentsList(game, isCompact);
       default:
         return _buildUsersTab(game, isCompact);
     }
@@ -174,7 +184,7 @@ class _AdminCenterScreenState extends State<AdminCenterScreen> {
     final activeUsers = _toInt(dash['activeUsers']);
     final newUsersToday = _toInt(dash['newUsersToday']);
     final weeklyActives = _toInt(dash['activeUsers7d']);
-    final totalUsers = _toInt(dash['totalUsers']);
+    final todayNetRevenue = _toInt(dash['todayNetRevenue']);
     final pendingInquiries = _toInt(dash['pendingInquiries']);
     final totalInquiries = _toInt(dash['totalInquiries']);
     final pendingReports = _toInt(dash['pendingReports']);
@@ -187,7 +197,7 @@ class _AdminCenterScreenState extends State<AdminCenterScreen> {
       (id: 'active', label: l.adminActiveUsers, value: '$activeUsers', color: const Color(0xFF42A5F5), icon: Icons.wifi_tethering),
       (id: 'newToday', label: l.adminNewUsersToday, value: '$newUsersToday', color: const Color(0xFF26A69A), icon: Icons.person_add_alt_1_outlined),
       (id: 'weeklyActive', label: l.adminWeeklyActives, value: '$weeklyActives', color: const Color(0xFF66BB6A), icon: Icons.trending_up),
-      (id: 'allUsers', label: l.adminTotalUsers, value: '$totalUsers', color: const Color(0xFFFFA726), icon: Icons.groups_2_outlined),
+      (id: 'revenue', label: l.adminTodayRevenue, value: _won(todayNetRevenue), color: const Color(0xFFFFA726), icon: Icons.payments_outlined),
       (id: 'pendingInquiries', label: l.adminPendingInquiries, value: '$pendingInquiries / $totalInquiries', color: const Color(0xFFAB47BC), icon: Icons.mail_outline),
       (id: 'pendingReports', label: l.adminPendingReports, value: '$pendingReports / $totalReports', color: const Color(0xFFEF5350), icon: Icons.report_outlined),
       (id: 'casualGames', label: l.adminCasualGames, value: '$todayCasualGames / $todayGames', color: const Color(0xFF5C6BC0), icon: Icons.sports_esports_outlined),
@@ -232,6 +242,8 @@ class _AdminCenterScreenState extends State<AdminCenterScreen> {
             game.requestAdminTodayMatches(ranked: false);
           } else if (item.id == 'rankedGames') {
             game.requestAdminTodayMatches(ranked: true);
+          } else if (item.id == 'revenue') {
+            game.requestAdminTodayPayments();
           }
         },
         child: Container(
@@ -717,6 +729,172 @@ class _AdminCenterScreenState extends State<AdminCenterScreen> {
           ),
         ),
       ],
+    );
+  }
+
+  Widget _buildPaymentsList(GameService game, bool isCompact) {
+    final l = L10n.of(context);
+    if (game.adminTodayPaymentsLoading) {
+      return const Center(child: CircularProgressIndicator());
+    }
+    if (game.adminTodayPaymentsError != null) {
+      return Center(child: Text(localizeServiceMessage(game.adminTodayPaymentsError!, l)));
+    }
+    final rows = game.adminTodayPayments;
+    if (rows.isEmpty) {
+      return const Center(
+        child: Text('오늘 결제 내역이 없습니다', style: TextStyle(color: _mutedColor)),
+      );
+    }
+    int gross = 0;
+    int refundCount = 0;
+    for (final r in rows) {
+      final refunded = (r['status']?.toString() == 'refunded');
+      if (refunded) {
+        refundCount++;
+      } else {
+        gross += _toInt(r['est_krw']);
+      }
+    }
+    final marginH = isCompact ? 12.0 : 16.0;
+    return Column(
+      children: [
+        Container(
+          margin: EdgeInsets.fromLTRB(marginH, 0, marginH, 10),
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+          decoration: BoxDecoration(
+            color: Colors.white.withValues(alpha: 0.94),
+            borderRadius: BorderRadius.circular(12),
+          ),
+          child: Row(
+            children: [
+              Text('${rows.length}',
+                  style: const TextStyle(
+                      fontSize: 18, fontWeight: FontWeight.w900, color: _inkColor)),
+              const SizedBox(width: 4),
+              const Text('건', style: TextStyle(color: _mutedColor, fontSize: 12)),
+              const Spacer(),
+              Text('추정 ${_won(gross)}',
+                  style: const TextStyle(
+                      fontSize: 14, fontWeight: FontWeight.w800, color: Color(0xFF2E7D32))),
+              if (refundCount > 0) ...[
+                const SizedBox(width: 8),
+                Text('환불 $refundCount',
+                    style: const TextStyle(
+                        fontSize: 12, fontWeight: FontWeight.w700, color: Color(0xFFC62828))),
+              ],
+            ],
+          ),
+        ),
+        Expanded(
+          child: ListView.separated(
+            padding: EdgeInsets.fromLTRB(marginH, 0, marginH, 16),
+            itemCount: rows.length,
+            separatorBuilder: (_, _) => const SizedBox(height: 8),
+            itemBuilder: (context, i) => _buildPaymentRow(rows[i]),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildPaymentRow(Map<String, dynamic> r) {
+    final refunded = r['status']?.toString() == 'refunded';
+    final platform = r['platform']?.toString() ?? '';
+    final sandbox = r['environment']?.toString() == 'sandbox';
+    final gold = _toInt(r['gold_granted']);
+    final krw = _toInt(r['est_krw']);
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: const Color(0xFFE6DEDA)),
+      ),
+      child: Row(
+        children: [
+          Container(
+            width: 40,
+            height: 40,
+            decoration: BoxDecoration(
+              color: refunded ? const Color(0xFFFFF3E0) : const Color(0xFFE8F5E9),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Icon(
+              refunded ? Icons.undo : Icons.payments_outlined,
+              color: refunded ? const Color(0xFFFB8C00) : const Color(0xFF43A047),
+              size: 20,
+            ),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Flexible(
+                      child: Text(
+                        r['nickname']?.toString() ?? '?',
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(
+                            fontWeight: FontWeight.w800, color: _inkColor, fontSize: 14),
+                      ),
+                    ),
+                    const SizedBox(width: 6),
+                    _payBadge(platform == 'ios' ? 'iOS' : 'AOS',
+                        const Color(0xFF5C6BC0)),
+                    if (sandbox) ...[
+                      const SizedBox(width: 4),
+                      _payBadge('SANDBOX', const Color(0xFF9E9E9E)),
+                    ],
+                    if (refunded) ...[
+                      const SizedBox(width: 4),
+                      _payBadge('환불', const Color(0xFFC62828)),
+                    ],
+                  ],
+                ),
+                const SizedBox(height: 3),
+                Text(
+                  r['product_id']?.toString() ?? '',
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(color: _mutedColor, fontSize: 11),
+                ),
+                Text(
+                  '+${gold}G · ${_formatTimestamp(r['verified_at'])}',
+                  style: const TextStyle(color: _mutedColor, fontSize: 11),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(width: 8),
+          Text(
+            _won(krw),
+            style: TextStyle(
+              fontSize: 14,
+              fontWeight: FontWeight.w900,
+              color: refunded ? const Color(0xFFB0A39E) : const Color(0xFF2E7D32),
+              decoration: refunded ? TextDecoration.lineThrough : null,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _payBadge(String text, Color color) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.12),
+        borderRadius: BorderRadius.circular(6),
+      ),
+      child: Text(
+        text,
+        style: TextStyle(fontSize: 10, fontWeight: FontWeight.w700, color: color),
+      ),
     );
   }
 

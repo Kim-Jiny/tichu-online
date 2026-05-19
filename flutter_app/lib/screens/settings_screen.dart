@@ -987,6 +987,17 @@ class _SettingsScreenState extends State<SettingsScreen> {
                                     onChanged: (v) => game.setAdminAlertPush(report: v),
                                   ),
                                 ),
+                                const Divider(height: 1, color: Color(0xFFEAE2DE)),
+                                _buildRow(
+                                  icon: Icons.payments_outlined,
+                                  iconColor: const Color(0xFF26A69A),
+                                  title: l10n.settingsPaymentNotifications,
+                                  subtitle: l10n.settingsPaymentNotificationsDesc,
+                                  trailing: Switch(
+                                    value: game.pushAdminPaymentEnabled,
+                                    onChanged: (v) => game.setAdminAlertPush(payment: v),
+                                  ),
+                                ),
                               ],
                             ],
                           ),

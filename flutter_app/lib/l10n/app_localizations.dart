@@ -339,6 +339,18 @@ abstract class L10n {
   /// **'Receive push when a new report arrives'**
   String get settingsReportNotificationsDesc;
 
+  /// No description provided for @settingsPaymentNotifications.
+  ///
+  /// In en, this message translates to:
+  /// **'Payment Notifications'**
+  String get settingsPaymentNotifications;
+
+  /// No description provided for @settingsPaymentNotificationsDesc.
+  ///
+  /// In en, this message translates to:
+  /// **'Receive push when a user purchase or refund occurs'**
+  String get settingsPaymentNotificationsDesc;
+
   /// No description provided for @settingsAdminSection.
   ///
   /// In en, this message translates to:
@@ -7292,6 +7304,12 @@ abstract class L10n {
   /// In en, this message translates to:
   /// **'Total users'**
   String get adminTotalUsers;
+
+  /// No description provided for @adminTodayRevenue.
+  ///
+  /// In en, this message translates to:
+  /// **'Net revenue today (est.)'**
+  String get adminTodayRevenue;
 
   /// No description provided for @adminNewUsersToday.
   ///

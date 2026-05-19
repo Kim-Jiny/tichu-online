@@ -1630,6 +1630,7 @@ async function handleAdminRoute(req, res, url, pathname, method, lobby, wss, mai
       <div class="section-label">유저와 매치 현황</div>
       <div class="stats-grid" style="grid-template-columns:repeat(auto-fit, minmax(170px, 1fr))">
         <div class="stat-card"><div class="label">전체 유저</div><div class="value">${formatNumber(stats.totalUsers)}</div><div class="kpi-note">오늘 +${formatNumber(stats.newUsersToday)} 가입</div></div>
+        <div class="stat-card"><div class="label">오늘 순매출(추정)</div><div class="value green">₩${formatNumber(stats.todayNetRevenue || 0)}</div><div class="kpi-note">결제 ${formatNumber(stats.todayPaidCount || 0)} · 환불 ${formatNumber(stats.todayRefundCount || 0)} · 정가추정</div></div>
         <div class="stat-card"><div class="label">활성 (24시간)</div><div class="value">${formatNumber(stats.activeUsers24h)}</div><div class="kpi-note">7일 활성 ${formatNumber(stats.activeUsers7d)}명</div></div>
         <div class="stat-card"><div class="label">총 매치</div><div class="value">${formatNumber(stats.totalMatches)}</div><div class="kpi-note">오늘 게임 ${formatNumber(stats.todayGames)}회</div></div>
         <div class="stat-card"><div class="label">오늘 게임</div><div class="value green">${formatNumber(stats.todayGames)}</div><div class="kpi-note"><span style="color:#5f62d6">${formatNumber(stats.todayTichuGames)} 티츄</span> · <span style="color:#ff7043">${formatNumber(stats.todaySKGames)} SK</span> · <span style="color:#E91E63">${formatNumber(stats.todayLLGames)} LL</span> · <span style="color:#1565C0">${formatNumber(stats.todayMightyGames)} 마이티</span></div></div>
@@ -1777,7 +1778,7 @@ async function handleAdminRoute(req, res, url, pathname, method, lobby, wss, mai
     const fromParam = url.searchParams.get('from');
     const toParam = url.searchParams.get('to');
     const bucket = url.searchParams.get('bucket') === 'hour' ? 'hour' : 'day';
-    const statTab = ['games', 'acquisition', 'economy', 'shop'].includes(url.searchParams.get('tab'))
+    const statTab = ['games', 'acquisition', 'economy', 'shop', 'payment'].includes(url.searchParams.get('tab'))
       ? url.searchParams.get('tab')
       : 'games';
     const platform = ['ios', 'android'].includes((url.searchParams.get('platform') || '').toLowerCase())
@@ -1813,6 +1814,13 @@ async function handleAdminRoute(req, res, url, pathname, method, lobby, wss, mai
     const goldSeries = stats.goldSeries || [];
     const shopSalesSeries = stats.shopSalesSeries || [];
     const topShopItems = stats.topShopItems || [];
+    const iap = stats.iapSummary || { byPlatform: { ios: {}, android: {} }, total: {}, feeRates: { ios: 0.15, android: 0.15 } };
+    const iapIos = iap.byPlatform.ios || {};
+    const iapAos = iap.byPlatform.android || {};
+    const iapTot = iap.total || {};
+    const iapSeries = stats.iapSeries || [];
+    const won = (n) => `₩${formatNumber(Math.round(Number(n) || 0))}`;
+    const pct = (r) => `${Math.round((Number(r) || 0) * 100)}%`;
     const fromValue = formatDateInput(from);
     const toValue = formatDateInput(to);
     const platformLabel = platform === 'ios' ? 'iOS' : platform === 'android' ? 'AOS' : '전체';
@@ -1872,6 +1880,7 @@ async function handleAdminRoute(req, res, url, pathname, method, lobby, wss, mai
       { key: 'acquisition', label: '유입 분석', desc: '가입, 플랫폼 분포, 전환' },
       { key: 'economy', label: '경제 분석', desc: '획득/소모/순변동' },
       { key: 'shop', label: '상점 분석', desc: '판매, 구매자, 베스트셀러' },
+      { key: 'payment', label: '결제 분석', desc: 'IAP 매출·환불·정산추정' },
     ];
     const presetLinks = [
       { key: 'today', label: '오늘' },
@@ -1927,6 +1936,12 @@ async function handleAdminRoute(req, res, url, pathname, method, lobby, wss, mai
         { label: '객단가', value: avgPurchaseValue.toFixed(1), meta: '구매 1건당 골드' },
         { label: '가입 대비 구매자', value: formatPercent(shopBuyerConversion, 1), meta: `${formatNumber(summary.shopBuyers || 0)}명` },
       ],
+      payment: [
+        { label: '추정 매출', value: won(iapTot.gross || 0), meta: `결제 ${formatNumber(iapTot.count || 0)}건 · 정가추정` },
+        { label: '정산추정액', value: won(iapTot.settlement || 0), meta: `수수료 차감 후` },
+        { label: '환불', value: won(iapTot.refundAmount || 0), meta: `${formatNumber(iapTot.refundCount || 0)}건` },
+        { label: '순매출', value: won(iapTot.net || 0), meta: '환불 차감 전 수수료' },
+      ],
     };
     const statActions = {
       games: [
@@ -1944,6 +1959,11 @@ async function handleAdminRoute(req, res, url, pathname, method, lobby, wss, mai
       shop: [
         { label: '상점 관리', href: '/tc-backstage/shop' },
         { label: '유저 목록 보기', href: '/tc-backstage/users' },
+      ],
+      payment: [
+        { label: '결제내역', href: '/tc-backstage/iap-receipts' },
+        { label: '검증로그', href: '/tc-backstage/iap-attempts' },
+        { label: '골드상품 관리', href: '/tc-backstage/gold-products' },
       ],
       'gold-products': [
         { label: '골드상품 관리', href: '/tc-backstage/gold-products' },
@@ -2205,11 +2225,81 @@ async function handleAdminRoute(req, res, url, pathname, method, lobby, wss, mai
       </div>
     `;
 
+    const platRow = (name, p, feeRate) => `<tr>
+      <td style="font-weight:700">${name}</td>
+      <td>${formatNumber(p.count || 0)}</td>
+      <td style="color:#2e7d32;font-weight:600">${won(p.gross || 0)}</td>
+      <td style="color:#c62828">${formatNumber(p.refundCount || 0)}건 · ${won(p.refundAmount || 0)}</td>
+      <td style="font-weight:600">${won(p.net || 0)}</td>
+      <td>${pct(feeRate)} · -${won(p.fee || 0)}</td>
+      <td style="font-weight:800;color:#1565c0">${won(p.settlement || 0)}</td>
+    </tr>`;
+    const iapPlatformTable = `<div class="table-wrap"><table>
+      <tr><th>플랫폼</th><th>결제</th><th>추정매출</th><th>환불</th><th>순매출</th><th>수수료</th><th>정산추정</th></tr>
+      ${platRow('iOS (App Store)', iapIos, iap.feeRates.ios)}
+      ${platRow('Android (Play)', iapAos, iap.feeRates.android)}
+      <tr style="background:#fafafa">
+        <td style="font-weight:800">합계</td>
+        <td style="font-weight:700">${formatNumber(iapTot.count || 0)}</td>
+        <td style="font-weight:700;color:#2e7d32">${won(iapTot.gross || 0)}</td>
+        <td style="color:#c62828">${formatNumber(iapTot.refundCount || 0)}건 · ${won(iapTot.refundAmount || 0)}</td>
+        <td style="font-weight:700">${won(iapTot.net || 0)}</td>
+        <td>-${won(iapTot.fee || 0)}</td>
+        <td style="font-weight:800;color:#1565c0">${won(iapTot.settlement || 0)}</td>
+      </tr>
+    </table></div>`;
+    const iapSeriesTable = iapSeries.length > 0
+      ? `<div class="table-wrap"><table>
+          <tr><th>${bucket === 'hour' ? '시간대' : '날짜'}</th><th>결제</th><th>추정매출</th><th>환불</th><th>순매출</th></tr>
+          ${iapSeries.map(row => `<tr>
+            <td>${formatDate(row.bucket_time)}</td>
+            <td style="font-weight:700">${formatNumber(row.paidCount || 0)}</td>
+            <td style="color:#2e7d32;font-weight:600">${won(row.gross || 0)}</td>
+            <td style="color:#c62828">${formatNumber(row.refundCount || 0)}건 · ${won(row.refundAmount || 0)}</td>
+            <td style="font-weight:700">${won(row.net || 0)}</td>
+          </tr>`).join('')}
+        </table></div>`
+      : '<div class="empty">기간 내 결제 데이터가 없습니다 (production 기준)</div>';
+
+    const paymentTabContent = `
+      ${summaryStrip([
+        { label: '추정 매출', value: won(iapTot.gross || 0), meta: `결제 ${formatNumber(iapTot.count || 0)}건` },
+        { label: '환불', value: won(iapTot.refundAmount || 0), valueColor: '#c0563f', meta: `${formatNumber(iapTot.refundCount || 0)}건` },
+        { label: '순매출(환불차감)', value: won(iapTot.net || 0), valueColor: (iapTot.net || 0) >= 0 ? '#1f2328' : '#c0563f' },
+        { label: '정산추정액', value: won(iapTot.settlement || 0), valueColor: '#1565c0', meta: '수수료 차감 후' },
+        { label: 'iOS 정산추정', value: won(iapIos.settlement || 0), meta: `${formatNumber(iapIos.count || 0)}건 · 수수료 ${pct(iap.feeRates.ios)}` },
+        { label: 'Android 정산추정', value: won(iapAos.settlement || 0), meta: `${formatNumber(iapAos.count || 0)}건 · 수수료 ${pct(iap.feeRates.android)}` },
+      ])}
+      <div class="card-actions">
+        ${(statActions.payment || []).map((action) => `<a href="${action.href}" class="btn btn-secondary">${escapeHtml(action.label)}</a>`).join('')}
+      </div>
+      <div class="subtab-copy">결제 탭은 production 인앱결제만 집계합니다. 매출은 서버에 결제금액이 저장되지 않아 <b>원화 정가 기준 추정치</b>이며(스토어 수수료·환율·해외통화·세금 제외), 정산추정액은 플랫폼 수수료(App Store ${pct(iap.feeRates.ios)} / Google Play ${pct(iap.feeRates.android)}, Small Business·감면 프로그램 가정)를 차감한 값입니다. 실제 정산액은 스토어 콘솔이 기준입니다.</div>
+      <div class="grid-2col">
+        <div class="card">
+          <h3>플랫폼별 매출·정산추정</h3>
+          <div style="height:8px"></div>
+          ${iapPlatformTable}
+        </div>
+        <div class="card">
+          <h3>기간별 추이</h3>
+          <div class="soft-panel">
+            ${metricLine('추정 매출 합계', won(iapTot.gross || 0))}
+            ${metricLine('환불 합계', `${formatNumber(iapTot.refundCount || 0)}건 · ${won(iapTot.refundAmount || 0)}`)}
+            ${metricLine('순매출(환불차감)', won(iapTot.net || 0))}
+            ${metricLine('정산추정 합계', won(iapTot.settlement || 0))}
+          </div>
+          <div style="height:14px"></div>
+          ${iapSeriesTable}
+        </div>
+      </div>
+    `;
+
     const tabContentMap = {
       games: gamesTabContent,
       acquisition: acquisitionTabContent,
       economy: economyTabContent,
       shop: shopTabContent,
+      payment: paymentTabContent,
     };
 
     const content = `
@@ -3571,6 +3661,7 @@ async function handleAdminRoute(req, res, url, pathname, method, lobby, wss, mai
           const txnShort = txn.length > 28 ? txn.slice(0, 28) + '…' : txn;
           const action = r.status === 'granted'
             ? `<form method="POST" action="/tc-backstage/iap-receipts/${r.id}/refund"
+                     style="display:inline-block;vertical-align:top;margin:0"
                      onsubmit="return confirm('이 결제의 지급 골드 ${formatNumber(r.gold_granted)}G를 회수합니다. (실제 결제금 환불은 스토어가 별도 처리)\\n계속할까요?')">
                  <button type="submit" class="btn btn-danger">환불 처리</button>
                </form>`
@@ -3584,7 +3675,7 @@ async function handleAdminRoute(req, res, url, pathname, method, lobby, wss, mai
             <td><b>${formatNumber(r.gold_granted)}</b></td>
             <td style="font-family:monospace;font-size:11px" title="${txn}"><a href="/tc-backstage/iap-receipts/${r.id}">${txnShort}</a></td>
             <td>${statusBadge(r.status)}</td>
-            <td><a href="/tc-backstage/iap-receipts/${r.id}" class="btn btn-secondary" style="margin-right:6px">상세</a>${action}</td>
+            <td style="white-space:nowrap"><a href="/tc-backstage/iap-receipts/${r.id}" class="btn btn-secondary" style="margin-right:6px">상세</a>${action}</td>
           </tr>`;
         }).join('')}
       </table></div>`;

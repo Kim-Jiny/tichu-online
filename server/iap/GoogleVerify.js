@@ -140,4 +140,46 @@ async function verifyGoogle(purchaseToken, expectedProductId) {
   };
 }
 
-module.exports = { verifyGoogle, getAccessToken };
+// Developer-initiated refund. POST orders.refund with revoke=true so the
+// purchase shows up in the Voided Purchases feed AND Google returns the
+// money to the user. Caller still does the local gold clawback (via
+// autoRefundByTransaction) so the user's in-game balance updates instantly.
+// Returns { ok:true } on 204, { ok:false, reason } otherwise.
+//
+// Requires the same env as verifyGoogle PLUS the SA having the "Manage
+// orders and subscriptions" permission in Play Console.
+async function refundGoogleOrder(orderId) {
+  const pkg = process.env.GOOGLE_PLAY_PACKAGE_NAME;
+  if (!pkg || !process.env.GOOGLE_PLAY_SA_EMAIL || !process.env.GOOGLE_PLAY_SA_PRIVATE_KEY) {
+    return { ok: false, reason: 'google_play_not_configured' };
+  }
+  if (!orderId || typeof orderId !== 'string') {
+    return { ok: false, reason: 'missing_order_id' };
+  }
+  let token;
+  try {
+    token = await getAccessToken();
+  } catch (err) {
+    console.error('[GoogleRefund] token failed:', err.message);
+    return { ok: false, reason: 'google_token_failed' };
+  }
+  const url = `https://androidpublisher.googleapis.com/androidpublisher/v3/applications/${encodeURIComponent(pkg)}/orders/${encodeURIComponent(orderId)}:refund?revoke=true`;
+  try {
+    const res = await fetch(url, {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    // 204 No Content = success. 404 = order not found. Others = failure.
+    if (res.status === 204) return { ok: true };
+    if (res.status === 404) return { ok: false, reason: 'order_not_found' };
+    let bodyText = '';
+    try { bodyText = await res.text(); } catch (_) {}
+    console.warn(`[GoogleRefund] HTTP ${res.status} for order=${orderId}: ${bodyText.slice(0, 200)}`);
+    return { ok: false, reason: `google_api_http_${res.status}` };
+  } catch (err) {
+    console.error('[GoogleRefund] request failed:', err.message);
+    return { ok: false, reason: 'request_failed' };
+  }
+}
+
+module.exports = { verifyGoogle, getAccessToken, refundGoogleOrder };

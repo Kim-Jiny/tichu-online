@@ -9,13 +9,14 @@ const {
   getDetailedAdminStats,
   getAllShopItemsAdmin, addShopItem, updateShopItem, deleteShopItem, getShopItemById,
   getAllGoldProductsAdmin, getGoldProductById, addGoldProduct, updateGoldProduct, deleteGoldProduct,
-  getIapReceipts, getIapReceiptById, refundIapReceipt,
+  getIapReceipts, getIapReceiptById, refundIapReceipt, autoRefundByTransaction,
   getIapAttempts, getIapAttemptById, getRefundIssues, listConsumptionRequests,
   getConfig, updateConfig,
   getNotices, getNoticeById, createNotice, updateNotice, deleteNotice,
   insertMaintenanceHistory, getMaintenanceHistory,
   getBroadcastFcmTokens, insertPushHistory, getPushHistory, clearInvalidFcmToken, insertPushRecipients, getPushHistoryDetail,
 } = require('./db/database');
+const { refundGoogleOrder } = require('./iap/GoogleVerify');
 
 // In-memory session store: token -> { username, createdAt }
 const sessions = new Map();
@@ -3687,6 +3688,17 @@ async function handleAdminRoute(req, res, url, pathname, method, lobby, wss, mai
     let banner = '';
     if (msg === 'refunded') {
       banner = `<div class="card" style="border-left:4px solid #2e7d32;margin-bottom:14px">✅ 골드 회수 완료. 실제 결제금 환불은 Apple/Google이 별도로 처리합니다.</div>`;
+    } else if (msg === 'store_refund_done') {
+      banner = `<div class="card" style="border-left:4px solid #2e7d32;margin-bottom:14px">✅ <b>스토어 환불 + 골드 회수 완료</b>. Google이 실제 결제금을 유저에게 환불했고, 지급 골드도 회수됐습니다.</div>`;
+    } else if (msg === 'store_refund_partial') {
+      banner = `<div class="card" style="border-left:4px solid #e65100;margin-bottom:14px">⚠️ 스토어 환불은 성공했으나 <b>골드 회수 실패</b>(이미 사용 등). 결제금은 이미 유저에게 환불됨. 환불문제 큐에서 강제 회수 가능합니다.</div>`;
+    } else if (msg === 'store_refund_failed') {
+      const reason = escapeHtml(url.searchParams.get('reason') || '');
+      banner = `<div class="card" style="border-left:4px solid #c62828;margin-bottom:14px">❌ 스토어 환불 실패: <code>${reason}</code>. 결제금·골드 모두 그대로입니다.</div>`;
+    } else if (msg === 'store_refund_ios_not_supported') {
+      banner = `<div class="card" style="border-left:4px solid #c62828;margin-bottom:14px">iOS 영수증은 스토어 환불을 지원하지 않습니다. 유저에게 <a href="https://reportaproblem.apple.com" target="_blank">reportaproblem.apple.com</a> 안내 후 골드만 회수 가능합니다.</div>`;
+    } else if (msg === 'store_refund_no_order_id') {
+      banner = `<div class="card" style="border-left:4px solid #c62828;margin-bottom:14px">orderId가 없어 스토어 환불 호출 불가. (드문 프로모/테스트 결제 케이스) 골드만 회수해주세요.</div>`;
     } else if (msg === 'already') {
       banner = `<div class="card" style="border-left:4px solid #888;margin-bottom:14px">이미 환불 처리된 건입니다.</div>`;
     } else if (msg === 'error') {
@@ -3740,11 +3752,19 @@ async function handleAdminRoute(req, res, url, pathname, method, lobby, wss, mai
           const dt = new Date(r.verified_at).toLocaleString('ko-KR', { timeZone: 'Asia/Seoul' });
           const txn = escapeHtml(String(r.transaction_id || ''));
           const txnShort = txn.length > 28 ? txn.slice(0, 28) + '…' : txn;
+          const isAndroid = String(r.platform).toLowerCase() === 'android';
+          const storeRefundBtn = (r.status === 'granted' && isAndroid)
+            ? `<form method="POST" action="/tc-backstage/iap-receipts/${r.id}/store-refund"
+                     style="display:inline-block;vertical-align:top;margin:0 6px 0 0"
+                     onsubmit="return confirm('⚠️ 실제 결제금을 Google에 환불 요청하고, 골드 ${formatNumber(r.gold_granted)}G도 회수합니다.\\n환불은 되돌릴 수 없습니다. 계속할까요?')">
+                 <button type="submit" class="btn btn-danger" style="background:#c62828">스토어 환불</button>
+               </form>`
+            : '';
           const action = r.status === 'granted'
-            ? `<form method="POST" action="/tc-backstage/iap-receipts/${r.id}/refund"
+            ? `${storeRefundBtn}<form method="POST" action="/tc-backstage/iap-receipts/${r.id}/refund"
                      style="display:inline-block;vertical-align:top;margin:0"
-                     onsubmit="return confirm('이 결제의 지급 골드 ${formatNumber(r.gold_granted)}G를 회수합니다. (실제 결제금 환불은 스토어가 별도 처리)\\n계속할까요?')">
-                 <button type="submit" class="btn btn-danger">환불 처리</button>
+                     onsubmit="return confirm('이 결제의 지급 골드 ${formatNumber(r.gold_granted)}G만 회수합니다. (실제 결제금 환불은 스토어가 별도 처리됐다고 가정)\\n계속할까요?')">
+                 <button type="submit" class="btn btn-secondary">골드만 회수</button>
                </form>`
             : `<span style="color:#888;font-size:12px">${r.refund_admin ? escapeHtml(r.refund_admin) : ''}${r.refunded_at ? '<br>' + new Date(r.refunded_at).toLocaleString('ko-KR', { timeZone: 'Asia/Seoul' }) : ''}</span>`;
           return `<tr>
@@ -3898,6 +3918,47 @@ async function handleAdminRoute(req, res, url, pathname, method, lobby, wss, mai
       return redirect(res, '/tc-backstage/iap-receipts?' + p.toString());
     }
     return redirect(res, base + '?msg=error');
+  }
+
+  // Store-side refund (Android only): real money back to user via Play
+  // Developer API, then local gold clawback via autoRefundByTransaction.
+  // One click = full round-trip (money + entitlement + in-game balance).
+  const storeRefundMatch = pathname.match(/^\/tc-backstage\/iap-receipts\/(\d+)\/store-refund$/);
+  if (storeRefundMatch && method === 'POST') {
+    const id = parseInt(storeRefundMatch[1], 10);
+    const rec = await getIapReceiptById(id);
+    if (!rec) return redirect(res, '/tc-backstage/iap-receipts?msg=error');
+    if (String(rec.platform).toLowerCase() !== 'android') {
+      return redirect(res, '/tc-backstage/iap-receipts?msg=store_refund_ios_not_supported');
+    }
+    if (rec.status === 'refunded') {
+      return redirect(res, '/tc-backstage/iap-receipts?msg=already');
+    }
+    if (!rec.transaction_id) {
+      return redirect(res, '/tc-backstage/iap-receipts?msg=store_refund_no_order_id');
+    }
+    // 1) Ask Google to refund + revoke. This moves the money back to the user.
+    const gr = await refundGoogleOrder(rec.transaction_id);
+    if (!gr.ok) {
+      console.warn(`[store-refund] Google refund failed for receipt=${id} txn=${rec.transaction_id}: ${gr.reason}`);
+      const p = new URLSearchParams({ msg: 'store_refund_failed', reason: gr.reason || '' });
+      return redirect(res, '/tc-backstage/iap-receipts?' + p.toString());
+    }
+    // 2) Local gold clawback. Mirrors what the Voided Purchases poller would
+    //    do — calling it directly is faster (no 30-min wait) and idempotent
+    //    if the poller later sees the same void.
+    const cb = await autoRefundByTransaction({
+      transactionId: rec.transaction_id,
+      source: 'admin_google',
+      reason: `admin_store_refund:${sessionInfo.session.username || 'admin'}`,
+    });
+    if (cb.success || cb.idempotent) {
+      return redirect(res, '/tc-backstage/iap-receipts?msg=store_refund_done');
+    }
+    // Money refunded but local clawback failed (e.g. user already spent the
+    // gold). Park in the issue queue so ops can decide force-minus.
+    console.warn(`[store-refund] Google refunded but local clawback failed for receipt=${id}: ${cb.reason}`);
+    return redirect(res, '/tc-backstage/iap-receipts?msg=store_refund_partial');
   }
 
   // ===== IAP 검증로그 (모든 시도) =====

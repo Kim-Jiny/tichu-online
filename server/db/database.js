@@ -7325,18 +7325,32 @@ async function autoRefundByTransaction({ transactionId, source, reason, onRefund
     if (recRes.rows.length === 0) {
       await client.query('ROLLBACK');
       // Store confirmed a refund for a transaction we have no grant for (e.g.
-      // a purchase whose verify failed, or an id-format mismatch). Don't drop
-      // it silently — surface it in the 검증로그 so ops can investigate.
-      await logIapAttempt({
-        nickname: null,
-        platform: source === 'apple' ? 'ios' : (source === 'google' ? 'android' : null),
-        productId: null,
-        environment: null,
-        outcome: 'error',
-        reason: `refund_unmatched:${source || 'store'}`,
-        transactionId: String(transactionId),
-        rawPayload: { reason },
-      });
+      // a purchase whose verify failed, or an id-format mismatch). Surface in
+      // the 검증로그 once so ops can investigate — but DON'T re-log each
+      // time the Google Voided poll hits the same txn inside its 1h overlap
+      // window (which is structurally required to avoid missing voids during
+      // downtime). One alert per txn is enough.
+      try {
+        const dup = await pool.query(
+          `SELECT 1 FROM tc_iap_attempts
+             WHERE transaction_id = $1
+               AND reason LIKE 'refund_unmatched:%'
+             LIMIT 1`,
+          [String(transactionId)]
+        );
+        if (dup.rows.length === 0) {
+          await logIapAttempt({
+            nickname: null,
+            platform: source === 'apple' ? 'ios' : (source === 'google' ? 'android' : null),
+            productId: null,
+            environment: null,
+            outcome: 'error',
+            reason: `refund_unmatched:${source || 'store'}`,
+            transactionId: String(transactionId),
+            rawPayload: { reason },
+          });
+        }
+      } catch (_) { /* dedup check is best-effort; never block refund path */ }
       return { success: false, reason: 'receipt_not_found' };
     }
     const rec = recRes.rows[0];

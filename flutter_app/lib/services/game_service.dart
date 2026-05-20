@@ -522,6 +522,10 @@ class GameService extends ChangeNotifier {
         // Prefetch attendance state so the shop icon badge / banner is
         // accurate the moment the user lands on the lobby.
         requestAttendanceState();
+        // Replay any verify_iap_purchase / claim_attendance that were queued
+        // while the WS was offline. Server requires ws.nickname for these,
+        // so it MUST run after login_success — not on raw WS connect.
+        _network.flushRetryQueue();
         notifyListeners();
         break;
 

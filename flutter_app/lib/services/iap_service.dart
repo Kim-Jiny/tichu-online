@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:io' show Platform;
 import 'package:in_app_purchase/in_app_purchase.dart';
+import 'package:in_app_purchase_android/in_app_purchase_android.dart';
 
 /// Thin wrapper around the in_app_purchase plugin.
 ///
@@ -110,10 +111,16 @@ class IapService {
       productDetails: product,
       applicationUserName: _boundAccountId,
     );
-    // Consumable: autoConsume so Android marks it consumable again. Server-side
-    // idempotency (transaction_id) is what actually prevents double-granting,
-    // not consumption timing.
-    await _iap.buyConsumable(purchaseParam: param, autoConsume: true);
+    // Consumable: autoConsume=FALSE on Android so the purchase stays
+    // un-consumed until OUR server confirms the grant. With autoConsume=true
+    // the plugin consumes BEFORE we can verify, and a verify that never
+    // reaches the server (network drop, app kill, etc.) leaves the user with
+    // money charged and zero recovery path — purchaseStream won't re-deliver
+    // an already-consumed purchase. Manual consume is fired after a
+    // successful verify in _finishAndroidConsumable below.
+    // (iOS ignores autoConsume; StoreKit finishTransaction via
+    // completePurchase plays the equivalent role.)
+    await _iap.buyConsumable(purchaseParam: param, autoConsume: false);
   }
 
   Future<void> _onPurchaseUpdates(List<PurchaseDetails> purchases) async {
@@ -201,9 +208,32 @@ class IapService {
     } finally {
       onSettled?.call(p.productID);
       if (mayFinish && p.pendingCompletePurchase) {
-        await _iap.completePurchase(p);
+        await _finishConsumable(p);
       }
     }
+  }
+
+  // Finish a granted CONSUMABLE in the platform-correct way:
+  //  - iOS: completePurchase → StoreKit finishTransaction (no consume needed)
+  //  - Android: explicit consumePurchase via the Android platform addition.
+  //    With autoConsume=false in buy(), the cross-platform completePurchase
+  //    only ACKNOWLEDGES on Android — it does NOT consume. Without consume,
+  //    the user can't re-purchase the same consumable. So we consume here,
+  //    AFTER the server has confirmed the grant.
+  Future<void> _finishConsumable(PurchaseDetails p) async {
+    if (Platform.isAndroid) {
+      try {
+        final android = InAppPurchase.instance
+            .getPlatformAddition<InAppPurchaseAndroidPlatformAddition>();
+        await android.consumePurchase(p);
+      } catch (e) {
+        // Fall back to completePurchase — at least acknowledge. The next app
+        // launch can retry consume if Google still has it un-consumed.
+        try { await _iap.completePurchase(p); } catch (_) {}
+      }
+      return;
+    }
+    await _iap.completePurchase(p);
   }
 
   void dispose() {

@@ -145,16 +145,26 @@ class NetworkService extends ChangeNotifier {
   }
 
   void send(Map<String, dynamic> data) {
-    if (_isConnected && _channel != null) {
-      _channel!.sink.add(jsonEncode(data));
-      return;
-    }
-    // Disconnected. Drop is unsafe for IAP/attendance — persist & retry.
     final type = data['type'] as String?;
-    if (type != null && _retryableTypes.contains(type)) {
+    final retryable = type != null && _retryableTypes.contains(type);
+    if (_isConnected && _channel != null) {
+      try {
+        _channel!.sink.add(jsonEncode(data));
+        return;
+      } catch (e) {
+        // Closing race: _isConnected was still true but the underlying
+        // sink had already started tearing down, so sink.add threw. For
+        // retryable types we MUST persist instead of letting the message
+        // vanish — _isConnected will catch up to false on the next tick.
+        debugPrint('[Network] sink.add threw on send: $e');
+        if (!retryable) return;
+        // fall through to queueing
+      }
+    }
+    if (retryable) {
       // ignore: discarded_futures
       _queueRetryable(data);
-      debugPrint('[Network] Queued retryable while offline: $type');
+      debugPrint('[Network] Queued retryable (offline/sink-fail): $type');
       return;
     }
     debugPrint('[Network] Cannot send (offline, droppable): $type');

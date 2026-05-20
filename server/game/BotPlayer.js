@@ -1194,13 +1194,51 @@ function handleFollowSingle(state, cards, normalCards, combos, lastValue, trickP
     return { type: 'play_cards', cards: ['special_phoenix'] };
   }
 
-  // Play lowest beating normal card
+  // Play lowest beating normal card — but try NOT to break a pair/triple
+  // for a low-value trick. Breaking a pair just to win a 2/3 lead trades a
+  // future strong combo for one cheap trick, which is usually a bad deal.
   if (beaters.length > 0) {
-    // If opponent has few cards, play more aggressively (use stronger card)
+    // Endgame aggression: opponent is about to finish — commit a stronger
+    // beater to lock the win regardless of combo preservation.
     if (minOppCards <= 3 && beaters.length > 1) {
-      // Play a strong beater to ensure we win
       return { type: 'play_cards', cards: [beaters[beaters.length - 1]] };
     }
+
+    // Classify beaters by whether they're "loose" (the only card at that
+    // rank in hand → not part of a pair/triple) or "in-combo" (playing
+    // would break a pair/triple).
+    const valueCounts = {};
+    for (const c of normalCards) {
+      const v = getCardValue(c);
+      valueCounts[v] = (valueCounts[v] || 0) + 1;
+    }
+    const loose = beaters.filter(c => valueCounts[getCardValue(c)] === 1);
+
+    // Cheap loose card (≤9): play freely; preserves any pairs, no waste.
+    if (loose.length > 0) {
+      const lowestLoose = loose[0];
+      const looseVal = getCardValue(lowestLoose);
+      if (looseVal <= 9) {
+        return { type: 'play_cards', cards: [lowestLoose] };
+      }
+      // High loose card (10+) for a worthless low trick with hand slack →
+      // skip. Don't burn a J/Q/K/A just to take a 0-point single-2 trick.
+      if (trickPts < 5 && lastValue < 10
+          && cards.length >= 5 && minOppCards > 4) {
+        return { type: 'pass' };
+      }
+      // Trick has stakes or hand running low → commit the loose high card
+      // (still preferable to breaking a pair).
+      return { type: 'play_cards', cards: [lowestLoose] };
+    }
+
+    // Every beater would break a pair/triple. Save the combo when the trick
+    // is worthless and there's no pressure: pass.
+    if (trickPts < 5 && lastValue < 10
+        && cards.length >= 5 && minOppCards > 4) {
+      return { type: 'pass' };
+    }
+    // Otherwise it's worth breaking — play the lowest beater.
     return { type: 'play_cards', cards: [beaters[0]] };
   }
 
@@ -1718,6 +1756,42 @@ function buildWinrateCandidates(game, botId) {
       const cardsInAction = action.cards || [];
       return !(cardsInAction.length === 1 && cardsInAction[0] === 'special_phoenix');
     });
+  }
+
+  // Pair preservation: on a cheap low single lead (worthless trick, opp
+  // not close to finishing, hand still has slack), drop candidate SINGLE
+  // plays that would break a pair/triple in hand. Forces the simulator
+  // to choose between pass and a "loose" (singleton-rank) beater.
+  // Mirrors the same gate used in handleFollowSingle so winrate doesn't
+  // overrule the heuristic by valuing "win cheap trick" over preserving
+  // future combo value. Special cards already covered by the D-extra
+  // phoenix filter above; bombs and combos aren't single plays.
+  if (lastPlay
+      && lastPlay.combo === 'single'
+      && (lastPlay.comboValue || 0) < 10
+      && cards.length >= 5) {
+    const trickPts = estimateTrickPoints(trick);
+    const activeOpps = getOpponents(state).filter(o => !o.hasFinished);
+    const minOppCards = activeOpps.length === 0
+      ? Infinity
+      : activeOpps.reduce((min, o) => Math.min(min, o.cardCount), Infinity);
+    if (trickPts < 5 && minOppCards > 4) {
+      const normalCards = cards.filter(c => !c.startsWith('special_'));
+      const valueCounts = {};
+      for (const c of normalCards) {
+        const v = getCardValue(c);
+        valueCounts[v] = (valueCounts[v] || 0) + 1;
+      }
+      legalActions = legalActions.filter(action => {
+        if (action.type !== 'play_cards') return true;
+        const acts = action.cards || [];
+        if (acts.length !== 1) return true; // only single plays
+        const c = acts[0];
+        if (c.startsWith('special_')) return true; // phoenix/dragon — let other filters handle
+        const v = getCardValue(c);
+        return valueCounts[v] === 1; // keep only loose (singleton-rank) singles
+      });
+    }
   }
 
   // Layer heuristic's strategic rules onto winrate's search. In cases

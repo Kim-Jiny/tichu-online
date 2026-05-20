@@ -160,14 +160,18 @@ class IapService {
   }
 
   Future<void> _verifyAndComplete(PurchaseDetails p) async {
-    // Already verified+granted this transaction this session (duplicate
-    // purchaseStream emission): don't re-hit the server. Still finish the
-    // store transaction so the plugin stops re-delivering it.
+    // Already verified+granted+CONSUMED this transaction this session
+    // (duplicate purchaseStream emission). Skip the server round-trip.
+    // _settledTxns is only set after _finishConsumable returned true, so
+    // landing here means consume already succeeded — no need to re-finish.
     final txnId = p.purchaseID;
     if (txnId != null && txnId.isNotEmpty && _settledTxns.contains(txnId)) {
       onSettled?.call(p.productID);
+      // Belt-and-suspenders: if the plugin still says pendingComplete=true,
+      // run the platform-correct finisher (consume on Android). Idempotent
+      // on Google's side; if it errors we just retry next launch.
       if (p.pendingCompletePurchase) {
-        await _iap.completePurchase(p);
+        await _finishConsumable(p);
       }
       return;
     }
@@ -180,6 +184,7 @@ class IapService {
     // unfinished makes the plugin re-deliver it on the next launch and we
     // retry verification then (server grant is idempotent).
     bool mayFinish = false;
+    bool granted = false;
     try {
       // verify() self-times-out (25s) and resolves with a failure map plus
       // correlation cleanup — no local .timeout() here, which would otherwise
@@ -193,10 +198,13 @@ class IapService {
       );
       if (result['success'] == true) {
         mayFinish = true;
-        if (txnId != null && txnId.isNotEmpty) _settledTxns.add(txnId);
-        final granted = (result['goldGranted'] ?? 0) as int;
+        granted = true;
+        // NOTE: do NOT add to _settledTxns yet. We only consider this txn
+        // "settled" after consume actually succeeds — otherwise a same-
+        // session re-emit would short-circuit and skip consume retry.
+        final gold = (result['goldGranted'] ?? 0) as int;
         final newGold = (result['newGold'] ?? 0) as int;
-        onSuccess?.call(granted, newGold);
+        onSuccess?.call(gold, newGold);
       } else {
         mayFinish = result['finish'] == true;
         onError?.call((result['message'] as String?) ?? 'verify_failed');
@@ -208,7 +216,14 @@ class IapService {
     } finally {
       onSettled?.call(p.productID);
       if (mayFinish && p.pendingCompletePurchase) {
-        await _finishConsumable(p);
+        final finished = await _finishConsumable(p);
+        // Only mark the txn settled in-memory if consume actually succeeded.
+        // If consume failed (rare), we want the next purchaseStream emit
+        // — same session or next launch — to retry consume, not short-
+        // circuit through the _settledTxns path.
+        if (finished && granted && txnId != null && txnId.isNotEmpty) {
+          _settledTxns.add(txnId);
+        }
       }
     }
   }
@@ -218,22 +233,38 @@ class IapService {
   //  - Android: explicit consumePurchase via the Android platform addition.
   //    With autoConsume=false in buy(), the cross-platform completePurchase
   //    only ACKNOWLEDGES on Android — it does NOT consume. Without consume,
-  //    the user can't re-purchase the same consumable. So we consume here,
-  //    AFTER the server has confirmed the grant.
-  Future<void> _finishConsumable(PurchaseDetails p) async {
+  //    the user can't re-purchase the same consumable.
+  //
+  // Returns true iff the platform-specific finisher succeeded. On Android
+  // consume failure we DELIBERATELY do not fall back to completePurchase
+  // (acknowledge): that would leave the purchase in an ack'd-but-not-
+  // consumed state — the user couldn't re-buy that pack, and a later
+  // re-emit can come with pendingCompletePurchase=false which would skip
+  // the consume retry entirely. Returning false instead lets the next
+  // purchaseStream delivery retry consume; if it keeps failing past 3
+  // days, Google auto-refunds and our Voided poll claws back the gold.
+  Future<bool> _finishConsumable(PurchaseDetails p) async {
     if (Platform.isAndroid) {
       try {
         final android = InAppPurchase.instance
             .getPlatformAddition<InAppPurchaseAndroidPlatformAddition>();
         await android.consumePurchase(p);
+        return true;
       } catch (e) {
-        // Fall back to completePurchase — at least acknowledge. The next app
-        // launch can retry consume if Google still has it un-consumed.
-        try { await _iap.completePurchase(p); } catch (_) {}
+        // Intentional: NO ack fallback. See comment above.
+        // ignore: avoid_print
+        print('[IAP] Android consume failed (will retry next launch): $e');
+        return false;
       }
-      return;
     }
-    await _iap.completePurchase(p);
+    try {
+      await _iap.completePurchase(p);
+      return true;
+    } catch (e) {
+      // ignore: avoid_print
+      print('[IAP] iOS completePurchase failed: $e');
+      return false;
+    }
   }
 
   void dispose() {

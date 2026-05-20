@@ -170,6 +170,8 @@ String localizeGoldTitle(String? title, String? source, L10n l10n, String locale
       return l10n.goldHistoryIapPurchase;
     case 'iap_refund':
       return l10n.goldHistoryIapRefund;
+    case 'attendance':
+      return l10n.goldHistoryAttendance;
     case 'sk_leave_defeat':
       return l10n.goldHistorySkLeaveDefeat;
     case 'sk_ranked_win':
@@ -220,6 +222,9 @@ String localizeGoldDescription(String? desc, String? source, L10n l10n) {
     // desc holds the raw product id — show the localized refund label instead.
     case 'iap_refund':
       return l10n.goldHistoryIapRefund;
+    // desc holds "day_N" — not user-meaningful; show the category label.
+    case 'attendance':
+      return l10n.goldHistoryAttendance;
     case 'admin_adjust':
       return l10n.goldHistoryAdminBy(desc);
     default:

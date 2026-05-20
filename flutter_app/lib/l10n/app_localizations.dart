@@ -7137,6 +7137,72 @@ abstract class L10n {
   /// **'Gold top-up'**
   String get goldHistoryIapPurchase;
 
+  /// No description provided for @goldHistoryAttendance.
+  ///
+  /// In en, this message translates to:
+  /// **'Daily check-in'**
+  String get goldHistoryAttendance;
+
+  /// No description provided for @attendanceBannerTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Today\'s check-in! Day {day}'**
+  String attendanceBannerTitle(int day);
+
+  /// No description provided for @attendanceBannerSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Watch an ad to claim {reward} gold!'**
+  String attendanceBannerSubtitle(int reward);
+
+  /// No description provided for @attendanceBannerCompletedTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Day {day} check-in done! 🎉'**
+  String attendanceBannerCompletedTitle(int day);
+
+  /// No description provided for @attendanceBannerCompletedSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Come back tomorrow for the next reward'**
+  String get attendanceBannerCompletedSubtitle;
+
+  /// No description provided for @attendanceDialogTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Daily check-in'**
+  String get attendanceDialogTitle;
+
+  /// No description provided for @attendanceResetInfo.
+  ///
+  /// In en, this message translates to:
+  /// **'Resets daily at {clock}'**
+  String attendanceResetInfo(String clock);
+
+  /// No description provided for @attendanceDoneToday.
+  ///
+  /// In en, this message translates to:
+  /// **'Checked in for today! Come back tomorrow 🎉'**
+  String get attendanceDoneToday;
+
+  /// No description provided for @attendanceClaiming.
+  ///
+  /// In en, this message translates to:
+  /// **'Processing...'**
+  String get attendanceClaiming;
+
+  /// No description provided for @attendanceWatchAdAndClaim.
+  ///
+  /// In en, this message translates to:
+  /// **'Watch ad & claim {reward} gold'**
+  String attendanceWatchAdAndClaim(int reward);
+
+  /// No description provided for @attendanceAdNotReady.
+  ///
+  /// In en, this message translates to:
+  /// **'Ad is still loading. Please try again in a moment.'**
+  String get attendanceAdNotReady;
+
   /// No description provided for @goldHistoryIapRefund.
   ///
   /// In en, this message translates to:

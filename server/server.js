@@ -22,6 +22,7 @@ const {
   getWallet, getGoldHistory, getShopItems, getVisualCatalog, getUserItems, buyItem, equipItem, useItem, changeNickname,
   getActiveGoldProducts, getGoldProductByProductId, grantIapGold, logIapAttempt, autoRefundByTransaction,
   getConsumptionSnapshot, recordConsumptionRequest, listConsumptionRequests,
+  getAttendanceState, claimAttendance,
   incrementLeaveCount, setRankedBan, getRankedBan, setChatBan, getChatBan, grantSeasonRewards,
   getActiveSeason, createSeason, getSeasons, getConfig, getLocalizedConfig, updateConfig,
   getCurrentSeasonRankings, getSeasonRankings, resetSeasonStats,
@@ -1714,6 +1715,12 @@ async function handleMessage(ws, data) {
       break;
     case 'verify_iap_purchase':
       await handleVerifyIapPurchase(ws, data);
+      break;
+    case 'get_attendance_state':
+      await handleGetAttendanceState(ws);
+      break;
+    case 'claim_attendance':
+      await handleClaimAttendance(ws);
       break;
     case 'get_shop_items':
       await handleGetShopItems(ws);
@@ -5389,6 +5396,45 @@ async function handleGetWallet(ws) {
   }
   const result = await getWallet(ws.nickname);
   sendTo(ws, { type: 'wallet_result', ...result });
+}
+
+// Daily attendance state (7-day streak). Pure read; the client uses
+// resetAtUtc to render the next-reset clock in device-local time.
+async function handleGetAttendanceState(ws) {
+  if (!ws.nickname) {
+    sendTo(ws, { type: 'attendance_state_result', success: false, message: t(ws.locale, 'login_required') });
+    return;
+  }
+  const state = await getAttendanceState(ws.nickname);
+  if (!state) {
+    sendTo(ws, { type: 'attendance_state_result', success: false, message: 'state_failed' });
+    return;
+  }
+  sendTo(ws, { type: 'attendance_state_result', success: true, ...state });
+}
+
+// Claim today's reward. Client gates this on a rewarded-ad completion;
+// double-claim is impossible regardless (DB checks last_claim_date == today).
+async function handleClaimAttendance(ws) {
+  if (!ws.nickname) {
+    sendTo(ws, { type: 'attendance_claim_result', success: false, message: t(ws.locale, 'login_required') });
+    return;
+  }
+  const r = await claimAttendance(ws.nickname);
+  if (!r.success) {
+    sendTo(ws, { type: 'attendance_claim_result', success: false, reason: r.reason, message: r.message || r.reason });
+    return;
+  }
+  // Echo a refreshed state so the client can update UI in one round-trip.
+  const state = await getAttendanceState(ws.nickname);
+  sendTo(ws, {
+    type: 'attendance_claim_result',
+    success: true,
+    goldGranted: r.goldGranted,
+    newStreak: r.newStreak,
+    newGold: r.newGold,
+    state: state || null,
+  });
 }
 
 function normalizePlatform(p) {

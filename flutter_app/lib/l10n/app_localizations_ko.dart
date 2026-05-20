@@ -3897,6 +3897,57 @@ class L10nKo extends L10n {
   String get goldHistoryIapPurchase => '골드 충전';
 
   @override
+  String get goldHistoryAttendance => '출석 보상';
+
+  @override
+  String attendanceBannerTitle(int day) {
+    return '오늘의 출석! $day일차';
+  }
+
+  @override
+  String attendanceBannerSubtitle(int reward) {
+    final intl.NumberFormat rewardNumberFormat =
+        intl.NumberFormat.decimalPattern(localeName);
+    final String rewardString = rewardNumberFormat.format(reward);
+
+    return '광고 보고 $rewardString골드 받기!';
+  }
+
+  @override
+  String attendanceBannerCompletedTitle(int day) {
+    return '$day일차 출석 완료! 🎉';
+  }
+
+  @override
+  String get attendanceBannerCompletedSubtitle => '내일 또 받으러 오세요';
+
+  @override
+  String get attendanceDialogTitle => '출석 체크';
+
+  @override
+  String attendanceResetInfo(String clock) {
+    return '매일 $clock 에 초기화';
+  }
+
+  @override
+  String get attendanceDoneToday => '오늘 출석 완료! 내일 또 받으러 오세요 🎉';
+
+  @override
+  String get attendanceClaiming => '처리 중...';
+
+  @override
+  String attendanceWatchAdAndClaim(int reward) {
+    final intl.NumberFormat rewardNumberFormat =
+        intl.NumberFormat.decimalPattern(localeName);
+    final String rewardString = rewardNumberFormat.format(reward);
+
+    return '광고 보고 $rewardString골드 받기';
+  }
+
+  @override
+  String get attendanceAdNotReady => '광고 준비 중입니다. 잠시 후 다시 시도해 주세요.';
+
+  @override
   String get goldHistoryIapRefund => '골드 환불';
 
   @override

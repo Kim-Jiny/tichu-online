@@ -3987,6 +3987,60 @@ class L10nEn extends L10n {
   String get goldHistoryIapPurchase => 'Gold top-up';
 
   @override
+  String get goldHistoryAttendance => 'Daily check-in';
+
+  @override
+  String attendanceBannerTitle(int day) {
+    return 'Today\'s check-in! Day $day';
+  }
+
+  @override
+  String attendanceBannerSubtitle(int reward) {
+    final intl.NumberFormat rewardNumberFormat =
+        intl.NumberFormat.decimalPattern(localeName);
+    final String rewardString = rewardNumberFormat.format(reward);
+
+    return 'Watch an ad to claim $rewardString gold!';
+  }
+
+  @override
+  String attendanceBannerCompletedTitle(int day) {
+    return 'Day $day check-in done! 🎉';
+  }
+
+  @override
+  String get attendanceBannerCompletedSubtitle =>
+      'Come back tomorrow for the next reward';
+
+  @override
+  String get attendanceDialogTitle => 'Daily check-in';
+
+  @override
+  String attendanceResetInfo(String clock) {
+    return 'Resets daily at $clock';
+  }
+
+  @override
+  String get attendanceDoneToday =>
+      'Checked in for today! Come back tomorrow 🎉';
+
+  @override
+  String get attendanceClaiming => 'Processing...';
+
+  @override
+  String attendanceWatchAdAndClaim(int reward) {
+    final intl.NumberFormat rewardNumberFormat =
+        intl.NumberFormat.decimalPattern(localeName);
+    final String rewardString = rewardNumberFormat.format(reward);
+
+    return 'Watch ad & claim $rewardString gold';
+  }
+
+  @override
+  String get attendanceAdNotReady =>
+      'Ad is still loading. Please try again in a moment.';
+
+  @override
   String get goldHistoryIapRefund => 'Gold refund';
 
   @override

@@ -162,6 +162,8 @@ class _ShopScreenState extends State<ShopScreen> {
                     children: [
                       _buildTopBar(context, game),
                       _buildWalletBar(game),
+                      if (_shouldShowAttendanceBanner(game))
+                        _buildAttendanceBanner(game),
                       if (_rewardedAdReady) _buildAdRewardButton(game),
                       const SizedBox(height: 8),
                       _buildTabs(),
@@ -2107,6 +2109,318 @@ class _ShopScreenState extends State<ShopScreen> {
     } catch (_) {
       return value.toString();
     }
+  }
+
+  // ---- Daily attendance banner / dialog ------------------------------------
+  // Banner stays visible all day — even after claim. After claim it just
+  // switches to a "completed" look so users can still tap it to see the
+  // 7-day grid in the dialog (claim button there is disabled).
+  bool _shouldShowAttendanceBanner(GameService game) =>
+      game.attendanceState != null;
+
+  Widget _buildAttendanceBanner(GameService game) {
+    final s = game.attendanceState!;
+    final claimed = s['claimedToday'] == true;
+    final reward = (s['todayRewardGold'] as int?) ?? 50;
+    final day = (s['todayDay'] as int?) ?? 1;
+    final isLastDay = day == 7;
+    final l10n = L10n.of(context);
+    final gradient = claimed
+        ? const [Color(0xFFA5D6A7), Color(0xFF66BB6A)]
+        : isLastDay
+            ? const [Color(0xFFFFD54F), Color(0xFFFFA000)]
+            : const [Color(0xFFFFE082), Color(0xFFFFB74D)];
+    final icon = claimed ? Icons.check_circle : Icons.event_available;
+    final title = claimed
+        ? l10n.attendanceBannerCompletedTitle(day)
+        : l10n.attendanceBannerTitle(day);
+    final subtitle = claimed
+        ? l10n.attendanceBannerCompletedSubtitle
+        : l10n.attendanceBannerSubtitle(reward);
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(14),
+        onTap: () => _showAttendanceDialog(game),
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              colors: gradient,
+              begin: Alignment.centerLeft,
+              end: Alignment.centerRight,
+            ),
+            borderRadius: BorderRadius.circular(14),
+            boxShadow: const [
+              BoxShadow(color: Color(0x33000000), blurRadius: 6, offset: Offset(0, 2)),
+            ],
+          ),
+          child: Row(
+            children: [
+              Icon(icon, color: Colors.white, size: 24),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      title,
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontWeight: FontWeight.w900,
+                        fontSize: 14,
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      subtitle,
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 12,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const Icon(Icons.chevron_right, color: Colors.white),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  String _formatResetClock(String? resetAtUtc) {
+    if (resetAtUtc == null) return '';
+    try {
+      final dt = DateTime.parse(resetAtUtc).toLocal();
+      final h = dt.hour.toString().padLeft(2, '0');
+      final m = dt.minute.toString().padLeft(2, '0');
+      return '$h:$m';
+    } catch (_) {
+      return '';
+    }
+  }
+
+  void _showAttendanceDialog(GameService game) {
+    // Always refresh state on open. Stale `claimedToday=false` could let the
+    // user tap "watch ad" and burn the ad on a server-rejected claim.
+    game.requestAttendanceState();
+    showDialog(
+      context: context,
+      builder: (_) => Consumer<GameService>(
+        builder: (dialogCtx, g, _) {
+          final s = g.attendanceState;
+          final l = L10n.of(context);
+          if (s == null) {
+            return const AlertDialog(
+              content: SizedBox(
+                height: 80,
+                child: Center(child: CircularProgressIndicator()),
+              ),
+            );
+          }
+          final claimedToday = s['claimedToday'] == true;
+          final cycleClaimed = (s['cycleClaimedDays'] as int?) ?? 0;
+          final todayDay = (s['todayDay'] as int?) ?? 1;
+          final rewards = (s['weekRewards'] as List?)?.cast<int>()
+              ?? const [50,50,50,50,50,50,1000];
+          final resetClock = _formatResetClock(s['resetAtUtc'] as String?);
+
+          return Dialog(
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(20, 18, 20, 16),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Row(
+                    children: [
+                      const Icon(Icons.event_available, color: Color(0xFFFFA000)),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          l.attendanceDialogTitle,
+                          style: const TextStyle(
+                            fontSize: 18, fontWeight: FontWeight.w900,
+                            color: Color(0xFF5A4038),
+                          ),
+                        ),
+                      ),
+                      IconButton(
+                        onPressed: () => Navigator.pop(dialogCtx),
+                        icon: const Icon(Icons.close),
+                        color: const Color(0xFF8A7A72),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    l.attendanceResetInfo(resetClock),
+                    style: const TextStyle(color: Color(0xFF8A7A72), fontSize: 12),
+                  ),
+                  const SizedBox(height: 14),
+                  // 7-day grid (4 + 3)
+                  GridView.count(
+                    crossAxisCount: 4,
+                    shrinkWrap: true,
+                    physics: const NeverScrollableScrollPhysics(),
+                    childAspectRatio: 0.82,
+                    crossAxisSpacing: 8,
+                    mainAxisSpacing: 8,
+                    children: List.generate(7, (i) {
+                      final day = i + 1;
+                      final reward = rewards.length > i ? rewards[i] : 50;
+                      final isClaimed = day <= cycleClaimed;
+                      final isToday = !claimedToday && day == todayDay;
+                      final isFinale = day == 7;
+                      return _attendanceDayCell(day, reward, isClaimed, isToday, isFinale);
+                    }),
+                  ),
+                  const SizedBox(height: 16),
+                  if (claimedToday)
+                    Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.symmetric(vertical: 12),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFE8F5E9),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: Text(
+                        l.attendanceDoneToday,
+                        textAlign: TextAlign.center,
+                        style: const TextStyle(
+                          color: Color(0xFF2E7D32),
+                          fontWeight: FontWeight.w800,
+                        ),
+                      ),
+                    )
+                  else
+                    ElevatedButton.icon(
+                      // Disable on:
+                      //  - claim in flight
+                      //  - state refresh in flight (avoid wasting the ad on
+                      //    a stale claimedToday=false that's about to flip)
+                      //  - claimedToday already true (server confirmed)
+                      onPressed: (g.attendanceClaiming
+                              || g.attendanceLoading
+                              || (g.attendanceState?['claimedToday'] == true))
+                          ? null
+                          : () => _attendanceClaim(g),
+                      icon: const Icon(Icons.play_circle_outline),
+                      label: Text(
+                        g.attendanceClaiming
+                            ? l.attendanceClaiming
+                            : g.attendanceLoading
+                                ? l.attendanceClaiming
+                                : l.attendanceWatchAdAndClaim((s['todayRewardGold'] as int?) ?? 50),
+                      ),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: const Color(0xFFFFB300),
+                        foregroundColor: Colors.white,
+                        minimumSize: const Size.fromHeight(48),
+                        textStyle: const TextStyle(fontWeight: FontWeight.w800, fontSize: 14),
+                      ),
+                    ),
+                ],
+              ),
+            ),
+          );
+        },
+      ),
+    );
+  }
+
+  Widget _attendanceDayCell(int day, int reward, bool claimed, bool today, bool finale) {
+    final bg = claimed
+        ? const Color(0xFFE8F5E9)
+        : today
+            ? const Color(0xFFFFF8E1)
+            : Colors.white;
+    final borderColor = today
+        ? const Color(0xFFFFB300)
+        : claimed
+            ? const Color(0xFF66BB6A)
+            : const Color(0xFFE0DAD6);
+    return Container(
+      decoration: BoxDecoration(
+        color: bg,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: borderColor, width: today ? 2 : 1),
+      ),
+      padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 4),
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Text(
+            'Day $day',
+            style: TextStyle(
+              fontSize: 11,
+              fontWeight: FontWeight.w700,
+              color: claimed ? const Color(0xFF2E7D32) : const Color(0xFF8A7A72),
+            ),
+          ),
+          const SizedBox(height: 4),
+          Icon(
+            claimed ? Icons.check_circle : Icons.monetization_on,
+            color: claimed
+                ? const Color(0xFF43A047)
+                : (finale ? const Color(0xFFFFA000) : const Color(0xFFFFC107)),
+            size: finale ? 22 : 18,
+          ),
+          const SizedBox(height: 4),
+          Text(
+            '$reward',
+            style: TextStyle(
+              fontSize: finale ? 13 : 11,
+              fontWeight: FontWeight.w900,
+              color: finale ? const Color(0xFFE65100) : const Color(0xFF5A4038),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _attendanceClaim(GameService game) async {
+    // Final guards before burning the ad. Three things must hold or we abort
+    // immediately (no ad shown):
+    //  - local state says we're not already claimed today
+    //  - no claim in flight (anti-spam)
+    //  - state isn't still being refreshed (avoid acting on stale data)
+    if (game.attendanceState?['claimedToday'] == true) return;
+    if (game.attendanceClaiming) return;
+    if (game.attendanceLoading) return;
+    // Reward gate: must watch a rewarded ad first. We reuse the screen's
+    // preloaded `_rewardedAd` (same instance as "ad reward gold"); after
+    // play we reload for the next use. If a separate attendance ad slot is
+    // added later, swap this body — server-side double-claim guard stands.
+    if (!_rewardedAdReady || _rewardedAd == null) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(L10n.of(context).attendanceAdNotReady)),
+        );
+        _preloadRewardedAd();
+      }
+      return;
+    }
+    final ad = _rewardedAd!;
+    _rewardedAd = null;
+    if (mounted) setState(() => _rewardedAdReady = false);
+    ad.fullScreenContentCallback = FullScreenContentCallback(
+      onAdDismissedFullScreenContent: (a) {
+        a.dispose();
+        _preloadRewardedAd();
+      },
+      onAdFailedToShowFullScreenContent: (a, e) {
+        a.dispose();
+        _preloadRewardedAd();
+      },
+    );
+    await ad.show(onUserEarnedReward: (a, reward) {
+      // Server is the source of truth; double-claim safe.
+      game.claimAttendance();
+    });
   }
 
   Widget _buildAdRewardButton(GameService game) {

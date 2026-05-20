@@ -1549,16 +1549,37 @@ class _LobbyScreenState extends State<LobbyScreen> {
   }
 
   List<Widget> _buildLobbyActionButtons(GameService game) {
+    final attendance = game.attendanceState;
+    final attendanceUnclaimed = attendance != null
+        && attendance['claimedToday'] != true;
     return [
-      _buildIconButton(
-        icon: Icons.store,
-        color: const Color(0xFFFFB74D),
-        onTap: () {
-          Navigator.push(
-            context,
-            MaterialPageRoute(builder: (_) => const ShopScreen()),
-          );
-        },
+      Stack(
+        children: [
+          _buildIconButton(
+            icon: Icons.store,
+            color: const Color(0xFFFFB74D),
+            onTap: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => const ShopScreen()),
+              );
+            },
+          ),
+          if (attendanceUnclaimed)
+            Positioned(
+              right: 4,
+              top: 4,
+              child: Container(
+                width: 10,
+                height: 10,
+                decoration: BoxDecoration(
+                  color: const Color(0xFFE53935),
+                  shape: BoxShape.circle,
+                  border: Border.all(color: Colors.white, width: 1.5),
+                ),
+              ),
+            ),
+        ],
       ),
       Stack(
         children: [

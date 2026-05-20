@@ -247,6 +247,14 @@ class GameService extends ChangeNotifier {
   List<Map<String, dynamic>> adminTodayPayments = [];
   bool adminTodayPaymentsLoading = false;
   String? adminTodayPaymentsError;
+
+  // Daily attendance reward state (7-day streak).
+  // Shape: { claimedToday, cycleClaimedDays, todayDay, todayRewardGold,
+  //          weekRewards: List<int>, resetAtUtc: ISO, totalClaims }
+  Map<String, dynamic>? attendanceState;
+  bool attendanceLoading = false;
+  String? attendanceError;
+  bool attendanceClaiming = false; // true while a claim_attendance is in flight
   List<Map<String, dynamic>> adminReportGroup = [];
   bool adminReportGroupLoading = false;
   String? adminReportGroupError;
@@ -511,6 +519,9 @@ class GameService extends ChangeNotifier {
         // Prefetch the visual catalog so banners/titles/themes render with
         // the admin-edited gradient config from the moment slots appear.
         requestVisualCatalog();
+        // Prefetch attendance state so the shop icon badge / banner is
+        // accurate the moment the user lands on the lobby.
+        requestAttendanceState();
         notifyListeners();
         break;
 
@@ -1603,6 +1614,64 @@ class GameService extends ChangeNotifier {
         }
         notifyListeners();
         break;
+      case 'attendance_state_result':
+        attendanceLoading = false;
+        if (data['success'] == true) {
+          attendanceState = {
+            'claimedToday': data['claimedToday'] == true,
+            'cycleClaimedDays': (data['cycleClaimedDays'] as num?)?.toInt() ?? 0,
+            'todayDay': (data['todayDay'] as num?)?.toInt() ?? 1,
+            'todayRewardGold': (data['todayRewardGold'] as num?)?.toInt() ?? 50,
+            'weekRewards': (data['weekRewards'] as List? ?? const [])
+                .map((e) => (e as num).toInt()).toList(),
+            'resetAtUtc': data['resetAtUtc'] as String?,
+            'totalClaims': (data['totalClaims'] as num?)?.toInt() ?? 0,
+          };
+          attendanceError = null;
+        } else {
+          attendanceError = data['message'] as String? ?? 'attendance_state_failed';
+        }
+        notifyListeners();
+        break;
+      case 'attendance_claim_result':
+        attendanceClaiming = false;
+        if (data['success'] == true) {
+          final st = data['state'] as Map<String, dynamic>?;
+          if (st != null) {
+            attendanceState = {
+              'claimedToday': st['claimedToday'] == true,
+              'cycleClaimedDays': (st['cycleClaimedDays'] as num?)?.toInt() ?? 0,
+              'todayDay': (st['todayDay'] as num?)?.toInt() ?? 1,
+              'todayRewardGold': (st['todayRewardGold'] as num?)?.toInt() ?? 50,
+              'weekRewards': (st['weekRewards'] as List? ?? const [])
+                  .map((e) => (e as num).toInt()).toList(),
+              'resetAtUtc': st['resetAtUtc'] as String?,
+              'totalClaims': (st['totalClaims'] as num?)?.toInt() ?? 0,
+            };
+          } else {
+            // Server granted but didn't echo a state object — still mark
+            // today claimed so the badge/banner/button hide immediately.
+            final newStreak = (data['newStreak'] as num?)?.toInt();
+            attendanceState = {
+              ...?attendanceState,
+              'claimedToday': true,
+              if (newStreak != null) 'cycleClaimedDays': newStreak,
+              if (newStreak != null) 'todayDay': newStreak,
+            };
+          }
+          // Reflect the new gold balance immediately.
+          final newGold = (data['newGold'] as num?)?.toInt();
+          if (newGold != null) gold = newGold;
+          attendanceError = null;
+        } else {
+          // Server-confirmed double-claim → sync local UI even if it lagged.
+          if (data['reason'] == 'already_claimed' && attendanceState != null) {
+            attendanceState = {...attendanceState!, 'claimedToday': true};
+          }
+          attendanceError = data['message'] as String? ?? data['reason'] as String? ?? 'claim_failed';
+        }
+        notifyListeners();
+        break;
       case 'admin_today_payments_result':
         adminTodayPaymentsLoading = false;
         if (data['success'] == true) {
@@ -2518,6 +2587,25 @@ class GameService extends ChangeNotifier {
     adminTodayPayments = const [];
     notifyListeners();
     _network.send({'type': 'get_admin_today_payments', 'limit': limit});
+  }
+
+  // Daily attendance — pure read, cheap; safe to call on screen open.
+  void requestAttendanceState() {
+    attendanceLoading = true;
+    attendanceError = null;
+    notifyListeners();
+    _network.send({'type': 'get_attendance_state'});
+  }
+
+  // Claim today's reward. The caller (UI) is expected to gate this on a
+  // rewarded-ad completion. Server is the source of truth for idempotency
+  // (rejects same-day re-claim), so a stray call can't double-grant.
+  void claimAttendance() {
+    if (attendanceClaiming) return;
+    attendanceClaiming = true;
+    attendanceError = null;
+    notifyListeners();
+    _network.send({'type': 'claim_attendance'});
   }
 
   void requestAdminReportGroup(String target, String roomId) {

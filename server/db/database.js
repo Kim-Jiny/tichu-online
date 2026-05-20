@@ -444,6 +444,20 @@ async function initDatabase() {
     `);
     await client.query(`CREATE INDEX IF NOT EXISTS idx_iap_consumption_created ON tc_iap_consumption_requests (created_at DESC)`);
 
+    // Daily attendance reward (7-day streak: 50/50/50/50/50/50/1000 gold).
+    // last_claim_date is the KST date of the last successful claim; that's
+    // also the per-day idempotency key (one row per user). When today's KST
+    // date == last_claim_date we refuse a second claim.
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS tc_attendance (
+        nickname VARCHAR(50) PRIMARY KEY,
+        last_claim_date DATE,
+        current_streak INT NOT NULL DEFAULT 0,
+        total_claims INT NOT NULL DEFAULT 0,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      )
+    `);
+
     // Seed the 5 agreed tiers, inactive by default. ON CONFLICT DO NOTHING so
     // re-runs never clobber admin-edited gold/bonus/active values.
     await client.query(`
@@ -6823,6 +6837,153 @@ async function listConsumptionRequests({ status, search, page = 1, limit = 50 } 
   }
 }
 
+// ---- Daily attendance reward (7-day streak) ---------------------------------
+// Day 1..6: 50G each, Day 7: 1000G. After day 7 the next claim starts a new
+// cycle at day 1. Missing a day (last claim ≠ today−1) resets the streak.
+const ATTENDANCE_REWARDS = [50, 50, 50, 50, 50, 50, 1000];
+
+// State for the client UI (no DB writes). All "today/yesterday" logic uses
+// KST (server authority); the client renders the reset clock in device-local
+// time using `resetAtUtc`.
+async function getAttendanceState(nickname) {
+  try {
+    const r = await pool.query(
+      `SELECT
+         a.last_claim_date,
+         COALESCE(a.current_streak, 0) AS current_streak,
+         COALESCE(a.total_claims, 0)  AS total_claims,
+         DATE(timezone('Asia/Seoul', NOW())) AS kst_today,
+         ((DATE(timezone('Asia/Seoul', NOW())) + 1)::timestamp
+            AT TIME ZONE 'Asia/Seoul') AS reset_at_utc,
+         (a.last_claim_date = DATE(timezone('Asia/Seoul', NOW())))::bool
+            AS claimed_today,
+         (a.last_claim_date = DATE(timezone('Asia/Seoul', NOW())) - 1)::bool
+            AS continues_streak
+       FROM (SELECT 1) _
+       LEFT JOIN tc_attendance a ON a.nickname = $1`,
+      [nickname]
+    );
+    const row = r.rows[0] || {};
+    const streak = parseInt(row.current_streak, 10) || 0;
+    const claimedToday = row.claimed_today === true;
+    const continuesStreak = row.continues_streak === true;
+    let cycleClaimedDays, todayDay;
+    if (claimedToday) {
+      // Already claimed today; current cycle stands at `streak` boxes filled.
+      cycleClaimedDays = streak;
+      todayDay = streak;
+    } else if (continuesStreak) {
+      // Yesterday was day `streak`; today extends it (or starts new cycle
+      // if yesterday completed day 7).
+      cycleClaimedDays = streak >= 7 ? 0 : streak;
+      todayDay = streak >= 7 ? 1 : streak + 1;
+    } else {
+      // Missed a day OR first-time user → cycle resets visually too.
+      cycleClaimedDays = 0;
+      todayDay = 1;
+    }
+    return {
+      claimedToday,
+      cycleClaimedDays,
+      todayDay,
+      todayRewardGold: ATTENDANCE_REWARDS[todayDay - 1],
+      weekRewards: ATTENDANCE_REWARDS,
+      resetAtUtc: row.reset_at_utc
+        ? new Date(row.reset_at_utc).toISOString() : null,
+      totalClaims: parseInt(row.total_claims, 10) || 0,
+    };
+  } catch (err) {
+    console.error('Get attendance state error:', err.message);
+    return null;
+  }
+}
+
+// Idempotent on (nickname, KST today). Returns the granted reward + new state.
+// Caller is expected to gate the call on a watched rewarded-ad completion;
+// double-claim is still impossible because of the DATE check inside the tx.
+async function claimAttendance(nickname) {
+  const client = await pool.connect();
+  try {
+    await client.query('BEGIN');
+    // All KST date math is done in Postgres and returned as booleans +
+    // pre-formatted text. This sidesteps node-pg's DATE → new Date(y,m,d)
+    // (local-TZ midnight) parser: on a non-UTC host, the resulting
+    // .toISOString().slice(0,10) is off by one day and the JS
+    // `lastStr === today` idempotency check breaks (server silently grants
+    // every same-day claim). PG-side comparison is timezone-correct.
+    const sel = await client.query(
+      `SELECT
+         u.gold,
+         COALESCE(a.current_streak, 0) AS current_streak,
+         (a.last_claim_date IS NOT NULL
+          AND a.last_claim_date = DATE(timezone('Asia/Seoul', NOW())))::bool
+            AS claimed_today,
+         (a.last_claim_date IS NOT NULL
+          AND a.last_claim_date = DATE(timezone('Asia/Seoul', NOW())) - 1)::bool
+            AS continues_streak,
+         DATE(timezone('Asia/Seoul', NOW()))::text AS today_str
+       FROM tc_users u
+       LEFT JOIN tc_attendance a ON a.nickname = u.nickname
+       WHERE u.nickname = $1
+       FOR UPDATE OF u`,
+      [nickname]
+    );
+    if (sel.rows.length === 0) {
+      await client.query('ROLLBACK');
+      return { success: false, reason: 'user_not_found' };
+    }
+    const row = sel.rows[0];
+    if (row.claimed_today === true) {
+      await client.query('ROLLBACK');
+      return { success: false, reason: 'already_claimed' };
+    }
+    const streak = parseInt(row.current_streak, 10) || 0;
+    const continues = row.continues_streak === true;
+    const newStreak = continues ? (streak >= 7 ? 1 : streak + 1) : 1;
+    const reward = ATTENDANCE_REWARDS[newStreak - 1];
+    // today_str is already 'YYYY-MM-DD' formatted by PG, TZ-safe.
+    const today = row.today_str;
+
+    await client.query(
+      `INSERT INTO tc_attendance
+         (nickname, last_claim_date, current_streak, total_claims, updated_at)
+       VALUES ($1, $2::date, $3, 1, CURRENT_TIMESTAMP)
+       ON CONFLICT (nickname) DO UPDATE SET
+         last_claim_date = EXCLUDED.last_claim_date,
+         current_streak  = EXCLUDED.current_streak,
+         total_claims    = tc_attendance.total_claims + 1,
+         updated_at      = CURRENT_TIMESTAMP`,
+      [nickname, today, newStreak]
+    );
+    const upd = await client.query(
+      `UPDATE tc_users SET gold = gold + $2 WHERE nickname = $1 RETURNING gold`,
+      [nickname, reward]
+    );
+    const newGold = upd.rows[0] ? upd.rows[0].gold : null;
+    // source='attendance', title='attendance' (client localizer maps this).
+    // description holds the streak day for ops/debug.
+    await client.query(
+      `INSERT INTO tc_gold_history (nickname, gold_delta, source, title, description)
+       VALUES ($1, $2, 'attendance', 'attendance', $3)`,
+      [nickname, reward, `day_${newStreak}`]
+    );
+    await client.query('COMMIT');
+    return {
+      success: true,
+      goldGranted: reward,
+      newStreak,
+      newGold,
+      claimedDate: today,
+    };
+  } catch (err) {
+    await client.query('ROLLBACK');
+    console.error('Claim attendance error:', err.message);
+    return { success: false, reason: 'error', message: err.message };
+  } finally {
+    client.release();
+  }
+}
+
 // Paginated attempt log with optional filters + global outcome summary.
 async function getIapAttempts({ outcome, environment, platform, search, page = 1, limit = 50 } = {}) {
   try {
@@ -7233,6 +7394,8 @@ module.exports = {
   getConsumptionSnapshot,
   recordConsumptionRequest,
   listConsumptionRequests,
+  getAttendanceState,
+  claimAttendance,
   getIapAttemptById,
   pool,
 };

@@ -90,6 +90,50 @@ function getRankFromCard(cardId) {
   return cardId.split('_')[1];
 }
 
+// ----- Bomb preservation helpers -----------------------------------------
+// findCombos generates pairs/triples/steps from ANY group of size >= 2/3 in
+// the hand — including the 2-or-3 card subsets of a 4-of-a-kind. The
+// followTrick / winrate paths then happily pick those, breaking the bomb to
+// win a single trick. These helpers detect the situation so callers can
+// filter such candidates out.
+//
+// Returns the Set of card-values that form a 4-of-a-kind in `cards`.
+function getBombValues(cards) {
+  const counts = {};
+  for (const c of cards) {
+    if (c.startsWith('special_')) continue;
+    const v = getCardValue(c);
+    counts[v] = (counts[v] || 0) + 1;
+  }
+  const set = new Set();
+  for (const [v, cnt] of Object.entries(counts)) {
+    if (cnt === 4) set.add(Number(v));
+  }
+  return set;
+}
+
+// True iff `play` touches a 4-of-a-kind in the hand but is NOT the bomb
+// itself (i.e. uses 1, 2, or 3 of the 4). Phoenix is treated as "doesn't
+// touch": a phoenix-extended pair/triple at a bomb value still costs us a
+// bomb card, so we check value membership directly.
+function playBreaksBomb(play, bombValues) {
+  if (!bombValues || bombValues.size === 0) return false;
+  const vals = [];
+  for (const c of play) {
+    if (c.startsWith('special_')) continue;
+    vals.push(getCardValue(c));
+  }
+  const touched = vals.filter(v => bombValues.has(v));
+  if (touched.length === 0) return false;
+  // Count per bomb-value involved: 4 of any one = the full bomb (fine).
+  const perVal = {};
+  for (const v of touched) perVal[v] = (perVal[v] || 0) + 1;
+  for (const [v, cnt] of Object.entries(perVal)) {
+    if (cnt !== 4) return true; // partial use of a quad -> breaks bomb
+  }
+  return false;
+}
+
 // ========== HAND EVALUATION SYSTEM ==========
 
 /**
@@ -963,17 +1007,24 @@ function leadTrick(state, cards, normalCards, combos) {
   // 3. Partner declared tichu: play lowest single to hand over the lead
   //    Don't try to empty our hand fast - let partner finish first
   if (partnerTichu) {
+    // Bomb cards aren't really "singles" — pulling one out leaves a 3-of-a-
+    // kind and kills the bomb. Filter them out from the low-single picks.
+    const bombValuesT = getBombValues(cards);
     const lowSingles = normalCards
-      .filter(c => getCardValue(c) <= 8)
+      .filter(c => getCardValue(c) <= 8 && !bombValuesT.has(getCardValue(c)))
       .sort((a, b) => getCardValue(a) - getCardValue(b));
     if (lowSingles.length > 0) {
       return { type: 'play_cards', cards: [lowSingles[0]] };
     }
-    // No low singles, play the lowest card we have
-    if (normalCards.length > 0) {
-      const sorted = [...normalCards].sort((a, b) => getCardValue(a) - getCardValue(b));
-      return { type: 'play_cards', cards: [sorted[0]] };
+    // No low non-bomb singles → fall back to the lowest non-bomb card.
+    const nonBombSorted = normalCards
+      .filter(c => !bombValuesT.has(getCardValue(c)))
+      .sort((a, b) => getCardValue(a) - getCardValue(b));
+    if (nonBombSorted.length > 0) {
+      return { type: 'play_cards', cards: [nonBombSorted[0]] };
     }
+    // Truly nothing but bomb-rank cards — fall through to the bomb path
+    // below (branches 4 / 7) rather than breaking the bomb here.
   }
 
   // 4. If bomb is our only remaining cards, play it to finish
@@ -1048,10 +1099,20 @@ function leadTrick(state, cards, normalCards, combos) {
     return { type: 'play_cards', cards: combos.bombs[0] };
   }
 
-  // 8. Fallback
+  // 8. Fallback — lowest non-bomb single. Bomb cards stay glued together so
+  // shouldBomb / branches 4 & 7 can decide their fate as a unit.
   if (normalCards.length > 0) {
-    const sorted = [...normalCards].sort((a, b) => getCardValue(a) - getCardValue(b));
-    return { type: 'play_cards', cards: [sorted[0]] };
+    const bombValuesF = getBombValues(cards);
+    const sorted = [...normalCards]
+      .filter(c => !bombValuesF.has(getCardValue(c)))
+      .sort((a, b) => getCardValue(a) - getCardValue(b));
+    if (sorted.length > 0) {
+      return { type: 'play_cards', cards: [sorted[0]] };
+    }
+    // Only bomb cards left → play the bomb instead of pulling one out.
+    if (combos.bombs.length > 0) {
+      return { type: 'play_cards', cards: combos.bombs[0] };
+    }
   }
 
   const playable = cards.filter(c => c !== 'special_dog');
@@ -1279,6 +1340,7 @@ function handleFollowSingle(state, cards, normalCards, combos, lastValue, trickP
 
 function handleFollowPair(state, cards, normalCards, combos, lastValue, trickPts, minOppCards) {
   const phoenixCombos = findCombosWithPhoenix(cards);
+  const bombValues = getBombValues(cards);
 
   // Regular pairs (sorted lowest first by findCombos)
   for (const pair of combos.pairs) {
@@ -1286,6 +1348,9 @@ function handleFollowPair(state, cards, normalCards, combos, lastValue, trickPts
     if (pairVal > lastValue) {
       // Can finish?
       if (pair.length === cards.length) return { type: 'play_cards', cards: pair };
+      // Bomb preservation: pairs at a quad's value come from the bomb. Skip
+      // — let the bomb decision (shouldBomb above) own that pile of cards.
+      if (bombValues.has(pairVal)) continue;
       // Save A pair unless trick is valuable or urgent
       if (pairVal >= 14 && trickPts < 20 && cards.length > 5 && minOppCards > 3) {
         continue;
@@ -1310,10 +1375,15 @@ function handleFollowPair(state, cards, normalCards, combos, lastValue, trickPts
 
 function handleFollowTriple(state, cards, normalCards, combos, lastValue, trickPts, minOppCards) {
   const phoenixCombos = findCombosWithPhoenix(cards);
+  const bombValues = getBombValues(cards);
 
   for (const triple of combos.triples) {
     const tripleVal = getCardValue(triple[0]);
     if (tripleVal > lastValue) {
+      // Bomb preservation: triples at a quad's value steal 3 of 4 bomb
+      // cards. Skip — the bomb itself stays available via shouldBomb.
+      // (Exception: hand fits exactly — let it finish.)
+      if (bombValues.has(tripleVal) && triple.length !== cards.length) continue;
       // Save A triple (value=14) unless trick has 20+ points, few cards left, or opponent almost out
       if (tripleVal >= 14 && trickPts < 20 && cards.length > 5 && minOppCards > 3) {
         continue;
@@ -1337,11 +1407,16 @@ function handleFollowTriple(state, cards, normalCards, combos, lastValue, trickP
 
 function handleFollowStraight(state, cards, normalCards, combos, lastValue, lastLength, trickPts, minOppCards) {
   const phoenixCombos = findCombosWithPhoenix(cards);
+  const bombValues = getBombValues(cards);
 
   for (const straight of combos.straights) {
     if (straight.length === lastLength) {
       const highVal = getHighestValue(straight);
       if (highVal > lastValue) {
+        // A straight that crosses a quad rank would peel one card off the
+        // bomb. Skip unless the play finishes us out.
+        if (playBreaksBomb(straight, bombValues)
+            && straight.length !== cards.length) continue;
         return { type: 'play_cards', cards: straight };
       }
     }
@@ -1374,10 +1449,15 @@ function handleFollowStraight(state, cards, normalCards, combos, lastValue, last
 
 function handleFollowFullHouse(state, cards, normalCards, combos, lastValue, trickPts, minOppCards) {
   const phoenixCombos = findCombosWithPhoenix(cards);
+  const bombValues = getBombValues(cards);
 
   for (const fh of combos.fullHouses) {
     const fhTripleVal = getFullHouseTripleValue(fh);
     if (fhTripleVal > lastValue) {
+      // The triple half of an FH at a bomb value uses 3 of 4 quad cards;
+      // the pair half at a bomb value uses 2 of 4. Either way the bomb is
+      // dead. Skip unless finishing.
+      if (playBreaksBomb(fh, bombValues) && fh.length !== cards.length) continue;
       return { type: 'play_cards', cards: fh };
     }
   }
@@ -1427,11 +1507,17 @@ function getPhoenixFullHouseTripleValue(cards) {
 
 function handleFollowSteps(state, cards, normalCards, combos, lastValue, lastLength, trickPts, minOppCards) {
   const phoenixCombos = findCombosWithPhoenix(cards);
+  const bombValues = getBombValues(cards);
 
   for (const step of combos.steps) {
     if (step.length === lastLength) {
       const highVal = getHighestValue(step);
       if (highVal > lastValue) {
+        // Bomb preservation: any rank inside the step that also forms a
+        // quad means we'd be tearing the bomb apart for a step trick. Skip
+        // unless this step finishes the hand.
+        if (playBreaksBomb(step, bombValues)
+            && step.length !== cards.length) continue;
         return { type: 'play_cards', cards: step };
       }
     }
@@ -1442,6 +1528,8 @@ function handleFollowSteps(state, cards, normalCards, combos, lastValue, lastLen
     if (step.length === lastLength) {
       const highVal = getHighestValue(step.filter(c => c !== 'special_phoenix'));
       if (highVal > lastValue) {
+        if (playBreaksBomb(step, bombValues)
+            && step.length !== cards.length) continue;
         if (step.length === cards.length || trickPts >= 10 || minOppCards <= 3) {
           return { type: 'play_cards', cards: step };
         }
@@ -1755,6 +1843,30 @@ function buildWinrateCandidates(game, botId) {
       if (action.type !== 'play_cards') return true;
       const cardsInAction = action.cards || [];
       return !(cardsInAction.length === 1 && cardsInAction[0] === 'special_phoenix');
+    });
+  }
+
+  // Bomb preservation: drop ANY non-bomb play that uses (but doesn't
+  // exhaust) cards from a 4-of-a-kind in hand. findCombos generates
+  // pairs/triples/steps/straights/full-houses from quad cards too, and
+  // winrate would happily pick e.g. pair-of-6 from a 6666 quad to win one
+  // trick — destroying a bomb worth 100 points and an automatic trick
+  // win in the process. The bomb itself stays in legalActions (as a
+  // BOMB_FOUR / BOMB_STRAIGHT_FLUSH); shouldBomb owns the "when to use"
+  // decision. Finishing plays bypass the filter — going out matters more
+  // than a held bomb.
+  const bombValues = getBombValues(cards);
+  if (bombValues.size > 0) {
+    legalActions = legalActions.filter(action => {
+      if (action.type !== 'play_cards') return true;
+      const playCards = action.cards || [];
+      // Finishing the hand: always allow regardless of bomb preservation.
+      if (playCards.length === cards.length) return true;
+      const combo = getComboType(playCards);
+      // Real bombs (the full quad / SF) must stay — that's what we WANT.
+      if (combo.type === COMBO.BOMB_FOUR
+          || combo.type === COMBO.BOMB_STRAIGHT_FLUSH) return true;
+      return !playBreaksBomb(playCards, bombValues);
     });
   }
 

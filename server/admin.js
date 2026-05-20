@@ -1783,7 +1783,7 @@ async function handleAdminRoute(req, res, url, pathname, method, lobby, wss, mai
     const fromParam = url.searchParams.get('from');
     const toParam = url.searchParams.get('to');
     const bucket = url.searchParams.get('bucket') === 'hour' ? 'hour' : 'day';
-    const statTab = ['games', 'acquisition', 'economy', 'shop', 'payment'].includes(url.searchParams.get('tab'))
+    const statTab = ['games', 'acquisition', 'economy', 'shop', 'payment', 'attendance'].includes(url.searchParams.get('tab'))
       ? url.searchParams.get('tab')
       : 'games';
     const platform = ['ios', 'android'].includes((url.searchParams.get('platform') || '').toLowerCase())
@@ -1888,6 +1888,7 @@ async function handleAdminRoute(req, res, url, pathname, method, lobby, wss, mai
       { key: 'economy', label: '경제 분석', desc: '획득/소모/순변동' },
       { key: 'shop', label: '상점 분석', desc: '판매, 구매자, 베스트셀러' },
       { key: 'payment', label: '결제 분석', desc: 'IAP 매출·환불·정산추정' },
+      { key: 'attendance', label: '출석 분석', desc: '일자별 출석·7일차 완주·지급골드' },
     ];
     const presetLinks = [
       { key: 'today', label: '오늘' },
@@ -1949,6 +1950,12 @@ async function handleAdminRoute(req, res, url, pathname, method, lobby, wss, mai
         { label: '환불', value: won(iapTot.refundAmount || 0), meta: `${formatNumber(iapTot.refundCount || 0)}건` },
         { label: '순매출', value: won(iapTot.net || 0), meta: '환불 차감 전 수수료' },
       ],
+      attendance: [
+        { label: '출석 인원', value: formatNumber(attSum.unique_claims || 0), valueColor: '#2e8b57', meta: `${formatNumber(attSum.total_claims || 0)}회` },
+        { label: '7일차 완주', value: formatNumber(attSum.finales || 0), valueColor: '#e65100' },
+        { label: '지급 골드', value: formatNumber(attSum.gold || 0), valueColor: '#b35b19' },
+        { label: '구간당 평균', value: (Number(attSum.unique_claims || 0) / Math.max(attSeries.length, 1)).toFixed(1), meta: bucket === 'hour' ? '시간대당' : '일자당' },
+      ],
     };
     const statActions = {
       games: [
@@ -1971,6 +1978,10 @@ async function handleAdminRoute(req, res, url, pathname, method, lobby, wss, mai
         { label: '결제내역', href: '/tc-backstage/iap-receipts' },
         { label: '검증로그', href: '/tc-backstage/iap-attempts' },
         { label: '골드상품 관리', href: '/tc-backstage/gold-products' },
+      ],
+      attendance: [
+        { label: '출석 로그', href: '/tc-backstage/attendance' },
+        { label: '오늘 출석', href: '/tc-backstage/attendance' },
       ],
       'gold-products': [
         { label: '골드상품 관리', href: '/tc-backstage/gold-products' },
@@ -2201,25 +2212,51 @@ async function handleAdminRoute(req, res, url, pathname, method, lobby, wss, mai
           ${goldTable}
         </div>
       </div>
-      <div class="section-label" style="margin-top:18px">출석 보상</div>
+    `;
+
+    const peakAttendanceRow = [...attSeries].sort((a, b) =>
+      Number(b.unique_claims || 0) - Number(a.unique_claims || 0))[0];
+    const attendanceTable = attSeries.length > 0
+      ? `<div class="table-wrap"><table>
+          <tr><th>${bucket === 'hour' ? '시간대' : '날짜'}</th><th>출석 인원</th><th>7일차 완주</th><th>지급 골드</th></tr>
+          ${attSeries.map(row => `<tr>
+            <td>${formatDate(row.bucket_time)}</td>
+            <td style="font-weight:700">${formatNumber(row.unique_claims || 0)}</td>
+            <td>${formatNumber(row.finales || 0)}</td>
+            <td style="color:#b35b19;font-weight:700">${formatNumber(row.gold || 0)}</td>
+          </tr>`).join('')}
+        </table></div>`
+      : '<div class="empty">기간 내 출석 데이터가 없습니다</div>';
+
+    const attendanceTabContent = `
       ${summaryStrip([
         { label: '기간 출석 인원', value: formatNumber(attSum.unique_claims || 0), valueColor: '#2e8b57', meta: `${formatNumber(attSum.total_claims || 0)}회 출석` },
         { label: '7일차 완주', value: formatNumber(attSum.finales || 0), valueColor: '#e65100' },
         { label: '지급 골드 합계', value: formatNumber(attSum.gold || 0), valueColor: '#b35b19' },
+        { label: '구간 평균 인원', value: (Number(attSum.unique_claims || 0) / Math.max(attSeries.length, 1)).toFixed(1), meta: bucket === 'hour' ? '시간대당' : '일자당' },
+        { label: '최대 출석 시점', value: peakAttendanceRow ? formatDate(peakAttendanceRow.bucket_time) : '-', meta: peakAttendanceRow ? `${formatNumber(peakAttendanceRow.unique_claims)} 명` : '데이터 없음' },
       ])}
-      <div class="card">
-        <h3>일자별 출석</h3>
-        ${attSeries.length > 0
-          ? `<div class="table-wrap"><table>
-              <tr><th>${bucket === 'hour' ? '시간대' : '날짜'}</th><th>출석 인원</th><th>7일차 완주</th><th>지급 골드</th></tr>
-              ${attSeries.map(row => `<tr>
-                <td>${formatDate(row.bucket_time)}</td>
-                <td style="font-weight:700">${formatNumber(row.unique_claims || 0)}</td>
-                <td>${formatNumber(row.finales || 0)}</td>
-                <td style="color:#b35b19;font-weight:700">${formatNumber(row.gold || 0)}</td>
-              </tr>`).join('')}
-            </table></div>`
-          : '<div class="empty">기간 내 출석 데이터가 없습니다</div>'}
+      <div class="card-actions">
+        ${(statActions.attendance || []).map((action) => `<a href="${action.href}" class="btn btn-secondary">${escapeHtml(action.label)}</a>`).join('')}
+      </div>
+      <div class="subtab-copy">출석 분석은 7일 사이클 출석 보상의 기간 흐름을 보여줍니다. 1~6일차 50G, 7일차 1,000G. 광고 시청 후 출석되며 KST 자정 단위로 1일 1회만 가능합니다.</div>
+      <div class="grid-2col">
+        <div class="card">
+          <h3>일자별 출석</h3>
+          <div style="height:8px"></div>
+          ${attendanceTable}
+        </div>
+        <div class="card">
+          <h3>보조 지표</h3>
+          <div class="soft-panel">
+            ${metricLine('총 출석 횟수', formatNumber(attSum.total_claims || 0))}
+            ${metricLine('순(고유) 출석 인원', formatNumber(attSum.unique_claims || 0))}
+            ${metricLine('7일차 완주', formatNumber(attSum.finales || 0))}
+            ${metricLine('지급 골드 합계', formatNumber(attSum.gold || 0))}
+            ${metricLine('최대 출석 시점', peakAttendanceRow ? `${escapeHtml(formatDate(peakAttendanceRow.bucket_time))} · ${formatNumber(peakAttendanceRow.unique_claims)}명` : '-')}
+            ${metricLine('완주율(7일차/출석인원)', (attSum.unique_claims > 0 ? formatPercent((Number(attSum.finales || 0) * 100) / Number(attSum.unique_claims), 1) : '-'))}
+          </div>
+        </div>
       </div>
     `;
 
@@ -2327,6 +2364,7 @@ async function handleAdminRoute(req, res, url, pathname, method, lobby, wss, mai
       economy: economyTabContent,
       shop: shopTabContent,
       payment: paymentTabContent,
+      attendance: attendanceTabContent,
     };
 
     const content = `

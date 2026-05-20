@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:io' show Platform;
 import 'package:in_app_purchase/in_app_purchase.dart';
 import 'package:in_app_purchase_android/in_app_purchase_android.dart';
+import 'package:in_app_purchase_android/billing_client_wrappers.dart';
 
 /// Thin wrapper around the in_app_purchase plugin.
 ///
@@ -167,10 +168,12 @@ class IapService {
     final txnId = p.purchaseID;
     if (txnId != null && txnId.isNotEmpty && _settledTxns.contains(txnId)) {
       onSettled?.call(p.productID);
-      // Belt-and-suspenders: if the plugin still says pendingComplete=true,
-      // run the platform-correct finisher (consume on Android). Idempotent
-      // on Google's side; if it errors we just retry next launch.
-      if (p.pendingCompletePurchase) {
+      // Belt-and-suspenders re-finish. Mirrors the main path's gate exactly
+      // — on Android we always attempt (consume on an already-consumed item
+      // returns itemNotOwned, which _finishConsumable treats as success).
+      // Catches edge cases like upgrades from the old autoConsume=true
+      // code path where a purchase might come back acked-but-not-consumed.
+      if (Platform.isAndroid || p.pendingCompletePurchase) {
         await _finishConsumable(p);
       }
       return;
@@ -215,7 +218,16 @@ class IapService {
       onError?.call('$e');
     } finally {
       onSettled?.call(p.productID);
-      if (mayFinish && p.pendingCompletePurchase) {
+      // Android consumables have ack and consume as SEPARATE steps. A
+      // re-delivered purchase that was acknowledged in a prior session but
+      // never consumed can arrive with pendingCompletePurchase=false — yet
+      // it's still un-consumed and we MUST consume to (a) let the user
+      // re-buy and (b) close the transaction. So on Android we attempt
+      // _finishConsumable whenever mayFinish, regardless of the flag. iOS
+      // keeps the strict pendingCompletePurchase gate.
+      final shouldFinish = mayFinish &&
+          (Platform.isAndroid || p.pendingCompletePurchase);
+      if (shouldFinish) {
         final finished = await _finishConsumable(p);
         // Only mark the txn settled in-memory if consume actually succeeded.
         // If consume failed (rare), we want the next purchaseStream emit
@@ -248,12 +260,24 @@ class IapService {
       try {
         final android = InAppPurchase.instance
             .getPlatformAddition<InAppPurchaseAndroidPlatformAddition>();
-        await android.consumePurchase(p);
-        return true;
+        final result = await android.consumePurchase(p);
+        final code = result.responseCode;
+        // ok = freshly consumed. itemNotOwned = already consumed by a prior
+        // call (same end state: nothing left in the purchase queue). Both
+        // satisfy "transaction is done on Google's side". Any other code
+        // (error, billingUnavailable, ...) leaves the purchase un-consumed,
+        // so we report failure and let next emit retry.
+        if (code == BillingResponse.ok || code == BillingResponse.itemNotOwned) {
+          return true;
+        }
+        // ignore: avoid_print
+        print('[IAP] Android consume non-ok responseCode=$code '
+            'msg=${result.debugMessage} (will retry next launch)');
+        return false;
       } catch (e) {
         // Intentional: NO ack fallback. See comment above.
         // ignore: avoid_print
-        print('[IAP] Android consume failed (will retry next launch): $e');
+        print('[IAP] Android consume threw (will retry next launch): $e');
         return false;
       }
     }

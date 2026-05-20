@@ -5,6 +5,7 @@ const {
   verifyAdmin, getInquiries, getInquiryById, resolveInquiry,
   getReports, getReportGroup, updateReportGroupStatus,
   getUsers, getUserDetail, getAdminGoldHistory, getAdminPurchaseHistory, deleteUser, getDashboardStats, getDashboardActivityTopPlayers, getAdminRecentMatches, setChatBan, setAdminMemo, getRecentMatches, adminAdjustGold, adminAdjustExp, setUserAdmin,
+  getAttendanceDashboardStats, listAttendanceLog, getAttendanceForNickname,
   getDetailedAdminStats,
   getAllShopItemsAdmin, addShopItem, updateShopItem, deleteShopItem, getShopItemById,
   getAllGoldProductsAdmin, getGoldProductById, addGoldProduct, updateGoldProduct, deleteGoldProduct,
@@ -485,6 +486,7 @@ input[type="text"], input[type="password"] { width: 100%; padding: 10px 12px; bo
     <a href="/tc-backstage/iap-receipts" class="${activePage === 'iap-receipts' ? 'active' : ''}" onclick="closeSidebar()">결제내역</a>
     <a href="/tc-backstage/iap-attempts" class="${activePage === 'iap-attempts' ? 'active' : ''}" onclick="closeSidebar()">검증로그</a>
     <a href="/tc-backstage/iap-consumption" class="${activePage === 'iap-consumption' ? 'active' : ''}" onclick="closeSidebar()">환불요청</a>
+    <a href="/tc-backstage/attendance" class="${activePage === 'attendance' ? 'active' : ''}" onclick="closeSidebar()">출석</a>
     <a href="/tc-backstage/iap-refund-issues" class="${activePage === 'iap-refund-issues' ? 'active' : ''}" onclick="closeSidebar()">환불문제</a>
   </div>
   <div class="nav-section">
@@ -1446,6 +1448,7 @@ async function handleAdminRoute(req, res, url, pathname, method, lobby, wss, mai
       ? url.searchParams.get('activityGame')
       : 'all';
     const stats = await getDashboardStats(activityPeriod, activityGame);
+    const attStats = await getAttendanceDashboardStats();
     // Get live data from lobby/wss
     const connectedUsers = wss ? wss.clients.size : 0;
     const allRooms = lobby ? lobby.getRoomList() : [];
@@ -1631,6 +1634,7 @@ async function handleAdminRoute(req, res, url, pathname, method, lobby, wss, mai
       <div class="section-label">유저와 매치 현황</div>
       <div class="stats-grid" style="grid-template-columns:repeat(auto-fit, minmax(170px, 1fr))">
         <div class="stat-card"><div class="label">전체 유저</div><div class="value">${formatNumber(stats.totalUsers)}</div><div class="kpi-note">오늘 +${formatNumber(stats.newUsersToday)} 가입</div></div>
+        <a href="/tc-backstage/attendance" class="stat-card" style="text-decoration:none;cursor:pointer"><div class="label">오늘 출석</div><div class="value" style="color:#2e8b57">${formatNumber(attStats.todayClaims)}<span style="font-size:14px;color:#8aa;font-weight:500">명</span></div><div class="kpi-note">7일차 완주 ${formatNumber(attStats.todayFinales)} · 지급 ${formatNumber(attStats.todayGold)}G</div></a>
         <div class="stat-card"><div class="label">오늘 순매출(추정)</div><div class="value green">₩${formatNumber(stats.todayNetRevenue || 0)}</div><div class="kpi-note">결제 ${formatNumber(stats.todayPaidCount || 0)} · 환불 ${formatNumber(stats.todayRefundCount || 0)} · 정가추정</div></div>
         <div class="stat-card"><div class="label">활성 (24시간)</div><div class="value">${formatNumber(stats.activeUsers24h)}</div><div class="kpi-note">7일 활성 ${formatNumber(stats.activeUsers7d)}명</div></div>
         <div class="stat-card"><div class="label">총 매치</div><div class="value">${formatNumber(stats.totalMatches)}</div><div class="kpi-note">오늘 게임 ${formatNumber(stats.todayGames)}회</div></div>
@@ -1820,6 +1824,8 @@ async function handleAdminRoute(req, res, url, pathname, method, lobby, wss, mai
     const iapAos = iap.byPlatform.android || {};
     const iapTot = iap.total || {};
     const iapSeries = stats.iapSeries || [];
+    const attSeries = stats.attendanceSeries || [];
+    const attSum = stats.attendanceSummary || {};
     const won = (n) => `₩${formatNumber(Math.round(Number(n) || 0))}`;
     const pct = (r) => `${Math.round((Number(r) || 0) * 100)}%`;
     const fromValue = formatDateInput(from);
@@ -2194,6 +2200,26 @@ async function handleAdminRoute(req, res, url, pathname, method, lobby, wss, mai
           <div style="height:14px"></div>
           ${goldTable}
         </div>
+      </div>
+      <div class="section-label" style="margin-top:18px">출석 보상</div>
+      ${summaryStrip([
+        { label: '기간 출석 인원', value: formatNumber(attSum.unique_claims || 0), valueColor: '#2e8b57', meta: `${formatNumber(attSum.total_claims || 0)}회 출석` },
+        { label: '7일차 완주', value: formatNumber(attSum.finales || 0), valueColor: '#e65100' },
+        { label: '지급 골드 합계', value: formatNumber(attSum.gold || 0), valueColor: '#b35b19' },
+      ])}
+      <div class="card">
+        <h3>일자별 출석</h3>
+        ${attSeries.length > 0
+          ? `<div class="table-wrap"><table>
+              <tr><th>${bucket === 'hour' ? '시간대' : '날짜'}</th><th>출석 인원</th><th>7일차 완주</th><th>지급 골드</th></tr>
+              ${attSeries.map(row => `<tr>
+                <td>${formatDate(row.bucket_time)}</td>
+                <td style="font-weight:700">${formatNumber(row.unique_claims || 0)}</td>
+                <td>${formatNumber(row.finales || 0)}</td>
+                <td style="color:#b35b19;font-weight:700">${formatNumber(row.gold || 0)}</td>
+              </tr>`).join('')}
+            </table></div>`
+          : '<div class="empty">기간 내 출석 데이터가 없습니다</div>'}
       </div>
     `;
 
@@ -3032,11 +3058,12 @@ async function handleAdminRoute(req, res, url, pathname, method, lobby, wss, mai
   const userDetailMatch = pathname.match(/^\/tc-backstage\/users\/([^/]+)$/);
   if (userDetailMatch && method === 'GET') {
     const nickname = decodeURIComponent(userDetailMatch[1]);
-    const [user, recentMatches, goldHistory, purchaseHistory] = await Promise.all([
+    const [user, recentMatches, goldHistory, purchaseHistory, attendance] = await Promise.all([
       getUserDetail(nickname),
       getRecentMatches(nickname, 20),
       getAdminGoldHistory(nickname, 50),
       getAdminPurchaseHistory(nickname, 30),
+      getAttendanceForNickname(nickname),
     ]);
     if (!user) return html(res, layout('찾을 수 없음', '<div class="empty">유저를 찾을 수 없습니다</div>', 'users'), 404);
 
@@ -3069,6 +3096,21 @@ async function handleAdminRoute(req, res, url, pathname, method, lobby, wss, mai
         { label: '영구 / 기간제', value: `${formatNumber(purchaseSummary.permanentCount)} / ${formatNumber(purchaseSummary.temporaryCount)}`, meta: `활성 ${formatNumber(purchaseSummary.activeCount)}개` },
         { label: '전적', value: `${formatNumber(user.wins)}승`, meta: `${formatNumber(user.losses)}패 · 승률 ${formatPercent(winRate)}` }
       ])}
+      <div class="card" style="margin-bottom:14px">
+        <div class="section-label" style="margin-bottom:8px">출석 보상</div>
+        <div class="detail-grid" style="grid-template-columns:130px 1fr">
+          <div class="label">오늘 출석</div>
+          <div class="value">${attendance.claimedToday
+            ? '<span class="badge" style="background:#e8f5e9;color:#2e7d32">완료</span>'
+            : '<span class="badge" style="background:#fff3e0;color:#e65100">미출석</span>'}</div>
+          <div class="label">현재 streak</div>
+          <div class="value" style="font-weight:600">${formatNumber(attendance.currentStreak || 0)}일차${attendance.currentStreak === 7 ? ' 🎉' : ''}</div>
+          <div class="label">누적 출석</div>
+          <div class="value">${formatNumber(attendance.totalClaims || 0)}회</div>
+          <div class="label">마지막 출석일</div>
+          <div class="value">${attendance.lastClaimDate ? new Date(attendance.lastClaimDate).toLocaleDateString('ko-KR', { timeZone: 'Asia/Seoul' }) : '<span style="color:#888">없음</span>'}</div>
+        </div>
+      </div>
       <div class="card">
         <div class="detail-grid" style="grid-template-columns:130px 1fr">
           <div class="label">닉네임</div><div class="value" style="font-weight:600">${escapeHtml(user.nickname)}${user.is_deleted ? ' <span class="badge" style="background:#ffebee;color:#c62828">탈퇴</span>' : ''}</div>
@@ -3996,6 +4038,81 @@ async function handleAdminRoute(req, res, url, pathname, method, lobby, wss, mai
       ${pagination(data.page, data.total, data.limit, baseUrl)}
     `;
     return html(res, layout('환불요청', content, 'iap-consumption'));
+  }
+
+  if (pathname === '/tc-backstage/attendance' && method === 'GET') {
+    const dateF = (url.searchParams.get('date') || '').trim();
+    const q = (url.searchParams.get('q') || '').trim().slice(0, 80);
+    const page = parseInt(url.searchParams.get('page') || '1', 10) || 1;
+    const data = await listAttendanceLog({
+      date: dateF || undefined,
+      search: q || undefined,
+      page, limit: 50,
+    });
+    const headStats = await getAttendanceDashboardStats();
+    const todayKST = formatDateInput(new Date());
+    const shownDate = dateF || todayKST;
+
+    const filterForm = `
+      <form method="GET" action="/tc-backstage/attendance" class="card" style="margin-bottom:14px;display:flex;gap:10px;flex-wrap:wrap;align-items:flex-end">
+        <div><div style="font-size:12px;color:#888;margin-bottom:6px">날짜 (KST)</div>
+          <input type="date" name="date" value="${escapeHtml(shownDate)}"></div>
+        <div><div style="font-size:12px;color:#888;margin-bottom:6px">닉네임</div>
+          <input type="text" name="q" value="${escapeHtml(q)}" placeholder="검색어" style="min-width:200px"></div>
+        <button type="submit" class="btn btn-primary">필터</button>
+        <a href="/tc-backstage/attendance" class="btn btn-secondary">초기화</a>
+      </form>`;
+
+    const dayLabel = (key) => {
+      if (!key) return '-';
+      const m = String(key).match(/^day_(\d+)$/);
+      return m ? `${m[1]}일차` : escapeHtml(String(key));
+    };
+    const dayBadge = (key) => {
+      const m = String(key || '').match(/^day_(\d+)$/);
+      const d = m ? parseInt(m[1], 10) : 0;
+      if (d === 7) return '<span class="badge" style="background:#fff3e0;color:#e65100">7일차 🎉</span>';
+      if (d >= 1) return `<span class="badge" style="background:#e8f5e9;color:#2e7d32">${d}일차</span>`;
+      return '<span style="color:#bbb">-</span>';
+    };
+
+    let table;
+    if (data.rows.length > 0) {
+      table = `<div class="table-wrap"><table>
+        <tr><th>시각(KST)</th><th>닉네임</th><th>이번 일차</th><th>지급 골드</th><th>현재 streak</th><th>누적 출석</th></tr>
+        ${data.rows.map(r => {
+          const dt = new Date(r.created_at).toLocaleString('ko-KR', { timeZone: 'Asia/Seoul' });
+          return `<tr>
+            <td style="font-size:12px;white-space:nowrap">${dt}</td>
+            <td><a href="/tc-backstage/users/${encodeURIComponent(r.nickname)}">${escapeHtml(r.nickname || '')}</a></td>
+            <td>${dayBadge(r.day_key)}</td>
+            <td style="color:#2e7d32;font-weight:700">+${formatNumber(r.gold_delta || 0)}G</td>
+            <td>${formatNumber(r.current_streak || 0)}</td>
+            <td>${formatNumber(r.total_claims || 0)}</td>
+          </tr>`;
+        }).join('')}
+      </table></div>`;
+    } else {
+      table = `<div class="empty">${dateF ? escapeHtml(dateF) + ' ' : ''}출석 기록 없음</div>`;
+    }
+
+    const qs = new URLSearchParams();
+    if (dateF) qs.set('date', dateF);
+    if (q) qs.set('q', q);
+    const baseUrl = '/tc-backstage/attendance' + (qs.toString() ? '?' + qs.toString() : '');
+
+    const content = `
+      ${pageHeader('출석 보상', '7일 사이클 출석 보상 로그. 사용자는 광고 시청 후 출석 체크하며, 골드 지급은 KST 자정 단위로 1일 1회만 가능합니다. 1~6일차 50G, 7일차 1,000G.')}
+      ${summaryStrip([
+        { label: '오늘 출석', value: formatNumber(headStats.todayClaims), valueColor: '#2e8b57' },
+        { label: '7일차 완주', value: formatNumber(headStats.todayFinales), valueColor: '#e65100' },
+        { label: '오늘 지급 골드', value: formatNumber(headStats.todayGold), valueColor: '#b35b19' },
+      ])}
+      ${filterForm}
+      <div class="card">${table}</div>
+      ${pagination(data.page, data.total, data.limit, baseUrl)}
+    `;
+    return html(res, layout('출석', content, 'attendance'));
   }
 
   const iapAttemptDetailMatch = pathname.match(/^\/tc-backstage\/iap-attempts\/(\d+)$/);

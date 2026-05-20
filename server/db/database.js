@@ -4695,6 +4695,29 @@ async function getDetailedAdminStats(dateFrom, dateTo, bucket = 'day', options =
       .map((s) => ({ ...s, net: s.gross - s.refundAmount }))
       .sort((a, b) => new Date(a.bucket_time) - new Date(b.bucket_time));
 
+    // ---- Attendance daily series ------------------------------------------
+    // Daily check-ins (distinct users) + 7-day completions + gold granted.
+    const attendanceSeries = await client.query(`
+      SELECT ${kstBucketExpr('created_at')} AS bucket_time,
+             COUNT(DISTINCT nickname) AS unique_claims,
+             COUNT(*) FILTER (WHERE description = 'day_7') AS finales,
+             COALESCE(SUM(gold_delta), 0) AS gold
+      FROM tc_gold_history
+      WHERE source = 'attendance'
+        AND created_at >= $1 AND created_at < $2
+      GROUP BY 1
+      ORDER BY 1
+    `, [from, to]);
+    const attendanceSummary = await client.query(`
+      SELECT COUNT(DISTINCT nickname) AS unique_claims,
+             COUNT(*) AS total_claims,
+             COUNT(*) FILTER (WHERE description = 'day_7') AS finales,
+             COALESCE(SUM(gold_delta), 0) AS gold
+      FROM tc_gold_history
+      WHERE source = 'attendance'
+        AND created_at >= $1 AND created_at < $2
+    `, [from, to]);
+
     const summaryRow = gameSummary.rows[0] || {};
     const goldRow = goldSummary.rows[0] || {};
     const shopRow = shopSummary.rows[0] || {};
@@ -4726,6 +4749,8 @@ async function getDetailedAdminStats(dateFrom, dateTo, bucket = 'day', options =
       goldSeries: goldSeries.rows,
       shopSalesSeries: shopSalesSeries.rows,
       topShopItems: topShopItems.rows,
+      attendanceSeries: attendanceSeries.rows,
+      attendanceSummary: attendanceSummary.rows[0] || {},
       range: { from, to, bucket: groupUnit, platform },
     };
   } catch (err) {
@@ -4739,6 +4764,8 @@ async function getDetailedAdminStats(dateFrom, dateTo, bucket = 'day', options =
       goldSeries: [],
       shopSalesSeries: [],
       topShopItems: [],
+      attendanceSeries: [],
+      attendanceSummary: {},
       iapSummary: {
         byPlatform: {
           ios: { count: 0, gross: 0, refundCount: 0, refundAmount: 0, net: 0, fee: 0, settlement: 0, feeRate: APPLE_FEE_RATE },
@@ -6984,6 +7011,118 @@ async function claimAttendance(nickname) {
   }
 }
 
+// ---- Attendance: admin queries ---------------------------------------------
+// Today's headline numbers for the dashboard card. KST-anchored; counts users
+// whose last_claim_date is today, plus 7-day completions and gold granted.
+async function getAttendanceDashboardStats() {
+  try {
+    const r = await pool.query(`
+      SELECT
+        COUNT(*) FILTER (
+          WHERE last_claim_date = DATE(timezone('Asia/Seoul', NOW()))
+        ) AS today_claims,
+        COUNT(*) FILTER (
+          WHERE last_claim_date = DATE(timezone('Asia/Seoul', NOW()))
+            AND current_streak = 7
+        ) AS today_finales
+      FROM tc_attendance
+    `);
+    const g = await pool.query(`
+      SELECT COALESCE(SUM(gold_delta), 0) AS gold_today
+      FROM tc_gold_history
+      WHERE source = 'attendance'
+        AND DATE((created_at) AT TIME ZONE 'UTC' AT TIME ZONE 'Asia/Seoul')
+          = DATE(timezone('Asia/Seoul', NOW()))
+    `);
+    return {
+      todayClaims: parseInt(r.rows[0].today_claims, 10) || 0,
+      todayFinales: parseInt(r.rows[0].today_finales, 10) || 0,
+      todayGold: parseInt(g.rows[0].gold_today, 10) || 0,
+    };
+  } catch (err) {
+    console.error('Get attendance dashboard stats error:', err.message);
+    return { todayClaims: 0, todayFinales: 0, todayGold: 0 };
+  }
+}
+
+// Paginated attendance log for ops. Sources tc_gold_history rows so we get the
+// exact streak day (description='day_N') and per-claim timestamp. Defaults to
+// today (KST) when `date` is not supplied.
+async function listAttendanceLog({ date, search, page = 1, limit = 50 } = {}) {
+  try {
+    const lim = Math.max(1, Math.min(parseInt(limit, 10) || 50, 200));
+    const pg = Math.max(1, parseInt(page, 10) || 1);
+    const where = [`h.source = 'attendance'`];
+    const params = [];
+    if (date) {
+      params.push(date);
+      where.push(`DATE((h.created_at) AT TIME ZONE 'UTC' AT TIME ZONE 'Asia/Seoul')
+                    = $${params.length}::date`);
+    } else {
+      where.push(`DATE((h.created_at) AT TIME ZONE 'UTC' AT TIME ZONE 'Asia/Seoul')
+                    = DATE(timezone('Asia/Seoul', NOW()))`);
+    }
+    if (search) {
+      params.push(`%${search}%`);
+      where.push(`h.nickname ILIKE $${params.length}`);
+    }
+    const whereSql = `WHERE ${where.join(' AND ')}`;
+    const countRes = await pool.query(
+      `SELECT COUNT(*) FROM tc_gold_history h ${whereSql}`, params);
+    const total = parseInt(countRes.rows[0].count, 10) || 0;
+    const rowsRes = await pool.query(
+      `SELECT h.id, h.nickname, h.gold_delta, h.description AS day_key,
+              h.created_at,
+              a.current_streak, a.total_claims
+         FROM tc_gold_history h
+         LEFT JOIN tc_attendance a ON a.nickname = h.nickname
+         ${whereSql}
+         ORDER BY h.created_at DESC
+         LIMIT ${lim} OFFSET ${(pg - 1) * lim}`,
+      params
+    );
+    return { rows: rowsRes.rows, total, page: pg, limit: lim };
+  } catch (err) {
+    console.error('List attendance log error:', err.message);
+    return { rows: [], total: 0, page: 1, limit: 50 };
+  }
+}
+
+// Single-user attendance summary for the user detail page.
+async function getAttendanceForNickname(nickname) {
+  try {
+    const r = await pool.query(
+      `SELECT
+         a.last_claim_date,
+         COALESCE(a.current_streak, 0)::int AS current_streak,
+         COALESCE(a.total_claims, 0)::int AS total_claims,
+         a.updated_at,
+         (a.last_claim_date = DATE(timezone('Asia/Seoul', NOW())))::bool
+           AS claimed_today
+       FROM tc_attendance a
+       WHERE a.nickname = $1`,
+      [nickname]
+    );
+    if (r.rows.length === 0) {
+      return { exists: false, currentStreak: 0, totalClaims: 0,
+        lastClaimDate: null, claimedToday: false };
+    }
+    const row = r.rows[0];
+    return {
+      exists: true,
+      currentStreak: row.current_streak,
+      totalClaims: row.total_claims,
+      lastClaimDate: row.last_claim_date,
+      claimedToday: row.claimed_today === true,
+      updatedAt: row.updated_at,
+    };
+  } catch (err) {
+    console.error('Get attendance for nickname error:', err.message);
+    return { exists: false, currentStreak: 0, totalClaims: 0,
+      lastClaimDate: null, claimedToday: false };
+  }
+}
+
 // Paginated attempt log with optional filters + global outcome summary.
 async function getIapAttempts({ outcome, environment, platform, search, page = 1, limit = 50 } = {}) {
   try {
@@ -7396,6 +7535,9 @@ module.exports = {
   listConsumptionRequests,
   getAttendanceState,
   claimAttendance,
+  getAttendanceDashboardStats,
+  listAttendanceLog,
+  getAttendanceForNickname,
   getIapAttemptById,
   pool,
 };

@@ -22,6 +22,10 @@ class _ShopScreenState extends State<ShopScreen> {
   bool _adLoading = false;
   RewardedAd? _rewardedAd;
   bool _rewardedAdReady = false;
+  // Attendance has its OWN rewarded ad unit (separate AdMob slot) so it
+  // doesn't fight the "ad reward gold" button for a single ad instance.
+  RewardedAd? _attendanceAd;
+  bool _attendanceAdReady = false;
   TabController? _inventoryTabs;
 
   String _getLocalizedItemName(Map<String, dynamic> item) {
@@ -81,6 +85,7 @@ class _ShopScreenState extends State<ShopScreen> {
     super.initState();
     _loadAdCount();
     _preloadRewardedAd();
+    _preloadAttendanceAd();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
       final game = context.read<GameService>();
@@ -117,10 +122,32 @@ class _ShopScreenState extends State<ShopScreen> {
     );
   }
 
+  // Dedicated attendance rewarded ad. Separate AdMob slot from the "ad
+  // reward gold" rewardedAdId so the two features don't race for one ad
+  // instance and we can read attendance-specific impression / revenue
+  // numbers in AdMob.
+  void _preloadAttendanceAd() {
+    RewardedAd.load(
+      adUnitId: AdService.attendanceRewardedAdId,
+      request: const AdRequest(),
+      rewardedAdLoadCallback: RewardedAdLoadCallback(
+        onAdLoaded: (ad) {
+          _attendanceAd = ad;
+          if (mounted) setState(() => _attendanceAdReady = true);
+        },
+        onAdFailedToLoad: (error) {
+          debugPrint('[AdService] Attendance rewarded FAILED: ${error.message}');
+          _attendanceAdReady = false;
+        },
+      ),
+    );
+  }
+
   @override
   void dispose() {
     _inventoryTabs?.removeListener(_handleInventoryTabChanged);
     _rewardedAd?.dispose();
+    _attendanceAd?.dispose();
     _inventoryTabController.dispose();
     super.dispose();
   }
@@ -2349,17 +2376,23 @@ class _ShopScreenState extends State<ShopScreen> {
         border: Border.all(color: borderColor, width: today ? 2 : 1),
       ),
       padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 4),
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Text(
-            'Day $day',
-            style: TextStyle(
-              fontSize: 11,
-              fontWeight: FontWeight.w700,
-              color: claimed ? const Color(0xFF2E7D32) : const Color(0xFF8A7A72),
+      // Narrow phones can squeeze the cell below the content's natural
+      // height. FittedBox scales the whole stack down instead of clipping;
+      // mainAxisSize.min lets it actually measure smaller than the parent.
+      child: FittedBox(
+        fit: BoxFit.scaleDown,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Text(
+              'Day $day',
+              style: TextStyle(
+                fontSize: 11,
+                fontWeight: FontWeight.w700,
+                color: claimed ? const Color(0xFF2E7D32) : const Color(0xFF8A7A72),
+              ),
             ),
-          ),
           const SizedBox(height: 4),
           Icon(
             claimed ? Icons.check_circle : Icons.monetization_on,
@@ -2379,6 +2412,7 @@ class _ShopScreenState extends State<ShopScreen> {
           ),
         ],
       ),
+      ),
     );
   }
 
@@ -2391,30 +2425,29 @@ class _ShopScreenState extends State<ShopScreen> {
     if (game.attendanceState?['claimedToday'] == true) return;
     if (game.attendanceClaiming) return;
     if (game.attendanceLoading) return;
-    // Reward gate: must watch a rewarded ad first. We reuse the screen's
-    // preloaded `_rewardedAd` (same instance as "ad reward gold"); after
-    // play we reload for the next use. If a separate attendance ad slot is
-    // added later, swap this body — server-side double-claim guard stands.
-    if (!_rewardedAdReady || _rewardedAd == null) {
+    // Reward gate: must watch the dedicated ATTENDANCE rewarded ad first.
+    // Uses a separate AdMob unit from rewardedAdId so the "ad reward gold"
+    // button and attendance don't race for a single ad instance.
+    if (!_attendanceAdReady || _attendanceAd == null) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text(L10n.of(context).attendanceAdNotReady)),
         );
-        _preloadRewardedAd();
+        _preloadAttendanceAd();
       }
       return;
     }
-    final ad = _rewardedAd!;
-    _rewardedAd = null;
-    if (mounted) setState(() => _rewardedAdReady = false);
+    final ad = _attendanceAd!;
+    _attendanceAd = null;
+    if (mounted) setState(() => _attendanceAdReady = false);
     ad.fullScreenContentCallback = FullScreenContentCallback(
       onAdDismissedFullScreenContent: (a) {
         a.dispose();
-        _preloadRewardedAd();
+        _preloadAttendanceAd();
       },
       onAdFailedToShowFullScreenContent: (a, e) {
         a.dispose();
-        _preloadRewardedAd();
+        _preloadAttendanceAd();
       },
     );
     await ad.show(onUserEarnedReward: (a, reward) {

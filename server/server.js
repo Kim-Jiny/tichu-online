@@ -1389,7 +1389,14 @@ setInterval(() => {
 // Auto-disables when the Play service account isn't configured.
 const GOOGLE_VOIDED_POLL_MS = 30 * 60 * 1000;
 const GOOGLE_VOIDED_CURSOR_KEY = 'iap_gvoid_cursor_ms';
-const GOOGLE_VOIDED_OVERLAP_MS = 60 * 60 * 1000; // re-scan 1h before cursor
+// Google's voidedpurchases endpoint can take up to ~24h to surface a refund
+// after it actually happens at the user's end. The poll filters by
+// voidedTimeMillis >= startTime — so if the cursor's startTime advances past
+// the void's voidedTime before Google indexes it, that refund is missed
+// forever. A 1h overlap was too tight in practice. 48h gives Google plenty
+// of breathing room; reprocessing is free because autoRefundByTransaction
+// is idempotent on transaction_id (already-refunded receipts short-circuit).
+const GOOGLE_VOIDED_OVERLAP_MS = 48 * 60 * 60 * 1000; // re-scan 48h before cursor
 async function runGoogleVoidedPoll() {
   try {
     // Resume from the persisted cursor so a long outage doesn't drop voids

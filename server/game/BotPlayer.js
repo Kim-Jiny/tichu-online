@@ -1817,6 +1817,29 @@ function buildWinrateCandidates(game, botId) {
     });
   }
 
+  // A4: enforce shouldBomb on follow tricks. shouldBomb owns the "when
+  // to bomb" decision (tichu defense, ≥20 pts, finish-by-bomb, opp ≤3
+  // cards). If it says no, strip bomb candidates from the winrate search
+  // — rollouts otherwise find a shallow "win this trick" line and burn
+  // a 100-point combo on a worthless trick (e.g. a mahjong wish on a
+  // rank we don't hold, or a single low card behind us). Lead bombs
+  // are handled by leadTrick's own logic and aren't filtered here.
+  // Finishing plays bypass the filter — going out matters more.
+  if (lastPlay) {
+    const bombCombos = findCombos(cards.filter(c => !c.startsWith('special_')));
+    const wantsBomb = shouldBomb(state, cards, bombCombos);
+    if (!wantsBomb) {
+      legalActions = legalActions.filter(action => {
+        if (action.type !== 'play_cards') return true;
+        const playCards = action.cards || [];
+        if (playCards.length === cards.length) return true;
+        const combo = getComboType(playCards);
+        return combo.type !== COMBO.BOMB_FOUR
+          && combo.type !== COMBO.BOMB_STRAIGHT_FLUSH;
+      });
+    }
+  }
+
   // A5: never overtake partner's mid/high plays (comboValue ≥ 9). Even
   // when there's no tichu in play, stealing a teammate's strong lead
   // wastes their card and rarely pays off — keep only pass for winrate.

@@ -1423,7 +1423,8 @@ class _SpectatorScreenState extends State<SpectatorScreen> {
       onTap: () => showTichuScoreHistoryDialog(
         context,
         history: scoreHistory
-            .map((e) => Map<String, dynamic>.from(e as Map))
+            .whereType<Map>()
+            .map((e) => Map<String, dynamic>.from(e))
             .toList(),
         totalA: scores['teamA'] ?? 0,
         totalB: scores['teamB'] ?? 0,

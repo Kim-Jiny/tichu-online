@@ -1358,7 +1358,7 @@ function parseGoldProductFormBody(body) {
 // ===== Route handler =====
 
 async function handleAdminRoute(req, res, url, pathname, method, lobby, wss, maintenanceFns = {}) {
-  const { getMaintenanceConfig, setMaintenanceConfig, getMaintenanceStatus, sendPushNotification, sendBroadcastPush, runGoogleVoidedPoll } = maintenanceFns;
+  const { getMaintenanceConfig, setMaintenanceConfig, getMaintenanceStatus, sendPushNotification, sendBroadcastPush, runGoogleVoidedPoll, closeRoom } = maintenanceFns;
   // Login page (no auth required)
   if (pathname === '/tc-backstage/login') {
     if (method === 'GET') {
@@ -4977,10 +4977,31 @@ async function handleAdminRoute(req, res, url, pathname, method, lobby, wss, mai
 
       <div style="text-align:center;margin-top:20px">
         <a href="/tc-backstage/rooms/${encodeURIComponent(roomId)}" class="btn btn-secondary" style="margin-right:8px">새로고침</a>
-        <a href="/tc-backstage/" class="btn btn-secondary">대시보드로</a>
+        <a href="/tc-backstage/" class="btn btn-secondary" style="margin-right:8px">대시보드로</a>
+        <form method="POST" action="/tc-backstage/rooms/${encodeURIComponent(roomId)}/delete"
+              onsubmit="return confirm('이 방을 강제로 닫습니다. 방에 있는 모든 유저와 관전자는 대기실로 이동됩니다.${game ? '\\n⚠️ 진행 중인 게임이 종료됩니다.' : ''}\\n계속할까요?')"
+              style="display:inline">
+          <button type="submit" class="btn btn-danger">방 강제 닫기</button>
+        </form>
       </div>
     `;
     return html(res, layout(`Room: ${room.name}`, content, 'home'));
+  }
+
+  // Force-close (delete) a room
+  const roomDeleteMatch = pathname.match(/^\/tc-backstage\/rooms\/([^/]+)\/delete$/);
+  if (roomDeleteMatch && method === 'POST') {
+    const roomId = decodeURIComponent(roomDeleteMatch[1]);
+    if (!lobby || typeof closeRoom !== 'function') {
+      return html(res, layout('방', '<div class="empty">로비를 사용할 수 없습니다</div>'), 500);
+    }
+    const room = lobby.getRoom(roomId);
+    if (!room) return redirect(res, '/tc-backstage/');
+    // Notifies all players/spectators with room_closed (client returns to lobby),
+    // clears timers, ends any in-progress game, and removes the room from the lobby.
+    closeRoom(roomId);
+    console.log(`[ADMIN] Room force-closed: ${roomId} (by ${sessionInfo.session.username})`);
+    return redirect(res, '/tc-backstage/');
   }
 
   // Online users list

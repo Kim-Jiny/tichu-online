@@ -4839,7 +4839,7 @@ class _LLGameScreenState extends State<LLGameScreen> {
           );
         },
       ),
-    );
+    ).whenComplete(reasonController.dispose);
   }
 }
 

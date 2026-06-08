@@ -5028,6 +5028,21 @@ function closeRoom(roomId, messageType = 'room_closed') {
   });
   delete timeoutCounts[roomId];
   delete turnTimerPhases[roomId];
+  // Bot action timers (scheduleBotActions) live in global maps and were not
+  // cleared above — drop them so the handle/entry doesn't leak after the room
+  // is gone (the callback null-checks the room, but the entry would persist).
+  if (pendingBotTimers[roomId]) {
+    clearTimeout(pendingBotTimers[roomId]);
+    delete pendingBotTimers[roomId];
+  }
+  delete pendingBotCheck[roomId];
+  // Card-view request timers live on the room object; clear them too.
+  if (room && room.cardRequestTimers) {
+    for (const key of Object.keys(room.cardRequestTimers)) {
+      clearTimeout(room.cardRequestTimers[key]);
+    }
+    room.cardRequestTimers = {};
+  }
   lobby.removeRoom(roomId);
 }
 

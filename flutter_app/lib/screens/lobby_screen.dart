@@ -51,7 +51,8 @@ class _LobbyScreenState extends State<LobbyScreen> {
       onAdLoaded: (_) {
         if (mounted) setState(() => _bannerAdLoaded = true);
       },
-      onAdFailedToLoad: (_, error) {
+      onAdFailedToLoad: (ad, error) {
+        ad.dispose();
         if (mounted) {
           setState(() {
             _bannerAd = null;
@@ -66,7 +67,8 @@ class _LobbyScreenState extends State<LobbyScreen> {
       onAdLoaded: (_) {
         if (mounted) setState(() => _roomBannerLoaded = true);
       },
-      onAdFailedToLoad: (_, error) {
+      onAdFailedToLoad: (ad, error) {
+        ad.dispose();
         if (mounted) {
           setState(() {
             _roomBannerAd = null;

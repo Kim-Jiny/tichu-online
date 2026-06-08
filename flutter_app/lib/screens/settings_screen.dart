@@ -327,7 +327,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
           ],
         ),
       ),
-    );
+    ).whenComplete(() {
+      titleController.dispose();
+      contentController.dispose();
+    });
   }
 
   void _showInquiryHistoryDialog() {

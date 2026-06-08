@@ -1156,7 +1156,7 @@ class _AdminCenterScreenState extends State<AdminCenterScreen> {
           ),
         ],
       ),
-    );
+    ).whenComplete(noteController.dispose);
   }
 
   void _showReportDetail(String target, String roomId) {

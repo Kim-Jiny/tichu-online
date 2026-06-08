@@ -743,7 +743,25 @@ function pagination(page, total, limit, baseUrl) {
 
 function escapeHtml(str) {
   if (!str) return '';
-  return String(str).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+  return String(str).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+}
+
+// Escapes a value for use inside a SINGLE-quoted JS string that itself lives in
+// a DOUBLE-quoted HTML attribute, e.g. onsubmit="return confirm('HERE')".
+// HTML-encoding alone is insufficient: the browser HTML-decodes the attribute
+// before the JS parses, so a &#39; would turn back into ' and break the string.
+// So we JS-escape (backslash) first, then HTML-attribute-escape the result.
+function jsEscape(str) {
+  if (!str) return '';
+  return String(str)
+    .replace(/\\/g, '\\\\')
+    .replace(/'/g, "\\'")
+    .replace(/\r/g, '\\r')
+    .replace(/\n/g, '\\n')
+    .replace(/&/g, '&amp;')
+    .replace(/"/g, '&quot;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;');
 }
 
 function formatNumber(value) {
@@ -3157,7 +3175,7 @@ async function handleAdminRoute(req, res, url, pathname, method, lobby, wss, mai
           <div class="label">앱 관리자</div><div class="value">
             <span class="badge" style="background:${user.is_admin ? '#ede7f6' : '#f5f5f5'};color:${user.is_admin ? '#5e35b1' : '#888'}">${user.is_admin ? '관리자' : '일반'}</span>
             <form method="POST" action="/tc-backstage/users/${encodeURIComponent(user.nickname)}/admin" style="display:inline-flex;align-items:center;gap:6px;margin-left:12px"
-              onsubmit="return confirm('${escapeHtml(user.nickname)} 유저를 ${user.is_admin ? '관리자에서 해제' : '관리자로 지정'}하시겠습니까?')">
+              onsubmit="return confirm('${jsEscape(user.nickname)} 유저를 ${user.is_admin ? '관리자에서 해제' : '관리자로 지정'}하시겠습니까?')">
               <input type="hidden" name="is_admin" value="${user.is_admin ? '0' : '1'}">
               <button type="submit" class="btn btn-secondary" style="font-size:11px;padding:4px 10px">${user.is_admin ? '권한 해제' : '관리자 지정'}</button>
             </form>
@@ -3837,7 +3855,7 @@ async function handleAdminRoute(req, res, url, pathname, method, lobby, wss, mai
            <b>⚠ 환불문제 (자동 회수 실패)</b> — 스토어는 현금을 환불했으나 유저가 골드를 이미 사용해 회수하지 못했습니다.
            출처 <b>${escapeHtml(r.refund_source || '-')}</b> · 사유 <span style="font-family:monospace">${escapeHtml(r.refund_reason || '-')}</span> · 감지 ${fmtDt(r.refund_detected_at)}
            <form method="POST" action="/tc-backstage/iap-receipts/${r.id}/refund" style="margin-top:10px"
-                 onsubmit="return confirm('${escapeHtml(r.nickname)} 님 잔액을 음수로 만들면서 ${formatNumber(r.gold_granted)}G를 강제 회수합니다.\\n계속할까요?')">
+                 onsubmit="return confirm('${jsEscape(r.nickname)} 님 잔액을 음수로 만들면서 ${formatNumber(r.gold_granted)}G를 강제 회수합니다.\\n계속할까요?')">
              <input type="hidden" name="force" value="1">
              <button type="submit" class="btn btn-danger">마이너스 강제회수</button>
            </form>
@@ -4310,7 +4328,7 @@ async function handleAdminRoute(req, res, url, pathname, method, lobby, wss, mai
             <td style="font-family:monospace;font-size:11px" title="${txn}"><a href="/tc-backstage/iap-receipts/${r.id}">${txnShort}</a></td>
             <td>
               <form method="POST" action="/tc-backstage/iap-receipts/${r.id}/refund"
-                    onsubmit="return confirm('${escapeHtml(r.nickname)} 님 잔액을 음수로 만들면서 ${formatNumber(r.gold_granted)}G를 강제 회수합니다.\\n스토어가 이미 현금을 환불한 건에만 사용하세요. 계속할까요?')">
+                    onsubmit="return confirm('${jsEscape(r.nickname)} 님 잔액을 음수로 만들면서 ${formatNumber(r.gold_granted)}G를 강제 회수합니다.\\n스토어가 이미 현금을 환불한 건에만 사용하세요. 계속할까요?')">
                 <input type="hidden" name="force" value="1">
                 <input type="hidden" name="back" value="issues">
                 <button type="submit" class="btn btn-danger">마이너스 강제회수</button>

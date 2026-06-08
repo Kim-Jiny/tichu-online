@@ -3692,6 +3692,14 @@ class GameService extends ChangeNotifier {
       );
     }
     _shareInviteLinkCompleter = null;
+    // Resolve any in-flight IAP verifications so their awaiters don't hang
+    // until the 25s timeout fires.
+    for (final c in _iapPending.values) {
+      if (!c.isCompleted) {
+        c.complete({'success': false, 'message': 'disposed'});
+      }
+    }
+    _iapPending.clear();
     _subscription?.cancel();
     _fcmTokenSubscription?.cancel();
     _dogDelayTimer?.cancel();

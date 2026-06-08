@@ -7704,7 +7704,7 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
           );
         },
       ),
-    );
+    ).whenComplete(reasonController.dispose);
   }
 }
 

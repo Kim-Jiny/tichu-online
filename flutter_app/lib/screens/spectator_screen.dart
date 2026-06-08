@@ -2702,7 +2702,7 @@ class _SpectatorScreenState extends State<SpectatorScreen> {
           );
         },
       ),
-    );
+    ).whenComplete(reasonController.dispose);
   }
 }
 

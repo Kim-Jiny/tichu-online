@@ -9,6 +9,7 @@ import '../models/ll_game_state.dart';
 import '../widgets/love_letter_card.dart';
 import '../widgets/connection_overlay.dart';
 import '../widgets/level_badge.dart';
+import '../widgets/spectator_controls.dart';
 import '../l10n/app_localizations.dart';
 import '../l10n/l10n_helpers.dart';
 
@@ -28,6 +29,7 @@ class _LLGameScreenState extends State<LLGameScreen> {
   bool _viewersOpen = false;
   bool _chatOpen = false;
   bool _soundPanelOpen = false;
+  bool _moreOpen = false;
   int _readChatCount = 0;
   final TextEditingController _chatController = TextEditingController();
   final ScrollController _chatScrollController = ScrollController();
@@ -196,6 +198,7 @@ class _LLGameScreenState extends State<LLGameScreen> {
                       if (gs.hasIncomingCardViewRequests)
                         _buildCardViewRequestPopup(gs),
                       if (_viewersOpen) _buildViewersPanel(gs),
+                      if (_moreOpen) _buildMoreMenu(gs),
                       if (_soundPanelOpen) _buildSoundPanel(gs),
                       if (_chatOpen) _buildChatPanel(context, gs),
                     ],
@@ -291,6 +294,19 @@ class _LLGameScreenState extends State<LLGameScreen> {
                             ),
                           ),
                           _buildHeaderActionButton(
+                            icon: gs.sfxVolume <= 0.01
+                                ? Icons.volume_off
+                                : Icons.volume_up,
+                            active: _soundPanelOpen,
+                            onTap: () {
+                              setState(() {
+                                _soundPanelOpen = !_soundPanelOpen;
+                                if (_soundPanelOpen) _chatOpen = false;
+                              });
+                            },
+                          ),
+                          const SizedBox(width: 6),
+                          _buildHeaderActionButton(
                             icon: Icons.chat_bubble_outline_rounded,
                             active: _chatOpen,
                             badgeCount: _chatOpen
@@ -302,6 +318,7 @@ class _LLGameScreenState extends State<LLGameScreen> {
                                 _chatOpen = !_chatOpen;
                                 if (_chatOpen) {
                                   _readChatCount = gs.chatMessages.length;
+                                  _soundPanelOpen = false;
                                 }
                               });
                             },
@@ -364,6 +381,7 @@ class _LLGameScreenState extends State<LLGameScreen> {
                   ],
                 ),
               ),
+              if (_soundPanelOpen) _buildSoundPanel(gs),
               if (_chatOpen) _buildChatPanel(context, gs),
             ],
           ),
@@ -583,8 +601,6 @@ class _LLGameScreenState extends State<LLGameScreen> {
   ) {
     final l10n = L10n.of(context);
     final unread = gs.chatMessages.length - _readChatCount;
-    final hasMuted = gs.sfxVolume <= 0.01;
-    final hasViewers = gs.cardViewers.isNotEmpty;
 
     return Container(
       decoration: BoxDecoration(
@@ -594,44 +610,67 @@ class _LLGameScreenState extends State<LLGameScreen> {
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
       child: Row(
         children: [
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-            decoration: BoxDecoration(
-              color: const Color(0xFFF0EBE8),
-              borderRadius: BorderRadius.circular(8),
-            ),
-            child: Text(
-              '${l10n.llRound} ${state.round}',
-              style: const TextStyle(
-                color: Color(0xFF5A4038),
-                fontSize: 13,
-                fontWeight: FontWeight.w600,
-              ),
-            ),
-          ),
-          const SizedBox(width: 8),
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
-            decoration: BoxDecoration(
-              color: const Color(0xFFF0EBE8),
-              borderRadius: BorderRadius.circular(8),
-            ),
+          Expanded(
             child: Row(
               mainAxisSize: MainAxisSize.min,
               children: [
-                const Icon(Icons.style, color: Color(0xFF8A7A72), size: 14),
-                const SizedBox(width: 4),
-                Text(
-                  '${state.drawPileCount}',
-                  style: const TextStyle(
-                    color: Color(0xFF8A7A72),
-                    fontSize: 12,
+                Flexible(
+                  child: Container(
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFF0EBE8),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Text(
+                      '${l10n.llRound} ${state.round}',
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(
+                        color: Color(0xFF5A4038),
+                        fontSize: 13,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFF0EBE8),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const Icon(Icons.style, color: Color(0xFF8A7A72), size: 14),
+                      const SizedBox(width: 4),
+                      Text(
+                        '${state.drawPileCount}',
+                        style: const TextStyle(
+                          color: Color(0xFF8A7A72),
+                          fontSize: 12,
+                        ),
+                      ),
+                    ],
                   ),
                 ),
               ],
             ),
           ),
-          const Spacer(),
+          const SizedBox(width: 6),
+          _buildTopActionButton(
+            icon: Icons.history,
+            active: false,
+            onTap: () => showLLScoreHistoryDialog(
+              context,
+              roundHistory: state.roundHistory,
+              players: state.players,
+              targetTokens: state.targetTokens,
+            ),
+          ),
+          const SizedBox(width: 4),
           _buildTopActionButton(
             icon: Icons.help_outline,
             active: false,
@@ -640,20 +679,7 @@ class _LLGameScreenState extends State<LLGameScreen> {
               _showCardGuide(context);
             },
           ),
-          const SizedBox(width: 6),
-          _buildTopActionButton(
-            icon: hasMuted ? Icons.volume_off : Icons.volume_up,
-            active: _soundPanelOpen,
-            onTap: () {
-              setState(() {
-                _soundPanelOpen = !_soundPanelOpen;
-                if (_soundPanelOpen) {
-                  _chatOpen = false;
-                }
-              });
-            },
-          ),
-          const SizedBox(width: 6),
+          const SizedBox(width: 4),
           _buildTopActionButton(
             icon: Icons.chat_bubble_outline,
             active: _chatOpen,
@@ -664,44 +690,116 @@ class _LLGameScreenState extends State<LLGameScreen> {
                 if (_chatOpen) {
                   _readChatCount = gs.chatMessages.length;
                   _soundPanelOpen = false;
+                  _viewersOpen = false;
+                  _moreOpen = false;
                 }
               });
             },
           ),
-          if (!gs.isSpectator) ...[
-            const SizedBox(width: 6),
+          const SizedBox(width: 4),
+          _buildTopActionButton(
+            icon: Icons.more_horiz,
+            active: _moreOpen,
+            onTap: () {
+              setState(() {
+                _moreOpen = !_moreOpen;
+                if (_moreOpen) {
+                  _chatOpen = false;
+                  _soundPanelOpen = false;
+                  _viewersOpen = false;
+                }
+              });
+            },
+          ),
+        ],
+      ),
+    );
+  }
+
+  // Overflow menu: groups sound / spectators (or card-view) / exit so the
+  // top bar never overflows when many actions are present.
+  Widget _buildMoreMenu(GameService gs) {
+    final hasMuted = gs.sfxVolume <= 0.01;
+    final hasViewers = gs.cardViewers.isNotEmpty;
+    return Positioned(
+      top: 54,
+      right: 8,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+        decoration: BoxDecoration(
+          color: Colors.white.withValues(alpha: 0.97),
+          borderRadius: BorderRadius.circular(14),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.15),
+              blurRadius: 8,
+              offset: const Offset(0, 3),
+            ),
+          ],
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
             _buildTopActionButton(
-              icon: Icons.visibility,
-              active: _viewersOpen,
-              badgeCount: gs.cardViewers.length,
-              iconColor: hasViewers
-                  ? const Color(0xFF6A9BD1)
-                  : const Color(0xFF5A4038),
+              icon: hasMuted ? Icons.volume_off : Icons.volume_up,
+              active: _soundPanelOpen,
               onTap: () {
                 setState(() {
-                  _viewersOpen = !_viewersOpen;
-                  if (_viewersOpen) {
+                  _soundPanelOpen = !_soundPanelOpen;
+                  _moreOpen = false;
+                  if (_soundPanelOpen) {
                     _chatOpen = false;
-                    _soundPanelOpen = false;
+                    _viewersOpen = false;
                   }
                 });
               },
             ),
+            const SizedBox(width: 8),
+            if (gs.isSpectator)
+              _buildTopActionButton(
+                icon: Icons.people_alt,
+                active: false,
+                badgeCount: gs.spectators.length,
+                onTap: () {
+                  setState(() => _moreOpen = false);
+                  showSpectatorListDialog(context, gs.spectators);
+                },
+              )
+            else
+              _buildTopActionButton(
+                icon: Icons.visibility,
+                active: _viewersOpen,
+                badgeCount: gs.cardViewers.length,
+                iconColor: hasViewers
+                    ? const Color(0xFF6A9BD1)
+                    : const Color(0xFF5A4038),
+                onTap: () {
+                  setState(() {
+                    _viewersOpen = !_viewersOpen;
+                    _moreOpen = false;
+                    if (_viewersOpen) {
+                      _chatOpen = false;
+                      _soundPanelOpen = false;
+                    }
+                  });
+                },
+              ),
+            const SizedBox(width: 8),
+            _buildTopActionButton(
+              icon: Icons.exit_to_app,
+              active: false,
+              iconColor: const Color(0xFFE53935),
+              onTap: () {
+                setState(() {
+                  _moreOpen = false;
+                  _soundPanelOpen = false;
+                  _viewersOpen = false;
+                });
+                _showExitDialog(context, gs);
+              },
+            ),
           ],
-          const SizedBox(width: 6),
-          _buildTopActionButton(
-            icon: Icons.exit_to_app,
-            active: false,
-            iconColor: const Color(0xFFE53935),
-            onTap: () {
-              setState(() {
-                _soundPanelOpen = false;
-                _viewersOpen = false;
-              });
-              _showExitDialog(context, gs);
-            },
-          ),
-        ],
+        ),
       ),
     );
   }
@@ -713,59 +811,12 @@ class _LLGameScreenState extends State<LLGameScreen> {
     int badgeCount = 0,
     Color? iconColor,
   }) {
-    return GestureDetector(
+    return SpectatorActionButton(
+      icon: icon,
+      active: active,
       onTap: onTap,
-      child: Stack(
-        clipBehavior: Clip.none,
-        children: [
-          AnimatedContainer(
-            duration: const Duration(milliseconds: 180),
-            padding: const EdgeInsets.all(8),
-            decoration: BoxDecoration(
-              color: active
-                  ? const Color(0xFF5A4038).withValues(alpha: 0.92)
-                  : Colors.white.withValues(alpha: 0.85),
-              borderRadius: BorderRadius.circular(10),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withValues(alpha: 0.08),
-                  blurRadius: 6,
-                ),
-              ],
-            ),
-            child: Icon(
-              icon,
-              size: 19,
-              color: active
-                  ? Colors.white
-                  : (iconColor ?? const Color(0xFF5A4038)),
-            ),
-          ),
-          if (badgeCount > 0)
-            Positioned(
-              right: -4,
-              top: -4,
-              child: Container(
-                constraints: const BoxConstraints(minWidth: 18),
-                padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
-                decoration: BoxDecoration(
-                  color: const Color(0xFFE53935),
-                  borderRadius: BorderRadius.circular(999),
-                  border: Border.all(color: Colors.white, width: 1.2),
-                ),
-                child: Text(
-                  badgeCount > 99 ? '99+' : '$badgeCount',
-                  textAlign: TextAlign.center,
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontSize: 9,
-                    fontWeight: FontWeight.w800,
-                  ),
-                ),
-              ),
-            ),
-        ],
-      ),
+      badgeCount: badgeCount,
+      iconColor: iconColor,
     );
   }
 

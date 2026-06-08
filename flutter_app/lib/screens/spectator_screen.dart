@@ -11,6 +11,7 @@ import '../widgets/playing_card.dart';
 import '../widgets/connection_overlay.dart';
 import '../widgets/level_badge.dart';
 import '../widgets/title_chip.dart';
+import '../widgets/spectator_controls.dart';
 
 class SpectatorScreen extends StatefulWidget {
   const SpectatorScreen({super.key});
@@ -522,6 +523,7 @@ class _SpectatorScreenState extends State<SpectatorScreen> {
     final currentPlayer = state['currentPlayer'] ?? '';
     final round = state['round'] ?? 1;
     final callRank = state['callRank'] as String?;
+    final scoreHistory = (state['scoreHistory'] as List?) ?? [];
 
     return Stack(
       children: [
@@ -533,6 +535,7 @@ class _SpectatorScreenState extends State<SpectatorScreen> {
               phase,
               round,
               totalScores,
+              scoreHistory,
               isLandscape,
             ),
             Expanded(
@@ -872,6 +875,7 @@ class _SpectatorScreenState extends State<SpectatorScreen> {
     String phase,
     int round,
     Map<String, dynamic> scores,
+    List scoreHistory,
     bool isLandscape,
   ) {
     return Container(
@@ -956,6 +960,8 @@ class _SpectatorScreenState extends State<SpectatorScreen> {
                   compact: true,
                 ),
                 const SizedBox(width: 6),
+                _buildScoreHistoryButton(game, scoreHistory, scores),
+                const SizedBox(width: 4),
                 _buildSpectatorButton(game),
                 const SizedBox(width: 4),
                 _buildSoundButton(game),
@@ -997,6 +1003,8 @@ class _SpectatorScreenState extends State<SpectatorScreen> {
                       ),
                     ),
                     const Spacer(),
+                    _buildScoreHistoryButton(game, scoreHistory, scores),
+                    const SizedBox(width: 6),
                     _buildSpectatorButton(game),
                     const SizedBox(width: 6),
                     _buildSoundButton(game),
@@ -1380,24 +1388,10 @@ class _SpectatorScreenState extends State<SpectatorScreen> {
   }
 
   Widget _buildSoundButton(GameService game) {
-    final hasMuted = game.sfxVolume <= 0.01;
-    return GestureDetector(
+    return SpectatorActionButton(
+      icon: game.sfxVolume <= 0.01 ? Icons.volume_off : Icons.volume_up,
+      active: _soundPanelOpen,
       onTap: () => setState(() => _soundPanelOpen = !_soundPanelOpen),
-      child: Container(
-        padding: const EdgeInsets.all(8),
-        decoration: BoxDecoration(
-          color: _soundPanelOpen
-              ? const Color(0xFF81C784)
-              : Colors.white.withValues(alpha: 0.9),
-          shape: BoxShape.circle,
-          border: Border.all(color: const Color(0xFFE0D8D4)),
-        ),
-        child: Icon(
-          hasMuted ? Icons.volume_off : Icons.volume_up,
-          color: _soundPanelOpen ? Colors.white : const Color(0xFF6A5A52),
-          size: 18,
-        ),
-      ),
     );
   }
 
@@ -1405,164 +1399,48 @@ class _SpectatorScreenState extends State<SpectatorScreen> {
     return Positioned(
       top: 96,
       right: 12,
-      child: Container(
-        width: 180,
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-        decoration: BoxDecoration(
-          color: Colors.white.withValues(alpha: 0.97),
-          borderRadius: BorderRadius.circular(14),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withValues(alpha: 0.15),
-              blurRadius: 8,
-              offset: const Offset(0, 3),
-            ),
-          ],
-        ),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              L10n.of(context).spectatorSoundEffects,
-              style: const TextStyle(
-                fontSize: 12,
-                fontWeight: FontWeight.bold,
-                color: Color(0xFF5A4038),
-              ),
-            ),
-            Slider(
-              value: game.sfxVolume,
-              onChanged: (v) => game.setSfxVolume(v),
-              onChangeEnd: (v) => game.setSfxVolume(v, persist: true),
-              min: 0,
-              max: 1,
-            ),
-          ],
-        ),
-      ),
+      child: SpectatorSoundPanel(game: game, width: 180),
     );
   }
 
   Widget _buildSpectatorButton(GameService game) {
-    final count = game.spectators.length;
-    return GestureDetector(
-      onTap: () => _showSpectatorListDialog(game),
-      child: Stack(
-        clipBehavior: Clip.none,
-        children: [
-          Container(
-            padding: const EdgeInsets.all(8),
-            decoration: BoxDecoration(
-              color: Colors.white.withValues(alpha: 0.9),
-              shape: BoxShape.circle,
-              border: Border.all(color: const Color(0xFFE0D8D4)),
-            ),
-            child: const Icon(
-              Icons.people_alt,
-              color: Color(0xFF6A5A52),
-              size: 18,
-            ),
-          ),
-          if (count > 0)
-            Positioned(
-              top: -4,
-              right: -4,
-              child: Container(
-                padding: const EdgeInsets.all(4),
-                decoration: const BoxDecoration(
-                  color: Color(0xFF7E57C2),
-                  shape: BoxShape.circle,
-                ),
-                child: Text(
-                  '$count',
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontSize: 10,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-              ),
-            ),
-        ],
-      ),
+    return SpectatorActionButton(
+      icon: Icons.people_alt,
+      active: false,
+      badgeCount: game.spectators.length,
+      onTap: () => showSpectatorListDialog(context, game.spectators),
     );
   }
 
-  void _showSpectatorListDialog(GameService game) {
-    final spectators = game.spectators;
-    showDialog(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        title: Row(
-          children: [
-            const Icon(Icons.people_alt, color: Color(0xFF5A4038)),
-            const SizedBox(width: 8),
-            Text(L10n.of(context).spectatorListTitle),
-          ],
-        ),
-        content: spectators.isEmpty
-            ? SizedBox(
-                height: 60,
-                child: Center(
-                  child: Text(
-                    L10n.of(context).spectatorNoSpectators,
-                    style: const TextStyle(color: Color(0xFF9A8E8A)),
-                  ),
-                ),
-              )
-            : SizedBox(
-                width: 240,
-                child: ListView.separated(
-                  shrinkWrap: true,
-                  itemCount: spectators.length,
-                  separatorBuilder: (_, _) => const Divider(height: 1),
-                  itemBuilder: (_, i) {
-                    final name = spectators[i]['nickname'] ?? '';
-                    return Padding(
-                      padding: const EdgeInsets.symmetric(vertical: 8),
-                      child: Text(
-                        name,
-                        style: const TextStyle(fontSize: 13, color: Color(0xFF5A4038)),
-                      ),
-                    );
-                  },
-                ),
-              ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx),
-            child: Text(L10n.of(context).spectatorClose),
-          ),
-        ],
+  Widget _buildScoreHistoryButton(
+    GameService game,
+    List scoreHistory,
+    Map<String, dynamic> scores,
+  ) {
+    return SpectatorActionButton(
+      icon: Icons.history,
+      active: false,
+      onTap: () => showTichuScoreHistoryDialog(
+        context,
+        history: scoreHistory
+            .map((e) => Map<String, dynamic>.from(e as Map))
+            .toList(),
+        totalA: scores['teamA'] ?? 0,
+        totalB: scores['teamB'] ?? 0,
       ),
     );
   }
 
   Widget _buildChatButton() {
-    return GestureDetector(
+    return SpectatorActionButton(
+      icon: Icons.chat_bubble_outline,
+      active: _chatOpen,
       onTap: () => setState(() {
         _chatOpen = !_chatOpen;
         if (_chatOpen) {
           _scrollChatToBottom();
         }
       }),
-      child: Container(
-        padding: const EdgeInsets.all(8),
-        decoration: BoxDecoration(
-          color: _chatOpen
-              ? const Color(0xFF77B8E8)
-              : Colors.white.withValues(alpha: 0.9),
-          shape: BoxShape.circle,
-          border: Border.all(color: const Color(0xFFE0D8D4)),
-        ),
-        child: Icon(
-          Icons.chat_bubble_outline,
-          color: _chatOpen ? Colors.white : const Color(0xFF6A5A52),
-          size: 18,
-        ),
-      ),
     );
   }
 

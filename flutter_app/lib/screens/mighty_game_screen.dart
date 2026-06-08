@@ -8,6 +8,7 @@ import '../models/player.dart';
 import '../widgets/playing_card.dart';
 import '../widgets/connection_overlay.dart';
 import '../widgets/level_badge.dart';
+import '../widgets/spectator_controls.dart';
 import '../l10n/app_localizations.dart';
 import '../l10n/l10n_helpers.dart';
 
@@ -1126,10 +1127,9 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
       top: 56,
       right: 8,
       child: Container(
-        // Always wide enough for the visibility button — even when no
-        // one's viewing, the user needs in-game access to the card-view
-        // policy toggle (esp. always_deny users with no incoming requests).
-        width: 210,
+        // Players see 4 actions (incl. card-view); spectators have no cards so
+        // the card-view button is hidden and the menu is narrower.
+        width: game.isSpectator ? 158 : 210,
         padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
         decoration: BoxDecoration(
           color: Colors.white.withValues(alpha: 0.97),
@@ -1157,18 +1157,21 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
                 _showSpectatorListDialog(game);
               },
             ),
-            _buildTopActionButton(
-              icon: Icons.visibility,
-              active: _viewersOpen,
-              badgeCount: hasViewers ? game.cardViewers.length : 0,
-              onTap: () {
-                setState(() {
-                  _moreOpen = false;
-                  _soundPanelOpen = false;
-                  _viewersOpen = !_viewersOpen;
-                });
-              },
-            ),
+            // Card-view policy controls — players only (spectators have no
+            // cards for anyone to view).
+            if (!game.isSpectator)
+              _buildTopActionButton(
+                icon: Icons.visibility,
+                active: _viewersOpen,
+                badgeCount: hasViewers ? game.cardViewers.length : 0,
+                onTap: () {
+                  setState(() {
+                    _moreOpen = false;
+                    _soundPanelOpen = false;
+                    _viewersOpen = !_viewersOpen;
+                  });
+                },
+              ),
             _buildTopActionButton(
               icon: game.sfxVolume <= 0.01 ? Icons.volume_off : Icons.volume_up,
               active: _soundPanelOpen,
@@ -1461,59 +1464,12 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
     int badgeCount = 0,
     Color? iconColor,
   }) {
-    return GestureDetector(
+    return SpectatorActionButton(
+      icon: icon,
+      active: active,
       onTap: onTap,
-      child: Stack(
-        clipBehavior: Clip.none,
-        children: [
-          AnimatedContainer(
-            duration: const Duration(milliseconds: 180),
-            padding: const EdgeInsets.all(8),
-            decoration: BoxDecoration(
-              color: active
-                  ? const Color(0xFF5A4038).withValues(alpha: 0.92)
-                  : Colors.white.withValues(alpha: 0.85),
-              borderRadius: BorderRadius.circular(10),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withValues(alpha: 0.08),
-                  blurRadius: 6,
-                ),
-              ],
-            ),
-            child: Icon(
-              icon,
-              size: 19,
-              color: active
-                  ? Colors.white
-                  : (iconColor ?? const Color(0xFF5A4038)),
-            ),
-          ),
-          if (badgeCount > 0)
-            Positioned(
-              right: -4,
-              top: -4,
-              child: Container(
-                constraints: const BoxConstraints(minWidth: 18),
-                padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
-                decoration: BoxDecoration(
-                  color: const Color(0xFFE53935),
-                  borderRadius: BorderRadius.circular(999),
-                  border: Border.all(color: Colors.white, width: 1.2),
-                ),
-                child: Text(
-                  badgeCount > 99 ? '99+' : '$badgeCount',
-                  textAlign: TextAlign.center,
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontSize: 9,
-                    fontWeight: FontWeight.w800,
-                  ),
-                ),
-              ),
-            ),
-        ],
-      ),
+      badgeCount: badgeCount,
+      iconColor: iconColor,
     );
   }
 

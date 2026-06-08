@@ -8,6 +8,7 @@ import '../models/sk_game_state.dart';
 import '../models/player.dart';
 import '../widgets/connection_overlay.dart';
 import '../widgets/level_badge.dart';
+import '../widgets/spectator_controls.dart';
 import '../l10n/app_localizations.dart';
 import '../l10n/l10n_helpers.dart';
 
@@ -460,6 +461,7 @@ class _SKGameScreenState extends State<SKGameScreen> {
             ],
           ),
         ),
+        if (_soundPanelOpen) _buildSoundPanel(game),
         if (_chatOpen) _buildChatPanel(game),
       ],
     );
@@ -662,6 +664,17 @@ class _SKGameScreenState extends State<SKGameScreen> {
           ),
           const SizedBox(width: 6),
           _buildTopActionButton(
+            icon: game.sfxVolume <= 0.01 ? Icons.volume_off : Icons.volume_up,
+            active: _soundPanelOpen,
+            onTap: () {
+              setState(() {
+                _soundPanelOpen = !_soundPanelOpen;
+                if (_soundPanelOpen) _chatOpen = false;
+              });
+            },
+          ),
+          const SizedBox(width: 6),
+          _buildTopActionButton(
             icon: Icons.chat_bubble_outline_rounded,
             active: _chatOpen,
             badgeCount: _chatOpen
@@ -672,6 +685,7 @@ class _SKGameScreenState extends State<SKGameScreen> {
                 _chatOpen = !_chatOpen;
                 if (_chatOpen) {
                   _readChatCount = game.chatMessages.length;
+                  _soundPanelOpen = false;
                 }
               });
             },
@@ -994,9 +1008,9 @@ class _SKGameScreenState extends State<SKGameScreen> {
       top: 58,
       right: 8,
       child: Container(
-        // Always 210 — visibility button now shows regardless of hasViewers
-        // so the menu width must always fit it.
-        width: 210,
+        // Players see 4 actions (incl. card-view); spectators have no cards so
+        // the card-view button is hidden and the menu is narrower.
+        width: game.isSpectator ? 158 : 210,
         padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
         decoration: BoxDecoration(
           color: Colors.white.withValues(alpha: 0.97),
@@ -1024,21 +1038,22 @@ class _SKGameScreenState extends State<SKGameScreen> {
                 _showSpectatorListDialog(game);
               },
             ),
-            // Always show so users can reach the card-view-policy
-            // controls even when nobody is currently viewing (esp. for
-            // always_deny users who would otherwise have no in-game UI).
-            _buildTopActionButton(
-              icon: Icons.visibility,
-              active: _viewersOpen,
-              badgeCount: hasViewers ? game.cardViewers.length : 0,
-              onTap: () {
-                setState(() {
-                  _moreOpen = false;
-                  _soundPanelOpen = false;
-                  _viewersOpen = !_viewersOpen;
-                });
-              },
-            ),
+            // Card-view policy controls — players only (spectators have no
+            // cards for anyone to view). Always shown for players so even
+            // always_deny users can reach the policy UI.
+            if (!game.isSpectator)
+              _buildTopActionButton(
+                icon: Icons.visibility,
+                active: _viewersOpen,
+                badgeCount: hasViewers ? game.cardViewers.length : 0,
+                onTap: () {
+                  setState(() {
+                    _moreOpen = false;
+                    _soundPanelOpen = false;
+                    _viewersOpen = !_viewersOpen;
+                  });
+                },
+              ),
             _buildTopActionButton(
               icon: game.sfxVolume <= 0.01 ? Icons.volume_off : Icons.volume_up,
               active: _soundPanelOpen,
@@ -1054,9 +1069,7 @@ class _SKGameScreenState extends State<SKGameScreen> {
             _buildTopActionButton(
               icon: Icons.exit_to_app,
               active: false,
-              iconColor: game.isSpectator
-                  ? const Color(0xFFFFC4C4)
-                  : const Color(0xFFE53935),
+              iconColor: const Color(0xFFE53935),
               onTap: () {
                 setState(() {
                   _moreOpen = false;
@@ -1550,59 +1563,12 @@ class _SKGameScreenState extends State<SKGameScreen> {
     int badgeCount = 0,
     Color? iconColor,
   }) {
-    return GestureDetector(
+    return SpectatorActionButton(
+      icon: icon,
+      active: active,
       onTap: onTap,
-      child: Stack(
-        clipBehavior: Clip.none,
-        children: [
-          AnimatedContainer(
-            duration: const Duration(milliseconds: 180),
-            padding: const EdgeInsets.all(8),
-            decoration: BoxDecoration(
-              color: active
-                  ? const Color(0xFF5A4038).withValues(alpha: 0.92)
-                  : Colors.white.withValues(alpha: 0.85),
-              borderRadius: BorderRadius.circular(10),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withValues(alpha: 0.08),
-                  blurRadius: 6,
-                ),
-              ],
-            ),
-            child: Icon(
-              icon,
-              size: 19,
-              color: active
-                  ? Colors.white
-                  : (iconColor ?? const Color(0xFF5A4038)),
-            ),
-          ),
-          if (badgeCount > 0)
-            Positioned(
-              right: -4,
-              top: -4,
-              child: Container(
-                constraints: const BoxConstraints(minWidth: 18),
-                padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
-                decoration: BoxDecoration(
-                  color: const Color(0xFFE53935),
-                  borderRadius: BorderRadius.circular(999),
-                  border: Border.all(color: Colors.white, width: 1.2),
-                ),
-                child: Text(
-                  badgeCount > 99 ? '99+' : '$badgeCount',
-                  textAlign: TextAlign.center,
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontSize: 9,
-                    fontWeight: FontWeight.w800,
-                  ),
-                ),
-              ),
-            ),
-        ],
-      ),
+      badgeCount: badgeCount,
+      iconColor: iconColor,
     );
   }
 

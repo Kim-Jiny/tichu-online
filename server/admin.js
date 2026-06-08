@@ -1358,7 +1358,7 @@ function parseGoldProductFormBody(body) {
 // ===== Route handler =====
 
 async function handleAdminRoute(req, res, url, pathname, method, lobby, wss, maintenanceFns = {}) {
-  const { getMaintenanceConfig, setMaintenanceConfig, getMaintenanceStatus, sendPushNotification, sendBroadcastPush, runGoogleVoidedPoll, closeRoom } = maintenanceFns;
+  const { getMaintenanceConfig, setMaintenanceConfig, getMaintenanceStatus, sendPushNotification, sendBroadcastPush, runGoogleVoidedPoll, closeRoom, broadcastRoomList } = maintenanceFns;
   // Login page (no auth required)
   if (pathname === '/tc-backstage/login') {
     if (method === 'GET') {
@@ -5000,6 +5000,8 @@ async function handleAdminRoute(req, res, url, pathname, method, lobby, wss, mai
     // Notifies all players/spectators with room_closed (client returns to lobby),
     // clears timers, ends any in-progress game, and removes the room from the lobby.
     closeRoom(roomId);
+    // Push updated room list to everyone in the lobby so the closed room disappears.
+    if (typeof broadcastRoomList === 'function') broadcastRoomList();
     console.log(`[ADMIN] Room force-closed: ${roomId} (by ${sessionInfo.session.username})`);
     return redirect(res, '/tc-backstage/');
   }

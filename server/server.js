@@ -733,7 +733,7 @@ const server = http.createServer(async (req, res) => {
 
   if (pathname.startsWith('/tc-backstage')) {
     try {
-      await handleAdminRoute(req, res, url, pathname, req.method, lobby, wss, { getMaintenanceConfig, setMaintenanceConfig, getMaintenanceStatus, sendPushNotification, sendBroadcastPush, runGoogleVoidedPoll, closeRoom });
+      await handleAdminRoute(req, res, url, pathname, req.method, lobby, wss, { getMaintenanceConfig, setMaintenanceConfig, getMaintenanceStatus, sendPushNotification, sendBroadcastPush, runGoogleVoidedPoll, closeRoom, broadcastRoomList });
     } catch (err) {
       console.error('Admin route error:', err);
       res.writeHead(500, { 'Content-Type': 'text/plain' });

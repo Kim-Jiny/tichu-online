@@ -1060,6 +1060,7 @@ class _SKGameScreenState extends State<SKGameScreen> {
               onTap: () {
                 setState(() {
                   _soundPanelOpen = !_soundPanelOpen;
+                  _moreOpen = false;
                   if (_soundPanelOpen) {
                     _viewersOpen = false;
                   }

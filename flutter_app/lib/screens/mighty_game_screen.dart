@@ -1178,6 +1178,7 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
               onTap: () {
                 setState(() {
                   _soundPanelOpen = !_soundPanelOpen;
+                  _moreOpen = false;
                   if (_soundPanelOpen) {
                     _viewersOpen = false;
                   }

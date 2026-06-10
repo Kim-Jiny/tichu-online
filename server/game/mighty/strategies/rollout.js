@@ -15,7 +15,12 @@
 
 const MightyBot = require('../MightyBot');
 
-const MAX_STEPS = 2000;
+// A full Mighty round is ~10 tricks (≤60 plays + trick-ends) plus bidding/kitty
+// — under ~100 steps even in pathological-but-legal lines. 200 gives safe
+// headroom while capping the tail: if a determinized state ever fails to
+// progress (illegal→fallback that doesn't advance), we bail at 200 instead of
+// burning 2000 heuristic evaluations and spiking a CPU core.
+const MAX_STEPS = 200;
 
 function _stepOnce(game) {
   if (game.state === 'trick_end') {

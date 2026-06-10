@@ -4296,6 +4296,16 @@ function getBotExtraDelay(speed) {
   }
 }
 
+// Cheap signature of the state that decides whether a just-computed bot action
+// is still valid: phase, who's to act, and trick progress. Lets the post-delay
+// timer skip recomputing an expensive (mixoracle) decision when nothing moved.
+function botStateSig(game) {
+  if (!game) return '';
+  const actor = typeof game.getPendingActor === 'function' ? game.getPendingActor() : game.currentPlayer;
+  const trickLen = Array.isArray(game.currentTrick) ? game.currentTrick.length : 0;
+  return `${game.state}|${actor}|${game.currentPlayer}|${trickLen}`;
+}
+
 function scheduleBotActions(roomId, forceReschedule = false) {
   const room = lobby.getRoom(roomId);
   if (!room || !room.game) return;
@@ -4408,14 +4418,24 @@ function scheduleBotActions(roomId, forceReschedule = false) {
         // Add extra delay for card play actions to feel more natural
         const isCardPlay = action.type === 'play_cards' || action.type === 'pass' || action.type === 'play_card';
         if (isCardPlay) {
+          // #1: cache the (expensive) decision + a cheap state signature.
+          // mixoracle is costly and nothing else acts during a bot's own delay
+          // window, so re-running decideFn after the delay just doubled CPU for
+          // no benefit. Reuse the cached action when the state is unchanged;
+          // only re-decide if it actually moved (e.g. a Tichu bomb interrupt —
+          // cheap heuristic anyway).
+          const decidedSig = botStateSig(r.game);
+          const decidedAction = action;
           pendingBotCheck[roomId] = true;
           pendingBotTimers[roomId] = setTimeout(() => {
             delete pendingBotTimers[roomId];
             delete pendingBotCheck[roomId];
             const r2 = lobby.getRoom(roomId);
             if (!r2 || !r2.game) return;
-            // Re-decide in case state changed
-            let action2 = decideFn(r2.game, botId);
+            // Reuse the cached decision when nothing changed; else re-decide.
+            let action2 = botStateSig(r2.game) === decidedSig
+              ? decidedAction
+              : decideFn(r2.game, botId);
             if (!action2) {
               // State changed (e.g. bomb interrupt) - re-schedule for other bots
               scheduleBotActions(roomId);

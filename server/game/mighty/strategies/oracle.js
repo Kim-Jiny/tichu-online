@@ -25,6 +25,12 @@ const { SUITS } = require('../MightyDeck');
 
 const MAX_BID_CANDIDATES = 5;
 const MAX_PLAY_CANDIDATES = 8;
+// Wall-clock cap for a candidate-evaluation sweep. Candidates are ordered with
+// the heuristic-preferred one first, so cutting off late candidates still
+// leaves a sensible best-so-far. Bounds worst-case decision time (and thus how
+// long the single event-loop thread can be blocked) regardless of clone/rollout
+// cost. The first candidate always evaluates (deadline is checked after each).
+const EVAL_BUDGET_MS = 12;
 
 function _heuristicAction(game, botId) {
   return MightyBotInternals.decideMightyBotAction(game, botId, 'heuristic');
@@ -40,6 +46,7 @@ function _evaluateCandidates(game, botId, candidates, scoreFn = _roundDelta) {
   const preScores = { ...game.scores };
   let bestId = candidates[0]?.id ?? null;
   let bestScore = -Infinity;
+  const deadline = Date.now() + EVAL_BUDGET_MS;
 
   for (const candidate of candidates) {
     const world = game.clone();
@@ -55,6 +62,8 @@ function _evaluateCandidates(game, botId, candidates, scoreFn = _roundDelta) {
       bestScore = score;
       bestId = candidate.id;
     }
+    // Stop once we've spent the budget; the best-so-far stands.
+    if (Date.now() > deadline) break;
   }
 
   return bestId;

@@ -122,6 +122,11 @@ const { runRollout } = require('./rollout');
 const MightyBotInternals = require('../MightyBot');
 const { getCardInfo, RANK_ORDER, SUITS } = require('../MightyDeck');
 
+// Wall-clock cap for the multi-candidate play sweep. Caps how long the single
+// event-loop thread is blocked on rollouts; the first candidate always runs, so
+// we never return without a pick. See oracle.js EVAL_BUDGET_MS.
+const EVAL_BUDGET_MS = 12;
+
 function _heuristicPlayAction(game, botId) {
   const action = MightyBotInternals.decideMightyBotAction(game, botId, 'heuristic');
   if (!action || action.type !== 'play_card') return null;
@@ -157,6 +162,7 @@ function _bestPlayAction(game, botId, actions) {
   const seen = new Set();
   let bestAction = null;
   let bestScore = -Infinity;
+  const deadline = Date.now() + EVAL_BUDGET_MS;
 
   for (const action of actions) {
     const key = _playActionKey(action);
@@ -168,6 +174,8 @@ function _bestPlayAction(game, botId, actions) {
       bestScore = score;
       bestAction = action;
     }
+    // Stop once the budget is spent; the best-so-far stands.
+    if (Date.now() > deadline) break;
   }
 
   return { action: bestAction, score: bestScore };

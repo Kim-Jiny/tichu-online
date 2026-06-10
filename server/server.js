@@ -239,6 +239,9 @@ const ANDROID_PACKAGE_NAME = 'com.jiny.tichuOnline';
 const IOS_APP_ID = 'HW9XJ9J5M2.com.jiny.tichuOnline';
 const IOS_STORE_URL = 'https://apps.apple.com/app/tichu-online/id6759035151';
 const ANDROID_STORE_URL = `https://play.google.com/store/apps/details?id=${ANDROID_PACKAGE_NAME}`;
+// Public support contact shown on /support. Override via env to route to a
+// mailbox you actually monitor (a personal address is fine for a solo dev).
+const SUPPORT_EMAIL = process.env.SUPPORT_EMAIL || 'kjinyz@naver.com';
 const DEFAULT_ANDROID_SHA256 = '42:BC:52:D8:BA:95:74:09:27:07:D4:42:7A:7D:93:25:7C:4F:65:99:1E:02:FE:62:6C:80:3B:72:14:B6:C1:44,F4:AF:EF:78:2C:6A:11:A0:DE:C4:C8:7C:FF:27:A8:5B:C9:B1:D7:71:72:9D:8F:CB:64:49:B5:1C:20:EF:96:1F';
 const inviteLinkTokens = new Map();
 
@@ -972,6 +975,94 @@ const server = http.createServer(async (req, res) => {
       + `<a href="${isPrivacy ? '/privacy' : '/terms'}?lang=de">Deutsch</a>`
       + ` · <a href="${isPrivacy ? '/terms' : '/privacy'}?lang=${lang}">${escapeHtml(otherLabel)}</a></div>`
       + `<pre>${escapeHtml(body || (lang === 'ko' ? '내용이 준비 중입니다.' : 'Content is being prepared.'))}</pre>`
+      + `</div></body></html>`;
+    res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' });
+    res.end(html);
+  } else if (pathname === '/support') {
+    // Public, no-auth customer-support page. App Store Connect / Google Play
+    // require a reachable Support URL. Self-contained (no DB) so it always
+    // renders even before any admin config is set. ?lang=ko|en|de (default ko).
+    const langParam = url.searchParams.get('lang');
+    const lang = ['ko', 'en', 'de'].includes(langParam) ? langParam : 'ko';
+    const SUP = {
+      ko: {
+        title: '고객지원', heading: 'Tichu Online 고객지원',
+        intro: '도움이 필요하신가요? 자주 묻는 질문을 먼저 확인하시고, 해결되지 않으면 아래 이메일이나 앱 내 문의로 연락 주세요. 보통 영업일 기준 1~2일 내에 답변드립니다.',
+        contact: '문의 이메일', inApp: '앱 내 문의', inAppDesc: '설정 → 문의하기 에서 직접 문의를 남기실 수 있어요. 답변은 앱 내 문의 내역에서 확인됩니다.',
+        faqTitle: '자주 묻는 질문',
+        faq: [
+          ['게임 규칙은 어디서 보나요?', '게임 화면의 규칙(?) 버튼에서 티츄·마이티·스컬킹·러브레터 각 게임의 규칙을 확인할 수 있습니다.'],
+          ['로그인 / 계정 문제', '소셜 로그인(애플·구글·카카오)으로 접속합니다. 로그인이 안 되면 앱을 최신 버전으로 업데이트한 뒤 다시 시도해 주세요.'],
+          ['골드 / 결제 문의', '골드는 게임 플레이 또는 인앱 결제로 얻을 수 있습니다. 결제했는데 골드가 지급되지 않았다면 결제 영수증과 함께 이메일로 문의해 주세요.'],
+          ['환불은 어떻게 하나요?', '인앱 결제 환불은 구입하신 스토어(App Store / Google Play) 정책에 따라 진행됩니다. 스토어 고객센터를 통해 요청해 주세요.'],
+          ['불량 이용자 신고', '게임 중 상대 프로필에서 신고할 수 있습니다. 접수된 신고는 운영팀이 검토합니다.'],
+          ['회원탈퇴 / 데이터 삭제', '설정 → 회원탈퇴 에서 계정과 모든 데이터를 삭제할 수 있습니다. 삭제 후에는 복구가 불가능합니다.'],
+        ],
+        links: '관련 문서', privacy: '개인정보처리방침', terms: '이용약관', store: '스토어에서 보기',
+      },
+      en: {
+        title: 'Support', heading: 'Tichu Online Support',
+        intro: 'Need help? Please check the FAQ below first. If that does not resolve your issue, reach us by email or through the in-app inquiry. We usually reply within 1–2 business days.',
+        contact: 'Contact email', inApp: 'In-app inquiry', inAppDesc: 'Go to Settings → Submit Inquiry to send us a message directly. Replies appear in your in-app inquiry history.',
+        faqTitle: 'Frequently Asked Questions',
+        faq: [
+          ['Where can I find the rules?', 'Tap the Rules (?) button on the game screen to read the rules for Tichu, Mighty, Skull King and Love Letter.'],
+          ['Login / account issues', 'Sign in with a social account (Apple, Google or Kakao). If login fails, update to the latest app version and try again.'],
+          ['Gold / purchase questions', 'You can earn gold by playing or buy it via in-app purchase. If a purchase did not credit your gold, email us with your store receipt.'],
+          ['How do I get a refund?', 'In-app purchase refunds are handled by the store you bought from (App Store / Google Play). Please request a refund through their support.'],
+          ['Report a player', 'You can report an opponent from their profile during a game. Our team reviews every report.'],
+          ['Delete account / data', 'Go to Settings → Delete Account to remove your account and all associated data. Deletion is permanent and cannot be undone.'],
+        ],
+        links: 'Related', privacy: 'Privacy Policy', terms: 'Terms of Service', store: 'View in store',
+      },
+      de: {
+        title: 'Support', heading: 'Tichu Online Support',
+        intro: 'Brauchst du Hilfe? Bitte sieh dir zuerst die FAQ unten an. Falls das dein Problem nicht löst, erreichst du uns per E-Mail oder über die In-App-Anfrage. Wir antworten in der Regel innerhalb von 1–2 Werktagen.',
+        contact: 'Kontakt-E-Mail', inApp: 'In-App-Anfrage', inAppDesc: 'Gehe zu Einstellungen → Anfrage senden, um uns direkt zu schreiben. Antworten erscheinen in deinem Anfrageverlauf.',
+        faqTitle: 'Häufig gestellte Fragen',
+        faq: [
+          ['Wo finde ich die Regeln?', 'Tippe im Spielbildschirm auf die Regeln-Schaltfläche (?), um die Regeln für Tichu, Mighty, Skull King und Love Letter zu lesen.'],
+          ['Login- / Kontoprobleme', 'Melde dich mit einem sozialen Konto an (Apple, Google oder Kakao). Falls der Login fehlschlägt, aktualisiere die App und versuche es erneut.'],
+          ['Gold / Kauf-Fragen', 'Gold erhältst du durch Spielen oder per In-App-Kauf. Wurde dein Gold nach einem Kauf nicht gutgeschrieben, schreib uns mit deinem Beleg.'],
+          ['Wie erhalte ich eine Rückerstattung?', 'Rückerstattungen für In-App-Käufe werden über den jeweiligen Store (App Store / Google Play) abgewickelt. Bitte fordere sie dort an.'],
+          ['Spieler melden', 'Du kannst einen Gegner während des Spiels über sein Profil melden. Unser Team prüft jede Meldung.'],
+          ['Konto / Daten löschen', 'Gehe zu Einstellungen → Konto löschen, um dein Konto und alle Daten zu entfernen. Die Löschung ist endgültig.'],
+        ],
+        links: 'Verwandt', privacy: 'Datenschutzrichtlinie', terms: 'Nutzungsbedingungen', store: 'Im Store ansehen',
+      },
+    };
+    const s = SUP[lang];
+    const faqHtml = s.faq.map(
+      ([q, a]) => `<details><summary>${escapeHtml(q)}</summary><p>${escapeHtml(a)}</p></details>`
+    ).join('');
+    const html = `<!DOCTYPE html><html lang="${lang}"><head>`
+      + `<meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">`
+      + `<meta name="robots" content="all"><title>${escapeHtml(s.title)} · Tichu Online</title>`
+      + `<style>body{margin:0;background:#f6f4ef;color:#2b2b2b;`
+      + `font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,'Noto Sans KR',sans-serif;line-height:1.7}`
+      + `.wrap{max-width:760px;margin:0 auto;padding:40px 22px 80px}`
+      + `h1{font-size:22px;margin:0 0 6px}h2{font-size:16px;margin:32px 0 12px}`
+      + `.nav{font-size:13px;margin:0 0 22px}.nav a{color:#7a6a4f;text-decoration:none;margin-right:14px}`
+      + `.intro{color:#4a4a4a;margin:0 0 8px}`
+      + `.card{background:#fff;border:1px solid #e7e1d6;border-radius:12px;padding:14px 16px;margin:10px 0}`
+      + `.card a{color:#7a6a4f}`
+      + `details{background:#fff;border:1px solid #e7e1d6;border-radius:12px;padding:12px 16px;margin:8px 0}`
+      + `summary{cursor:pointer;font-weight:600}details p{margin:10px 0 2px;color:#4a4a4a}`
+      + `.foot{font-size:12px;color:#9a917f;margin-top:40px}</style></head>`
+      + `<body><div class="wrap"><h1>${escapeHtml(s.heading)}</h1>`
+      + `<div class="nav"><a href="/support?lang=ko">한국어</a>`
+      + `<a href="/support?lang=en">English</a><a href="/support?lang=de">Deutsch</a></div>`
+      + `<p class="intro">${escapeHtml(s.intro)}</p>`
+      + `<div class="card"><strong>${escapeHtml(s.contact)}:</strong> `
+      + `<a href="mailto:${SUPPORT_EMAIL}">${escapeHtml(SUPPORT_EMAIL)}</a><br>`
+      + `<strong>${escapeHtml(s.inApp)}:</strong> ${escapeHtml(s.inAppDesc)}</div>`
+      + `<h2>${escapeHtml(s.faqTitle)}</h2>${faqHtml}`
+      + `<h2>${escapeHtml(s.links)}</h2><div class="card">`
+      + `<a href="/privacy?lang=${lang}">${escapeHtml(s.privacy)}</a> · `
+      + `<a href="/terms?lang=${lang}">${escapeHtml(s.terms)}</a><br>`
+      + `<a href="${IOS_STORE_URL}">App Store</a> · `
+      + `<a href="${ANDROID_STORE_URL}">Google Play</a></div>`
+      + `<p class="foot">© Tichu Online</p>`
       + `</div></body></html>`;
     res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' });
     res.end(html);

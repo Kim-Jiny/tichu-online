@@ -336,6 +336,24 @@ input[type="text"], input[type="password"] { width: 100%; padding: 10px 12px; bo
 .sticky-kpi-item .k { font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 6px; }
 .sticky-kpi-item .v { font-size: 22px; font-weight: 800; color: var(--text); letter-spacing: -0.02em; }
 .sticky-kpi-item .m { margin-top: 6px; font-size: 12px; color: var(--muted); line-height: 1.5; }
+.hero-rail { padding: 18px 20px; }
+.hero-kpi { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 14px 4px; }
+.hero-item { padding: 2px 18px; min-width: 0; border-left: 1px solid rgba(32,28,22,0.08); }
+.hero-item:first-child { border-left: none; padding-left: 0; }
+.hk-label { font-size: 12px; color: var(--muted); letter-spacing: 0.02em; margin-bottom: 7px; white-space: nowrap; }
+.hk-value { font-size: 30px; font-weight: 800; color: var(--text); letter-spacing: -0.03em; line-height: 1.05; }
+.hk-delta { margin-top: 9px; }
+.hk-prev { font-size: 11px; color: var(--muted); margin-top: 5px; }
+.delta { display: inline-flex; align-items: center; gap: 3px; font-size: 12px; font-weight: 700; padding: 2px 9px; border-radius: 999px; line-height: 1.5; }
+.delta.up { color: #1a7f4b; background: rgba(46,139,87,0.13); }
+.delta.down { color: #c0563f; background: rgba(192,86,63,0.13); }
+.delta.flat { color: #8a8378; background: rgba(138,131,120,0.12); font-weight: 600; }
+.chart-foldout { border: 1px solid #ebe4d8; border-radius: 14px; background: #fff; margin: 12px 0; overflow: hidden; }
+.chart-foldout > summary { cursor: pointer; padding: 13px 18px; font-size: 14px; font-weight: 700; color: var(--text); list-style: none; display: flex; align-items: center; justify-content: space-between; }
+.chart-foldout > summary::-webkit-details-marker { display: none; }
+.chart-foldout > summary::after { content: '▾ 차트 보기'; font-size: 12px; font-weight: 600; color: var(--muted); }
+.chart-foldout[open] > summary::after { content: '▴ 접기'; }
+.chart-foldout .card-body { padding: 2px 18px 18px; }
 .status-strip { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 12px; margin-bottom: 18px; }
 .status-card {
   padding: 14px 16px;
@@ -425,6 +443,10 @@ input[type="text"], input[type="password"] { width: 100%; padding: 10px 12px; bo
   .sticky-kpi-rail { padding: 14px; border-radius: 16px; }
   .sticky-kpi-grid { grid-template-columns: 1fr 1fr; }
   .sticky-kpi-item { padding: 12px; }
+  .hero-kpi { grid-template-columns: 1fr 1fr; gap: 16px 0; }
+  .hero-item { padding: 0 14px; border-left: 1px solid rgba(32,28,22,0.08); }
+  .hero-item:nth-child(odd) { border-left: none; padding-left: 0; }
+  .hk-value { font-size: 24px; }
   .sticky-kpi-item .v { font-size: 18px; }
   .status-strip { grid-template-columns: 1fr; }
   .card-actions { flex-direction: column; }
@@ -813,6 +835,39 @@ function buildDeltaMeta(currentValue, previousValue, suffix = '', digits = 1) {
   const delta = ((current - previous) / previous) * 100;
   const sign = delta > 0 ? '+' : '';
   return `이전 기간 대비 ${sign}${delta.toFixed(digits)}%${suffix}`;
+}
+
+// Colored trend chip vs the previous equal-length period. Up=green, down=red
+// (directional, per the dashboard convention). Returns a flat chip when there's
+// no usable baseline (previous ≤ 0).
+function deltaPill(current, previous) {
+  const c = Number(current || 0);
+  const p = Number(previous || 0);
+  if (!Number.isFinite(p) || p <= 0) {
+    return '<span class="delta flat">— 비교 없음</span>';
+  }
+  const d = ((c - p) / p) * 100;
+  if (Math.abs(d) < 0.05) return '<span class="delta flat">— 0.0%</span>';
+  const up = d > 0;
+  return `<span class="delta ${up ? 'up' : 'down'}">${up ? '▲' : '▼'} ${up ? '+' : ''}${d.toFixed(1)}%</span>`;
+}
+
+// Sticky hero KPI strip: the few numbers that matter for the active tab, each
+// as a big value + colored vs-previous-period delta. items: [{label, cur, prev,
+// fmt?, color?}]. fmt defaults to formatNumber.
+function heroRail(items) {
+  if (!items || items.length === 0) return '';
+  const cells = items.map((it) => {
+    const fmt = it.fmt || ((n) => formatNumber(Number(n) || 0));
+    const colorStyle = it.color ? ` style="color:${it.color}"` : '';
+    return `<div class="hero-item">
+      <div class="hk-label">${escapeHtml(it.label)}</div>
+      <div class="hk-value"${colorStyle}>${fmt(it.cur)}</div>
+      <div class="hk-delta">${deltaPill(it.cur, it.prev)}</div>
+      <div class="hk-prev">이전 ${fmt(it.prev)}</div>
+    </div>`;
+  }).join('');
+  return `<div class="sticky-kpi-rail hero-rail"><div class="hero-kpi">${cells}</div></div>`;
 }
 
 function gameTypeBadge(gameType) {
@@ -1845,6 +1900,8 @@ async function handleAdminRoute(req, res, url, pathname, method, lobby, wss, mai
     const iapSeries = stats.iapSeries || [];
     const attSeries = stats.attendanceSeries || [];
     const attSum = stats.attendanceSummary || {};
+    const prevIapTot = ((prevStats.iapSummary || {}).total) || {};
+    const prevAttSum = prevStats.attendanceSummary || {};
     const won = (n) => `₩${formatNumber(Math.round(Number(n) || 0))}`;
     const pct = (r) => `${Math.round((Number(r) || 0) * 100)}%`;
     const fromValue = formatDateInput(from);
@@ -1915,12 +1972,6 @@ async function handleAdminRoute(req, res, url, pathname, method, lobby, wss, mai
       { key: 'last7', label: '최근 7일' },
       { key: 'last30', label: '최근 30일' },
     ];
-    const comparisonMeta = {
-      games: buildDeltaMeta(summary.totalGames, prevSummary.totalGames),
-      signups: buildDeltaMeta(summary.totalSignups, prevSummary.totalSignups),
-      goldNet: buildDeltaMeta(summary.goldNet, prevSummary.goldNet),
-      shopPurchases: buildDeltaMeta(summary.shopPurchases, prevSummary.shopPurchases),
-    };
     const warningCards = [];
     if (Number(prevSummary.totalGames || 0) > 0) {
       const deltaGames = ((Number(summary.totalGames || 0) - Number(prevSummary.totalGames || 0)) / Number(prevSummary.totalGames || 1)) * 100;
@@ -1938,44 +1989,8 @@ async function handleAdminRoute(req, res, url, pathname, method, lobby, wss, mai
     if (mightyShare >= 25) {
       warningCards.push({ tone: 'good', title: '마이티 비중 확대', desc: `현재 전체 게임 중 마이티가 ${mightyShare.toFixed(1)}%를 차지합니다.` });
     }
-    const stickyFavorites = {
-      games: [
-        { label: '전체 게임', value: formatNumber(summary.totalGames || 0), meta: comparisonMeta.games },
-        { label: '랭크 비중', value: formatPercent(rankedShare, 1), meta: `${formatNumber(summary.rankedGames || 0)}판` },
-        { label: '마이티 비중', value: formatPercent(mightyShare, 1), meta: buildDeltaMeta(summary.mightyGames, prevSummary.mightyGames) },
-        { label: '주력 게임', value: escapeHtml(dominantGame?.label || '-'), meta: dominantGame ? `${formatNumber(dominantGame.value)}판` : '데이터 없음' },
-      ],
-      acquisition: [
-        { label: '전체 가입', value: formatNumber(summary.totalSignups || 0), meta: comparisonMeta.signups },
-        { label: 'iOS 비중', value: formatPercent(iosShare, 1), meta: `${formatNumber(summary.iosSignups || 0)}명` },
-        { label: 'AOS 비중', value: formatPercent(aosShare, 1), meta: `${formatNumber(summary.androidSignups || 0)}명` },
-        { label: '가입/게임', value: formatPercent(signupPerGame * 100, 1), meta: '게임 100판당' },
-      ],
-      economy: [
-        { label: '획득 골드', value: formatNumber(summary.goldEarned || 0), meta: buildDeltaMeta(summary.goldEarned, prevSummary.goldEarned) },
-        { label: '소모 골드', value: formatNumber(summary.goldSpent || 0), meta: buildDeltaMeta(summary.goldSpent, prevSummary.goldSpent) },
-        { label: '순변동', value: formatNumber(summary.goldNet || 0), meta: comparisonMeta.goldNet },
-        { label: '흑자 구간', value: formatNumber(positiveNetBuckets), meta: `${Math.max(goldSeries.length, 1)}개 중` },
-      ],
-      shop: [
-        { label: '상점 구매', value: formatNumber(summary.shopPurchases || 0), meta: comparisonMeta.shopPurchases },
-        { label: '상점 지출', value: formatNumber(summary.shopGoldSpent || 0), meta: buildDeltaMeta(summary.shopGoldSpent, prevSummary.shopGoldSpent) },
-        { label: '객단가', value: avgPurchaseValue.toFixed(1), meta: '구매 1건당 골드' },
-        { label: '가입 대비 구매자', value: formatPercent(shopBuyerConversion, 1), meta: `${formatNumber(summary.shopBuyers || 0)}명` },
-      ],
-      payment: [
-        { label: '추정 매출', value: won(iapTot.gross || 0), meta: `결제 ${formatNumber(iapTot.count || 0)}건 · 정가추정` },
-        { label: '정산추정액', value: won(iapTot.settlement || 0), meta: `수수료 차감 후` },
-        { label: '환불', value: won(iapTot.refundAmount || 0), meta: `${formatNumber(iapTot.refundCount || 0)}건` },
-        { label: '순매출', value: won(iapTot.net || 0), meta: '환불 차감 전 수수료' },
-      ],
-      attendance: [
-        { label: '출석 인원', value: formatNumber(attSum.unique_claims || 0), valueColor: '#2e8b57', meta: `${formatNumber(attSum.total_claims || 0)}회` },
-        { label: '7일차 완주', value: formatNumber(attSum.finales || 0), valueColor: '#e65100' },
-        { label: '지급 골드', value: formatNumber(attSum.gold || 0), valueColor: '#b35b19' },
-        { label: '구간당 평균', value: (Number(attSum.unique_claims || 0) / Math.max(attSeries.length, 1)).toFixed(1), meta: bucket === 'hour' ? '시간대당' : '일자당' },
-      ],
-    };
+    // (Per-tab KPIs now render via heroKpis/heroRail; the legacy stickyFavorites
+    // and global summaryCards strips were removed in the dashboard redesign.)
     const statActions = {
       games: [
         { label: '최근 매치 보기', href: '/tc-backstage/matches' },
@@ -2019,21 +2034,6 @@ async function handleAdminRoute(req, res, url, pathname, method, lobby, wss, mai
         { label: '결제내역', href: '/tc-backstage/iap-receipts' },
       ],
     };
-
-    const summaryCards = summaryStrip([
-      { label: '전체 게임', value: formatNumber(summary.totalGames || 0), meta: `${fromValue} ~ ${toValue} · ${platformLabel}` },
-      { label: '티츄', value: formatNumber(summary.tichuGames || 0), valueColor: '#5f62d6', meta: summary.totalGames ? formatPercent((summary.tichuGames || 0) * 100 / summary.totalGames, 1) : '0%' },
-      { label: '스컬킹', value: formatNumber(summary.skullGames || 0), valueColor: '#138072', meta: summary.totalGames ? formatPercent((summary.skullGames || 0) * 100 / summary.totalGames, 1) : '0%' },
-      { label: '러브레터', value: formatNumber(summary.llGames || 0), valueColor: '#E91E63', meta: summary.totalGames ? formatPercent((summary.llGames || 0) * 100 / summary.totalGames, 1) : '0%' },
-      { label: '마이티', value: formatNumber(summary.mightyGames || 0), valueColor: '#7b1fa2', meta: summary.totalGames ? formatPercent((summary.mightyGames || 0) * 100 / summary.totalGames, 1) : '0%' },
-      { label: '랭크전', value: formatNumber(summary.rankedGames || 0), valueColor: '#c67b2b', meta: summary.totalGames ? formatPercent((summary.rankedGames || 0) * 100 / summary.totalGames, 1) : '0%' },
-      { label: '가입', value: formatNumber(summary.totalSignups || 0), meta: `iOS ${formatNumber(summary.iosSignups || 0)} · AOS ${formatNumber(summary.androidSignups || 0)}` },
-      { label: '획득 골드', value: formatNumber(summary.goldEarned || 0), valueColor: '#2e8b57' },
-      { label: '소모 골드', value: formatNumber(summary.goldSpent || 0), valueColor: '#c0563f' },
-      { label: '순변동', value: formatNumber(summary.goldNet || 0), valueColor: (summary.goldNet || 0) >= 0 ? '#1f2328' : '#c0563f' },
-      { label: '상점 구매', value: formatNumber(summary.shopPurchases || 0), meta: `구매자 ${formatNumber(summary.shopBuyers || 0)}명` },
-      { label: '상점 지출', value: formatNumber(summary.shopGoldSpent || 0), valueColor: '#b35b19', meta: `판매 아이템 ${formatNumber(summary.shopUniqueItems || 0)}종` }
-    ]);
 
     const gameTable = gameSeries.length > 0
       ? `<div class="table-wrap"><table>
@@ -2160,20 +2160,14 @@ async function handleAdminRoute(req, res, url, pathname, method, lobby, wss, mai
         ${(statActions.games || []).map((action) => `<a href="${action.href}" class="btn btn-secondary">${escapeHtml(action.label)}</a>`).join('')}
       </div>
       <div class="subtab-copy">게임 탭은 실제 플레이 볼륨과 어떤 게임이 운영을 주도하는지에 집중합니다. 차트를 클릭하면 해당 날짜로 바로 drill-down 됩니다.</div>
-      <div class="grid-2col">
-        <div class="card">
-          <h3>게임량 추이</h3>
-          <div style="position:relative;height:300px;margin-top:14px"><canvas id="gameChart"></canvas></div>
-        </div>
-        <div class="card">
-          <h3>게임 비율</h3>
-          <div style="position:relative;height:300px;display:flex;align-items:center;justify-content:center;margin-top:14px"><canvas id="gamePieChart"></canvas></div>
-        </div>
-      </div>
       <div class="card">
         <h3>게임량 상세</h3>
         ${gameTable}
       </div>
+      <details class="chart-foldout">
+        <summary>게임량 추이</summary>
+        <div class="card-body"><div style="position:relative;height:300px"><canvas id="gameChart"></canvas></div></div>
+      </details>
     `;
 
     const acquisitionTabContent = `
@@ -2189,16 +2183,14 @@ async function handleAdminRoute(req, res, url, pathname, method, lobby, wss, mai
         ${(statActions.acquisition || []).map((action) => `<a href="${action.href}" class="btn btn-secondary">${escapeHtml(action.label)}</a>`).join('')}
       </div>
       <div class="subtab-copy">유입 탭은 가입 추이와 플랫폼 분포, 그리고 게임량 대비 신규 유저 유입 강도를 같이 봅니다. 차트를 클릭하면 해당 날짜로 좁혀볼 수 있습니다.</div>
-      <div class="grid-2col">
-        <div class="card">
-          <h3>가입 추이</h3>
-          <div style="position:relative;height:300px;margin-top:14px"><canvas id="signupChart"></canvas></div>
-        </div>
-        <div class="card">
-          <h3>가입 상세</h3>
-          ${signupTable}
-        </div>
+      <div class="card">
+        <h3>가입 상세</h3>
+        ${signupTable}
       </div>
+      <details class="chart-foldout">
+        <summary>가입 추이</summary>
+        <div class="card-body"><div style="position:relative;height:300px"><canvas id="signupChart"></canvas></div></div>
+      </details>
     `;
 
     const economyTabContent = `
@@ -2214,23 +2206,21 @@ async function handleAdminRoute(req, res, url, pathname, method, lobby, wss, mai
         ${(statActions.economy || []).map((action) => `<a href="${action.href}" class="btn btn-secondary">${escapeHtml(action.label)}</a>`).join('')}
       </div>
       <div class="subtab-copy">경제 탭은 게임 보상, 광고, 상점 소비를 합친 전체 골드 흐름을 읽기 쉽게 보여줍니다. 차트 클릭 시 해당 날짜 기준으로 바로 좁혀집니다.</div>
-      <div class="grid-2col">
-        <div class="card">
-          <h3>골드 획득 / 소모</h3>
-          <div style="position:relative;height:300px;margin-top:14px"><canvas id="goldChart"></canvas></div>
+      <div class="card">
+        <h3>보조 지표</h3>
+        <div class="soft-panel">
+          ${metricLine('최대 획득 구간', peakEarnRow ? `${escapeHtml(formatDate(peakEarnRow.bucket_time))} · ${formatNumber(peakEarnRow.earned)}` : '-')}
+          ${metricLine('최대 소모 구간', peakSpendRow ? `${escapeHtml(formatDate(peakSpendRow.bucket_time))} · ${formatNumber(peakSpendRow.spent)}` : '-')}
+          ${metricLine('구간당 평균 획득', (Number(summary.goldEarned || 0) / Math.max(goldSeries.length, 1)).toFixed(1))}
+          ${metricLine('구간당 평균 소모', (Number(summary.goldSpent || 0) / Math.max(goldSeries.length, 1)).toFixed(1))}
         </div>
-        <div class="card">
-          <h3>보조 지표</h3>
-          <div class="soft-panel">
-            ${metricLine('최대 획득 구간', peakEarnRow ? `${escapeHtml(formatDate(peakEarnRow.bucket_time))} · ${formatNumber(peakEarnRow.earned)}` : '-')}
-            ${metricLine('최대 소모 구간', peakSpendRow ? `${escapeHtml(formatDate(peakSpendRow.bucket_time))} · ${formatNumber(peakSpendRow.spent)}` : '-')}
-            ${metricLine('구간당 평균 획득', (Number(summary.goldEarned || 0) / Math.max(goldSeries.length, 1)).toFixed(1))}
-            ${metricLine('구간당 평균 소모', (Number(summary.goldSpent || 0) / Math.max(goldSeries.length, 1)).toFixed(1))}
-          </div>
-          <div style="height:14px"></div>
-          ${goldTable}
-        </div>
+        <div style="height:14px"></div>
+        ${goldTable}
       </div>
+      <details class="chart-foldout">
+        <summary>골드 획득 / 소모 추이</summary>
+        <div class="card-body"><div style="position:relative;height:300px"><canvas id="goldChart"></canvas></div></div>
+      </details>
     `;
 
     const peakAttendanceRow = [...attSeries].sort((a, b) =>
@@ -2292,20 +2282,18 @@ async function handleAdminRoute(req, res, url, pathname, method, lobby, wss, mai
         ${(statActions.shop || []).map((action) => `<a href="${action.href}" class="btn btn-secondary">${escapeHtml(action.label)}</a>`).join('')}
       </div>
       <div class="subtab-copy">상점 탭은 판매량뿐 아니라 구매자 밀도와 어떤 상품이 실제 지출을 끌고 가는지에 초점을 둡니다. 차트를 클릭하면 해당 날짜 기준으로 바로 drill-down 됩니다.</div>
-      <div class="grid-2col">
-        <div class="card">
-          <h3>상점 판매 추이</h3>
-          <div style="position:relative;height:300px"><canvas id="shopSalesChart"></canvas></div>
-        </div>
-        <div class="card">
-          <h3>베스트셀러 아이템</h3>
-          ${topShopItemsTable}
-        </div>
+      <div class="card">
+        <h3>베스트셀러 아이템</h3>
+        ${topShopItemsTable}
       </div>
       <div class="card">
         <h3>상점 판매 상세</h3>
         ${shopSalesTable}
       </div>
+      <details class="chart-foldout">
+        <summary>상점 판매 추이</summary>
+        <div class="card-body"><div style="position:relative;height:300px"><canvas id="shopSalesChart"></canvas></div></div>
+      </details>
     `;
 
     const platRow = (name, p, feeRate) => `<tr>
@@ -2386,6 +2374,44 @@ async function handleAdminRoute(req, res, url, pathname, method, lobby, wss, mai
       attendance: attendanceTabContent,
     };
 
+    // The few numbers that matter per tab, pinned at the top with a vs-previous
+    // -period delta. cur/prev feed deltaPill; fmt defaults to formatNumber.
+    const heroKpis = {
+      games: [
+        { label: '전체 게임', cur: summary.totalGames, prev: prevSummary.totalGames },
+        { label: '티츄', cur: summary.tichuGames, prev: prevSummary.tichuGames },
+        { label: '스컬킹', cur: summary.skullGames, prev: prevSummary.skullGames },
+        { label: '마이티', cur: summary.mightyGames, prev: prevSummary.mightyGames },
+        { label: '랭크전', cur: summary.rankedGames, prev: prevSummary.rankedGames },
+      ],
+      acquisition: [
+        { label: '전체 가입', cur: summary.totalSignups, prev: prevSummary.totalSignups },
+        { label: 'iOS 가입', cur: summary.iosSignups, prev: prevSummary.iosSignups },
+        { label: 'AOS 가입', cur: summary.androidSignups, prev: prevSummary.androidSignups },
+      ],
+      economy: [
+        { label: '획득 골드', cur: summary.goldEarned, prev: prevSummary.goldEarned, color: '#2e8b57' },
+        { label: '소모 골드', cur: summary.goldSpent, prev: prevSummary.goldSpent, color: '#c0563f' },
+        { label: '순변동', cur: summary.goldNet, prev: prevSummary.goldNet, color: (summary.goldNet || 0) >= 0 ? '#1f2328' : '#c0563f' },
+      ],
+      shop: [
+        { label: '상점 구매', cur: summary.shopPurchases, prev: prevSummary.shopPurchases },
+        { label: '상점 지출', cur: summary.shopGoldSpent, prev: prevSummary.shopGoldSpent },
+        { label: '구매자', cur: summary.shopBuyers, prev: prevSummary.shopBuyers },
+      ],
+      payment: [
+        { label: '추정 매출', cur: iapTot.gross, prev: prevIapTot.gross, fmt: won },
+        { label: '환불', cur: iapTot.refundAmount, prev: prevIapTot.refundAmount, fmt: won, color: '#c0563f' },
+        { label: '순매출', cur: iapTot.net, prev: prevIapTot.net, fmt: won },
+        { label: '정산추정', cur: iapTot.settlement, prev: prevIapTot.settlement, fmt: won, color: '#1565c0' },
+      ],
+      attendance: [
+        { label: '출석 인원', cur: attSum.unique_claims, prev: prevAttSum.unique_claims, color: '#2e8b57' },
+        { label: '7일차 완주', cur: attSum.finales, prev: prevAttSum.finales, color: '#e65100' },
+        { label: '지급 골드', cur: attSum.gold, prev: prevAttSum.gold, color: '#b35b19' },
+      ],
+    };
+
     const content = `
       <script src="https://cdn.jsdelivr.net/npm/chart.js@4/dist/chart.umd.min.js"></script>
       ${pageHeader('통계', '기간별 게임량, 가입, 골드 흐름, 그리고 상점 판매 추이까지 함께 볼 수 있습니다. 플랫폼 필터로 iOS/AOS 기준도 바로 확인할 수 있습니다.')}
@@ -2420,7 +2446,6 @@ async function handleAdminRoute(req, res, url, pathname, method, lobby, wss, mai
           <a href="/tc-backstage/stats" class="btn btn-secondary">초기화</a>
         </form>
       </div>
-      ${summaryCards}
       <div class="preset-bar">
         ${presetLinks.map((item) => `<a href="${buildStatsLink({ preset: item.key })}" class="preset-link ${preset === item.key ? 'active' : ''}">${item.label}</a>`).join('')}
       </div>
@@ -2432,18 +2457,7 @@ async function handleAdminRoute(req, res, url, pathname, method, lobby, wss, mai
           </a>
         `).join('')}
       </div>
-      <div class="sticky-kpi-rail">
-        <div class="sticky-kpi-title">즐겨찾기 KPI</div>
-        <div class="sticky-kpi-grid">
-          ${(stickyFavorites[statTab] || []).map((item) => `
-            <div class="sticky-kpi-item">
-              <div class="k">${escapeHtml(item.label)}</div>
-              <div class="v">${item.value}</div>
-              <div class="m">${item.meta || ''}</div>
-            </div>
-          `).join('')}
-        </div>
-      </div>
+      ${heroRail(heroKpis[statTab])}
       ${warningCards.length > 0 ? `
         <div class="status-strip">
           ${warningCards.map((card) => `
@@ -2559,34 +2573,6 @@ async function handleAdminRoute(req, res, url, pathname, method, lobby, wss, mai
         });
           attachDrilldown(gameChart, ${JSON.stringify(gameBucketTimes)}, 'games');
         }
-
-        // Game pie chart
-        const totalTichu = ${JSON.stringify(gameChartTichu)}.reduce((a,b) => a+b, 0);
-        const totalSK = ${JSON.stringify(gameChartSK)}.reduce((a,b) => a+b, 0);
-        const totalLL = ${JSON.stringify(gameChartLL)}.reduce((a,b) => a+b, 0);
-        const totalMighty = ${JSON.stringify(gameChartMighty)}.reduce((a,b) => a+b, 0);
-        const gamePieChartEl = document.getElementById('gamePieChart');
-        if (gamePieChartEl) new Chart(gamePieChartEl, {
-          type: 'doughnut',
-          data: {
-            labels: ['티츄 (' + totalTichu + ')', '스컬킹 (' + totalSK + ')', '러브레터 (' + totalLL + ')', '마이티 (' + totalMighty + ')'],
-            datasets: [{
-              data: [totalTichu, totalSK, totalLL, totalMighty],
-              backgroundColor: ['rgba(108,99,255,0.85)', 'rgba(255,112,67,0.85)', 'rgba(233,30,99,0.85)', 'rgba(123,31,162,0.85)'],
-              borderWidth: 0,
-              hoverOffset: 8,
-            }]
-          },
-          options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            cutout: '55%',
-            plugins: {
-              tooltip: tooltipStyle,
-              legend: { position: 'bottom', labels: { usePointStyle: true, padding: 16, font: { size: 13 } } },
-            },
-          }
-        });
 
         // Gold chart - bar + line
         const goldChartEl = document.getElementById('goldChart');
@@ -2767,6 +2753,18 @@ async function handleAdminRoute(req, res, url, pathname, method, lobby, wss, mai
         });
           attachDrilldown(shopSalesChart, ${JSON.stringify(shopBucketTimes)}, 'shop');
         }
+
+        // Charts live inside collapsed <details> (display:none), so Chart.js
+        // sizes them to 0 on init. Resize on first open so they render fully.
+        document.querySelectorAll('details.chart-foldout').forEach((d) => {
+          d.addEventListener('toggle', () => {
+            if (!d.open) return;
+            d.querySelectorAll('canvas').forEach((cv) => {
+              const ch = Chart.getChart(cv);
+              if (ch) ch.resize();
+            });
+          });
+        });
       })();
       </script>
     `;

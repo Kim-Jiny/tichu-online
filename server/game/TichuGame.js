@@ -272,63 +272,70 @@ class TichuGame {
     }
   }
 
-  handlePlayCards(playerId, cardIds, callRank = null) {
+  // Pure legality check for a play action — returns the SAME {success,
+  // messageKey, messageParams} verdict handlePlayCards would, plus the resolved
+  // {combo, kind} for routing, WITHOUT mutating game/hand state. This is the
+  // single source of truth for play legality: handlePlayCards delegates to it,
+  // and bots call it directly to filter candidates instead of cloning the whole
+  // game per candidate (the old canApplyAction hot spot). kind ∈ bomb|dog|normal.
+  // NOTE: on a Phoenix play this sets combo.value (a fresh combo object) just as
+  // the original inline path did; the caller reuses that combo for the push.
+  canPlayCards(playerId, cardIds) {
     if (this.state !== STATE.PLAYING) {
       return { success: false, messageKey: 'game_not_playing_phase' };
     }
     if (this.dragonPending) {
       return { success: false, messageKey: 'game_dragon_target_pending' };
     }
+    if (!Array.isArray(cardIds)) {
+      return { success: false, messageKey: 'game_invalid_cards' };
+    }
+
+    // Off-turn: only a bomb may interrupt an existing (non-empty) trick.
     if (playerId !== this.currentPlayer) {
-      // S5: Verify cards in hand BEFORE combo validation
-      if (!Array.isArray(cardIds)) {
-        return { success: false, messageKey: 'game_invalid_cards' };
-      }
       for (const c of cardIds) {
         if (!this.hands[playerId].includes(c)) {
           return { success: false, messageKey: 'game_not_your_turn' };
         }
       }
-      // Allow bombs from anyone (interruption)
       const combo = getComboType(cardIds);
       if (!isBomb(combo)) {
         return { success: false, messageKey: 'game_not_your_turn' };
       }
-      // A bomb may only INTERRUPT an existing play — never lead an empty
-      // trick. Without this, a non-leader could bomb into an empty trick,
-      // set currentPlayer to self and steal the lead from the real leader.
       if (this.currentTrick.length === 0) {
         return { success: false, messageKey: 'game_not_your_turn' };
       }
-      // Bomb interruption
-      return this.playBomb(playerId, cardIds, combo);
+      const lastCombo = this.currentTrick[this.currentTrick.length - 1].combo;
+      if (!canBeat(lastCombo, combo)) {
+        return { success: false, messageKey: 'game_bomb_not_strong_enough' };
+      }
+      return { success: true, combo, kind: 'bomb' };
     }
 
-    // S11: Validate cardIds is an array
-    if (!Array.isArray(cardIds) || cardIds.length === 0) {
+    // On-turn play.
+    if (cardIds.length === 0) {
       return { success: false, messageKey: 'game_invalid_cards' };
     }
-
-    // Verify cards in hand
     for (const c of cardIds) {
       if (!this.hands[playerId].includes(c)) {
         return { success: false, messageKey: 'game_card_not_in_hand' };
       }
     }
 
-    // Check Dog - special play
+    // Dog — lead only.
     if (cardIds.length === 1 && cardIds[0] === 'special_dog') {
-      return this.playDog(playerId);
+      if (this.currentTrick.length > 0) {
+        return { success: false, messageKey: 'game_dog_only_on_lead' };
+      }
+      return { success: true, kind: 'dog' };
     }
 
-    // Validate combo
     const combo = getComboType(cardIds);
     if (combo.type === COMBO.INVALID) {
       return { success: false, messageKey: 'game_invalid_combo' };
     }
 
-    // If Phoenix played as single, set value to current top + 0.5
-    // Phoenix cannot beat Dragon (only bombs can beat Dragon)
+    // Phoenix as single: takes current top + 0.5; cannot beat the Dragon.
     if (combo.isPhoenix && this.currentTrick.length > 0) {
       const lastCombo = this.currentTrick[this.currentTrick.length - 1].combo;
       if (lastCombo.value === 15) {
@@ -337,7 +344,6 @@ class TichuGame {
       combo.value = lastCombo.value + 0.5;
     }
 
-    // Check if can beat current trick
     if (this.currentTrick.length > 0) {
       const lastCombo = this.currentTrick[this.currentTrick.length - 1].combo;
       if (!canBeat(lastCombo, combo)) {
@@ -345,15 +351,30 @@ class TichuGame {
       }
     }
 
-    // Check call fulfillment
+    // Call (mahjong wish) obligation.
     if (this.callRank && this.currentTrick.length > 0) {
       if (!this.isCallFulfilled(playerId, cardIds, combo)) {
-        // Player must fulfill call if possible
         if (this.canFulfillCallAndBeat(playerId)) {
           return { success: false, messageKey: 'game_must_play_called_rank', messageParams: { rank: this.callRank } };
         }
       }
     }
+
+    return { success: true, combo, kind: 'normal' };
+  }
+
+  handlePlayCards(playerId, cardIds, callRank = null) {
+    // Validate via the single source of truth, then route to the mutation path.
+    const check = this.canPlayCards(playerId, cardIds);
+    if (!check.success) return check;
+    if (check.kind === 'bomb') {
+      return this.playBomb(playerId, cardIds, check.combo);
+    }
+    if (check.kind === 'dog') {
+      return this.playDog(playerId);
+    }
+    // Normal play: canPlayCards resolved (and Phoenix-adjusted) the combo.
+    const combo = check.combo;
 
     // Play the cards (arrange Phoenix position for display)
     const arrangedCards = arrangeCardsWithPhoenix(cardIds, combo);

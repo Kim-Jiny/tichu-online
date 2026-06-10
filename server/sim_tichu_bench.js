@@ -21,16 +21,19 @@ const { decideBotAction } = require('./game/BotPlayer');
 function parseArgs() {
   const args = process.argv.slice(2);
   let rounds = 40;
+  let warmup = 0;
   let seats = ['winrate', 'winrate', 'winrate', 'winrate'];
   for (let i = 0; i < args.length; i++) {
     if (args[i] === '--seats') {
       seats = (args[++i] || '').split(',').map((s) => s.trim());
       if (seats.length !== 4) { console.error('--seats needs 4'); process.exit(1); }
+    } else if (args[i] === '--warmup') {
+      warmup = Number(args[++i]) || 0;
     } else if (!Number.isNaN(Number(args[i]))) {
       rounds = Number(args[i]);
     }
   }
-  return { rounds, seats };
+  return { rounds, seats, warmup };
 }
 
 function pendingActors(game) {
@@ -48,7 +51,7 @@ function pct(sortedArr, p) {
 }
 
 function main() {
-  const { rounds, seats } = parseArgs();
+  const { rounds, seats, warmup } = parseArgs();
   const playerIds = ['p0', 'p1', 'p2', 'p3'];
   const playerNames = { p0: 'p0', p1: 'p1', p2: 'p2', p3: 'p3' };
   const stratOf = {};
@@ -73,7 +76,9 @@ function main() {
         const t0 = performance.now();
         let action = decideBotAction(game, actor, stratOf[actor]);
         const dt = performance.now() - t0;
-        if (stratOf[actor] && times[stratOf[actor]]) times[stratOf[actor]].push(dt);
+        // Skip warmup rounds from timing so JIT-cold outliers (absent in a
+        // long-running server) don't masquerade as steady-state spikes.
+        if (r >= warmup && stratOf[actor] && times[stratOf[actor]]) times[stratOf[actor]].push(dt);
         if (!action) action = game.getAutoTimeoutAction(actor);
         if (!action) continue;
         const res = game.handleAction(actor, action);

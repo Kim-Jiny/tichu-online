@@ -1684,6 +1684,14 @@ function collectRawPlayCandidates(cards, isLead, state) {
 }
 
 function canApplyAction(game, botId, action) {
+  // Fast path: play_cards legality via the game's pure validator — no clone.
+  // This is the hot spot: a full hand yields dozens of play candidates, and the
+  // old clone()+handleAction per candidate was the dominant per-decision cost
+  // (uncapped by the search time budget). Pass/dragon_give are few, so they keep
+  // the simple clone path.
+  if (action && action.type === 'play_cards' && typeof game.canPlayCards === 'function') {
+    return game.canPlayCards(botId, action.cards || []).success === true;
+  }
   const clone = game.clone();
   clone._suppressBotSearchLogs = true;
   const result = clone.handleAction(botId, action);
@@ -2016,9 +2024,18 @@ function getPendingSimulationActor(game) {
   return game.currentPlayer;
 }
 
-function runHeuristicRollout(game) {
+// Plays a determinized world to round_end with the heuristic policy. Returns
+// true only if it reached a terminal state (so the score is meaningful). An
+// early-game rollout replays a whole round (~60 heuristic decisions) and can
+// take 100-250ms on its own — longer than the search's whole time budget — and
+// the per-candidate deadline outside can't interrupt a rollout already running.
+// So we check `deadline` INSIDE the loop and bail (returning false) the moment
+// it's exceeded; the caller discards that incomplete sample. This hard-caps a
+// single decision at ~budget instead of letting one fat rollout overshoot it.
+function runHeuristicRollout(game, deadline = 0) {
   let steps = 0;
   while (game.state !== 'round_end' && game.state !== 'game_end' && steps < TICHU_SEARCH_MAX_STEPS) {
+    if (deadline && performance.now() >= deadline) return false;
     const actor = getPendingSimulationActor(game);
     if (!actor) break;
 
@@ -2035,7 +2052,7 @@ function runHeuristicRollout(game) {
     }
     steps++;
   }
-  return game;
+  return game.state === 'round_end' || game.state === 'game_end';
 }
 
 function evaluateSimulatedOutcome(game, botId) {
@@ -2136,7 +2153,10 @@ function chooseBestWinrateAction(game, botId, candidates) {
       const result = sim.handleAction(botId, entry.action);
       if (!result || !result.success) continue;
 
-      runHeuristicRollout(sim);
+      // Deadline-aware: a single rollout can exceed the whole budget, so it may
+      // bail mid-play. Discard the incomplete sample and stop sampling — time's up.
+      const completed = runHeuristicRollout(sim, deadline);
+      if (!completed) { activeKeys = []; break; }
       const outcome = evaluateSimulatedOutcome(sim, botId);
       entry.winSum += outcome.win;
       entry.marginSum += outcome.margin;

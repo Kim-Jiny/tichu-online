@@ -294,6 +294,12 @@ class TichuGame {
       if (!isBomb(combo)) {
         return { success: false, messageKey: 'game_not_your_turn' };
       }
+      // A bomb may only INTERRUPT an existing play — never lead an empty
+      // trick. Without this, a non-leader could bomb into an empty trick,
+      // set currentPlayer to self and steal the lead from the real leader.
+      if (this.currentTrick.length === 0) {
+        return { success: false, messageKey: 'game_not_your_turn' };
+      }
       // Bomb interruption
       return this.playBomb(playerId, cardIds, combo);
     }

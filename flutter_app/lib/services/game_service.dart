@@ -324,7 +324,7 @@ class GameService extends ChangeNotifier {
   StreamSubscription? _fcmTokenSubscription;
 
   GameService(this._network) {
-    _subscription = _network.messageStream.listen(_handleMessage);
+    _subscription = _network.messageStream.listen(_onMessage);
     _fcmTokenSubscription = FirebaseMessaging.instance.onTokenRefresh.listen((
       newToken,
     ) {
@@ -471,6 +471,18 @@ class GameService extends ChangeNotifier {
         return const [Color(0xFFFFE8D0), Color(0xFFE8D0B8), Color(0xFFF0D8C8)];
       default:
         return const [Color(0xFFFFF1F5), Color(0xFFE6DCE8), Color(0xFFEDE2EF)];
+    }
+  }
+
+  // Listener wrapper: a single malformed server payload (e.g. an unguarded
+  // cast inside a model fromJson) must not throw uncaught into the stream zone
+  // and silently strand the game state. Catch, log the offending type, drop
+  // just that message.
+  void _onMessage(Map<String, dynamic> data) {
+    try {
+      _handleMessage(data);
+    } catch (e, st) {
+      debugPrint('[GameService] message handler error type=${data['type']}: $e\n$st');
     }
   }
 

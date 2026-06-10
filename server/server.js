@@ -1119,6 +1119,15 @@ process.on('unhandledRejection', (reason, promise) => {
   console.error('[UNHANDLED REJECTION]', reason);
 });
 
+// Last-resort guard against a SYNCHRONOUS throw escaping a non-promise code
+// path — most dangerously inside a setTimeout/setInterval callback (turn,
+// round, trick and bot timers), which Node delivers outside any try/catch and
+// would otherwise crash the whole process and drop every connected game. We
+// log and keep running; a single bad timer must not take down all rooms.
+process.on('uncaughtException', (err) => {
+  console.error('[UNCAUGHT EXCEPTION]', err);
+});
+
 // Title translations cache. Populated at boot from tc_shop_items so we can
 // localize a peer's equipped title per-recipient without hitting the DB on
 // every room-state broadcast. Refreshed lazily on cache miss.
@@ -2674,7 +2683,9 @@ function handleCreateRoom(ws, data) {
     sendTo(ws, { type: 'error', message: t(ws.locale, 'already_in_room') });
     return;
   }
-  const roomName = (data.roomName || `${ws.nickname}'s Room`).trim();
+  // Cap to 20 chars, matching handleChangeRoomName — an uncapped name (bounded
+  // only by maxPayload) would be re-broadcast to every lobby client.
+  const roomName = (data.roomName || `${ws.nickname}'s Room`).trim().slice(0, 20);
   const isRanked = !!data.isRanked;
   const gameType = data.gameType === 'skull_king' ? 'skull_king'
     : data.gameType === 'love_letter' ? 'love_letter'
@@ -5603,6 +5614,15 @@ async function handleVerifyIapPurchase(ws, data) {
         rawPayload: { expected: 'bindingUuid(userId)', got: v.accountId },
       });
     }
+  } else if (!v.accountId) {
+    // Unbound purchase (legacy client / receipt carries no appAccountToken).
+    // The binding check is the only defense against a stolen receipt being
+    // redirected to another account, so an unbound grant can't be vouched for.
+    // We still grant (idempotency stops double-credit) to avoid under-crediting
+    // real legacy buyers, but flag it so it surfaces in fraud review. HARDEN:
+    // once a min app version that always stamps bindingToken is enforced, turn
+    // this into a hard reject (return fail('flagged','binding_required',...)).
+    console.warn(`[IAP] unbound purchase granted (no accountId) nickname=${ws.nickname} product=${productId} platform=${platform} env=${environment}`);
   }
 
   const goldTotal = (parseInt(product.gold_amount, 10) || 0) + (parseInt(product.bonus_gold, 10) || 0);

@@ -190,6 +190,17 @@ class _SKGameScreenState extends State<SKGameScreen> {
                     );
                   }
 
+                  // A partial/early reconnect snapshot can arrive with an
+                  // empty player list; several builders below resolve the self
+                  // player via players.firstWhere(..., orElse: players.first),
+                  // which throws StateError on an empty list. Hold on the
+                  // loading view until the roster is populated.
+                  if (state.players.isEmpty) {
+                    return _buildRecoveryLoading(
+                      title: L10n.of(context).skGameLoadingState,
+                    );
+                  }
+
                   _syncGameEndCountdown(state.phase);
 
                   // Clear selected card and bid when a NEW round's bidding starts

@@ -2062,21 +2062,28 @@ function getWinrateSearchBudget(game, state, candidateCount) {
   const hasActiveCall = !!state.callRank && trickSize > 0;
 
   let samples = getSearchSampleCount(handSize);
-  let timeBudgetMs = 120;
+  // Budgets lowered from 90–140ms: the search is synchronous on the single
+  // event-loop thread, so the old caps let one Tichu bot decision stall the
+  // whole server for up to ~160ms. Typical decisions finish in a few ms; only
+  // rare early-game positions hit the cap, so trimming the cap mostly affects
+  // the tail (the spikes) and leaves common decisions untouched. A full sample
+  // pass over all candidates costs ~10–30ms, so ~50–60ms still guarantees every
+  // candidate is evaluated at least once.
+  let timeBudgetMs = 55;
 
   if (trickSize === 0) {
-    timeBudgetMs = 140;
+    timeBudgetMs = 60;
   }
   if (hasActiveCall) {
     samples = Math.max(2, samples - 1);
-    timeBudgetMs = 90;
+    timeBudgetMs = 45;
   }
   if (candidateCount >= 8) {
     samples = Math.max(2, samples - 1);
-    timeBudgetMs = Math.min(timeBudgetMs, 100);
+    timeBudgetMs = Math.min(timeBudgetMs, 50);
   }
   if (handSize <= 4) {
-    timeBudgetMs += 20;
+    timeBudgetMs += 10;
   }
 
   return { samples, timeBudgetMs };

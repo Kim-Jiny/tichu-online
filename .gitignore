@@ -32,3 +32,6 @@ server/node_modules/
 # IDE
 .vscode/
 *.swp
+
+# Release build artifacts (AAB/IPA archives)
+releases/

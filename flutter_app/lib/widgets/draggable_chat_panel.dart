@@ -63,10 +63,17 @@ class _DraggableChatPanelState extends State<DraggableChatPanel> {
   double? _width;
   double? _height;
 
+  // Panel opacity (1.0 = opaque). Clamped to [_minOpacity, 1] so it can never
+  // become fully invisible/unreachable.
+  static const double _minOpacity = 0.3;
+  double _opacity = 1.0;
+  bool _showOpacitySlider = false;
+
   String get _kLeft => 'chat_panel_${widget.persistKey}_left';
   String get _kTop => 'chat_panel_${widget.persistKey}_top';
   String get _kWidth => 'chat_panel_${widget.persistKey}_width';
   String get _kHeight => 'chat_panel_${widget.persistKey}_height';
+  String get _kOpacity => 'chat_panel_${widget.persistKey}_opacity';
 
   @override
   void initState() {
@@ -77,20 +84,26 @@ class _DraggableChatPanelState extends State<DraggableChatPanel> {
   Future<void> _loadGeometry() async {
     final prefs = await SharedPreferences.getInstance();
     if (!mounted) return;
-    // Don't clobber geometry the user already changed before prefs resolved.
-    if (_left != null) return;
+    // Opacity persists independently of geometry, so apply it even when no
+    // saved position exists yet.
+    final opacity = prefs.getDouble(_kOpacity);
     final left = prefs.getDouble(_kLeft);
     final top = prefs.getDouble(_kTop);
     final width = prefs.getDouble(_kWidth);
     final height = prefs.getDouble(_kHeight);
-    if (left == null || top == null || width == null || height == null) {
-      return;
-    }
     setState(() {
-      _left = left;
-      _top = top;
-      _width = width;
-      _height = height;
+      if (opacity != null) _opacity = opacity.clamp(_minOpacity, 1.0);
+      // Don't clobber geometry the user already changed before prefs resolved.
+      if (_left == null &&
+          left != null &&
+          top != null &&
+          width != null &&
+          height != null) {
+        _left = left;
+        _top = top;
+        _width = width;
+        _height = height;
+      }
     });
   }
 
@@ -100,6 +113,11 @@ class _DraggableChatPanelState extends State<DraggableChatPanel> {
     if (_top != null) await prefs.setDouble(_kTop, _top!);
     if (_width != null) await prefs.setDouble(_kWidth, _width!);
     if (_height != null) await prefs.setDouble(_kHeight, _height!);
+  }
+
+  Future<void> _saveOpacity() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setDouble(_kOpacity, _opacity);
   }
 
   void _dismissKeyboard() => FocusScope.of(context).unfocus();
@@ -170,7 +188,9 @@ class _DraggableChatPanelState extends State<DraggableChatPanel> {
   Widget _buildPanel(double width, double height, double maxW, double maxH) {
     return Stack(
       children: [
-        Container(
+        Opacity(
+          opacity: _opacity,
+          child: Container(
           decoration: BoxDecoration(
             color: Colors.white,
             borderRadius: BorderRadius.circular(16),
@@ -185,6 +205,7 @@ class _DraggableChatPanelState extends State<DraggableChatPanel> {
           child: Column(
             children: [
               _buildHeader(width, height),
+              if (_showOpacitySlider) _buildOpacitySlider(),
               // Messages — tapping empty space dismisses the keyboard.
               Expanded(
                 child: GestureDetector(
@@ -230,6 +251,7 @@ class _DraggableChatPanelState extends State<DraggableChatPanel> {
                 ),
               ),
             ],
+          ),
           ),
         ),
         // Resize handle (bottom-right corner).
@@ -291,11 +313,65 @@ class _DraggableChatPanelState extends State<DraggableChatPanel> {
               ),
             ),
             GestureDetector(
+              onTap: () =>
+                  setState(() => _showOpacitySlider = !_showOpacitySlider),
+              child: Icon(
+                Icons.opacity,
+                color: _showOpacitySlider ? Colors.white : Colors.white70,
+                size: 19,
+              ),
+            ),
+            const SizedBox(width: 12),
+            GestureDetector(
               onTap: widget.onClose,
               child: const Icon(Icons.close, color: Colors.white, size: 20),
             ),
           ],
         ),
+      ),
+    );
+  }
+
+  // Opacity gauge — only shown while toggled on via the header button.
+  Widget _buildOpacitySlider() {
+    return Container(
+      padding: const EdgeInsets.only(left: 12, right: 8),
+      decoration: BoxDecoration(
+        border: Border(
+          bottom: BorderSide(color: Colors.grey.withValues(alpha: 0.2)),
+        ),
+      ),
+      child: Row(
+        children: [
+          const Icon(Icons.opacity, size: 15, color: Color(0xFF8A8A8A)),
+          Expanded(
+            child: SliderTheme(
+              data: SliderTheme.of(context).copyWith(
+                trackHeight: 3,
+                overlayShape:
+                    const RoundSliderOverlayShape(overlayRadius: 12),
+                thumbShape:
+                    const RoundSliderThumbShape(enabledThumbRadius: 7),
+              ),
+              child: Slider(
+                value: _opacity,
+                min: _minOpacity,
+                max: 1.0,
+                activeColor: widget.accentColor,
+                onChanged: (v) => setState(() => _opacity = v),
+                onChangeEnd: (_) => _saveOpacity(),
+              ),
+            ),
+          ),
+          SizedBox(
+            width: 34,
+            child: Text(
+              '${(_opacity * 100).round()}%',
+              textAlign: TextAlign.end,
+              style: const TextStyle(fontSize: 11, color: Color(0xFF8A8A8A)),
+            ),
+          ),
+        ],
       ),
     );
   }

@@ -22,15 +22,12 @@ enum AppDestination { lobby, waitingRoom, game, spectator, skGame, llGame, might
 class GameService extends ChangeNotifier {
   final NetworkService _network;
   StreamSubscription? _subscription;
-  Timer? _dogDelayTimer;
   Timer? _dogClearTimer;
   Timer? _inquiryBannerTimer;
   Timer? _pushToggleTimer;
   int _pushPrefsLoadVersion = 0;
   final Map<String, DateTime> _roomInviteCooldowns = {};
   Completer<String?>? _shareInviteLinkCompleter;
-  DateTime? _dogDelayUntil;
-  Map<String, dynamic>? _pendingGameState;
   GameStateData? _prevGameState;
   SKGameStateData? _prevSKGameState;
   LLGameStateData? _prevLLGameState;
@@ -1113,7 +1110,7 @@ class GameService extends ChangeNotifier {
             } else {
               spectators = [];
             }
-            _applyGameStateWithDogDelay(state);
+            gameState = GameStateData.fromJson(state);
           }
         }
         notifyListeners();
@@ -2008,7 +2005,12 @@ class GameService extends ChangeNotifier {
   void _handleDogPlayed(Map<String, dynamic> data) {
     dogPlayActive = true;
     dogPlayPlayerName = (data['playerName'] as String?) ?? '';
-    _dogDelayUntil = DateTime.now().add(const Duration(seconds: 2));
+    // NOTE: We intentionally do NOT arm the 2s game-state hold here. The Dog
+    // can only be led on an empty trick, so there are no played cards to keep
+    // visible — holding the state just froze the turn indicator on the Dog
+    // player (the old currentPlayer) for 2s instead of moving it to the
+    // partner who now leads. The _buildDogPlayedBanner (driven by its own
+    // _dogClearTimer below) already conveys that the Dog was played.
 
     _dogClearTimer?.cancel();
     _dogClearTimer = Timer(const Duration(seconds: 2), () {
@@ -2215,33 +2217,6 @@ class GameService extends ChangeNotifier {
     _sfx.play('countdown_tick');
   }
 
-  void _applyGameStateWithDogDelay(Map<String, dynamic> state) {
-    if (_dogDelayUntil == null) {
-      gameState = GameStateData.fromJson(state);
-      return;
-    }
-
-    final now = DateTime.now();
-    if (now.isAfter(_dogDelayUntil!)) {
-      _dogDelayUntil = null;
-      gameState = GameStateData.fromJson(state);
-      return;
-    }
-
-    _pendingGameState = state;
-    _dogDelayTimer?.cancel();
-    final remaining = _dogDelayUntil!.difference(now);
-    _dogDelayTimer = Timer(remaining, () {
-      if (_disposed) return;
-      if (_pendingGameState != null) {
-        gameState = GameStateData.fromJson(_pendingGameState!);
-        _pendingGameState = null;
-        _dogDelayUntil = null;
-        notifyListeners();
-      }
-    });
-  }
-
   // Actions
   void login(String nickname) {
     // Guest login (development mode)
@@ -2326,16 +2301,12 @@ class GameService extends ChangeNotifier {
   }
 
   void reset() {
-    _dogDelayTimer?.cancel();
-    _dogDelayTimer = null;
     _dogClearTimer?.cancel();
     _dogClearTimer = null;
     _inquiryBannerTimer?.cancel();
     _inquiryBannerTimer = null;
     _pushToggleTimer?.cancel();
     _pushToggleTimer = null;
-    _dogDelayUntil = null;
-    _pendingGameState = null;
     _prevGameState = null;
     _prevSKGameState = null;
     _prevLLGameState = null;
@@ -3714,7 +3685,6 @@ class GameService extends ChangeNotifier {
     _iapPending.clear();
     _subscription?.cancel();
     _fcmTokenSubscription?.cancel();
-    _dogDelayTimer?.cancel();
     _dogClearTimer?.cancel();
     _inquiryBannerTimer?.cancel();
     _pushToggleTimer?.cancel();

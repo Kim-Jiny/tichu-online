@@ -9,6 +9,7 @@ import '../utils/level_curve.dart';
 import '../services/session_service.dart';
 import '../widgets/playing_card.dart';
 import '../widgets/connection_overlay.dart';
+import '../widgets/draggable_chat_panel.dart';
 import '../widgets/level_badge.dart';
 import '../widgets/title_chip.dart';
 import '../widgets/spectator_controls.dart';
@@ -74,6 +75,22 @@ class _SpectatorScreenState extends State<SpectatorScreen> {
     );
   }
   int _lastChatMessageCount = 0;
+  int _readChatCount = 0;
+
+  @override
+  void initState() {
+    super.initState();
+    // Treat chat history that already exists when joining as read, so the
+    // unread badge only counts messages received after entering.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      final count = context.read<GameService>().chatMessages.length;
+      setState(() {
+        _readChatCount = count;
+        _lastChatMessageCount = count;
+      });
+    });
+  }
 
   @override
   void dispose() {
@@ -216,7 +233,7 @@ class _SpectatorScreenState extends State<SpectatorScreen> {
                   const SizedBox(width: 6),
                   _buildSoundButton(game),
                   const SizedBox(width: 6),
-                  _buildChatButton(),
+                  _buildChatButton(game),
                 ],
               ),
             ),
@@ -966,7 +983,7 @@ class _SpectatorScreenState extends State<SpectatorScreen> {
                 const SizedBox(width: 4),
                 _buildSoundButton(game),
                 const SizedBox(width: 4),
-                _buildChatButton(),
+                _buildChatButton(game),
               ],
             )
           : Column(
@@ -1009,7 +1026,7 @@ class _SpectatorScreenState extends State<SpectatorScreen> {
                     const SizedBox(width: 6),
                     _buildSoundButton(game),
                     const SizedBox(width: 6),
-                    _buildChatButton(),
+                    _buildChatButton(game),
                   ],
                 ),
                 const SizedBox(height: 6),
@@ -1432,13 +1449,17 @@ class _SpectatorScreenState extends State<SpectatorScreen> {
     );
   }
 
-  Widget _buildChatButton() {
+  Widget _buildChatButton(GameService game) {
     return SpectatorActionButton(
       icon: Icons.chat_bubble_outline,
       active: _chatOpen,
+      badgeCount: _chatOpen
+          ? 0
+          : (game.chatMessages.length - _readChatCount).clamp(0, 99),
       onTap: () => setState(() {
         _chatOpen = !_chatOpen;
         if (_chatOpen) {
+          _readChatCount = game.chatMessages.length;
           _scrollChatToBottom();
         }
       }),
@@ -1448,120 +1469,34 @@ class _SpectatorScreenState extends State<SpectatorScreen> {
   Widget _buildChatPanel(GameService game) {
     if (game.chatMessages.length != _lastChatMessageCount) {
       _lastChatMessageCount = game.chatMessages.length;
+      // Panel only builds while open, so keep the read marker current to
+      // avoid a stale unread badge after the user closes the chat.
+      _readChatCount = game.chatMessages.length;
       _scrollChatToBottom();
     }
-    final media = MediaQuery.of(context);
-    final maxHeight = media.size.height - media.viewInsets.bottom - 74;
-    final panelHeight = maxHeight < 240
-        ? 240.0
-        : (maxHeight < 350 ? maxHeight : 350.0);
-    final panelWidth = (media.size.width - 16).clamp(220.0, 320.0);
-
-    return AnimatedPositioned(
-      duration: const Duration(milliseconds: 180),
-      curve: Curves.easeOut,
-      right: 8,
-      top: 50,
-      width: panelWidth,
-      height: panelHeight,
-      child: Container(
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(16),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withValues(alpha: 0.15),
-              blurRadius: 10,
-              offset: const Offset(0, 4),
-            ),
-          ],
-        ),
-        child: Column(
-          children: [
-            // Header
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-              decoration: const BoxDecoration(
-                color: Color(0xFF64B5F6),
-                borderRadius: BorderRadius.only(
-                  topLeft: Radius.circular(16),
-                  topRight: Radius.circular(16),
-                ),
-              ),
-              child: Row(
-                children: [
-                  Text(
-                    L10n.of(context).spectatorChat,
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontWeight: FontWeight.bold,
-                      fontSize: 16,
-                    ),
-                  ),
-                  const Spacer(),
-                  GestureDetector(
-                    onTap: () => setState(() => _chatOpen = false),
-                    child: const Icon(Icons.close, color: Colors.white, size: 20),
-                  ),
-                ],
-              ),
-            ),
-            // Messages
-            Expanded(
-              child: ListView.builder(
-                controller: _chatScrollController,
-                reverse: true,
-                padding: const EdgeInsets.all(8),
-                itemCount: game.chatMessages.length,
-                itemBuilder: (context, index) {
-                  final msg = game.chatMessages[game.chatMessages.length - 1 - index];
-                  final sender = msg['sender'] as String? ?? '';
-                  String message = msg['message'] as String? ?? '';
-                  if (message == 'chat_banned') {
-                    final mins = msg['remainingMinutes'] as int? ?? 0;
-                    message = localizeChatBanned(mins, L10n.of(context));
-                  }
-                  final isMe = sender == game.playerName;
-                  final isBlocked = game.isBlocked(sender);
-
-                  if (isBlocked) return const SizedBox.shrink();
-
-                  return _buildChatBubble(sender, message, isMe);
-                },
-              ),
-            ),
-            // Input
-            Container(
-              padding: const EdgeInsets.all(8),
-              decoration: BoxDecoration(
-                border: Border(
-                  top: BorderSide(color: Colors.grey.withValues(alpha: 0.2)),
-                ),
-              ),
-              child: Row(
-                children: [
-                  Expanded(
-                    child: TextField(
-                      controller: _chatController,
-                      decoration: InputDecoration(
-                        hintText: L10n.of(context).spectatorMessageHint,
-                        border: InputBorder.none,
-                        contentPadding: const EdgeInsets.symmetric(horizontal: 12),
-                      ),
-                      style: const TextStyle(fontSize: 14),
-                      onSubmitted: (_) => _sendChatMessage(game),
-                    ),
-                  ),
-                  IconButton(
-                    onPressed: () => _sendChatMessage(game),
-                    icon: const Icon(Icons.send, color: Color(0xFF77B8E8)),
-                  ),
-                ],
-              ),
-            ),
-          ],
-        ),
-      ),
+    return DraggableChatPanel(
+      accentColor: const Color(0xFF64B5F6),
+      sendIconColor: const Color(0xFF77B8E8),
+      title: L10n.of(context).spectatorChat,
+      hintText: L10n.of(context).spectatorMessageHint,
+      controller: _chatController,
+      scrollController: _chatScrollController,
+      onSend: () => _sendChatMessage(game),
+      onClose: () => setState(() => _chatOpen = false),
+      itemCount: game.chatMessages.length,
+      itemBuilder: (context, index) {
+        final msg = game.chatMessages[game.chatMessages.length - 1 - index];
+        final sender = msg['sender'] as String? ?? '';
+        String message = msg['message'] as String? ?? '';
+        if (message == 'chat_banned') {
+          final mins = msg['remainingMinutes'] as int? ?? 0;
+          message = localizeChatBanned(mins, L10n.of(context));
+        }
+        final isMe = sender == game.playerName;
+        final isBlocked = game.isBlocked(sender);
+        if (isBlocked) return const SizedBox.shrink();
+        return _buildChatBubble(sender, message, isMe);
+      },
     );
   }
 

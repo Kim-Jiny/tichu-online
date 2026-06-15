@@ -8,6 +8,7 @@ import '../models/sk_game_state.dart';
 import '../models/player.dart';
 import '../widgets/connection_overlay.dart';
 import '../widgets/level_badge.dart';
+import '../widgets/draggable_chat_panel.dart';
 import '../widgets/spectator_controls.dart';
 import '../l10n/app_localizations.dart';
 import '../l10n/l10n_helpers.dart';
@@ -2721,118 +2722,29 @@ class _SKGameScreenState extends State<SKGameScreen> {
       _scrollChatToBottom();
     }
 
-    final media = MediaQuery.of(context);
-    final keyboardHeight = media.viewInsets.bottom;
-    final topInset = media.padding.top;
-    final availableWidth = (media.size.width - 16).clamp(220.0, 320.0);
-    final topOffset = topInset + 42;
-    final bottomOffset = 8 + keyboardHeight;
-    final maxHeight = media.size.height - topOffset - bottomOffset;
-    final panelHeight = maxHeight.clamp(160.0, 350.0);
-
-    return Positioned(
-      right: 8,
-      top: topOffset,
-      width: availableWidth,
-      height: panelHeight,
-      child: Container(
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(16),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withValues(alpha: 0.15),
-              blurRadius: 10,
-              offset: const Offset(0, 4),
-            ),
-          ],
-        ),
-        child: Column(
-          children: [
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-              decoration: const BoxDecoration(
-                color: Color(0xFF21455F),
-                borderRadius: BorderRadius.only(
-                  topLeft: Radius.circular(16),
-                  topRight: Radius.circular(16),
-                ),
-              ),
-              child: Row(
-                children: [
-                  Text(
-                    L10n.of(context).skGameChat,
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontWeight: FontWeight.bold,
-                      fontSize: 16,
-                    ),
-                  ),
-                  const Spacer(),
-                  GestureDetector(
-                    onTap: () => setState(() => _chatOpen = false),
-                    child: const Icon(
-                      Icons.close,
-                      color: Colors.white,
-                      size: 20,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            Expanded(
-              child: ListView.builder(
-                controller: _chatScrollController,
-                reverse: true,
-                padding: const EdgeInsets.all(8),
-                itemCount: game.chatMessages.length,
-                itemBuilder: (context, index) {
-                  final msg = game.chatMessages[game.chatMessages.length - 1 - index];
-                  final sender = msg['sender'] as String? ?? '';
-                  String message = msg['message'] as String? ?? '';
-                  if (message == 'chat_banned') {
-                    final mins = msg['remainingMinutes'] as int? ?? 0;
-                    message = localizeChatBanned(mins, L10n.of(context));
-                  }
-                  final isMe = sender == game.playerName;
-                  final isBlocked = sender.isNotEmpty && game.isBlocked(sender);
-
-                  if (isBlocked) return const SizedBox.shrink();
-                  return _buildChatBubble(sender, message, isMe, game);
-                },
-              ),
-            ),
-            Container(
-              padding: const EdgeInsets.all(8),
-              decoration: BoxDecoration(
-                border: Border(
-                  top: BorderSide(color: Colors.grey.withValues(alpha: 0.2)),
-                ),
-              ),
-              child: Row(
-                children: [
-                  Expanded(
-                    child: TextField(
-                      controller: _chatController,
-                      decoration: InputDecoration(
-                        hintText: L10n.of(context).skGameMessageHint,
-                        border: InputBorder.none,
-                        contentPadding: EdgeInsets.symmetric(horizontal: 12),
-                      ),
-                      style: const TextStyle(fontSize: 14),
-                      onSubmitted: (_) => _sendChatMessage(game),
-                    ),
-                  ),
-                  IconButton(
-                    onPressed: () => _sendChatMessage(game),
-                    icon: const Icon(Icons.send, color: Color(0xFF64B5F6)),
-                  ),
-                ],
-              ),
-            ),
-          ],
-        ),
-      ),
+    return DraggableChatPanel(
+      accentColor: const Color(0xFF21455F),
+      sendIconColor: const Color(0xFF64B5F6),
+      title: L10n.of(context).skGameChat,
+      hintText: L10n.of(context).skGameMessageHint,
+      controller: _chatController,
+      scrollController: _chatScrollController,
+      onSend: () => _sendChatMessage(game),
+      onClose: () => setState(() => _chatOpen = false),
+      itemCount: game.chatMessages.length,
+      itemBuilder: (context, index) {
+        final msg = game.chatMessages[game.chatMessages.length - 1 - index];
+        final sender = msg['sender'] as String? ?? '';
+        String message = msg['message'] as String? ?? '';
+        if (message == 'chat_banned') {
+          final mins = msg['remainingMinutes'] as int? ?? 0;
+          message = localizeChatBanned(mins, L10n.of(context));
+        }
+        final isMe = sender == game.playerName;
+        final isBlocked = sender.isNotEmpty && game.isBlocked(sender);
+        if (isBlocked) return const SizedBox.shrink();
+        return _buildChatBubble(sender, message, isMe, game);
+      },
     );
   }
 

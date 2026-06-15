@@ -674,6 +674,7 @@ class _SpectatorScreenState extends State<SpectatorScreen> {
                     child: _buildTrickArea(
                       currentTrick,
                       callRank: callRank,
+                      players: players,
                     ),
                   ),
                   if (players.length > 1)
@@ -761,6 +762,7 @@ class _SpectatorScreenState extends State<SpectatorScreen> {
                           compact: compact,
                           landscapeCompact: compact,
                           callRank: callRank,
+                          players: players,
                         ),
                       ),
                     ),
@@ -1573,6 +1575,7 @@ class _SpectatorScreenState extends State<SpectatorScreen> {
     bool compact = false,
     bool landscapeCompact = false,
     String? callRank,
+    List players = const [],
   }) {
     final hasCall = callRank != null && callRank.isNotEmpty;
 
@@ -1639,9 +1642,19 @@ class _SpectatorScreenState extends State<SpectatorScreen> {
     final lastCombo = (lastPlay['combo'] ?? '') as String;
     final lastComboValue = (lastPlay['comboValue'] as num?)?.toDouble() ?? 0;
 
-    // Alternate colors based on play index (even = blue, odd = pink)
-    final playIndex = currentTrick.length - 1;
-    final isBlue = playIndex % 2 == 0;
+    // Color by the playing player's team so the trick box matches the seat
+    // tint (Team A → blue, Team B → rose). Falls back to blue when the team
+    // can't be resolved. Previously this alternated by play index, which
+    // clashed with the team-colored seats.
+    final lastPlayerId = (lastPlay['playerId'] ?? '').toString();
+    String lastTeam = '';
+    for (final p in players) {
+      if (p is Map && (p['id']?.toString() ?? '') == lastPlayerId) {
+        lastTeam = p['team']?.toString() ?? '';
+        break;
+      }
+    }
+    final isBlue = lastTeam != 'B';
     final bgColor = isBlue ? const Color(0xFFE3F0FF) : const Color(0xFFFFE8EC);
     final borderColor = isBlue ? const Color(0xFFB3D4F7) : const Color(0xFFF5C0C8);
     final nameColor = isBlue ? const Color(0xFF4A90D9) : const Color(0xFFD94A5A);

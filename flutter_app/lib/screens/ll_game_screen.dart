@@ -185,7 +185,18 @@ class _LLGameScreenState extends State<LLGameScreen> {
                           left: 0,
                           right: 0,
                           bottom: 0,
-                          child: _buildBottomArea(context, gs, llState),
+                          child: Column(
+                            mainAxisSize: MainAxisSize.min,
+                            crossAxisAlignment: CrossAxisAlignment.stretch,
+                            children: [
+                              _buildLLEventLog(
+                                llState,
+                                gs,
+                                L10n.of(context),
+                              ),
+                              _buildBottomArea(context, gs, llState),
+                            ],
+                          ),
                         ),
                       if (llState.phase == 'effect_resolve' &&
                           llState.pendingEffect != null &&
@@ -1231,7 +1242,11 @@ class _LLGameScreenState extends State<LLGameScreen> {
                       ),
                     );
                   }(),
-              _buildLLEventLogOverlay(state, gs, L10n.of(context)),
+              // Player only — spectators render the log above their hand
+              // overlay (see the spectator bottom area in build) so it is not
+              // hidden behind it.
+              if (!gs.isSpectator)
+                _buildLLEventLogOverlay(state, gs, L10n.of(context)),
             ],
           );
         },
@@ -1338,7 +1353,7 @@ class _LLGameScreenState extends State<LLGameScreen> {
                   .toList(),
             ),
           ],
-          // Event log is rendered as a top-left overlay in the game area
+          // Event log is rendered as a bottom-left overlay in the game area
           // (see _buildLLEventLogOverlay). Center board stays clean.
         ],
       ),
@@ -3585,10 +3600,28 @@ class _LLGameScreenState extends State<LLGameScreen> {
     return segs;
   }
 
-  // Top-left overlay log of recent center-board events. Updates the rolling
-  // log from the current effect resolution, then renders it left-aligned
-  // with the newest line on top (slightly larger for emphasis).
+  // Bottom-left overlay log of recent center-board events (sits just above
+  // the player's hand). Updates the rolling log from the current effect
+  // resolution, then renders it left-aligned with the newest line at the
+  // bottom (slightly larger for emphasis).
+  // Positioned wrapper for the player layout — the log sits at the bottom of
+  // the game area, just above the in-flow hand.
   Widget _buildLLEventLogOverlay(
+    LLGameStateData state,
+    GameService gs,
+    L10n l10n,
+  ) {
+    return Positioned(
+      bottom: 0,
+      left: 0,
+      right: 0,
+      child: _buildLLEventLog(state, gs, l10n),
+    );
+  }
+
+  // Rolling event-log content (no Positioned). Spectators stack this directly
+  // above their hand overlay so it is never hidden behind it.
+  Widget _buildLLEventLog(
     LLGameStateData state,
     GameService gs,
     L10n l10n,
@@ -3611,60 +3644,48 @@ class _LLGameScreenState extends State<LLGameScreen> {
         }
       }
     }
-    if (_llCenterLog.isEmpty) {
-      // Always return a Positioned so the Stack doesn't pick up a
-      // non-positioned SizedBox child and resize / re-align siblings
-      // (which would shift seats and the trick box).
-      return const Positioned(
-        top: 0,
-        left: 0,
-        right: 0,
-        child: SizedBox.shrink(),
-      );
-    }
-    final reversed = _llCenterLog.reversed.toList();
-    return Positioned(
-      top: 0,
-      left: 0,
-      right: 0,
-      child: IgnorePointer(
-        child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-          child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                for (var i = 0; i < reversed.length; i++) ...[
-                  if (i > 0) const SizedBox(height: 2),
-                  RichText(
-                    textAlign: TextAlign.left,
-                    text: TextSpan(
-                      style: TextStyle(
-                        color: const Color(0xFF5A4038),
-                        fontSize: i == 0 ? 13 : 11,
-                        fontWeight:
-                            i == 0 ? FontWeight.w700 : FontWeight.w600,
-                      ),
-                      children: [
-                        for (final seg in reversed[i])
-                          TextSpan(
-                            text: seg.text,
-                            style: seg.emphasized
-                                ? const TextStyle(
-                                    color: Color(0xFFE91E63),
-                                    fontWeight: FontWeight.w800,
-                                  )
-                                : null,
-                          ),
-                      ],
-                    ),
+    if (_llCenterLog.isEmpty) return const SizedBox.shrink();
+    // _llCenterLog is oldest-first; render in natural order so the newest
+    // line lands at the bottom (just above the hand).
+    final lines = _llCenterLog;
+    return IgnorePointer(
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            for (var i = 0; i < lines.length; i++) ...[
+              if (i > 0) const SizedBox(height: 2),
+              RichText(
+                textAlign: TextAlign.left,
+                text: TextSpan(
+                  style: TextStyle(
+                    color: const Color(0xFF5A4038),
+                    fontSize: i == lines.length - 1 ? 13 : 11,
+                    fontWeight: i == lines.length - 1
+                        ? FontWeight.w700
+                        : FontWeight.w600,
                   ),
-                ],
-              ],
-            ),
-          ),
+                  children: [
+                    for (final seg in lines[i])
+                      TextSpan(
+                        text: seg.text,
+                        style: seg.emphasized
+                            ? const TextStyle(
+                                color: Color(0xFFE91E63),
+                                fontWeight: FontWeight.w800,
+                              )
+                            : null,
+                      ),
+                  ],
+                ),
+              ),
+            ],
+          ],
         ),
-      );
+      ),
+    );
   }
 
   // Build 1-2 lines of styled status segments for the trick box.

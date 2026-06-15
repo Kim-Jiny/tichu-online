@@ -139,16 +139,23 @@ class _DraggableChatPanelState extends State<DraggableChatPanel> {
     return Positioned.fill(
       child: Stack(
         children: [
-          // Tap-to-dismiss barrier — only intercepts touches while the
-          // keyboard is up so it never blocks gameplay otherwise.
-          if (keyboardOpen)
-            Positioned.fill(
+          // Tap-to-dismiss barrier — always present (so the children list
+          // keeps a stable length/order and Flutter never re-matches the
+          // panel's element to the barrier, which would destroy the focused
+          // TextField and bounce the keyboard back down). IgnorePointer lets
+          // touches pass through to gameplay whenever the keyboard is closed.
+          Positioned.fill(
+            key: const ValueKey('chat_dismiss_barrier'),
+            child: IgnorePointer(
+              ignoring: !keyboardOpen,
               child: GestureDetector(
                 behavior: HitTestBehavior.opaque,
                 onTap: _dismissKeyboard,
               ),
             ),
+          ),
           Positioned(
+            key: const ValueKey('chat_panel'),
             left: left,
             top: top,
             width: width,

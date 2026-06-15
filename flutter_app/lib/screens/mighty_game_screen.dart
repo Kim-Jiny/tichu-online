@@ -6,6 +6,7 @@ import '../services/game_service.dart';
 import '../models/mighty_game_state.dart';
 import '../models/player.dart';
 import '../widgets/playing_card.dart';
+import '../widgets/draggable_chat_panel.dart';
 import '../widgets/connection_overlay.dart';
 import '../widgets/level_badge.dart';
 import '../widgets/spectator_controls.dart';
@@ -513,9 +514,13 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
   Widget _buildSpectatorWaiting(GameService game) {
     final slots = game.roomPlayers;
     final l10n = L10n.of(context);
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(12, 12, 12, 16),
-      child: Column(
+    // Stack so the floating DraggableChatPanel (a Positioned) overlays the
+    // waiting-room layout — it can't live inside the Column.
+    return Stack(
+      children: [
+        Padding(
+          padding: const EdgeInsets.fromLTRB(12, 12, 12, 16),
+          child: Column(
         children: [
           // Header
           Container(
@@ -634,12 +639,11 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
               ),
             ),
           ),
-          if (_chatOpen) ...[
-            const SizedBox(height: 8),
-            SizedBox(height: 200, child: _buildChatPanel(game)),
-          ],
         ],
       ),
+        ),
+        if (_chatOpen) _buildChatPanel(game),
+      ],
     );
   }
 
@@ -1475,12 +1479,10 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
   }
 
   void _scrollChatToBottom() {
+    // DraggableChatPanel's list is reverse:true, so offset 0 == newest.
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (_chatScrollController.hasClients) {
-        _chatScrollController.jumpTo(
-          _chatScrollController.position.maxScrollExtent,
-        );
-      }
+      if (!_chatScrollController.hasClients) return;
+      _chatScrollController.jumpTo(0);
     });
   }
 
@@ -1498,119 +1500,29 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
       _readChatCount = game.chatMessages.length;
       _scrollChatToBottom();
     }
-
-    final media = MediaQuery.of(context);
-    final keyboardHeight = media.viewInsets.bottom;
-    final topInset = media.padding.top;
-    final availableWidth = (media.size.width - 16).clamp(220.0, 320.0);
-    final topOffset = topInset + 42;
-    final bottomOffset = 8 + keyboardHeight;
-    final maxHeight = media.size.height - topOffset - bottomOffset;
-    final panelHeight = maxHeight.clamp(160.0, 350.0);
-
-    return Positioned(
-      right: 8,
-      top: topOffset,
-      width: availableWidth,
-      height: panelHeight,
-      child: Container(
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(16),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withValues(alpha: 0.15),
-              blurRadius: 10,
-              offset: const Offset(0, 4),
-            ),
-          ],
-        ),
-        child: Column(
-          children: [
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-              decoration: const BoxDecoration(
-                color: Color(0xFF1565C0),
-                borderRadius: BorderRadius.only(
-                  topLeft: Radius.circular(16),
-                  topRight: Radius.circular(16),
-                ),
-              ),
-              child: Row(
-                children: [
-                  Text(
-                    L10n.of(context).mtChat,
-                    style: TextStyle(
-                      color: Colors.white,
-                      fontWeight: FontWeight.bold,
-                      fontSize: 16,
-                    ),
-                  ),
-                  const Spacer(),
-                  GestureDetector(
-                    onTap: () => setState(() => _chatOpen = false),
-                    child: const Icon(
-                      Icons.close,
-                      color: Colors.white,
-                      size: 20,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            Expanded(
-              child: ListView.builder(
-                controller: _chatScrollController,
-                padding: const EdgeInsets.all(8),
-                itemCount: game.chatMessages.length,
-                itemBuilder: (context, index) {
-                  final msg = game.chatMessages[index];
-                  final sender = msg['sender'] as String? ?? '';
-                  String message = msg['message'] as String? ?? '';
-                  if (message == 'chat_banned') {
-                    final mins = msg['remainingMinutes'] as int? ?? 0;
-                    message = localizeChatBanned(mins, L10n.of(context));
-                  }
-                  final isMe = sender == game.playerName;
-                  final isBlocked = sender.isNotEmpty && game.isBlocked(sender);
-                  if (isBlocked) return const SizedBox.shrink();
-                  return _buildChatBubble(sender, message, isMe);
-                },
-              ),
-            ),
-            Container(
-              padding: const EdgeInsets.all(8),
-              decoration: BoxDecoration(
-                border: Border(
-                  top: BorderSide(color: Colors.grey.withValues(alpha: 0.2)),
-                ),
-              ),
-              child: Row(
-                children: [
-                  Expanded(
-                    child: TextField(
-                      controller: _chatController,
-                      decoration: InputDecoration(
-                        hintText: L10n.of(context).mtTypeMessage,
-                        border: InputBorder.none,
-                        contentPadding: const EdgeInsets.symmetric(
-                          horizontal: 12,
-                        ),
-                      ),
-                      style: const TextStyle(fontSize: 14),
-                      onSubmitted: (_) => _sendChatMessage(game),
-                    ),
-                  ),
-                  IconButton(
-                    onPressed: () => _sendChatMessage(game),
-                    icon: const Icon(Icons.send, color: Color(0xFF1565C0)),
-                  ),
-                ],
-              ),
-            ),
-          ],
-        ),
-      ),
+    return DraggableChatPanel(
+      accentColor: const Color(0xFF1565C0),
+      sendIconColor: const Color(0xFF1565C0),
+      title: L10n.of(context).mtChat,
+      hintText: L10n.of(context).mtTypeMessage,
+      controller: _chatController,
+      scrollController: _chatScrollController,
+      onSend: () => _sendChatMessage(game),
+      onClose: () => setState(() => _chatOpen = false),
+      itemCount: game.chatMessages.length,
+      itemBuilder: (context, index) {
+        final msg = game.chatMessages[game.chatMessages.length - 1 - index];
+        final sender = msg['sender'] as String? ?? '';
+        String message = msg['message'] as String? ?? '';
+        if (message == 'chat_banned') {
+          final mins = msg['remainingMinutes'] as int? ?? 0;
+          message = localizeChatBanned(mins, L10n.of(context));
+        }
+        final isMe = sender == game.playerName;
+        final isBlocked = sender.isNotEmpty && game.isBlocked(sender);
+        if (isBlocked) return const SizedBox.shrink();
+        return _buildChatBubble(sender, message, isMe);
+      },
     );
   }
 

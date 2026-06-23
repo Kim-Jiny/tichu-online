@@ -21,13 +21,21 @@
  * the normal (oracle) path.
  */
 
-const { SUITS } = require('./MightyDeck');
+const { SUITS, getCardInfo, RANK_ORDER } = require('./MightyDeck');
+const { canBeatCurrentWinner } = require('./MightyKnowledge');
 
-// Activate only when the largest active hand has at most this many cards.
-// 3 keeps the tree tiny (verified node counts well under budget).
-const MAX_SOLVE_CARDS = 3;
-// Hard backstop so a pathological position can't stall the event loop.
-const NODE_BUDGET = 60000;
+// Activate when the largest active hand has at most this many cards. Default 3
+// is the sweet spot: cheap (move-ordering keeps the worst case ~3k nodes,
+// avg <1ms) and captures the decisive endgame. 4 is feasible behind the time
+// deadline (cheap 4-card positions solve, expensive ones fall back) but its
+// marginal win over 3 is within measurement noise and it doubles latency on
+// fall-backs, so it's left as an opt-in (MIGHTY_SOLVE_CARDS=4).
+const MAX_SOLVE_CARDS = parseInt(process.env.MIGHTY_SOLVE_CARDS || '3', 10);
+// Wall-clock budget for one solve. If exceeded we abandon and return null so
+// the caller falls back — guarantees the solver never blows the decision
+// budget regardless of position. Node count is a coarse backstop.
+const TIME_BUDGET_MS = parseInt(process.env.MIGHTY_SOLVE_MS || '9', 10);
+const NODE_BUDGET = 2000000;
 
 function _maxHand(game) {
   let m = 0;
@@ -97,6 +105,41 @@ function _ensureRefs() {
 }
 
 /**
+ * Order moves best-first FROM THE ACTING PLAYER'S perspective so alpha-beta
+ * prunes hard. Each player tries their own best move first, which is exactly
+ * the order a max node (our team) and a min node (opponent) both want — a max
+ * node wants the highest bot-score child first, a min node the lowest, and
+ * "best for the actor's team" is high-bot-score when the actor is us and
+ * low-bot-score when the actor is the opponent. Ordering never changes the
+ * solved value — only the work to reach it.
+ */
+function _orderMoves(game, actor, moves) {
+  if (moves.length <= 1) return moves;
+  const leading = game.currentTrick.length === 0;
+  let trickPts = 0;
+  for (const p of game.currentTrick) {
+    if (p.cardId === 'mighty_joker') continue;
+    if (getCardInfo(p.cardId).point > 0) trickPts++;
+  }
+  const scored = moves.map((a) => {
+    const card = a.cardId;
+    const info = card === 'mighty_joker' ? null : getCardInfo(card);
+    const cardPts = info && info.point > 0 ? 1 : 0;
+    const rank = info ? (RANK_ORDER[info.rank] || 0) : 15;
+    const wins = leading ? true : canBeatCurrentWinner(game, card);
+    // Winning the trick (capturing its points) is the likely-good line: try the
+    // cheapest winner first. Otherwise dump the lowest card and avoid feeding a
+    // point card into a trick we'd lose.
+    const score = wins
+      ? 1000 + (trickPts + cardPts) * 20 - rank
+      : -rank - cardPts * 30;
+    return { a, score };
+  });
+  scored.sort((x, y) => y.score - x.score);
+  return scored.map((s) => s.a);
+}
+
+/**
  * Alpha-beta over the deciding bot's round-end score.
  * @returns the leaf value (bot's score) for this subtree.
  */
@@ -105,12 +148,16 @@ function _search(game, botId, govSet, botIsGov, alpha, beta, ctr) {
   if (game.state === 'round_end' || game.state === 'game_end') {
     return (game.scores && game.scores[botId]) || 0;
   }
-  if (++ctr.nodes > NODE_BUDGET) throw new Error('budget');
+  // Deadline check (cheap: only every 256 nodes). A blown budget throws, the
+  // top-level catch returns null, and the caller falls back — so we never
+  // return a partial (and possibly wrong) result.
+  if (((++ctr.nodes) & 255) === 0 && Date.now() > ctr.deadline) throw new Error('budget');
+  if (ctr.nodes > NODE_BUDGET) throw new Error('budget');
 
   const actor = game.currentPlayer;
   if (!actor) return (game.scores && game.scores[botId]) || 0;
   const maximizing = govSet.has(actor) === botIsGov;
-  const moves = _moves(game, actor);
+  const moves = _orderMoves(game, actor, _moves(game, actor));
 
   let best = maximizing ? -Infinity : Infinity;
   for (const action of moves) {
@@ -146,10 +193,10 @@ function solve(game, botId) {
 
   const govSet = _govSet(game);
   const botIsGov = govSet.has(botId);
-  const ctr = { nodes: 0 };
+  const ctr = { nodes: 0, deadline: Date.now() + TIME_BUDGET_MS };
 
   try {
-    const moves = _moves(game, botId);
+    const moves = _orderMoves(game, botId, _moves(game, botId));
     if (moves.length === 0) return null;
     if (moves.length === 1) { moves[0].__nodes = 0; return moves[0]; }
 
@@ -158,6 +205,7 @@ function solve(game, botId) {
     let alpha = -Infinity;
     const beta = Infinity;
     for (const action of moves) {
+      if (Date.now() > ctr.deadline) throw new Error('budget');
       const world = game.clone();
       const res = world.handleAction(botId, action);
       if (!res || res.success === false) continue;

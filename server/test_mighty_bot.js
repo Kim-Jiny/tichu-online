@@ -11,6 +11,11 @@
  *
  *   node test_mighty_bot.js
  */
+// Pin the solver to a fixed depth + a huge time budget BEFORE loading it, so
+// these golden tests are fully deterministic (no deadline-dependent fallback).
+process.env.MIGHTY_SOLVE_CARDS = '3';
+process.env.MIGHTY_SOLVE_MS = '600000';
+
 const assert = require('assert');
 const MightyGame = require('./game/mighty/MightyGame');
 const MightyBot = require('./game/mighty/MightyBot');

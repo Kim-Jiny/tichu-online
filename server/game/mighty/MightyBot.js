@@ -2588,6 +2588,8 @@ module.exports = {
   chooseKittyDiscards,
   considerTrumpChange,
   makePlayAction,
+  isGovernment,
+  isGovernmentSelf,
   getKnownVoids: _getKnownVoids,
   getPlayedCards: _getPlayedCards,
   isFriend: _isFriend,

@@ -14,6 +14,7 @@
 const assert = require('assert');
 const MightyGame = require('./game/mighty/MightyGame');
 const MightyBot = require('./game/mighty/MightyBot');
+const Solver = require('./game/mighty/MightyEndgameSolver');
 const { makeRng, deal } = require('./game/mighty/MightyDeck');
 
 const IDS = ['p0', 'p1', 'p2', 'p3', 'p4'];
@@ -156,6 +157,45 @@ check('fix3: friend preserves joker on locked trick',
   const action = MightyBot.makePlayAction('mighty_joker', g, 'p0');
   check('fix4: joker call avoids Mighty suit (spade)',
     action.jokerSuit, s => s && s !== 'spade');
+})();
+
+// ── Endgame solver: legal + deterministic on real seeded endgames ──
+// Plays seeded games to their first solvable position and checks the solver
+// returns a legal, deterministic move. (Broad coverage — 4000+ solves with 0
+// illegal moves — is exercised by sim_mighty_solver_ab.js.)
+(() => {
+  const settle = (g) => { let s = 200; while (s-- > 0) { if (g.state === 'trick_end') { g.advanceAfterTrickEnd(); continue; } break; } };
+  let tested = 0, illegal = 0, nondet = 0;
+  for (let seed = 1; seed <= 80 && tested < 40; seed++) {
+    const names = {}; IDS.forEach(p => (names[p] = p));
+    const g = new MightyGame(IDS, names, { targetScore: 50, rng: makeRng(seed) });
+    g.start();
+    let steps = 0;
+    while (g.state !== 'round_end' && g.state !== 'game_end' && steps++ < 8000) {
+      settle(g);
+      if (g.state === 'round_end' || g.state === 'game_end') break;
+      const actor = g.getPendingActor();
+      if (!actor) break;
+      if (g.state === 'playing' && g.currentPlayer === actor && Solver.canSolve(g) && tested < 40) {
+        const m1 = Solver.solve(g, actor);
+        const m2 = Solver.solve(g, actor);
+        if (m1) {
+          tested++;
+          if (!g._getLegalCards(actor).includes(m1.cardId)) illegal++;
+          if (!m2 || m1.cardId !== m2.cardId || m1.jokerSuit !== m2.jokerSuit) nondet++;
+        }
+      }
+      const a = MightyBot.decideMightyBotAction(g, actor, 'heuristic');
+      if (!a) break;
+      const res = g.handleAction(actor, a);
+      if (!res || res.success === false) {
+        const fb = g.getAutoTimeoutAction(actor);
+        if (fb) g.handleAction(actor, fb); else break;
+      }
+    }
+  }
+  check(`solver legal on ${tested} endgames`, illegal, x => x === 0);
+  check('solver deterministic', nondet, x => x === 0);
 })();
 
 console.log(`\n${pass} passed, ${fail} failed`);

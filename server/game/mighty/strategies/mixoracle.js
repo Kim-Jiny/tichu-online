@@ -119,7 +119,20 @@
 
 const oracle = require('./oracle');
 const { runRollout } = require('./rollout');
+const endgameSolver = require('../MightyEndgameSolver');
 const MightyBotInternals = require('../MightyBot');
+
+// Endgame solver on by default; MIGHTY_NO_SOLVER=1 disables (for A-B testing).
+const SOLVER_ON = process.env.MIGHTY_NO_SOLVER !== '1';
+
+// Per-seat gate hook (testing only). When global.__mightySolverGate is a
+// function, the solver is enabled for a seat only if it returns true — lets a
+// head-to-head harness pit solver seats against oracle-only seats at one table.
+function _solverEnabledFor(botId) {
+  if (!SOLVER_ON) return false;
+  const gate = global.__mightySolverGate;
+  return typeof gate === 'function' ? gate(botId) : true;
+}
 const { getCardInfo, RANK_ORDER, SUITS } = require('../MightyDeck');
 
 // Wall-clock cap for the multi-candidate play sweep. Caps how long the single
@@ -1156,6 +1169,14 @@ function decide(game, botId) {
       && typeof game._canDeclareSetting === 'function'
       && game._canDeclareSetting(botId)) {
     return { type: 'declare_setting' };
+  }
+
+  // Exact endgame solver: once few cards remain the position is small enough to
+  // solve perfectly (full-information alpha-beta). It supersedes both the hard
+  // rules and the rollout oracle there — those are heuristics, this is optimal.
+  if (_solverEnabledFor(botId)) {
+    const solved = endgameSolver.solve(game, botId);
+    if (solved) return solved;
   }
 
   const ruled = _applyHardRules(game, botId);

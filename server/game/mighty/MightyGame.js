@@ -10,6 +10,10 @@ class MightyGame {
     this.playerCount = playerIds.length; // 5 (or 6 future)
     this.gameType = 'mighty';
 
+    // Randomness source. Defaults to Math.random (production). Pass options.rng
+    // (e.g. MightyDeck.makeRng(seed)) for reproducible deals in tests/sim A-B.
+    this._rng = typeof options.rng === 'function' ? options.rng : Math.random;
+
     // Mode: '6p' starts kill-mighty (8 cards + 5 kitty + kill phase + min bid 14 + deal-miss 0)
     //       '5p' is classic mighty (10 cards + 3 kitty + no kill + min bid 13 + deal-miss 0.5).
     // After a kill or suicide, a 6p game transitions to '5p' semantics for the remaining
@@ -82,7 +86,7 @@ class MightyGame {
     this.state = 'dealing';
 
     // Reset round state
-    const { hands, kitty } = deal(this.playerIds);
+    const { hands, kitty } = deal(this.playerIds, this._rng);
     this.hands = hands;
     this.kitty = kitty;
     this.trumpSuit = null;
@@ -467,8 +471,9 @@ class MightyGame {
 
   _shuffle(arr) {
     const a = arr.slice();
+    const rng = this._rng || Math.random;
     for (let i = a.length - 1; i > 0; i--) {
-      const j = Math.floor(Math.random() * (i + 1));
+      const j = Math.floor(rng() * (i + 1));
       [a[i], a[j]] = [a[j], a[i]];
     }
     return a;
@@ -1599,7 +1604,7 @@ class MightyGame {
     if (this.state === 'playing' && this.currentPlayer === playerId) {
       const legalCards = this._getLegalCards(playerId);
       if (legalCards.length > 0) {
-        const cardId = legalCards[Math.floor(Math.random() * legalCards.length)];
+        const cardId = legalCards[Math.floor((this._rng || Math.random)() * legalCards.length)];
         const result = { type: 'play_card', cardId };
         if (cardId === 'mighty_joker' && this.currentTrick.length === 0) {
           result.jokerSuit = this.trumpSuit && this.trumpSuit !== 'no_trump'

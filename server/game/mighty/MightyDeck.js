@@ -25,8 +25,24 @@ function shuffle(deck, rng = Math.random) {
   return arr;
 }
 
-function deal(playerIds) {
-  const deck = shuffle(createDeck());
+/**
+ * Deterministic PRNG factory (mulberry32). Returns a function with the same
+ * [0,1) signature as Math.random, so it drops in anywhere an rng is accepted.
+ * Used for reproducible deals in tests / sim A-B comparisons. Production passes
+ * no seed and keeps using Math.random.
+ */
+function makeRng(seed) {
+  let s = (seed >>> 0) || 1;
+  return function () {
+    s = (s + 0x6D2B79F5) | 0;
+    let t = Math.imul(s ^ (s >>> 15), 1 | s);
+    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+}
+
+function deal(playerIds, rng = Math.random) {
+  const deck = shuffle(createDeck(), rng);
   const n = playerIds.length;
   const hands = {};
   for (const pid of playerIds) {
@@ -80,6 +96,7 @@ module.exports = {
   RANK_ORDER,
   createDeck,
   shuffle,
+  makeRng,
   deal,
   getCardInfo,
   sortCards,

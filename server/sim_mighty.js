@@ -22,6 +22,7 @@
 
 const MightyGame = require('./game/mighty/MightyGame');
 const { decideMightyBotAction } = require('./game/mighty/MightyBot');
+const { makeRng } = require('./game/mighty/MightyDeck');
 const { VALID_BOT_STRATEGIES: VALID_STRATEGIES } = require('./game/BotPlayer');
 
 function parseArgs() {
@@ -29,9 +30,16 @@ function parseArgs() {
   let rounds = 200;
   let strategies = ['heuristic', 'heuristic', 'heuristic', 'heuristic', 'heuristic'];
   let rotate = false;
+  let seed = null;
   for (let i = 0; i < args.length; i++) {
     const a = args[i];
-    if (a === '--strategies') {
+    if (a === '--seed') {
+      seed = parseInt(args[++i], 10);
+      if (!Number.isFinite(seed)) {
+        console.error('--seed needs an integer');
+        process.exit(1);
+      }
+    } else if (a === '--strategies') {
       const list = (args[++i] || '').split(',').map(s => s.trim());
       if (list.length !== 5) {
         console.error('--strategies needs exactly 5 comma-separated names');
@@ -50,7 +58,7 @@ function parseArgs() {
       rounds = parseInt(a, 10);
     }
   }
-  return { rounds, strategies, rotate };
+  return { rounds, strategies, rotate, seed };
 }
 
 function advanceUntilStable(game) {
@@ -64,10 +72,12 @@ function advanceUntilStable(game) {
   }
 }
 
-function runGame(playerIds, seatStrategy, decisionStats) {
+function runGame(playerIds, seatStrategy, decisionStats, rng) {
   const playerNames = {};
   for (const pid of playerIds) playerNames[pid] = pid;
-  const game = new MightyGame(playerIds, playerNames, { targetScore: 50 });
+  const opts = { targetScore: 50 };
+  if (rng) opts.rng = rng;
+  const game = new MightyGame(playerIds, playerNames, opts);
   game.start();
 
   const safety = { steps: 0, max: 8000 };
@@ -100,10 +110,10 @@ function runGame(playerIds, seatStrategy, decisionStats) {
 }
 
 function main() {
-  const { rounds, strategies, rotate } = parseArgs();
+  const { rounds, strategies, rotate, seed } = parseArgs();
   const playerIds = ['p0', 'p1', 'p2', 'p3', 'p4'];
 
-  console.log(`\nSimulating ${rounds} rounds. Seats: ${strategies.join(',')}${rotate ? '  (rotating)' : ''}`);
+  console.log(`\nSimulating ${rounds} rounds. Seats: ${strategies.join(',')}${rotate ? '  (rotating)' : ''}${seed != null ? `  (seed=${seed})` : ''}`);
 
   const decisionStats = {};
   for (const s of VALID_STRATEGIES) decisionStats[s] = { count: 0, totalMs: 0 };
@@ -129,7 +139,10 @@ function main() {
       seatStrategy[playerIds[i]] = strategies[stratIdx];
     }
 
-    const { game, error } = runGame(playerIds, seatStrategy, decisionStats);
+    // Deterministic per-round deal when seeded: same seed → same deals across
+    // runs, so two strategy configs can be A-B compared on identical hands.
+    const rng = seed != null ? makeRng((seed * 1000003 + r) >>> 0) : null;
+    const { game, error } = runGame(playerIds, seatStrategy, decisionStats, rng);
     if (error) continue;
 
     if (!game.declarer || !game.roundResult) {

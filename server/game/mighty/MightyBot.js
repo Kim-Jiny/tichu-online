@@ -1,6 +1,23 @@
 'use strict';
 
 const { getCardInfo, RANK_ORDER, SUITS } = require('./MightyDeck');
+// Perfect-information world-knowledge queries (team membership, trick winner,
+// who can still beat it, trump/Mighty/joker possession) live in one module.
+const {
+  getRemainingPlayers,
+  isGovernment,
+  isGovernmentSelf,
+  _isFriend,
+  getCurrentTrickWinner,
+  getWinnerCardId,
+  canBeatCurrentWinner,
+  _onlyGovernmentHasTrump,
+  _noRealOppTrumpLeft,
+  _oppHoldsJoker,
+  _oppHoldsMighty,
+  _trumpSurvivesOpp,
+  _trickLockedForUs,
+} = require('./MightyKnowledge');
 
 /**
  * Decide the next action for a Mighty bot. Single user-facing strategy:
@@ -747,32 +764,6 @@ function pickFriendCard(hand, game) {
 //  HELPER FUNCTIONS
 // ═══════════════════════════════════════════════════════════
 
-function getRemainingPlayers(game, botId) {
-  const playedIds = new Set(game.currentTrick.map(p => p.pid));
-  const leaderIdx = game.playerIds.indexOf(game.currentTrick[0].pid);
-  const excluded = game.excludedPlayers || new Set();
-  const remaining = [];
-  for (let i = 0; i < game.playerCount; i++) {
-    const pid = game.playerIds[(leaderIdx + i) % game.playerCount];
-    if (excluded.has(pid)) continue;
-    if (!playedIds.has(pid) && pid !== botId) {
-      remaining.push(pid);
-    }
-  }
-  return remaining;
-}
-
-function isGovernment(game, playerId) {
-  if (playerId === game.declarer) return true;
-  if (game.friendRevealed && playerId === game.partner) return true;
-  return false;
-}
-
-function isGovernmentSelf(game, playerId) {
-  if (isGovernment(game, playerId)) return true;
-  return _isFriend(game, playerId);
-}
-
 function getTrickPointCount(game) {
   let count = 0;
   for (const play of game.currentTrick) {
@@ -835,35 +826,6 @@ function getNonTrumpWeakest(legalCards, game) {
   });
   if (nonTrump.length > 0) return getWeakestCard(nonTrump, game);
   return getNonPointWeakest(legalCards, game);
-}
-
-/**
- * True if NO opponent (player not on `botId`'s team) can over-ruff `trumpCard`
- * — i.e., no opponent holds a higher trump, the Mighty, or the joker. Such a
- * trump is a "live ruffer": it will still WIN a future trick by ruffing, so
- * it's worth keeping rather than discarding. Omniscient (reads full hands),
- * like the other helpers. Allies over-ruffing is fine (trick stays on our
- * team), so only opponents count.
- */
-function _trumpSurvivesOpp(game, botId, trumpCard) {
-  const trump = game.trumpSuit;
-  if (!trump || trump === 'no_trump') return false;
-  if (!trumpCard) return false;
-  const info0 = getCardInfo(trumpCard);
-  if (!info0 || info0.suit !== trump) return false;
-  const mightyCard = game.getMightyCard();
-  const myRank = RANK_ORDER[info0.rank] || 0;
-  const botIsGov = isGovernmentSelf(game, botId);
-  for (const pid of game.playerIds) {
-    if (pid === botId) continue;
-    if (isGovernmentSelf(game, pid) === botIsGov) continue; // skip allies
-    for (const cid of (game.hands[pid] || [])) {
-      if (cid === mightyCard || cid === 'mighty_joker') return false;
-      const info = getCardInfo(cid);
-      if (info.suit === trump && (RANK_ORDER[info.rank] || 0) > myRank) return false;
-    }
-  }
-  return true;
 }
 
 /**
@@ -1677,27 +1639,6 @@ function decideFollowCard(game, botId, legalCards) {
   return pick;
 }
 
-/**
- * True if the team's current trick winner is LOCKED — the winner is on our
- * team AND no opponent still to play in this trick holds a card that can beat
- * it. Omniscient (reads yet-to-play opponents' hands). `canBeatCurrentWinner`
- * over-estimates beatability for must-follow situations, so this never reports
- * "locked" when an opponent could actually steal the trick — safe to act on.
- */
-function _trickLockedForUs(game, botId) {
-  if (!game.currentTrick || game.currentTrick.length === 0) return false;
-  const botIsGov = isGovernmentSelf(game, botId);
-  const winner = getCurrentTrickWinner(game);
-  if (!winner || isGovernmentSelf(game, winner) !== botIsGov) return false; // not ours
-  for (const pid of getRemainingPlayers(game, botId)) {
-    if (isGovernmentSelf(game, pid) === botIsGov) continue; // allies can't hurt us
-    for (const cid of (game.hands[pid] || [])) {
-      if (canBeatCurrentWinner(game, cid)) return false;
-    }
-  }
-  return true;
-}
-
 function governmentFollow(game, botId, legalCards, winningCards, currentWinner, winnerOnOurTeam, mightyCard) {
   const oppBehind = hasOppositionBehind(game, botId);
   const isFriend = _isFriend(game, botId);
@@ -2011,31 +1952,6 @@ function oppositionFollow(game, botId, legalCards, winningCards, currentWinner, 
 //  TRICK EVALUATION
 // ═══════════════════════════════════════════════════════════
 
-function getCurrentTrickWinner(game) {
-  if (game.currentTrick.length === 0) return null;
-
-  const mightyCard = game.getMightyCard();
-  const leadCard = game.currentTrick[0].cardId;
-  const leadSuit = leadCard === 'mighty_joker' ? game.jokerSuitDeclared : getCardInfo(leadCard).suit;
-  const isFirstTrick = game.tricks.length === 0;
-  const totalTricks = Math.floor(50 / (game.activePlayerCount || game.playerCount));
-  const isLastTrick = game.tricks.length === totalTricks - 1;
-  const jokerCallCard = game.getJokerCallCard();
-  const jokerIsWeak = (isFirstTrick && !game.options.firstTrickJokerPower) ||
-    (isLastTrick && !game.options.lastTrickJokerPower) ||
-    (leadCard === jokerCallCard && game.jokerCallActive);
-
-  let bestPlay = null;
-  let bestPriority = -1;
-
-  for (const play of game.currentTrick) {
-    const priority = game._getCardPriority(play.cardId, leadSuit, jokerIsWeak, mightyCard);
-    if (priority > bestPriority) { bestPriority = priority; bestPlay = play; }
-  }
-
-  return bestPlay ? bestPlay.pid : null;
-}
-
 /**
  * Perfect-info safety check: will the currently winning card survive
  * the rest of the trick? Scans every opp seat that hasn't played yet
@@ -2062,66 +1978,9 @@ function _winnerCardWillHold(game, botId) {
   return true;
 }
 
-function canBeatCurrentWinner(game, cardId) {
-  const mightyCard = game.getMightyCard();
-  if (cardId === mightyCard) return true;
-
-  const leadCard = game.currentTrick[0].cardId;
-  const leadSuit = leadCard === 'mighty_joker' ? game.jokerSuitDeclared : getCardInfo(leadCard).suit;
-  const isFirstTrick = game.tricks.length === 0;
-  const totalTricks = Math.floor(50 / (game.activePlayerCount || game.playerCount));
-  const isLastTrick = game.tricks.length === totalTricks - 1;
-  const jokerCallCard = game.getJokerCallCard();
-  const jokerIsWeak = (isFirstTrick && !game.options.firstTrickJokerPower) ||
-    (isLastTrick && !game.options.lastTrickJokerPower) ||
-    (leadCard === jokerCallCard && game.jokerCallActive);
-
-  const cardPriority = game._getCardPriority(cardId, leadSuit, jokerIsWeak, mightyCard);
-
-  let bestPriority = -1;
-  for (const play of game.currentTrick) {
-    const p = game._getCardPriority(play.cardId, leadSuit, jokerIsWeak, mightyCard);
-    if (p > bestPriority) bestPriority = p;
-  }
-
-  return cardPriority > bestPriority;
-}
-
-function getWinnerCardId(game) {
-  const mightyCard = game.getMightyCard();
-  const leadCard = game.currentTrick[0].cardId;
-  const leadSuit = leadCard === 'mighty_joker' ? game.jokerSuitDeclared : getCardInfo(leadCard).suit;
-  const isFirstTrick = game.tricks.length === 0;
-  const totalTricks = Math.floor(50 / (game.activePlayerCount || game.playerCount));
-  const isLastTrick = game.tricks.length === totalTricks - 1;
-  const jokerCallCard = game.getJokerCallCard();
-  const jokerIsWeak = (isFirstTrick && !game.options.firstTrickJokerPower) ||
-    (isLastTrick && !game.options.lastTrickJokerPower) ||
-    (leadCard === jokerCallCard && game.jokerCallActive);
-
-  let bestPlay = null;
-  let bestPriority = -1;
-  for (const play of game.currentTrick) {
-    const priority = game._getCardPriority(play.cardId, leadSuit, jokerIsWeak, mightyCard);
-    if (priority > bestPriority) { bestPriority = priority; bestPlay = play; }
-  }
-  return bestPlay ? bestPlay.cardId : null;
-}
-
 // ═══════════════════════════════════════════════════════════
 //  CARD ANALYSIS HELPERS
 // ═══════════════════════════════════════════════════════════
-
-/** Check if a player is the friend (even before reveal, by checking hand) */
-function _isFriend(game, playerId) {
-  if (playerId === game.declarer) return false;
-  if (game.friendRevealed && playerId === game.partner) return true;
-  if (!game.friendRevealed && game.friendCard && game.friendCard !== 'no_friend' && game.friendCard !== 'first_trick') {
-    const hand = game.hands[playerId] || [];
-    if (hand.includes(game.friendCard)) return true;
-  }
-  return false;
-}
 
 /**
  * Check if a card is the effective top of its suit.
@@ -2299,69 +2158,6 @@ function _shouldAvoidSpadeLead(game, botId, suitCards, mightyCard) {
     if (suit !== 'spade' && cards.length > 0) return true;
   }
   return false;
-}
-
-/** Check if only government still hold trump cards */
-/** True if any player on the side opposing `selfPid` still holds the Mighty
- *  (which beats trump). Omniscient — reads full hands like the other helpers. */
-function _oppHoldsMighty(game, selfPid) {
-  const mightyCard = game.getMightyCard();
-  if (!mightyCard) return false;
-  const selfIsGov = isGovernmentSelf(game, selfPid);
-  for (const pid of game.playerIds) {
-    if (pid === selfPid) continue;
-    if (isGovernmentSelf(game, pid) === selfIsGov) continue;
-    if ((game.hands[pid] || []).includes(mightyCard)) return true;
-  }
-  return false;
-}
-
-/** True if any player on the side opposing `selfPid` still holds the joker
- *  (which beats trump). Omniscient — reads full hands like the other helpers. */
-function _oppHoldsJoker(game, selfPid) {
-  const selfIsGov = isGovernmentSelf(game, selfPid);
-  for (const pid of game.playerIds) {
-    if (pid === selfPid) continue;
-    if (isGovernmentSelf(game, pid) === selfIsGov) continue;
-    if ((game.hands[pid] || []).includes('mighty_joker')) return true;
-  }
-  return false;
-}
-
-function _onlyGovernmentHasTrump(game) {
-  if (!game.trumpSuit || game.trumpSuit === 'no_trump') return false;
-  for (const pid of game.playerIds) {
-    if (pid === game.declarer || pid === game.partner) continue;
-    const hand = game.hands[pid] || [];
-    for (const cardId of hand) {
-      if (cardId === 'mighty_joker') continue;
-      const info = getCardInfo(cardId);
-      if (info.suit === game.trumpSuit) return false;
-    }
-  }
-  return true;
-}
-
-/**
- * Variant of _onlyGovernmentHasTrump that also excludes `selfPid` — needed by
- * the friend bot pre-reveal, where `game.partner` is still null but the bot
- * itself knows it is part of government and should not count its own trumps
- * as opposition trumps.
- */
-function _noRealOppTrumpLeft(game, selfPid) {
-  if (!game.trumpSuit || game.trumpSuit === 'no_trump') return false;
-  const selfIsGov = isGovernmentSelf(game, selfPid);
-  for (const pid of game.playerIds) {
-    if (pid === selfPid) continue;
-    if (isGovernmentSelf(game, pid) === selfIsGov) continue;
-    const hand = game.hands[pid] || [];
-    for (const cardId of hand) {
-      if (cardId === 'mighty_joker') continue;
-      const info = getCardInfo(cardId);
-      if (info.suit === game.trumpSuit) return false;
-    }
-  }
-  return true;
 }
 
 /** Suits that have already appeared as the lead card of any completed trick.

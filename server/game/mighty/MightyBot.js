@@ -838,6 +838,71 @@ function getNonTrumpWeakest(legalCards, game) {
 }
 
 /**
+ * True if NO opponent (player not on `botId`'s team) can over-ruff `trumpCard`
+ * — i.e., no opponent holds a higher trump, the Mighty, or the joker. Such a
+ * trump is a "live ruffer": it will still WIN a future trick by ruffing, so
+ * it's worth keeping rather than discarding. Omniscient (reads full hands),
+ * like the other helpers. Allies over-ruffing is fine (trick stays on our
+ * team), so only opponents count.
+ */
+function _trumpSurvivesOpp(game, botId, trumpCard) {
+  const trump = game.trumpSuit;
+  if (!trump || trump === 'no_trump') return false;
+  if (!trumpCard) return false;
+  const info0 = getCardInfo(trumpCard);
+  if (!info0 || info0.suit !== trump) return false;
+  const mightyCard = game.getMightyCard();
+  const myRank = RANK_ORDER[info0.rank] || 0;
+  const botIsGov = isGovernmentSelf(game, botId);
+  for (const pid of game.playerIds) {
+    if (pid === botId) continue;
+    if (isGovernmentSelf(game, pid) === botIsGov) continue; // skip allies
+    for (const cid of (game.hands[pid] || [])) {
+      if (cid === mightyCard || cid === 'mighty_joker') return false;
+      const info = getCardInfo(cid);
+      if (info.suit === trump && (RANK_ORDER[info.rank] || 0) > myRank) return false;
+    }
+  }
+  return true;
+}
+
+/**
+ * Discard for an opposition bot that can't win a trick the GOVERNMENT is
+ * taking. Government already collects this trick's points, so dumping a point
+ * card just hands them an EXTRA point. Priority:
+ *   1. Junk (non-point, non-trump) — keeps both trumps and point cards.
+ *   2. If only points and trumps remain: don't reflexively burn a trump that
+ *      can still WIN a future trick by ruffing. If our lowest trump is a live
+ *      ruffer (no opponent can over-ruff it), keep it and dump the cheapest
+ *      point card instead. Only when the trump is over-ruffable dead weight do
+ *      we burn it to deny the point.
+ *   3. Fallback: weakest non-point (burns the dead-weight trump before points).
+ */
+function getOppLosingDiscard(legalCards, game, botId) {
+  const mightyCard = game.getMightyCard();
+  const trump = game.trumpSuit;
+  const isSpecial = (c) => c === mightyCard || c === 'mighty_joker';
+
+  const junk = legalCards.filter(c => !isSpecial(c)
+    && getCardInfo(c).point === 0 && getCardInfo(c).suit !== trump);
+  if (junk.length > 0) return getWeakestCard(junk, game);
+
+  if (trump && trump !== 'no_trump') {
+    const trumps = legalCards.filter(c => !isSpecial(c) && getCardInfo(c).suit === trump);
+    const points = legalCards.filter(c => !isSpecial(c) && getCardInfo(c).point > 0);
+    if (trumps.length > 0 && points.length > 0) {
+      const lowestTrump = getWeakestCard(trumps, game);
+      if (_trumpSurvivesOpp(game, botId, lowestTrump)) {
+        // Keep the live ruffer; dump the lowest-value point card instead.
+        return [...points].sort((a, b) =>
+          RANK_ORDER[getCardInfo(a).rank] - RANK_ORDER[getCardInfo(b).rank])[0];
+      }
+    }
+  }
+  return getNonPointWeakest(legalCards, game);
+}
+
+/**
  * "Safe discard" for uncertain-ally-winning / can't-win scenarios.
  * Avoids both point cards (don't hand opp points) and trump cards (don't
  * burn trump). Tiered fallback: non-point non-trump → non-point → non-trump → any.
@@ -1207,6 +1272,32 @@ function _governmentLead(game, botId, legalCards, suitCards, mightyCard) {
   // count so joker leads become available as soon as we've confirmed opp is dry.
   if (legalCards.includes('mighty_joker') && _onlyGovernmentHasTrump(game)) {
     return 'mighty_joker';
+  }
+
+  // Phase 4.5: PENULTIMATE-TRICK joker sacrifice. Only government holds
+  // trump-SUIT cards (opp can't over-ruff), but an opponent still holds the
+  // joker, which beats trump AND is powerless on the last trick — so the opp
+  // is FORCED to spend it now (next trick is the last). We will lose this
+  // trick to the joker whichever trump we lead, so lead our LOWEST trump: the
+  // joker captures only our cheapest card and we keep the higher trump to win
+  // the final trick, where the joker can't beat it. (e.g. hold 기루 3+J, opp
+  // has joker → lead 3, keep J for the last trick.)
+  //
+  // Restricted to the penultimate trick on purpose: one trick earlier the
+  // joker is NOT yet forced out, so the opp will duck and we should cash our
+  // HIGH trumps (handled by the normal phases) rather than waste a low lead —
+  // otherwise we'd be forced to feed a HIGHER card to the joker here.
+  const totalTricksNow = Math.floor(50 / (game.activePlayerCount || game.playerCount));
+  const isPenultimateTrick = game.tricks.length === totalTricksNow - 2;
+  const govTrumps = suitCards[game.trumpSuit] || [];
+  if (isPenultimateTrick
+      && govTrumps.length >= 2
+      && _onlyGovernmentHasTrump(game)
+      && !game.options.lastTrickJokerPower   // joker actually dies last trick
+      && _oppHoldsJoker(game, botId)
+      && !_oppHoldsMighty(game, botId)) {     // mighty doesn't die last trick
+    return [...govTrumps].sort((a, b) =>
+      RANK_ORDER[getCardInfo(a).rank] - RANK_ORDER[getCardInfo(b).rank])[0]; // lowest
   }
 
   // Phase 5: Lead remaining trumps — skip when only government holds trump.
@@ -1586,6 +1677,27 @@ function decideFollowCard(game, botId, legalCards) {
   return pick;
 }
 
+/**
+ * True if the team's current trick winner is LOCKED — the winner is on our
+ * team AND no opponent still to play in this trick holds a card that can beat
+ * it. Omniscient (reads yet-to-play opponents' hands). `canBeatCurrentWinner`
+ * over-estimates beatability for must-follow situations, so this never reports
+ * "locked" when an opponent could actually steal the trick — safe to act on.
+ */
+function _trickLockedForUs(game, botId) {
+  if (!game.currentTrick || game.currentTrick.length === 0) return false;
+  const botIsGov = isGovernmentSelf(game, botId);
+  const winner = getCurrentTrickWinner(game);
+  if (!winner || isGovernmentSelf(game, winner) !== botIsGov) return false; // not ours
+  for (const pid of getRemainingPlayers(game, botId)) {
+    if (isGovernmentSelf(game, pid) === botIsGov) continue; // allies can't hurt us
+    for (const cid of (game.hands[pid] || [])) {
+      if (canBeatCurrentWinner(game, cid)) return false;
+    }
+  }
+  return true;
+}
+
 function governmentFollow(game, botId, legalCards, winningCards, currentWinner, winnerOnOurTeam, mightyCard) {
   const oppBehind = hasOppositionBehind(game, botId);
   const isFriend = _isFriend(game, botId);
@@ -1613,6 +1725,17 @@ function governmentFollow(game, botId, legalCards, winningCards, currentWinner, 
     // almost always hold — just dump a non-trump point card. Don't trump-ruff our own ace,
     // and don't burn the joker just to reveal the partnership.
     const winnerCard = getWinnerCardId(game);
+
+    // Trick already LOCKED for our team: no opponent still to play can beat the
+    // declarer's winning card. We know this from full-hand info — e.g. the
+    // declarer ruffed with a trump and no opponent holds a higher trump, the
+    // Mighty, or a powered joker. The trick is ours no matter what we drop, so
+    // dump safely and PRESERVE the joker/trumps. Burning the joker here to
+    // "reveal" or "reinforce" a trivially-won trick just throws the joker away.
+    if (_trickLockedForUs(game, botId)) {
+      return dumpSafe(legalCards, game);
+    }
+
     const declarerSecure = _isEffectiveTopOfSuit(winnerCard, game);
 
     // Joker-friend safe-window reveal: when declarer's lead is TRULY
@@ -1814,8 +1937,10 @@ function oppositionFollow(game, botId, legalCards, winningCards, currentWinner, 
     }
 
     // ═══ SUITED: conserve trump and specials ═══
+    // getOppLosingDiscard prefers junk, then keeps a live-ruffer trump over a
+    // point card (don't burn a trump that can still win a future ruff).
     if (trickPoints === 0 && !govBehind) {
-      return getNonPointWeakest(legalCards, game);
+      return getOppLosingDiscard(legalCards, game, botId);
     }
 
     // Don't waste trump on pointless tricks
@@ -1826,18 +1951,18 @@ function oppositionFollow(game, botId, legalCards, winningCards, currentWinner, 
         return info.suit !== game.trumpSuit;
       });
       if (nonTrumpWinners.length > 0) return getWeakestCard(nonTrumpWinners, game);
-      return getNonPointWeakest(legalCards, game);
+      return getOppLosingDiscard(legalCards, game, botId);
     }
 
     // Don't waste mighty/joker on low-value tricks unless last player
     if (trickPoints <= 1 && !isLastPlayer && winningCards.length > 0) {
       const cheapWinners = winningCards.filter(c => c !== mightyCard && c !== 'mighty_joker');
       if (cheapWinners.length > 0) return getWeakestCard(cheapWinners, game);
-      return getNonPointWeakest(legalCards, game);
+      return getOppLosingDiscard(legalCards, game, botId);
     }
 
     if (winningCards.length > 0) return pickSufficientWinner(winningCards, game, isLastPlayer, govBehind);
-    return getNonPointWeakest(legalCards, game);
+    return getOppLosingDiscard(legalCards, game, botId);
   }
 
   // ─── Our team (opposition ally) is winning ───
@@ -2177,6 +2302,32 @@ function _shouldAvoidSpadeLead(game, botId, suitCards, mightyCard) {
 }
 
 /** Check if only government still hold trump cards */
+/** True if any player on the side opposing `selfPid` still holds the Mighty
+ *  (which beats trump). Omniscient — reads full hands like the other helpers. */
+function _oppHoldsMighty(game, selfPid) {
+  const mightyCard = game.getMightyCard();
+  if (!mightyCard) return false;
+  const selfIsGov = isGovernmentSelf(game, selfPid);
+  for (const pid of game.playerIds) {
+    if (pid === selfPid) continue;
+    if (isGovernmentSelf(game, pid) === selfIsGov) continue;
+    if ((game.hands[pid] || []).includes(mightyCard)) return true;
+  }
+  return false;
+}
+
+/** True if any player on the side opposing `selfPid` still holds the joker
+ *  (which beats trump). Omniscient — reads full hands like the other helpers. */
+function _oppHoldsJoker(game, selfPid) {
+  const selfIsGov = isGovernmentSelf(game, selfPid);
+  for (const pid of game.playerIds) {
+    if (pid === selfPid) continue;
+    if (isGovernmentSelf(game, pid) === selfIsGov) continue;
+    if ((game.hands[pid] || []).includes('mighty_joker')) return true;
+  }
+  return false;
+}
+
 function _onlyGovernmentHasTrump(game) {
   if (!game.trumpSuit || game.trumpSuit === 'no_trump') return false;
   for (const pid of game.playerIds) {
@@ -2398,6 +2549,26 @@ function _pickJokerLeadSuit(game, botId) {
   if (isGovernment && friendCardSuit && oppHoldsSuit[friendCardSuit]
       && _countCardsInSuitOutsideHand(game, botId, friendCardSuit) >= 5) {
     suitScore[friendCardSuit] += 200;
+  }
+
+  // Don't drag our own team's Mighty out. If a teammate holds the Mighty and
+  // it's their ONLY card of that suit, declaring that suit forces them to
+  // follow with the Mighty (MightyGame _getLegalCards) — burning the team's
+  // best card on this trick for nothing (e.g. trump=♣ → Mighty=♠A; calling ♠
+  // pulls 주공's lone ♠A out). Trump is the safe call: the Mighty never lives
+  // in the trump suit, so the teammate follows with a real trump instead.
+  const mightySuit = mightyCard ? (getCardInfo(mightyCard).suit || null) : null;
+  if (mightySuit && suitScore[mightySuit] != null) {
+    for (const pid of game.playerIds) {
+      if (pid === botId) continue;
+      if (isGovernmentSelf(game, pid) !== botIsGov) continue; // teammate only
+      const h = game.hands[pid] || [];
+      if (!h.includes(mightyCard)) continue;
+      const hasOtherInSuit = h.some(c =>
+        c !== mightyCard && c !== 'mighty_joker'
+        && getCardInfo(c).suit === mightySuit);
+      if (!hasOtherInSuit) { suitScore[mightySuit] -= 300; break; }
+    }
   }
 
   let bestSuit = null;

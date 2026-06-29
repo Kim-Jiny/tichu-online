@@ -115,6 +115,11 @@ class _LobbyScreenState extends State<LobbyScreen> {
   // lobby mount; closing the popup marks replies read (clears banner + badge).
   void _onInquiryUpdate() {
     if (!mounted || _inquiryReplyShown) return;
+    // Only on the lobby list — never over a waiting room or an in-progress
+    // game. If inquiries load late (or requestInquiries runs again) while in a
+    // room, defer WITHOUT consuming: the listener stays active and fires again
+    // once the player is back on the lobby (_inRoom == false).
+    if (_inRoom) return;
     final game = _inquiryGameRef;
     if (game == null) return;
     Map<String, dynamic>? reply;

@@ -893,6 +893,25 @@ class TichuGame {
     if (!lastCombo) return false;
 
     const hand = this.hands[playerId];
+
+    // Memoize: the body is an exhaustive 2^hand subset scan (~16k iterations for
+    // a full hand). The bot's candidate filter calls canPlayCards — and thus
+    // this — once PER candidate (dozens), yet the answer depends only on
+    // (callRank, the trick top, this player's hand), all constant across that
+    // pass. Cache by an authoritative signature so repeats are O(1); any state
+    // change alters the key and forces a recompute, so it can never go stale.
+    // This was the dominant tail cost in winrate-bot decisions (a Mahjong-wish
+    // first trick with a 14-card hand cost ~34ms × every candidate).
+    const sig = `${playerId}|${this.callRank}|${lastCombo.type}|${lastCombo.value}|${lastCombo.length}|${hand.join(',')}`;
+    if (this._cfcbCacheKey === sig) return this._cfcbCacheVal;
+
+    const result = this._computeCanFulfillCallAndBeat(lastCombo, hand);
+    this._cfcbCacheKey = sig;
+    this._cfcbCacheVal = result;
+    return result;
+  }
+
+  _computeCanFulfillCallAndBeat(lastCombo, hand) {
     const wishValue = this.rankToValue(this.callRank);
     const wishMask = hand.reduce((mask, cardId, idx) => {
       return getCardValue(cardId) === wishValue ? (mask | (1 << idx)) : mask;

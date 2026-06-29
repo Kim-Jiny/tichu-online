@@ -1250,7 +1250,7 @@ if (DIAG_ON) {
 // watchdog is the catch-all: if a bot is the pending actor but nothing is
 // scheduled for the room across a full interval, force a reschedule. It only
 // ever fires on a genuine stall, so it's a no-op in healthy rooms.
-const { botWatchdogTick } = require('./game/botWatchdog');
+const { botWatchdogTick, NON_ACTIONABLE_STATES } = require('./game/botWatchdog');
 const BOT_WATCHDOG_MS = 4000;
 const botStuckSeen = {}; // roomId -> consecutive intervals seen stranded
 setInterval(() => {
@@ -4550,7 +4550,7 @@ function scheduleBotActions(roomId, forceReschedule = false) {
           // S11: Don't return on failure - let other bots try
           console.log(`[BOT] ${botId} action failed: ${result?.message}`);
         }
-      } else if (pendingActor && botId === pendingActor && r.isBot(pendingActor)) {
+      } else if (pendingActor && botId === pendingActor && r.isBot(pendingActor) && !NON_ACTIONABLE_STATES.has(r.game.state)) {
         // SAFETY NET: it is genuinely this bot's turn, but its strategy returned
         // no action (decide() falls through to `return null` for some state /
         // hand). Bots get NO turn-timeout (startTurnTimer skips them), so

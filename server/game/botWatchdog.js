@@ -58,4 +58,4 @@ function botWatchdogTick({ rooms, pendingBotTimers, seen, threshold = 2 }) {
   return toRecover;
 }
 
-module.exports = { botWatchdogTick };
+module.exports = { botWatchdogTick, NON_ACTIONABLE_STATES };

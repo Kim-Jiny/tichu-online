@@ -5111,6 +5111,25 @@ async function handleAdminRoute(req, res, url, pathname, method, lobby, wss, mai
     const amount = parseInt(body.amount);
     if (!isNaN(amount) && amount !== 0) {
       await adminAdjustGold(nickname, amount, sessionInfo.session.username || 'admin');
+      // Notify the user — POSITIVE grants only. Deductions (e.g. refund
+      // clawback) stay silent: a "gold removed" push would alert/upset users.
+      // Mirrors the inquiry-resolution push; fire-and-forget (sendPushNotification
+      // swallows its own errors, and the try/catch guards the lookup) so a push
+      // problem can never undo or block the gold grant itself.
+      if (amount > 0 && sendPushNotification) {
+        try {
+          const user = await getUserDetail(nickname);
+          if (user && user.fcm_token && user.push_enabled !== false) {
+            await sendPushNotification(
+              user.fcm_token,
+              '골드가 지급되었어요',
+              `+${amount.toLocaleString()} 골드가 지급되었어요. 앱에서 확인해주세요.`
+            );
+          }
+        } catch (e) {
+          console.error('[ADMIN] gold-grant push failed:', e.message);
+        }
+      }
     }
     const referer = req.headers.referer || '';
     if (referer.includes('/tc-backstage/users?') || referer.endsWith('/tc-backstage/users')) {

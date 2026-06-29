@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:web_socket_channel/web_socket_channel.dart';
+import 'package:connectivity_plus/connectivity_plus.dart';
 
 class NetworkService extends ChangeNotifier {
   static const _debugIp = String.fromEnvironment('DEBUG_SERVER_IP', defaultValue: '127.0.0.1');
@@ -26,12 +27,24 @@ class NetworkService extends ChangeNotifier {
 
   WebSocketChannel? _channel;
   StreamSubscription? _subscription;
+  StreamSubscription? _connectivitySub;
   int _connectionId = 0;
   bool _isConnected = false;
   bool _isConnecting = false;
   String _serverUrl = defaultUrl;
   bool _shouldAutoReconnect = true;
   Completer<void>? _connectCompleter;
+
+  // Client-side connection heartbeat. A socket's onDone/onError do NOT fire on
+  // a silent network handoff (WiFi↔cellular), leaving a zombie socket with
+  // _isConnected stuck true and the game screen frozen — nothing reconnects.
+  // We ping the server every _heartbeatInterval; if no pong arrives within
+  // _heartbeatDeadAfter we declare the socket dead and run the normal
+  // disconnect→reconnect chain (listeners → ConnectionOverlay → restore).
+  Timer? _heartbeatTimer;
+  DateTime? _lastPongAt;
+  static const Duration _heartbeatInterval = Duration(seconds: 5);
+  static const Duration _heartbeatDeadAfter = Duration(seconds: 15);
 
   final StreamController<Map<String, dynamic>> _messageController =
       StreamController<Map<String, dynamic>>.broadcast();
@@ -40,6 +53,17 @@ class NetworkService extends ChangeNotifier {
   bool get isConnecting => _isConnecting;
   bool get shouldAutoReconnect => _shouldAutoReconnect;
   Stream<Map<String, dynamic>> get messageStream => _messageController.stream;
+
+  NetworkService() {
+    // Network changed (e.g. WiFi↔cellular handoff). The current socket is very
+    // likely a zombie now, so verify it immediately instead of waiting out the
+    // ~15s heartbeat. The heartbeat remains the backstop for cases the OS
+    // doesn't surface a connectivity event.
+    _connectivitySub = Connectivity().onConnectivityChanged.listen(
+      (_) => _probeConnectionNow(),
+      onError: (_) {},
+    );
+  }
 
   Future<void> connect([String? url]) async {
     if (_isConnected) return;
@@ -63,6 +87,7 @@ class NetworkService extends ChangeNotifier {
 
       _isConnecting = false;
       _isConnected = true;
+      _lastPongAt = DateTime.now();
       final myId = ++_connectionId;
       _connectCompleter?.complete();
       _connectCompleter = null;
@@ -80,6 +105,11 @@ class NetworkService extends ChangeNotifier {
           if (_connectionId != myId) return;
           try {
             final json = jsonDecode(data as String) as Map<String, dynamic>;
+            if (json['type'] == 'pong') {
+              // Heartbeat reply — proof the socket is alive. Consume it.
+              _lastPongAt = DateTime.now();
+              return;
+            }
             _messageController.add(json);
           } catch (e) {
             debugPrint('[Network] Failed to parse message: $e');
@@ -97,6 +127,7 @@ class NetworkService extends ChangeNotifier {
         },
       );
 
+      _startHeartbeat();
       debugPrint('[Network] Connected to $_serverUrl (id=$myId)');
     } catch (e) {
       debugPrint('[Network] Connection failed: $e');
@@ -128,7 +159,59 @@ class NetworkService extends ChangeNotifier {
     await connect(url);
   }
 
+  void _startHeartbeat() {
+    _heartbeatTimer?.cancel();
+    _lastPongAt = DateTime.now();
+    _heartbeatTimer = Timer.periodic(_heartbeatInterval, (_) => _heartbeatTick());
+  }
+
+  void _stopHeartbeat() {
+    _heartbeatTimer?.cancel();
+    _heartbeatTimer = null;
+  }
+
+  void _heartbeatTick() {
+    if (!_isConnected || _channel == null) return;
+    final last = _lastPongAt;
+    if (last != null && DateTime.now().difference(last) > _heartbeatDeadAfter) {
+      // No pong within the dead window → zombie socket (e.g. network handoff
+      // with no TCP FIN). Tear it down so the normal reconnect chain runs.
+      debugPrint('[Network] Heartbeat timeout — treating socket as dead');
+      disconnect(intentional: false);
+      return;
+    }
+    try {
+      _channel!.sink.add(jsonEncode({'type': 'ping'}));
+    } catch (e) {
+      debugPrint('[Network] Heartbeat send failed: $e');
+      disconnect(intentional: false);
+    }
+  }
+
+  // Fast liveness check after a connectivity change: ping now and, if no fresh
+  // pong arrives shortly, declare the socket dead and reconnect. Faster than the
+  // periodic heartbeat for the common WiFi↔cellular case.
+  void _probeConnectionNow() {
+    if (!_isConnected || _channel == null) return;
+    final probeAt = DateTime.now();
+    try {
+      _channel!.sink.add(jsonEncode({'type': 'ping'}));
+    } catch (_) {
+      disconnect(intentional: false);
+      return;
+    }
+    Timer(const Duration(seconds: 4), () {
+      if (!_isConnected) return;
+      final last = _lastPongAt;
+      if (last == null || last.isBefore(probeAt)) {
+        debugPrint('[Network] Connectivity-change probe got no pong — reconnecting');
+        disconnect(intentional: false);
+      }
+    });
+  }
+
   void _handleDisconnect({bool intentional = false}) {
+    _stopHeartbeat();
     final wasConnected = _isConnected;
     _isConnected = false;
     _isConnecting = false;
@@ -293,6 +376,7 @@ class NetworkService extends ChangeNotifier {
 
   @override
   void dispose() {
+    _connectivitySub?.cancel();
     disconnect();
     _messageController.close();
     super.dispose();

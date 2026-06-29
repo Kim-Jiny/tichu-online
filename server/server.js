@@ -1684,6 +1684,16 @@ wss.on('connection', (ws, req) => {
 
 async function handleMessage(ws, data) {
   switch (data.type) {
+    case 'ping':
+      // App-level keepalive from the client's connection heartbeat. Replying
+      // pong lets the client detect a dead/zombie socket (e.g. WiFi↔cellular
+      // handoff where no TCP FIN ever arrives, so the client's onDone/onError
+      // never fire and the screen silently freezes). Also counts as proof of
+      // life for the server's own zombie-connection sweep.
+      ws.isAlive = true;
+      ws.missedHeartbeats = 0;
+      sendTo(ws, { type: 'pong' });
+      break;
     case 'register':
       await handleRegister(ws, data);
       break;

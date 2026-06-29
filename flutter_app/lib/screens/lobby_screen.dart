@@ -43,6 +43,12 @@ class _LobbyScreenState extends State<LobbyScreen> {
   BannerAd? _roomBannerAd;
   bool _roomBannerLoaded = false;
 
+  // 문의 답변 자동 팝업: 접속(로그인) 후 문의 목록이 로드됐을 때 미읽음 답변이
+  // 있으면 답변 팝업을 1회 띄운다. 푸시를 누르고 들어온 경우든 일반 실행이든
+  // 답변을 바로 보게 하고, 팝업을 닫으면 읽음처리되어 다시 뜨지 않는다.
+  GameService? _inquiryGameRef;
+  bool _inquiryReplyShown = false;
+
   @override
   void initState() {
     super.initState();
@@ -86,16 +92,96 @@ class _LobbyScreenState extends State<LobbyScreen> {
       game.requestFriends();
       game.requestPendingFriendRequests();
       game.requestInquiries();
+      // Auto-show the reply popup once the inquiry list arrives (or already has
+      // an unread reply). Listener so it fires when requestInquiries resolves.
+      _inquiryGameRef = game;
+      game.addListener(_onInquiryUpdate);
+      _onInquiryUpdate();
     });
   }
 
   @override
   void dispose() {
+    _inquiryGameRef?.removeListener(_onInquiryUpdate);
     _chatController.dispose();
     _chatScrollController.dispose();
     _bannerAd?.dispose();
     _roomBannerAd?.dispose();
     super.dispose();
+  }
+
+  // Show the inquiry reply popup once, the moment an unread answered inquiry is
+  // present. Removes its own listener after firing so it shows at most once per
+  // lobby mount; closing the popup marks replies read (clears banner + badge).
+  void _onInquiryUpdate() {
+    if (!mounted || _inquiryReplyShown) return;
+    final game = _inquiryGameRef;
+    if (game == null) return;
+    Map<String, dynamic>? reply;
+    for (final it in game.inquiries) {
+      final status = it['status']?.toString() ?? '';
+      final adminNote = it['admin_note']?.toString() ?? '';
+      if (status == 'resolved' && adminNote.isNotEmpty && it['user_read'] != true) {
+        reply = it;
+        break;
+      }
+    }
+    if (reply == null) return;
+    _inquiryReplyShown = true;
+    game.removeListener(_onInquiryUpdate);
+    _showInquiryReplyPopup(reply, game);
+  }
+
+  void _showInquiryReplyPopup(Map<String, dynamic> item, GameService game) {
+    if (!mounted) return;
+    final l10n = L10n.of(context);
+    final title = item['title']?.toString() ?? '';
+    final adminNote = item['admin_note']?.toString() ?? '';
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: Row(
+          children: [
+            const Icon(Icons.mark_email_read, color: Color(0xFF1E88E5)),
+            const SizedBox(width: 8),
+            Expanded(
+              child: Text(
+                l10n.serviceInquiryReply(title.isEmpty ? l10n.serviceInquiryDefault : title),
+                style: const TextStyle(fontSize: 16),
+                overflow: TextOverflow.ellipsis,
+                maxLines: 2,
+              ),
+            ),
+          ],
+        ),
+        content: SingleChildScrollView(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                l10n.inquiryAnswerLabel,
+                style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Color(0xFF4CAF50)),
+              ),
+              const SizedBox(height: 6),
+              Text(
+                adminNote,
+                style: const TextStyle(fontSize: 14, color: Color(0xFF5A4038)),
+              ),
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: Text(l10n.commonClose),
+          ),
+        ],
+      ),
+    ).then((_) {
+      if (mounted) game.markInquiriesRead();
+    });
   }
 
   void _showRoomInviteDialog(Map<String, dynamic> invite, GameService game) {

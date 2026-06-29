@@ -911,32 +911,87 @@ class TichuGame {
     return result;
   }
 
+  // Does the player hold ANY combo that includes a called-rank card AND beats
+  // the current trick top? The old impl scanned all 2^hand subsets (~16k for a
+  // full hand → up to ~1s on the shared prod VPS, blocking the event loop for
+  // every other player). canBeat narrows what can possibly beat `lastCombo`, so
+  // we only need to look at:
+  //   (A) NON-bomb beats: same type AND same length as lastCombo (canBeat rule)
+  //       → enumerate just the size-L subsets that include the called rank.
+  //   (B) BOMB beats: four-of-a-kind (length 4) or straight-flush (length ≥5),
+  //       detected DIRECTLY (no subset scan): a 4-bomb that includes the called
+  //       rank must BE four of that rank; a straight-flush must be a same-suit
+  //       consecutive run containing the called-rank card.
+  // Equivalence with the old brute force is covered by test_canfulfill_equiv.js.
   _computeCanFulfillCallAndBeat(lastCombo, hand) {
     const wishValue = this.rankToValue(this.callRank);
-    const wishMask = hand.reduce((mask, cardId, idx) => {
-      return getCardValue(cardId) === wishValue ? (mask | (1 << idx)) : mask;
-    }, 0);
+    const wishCards = hand.filter((c) => getCardValue(c) === wishValue);
+    if (wishCards.length === 0) return false; // can't include the called rank
 
-    if (wishMask === 0) return false;
-
-    const totalMasks = 1 << hand.length;
-    for (let mask = 1; mask < totalMasks; mask++) {
-      if ((mask & wishMask) === 0) continue;
-
-      const subset = [];
-      for (let i = 0; i < hand.length; i++) {
-        if (mask & (1 << i)) subset.push(hand[i]);
-      }
-
+    const trickActive = this.currentTrick.length > 0;
+    // Evaluate one concrete subset exactly as the old loop did.
+    const beats = (subset) => {
       const combo = getComboType(subset);
-      if (combo.type === COMBO.INVALID) continue;
+      if (combo.type === COMBO.INVALID) return false;
+      if (combo.isPhoenix && trickActive) combo.value = lastCombo.value + 0.5;
+      return canBeat(lastCombo, combo);
+    };
+    const includesWish = (subset) => subset.some((c) => getCardValue(c) === wishValue);
 
-      if (combo.isPhoenix && this.currentTrick.length > 0) {
-        combo.value = lastCombo.value + 0.5;
+    // (A) Non-bomb beat: same length only. A non-bomb can never beat a bomb, so
+    // skip when lastCombo is itself a bomb.
+    if (!isBomb(lastCombo)) {
+      const L = lastCombo.length;
+      const n = hand.length;
+      if (L >= 1 && L <= n) {
+        const idx = new Array(L);
+        const rec = (start, depth) => {
+          if (depth === L) {
+            const subset = idx.map((i) => hand[i]);
+            return includesWish(subset) && beats(subset);
+          }
+          for (let i = start; i <= n - (L - depth); i++) {
+            idx[depth] = i;
+            if (rec(i + 1, depth + 1)) return true;
+          }
+          return false;
+        };
+        if (rec(0, 0)) return true;
       }
+    }
 
-      if (canBeat(lastCombo, combo)) {
-        return true;
+    // (B1) Four-of-a-kind bomb that includes the called rank: must be four cards
+    // of the called rank.
+    if (wishCards.length >= 4 && beats(wishCards.slice(0, 4))) return true;
+
+    // (B2) Straight-flush bomb containing the called rank: a same-suit run of
+    // consecutive values that includes wishValue. Scan per suit (no subset scan).
+    const SUITS = ['spade', 'heart', 'diamond', 'club'];
+    for (const suit of SUITS) {
+      const prefix = suit + '_';
+      const present = new Set();
+      for (const c of hand) {
+        if (c.startsWith(prefix)) present.add(getCardValue(c));
+      }
+      if (!present.has(wishValue)) continue; // run must contain the called rank
+      // Maximal consecutive run containing wishValue.
+      let lo = wishValue;
+      let hi = wishValue;
+      while (present.has(lo - 1)) lo--;
+      while (present.has(hi + 1)) hi++;
+      if (hi - lo + 1 < 5) continue;
+      // Try every length-≥5 window inside the run that still includes wishValue.
+      for (let len = 5; len <= hi - lo + 1; len++) {
+        for (let start = lo; start + len - 1 <= hi; start++) {
+          const end = start + len - 1;
+          if (wishValue < start || wishValue > end) continue;
+          const subset = [];
+          for (let v = start; v <= end; v++) {
+            const card = hand.find((c) => c.startsWith(prefix) && getCardValue(c) === v);
+            if (card) subset.push(card);
+          }
+          if (subset.length === len && beats(subset)) return true;
+        }
       }
     }
 

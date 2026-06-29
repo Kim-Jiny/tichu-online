@@ -31,6 +31,15 @@ class _SettingsScreenState extends State<SettingsScreen> {
   BannerAd? _bannerAd;
   bool _bannerAdLoaded = false;
 
+  // Owned by the State, not the inquiry dialog: the dialog's CLOSE animation
+  // keeps rebuilding its TextFields for a few frames after the route future
+  // completes. Disposing in the dialog's whenComplete() therefore freed these
+  // mid-transition and the next frame's addListener hit a disposed controller
+  // ("used after being disposed"). State.dispose runs only after teardown, so
+  // tying their lifetime to the State avoids the race. Cleared on each open.
+  final TextEditingController _inquiryTitleController = TextEditingController();
+  final TextEditingController _inquiryContentController = TextEditingController();
+
   @override
   void initState() {
     super.initState();
@@ -46,6 +55,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
   @override
   void dispose() {
     _bannerAd?.dispose();
+    _inquiryTitleController.dispose();
+    _inquiryContentController.dispose();
     super.dispose();
   }
 
@@ -192,8 +203,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
   void _showInquiryDialog() {
     final l10n = L10n.of(context);
-    final titleController = TextEditingController();
-    final contentController = TextEditingController();
+    // Reuse the State-owned controllers; reset their contents for a fresh form.
+    _inquiryTitleController.clear();
+    _inquiryContentController.clear();
     String selectedCategory = 'bug';
 
     showDialog(
@@ -272,7 +284,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 Text(l10n.inquiryFieldTitle, style: const TextStyle(fontSize: 13, color: Color(0xFF8A8A8A))),
                 const SizedBox(height: 4),
                 TextField(
-                  controller: titleController,
+                  controller: _inquiryTitleController,
                   decoration: InputDecoration(
                     hintText: l10n.inquiryFieldTitleHint,
                     border: OutlineInputBorder(
@@ -285,7 +297,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 Text(l10n.inquiryFieldContent, style: const TextStyle(fontSize: 13, color: Color(0xFF8A8A8A))),
                 const SizedBox(height: 4),
                 TextField(
-                  controller: contentController,
+                  controller: _inquiryContentController,
                   maxLines: 5,
                   decoration: InputDecoration(
                     hintText: l10n.inquiryFieldContentHint,
@@ -305,8 +317,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
             ),
             ElevatedButton(
               onPressed: () {
-                final title = titleController.text.trim();
-                final content = contentController.text.trim();
+                final title = _inquiryTitleController.text.trim();
+                final content = _inquiryContentController.text.trim();
                 if (title.isEmpty || content.isEmpty) return;
                 final game = dialogCtx.read<GameService>();
                 game.submitInquiry(selectedCategory, title, content);
@@ -327,10 +339,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
           ],
         ),
       ),
-    ).whenComplete(() {
-      titleController.dispose();
-      contentController.dispose();
-    });
+    );
   }
 
   void _showInquiryHistoryDialog() {

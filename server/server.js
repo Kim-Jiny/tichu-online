@@ -4943,8 +4943,15 @@ async function handleDesertion(roomId, playerId, reason = 'leave') {
     reason, // 'leave' or 'timeout'
   });
 
-  // Increment leave_count + ranked ban (skip bots)
-  if (deserterNick && !playerId.startsWith('bot_')) {
+  // Increment leave_count + ranked ban (skip bots). Also skip when the deserter
+  // is the ONLY human in the room (solo vs bots): there is no other player to
+  // harm, so leaving a practice-with-bots game must not count as desertion.
+  // Count humans EXCLUDING the deserter, so it's correct whether or not the
+  // deserter has already been removed from room.players by this point.
+  const otherHumans = room.players.filter(
+    (p) => p !== null && !p.isBot && p.id !== playerId,
+  ).length;
+  if (deserterNick && !playerId.startsWith('bot_') && otherHumans > 0) {
     await incrementLeaveCount(deserterNick);
     if (room.isRanked) {
       await setRankedBan(deserterNick);

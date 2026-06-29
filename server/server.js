@@ -1612,6 +1612,18 @@ wss.on('connection', (ws, req) => {
       return;
     }
 
+    // Heartbeat ping: answer immediately, BEFORE the per-client handler queue.
+    // A slow in-flight handler (e.g. DB work) must not delay the pong, or the
+    // client's ~15s liveness check could falsely declare the socket dead and
+    // trigger an unnecessary reconnect. This is also proof-of-life for the
+    // server's own zombie sweep.
+    if (data && data.type === 'ping') {
+      ws.isAlive = true;
+      ws.missedHeartbeats = 0;
+      sendTo(ws, { type: 'pong' });
+      return;
+    }
+
     // Queue messages per-client to prevent async handler interleaving
     ws._messageQueue = ws._messageQueue.then(() => handleMessage(ws, data)).catch(err => {
       console.error('Message handler error:', err);
@@ -1684,16 +1696,9 @@ wss.on('connection', (ws, req) => {
 
 async function handleMessage(ws, data) {
   switch (data.type) {
-    case 'ping':
-      // App-level keepalive from the client's connection heartbeat. Replying
-      // pong lets the client detect a dead/zombie socket (e.g. WiFi↔cellular
-      // handoff where no TCP FIN ever arrives, so the client's onDone/onError
-      // never fire and the screen silently freezes). Also counts as proof of
-      // life for the server's own zombie-connection sweep.
-      ws.isAlive = true;
-      ws.missedHeartbeats = 0;
-      sendTo(ws, { type: 'pong' });
-      break;
+    // NOTE: 'ping' is handled earlier in ws.on('message'), before this queue,
+    // so the pong is never delayed by a slow in-flight handler. It never
+    // reaches this switch.
     case 'register':
       await handleRegister(ws, data);
       break;

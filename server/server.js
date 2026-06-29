@@ -1205,6 +1205,64 @@ wss.on('close', () => {
   clearInterval(heartbeatInterval);
 });
 
+// ── DIAGNOSTICS (temporary): event-loop lag + memory ──────────────────────────
+// Investigating "bots lag → players get kicked". Node is single-threaded, so any
+// synchronous work (bot rollouts/solver, GC) blocks the loop; if the block spans
+// the 15s heartbeat the client is terminated as a zombie. A probe fires every
+// DIAG_PROBE_MS and the gap *beyond* that interval is how long the loop was
+// blocked. This tells us CPU-blocking (lag spikes, flat memory) vs memory
+// pressure (lag rises with GC + climbing rss/heap). Set DIAG=0 to silence.
+const DIAG_ON = process.env.DIAG !== '0';
+if (DIAG_ON) {
+  const DIAG_PROBE_MS = 1000;
+  const MB = 1048576;
+  let diagLastProbe = process.hrtime.bigint();
+  let diagMaxLag = 0;
+  let diagLastReport = Date.now();
+  setInterval(() => {
+    const now = process.hrtime.bigint();
+    const lag = Number(now - diagLastProbe) / 1e6 - DIAG_PROBE_MS; // ms blocked beyond schedule
+    diagLastProbe = now;
+    if (lag > diagMaxLag) diagMaxLag = lag;
+    // Immediate warning on a serious stall (>500ms is something a player feels).
+    if (lag > 500) {
+      const m = process.memoryUsage();
+      console.log(`[DIAG] STALL ${Math.round(lag)}ms | rss=${(m.rss / MB).toFixed(0)}MB heapUsed=${(m.heapUsed / MB).toFixed(0)}MB heapTotal=${(m.heapTotal / MB).toFixed(0)}MB rooms=${lobby.rooms.size} clients=${wss.clients.size}`);
+    }
+    // Baseline summary every 30s even when nothing stalls.
+    if (Date.now() - diagLastReport >= 30000) {
+      const m = process.memoryUsage();
+      console.log(`[DIAG] 30s | maxLag=${Math.round(diagMaxLag)}ms rss=${(m.rss / MB).toFixed(0)}MB heapUsed=${(m.heapUsed / MB).toFixed(0)}MB heapTotal=${(m.heapTotal / MB).toFixed(0)}MB rooms=${lobby.rooms.size} clients=${wss.clients.size}`);
+      diagMaxLag = 0;
+      diagLastReport = Date.now();
+    }
+  }, DIAG_PROBE_MS).unref();
+}
+// ──────────────────────────────────────────────────────────────────────────────
+
+// ── STUCK-BOT WATCHDOG ────────────────────────────────────────────────────────
+// Bots get NO turn-timeout (startTurnTimer skips them), so if a bot's turn is
+// ever left unscheduled — a lost/cleared pendingBotTimer, a leaked
+// pendingBotCheck flag, a scheduling race on (re)connect — the room freezes
+// FOREVER. Humans then rack up turn-timeout strikes while waiting for a bot that
+// will never move, and get deserted. Self-play can't reproduce this (the engine
+// never strands its own actor); it only happens in the live scheduler. This
+// watchdog is the catch-all: if a bot is the pending actor but nothing is
+// scheduled for the room across a full interval, force a reschedule. It only
+// ever fires on a genuine stall, so it's a no-op in healthy rooms.
+const { botWatchdogTick } = require('./game/botWatchdog');
+const BOT_WATCHDOG_MS = 4000;
+const botStuckSeen = {}; // roomId -> consecutive intervals seen stranded
+setInterval(() => {
+  const toRecover = botWatchdogTick({ rooms: lobby.rooms, pendingBotTimers, seen: botStuckSeen });
+  for (const { roomId, actor } of toRecover) {
+    const room = lobby.getRoom(roomId);
+    console.log(`[BOT] WATCHDOG recovering stranded bot turn: room=${roomId} type=${room?.gameType} state=${room?.game?.state} actor=${actor} pendingCheck=${!!pendingBotCheck[roomId]}`);
+    try { scheduleBotActions(roomId, true); } catch (e) { console.error('[BOT] WATCHDOG reschedule failed', e); }
+  }
+}, BOT_WATCHDOG_MS).unref();
+// ──────────────────────────────────────────────────────────────────────────────
+
 // Safety net for unawaited async errors
 process.on('unhandledRejection', (reason, promise) => {
   console.error('[UNHANDLED REJECTION]', reason);
@@ -4367,7 +4425,17 @@ function scheduleBotActions(roomId, forceReschedule = false) {
     const baseDecideFn = isMighty ? decideMightyBotAction : isLL ? decideLLBotAction : isSK ? decideSKBotAction : decideBotAction;
     const decideFn = (g, pid) => {
       const cur = lobby.getRoom(roomId);
-      return baseDecideFn(g, pid, cur?.bots.get(pid)?.strategy || 'heuristic');
+      const strat = cur?.bots.get(pid)?.strategy || 'heuristic';
+      // DIAGNOSTICS (temporary): time each bot decision. The mighty bot claims a
+      // ~40ms budget (rollout 12ms + solver 9ms + oracle); anything well above
+      // that is blocking the event loop and is a prime suspect for the kicks.
+      const __t0 = process.hrtime.bigint();
+      const a = baseDecideFn(g, pid, strat);
+      const __ms = Number(process.hrtime.bigint() - __t0) / 1e6;
+      if (process.env.DIAG !== '0' && __ms > 100) {
+        console.log(`[DIAG] bot-decide ${__ms.toFixed(0)}ms room=${roomId} type=${r.gameType} state=${r.game?.state} bot=${pid} strat=${strat}`);
+      }
+      return a;
     };
 
     if (isSK && r.game.state === 'bidding') {
@@ -4482,6 +4550,29 @@ function scheduleBotActions(roomId, forceReschedule = false) {
           // S11: Don't return on failure - let other bots try
           console.log(`[BOT] ${botId} action failed: ${result?.message}`);
         }
+      } else if (pendingActor && botId === pendingActor && r.isBot(pendingActor)) {
+        // SAFETY NET: it is genuinely this bot's turn, but its strategy returned
+        // no action (decide() falls through to `return null` for some state /
+        // hand). Bots get NO turn-timeout (startTurnTimer skips them), so
+        // without this the room freezes forever and the HUMAN players time out
+        // and get kicked instead — exactly the "bot turn never advances" bug.
+        // Force the engine's guaranteed-legal auto-action so the turn always
+        // advances, and log the state so the null-decision source can be fixed.
+        console.log(`[BOT] STUCK bot=${botId} room=${roomId} type=${r.gameType} state=${r.game.state} — forcing auto-action`);
+        const stuckFb = r.game.getAutoTimeoutAction(botId);
+        if (stuckFb) {
+          const fr = r.game.handleAction(botId, stuckFb);
+          if (fr && fr.success) {
+            if (fr.broadcast) broadcastGameEvent(roomId, fr.broadcast);
+            if (r.game && r.game.state === 'game_end') { saveGameResult(r); scheduleAutoReturnToRoom(roomId); }
+            sendGameStateToAll(roomId); // re-triggers scheduleBotActions for the next actor
+          } else {
+            console.log(`[BOT] STUCK bot=${botId} auto-action FAILED: ${fr?.messageKey || fr?.message} (state=${r.game.state})`);
+          }
+        } else {
+          console.log(`[BOT] STUCK bot=${botId} no auto-action available for state=${r.game.state}`);
+        }
+        return;
       }
     }
   }, effectiveDelay);

@@ -1280,6 +1280,16 @@ class TichuGame {
     };
   }
 
+  // The player who must act right now. During PLAYING the obligated actor is
+  // not always currentPlayer: a played bird leaves needsToCallRank on someone,
+  // and a won Dragon trick leaves dragonDecider pending. Bot scheduling and the
+  // stuck-bot watchdog must target THIS player, not blindly currentPlayer.
+  getPendingActor() {
+    if (this.needsToCallRank) return this.needsToCallRank;
+    if (this.dragonPending) return this.dragonDecider;
+    return this.currentPlayer || null;
+  }
+
   // Auto timeout action for when a player's turn timer expires
   getAutoTimeoutAction(playerId) {
     if (this.state !== STATE.PLAYING) return null;

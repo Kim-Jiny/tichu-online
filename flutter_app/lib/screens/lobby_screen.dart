@@ -1489,6 +1489,9 @@ class _LobbyScreenState extends State<LobbyScreen> {
                   // Sync local room flag with server state
                   if (!game.hasRoom && _inRoom) {
                     _inRoom = false;
+                    // Back on the lobby: re-check for a reply popup deferred
+                    // while in a room (no further notify is guaranteed).
+                    WidgetsBinding.instance.addPostFrameCallback((_) => _onInquiryUpdate());
                   }
                   if (game.isInWaitingRoom && !_inRoom) {
                     _inRoom = true;
@@ -2504,6 +2507,8 @@ class _LobbyScreenState extends State<LobbyScreen> {
                 onPressed: () {
                   game.leaveRoom();
                   setState(() => _inRoom = false);
+                  // Re-check for a reply popup deferred while in the room.
+                  WidgetsBinding.instance.addPostFrameCallback((_) => _onInquiryUpdate());
                 },
                 icon: const Icon(Icons.arrow_back),
                 color: const Color(0xFF8A7A72),

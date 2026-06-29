@@ -115,13 +115,14 @@ class _LobbyScreenState extends State<LobbyScreen> {
   // lobby mount; closing the popup marks replies read (clears banner + badge).
   void _onInquiryUpdate() {
     if (!mounted || _inquiryReplyShown) return;
-    // Only on the lobby list — never over a waiting room or an in-progress
-    // game. If inquiries load late (or requestInquiries runs again) while in a
-    // room, defer WITHOUT consuming: the listener stays active and fires again
-    // once the player is back on the lobby (_inRoom == false).
-    if (_inRoom) return;
     final game = _inquiryGameRef;
     if (game == null) return;
+    // Only on the lobby list — never over a waiting room or in-progress game.
+    // Check AUTHORITATIVE server state (hasRoom / destination), not just the
+    // local _inRoom flag, which flips to false optimistically on leave before
+    // the server confirms the exit. Defer WITHOUT consuming: the listener stays
+    // active and fires again on the server-confirm notify, once truly on lobby.
+    if (_inRoom || game.hasRoom || game.currentDestination != AppDestination.lobby) return;
     Map<String, dynamic>? reply;
     for (final it in game.inquiries) {
       final status = it['status']?.toString() ?? '';
@@ -2507,8 +2508,10 @@ class _LobbyScreenState extends State<LobbyScreen> {
                 onPressed: () {
                   game.leaveRoom();
                   setState(() => _inRoom = false);
-                  // Re-check for a reply popup deferred while in the room.
-                  WidgetsBinding.instance.addPostFrameCallback((_) => _onInquiryUpdate());
+                  // No immediate re-check here: _inRoom flips to false before the
+                  // server confirms, so the strengthened _onInquiryUpdate guard
+                  // would defer anyway. The server-confirm notify re-fires the
+                  // listener once truly on the lobby.
                 },
                 icon: const Icon(Icons.arrow_back),
                 color: const Color(0xFF8A7A72),

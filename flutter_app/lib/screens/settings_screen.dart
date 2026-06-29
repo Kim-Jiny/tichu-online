@@ -1260,7 +1260,24 @@ class _SettingsScreenState extends State<SettingsScreen> {
                                 iconColor: const Color(0xFF1E88E5),
                                 title: l10n.settingsInquiryHistory,
                                 onTap: _showInquiryHistoryDialog,
-                                trailing: const Icon(Icons.chevron_right, color: Color(0xFFB0A8A4)),
+                                trailing: Consumer<GameService>(
+                                  builder: (_, g, _) => Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      if (g.unreadInquiryReplyCount > 0)
+                                        Container(
+                                          width: 8,
+                                          height: 8,
+                                          margin: const EdgeInsets.only(right: 6),
+                                          decoration: const BoxDecoration(
+                                            color: Color(0xFFE53935),
+                                            shape: BoxShape.circle,
+                                          ),
+                                        ),
+                                      const Icon(Icons.chevron_right, color: Color(0xFFB0A8A4)),
+                                    ],
+                                  ),
+                                ),
                               ),
                             ],
                           ),

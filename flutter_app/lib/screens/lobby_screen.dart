@@ -1663,7 +1663,10 @@ class _LobbyScreenState extends State<LobbyScreen> {
               );
             },
           ),
-          if (game.unreadNoticeCount > 0)
+          // Badge covers BOTH unread notices and unread inquiry replies, so an
+          // answered inquiry is discoverable on the room-list page (settings →
+          // 문의내역) instead of relying on the transient banner.
+          if (game.unreadNoticeCount + game.unreadInquiryReplyCount > 0)
             Positioned(
               right: -4,
               top: -4,
@@ -1675,9 +1678,9 @@ class _LobbyScreenState extends State<LobbyScreen> {
                 ),
                 constraints: const BoxConstraints(minWidth: 16, minHeight: 16),
                 child: Text(
-                  game.unreadNoticeCount > 9
+                  (game.unreadNoticeCount + game.unreadInquiryReplyCount) > 9
                       ? '9+'
-                      : '${game.unreadNoticeCount}',
+                      : '${game.unreadNoticeCount + game.unreadInquiryReplyCount}',
                   style: const TextStyle(
                     color: Colors.white,
                     fontSize: 9,

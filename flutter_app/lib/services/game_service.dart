@@ -213,6 +213,21 @@ class GameService extends ChangeNotifier {
     return count;
   }
 
+  /// Count of answered inquiries the user hasn't read yet. Drives a persistent
+  /// badge so the reply is discoverable — the transient lobby banner alone left
+  /// users who didn't know to open 문의내역 with a notification that kept
+  /// re-appearing every lobby visit. Same criteria as the banner.
+  int get unreadInquiryReplyCount {
+    int count = 0;
+    for (final item in inquiries) {
+      final status = item['status']?.toString() ?? '';
+      final adminNote = item['admin_note']?.toString() ?? '';
+      final userRead = item['user_read'] == true;
+      if (status == 'resolved' && adminNote.isNotEmpty && !userRead) count++;
+    }
+    return count;
+  }
+
   // Push settings
   bool pushEnabled = true;
   bool pushFriendInviteEnabled = true;
@@ -3663,6 +3678,9 @@ class GameService extends ChangeNotifier {
       }
     }
     inquiryBannerMessage = null;
+    // Notify again AFTER flipping user_read so the unread badge clears now
+    // (the earlier notify fired while user_read was still false).
+    notifyListeners();
   }
 
   @override

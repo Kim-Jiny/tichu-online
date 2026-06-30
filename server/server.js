@@ -4189,31 +4189,38 @@ async function saveMightyGameResult(room) {
 function sendGameStateToAll(roomId) {
   const room = lobby.getRoom(roomId);
   if (!room || !room.game) return;
-  if (room.game.state !== 'trick_end' && trickEndTimers[roomId]) {
+  // Do NOT clear the Love Letter effect_resolve auto-ack timer here. It owns the
+  // 2.5s advance; clearing+resetting it on every re-broadcast (e.g. a human's
+  // client activity in the room) keeps postponing the ack and strands the
+  // (often bot) effect owner until the 8s watchdog — turning each effect into an
+  // 8s stall. It is armed exactly once below and cleans up after itself.
+  const isLLEffectResolve = room.gameType === 'love_letter' && room.game.state === 'effect_resolve';
+  if (room.game.state !== 'trick_end' && !isLLEffectResolve && trickEndTimers[roomId]) {
     clearTimeout(trickEndTimers[roomId]);
     delete trickEndTimers[roomId];
   }
 
   // Love Letter: auto-advance effect_resolve after resolved effects
-  if (room.gameType === 'love_letter' && room.game.state === 'effect_resolve'
-      && room.game.pendingEffect && room.game.pendingEffect.resolved) {
-    if (trickEndTimers[roomId]) clearTimeout(trickEndTimers[roomId]);
-    trickEndTimers[roomId] = setTimeout(() => {
-      delete trickEndTimers[roomId];
-      const r = lobby.getRoom(roomId);
-      if (!r || !r.game || r.game.state !== 'effect_resolve') return;
-      if (!r.game.pendingEffect || !r.game.pendingEffect.resolved) return;
-      // Clear stale turn timer from the effect_resolve phase before advancing
-      clearTurnTimer(roomId);
-      // Auto-ack on behalf of the acting player
-      const actingPlayer = r.game.pendingEffect.playerId;
-      r.game.handleAction(actingPlayer, { type: 'effect_ack' });
-      if (r.game.state === 'game_end') {
-        saveGameResult(r);
-        scheduleAutoReturnToRoom(roomId);
-      }
-      sendGameStateToAll(roomId);
-    }, 2500);
+  if (isLLEffectResolve && room.game.pendingEffect && room.game.pendingEffect.resolved) {
+    // Arm the auto-ack ONCE — re-broadcasts must not reset the deadline.
+    if (!trickEndTimers[roomId]) {
+      trickEndTimers[roomId] = setTimeout(() => {
+        delete trickEndTimers[roomId];
+        const r = lobby.getRoom(roomId);
+        if (!r || !r.game || r.game.state !== 'effect_resolve') return;
+        if (!r.game.pendingEffect || !r.game.pendingEffect.resolved) return;
+        // Clear stale turn timer from the effect_resolve phase before advancing
+        clearTurnTimer(roomId);
+        // Auto-ack on behalf of the acting player
+        const actingPlayer = r.game.pendingEffect.playerId;
+        r.game.handleAction(actingPlayer, { type: 'effect_ack' });
+        if (r.game.state === 'game_end') {
+          saveGameResult(r);
+          scheduleAutoReturnToRoom(roomId);
+        }
+        sendGameStateToAll(roomId);
+      }, 2500);
+    }
     _broadcastState(roomId, room);
     return;
   }

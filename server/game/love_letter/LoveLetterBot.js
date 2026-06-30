@@ -1,13 +1,34 @@
 /**
- * Love Letter Bot - Simple AI decision making
+ * Love Letter Bot - decision making.
+ *
+ * Guard guessing uses CARD COUNTING over public information (all discard piles,
+ * the bot's own hand, and any face-up set-aside cards). This 16-card variant
+ * has no Priest, so nobody ever learns another player's exact card, which makes
+ * the remaining-card distribution the optimal guess. The old uniform-random
+ * guess ignored this and hit far less often.
  */
 
 const { getCardInfo, CARD_TYPE, GUESSABLE_TYPES } = require('./LoveLetterDeck');
 
+// Full deck composition by type (Guard×5, Spy×2, Baron×2, Handmaid×2,
+// Prince×2, King/Countess/Princess×1).
+const DECK_COUNTS = {
+  [CARD_TYPE.GUARD]: 5,
+  [CARD_TYPE.SPY]: 2,
+  [CARD_TYPE.BARON]: 2,
+  [CARD_TYPE.HANDMAID]: 2,
+  [CARD_TYPE.PRINCE]: 2,
+  [CARD_TYPE.KING]: 1,
+  [CARD_TYPE.COUNTESS]: 1,
+  [CARD_TYPE.PRINCESS]: 1,
+};
+
 /**
- * Main entry point: decide bot action based on game state
+ * Main entry point: decide bot action based on game state.
+ * @param {object} [opts] - { randomGuess } forces uniform-random Guard guessing
+ *        (used only by the bench to measure the card-counting improvement).
  */
-function decideLLBotAction(game, botId) {
+function decideLLBotAction(game, botId, opts = {}) {
   if (!game || !game.playerIds.includes(botId)) return null;
 
   if (game.state === 'playing' && game.currentPlayer === botId) {
@@ -15,7 +36,7 @@ function decideLLBotAction(game, botId) {
   }
 
   if (game.state === 'effect_resolve' && game.pendingEffect) {
-    return decideEffect(game, botId);
+    return decideEffect(game, botId, opts);
   }
 
   return null;
@@ -60,7 +81,41 @@ function decidePlay(game, botId) {
   return { type: 'play_card', cardId: sorted[0].id };
 }
 
-function decideEffect(game, botId) {
+// Remaining count of each card TYPE that is still unknown (could be in an
+// opponent's hand or the draw pile), from public information only.
+function remainingTypeCounts(game, botId) {
+  const counts = { ...DECK_COUNTS };
+  const sub = (cardId) => {
+    const t = getCardInfo(cardId)?.type;
+    if (t && counts[t] != null) counts[t] -= 1;
+  };
+  for (const pid of game.playerIds) {
+    for (const cid of (game.discardPiles?.[pid] || [])) sub(cid);
+  }
+  for (const cid of (game.hands?.[botId] || [])) sub(cid);
+  for (const cid of (game.faceUpCards || [])) sub(cid); // public set-aside (2p)
+  return counts;
+}
+
+// Best Guard guess = the most plentiful remaining guessable type (Guard itself
+// can't be guessed). Ties broken toward the higher-value card (knock out a
+// bigger threat).
+function pickGuess(game, botId) {
+  const counts = remainingTypeCounts(game, botId);
+  let best = GUESSABLE_TYPES[0];
+  let bestN = -Infinity;
+  let bestV = -Infinity;
+  for (const t of GUESSABLE_TYPES) {
+    const n = counts[t] || 0;
+    const v = getCardInfo(`ll_${t}_1`)?.value ?? 0;
+    if (n > bestN || (n === bestN && v > bestV)) {
+      best = t; bestN = n; bestV = v;
+    }
+  }
+  return best;
+}
+
+function decideEffect(game, botId, opts = {}) {
   const eff = game.pendingEffect;
   if (!eff || eff.playerId !== botId) return null;
 
@@ -70,7 +125,9 @@ function decideEffect(game, botId) {
 
   if (eff.type === 'guard') {
     const target = pickRandomTarget(eff.validTargets);
-    const guess = GUESSABLE_TYPES[Math.floor(Math.random() * GUESSABLE_TYPES.length)];
+    const guess = opts.randomGuess
+      ? GUESSABLE_TYPES[Math.floor(Math.random() * GUESSABLE_TYPES.length)]
+      : pickGuess(game, botId);
     return { type: 'guard_guess', targetId: target, guess };
   }
 

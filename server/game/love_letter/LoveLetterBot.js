@@ -8,7 +8,7 @@
  * guess ignored this and hit far less often.
  */
 
-const { getCardInfo, CARD_TYPE, GUESSABLE_TYPES } = require('./LoveLetterDeck');
+const { getCardInfo, CARD_TYPE, CARD_VALUES, GUESSABLE_TYPES } = require('./LoveLetterDeck');
 
 // Full deck composition by type (Guard×5, Spy×2, Baron×2, Handmaid×2,
 // Prince×2, King/Countess/Princess×1).
@@ -107,7 +107,10 @@ function pickGuess(game, botId) {
   let bestV = -Infinity;
   for (const t of GUESSABLE_TYPES) {
     const n = counts[t] || 0;
-    const v = getCardInfo(`ll_${t}_1`)?.value ?? 0;
+    // CARD_VALUES keyed by type — building card ids breaks for the singletons
+    // (ll_king / ll_countess / ll_princess have no _1 suffix), which would mis-
+    // value them as 0 and defeat the "tie → guess the bigger card" tiebreak.
+    const v = CARD_VALUES[t] ?? 0;
     if (n > bestN || (n === bestN && v > bestV)) {
       best = t; bestN = n; bestV = v;
     }

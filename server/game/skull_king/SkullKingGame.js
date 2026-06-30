@@ -100,6 +100,22 @@ class SkullKingGame {
     this.state = 'bidding';
   }
 
+  // The player the bot scheduler / stuck-bot watchdog should act on. Bidding is
+  // SIMULTANEOUS, and currentPlayer during bidding is stale (often a player who
+  // already bid) — without this the watchdog would mis-read a stale-currentPlayer
+  // bot as "stranded" while the table merely waits for a slow HUMAN bidder, and
+  // fire false recoveries. Surface a real non-bidder instead: a bot → the
+  // watchdog recovers it; a human → the watchdog's own isBot check stands down.
+  getPendingActor() {
+    if (this.state === 'bidding') {
+      for (const pid of this.playerIds) {
+        if (this.bids[pid] === null) return pid;
+      }
+      return null; // all bids in (transient) — nothing pending
+    }
+    return this.currentPlayer || null;
+  }
+
   handleAction(playerId, data) {
     switch (data.type) {
       case 'submit_bid':

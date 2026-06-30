@@ -4076,6 +4076,9 @@ class L10nDe extends L10n {
       'Werbung wird geladen. Bitte gleich nochmal versuchen.';
 
   @override
+  String get attendanceAdLoading => 'Anzeige wird geladen…';
+
+  @override
   String get goldHistoryIapRefund => 'Gold-Rückerstattung';
 
   @override

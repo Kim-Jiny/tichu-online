@@ -3948,6 +3948,9 @@ class L10nKo extends L10n {
   String get attendanceAdNotReady => '광고 준비 중입니다. 잠시 후 다시 시도해 주세요.';
 
   @override
+  String get attendanceAdLoading => '광고 준비 중…';
+
+  @override
   String get goldHistoryIapRefund => '골드 환불';
 
   @override

@@ -25,7 +25,11 @@ class _ShopScreenState extends State<ShopScreen> {
   // Attendance has its OWN rewarded ad unit (separate AdMob slot) so it
   // doesn't fight the "ad reward gold" button for a single ad instance.
   RewardedAd? _attendanceAd;
-  bool _attendanceAdReady = false;
+  // ValueNotifier (not a plain bool) so the attendance DIALOG — a separate
+  // route that won't rebuild on the ShopScreen's setState — can react to the ad
+  // becoming ready and enable its claim button via a ValueListenableBuilder.
+  final ValueNotifier<bool> _attendanceAdReady = ValueNotifier(false);
+  bool _attendanceAdLoadInFlight = false;
   TabController? _inventoryTabs;
 
   String _getLocalizedItemName(Map<String, dynamic> item) {
@@ -127,17 +131,27 @@ class _ShopScreenState extends State<ShopScreen> {
   // instance and we can read attendance-specific impression / revenue
   // numbers in AdMob.
   void _preloadAttendanceAd() {
+    if (_attendanceAdLoadInFlight || _attendanceAd != null) return;
+    _attendanceAdLoadInFlight = true;
     RewardedAd.load(
       adUnitId: AdService.attendanceRewardedAdId,
       request: const AdRequest(),
       rewardedAdLoadCallback: RewardedAdLoadCallback(
         onAdLoaded: (ad) {
+          _attendanceAdLoadInFlight = false;
+          if (!mounted) { ad.dispose(); return; }
           _attendanceAd = ad;
-          if (mounted) setState(() => _attendanceAdReady = true);
+          _attendanceAdReady.value = true; // enables the dialog claim button
         },
         onAdFailedToLoad: (error) {
           debugPrint('[AdService] Attendance rewarded FAILED: ${error.message}');
-          _attendanceAdReady = false;
+          _attendanceAdLoadInFlight = false;
+          _attendanceAdReady.value = false;
+          // Keep retrying so the (disabled) claim button eventually enables.
+          // Backoff avoids hammering AdMob on a persistent no-fill.
+          Future.delayed(const Duration(seconds: 5), () {
+            if (mounted && _attendanceAd == null) _preloadAttendanceAd();
+          });
         },
       ),
     );
@@ -148,6 +162,7 @@ class _ShopScreenState extends State<ShopScreen> {
     _inventoryTabs?.removeListener(_handleInventoryTabChanged);
     _rewardedAd?.dispose();
     _attendanceAd?.dispose();
+    _attendanceAdReady.dispose();
     _inventoryTabController.dispose();
     super.dispose();
   }
@@ -2233,6 +2248,9 @@ class _ShopScreenState extends State<ShopScreen> {
     // Always refresh state on open. Stale `claimedToday=false` could let the
     // user tap "watch ad" and burn the ad on a server-rejected claim.
     game.requestAttendanceState();
+    // Make sure the rewarded ad is loading so the claim button can enable
+    // (no-op if already loaded or a load is in flight).
+    _preloadAttendanceAd();
     showDialog(
       context: context,
       builder: (_) => Consumer<GameService>(
@@ -2323,31 +2341,45 @@ class _ShopScreenState extends State<ShopScreen> {
                       ),
                     )
                   else
-                    ElevatedButton.icon(
-                      // Disable on:
-                      //  - claim in flight
-                      //  - state refresh in flight (avoid wasting the ad on
-                      //    a stale claimedToday=false that's about to flip)
-                      //  - claimedToday already true (server confirmed)
-                      onPressed: (g.attendanceClaiming
-                              || g.attendanceLoading
-                              || (g.attendanceState?['claimedToday'] == true))
-                          ? null
-                          : () => _attendanceClaim(g),
-                      icon: const Icon(Icons.play_circle_outline),
-                      label: Text(
-                        g.attendanceClaiming
-                            ? l.attendanceClaiming
-                            : g.attendanceLoading
+                    // Reacts to the attendance ad becoming ready (ValueNotifier)
+                    // so the button stays DISABLED — showing a loading state —
+                    // until the rewarded ad has loaded, then enables. Avoids the
+                    // old "tap → ad not ready" dead-end.
+                    ValueListenableBuilder<bool>(
+                      valueListenable: _attendanceAdReady,
+                      builder: (context, adReady, _) {
+                        // Disable on: claim in flight, state refresh in flight
+                        // (avoid wasting the ad on a stale claimedToday about to
+                        // flip), already claimed, or the ad not yet loaded.
+                        final busy = g.attendanceClaiming || g.attendanceLoading;
+                        final claimed = g.attendanceState?['claimedToday'] == true;
+                        final enabled = adReady && !busy && !claimed;
+                        return ElevatedButton.icon(
+                          onPressed: enabled ? () => _attendanceClaim(g) : null,
+                          icon: (!adReady && !busy && !claimed)
+                              ? const SizedBox(
+                                  width: 18,
+                                  height: 18,
+                                  child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                                )
+                              : const Icon(Icons.play_circle_outline),
+                          label: Text(
+                            busy
                                 ? l.attendanceClaiming
-                                : l.attendanceWatchAdAndClaim((s['todayRewardGold'] as int?) ?? 50),
-                      ),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: const Color(0xFFFFB300),
-                        foregroundColor: Colors.white,
-                        minimumSize: const Size.fromHeight(48),
-                        textStyle: const TextStyle(fontWeight: FontWeight.w800, fontSize: 14),
-                      ),
+                                : !adReady
+                                    ? l.attendanceAdLoading
+                                    : l.attendanceWatchAdAndClaim((s['todayRewardGold'] as int?) ?? 50),
+                          ),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: const Color(0xFFFFB300),
+                            foregroundColor: Colors.white,
+                            disabledBackgroundColor: const Color(0xFFFFD180),
+                            disabledForegroundColor: Colors.white,
+                            minimumSize: const Size.fromHeight(48),
+                            textStyle: const TextStyle(fontWeight: FontWeight.w800, fontSize: 14),
+                          ),
+                        );
+                      },
                     ),
                 ],
               ),
@@ -2428,7 +2460,7 @@ class _ShopScreenState extends State<ShopScreen> {
     // Reward gate: must watch the dedicated ATTENDANCE rewarded ad first.
     // Uses a separate AdMob unit from rewardedAdId so the "ad reward gold"
     // button and attendance don't race for a single ad instance.
-    if (!_attendanceAdReady || _attendanceAd == null) {
+    if (!_attendanceAdReady.value || _attendanceAd == null) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text(L10n.of(context).attendanceAdNotReady)),
@@ -2439,7 +2471,7 @@ class _ShopScreenState extends State<ShopScreen> {
     }
     final ad = _attendanceAd!;
     _attendanceAd = null;
-    if (mounted) setState(() => _attendanceAdReady = false);
+    _attendanceAdReady.value = false;
     ad.fullScreenContentCallback = FullScreenContentCallback(
       onAdDismissedFullScreenContent: (a) {
         a.dispose();

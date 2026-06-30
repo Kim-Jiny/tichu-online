@@ -1240,6 +1240,7 @@
   "attendanceWatchAdAndClaim": "Werbung ansehen & {reward} Gold erhalten",
   "@attendanceWatchAdAndClaim": { "placeholders": { "reward": { "type": "int", "format": "decimalPattern" } } },
   "attendanceAdNotReady": "Werbung wird geladen. Bitte gleich nochmal versuchen.",
+  "attendanceAdLoading": "Anzeige wird geladen…",
   "goldHistoryIapRefund": "Gold-Rückerstattung",
   "goldHistoryLeaveDefeat": "Aufgabe-Niederlage",
   "goldHistoryRankedWin": "Ranked-Sieg",

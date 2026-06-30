@@ -7203,6 +7203,12 @@ abstract class L10n {
   /// **'Ad is still loading. Please try again in a moment.'**
   String get attendanceAdNotReady;
 
+  /// No description provided for @attendanceAdLoading.
+  ///
+  /// In en, this message translates to:
+  /// **'Loading ad…'**
+  String get attendanceAdLoading;
+
   /// No description provided for @goldHistoryIapRefund.
   ///
   /// In en, this message translates to:

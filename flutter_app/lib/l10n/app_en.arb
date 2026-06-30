@@ -1837,6 +1837,7 @@
   "attendanceWatchAdAndClaim": "Watch ad & claim {reward} gold",
   "@attendanceWatchAdAndClaim": { "placeholders": { "reward": { "type": "int", "format": "decimalPattern" } } },
   "attendanceAdNotReady": "Ad is still loading. Please try again in a moment.",
+  "attendanceAdLoading": "Loading ad…",
   "goldHistoryIapRefund": "Gold refund",
   "goldHistoryLeaveDefeat": "Forfeit loss",
   "goldHistoryRankedWin": "Ranked win",

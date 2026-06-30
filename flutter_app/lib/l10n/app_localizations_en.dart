@@ -4041,6 +4041,9 @@ class L10nEn extends L10n {
       'Ad is still loading. Please try again in a moment.';
 
   @override
+  String get attendanceAdLoading => 'Loading ad…';
+
+  @override
   String get goldHistoryIapRefund => 'Gold refund';
 
   @override

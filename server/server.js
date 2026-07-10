@@ -1099,6 +1099,11 @@ const turnTimers = {};    // roomId -> setTimeout handle
 const timeoutCounts = {}; // roomId -> { playerId: count }
 const roundEndTimers = {}; // roomId -> setTimeout handle for auto next round
 const trickEndTimers = {}; // roomId -> setTimeout handle for skull king trick reveal
+// Love Letter: backup auto-ack timer for BOT effect owners only. The primary
+// 2.5s auto-ack lives in trickEndTimers; this fires just after it as a safety
+// net so a slipped/never-armed primary (reconnect race) costs a brief blip
+// instead of the ~8s stuck-bot watchdog. Idempotent — see autoAckResolvedLLEffect.
+const llAckBackupTimers = {}; // roomId -> setTimeout handle
 const turnTimerPhases = {}; // roomId -> phase name (to prevent phase timer reset)
 const waitingRoomTimers = {}; // `${roomId}_${playerId}` -> setTimeout handle for waiting room disconnect
 
@@ -4186,6 +4191,26 @@ async function saveMightyGameResult(room) {
   }
 }
 
+// Shared executor for the Love Letter resolved-effect auto-ack. Idempotent: it
+// no-ops unless the room is still parked on a resolved effect, so the primary
+// 2.5s timer and the bot backup timer can both point at it without ever
+// double-acking (whichever fires first advances the state; the other no-ops).
+function autoAckResolvedLLEffect(roomId) {
+  const r = lobby.getRoom(roomId);
+  if (!r || !r.game || r.game.state !== 'effect_resolve') return;
+  if (!r.game.pendingEffect || !r.game.pendingEffect.resolved) return;
+  // Clear stale turn timer from the effect_resolve phase before advancing
+  clearTurnTimer(roomId);
+  // Auto-ack on behalf of the acting player
+  const actingPlayer = r.game.pendingEffect.playerId;
+  r.game.handleAction(actingPlayer, { type: 'effect_ack' });
+  if (r.game.state === 'game_end') {
+    saveGameResult(r);
+    scheduleAutoReturnToRoom(roomId);
+  }
+  sendGameStateToAll(roomId);
+}
+
 function sendGameStateToAll(roomId) {
   const room = lobby.getRoom(roomId);
   if (!room || !room.game) return;
@@ -4202,24 +4227,25 @@ function sendGameStateToAll(roomId) {
 
   // Love Letter: auto-advance effect_resolve after resolved effects
   if (isLLEffectResolve && room.game.pendingEffect && room.game.pendingEffect.resolved) {
-    // Arm the auto-ack ONCE — re-broadcasts must not reset the deadline.
+    // Primary auto-ack: arm ONCE — re-broadcasts must not reset the 2.5s deadline.
     if (!trickEndTimers[roomId]) {
       trickEndTimers[roomId] = setTimeout(() => {
         delete trickEndTimers[roomId];
-        const r = lobby.getRoom(roomId);
-        if (!r || !r.game || r.game.state !== 'effect_resolve') return;
-        if (!r.game.pendingEffect || !r.game.pendingEffect.resolved) return;
-        // Clear stale turn timer from the effect_resolve phase before advancing
-        clearTurnTimer(roomId);
-        // Auto-ack on behalf of the acting player
-        const actingPlayer = r.game.pendingEffect.playerId;
-        r.game.handleAction(actingPlayer, { type: 'effect_ack' });
-        if (r.game.state === 'game_end') {
-          saveGameResult(r);
-          scheduleAutoReturnToRoom(roomId);
-        }
-        sendGameStateToAll(roomId);
+        autoAckResolvedLLEffect(roomId);
       }, 2500);
+    }
+    // Backup auto-ack for BOT effect owners. A bot has no turn-timer, so if the
+    // primary above ever slips — never armed because the slot was occupied, or
+    // cleared by a reconnect race — the bot would freeze until the ~8s stuck-bot
+    // watchdog. This independent timer fires just after the presentation window
+    // and self-heals to a brief blip. Idempotent (autoAckResolvedLLEffect no-ops
+    // once the primary advanced), so it never double-acks. Humans need no backup:
+    // they can ack from the UI.
+    if (room.isBot(room.game.pendingEffect.playerId) && !llAckBackupTimers[roomId]) {
+      llAckBackupTimers[roomId] = setTimeout(() => {
+        delete llAckBackupTimers[roomId];
+        autoAckResolvedLLEffect(roomId);
+      }, 4000);
     }
     _broadcastState(roomId, room);
     return;
@@ -5254,6 +5280,10 @@ function closeRoom(roomId, messageType = 'room_closed') {
   if (trickEndTimers[roomId]) {
     clearTimeout(trickEndTimers[roomId]);
     delete trickEndTimers[roomId];
+  }
+  if (llAckBackupTimers[roomId]) {
+    clearTimeout(llAckBackupTimers[roomId]);
+    delete llAckBackupTimers[roomId];
   }
   if (turnTimers[roomId]) {
     clearTimeout(turnTimers[roomId]);

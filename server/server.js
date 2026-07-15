@@ -1220,25 +1220,70 @@ wss.on('close', () => {
 const DIAG_ON = process.env.DIAG !== '0';
 if (DIAG_ON) {
   const DIAG_PROBE_MS = 1000;
+  const DIAG_STALL_MS = 200; // was 500 — capture the ~295ms spikes with a live snapshot
   const MB = 1048576;
+
+  // GC observation — the discriminator for "is this lag spike a GC pause?".
+  // Bot CPU is structurally capped (~80ms) and gets its own bot-decide timing,
+  // so the remaining suspects for a spike are GC, untimed server code, or a
+  // host pause. Each probe reports how many ms of GC ran since the previous
+  // probe: if a stall's lag ≈ the GC time in its window, it's GC; if lag >> gc,
+  // it's non-GC blocking. Major (mark-sweep-compact) is the expensive kind.
+  // Note: GC entries are delivered slightly after the pause, so per-probe
+  // attribution can be off by one probe — the 30s window's maxProbe GC is the
+  // robust signal (compare it against maxLag in the same window).
+  const { PerformanceObserver, constants } = require('perf_hooks');
+  let gcTotalMs = 0;   // cumulative all-GC time
+  let gcMajorMs = 0;   // cumulative major-GC time
+  const gcObs = new PerformanceObserver((list) => {
+    for (const e of list.getEntries()) {
+      const kind = (e.detail && e.detail.kind) != null ? e.detail.kind : e.kind;
+      gcTotalMs += e.duration;
+      if (kind === constants.NODE_PERFORMANCE_GC_MAJOR) gcMajorMs += e.duration;
+    }
+  });
+  gcObs.observe({ entryTypes: ['gc'] });
+
   let diagLastProbe = process.hrtime.bigint();
   let diagMaxLag = 0;
   let diagLastReport = Date.now();
+  let gcAtLastProbe = 0;      // gcTotalMs snapshot at previous probe
+  let gcMajorAtLastProbe = 0;
+  let winGcMs = 0;            // GC ms over the current 30s window
+  let winGcMajorMs = 0;
+  let winMaxGcProbe = 0;     // largest single-probe GC total in the window
+
   setInterval(() => {
     const now = process.hrtime.bigint();
     const lag = Number(now - diagLastProbe) / 1e6 - DIAG_PROBE_MS; // ms blocked beyond schedule
     diagLastProbe = now;
     if (lag > diagMaxLag) diagMaxLag = lag;
-    // Immediate warning on a serious stall (>500ms is something a player feels).
-    if (lag > 500) {
+
+    const gcInProbe = gcTotalMs - gcAtLastProbe;
+    const gcMajorInProbe = gcMajorMs - gcMajorAtLastProbe;
+    gcAtLastProbe = gcTotalMs;
+    gcMajorAtLastProbe = gcMajorMs;
+    winGcMs += gcInProbe;
+    winGcMajorMs += gcMajorInProbe;
+    if (gcInProbe > winMaxGcProbe) winMaxGcProbe = gcInProbe;
+
+    // Immediate warning on a stall (>200ms is something a player can feel).
+    if (lag > DIAG_STALL_MS) {
       const m = process.memoryUsage();
-      console.log(`[DIAG] STALL ${Math.round(lag)}ms | rss=${(m.rss / MB).toFixed(0)}MB heapUsed=${(m.heapUsed / MB).toFixed(0)}MB heapTotal=${(m.heapTotal / MB).toFixed(0)}MB rooms=${lobby.rooms.size} clients=${wss.clients.size}`);
+      // gcShare: how much of this stall the GC explains. ~100% → GC pause;
+      // low % → non-GC blocking (server code or host). May undercount if the
+      // GC entry lands in the next probe — cross-check the 30s maxProbe line.
+      const gcShare = lag > 0 ? Math.min(100, Math.round((gcInProbe / lag) * 100)) : 0;
+      console.log(`[DIAG] STALL ${Math.round(lag)}ms gc=${gcInProbe.toFixed(0)}ms(major=${gcMajorInProbe.toFixed(0)},${gcShare}%) | rss=${(m.rss / MB).toFixed(0)}MB heapUsed=${(m.heapUsed / MB).toFixed(0)}MB heapTotal=${(m.heapTotal / MB).toFixed(0)}MB rooms=${lobby.rooms.size} clients=${wss.clients.size}`);
     }
     // Baseline summary every 30s even when nothing stalls.
     if (Date.now() - diagLastReport >= 30000) {
       const m = process.memoryUsage();
-      console.log(`[DIAG] 30s | maxLag=${Math.round(diagMaxLag)}ms rss=${(m.rss / MB).toFixed(0)}MB heapUsed=${(m.heapUsed / MB).toFixed(0)}MB heapTotal=${(m.heapTotal / MB).toFixed(0)}MB rooms=${lobby.rooms.size} clients=${wss.clients.size}`);
+      console.log(`[DIAG] 30s | maxLag=${Math.round(diagMaxLag)}ms gc=${winGcMs.toFixed(0)}ms(major=${winGcMajorMs.toFixed(0)},maxProbe=${winMaxGcProbe.toFixed(0)}) rss=${(m.rss / MB).toFixed(0)}MB heapUsed=${(m.heapUsed / MB).toFixed(0)}MB heapTotal=${(m.heapTotal / MB).toFixed(0)}MB rooms=${lobby.rooms.size} clients=${wss.clients.size}`);
       diagMaxLag = 0;
+      winGcMs = 0;
+      winGcMajorMs = 0;
+      winMaxGcProbe = 0;
       diagLastReport = Date.now();
     }
   }, DIAG_PROBE_MS).unref();
@@ -4212,6 +4257,20 @@ function autoAckResolvedLLEffect(roomId) {
 }
 
 function sendGameStateToAll(roomId) {
+  // DIAGNOSTICS (temporary): broadcasting serializes state for every human +
+  // spectator and is NOT covered by bot-decide timing, so a slow broadcast
+  // shows up only as event-loop lag. Time it to catch that case.
+  if (process.env.DIAG === '0') return _sendGameStateToAllImpl(roomId);
+  const __t0 = process.hrtime.bigint();
+  try {
+    return _sendGameStateToAllImpl(roomId);
+  } finally {
+    const __ms = Number(process.hrtime.bigint() - __t0) / 1e6;
+    if (__ms > 40) console.log(`[DIAG] broadcast ${__ms.toFixed(0)}ms room=${roomId}`);
+  }
+}
+
+function _sendGameStateToAllImpl(roomId) {
   const room = lobby.getRoom(roomId);
   if (!room || !room.game) return;
   // Do NOT clear the Love Letter effect_resolve auto-ack timer here. It owns the
@@ -4296,7 +4355,12 @@ function sendGameStateToAll(roomId) {
       delete roundEndTimers[roomId];
       const r = lobby.getRoom(roomId);
       if (!r || !r.game || r.game.state !== 'round_end') return;
+      // DIAGNOSTICS (temporary): nextRound re-deals 56 cards; time it in case a
+      // round transition is a source of untimed event-loop lag.
+      const __t0 = process.hrtime.bigint();
       r.game.nextRound();
+      const __ms = Number(process.hrtime.bigint() - __t0) / 1e6;
+      if (process.env.DIAG !== '0' && __ms > 40) console.log(`[DIAG] nextRound ${__ms.toFixed(0)}ms room=${roomId} type=${r.gameType}`);
       sendGameStateToAll(roomId);
     }, roundEndDelay);
     // Send state without timer for round_end

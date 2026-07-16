@@ -3964,6 +3964,13 @@ async function handleGetProfile(ws, data) {
 }
 
 function handleGameAction(ws, data) {
+  const __diagActionOn = process.env.DIAG !== '0'
+    && ['play_cards', 'pass', 'play_card'].includes(data?.type);
+  const __diagActionStart = __diagActionOn ? process.hrtime.bigint() : 0n;
+  let __diagHandleMs = 0;
+  let __diagEventMs = 0;
+  let __diagStateMs = 0;
+
   if (!ws.roomId) {
     sendTo(ws, { type: 'error', message: t(ws.locale, 'not_in_room') });
     return;
@@ -4007,7 +4014,9 @@ function handleGameAction(ws, data) {
     return;
   }
 
+  const __diagHandleStart = __diagActionOn ? process.hrtime.bigint() : 0n;
   const result = room.game.handleAction(ws.playerId, data);
+  if (__diagActionOn) __diagHandleMs = Number(process.hrtime.bigint() - __diagHandleStart) / 1e6;
   if (!result.success) {
     sendTo(ws, { type: 'error', message: resultMessage(result, ws.locale) });
     return;
@@ -4025,9 +4034,19 @@ function handleGameAction(ws, data) {
 
   // Broadcast updated game state
   if (result.broadcast) {
+    const __diagEventStart = __diagActionOn ? process.hrtime.bigint() : 0n;
     broadcastGameEvent(ws.roomId, result.broadcast);
+    if (__diagActionOn) __diagEventMs = Number(process.hrtime.bigint() - __diagEventStart) / 1e6;
   }
+  const __diagStateStart = __diagActionOn ? process.hrtime.bigint() : 0n;
   sendGameStateToAll(ws.roomId);
+  if (__diagActionOn) {
+    __diagStateMs = Number(process.hrtime.bigint() - __diagStateStart) / 1e6;
+    const __diagTotalMs = Number(process.hrtime.bigint() - __diagActionStart) / 1e6;
+    if (__diagTotalMs > 40) {
+      console.log(`[DIAG] human-action ${__diagTotalMs.toFixed(0)}ms room=${ws.roomId} type=${room.gameType} action=${data.type} handle=${__diagHandleMs.toFixed(0)}ms event=${__diagEventMs.toFixed(0)}ms state=${__diagStateMs.toFixed(0)}ms`);
+    }
+  }
 
   // Check for game end and save match result
   if (room.game && room.game.state === 'game_end') {

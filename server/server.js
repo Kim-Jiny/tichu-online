@@ -4379,6 +4379,27 @@ function _sendGameStateToAllImpl(roomId) {
 }
 
 function _broadcastState(roomId, room) {
+  // DIAGNOSTICS (temporary): split the broadcast cost. `broadcast` timing showed
+  // 40–337ms here, but the code looks cheap — so break it down to see whether the
+  // ms are in state-building (getStateForPlayer), stringify+send, recipient count,
+  // or an oversized payload. A big total with tiny state/send sums means the wall
+  // time was stolen by something else (GC / host pause) landing mid-broadcast.
+  const __diagOn = process.env.DIAG !== '0';
+  const __t0 = __diagOn ? process.hrtime.bigint() : 0n;
+  let __tState = 0, __tSend = 0, __nH = 0, __nS = 0, __maxBytes = 0;
+  const __send = (ws, obj, isSpec) => {
+    if (!__diagOn) { sendTo(ws, obj); return; }
+    const __s = process.hrtime.bigint();
+    if (ws.readyState === ws.OPEN) {
+      const str = JSON.stringify(obj);
+      if (str.length > __maxBytes) __maxBytes = str.length;
+      ws.send(str);
+      if (isSpec) __nS++; else __nH++;
+    }
+    __tSend += Number(process.hrtime.bigint() - __s) / 1e6;
+  };
+
+  try {
   // Clear out stale card-view permissions (killed-mighty players from the
   // previous round who are now active again).
   if (typeof room.pruneCardViewPermissions === 'function') {
@@ -4406,6 +4427,7 @@ function _broadcastState(roomId, room) {
     if (room.isBot(player.id)) continue;
     const ws = findWsByPlayerId(player.id);
     if (ws) {
+      const __sb = __diagOn ? process.hrtime.bigint() : 0n;
       // Killed-mighty players get their scoreboard filled with peek data for
       // any seat they've been granted viewing rights to.
       const isExcluded = isMighty && room.game.excludedPlayers
@@ -4423,7 +4445,8 @@ function _broadcastState(roomId, room) {
       state.cardViewers = room.getViewersForPlayer(player.id);
       state.spectators = spectatorList;
       state.spectatorCount = spectatorList.length;
-      sendTo(ws, { type: 'game_state', state });
+      if (__diagOn) __tState += Number(process.hrtime.bigint() - __sb) / 1e6;
+      __send(ws, { type: 'game_state', state }, false);
     }
   }
 
@@ -4431,6 +4454,7 @@ function _broadcastState(roomId, room) {
   for (const spectatorId of room.getSpectatorIds()) {
     const ws = findWsByPlayerId(spectatorId);
     if (ws) {
+      const __sb = __diagOn ? process.hrtime.bigint() : 0n;
       const permittedPlayers = room.getPermittedPlayers(spectatorId);
       const spectatorState = room.game.getStateForSpectator(permittedPlayers);
       spectatorState.players = spectatorState.players.map(p => ({
@@ -4441,7 +4465,18 @@ function _broadcastState(roomId, room) {
       spectatorState.turnDeadline = room.turnDeadline;
       spectatorState.spectators = spectatorList;
       spectatorState.spectatorCount = spectatorList.length;
-      sendTo(ws, { type: 'spectator_game_state', state: spectatorState });
+      if (__diagOn) __tState += Number(process.hrtime.bigint() - __sb) / 1e6;
+      __send(ws, { type: 'spectator_game_state', state: spectatorState }, true);
+    }
+  }
+  } finally {
+    if (__diagOn) {
+      const __ms = Number(process.hrtime.bigint() - __t0) / 1e6;
+      // A big __ms with small tState+tSend ⇒ time stolen mid-broadcast (GC/host),
+      // not real broadcast work. Big tState/tSend ⇒ genuine serialization cost.
+      if (__ms > 40) {
+        console.log(`[DIAG] bcast-split ${__ms.toFixed(0)}ms room=${roomId} type=${room.gameType} recips=${__nH}h/${__nS}s state=${__tState.toFixed(0)}ms send=${__tSend.toFixed(0)}ms maxKB=${(__maxBytes / 1024).toFixed(1)}`);
+      }
     }
   }
 }

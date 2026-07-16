@@ -2194,7 +2194,8 @@ function chooseBestWinrateAction(game, botId, candidates) {
   }
 
   if (!best) {
-    return heuristicAction || candidates[0];
+    const heuristicCandidate = candidates.find(action => getActionKey(action) === heuristicKey);
+    return heuristicCandidate || candidates[0];
   }
 
   return best.action;

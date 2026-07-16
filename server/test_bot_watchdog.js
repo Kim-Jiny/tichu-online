@@ -7,8 +7,10 @@
  */
 
 const assert = require('assert');
+const { performance } = require('perf_hooks');
 const { botWatchdogTick } = require('./game/botWatchdog');
 const TichuGame = require('./game/TichuGame');
+const { decideBotAction } = require('./game/BotPlayer');
 
 let pass = 0;
 function ok(name, cond) {
@@ -142,6 +144,30 @@ console.log('\n[6] End-to-end: a frozen Tichu room where it is a BOT\'s dragon-g
   // must produce a legal dragon give for that bot — i.e. recovery is real.
   const fb = g.getAutoTimeoutAction('bot1');
   ok('engine yields a legal recovery action (dragon_give)', fb && fb.type === 'dragon_give');
+}
+
+console.log('\n[7] Winrate fallback: dragon-give stays legal when search gets no samples');
+{
+  const ids = ['bot1', 'p1', 'p2', 'p3'];
+  const names = {}; ids.forEach((p) => (names[p] = p));
+  const g = new TichuGame(ids, names);
+  g.start();
+  g.state = 'playing';
+  g.currentPlayer = 'bot1';
+  g.dragonPending = true;
+  g.dragonDecider = 'bot1';
+  g.pendingTrickCards = ['special_dragon', 'heart_5'];
+  g.hands.bot1 = ['spade_3', 'heart_4', 'club_9'];
+
+  const originalNow = performance.now;
+  let calls = 0;
+  performance.now = () => (calls++ === 0 ? 0 : 10000);
+  try {
+    const action = decideBotAction(g, 'bot1', 'winrate');
+    ok('winrate timeout fallback chooses dragon_give, not an illegal card play', action && action.type === 'dragon_give');
+  } finally {
+    performance.now = originalNow;
+  }
 }
 
 console.log(`\n✅ ALL ${pass} ASSERTIONS PASSED\n`);

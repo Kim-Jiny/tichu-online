@@ -4473,7 +4473,8 @@ function botStateSig(game) {
   if (!game) return '';
   const actor = typeof game.getPendingActor === 'function' ? game.getPendingActor() : game.currentPlayer;
   const trickLen = Array.isArray(game.currentTrick) ? game.currentTrick.length : 0;
-  return `${game.state}|${actor}|${game.currentPlayer}|${trickLen}`;
+  const pendingLen = Array.isArray(game.pendingTrickCards) ? game.pendingTrickCards.length : 0;
+  return `${game.state}|${actor}|${game.currentPlayer}|${trickLen}|${game.needsToCallRank || ''}|${game.dragonPending ? game.dragonDecider || '' : ''}|${pendingLen}`;
 }
 
 function scheduleBotActions(roomId, forceReschedule = false) {

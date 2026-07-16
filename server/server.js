@@ -4405,14 +4405,20 @@ function _broadcastState(roomId, room) {
   // time was stolen by something else (GC / host pause) landing mid-broadcast.
   const __diagOn = process.env.DIAG !== '0';
   const __t0 = __diagOn ? process.hrtime.bigint() : 0n;
-  let __tState = 0, __tSend = 0, __nH = 0, __nS = 0, __maxBytes = 0;
+  let __tState = 0, __tJson = 0, __tWs = 0, __tSend = 0, __nH = 0, __nS = 0, __maxBytes = 0, __maxBufferedBefore = 0, __maxBufferedAfter = 0;
   const __send = (ws, obj, isSpec) => {
     if (!__diagOn) { sendTo(ws, obj); return; }
     const __s = process.hrtime.bigint();
     if (ws.readyState === ws.OPEN) {
+      const __j = process.hrtime.bigint();
       const str = JSON.stringify(obj);
+      __tJson += Number(process.hrtime.bigint() - __j) / 1e6;
       if (str.length > __maxBytes) __maxBytes = str.length;
+      if ((ws.bufferedAmount || 0) > __maxBufferedBefore) __maxBufferedBefore = ws.bufferedAmount || 0;
+      const __w = process.hrtime.bigint();
       ws.send(str);
+      __tWs += Number(process.hrtime.bigint() - __w) / 1e6;
+      if ((ws.bufferedAmount || 0) > __maxBufferedAfter) __maxBufferedAfter = ws.bufferedAmount || 0;
       if (isSpec) __nS++; else __nH++;
     }
     __tSend += Number(process.hrtime.bigint() - __s) / 1e6;
@@ -4494,7 +4500,7 @@ function _broadcastState(roomId, room) {
       // A big __ms with small tState+tSend ⇒ time stolen mid-broadcast (GC/host),
       // not real broadcast work. Big tState/tSend ⇒ genuine serialization cost.
       if (__ms > 40) {
-        console.log(`[DIAG] bcast-split ${__ms.toFixed(0)}ms room=${roomId} type=${room.gameType} recips=${__nH}h/${__nS}s state=${__tState.toFixed(0)}ms send=${__tSend.toFixed(0)}ms maxKB=${(__maxBytes / 1024).toFixed(1)}`);
+        console.log(`[DIAG] bcast-split ${__ms.toFixed(0)}ms room=${roomId} type=${room.gameType} recips=${__nH}h/${__nS}s state=${__tState.toFixed(0)}ms json=${__tJson.toFixed(0)}ms ws=${__tWs.toFixed(0)}ms send=${__tSend.toFixed(0)}ms maxKB=${(__maxBytes / 1024).toFixed(1)} buf=${Math.round(__maxBufferedBefore / 1024)}KB>${Math.round(__maxBufferedAfter / 1024)}KB`);
       }
     }
   }

@@ -905,7 +905,15 @@ class TichuGame {
     const sig = `${playerId}|${this.callRank}|${lastCombo.type}|${lastCombo.value}|${lastCombo.length}|${hand.join(',')}`;
     if (this._cfcbCacheKey === sig) return this._cfcbCacheVal;
 
+    const __diagOn = process.env.DIAG !== '0' && !this._suppressBotSearchLogs;
+    const __t0 = __diagOn ? process.hrtime.bigint() : 0n;
     const result = this._computeCanFulfillCallAndBeat(lastCombo, hand);
+    if (__diagOn) {
+      const __ms = Number(process.hrtime.bigint() - __t0) / 1e6;
+      if (__ms > 40) {
+        console.log(`[DIAG] tichu-call-check ${__ms.toFixed(0)}ms player=${playerId} rank=${this.callRank} combo=${lastCombo.type}/${lastCombo.length || '-'} hand=${hand.length} result=${result}`);
+      }
+    }
     this._cfcbCacheKey = sig;
     this._cfcbCacheVal = result;
     return result;

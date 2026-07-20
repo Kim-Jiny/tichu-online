@@ -4464,6 +4464,10 @@ function _broadcastState(roomId, room) {
         ? room.getPermittedPlayers(player.id)
         : new Set();
       const state = room.game.getStateForPlayer(player.id, permitted, gameStateCache);
+      const __stateMs = __diagOn ? Number(process.hrtime.bigint() - __sb) / 1e6 : 0;
+      if (__diagOn && __stateMs > 40) {
+        console.log(`[DIAG] state-build ${__stateMs.toFixed(0)}ms room=${roomId} type=${room.gameType} phase=${room.game.state} recipient=${player.id} cards=${room.game.hands?.[player.id]?.length ?? '-'}`);
+      }
       state.players = state.players.map(p => ({
         ...p,
         connected: connectionStatus[p.id] !== false,
@@ -4485,6 +4489,10 @@ function _broadcastState(roomId, room) {
       const __sb = __diagOn ? process.hrtime.bigint() : 0n;
       const permittedPlayers = room.getPermittedPlayers(spectatorId);
       const spectatorState = room.game.getStateForSpectator(permittedPlayers, gameStateCache);
+      const __stateMs = __diagOn ? Number(process.hrtime.bigint() - __sb) / 1e6 : 0;
+      if (__diagOn && __stateMs > 40) {
+        console.log(`[DIAG] state-build ${__stateMs.toFixed(0)}ms room=${roomId} type=${room.gameType} phase=${room.game.state} recipient=${spectatorId} spectator=1`);
+      }
       spectatorState.players = spectatorState.players.map(p => ({
         ...p,
         connected: connectionStatus[p.id] !== false,

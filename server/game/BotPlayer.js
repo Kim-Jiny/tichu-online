@@ -1901,6 +1901,58 @@ function buildWinrateCandidates(game, botId) {
     });
   }
 
+  // Lead structure preservation: when LEADING (empty trick), a shallow winrate
+  // rollout over-values grabbing the current trick, so it pulls a single out of
+  // a pair/triple (55 -> 5) or a pair out of a triple (888 -> 88), stranding the
+  // leftover card. The heuristic's decomposeHand never does this — it leads the
+  // leftover singles and keeps same-rank groups whole (pair/triple/full-house).
+  // Mirror that: on lead, drop any single/pair/triple play that uses only PART
+  // of a larger same-rank group we hold. Straights/steps/full-houses span
+  // different ranks and are left alone (decomposeHand itself pulls one card from
+  // a pair to build a straight). Finishing plays and real bombs are exempt.
+  if (trick.length === 0) {
+    const heldByValue = {};
+    for (const c of cards) {
+      if (c.startsWith('special_')) continue;
+      const v = getCardValue(c);
+      heldByValue[v] = (heldByValue[v] || 0) + 1;
+    }
+    legalActions = legalActions.filter(action => {
+      if (action.type !== 'play_cards') return true;
+      const playCards = action.cards || [];
+      if (playCards.length === cards.length) return true; // finishing play
+      const combo = getComboType(playCards);
+      if (combo.type !== COMBO.SINGLE
+        && combo.type !== COMBO.PAIR
+        && combo.type !== COMBO.TRIPLE) return true; // only same-rank groups
+      const normal = playCards.find(c => !c.startsWith('special_'));
+      if (!normal) return true; // pure special (e.g. lone phoenix) — leave it
+      const v = getCardValue(normal);
+      // Breaks a larger held group of this rank → strands the remainder.
+      return (heldByValue[v] || 0) <= playCards.length;
+    });
+
+    // Lead low-single bias: a shallow rollout over-values winning the current
+    // trick, so it leads a HIGH single (K/A) instead of dumping a low one —
+    // burning a stopper. The heuristic always leads its LOWEST single. Match
+    // that: among NORMAL single-card lead candidates, keep only the lowest.
+    // Combos (pairs/straights/steps/full-houses) and special singles (bird/dog/
+    // phoenix/dragon, which have their own lead rules) are left for the rollout.
+    const normalSingles = legalActions.filter(a =>
+      a.type === 'play_cards'
+      && (a.cards || []).length === 1
+      && !a.cards[0].startsWith('special_'));
+    if (normalSingles.length > 1) {
+      let lowest = normalSingles[0];
+      for (const a of normalSingles) {
+        if (getCardValue(a.cards[0]) < getCardValue(lowest.cards[0])) lowest = a;
+      }
+      const dropKeys = new Set(
+        normalSingles.filter(a => a !== lowest).map(a => getActionKey(a)));
+      legalActions = legalActions.filter(a => !dropKeys.has(getActionKey(a)));
+    }
+  }
+
   // Pair preservation: on a cheap low single lead (worthless trick, opp
   // not close to finishing, hand still has slack), drop candidate SINGLE
   // plays that would break a pair/triple in hand. Forces the simulator

@@ -3132,11 +3132,11 @@ async function handleLeaveRoom(ws) {
         // handleDesertion already removes player and cleans up
       } else {
         room.removePlayer(ws.playerId);
-      }
-      if (room.getHumanPlayerCount() === 0) {
-        removeRoomAndNotifySpectators(roomId);
-      } else {
-        broadcastRoomState(roomId);
+        if (room.getHumanPlayerCount() === 0) {
+          removeRoomAndNotifySpectators(roomId);
+        } else {
+          broadcastRoomState(roomId);
+        }
       }
     }
   }
@@ -4444,6 +4444,9 @@ function _broadcastState(roomId, room) {
   const roomTimeouts = timeoutCounts[roomId] || {};
 
   const isMighty = room.gameType === 'mighty';
+  const gameStateCache = typeof room.game.buildStateBroadcastCache === 'function'
+    ? room.game.buildStateBroadcastCache()
+    : null;
 
   // Send to human players (skip null slots and bots)
   for (const player of room.players) {
@@ -4460,7 +4463,7 @@ function _broadcastState(roomId, room) {
       const permitted = isExcluded
         ? room.getPermittedPlayers(player.id)
         : new Set();
-      const state = room.game.getStateForPlayer(player.id, permitted);
+      const state = room.game.getStateForPlayer(player.id, permitted, gameStateCache);
       state.players = state.players.map(p => ({
         ...p,
         connected: connectionStatus[p.id] !== false,
@@ -4481,7 +4484,7 @@ function _broadcastState(roomId, room) {
     if (ws) {
       const __sb = __diagOn ? process.hrtime.bigint() : 0n;
       const permittedPlayers = room.getPermittedPlayers(spectatorId);
-      const spectatorState = room.game.getStateForSpectator(permittedPlayers);
+      const spectatorState = room.game.getStateForSpectator(permittedPlayers, gameStateCache);
       spectatorState.players = spectatorState.players.map(p => ({
         ...p,
         connected: connectionStatus[p.id] !== false,

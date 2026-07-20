@@ -21,8 +21,10 @@ class LobbyManager {
   }
 
   removeRoom(roomId) {
+    if (!this.rooms.has(roomId)) return false;
     this.rooms.delete(roomId);
     console.log(`Room removed: ${roomId}`);
+    return true;
   }
 
   getRoomList() {

@@ -1234,7 +1234,54 @@ class MightyGame {
 
   // ─── STATE FOR PLAYER ───────────────────────────────────
 
-  getStateForPlayer(playerId, permittedPlayerIds = new Set()) {
+  buildStateBroadcastCache() {
+    const governmentIds = new Set();
+    if (this.declarer) governmentIds.add(this.declarer);
+    if (this.friendRevealed && this.partner) governmentIds.add(this.partner);
+
+    const trickCounts = {};
+    for (const pid of this.playerIds) trickCounts[pid] = 0;
+    for (const trick of this.tricks) {
+      if (trick && trick.winner) trickCounts[trick.winner] = (trickCounts[trick.winner] || 0) + 1;
+    }
+
+    const pointCounts = {};
+    for (const pid of this.playerIds) {
+      pointCounts[pid] = countPoints(this.pointCards[pid] || []);
+    }
+
+    const currentTrick = this.currentTrick.map(play => ({
+      playerId: play.pid,
+      playerName: this.playerNames[play.pid] || play.pid,
+      cardId: play.cardId,
+    }));
+
+    const tricks = this.tricks.map(t => ({
+      leader: t.leader,
+      winner: t.winner,
+      cards: t.cards.map(c => ({ playerId: c.pid, cardId: c.cardId })),
+    }));
+
+    const hasTrumpCounter = this.trumpSuit && this.trumpSuit !== 'no_trump'
+      && (this.state === 'playing' || this.state === 'trick_end');
+
+    return {
+      governmentIds,
+      trickCounts,
+      pointCounts,
+      publicBids: this._getPublicBids(),
+      currentTrick,
+      tricks,
+      mightyCard: this.trumpSuit ? this.getMightyCard() : null,
+      jokerCallCard: this.trumpSuit ? this.getJokerCallCard() : null,
+      jokerHasPower: this._currentTrickJokerHasPower(),
+      remainingTrumps: hasTrumpCounter ? this._countRemainingTrumps() : undefined,
+      excludedPlayers: [...this.excludedPlayers],
+    };
+  }
+
+  getStateForPlayer(playerId, permittedPlayerIds = new Set(), broadcastCache = null) {
+    const cache = broadcastCache || this.buildStateBroadcastCache();
     const playerIdx = this.playerIds.indexOf(playerId);
     const isMyTurn = this.currentPlayer === playerId;
     const legalCards = isMyTurn && this.state === 'playing'
@@ -1246,15 +1293,11 @@ class MightyGame {
 
     // Build players array (relative positioning, same pattern as SK)
     // Government = declarer + revealed partner; opposition = everyone else
-    const governmentIds = new Set();
-    if (this.declarer) governmentIds.add(this.declarer);
-    if (this.friendRevealed && this.partner) governmentIds.add(this.partner);
-
     const players = [];
     for (let i = 0; i < this.playerCount; i++) {
       const pid = this.playerIds[(playerIdx + i) % this.playerCount];
       const isSelf = pid === playerId;
-      const isGovt = governmentIds.has(pid);
+      const isGovt = cache.governmentIds.has(pid);
       const canReveal = isExcluded && permittedPlayerIds.has(pid);
       players.push({
         id: pid,
@@ -1262,8 +1305,8 @@ class MightyGame {
         position: isSelf ? 'self' : `player_${i}`,
         cardCount: (this.hands[pid] || []).length,
         bid: this.bids[pid] !== undefined ? this.bids[pid] : null,
-        trickCount: this.tricks.filter(t => t.winner === pid).length,
-        pointCount: countPoints(this.pointCards[pid] || []),
+        trickCount: cache.trickCounts[pid] || 0,
+        pointCount: cache.pointCounts[pid] || 0,
         pointCards: isGovt ? [] : (this.pointCards[pid] || []),
         // Surface hand cards the same way the spectator state does when an
         // excluded player has been granted permission to peek.
@@ -1273,13 +1316,6 @@ class MightyGame {
         timeoutCount: 0,
       });
     }
-
-    // Build current trick with player names
-    const currentTrick = this.currentTrick.map(play => ({
-      playerId: play.pid,
-      playerName: this.playerNames[play.pid] || play.pid,
-      cardId: play.cardId,
-    }));
 
     const state = {
       gameType: this.gameType,
@@ -1293,18 +1329,18 @@ class MightyGame {
       partner: this.friendRevealed ? this.partner : null,
       friendCard: this.state !== 'bidding' ? this.friendCard : null,
       currentBid: this.currentBid,
-      bids: this._getPublicBids(),
+      bids: cache.publicBids,
       currentPlayer: this.currentPlayer,
       isMyTurn,
-      currentTrick,
+      currentTrick: cache.currentTrick,
       legalCards,
       scores: this.scores,
       scoreHistory: this.scoreHistory,
       roundResult: this.state === 'round_end' || this.state === 'game_end' ? this.roundResult : null,
-      mightyCard: this.trumpSuit ? this.getMightyCard() : null,
-      jokerCallCard: this.trumpSuit ? this.getJokerCallCard() : null,
+      mightyCard: cache.mightyCard,
+      jokerCallCard: cache.jokerCallCard,
       jokerCallActive: this.jokerCallActive,
-      jokerHasPower: this._currentTrickJokerHasPower(),
+      jokerHasPower: cache.jokerHasPower,
       jokerSuitDeclared: this.jokerSuitDeclared,
       lastTrickCards: this.state === 'trick_end' ? this.lastTrickCards : [],
       lastTrickWinner: this.state === 'trick_end' ? this.lastTrickWinner : null,
@@ -1314,18 +1350,14 @@ class MightyGame {
       canDeclareSetting: this._canDeclareSetting(playerId),
       lastSettingEvent: this.lastSettingEvent,
       mode: this.mode,
-      excludedPlayers: [...this.excludedPlayers],
+      excludedPlayers: cache.excludedPlayers,
       lastKillEvent: this.lastKillEvent,
-      tricks: this.tricks.map(t => ({
-        leader: t.leader,
-        winner: t.winner,
-        cards: t.cards.map(c => ({ playerId: c.pid, cardId: c.cardId })),
-      })),
+      tricks: cache.tricks,
     };
 
     // Remaining trump count (for trump counter item)
     if (this.trumpSuit && this.trumpSuit !== 'no_trump' && (this.state === 'playing' || this.state === 'trick_end')) {
-      state.remainingTrumps = this._countRemainingTrumps();
+      state.remainingTrumps = cache.remainingTrumps;
     }
 
     // Kitty phase: show 13 cards to declarer + which cards came from kitty
@@ -1345,10 +1377,8 @@ class MightyGame {
     return state;
   }
 
-  getStateForSpectator(permittedPlayerIds = new Set()) {
-    const governmentIds = new Set();
-    if (this.declarer) governmentIds.add(this.declarer);
-    if (this.friendRevealed && this.partner) governmentIds.add(this.partner);
+  getStateForSpectator(permittedPlayerIds = new Set(), broadcastCache = null) {
+    const cache = broadcastCache || this.buildStateBroadcastCache();
 
     const players = this.playerIds.map((pid, i) => ({
       id: pid,
@@ -1358,17 +1388,11 @@ class MightyGame {
       canViewCards: permittedPlayerIds.has(pid),
       cardCount: (this.hands[pid] || []).length,
       bid: this.bids[pid] !== undefined ? this.bids[pid] : null,
-      trickCount: this.tricks.filter(t => t.winner === pid).length,
-      pointCount: countPoints(this.pointCards[pid] || []),
-      pointCards: governmentIds.has(pid) ? [] : (this.pointCards[pid] || []),
+      trickCount: cache.trickCounts[pid] || 0,
+      pointCount: cache.pointCounts[pid] || 0,
+      pointCards: cache.governmentIds.has(pid) ? [] : (this.pointCards[pid] || []),
       connected: true,
       timeoutCount: 0,
-    }));
-
-    const currentTrick = this.currentTrick.map(play => ({
-      playerId: play.pid,
-      playerName: this.playerNames[play.pid] || play.pid,
-      cardId: play.cardId,
     }));
 
     return {
@@ -1377,21 +1401,21 @@ class MightyGame {
       round: this.round,
       players,
       currentPlayer: this.currentPlayer,
-      currentTrick,
+      currentTrick: cache.currentTrick,
       trumpSuit: this.trumpSuit,
       declarer: this.declarer,
       friendRevealed: this.friendRevealed,
       partner: this.friendRevealed ? this.partner : null,
       friendCard: this.state !== 'bidding' ? this.friendCard : null,
       currentBid: this.currentBid,
-      bids: this._getPublicBids(),
+      bids: cache.publicBids,
       scores: this.scores,
       scoreHistory: this.scoreHistory,
       roundResult: this.state === 'round_end' || this.state === 'game_end' ? this.roundResult : null,
-      mightyCard: this.trumpSuit ? this.getMightyCard() : null,
-      jokerCallCard: this.trumpSuit ? this.getJokerCallCard() : null,
+      mightyCard: cache.mightyCard,
+      jokerCallCard: cache.jokerCallCard,
       jokerCallActive: this.jokerCallActive,
-      jokerHasPower: this._currentTrickJokerHasPower(),
+      jokerHasPower: cache.jokerHasPower,
       jokerSuitDeclared: this.jokerSuitDeclared,
       lastTrickCards: this.state === 'trick_end' ? this.lastTrickCards : [],
       lastTrickWinner: this.state === 'trick_end' ? this.lastTrickWinner : null,
@@ -1399,16 +1423,10 @@ class MightyGame {
       lastDealMissEvent: this.lastDealMissEvent,
       lastSettingEvent: this.lastSettingEvent,
       mode: this.mode,
-      excludedPlayers: [...this.excludedPlayers],
+      excludedPlayers: cache.excludedPlayers,
       lastKillEvent: this.lastKillEvent,
-      remainingTrumps: (this.trumpSuit && this.trumpSuit !== 'no_trump' &&
-        (this.state === 'playing' || this.state === 'trick_end'))
-        ? this._countRemainingTrumps() : undefined,
-      tricks: this.tricks.map(t => ({
-        leader: t.leader,
-        winner: t.winner,
-        cards: t.cards.map(c => ({ playerId: c.pid, cardId: c.cardId })),
-      })),
+      remainingTrumps: cache.remainingTrumps,
+      tricks: cache.tricks,
     };
   }
 

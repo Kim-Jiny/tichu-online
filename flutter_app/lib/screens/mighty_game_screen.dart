@@ -204,6 +204,17 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
                   builder: (context, game, _) =>
                       _buildEndPhaseOverlay(context, game),
                 ),
+                // Kitty-exchange panel as a body-level overlay so it can
+                // overlap the contract bar (shown higher) on small screens.
+                Consumer<GameService>(
+                  builder: (context, game, _) {
+                    final s = game.mightyGameState;
+                    if (s == null || s.phase != 'kitty_exchange') {
+                      return const SizedBox.shrink();
+                    }
+                    return _buildKittyOverlay(game, s);
+                  },
+                ),
                 // Setting-reveal overlay on top of everything (incl. the
                 // round-result overlay) so it stays visible when a setting
                 // declaration ends the round.
@@ -2137,24 +2148,8 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
             child: _buildTableBoard(state, game),
           ),
         ),
-        // round_end / game_end dim + result UI are rendered at the body-level
-        // Stack so the dim extends edge-to-edge through the SafeArea.
-        if (state.phase == 'kitty_exchange')
-          Positioned(
-            left: 12,
-            right: 12,
-            // Bound the top too so the panel can't grow up behind the contract
-            // bar on small screens; it anchors to the bottom and scrolls when
-            // taller than the available space.
-            top: 4,
-            bottom: game.isSpectator ? 120 : 210,
-            child: Align(
-              alignment: Alignment.bottomCenter,
-              child: SingleChildScrollView(
-                child: _buildKittyUI(game, state),
-              ),
-            ),
-          ),
+        // NOTE: the kitty-exchange panel is rendered at the top of the body
+        // Stack (above the contract bar) so it can overlap it on small screens.
         if (showBottomOverlay)
           Align(alignment: Alignment.bottomCenter, child: bottomOverlay),
       ],
@@ -3329,29 +3324,71 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
     );
   }
 
+  // Full-screen host for the kitty panel. Positions it in the upper area so it
+  // overlaps the contract bar (starts just below the top round bar), leaving
+  // the hand area at the bottom tappable. Scrolls when taller than the region.
+  Widget _buildKittyOverlay(GameService game, MightyGameStateData state) {
+    final topInset = MediaQuery.of(context).padding.top;
+    return SizedBox.expand(
+      child: Padding(
+        padding: EdgeInsets.only(
+          left: 12,
+          right: 12,
+          top: topInset + 42,
+          bottom: game.isSpectator ? 120 : 210,
+        ),
+        child: Align(
+          alignment: Alignment.topCenter,
+          child: SingleChildScrollView(
+            child: _buildKittyUI(game, state),
+          ),
+        ),
+      ),
+    );
+  }
+
   // ── Kitty Exchange ──
   Widget _buildKittyUI(GameService game, MightyGameStateData state) {
     if (!state.isMyTurn) {
       return Container(
         width: double.infinity,
-        margin: const EdgeInsets.fromLTRB(12, 8, 12, 12),
+        margin: const EdgeInsets.only(bottom: 4),
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
           color: Colors.white.withValues(alpha: 0.88),
           borderRadius: BorderRadius.circular(16),
           border: Border.all(color: const Color(0xFFE0D8D4)),
         ),
-        child: Text(
-          L10n.of(context).mtExchangingKitty,
-          textAlign: TextAlign.center,
-          style: const TextStyle(fontSize: 14, color: Color(0xFF5A4038)),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(
+              L10n.of(context).mtExchangingKitty,
+              textAlign: TextAlign.center,
+              style: const TextStyle(fontSize: 14, color: Color(0xFF5A4038)),
+            ),
+            // Show the declarer's remaining time so others know how long to wait.
+            if (_remainingSeconds > 0) ...[
+              const SizedBox(height: 6),
+              Text(
+                '${_remainingSeconds}s',
+                style: TextStyle(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w800,
+                  color: _remainingSeconds <= 5
+                      ? const Color(0xFFE53935)
+                      : const Color(0xFF8A7A72),
+                ),
+              ),
+            ],
+          ],
         ),
       );
     }
 
     return Container(
       width: double.infinity,
-      margin: const EdgeInsets.fromLTRB(12, 8, 12, 12),
+      margin: const EdgeInsets.only(bottom: 4),
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
         color: Colors.white.withValues(alpha: 0.95),

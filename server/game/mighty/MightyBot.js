@@ -2164,6 +2164,10 @@ function _shouldHoldMightyInMightyFriends(game, legalCards) {
  */
 function _mightySuitToAvoidLeading(game, botId) {
   if (!game.friendRevealed || botId !== game.partner) return null;
+  // NT is the exception (per user spec): with no trump there's no ruffing to
+  // waste, and the friend must be free to RETURN the declarer's called suit
+  // even when that suit is the Mighty's home suit. Only suppress in suited play.
+  if (!game.trumpSuit || game.trumpSuit === 'no_trump') return null;
   const mightyCard = game.getMightyCard();
   // Exception: mighty/joker-friend designation → suppress nothing.
   if (game.friendCard === 'mighty_joker' || game.friendCard === mightyCard) return null;

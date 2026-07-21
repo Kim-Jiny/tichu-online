@@ -1153,8 +1153,8 @@ class _SKGameScreenState extends State<SKGameScreen> {
     final isLandscape =
         MediaQuery.of(context).orientation == Orientation.landscape;
     const playedCardWidth = 72 * 0.7;
-    const seatWidth = 110.0;
-    const seatHeight = 82.0;
+    const seatWidth = 118.0;
+    const seatHeight = 92.0;
 
     return Padding(
       padding: const EdgeInsets.fromLTRB(8, 6, 8, 8),
@@ -1743,8 +1743,8 @@ class _SKGameScreenState extends State<SKGameScreen> {
     final isLandscape =
         MediaQuery.of(context).orientation == Orientation.landscape;
     const playedCardWidth = 72 * 0.7;
-    const seatWidth = 110.0;
-    const seatHeight = 82.0;
+    const seatWidth = 118.0;
+    const seatHeight = 92.0;
     final opponents = state.players
         .where((p) => p.position != 'self')
         .toList(growable: false);

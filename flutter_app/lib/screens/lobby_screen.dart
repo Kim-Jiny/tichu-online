@@ -1515,13 +1515,13 @@ class _LobbyScreenState extends State<LobbyScreen> {
   }
 
   Widget _buildLobbyView(GameService game, {required bool isLandscape}) {
+    final Widget body;
     if (isLandscape) {
       final hasTopNotices =
           game.hasMaintenanceNotice ||
           game.inquiryBannerMessage != null ||
           game.errorMessage != null;
-      final hasBanner = _bannerAd != null && _bannerAdLoaded;
-      return Column(
+      body = Column(
         children: [
           _buildLobbyHeader(game, isLandscape: true),
           if (hasTopNotices)
@@ -1535,42 +1535,45 @@ class _LobbyScreenState extends State<LobbyScreen> {
               child: _buildRoomListPanel(game),
             ),
           ),
-          if (hasBanner)
-            Padding(
-              padding: const EdgeInsets.only(bottom: 8),
-              child: Center(
-                child: SizedBox(
-                  height: _bannerAd!.size.height.toDouble(),
-                  width: _bannerAd!.size.width.toDouble(),
-                  child: AdWidget(
-                    ad: _bannerAd!,
-                    key: ValueKey(_bannerAd!.hashCode),
-                  ),
-                ),
-              ),
-            ),
+        ],
+      );
+    } else {
+      body = Column(
+        children: [
+          _buildLobbyHeader(game, isLandscape: false),
+
+          // Maintenance notice banner
+          if (game.hasMaintenanceNotice) _buildMaintenanceBanner(game),
+          if (game.inquiryBannerMessage != null) _buildInquiryBanner(game),
+          if (game.errorMessage != null) _buildErrorBanner(game.errorMessage!),
+
+          // Room list or Friends panel
+          Expanded(child: _buildRoomListPanel(game)),
         ],
       );
     }
 
+    // Single shared banner-ad slot (same tree position for both orientations)
+    // so the one BannerAd is never attached to two AdWidgets at once — which
+    // throws "AdWidget is already in the Widget tree" during an orientation /
+    // rebuild transition.
     return Column(
       children: [
-        _buildLobbyHeader(game, isLandscape: false),
-
-        // Maintenance notice banner
-        if (game.hasMaintenanceNotice) _buildMaintenanceBanner(game),
-        if (game.inquiryBannerMessage != null) _buildInquiryBanner(game),
-        if (game.errorMessage != null) _buildErrorBanner(game.errorMessage!),
-
-        // Room list or Friends panel
-        Expanded(child: _buildRoomListPanel(game)),
+        Expanded(child: body),
         if (_bannerAd != null && _bannerAdLoaded)
-          SizedBox(
-            height: _bannerAd!.size.height.toDouble(),
-            width: _bannerAd!.size.width.toDouble(),
-            child: AdWidget(ad: _bannerAd!, key: ValueKey(_bannerAd!.hashCode)),
+          Padding(
+            padding: const EdgeInsets.only(bottom: 8),
+            child: Center(
+              child: SizedBox(
+                height: _bannerAd!.size.height.toDouble(),
+                width: _bannerAd!.size.width.toDouble(),
+                child: AdWidget(
+                  ad: _bannerAd!,
+                  key: ValueKey(_bannerAd!.hashCode),
+                ),
+              ),
+            ),
           ),
-        const SizedBox(height: 8),
       ],
     );
   }

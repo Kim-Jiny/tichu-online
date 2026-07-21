@@ -4220,6 +4220,60 @@ async function handleAdminRoute(req, res, url, pathname, method, lobby, wss, mai
     const todayKST = formatDateInput(new Date());
     const shownDate = dateF || todayKST;
 
+    // Single selected week / month attendance (default: current), navigable via
+    // ?week=YYYY-MM-DD (any day in the week) and ?month=YYYY-MM. Independent of
+    // the per-claim date/nickname filter below.
+    const weekParam = (url.searchParams.get('week') || '').trim();
+    const weekRefStr = /^\d{4}-\d{2}-\d{2}$/.test(weekParam) ? weekParam : todayKST;
+    const _wref = new Date(weekRefStr + 'T00:00:00Z');
+    const _mon = new Date(_wref.getTime() - ((_wref.getUTCDay() + 6) % 7) * 86400000); // Monday
+    const mondayStr = _mon.toISOString().slice(0, 10);
+    const weekStart = new Date(`${mondayStr}T00:00:00+09:00`);
+    const weekEnd = new Date(weekStart.getTime() + 7 * 86400000);
+    const sundayStr = _kstDateFmt.format(new Date(weekStart.getTime() + 6 * 86400000));
+    const prevWeekStr = new Date(_mon.getTime() - 7 * 86400000).toISOString().slice(0, 10);
+    const nextWeekStr = new Date(_mon.getTime() + 7 * 86400000).toISOString().slice(0, 10);
+
+    const monthParam = (url.searchParams.get('month') || '').trim();
+    const monthStr = /^\d{4}-\d{2}$/.test(monthParam) ? monthParam : todayKST.slice(0, 7);
+    const [_my, _mm] = monthStr.split('-').map(Number);
+    const monthStart = new Date(`${monthStr}-01T00:00:00+09:00`);
+    const _nY = _mm === 12 ? _my + 1 : _my, _nM = _mm === 12 ? 1 : _mm + 1;
+    const _pY = _mm === 1 ? _my - 1 : _my, _pM = _mm === 1 ? 12 : _mm - 1;
+    const monthEnd = new Date(`${_nY}-${String(_nM).padStart(2, '0')}-01T00:00:00+09:00`);
+    const prevMonthStr = `${_pY}-${String(_pM).padStart(2, '0')}`;
+    const nextMonthStr = `${_nY}-${String(_nM).padStart(2, '0')}`;
+
+    const [weekBd, monthBd] = await Promise.all([
+      getAttendanceBreakdown(weekStart.toISOString(), weekEnd.toISOString(), { topLimit: 100 }),
+      getAttendanceBreakdown(monthStart.toISOString(), monthEnd.toISOString(), { topLimit: 100 }),
+    ]);
+    const weekSum = (weekBd.weekly && weekBd.weekly[0]) || {};
+    const weekUsers = weekBd.topUsers || [];
+    const monthSum = (monthBd.monthly && monthBd.monthly[0]) || {};
+    const monthUsers = monthBd.topUsers || [];
+
+    const attNavUrl = (o) => {
+      const p = new URLSearchParams();
+      if (dateF) p.set('date', dateF);
+      if (q) p.set('q', q);
+      p.set('week', o.week != null ? o.week : mondayStr);
+      p.set('month', o.month != null ? o.month : monthStr);
+      return '/tc-backstage/attendance?' + p.toString();
+    };
+    const attUserList = (users) => users.length > 0
+      ? `<div class="table-wrap"><table>
+          <tr><th>닉네임</th><th>출석</th><th>7일완주</th><th>현재 연속</th><th>지급 골드</th></tr>
+          ${users.map(u => `<tr>
+            <td><a href="/tc-backstage/users/${encodeURIComponent(u.nickname || '')}" style="color:#5f62d6;text-decoration:none;font-weight:600">${escapeHtml(u.nickname || '-')}</a></td>
+            <td style="font-weight:700">${formatNumber(u.claims || 0)}회</td>
+            <td>${formatNumber(u.finales || 0)}</td>
+            <td style="color:#2e8b57;font-weight:600">${formatNumber(u.current_streak || 0)}일</td>
+            <td style="color:#b35b19;font-weight:700">${formatNumber(u.gold || 0)}</td>
+          </tr>`).join('')}
+        </table></div>`
+      : '<div class="empty">출석한 유저 없음</div>';
+
     const filterForm = `
       <form method="GET" action="/tc-backstage/attendance" class="card" style="margin-bottom:14px;display:flex;gap:10px;flex-wrap:wrap;align-items:flex-end">
         <div><div style="font-size:12px;color:#888;margin-bottom:6px">날짜 (KST)</div>
@@ -4275,6 +4329,41 @@ async function handleAdminRoute(req, res, url, pathname, method, lobby, wss, mai
         { label: '7일차 완주', value: formatNumber(headStats.todayFinales), valueColor: '#e65100' },
         { label: '오늘 지급 골드', value: formatNumber(headStats.todayGold), valueColor: '#b35b19' },
       ])}
+      <div class="grid-2col">
+        <div class="card">
+          <h3>주간 출석 <span style="font-size:13px;color:#8a8f98;font-weight:600">· ${mondayStr}(월) ~ ${sundayStr}(일)</span></h3>
+          <div style="display:flex;gap:8px;flex-wrap:wrap;margin:10px 0 12px">
+            <a href="${attNavUrl({ week: prevWeekStr })}" class="btn btn-secondary">◀ 이전 주</a>
+            <a href="${attNavUrl({ week: todayKST })}" class="btn btn-secondary">이번 주</a>
+            <a href="${attNavUrl({ week: nextWeekStr })}" class="btn btn-secondary">다음 주 ▶</a>
+          </div>
+          <div class="soft-panel">
+            ${metricLine('출석 인원(고유)', `${formatNumber(weekSum.unique_claims || 0)}명`)}
+            ${metricLine('총 출석', `${formatNumber(weekSum.total_claims || 0)}회`)}
+            ${metricLine('7일차 완주', formatNumber(weekSum.finales || 0))}
+            ${metricLine('지급 골드', `${formatNumber(weekSum.gold || 0)}G`)}
+          </div>
+          <div style="height:10px"></div>
+          ${attUserList(weekUsers)}
+        </div>
+        <div class="card">
+          <h3>월간 출석 <span style="font-size:13px;color:#8a8f98;font-weight:600">· ${monthStr}</span></h3>
+          <div style="display:flex;gap:8px;flex-wrap:wrap;margin:10px 0 12px">
+            <a href="${attNavUrl({ month: prevMonthStr })}" class="btn btn-secondary">◀ 이전 달</a>
+            <a href="${attNavUrl({ month: todayKST.slice(0, 7) })}" class="btn btn-secondary">이번 달</a>
+            <a href="${attNavUrl({ month: nextMonthStr })}" class="btn btn-secondary">다음 달 ▶</a>
+          </div>
+          <div class="soft-panel">
+            ${metricLine('출석 인원(고유)', `${formatNumber(monthSum.unique_claims || 0)}명`)}
+            ${metricLine('총 출석', `${formatNumber(monthSum.total_claims || 0)}회`)}
+            ${metricLine('7일차 완주', formatNumber(monthSum.finales || 0))}
+            ${metricLine('지급 골드', `${formatNumber(monthSum.gold || 0)}G`)}
+          </div>
+          <div style="height:10px"></div>
+          ${attUserList(monthUsers)}
+        </div>
+      </div>
+      <div class="subtab-copy" style="margin-top:2px">주간(월~일)·월간은 KST 기준 고유 출석 인원이며, 위 버튼으로 다른 주·달을 볼 수 있습니다. 아래는 선택한 날짜의 출석 유저별 상세 로그입니다.</div>
       ${filterForm}
       <div class="card">${table}</div>
       ${pagination(data.page, data.total, data.limit, baseUrl)}

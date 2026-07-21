@@ -1305,9 +1305,6 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
         ? '$friendCardRank$friendSuffixText'
         : '${friendSpecialText ?? ''}$friendSuffixText';
 
-    final showTrumpCounter =
-        state.remainingTrumps != null && game.hasMightyTrumpCounter;
-
     // Estimate the center content's width using rough per-character widths.
     // CJK glyphs are roughly em-wide; ASCII a bit narrower. Used only to decide
     // whether the right-side deal-miss chip would overlap the centered info,
@@ -1468,11 +1465,6 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
               // Center content sits at the true row center regardless of the
               // side chips' widths.
               centerContent,
-              if (showTrumpCounter)
-                Align(
-                  alignment: Alignment.centerLeft,
-                  child: _buildTrumpCounterLabel(state),
-                ),
               if (dealMissChip != null)
                 Align(
                   alignment: Alignment.centerRight,
@@ -2091,6 +2083,29 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
           ),
         if (showBottomOverlay)
           Align(alignment: Alignment.bottomCenter, child: bottomOverlay),
+        // Remaining-trump counter, parked to the left of the hand (only if the
+        // player owns the trump-counter item).
+        if (showBottomOverlay &&
+            state.remainingTrumps != null &&
+            game.hasMightyTrumpCounter)
+          Positioned(
+            left: 8,
+            bottom: game.isSpectator ? 116 : 150,
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+              decoration: BoxDecoration(
+                color: Colors.white.withValues(alpha: 0.92),
+                borderRadius: BorderRadius.circular(12),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: 0.08),
+                    blurRadius: 6,
+                  ),
+                ],
+              ),
+              child: _buildTrumpCounterLabel(state),
+            ),
+          ),
       ],
     );
   }
@@ -2741,6 +2756,54 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
   }
 
   // ── Trick Area ──
+  // Consolidated game-state header for the center trick panel: round, trick
+  // number (n/10) and lead suit (when a trick is in progress). Trump counting
+  // lives beside the hand instead. Keeps the at-a-glance info in one readable
+  // place instead of scattered around the table.
+  Widget _buildTrickInfoHeader(
+    MightyGameStateData state, {
+    String? leadSuit,
+  }) {
+    final trickNo = (state.tricks.length + 1).clamp(1, 10);
+    const style = TextStyle(
+      fontSize: 12,
+      fontWeight: FontWeight.w700,
+      color: Color(0xFF5A4038),
+    );
+    Widget dot() => const Padding(
+      padding: EdgeInsets.symmetric(horizontal: 5),
+      child: Text('·', style: TextStyle(fontSize: 12, color: Color(0xFFBBB0A8))),
+    );
+    final children = <Widget>[
+      const Icon(Icons.event_repeat, size: 12, color: Color(0xFF8A7A72)),
+      const SizedBox(width: 3),
+      Text(L10n.of(context).mtRoundOnly(state.round.toString()), style: style),
+      dot(),
+      const Icon(Icons.style, size: 12, color: Color(0xFF8A7A72)),
+      const SizedBox(width: 3),
+      Text('$trickNo/10', style: style),
+    ];
+    if (leadSuit != null) {
+      children.addAll([
+        dot(),
+        Text(
+          '${L10n.of(context).mtLead} ',
+          style: style.copyWith(color: _bidAccentColor(leadSuit)),
+        ),
+        SuitIcon(suit: leadSuit, size: 13, color: _bidAccentColor(leadSuit)),
+      ]);
+    }
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 6),
+      child: Wrap(
+        alignment: WrapAlignment.center,
+        crossAxisAlignment: WrapCrossAlignment.center,
+        runSpacing: 2,
+        children: children,
+      ),
+    );
+  }
+
   Widget _buildTrickArea(MightyGameStateData state, GameService game) {
     if (state.currentTrick.isEmpty) {
       return Center(
@@ -2754,6 +2817,7 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
+              _buildTrickInfoHeader(state),
               const Icon(Icons.style, size: 20, color: Color(0xFF8A7A72)),
               const SizedBox(height: 4),
               Text(
@@ -2809,6 +2873,7 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
+            _buildTrickInfoHeader(state, leadSuit: leadSuit),
             // Line 1: contract (declarer's trump + bid points)
             if (contractPoints != null && contractSuit != null)
               Row(
@@ -2830,30 +2895,7 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
                   ),
                 ],
               ),
-            // Line 2: lead suit
-            if (leadSuit != null)
-              Padding(
-                padding: const EdgeInsets.only(top: 4),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Text(
-                      '${L10n.of(context).mtLead} ',
-                      style: TextStyle(
-                        fontSize: 11,
-                        fontWeight: FontWeight.w600,
-                        color: _bidAccentColor(leadSuit),
-                      ),
-                    ),
-                    SuitIcon(
-                      suit: leadSuit,
-                      size: 13,
-                      color: _bidAccentColor(leadSuit),
-                    ),
-                  ],
-                ),
-              ),
-            // Line 3: turn timer
+            // Turn timer
             if (_remainingSeconds > 0)
               Padding(
                 padding: const EdgeInsets.only(top: 4),

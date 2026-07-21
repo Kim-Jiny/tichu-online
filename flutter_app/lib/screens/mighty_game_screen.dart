@@ -204,6 +204,20 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
                   builder: (context, game, _) =>
                       _buildEndPhaseOverlay(context, game),
                 ),
+                // Setting-reveal overlay on top of everything (incl. the
+                // round-result overlay) so it stays visible when a setting
+                // declaration ends the round.
+                Consumer<GameService>(
+                  builder: (context, game, _) {
+                    final s = game.mightyGameState;
+                    final ev = s?.lastSettingEvent;
+                    if (ev == null) return const SizedBox.shrink();
+                    if (_dismissedSettingKey == '${ev.round}-${ev.playerId}') {
+                      return const SizedBox.shrink();
+                    }
+                    return _buildSettingRevealOverlay(ev, trumpSuit: s!.trumpSuit);
+                  },
+                ),
               ],
             ),
           ),
@@ -507,13 +521,9 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
                           _dismissedKillKey !=
                               '${state.round}-${state.lastKillEvent!.targetCardId}')
                         _buildKillRevealOverlay(state, state.lastKillEvent!),
-                      if (state.lastSettingEvent != null &&
-                          _dismissedSettingKey !=
-                              '${state.lastSettingEvent!.round}-${state.lastSettingEvent!.playerId}')
-                        _buildSettingRevealOverlay(
-                          state.lastSettingEvent!,
-                          trumpSuit: state.trumpSuit,
-                        ),
+                      // NOTE: the setting-reveal overlay is rendered at the top
+                      // of the body Stack (above the round-result overlay) so it
+                      // isn't hidden behind the round result.
                       if (_contractChangeBanner != null)
                         _buildContractChangeBanner(_contractChangeBanner!),
                     ],
@@ -3678,6 +3688,7 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
 
               return Container(
                 constraints: const BoxConstraints(maxWidth: 360),
+                clipBehavior: Clip.antiAlias,
                 decoration: BoxDecoration(
                   color: const Color(0xFFFFFBF5),
                   borderRadius: BorderRadius.circular(20),
@@ -3689,7 +3700,8 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
                     ),
                   ],
                 ),
-                child: Column(
+                child: SingleChildScrollView(
+                  child: Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
                     // Header
@@ -3754,6 +3766,7 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
                       ),
                     ),
                   ],
+                ),
                 ),
               );
             },
@@ -5774,7 +5787,10 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
     String? trumpSuit,
   }) {
     final l10n = L10n.of(context);
-    return Positioned.fill(
+    // SizedBox.expand (not Positioned.fill) so this can be returned from a
+    // Consumer placed at the top of the body Stack — above the round-result
+    // overlay — without needing to be a direct Stack child.
+    return SizedBox.expand(
       child: GestureDetector(
         onTap: () => setState(() {
           _dismissedSettingKey = '${event.round}-${event.playerId}';

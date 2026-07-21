@@ -505,11 +505,14 @@ input[type="text"], input[type="password"] { width: 100%; padding: 10px 12px; bo
     <a href="/tc-backstage/reports" class="${activePage === 'reports' ? 'active' : ''}" onclick="closeSidebar()">신고</a>
     <a href="/tc-backstage/users" class="${activePage === 'users' ? 'active' : ''}" onclick="closeSidebar()">유저</a>
     <a href="/tc-backstage/shop" class="${activePage === 'shop' ? 'active' : ''}" onclick="closeSidebar()">상점</a>
+    <a href="/tc-backstage/attendance" class="${activePage === 'attendance' ? 'active' : ''}" onclick="closeSidebar()">출석</a>
+  </div>
+  <div class="nav-section">
+    <div class="nav-section-label">매출</div>
     <a href="/tc-backstage/gold-products" class="${activePage === 'gold-products' ? 'active' : ''}" onclick="closeSidebar()">골드상품</a>
     <a href="/tc-backstage/iap-receipts" class="${activePage === 'iap-receipts' ? 'active' : ''}" onclick="closeSidebar()">결제내역</a>
     <a href="/tc-backstage/iap-attempts" class="${activePage === 'iap-attempts' ? 'active' : ''}" onclick="closeSidebar()">검증로그</a>
     <a href="/tc-backstage/iap-consumption" class="${activePage === 'iap-consumption' ? 'active' : ''}" onclick="closeSidebar()">환불요청</a>
-    <a href="/tc-backstage/attendance" class="${activePage === 'attendance' ? 'active' : ''}" onclick="closeSidebar()">출석</a>
     <a href="/tc-backstage/iap-refund-issues" class="${activePage === 'iap-refund-issues' ? 'active' : ''}" onclick="closeSidebar()">환불문제</a>
   </div>
   <div class="nav-section">

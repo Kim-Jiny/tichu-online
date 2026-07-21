@@ -1454,37 +1454,6 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
               state.dealMissPool > 0 &&
               centerRight > dealMissLeftIfFull - 6;
 
-          // My own role (주공 / 친구 / 야당). Self isn't drawn as a table seat,
-          // so surface it here. Friend is shown as soon as it's knowable to me
-          // (I hold the named card) even before the public reveal.
-          String? myRoleLabel;
-          Color myRoleColor = const Color(0xFF5A6B89);
-          if (!isBidding && !game.isSpectator) {
-            final myId = game.playerId;
-            final fc = state.friendCard;
-            final iHoldFriendCard =
-                fc != null &&
-                fc != 'no_friend' &&
-                fc != 'first_trick' &&
-                state.myCards.contains(fc);
-            if (myId.isNotEmpty && state.declarer != null) {
-              if (myId == state.declarer) {
-                myRoleLabel = L10n.of(context).mtDeclarer;
-                myRoleColor = const Color(0xFFFF8A00);
-              } else if (fc == null) {
-                // friend not named yet — role unknown
-              } else if ((state.friendRevealed && myId == state.partner) ||
-                  iHoldFriendCard) {
-                myRoleLabel = L10n.of(context).mtFriend;
-                myRoleColor = const Color(0xFF4CAF50);
-              } else if (fc == 'first_trick' && !state.friendRevealed) {
-                // first-trick friend not decided yet — role unknown
-              } else {
-                myRoleLabel = L10n.of(context).mtOpposition;
-              }
-            }
-          }
-
           final centerContent = Row(
             mainAxisSize: MainAxisSize.min,
             children: [
@@ -1563,38 +1532,6 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
                     ),
                     overflow: TextOverflow.ellipsis,
                   ),
-              ],
-              // My own role badge (나: 주공/친구/야당).
-              if (myRoleLabel != null) ...[
-                const SizedBox(width: 8),
-                Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 8,
-                    vertical: 3,
-                  ),
-                  decoration: BoxDecoration(
-                    color: myRoleColor.withValues(alpha: 0.14),
-                    borderRadius: BorderRadius.circular(8),
-                    border: Border.all(
-                      color: myRoleColor.withValues(alpha: 0.55),
-                    ),
-                  ),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Icon(Icons.person, size: 12, color: myRoleColor),
-                      const SizedBox(width: 3),
-                      Text(
-                        myRoleLabel,
-                        style: TextStyle(
-                          fontSize: 12,
-                          fontWeight: FontWeight.w800,
-                          color: myRoleColor,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
               ],
             ],
           );
@@ -2907,6 +2844,60 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
   // compact tappable chip on the prev-trick button line: point count + up to
   // 5 mini cards + "+N", mirroring the other players' seat display. Tapping
   // opens the same full point-card popup.
+  // My own role chip — only for 주공 / 프렌드 (opposition intentionally shown
+  // as nothing). Friend is surfaced as soon as it's knowable to me (I hold the
+  // named card) even before the public reveal. Returns null when I have no such
+  // role to show.
+  Widget? _buildMyRoleBadge(MightyGameStateData state, GameService game) {
+    if (game.isSpectator) return null;
+    final myId = game.playerId;
+    if (myId.isEmpty || state.declarer == null) return null;
+
+    final String label;
+    final Color color;
+    if (myId == state.declarer) {
+      label = L10n.of(context).mtDeclarer;
+      color = const Color(0xFFFF8A00);
+    } else {
+      final fc = state.friendCard;
+      final iHoldFriendCard =
+          fc != null &&
+          fc != 'no_friend' &&
+          fc != 'first_trick' &&
+          state.myCards.contains(fc);
+      final amFriend =
+          fc != null &&
+          ((state.friendRevealed && myId == state.partner) || iHoldFriendCard);
+      if (!amFriend) return null;
+      label = L10n.of(context).mtFriend;
+      color = const Color(0xFF4CAF50);
+    }
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 6),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.14),
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: color.withValues(alpha: 0.55)),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(Icons.person, size: 13, color: color),
+          const SizedBox(width: 3),
+          Text(
+            label,
+            style: TextStyle(
+              fontSize: 12,
+              fontWeight: FontWeight.w800,
+              color: color,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   Widget _buildMyPointCardStrip(MightyGameStateData state) {
     final me = state.players.cast<MightyPlayer?>().firstWhere(
       (p) => p?.position == 'self',
@@ -4447,7 +4438,7 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
                         child: FittedBox(
                           fit: BoxFit.scaleDown,
                           alignment: Alignment.centerLeft,
-                          child: _buildMyPointCardStrip(state),
+                          child: _buildMyRoleBadge(state, game) ?? _buildMyPointCardStrip(state),
                         ),
                       ),
                     ),
@@ -4538,7 +4529,7 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
                       child: FittedBox(
                         fit: BoxFit.scaleDown,
                         alignment: Alignment.centerLeft,
-                        child: _buildMyPointCardStrip(state),
+                        child: _buildMyRoleBadge(state, game) ?? _buildMyPointCardStrip(state),
                       ),
                     ),
                   ),

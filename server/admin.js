@@ -4378,6 +4378,10 @@ async function handleAdminRoute(req, res, url, pathname, method, lobby, wss, mai
     const qs = new URLSearchParams();
     if (dateF) qs.set('date', dateF);
     if (q) qs.set('q', q);
+    // Preserve the selected week/month so the daily-log pagination doesn't reset
+    // the weekly/monthly panels back to the current period.
+    if (weekParam) qs.set('week', mondayStr);
+    if (monthParam) qs.set('month', monthStr);
     const baseUrl = '/tc-backstage/attendance' + (qs.toString() ? '?' + qs.toString() : '');
 
     const content = `

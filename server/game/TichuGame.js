@@ -936,23 +936,25 @@ class TichuGame {
     const wishCards = hand.filter((c) => getCardValue(c) === wishValue);
     if (wishCards.length === 0) return false; // can't include the called rank
 
-    const trickActive = this.currentTrick.length > 0;
-    // Evaluate one concrete subset exactly as the old loop did.
-    const beats = (subset) => {
-      const combo = getComboType(subset);
-      if (combo.type === COMBO.INVALID) return false;
-      if (combo.isPhoenix && trickActive) combo.value = lastCombo.value + 0.5;
-      return canBeat(lastCombo, combo);
-    };
-    const includesWish = (subset) => subset.some((c) => getCardValue(c) === wishValue);
-
-    // (A) Non-bomb beat: same length only. A non-bomb can never beat a bomb, so
-    // skip when lastCombo is itself a bomb.
-    if (!isBomb(lastCombo)) {
+    // Fast path for the logged hot case: called-rank obligation against a
+    // straight. Instead of enumerating C(14, 5+) subsets and running
+    // getComboType() on each, scan the few possible consecutive windows.
+    if (!isBomb(lastCombo) && lastCombo.type === COMBO.STRAIGHT) {
+      if (this._canFulfillStraightCallAndBeat(lastCombo, hand, wishValue)) return true;
+      // A normal straight cannot win; bombs may still satisfy the call below.
+    } else if (!isBomb(lastCombo)) {
       const L = lastCombo.length;
       const n = hand.length;
       if (L >= 1 && L <= n) {
         const idx = new Array(L);
+        const trickActive = this.currentTrick.length > 0;
+        const beats = (subset) => {
+          const combo = getComboType(subset);
+          if (combo.type === COMBO.INVALID) return false;
+          if (combo.isPhoenix && trickActive) combo.value = lastCombo.value + 0.5;
+          return canBeat(lastCombo, combo);
+        };
+        const includesWish = (subset) => subset.some((c) => getCardValue(c) === wishValue);
         const rec = (start, depth) => {
           if (depth === L) {
             const subset = idx.map((i) => hand[i]);
@@ -967,6 +969,15 @@ class TichuGame {
         if (rec(0, 0)) return true;
       }
     }
+
+    const trickActive = this.currentTrick.length > 0;
+    // Evaluate one concrete subset exactly as the old loop did.
+    const beats = (subset) => {
+      const combo = getComboType(subset);
+      if (combo.type === COMBO.INVALID) return false;
+      if (combo.isPhoenix && trickActive) combo.value = lastCombo.value + 0.5;
+      return canBeat(lastCombo, combo);
+    };
 
     // (B1) Four-of-a-kind bomb that includes the called rank: must be four cards
     // of the called rank.
@@ -1003,6 +1014,33 @@ class TichuGame {
       }
     }
 
+    return false;
+  }
+
+  _canFulfillStraightCallAndBeat(lastCombo, hand, wishValue) {
+    const L = lastCombo.length;
+    if (!L || L < 5) return false;
+    const hasPhoenix = hand.includes('special_phoenix');
+    const present = new Set();
+    for (const c of hand) {
+      if (c === 'special_dragon' || c === 'special_dog' || c === 'special_phoenix') continue;
+      present.add(getCardValue(c));
+    }
+    if (!present.has(wishValue)) return false;
+
+    // Valid straight values are Bird(1) through Ace(14).
+    for (let start = 1; start + L - 1 <= 14; start++) {
+      const high = start + L - 1;
+      if (high <= lastCombo.value) continue;
+      if (wishValue < start || wishValue > high) continue;
+
+      let missing = 0;
+      for (let v = start; v <= high; v++) {
+        if (!present.has(v)) missing++;
+        if (missing > (hasPhoenix ? 1 : 0)) break;
+      }
+      if (missing === 0 || (missing === 1 && hasPhoenix)) return true;
+    }
     return false;
   }
 

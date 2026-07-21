@@ -1885,7 +1885,9 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
                           ? 0.10
                           : (isLandscape ? 0.36 : 0.46),
                     ),
-                    child: isBidding || isKillSelect
+                    child: isBidding
+                        ? _buildBiddingCenterInfo(state)
+                        : isKillSelect
                         ? const SizedBox.shrink()
                         : Transform.translate(
                             offset: Offset(
@@ -3015,6 +3017,49 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
   // number (n/10) and lead suit (when a trick is in progress). Trump counting
   // lives beside the hand instead. Keeps the at-a-glance info in one readable
   // place instead of scattered around the table.
+  // Centre indicator during bidding — mainly for spectators, who have no
+  // bidding panel of their own and otherwise wouldn't see the turn timer.
+  Widget _buildBiddingCenterInfo(MightyGameStateData state) {
+    return Center(
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+        decoration: BoxDecoration(
+          color: Colors.white.withValues(alpha: 0.6),
+          borderRadius: BorderRadius.circular(16),
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Icon(Icons.gavel, size: 20, color: Color(0xFF1565C0)),
+            const SizedBox(height: 4),
+            Text(
+              L10n.of(context).mtBidInProgress,
+              style: const TextStyle(
+                fontSize: 13,
+                fontWeight: FontWeight.bold,
+                color: Color(0xFF5A4038),
+              ),
+            ),
+            if (_remainingSeconds > 0)
+              Padding(
+                padding: const EdgeInsets.only(top: 4),
+                child: Text(
+                  '${_remainingSeconds}s',
+                  style: TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.bold,
+                    color: _remainingSeconds <= 5
+                        ? const Color(0xFFE53935)
+                        : const Color(0xFF8A7A72),
+                  ),
+                ),
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+
   Widget _buildTrickArea(MightyGameStateData state, GameService game) {
     if (state.currentTrick.isEmpty) {
       // During the kitty exchange the declarer works in their own bottom panel;

@@ -2928,6 +2928,9 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
   // place instead of scattered around the table.
   Widget _buildTrickArea(MightyGameStateData state, GameService game) {
     if (state.currentTrick.isEmpty) {
+      // During the kitty exchange the declarer works in their own bottom panel;
+      // everyone else sees the declarer's remaining time here in the centre.
+      final isKittyWait = state.phase == 'kitty_exchange' && !state.isMyTurn;
       return Center(
         child: Container(
           width: 200,
@@ -2939,19 +2942,26 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              const Icon(Icons.style, size: 20, color: Color(0xFF8A7A72)),
+              Icon(
+                isKittyWait ? Icons.swap_horiz : Icons.style,
+                size: 20,
+                color: const Color(0xFF8A7A72),
+              ),
               const SizedBox(height: 4),
               Text(
-                state.isMyTurn
+                isKittyWait
+                    ? L10n.of(context).mtExchangingKitty
+                    : state.isMyTurn
                     ? L10n.of(context).mtYourTurn
                     : L10n.of(context).mtWaiting,
+                textAlign: TextAlign.center,
                 style: const TextStyle(
                   fontSize: 13,
                   fontWeight: FontWeight.bold,
                   color: Color(0xFF5A4038),
                 ),
               ),
-              if (_remainingSeconds > 0 && state.isMyTurn)
+              if (_remainingSeconds > 0 && (state.isMyTurn || isKittyWait))
                 Padding(
                   padding: const EdgeInsets.only(top: 4),
                   child: Text(

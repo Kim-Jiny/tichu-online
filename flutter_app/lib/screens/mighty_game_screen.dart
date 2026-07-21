@@ -1666,7 +1666,7 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
       return const Text(
         'PASS',
         style: TextStyle(
-          fontSize: 9,
+          fontSize: 11,
           fontWeight: FontWeight.w800,
           color: Color(0xFF9E9E9E),
           letterSpacing: 0.5,
@@ -1681,12 +1681,12 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.center,
         children: [
-          SuitIcon(suit: suit, size: 9, color: accent),
-          const SizedBox(width: 1),
+          SuitIcon(suit: suit, size: 11, color: accent),
+          const SizedBox(width: 2),
           Text(
             '$points',
             style: TextStyle(
-              fontSize: 9,
+              fontSize: 11,
               fontWeight: FontWeight.w800,
               color: accent,
             ),
@@ -2118,7 +2118,7 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
       roleLabel = Text(
         L10n.of(context).mtKillExcluded,
         style: const TextStyle(
-          fontSize: 8,
+          fontSize: 10,
           fontWeight: FontWeight.w800,
           color: Color(0xFFD84315),
         ),
@@ -2127,7 +2127,7 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
       roleLabel = Text(
         L10n.of(context).mtDeclarer,
         style: const TextStyle(
-          fontSize: 8,
+          fontSize: 10,
           fontWeight: FontWeight.w800,
           color: Color(0xFFFF8A00),
         ),
@@ -2136,7 +2136,7 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
       roleLabel = Text(
         L10n.of(context).mtFriend,
         style: const TextStyle(
-          fontSize: 8,
+          fontSize: 10,
           fontWeight: FontWeight.w800,
           color: Color(0xFF4CAF50),
         ),
@@ -2164,6 +2164,7 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
             final horizontalPadding = compact ? 5.0 : 7.0;
             final verticalPadding = compact ? 4.0 : 6.0;
             final timeoutHeight = compact ? 11.0 : 12.0;
+            final roleLabelHeight = compact ? 13.0 : 14.0;
             final dotSize = compact ? 5.0 : 6.0;
             final offlineIconSize = compact ? 10.0 : 11.0;
             final nameFontSize = compact ? 10.0 : 11.0;
@@ -2235,7 +2236,7 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
                                 crossAxisAlignment: CrossAxisAlignment.center,
                                 children: [
                                   SizedBox(
-                                    height: timeoutHeight,
+                                    height: roleLabelHeight,
                                     child: Center(child: roleLabel),
                                   ),
                                   Row(

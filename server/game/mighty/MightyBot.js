@@ -1605,6 +1605,13 @@ function decideFollowCard(game, botId, legalCards) {
   const winnerIsGov = isGovernment(game, currentWinner);
   const winningCards = legalCards.filter(cardId => canBeatCurrentWinner(game, cardId));
 
+  // A government bot (declarer / friend) knows its own partner even before the
+  // reveal (full-info), so it must recognise the unrevealed friend's win as an
+  // ally win — otherwise the declarer over-trumps its own friend who is already
+  // winning a non-trump-lead trick with a ruff. Opposition bots stay
+  // reveal-gated (they shouldn't "know" who the friend is yet).
+  const winnerIsAllyForGov = isGovernmentSelf(game, currentWinner);
+
   // First-trick-friend (초구 프렌즈): the first-trick winner becomes declarer's
   // partner. Any non-declarer bot holding a card that beats the current
   // winner actively tries — gates on "sureWinner only" or "last player only"
@@ -1616,7 +1623,7 @@ function decideFollowCard(game, botId, legalCards) {
   }
 
   const winnerOnOurTeam = botIsGov
-    ? winnerIsGov
+    ? winnerIsAllyForGov
     : (game.friendRevealed ? !winnerIsGov : currentWinner !== game.declarer);
 
   const pick = botIsGov

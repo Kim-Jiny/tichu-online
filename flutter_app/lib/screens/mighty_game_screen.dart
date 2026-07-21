@@ -1888,7 +1888,7 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
                     child: isBidding
                         ? _buildBiddingCenterInfo(state)
                         : isKillSelect
-                        ? const SizedBox.shrink()
+                        ? _buildKillCenterInfo(state)
                         : Transform.translate(
                             offset: Offset(
                               0,
@@ -2045,8 +2045,12 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
                         ? 0.10
                         : (isLandscape ? 0.36 : 0.46),
                   ),
-                  child: isBidding || isKillSelect
+                  child: isBidding
                       ? const SizedBox.shrink()
+                      : isKillSelect
+                      ? (state.isMyTurn
+                            ? const SizedBox.shrink()
+                            : _buildKillCenterInfo(state))
                       : Transform.translate(
                           offset: Offset(
                             0,
@@ -3038,6 +3042,63 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
                 fontSize: 13,
                 fontWeight: FontWeight.bold,
                 color: Color(0xFF5A4038),
+              ),
+            ),
+            if (_remainingSeconds > 0)
+              Padding(
+                padding: const EdgeInsets.only(top: 4),
+                child: Text(
+                  '${_remainingSeconds}s',
+                  style: TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.bold,
+                    color: _remainingSeconds <= 5
+                        ? const Color(0xFFE53935)
+                        : const Color(0xFF8A7A72),
+                  ),
+                ),
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  // Centre indicator during the 6p kill-select phase — shown to everyone but
+  // the declarer (who has their own kill panel), so others/spectators know the
+  // declarer is choosing a kill target and how long they have.
+  Widget _buildKillCenterInfo(MightyGameStateData state) {
+    final declarerName = state.declarer == null
+        ? ''
+        : (state.players
+                  .where((p) => p.id == state.declarer)
+                  .map((p) => p.name)
+                  .firstOrNull ??
+              '');
+    return Center(
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+        decoration: BoxDecoration(
+          color: Colors.white.withValues(alpha: 0.6),
+          borderRadius: BorderRadius.circular(16),
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Icon(Icons.dangerous, size: 20, color: Color(0xFFD84315)),
+            const SizedBox(height: 4),
+            SizedBox(
+              width: 180,
+              child: Text(
+                L10n.of(context).mtKillPhaseWait(declarerName),
+                textAlign: TextAlign.center,
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+                style: const TextStyle(
+                  fontSize: 13,
+                  fontWeight: FontWeight.bold,
+                  color: Color(0xFF5A4038),
+                ),
               ),
             ),
             if (_remainingSeconds > 0)
@@ -5063,32 +5124,9 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
       '2',
     ];
 
-    if (!state.isMyTurn) {
-      final declarerName =
-          state.players
-              .where((p) => p.id == state.declarer)
-              .map((p) => p.name)
-              .firstOrNull ??
-          '...';
-      return Container(
-        width: double.infinity,
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-        decoration: BoxDecoration(
-          color: Colors.white.withValues(alpha: 0.92),
-          borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: const Color(0xFFE0D8D4)),
-        ),
-        child: Text(
-          l10n.mtKillPhaseWait(declarerName),
-          textAlign: TextAlign.center,
-          style: const TextStyle(
-            fontSize: 13,
-            fontWeight: FontWeight.w700,
-            color: Color(0xFF5A4038),
-          ),
-        ),
-      );
-    }
+    // Non-declarers: the "declarer is choosing a kill" note is shown in the
+    // centre trick box, so nothing is needed here above the hand.
+    if (!state.isMyTurn) return const SizedBox.shrink();
 
     return Container(
       width: double.infinity,
@@ -5115,6 +5153,17 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
                   ),
                 ),
               ),
+              if (_remainingSeconds > 0)
+                Text(
+                  '${_remainingSeconds}s',
+                  style: TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w800,
+                    color: _remainingSeconds <= 5
+                        ? const Color(0xFFE53935)
+                        : const Color(0xFF8A7A72),
+                  ),
+                ),
             ],
           ),
           const SizedBox(height: 8),

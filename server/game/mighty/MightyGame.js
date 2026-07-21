@@ -1427,6 +1427,8 @@ class MightyGame {
       lastKillEvent: this.lastKillEvent,
       remainingTrumps: cache.remainingTrumps,
       tricks: cache.tricks,
+      // Let spectators mark which of the declarer's cards came from the kitty.
+      kittyCards: this.state === 'kitty_exchange' ? this.kitty : [],
     };
   }
 

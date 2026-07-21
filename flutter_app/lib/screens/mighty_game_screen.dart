@@ -5114,11 +5114,14 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
               !isJokerCallCard &&
               state?.friendCard != null &&
               cardId == state!.friendCard;
+          // Mark kitty (바닥) cards whenever we're viewing them during the
+          // exchange — including spectators/other players, not just the
+          // declarer (isKitty requires it to be my turn).
           final isKittyCard =
               !isMightyCard &&
               !isJokerCallCard &&
               !isFriendCard &&
-              isKitty &&
+              state?.phase == 'kitty_exchange' &&
               (state?.kittyCards.contains(cardId) ?? false);
           // Post-kill/suicide: cards received via redistribution get the move_up badge
           // for the receiving player (similar to declarer's kitty-pickup highlight).

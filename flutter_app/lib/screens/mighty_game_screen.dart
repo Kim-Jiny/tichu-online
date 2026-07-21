@@ -2191,13 +2191,13 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
                   ),
                   decoration: const BoxDecoration(),
                   child: Center(
-                    child: FittedBox(
-                      fit: BoxFit.scaleDown,
-                      alignment: Alignment.topCenter,
-                      child: Column(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Stack(
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        FittedBox(
+                          fit: BoxFit.scaleDown,
+                          alignment: Alignment.topCenter,
+                          child: Stack(
                         clipBehavior: Clip.none,
                         children: [
                           AnimatedContainer(
@@ -2390,9 +2390,20 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
                             ),
                         ],
                       ),
-                        if (hasPointCards) _buildSeatPointCards(player),
+                        ),
+                        if (hasPointCards)
+                          SizedBox(
+                            height: 0,
+                            child: OverflowBox(
+                              minWidth: 0,
+                              maxWidth: double.infinity,
+                              minHeight: 0,
+                              maxHeight: double.infinity,
+                              alignment: Alignment.topCenter,
+                              child: _buildSeatPointCards(player),
+                            ),
+                          ),
                       ],
-                    ),
                     ),
                   ),
                 ),
@@ -2651,26 +2662,50 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
   // profile (replaces the old clustered opposition bar). Constrained width so a
   // large capture wraps to a second row instead of overflowing the seat.
   Widget _buildSeatPointCards(MightyPlayer player) {
-    if (player.pointCards.isEmpty) return const SizedBox.shrink();
+    final cards = player.pointCards;
+    if (cards.isEmpty) return const SizedBox.shrink();
+    const maxShown = 5;
+    final shown = cards.take(maxShown).toList();
+    final extra = cards.length - shown.length;
+    // Single row (capped at 5 cards + "+N") so a big capture doesn't make the
+    // strip tall and shrink the seat profile via the FittedBox scale-down.
+    final items = <Widget>[
+      for (final cardId in shown)
+        PlayingCard(
+          cardId: _displayCardId(cardId),
+          width: 15,
+          height: 21,
+          isInteractive: false,
+        ),
+      if (extra > 0)
+        Container(
+          width: 17,
+          height: 21,
+          alignment: Alignment.center,
+          decoration: BoxDecoration(
+            color: const Color(0xFF5A4038),
+            borderRadius: BorderRadius.circular(3),
+          ),
+          child: Text(
+            '+$extra',
+            style: const TextStyle(
+              fontSize: 8,
+              fontWeight: FontWeight.w800,
+              color: Colors.white,
+            ),
+          ),
+        ),
+    ];
     return Padding(
       padding: const EdgeInsets.only(top: 3),
-      child: SizedBox(
-        width: 92,
-        child: Wrap(
-          alignment: WrapAlignment.center,
-          spacing: 2,
-          runSpacing: 2,
-          children: player.pointCards
-              .map(
-                (cardId) => PlayingCard(
-                  cardId: _displayCardId(cardId),
-                  width: 16,
-                  height: 22,
-                  isInteractive: false,
-                ),
-              )
-              .toList(),
-        ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          for (var i = 0; i < items.length; i++) ...[
+            if (i > 0) const SizedBox(width: 2),
+            items[i],
+          ],
+        ],
       ),
     );
   }

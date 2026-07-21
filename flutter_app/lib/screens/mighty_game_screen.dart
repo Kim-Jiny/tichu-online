@@ -528,7 +528,10 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
                           _dismissedDealMissKey !=
                               '${state.lastDealMissEvent!.round}-${state.lastDealMissEvent!.playerId}')
                         _buildDealMissRevealOverlay(state.lastDealMissEvent!),
+                      // The declarer chose the kill target, so they don't need
+                      // the reveal popup — only show it to everyone else.
                       if (state.lastKillEvent != null &&
+                          game.playerId != state.declarer &&
                           _dismissedKillKey !=
                               '${state.round}-${state.lastKillEvent!.targetCardId}')
                         _buildKillRevealOverlay(state, state.lastKillEvent!),

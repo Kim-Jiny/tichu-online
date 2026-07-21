@@ -7088,6 +7088,52 @@ async function listAttendanceLog({ date, search, page = 1, limit = 50 } = {}) {
   }
 }
 
+// Attendance breakdown for the stats page: weekly / monthly rollups (KST-bucketed,
+// COUNT(DISTINCT nickname) so a user counts once per week/month) plus the users who
+// attended within the range, ranked by claim count. dateFrom/dateTo are ISO strings.
+async function getAttendanceBreakdown(dateFrom, dateTo, { topLimit = 50 } = {}) {
+  const from = dateFrom || new Date(Date.now() - 29 * 24 * 60 * 60 * 1000).toISOString();
+  const to = dateTo || new Date().toISOString();
+  const lim = Math.max(1, Math.min(parseInt(topLimit, 10) || 50, 200));
+  try {
+    // DATE_TRUNC on the KST wall clock, re-attaching Seoul tz so pg returns the
+    // correct UTC instant (same trick as getDetailedAdminStats' kstBucketExpr).
+    const seriesSql = (unit) => `
+      SELECT (DATE_TRUNC('${unit}', (created_at) AT TIME ZONE 'UTC' AT TIME ZONE 'Asia/Seoul')) AT TIME ZONE 'Asia/Seoul' AS bucket_time,
+             COUNT(DISTINCT nickname) AS unique_claims,
+             COUNT(*) AS total_claims,
+             COUNT(*) FILTER (WHERE description = 'day_7') AS finales,
+             COALESCE(SUM(gold_delta), 0) AS gold
+      FROM tc_gold_history
+      WHERE source = 'attendance'
+        AND created_at >= $1 AND created_at < $2
+      GROUP BY 1 ORDER BY 1`;
+    const [weekly, monthly, topUsers] = await Promise.all([
+      pool.query(seriesSql('week'), [from, to]),
+      pool.query(seriesSql('month'), [from, to]),
+      pool.query(`
+        SELECT h.nickname,
+               COUNT(*) AS claims,
+               COUNT(*) FILTER (WHERE h.description = 'day_7') AS finales,
+               COALESCE(SUM(h.gold_delta), 0) AS gold,
+               MAX(h.created_at) AS last_claim,
+               COALESCE(a.current_streak, 0) AS current_streak,
+               COALESCE(a.total_claims, 0) AS total_claims
+        FROM tc_gold_history h
+        LEFT JOIN tc_attendance a ON a.nickname = h.nickname
+        WHERE h.source = 'attendance'
+          AND h.created_at >= $1 AND h.created_at < $2
+        GROUP BY h.nickname, a.current_streak, a.total_claims
+        ORDER BY claims DESC, last_claim DESC
+        LIMIT ${lim}`, [from, to]),
+    ]);
+    return { weekly: weekly.rows, monthly: monthly.rows, topUsers: topUsers.rows };
+  } catch (err) {
+    console.error('Get attendance breakdown error:', err.message);
+    return { weekly: [], monthly: [], topUsers: [] };
+  }
+}
+
 // Single-user attendance summary for the user detail page.
 async function getAttendanceForNickname(nickname) {
   try {
@@ -7551,6 +7597,7 @@ module.exports = {
   claimAttendance,
   getAttendanceDashboardStats,
   listAttendanceLog,
+  getAttendanceBreakdown,
   getAttendanceForNickname,
   getIapAttemptById,
   pool,

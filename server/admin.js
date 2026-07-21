@@ -5,7 +5,7 @@ const {
   verifyAdmin, getInquiries, getInquiryById, resolveInquiry,
   getReports, getReportGroup, updateReportGroupStatus,
   getUsers, getUserDetail, getAdminGoldHistory, getAdminPurchaseHistory, deleteUser, getDashboardStats, getDashboardActivityTopPlayers, getAdminRecentMatches, setChatBan, setAdminMemo, getRecentMatches, adminAdjustGold, adminAdjustExp, setUserAdmin,
-  getAttendanceDashboardStats, listAttendanceLog, getAttendanceForNickname,
+  getAttendanceDashboardStats, listAttendanceLog, getAttendanceBreakdown, getAttendanceForNickname,
   getDetailedAdminStats,
   getAllShopItemsAdmin, addShopItem, updateShopItem, deleteShopItem, getShopItemById,
   getAllGoldProductsAdmin, getGoldProductById, addGoldProduct, updateGoldProduct, deleteGoldProduct,
@@ -1902,6 +1902,10 @@ async function handleAdminRoute(req, res, url, pathname, method, lobby, wss, mai
     const attSum = stats.attendanceSummary || {};
     const prevIapTot = ((prevStats.iapSummary || {}).total) || {};
     const prevAttSum = prevStats.attendanceSummary || {};
+    const attBreakdown = await getAttendanceBreakdown(from.toISOString(), to.toISOString());
+    const attWeekly = attBreakdown.weekly || [];
+    const attMonthly = attBreakdown.monthly || [];
+    const attTopUsers = attBreakdown.topUsers || [];
     const won = (n) => `₩${formatNumber(Math.round(Number(n) || 0))}`;
     const pct = (r) => `${Math.round((Number(r) || 0) * 100)}%`;
     const fromValue = formatDateInput(from);
@@ -2237,6 +2241,37 @@ async function handleAdminRoute(req, res, url, pathname, method, lobby, wss, mai
         </table></div>`
       : '<div class="empty">기간 내 출석 데이터가 없습니다</div>';
 
+    const attWeekLabel = (bt) => { try { return _kstDateFmt.format(new Date(bt)); } catch (_) { return String(bt); } };
+    const attMonthLabel = (bt) => { try { return _kstDateFmt.format(new Date(bt)).slice(0, 7); } catch (_) { return String(bt); } };
+    const attRollupTable = (rows, labelFn, firstCol) => rows.length > 0
+      ? `<div class="table-wrap"><table>
+          <tr><th>${firstCol}</th><th>출석 인원</th><th>총 출석</th><th>7일차 완주</th><th>지급 골드</th></tr>
+          ${rows.map(row => `<tr>
+            <td style="font-weight:700">${escapeHtml(labelFn(row.bucket_time))}</td>
+            <td style="font-weight:700;color:#2e8b57">${formatNumber(row.unique_claims || 0)}</td>
+            <td>${formatNumber(row.total_claims || 0)}</td>
+            <td>${formatNumber(row.finales || 0)}</td>
+            <td style="color:#b35b19;font-weight:700">${formatNumber(row.gold || 0)}</td>
+          </tr>`).join('')}
+        </table></div>`
+      : '<div class="empty">기간 내 출석 데이터가 없습니다</div>';
+    const attWeeklyTable = attRollupTable(attWeekly, attWeekLabel, '주 시작(월요일)');
+    const attMonthlyTable = attRollupTable(attMonthly, attMonthLabel, '월');
+    const attUsersTable = attTopUsers.length > 0
+      ? `<div class="table-wrap"><table>
+          <tr><th>닉네임</th><th>기간 출석</th><th>7일완주</th><th>현재 연속</th><th>누적 출석</th><th>지급 골드</th><th>최근 출석</th></tr>
+          ${attTopUsers.map(u => `<tr>
+            <td><a href="/tc-backstage/users/${encodeURIComponent(u.nickname || '')}" style="font-weight:700;color:#5f62d6;text-decoration:none">${escapeHtml(u.nickname || '-')}</a></td>
+            <td style="font-weight:700">${formatNumber(u.claims || 0)}회</td>
+            <td>${formatNumber(u.finales || 0)}</td>
+            <td style="font-weight:700;color:#2e8b57">${formatNumber(u.current_streak || 0)}일</td>
+            <td>${formatNumber(u.total_claims || 0)}</td>
+            <td style="color:#b35b19;font-weight:700">${formatNumber(u.gold || 0)}</td>
+            <td style="color:#8a8f98;font-size:12px">${escapeHtml(formatDate(u.last_claim))}</td>
+          </tr>`).join('')}
+        </table></div>`
+      : '<div class="empty">기간 내 출석한 유저가 없습니다</div>';
+
     const attendanceTabContent = `
       ${summaryStrip([
         { label: '기간 출석 인원', value: formatNumber(attSum.unique_claims || 0), valueColor: '#2e8b57', meta: `${formatNumber(attSum.total_claims || 0)}회 출석` },
@@ -2248,7 +2283,19 @@ async function handleAdminRoute(req, res, url, pathname, method, lobby, wss, mai
       <div class="card-actions">
         ${(statActions.attendance || []).map((action) => `<a href="${action.href}" class="btn btn-secondary">${escapeHtml(action.label)}</a>`).join('')}
       </div>
-      <div class="subtab-copy">출석 분석은 7일 사이클 출석 보상의 기간 흐름을 보여줍니다. 1~6일차 50G, 7일차 1,000G. 광고 시청 후 출석되며 KST 자정 단위로 1일 1회만 가능합니다.</div>
+      <div class="subtab-copy">출석 분석은 7일 사이클 출석 보상의 흐름을 주간·월간·일자별로 함께 보여줍니다. 1~6일차 50G, 7일차 1,000G. 광고 시청 후 출석되며 KST 자정 단위로 1일 1회만 가능합니다. 주간/월간 "출석 인원"은 KST 기준 고유 유저 수(한 유저는 그 주·달에 1명으로 집계)입니다.</div>
+      <div class="grid-2col">
+        <div class="card">
+          <h3>주간 출석</h3>
+          <div style="height:8px"></div>
+          ${attWeeklyTable}
+        </div>
+        <div class="card">
+          <h3>월간 출석</h3>
+          <div style="height:8px"></div>
+          ${attMonthlyTable}
+        </div>
+      </div>
       <div class="grid-2col">
         <div class="card">
           <h3>일자별 출석</h3>
@@ -2266,6 +2313,11 @@ async function handleAdminRoute(req, res, url, pathname, method, lobby, wss, mai
             ${metricLine('완주율(7일차/출석인원)', (attSum.unique_claims > 0 ? formatPercent((Number(attSum.finales || 0) * 100) / Number(attSum.unique_claims), 1) : '-'))}
           </div>
         </div>
+      </div>
+      <div class="card">
+        <h3>출석 유저 <span style="font-size:13px;color:#8a8f98;font-weight:600">· 기간 내 출석 많은 순 상위 ${attTopUsers.length}명</span></h3>
+        <div style="height:8px"></div>
+        ${attUsersTable}
       </div>
     `;
 

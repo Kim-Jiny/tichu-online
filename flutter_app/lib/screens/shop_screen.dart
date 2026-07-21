@@ -18,6 +18,9 @@ class ShopScreen extends StatefulWidget {
 
 class _ShopScreenState extends State<ShopScreen> {
   final _inventoryTabController = ValueNotifier<int>(0);
+  // Item keys with an in-flight use/equip action, to disable the button and
+  // block rapid double-taps (a consumable could otherwise be spent twice).
+  final Set<String> _busyItemKeys = {};
   int _todayAdCount = 0;
   bool _adLoading = false;
   RewardedAd? _rewardedAd;
@@ -1228,15 +1231,17 @@ class _ShopScreenState extends State<ShopScreen> {
                           SizedBox(
                             height: 30,
                             child: ElevatedButton(
-                              onPressed: () {
-                                if (effectType == 'nickname_change') {
-                                  _showNicknameChangeDialog(context, game);
-                                } else if (isConsumable) {
-                                  game.useItem(itemKey);
-                                } else {
-                                  game.equipItem(itemKey);
-                                }
-                              },
+                              onPressed: _busyItemKeys.contains(itemKey)
+                                  ? null
+                                  : () {
+                                      if (effectType == 'nickname_change') {
+                                        _showNicknameChangeDialog(context, game);
+                                      } else if (isConsumable) {
+                                        _runItemAction(itemKey, () => game.useItem(itemKey));
+                                      } else {
+                                        _runItemAction(itemKey, () => game.equipItem(itemKey));
+                                      }
+                                    },
                               style: ElevatedButton.styleFrom(
                                 backgroundColor: isConsumable
                                     ? const Color(0xFFFFE0B2)
@@ -1248,10 +1253,19 @@ class _ShopScreenState extends State<ShopScreen> {
                                 minimumSize: const Size(0, 30),
                                 tapTargetSize: MaterialTapTargetSize.shrinkWrap,
                               ),
-                              child: Text(
-                                isConsumable ? l10n.shopButtonUse : l10n.shopButtonEquip,
-                                style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w700),
-                              ),
+                              child: _busyItemKeys.contains(itemKey)
+                                  ? const SizedBox(
+                                      width: 14,
+                                      height: 14,
+                                      child: CircularProgressIndicator(
+                                        strokeWidth: 2,
+                                        color: Color(0xFF4A3A33),
+                                      ),
+                                    )
+                                  : Text(
+                                      isConsumable ? l10n.shopButtonUse : l10n.shopButtonEquip,
+                                      style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w700),
+                                    ),
                             ),
                           ),
                       ],
@@ -1264,6 +1278,18 @@ class _ShopScreenState extends State<ShopScreen> {
         ),
       ),
     );
+  }
+
+  // Run a use/equip action with a short busy window so a double-tap can't fire
+  // it twice before the server round-trip lands (the item list rebuilds on the
+  // result, which clears any stale busy state via the delayed removal below).
+  void _runItemAction(String itemKey, VoidCallback action) {
+    if (_busyItemKeys.contains(itemKey)) return;
+    setState(() => _busyItemKeys.add(itemKey));
+    action();
+    Future.delayed(const Duration(milliseconds: 1200), () {
+      if (mounted) setState(() => _busyItemKeys.remove(itemKey));
+    });
   }
 
   // Fallback chain: server-driven visual (admin-editable) → legacy hardcoded

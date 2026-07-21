@@ -315,16 +315,30 @@ class _DraggableChatPanelState extends State<DraggableChatPanel> {
             GestureDetector(
               onTap: () =>
                   setState(() => _showOpacitySlider = !_showOpacitySlider),
-              child: Icon(
-                Icons.opacity,
-                color: _showOpacitySlider ? Colors.white : Colors.white70,
-                size: 19,
+              behavior: HitTestBehavior.opaque,
+              child: SizedBox(
+                width: 40,
+                height: 40,
+                child: Center(
+                  child: Icon(
+                    Icons.opacity,
+                    color: _showOpacitySlider ? Colors.white : Colors.white70,
+                    size: 19,
+                  ),
+                ),
               ),
             ),
-            const SizedBox(width: 12),
+            const SizedBox(width: 4),
             GestureDetector(
               onTap: widget.onClose,
-              child: const Icon(Icons.close, color: Colors.white, size: 20),
+              behavior: HitTestBehavior.opaque,
+              child: const SizedBox(
+                width: 40,
+                height: 40,
+                child: Center(
+                  child: Icon(Icons.close, color: Colors.white, size: 20),
+                ),
+              ),
             ),
           ],
         ),

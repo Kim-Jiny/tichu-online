@@ -74,7 +74,39 @@ class _GoldShopScreenState extends State<GoldShopScreen> {
 
   void _handleSuccess(int granted, int newGold) {
     if (!mounted) return;
-    _toast(granted > 0 ? '$granted 골드가 지급되었습니다!' : '이미 처리된 결제입니다.');
+    if (granted <= 0) {
+      _toast('이미 처리된 결제입니다.');
+      return;
+    }
+    // Real-money purchase deserves a clear confirmation (not just a 3s toast),
+    // and should surface the new balance.
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Icon(Icons.check_circle, color: Color(0xFF66BB6A), size: 52),
+            const SizedBox(height: 14),
+            const Text('결제 완료',
+                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Color(0xFF5A4038))),
+            const SizedBox(height: 8),
+            Text('+$granted 골드가 지급되었습니다',
+                style: const TextStyle(fontSize: 15, color: Color(0xFF5A4038))),
+            const SizedBox(height: 4),
+            Text('보유 골드 $newGold',
+                style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: Color(0xFFB35B19))),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(),
+            child: const Text('확인'),
+          ),
+        ],
+      ),
+    );
   }
 
   void _handleError(String message) {
@@ -267,7 +299,10 @@ class _GoldShopScreenState extends State<GoldShopScreen> {
                   trailing: ElevatedButton(
                     onPressed:
                         (busy || pd == null) ? null : () => _buy(p),
-                    child: busy
+                    // Spinner both while the purchase is in-flight AND while the
+                    // store price is still resolving (pd == null) — clearer than
+                    // a disabled "..." that looks broken.
+                    child: (busy || pd == null)
                         ? const SizedBox(
                             width: 18,
                             height: 18,

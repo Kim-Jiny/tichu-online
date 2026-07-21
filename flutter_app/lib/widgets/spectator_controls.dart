@@ -34,12 +34,13 @@ class SpectatorActionButton extends StatelessWidget {
   Widget build(BuildContext context) {
     return GestureDetector(
       onTap: onTap,
+      behavior: HitTestBehavior.opaque,
       child: Stack(
         clipBehavior: Clip.none,
         children: [
           AnimatedContainer(
             duration: const Duration(milliseconds: 180),
-            padding: const EdgeInsets.all(8),
+            padding: const EdgeInsets.all(11),
             decoration: BoxDecoration(
               color: active
                   ? _kTextPrimary.withValues(alpha: 0.92)

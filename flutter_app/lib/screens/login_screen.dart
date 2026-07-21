@@ -630,22 +630,27 @@ class _LoginScreenState extends State<LoginScreen> {
   }) {
     return GestureDetector(
       onTap: _isConnecting ? null : onTap,
-      child: Container(
-        width: 56,
-        height: 56,
-        decoration: BoxDecoration(
-          color: backgroundColor,
-          borderRadius: BorderRadius.circular(16),
-          border: borderColor != null ? Border.all(color: borderColor) : null,
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withValues(alpha: 0.1),
-              blurRadius: 8,
-              offset: const Offset(0, 2),
-            ),
-          ],
+      // Dim while connecting so the disabled state is visible (matches the main
+      // login button), preventing confused repeat taps during the handshake.
+      child: Opacity(
+        opacity: _isConnecting ? 0.5 : 1.0,
+        child: Container(
+          width: 56,
+          height: 56,
+          decoration: BoxDecoration(
+            color: backgroundColor,
+            borderRadius: BorderRadius.circular(16),
+            border: borderColor != null ? Border.all(color: borderColor) : null,
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.1),
+                blurRadius: 8,
+                offset: const Offset(0, 2),
+              ),
+            ],
+          ),
+          child: Center(child: child),
         ),
-        child: Center(child: child),
       ),
     );
   }

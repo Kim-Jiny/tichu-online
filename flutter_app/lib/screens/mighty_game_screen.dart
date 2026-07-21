@@ -486,10 +486,6 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
                       Column(
                         children: [
                           _buildTopBar(state, game),
-                          if (state.phase == 'playing' ||
-                              state.phase == 'trick_end' ||
-                              state.phase == 'round_end')
-                            _buildOppositionPointBar(state),
                           Expanded(child: _buildActiveBoardStage(state, game)),
                         ],
                       ),
@@ -1305,6 +1301,9 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
         ? '$friendCardRank$friendSuffixText'
         : '${friendSpecialText ?? ''}$friendSuffixText';
 
+    final showTrumpCounter =
+        state.remainingTrumps != null && game.hasMightyTrumpCounter;
+
     // Estimate the center content's width using rough per-character widths.
     // CJK glyphs are roughly em-wide; ASCII a bit narrower. Used only to decide
     // whether the right-side deal-miss chip would overlap the centered info,
@@ -1465,6 +1464,11 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
               // Center content sits at the true row center regardless of the
               // side chips' widths.
               centerContent,
+              if (showTrumpCounter)
+                Align(
+                  alignment: Alignment.centerLeft,
+                  child: _buildTrumpCounterLabel(state),
+                ),
               if (dealMissChip != null)
                 Align(
                   alignment: Alignment.centerRight,
@@ -2083,29 +2087,6 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
           ),
         if (showBottomOverlay)
           Align(alignment: Alignment.bottomCenter, child: bottomOverlay),
-        // Remaining-trump counter, parked to the left of the hand (only if the
-        // player owns the trump-counter item).
-        if (showBottomOverlay &&
-            state.remainingTrumps != null &&
-            game.hasMightyTrumpCounter)
-          Positioned(
-            left: 8,
-            bottom: game.isSpectator ? 116 : 150,
-            child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
-              decoration: BoxDecoration(
-                color: Colors.white.withValues(alpha: 0.92),
-                borderRadius: BorderRadius.circular(12),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withValues(alpha: 0.08),
-                    blurRadius: 6,
-                  ),
-                ],
-              ),
-              child: _buildTrumpCounterLabel(state),
-            ),
-          ),
       ],
     );
   }
@@ -2210,7 +2191,10 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
                   ),
                   decoration: const BoxDecoration(),
                   child: Center(
-                    child: FittedBox(
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        FittedBox(
                       fit: BoxFit.scaleDown,
                       alignment: Alignment.topCenter,
                       child: Stack(
@@ -2406,6 +2390,9 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
                             ),
                         ],
                       ),
+                    ),
+                        if (hasPointCards) _buildSeatPointCards(player),
+                      ],
                     ),
                   ),
                 ),
@@ -2660,76 +2647,30 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
     return 315.0;
   }
 
-  Widget _buildOppositionPointBar(MightyGameStateData state) {
-    // Collect all opposition point cards
-    final oppCards = <String>[];
-    int oppPoints = 0;
-    for (final p in state.players) {
-      final isGovt =
-          p.id == state.declarer ||
-          (state.friendRevealed && p.id == state.partner);
-      if (!isGovt) {
-        oppCards.addAll(p.pointCards);
-        oppPoints += p.pointCount;
-      }
-    }
-    final bidPoints = (state.currentBid['points'] is num)
-        ? (state.currentBid['points'] as num).toInt()
-        : 13;
-    // Opposition needs (20 - bidPoints + 1) to defeat declarer
-    final oppTarget = 20 - bidPoints + 1;
-
-    return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 8),
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-      decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: 0.85),
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: const Color(0xFFE0D8D4)),
-      ),
-      child: Row(
-        children: [
-          // Label with opposition points captured (e.g. "야당 13")
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-            decoration: BoxDecoration(
-              color: oppPoints >= oppTarget
-                  ? const Color(0xFFE53935)
-                  : const Color(0xFF8A7A72),
-              borderRadius: BorderRadius.circular(6),
-            ),
-            child: Text(
-              '${L10n.of(context).mtOpposition} $oppPoints',
-              style: const TextStyle(
-                fontSize: 11,
-                fontWeight: FontWeight.bold,
-                color: Colors.white,
-              ),
-            ),
-          ),
-          const SizedBox(width: 6),
-          // Scrollable card list
-          Expanded(
-            child: SingleChildScrollView(
-              scrollDirection: Axis.horizontal,
-              child: Row(
-                children: oppCards
-                    .map(
-                      (cardId) => Padding(
-                        padding: const EdgeInsets.only(right: 3),
-                        child: PlayingCard(
-                          cardId: _displayCardId(cardId),
-                          width: 24,
-                          height: 34,
-                          isInteractive: false,
-                        ),
-                      ),
-                    )
-                    .toList(),
-              ),
-            ),
-          ),
-        ],
+  // Compact strip of ONE player's captured point cards, shown under their seat
+  // profile (replaces the old clustered opposition bar). Constrained width so a
+  // large capture wraps to a second row instead of overflowing the seat.
+  Widget _buildSeatPointCards(MightyPlayer player) {
+    if (player.pointCards.isEmpty) return const SizedBox.shrink();
+    return Padding(
+      padding: const EdgeInsets.only(top: 3),
+      child: SizedBox(
+        width: 92,
+        child: Wrap(
+          alignment: WrapAlignment.center,
+          spacing: 2,
+          runSpacing: 2,
+          children: player.pointCards
+              .map(
+                (cardId) => PlayingCard(
+                  cardId: _displayCardId(cardId),
+                  width: 16,
+                  height: 22,
+                  isInteractive: false,
+                ),
+              )
+              .toList(),
+        ),
       ),
     );
   }

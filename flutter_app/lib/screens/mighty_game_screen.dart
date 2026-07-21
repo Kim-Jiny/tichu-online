@@ -1672,7 +1672,7 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
       return const Text(
         'PASS',
         style: TextStyle(
-          fontSize: 11,
+          fontSize: 13,
           fontWeight: FontWeight.w800,
           color: Color(0xFF9E9E9E),
           letterSpacing: 0.5,
@@ -1687,12 +1687,12 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.center,
         children: [
-          SuitIcon(suit: suit, size: 11, color: accent),
-          const SizedBox(width: 2),
+          SuitIcon(suit: suit, size: 13, color: accent),
+          const SizedBox(width: 3),
           Text(
             '$points',
             style: TextStyle(
-              fontSize: 11,
+              fontSize: 13,
               fontWeight: FontWeight.w800,
               color: accent,
             ),
@@ -2170,7 +2170,7 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
             final horizontalPadding = compact ? 5.0 : 7.0;
             final verticalPadding = compact ? 4.0 : 6.0;
             final timeoutHeight = compact ? 11.0 : 12.0;
-            final roleLabelHeight = compact ? 13.0 : 14.0;
+            final roleLabelHeight = compact ? 15.0 : 16.0;
             final dotSize = compact ? 5.0 : 6.0;
             final offlineIconSize = compact ? 10.0 : 11.0;
             final nameFontSize = compact ? 10.0 : 11.0;

@@ -3147,10 +3147,10 @@ class _SKGameScreenState extends State<SKGameScreen> {
                   TextAlign align = TextAlign.center,
                   FontWeight fontWeight = FontWeight.w600,
                   Color color = const Color(0xFF5A4038),
-                  double fontSize = 10,
+                  double fontSize = 12,
                   EdgeInsets padding = const EdgeInsets.symmetric(
                     horizontal: 3,
-                    vertical: 8,
+                    vertical: 9,
                   ),
                 }) {
                   return Padding(
@@ -3180,22 +3180,23 @@ class _SKGameScreenState extends State<SKGameScreen> {
                   children: [
                     TableRow(
                       decoration: const BoxDecoration(
+                        color: Color(0xFFFFF1EA),
                         border: Border(
-                          bottom: BorderSide(color: Color(0xFFE4DBD6), width: 1),
+                          bottom: BorderSide(color: Color(0xFFF0D9CB), width: 1),
                         ),
                       ),
                       children: [
                         cell(
                           'R',
                           fontWeight: FontWeight.w800,
-                          fontSize: 11,
+                          fontSize: 12,
                           color: const Color(0xFFC96E34),
                         ),
                         ...state.players.map(
                           (p) => cell(
                             p.name.length > 4 ? p.name.substring(0, 4) : p.name,
                             fontWeight: FontWeight.w800,
-                            fontSize: 11,
+                            fontSize: 12,
                             color: p.position == 'self'
                                 ? const Color(0xFF355D89)
                                 : const Color(0xFFC96E34),
@@ -3203,7 +3204,9 @@ class _SKGameScreenState extends State<SKGameScreen> {
                         ),
                       ],
                     ),
-                    ...state.scoreHistory.map((entry) {
+                    ...state.scoreHistory.asMap().entries.map((mapEntry) {
+                      final rowIndex = mapEntry.key;
+                      final entry = mapEntry.value;
                       final scores =
                           entry['scores'] as Map<String, dynamic>? ?? {};
 
@@ -3215,11 +3218,16 @@ class _SKGameScreenState extends State<SKGameScreen> {
                       }
 
                       return TableRow(
+                        decoration: BoxDecoration(
+                          color: rowIndex.isOdd
+                              ? const Color(0xFFFAF4F0)
+                              : null,
+                        ),
                         children: [
                           cell(
                             '${entry['round']}',
                             fontWeight: FontWeight.w700,
-                            fontSize: 11,
+                            fontSize: 12,
                             color: const Color(0xFF8A7A72),
                           ),
                           ...state.players.map((p) {
@@ -3236,14 +3244,14 @@ class _SKGameScreenState extends State<SKGameScreen> {
 
                             return cell(
                               '$roundScore',
-                              fontSize: 12,
+                              fontSize: 14,
                               fontWeight: p.position == 'self'
                                   ? FontWeight.w800
                                   : FontWeight.w600,
                               color: scoreColor,
                               padding: const EdgeInsets.symmetric(
                                 horizontal: 4,
-                                vertical: 6,
+                                vertical: 7,
                               ),
                             );
                           }),
@@ -3252,15 +3260,16 @@ class _SKGameScreenState extends State<SKGameScreen> {
                     }),
                     TableRow(
                       decoration: const BoxDecoration(
+                        color: Color(0xFFFFF1EA),
                         border: Border(
-                          top: BorderSide(color: Color(0xFFE4DBD6), width: 1),
+                          top: BorderSide(color: Color(0xFFF0D9CB), width: 1.5),
                         ),
                       ),
                       children: [
                         cell(
                           L10n.of(context).commonTotal,
                           fontWeight: FontWeight.w800,
-                          fontSize: 11,
+                          fontSize: 12,
                           color: const Color(0xFF3E312A),
                         ),
                         ...state.players.map((p) {
@@ -3268,7 +3277,7 @@ class _SKGameScreenState extends State<SKGameScreen> {
                           return cell(
                             '$total',
                             fontWeight: FontWeight.w900,
-                            fontSize: 13,
+                            fontSize: 15,
                             color: total < 0
                                 ? const Color(0xFFC94256)
                                 : const Color(0xFF3E312A),

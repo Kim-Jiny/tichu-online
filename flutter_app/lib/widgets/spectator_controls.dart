@@ -368,7 +368,8 @@ void showTichuScoreHistoryDialog(
                       final rEnemy = myTeam == 'A' ? rawB : rawA;
                       final myWon = rMy > rEnemy;
                       final enemyWon = rEnemy > rMy;
-                      return Padding(
+                      return Container(
+                        color: i.isOdd ? const Color(0xFFF6F8FB) : null,
                         padding: const EdgeInsets.symmetric(
                           horizontal: 2,
                           vertical: 10,
@@ -547,7 +548,8 @@ void showLLScoreHistoryDialog(
                       final names = r.winnerNames.isNotEmpty
                           ? r.winnerNames.join(', ')
                           : (r.winnerName ?? '-');
-                      return Padding(
+                      return Container(
+                        color: i.isOdd ? const Color(0xFFFBF4F7) : null,
                         padding: const EdgeInsets.symmetric(
                           horizontal: 2,
                           vertical: 10,

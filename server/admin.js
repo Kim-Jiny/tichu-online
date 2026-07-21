@@ -1885,10 +1885,16 @@ async function handleAdminRoute(req, res, url, pathname, method, lobby, wss, mai
       to = defaultTo;
     }
 
-    const stats = await getDetailedAdminStats(from.toISOString(), to.toISOString(), bucket, { platform });
     const prevTo = new Date(from.getTime() - 1);
     const prevFrom = new Date(prevTo.getTime() - (to.getTime() - from.getTime()));
-    const prevStats = await getDetailedAdminStats(prevFrom.toISOString(), prevTo.toISOString(), bucket, { platform });
+    // Current-period stats, previous-period stats, and attendance breakdown are
+    // independent aggregates — fetch in parallel so page latency is the slowest
+    // one, not their sum.
+    const [stats, prevStats, attBreakdown] = await Promise.all([
+      getDetailedAdminStats(from.toISOString(), to.toISOString(), bucket, { platform }),
+      getDetailedAdminStats(prevFrom.toISOString(), prevTo.toISOString(), bucket, { platform }),
+      getAttendanceBreakdown(from.toISOString(), to.toISOString()),
+    ]);
     const summary = stats.summary || {};
     const prevSummary = prevStats.summary || {};
     const gameSeries = stats.gameSeries || [];
@@ -1905,7 +1911,6 @@ async function handleAdminRoute(req, res, url, pathname, method, lobby, wss, mai
     const attSum = stats.attendanceSummary || {};
     const prevIapTot = ((prevStats.iapSummary || {}).total) || {};
     const prevAttSum = prevStats.attendanceSummary || {};
-    const attBreakdown = await getAttendanceBreakdown(from.toISOString(), to.toISOString());
     const attWeekly = attBreakdown.weekly || [];
     const attMonthly = attBreakdown.monthly || [];
     const attTopUsers = attBreakdown.topUsers || [];
@@ -5145,7 +5150,7 @@ async function handleAdminRoute(req, res, url, pathname, method, lobby, wss, mai
         </form>
       </div>
     `;
-    return html(res, layout(`Room: ${room.name}`, content, 'home'));
+    return html(res, layout(`Room: ${escapeHtml(room.name)}`, content, 'home'));
   }
 
   // Force-close (delete) a room

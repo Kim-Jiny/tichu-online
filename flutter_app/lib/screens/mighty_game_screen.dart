@@ -2045,12 +2045,8 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
                         ? 0.10
                         : (isLandscape ? 0.36 : 0.46),
                   ),
-                  child: isBidding
+                  child: isBidding || isKillSelect
                       ? const SizedBox.shrink()
-                      : isKillSelect
-                      ? (state.isMyTurn
-                            ? const SizedBox.shrink()
-                            : _buildKillCenterInfo(state))
                       : Transform.translate(
                           offset: Offset(
                             0,
@@ -3123,9 +3119,10 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
 
   Widget _buildTrickArea(MightyGameStateData state, GameService game) {
     if (state.currentTrick.isEmpty) {
-      // During the kitty exchange the declarer works in their own bottom panel;
-      // everyone else sees the declarer's remaining time here in the centre.
-      final isKittyWait = state.phase == 'kitty_exchange' && !state.isMyTurn;
+      // During the kitty exchange spectators see the status here in the centre;
+      // players (incl. non-declarers) see it above their own hand instead.
+      final isKittyWait =
+          state.phase == 'kitty_exchange' && game.isSpectator;
       return Center(
         child: Container(
           width: 200,
@@ -4617,6 +4614,60 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
               padding: const EdgeInsets.only(bottom: 8),
               child: _buildCompactKillPanel(state, game),
             ),
+          // Non-declarer players wait for the declarer's kitty exchange — show
+          // the note above the hand (spectators see it in the centre instead).
+          if (state.phase == 'kitty_exchange' && !state.isMyTurn)
+            Padding(
+              padding: const EdgeInsets.only(bottom: 8),
+              child: Container(
+                width: double.infinity,
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 12,
+                  vertical: 10,
+                ),
+                decoration: BoxDecoration(
+                  color: Colors.white.withValues(alpha: 0.92),
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(color: const Color(0xFFE0D8D4)),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    const Icon(
+                      Icons.swap_horiz,
+                      size: 16,
+                      color: Color(0xFF5A4038),
+                    ),
+                    const SizedBox(width: 6),
+                    Flexible(
+                      child: Text(
+                        L10n.of(context).mtExchangingKitty,
+                        textAlign: TextAlign.center,
+                        style: const TextStyle(
+                          fontSize: 13,
+                          fontWeight: FontWeight.w700,
+                          color: Color(0xFF5A4038),
+                        ),
+                      ),
+                    ),
+                    if (_remainingSeconds > 0) ...[
+                      const SizedBox(width: 8),
+                      Text(
+                        '${_remainingSeconds}s',
+                        style: TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w800,
+                          color: _remainingSeconds <= 5
+                              ? const Color(0xFFE53935)
+                              : const Color(0xFF8A7A72),
+                        ),
+                      ),
+                    ],
+                  ],
+                ),
+              ),
+            ),
           if (game.myTimeoutCount > 0)
             Padding(
               padding: const EdgeInsets.only(bottom: 6),
@@ -5124,9 +5175,55 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
       '2',
     ];
 
-    // Non-declarers: the "declarer is choosing a kill" note is shown in the
-    // centre trick box, so nothing is needed here above the hand.
-    if (!state.isMyTurn) return const SizedBox.shrink();
+    // Non-declarer players: show the "declarer is choosing a kill" note above
+    // the hand (spectators see it in the centre trick box instead).
+    if (!state.isMyTurn) {
+      final declarerName =
+          state.players
+              .where((p) => p.id == state.declarer)
+              .map((p) => p.name)
+              .firstOrNull ??
+          '...';
+      return Container(
+        width: double.infinity,
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+        decoration: BoxDecoration(
+          color: Colors.white.withValues(alpha: 0.92),
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: const Color(0xFFE0D8D4)),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Flexible(
+              child: Text(
+                l10n.mtKillPhaseWait(declarerName),
+                textAlign: TextAlign.center,
+                style: const TextStyle(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w700,
+                  color: Color(0xFF5A4038),
+                ),
+              ),
+            ),
+            if (_remainingSeconds > 0) ...[
+              const SizedBox(width: 8),
+              Text(
+                '${_remainingSeconds}s',
+                style: TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w800,
+                  color: _remainingSeconds <= 5
+                      ? const Color(0xFFE53935)
+                      : const Color(0xFF8A7A72),
+                ),
+              ),
+            ],
+          ],
+        ),
+      );
+    }
 
     return Container(
       width: double.infinity,

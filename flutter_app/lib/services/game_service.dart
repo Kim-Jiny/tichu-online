@@ -991,7 +991,11 @@ class GameService extends ChangeNotifier {
             currentGameType = 'mighty';
             final nextMighty = MightyGameStateData.fromJson(state);
             _handleMightySfxTransitions(_prevMightyGameState, nextMighty);
-            _prevMightyGameState = mightyGameState;
+            // Track the IMMEDIATELY previous state (was mistakenly set to the
+            // already-stale `mightyGameState`, lagging SFX diffing by one tick
+            // — my_turn/card sounds compared against two-updates-ago). Matches
+            // the SK/Tichu/LL pattern (_prev = next).
+            _prevMightyGameState = nextMighty;
             mightyGameState = nextMighty;
             gameState = null;
             skGameState = null;
@@ -2194,7 +2198,13 @@ class GameService extends ChangeNotifier {
 
     // Phase transitions
     if (prev.phase != next.phase) {
-      if (next.phase == 'round_end') {
+      if (next.phase == 'trick_end') {
+        // The trick-completing (last) card doesn't grow currentTrick — the
+        // server clears it in _resolveTrick and sends phase='trick_end' with an
+        // empty currentTrick — so the "trick grew" check above misses it. Play
+        // the card sound here so the final card of each trick isn't silent.
+        _sfx.play('card');
+      } else if (next.phase == 'round_end') {
         _sfx.play('round_end');
       } else if (next.phase == 'game_end') {
         // Check if self won (highest score)

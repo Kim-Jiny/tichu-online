@@ -300,12 +300,12 @@ class SuitPainter extends CustomPainter {
     final w = size.width;
     final h = size.height;
     final path = Path();
-    // Start at bottom tip
-    path.moveTo(w * 0.5, h * 0.95);
-    // Left curve
-    path.cubicTo(w * -0.1, h * 0.55, w * -0.05, h * 0.1, w * 0.5, h * 0.3);
-    // Right curve
-    path.cubicTo(w * 1.05, h * 0.1, w * 1.1, h * 0.55, w * 0.5, h * 0.95);
+    // Bottom tip, then two full rounded lobes with a deep centre dip.
+    path.moveTo(w * 0.5, h * 0.97);
+    path.cubicTo(w * -0.02, h * 0.60, w * 0.02, h * 0.20, w * 0.22, h * 0.12);
+    path.cubicTo(w * 0.38, h * 0.05, w * 0.47, h * 0.14, w * 0.5, h * 0.30);
+    path.cubicTo(w * 0.53, h * 0.14, w * 0.62, h * 0.05, w * 0.78, h * 0.12);
+    path.cubicTo(w * 0.98, h * 0.20, w * 1.02, h * 0.60, w * 0.5, h * 0.97);
     path.close();
     canvas.drawPath(path, paint);
   }
@@ -350,14 +350,19 @@ class SuitPainter extends CustomPainter {
   void _drawClub(Canvas canvas, Size size, Paint paint) {
     final w = size.width;
     final h = size.height;
-    final r = w * 0.24;
-    // Three circles
-    canvas.drawCircle(Offset(w * 0.5, h * 0.25), r, paint); // top
-    canvas.drawCircle(Offset(w * 0.22, h * 0.52), r, paint); // left
-    canvas.drawCircle(Offset(w * 0.78, h * 0.52), r, paint); // right
-    // Stem
-    final stemRect = Rect.fromLTWH(w * 0.4, h * 0.5, w * 0.2, h * 0.45);
-    canvas.drawRect(stemRect, paint);
+    final r = w * 0.23;
+    // Three lobes.
+    canvas.drawCircle(Offset(w * 0.5, h * 0.27), r, paint); // top
+    canvas.drawCircle(Offset(w * 0.25, h * 0.55), r, paint); // left
+    canvas.drawCircle(Offset(w * 0.75, h * 0.55), r, paint); // right
+    // Flared stem (matches the spade), overlapping the lobes so there's no gap.
+    final stemPath = Path();
+    stemPath.moveTo(w * 0.40, h * 0.46);
+    stemPath.quadraticBezierTo(w * 0.44, h * 0.74, w * 0.31, h * 0.98);
+    stemPath.lineTo(w * 0.69, h * 0.98);
+    stemPath.quadraticBezierTo(w * 0.56, h * 0.74, w * 0.60, h * 0.46);
+    stemPath.close();
+    canvas.drawPath(stemPath, paint);
   }
 
   @override

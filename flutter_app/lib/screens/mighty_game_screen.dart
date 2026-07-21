@@ -4251,7 +4251,60 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
       return _buildSpectatorHandArea(state, game);
     }
     final cards = state.myCards;
-    if (cards.isEmpty) return const SizedBox(height: 20);
+    if (cards.isEmpty) {
+      // After the last card is played, keep the hand panel visible instead of
+      // collapsing the whole bottom area (jarring layout jump). Preserve the
+      // captured-points chip + prev-trick button and show a "waiting" note
+      // while the round finishes.
+      final showStrip =
+          state.phase == 'playing' ||
+          state.phase == 'trick_end' ||
+          state.phase == 'round_end';
+      return Container(
+        padding: const EdgeInsets.fromLTRB(8, 10, 8, 12),
+        decoration: const BoxDecoration(
+          color: Color(0xEBFFFFFF),
+          borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+          border: Border(top: BorderSide(color: Color(0xFFE0D8D4))),
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            if (showStrip)
+              Padding(
+                padding: const EdgeInsets.only(bottom: 4, left: 4, right: 4),
+                child: Row(
+                  children: [
+                    Flexible(
+                      child: Align(
+                        alignment: Alignment.centerLeft,
+                        child: FittedBox(
+                          fit: BoxFit.scaleDown,
+                          alignment: Alignment.centerLeft,
+                          child: _buildMyPointCardStrip(state),
+                        ),
+                      ),
+                    ),
+                    if (game.hasMightyPrevTrick && state.tricks.isNotEmpty)
+                      _buildPrevTrickButton(state),
+                  ],
+                ),
+              ),
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: 10),
+              child: Text(
+                L10n.of(context).mtWaiting,
+                style: const TextStyle(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w600,
+                  color: Color(0xFF8A7A72),
+                ),
+              ),
+            ),
+          ],
+        ),
+      );
+    }
 
     final isPlaying = state.phase == 'playing' && state.isMyTurn;
     final isKitty = state.phase == 'kitty_exchange' && state.isMyTurn;

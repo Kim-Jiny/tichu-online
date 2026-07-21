@@ -22,7 +22,7 @@
  */
 
 const { SUITS, getCardInfo, RANK_ORDER } = require('./MightyDeck');
-const { canBeatCurrentWinner } = require('./MightyKnowledge');
+const { canBeatCurrentWinner, getCurrentTrickWinner } = require('./MightyKnowledge');
 
 // Activate when the largest active hand has at most this many cards. Default 3
 // is the sweet spot: cheap (move-ordering keeps the worst case ~3k nodes,
@@ -140,6 +140,34 @@ function _orderMoves(game, actor, moves) {
 }
 
 /**
+ * Root-only tie-break among equal-value moves (higher = preferred). The solver
+ * is score-optimal but often indifferent between several moves; pick the clean
+ * one. Chiefly: never overtake our OWN team's already-winning trick with a
+ * special (joker/mighty) — value-equal but it burns the special and steals the
+ * declarer's guaranteed lead. Also mildly prefer keeping specials / dumping low.
+ */
+function _tieBreak(game, botId, action, govSet, botIsGov) {
+  const card = action.cardId;
+  const mighty = game.getMightyCard();
+  const isSpecial = card === 'mighty_joker' || card === mighty;
+  let t = 0;
+  if (game.currentTrick && game.currentTrick.length > 0) {
+    const winner = getCurrentTrickWinner(game);
+    const allyWinning =
+      winner && winner !== botId && (govSet.has(winner) === botIsGov);
+    if (allyWinning && canBeatCurrentWinner(game, card)) {
+      t -= 1000;                 // don't overtake an ally who is winning
+      if (isSpecial) t -= 1000;  // especially not with a special
+    }
+  }
+  if (isSpecial) t -= 5;         // keep specials when otherwise equal
+  const info = card === 'mighty_joker' ? null : getCardInfo(card);
+  const rank = info ? (RANK_ORDER[info.rank] || 0) : 15;
+  t -= rank * 0.1;               // dump low
+  return t;
+}
+
+/**
  * Alpha-beta over the deciding bot's round-end score.
  * @returns the leaf value (bot's score) for this subtree.
  */
@@ -202,16 +230,22 @@ function solve(game, botId) {
 
     let bestAction = null;
     let bestVal = -Infinity;
-    let alpha = -Infinity;
-    const beta = Infinity;
+    let bestTie = -Infinity;
     for (const action of moves) {
       if (Date.now() > ctr.deadline) throw new Error('budget');
       const world = game.clone();
       const res = world.handleAction(botId, action);
       if (!res || res.success === false) continue;
-      const v = _search(world, botId, govSet, botIsGov, alpha, beta, ctr);
-      if (v > bestVal) { bestVal = v; bestAction = action; }
-      if (bestVal > alpha) alpha = bestVal;
+      // Full window per root move so each value is EXACT — needed for a
+      // reliable tie-break (a rising root alpha would return fail-low bounds
+      // for equal-value moves and hide the ties).
+      const v = _search(world, botId, govSet, botIsGov, -Infinity, Infinity, ctr);
+      const tie = _tieBreak(game, botId, action, govSet, botIsGov);
+      if (v > bestVal || (v === bestVal && tie > bestTie)) {
+        bestVal = v;
+        bestTie = tie;
+        bestAction = action;
+      }
     }
     if (!bestAction) return null;
     // Debug metadata (ignored by handleAction).

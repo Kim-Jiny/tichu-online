@@ -1637,7 +1637,13 @@ function decideFollowCard(game, botId, legalCards) {
   // the natural pick was a safe dump. Losing the last trick is cheaper
   // than wasting joker outright, and winning an "extra" trick can only
   // help (declarer team collects, opp team denies declarer).
-  if (pick && pick !== 'mighty_joker' && legalCards.includes('mighty_joker')
+  //
+  // BUT never do this when our OWN TEAM is already winning the trick: playing
+  // the joker there just steals the lead from the declarer (who was winning
+  // with a guaranteed card, e.g. a trump only they hold) and burns the joker
+  // for nothing. Only cash it to take a trick away from an opponent.
+  if (pick && pick !== 'mighty_joker' && !winnerOnOurTeam
+      && legalCards.includes('mighty_joker')
       && winningCards.includes('mighty_joker')) {
     const totalTricks = Math.floor(50 / (game.activePlayerCount || game.playerCount));
     const nextIsLast = game.tricks.length === totalTricks - 2;

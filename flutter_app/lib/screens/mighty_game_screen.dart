@@ -1241,7 +1241,13 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
                   _moreOpen = false;
                   _soundPanelOpen = false;
                 });
-                _showExitConfirmDialog(game);
+                // Spectators can leave immediately (no game state to lose);
+                // only players get the "really leave?" confirm. Matches SK.
+                if (game.isSpectator) {
+                  game.leaveRoom();
+                } else {
+                  _showExitConfirmDialog(game);
+                }
               },
             ),
           ],

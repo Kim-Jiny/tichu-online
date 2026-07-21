@@ -23,13 +23,28 @@ const sessions = new Map();
 const SESSION_MAX_AGE = 24 * 60 * 60 * 1000; // 24 hours
 const isProduction = process.env.NODE_ENV === 'production';
 
-// Clean up expired sessions every hour
+// Login brute-force guard: per-IP failed-attempt tracking with lockout.
+const loginAttempts = new Map(); // ip -> { count, firstAt, lockedUntil }
+const LOGIN_MAX_FAILS = 5;
+const LOGIN_WINDOW_MS = 15 * 60 * 1000;  // fails within this window accumulate
+const LOGIN_LOCK_MS = 15 * 60 * 1000;    // lock duration once threshold hit
+function loginClientIp(req) {
+  return String(req.headers['x-forwarded-for'] || '').split(',')[0].trim()
+    || req.socket?.remoteAddress || 'unknown';
+}
+
+// Clean up expired sessions + stale login-attempt records every hour
 setInterval(() => {
   const now = Date.now();
   for (const [token, session] of sessions) {
     if (now - session.createdAt > SESSION_MAX_AGE) {
       sessions.delete(token);
     }
+  }
+  for (const [ip, rec] of loginAttempts) {
+    const active = (rec.lockedUntil && rec.lockedUntil > now)
+      || (now - rec.firstAt < LOGIN_WINDOW_MS);
+    if (!active) loginAttempts.delete(ip);
   }
 }, 60 * 60 * 1000);
 
@@ -758,11 +773,27 @@ function kstDateKey(d) {
 function pagination(page, total, limit, baseUrl) {
   const totalPages = Math.ceil(total / limit);
   if (totalPages <= 1) return '';
-  let out = '<div class="pagination">';
-  for (let i = 1; i <= totalPages; i++) {
-    const sep = baseUrl.includes('?') ? '&' : '?';
-    out += `<a href="${baseUrl}${sep}page=${i}" class="${i === page ? 'active' : ''}">${i}</a>`;
+  const sep = baseUrl.includes('?') ? '&' : '?';
+  const link = (i, label, active) =>
+    `<a href="${baseUrl}${sep}page=${i}" class="${active ? 'active' : ''}">${label}</a>`;
+  const gap = '<span style="padding:0 6px;color:#aaa">…</span>';
+  // Windowed: first, last, and ±2 around the current page (with … gaps) so the
+  // link count stays bounded regardless of table size.
+  const WINDOW = 2;
+  const shown = new Set([1, totalPages]);
+  for (let i = page - WINDOW; i <= page + WINDOW; i++) {
+    if (i >= 1 && i <= totalPages) shown.add(i);
   }
+  const sorted = [...shown].sort((a, b) => a - b);
+  let out = '<div class="pagination">';
+  if (page > 1) out += link(page - 1, '‹', false);
+  let prev = 0;
+  for (const i of sorted) {
+    if (i - prev > 1) out += gap;
+    out += link(i, String(i), i === page);
+    prev = i;
+  }
+  if (page < totalPages) out += link(page + 1, '›', false);
   out += '</div>';
   return out;
 }
@@ -1442,11 +1473,27 @@ async function handleAdminRoute(req, res, url, pathname, method, lobby, wss, mai
       return html(res, loginPage());
     }
     if (method === 'POST') {
+      const ip = loginClientIp(req);
+      const now = Date.now();
+      const rec = loginAttempts.get(ip);
+      if (rec && rec.lockedUntil && rec.lockedUntil > now) {
+        const mins = Math.ceil((rec.lockedUntil - now) / 60000);
+        return html(res, loginPage(`로그인 시도가 너무 많습니다. ${mins}분 후 다시 시도하세요.`));
+      }
       const body = await parseBody(req);
       const admin = await verifyAdmin(body.username || '', body.password || '');
       if (!admin) {
-        return html(res, loginPage('잘못된 로그인 정보입니다'));
+        // Accumulate failures within the window; lock once threshold is hit.
+        const r = (rec && (now - rec.firstAt) < LOGIN_WINDOW_MS) ? rec : { count: 0, firstAt: now };
+        r.count += 1;
+        if (r.count >= LOGIN_MAX_FAILS) r.lockedUntil = now + LOGIN_LOCK_MS;
+        loginAttempts.set(ip, r);
+        const left = Math.max(0, LOGIN_MAX_FAILS - r.count);
+        return html(res, loginPage(r.lockedUntil
+          ? `로그인 시도가 너무 많습니다. 15분 후 다시 시도하세요.`
+          : `잘못된 로그인 정보입니다 (남은 시도 ${left}회)`));
       }
+      loginAttempts.delete(ip); // success clears the counter
       const token = crypto.randomBytes(32).toString('hex');
       sessions.set(token, { username: admin.username, createdAt: Date.now() });
       setSessionCookie(res, token);
@@ -1525,8 +1572,10 @@ async function handleAdminRoute(req, res, url, pathname, method, lobby, wss, mai
     const activityGame = ['all', 'tichu', 'skull_king', 'love_letter', 'mighty'].includes(url.searchParams.get('activityGame'))
       ? url.searchParams.get('activityGame')
       : 'all';
-    const stats = await getDashboardStats(activityPeriod, activityGame);
-    const attStats = await getAttendanceDashboardStats();
+    const [stats, attStats] = await Promise.all([
+      getDashboardStats(activityPeriod, activityGame),
+      getAttendanceDashboardStats(),
+    ]);
     // Get live data from lobby/wss
     const connectedUsers = wss ? wss.clients.size : 0;
     const allRooms = lobby ? lobby.getRoomList() : [];
@@ -4627,8 +4676,12 @@ async function handleAdminRoute(req, res, url, pathname, method, lobby, wss, mai
     const [privacyKo, privacyEn, privacyDe] = await Promise.all([
       getConfig('privacy_policy_ko'), getConfig('privacy_policy_en'), getConfig('privacy_policy_de'),
     ]);
-    const minVersion = await getConfig('min_version') || '';
-    const latestVersion = await getConfig('latest_version') || '';
+    const [minVersionRaw, latestVersionRaw] = await Promise.all([
+      getConfig('min_version'),
+      getConfig('latest_version'),
+    ]);
+    const minVersion = minVersionRaw || '';
+    const latestVersion = latestVersionRaw || '';
     const saved = url.searchParams.get('saved');
 
     const langTabs = (baseId, values) => {

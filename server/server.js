@@ -5524,18 +5524,26 @@ async function handleChatMessage(ws, data) {
     timestamp: Date.now(),
   };
 
-  // Get list of users who blocked the sender (to filter them out)
-  let blockedBySender = [];
-  try {
-    const { pool } = require('./db/database');
-    const { rows } = await pool.query(
-      'SELECT blocker_nickname FROM tc_blocked_users WHERE blocked_nickname = $1',
-      [ws.nickname]
-    );
-    blockedBySender = rows.map(r => r.blocker_nickname);
-  } catch (e) { /* ignore - send to all on error */ }
-
-  const blockedSet = new Set(blockedBySender);
+  // Users who blocked the sender (to filter them from the broadcast). This ran
+  // a DB query on EVERY chat message; cache it on the socket with a short TTL.
+  // Trade-off: a new block takes up to TTL to take effect in live chat.
+  let blockedSet;
+  const nowTs = Date.now();
+  if (ws._blockedByCache && (nowTs - ws._blockedByCache.at) < 30000) {
+    blockedSet = ws._blockedByCache.set;
+  } else {
+    let blockedBySender = [];
+    try {
+      const { pool } = require('./db/database');
+      const { rows } = await pool.query(
+        'SELECT blocker_nickname FROM tc_blocked_users WHERE blocked_nickname = $1',
+        [ws.nickname]
+      );
+      blockedBySender = rows.map(r => r.blocker_nickname);
+    } catch (e) { /* ignore - send to all on error */ }
+    blockedSet = new Set(blockedBySender);
+    ws._blockedByCache = { set: blockedSet, at: nowTs };
+  }
 
   // Broadcast to all players in the room
   room.getPlayerIds().forEach(playerId => {
@@ -6897,21 +6905,22 @@ async function handleSendDm(ws, data) {
     sendTo(ws, { type: 'dm_error', message: t(ws.locale, 'dm_max_length') });
     return;
   }
-  // Check friendship
-  const friendsList = await getFriends(ws.nickname);
+  // Friendship / block / chat-ban lookups are independent — run in parallel,
+  // then apply the checks in priority order.
+  const [friendsList, blockedList, blockedByTarget, chatBan] = await Promise.all([
+    getFriends(ws.nickname),
+    getBlockedUsers(ws.nickname),
+    getBlockedUsers(targetNickname),
+    getChatBan(ws.nickname),
+  ]);
   if (!friendsList.includes(targetNickname)) {
     sendTo(ws, { type: 'dm_error', message: t(ws.locale, 'dm_friends_only') });
     return;
   }
-  // Check blocked
-  const blockedList = await getBlockedUsers(ws.nickname);
-  const blockedByTarget = await getBlockedUsers(targetNickname);
   if (blockedList.includes(targetNickname) || blockedByTarget.includes(ws.nickname)) {
     sendTo(ws, { type: 'dm_error', message: t(ws.locale, 'dm_blocked') });
     return;
   }
-  // Check chat ban
-  const chatBan = await getChatBan(ws.nickname);
   if (chatBan) {
     sendTo(ws, { type: 'dm_error', message: t(ws.locale, 'chat_banned') });
     return;

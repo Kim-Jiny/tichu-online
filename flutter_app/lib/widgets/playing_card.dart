@@ -325,22 +325,24 @@ class SuitPainter extends CustomPainter {
   void _drawSpade(Canvas canvas, Size size, Paint paint) {
     final w = size.width;
     final h = size.height;
+    // Leaf body: sharp top tip, two full rounded bottom lobes, and a raised
+    // centre cusp between them (the classic spade notch).
     final path = Path();
-    // Top tip
     path.moveTo(w * 0.5, 0);
-    // Left curve
-    path.cubicTo(w * -0.1, h * 0.35, w * -0.05, h * 0.75, w * 0.5, h * 0.6);
-    // Right curve
-    path.cubicTo(w * 1.05, h * 0.75, w * 1.1, h * 0.35, w * 0.5, 0);
+    // Down-left to the left lobe, then curl in to the centre cusp.
+    path.cubicTo(w * 0.12, h * 0.30, w * -0.05, h * 0.60, w * 0.22, h * 0.70);
+    path.cubicTo(w * 0.36, h * 0.76, w * 0.48, h * 0.70, w * 0.5, h * 0.58);
+    // Out to the right lobe, then back up to the top tip.
+    path.cubicTo(w * 0.52, h * 0.70, w * 0.64, h * 0.76, w * 0.78, h * 0.70);
+    path.cubicTo(w * 1.05, h * 0.60, w * 0.88, h * 0.30, w * 0.5, 0);
     path.close();
     canvas.drawPath(path, paint);
-    // Stem
+    // Stem: narrow at the cusp, flaring out to a wide base.
     final stemPath = Path();
-    stemPath.moveTo(w * 0.35, h * 0.6);
-    stemPath.quadraticBezierTo(w * 0.5, h * 0.75, w * 0.5, h);
-    stemPath.quadraticBezierTo(w * 0.5, h * 0.75, w * 0.65, h * 0.6);
-    stemPath.lineTo(w * 0.58, h * 0.95);
-    stemPath.lineTo(w * 0.42, h * 0.95);
+    stemPath.moveTo(w * 0.5, h * 0.55);
+    stemPath.quadraticBezierTo(w * 0.46, h * 0.80, w * 0.33, h * 0.98);
+    stemPath.lineTo(w * 0.67, h * 0.98);
+    stemPath.quadraticBezierTo(w * 0.54, h * 0.80, w * 0.5, h * 0.55);
     stemPath.close();
     canvas.drawPath(stemPath, paint);
   }

@@ -4405,20 +4405,27 @@ function _broadcastState(roomId, room) {
   // time was stolen by something else (GC / host pause) landing mid-broadcast.
   const __diagOn = process.env.DIAG !== '0';
   const __t0 = __diagOn ? process.hrtime.bigint() : 0n;
-  let __tState = 0, __tJson = 0, __tWs = 0, __tSend = 0, __nH = 0, __nS = 0, __maxBytes = 0, __maxBufferedBefore = 0, __maxBufferedAfter = 0;
-  const __send = (ws, obj, isSpec) => {
+  let __tState = 0, __tBuild = 0, __tDecor = 0, __tJson = 0, __tWs = 0, __tSend = 0, __nH = 0, __nS = 0, __maxBytes = 0, __maxBufferedBefore = 0, __maxBufferedAfter = 0;
+  const __send = (ws, obj, isSpec, recipientId = '-') => {
     if (!__diagOn) { sendTo(ws, obj); return; }
     const __s = process.hrtime.bigint();
     if (ws.readyState === ws.OPEN) {
       const __j = process.hrtime.bigint();
       const str = JSON.stringify(obj);
-      __tJson += Number(process.hrtime.bigint() - __j) / 1e6;
+      const __jsonMs = Number(process.hrtime.bigint() - __j) / 1e6;
+      __tJson += __jsonMs;
       if (str.length > __maxBytes) __maxBytes = str.length;
-      if ((ws.bufferedAmount || 0) > __maxBufferedBefore) __maxBufferedBefore = ws.bufferedAmount || 0;
+      const __bufBefore = ws.bufferedAmount || 0;
+      if (__bufBefore > __maxBufferedBefore) __maxBufferedBefore = __bufBefore;
       const __w = process.hrtime.bigint();
-      ws.send(str);
-      __tWs += Number(process.hrtime.bigint() - __w) / 1e6;
-      if ((ws.bufferedAmount || 0) > __maxBufferedAfter) __maxBufferedAfter = ws.bufferedAmount || 0;
+      ws.send(str, { compress: false });
+      const __wsMs = Number(process.hrtime.bigint() - __w) / 1e6;
+      __tWs += __wsMs;
+      const __bufAfter = ws.bufferedAmount || 0;
+      if (__bufAfter > __maxBufferedAfter) __maxBufferedAfter = __bufAfter;
+      if ((__jsonMs + __wsMs) > 40) {
+        console.log(`[DIAG] send-slow ${(__jsonMs + __wsMs).toFixed(0)}ms room=${roomId} type=${room.gameType} phase=${room.game.state} recipient=${recipientId} kind=${isSpec ? 'spectator' : 'player'} json=${__jsonMs.toFixed(0)}ms ws=${__wsMs.toFixed(0)}ms kb=${(str.length / 1024).toFixed(1)} buf=${Math.round(__bufBefore / 1024)}KB>${Math.round(__bufAfter / 1024)}KB`);
+      }
       if (isSpec) __nS++; else __nH++;
     }
     __tSend += Number(process.hrtime.bigint() - __s) / 1e6;
@@ -4465,9 +4472,11 @@ function _broadcastState(roomId, room) {
         : new Set();
       const state = room.game.getStateForPlayer(player.id, permitted, gameStateCache);
       const __stateMs = __diagOn ? Number(process.hrtime.bigint() - __sb) / 1e6 : 0;
+      if (__diagOn) __tBuild += __stateMs;
       if (__diagOn && __stateMs > 40) {
         console.log(`[DIAG] state-build ${__stateMs.toFixed(0)}ms room=${roomId} type=${room.gameType} phase=${room.game.state} recipient=${player.id} cards=${room.game.hands?.[player.id]?.length ?? '-'}`);
       }
+      const __db = __diagOn ? process.hrtime.bigint() : 0n;
       state.players = state.players.map(p => ({
         ...p,
         connected: connectionStatus[p.id] !== false,
@@ -4477,8 +4486,15 @@ function _broadcastState(roomId, room) {
       state.cardViewers = room.getViewersForPlayer(player.id);
       state.spectators = spectatorList;
       state.spectatorCount = spectatorList.length;
+      if (__diagOn) {
+        const __decorMs = Number(process.hrtime.bigint() - __db) / 1e6;
+        __tDecor += __decorMs;
+        if (__decorMs > 40) {
+          console.log(`[DIAG] state-decor ${__decorMs.toFixed(0)}ms room=${roomId} type=${room.gameType} phase=${room.game.state} recipient=${player.id}`);
+        }
+      }
       if (__diagOn) __tState += Number(process.hrtime.bigint() - __sb) / 1e6;
-      __send(ws, { type: 'game_state', state }, false);
+      __send(ws, { type: 'game_state', state }, false, player.id);
     }
   }
 
@@ -4490,9 +4506,11 @@ function _broadcastState(roomId, room) {
       const permittedPlayers = room.getPermittedPlayers(spectatorId);
       const spectatorState = room.game.getStateForSpectator(permittedPlayers, gameStateCache);
       const __stateMs = __diagOn ? Number(process.hrtime.bigint() - __sb) / 1e6 : 0;
+      if (__diagOn) __tBuild += __stateMs;
       if (__diagOn && __stateMs > 40) {
         console.log(`[DIAG] state-build ${__stateMs.toFixed(0)}ms room=${roomId} type=${room.gameType} phase=${room.game.state} recipient=${spectatorId} spectator=1`);
       }
+      const __db = __diagOn ? process.hrtime.bigint() : 0n;
       spectatorState.players = spectatorState.players.map(p => ({
         ...p,
         connected: connectionStatus[p.id] !== false,
@@ -4501,8 +4519,15 @@ function _broadcastState(roomId, room) {
       spectatorState.turnDeadline = room.turnDeadline;
       spectatorState.spectators = spectatorList;
       spectatorState.spectatorCount = spectatorList.length;
+      if (__diagOn) {
+        const __decorMs = Number(process.hrtime.bigint() - __db) / 1e6;
+        __tDecor += __decorMs;
+        if (__decorMs > 40) {
+          console.log(`[DIAG] state-decor ${__decorMs.toFixed(0)}ms room=${roomId} type=${room.gameType} phase=${room.game.state} recipient=${spectatorId} spectator=1`);
+        }
+      }
       if (__diagOn) __tState += Number(process.hrtime.bigint() - __sb) / 1e6;
-      __send(ws, { type: 'spectator_game_state', state: spectatorState }, true);
+      __send(ws, { type: 'spectator_game_state', state: spectatorState }, true, spectatorId);
     }
   }
   } finally {
@@ -4511,7 +4536,7 @@ function _broadcastState(roomId, room) {
       // A big __ms with small tState+tSend ⇒ time stolen mid-broadcast (GC/host),
       // not real broadcast work. Big tState/tSend ⇒ genuine serialization cost.
       if (__ms > 40) {
-        console.log(`[DIAG] bcast-split ${__ms.toFixed(0)}ms room=${roomId} type=${room.gameType} recips=${__nH}h/${__nS}s state=${__tState.toFixed(0)}ms json=${__tJson.toFixed(0)}ms ws=${__tWs.toFixed(0)}ms send=${__tSend.toFixed(0)}ms maxKB=${(__maxBytes / 1024).toFixed(1)} buf=${Math.round(__maxBufferedBefore / 1024)}KB>${Math.round(__maxBufferedAfter / 1024)}KB`);
+        console.log(`[DIAG] bcast-split ${__ms.toFixed(0)}ms room=${roomId} type=${room.gameType} recips=${__nH}h/${__nS}s state=${__tState.toFixed(0)}ms build=${__tBuild.toFixed(0)}ms decor=${__tDecor.toFixed(0)}ms json=${__tJson.toFixed(0)}ms ws=${__tWs.toFixed(0)}ms send=${__tSend.toFixed(0)}ms maxKB=${(__maxBytes / 1024).toFixed(1)} buf=${Math.round(__maxBufferedBefore / 1024)}KB>${Math.round(__maxBufferedAfter / 1024)}KB`);
       }
     }
   }
@@ -7020,6 +7045,6 @@ async function notifyFriendsOfStatusChange(nickname, isOnline) {
 
 function sendTo(ws, data) {
   if (ws.readyState === ws.OPEN) {
-    ws.send(JSON.stringify(data));
+    ws.send(JSON.stringify(data), { compress: false });
   }
 }

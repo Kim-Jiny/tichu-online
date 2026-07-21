@@ -83,7 +83,11 @@ class NetworkService extends ChangeNotifier {
 
     try {
       _channel = WebSocketChannel.connect(Uri.parse(_serverUrl));
-      await _channel!.ready;
+      // Bound the handshake. A stale/half-open socket (e.g. after a long
+      // background) can otherwise hang on `.ready` for the OS TCP timeout
+      // (tens of seconds), stalling reconnect and leaving the "connecting"
+      // overlay stuck. Time out fast so reconnect() retries a fresh socket.
+      await _channel!.ready.timeout(const Duration(seconds: 8));
 
       _isConnecting = false;
       _isConnected = true;
@@ -131,6 +135,10 @@ class NetworkService extends ChangeNotifier {
       debugPrint('[Network] Connected to $_serverUrl (id=$myId)');
     } catch (e) {
       debugPrint('[Network] Connection failed: $e');
+      // Abort the (possibly still-pending) stuck socket so it doesn't leak.
+      try {
+        _channel?.sink.close();
+      } catch (_) {}
       _connectCompleter?.completeError(e);
       _connectCompleter = null;
       _handleDisconnect();

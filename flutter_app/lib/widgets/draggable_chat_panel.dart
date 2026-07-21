@@ -289,7 +289,7 @@ class _DraggableChatPanelState extends State<DraggableChatPanel> {
       },
       onPanEnd: (_) => _saveGeometry(),
       child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
         decoration: BoxDecoration(
           color: widget.accentColor,
           borderRadius: const BorderRadius.only(
@@ -317,8 +317,8 @@ class _DraggableChatPanelState extends State<DraggableChatPanel> {
                   setState(() => _showOpacitySlider = !_showOpacitySlider),
               behavior: HitTestBehavior.opaque,
               child: SizedBox(
-                width: 40,
-                height: 40,
+                width: 36,
+                height: 32,
                 child: Center(
                   child: Icon(
                     Icons.opacity,
@@ -328,13 +328,13 @@ class _DraggableChatPanelState extends State<DraggableChatPanel> {
                 ),
               ),
             ),
-            const SizedBox(width: 4),
+            const SizedBox(width: 2),
             GestureDetector(
               onTap: widget.onClose,
               behavior: HitTestBehavior.opaque,
               child: const SizedBox(
-                width: 40,
-                height: 40,
+                width: 36,
+                height: 32,
                 child: Center(
                   child: Icon(Icons.close, color: Colors.white, size: 20),
                 ),

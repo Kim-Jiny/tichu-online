@@ -1734,8 +1734,8 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
           final width = constraints.maxWidth;
           final height = constraints.maxHeight;
           final centerX = width / 2;
-          const seatWidth = 106.0;
-          const seatHeight = 78.0;
+          const seatWidth = 116.0;
+          const seatHeight = 90.0;
           const playedCardWidth = 72 * 0.7;
           const playedCardHeight = 72.0;
           final spectatorBoardDrop = _mightySmallDeviceBoardDrop(

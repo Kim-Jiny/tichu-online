@@ -510,7 +510,10 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
                       if (state.lastSettingEvent != null &&
                           _dismissedSettingKey !=
                               '${state.lastSettingEvent!.round}-${state.lastSettingEvent!.playerId}')
-                        _buildSettingRevealOverlay(state.lastSettingEvent!),
+                        _buildSettingRevealOverlay(
+                          state.lastSettingEvent!,
+                          trumpSuit: state.trumpSuit,
+                        ),
                       if (_contractChangeBanner != null)
                         _buildContractChangeBanner(_contractChangeBanner!),
                     ],
@@ -5701,7 +5704,10 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
   /// declares 세팅. Reveals the declarer's hand + who they are + a close
   /// prompt. Dismissed by tapping; keyed on round+playerId so a later
   /// round's reveal re-shows even if the prior key matches.
-  Widget _buildSettingRevealOverlay(MightySettingEvent event) {
+  Widget _buildSettingRevealOverlay(
+    MightySettingEvent event, {
+    String? trumpSuit,
+  }) {
     final l10n = L10n.of(context);
     return Positioned.fill(
       child: GestureDetector(
@@ -5760,7 +5766,11 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
                   ),
                 ),
                 const SizedBox(height: 12),
-                _buildDealMissCardRows(event.cards, splitAt: 6),
+                _buildDealMissCardRows(
+                  event.cards,
+                  splitAt: 6,
+                  trumpSuit: trumpSuit,
+                ),
                 const SizedBox(height: 10),
                 Text(
                   l10n.mtSettingTapToClose,
@@ -6110,22 +6120,42 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
   /// two equal(ish) rows. Deal-miss always splits (full hand ≥ 8 cards is
   /// awkward in one row), while the setting reveal only splits past the
   /// ≥ 5-card threshold.
-  Widget _buildDealMissCardRows(List<String> cards, {int? splitAt = 1}) {
+  Widget _buildDealMissCardRows(
+    List<String> cards, {
+    int? splitAt = 1,
+    String? trumpSuit,
+  }) {
+    final highlightTrump = trumpSuit != null && trumpSuit != 'no_trump';
     Widget buildRow(List<String> ids) {
+      final tiles = <Widget>[];
+      for (int i = 0; i < ids.length; i++) {
+        if (i > 0) tiles.add(const SizedBox(width: 4));
+        final id = ids[i];
+        Widget card = PlayingCard(
+          cardId: _displayCardId(id),
+          width: 38,
+          height: 54,
+          isInteractive: false,
+        );
+        // Frame trump-suit cards so the 기루다 holdings stand out.
+        if (highlightTrump && _getCardSuit(id) == trumpSuit) {
+          card = Container(
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(6),
+              border: Border.all(
+                color: _bidAccentColor(trumpSuit),
+                width: 2.5,
+              ),
+            ),
+            child: card,
+          );
+        }
+        tiles.add(card);
+      }
       return Row(
         mainAxisAlignment: MainAxisAlignment.center,
         mainAxisSize: MainAxisSize.min,
-        children: [
-          for (int i = 0; i < ids.length; i++) ...[
-            if (i > 0) const SizedBox(width: 4),
-            PlayingCard(
-              cardId: _displayCardId(ids[i]),
-              width: 38,
-              height: 54,
-              isInteractive: false,
-            ),
-          ],
-        ],
+        children: tiles,
       );
     }
 

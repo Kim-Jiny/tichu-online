@@ -33,6 +33,28 @@ class SfxService {
   Future<void> _ensureInitialized() => _initFuture ??= _init();
 
   Future<void> _init() async {
+    // Respect the silent switch and DON'T hijack other apps' audio (e.g. a
+    // video/music playing in the background). iOS `ambient` obeys the mute
+    // switch and mixes with others; on Android we request no audio focus so
+    // background media keeps playing. Without this, audioplayers defaults to
+    // iOS `playback` (ignores mute, interrupts others).
+    try {
+      await AudioPlayer.global.setAudioContext(
+        AudioContext(
+          iOS: AudioContextIOS(
+            category: AVAudioSessionCategory.ambient,
+            options: const {AVAudioSessionOptions.mixWithOthers},
+          ),
+          android: const AudioContextAndroid(
+            isSpeakerphoneOn: false,
+            stayAwake: false,
+            contentType: AndroidContentType.sonification,
+            usageType: AndroidUsageType.game,
+            audioFocus: AndroidAudioFocus.none,
+          ),
+        ),
+      );
+    } catch (_) {}
     // Preload all players in parallel — each is independent, and serial
     // awaits would stack up to several hundred ms before the very first
     // SFX could play.

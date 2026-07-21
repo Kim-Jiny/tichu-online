@@ -2191,8 +2191,9 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
                   ),
                   decoration: const BoxDecoration(),
                   child: Center(
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
+                    child: Stack(
+                      clipBehavior: Clip.none,
+                      alignment: Alignment.topCenter,
                       children: [
                         FittedBox(
                           fit: BoxFit.scaleDown,
@@ -2392,15 +2393,15 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
                       ),
                         ),
                         if (hasPointCards)
-                          SizedBox(
-                            height: 0,
-                            child: OverflowBox(
-                              minWidth: 0,
-                              maxWidth: double.infinity,
-                              minHeight: 0,
-                              maxHeight: double.infinity,
-                              alignment: Alignment.topCenter,
-                              child: _buildSeatPointCards(player),
+                          Positioned(
+                            left: 0,
+                            right: 0,
+                            bottom: -26,
+                            child: Center(
+                              child: FittedBox(
+                                fit: BoxFit.scaleDown,
+                                child: _buildSeatPointCards(player),
+                              ),
                             ),
                           ),
                       ],

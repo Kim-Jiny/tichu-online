@@ -351,10 +351,15 @@ function _friendNTLeadRule(game, botId) {
   const hand = game.hands[botId] || [];
   if (hand.length === 0) return null;
 
+  // While the declarer still holds the Mighty, don't recycle its home suit
+  // (skipped for mighty/joker-friend designation — handled in the helper).
+  const avoidSuit = MightyBotInternals.mightySuitToAvoidLeading(game, botId);
+
   const tops = [];
   for (const cardId of hand) {
     if (cardId === 'mighty_joker') continue;
     if (!MightyBotInternals.isEffectiveTopOfSuit(cardId, game)) continue;
+    if (avoidSuit && getCardInfo(cardId).suit === avoidSuit) continue;
     tops.push(cardId);
   }
   if (tops.length > 0) {
@@ -377,6 +382,9 @@ function _friendNTLeadRule(game, botId) {
   const friendInfo = getCardInfo(friendCard);
   if (!friendInfo) return null;
   const friendSuit = friendInfo.suit;
+  // Don't feed the called suit back when it IS the Mighty's home suit and the
+  // declarer still holds the Mighty (would just burn declarer's Mighty).
+  if (avoidSuit && friendSuit === avoidSuit) return null;
 
   const friendSuitCards = [];
   for (const cardId of hand) {
@@ -420,6 +428,10 @@ function _friendSuitedTopCashRule(game, botId) {
   if (hand.length === 0) return null;
   const mightyCard = game.getMightyCard();
 
+  // While the declarer still holds the Mighty, don't cash a top in its home
+  // suit (skipped for mighty/joker-friend designation / when we hold trump).
+  const avoidSuit = MightyBotInternals.mightySuitToAvoidLeading(game, botId);
+
   const tops = [];
   for (const cardId of hand) {
     if (cardId === 'mighty_joker') continue;
@@ -427,6 +439,7 @@ function _friendSuitedTopCashRule(game, botId) {
     const info = getCardInfo(cardId);
     if (!info) continue;
     if (info.suit === trump) continue;
+    if (avoidSuit && info.suit === avoidSuit) continue;
     if (!MightyBotInternals.isEffectiveTopOfSuit(cardId, game)) continue;
     if (MightyBotInternals.suitLedCount(game, info.suit) > 0) continue;
     tops.push(cardId);

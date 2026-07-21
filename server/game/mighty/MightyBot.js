@@ -1295,17 +1295,19 @@ function _friendLead(game, botId, legalCards, suitCards, mightyCard) {
     suitCards = withoutMighty;
   }
 
-  // Revealed friend with no trump: avoid leading spade while the Mighty
-  // is still live — a high-spade lead usually just forces the declarer
-  // to burn Mighty on our trick.
-  if (_shouldAvoidSpadeLead(game, botId, suitCards, mightyCard)) {
-    const withoutSpade = {};
+  // Revealed friend: while the DECLARER still holds the Mighty, don't recycle
+  // the Mighty's home suit — a high lead there just forces declarer to burn
+  // Mighty on a trick the government already controls. Skipped for
+  // mighty/joker-friend designation (see _mightySuitToAvoidLeading).
+  const mightySuitToAvoid = _mightySuitToAvoidLeading(game, botId);
+  if (mightySuitToAvoid) {
+    const filtered = {};
     for (const [suit, cards] of Object.entries(suitCards)) {
-      if (suit !== 'spade' && cards.length > 0) withoutSpade[suit] = cards;
+      if (suit !== mightySuitToAvoid && cards.length > 0) filtered[suit] = cards;
     }
-    suitCards = withoutSpade;
+    suitCards = filtered;
     legalCards = legalCards.filter(c =>
-      c === 'mighty_joker' || getCardInfo(c).suit !== 'spade');
+      c === 'mighty_joker' || getCardInfo(c).suit !== mightySuitToAvoid);
   }
 
   const friendCardSuit = _getFriendCardSuit(game);
@@ -2135,29 +2137,53 @@ function _shouldHoldMightyInMightyFriends(game, legalCards) {
 }
 
 /**
- * Revealed-friend + no-trump-in-hand + Mighty-still-live heuristic:
- * spade is the Mighty's home suit, so leading a high spade tends to
- * force the declarer to burn Mighty on our trick (we were already
- * winning it for the government). Strip spade from the lead pool when
- * any non-spade alternative exists. No-op when we have trump cards
- * (trump leads take priority anyway) or when Mighty has already been
- * played. Does not fire in the Mighty-friends variant since friend is
- * revealed exactly when Mighty is played, which contradicts the
- * "Mighty still live" side of this guard.
+ * Rule (user spec): while the DECLARER still holds the Mighty, the revealed
+ * friend must not recycle the Mighty's home suit — leading it just forces the
+ * declarer to burn the Mighty on a trick the government already controls.
+ *
+ * Uses the DYNAMIC Mighty suit (spade normally, diamond when trump is spade).
+ * Fires only when the declarer actually still holds the Mighty (bots see all
+ * hands, so this is exact — replaces the old "Mighty not yet played" proxy).
+ *
+ * Exception: when the friend was designated by the Mighty or the Joker
+ * (마이티/조커 친구), the reveal flow expects the friend to run the called
+ * suit back to the declarer, so we suppress nothing.
+ *
+ * Also a no-op when we hold trump (trump leads take priority anyway), when we
+ * hold no card in the Mighty suit, or when there's no alternative suit to lead
+ * instead.
+ *
+ * @returns {string|null} the suit to strip from the friend's lead pool, or null.
  */
-function _shouldAvoidSpadeLead(game, botId, suitCards, mightyCard) {
-  if (!game.friendRevealed || botId !== game.partner) return false;
-  const hasTrumpInHand = game.trumpSuit && game.trumpSuit !== 'no_trump'
-    && (suitCards[game.trumpSuit] || []).length > 0;
-  if (hasTrumpInHand) return false;
-  const played = _getPlayedCards(game);
-  if (played.has(mightyCard)) return false;
-  const spadeCards = suitCards.spade || [];
-  if (spadeCards.length === 0) return false;
-  for (const [suit, cards] of Object.entries(suitCards)) {
-    if (suit !== 'spade' && cards.length > 0) return true;
+function _mightySuitToAvoidLeading(game, botId) {
+  if (!game.friendRevealed || botId !== game.partner) return null;
+  const mightyCard = game.getMightyCard();
+  // Exception: mighty/joker-friend designation → suppress nothing.
+  if (game.friendCard === 'mighty_joker' || game.friendCard === mightyCard) return null;
+  // Only when the declarer actually still holds the Mighty.
+  const declarerHand = game.hands[game.declarer] || [];
+  if (!declarerHand.includes(mightyCard)) return null;
+  const mightyInfo = getCardInfo(mightyCard);
+  const mightySuit = mightyInfo && mightyInfo.suit;
+  if (!mightySuit) return null;
+
+  const hand = game.hands[botId] || [];
+  const trump = (game.trumpSuit && game.trumpSuit !== 'no_trump') ? game.trumpSuit : null;
+  let hasTrump = false;
+  let mightySuitCount = 0;
+  let hasAlternative = false;
+  for (const cardId of hand) {
+    if (cardId === 'mighty_joker') continue;
+    const info = getCardInfo(cardId);
+    if (!info || !info.suit) continue;
+    if (trump && info.suit === trump) hasTrump = true;
+    if (info.suit === mightySuit) mightySuitCount++;
+    else hasAlternative = true;
   }
-  return false;
+  // Trump leads take priority — don't override.
+  if (hasTrump) return null;
+  if (mightySuitCount === 0 || !hasAlternative) return null;
+  return mightySuit;
 }
 
 /** Suits that have already appeared as the lead card of any completed trick.
@@ -2400,5 +2426,6 @@ module.exports = {
   hasOppositionBehind,
   declarerStrongSuit: _declarerStrongSuit,
   getFriendCardSuit: _getFriendCardSuit,
+  mightySuitToAvoidLeading: _mightySuitToAvoidLeading,
   winnerCardWillHold: _winnerCardWillHold,
 };

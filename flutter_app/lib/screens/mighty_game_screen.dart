@@ -3017,11 +3017,6 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
                 ),
               ),
             ),
-            if (state.friendCard != null)
-              Padding(
-                padding: const EdgeInsets.only(top: 6),
-                child: _buildFriendRevealLine(state),
-              ),
           ],
         ),
       ),
@@ -3096,72 +3091,6 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
           ),
         ),
       ],
-    );
-  }
-
-  /// Builds the friend-card line shown in the trick-end area. Uses SuitIcon
-  /// + suit-colored text when the friend is a regular card; falls back to
-  /// neutral text for joker / no-friend / first-trick variants.
-  Widget _buildFriendRevealLine(MightyGameStateData state) {
-    final l10n = L10n.of(context);
-    final friendCard = state.friendCard!;
-    final partnerName = state.partner == null
-        ? ''
-        : state.players
-                  .where((p) => p.id == state.partner)
-                  .map((p) => p.name)
-                  .firstOrNull ??
-              '';
-    final showReveal = state.friendRevealed && state.partner != null;
-
-    String? suit;
-    String? rank;
-    String specialLabel = '';
-    if (friendCard == 'mighty_joker') {
-      specialLabel = l10n.mtFriendCardJoker;
-    } else if (friendCard == 'no_friend') {
-      specialLabel = l10n.mtFriendCardSolo;
-    } else if (friendCard == 'first_trick') {
-      specialLabel = l10n.mtFriendCard1st;
-    } else {
-      final parts = friendCard.replaceFirst('mighty_', '').split('_');
-      if (parts.length == 2) {
-        suit = parts[0];
-        rank = parts[1];
-      } else {
-        specialLabel = friendCard;
-      }
-    }
-    final accent = suit != null
-        ? _bidAccentColor(suit)
-        : const Color(0xFF8A7A72);
-    final baseStyle = TextStyle(
-      fontSize: 11,
-      fontWeight: FontWeight.w600,
-      color: accent,
-    );
-    const cardSentinel = 'CARD';
-    final template = showReveal
-        ? l10n.mtFriendRevealed(cardSentinel, partnerName)
-        : l10n.mtFriendHidden(cardSentinel);
-    final parts = template.split(cardSentinel);
-    return RichText(
-      textAlign: TextAlign.center,
-      text: TextSpan(
-        style: baseStyle,
-        children: [
-          if (parts.isNotEmpty) TextSpan(text: parts[0]),
-          if (suit != null) ...[
-            WidgetSpan(
-              alignment: PlaceholderAlignment.middle,
-              child: SuitIcon(suit: suit, size: 11, color: accent),
-            ),
-            TextSpan(text: rank!),
-          ] else
-            TextSpan(text: specialLabel),
-          if (parts.length > 1) TextSpan(text: parts[1]),
-        ],
-      ),
     );
   }
 

@@ -5166,7 +5166,7 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
                     width: selected ? 2 : 1,
                   ),
                 ),
-                child: Text(s.$2, style: TextStyle(fontSize: 16, color: s.$3)),
+                child: SuitIcon(suit: s.$1, size: 18, color: s.$3),
               ),
             );
           }),

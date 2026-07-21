@@ -304,6 +304,12 @@ function _friendDrawTrumpRule(game, botId) {
   if (!trump || trump === 'no_trump') return null;
 
   if (MightyBotInternals.countOpponentTrumps(game, botId) <= 0) return null;
+  // Don't draw trump when only our own team (declarer + friend) still holds
+  // real trump. countOpponentTrumps counts the joker as a "trump", but the
+  // joker isn't a trump-suit card — a trump lead can't draw it, it just lets
+  // opp beat our trump with the joker. noRealOppTrumpLeft ignores the joker
+  // and checks actual trump-suit holdings, so gate on it here.
+  if (MightyBotInternals.noRealOppTrumpLeft(game, botId)) return null;
   if (_hasSafeFreshTop(game, botId)) return null;
 
   const mightyCard = game.getMightyCard();

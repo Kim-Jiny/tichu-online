@@ -2711,47 +2711,82 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
     );
   }
 
-  // My own captured point cards, shown above my hand (the table seat for
-  // `position == 'self'` is omitted, so this is the only place my score cards
-  // appear). Horizontal-scroll so a big capture never overflows.
+  // My own captured point cards — the table seat for `position == 'self'` is
+  // omitted, so this is the only place my score cards appear. Shown as a
+  // compact tappable chip on the prev-trick button line: point count + up to
+  // 5 mini cards + "+N", mirroring the other players' seat display. Tapping
+  // opens the same full point-card popup.
   Widget _buildMyPointCardStrip(MightyGameStateData state) {
     final me = state.players.cast<MightyPlayer?>().firstWhere(
       (p) => p?.position == 'self',
       orElse: () => null,
     );
     final cards = me?.pointCards ?? const <String>[];
-    if (cards.isEmpty) return const SizedBox.shrink();
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 6),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          const Icon(
-            Icons.workspace_premium,
-            size: 14,
-            color: Color(0xFF8A7A72),
+    if (cards.isEmpty || me == null) return const SizedBox.shrink();
+    const maxShown = 5;
+    final shown = cards.take(maxShown).toList();
+    final extra = cards.length - shown.length;
+    final cardItems = <Widget>[
+      for (final cardId in shown)
+        PlayingCard(
+          cardId: _displayCardId(cardId),
+          width: 16,
+          height: 22,
+          isInteractive: false,
+        ),
+      if (extra > 0)
+        Container(
+          width: 18,
+          height: 22,
+          alignment: Alignment.center,
+          decoration: BoxDecoration(
+            color: const Color(0xFF5A4038),
+            borderRadius: BorderRadius.circular(3),
           ),
-          const SizedBox(width: 6),
-          Flexible(
-            child: SingleChildScrollView(
-              scrollDirection: Axis.horizontal,
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  for (var i = 0; i < cards.length; i++) ...[
-                    if (i > 0) const SizedBox(width: 2),
-                    PlayingCard(
-                      cardId: _displayCardId(cards[i]),
-                      width: 18,
-                      height: 25,
-                      isInteractive: false,
-                    ),
-                  ],
-                ],
-              ),
+          child: Text(
+            '+$extra',
+            style: const TextStyle(
+              fontSize: 9,
+              fontWeight: FontWeight.w800,
+              color: Colors.white,
             ),
           ),
-        ],
+        ),
+    ];
+    return GestureDetector(
+      behavior: HitTestBehavior.opaque,
+      onTap: () => _showPointCardsDialog(me),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
+        decoration: BoxDecoration(
+          color: const Color(0xFFF3ECE6),
+          borderRadius: BorderRadius.circular(8),
+          border: Border.all(color: const Color(0xFFE0D8D4)),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Icon(
+              Icons.workspace_premium,
+              size: 15,
+              color: Color(0xFF8A7A72),
+            ),
+            const SizedBox(width: 3),
+            Text(
+              '${me.pointCount}',
+              style: const TextStyle(
+                fontSize: 12,
+                fontWeight: FontWeight.w800,
+                color: Color(0xFF5A4038),
+              ),
+            ),
+            const SizedBox(width: 6),
+            for (var i = 0; i < cardItems.length; i++) ...[
+              if (i > 0) const SizedBox(width: 2),
+              cardItems[i],
+            ],
+          ],
+        ),
       ),
     );
   }
@@ -4272,10 +4307,19 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
               state.phase == 'trick_end' ||
               state.phase == 'round_end')
             Padding(
-              padding: const EdgeInsets.only(bottom: 4, right: 4),
+              padding: const EdgeInsets.only(bottom: 4, left: 4, right: 4),
               child: Row(
-                mainAxisAlignment: MainAxisAlignment.end,
                 children: [
+                  Flexible(
+                    child: Align(
+                      alignment: Alignment.centerLeft,
+                      child: FittedBox(
+                        fit: BoxFit.scaleDown,
+                        alignment: Alignment.centerLeft,
+                        child: _buildMyPointCardStrip(state),
+                      ),
+                    ),
+                  ),
                   if (state.canDeclareSetting) _buildSettingButton(game),
                   if (state.canDeclareSetting &&
                       game.hasMightyPrevTrick &&
@@ -4433,8 +4477,6 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
               state.currentTrick.isEmpty &&
               state.jokerHasPower)
             _buildJokerCallToggle(),
-          // My captured point cards (score cards I've won this round).
-          _buildMyPointCardStrip(state),
           // Card rows
           Padding(
             padding: const EdgeInsets.symmetric(vertical: 4),

@@ -2191,13 +2191,13 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
                   ),
                   decoration: const BoxDecoration(),
                   child: Center(
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        FittedBox(
+                    child: FittedBox(
                       fit: BoxFit.scaleDown,
                       alignment: Alignment.topCenter,
-                      child: Stack(
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Stack(
                         clipBehavior: Clip.none,
                         children: [
                           AnimatedContainer(
@@ -2390,9 +2390,9 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
                             ),
                         ],
                       ),
-                    ),
                         if (hasPointCards) _buildSeatPointCards(player),
                       ],
+                    ),
                     ),
                   ),
                 ),

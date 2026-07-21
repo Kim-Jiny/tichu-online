@@ -143,10 +143,15 @@ class _ConnectionOverlayState extends State<ConnectionOverlay>
         widget.child,
         Positioned.fill(
           child: AbsorbPointer(
-            child: Container(
-              color: Colors.black54,
-              alignment: Alignment.center,
-              child: Column(
+            // Material provides the text-style baseline so the label doesn't get
+            // the yellow "no Material ancestor" debug underline (this overlay
+            // sits above the app, outside any Scaffold).
+            child: Material(
+              type: MaterialType.transparency,
+              child: Container(
+                color: Colors.black54,
+                alignment: Alignment.center,
+                child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   const SizedBox(
@@ -169,6 +174,7 @@ class _ConnectionOverlayState extends State<ConnectionOverlay>
                 ],
               ),
             ),
+          ),
           ),
         ),
       ],

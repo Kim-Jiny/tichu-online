@@ -1339,7 +1339,7 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
         : 0.0;
 
     return Padding(
-      padding: const EdgeInsets.fromLTRB(8, 4, 8, 4),
+      padding: const EdgeInsets.fromLTRB(8, 6, 8, 6),
       child: LayoutBuilder(
         builder: (context, constraints) {
           final width = constraints.maxWidth;
@@ -1357,21 +1357,21 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
                 Text(
                   leaderName,
                   style: const TextStyle(
-                    fontSize: 11,
+                    fontSize: 13,
                     fontWeight: FontWeight.w600,
                     color: Color(0xFF5A4038),
                   ),
                 ),
-              if (leaderName.isNotEmpty && hasBid) const SizedBox(width: 6),
+              if (leaderName.isNotEmpty && hasBid) const SizedBox(width: 7),
               if (hasBid)
                 Container(
                   padding: const EdgeInsets.symmetric(
-                    horizontal: 6,
-                    vertical: 2,
+                    horizontal: 9,
+                    vertical: 4,
                   ),
                   decoration: BoxDecoration(
                     color: _bidAccentColor(bidSuit?.toString()),
-                    borderRadius: BorderRadius.circular(6),
+                    borderRadius: BorderRadius.circular(7),
                   ),
                   child: Row(
                     mainAxisSize: MainAxisSize.min,
@@ -1379,16 +1379,16 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
                     children: [
                       SuitIcon(
                         suit: bidSuit?.toString() ?? '',
-                        size: 11,
+                        size: 14,
                         color: Colors.white,
                       ),
-                      const SizedBox(width: 3),
+                      const SizedBox(width: 4),
                       Text(
                         L10n.of(
                           context,
                         ).mtContractWithPoints(bidPoints.toInt()),
                         style: const TextStyle(
-                          fontSize: 12,
+                          fontSize: 15,
                           fontWeight: FontWeight.bold,
                           color: Colors.white,
                         ),
@@ -1397,23 +1397,23 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
                   ),
                 ),
               if (!isBidding && hasFriendInfo) ...[
-                const SizedBox(width: 6),
+                const SizedBox(width: 7),
                 const Text(
                   '/',
-                  style: TextStyle(fontSize: 11, color: Color(0xFF8A7A72)),
+                  style: TextStyle(fontSize: 13, color: Color(0xFF8A7A72)),
                 ),
-                const SizedBox(width: 6),
+                const SizedBox(width: 7),
                 if (friendCardSuit != null) ...[
                   SuitIcon(
                     suit: friendCardSuit,
-                    size: 10,
+                    size: 13,
                     color: _bidAccentColor(friendCardSuit),
                   ),
-                  const SizedBox(width: 2),
+                  const SizedBox(width: 3),
                   Text(
                     '$friendCardRank$friendSuffixText',
                     style: TextStyle(
-                      fontSize: 10,
+                      fontSize: 13,
                       fontWeight: FontWeight.w600,
                       color: _bidAccentColor(friendCardSuit),
                     ),
@@ -1423,7 +1423,7 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
                   Text(
                     '${friendSpecialText ?? ''}$friendSuffixText',
                     style: const TextStyle(
-                      fontSize: 10,
+                      fontSize: 13,
                       color: Color(0xFF8A7A72),
                     ),
                     overflow: TextOverflow.ellipsis,
@@ -1491,12 +1491,12 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
       mainAxisSize: MainAxisSize.min,
       crossAxisAlignment: CrossAxisAlignment.center,
       children: [
-        SuitIcon(suit: suit, size: 12, color: tone),
-        const SizedBox(width: 2),
+        SuitIcon(suit: suit, size: 14, color: tone),
+        const SizedBox(width: 3),
         Text(
           '$count',
           style: TextStyle(
-            fontSize: 12,
+            fontSize: 14,
             fontWeight: FontWeight.bold,
             color: tone,
           ),
@@ -2830,45 +2830,6 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
   // number (n/10) and lead suit (when a trick is in progress). Trump counting
   // lives beside the hand instead. Keeps the at-a-glance info in one readable
   // place instead of scattered around the table.
-  Widget _buildTrickInfoHeader(
-    MightyGameStateData state, {
-    String? leadSuit,
-  }) {
-    const style = TextStyle(
-      fontSize: 12,
-      fontWeight: FontWeight.w700,
-      color: Color(0xFF5A4038),
-    );
-    Widget dot() => const Padding(
-      padding: EdgeInsets.symmetric(horizontal: 5),
-      child: Text('·', style: TextStyle(fontSize: 12, color: Color(0xFFBBB0A8))),
-    );
-    final children = <Widget>[
-      const Icon(Icons.event_repeat, size: 12, color: Color(0xFF8A7A72)),
-      const SizedBox(width: 3),
-      Text(L10n.of(context).mtRoundOnly(state.round.toString()), style: style),
-    ];
-    if (leadSuit != null) {
-      children.addAll([
-        dot(),
-        Text(
-          '${L10n.of(context).mtLead} ',
-          style: style.copyWith(color: _bidAccentColor(leadSuit)),
-        ),
-        SuitIcon(suit: leadSuit, size: 13, color: _bidAccentColor(leadSuit)),
-      ]);
-    }
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 6),
-      child: Wrap(
-        alignment: WrapAlignment.center,
-        crossAxisAlignment: WrapCrossAlignment.center,
-        runSpacing: 2,
-        children: children,
-      ),
-    );
-  }
-
   Widget _buildTrickArea(MightyGameStateData state, GameService game) {
     if (state.currentTrick.isEmpty) {
       return Center(
@@ -2882,7 +2843,6 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              _buildTrickInfoHeader(state),
               const Icon(Icons.style, size: 20, color: Color(0xFF8A7A72)),
               const SizedBox(height: 4),
               Text(
@@ -2924,57 +2884,84 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
       leadSuit = _getCardSuit(leadCardId);
     }
 
-    // Declarer's contract (suit + points)
-    final contractPoints = state.currentBid['points'] as int?;
-    final contractSuit = state.currentBid['suit']?.toString();
+    // Contract (공약) is already shown in the top info bar, so the center
+    // trick box only surfaces the LEAD suit — rendered big and faded as a
+    // background watermark so it reads at a glance.
+    final accent = leadSuit != null
+        ? _bidAccentColor(leadSuit)
+        : const Color(0xFF8A7A72);
 
     return Center(
       child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+        width: 150,
+        clipBehavior: Clip.antiAlias,
         decoration: BoxDecoration(
           color: Colors.white.withValues(alpha: 0.68),
           borderRadius: BorderRadius.circular(16),
         ),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
+        child: Stack(
+          alignment: Alignment.center,
           children: [
-            _buildTrickInfoHeader(state, leadSuit: leadSuit),
-            // Line 1: contract (declarer's trump + bid points)
-            if (contractPoints != null && contractSuit != null)
-              Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  SuitIcon(
-                    suit: contractSuit,
-                    size: 15,
-                    color: _bidAccentColor(contractSuit),
-                  ),
-                  const SizedBox(width: 4),
-                  Text(
-                    L10n.of(context).mtContractWithPoints(contractPoints),
-                    style: TextStyle(
-                      fontSize: 14,
-                      fontWeight: FontWeight.w800,
-                      color: _bidAccentColor(contractSuit),
+            // Big faded lead-suit watermark behind the label.
+            if (leadSuit != null)
+              Positioned.fill(
+                child: Center(
+                  child: OverflowBox(
+                    maxWidth: double.infinity,
+                    maxHeight: double.infinity,
+                    child: SuitIcon(
+                      suit: leadSuit,
+                      size: 88,
+                      color: accent.withValues(alpha: 0.13),
                     ),
-                  ),
-                ],
-              ),
-            // Turn timer
-            if (_remainingSeconds > 0)
-              Padding(
-                padding: const EdgeInsets.only(top: 4),
-                child: Text(
-                  '${_remainingSeconds}s',
-                  style: TextStyle(
-                    fontSize: 12,
-                    fontWeight: FontWeight.bold,
-                    color: _remainingSeconds <= 5
-                        ? const Color(0xFFE53935)
-                        : const Color(0xFF8A7A72),
                   ),
                 ),
               ),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  if (leadSuit != null)
+                    Row(
+                      mainAxisSize: MainAxisSize.min,
+                      crossAxisAlignment: CrossAxisAlignment.center,
+                      children: [
+                        Text(
+                          '${L10n.of(context).mtLead} ',
+                          style: TextStyle(
+                            fontSize: 13,
+                            fontWeight: FontWeight.w800,
+                            color: accent,
+                          ),
+                        ),
+                        SuitIcon(suit: leadSuit, size: 18, color: accent),
+                      ],
+                    )
+                  else
+                    const Icon(
+                      Icons.style,
+                      size: 20,
+                      color: Color(0xFF8A7A72),
+                    ),
+                  // Turn timer
+                  if (_remainingSeconds > 0)
+                    Padding(
+                      padding: const EdgeInsets.only(top: 4),
+                      child: Text(
+                        '${_remainingSeconds}s',
+                        style: TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.bold,
+                          color: _remainingSeconds <= 5
+                              ? const Color(0xFFE53935)
+                              : const Color(0xFF8A7A72),
+                        ),
+                      ),
+                    ),
+                ],
+              ),
+            ),
           ],
         ),
       ),

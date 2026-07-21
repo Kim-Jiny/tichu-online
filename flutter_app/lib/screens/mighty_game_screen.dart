@@ -2894,6 +2894,7 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
     return Center(
       child: Container(
         width: 150,
+        constraints: const BoxConstraints(minHeight: 74),
         clipBehavior: Clip.antiAlias,
         decoration: BoxDecoration(
           color: Colors.white.withValues(alpha: 0.68),
@@ -2902,17 +2903,18 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
         child: Stack(
           alignment: Alignment.center,
           children: [
-            // Big faded lead-suit watermark behind the label.
+            // Big faded lead-suit watermark — FittedBox scales it to fit the
+            // box so it's always fully visible (never clipped).
             if (leadSuit != null)
               Positioned.fill(
-                child: Center(
-                  child: OverflowBox(
-                    maxWidth: double.infinity,
-                    maxHeight: double.infinity,
+                child: Padding(
+                  padding: const EdgeInsets.all(8),
+                  child: FittedBox(
+                    fit: BoxFit.contain,
                     child: SuitIcon(
                       suit: leadSuit,
-                      size: 88,
-                      color: accent.withValues(alpha: 0.13),
+                      size: 100,
+                      color: accent.withValues(alpha: 0.15),
                     ),
                   ),
                 ),

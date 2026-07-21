@@ -876,6 +876,36 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
                   ],
                 ),
               ),
+              const SizedBox(width: 6),
+              // Target score (finish line) so it's visible without opening the
+              // score-history dialog.
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFEFF4F0),
+                  borderRadius: BorderRadius.circular(10),
+                  border: Border.all(color: const Color(0xFFD3E1D8)),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const Icon(
+                      Icons.flag_rounded,
+                      size: 12,
+                      color: Color(0xFF5E8A72),
+                    ),
+                    const SizedBox(width: 3),
+                    Text(
+                      '${game.roomTargetScore}',
+                      style: const TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w800,
+                        color: Color(0xFF41715A),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
               const Spacer(),
               if (state.scoreHistory.isNotEmpty)
                 Padding(

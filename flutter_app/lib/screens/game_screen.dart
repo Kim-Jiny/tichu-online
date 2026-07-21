@@ -3121,6 +3121,17 @@ class _GameScreenState extends State<GameScreen> {
                 color: enemyLeading ? enemyColor : const Color(0xFF8A7A72),
               ),
             ),
+            // Target score (finish line) so players don't have to open the
+            // history dialog to see how many points end the game.
+            SizedBox(width: 6 * _s),
+            Text(
+              '/ ${context.read<GameService>().roomTargetScore}',
+              style: TextStyle(
+                fontSize: 11 * _s,
+                fontWeight: FontWeight.w700,
+                color: const Color(0xFF8A7A72),
+              ),
+            ),
             SizedBox(width: 4 * _s),
             Icon(Icons.history, size: 12 * _s, color: const Color(0xFF8A7A72)),
           ],

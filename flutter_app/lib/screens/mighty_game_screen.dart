@@ -840,46 +840,37 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
           padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
           child: Row(
             children: [
-              Flexible(
-                child: Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 10,
-                    vertical: 5,
-                  ),
-                  decoration: BoxDecoration(
-                    color: Colors.white.withValues(alpha: 0.9),
-                    borderRadius: BorderRadius.circular(12),
-                    border: Border.all(color: const Color(0xFFCCCCCC)),
-                  ),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      const Icon(
-                        Icons.style,
-                        size: 14,
+              Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 10,
+                  vertical: 5,
+                ),
+                decoration: BoxDecoration(
+                  color: Colors.white.withValues(alpha: 0.9),
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: const Color(0xFFCCCCCC)),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const Icon(Icons.style, size: 14, color: Color(0xFF5A4038)),
+                    const SizedBox(width: 5),
+                    Text(
+                      state.phase == 'round_end'
+                          ? L10n.of(
+                              context,
+                            ).mtRoundOnly(state.round.toString())
+                          : L10n.of(context).mtRoundPhase(
+                              state.round.toString(),
+                              _phaseLabel(state.phase),
+                            ),
+                      style: const TextStyle(
+                        fontSize: 13,
+                        fontWeight: FontWeight.bold,
                         color: Color(0xFF5A4038),
                       ),
-                      const SizedBox(width: 5),
-                      Flexible(
-                        child: Text(
-                          state.phase == 'round_end'
-                              ? L10n.of(
-                                  context,
-                                ).mtRoundOnly(state.round.toString())
-                              : L10n.of(context).mtRoundPhase(
-                                  state.round.toString(),
-                                  _phaseLabel(state.phase),
-                                ),
-                          overflow: TextOverflow.ellipsis,
-                          style: const TextStyle(
-                            fontSize: 13,
-                            fontWeight: FontWeight.bold,
-                            color: Color(0xFF5A4038),
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
+                    ),
+                  ],
                 ),
               ),
               const Spacer(),

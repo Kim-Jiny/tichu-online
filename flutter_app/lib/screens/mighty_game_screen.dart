@@ -3324,10 +3324,21 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
     );
   }
 
-  // Full-screen host for the kitty panel. Positions it in the upper area so it
-  // overlaps the contract bar (starts just below the top round bar), leaving
-  // the hand area at the bottom tappable. Scrolls when taller than the region.
+  // Full-screen host for the kitty panel.
   Widget _buildKittyOverlay(GameService game, MightyGameStateData state) {
+    // Other players / spectators only see the small "exchanging" note — keep
+    // it centered on screen (not pinned to the top).
+    if (!state.isMyTurn) {
+      return Center(
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 24),
+          child: _buildKittyUI(game, state),
+        ),
+      );
+    }
+    // The DECLARER's interactive panel is anchored high (overlapping the
+    // contract bar, just below the top round bar) and scrolls, so its top
+    // controls aren't hidden; the hand area at the bottom stays tappable.
     final topInset = MediaQuery.of(context).padding.top;
     return SizedBox.expand(
       child: Padding(
@@ -3335,7 +3346,7 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
           left: 12,
           right: 12,
           top: topInset + 42,
-          bottom: game.isSpectator ? 120 : 210,
+          bottom: 210,
         ),
         child: Align(
           alignment: Alignment.topCenter,
@@ -6264,11 +6275,13 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
           height: 54,
           isInteractive: false,
         );
-        // Frame trump-suit cards so the 기루다 holdings stand out.
+        // Frame trump-suit cards so the 기루다 holdings stand out. Match the
+        // PlayingCard corner radius ((w/48*14).clamp(4,14); w=38 → ~11) so the
+        // border hugs the rounded card corners instead of cutting inside them.
         if (highlightTrump && _getCardSuit(id) == trumpSuit) {
           card = Container(
             decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(6),
+              borderRadius: BorderRadius.circular(11),
               border: Border.all(
                 color: _bidAccentColor(trumpSuit),
                 width: 2.5,

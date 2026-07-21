@@ -5366,7 +5366,12 @@ class _LobbyScreenState extends State<LobbyScreen> {
                 child: Icon(Icons.wifi_off, size: 14, color: Color(0xFFFF8A65)),
               ),
             Expanded(
-              child: Column(
+              child: LayoutBuilder(
+                builder: (context, cons) => FittedBox(
+                  fit: BoxFit.scaleDown,
+                  child: ConstrainedBox(
+                    constraints: BoxConstraints(maxWidth: cons.maxWidth),
+                    child: Column(
                 mainAxisSize: MainAxisSize.min,
                 mainAxisAlignment: MainAxisAlignment.center,
                 crossAxisAlignment: CrossAxisAlignment.center,
@@ -5418,6 +5423,9 @@ class _LobbyScreenState extends State<LobbyScreen> {
                     },
                   ),
                 ],
+                    ),
+                  ),
+                ),
               ),
             ),
             // Add bot button on empty slots (host only, not ranked, not blocked)

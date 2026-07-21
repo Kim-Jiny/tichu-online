@@ -2225,7 +2225,7 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
                                           : isPartner
                                           ? const Color(0xFF4CAF50)
                                           : const Color(0xFF64B5F6),
-                                      width: 1.5,
+                                      width: (isDeclarer || isPartner) ? 3.5 : 1.5,
                                     )
                                   : null,
                             ),
@@ -2558,6 +2558,13 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
     switch (count) {
       case 4:
         return const [172, 238, 302, 368];
+      case 5:
+        // top(270) + two vertical columns. Lower seats mirror the upper ones
+        // across the horizontal axis so each side shares the same X: left
+        // column at 207.5/152.5 (cos ≈ -0.887), right at 332.5/387.5
+        // (cos ≈ +0.887). Order: lower-left, upper-left, top, upper-right,
+        // lower-right.
+        return const [152.5, 207.5, 270.0, 332.5, 387.5];
       default:
         return null;
     }

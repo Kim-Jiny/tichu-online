@@ -1958,6 +1958,13 @@ class _SKGameScreenState extends State<SKGameScreen> {
     switch (count) {
       case 4:
         return const [172, 238, 302, 368];
+      case 5:
+        // top(270) + two vertical columns. Lower seats mirror the upper ones
+        // across the horizontal axis so each side shares the same X: left
+        // column at 207.5/152.5 (cos ≈ -0.887), right at 332.5/387.5
+        // (cos ≈ +0.887). Order: lower-left, upper-left, top, upper-right,
+        // lower-right.
+        return const [152.5, 207.5, 270.0, 332.5, 387.5];
       default:
         return null;
     }

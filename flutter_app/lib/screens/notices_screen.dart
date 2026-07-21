@@ -78,12 +78,14 @@ class _NoticesScreenState extends State<NoticesScreen> {
               Expanded(
                 child: Consumer<GameService>(
                   builder: (context, game, _) {
+                    Widget content;
                     if (game.noticesLoading) {
-                      return const Center(child: CircularProgressIndicator());
-                    }
-                    if (game.noticesError != null) {
-                      return Center(
-                        child: Column(
+                      content = _fillScrollable(
+                        const CircularProgressIndicator(),
+                      );
+                    } else if (game.noticesError != null) {
+                      content = _fillScrollable(
+                        Column(
                           mainAxisSize: MainAxisSize.min,
                           children: [
                             Text(
@@ -99,28 +101,51 @@ class _NoticesScreenState extends State<NoticesScreen> {
                           ],
                         ),
                       );
-                    }
-                    if (game.notices.isEmpty) {
-                      return Center(
-                        child: Text(
+                    } else if (game.notices.isEmpty) {
+                      content = _fillScrollable(
+                        Text(
                           l10n.noticeEmpty,
                           style: const TextStyle(color: Color(0xFF9A8E8A)),
                         ),
                       );
+                    } else {
+                      content = ListView.separated(
+                        physics: const AlwaysScrollableScrollPhysics(),
+                        padding: const EdgeInsets.symmetric(horizontal: 16),
+                        itemCount: game.notices.length,
+                        separatorBuilder: (_, _) => const SizedBox(height: 8),
+                        itemBuilder: (context, index) {
+                          final item = game.notices[index];
+                          return _buildNoticeItem(item, l10n);
+                        },
+                      );
                     }
-                    return ListView.separated(
-                      padding: const EdgeInsets.symmetric(horizontal: 16),
-                      itemCount: game.notices.length,
-                      separatorBuilder: (_, __) => const SizedBox(height: 8),
-                      itemBuilder: (context, index) {
-                        final item = game.notices[index];
-                        return _buildNoticeItem(item, l10n);
+                    return RefreshIndicator(
+                      onRefresh: () async {
+                        game.requestNotices();
+                        await Future.delayed(const Duration(milliseconds: 500));
                       },
+                      child: content,
                     );
                   },
                 ),
               ),
             ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  // Scrollable wrapper so RefreshIndicator can pull on non-list states too.
+  Widget _fillScrollable(Widget child) {
+    return LayoutBuilder(
+      builder: (context, constraints) => SingleChildScrollView(
+        physics: const AlwaysScrollableScrollPhysics(),
+        child: ConstrainedBox(
+          constraints: BoxConstraints(minHeight: constraints.maxHeight),
+          child: Center(
+            child: Padding(padding: const EdgeInsets.all(24), child: child),
           ),
         ),
       ),

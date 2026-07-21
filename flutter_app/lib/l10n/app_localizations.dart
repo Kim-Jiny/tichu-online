@@ -5739,6 +5739,12 @@ abstract class L10n {
   /// **'Reject'**
   String get friendsReject;
 
+  /// No description provided for @friendsRejected.
+  ///
+  /// In en, this message translates to:
+  /// **'Friend request rejected'**
+  String get friendsRejected;
+
   /// No description provided for @friendsDmEmpty.
   ///
   /// In en, this message translates to:

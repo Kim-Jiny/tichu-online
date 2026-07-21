@@ -3182,6 +3182,9 @@ class L10nDe extends L10n {
   String get friendsReject => 'Ablehnen';
 
   @override
+  String get friendsRejected => 'Freundschaftsanfrage abgelehnt';
+
+  @override
   String get friendsDmEmpty => 'Keine Nachrichten.\nSende die erste Nachricht!';
 
   @override

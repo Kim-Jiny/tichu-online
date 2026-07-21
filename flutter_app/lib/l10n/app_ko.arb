@@ -1010,6 +1010,7 @@
   "friendsAccepted": "{nickname}님과 친구가 되었습니다",
   "friendsAccept": "수락",
   "friendsReject": "거절",
+  "friendsRejected": "친구 요청을 거절했습니다",
   "friendsDmEmpty": "메시지가 없습니다.\n첫 메시지를 보내보세요!",
   "friendsDmInputHint": "메시지를 입력하세요",
   "friendsRemoveTitle": "친구 삭제",

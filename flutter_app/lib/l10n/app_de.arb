@@ -1018,6 +1018,7 @@
   "friendsAccepted": "Du bist jetzt mit {nickname} befreundet",
   "friendsAccept": "Annehmen",
   "friendsReject": "Ablehnen",
+  "friendsRejected": "Freundschaftsanfrage abgelehnt",
   "friendsDmEmpty": "Keine Nachrichten.\nSende die erste Nachricht!",
   "friendsDmInputHint": "Nachricht eingeben",
   "friendsRemoveTitle": "Freund entfernen",

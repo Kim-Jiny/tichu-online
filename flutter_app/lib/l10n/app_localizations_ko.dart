@@ -3102,6 +3102,9 @@ class L10nKo extends L10n {
   String get friendsReject => '거절';
 
   @override
+  String get friendsRejected => '친구 요청을 거절했습니다';
+
+  @override
   String get friendsDmEmpty => '메시지가 없습니다.\n첫 메시지를 보내보세요!';
 
   @override

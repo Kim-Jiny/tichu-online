@@ -144,16 +144,7 @@ class _RankingScreenState extends State<RankingScreen> {
           ),
           const Spacer(),
           IconButton(
-            onPressed: () {
-              final game = context.read<GameService>();
-              if (_rankingGameType == 'skull_king') {
-                game.requestSKRankings();
-              } else if (_rankingGameType == 'mighty') {
-                game.requestMightyRankings();
-              } else {
-                game.requestRankings();
-              }
-            },
+            onPressed: _refreshRankings,
             icon: const Icon(Icons.refresh),
             color: const Color(0xFF8A7A72),
           ),
@@ -228,21 +219,68 @@ class _RankingScreenState extends State<RankingScreen> {
     );
   }
 
+  void _refreshRankings() {
+    final game = context.read<GameService>();
+    if (_rankingGameType == 'skull_king') {
+      game.requestSKRankings();
+    } else if (_rankingGameType == 'mighty') {
+      game.requestMightyRankings();
+    } else {
+      game.requestRankings();
+    }
+  }
+
+  // Scrollable wrapper so RefreshIndicator can pull on non-list states too.
+  Widget _fillScrollable(Widget child) {
+    return LayoutBuilder(
+      builder: (context, constraints) => SingleChildScrollView(
+        physics: const AlwaysScrollableScrollPhysics(),
+        child: ConstrainedBox(
+          constraints: BoxConstraints(minHeight: constraints.maxHeight),
+          child: Center(
+            child: Padding(padding: const EdgeInsets.all(24), child: child),
+          ),
+        ),
+      ),
+    );
+  }
+
   Widget _buildBody(GameService game) {
+    return RefreshIndicator(
+      onRefresh: () async {
+        _refreshRankings();
+        await Future.delayed(const Duration(milliseconds: 500));
+      },
+      child: _buildRankingContent(game),
+    );
+  }
+
+  Widget _buildRankingContent(GameService game) {
     if (game.rankingsLoading) {
-      return const Center(child: CircularProgressIndicator());
+      return _fillScrollable(const CircularProgressIndicator());
     }
     if (game.rankingsError != null) {
-      return Center(
-        child: Text(
-          localizeServiceMessage(game.rankingsError!, L10n.of(context)),
-          style: const TextStyle(color: Color(0xFFCC6666)),
+      return _fillScrollable(
+        Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(
+              localizeServiceMessage(game.rankingsError!, L10n.of(context)),
+              textAlign: TextAlign.center,
+              style: const TextStyle(color: Color(0xFFCC6666)),
+            ),
+            const SizedBox(height: 12),
+            TextButton(
+              onPressed: _refreshRankings,
+              child: Text(L10n.of(context).noticeRetry),
+            ),
+          ],
         ),
       );
     }
     if (game.rankings.isEmpty) {
-      return Center(
-        child: Text(
+      return _fillScrollable(
+        Text(
           L10n.of(context).rankingNoData,
           style: const TextStyle(color: Color(0xFF9A8E8A)),
         ),
@@ -250,6 +288,7 @@ class _RankingScreenState extends State<RankingScreen> {
     }
 
     return ListView.separated(
+      physics: const AlwaysScrollableScrollPhysics(),
       padding: const EdgeInsets.fromLTRB(16, 8, 16, 20),
       itemCount: game.rankings.length + (game.myRankData != null ? 1 : 0),
       separatorBuilder: (_, _) => const SizedBox(height: 8),

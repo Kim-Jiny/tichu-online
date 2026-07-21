@@ -3166,6 +3166,9 @@ class L10nEn extends L10n {
   String get friendsReject => 'Reject';
 
   @override
+  String get friendsRejected => 'Friend request rejected';
+
+  @override
   String get friendsDmEmpty => 'No messages.\nSend the first message!';
 
   @override

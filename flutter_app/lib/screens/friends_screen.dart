@@ -198,12 +198,8 @@ class _FriendsScreenState extends State<FriendsScreen> with TickerProviderStateM
           ),
           const Spacer(),
           GestureDetector(
-            onTap: () {
-              final game = context.read<GameService>();
-              game.requestFriends();
-              game.requestPendingFriendRequests();
-              game.requestDmConversations();
-            },
+            onTap: _refreshFriends,
+            behavior: HitTestBehavior.opaque,
             child: Container(
               padding: const EdgeInsets.all(8),
               decoration: BoxDecoration(
@@ -307,28 +303,39 @@ class _FriendsScreenState extends State<FriendsScreen> with TickerProviderStateM
           if (partner.isNotEmpty && count > 0) unreadMap[partner] = count;
         }
 
+        Future<void> onRefresh() async {
+          _refreshFriends();
+          await Future.delayed(const Duration(milliseconds: 500));
+        }
+
         if (sorted.isEmpty) {
-          return Center(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                const Icon(Icons.people_outline, size: 48, color: Color(0xFFBDBDBD)),
-                const SizedBox(height: 12),
-                Text(
-                  L10n.of(context).friendsEmptyList,
-                  textAlign: TextAlign.center,
-                  style: const TextStyle(fontSize: 14, color: Color(0xFF9A8E8A)),
-                ),
-              ],
+          return RefreshIndicator(
+            onRefresh: onRefresh,
+            child: _fillScrollable(
+              Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const Icon(Icons.people_outline, size: 48, color: Color(0xFFBDBDBD)),
+                  const SizedBox(height: 12),
+                  Text(
+                    L10n.of(context).friendsEmptyList,
+                    textAlign: TextAlign.center,
+                    style: const TextStyle(fontSize: 14, color: Color(0xFF9A8E8A)),
+                  ),
+                ],
+              ),
             ),
           );
         }
 
-        return ListView.separated(
-          padding: const EdgeInsets.all(16),
-          itemCount: sorted.length,
-          separatorBuilder: (_, _) => const SizedBox(height: 8),
-          itemBuilder: (context, index) {
+        return RefreshIndicator(
+          onRefresh: onRefresh,
+          child: ListView.separated(
+            physics: const AlwaysScrollableScrollPhysics(),
+            padding: const EdgeInsets.all(16),
+            itemCount: sorted.length,
+            separatorBuilder: (_, _) => const SizedBox(height: 8),
+            itemBuilder: (context, index) {
             final friend = sorted[index];
             final nickname = friend['nickname'] as String? ?? '';
             final isOnline = friend['isOnline'] == true;
@@ -457,7 +464,7 @@ class _FriendsScreenState extends State<FriendsScreen> with TickerProviderStateM
                       _buildRoomActionChip(friend, game),
                     const SizedBox(width: 4),
                     // Profile
-                    GestureDetector(
+                    _iconTapTarget(
                       onTap: () => Navigator.push(
                         context,
                         MaterialPageRoute(builder: (_) => ProfileViewScreen(nickname: nickname)),
@@ -471,9 +478,8 @@ class _FriendsScreenState extends State<FriendsScreen> with TickerProviderStateM
                         child: const Icon(Icons.person, size: 14, color: Color(0xFF5C6BC0)),
                       ),
                     ),
-                    const SizedBox(width: 4),
                     // Remove friend
-                    GestureDetector(
+                    _iconTapTarget(
                       onTap: () => _showRemoveFriendConfirmation(nickname, game),
                       child: Container(
                         padding: const EdgeInsets.all(6),
@@ -489,8 +495,39 @@ class _FriendsScreenState extends State<FriendsScreen> with TickerProviderStateM
               ),
             );
           },
+          ),
         );
       },
+    );
+  }
+
+  // 44x44 tap target around a small icon chip (visual stays compact, hit area
+  // meets the 44px guideline). Nickname lives in an Expanded so this won't overflow.
+  Widget _iconTapTarget({required VoidCallback onTap, required Widget child}) {
+    return GestureDetector(
+      onTap: onTap,
+      behavior: HitTestBehavior.opaque,
+      child: SizedBox(width: 44, height: 44, child: Center(child: child)),
+    );
+  }
+
+  void _refreshFriends() {
+    final game = context.read<GameService>();
+    game.requestFriends();
+    game.requestPendingFriendRequests();
+    game.requestDmConversations();
+  }
+
+  // Scrollable wrapper so RefreshIndicator can pull on empty states too.
+  Widget _fillScrollable(Widget child) {
+    return LayoutBuilder(
+      builder: (context, constraints) => SingleChildScrollView(
+        physics: const AlwaysScrollableScrollPhysics(),
+        child: ConstrainedBox(
+          constraints: BoxConstraints(minHeight: constraints.maxHeight),
+          child: Center(child: child),
+        ),
+      ),
     );
   }
 
@@ -782,6 +819,9 @@ class _FriendsScreenState extends State<FriendsScreen> with TickerProviderStateM
                   GestureDetector(
                     onTap: () {
                       game.rejectFriendRequest(nickname);
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(content: Text(L10n.of(context).friendsRejected)),
+                      );
                     },
                     child: Container(
                       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),

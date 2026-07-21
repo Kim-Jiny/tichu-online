@@ -171,7 +171,7 @@ class TichuApp extends StatelessWidget {
             final platform = Theme.of(context).platform;
             final currentScale = media.textScaler.scale(1.0);
             final adjustedScale = platform == TargetPlatform.android
-                ? (currentScale * 0.92).clamp(0.9, 1.0)
+                ? (currentScale * 0.95).clamp(0.9, 1.0)
                 : currentScale;
             return MediaQuery(
               data: media.copyWith(

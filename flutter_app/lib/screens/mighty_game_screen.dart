@@ -2132,6 +2132,29 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
           color: Color(0xFFD84315),
         ),
       );
+    } else if (isDeclarer && isPartner) {
+      // 초구 프렌즈: the declarer won the first trick, so they are BOTH the
+      // 주공 and the 프렌드 — surface both roles at once.
+      roleLabel = RichText(
+        textAlign: TextAlign.center,
+        text: TextSpan(
+          style: const TextStyle(fontSize: 10, fontWeight: FontWeight.w800),
+          children: [
+            TextSpan(
+              text: L10n.of(context).mtDeclarer,
+              style: const TextStyle(color: Color(0xFFFF8A00)),
+            ),
+            const TextSpan(
+              text: '·',
+              style: TextStyle(color: Color(0xFF8A7A72)),
+            ),
+            TextSpan(
+              text: L10n.of(context).mtFriend,
+              style: const TextStyle(color: Color(0xFF4CAF50)),
+            ),
+          ],
+        ),
+      );
     } else if (isDeclarer) {
       roleLabel = Text(
         L10n.of(context).mtDeclarer,

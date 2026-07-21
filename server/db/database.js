@@ -2226,6 +2226,11 @@ async function claimAdReward(nickname) {
   const client = await pool.connect();
   try {
     await client.query('BEGIN');
+    // Lock the user row first so concurrent ad-reward claims for the same user
+    // serialize. Without this the daily-cap COUNT below is a read-then-write
+    // race: two claims can both read cnt=4, both pass the < 5 check, and both
+    // grant — exceeding the 5/day cap (mirrors claimAttendance / buyItem locks).
+    await client.query('SELECT 1 FROM tc_users WHERE nickname = $1 FOR UPDATE', [nickname]);
     // Count today's claims
     const countResult = await client.query(
       `SELECT COUNT(*) as cnt FROM tc_ad_rewards

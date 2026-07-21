@@ -5598,7 +5598,11 @@ async function handleReportUser(ws, data) {
     return;
   }
   const targetNickname = data.nickname;
-  const reason = data.reason || '';
+  // Cap length: reason is part of tc_reports' UNIQUE btree index (reporter,
+  // reported, room, reason). A btree entry maxes ~2704 bytes, so an oversized
+  // reason makes the INSERT throw and the report silently fail. 500 chars
+  // (<=1500 bytes UTF-8) stays well under and matches the DM cap.
+  const reason = String(data.reason || '').slice(0, 500);
   if (!targetNickname || targetNickname === ws.nickname) {
     sendTo(ws, { type: 'error', message: t(ws.locale, 'cannot_report') });
     return;
@@ -6666,7 +6670,11 @@ async function handleSubmitInquiry(ws, data) {
     sendTo(ws, { type: 'error', message: t(ws.locale, 'login_required') });
     return;
   }
-  const { category, title, content } = data;
+  const category = data.category;
+  // Cap lengths — tc_inquiries.title/content are unbounded TEXT; clamp to keep
+  // storage sane and avoid oversized payloads (client frames allow up to 64KB).
+  const title = String(data.title || '').slice(0, 120);
+  const content = String(data.content || '').slice(0, 4000);
   if (!category || !title || !content) {
     sendTo(ws, { type: 'inquiry_result', success: false, message: t(ws.locale, 'inquiry_fill_all') });
     return;

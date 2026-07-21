@@ -67,6 +67,7 @@ function parseBody(req) {
       if (body.length > MAX_BODY_SIZE) {
         req.destroy();
         reject(new Error('Request body too large'));
+        return;
       }
     });
     req.on('end', () => {

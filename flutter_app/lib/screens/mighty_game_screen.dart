@@ -3330,9 +3330,9 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
     // here — the "exchanging" note was redundant and overlapped the kill-reveal
     // popup in 6p, making both unreadable.
     if (!state.isMyTurn) return const SizedBox.shrink();
-    // The DECLARER's interactive panel is anchored high (overlapping the
-    // contract bar, just below the top round bar) and scrolls, so its top
-    // controls aren't hidden; the hand area at the bottom stays tappable.
+    // The DECLARER's interactive panel sits just above their hand (bottom-
+    // anchored) and grows upward — over the contract bar if needed — scrolling
+    // when it would reach the top. The hand area below stays tappable.
     final topInset = MediaQuery.of(context).padding.top;
     return SizedBox.expand(
       child: Padding(
@@ -3343,7 +3343,7 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
           bottom: 210,
         ),
         child: Align(
-          alignment: Alignment.topCenter,
+          alignment: Alignment.bottomCenter,
           child: SingleChildScrollView(
             child: _buildKittyUI(game, state),
           ),

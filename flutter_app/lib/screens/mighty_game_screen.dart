@@ -3326,16 +3326,10 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
 
   // Full-screen host for the kitty panel.
   Widget _buildKittyOverlay(GameService game, MightyGameStateData state) {
-    // Other players / spectators only see the small "exchanging" note — keep
-    // it centered on screen (not pinned to the top).
-    if (!state.isMyTurn) {
-      return Center(
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 24),
-          child: _buildKittyUI(game, state),
-        ),
-      );
-    }
+    // Only the DECLARER sees the kitty panel. Others / spectators get nothing
+    // here — the "exchanging" note was redundant and overlapped the kill-reveal
+    // popup in 6p, making both unreadable.
+    if (!state.isMyTurn) return const SizedBox.shrink();
     // The DECLARER's interactive panel is anchored high (overlapping the
     // contract bar, just below the top round bar) and scrolls, so its top
     // controls aren't hidden; the hand area at the bottom stays tappable.

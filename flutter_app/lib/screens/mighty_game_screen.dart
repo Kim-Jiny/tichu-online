@@ -2711,6 +2711,51 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
     );
   }
 
+  // My own captured point cards, shown above my hand (the table seat for
+  // `position == 'self'` is omitted, so this is the only place my score cards
+  // appear). Horizontal-scroll so a big capture never overflows.
+  Widget _buildMyPointCardStrip(MightyGameStateData state) {
+    final me = state.players.cast<MightyPlayer?>().firstWhere(
+      (p) => p?.position == 'self',
+      orElse: () => null,
+    );
+    final cards = me?.pointCards ?? const <String>[];
+    if (cards.isEmpty) return const SizedBox.shrink();
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 6),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          const Icon(
+            Icons.workspace_premium,
+            size: 14,
+            color: Color(0xFF8A7A72),
+          ),
+          const SizedBox(width: 6),
+          Flexible(
+            child: SingleChildScrollView(
+              scrollDirection: Axis.horizontal,
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  for (var i = 0; i < cards.length; i++) ...[
+                    if (i > 0) const SizedBox(width: 2),
+                    PlayingCard(
+                      cardId: _displayCardId(cards[i]),
+                      width: 18,
+                      height: 25,
+                      isInteractive: false,
+                    ),
+                  ],
+                ],
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   void _showPointCardsDialog(MightyPlayer p) {
     showDialog(
       context: context,
@@ -2754,7 +2799,6 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
     MightyGameStateData state, {
     String? leadSuit,
   }) {
-    final trickNo = (state.tricks.length + 1).clamp(1, 10);
     const style = TextStyle(
       fontSize: 12,
       fontWeight: FontWeight.w700,
@@ -2768,10 +2812,6 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
       const Icon(Icons.event_repeat, size: 12, color: Color(0xFF8A7A72)),
       const SizedBox(width: 3),
       Text(L10n.of(context).mtRoundOnly(state.round.toString()), style: style),
-      dot(),
-      const Icon(Icons.style, size: 12, color: Color(0xFF8A7A72)),
-      const SizedBox(width: 3),
-      Text('$trickNo/10', style: style),
     ];
     if (leadSuit != null) {
       children.addAll([
@@ -4393,6 +4433,8 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
               state.currentTrick.isEmpty &&
               state.jokerHasPower)
             _buildJokerCallToggle(),
+          // My captured point cards (score cards I've won this round).
+          _buildMyPointCardStrip(state),
           // Card rows
           Padding(
             padding: const EdgeInsets.symmetric(vertical: 4),

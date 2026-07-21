@@ -2160,14 +2160,14 @@ async function handleAdminRoute(req, res, url, pathname, method, lobby, wss, mai
         ${(statActions.games || []).map((action) => `<a href="${action.href}" class="btn btn-secondary">${escapeHtml(action.label)}</a>`).join('')}
       </div>
       <div class="subtab-copy">게임 탭은 실제 플레이 볼륨과 어떤 게임이 운영을 주도하는지에 집중합니다. 차트를 클릭하면 해당 날짜로 바로 drill-down 됩니다.</div>
+      <details class="chart-foldout" open>
+        <summary>게임량 추이</summary>
+        <div class="card-body"><div style="position:relative;height:300px"><canvas id="gameChart"></canvas></div></div>
+      </details>
       <div class="card">
         <h3>게임량 상세</h3>
         ${gameTable}
       </div>
-      <details class="chart-foldout">
-        <summary>게임량 추이</summary>
-        <div class="card-body"><div style="position:relative;height:300px"><canvas id="gameChart"></canvas></div></div>
-      </details>
     `;
 
     const acquisitionTabContent = `
@@ -2183,14 +2183,14 @@ async function handleAdminRoute(req, res, url, pathname, method, lobby, wss, mai
         ${(statActions.acquisition || []).map((action) => `<a href="${action.href}" class="btn btn-secondary">${escapeHtml(action.label)}</a>`).join('')}
       </div>
       <div class="subtab-copy">유입 탭은 가입 추이와 플랫폼 분포, 그리고 게임량 대비 신규 유저 유입 강도를 같이 봅니다. 차트를 클릭하면 해당 날짜로 좁혀볼 수 있습니다.</div>
+      <details class="chart-foldout" open>
+        <summary>가입 추이</summary>
+        <div class="card-body"><div style="position:relative;height:300px"><canvas id="signupChart"></canvas></div></div>
+      </details>
       <div class="card">
         <h3>가입 상세</h3>
         ${signupTable}
       </div>
-      <details class="chart-foldout">
-        <summary>가입 추이</summary>
-        <div class="card-body"><div style="position:relative;height:300px"><canvas id="signupChart"></canvas></div></div>
-      </details>
     `;
 
     const economyTabContent = `
@@ -2206,6 +2206,10 @@ async function handleAdminRoute(req, res, url, pathname, method, lobby, wss, mai
         ${(statActions.economy || []).map((action) => `<a href="${action.href}" class="btn btn-secondary">${escapeHtml(action.label)}</a>`).join('')}
       </div>
       <div class="subtab-copy">경제 탭은 게임 보상, 광고, 상점 소비를 합친 전체 골드 흐름을 읽기 쉽게 보여줍니다. 차트 클릭 시 해당 날짜 기준으로 바로 좁혀집니다.</div>
+      <details class="chart-foldout" open>
+        <summary>골드 획득 / 소모 추이</summary>
+        <div class="card-body"><div style="position:relative;height:300px"><canvas id="goldChart"></canvas></div></div>
+      </details>
       <div class="card">
         <h3>보조 지표</h3>
         <div class="soft-panel">
@@ -2217,10 +2221,6 @@ async function handleAdminRoute(req, res, url, pathname, method, lobby, wss, mai
         <div style="height:14px"></div>
         ${goldTable}
       </div>
-      <details class="chart-foldout">
-        <summary>골드 획득 / 소모 추이</summary>
-        <div class="card-body"><div style="position:relative;height:300px"><canvas id="goldChart"></canvas></div></div>
-      </details>
     `;
 
     const peakAttendanceRow = [...attSeries].sort((a, b) =>
@@ -2282,6 +2282,10 @@ async function handleAdminRoute(req, res, url, pathname, method, lobby, wss, mai
         ${(statActions.shop || []).map((action) => `<a href="${action.href}" class="btn btn-secondary">${escapeHtml(action.label)}</a>`).join('')}
       </div>
       <div class="subtab-copy">상점 탭은 판매량뿐 아니라 구매자 밀도와 어떤 상품이 실제 지출을 끌고 가는지에 초점을 둡니다. 차트를 클릭하면 해당 날짜 기준으로 바로 drill-down 됩니다.</div>
+      <details class="chart-foldout" open>
+        <summary>상점 판매 추이</summary>
+        <div class="card-body"><div style="position:relative;height:300px"><canvas id="shopSalesChart"></canvas></div></div>
+      </details>
       <div class="card">
         <h3>베스트셀러 아이템</h3>
         ${topShopItemsTable}
@@ -2290,10 +2294,6 @@ async function handleAdminRoute(req, res, url, pathname, method, lobby, wss, mai
         <h3>상점 판매 상세</h3>
         ${shopSalesTable}
       </div>
-      <details class="chart-foldout">
-        <summary>상점 판매 추이</summary>
-        <div class="card-body"><div style="position:relative;height:300px"><canvas id="shopSalesChart"></canvas></div></div>
-      </details>
     `;
 
     const platRow = (name, p, feeRate) => `<tr>

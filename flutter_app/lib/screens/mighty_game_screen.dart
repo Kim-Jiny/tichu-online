@@ -2143,8 +2143,17 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
           Positioned(
             left: 12,
             right: 12,
+            // Bound the top too so the panel can't grow up behind the contract
+            // bar on small screens; it anchors to the bottom and scrolls when
+            // taller than the available space.
+            top: 4,
             bottom: game.isSpectator ? 120 : 210,
-            child: _buildKittyUI(game, state),
+            child: Align(
+              alignment: Alignment.bottomCenter,
+              child: SingleChildScrollView(
+                child: _buildKittyUI(game, state),
+              ),
+            ),
           ),
         if (showBottomOverlay)
           Align(alignment: Alignment.bottomCenter, child: bottomOverlay),

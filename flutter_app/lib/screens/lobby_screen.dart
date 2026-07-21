@@ -1947,9 +1947,17 @@ class _LobbyScreenState extends State<LobbyScreen> {
           ),
           const SizedBox(height: 8),
           Expanded(
-            child: game.roomList.isEmpty
-                ? _buildEmptyRoomList()
-                : _buildRoomList(game.roomList),
+            child: RefreshIndicator(
+              onRefresh: () async {
+                game.requestRoomList();
+                await Future.delayed(const Duration(milliseconds: 500));
+              },
+              child: !game.roomListReceived
+                  ? _buildRoomListLoading()
+                  : (game.roomList.isEmpty
+                      ? _buildEmptyRoomList()
+                      : _buildRoomList(game.roomList)),
+            ),
           ),
           const SizedBox(height: 16),
           SizedBox(
@@ -1981,12 +1989,46 @@ class _LobbyScreenState extends State<LobbyScreen> {
 
   // removed separate spectate list; in-progress rooms are shown inline
 
+  // Scrollable so RefreshIndicator can pull even when the content doesn't fill
+  // the viewport.
+  Widget _fillScrollable(Widget child) {
+    return LayoutBuilder(
+      builder: (context, constraints) => SingleChildScrollView(
+        physics: const AlwaysScrollableScrollPhysics(),
+        child: ConstrainedBox(
+          constraints: BoxConstraints(minHeight: constraints.maxHeight),
+          child: Center(child: child),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildRoomListLoading() {
+    return _fillScrollable(
+      const Padding(
+        padding: EdgeInsets.all(24),
+        child: CircularProgressIndicator(color: Color(0xFF8A7A72)),
+      ),
+    );
+  }
+
   Widget _buildEmptyRoomList() {
-    return Center(
-      child: Text(
-        L10n.of(context).lobbyEmptyRoomList,
-        textAlign: TextAlign.center,
-        style: const TextStyle(fontSize: 16, color: Color(0xFF9A8E8A)),
+    return _fillScrollable(
+      Padding(
+        padding: const EdgeInsets.all(24),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Icon(Icons.meeting_room_outlined,
+                size: 48, color: Color(0xFFC4B8B0)),
+            const SizedBox(height: 12),
+            Text(
+              L10n.of(context).lobbyEmptyRoomList,
+              textAlign: TextAlign.center,
+              style: const TextStyle(fontSize: 16, color: Color(0xFF9A8E8A)),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -2000,6 +2042,7 @@ class _LobbyScreenState extends State<LobbyScreen> {
         return a.gameInProgress ? 1 : -1;
       });
     return ListView.separated(
+      physics: const AlwaysScrollableScrollPhysics(),
       itemCount: sorted.length,
       separatorBuilder: (_, _) => const SizedBox(height: 8),
       itemBuilder: (context, index) {

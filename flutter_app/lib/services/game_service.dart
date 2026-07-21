@@ -67,6 +67,9 @@ class GameService extends ChangeNotifier {
 
   // Room list
   List<Room> roomList = [];
+  // False until the first room_list message arrives (and reset on disconnect) so
+  // the lobby can show a loading spinner instead of a premature "no rooms" state.
+  bool roomListReceived = false;
   List<Room> spectatableRooms = [];
 
   // Spectator mode
@@ -592,6 +595,7 @@ class GameService extends ChangeNotifier {
         roomList =
             (data['rooms'] as List?)?.map((r) => Room.fromJson(r)).toList() ??
             [];
+        roomListReceived = true;
         notifyListeners();
         break;
 
@@ -2346,6 +2350,7 @@ class GameService extends ChangeNotifier {
     roomSkExpansions = const [];
     currentGameType = 'tichu';
     roomList = [];
+    roomListReceived = false;
     spectatableRooms = [];
     isSpectator = false;
     duplicateLoginKicked = false;

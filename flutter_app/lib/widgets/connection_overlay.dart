@@ -1,6 +1,7 @@
 import 'dart:io' show Platform;
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import '../l10n/app_localizations.dart';
 import '../services/game_service.dart';
 import '../services/network_service.dart';
 import '../services/session_service.dart';
@@ -84,9 +85,15 @@ class _ConnectionOverlayState extends State<ConnectionOverlay>
     }
   }
 
+  // Toggle the reconnecting flag AND rebuild so the overlay shows/hides.
+  void _setReconnecting(bool v) {
+    _globalReconnecting = v;
+    if (mounted) setState(() {});
+  }
+
   Future<void> _startReconnect() async {
     if (_globalReconnecting) return;
-    _globalReconnecting = true;
+    _setReconnecting(true);
     final myAttemptId = ++_reconnectAttemptId;
 
     try {
@@ -113,7 +120,7 @@ class _ConnectionOverlayState extends State<ConnectionOverlay>
       }
     } finally {
       if (myAttemptId == _reconnectAttemptId) {
-        _globalReconnecting = false;
+        _setReconnecting(false);
       }
     }
   }
@@ -122,12 +129,49 @@ class _ConnectionOverlayState extends State<ConnectionOverlay>
     if (!mounted) return;
     // Invalidate any in-flight zombie reconnection
     ++_reconnectAttemptId;
-    _globalReconnecting = false;
+    _setReconnecting(false);
     context.read<SessionService>().resetToLoginState(suppressAutoRestore: true);
   }
 
   @override
   Widget build(BuildContext context) {
-    return widget.child;
+    if (!_globalReconnecting) return widget.child;
+    // While reconnecting, dim + block the (frozen) UI and show a clear spinner
+    // so the user knows the app is working, not stuck.
+    return Stack(
+      children: [
+        widget.child,
+        Positioned.fill(
+          child: AbsorbPointer(
+            child: Container(
+              color: Colors.black54,
+              alignment: Alignment.center,
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const SizedBox(
+                    width: 44,
+                    height: 44,
+                    child: CircularProgressIndicator(
+                      color: Colors.white,
+                      strokeWidth: 3,
+                    ),
+                  ),
+                  const SizedBox(height: 18),
+                  Text(
+                    L10n.of(context).serviceRestoreConnecting,
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 16,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ],
+    );
   }
 }

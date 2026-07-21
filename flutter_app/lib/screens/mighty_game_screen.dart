@@ -864,9 +864,41 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
           padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
           child: LayoutBuilder(
             builder: (context, constraints) {
-              // On narrow screens omit the target chip rather than overflow /
-              // truncate the round-phase chip.
-              final showTarget = constraints.maxWidth >= 360;
+              // Show the target chip only if it actually fits — measure the
+              // round-phase chip text at the real font scale so a small screen
+              // with small text can still show it (vs a fixed width threshold).
+              final roundText = state.phase == 'round_end'
+                  ? L10n.of(context).mtRoundOnly(state.round.toString())
+                  : L10n.of(context).mtRoundPhase(
+                      state.round.toString(),
+                      _phaseLabel(state.phase),
+                    );
+              final scaler = MediaQuery.textScalerOf(context);
+              double measure(String s, double size, FontWeight w) {
+                final tp = TextPainter(
+                  text: TextSpan(
+                    text: s,
+                    style: TextStyle(fontSize: size, fontWeight: w),
+                  ),
+                  textDirection: TextDirection.ltr,
+                  textScaler: scaler,
+                  maxLines: 1,
+                )..layout();
+                return tp.width;
+              }
+
+              // round chip: h-padding(20) + icon(14) + gap(5) + text
+              final roundChipW =
+                  39 + measure(roundText, 13, FontWeight.bold);
+              // target chip: h-padding(16) + flag(12) + gap(3) + number, plus
+              // the 6px gap before it.
+              final targetChipW =
+                  37 + measure('${game.roomTargetScore}', 12, FontWeight.w800);
+              // action buttons (~41 each; history is conditional; 6px gaps).
+              final buttonsW =
+                  (state.scoreHistory.isNotEmpty ? 47.0 : 0.0) + 47 + 41;
+              final showTarget = constraints.maxWidth >=
+                  roundChipW + targetChipW + buttonsW + 8;
               return Row(
                 children: [
                   Container(

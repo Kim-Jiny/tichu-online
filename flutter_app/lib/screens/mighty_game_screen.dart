@@ -78,6 +78,10 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
   // Auto-dismiss the kill reveal after a few seconds if the user doesn't tap.
   Timer? _killAutoDismissTimer;
   String? _killAutoDismissKey;
+  Timer? _dealMissAutoDismissTimer;
+  String? _dealMissAutoDismissKey;
+  Timer? _settingAutoDismissTimer;
+  String? _settingAutoDismissKey;
   // Setting-reveal dismissal (same pattern as deal-miss/kill).
   String? _dismissedSettingKey;
   String? _selectedKillCard;
@@ -121,6 +125,8 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
     _cardViewRequestTimer?.cancel();
     _contractChangeTimer?.cancel();
     _killAutoDismissTimer?.cancel();
+    _dealMissAutoDismissTimer?.cancel();
+    _settingAutoDismissTimer?.cancel();
     super.dispose();
   }
 
@@ -386,6 +392,47 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
                       );
                     } else if (!isActive && _killAutoDismissKey == killKey) {
                       _killAutoDismissTimer?.cancel();
+                    }
+                  }
+
+                  // Deal-miss reveal auto-dismiss (same 5s pattern as kill so the
+                  // full-screen overlay never blocks the table indefinitely).
+                  if (state.lastDealMissEvent != null) {
+                    final dmKey =
+                        '${state.lastDealMissEvent!.round}-${state.lastDealMissEvent!.playerId}';
+                    final isActive = _dismissedDealMissKey != dmKey;
+                    if (isActive && _dealMissAutoDismissKey != dmKey) {
+                      _dealMissAutoDismissKey = dmKey;
+                      _dealMissAutoDismissTimer?.cancel();
+                      _dealMissAutoDismissTimer = Timer(
+                        const Duration(seconds: 5),
+                        () {
+                          if (!mounted) return;
+                          setState(() => _dismissedDealMissKey = dmKey);
+                        },
+                      );
+                    } else if (!isActive && _dealMissAutoDismissKey == dmKey) {
+                      _dealMissAutoDismissTimer?.cancel();
+                    }
+                  }
+
+                  // Setting reveal auto-dismiss (same pattern).
+                  if (state.lastSettingEvent != null) {
+                    final stKey =
+                        '${state.lastSettingEvent!.round}-${state.lastSettingEvent!.playerId}';
+                    final isActive = _dismissedSettingKey != stKey;
+                    if (isActive && _settingAutoDismissKey != stKey) {
+                      _settingAutoDismissKey = stKey;
+                      _settingAutoDismissTimer?.cancel();
+                      _settingAutoDismissTimer = Timer(
+                        const Duration(seconds: 5),
+                        () {
+                          if (!mounted) return;
+                          setState(() => _dismissedSettingKey = stKey);
+                        },
+                      );
+                    } else if (!isActive && _settingAutoDismissKey == stKey) {
+                      _settingAutoDismissTimer?.cancel();
                     }
                   }
 
@@ -2154,7 +2201,9 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
                       child: Stack(
                         clipBehavior: Clip.none,
                         children: [
-                          Container(
+                          AnimatedContainer(
+                            duration: const Duration(milliseconds: 220),
+                            curve: Curves.easeOut,
                             padding: EdgeInsets.symmetric(
                               horizontal: compact ? 6 : 8,
                               vertical: compact ? 4 : 5,
@@ -3364,6 +3413,7 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
                   '2',
                 ])
                   GestureDetector(
+                    behavior: HitTestBehavior.opaque,
                     onTap: () {
                       setState(() {
                         _friendRank = rank;
@@ -3371,8 +3421,8 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
                       });
                     },
                     child: Container(
-                      width: 36,
-                      height: 30,
+                      width: 40,
+                      height: 44,
                       decoration: BoxDecoration(
                         color: _friendRank == rank
                             ? const Color(0xFFE3F2FD)
@@ -4198,8 +4248,8 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
                     });
                   },
                   style: FilledButton.styleFrom(
-                    backgroundColor: const Color(0xFFE6F1FF),
-                    foregroundColor: const Color(0xFF355D89),
+                    backgroundColor: const Color(0xFF1565C0),
+                    foregroundColor: Colors.white,
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(12),
                     ),
@@ -4698,10 +4748,11 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
               for (final suit in suits) ...[
                 Expanded(
                   child: GestureDetector(
+                    behavior: HitTestBehavior.opaque,
                     onTap: () => setState(() => _killSuitTab = suit),
                     child: Container(
                       margin: const EdgeInsets.symmetric(horizontal: 2),
-                      padding: const EdgeInsets.symmetric(vertical: 8),
+                      padding: const EdgeInsets.symmetric(vertical: 12),
                       decoration: BoxDecoration(
                         color: _killSuitTab == suit
                             ? (PlayingCard.suitColors[suit] ??
@@ -5063,6 +5114,33 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
             const SizedBox(height: 8),
           ],
           const Divider(height: 8),
+          Padding(
+            padding: const EdgeInsets.symmetric(vertical: 2, horizontal: 6),
+            child: Row(
+              children: [
+                const SizedBox(width: 14),
+                const Expanded(child: SizedBox()),
+                SizedBox(
+                  width: 48,
+                  child: Text(
+                    L10n.of(context).llRound,
+                    textAlign: TextAlign.right,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(fontSize: 10, color: Color(0xFF9A8E8A)),
+                  ),
+                ),
+                SizedBox(
+                  width: 56,
+                  child: Text(
+                    L10n.of(context).mtTotal,
+                    textAlign: TextAlign.right,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(fontSize: 10, color: Color(0xFF9A8E8A)),
+                  ),
+                ),
+              ],
+            ),
+          ),
           ...state.players.map((p) {
             final roundScore = (result?['scores']?[p.id] as num?)?.toInt();
             final totalScore = state.scores[p.id] ?? 0;
@@ -5983,10 +6061,12 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
     }
 
     return GestureDetector(
+      behavior: HitTestBehavior.opaque,
       onTap: inHand ? null : () => setState(() => _selectedKillCard = cardId),
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 120),
         width: isJoker ? double.infinity : 52,
+        constraints: const BoxConstraints(minHeight: 44),
         padding: EdgeInsets.symmetric(
           horizontal: isJoker ? 12 : 4,
           vertical: isJoker ? 12 : 8,

@@ -6710,10 +6710,10 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
                   TextAlign align = TextAlign.center,
                   FontWeight fontWeight = FontWeight.w600,
                   Color color = const Color(0xFF5A4038),
-                  double fontSize = 10,
+                  double fontSize = 12,
                   EdgeInsets padding = const EdgeInsets.symmetric(
                     horizontal: 3,
-                    vertical: 8,
+                    vertical: 9,
                   ),
                 }) {
                   return Padding(
@@ -6759,7 +6759,7 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
                       children: [
                         SuitIcon(
                           suit: trumpSuit,
-                          size: 10,
+                          size: 12,
                           color: _bidAccentColor(trumpSuit),
                         ),
                         const SizedBox(width: 3),
@@ -6769,8 +6769,8 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
                             style: TextStyle(
-                              fontSize: 10,
-                              fontWeight: FontWeight.w700,
+                              fontSize: 12,
+                              fontWeight: FontWeight.w800,
                               color: color,
                             ),
                           ),
@@ -6791,28 +6791,29 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
                   children: [
                     TableRow(
                       decoration: const BoxDecoration(
+                        color: Color(0xFFEAF2FF),
                         border: Border(
-                          bottom: BorderSide(color: Color(0xFFDCE4EE), width: 1),
+                          bottom: BorderSide(color: Color(0xFFC9DCF7), width: 1),
                         ),
                       ),
                       children: [
                         cell(
                           'R',
                           fontWeight: FontWeight.w800,
-                          fontSize: 11,
+                          fontSize: 12,
                           color: const Color(0xFF295EA8),
                         ),
                         cell(
                           L10n.of(context).mtBidShort,
                           fontWeight: FontWeight.w800,
-                          fontSize: 11,
+                          fontSize: 12,
                           color: const Color(0xFF295EA8),
                         ),
                         ...state.players.map(
                           (p) => cell(
-                            p.name.length > 3 ? p.name.substring(0, 3) : p.name,
+                            p.name.length > 4 ? p.name.substring(0, 4) : p.name,
                             fontWeight: FontWeight.w800,
-                            fontSize: 11,
+                            fontSize: 12,
                             color: p.position == 'self'
                                 ? const Color(0xFF355D89)
                                 : const Color(0xFF295EA8),
@@ -6820,7 +6821,9 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
                         ),
                       ],
                     ),
-                    ...state.scoreHistory.map((entry) {
+                    ...state.scoreHistory.asMap().entries.map((mapEntry) {
+                      final rowIndex = mapEntry.key;
+                      final entry = mapEntry.value;
                       final trump =
                           suitSymbol[entry.trumpSuit] ?? entry.trumpSuit ?? '?';
                       for (final p in state.players) {
@@ -6839,20 +6842,30 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
                           : showSuitIcon
                           ? '${entry.bid}${entry.success ? '✓' : '✗'}'
                           : '$trump${entry.bid}${entry.success ? '✓' : '✗'}';
+                      // Colour the bid cell by outcome so a scan of the column
+                      // reads success (green) / fail (red) / deal-miss (amber).
+                      final bidColor = entry.dealMiss
+                          ? const Color(0xFFB56A1D)
+                          : entry.success
+                          ? const Color(0xFF2E9E5B)
+                          : const Color(0xFFD04A5B);
                       return TableRow(
+                        decoration: BoxDecoration(
+                          color: rowIndex.isOdd
+                              ? const Color(0xFFF4F8FD)
+                              : null,
+                        ),
                         children: [
                           cell(
                             '${entry.round}',
                             fontWeight: FontWeight.w700,
-                            fontSize: 11,
+                            fontSize: 12,
                             color: const Color(0xFF8A92A0),
                           ),
                           bidCell(
                             trumpSuit: showSuitIcon ? trumpKey : null,
                             label: bidLabel,
-                            color: entry.dealMiss
-                                ? const Color(0xFFB56A1D)
-                                : const Color(0xFF233142),
+                            color: bidColor,
                             dealMiss: entry.dealMiss,
                           ),
                           ...state.players.map((p) {
@@ -6882,7 +6895,7 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
                                           '$base',
                                           textAlign: TextAlign.center,
                                           style: TextStyle(
-                                            fontSize: 12,
+                                            fontSize: 14,
                                             fontWeight: p.position == 'self'
                                                 ? FontWeight.w800
                                                 : FontWeight.w600,
@@ -6894,7 +6907,7 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
                                           '+$bonus',
                                           textAlign: TextAlign.center,
                                           style: const TextStyle(
-                                            fontSize: 9,
+                                            fontSize: 10,
                                             fontWeight: FontWeight.w700,
                                             color: Color(0xFFB56A1D),
                                             height: 1.1,
@@ -6908,7 +6921,7 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
                                       maxLines: 2,
                                       overflow: TextOverflow.ellipsis,
                                       style: TextStyle(
-                                        fontSize: 12,
+                                        fontSize: 14,
                                         fontWeight: p.position == 'self'
                                             ? FontWeight.w800
                                             : FontWeight.w600,
@@ -6923,8 +6936,9 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
                     }),
                     TableRow(
                       decoration: const BoxDecoration(
+                        color: Color(0xFFEAF2FF),
                         border: Border(
-                          top: BorderSide(color: Color(0xFFDCE4EE), width: 1),
+                          top: BorderSide(color: Color(0xFFC9DCF7), width: 1.5),
                         ),
                       ),
                       children: [
@@ -6933,7 +6947,7 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
                           L10n.of(context).mtTotal,
                           align: TextAlign.left,
                           fontWeight: FontWeight.w800,
-                          fontSize: 11,
+                          fontSize: 12,
                           color: const Color(0xFF233142),
                         ),
                         ...state.players.map((p) {
@@ -6941,7 +6955,7 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
                           return cell(
                             '$total',
                             fontWeight: FontWeight.w900,
-                            fontSize: 13,
+                            fontSize: 15,
                             color: total < 0
                                 ? const Color(0xFFD04A5B)
                                 : const Color(0xFF233142),

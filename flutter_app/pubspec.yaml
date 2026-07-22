@@ -19,7 +19,7 @@ publish_to: 'none' # Remove this line if you wish to publish to pub.dev
 version: 2.6.3+40
 
 environment:
-  sdk: ^3.10.7
+  sdk: ^3.12.0
 
 # Dependencies specify other packages that your package needs in order to work.
 # To automatically upgrade your package dependencies to the latest versions
@@ -57,12 +57,14 @@ dependencies:
   app_links: ^6.4.1
   url_launcher: ^6.3.2
   firebase_analytics: ^11.6.0
-  in_app_purchase: ^3.2.0
+  in_app_purchase: ^3.3.0
   # Direct dep so iap_service.dart can import InAppPurchaseAndroidPlatformAddition
   # for manual consumePurchase (autoConsume=false flow). Pulled in transitively
   # by in_app_purchase anyway; pinning it explicitly avoids a "unknown package"
   # surprise on a strict resolver.
-  in_app_purchase_android: ^0.4.0
+  # 0.5.x bundles Google Play Billing Library 8.x (required by Play from
+  # 2026-08-31; 0.4.x shipped Billing 7.x). Requires Dart >= 3.12.
+  in_app_purchase_android: ^0.5.2
 
 dev_dependencies:
   flutter_test:

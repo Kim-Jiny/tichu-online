@@ -1210,17 +1210,25 @@ wss.on('close', () => {
   clearInterval(heartbeatInterval);
 });
 
-// ── DIAGNOSTICS (temporary): event-loop lag + memory ──────────────────────────
+// ── DIAGNOSTICS: event-loop lag + slow-path detail ───────────────────────────
 // Investigating "bots lag → players get kicked". Node is single-threaded, so any
 // synchronous work (bot rollouts/solver, GC) blocks the loop; if the block spans
 // the 15s heartbeat the client is terminated as a zombie. A probe fires every
 // DIAG_PROBE_MS and the gap *beyond* that interval is how long the loop was
 // blocked. This tells us CPU-blocking (lag spikes, flat memory) vs memory
 // pressure (lag rises with GC + climbing rss/heap). Set DIAG=0 to silence.
+function diagNumberEnv(name, fallback) {
+  const n = Number(process.env[name]);
+  return Number.isFinite(n) && n >= 0 ? n : fallback;
+}
+
 const DIAG_ON = process.env.DIAG !== '0';
+const DIAG_SLOW_MS = diagNumberEnv('DIAG_SLOW_MS', 40);
+const DIAG_BOT_SLOW_MS = diagNumberEnv('DIAG_BOT_SLOW_MS', 100);
+const DIAG_STALL_MS = diagNumberEnv('DIAG_STALL_MS', 200);
+
 if (DIAG_ON) {
   const DIAG_PROBE_MS = 1000;
-  const DIAG_STALL_MS = 200; // was 500 — capture the ~295ms spikes with a live snapshot
   const MB = 1048576;
 
   // GC observation — the discriminator for "is this lag spike a GC pause?".
@@ -1267,7 +1275,7 @@ if (DIAG_ON) {
     winGcMajorMs += gcMajorInProbe;
     if (gcInProbe > winMaxGcProbe) winMaxGcProbe = gcInProbe;
 
-    // Immediate warning on a stall (>200ms is something a player can feel).
+    // Immediate warning on a stall (default >200ms is something a player can feel).
     if (lag > DIAG_STALL_MS) {
       const m = process.memoryUsage();
       // gcShare: how much of this stall the GC explains. ~100% → GC pause;
@@ -3964,7 +3972,7 @@ async function handleGetProfile(ws, data) {
 }
 
 function handleGameAction(ws, data) {
-  const __diagActionOn = process.env.DIAG !== '0'
+  const __diagActionOn = DIAG_ON
     && ['play_cards', 'pass', 'play_card'].includes(data?.type);
   const __diagActionStart = __diagActionOn ? process.hrtime.bigint() : 0n;
   let __diagHandleMs = 0;
@@ -4043,7 +4051,7 @@ function handleGameAction(ws, data) {
   if (__diagActionOn) {
     __diagStateMs = Number(process.hrtime.bigint() - __diagStateStart) / 1e6;
     const __diagTotalMs = Number(process.hrtime.bigint() - __diagActionStart) / 1e6;
-    if (__diagTotalMs > 40) {
+    if (__diagTotalMs > DIAG_SLOW_MS) {
       console.log(`[DIAG] human-action ${__diagTotalMs.toFixed(0)}ms room=${ws.roomId} type=${room.gameType} action=${data.type} handle=${__diagHandleMs.toFixed(0)}ms event=${__diagEventMs.toFixed(0)}ms state=${__diagStateMs.toFixed(0)}ms`);
     }
   }
@@ -4276,17 +4284,7 @@ function autoAckResolvedLLEffect(roomId) {
 }
 
 function sendGameStateToAll(roomId) {
-  // DIAGNOSTICS (temporary): broadcasting serializes state for every human +
-  // spectator and is NOT covered by bot-decide timing, so a slow broadcast
-  // shows up only as event-loop lag. Time it to catch that case.
-  if (process.env.DIAG === '0') return _sendGameStateToAllImpl(roomId);
-  const __t0 = process.hrtime.bigint();
-  try {
-    return _sendGameStateToAllImpl(roomId);
-  } finally {
-    const __ms = Number(process.hrtime.bigint() - __t0) / 1e6;
-    if (__ms > 40) console.log(`[DIAG] broadcast ${__ms.toFixed(0)}ms room=${roomId}`);
-  }
+  return _sendGameStateToAllImpl(roomId);
 }
 
 function _sendGameStateToAllImpl(roomId) {
@@ -4379,7 +4377,7 @@ function _sendGameStateToAllImpl(roomId) {
       const __t0 = process.hrtime.bigint();
       r.game.nextRound();
       const __ms = Number(process.hrtime.bigint() - __t0) / 1e6;
-      if (process.env.DIAG !== '0' && __ms > 40) console.log(`[DIAG] nextRound ${__ms.toFixed(0)}ms room=${roomId} type=${r.gameType}`);
+      if (DIAG_ON && __ms > DIAG_SLOW_MS) console.log(`[DIAG] nextRound ${__ms.toFixed(0)}ms room=${roomId} type=${r.gameType}`);
       sendGameStateToAll(roomId);
     }, roundEndDelay);
     // Send state without timer for round_end
@@ -4398,12 +4396,10 @@ function _sendGameStateToAllImpl(roomId) {
 }
 
 function _broadcastState(roomId, room) {
-  // DIAGNOSTICS (temporary): split the broadcast cost. `broadcast` timing showed
-  // 40–337ms here, but the code looks cheap — so break it down to see whether the
-  // ms are in state-building (getStateForPlayer), stringify+send, recipient count,
-  // or an oversized payload. A big total with tiny state/send sums means the wall
-  // time was stolen by something else (GC / host pause) landing mid-broadcast.
-  const __diagOn = process.env.DIAG !== '0';
+  // Slow broadcast detail. `bcast-split` is the main line; per-recipient
+  // `send-slow` and state-build/decor lines appear only when that sub-step is
+  // itself slow enough to explain the spike.
+  const __diagOn = DIAG_ON;
   const __t0 = __diagOn ? process.hrtime.bigint() : 0n;
   let __tState = 0, __tBuild = 0, __tDecor = 0, __tJson = 0, __tWs = 0, __tSend = 0, __nH = 0, __nS = 0, __maxBytes = 0, __maxBufferedBefore = 0, __maxBufferedAfter = 0;
   const __send = (ws, obj, isSpec, recipientId = '-') => {
@@ -4423,7 +4419,7 @@ function _broadcastState(roomId, room) {
       __tWs += __wsMs;
       const __bufAfter = ws.bufferedAmount || 0;
       if (__bufAfter > __maxBufferedAfter) __maxBufferedAfter = __bufAfter;
-      if ((__jsonMs + __wsMs) > 40) {
+      if ((__jsonMs + __wsMs) > DIAG_SLOW_MS) {
         console.log(`[DIAG] send-slow ${(__jsonMs + __wsMs).toFixed(0)}ms room=${roomId} type=${room.gameType} phase=${room.game.state} recipient=${recipientId} kind=${isSpec ? 'spectator' : 'player'} json=${__jsonMs.toFixed(0)}ms ws=${__wsMs.toFixed(0)}ms kb=${(str.length / 1024).toFixed(1)} buf=${Math.round(__bufBefore / 1024)}KB>${Math.round(__bufAfter / 1024)}KB`);
       }
       if (isSpec) __nS++; else __nH++;
@@ -4473,7 +4469,7 @@ function _broadcastState(roomId, room) {
       const state = room.game.getStateForPlayer(player.id, permitted, gameStateCache);
       const __stateMs = __diagOn ? Number(process.hrtime.bigint() - __sb) / 1e6 : 0;
       if (__diagOn) __tBuild += __stateMs;
-      if (__diagOn && __stateMs > 40) {
+      if (__diagOn && __stateMs > DIAG_SLOW_MS) {
         console.log(`[DIAG] state-build ${__stateMs.toFixed(0)}ms room=${roomId} type=${room.gameType} phase=${room.game.state} recipient=${player.id} cards=${room.game.hands?.[player.id]?.length ?? '-'}`);
       }
       const __db = __diagOn ? process.hrtime.bigint() : 0n;
@@ -4489,7 +4485,7 @@ function _broadcastState(roomId, room) {
       if (__diagOn) {
         const __decorMs = Number(process.hrtime.bigint() - __db) / 1e6;
         __tDecor += __decorMs;
-        if (__decorMs > 40) {
+        if (__decorMs > DIAG_SLOW_MS) {
           console.log(`[DIAG] state-decor ${__decorMs.toFixed(0)}ms room=${roomId} type=${room.gameType} phase=${room.game.state} recipient=${player.id}`);
         }
       }
@@ -4507,7 +4503,7 @@ function _broadcastState(roomId, room) {
       const spectatorState = room.game.getStateForSpectator(permittedPlayers, gameStateCache);
       const __stateMs = __diagOn ? Number(process.hrtime.bigint() - __sb) / 1e6 : 0;
       if (__diagOn) __tBuild += __stateMs;
-      if (__diagOn && __stateMs > 40) {
+      if (__diagOn && __stateMs > DIAG_SLOW_MS) {
         console.log(`[DIAG] state-build ${__stateMs.toFixed(0)}ms room=${roomId} type=${room.gameType} phase=${room.game.state} recipient=${spectatorId} spectator=1`);
       }
       const __db = __diagOn ? process.hrtime.bigint() : 0n;
@@ -4522,7 +4518,7 @@ function _broadcastState(roomId, room) {
       if (__diagOn) {
         const __decorMs = Number(process.hrtime.bigint() - __db) / 1e6;
         __tDecor += __decorMs;
-        if (__decorMs > 40) {
+        if (__decorMs > DIAG_SLOW_MS) {
           console.log(`[DIAG] state-decor ${__decorMs.toFixed(0)}ms room=${roomId} type=${room.gameType} phase=${room.game.state} recipient=${spectatorId} spectator=1`);
         }
       }
@@ -4535,7 +4531,7 @@ function _broadcastState(roomId, room) {
       const __ms = Number(process.hrtime.bigint() - __t0) / 1e6;
       // A big __ms with small tState+tSend ⇒ time stolen mid-broadcast (GC/host),
       // not real broadcast work. Big tState/tSend ⇒ genuine serialization cost.
-      if (__ms > 40) {
+      if (__ms > DIAG_SLOW_MS) {
         console.log(`[DIAG] bcast-split ${__ms.toFixed(0)}ms room=${roomId} type=${room.gameType} recips=${__nH}h/${__nS}s state=${__tState.toFixed(0)}ms build=${__tBuild.toFixed(0)}ms decor=${__tDecor.toFixed(0)}ms json=${__tJson.toFixed(0)}ms ws=${__tWs.toFixed(0)}ms send=${__tSend.toFixed(0)}ms maxKB=${(__maxBytes / 1024).toFixed(1)} buf=${Math.round(__maxBufferedBefore / 1024)}KB>${Math.round(__maxBufferedAfter / 1024)}KB`);
       }
     }
@@ -4641,7 +4637,7 @@ function scheduleBotActions(roomId, forceReschedule = false) {
       const __t0 = process.hrtime.bigint();
       const a = baseDecideFn(g, pid, strat);
       const __ms = Number(process.hrtime.bigint() - __t0) / 1e6;
-      if (process.env.DIAG !== '0' && __ms > 100) {
+      if (DIAG_ON && __ms > DIAG_BOT_SLOW_MS) {
         console.log(`[DIAG] bot-decide ${__ms.toFixed(0)}ms room=${roomId} type=${r.gameType} state=${r.game?.state} bot=${pid} strat=${strat}`);
       }
       return a;

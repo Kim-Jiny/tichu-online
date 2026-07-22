@@ -149,6 +149,9 @@ class _ShopScreenState extends State<ShopScreen> {
         onAdFailedToLoad: (error) {
           debugPrint('[AdService] Attendance rewarded FAILED: ${error.message}');
           _attendanceAdLoadInFlight = false;
+          // The screen may have been disposed (which disposes the notifier)
+          // before a late load-failure arrives — don't touch it then.
+          if (!mounted) return;
           _attendanceAdReady.value = false;
           // Keep retrying so the (disabled) claim button eventually enables.
           // Backoff avoids hammering AdMob on a persistent no-fill.

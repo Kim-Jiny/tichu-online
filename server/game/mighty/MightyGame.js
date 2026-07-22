@@ -1427,8 +1427,13 @@ class MightyGame {
       lastKillEvent: this.lastKillEvent,
       remainingTrumps: cache.remainingTrumps,
       tricks: cache.tricks,
-      // Let spectators mark which of the declarer's cards came from the kitty.
-      kittyCards: this.state === 'kitty_exchange' ? this.kitty : [],
+      // Let spectators mark which of the declarer's cards came from the kitty —
+      // but ONLY when this spectator may already view the declarer's hand.
+      // Otherwise the kitty composition would leak to unpermitted spectators.
+      kittyCards:
+        this.state === 'kitty_exchange' && permittedPlayerIds.has(this.declarer)
+          ? this.kitty
+          : [],
     };
   }
 

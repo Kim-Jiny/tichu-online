@@ -140,6 +140,25 @@ const { getCardInfo, RANK_ORDER, SUITS } = require('../MightyDeck');
 // we never return without a pick. See oracle.js EVAL_BUDGET_MS.
 const EVAL_BUDGET_MS = 12;
 
+function _diagNumberEnv(name, fallback) {
+  const n = Number(process.env[name]);
+  return Number.isFinite(n) && n >= 0 ? n : fallback;
+}
+
+function _diagElapsedMs(start) {
+  return Number(process.hrtime.bigint() - start) / 1e6;
+}
+
+function _maxActiveHandSize(game) {
+  let max = 0;
+  for (const pid of game.playerIds || []) {
+    if (game.excludedPlayers && game.excludedPlayers.has(pid)) continue;
+    const n = (game.hands && game.hands[pid] && game.hands[pid].length) || 0;
+    if (n > max) max = n;
+  }
+  return max;
+}
+
 function _heuristicPlayAction(game, botId) {
   const action = MightyBotInternals.decideMightyBotAction(game, botId, 'heuristic');
   if (!action || action.type !== 'play_card') return null;
@@ -1170,6 +1189,32 @@ function _oppositionTrumpLeadCensorRule(game, botId, oracleAction) {
 }
 
 function decide(game, botId) {
+  const __diagOn = process.env.DIAG !== '0';
+  const __diagSlowMs = _diagNumberEnv('DIAG_BOT_SLOW_MS', 100);
+  const __diagStart = __diagOn ? process.hrtime.bigint() : 0n;
+  let __settingMs = 0;
+  let __solverMs = 0;
+  let __rulesMs = 0;
+  let __oracleMs = 0;
+  let __censorMs = 0;
+  let __path = 'none';
+  let __solverNodes = '-';
+
+  const __finish = (action) => {
+    if (__diagOn) {
+      const __totalMs = _diagElapsedMs(__diagStart);
+      if (__totalMs > __diagSlowMs) {
+        const hand = (game.hands && game.hands[botId] && game.hands[botId].length) || 0;
+        const trick = (game.currentTrick && game.currentTrick.length) || 0;
+        const actionInfo = action
+          ? `${action.type || '-'}:${action.cardId || action.points || action.suit || action.pass || '-'}`
+          : 'null';
+        console.log(`[DIAG] mixoracle-detail ${__totalMs.toFixed(0)}ms bot=${botId} phase=${game.state} path=${__path} hand=${hand} maxHand=${_maxActiveHandSize(game)} trick=${trick} setting=${__settingMs.toFixed(0)}ms solver=${__solverMs.toFixed(0)}ms rules=${__rulesMs.toFixed(0)}ms oracle=${__oracleMs.toFixed(0)}ms censor=${__censorMs.toFixed(0)}ms nodes=${__solverNodes} action=${actionInfo}`);
+      }
+    }
+    return action;
+  };
+
   // Setting (세팅) declaration takes precedence over every other decision
   // path: the server-side `_canDeclareSetting` check already proves the
   // remaining hand wins unconditionally, so skipping to the round end and
@@ -1177,30 +1222,53 @@ function decide(game, botId) {
   // out one trick at a time. Mirrors the heuristic decidePlay's first
   // gate — kept here too because mixoracle reaches the oracle play path
   // without going through that gate.
-  if (game.state === 'playing'
+  const __settingStart = __diagOn ? process.hrtime.bigint() : 0n;
+  const canDeclareSetting = game.state === 'playing'
       && game.currentPlayer === botId
       && game.currentTrick
       && game.currentTrick.length === 0
       && typeof game._canDeclareSetting === 'function'
-      && game._canDeclareSetting(botId)) {
-    return { type: 'declare_setting' };
+      && game._canDeclareSetting(botId);
+  if (__diagOn) __settingMs = _diagElapsedMs(__settingStart);
+  if (canDeclareSetting) {
+    __path = 'setting';
+    return __finish({ type: 'declare_setting' });
   }
 
   // Exact endgame solver: once few cards remain the position is small enough to
   // solve perfectly (full-information alpha-beta). It supersedes both the hard
   // rules and the rollout oracle there — those are heuristics, this is optimal.
   if (_solverEnabledFor(botId)) {
+    const __solverStart = __diagOn ? process.hrtime.bigint() : 0n;
     const solved = endgameSolver.solve(game, botId);
-    if (solved) return solved;
+    if (__diagOn) __solverMs = _diagElapsedMs(__solverStart);
+    if (solved) {
+      __path = 'solver';
+      __solverNodes = solved.__nodes ?? '-';
+      return __finish(solved);
+    }
   }
 
+  const __rulesStart = __diagOn ? process.hrtime.bigint() : 0n;
   const ruled = _applyHardRules(game, botId);
-  if (ruled) return ruled;
+  if (__diagOn) __rulesMs = _diagElapsedMs(__rulesStart);
+  if (ruled) {
+    __path = 'rules';
+    return __finish(ruled);
+  }
 
+  const __oracleStart = __diagOn ? process.hrtime.bigint() : 0n;
   const oracleAction = oracle.decide(game, botId);
+  if (__diagOn) __oracleMs = _diagElapsedMs(__oracleStart);
+  const __censorStart = __diagOn ? process.hrtime.bigint() : 0n;
   const censored = _oppositionTrumpLeadCensorRule(game, botId, oracleAction);
-  if (censored) return censored;
-  return oracleAction;
+  if (__diagOn) __censorMs = _diagElapsedMs(__censorStart);
+  if (censored) {
+    __path = 'censor';
+    return __finish(censored);
+  }
+  __path = 'oracle';
+  return __finish(oracleAction);
 }
 
 module.exports = { decide };

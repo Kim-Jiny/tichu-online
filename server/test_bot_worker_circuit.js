@@ -60,7 +60,28 @@ async function main() {
   await good.destroy();
   console.log('  healthy pool unaffected — still decides');
 
-  console.log('OK — circuit breaker opens on load failures, rejects fast, and healthy pools work.');
+  // --- Spawn-construction failure (host resource exhaustion) must not strand
+  // queued jobs. new Worker(99999) throws SYNCHRONOUSLY (ERR_INVALID_ARG_TYPE),
+  // simulating EMFILE/ENOMEM at construction — a path that bypasses the normal
+  // worker error/exit handlers. (A truthy invalid value; a falsy one would hit
+  // the `|| WORKER_FILE` default.) A decide() that queues behind a never-
+  // spawning worker MUST still settle (reject), or the caller's
+  // botDecisionInFlight sticks and the room freezes forever.
+  const spawnPool = new BotWorkerPool({ size: 1, workerFile: 99999 });
+  let settled = false, sRejected = false;
+  const fake = { serialize: () => ({}) };
+  spawnPool.decide('mighty', fake, 'bot_1', 'mixoracle')
+    .then(() => { settled = true; })
+    .catch(() => { settled = true; sRejected = true; });
+  const s0 = Date.now();
+  while (!settled && Date.now() - s0 < 15000) await sleep(200);
+  assert.ok(settled, 'queued decide() never settled — STRANDED (would freeze the room)');
+  assert.ok(sRejected, 'stranded decide() should reject so the caller falls back inline');
+  assert.ok(spawnPool.disabled, 'pool should disable after repeated spawn-construction failures');
+  await spawnPool.destroy();
+  console.log('  spawn-throw: queued decide() settled (rejected) + pool disabled — no permanent freeze');
+
+  console.log('OK — circuit breaker opens on load failures, rejects fast, spawn-throws never strand, and healthy pools work.');
 }
 
 main().then(() => process.exit(0)).catch((e) => { console.error(e); process.exit(1); });

@@ -71,7 +71,21 @@ class BotWorkerPool {
 
   _spawn(idx) {
     if (this.disabled) return;
-    const worker = new Worker(this._workerFile);
+    let worker;
+    try {
+      worker = new Worker(this._workerFile);
+    } catch (e) {
+      // `new Worker` throws SYNCHRONOUSLY on host resource exhaustion
+      // (EMFILE / ENOMEM / thread-limit). This returns before any slot or
+      // listener exists, so it bypasses the normal failure path entirely. If
+      // it escaped, the throw would abort _respawn before _drain(), stranding
+      // queued jobs (which carry NO timeout) — their promises would never
+      // settle, sticking botDecisionInFlight and silently freezing the room.
+      // Route it through the same load-failure accounting instead.
+      this._workers[idx] = null;
+      this._noteLoadFailure(idx, e);
+      return;
+    }
     const slot = { worker, busy: false, gen: ++this._gen, spawnedAt: Date.now(), completed: false };
     // Identity-guard every listener: after a terminate()+respawn, the OLD
     // worker's late 'exit'/'error'/'message' must NOT touch the fresh slot now
@@ -178,21 +192,27 @@ class BotWorkerPool {
       }
     }
     // A worker that died young without ever completing a job is almost
-    // certainly a load-time failure (bad require / build) that will recur on
-    // every respawn — count it in a sliding window and back off.
+    // certainly a load-time failure (bad require / build, or host exhaustion)
+    // that will recur on every respawn — count it in a sliding window and back
+    // off. Otherwise respawn immediately (transient post-work crash).
+    const loadFailure = !slot.completed && (Date.now() - slot.spawnedAt) < LOAD_FAIL_MS;
+    if (loadFailure) this._noteLoadFailure(idx, err);
+    else this._respawn(idx, 0);
+  }
+
+  // Shared load-failure accounting. Reached both from a worker that died young
+  // (_onWorkerFailure) and from a synchronous `new Worker` throw (_spawn). Trips
+  // the circuit after MAX_LOAD_FAILURES within the window, else backs off and
+  // retries. _disable() rejects every queued/in-flight job so no caller hangs.
+  _noteLoadFailure(idx, err) {
+    if (this.disabled) return;
     const now = Date.now();
-    const loadFailure = !slot.completed && (now - slot.spawnedAt) < LOAD_FAIL_MS;
-    if (loadFailure) {
-      this._loadFailures.push(now);
-      const cutoff = now - LOAD_FAIL_WINDOW_MS;
-      while (this._loadFailures.length && this._loadFailures[0] < cutoff) this._loadFailures.shift();
-      const n = this._loadFailures.length;
-      if (n >= MAX_LOAD_FAILURES) { this._disable(err); return; }
-      const backoff = Math.min(MAX_BACKOFF_MS, BASE_BACKOFF_MS * 2 ** (n - 1));
-      this._respawn(idx, backoff);
-    } else {
-      this._respawn(idx, 0);
-    }
+    this._loadFailures.push(now);
+    const cutoff = now - LOAD_FAIL_WINDOW_MS;
+    while (this._loadFailures.length && this._loadFailures[0] < cutoff) this._loadFailures.shift();
+    const n = this._loadFailures.length;
+    if (n >= MAX_LOAD_FAILURES) { this._disable(err); return; }
+    this._respawn(idx, Math.min(MAX_BACKOFF_MS, BASE_BACKOFF_MS * 2 ** (n - 1)));
   }
 
   _respawn(idx, delayMs = 0) {

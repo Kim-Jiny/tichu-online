@@ -4709,6 +4709,19 @@ function scheduleBotActions(roomId, forceReschedule = false) {
             let action2 = botStateSig(r2.game) === decidedSig
               ? decidedAction
               : decideFn(r2.game, botId);
+            // The cached decision was validated against the pre-delay state.
+            // botStateSig is coarse (it captures trick *length* but not the
+            // trick-top combo), so a rare state change during the delay can
+            // leave a reused follow-play unable to beat the current trick
+            // (-> game_combo_cannot_beat, then a wasted fallback pass). If a
+            // reused Tichu card-play is no longer legal, re-decide — decideFn
+            // always filters candidates against the current game.
+            if (action2 === decidedAction
+                && (action2.type === 'play_cards' || action2.type === 'play_card')
+                && typeof r2.game.canPlayCards === 'function'
+                && !r2.game.canPlayCards(botId, action2.cards || []).success) {
+              action2 = decideFn(r2.game, botId);
+            }
             if (!action2) {
               // State changed (e.g. bomb interrupt) - re-schedule for other bots
               scheduleBotActions(roomId);

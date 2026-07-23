@@ -56,7 +56,12 @@ function _evaluateCandidates(game, botId, candidates, scoreFn = _roundDelta) {
       continue;
     }
 
-    runRollout(world);
+    runRollout(world, deadline);
+    if (deadline && Date.now() >= deadline
+        && world.state !== 'round_end'
+        && world.state !== 'game_end') {
+      break;
+    }
     const score = scoreFn(preScores, world, botId);
     if (score > bestScore) {
       bestScore = score;

@@ -43,9 +43,10 @@ function _stepOnce(game) {
   return true;
 }
 
-function runRollout(game) {
+function runRollout(game, deadline = 0) {
   let steps = 0;
   while (game.state !== 'round_end' && game.state !== 'game_end' && steps < MAX_STEPS) {
+    if (deadline && Date.now() >= deadline) break;
     if (!_stepOnce(game)) break;
     steps++;
   }

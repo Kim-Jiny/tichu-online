@@ -180,13 +180,18 @@ function _playActionKey(action) {
   ].join('|');
 }
 
-function _evaluatePlayActionScore(game, botId, action) {
+function _evaluatePlayActionScore(game, botId, action, deadline = 0) {
   if (!action || action.type !== 'play_card') return -Infinity;
   const world = game.clone();
   const result = world.handleAction(botId, action);
   if (!result || !result.success) return -Infinity;
   const preScores = { ...game.scores };
-  runRollout(world);
+  runRollout(world, deadline);
+  if (deadline && Date.now() >= deadline
+      && world.state !== 'round_end'
+      && world.state !== 'game_end') {
+    return -Infinity;
+  }
   return _roundDelta(preScores, world, botId);
 }
 
@@ -201,7 +206,7 @@ function _bestPlayAction(game, botId, actions) {
     if (!key || seen.has(key)) continue;
     seen.add(key);
 
-    const score = _evaluatePlayActionScore(game, botId, action);
+    const score = _evaluatePlayActionScore(game, botId, action, deadline);
     if (score > bestScore) {
       bestScore = score;
       bestAction = action;
@@ -224,7 +229,11 @@ function _preferActionOverOracle(game, botId, candidateActions) {
     return candidate.action;
   }
 
-  const oracleScore = _evaluatePlayActionScore(game, botId, oracleAction);
+  const oracleScore = _evaluatePlayActionScore(game, botId, oracleAction, Date.now() + EVAL_BUDGET_MS);
+  // 오라클 평가가 시간초과로 미완성(-Infinity)이면 후보가 낫다고 단정할 수 없다.
+  // 이 경우 오라클 추천을 유지한다(null 반환). 안 그러면 어려운(=롤아웃이 느린)
+  // 국면에서 봇이 계통적으로 오라클을 버리고 휴리스틱으로 흘러 약해진다.
+  if (oracleScore === -Infinity) return null;
   return candidate.score > oracleScore ? candidate.action : null;
 }
 

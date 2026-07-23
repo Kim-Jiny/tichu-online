@@ -1288,7 +1288,10 @@ if (DIAG_ON) {
     // Baseline summary every 30s even when nothing stalls.
     if (Date.now() - diagLastReport >= 30000) {
       const m = process.memoryUsage();
-      console.log(`[DIAG] 30s | maxLag=${Math.round(diagMaxLag)}ms gc=${winGcMs.toFixed(0)}ms(major=${winGcMajorMs.toFixed(0)},maxProbe=${winMaxGcProbe.toFixed(0)}) rss=${(m.rss / MB).toFixed(0)}MB heapUsed=${(m.heapUsed / MB).toFixed(0)}MB heapTotal=${(m.heapTotal / MB).toFixed(0)}MB rooms=${lobby.rooms.size} clients=${wss.clients.size}`);
+      const botDiag = botPool
+        ? ` bots=q${botPool.queueDepth}/f${botPool.inFlight}/maxq${botPool.stats.maxQueue}/to${botPool.stats.timeouts}/er${botPool.stats.errors}`
+        : '';
+      console.log(`[DIAG] 30s | maxLag=${Math.round(diagMaxLag)}ms gc=${winGcMs.toFixed(0)}ms(major=${winGcMajorMs.toFixed(0)},maxProbe=${winMaxGcProbe.toFixed(0)}) rss=${(m.rss / MB).toFixed(0)}MB heapUsed=${(m.heapUsed / MB).toFixed(0)}MB heapTotal=${(m.heapTotal / MB).toFixed(0)}MB rooms=${lobby.rooms.size} clients=${wss.clients.size}${botDiag}`);
       diagMaxLag = 0;
       winGcMs = 0;
       winGcMajorMs = 0;

@@ -100,7 +100,14 @@ class BotWorkerPool {
     if (this.disabled) return Promise.reject(new Error('bot pool disabled'));
     let state;
     try {
-      state = game.serialize();
+      // structuredClone NOW (not at postMessage/dispatch time). serialize()
+      // shares live nested refs (hands, currentTrick, exchangeCards, …); a
+      // queued job's postMessage-clone is deferred to dispatch, so without an
+      // eager copy a main-thread mutation between enqueue and dispatch could
+      // hand the worker a torn snapshot (old scalars, newer nested data). The
+      // clone is ~0.03ms on a ~5KB state — cheap insurance that the snapshot is
+      // frozen at call time.
+      state = structuredClone(game.serialize());
     } catch (e) {
       return Promise.reject(new Error(`serialize failed: ${(e && e.message) || e}`));
     }

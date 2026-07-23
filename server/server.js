@@ -4771,7 +4771,11 @@ function scheduleBotActions(roomId, forceReschedule = false) {
       // where pendingActor is null, every candidate legitimately decides).
       // Bots checked purely for a bomb/tichu interrupt on someone else's turn
       // short-circuit to []/null, so run those inline and skip the round-trip.
-      const allowOffload = !pendingActor || botId === pendingActor;
+      // Include `currentPlayer` explicitly: the expensive winrate/oracle path
+      // runs on isMyTurn (== currentPlayer), which can diverge from pendingActor
+      // in the bird/needsToCallRank and dragon windows — offload it so that
+      // never blocks the event loop, regardless of client behaviour.
+      const allowOffload = !pendingActor || botId === pendingActor || botId === r.game.currentPlayer;
       let action = await decideFn(r.game, botId, allowOffload);
       // The room may have been closed (desertion / AFK / everyone left) during
       // the worker round-trip. closeRoom() removes it from the lobby but does

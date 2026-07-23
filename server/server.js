@@ -4742,7 +4742,12 @@ function scheduleBotActions(roomId, forceReschedule = false) {
       // reschedule — applying it risks an out-of-turn move.
       const preSig = botStateSig(r.game);
       let action = await decideFn(r.game, botId);
-      if (!r.game) return;
+      // The room may have been closed (desertion / AFK / everyone left) during
+      // the worker round-trip. closeRoom() removes it from the lobby but does
+      // NOT null room.game (by design it relies on callbacks re-fetching), so
+      // the captured `r` would still look alive — trust lobby.getRoom instead.
+      // Without this we'd handleAction / saveGameResult on a dead room.
+      if (!lobby.getRoom(roomId) || !r.game) return;
       if (botStateSig(r.game) !== preSig) { scheduleBotActions(roomId); return; }
       if (action) {
         const bot = r.bots.get(botId);
@@ -5563,6 +5568,7 @@ function closeRoom(roomId, messageType = 'room_closed') {
     delete pendingBotTimers[roomId];
   }
   delete pendingBotCheck[roomId];
+  delete botDecisionInFlight[roomId];
   // Card-view request timers live on the room object; clear them too.
   if (room && room.cardRequestTimers) {
     for (const key of Object.keys(room.cardRequestTimers)) {

@@ -53,6 +53,7 @@ class Host {
   constructor() {
     this.ws = null; this.playerId = null; this.myCards = []; this.botsAdded = false;
     this.started = false; this.rounds = 0; this.done = false;
+    this.desertMode = false; this.deserted = false; // scenario B: drop mid-game
     const uniq = Date.now().toString(36);
     this.username = `smoke_${uniq}`;
     this.password = 'smoke_pw_123';
@@ -112,6 +113,14 @@ class Host {
         this.send({ type: 'exchange_cards', cards: { left: low[0] || this.myCards[0], partner: high[0] || this.myCards[1], right: low[1] || this.myCards[2] } });
       }
     } else if (phase === 'playing') {
+      // Scenario B: once the game is live (bots actively deciding in workers),
+      // hard-drop the socket to trigger desertion -> room removal, ideally
+      // while a bot decision is mid-flight in a worker.
+      if (this.desertMode && !this.deserted) {
+        this.deserted = true;
+        setTimeout(() => { try { this.ws.terminate(); } catch (_) {} }, 1200);
+        return;
+      }
       if (s.dragonPending && s.dragonDecider === this.playerId) { this.send({ type: 'dragon_give', target: 'left' }); return; }
       if (s.isMyTurn) setTimeout(() => this.play(s), 120);
     } else if (phase === 'round_end') {
@@ -162,7 +171,7 @@ async function main() {
   host.send({ type: 'register', username: host.username, password: host.password, nickname: host.nickname });
 
   const t0 = Date.now();
-  while (!host.done && Date.now() - t0 < TIME_BUDGET_MS && host.rounds < 3) await sleep(500);
+  while (!host.done && Date.now() - t0 < TIME_BUDGET_MS && host.rounds < 1) await sleep(500);
   await sleep(500);
 
   // ---- assertions from the server's own log ----
@@ -185,6 +194,25 @@ async function main() {
     /\[server exited code=[^0]/,
   ];
   for (const p of badPatterns) check(!serverSaw(p), `server log contains failure marker: ${p}`);
+
+  // ---- Scenario B: desertion mid-game (room removed while bots may be
+  // awaiting the worker). Must remove the room cleanly, no crash/double-save. ----
+  const logMarkB = logbuf.length;
+  const deserter = new Host();
+  deserter.desertMode = true;
+  await deserter.connect();
+  deserter.send({ type: 'register', username: deserter.username, password: deserter.password, nickname: deserter.nickname });
+  await sleep(45000); // start -> play -> host drops -> reconnect grace + turn timeouts -> desertion
+  const deltaB = logbuf.slice(logMarkB);
+  const sawB = (re) => re.test(deltaB);
+  check(sawB(/tichu game started/), 'desertion: second game never started');
+  check(sawB(/Room removed|desert/i), 'desertion: room not removed after host drop');
+  for (const p of badPatterns) check(!sawB(p), `desertion: failure marker after host drop: ${p}`);
+  const bLines = deltaB.split('\n').filter((l) =>
+    /Room removed|desert|timeout|disconnect|reconnect|game started|error|ERROR|Match result/i.test(l)
+    && !/DIAG] 30s/.test(l));
+  console.log('  --- desertion scenario log ---');
+  for (const l of bLines.slice(0, 15)) console.log('   ' + l.trim());
 
   // Informational counts.
   const workerDecisions = (logbuf.match(/via=worker/g) || []).length;

@@ -4820,7 +4820,12 @@ function scheduleBotActions(roomId, forceReschedule = false) {
             } else {
               const preSig2 = botStateSig(r2.game);
               action2 = await decideFn(r2.game, botId);
-              if (!r2.game) return;
+              // Same stale-room guard as the outer path: the room may have been
+              // closed or entered desertion during the worker round-trip, and
+              // closeRoom() leaves the captured r2.game set — so `!r2.game`
+              // alone wouldn't catch it, and we'd run handleAction /
+              // saveGameResult / sendGameStateToAll on a dead room.
+              if (!lobby.getRoom(roomId) || !r2.game || r2.game.deserted) return;
               if (botStateSig(r2.game) !== preSig2) { scheduleBotActions(roomId); return; }
             }
             // The cached decision was validated against the pre-delay state.
@@ -4836,7 +4841,7 @@ function scheduleBotActions(roomId, forceReschedule = false) {
                 && !r2.game.canPlayCards(botId, action2.cards || []).success) {
               const preSig3 = botStateSig(r2.game);
               action2 = await decideFn(r2.game, botId);
-              if (!r2.game) return;
+              if (!lobby.getRoom(roomId) || !r2.game || r2.game.deserted) return;
               if (botStateSig(r2.game) !== preSig3) { scheduleBotActions(roomId); return; }
             }
             if (!action2) {

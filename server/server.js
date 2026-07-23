@@ -12,6 +12,7 @@ const { decideBotAction } = require('./game/BotPlayer');
 const { decideSKBotAction } = require('./game/skull_king/SkullKingBot');
 const { decideLLBotAction } = require('./game/love_letter/LoveLetterBot');
 const { decideMightyBotAction } = require('./game/mighty/MightyBot');
+const { BotWorkerPool } = require('./bots/BotWorkerPool');
 const {
   initDatabase, registerUser, loginUser, checkNickname, deleteUser,
   blockUser, unblockUser, getBlockedUsers, reportUser,
@@ -4569,6 +4570,32 @@ function botStateSig(game) {
   return `${game.state}|${actor}|${game.currentPlayer}|${trickLen}|${game.needsToCallRank || ''}|${game.dragonPending ? game.dragonDecider || '' : ''}|${pendingLen}`;
 }
 
+// Bot decision worker pool. Expensive searches (mighty mixoracle/oracle/solver,
+// tichu winrate) run here off the main event loop; heuristic / LL / SK stay
+// inline (sub-ms, offload would only add IPC latency). BOT_WORKERS=0 disables
+// the pool entirely (kill switch) — every decision then runs inline as before.
+let botPool = null;
+try {
+  if (process.env.BOT_WORKERS === '0') {
+    console.log('[info] Bot worker pool disabled (BOT_WORKERS=0) — decisions run inline');
+  } else {
+    botPool = new BotWorkerPool();
+    console.log(`[info] Bot worker pool started (size=${botPool.size})`);
+  }
+} catch (e) {
+  console.error('[BOT] worker pool init failed — falling back to inline decisions:', e);
+  botPool = null;
+}
+
+// Which (gameType, strategy) pairs are worth offloading. 'heuristic' is sub-ms;
+// love_letter / skull_king bots are pure heuristics. Everything else on a
+// supported game type is an expensive search → worker. New expensive mighty
+// strategies auto-qualify (anything != heuristic), so this needs no upkeep.
+function botStratIsExpensive(gameType, strat) {
+  if (gameType !== 'mighty' && gameType !== 'tichu') return false;
+  return !!strat && strat !== 'heuristic';
+}
+
 function scheduleBotActions(roomId, forceReschedule = false) {
   const room = lobby.getRoom(roomId);
   if (!room || !room.game) return;
@@ -4617,28 +4644,42 @@ function scheduleBotActions(roomId, forceReschedule = false) {
     }
   }
 
-  pendingBotTimers[roomId] = setTimeout(() => {
+  pendingBotTimers[roomId] = setTimeout(async () => {
     delete pendingBotTimers[roomId];
     delete pendingBotCheck[roomId];
     const r = lobby.getRoom(roomId);
     if (!r || !r.game) return;
 
+    try {
     // Re-evaluate at execution time
     const isSK = r.gameType === 'skull_king';
     const isLL = r.gameType === 'love_letter';
     const isMighty = r.gameType === 'mighty';
     const baseDecideFn = isMighty ? decideMightyBotAction : isLL ? decideLLBotAction : isSK ? decideSKBotAction : decideBotAction;
-    const decideFn = (g, pid) => {
+    // Async: expensive strategies are offloaded to the worker pool (the await
+    // yields the event loop instead of blocking it). Cheap strategies resolve
+    // inline via an already-settled promise (microtask only — no I/O gap). On
+    // any worker failure we fall back to an inline decision so a game never
+    // hangs on a sick worker.
+    const decideFn = async (g, pid) => {
       const cur = lobby.getRoom(roomId);
       const strat = cur?.bots.get(pid)?.strategy || 'heuristic';
-      // DIAGNOSTICS (temporary): time each bot decision. The mighty bot claims a
-      // ~40ms budget (rollout 12ms + solver 9ms + oracle); anything well above
-      // that is blocking the event loop and is a prime suspect for the kicks.
+      const offload = !!botPool && botStratIsExpensive(r.gameType, strat);
       const __t0 = process.hrtime.bigint();
-      const a = baseDecideFn(g, pid, strat);
+      let a;
+      if (offload) {
+        try {
+          a = await botPool.decide(r.gameType, g, pid, strat);
+        } catch (e) {
+          if (DIAG_ON) console.log(`[DIAG] bot-worker-fallback room=${roomId} bot=${pid} strat=${strat} err=${e && e.message}`);
+          a = baseDecideFn(g, pid, strat);
+        }
+      } else {
+        a = baseDecideFn(g, pid, strat);
+      }
       const __ms = Number(process.hrtime.bigint() - __t0) / 1e6;
       if (DIAG_ON && __ms > DIAG_BOT_SLOW_MS) {
-        console.log(`[DIAG] bot-decide ${__ms.toFixed(0)}ms room=${roomId} type=${r.gameType} state=${r.game?.state} bot=${pid} strat=${strat}`);
+        console.log(`[DIAG] bot-decide ${__ms.toFixed(0)}ms room=${roomId} type=${r.gameType} state=${r.game?.state} bot=${pid} strat=${strat}${offload ? ' via=worker' : ''}`);
       }
       return a;
     };
@@ -4647,7 +4688,7 @@ function scheduleBotActions(roomId, forceReschedule = false) {
       const pendingBidBots = r.getBotIds().filter(pid => r.game?.bids?.[pid] === null);
       let progressed = false;
       for (const botId of pendingBidBots) {
-        let action = decideFn(r.game, botId);
+        let action = await decideFn(r.game, botId);
         if (!action) continue;
         let result = r.game.handleAction(botId, action);
         if (result && !result.success && r.game) {
@@ -4684,7 +4725,15 @@ function scheduleBotActions(roomId, forceReschedule = false) {
       : r.getBotIds();
 
     for (const botId of candidateBotIds) {
-      let action = decideFn(r.game, botId);
+      // Snapshot decision-relevant state before the (possibly awaited)
+      // decision. Offloaded decisions yield the event loop during the worker
+      // round-trip, so a human action or other event can move the game. If it
+      // moved, discard this now-stale decision and let the fresh state
+      // reschedule — applying it risks an out-of-turn move.
+      const preSig = botStateSig(r.game);
+      let action = await decideFn(r.game, botId);
+      if (!r.game) return;
+      if (botStateSig(r.game) !== preSig) { scheduleBotActions(roomId); return; }
       if (action) {
         const bot = r.bots.get(botId);
         const botSpeed = bot ? bot.speed : 'normal';
@@ -4700,15 +4749,25 @@ function scheduleBotActions(roomId, forceReschedule = false) {
           const decidedSig = botStateSig(r.game);
           const decidedAction = action;
           pendingBotCheck[roomId] = true;
-          pendingBotTimers[roomId] = setTimeout(() => {
+          pendingBotTimers[roomId] = setTimeout(async () => {
             delete pendingBotTimers[roomId];
             delete pendingBotCheck[roomId];
             const r2 = lobby.getRoom(roomId);
             if (!r2 || !r2.game) return;
+            try {
             // Reuse the cached decision when nothing changed; else re-decide.
-            let action2 = botStateSig(r2.game) === decidedSig
-              ? decidedAction
-              : decideFn(r2.game, botId);
+            // The re-decide may be offloaded (awaited): guard the async gap so
+            // a state change during the worker round-trip discards the stale
+            // result instead of applying an out-of-turn move.
+            let action2;
+            if (botStateSig(r2.game) === decidedSig) {
+              action2 = decidedAction;
+            } else {
+              const preSig2 = botStateSig(r2.game);
+              action2 = await decideFn(r2.game, botId);
+              if (!r2.game) return;
+              if (botStateSig(r2.game) !== preSig2) { scheduleBotActions(roomId); return; }
+            }
             // The cached decision was validated against the pre-delay state.
             // botStateSig is coarse (it captures trick *length* but not the
             // trick-top combo), so a rare state change during the delay can
@@ -4720,7 +4779,10 @@ function scheduleBotActions(roomId, forceReschedule = false) {
                 && (action2.type === 'play_cards' || action2.type === 'play_card')
                 && typeof r2.game.canPlayCards === 'function'
                 && !r2.game.canPlayCards(botId, action2.cards || []).success) {
-              action2 = decideFn(r2.game, botId);
+              const preSig3 = botStateSig(r2.game);
+              action2 = await decideFn(r2.game, botId);
+              if (!r2.game) return;
+              if (botStateSig(r2.game) !== preSig3) { scheduleBotActions(roomId); return; }
             }
             if (!action2) {
               // State changed (e.g. bomb interrupt) - re-schedule for other bots
@@ -4740,6 +4802,9 @@ function scheduleBotActions(roomId, forceReschedule = false) {
               if (result2.broadcast) broadcastGameEvent(roomId, result2.broadcast);
               if (r2.game && r2.game.state === 'game_end') { saveGameResult(r2); scheduleAutoReturnToRoom(roomId); }
               sendGameStateToAll(roomId);
+            }
+            } catch (e) {
+              console.error(`[BOT] scheduleBotActions play-delay timer error room=${roomId}:`, e);
             }
           }, getBotExtraDelay(botSpeed));
           return;
@@ -4792,6 +4857,11 @@ function scheduleBotActions(roomId, forceReschedule = false) {
         }
         return;
       }
+    }
+    } catch (e) {
+      // Never let an async bot-decision path crash the process. The bot
+      // watchdog reschedules a stalled room, so logging + bailing is safe.
+      console.error(`[BOT] scheduleBotActions callback error room=${roomId}:`, e);
     }
   }, effectiveDelay);
 }

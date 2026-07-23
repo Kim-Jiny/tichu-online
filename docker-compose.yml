@@ -13,6 +13,19 @@ x-server-common: &server-common
   build: ./server
   image: tichu-server:latest
   restart: unless-stopped
+  # Resource policy for the shared 4-vCPU / 8GB Contabo box. tichu is the
+  # MAIN app (most users), co-hosting ~18 mostly-idle side projects.
+  #  - BOT_WORKERS=2 (set per-slot env below) caps concurrent bot searches so
+  #    the main event loop always keeps a free core -> WS heartbeat / human
+  #    input never stall even under full bot load. This is the guarantee we
+  #    protect above all; 2 workers << 4 cores. (Raise to 3 only on a
+  #    dedicated host — on 4 shared cores it would starve tichu's own libuv/GC.)
+  #  - cpu_shares 4096 (4x default) makes tichu win CPU over the side projects
+  #    when the box is contended.
+  #  - cpus/mem_limit are runaway ceilings, generous because tichu is priority.
+  cpu_shares: 4096
+  cpus: 3.5
+  mem_limit: 2g
   # SIGTERM grace window. Long-running games on the outgoing slot get
   # up to 10 minutes to finish (or migrate via /internal/adopt-rooms)
   # before docker SIGKILL.
@@ -35,6 +48,7 @@ services:
       - NODE_ENV=production
       - PORT=3000
       - INSTANCE_NAME=blue
+      - BOT_WORKERS=2
       - PEER_URL=http://tichu-online-green:3000
       - INTERNAL_MIGRATE_TOKEN=${INTERNAL_MIGRATE_TOKEN}
       - DATABASE_URL=${DATABASE_URL}
@@ -56,6 +70,7 @@ services:
       - NODE_ENV=production
       - PORT=3000
       - INSTANCE_NAME=green
+      - BOT_WORKERS=2
       - PEER_URL=http://tichu-online-blue:3000
       - INTERNAL_MIGRATE_TOKEN=${INTERNAL_MIGRATE_TOKEN}
       - DATABASE_URL=${DATABASE_URL}

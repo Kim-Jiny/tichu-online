@@ -1316,10 +1316,23 @@ const { botWatchdogTick, NON_ACTIONABLE_STATES } = require('./game/botWatchdog')
 const BOT_WATCHDOG_MS = 4000;
 const botStuckSeen = {}; // roomId -> consecutive intervals seen stranded
 setInterval(() => {
-  const toRecover = botWatchdogTick({ rooms: lobby.rooms, pendingBotTimers, seen: botStuckSeen, inFlight: botDecisionInFlight });
+  const effectAckTimers = {};
+  for (const roomId of Object.keys(trickEndTimers)) effectAckTimers[roomId] = true;
+  for (const roomId of Object.keys(llAckBackupTimers)) effectAckTimers[roomId] = true;
+  const toRecover = botWatchdogTick({
+    rooms: lobby.rooms,
+    pendingBotTimers,
+    seen: botStuckSeen,
+    inFlight: botDecisionInFlight,
+    effectAckTimers,
+  });
   for (const { roomId, actor } of toRecover) {
     const room = lobby.getRoom(roomId);
-    console.log(`[BOT] WATCHDOG recovering stranded bot turn: room=${roomId} type=${room?.gameType} state=${room?.game?.state} actor=${actor} pendingCheck=${!!pendingBotCheck[roomId]}`);
+    const eff = room?.game?.pendingEffect;
+    const llEff = room?.gameType === 'love_letter' && eff
+      ? ` effect=${eff.type || '-'} resolved=${eff.resolved ? 1 : 0} needsTarget=${eff.needsTarget ? 1 : 0} needsGuess=${eff.needsGuess ? 1 : 0} ackTimer=${effectAckTimers[roomId] ? 1 : 0}`
+      : '';
+    console.log(`[BOT] WATCHDOG recovering stranded bot turn: room=${roomId} type=${room?.gameType} state=${room?.game?.state} actor=${actor} pendingCheck=${!!pendingBotCheck[roomId]}${llEff}`);
     try { scheduleBotActions(roomId, true); } catch (e) { console.error('[BOT] WATCHDOG reschedule failed', e); }
   }
 }, BOT_WATCHDOG_MS).unref();

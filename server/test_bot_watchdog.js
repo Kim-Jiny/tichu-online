@@ -20,12 +20,18 @@ function ok(name, cond) {
 }
 
 // Minimal room doubles. isBot(id) => true for ids starting with 'bot'.
-function room({ state = 'playing', pendingActor, bots = ['bot1'] }) {
+function room({
+  state = 'playing',
+  pendingActor,
+  bots = ['bot1'],
+  gameType = 'tichu',
+  pendingEffect = null,
+}) {
   return {
-    gameType: 'tichu',
+    gameType,
     getBotIds: () => bots,
     isBot: (id) => typeof id === 'string' && id.startsWith('bot'),
-    game: { state, getPendingActor: () => pendingActor },
+    game: { state, pendingEffect, getPendingActor: () => pendingActor },
   };
 }
 const asMap = (obj) => new Map(Object.entries(obj));
@@ -91,6 +97,45 @@ console.log('\n[4b] Watchdog: terminal/transitional states are never recovered')
     assert.strictEqual(seen.r1, undefined, `state ${st} must not accrue`);
   }
   ok('round_end/game_end/trick_end/dealing/waiting → no false recovery', true);
+}
+
+console.log('\n[4c] Watchdog: Love Letter resolved effect waits for auto-ack timer');
+{
+  const rooms = asMap({
+    r1: room({
+      gameType: 'love_letter',
+      state: 'effect_resolve',
+      pendingActor: 'bot1',
+      pendingEffect: { type: 'handmaid', playerId: 'bot1', resolved: true },
+    }),
+  });
+  const seen = {};
+  let out;
+  for (let i = 0; i < 3; i++) {
+    out = botWatchdogTick({
+      rooms,
+      pendingBotTimers: {},
+      seen,
+      effectAckTimers: { r1: {} },
+    });
+  }
+  ok('resolved LL effect + ack timer → no watchdog recovery', out.length === 0 && seen.r1 === undefined);
+}
+
+console.log('\n[4d] Watchdog: Love Letter unresolved effect still recovers');
+{
+  const rooms = asMap({
+    r1: room({
+      gameType: 'love_letter',
+      state: 'effect_resolve',
+      pendingActor: 'bot1',
+      pendingEffect: { type: 'guard', playerId: 'bot1', resolved: false, needsGuess: true },
+    }),
+  });
+  const seen = {};
+  botWatchdogTick({ rooms, pendingBotTimers: {}, seen, effectAckTimers: { r1: {} } });
+  const out = botWatchdogTick({ rooms, pendingBotTimers: {}, seen, effectAckTimers: { r1: {} } });
+  ok('unresolved LL effect → watchdog still recovers bot action', out.length === 1 && out[0].roomId === 'r1');
 }
 
 console.log('\n[5] TichuGame.getPendingActor targets the obligated actor');

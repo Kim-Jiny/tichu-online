@@ -29,7 +29,14 @@ const NON_ACTIONABLE_STATES = new Set([
   'round_end', 'game_end', 'trick_end', 'dealing', 'waiting',
 ]);
 
-function botWatchdogTick({ rooms, pendingBotTimers, seen, inFlight = {}, threshold = 2 }) {
+function botWatchdogTick({
+  rooms,
+  pendingBotTimers,
+  seen,
+  inFlight = {},
+  effectAckTimers = {},
+  threshold = 2,
+}) {
   const toRecover = [];
   for (const [roomId, room] of rooms) {
     if (!room || !room.game || room.getBotIds().length === 0) {
@@ -44,6 +51,18 @@ function botWatchdogTick({ rooms, pendingBotTimers, seen, inFlight = {}, thresho
       ? room.game.getPendingActor()
       : room.game.currentPlayer;
     const botPending = actor && room.isBot(actor);
+    // Love Letter resolved effects are advanced by the presentation/auto-ack
+    // timer, not by the normal bot decision timer. If that timer is alive, the
+    // room is progressing normally and should not be force-rescheduled.
+    if (botPending
+        && room.gameType === 'love_letter'
+        && room.game.state === 'effect_resolve'
+        && room.game.pendingEffect
+        && room.game.pendingEffect.resolved
+        && effectAckTimers[roomId]) {
+      delete seen[roomId];
+      continue;
+    }
     // A queued bot timer — or a decision currently awaiting the worker pool —
     // means the room is progressing normally, not stranded.
     if (!botPending || pendingBotTimers[roomId] || inFlight[roomId]) {

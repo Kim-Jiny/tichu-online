@@ -1726,6 +1726,72 @@ class MightyGame {
     c.lastSettingEvent = this.lastSettingEvent;
     return c;
   }
+
+  /** JSON-safe snapshot for worker-thread bot offload. MUST mirror clone()'s
+   *  field set — clone() defines exactly the state a bot search needs, so a
+   *  worker reconstructed from this behaves identically to one on the main
+   *  thread. Kept in sync with clone() by a parity test (see
+   *  test/serialize-roundtrip). Only excludedPlayers (a Set) needs conversion;
+   *  everything else is primitives / plain arrays / plain objects. Shared refs
+   *  (playerIds, playerNames, gameType, playerCount) are included because
+   *  workers don't share memory. Live refs are fine: the postMessage boundary
+   *  structured-clones them. */
+  serialize() {
+    return {
+      playerIds: this.playerIds,
+      playerNames: this.playerNames,
+      gameType: this.gameType,
+      playerCount: this.playerCount,
+      state: this.state,
+      round: this.round,
+      mode: this.mode,
+      activePlayerCount: this.activePlayerCount,
+      dealMissPool: this.dealMissPool,
+      trumpSuit: this.trumpSuit,
+      declarer: this.declarer,
+      partner: this.partner,
+      friendCard: this.friendCard,
+      friendRevealed: this.friendRevealed,
+      passCount: this.passCount,
+      currentBidderIndex: this.currentBidderIndex,
+      currentPlayer: this.currentPlayer,
+      dealerIndex: this.dealerIndex,
+      jokerSuitDeclared: this.jokerSuitDeclared,
+      jokerCallActive: this.jokerCallActive,
+      lastTrickWinner: this.lastTrickWinner,
+      revealGracePeriodEndAt: this.revealGracePeriodEndAt,
+      options: this.options,
+      kitty: this.kitty,
+      bidOrder: this.bidOrder,
+      discarded: this.discarded,
+      lastTrickCards: this.lastTrickCards,
+      bids: this.bids,
+      currentBid: this.currentBid,
+      scores: this.scores,
+      excludedPlayers: [...this.excludedPlayers], // Set -> array
+      hands: this.hands,
+      pointCards: this.pointCards,
+      newlyReceivedCards: this.newlyReceivedCards,
+      currentTrick: this.currentTrick,
+      tricks: this.tricks,
+      scoreHistory: this.scoreHistory,
+      roundResult: this.roundResult,
+      lastDealMissEvent: this.lastDealMissEvent,
+      lastKillEvent: this.lastKillEvent,
+      lastSettingEvent: this.lastSettingEvent,
+    };
+  }
+
+  /** Rebuild a working instance from serialize() output (called in the worker).
+   *  Mirror of clone()'s reconstruction but from a plain snapshot. `s` is
+   *  already a private copy (structured-cloned across postMessage), so we may
+   *  adopt its refs directly. */
+  static reconstruct(s) {
+    const c = Object.create(MightyGame.prototype);
+    Object.assign(c, s);
+    c.excludedPlayers = new Set(s.excludedPlayers || []); // array -> Set
+    return c;
+  }
 }
 
 module.exports = MightyGame;

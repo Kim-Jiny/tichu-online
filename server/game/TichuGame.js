@@ -1262,6 +1262,58 @@ class TichuGame {
     return c;
   }
 
+  /** JSON-safe snapshot for worker-thread bot offload. MUST mirror clone()'s
+   *  field set — clone() defines exactly the state a bot search needs. Kept in
+   *  sync with clone() by a parity test (see test/serialize-roundtrip). Every
+   *  TichuGame field is already plain (no Set/Map/Date), so this is a flat
+   *  structural copy; live refs are fine because postMessage structured-clones
+   *  them. */
+  serialize() {
+    return {
+      playerIds: this.playerIds,
+      playerNames: this.playerNames,
+      teams: this.teams,
+      targetScore: this.targetScore,
+      state: this.state,
+      round: this.round,
+      _suppressBotSearchLogs: this._suppressBotSearchLogs,
+      totalScores: this.totalScores,
+      scoreHistory: this.scoreHistory,
+      // clone() normalizes these falsy-until-set fields to null; match it so a
+      // reconstructed game is byte-identical (undefined !== null under
+      // deepStrictEqual, and downstream reads expect null).
+      lastRoundScores: this.lastRoundScores || null,
+      hands: this.hands,
+      trickPiles: this.trickPiles,
+      largeTichuDeclarations: this.largeTichuDeclarations,
+      smallTichuDeclarations: this.smallTichuDeclarations,
+      largeTichuResponses: this.largeTichuResponses,
+      exchangeDone: this.exchangeDone,
+      exchangeCards: this.exchangeCards,
+      receivedFrom: this.receivedFrom,
+      currentTrick: this.currentTrick,
+      lastTrick: this.lastTrick,
+      currentPlayer: this.currentPlayer,
+      passCount: this.passCount,
+      lastPlayedBy: this.lastPlayedBy,
+      trickStarter: this.trickStarter,
+      finishOrder: this.finishOrder,
+      callRank: this.callRank,
+      needsToCallRank: this.needsToCallRank,
+      dragonPending: this.dragonPending,
+      dragonDecider: this.dragonDecider,
+      pendingTrickCards: this.pendingTrickCards || null,
+      dealData: this.dealData,
+    };
+  }
+
+  /** Rebuild a working instance from serialize() output (called in the worker). */
+  static reconstruct(s) {
+    const c = Object.create(TichuGame.prototype);
+    Object.assign(c, s);
+    return c;
+  }
+
   getStateForPlayer(playerId) {
     const playerIdx = this.playerIds.indexOf(playerId);
     const otherPlayers = [];

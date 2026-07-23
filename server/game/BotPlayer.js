@@ -1785,8 +1785,7 @@ function scoreCandidatePriority(action, heuristicKey, handSize) {
   return score;
 }
 
-function buildWinrateCandidates(game, botId) {
-  const state = game.getStateForPlayer(botId);
+function buildWinrateCandidates(game, botId, state = game.getStateForPlayer(botId)) {
   const cards = state.myCards || [];
   if (state.phase !== 'playing') return [];
 
@@ -2167,7 +2166,7 @@ function rankWinrateEntry(entry, heuristicKey, handSize) {
   return (winRate * 1000000) + (avgMargin * 1000) + avgRoundMargin + (priority / 1000000);
 }
 
-function chooseBestWinrateAction(game, botId, candidates) {
+function chooseBestWinrateAction(game, botId, candidates, state = game.getStateForPlayer(botId), diagTiming = null) {
   if (candidates.length <= 1) return candidates[0] || null;
 
   const diagOn = process.env.DIAG !== '0';
@@ -2178,13 +2177,22 @@ function chooseBestWinrateAction(game, botId, candidates) {
   let evals = 0;
   let completedRollouts = 0;
   let stoppedByBudget = false;
+  let heuristicMs = 0;
+  let setupMs = 0;
+  let determinizeMs = 0;
+  // state build + candidate build happen in decideWinrateBotAction (one shared
+  // getStateForPlayer), passed in via diagTiming so the whole bot-decide span
+  // shows up on one line instead of hiding ~half the time outside this fn.
+  const stateMs = diagTiming ? diagTiming.stateMs : 0;
+  const candMs = diagTiming ? diagTiming.candMs : 0;
 
-  const state = game.getStateForPlayer(botId);
   const handSize = (state.myCards || []).length;
+  const heuristicStart = diagOn ? process.hrtime.bigint() : 0n;
   const heuristicAction = autoPlay(state, state.myCards || []);
+  if (diagOn) heuristicMs = Number(process.hrtime.bigint() - heuristicStart) / 1e6;
   const heuristicKey = getActionKey(heuristicAction);
   const { samples, timeBudgetMs } = getWinrateSearchBudget(game, state, candidates.length);
-  const deadline = performance.now() + timeBudgetMs;
+  const setupStart = diagOn ? process.hrtime.bigint() : 0n;
   const stats = new Map();
   for (const candidate of candidates) {
     stats.set(getActionKey(candidate), {
@@ -2200,13 +2208,17 @@ function chooseBestWinrateAction(game, botId, candidates) {
     .slice()
     .sort((a, b) => scoreCandidatePriority(b, heuristicKey, handSize) - scoreCandidatePriority(a, heuristicKey, handSize))
     .map(getActionKey);
+  if (diagOn) setupMs = Number(process.hrtime.bigint() - setupStart) / 1e6;
+  const deadline = performance.now() + timeBudgetMs;
 
   for (let sample = 0; sample < samples && activeKeys.length > 0; sample++) {
     if (performance.now() >= deadline) {
       stoppedByBudget = true;
       break;
     }
+    const detStart = diagOn ? process.hrtime.bigint() : 0n;
     const baseWorld = determinizeGameForBot(game, botId);
+    if (diagOn) determinizeMs += Number(process.hrtime.bigint() - detStart) / 1e6;
     for (const key of activeKeys) {
       if (performance.now() >= deadline) {
         stoppedByBudget = true;
@@ -2272,7 +2284,7 @@ function chooseBestWinrateAction(game, botId, candidates) {
     if (diagOn) {
       const elapsed = Number(process.hrtime.bigint() - diagStart) / 1e6;
       if (elapsed > diagSlowMs) {
-        console.log(`[DIAG] tichu-winrate-detail ${elapsed.toFixed(0)}ms bot=${botId} budget=${timeBudgetMs}ms hand=${handSize} candidates=${candidates.length} evals=${evals} completed=${completedRollouts} samples=0 stopped=${stoppedByBudget ? 1 : 0} fallback=${getActionKey(fallback)}`);
+        console.log(`[DIAG] tichu-winrate-detail ${elapsed.toFixed(0)}ms bot=${botId} budget=${timeBudgetMs}ms hand=${handSize} candidates=${candidates.length} state=${stateMs.toFixed(0)}ms cand=${candMs.toFixed(0)}ms heur=${heuristicMs.toFixed(0)}ms setup=${setupMs.toFixed(0)}ms det=${determinizeMs.toFixed(0)}ms evals=${evals} completed=${completedRollouts} samples=0 stopped=${stoppedByBudget ? 1 : 0} fallback=${getActionKey(fallback)}`);
       }
     }
     return fallback;
@@ -2281,23 +2293,30 @@ function chooseBestWinrateAction(game, botId, candidates) {
   if (diagOn) {
     const elapsed = Number(process.hrtime.bigint() - diagStart) / 1e6;
     if (elapsed > diagSlowMs) {
-      console.log(`[DIAG] tichu-winrate-detail ${elapsed.toFixed(0)}ms bot=${botId} budget=${timeBudgetMs}ms hand=${handSize} candidates=${candidates.length} evals=${evals} completed=${completedRollouts} samples=${best.samples} stopped=${stoppedByBudget ? 1 : 0} best=${getActionKey(best.action)}`);
+      console.log(`[DIAG] tichu-winrate-detail ${elapsed.toFixed(0)}ms bot=${botId} budget=${timeBudgetMs}ms hand=${handSize} candidates=${candidates.length} state=${stateMs.toFixed(0)}ms cand=${candMs.toFixed(0)}ms heur=${heuristicMs.toFixed(0)}ms setup=${setupMs.toFixed(0)}ms det=${determinizeMs.toFixed(0)}ms evals=${evals} completed=${completedRollouts} samples=${best.samples} stopped=${stoppedByBudget ? 1 : 0} best=${getActionKey(best.action)}`);
     }
   }
   return best.action;
 }
 
 function decideWinrateBotAction(game, botId) {
+  const diagOn = process.env.DIAG !== '0';
+  // Build state ONCE and thread it through buildWinrateCandidates +
+  // chooseBestWinrateAction. getStateForPlayer used to run 3x per decision.
+  const stateStart = diagOn ? process.hrtime.bigint() : 0n;
   const state = game.getStateForPlayer(botId);
+  const stateMs = diagOn ? Number(process.hrtime.bigint() - stateStart) / 1e6 : 0;
   if (state.phase !== 'playing') {
     return decideHeuristicBotAction(game, botId);
   }
 
-  const candidates = buildWinrateCandidates(game, botId);
+  const candStart = diagOn ? process.hrtime.bigint() : 0n;
+  const candidates = buildWinrateCandidates(game, botId, state);
+  const candMs = diagOn ? Number(process.hrtime.bigint() - candStart) / 1e6 : 0;
   if (candidates.length === 0) {
     return decideHeuristicBotAction(game, botId);
   }
-  return chooseBestWinrateAction(game, botId, candidates);
+  return chooseBestWinrateAction(game, botId, candidates, state, { stateMs, candMs });
 }
 
 

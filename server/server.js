@@ -1289,7 +1289,7 @@ if (DIAG_ON) {
     if (Date.now() - diagLastReport >= 30000) {
       const m = process.memoryUsage();
       const botDiag = botPool
-        ? ` bots=q${botPool.queueDepth}/f${botPool.inFlight}/maxq${botPool.stats.maxQueue}/to${botPool.stats.timeouts}/er${botPool.stats.errors}`
+        ? ` bots=q${botPool.queueDepth}/f${botPool.inFlight}/maxq${botPool.stats.maxQueue}/to${botPool.stats.timeouts}/er${botPool.stats.errors}${botPool.disabled ? '/DISABLED' : ''}`
         : '';
       console.log(`[DIAG] 30s | maxLag=${Math.round(diagMaxLag)}ms gc=${winGcMs.toFixed(0)}ms(major=${winGcMajorMs.toFixed(0)},maxProbe=${winMaxGcProbe.toFixed(0)}) rss=${(m.rss / MB).toFixed(0)}MB heapUsed=${(m.heapUsed / MB).toFixed(0)}MB heapTotal=${(m.heapTotal / MB).toFixed(0)}MB rooms=${lobby.rooms.size} clients=${wss.clients.size}${botDiag}`);
       diagMaxLag = 0;
@@ -4609,7 +4609,13 @@ function scheduleBotActions(roomId, forceReschedule = false) {
   const room = lobby.getRoom(roomId);
   if (!room || !room.game) return;
   if (room.getBotIds().length === 0) return;
-  if (pendingBotCheck[roomId] && !forceReschedule) return; // Already scheduled
+  // Block re-entry while a decision is already scheduled OR a worker decision
+  // is mid-flight. The latter matters because the callback drops pendingBotCheck
+  // before awaiting the worker; without this an unrelated re-broadcast
+  // (small-tichu declare, card-view revoke, reconnect) would arm a second
+  // competing timer during that await. The in-flight callback re-checks state
+  // on resolve and reschedules if anything moved, so nothing is lost.
+  if ((pendingBotCheck[roomId] || botDecisionInFlight[roomId]) && !forceReschedule) return;
   if (forceReschedule && pendingBotTimers[roomId]) {
     clearTimeout(pendingBotTimers[roomId]);
     delete pendingBotTimers[roomId];
@@ -4653,15 +4659,16 @@ function scheduleBotActions(roomId, forceReschedule = false) {
     }
   }
 
+  if (pendingBotTimers[roomId]) clearTimeout(pendingBotTimers[roomId]); // never leak a prior handle
   pendingBotTimers[roomId] = setTimeout(async () => {
     delete pendingBotTimers[roomId];
     delete pendingBotCheck[roomId];
     const r = lobby.getRoom(roomId);
     if (!r || !r.game) return;
 
-    botDecisionInFlight[roomId] = true; // guard: awaiting worker != stranded
     try {
-    // Re-evaluate at execution time
+    // Re-evaluate at execution time (botDecisionInFlight is managed inside
+    // decideFn, around the actual worker round-trip).
     const isSK = r.gameType === 'skull_king';
     const isLL = r.gameType === 'love_letter';
     const isMighty = r.gameType === 'mighty';
@@ -4678,11 +4685,25 @@ function scheduleBotActions(roomId, forceReschedule = false) {
       const __t0 = process.hrtime.bigint();
       let a;
       if (offload) {
+        // Refcount an in-flight worker decision for this room. While it's set:
+        //  - scheduleBotActions won't arm a second competing timer (guard above)
+        //  - the watchdog won't misread the slow decision as a frozen room.
+        // A counter (not a boolean) so two concurrent decisions can't clear each
+        // other's mark. Cleared in finally so it never sticks (which would both
+        // wedge scheduling AND blind the watchdog).
+        botDecisionInFlight[roomId] = (botDecisionInFlight[roomId] || 0) + 1;
         try {
           a = await botPool.decide(r.gameType, g, pid, strat);
         } catch (e) {
+          // Worker unavailable (timeout / crash / circuit open). Fall back to
+          // the CHEAP heuristic inline — never the expensive strat, which would
+          // re-block the very event loop the pool exists to protect (and under
+          // a pool-wide outage every decision would hit this path at once).
           if (DIAG_ON) console.log(`[DIAG] bot-worker-fallback room=${roomId} bot=${pid} strat=${strat} err=${e && e.message}`);
-          a = baseDecideFn(g, pid, strat);
+          a = baseDecideFn(g, pid, 'heuristic');
+        } finally {
+          botDecisionInFlight[roomId] = (botDecisionInFlight[roomId] || 1) - 1;
+          if (botDecisionInFlight[roomId] <= 0) delete botDecisionInFlight[roomId];
         }
       } else {
         a = baseDecideFn(g, pid, strat);
@@ -4747,7 +4768,11 @@ function scheduleBotActions(roomId, forceReschedule = false) {
       // NOT null room.game (by design it relies on callbacks re-fetching), so
       // the captured `r` would still look alive — trust lobby.getRoom instead.
       // Without this we'd handleAction / saveGameResult on a dead room.
-      if (!lobby.getRoom(roomId) || !r.game) return;
+      // Also bail if the room is being deserted: handleDesertion claimed the
+      // game terminally (deserted/resultSaved) but leaves state='playing' until
+      // its DB awaits finish, so botStateSig alone wouldn't catch it. Applying
+      // a move here would race the desertion save.
+      if (!lobby.getRoom(roomId) || !r.game || r.game.deserted) return;
       if (botStateSig(r.game) !== preSig) { scheduleBotActions(roomId); return; }
       if (action) {
         const bot = r.bots.get(botId);
@@ -4764,12 +4789,12 @@ function scheduleBotActions(roomId, forceReschedule = false) {
           const decidedSig = botStateSig(r.game);
           const decidedAction = action;
           pendingBotCheck[roomId] = true;
+          if (pendingBotTimers[roomId]) clearTimeout(pendingBotTimers[roomId]); // never leak a prior handle
           pendingBotTimers[roomId] = setTimeout(async () => {
             delete pendingBotTimers[roomId];
             delete pendingBotCheck[roomId];
             const r2 = lobby.getRoom(roomId);
-            if (!r2 || !r2.game) return;
-            botDecisionInFlight[roomId] = true; // guard: awaiting worker != stranded
+            if (!r2 || !r2.game || r2.game.deserted) return;
             try {
             // Reuse the cached decision when nothing changed; else re-decide.
             // The re-decide may be offloaded (awaited): guard the async gap so
@@ -4821,8 +4846,6 @@ function scheduleBotActions(roomId, forceReschedule = false) {
             }
             } catch (e) {
               console.error(`[BOT] scheduleBotActions play-delay timer error room=${roomId}:`, e);
-            } finally {
-              delete botDecisionInFlight[roomId];
             }
           }, getBotExtraDelay(botSpeed));
           return;
@@ -4880,8 +4903,6 @@ function scheduleBotActions(roomId, forceReschedule = false) {
       // Never let an async bot-decision path crash the process. The bot
       // watchdog reschedules a stalled room, so logging + bailing is safe.
       console.error(`[BOT] scheduleBotActions callback error room=${roomId}:`, e);
-    } finally {
-      delete botDecisionInFlight[roomId];
     }
   }, effectiveDelay);
 }
@@ -5226,6 +5247,21 @@ async function handleDesertion(roomId, playerId, reason = 'leave') {
   if (!room || !room.game) return;
 
   const game = room.game;
+  // Claim the game terminally BEFORE any await/broadcast. This closes two
+  // race windows:
+  //  (a) a concurrent leave/timeout that also reaches handleDesertion bails
+  //      here (its outer !deserted guard passed before we ran) — no double
+  //      desertion save; and
+  //  (b) an offloaded bot decision awaiting a worker can resolve mid-desertion
+  //      while state is still 'playing' (we set state='game_end' only at the
+  //      end, after the DB awaits). resultSaved claims the shared idempotency
+  //      token so the normal saveGameResult can't also save, and the bot
+  //      callback's `deserted` check stops it from applying a move at all.
+  //      Prevents a single match being written twice (normal result + desertion
+  //      draw), which would corrupt ranked stats / bans.
+  if (game.deserted) return;
+  game.deserted = true;
+  game.resultSaved = true;
   const deserterNick = game.playerNames[playerId];
 
   // Broadcast desertion event

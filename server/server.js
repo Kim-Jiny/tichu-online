@@ -4678,10 +4678,15 @@ function scheduleBotActions(roomId, forceReschedule = false) {
     // inline via an already-settled promise (microtask only — no I/O gap). On
     // any worker failure we fall back to an inline decision so a game never
     // hangs on a sick worker.
-    const decideFn = async (g, pid) => {
+    const decideFn = async (g, pid, allowOffload = true) => {
       const cur = lobby.getRoom(roomId);
       const strat = cur?.bots.get(pid)?.strategy || 'heuristic';
-      const offload = !!botPool && botStratIsExpensive(r.gameType, strat);
+      // Only offload when this bot actually has a decision to make. When it is
+      // someone else's turn (candidateBotIds = all bots, for the bomb / tichu
+      // interrupt check), the strategy short-circuits to []/null before any
+      // rollout — so running it inline is just as cheap and saves a wasted
+      // worker round-trip per non-acting bot on every human turn.
+      const offload = allowOffload && !!botPool && botStratIsExpensive(r.gameType, strat);
       const __t0 = process.hrtime.bigint();
       let a;
       if (offload) {
@@ -4762,7 +4767,12 @@ function scheduleBotActions(roomId, forceReschedule = false) {
       // moved, discard this now-stale decision and let the fresh state
       // reschedule — applying it risks an out-of-turn move.
       const preSig = botStateSig(r.game);
-      let action = await decideFn(r.game, botId);
+      // Offload only the actor whose turn it is (or, in simultaneous phases
+      // where pendingActor is null, every candidate legitimately decides).
+      // Bots checked purely for a bomb/tichu interrupt on someone else's turn
+      // short-circuit to []/null, so run those inline and skip the round-trip.
+      const allowOffload = !pendingActor || botId === pendingActor;
+      let action = await decideFn(r.game, botId, allowOffload);
       // The room may have been closed (desertion / AFK / everyone left) during
       // the worker round-trip. closeRoom() removes it from the lobby but does
       // NOT null room.game (by design it relies on callbacks re-fetching), so
@@ -5281,9 +5291,19 @@ async function handleDesertion(roomId, playerId, reason = 'leave') {
     (p) => p !== null && !p.isBot && p.id !== playerId,
   ).length;
   if (deserterNick && !playerId.startsWith('bot_') && otherHumans > 0) {
-    await incrementLeaveCount(deserterNick);
-    if (room.isRanked) {
-      await setRankedBan(deserterNick);
+    // These are non-critical side effects. They MUST NOT abort desertion: we
+    // already claimed the game terminally (deserted/resultSaved above), so if a
+    // DB blip (e.g. pool.connect() failure) threw out of here, we'd skip the
+    // result save AND the cleanup below — leaving the room permanently bricked
+    // (state='playing' forever; bots and the watchdog both bail on `deserted`,
+    // and re-desertion/normal-save are blocked). Swallow and continue.
+    try {
+      await incrementLeaveCount(deserterNick);
+      if (room.isRanked) {
+        await setRankedBan(deserterNick);
+      }
+    } catch (e) {
+      console.error(`[DESERTION] leave-count/ban update failed for ${deserterNick}:`, e);
     }
   }
 

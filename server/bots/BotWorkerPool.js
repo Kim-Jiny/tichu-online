@@ -26,12 +26,16 @@ const WORKER_FILE = path.join(__dirname, 'botWorker.js');
 
 // Circuit-breaker tuning. A worker that dies within LOAD_FAIL_MS of spawn
 // without ever completing a job is treated as a *load* failure (e.g. a
-// require() that throws in the container). MAX_LOAD_FAILURES such failures in a
-// row opens the circuit: the pool disables itself and every decide() rejects
-// immediately so callers fall back to a cheap inline decision — instead of a
-// tight respawn loop pegging a core while the main thread also drowns in
-// expensive inline fallbacks. After REENABLE_MS it probes once more.
+// require() that throws in the container). MAX_LOAD_FAILURES such failures
+// WITHIN LOAD_FAIL_WINDOW_MS opens the circuit: the pool disables itself and
+// every decide() rejects immediately so callers fall back to a cheap inline
+// decision — instead of a tight respawn loop pegging a core while the main
+// thread also drowns in expensive inline fallbacks. After REENABLE_MS it
+// probes once more. The window (not a consecutive counter) is deliberate: a
+// single poisoned worker respawning every ~250ms must trip the breaker even
+// while healthy sibling workers keep completing jobs.
 const LOAD_FAIL_MS = 4000;
+const LOAD_FAIL_WINDOW_MS = 30000;
 const MAX_LOAD_FAILURES = 6;
 const BASE_BACKOFF_MS = 250;
 const MAX_BACKOFF_MS = 10000;
@@ -55,7 +59,8 @@ class BotWorkerPool {
     this._queue = [];            // jobs waiting for a free worker
     this._workers = [];          // { worker, busy, gen, spawnedAt, completed }
     this.disabled = false;       // circuit open -> decide() rejects, caller inlines
-    this._consecLoadFailures = 0;
+    this._destroyed = false;
+    this._loadFailures = [];     // timestamps of recent load failures (sliding window)
     this._gen = 0;               // monotonic worker id; stale events are ignored
     this._respawnTimers = new Set();
     this._reenableTimer = null;
@@ -74,7 +79,12 @@ class BotWorkerPool {
     // job and respawn a healthy worker). Compare against the current occupant.
     worker.on('message', (msg) => { if (this._workers[idx] === slot) this._onMessage(idx, slot, msg); });
     worker.on('error', (err) => { if (this._workers[idx] === slot) this._onWorkerFailure(idx, slot, err); });
-    worker.on('exit', (code) => { if (this._workers[idx] === slot && code !== 0) this._onWorkerFailure(idx, slot, new Error(`worker exit ${code}`)); });
+    // Respawn on ANY exit, not just non-zero: a long-lived message-loop worker
+    // should never exit on its own, so even a clean exit(0) means a dead slot.
+    // Intentional terminate()s are already filtered by the identity guard (the
+    // slot is nulled/replaced before terminate), so this only fires for a
+    // worker that died while still the current occupant.
+    worker.on('exit', (code) => { if (this._workers[idx] === slot) this._onWorkerFailure(idx, slot, new Error(`worker exit ${code}`)); });
     this._workers[idx] = slot;
   }
 
@@ -130,7 +140,9 @@ class BotWorkerPool {
     clearTimeout(job.timer);
     slot.busy = false;
     slot.completed = true;            // this worker loaded & ran fine
-    this._consecLoadFailures = 0;     // a success clears the load-failure streak
+    // NOTE: do NOT clear _loadFailures here. Successes must not mask a single
+    // worker that keeps load-failing — old failures age out of the window on
+    // their own (see _onWorkerFailure).
     if (msg.error) { this.stats.errors++; job.reject(new Error(msg.error)); }
     else { this.stats.completed++; job.resolve(msg.action); }
     this._drain(idx);
@@ -160,12 +172,16 @@ class BotWorkerPool {
     }
     // A worker that died young without ever completing a job is almost
     // certainly a load-time failure (bad require / build) that will recur on
-    // every respawn — count it toward the circuit breaker and back off.
-    const loadFailure = !slot.completed && (Date.now() - slot.spawnedAt) < LOAD_FAIL_MS;
+    // every respawn — count it in a sliding window and back off.
+    const now = Date.now();
+    const loadFailure = !slot.completed && (now - slot.spawnedAt) < LOAD_FAIL_MS;
     if (loadFailure) {
-      this._consecLoadFailures++;
-      if (this._consecLoadFailures >= MAX_LOAD_FAILURES) { this._disable(err); return; }
-      const backoff = Math.min(MAX_BACKOFF_MS, BASE_BACKOFF_MS * 2 ** (this._consecLoadFailures - 1));
+      this._loadFailures.push(now);
+      const cutoff = now - LOAD_FAIL_WINDOW_MS;
+      while (this._loadFailures.length && this._loadFailures[0] < cutoff) this._loadFailures.shift();
+      const n = this._loadFailures.length;
+      if (n >= MAX_LOAD_FAILURES) { this._disable(err); return; }
+      const backoff = Math.min(MAX_BACKOFF_MS, BASE_BACKOFF_MS * 2 ** (n - 1));
       this._respawn(idx, backoff);
     } else {
       this._respawn(idx, 0);
@@ -198,7 +214,7 @@ class BotWorkerPool {
     if (this.disabled) return;
     this.disabled = true;
     this.stats.disables++;
-    console.error(`[BOT] worker pool DISABLED after ${this._consecLoadFailures} load failures — decisions run inline until re-probe. ${(err && err.message) || err}`);
+    console.error(`[BOT] worker pool DISABLED after ${this._loadFailures.length} load failures in ${LOAD_FAIL_WINDOW_MS}ms — decisions run inline until re-probe. ${(err && err.message) || err}`);
     for (const [, job] of this._pending) { clearTimeout(job.timer); try { job.reject(new Error('bot pool disabled')); } catch (_) {} }
     this._pending.clear();
     for (const job of this._queue) { try { job.reject(new Error('bot pool disabled')); } catch (_) {} }
@@ -212,10 +228,10 @@ class BotWorkerPool {
   }
 
   _reenable() {
-    if (!this.disabled) return;
+    if (this._destroyed || !this.disabled) return; // never resurrect a destroyed pool
     console.log('[BOT] worker pool re-probing after cooldown');
     this.disabled = false;
-    this._consecLoadFailures = 0;
+    this._loadFailures = [];
     this._reenableTimer = null;
     for (let i = 0; i < this.size; i++) this._spawn(i);
   }
@@ -231,14 +247,24 @@ class BotWorkerPool {
   get inFlight() { return this._pending.size; }
 
   async destroy() {
+    this._destroyed = true;
     this.disabled = true; // stop any pending respawns from re-spawning
     for (const t of this._respawnTimers) clearTimeout(t);
     this._respawnTimers.clear();
     if (this._reenableTimer) { clearTimeout(this._reenableTimer); this._reenableTimer = null; }
-    for (const slot of this._workers) {
+    // Drop slot identity BEFORE terminating so the terminate()-triggered exit
+    // events are ignored by the listener guard (no failure-path spin).
+    const workers = this._workers;
+    this._workers = [];
+    // Settle every outstanding promise so no caller hangs (mirror _disable);
+    // queued jobs have no worker/timer and would otherwise never resolve.
+    for (const [, job] of this._pending) { clearTimeout(job.timer); try { job.reject(new Error('bot pool destroyed')); } catch (_) {} }
+    this._pending.clear();
+    for (const job of this._queue) { try { job.reject(new Error('bot pool destroyed')); } catch (_) {} }
+    this._queue = [];
+    for (const slot of workers) {
       if (slot && slot.worker) { try { await slot.worker.terminate(); } catch (_) {} }
     }
-    this._workers = [];
   }
 }
 

@@ -43,9 +43,30 @@ function assertParity(GameClass, game, label) {
   return rebuilt;
 }
 
+// Explicit check for the one field that only diverges in 6-player kill-mighty:
+// excludedPlayers is a Set (empty in 5p, populated after a kill). serialize
+// turns it into an array; reconstruct must turn it back into a Set with the
+// same members. A driven game may not always trigger a kill, so assert it
+// directly too.
+function assertExcludedPlayersRoundtrip() {
+  const ids = ['p0', 'p1', 'p2', 'p3', 'p4', 'p5'];
+  const names = {}; for (const p of ids) names[p] = p;
+  const game = new MightyGame(ids, names, { targetScore: 50, rng: makeRng(99) });
+  game.start();
+  game.excludedPlayers.add('p2');
+  game.excludedPlayers.add('p4');
+  const rebuilt = roundtrip(MightyGame, game);
+  assert.ok(rebuilt.excludedPlayers instanceof Set,
+    'reconstructed excludedPlayers is not a Set');
+  assert.deepStrictEqual([...rebuilt.excludedPlayers].sort(), ['p2', 'p4'],
+    'excludedPlayers Set members lost across serialize/reconstruct');
+  assert.deepStrictEqual(rebuilt, game.clone(),
+    'full parity failed with a populated excludedPlayers Set');
+  checkpoints++;
+}
+
 // ---------------------------------------------------------------- Mighty ----
-function driveMighty(seed) {
-  const playerIds = ['p0', 'p1', 'p2', 'p3', 'p4'];
+function driveMighty(seed, playerIds) {
   const playerNames = {};
   for (const pid of playerIds) playerNames[pid] = pid;
   const game = new MightyGame(playerIds, playerNames, { targetScore: 50, rng: makeRng(seed) });
@@ -146,7 +167,11 @@ function driveTichu(seed) {
 
 // ------------------------------------------------------------------ Run -----
 function main() {
-  for (let seed = 1; seed <= 6; seed++) driveMighty(seed);
+  const FIVE = ['p0', 'p1', 'p2', 'p3', 'p4'];
+  const SIX = ['p0', 'p1', 'p2', 'p3', 'p4', 'p5']; // 6p = kill-mighty (mode '6p')
+  for (let seed = 1; seed <= 6; seed++) driveMighty(seed, FIVE);
+  for (let seed = 1; seed <= 6; seed++) driveMighty(seed, SIX); // exercises kill phase / excludedPlayers
+  assertExcludedPlayersRoundtrip();
   for (let seed = 1; seed <= 6; seed++) driveTichu(seed);
   console.log(`OK — serialize/reconstruct parity held across ${checkpoints} ` +
     `checkpoints (${functionalChecks} functional action checks).`);

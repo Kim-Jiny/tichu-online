@@ -1316,7 +1316,7 @@ const { botWatchdogTick, NON_ACTIONABLE_STATES } = require('./game/botWatchdog')
 const BOT_WATCHDOG_MS = 4000;
 const botStuckSeen = {}; // roomId -> consecutive intervals seen stranded
 setInterval(() => {
-  const toRecover = botWatchdogTick({ rooms: lobby.rooms, pendingBotTimers, seen: botStuckSeen });
+  const toRecover = botWatchdogTick({ rooms: lobby.rooms, pendingBotTimers, seen: botStuckSeen, inFlight: botDecisionInFlight });
   for (const { roomId, actor } of toRecover) {
     const room = lobby.getRoom(roomId);
     console.log(`[BOT] WATCHDOG recovering stranded bot turn: room=${roomId} type=${room?.gameType} state=${room?.game?.state} actor=${actor} pendingCheck=${!!pendingBotCheck[roomId]}`);
@@ -4545,6 +4545,12 @@ function _broadcastState(roomId, room) {
 // Bot auto-response: schedule a single delayed bot action check
 let pendingBotCheck = {}; // roomId -> true (prevent duplicate scheduling)
 let pendingBotTimers = {}; // roomId -> timeout handle
+// roomId -> true while a bot decision is awaiting the worker pool. During that
+// await pendingBotTimers[roomId] is cleared (the callback already fired), so
+// without this flag the stuck-bot watchdog would misread a slow (queued) worker
+// decision as a frozen room and force-reschedule it — harmless (the botStateSig
+// gap guard rejects the duplicate) but wasteful and log-noisy under load.
+let botDecisionInFlight = {};
 
 function getBotBaseDelay(speed) {
   switch (speed) {
@@ -4653,6 +4659,7 @@ function scheduleBotActions(roomId, forceReschedule = false) {
     const r = lobby.getRoom(roomId);
     if (!r || !r.game) return;
 
+    botDecisionInFlight[roomId] = true; // guard: awaiting worker != stranded
     try {
     // Re-evaluate at execution time
     const isSK = r.gameType === 'skull_king';
@@ -4757,6 +4764,7 @@ function scheduleBotActions(roomId, forceReschedule = false) {
             delete pendingBotCheck[roomId];
             const r2 = lobby.getRoom(roomId);
             if (!r2 || !r2.game) return;
+            botDecisionInFlight[roomId] = true; // guard: awaiting worker != stranded
             try {
             // Reuse the cached decision when nothing changed; else re-decide.
             // The re-decide may be offloaded (awaited): guard the async gap so
@@ -4808,6 +4816,8 @@ function scheduleBotActions(roomId, forceReschedule = false) {
             }
             } catch (e) {
               console.error(`[BOT] scheduleBotActions play-delay timer error room=${roomId}:`, e);
+            } finally {
+              delete botDecisionInFlight[roomId];
             }
           }, getBotExtraDelay(botSpeed));
           return;
@@ -4865,6 +4875,8 @@ function scheduleBotActions(roomId, forceReschedule = false) {
       // Never let an async bot-decision path crash the process. The bot
       // watchdog reschedules a stalled room, so logging + bailing is safe.
       console.error(`[BOT] scheduleBotActions callback error room=${roomId}:`, e);
+    } finally {
+      delete botDecisionInFlight[roomId];
     }
   }, effectiveDelay);
 }

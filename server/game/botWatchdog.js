@@ -29,7 +29,7 @@ const NON_ACTIONABLE_STATES = new Set([
   'round_end', 'game_end', 'trick_end', 'dealing', 'waiting',
 ]);
 
-function botWatchdogTick({ rooms, pendingBotTimers, seen, threshold = 2 }) {
+function botWatchdogTick({ rooms, pendingBotTimers, seen, inFlight = {}, threshold = 2 }) {
   const toRecover = [];
   for (const [roomId, room] of rooms) {
     if (!room || !room.game || room.getBotIds().length === 0) {
@@ -44,8 +44,9 @@ function botWatchdogTick({ rooms, pendingBotTimers, seen, threshold = 2 }) {
       ? room.game.getPendingActor()
       : room.game.currentPlayer;
     const botPending = actor && room.isBot(actor);
-    // A queued bot timer means the room is progressing normally.
-    if (!botPending || pendingBotTimers[roomId]) {
+    // A queued bot timer — or a decision currently awaiting the worker pool —
+    // means the room is progressing normally, not stranded.
+    if (!botPending || pendingBotTimers[roomId] || inFlight[roomId]) {
       delete seen[roomId];
       continue;
     }

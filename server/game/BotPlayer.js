@@ -2170,6 +2170,15 @@ function rankWinrateEntry(entry, heuristicKey, handSize) {
 function chooseBestWinrateAction(game, botId, candidates) {
   if (candidates.length <= 1) return candidates[0] || null;
 
+  const diagOn = process.env.DIAG !== '0';
+  const diagSlowMs = Number.isFinite(Number(process.env.DIAG_BOT_SLOW_MS))
+    ? Number(process.env.DIAG_BOT_SLOW_MS)
+    : 100;
+  const diagStart = diagOn ? process.hrtime.bigint() : 0n;
+  let evals = 0;
+  let completedRollouts = 0;
+  let stoppedByBudget = false;
+
   const state = game.getStateForPlayer(botId);
   const handSize = (state.myCards || []).length;
   const heuristicAction = autoPlay(state, state.myCards || []);
@@ -2193,10 +2202,16 @@ function chooseBestWinrateAction(game, botId, candidates) {
     .map(getActionKey);
 
   for (let sample = 0; sample < samples && activeKeys.length > 0; sample++) {
-    if (performance.now() >= deadline) break;
+    if (performance.now() >= deadline) {
+      stoppedByBudget = true;
+      break;
+    }
     const baseWorld = determinizeGameForBot(game, botId);
     for (const key of activeKeys) {
-      if (performance.now() >= deadline) break;
+      if (performance.now() >= deadline) {
+        stoppedByBudget = true;
+        break;
+      }
       const entry = stats.get(key);
       if (!entry) continue;
       const sim = baseWorld.clone();
@@ -2207,13 +2222,19 @@ function chooseBestWinrateAction(game, botId, candidates) {
 
       // Deadline-aware: a single rollout can exceed the whole budget, so it may
       // bail mid-play. Discard the incomplete sample and stop sampling — time's up.
+      evals++;
       const completed = runHeuristicRollout(sim, deadline);
-      if (!completed) { activeKeys = []; break; }
+      if (!completed) {
+        stoppedByBudget = true;
+        activeKeys = [];
+        break;
+      }
       const outcome = evaluateSimulatedOutcome(sim, botId);
       entry.winSum += outcome.win;
       entry.marginSum += outcome.margin;
       entry.roundMarginSum += outcome.roundMargin;
       entry.samples += 1;
+      completedRollouts++;
     }
 
     // Successive halving: after each round, keep only the best-performing
@@ -2247,9 +2268,22 @@ function chooseBestWinrateAction(game, botId, candidates) {
 
   if (!best) {
     const heuristicCandidate = candidates.find(action => getActionKey(action) === heuristicKey);
-    return heuristicCandidate || candidates[0];
+    const fallback = heuristicCandidate || candidates[0];
+    if (diagOn) {
+      const elapsed = Number(process.hrtime.bigint() - diagStart) / 1e6;
+      if (elapsed > diagSlowMs) {
+        console.log(`[DIAG] tichu-winrate-detail ${elapsed.toFixed(0)}ms bot=${botId} budget=${timeBudgetMs}ms hand=${handSize} candidates=${candidates.length} evals=${evals} completed=${completedRollouts} samples=0 stopped=${stoppedByBudget ? 1 : 0} fallback=${getActionKey(fallback)}`);
+      }
+    }
+    return fallback;
   }
 
+  if (diagOn) {
+    const elapsed = Number(process.hrtime.bigint() - diagStart) / 1e6;
+    if (elapsed > diagSlowMs) {
+      console.log(`[DIAG] tichu-winrate-detail ${elapsed.toFixed(0)}ms bot=${botId} budget=${timeBudgetMs}ms hand=${handSize} candidates=${candidates.length} evals=${evals} completed=${completedRollouts} samples=${best.samples} stopped=${stoppedByBudget ? 1 : 0} best=${getActionKey(best.action)}`);
+    }
+  }
   return best.action;
 }
 

@@ -38,6 +38,9 @@ class Player {
   final String? titleKey;
   final String? titleName;
   final String? bannerKey;
+  /// Public avatar URL (paid profile-photo item, active + unexpired). Null =
+  /// default avatar. Always null for bots. Server resolves eligibility.
+  final String? photoUrl;
   final String? botSpeed;
   final String? botStrategy;
   /// Player's account level. Null for bots and (transitionally) for old
@@ -64,6 +67,7 @@ class Player {
     this.titleKey,
     this.titleName,
     this.bannerKey,
+    this.photoUrl,
     this.botSpeed,
     this.botStrategy,
     this.level,
@@ -88,6 +92,7 @@ class Player {
       titleKey: json['titleKey'] as String?,
       titleName: json['titleName'] as String?,
       bannerKey: json['bannerKey'] as String?,
+      photoUrl: json['photoUrl'] as String?,
       botSpeed: json['botSpeed'] as String?,
       botStrategy: json['botStrategy'] as String?,
       level: (json['level'] as num?)?.toInt(),

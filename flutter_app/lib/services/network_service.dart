@@ -361,6 +361,19 @@ class NetworkService extends ChangeNotifier {
 
   String get serverUrl => _serverUrl;
 
+  /// HTTP(S) base for the few non-WS endpoints (profile-photo upload, and
+  /// resolving relative /media/ avatar URLs). Derived from the active WS URL:
+  /// `ws://` -> `http://`, `wss://` -> `https://`.
+  String get httpBase => _serverUrl.replaceFirst(RegExp(r'^ws'), 'http');
+
+  /// Resolve a possibly-relative avatar URL (server returns `/media/...` when
+  /// MINIO_PUBLIC_BASE is unset) into an absolute URL against [httpBase].
+  String? resolveMediaUrl(String? url) {
+    if (url == null || url.isEmpty) return null;
+    if (url.startsWith('http://') || url.startsWith('https://')) return url;
+    return '$httpBase${url.startsWith('/') ? '' : '/'}$url';
+  }
+
   Future<bool> reconnect() async {
     disconnect(intentional: false);
     const delays = [1, 2, 3, 5, 8]; // seconds – fast initial retries

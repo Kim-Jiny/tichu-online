@@ -172,6 +172,14 @@ class GameService extends ChangeNotifier {
   // Equipped title
   String? equippedTitle;
 
+  // Own active profile-photo URL (null = default avatar). Set from
+  // login_success and refreshed after a successful upload.
+  String? myPhotoUrl;
+
+  /// Resolve a (possibly relative) avatar URL into an absolute one against the
+  /// active server host. Used by avatar widgets.
+  String? resolvePhotoUrl(String? url) => _network.resolveMediaUrl(url);
+
   // Report result
   String? reportResultMessage;
   bool? reportResultSuccess;
@@ -519,6 +527,7 @@ class GameService extends ChangeNotifier {
         ensureIapStarted();
         equippedTheme = data['themeKey'] as String?;
         equippedTitle = data['titleKey'] as String?;
+        myPhotoUrl = data['photoUrl'] as String?;
         hasTopCardCounter = data['hasTopCardCounter'] == true;
         hasMightyTrumpCounter = data['hasMightyTrumpCounter'] == true;
         hasMightyPrevTrick = data['hasMightyPrevTrick'] == true;
@@ -553,6 +562,17 @@ class GameService extends ChangeNotifier {
         // while the WS was offline. Server requires ws.nickname for these,
         // so it MUST run after login_success — not on raw WS connect.
         _network.flushRetryQueue();
+        notifyListeners();
+        break;
+
+      case 'profile_photo_updated':
+        // A player in the room (re)uploaded their avatar. Update our own
+        // reference immediately; other players' new photos surface on the next
+        // room/game state broadcast (their player.photoUrl is already updated
+        // server-side).
+        if (data['playerId'] == playerId) {
+          myPhotoUrl = data['url'] as String?;
+        }
         notifyListeners();
         break;
 
@@ -1815,17 +1835,20 @@ class GameService extends ChangeNotifier {
           lastPurchaseItemKey = data['itemKey'] as String?;
           lastPurchaseSuccess = data['success'] == true;
           lastPurchaseExtended = data['extended'] == true;
-          if (data['success'] == true &&
-              data['itemKey'] == 'top_card_counter_7d') {
-            hasTopCardCounter = true;
-          }
-          if (data['success'] == true &&
-              data['itemKey'] == 'mighty_trump_counter_7d') {
-            hasMightyTrumpCounter = true;
-          }
-          if (data['success'] == true &&
-              data['itemKey'] == 'mighty_prev_trick_7d') {
-            hasMightyPrevTrick = true;
+          // Flip the local feature flag immediately on purchase for ANY
+          // duration tier (7d/30d/…) — the server gate is effect_type-based,
+          // so a 30d buy enables the same feature as the 7d one.
+          final purchasedKey = data['itemKey'] as String?;
+          if (data['success'] == true && purchasedKey != null) {
+            if (purchasedKey.startsWith('top_card_counter')) {
+              hasTopCardCounter = true;
+            }
+            if (purchasedKey.startsWith('mighty_trump_counter')) {
+              hasMightyTrumpCounter = true;
+            }
+            if (purchasedKey.startsWith('mighty_prev_trick')) {
+              hasMightyPrevTrick = true;
+            }
           }
         }
         if (type == 'equip_result' && data['success'] == true) {
@@ -2347,6 +2370,7 @@ class GameService extends ChangeNotifier {
     playerName = '';
     equippedTheme = null;
     equippedTitle = null;
+    myPhotoUrl = null;
     currentRoomId = '';
     currentRoomName = '';
     roomPlayers = List.filled(4, null);

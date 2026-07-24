@@ -3441,6 +3441,9 @@ class L10nDe extends L10n {
   String get shopCategoryUtil => 'Nützliches';
 
   @override
+  String get shopCategoryFeature => 'Funktionen';
+
+  @override
   String get shopCategorySeason => 'Saison';
 
   @override

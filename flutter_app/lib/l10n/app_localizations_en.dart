@@ -3424,6 +3424,9 @@ class L10nEn extends L10n {
   String get shopCategoryUtil => 'Utility';
 
   @override
+  String get shopCategoryFeature => 'Features';
+
+  @override
   String get shopCategorySeason => 'Season';
 
   @override

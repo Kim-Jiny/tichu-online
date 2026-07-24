@@ -854,7 +854,7 @@ class _ShopScreenState extends State<ShopScreen> {
     }
 
     return DefaultTabController(
-      length: 4,
+      length: 5,
       child: Column(
         children: [
           const SizedBox(height: 8),
@@ -863,6 +863,7 @@ class _ShopScreenState extends State<ShopScreen> {
             L10n.of(context).shopCategoryTitle,
             L10n.of(context).shopCategoryTheme,
             L10n.of(context).shopCategoryUtil,
+            L10n.of(context).shopCategoryFeature,
           ]),
           Expanded(
             child: TabBarView(
@@ -871,6 +872,7 @@ class _ShopScreenState extends State<ShopScreen> {
                 _buildShopList(context, game, _filterShop(game.shopItems, 'title')),
                 _buildShopList(context, game, _filterShop(game.shopItems, 'theme')),
                 _buildShopList(context, game, _filterShop(game.shopItems, 'utility')),
+                _buildShopList(context, game, _filterShop(game.shopItems, 'feature')),
               ],
             ),
           ),
@@ -892,11 +894,180 @@ class _ShopScreenState extends State<ShopScreen> {
         ),
       );
     }
+    // Group duration tiers of one feature (same effect_type) into a single
+    // card so "마이티 기루다 카운터(7일)" and "(30일)" don't read as two separate
+    // near-identical items. Items without an effect_type (banners/titles/…)
+    // stay as their own single-item groups. First-appearance order preserved.
+    final groups = <List<Map<String, dynamic>>>[];
+    final indexByEffect = <String, int>{};
+    for (final item in items) {
+      final et = item['effect_type']?.toString() ?? '';
+      if (et.isEmpty) {
+        groups.add([item]);
+        continue;
+      }
+      final existing = indexByEffect[et];
+      if (existing != null) {
+        groups[existing].add(item);
+      } else {
+        indexByEffect[et] = groups.length;
+        groups.add([item]);
+      }
+    }
+    for (final g in groups) {
+      if (g.length > 1) {
+        g.sort((a, b) => ((a['duration_days'] ?? 0) as int)
+            .compareTo((b['duration_days'] ?? 0) as int));
+      }
+    }
     return ListView.separated(
       padding: const EdgeInsets.fromLTRB(14, 10, 14, 20),
-      itemCount: items.length,
+      itemCount: groups.length,
       separatorBuilder: (_, _) => const SizedBox(height: 8),
-      itemBuilder: (context, index) => _buildShopRow(context, game, items[index]),
+      itemBuilder: (context, index) {
+        final g = groups[index];
+        return g.length == 1
+            ? _buildShopRow(context, game, g.first)
+            : _buildGroupedFeatureCard(context, game, g);
+      },
+    );
+  }
+
+  // Base feature name without the trailing "(7일)/(30일)" duration suffix the
+  // server bakes into each tier's localized name.
+  String _stripDurationSuffix(String name) =>
+      name.replaceFirst(RegExp(r'\s*\([^)]*\)\s*$'), '').trim();
+
+  // A single card representing one feature with multiple duration tiers. The
+  // name/visual/description show once; each tier is a chip that opens the same
+  // detail sheet as a normal row (so the buy/extend flow is unchanged).
+  Widget _buildGroupedFeatureCard(
+    BuildContext context,
+    GameService game,
+    List<Map<String, dynamic>> tiers,
+  ) {
+    final first = tiers.first;
+    final baseName = _stripDurationSuffix(_getLocalizedItemName(first));
+    final description = _getLocalizedItemDescription(first);
+    final ownedActive = tiers.any((t) {
+      final key = t['item_key']?.toString() ?? '';
+      return game.inventoryItems.any((i) => i['item_key'] == key);
+    });
+
+    return Container(
+      padding: const EdgeInsets.all(10),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: const Color(0xFFE7E0DC)),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.center,
+        children: [
+          _buildShopRowVisual(first, 72),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Row(
+                  children: [
+                    Expanded(
+                      child: Text(
+                        baseName,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.bold,
+                          color: Color(0xFF4A3A33),
+                        ),
+                      ),
+                    ),
+                    if (ownedActive)
+                      _badge(
+                        L10n.of(context).shopItemOwned,
+                        const Color(0xFF7E57C2),
+                        const Color(0xFFEDE7F6),
+                      ),
+                  ],
+                ),
+                if (description.isNotEmpty) ...[
+                  const SizedBox(height: 2),
+                  Text(
+                    description,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(
+                      fontSize: 11.5,
+                      color: Color(0xFF8A7A72),
+                      height: 1.3,
+                    ),
+                  ),
+                ],
+                const SizedBox(height: 8),
+                Wrap(
+                  spacing: 8,
+                  runSpacing: 6,
+                  children:
+                      tiers.map((t) => _buildTierChip(context, t)).toList(),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // Duration option chip: "7일 · 1000골드". Reuses the server-localized "(7일)"
+  // suffix so no new duration strings are needed. Tap -> detail sheet for that
+  // exact tier.
+  Widget _buildTierChip(BuildContext context, Map<String, dynamic> tier) {
+    final name = _getLocalizedItemName(tier);
+    final match = RegExp(r'\(([^)]*)\)\s*$').firstMatch(name);
+    final durationLabel =
+        match != null ? match.group(1)! : '${tier['duration_days'] ?? ''}';
+    final price = tier['price'] ?? 0;
+    final onSale = _isOnSale(tier);
+    return Material(
+      color: onSale ? const Color(0xFFFFF3F3) : const Color(0xFFF4F1FB),
+      borderRadius: BorderRadius.circular(10),
+      child: InkWell(
+        onTap: () => _showItemDetailSheet(context, tier),
+        borderRadius: BorderRadius.circular(10),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                durationLabel,
+                style: const TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w700,
+                  color: Color(0xFF5A4A80),
+                ),
+              ),
+              const SizedBox(width: 6),
+              const Icon(Icons.monetization_on,
+                  size: 12, color: Color(0xFFF0B400)),
+              const SizedBox(width: 2),
+              Text(
+                '$price',
+                style: TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.bold,
+                  color: onSale
+                      ? const Color(0xFFD32F2F)
+                      : const Color(0xFF4A4080),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
     );
   }
 

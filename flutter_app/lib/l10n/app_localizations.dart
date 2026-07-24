@@ -6183,6 +6183,12 @@ abstract class L10n {
   /// **'Utility'**
   String get shopCategoryUtil;
 
+  /// No description provided for @shopCategoryFeature.
+  ///
+  /// In en, this message translates to:
+  /// **'Features'**
+  String get shopCategoryFeature;
+
   /// No description provided for @shopCategorySeason.
   ///
   /// In en, this message translates to:

@@ -1551,6 +1551,7 @@
   "shopCategoryTitle": "Title",
   "shopCategoryTheme": "Theme",
   "shopCategoryUtil": "Utility",
+  "shopCategoryFeature": "Features",
   "shopCategorySeason": "Season",
   "shopItemEmpty": "No items",
   "shopItemOwned": "Owned",

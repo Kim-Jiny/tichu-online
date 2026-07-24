@@ -3353,6 +3353,9 @@ class L10nKo extends L10n {
   String get shopCategoryUtil => '유틸';
 
   @override
+  String get shopCategoryFeature => '기능';
+
+  @override
   String get shopCategorySeason => '시즌';
 
   @override

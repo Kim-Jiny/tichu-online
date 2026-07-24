@@ -207,6 +207,11 @@ async function initDatabase() {
     await client.query(`ALTER TABLE tc_users ADD COLUMN IF NOT EXISTS chat_ban_until TIMESTAMP`);
     await client.query(`ALTER TABLE tc_users ADD COLUMN IF NOT EXISTS admin_memo TEXT`);
 
+    // Profile photo (UGC) columns — see server/deploy/PROFILE_PHOTO_PLAN.md
+    await client.query(`ALTER TABLE tc_users ADD COLUMN IF NOT EXISTS profile_photo_key VARCHAR(255)`);        // minio object key (NULL = default avatar)
+    await client.query(`ALTER TABLE tc_users ADD COLUMN IF NOT EXISTS profile_photo_expires_at TIMESTAMP`);    // 7-day item expiry (NULL = inactive)
+    await client.query(`ALTER TABLE tc_users ADD COLUMN IF NOT EXISTS profile_photo_status VARCHAR(20) DEFAULT 'none'`); // none | active
+
     // Device info columns
     await client.query(`ALTER TABLE tc_users ADD COLUMN IF NOT EXISTS fcm_token TEXT`);
     await client.query(`ALTER TABLE tc_users ADD COLUMN IF NOT EXISTS push_enabled BOOLEAN DEFAULT true`);

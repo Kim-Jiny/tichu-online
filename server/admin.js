@@ -4,7 +4,7 @@ const logBuffer = require('./logBuffer');
 const {
   verifyAdmin, getInquiries, getInquiryById, resolveInquiry,
   getReports, getReportGroup, updateReportGroupStatus,
-  getUsers, getUserDetail, getAdminGoldHistory, getAdminPurchaseHistory, deleteUser, getDashboardStats, getDashboardActivityTopPlayers, getAdminRecentMatches, setChatBan, setAdminMemo, getRecentMatches, adminAdjustGold, adminAdjustExp, setUserAdmin,
+  getUsers, getUserDetail, getAdminGoldHistory, getAdminPurchaseHistory, deleteUser, getDashboardStats, getDashboardActivityTopPlayers, getAdminRecentMatches, setChatBan, setAdminMemo, adminClearProfilePhoto, getRecentMatches, adminAdjustGold, adminAdjustExp, setUserAdmin,
   getAttendanceDashboardStats, listAttendanceLog, getAttendanceBreakdown, getAttendanceForNickname,
   getDetailedAdminStats,
   getAllShopItemsAdmin, addShopItem, updateShopItem, deleteShopItem, getShopItemById,
@@ -17,6 +17,7 @@ const {
   getBroadcastFcmTokens, insertPushHistory, getPushHistory, clearInvalidFcmToken, insertPushRecipients, getPushHistoryDetail,
 } = require('./db/database');
 const { refundGoogleOrder } = require('./iap/GoogleVerify');
+const minioClient = require('./storage/minioClient');
 
 // In-memory session store: token -> { username, createdAt }
 const sessions = new Map();
@@ -3406,6 +3407,29 @@ async function handleAdminRoute(req, res, url, pathname, method, lobby, wss, mai
         </form>
       </div>` : ''}
 
+      ${(() => {
+        const active = user.profile_photo_status === 'active'
+          && user.profile_photo_key
+          && (!user.profile_photo_expires_at || new Date(user.profile_photo_expires_at) > new Date());
+        const photoUrl = active ? minioClient.publicUrl(user.profile_photo_key) : null;
+        return `<div class="card">
+        <h3>프로필 사진</h3>
+        ${active
+          ? `<div style="display:flex;align-items:center;gap:16px;flex-wrap:wrap">
+              <img src="${escapeHtml(photoUrl)}" alt="프로필 사진" style="width:96px;height:96px;border-radius:12px;object-fit:cover;border:1px solid #eee">
+              <div style="font-size:13px;color:#666">
+                <div>상태: <span class="badge" style="background:#e8f5e9;color:#2e7d32">활성</span></div>
+                <div style="margin-top:4px">만료: ${user.profile_photo_expires_at ? formatDate(user.profile_photo_expires_at) : '무기한'}</div>
+              </div>
+              <form method="POST" action="/tc-backstage/users/${encodeURIComponent(user.nickname)}/clear-photo" style="margin-left:auto"
+                onsubmit="return confirm('${jsEscape(user.nickname)} 유저의 프로필 사진을 강제 삭제하시겠습니까? (남은 이용권은 유지되어 재업로드 가능)')">
+                <button type="submit" class="btn btn-secondary" style="color:#c62828;border-color:#f0c0c0">사진 강제 삭제</button>
+              </form>
+            </div>`
+          : '<span style="color:#888;font-weight:600">설정된 프로필 사진 없음</span>'}
+      </div>`;
+      })()}
+
       <div class="card">
         <h3>채팅 금지</h3>
         <form method="POST" action="/tc-backstage/users/${encodeURIComponent(user.nickname)}/chat-ban" style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
@@ -3504,6 +3528,15 @@ async function handleAdminRoute(req, res, url, pathname, method, lobby, wss, mai
     const nickname = decodeURIComponent(memoMatch[1]);
     const body = await parseBody(req);
     await setAdminMemo(nickname, (body.memo || '').trim());
+    return redirect(res, `/tc-backstage/users/${encodeURIComponent(nickname)}`);
+  }
+
+  // Force-remove a profile photo (moderation)
+  const clearPhotoMatch = pathname.match(/^\/tc-backstage\/users\/([^/]+)\/clear-photo$/);
+  if (clearPhotoMatch && method === 'POST') {
+    const nickname = decodeURIComponent(clearPhotoMatch[1]);
+    const { oldKey } = await adminClearProfilePhoto(nickname);
+    if (oldKey) await minioClient.deleteProfilePhoto(oldKey); // best-effort
     return redirect(res, `/tc-backstage/users/${encodeURIComponent(nickname)}`);
   }
 

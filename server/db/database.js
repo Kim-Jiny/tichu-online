@@ -2992,6 +2992,31 @@ async function setAdminMemo(nickname, memo) {
   }
 }
 
+// Admin force-removal of a profile photo (moderation). Clears the row so
+// serialize() stops surfacing it and returns the old object key so the caller
+// can delete it from storage. Keeps the paid duration expiry so the user can
+// re-upload a compliant photo within their remaining window.
+async function adminClearProfilePhoto(nickname) {
+  const client = await pool.connect();
+  try {
+    const before = await client.query(
+      `SELECT profile_photo_key FROM tc_users WHERE nickname = $1`,
+      [nickname],
+    );
+    if (before.rows.length === 0) return { success: false, oldKey: null };
+    await client.query(
+      `UPDATE tc_users SET profile_photo_key = NULL, profile_photo_status = 'none' WHERE nickname = $1`,
+      [nickname],
+    );
+    return { success: true, oldKey: before.rows[0].profile_photo_key || null };
+  } catch (err) {
+    console.error('Admin clear profile photo error:', err);
+    return { success: false, oldKey: null };
+  } finally {
+    client.release();
+  }
+}
+
 async function setChatBan(nickname, minutes) {
   const client = await pool.connect();
   try {
@@ -3627,7 +3652,8 @@ async function getUserDetail(nickname) {
       `SELECT id, username, nickname, total_games, wins, losses, rating, created_at, last_login, chat_ban_until, leave_count, gold, level, exp_total, season_rating, admin_memo,
               fcm_token, push_enabled, push_admin_inquiry, push_admin_report, is_admin, is_deleted, deleted_at, device_platform, device_model, os_version, app_version, last_ip, locale,
               sk_total_games, sk_wins, sk_losses, ll_total_games, ll_wins, ll_losses,
-              mighty_total_games, mighty_wins, mighty_losses, mighty_rating
+              mighty_total_games, mighty_wins, mighty_losses, mighty_rating,
+              profile_photo_key, profile_photo_status, profile_photo_expires_at
        FROM tc_users WHERE nickname = $1`,
       [nickname]
     );
@@ -7567,6 +7593,7 @@ module.exports = {
   setChatBan,
   getChatBan,
   setAdminMemo,
+  adminClearProfilePhoto,
   getActiveSeason,
   createSeason,
   getSeasons,

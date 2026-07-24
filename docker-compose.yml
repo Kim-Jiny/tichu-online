@@ -105,42 +105,15 @@ services:
     networks:
       - app-network
 
-  # Object storage for user-uploaded profile photos. Gated behind the
-  # `storage` profile so it never auto-starts during deploy.sh runs —
-  # only `docker compose --profile storage up -d minio` brings it up.
-  #
-  # Mirrors the hmlove-minio pattern on this VPS: API (9000) stays on
-  # the docker network only (server-blue/green access via
-  # http://tichu-minio:9000). Public read traffic for profile photos
-  # goes through nginx on the media path. Console (9001) is bound to
-  # 127.0.0.1:59003 so admin can reach it via SSH tunnel without
-  # exposing it to the public.
-  minio:
-    profiles: ["storage"]
-    image: minio/minio:latest
-    container_name: tichu-minio
-    restart: unless-stopped
-    command: server /data --console-address ":9001"
-    expose:
-      - "9000"
-    ports:
-      - "127.0.0.1:59003:9001"
-    environment:
-      - MINIO_ROOT_USER=${MINIO_ROOT_USER}
-      - MINIO_ROOT_PASSWORD=${MINIO_ROOT_PASSWORD}
-    volumes:
-      - minio_data:/data
-    healthcheck:
-      test: ["CMD-SHELL", "mc ready local || exit 1"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-    networks:
-      - app-network
+  # NOTE: no dedicated MinIO service. Profile photos reuse the existing
+  # hmlove-minio instance (already on app-network, same VPS, own project)
+  # under a separate `tichu-profile-photos` bucket + a tichu-scoped access
+  # key — saves ~250MB RAM vs a 3rd MinIO container. server-blue/green reach
+  # it at http://hmlove-minio:9000; nginx proxies /media/profile-photos/.
+  # See server/deploy/PROFILE_PHOTO_PLAN.md for the bucket/key setup.
 
 volumes:
   pgdata:
-  minio_data:
 
 networks:
   app-network:

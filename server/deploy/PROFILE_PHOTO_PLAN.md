@@ -4,6 +4,42 @@
 
 ---
 
+## ⚠️ 결정 변경 (2026-07, 이 아래 상세를 대체)
+
+**저장소: 전용 `tichu-minio` 신규 컨테이너 → 기존 `hmlove-minio` 재활용.**
+같은 VPS·`app-network`에 이미 떠 있는(사장님 본인) MinIO를 재사용해 3번째
+MinIO 컨테이너 RAM ~250MB를 아낀다. tichu 데이터는 **전용 버킷 +
+버킷 스코프 access key**로 hmlove 데이터와 격리.
+
+- 엔드포인트: `http://hmlove-minio:9000` (docker network 내부)
+- 버킷: `tichu-profile-photos` (익명 download 허용)
+- server-blue/green env(.env): `MINIO_ENDPOINT=hmlove-minio`, `MINIO_PORT=9000`,
+  `MINIO_BUCKET=tichu-profile-photos`, `MINIO_ACCESS_KEY=<tichu전용>`, `MINIO_SECRET_KEY=<...>`
+- docker-compose.yml에 tichu minio 서비스 **없음** (재사용).
+- nginx `/media/profile-photos/` → `http://hmlove-minio:9000/tichu-profile-photos/`.
+
+**hmlove-minio에서 1회 셋업** (hmlove-minio root 자격 필요):
+```bash
+# 버킷 생성 + 익명 read
+docker exec hmlove-minio mc alias set local http://localhost:9000 <HMLOVE_ROOT_USER> <HMLOVE_ROOT_PW>
+docker exec hmlove-minio mc mb local/tichu-profile-photos
+docker exec hmlove-minio mc anonymous set download local/tichu-profile-photos
+# tichu 전용 유저 + 그 버킷에만 readwrite 정책
+docker exec hmlove-minio mc admin user add local <TICHU_ACCESS_KEY> <TICHU_SECRET_KEY>
+docker exec hmlove-minio sh -c 'cat > /tmp/tichu-pp.json <<JSON
+{"Version":"2012-10-17","Statement":[{"Effect":"Allow","Action":["s3:*"],"Resource":["arn:aws:s3:::tichu-profile-photos","arn:aws:s3:::tichu-profile-photos/*"]}]}
+JSON'
+docker exec hmlove-minio mc admin policy create local tichu-pp /tmp/tichu-pp.json
+docker exec hmlove-minio mc admin policy attach local tichu-pp --user <TICHU_ACCESS_KEY>
+```
+
+> 트레이드오프: tichu 사진이 hmlove-minio 볼륨에 얹힘 → 그 인스턴스 재시작/폐기
+> 시 영향. 부가기능이고 같은 관리주체라 감내. 백업은 hmlove-minio 볼륨과 함께.
+
+아래 "저장소" 및 tichu-minio 관련 상세(compose/셋업/env)는 **위 결정으로 대체됨.**
+
+---
+
 ## 배경 & 목표
 
 유저가 본인 프로필 사진을 업로드해 다른 유저에게 노출할 수 있게 한다.

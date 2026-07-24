@@ -800,21 +800,29 @@ async function cleanupExpiredProfilePhotos() {
   if (!minioClient.isEnabled()) return;
   try {
     const { pool } = require('./db/database');
-    const expired = await pool.query(
-      `SELECT id, profile_photo_key FROM tc_users
-       WHERE profile_photo_status = 'active'
-         AND profile_photo_expires_at IS NOT NULL
-         AND profile_photo_expires_at < NOW()`,
+    // Select + lock the still-expired rows, clear them, and return their OLD
+    // keys — all in ONE statement so a concurrent re-buy+re-upload can't race
+    // between the read and the wipe. victims FOR UPDATE blocks an interleaving
+    // purchase; anyone who already renewed no longer matches expires_at < NOW()
+    // and is neither cleared nor has their fresh object deleted.
+    const cleared = await pool.query(
+      `WITH victims AS (
+         SELECT id, profile_photo_key FROM tc_users
+         WHERE profile_photo_status = 'active'
+           AND profile_photo_expires_at IS NOT NULL
+           AND profile_photo_expires_at < NOW()
+         FOR UPDATE
+       ), upd AS (
+         UPDATE tc_users SET profile_photo_key = NULL, profile_photo_status = 'none'
+         FROM victims WHERE tc_users.id = victims.id
+       )
+       SELECT profile_photo_key FROM victims`,
     );
-    for (const u of expired.rows) {
+    for (const u of cleared.rows) {
       if (u.profile_photo_key) await minioClient.deleteProfilePhoto(u.profile_photo_key);
-      await pool.query(
-        `UPDATE tc_users SET profile_photo_key = NULL, profile_photo_status = 'none' WHERE id = $1`,
-        [u.id],
-      );
     }
-    if (expired.rows.length) {
-      console.log(`[profile-photo] cleaned up ${expired.rows.length} expired photo(s)`);
+    if (cleared.rows.length) {
+      console.log(`[profile-photo] cleaned up ${cleared.rows.length} expired photo(s)`);
     }
   } catch (e) {
     console.error('[profile-photo] cleanup error:', e && e.message);
@@ -929,11 +937,18 @@ const server = http.createServer(async (req, res) => {
       const { buffer } = await parseUploadedImage(req);
       // sharp strips metadata (incl. EXIF/GPS) by default; .rotate() honours the
       // EXIF orientation first, then squares to 512 and re-encodes as JPEG.
-      const processed = await sharp(buffer)
-        .rotate()
-        .resize(512, 512, { fit: 'cover' })
-        .jpeg({ quality: 85 })
-        .toBuffer();
+      // A decode failure here is bad client input (declared image/* but corrupt
+      // or non-image bytes), so surface it as 400 — not a 500 server error.
+      let processed;
+      try {
+        processed = await sharp(buffer)
+          .rotate()
+          .resize(512, 512, { fit: 'cover' })
+          .jpeg({ quality: 85 })
+          .toBuffer();
+      } catch (_) {
+        throw httpErr(400, 'invalid_image');
+      }
 
       const { key, url } = await minioClient.uploadProfilePhoto(userId, processed, 'image/jpeg');
       const { pool } = require('./db/database');
@@ -7007,6 +7022,18 @@ async function handleBuyItem(ws, data) {
     return;
   }
   if (itemRequiresNewBannerClient(itemKey) && !clientSupportsNewBanners(ws)) {
+    sendTo(ws, {
+      type: 'purchase_result',
+      success: false,
+      itemKey,
+      message: t(ws.locale, 'banner_update_required'),
+    });
+    return;
+  }
+  // Profile-photo items need the 2.8.0 upload UI; the shop list already hides
+  // them from older clients, so this only blocks a stale/tampered client from
+  // spending gold on an item it can't use.
+  if (typeof itemKey === 'string' && itemKey.startsWith('profile_photo') && !clientSupportsProfilePhoto(ws)) {
     sendTo(ws, {
       type: 'purchase_result',
       success: false,

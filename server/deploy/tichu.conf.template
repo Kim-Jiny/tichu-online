@@ -43,6 +43,26 @@ server {
         return 403;
     }
 
+    # Profile photos served directly from the tichu-minio container.
+    # The bucket has anonymous download enabled, so MinIO returns the
+    # raw object on plain GET. Image URLs change on every re-upload
+    # (key = userId/timestamp.ext), so aggressive caching is safe.
+    # GET-only; uploads go through the API on /upload/profile-photo
+    # which writes via the SDK from inside the docker network.
+    location /media/profile-photos/ {
+        limit_except GET HEAD { deny all; }
+        proxy_pass http://tichu-minio:9000/profile-photos/;
+        proxy_set_header Host tichu-minio:9000;
+        proxy_set_header Cookie "";
+        proxy_hide_header Set-Cookie;
+        proxy_hide_header x-amz-id-2;
+        proxy_hide_header x-amz-request-id;
+
+        proxy_cache_valid 200 7d;
+        expires 7d;
+        add_header Cache-Control "public, immutable" always;
+    }
+
     location / {
         proxy_pass http://tichu_backend;
         proxy_http_version 1.1;

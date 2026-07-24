@@ -34,10 +34,13 @@ function decide(gameType, state, botId, strat) {
 
 parentPort.on('message', (msg) => {
   const { id, gameType, botId, strat, state } = msg;
+  const t0 = process.hrtime.bigint();
   try {
     const action = decide(gameType, state, botId, strat);
-    parentPort.postMessage({ id, action: action || null });
+    const computeMs = Number(process.hrtime.bigint() - t0) / 1e6;
+    parentPort.postMessage({ id, action: action || null, computeMs });
   } catch (e) {
-    parentPort.postMessage({ id, error: (e && e.message) || String(e) });
+    const computeMs = Number(process.hrtime.bigint() - t0) / 1e6;
+    parentPort.postMessage({ id, error: (e && e.message) || String(e), computeMs });
   }
 });

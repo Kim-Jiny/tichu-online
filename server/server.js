@@ -1289,13 +1289,14 @@ if (DIAG_ON) {
     if (Date.now() - diagLastReport >= 30000) {
       const m = process.memoryUsage();
       const botDiag = botPool
-        ? ` bots=q${botPool.queueDepth}/f${botPool.inFlight}/maxq${botPool.stats.maxQueue}/to${botPool.stats.timeouts}/er${botPool.stats.errors}${botPool.disabled ? '/DISABLED' : ''}`
+        ? ` bots=q${botPool.queueDepth}/f${botPool.inFlight}/maxq${botPool.stats.maxQueue}/slow${botPool.stats.slow}/stale${botPool.stats.stale}/to${botPool.stats.timeouts}/er${botPool.stats.errors}/mqw${botPool.stats.maxQWaitMs.toFixed(0)}/mc${botPool.stats.maxComputeMs.toFixed(0)}/mt${botPool.stats.maxTotalMs.toFixed(0)}${botPool.disabled ? '/DISABLED' : ''}`
         : '';
       console.log(`[DIAG] 30s | maxLag=${Math.round(diagMaxLag)}ms gc=${winGcMs.toFixed(0)}ms(major=${winGcMajorMs.toFixed(0)},maxProbe=${winMaxGcProbe.toFixed(0)}) rss=${(m.rss / MB).toFixed(0)}MB heapUsed=${(m.heapUsed / MB).toFixed(0)}MB heapTotal=${(m.heapTotal / MB).toFixed(0)}MB rooms=${lobby.rooms.size} clients=${wss.clients.size}${botDiag}`);
       diagMaxLag = 0;
       winGcMs = 0;
       winGcMajorMs = 0;
       winMaxGcProbe = 0;
+      if (botPool) botPool.resetWindowStats(); // each line = THIS window's peaks/rates
       diagLastReport = Date.now();
     }
   }, DIAG_PROBE_MS).unref();
@@ -4700,7 +4701,6 @@ function scheduleBotActions(roomId, forceReschedule = false) {
       // rollout — so running it inline is just as cheap and saves a wasted
       // worker round-trip per non-acting bot on every human turn.
       const offload = allowOffload && !!botPool && botStratIsExpensive(r.gameType, strat);
-      const __t0 = process.hrtime.bigint();
       let a;
       if (offload) {
         // Refcount an in-flight worker decision for this room. While it's set:
@@ -4726,10 +4726,9 @@ function scheduleBotActions(roomId, forceReschedule = false) {
       } else {
         a = baseDecideFn(g, pid, strat);
       }
-      const __ms = Number(process.hrtime.bigint() - __t0) / 1e6;
-      if (DIAG_ON && __ms > DIAG_BOT_SLOW_MS) {
-        console.log(`[DIAG] bot-decide ${__ms.toFixed(0)}ms room=${roomId} type=${r.gameType} state=${r.game?.state} bot=${pid} strat=${strat}${offload ? ' via=worker' : ''}`);
-      }
+      // No per-decision timing log here: the mixoracle-detail / tichu-winrate-
+      // detail breakdown (for tuning) and the 30s pool summary (mc/mqw/slow,
+      // for stutter) cover it without 3 overlapping lines per slow decision.
       return a;
     };
 
@@ -4800,7 +4799,12 @@ function scheduleBotActions(roomId, forceReschedule = false) {
       // its DB awaits finish, so botStateSig alone wouldn't catch it. Applying
       // a move here would race the desertion save.
       if (!lobby.getRoom(roomId) || !r.game || r.game.deserted) return;
-      if (botStateSig(r.game) !== preSig) { scheduleBotActions(roomId); return; }
+      const postSig = botStateSig(r.game);
+      if (postSig !== preSig) {
+        if (botPool) botPool.noteStale(); // counted in the 30s summary (stale)
+        scheduleBotActions(roomId);
+        return;
+      }
       if (action) {
         const bot = r.bots.get(botId);
         const botSpeed = bot ? bot.speed : 'normal';
@@ -4839,7 +4843,12 @@ function scheduleBotActions(roomId, forceReschedule = false) {
               // alone wouldn't catch it, and we'd run handleAction /
               // saveGameResult / sendGameStateToAll on a dead room.
               if (!lobby.getRoom(roomId) || !r2.game || r2.game.deserted) return;
-              if (botStateSig(r2.game) !== preSig2) { scheduleBotActions(roomId); return; }
+              const postSig2 = botStateSig(r2.game);
+              if (postSig2 !== preSig2) {
+                if (botPool) botPool.noteStale(); // counted in the 30s summary (stale)
+                scheduleBotActions(roomId);
+                return;
+              }
             }
             // The cached decision was validated against the pre-delay state.
             // botStateSig is coarse (it captures trick *length* but not the
@@ -4855,7 +4864,12 @@ function scheduleBotActions(roomId, forceReschedule = false) {
               const preSig3 = botStateSig(r2.game);
               action2 = await decideFn(r2.game, botId);
               if (!lobby.getRoom(roomId) || !r2.game || r2.game.deserted) return;
-              if (botStateSig(r2.game) !== preSig3) { scheduleBotActions(roomId); return; }
+              const postSig3 = botStateSig(r2.game);
+              if (postSig3 !== preSig3) {
+                if (botPool) botPool.noteStale(); // counted in the 30s summary (stale)
+                scheduleBotActions(roomId);
+                return;
+              }
             }
             if (!action2) {
               // State changed (e.g. bomb interrupt) - re-schedule for other bots

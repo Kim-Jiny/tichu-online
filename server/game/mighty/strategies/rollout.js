@@ -22,12 +22,13 @@ const MightyBot = require('../MightyBot');
 // burning 2000 heuristic evaluations and spiking a CPU core.
 const MAX_STEPS = 200;
 
-// DIAG gating read ONCE at module load, not per rollout step. _stepOnce runs
-// thousands of times per mighty decision (candidates × samples × ~100 steps);
-// a process.env read is ~119ns vs ~1ns for a hoisted const (measured), so
-// reading env per step would tax the very hot path the worker offload exists to
-// speed up. Env vars don't change at runtime, so this is behaviour-identical.
-const DIAG_ON = process.env.DIAG !== '0';
+// Per-rollout-step timing is DEEP debug on the hottest path — _stepOnce runs
+// thousands of times per mighty decision (candidates × samples × ~100 steps).
+// So it is gated behind its OWN opt-in flag (OFF by default), NOT the always-on
+// DIAG: normal prod pays zero cost (no hrtime, no env reads per step). Set
+// DIAG_ROLLOUT_STEP=1 only when deep-profiling a slow rollout. Read once at
+// module load (env doesn't change at runtime).
+const ROLLOUT_STEP_DIAG = process.env.DIAG_ROLLOUT_STEP === '1';
 const SLOW_MS = Number.isFinite(Number(process.env.DIAG_BOT_SLOW_MS))
   ? Number(process.env.DIAG_BOT_SLOW_MS)
   : 100;
@@ -39,25 +40,25 @@ function _stepOnce(game) {
   }
   const actor = game.getPendingActor();
   if (!actor) return false;
-  const t0 = DIAG_ON ? process.hrtime.bigint() : 0n;
+  const t0 = ROLLOUT_STEP_DIAG ? process.hrtime.bigint() : 0n;
   const action = MightyBot.decideMightyBotAction(game, actor, 'heuristic');
-  const heurMs = DIAG_ON ? Number(process.hrtime.bigint() - t0) / 1e6 : 0;
+  const heurMs = ROLLOUT_STEP_DIAG ? Number(process.hrtime.bigint() - t0) / 1e6 : 0;
   if (!action) return false;
-  const a0 = DIAG_ON ? process.hrtime.bigint() : 0n;
+  const a0 = ROLLOUT_STEP_DIAG ? process.hrtime.bigint() : 0n;
   const r = game.handleAction(actor, action);
-  let actionMs = DIAG_ON ? Number(process.hrtime.bigint() - a0) / 1e6 : 0;
+  let actionMs = ROLLOUT_STEP_DIAG ? Number(process.hrtime.bigint() - a0) / 1e6 : 0;
   if (!r || !r.success) {
     const fb = game.getAutoTimeoutAction(actor);
     if (fb) {
-      const f0 = DIAG_ON ? process.hrtime.bigint() : 0n;
+      const f0 = ROLLOUT_STEP_DIAG ? process.hrtime.bigint() : 0n;
       const r2 = game.handleAction(actor, fb);
-      if (DIAG_ON) { actionMs += Number(process.hrtime.bigint() - f0) / 1e6; _logSlowStep(game, actor, action, heurMs, actionMs, t0); }
+      if (ROLLOUT_STEP_DIAG) { actionMs += Number(process.hrtime.bigint() - f0) / 1e6; _logSlowStep(game, actor, action, heurMs, actionMs, t0); }
       return !!(r2 && r2.success);
     }
-    if (DIAG_ON) _logSlowStep(game, actor, action, heurMs, actionMs, t0);
+    if (ROLLOUT_STEP_DIAG) _logSlowStep(game, actor, action, heurMs, actionMs, t0);
     return false;
   }
-  if (DIAG_ON) _logSlowStep(game, actor, action, heurMs, actionMs, t0);
+  if (ROLLOUT_STEP_DIAG) _logSlowStep(game, actor, action, heurMs, actionMs, t0);
   return true;
 }
 

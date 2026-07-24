@@ -41,6 +41,15 @@ const BASE_BACKOFF_MS = 250;
 const MAX_BACKOFF_MS = 10000;
 const REENABLE_MS = 60000;
 
+function diagNumberEnv(name, fallback) {
+  const n = Number(process.env[name]);
+  return Number.isFinite(n) && n >= 0 ? n : fallback;
+}
+
+// Read once — used per completed decision to bump the (window-summarized) slow
+// counter. Env doesn't change at runtime.
+const POOL_SLOW_MS = diagNumberEnv('DIAG_BOT_SLOW_MS', 100);
+
 function defaultSize() {
   const env = parseInt(process.env.BOT_WORKERS || '', 10);
   if (Number.isFinite(env) && env > 0) return env;
@@ -65,7 +74,19 @@ class BotWorkerPool {
     this._respawnTimers = new Set();
     this._reenableTimer = null;
     // Lightweight counters for DIAG.
-    this.stats = { dispatched: 0, completed: 0, errors: 0, timeouts: 0, maxQueue: 0, disables: 0 };
+    this.stats = {
+      dispatched: 0,
+      completed: 0,
+      errors: 0,
+      timeouts: 0,
+      maxQueue: 0,
+      disables: 0,
+      slow: 0,
+      stale: 0,
+      maxQWaitMs: 0,
+      maxComputeMs: 0,
+      maxTotalMs: 0,
+    };
     for (let i = 0; i < this.size; i++) this._spawn(i);
   }
 
@@ -129,6 +150,7 @@ class BotWorkerPool {
       const job = {
         gameType, botId, strat, state,
         timeoutMs: timeoutMs || this.defaultTimeoutMs,
+        enqueuedAt: process.hrtime.bigint(),
         resolve, reject,
       };
       const freeIdx = this._workers.findIndex((w) => w && !w.busy);
@@ -146,6 +168,7 @@ class BotWorkerPool {
     slot.busy = true;
     job.id = id;
     job.workerIdx = idx;
+    job.dispatchedAt = process.hrtime.bigint();
     job.timer = setTimeout(() => this._onTimeout(id), job.timeoutMs);
     this._pending.set(id, job);
     this.stats.dispatched++;
@@ -161,11 +184,29 @@ class BotWorkerPool {
     clearTimeout(job.timer);
     slot.busy = false;
     slot.completed = true;            // this worker loaded & ran fine
+    const doneAt = process.hrtime.bigint();
+    const totalMs = Number(doneAt - job.enqueuedAt) / 1e6;
+    const qwaitMs = Number(job.dispatchedAt - job.enqueuedAt) / 1e6;
+    const computeMs = Number.isFinite(msg.computeMs) ? msg.computeMs : Number(doneAt - job.dispatchedAt) / 1e6;
+    if (qwaitMs > this.stats.maxQWaitMs) this.stats.maxQWaitMs = qwaitMs;
+    if (computeMs > this.stats.maxComputeMs) this.stats.maxComputeMs = computeMs;
+    if (totalMs > this.stats.maxTotalMs) this.stats.maxTotalMs = totalMs;
     // NOTE: do NOT clear _loadFailures here. Successes must not mask a single
     // worker that keeps load-failing — old failures age out of the window on
     // their own (see _onWorkerFailure).
-    if (msg.error) { this.stats.errors++; job.reject(new Error(msg.error)); }
-    else { this.stats.completed++; job.resolve(msg.action); }
+    if (msg.error) {
+      this.stats.errors++;
+      if (process.env.DIAG !== '0') {
+        console.log(`[DIAG] bot-worker-error id=${msg.id} worker=${idx} type=${job.gameType} bot=${job.botId} strat=${job.strat} total=${totalMs.toFixed(0)}ms qwait=${qwaitMs.toFixed(0)}ms compute=${computeMs.toFixed(0)}ms err=${msg.error}`);
+      }
+      job.reject(new Error(msg.error));
+    } else {
+      this.stats.completed++;
+      // Count slow decisions for the 30s summary (slow/mqw/mc/mt); no per-event
+      // log — the aggregate + mixoracle-detail/tichu-winrate-detail cover it.
+      if (totalMs > POOL_SLOW_MS || qwaitMs > POOL_SLOW_MS || computeMs > POOL_SLOW_MS) this.stats.slow++;
+      job.resolve(msg.action);
+    }
     this._drain(idx);
   }
 
@@ -174,6 +215,12 @@ class BotWorkerPool {
     if (!job) return;
     this._pending.delete(id);
     this.stats.timeouts++;
+    if (process.env.DIAG !== '0') {
+      const now = process.hrtime.bigint();
+      const totalMs = Number(now - job.enqueuedAt) / 1e6;
+      const qwaitMs = job.dispatchedAt ? Number(job.dispatchedAt - job.enqueuedAt) / 1e6 : totalMs;
+      console.log(`[DIAG] bot-worker-timeout id=${id} worker=${job.workerIdx} type=${job.gameType} bot=${job.botId} strat=${job.strat} total=${totalMs.toFixed(0)}ms qwait=${qwaitMs.toFixed(0)}ms timeout=${job.timeoutMs}ms`);
+    }
     // The worker is stuck in a synchronous burst and cannot be interrupted;
     // terminate and respawn (immediately — a timeout is normal under load, not
     // a load failure, so it must not reduce capacity or trip the breaker).
@@ -272,6 +319,23 @@ class BotWorkerPool {
 
   get queueDepth() { return this._queue.length; }
   get inFlight() { return this._pending.size; }
+
+  noteStale() {
+    this.stats.stale++;
+  }
+
+  // Reset the window-scoped gauges/counters so each 30s DIAG line reflects THAT
+  // window's peak/rate (better stutter detection than an ever-growing all-time
+  // max). Lifetime totals (dispatched/completed/timeouts/errors/disables) are
+  // left cumulative.
+  resetWindowStats() {
+    this.stats.maxQueue = 0;
+    this.stats.slow = 0;
+    this.stats.stale = 0;
+    this.stats.maxQWaitMs = 0;
+    this.stats.maxComputeMs = 0;
+    this.stats.maxTotalMs = 0;
+  }
 
   async destroy() {
     this._destroyed = true;

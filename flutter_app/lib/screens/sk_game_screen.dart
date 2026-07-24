@@ -8,6 +8,7 @@ import '../models/sk_game_state.dart';
 import '../models/player.dart';
 import '../widgets/connection_overlay.dart';
 import '../widgets/level_badge.dart';
+import '../widgets/profile_avatar.dart';
 import '../widgets/draggable_chat_panel.dart';
 import '../widgets/spectator_controls.dart';
 import '../l10n/app_localizations.dart';
@@ -559,22 +560,25 @@ class _SKGameScreenState extends State<SKGameScreen> {
             ),
             child: Row(
               children: [
-                if (p.level != null)
-                  LevelBadge(level: p.level, size: 36)
-                else
-                  Container(
-                    width: 36,
-                    height: 36,
-                    decoration: const BoxDecoration(
-                      color: Color(0xFFF2ECE8),
-                      shape: BoxShape.circle,
-                    ),
-                    child: const Icon(
-                      Icons.person,
-                      size: 18,
-                      color: Color(0xFF6A5A52),
-                    ),
-                  ),
+                ProfileAvatar(
+                  photoUrl: game.resolvePhotoUrl(p.photoUrl),
+                  size: 36,
+                  fallback: p.level != null
+                      ? LevelBadge(level: p.level, size: 36)
+                      : Container(
+                          width: 36,
+                          height: 36,
+                          decoration: const BoxDecoration(
+                            color: Color(0xFFF2ECE8),
+                            shape: BoxShape.circle,
+                          ),
+                          child: const Icon(
+                            Icons.person,
+                            size: 18,
+                            color: Color(0xFF6A5A52),
+                          ),
+                        ),
+                ),
                 const SizedBox(width: 10),
                 Expanded(
                   child: Column(

@@ -11,6 +11,7 @@ import '../widgets/playing_card.dart';
 import '../widgets/connection_overlay.dart';
 import '../widgets/draggable_chat_panel.dart';
 import '../widgets/level_badge.dart';
+import '../widgets/profile_avatar.dart';
 import '../widgets/title_chip.dart';
 import '../widgets/spectator_controls.dart';
 
@@ -457,8 +458,14 @@ class _SpectatorScreenState extends State<SpectatorScreen> {
               mainAxisSize: MainAxisSize.min,
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                if (player.level != null) ...[
-                  LevelBadge(level: player.level, size: 18),
+                if (player.photoUrl != null || player.level != null) ...[
+                  ProfileAvatar(
+                    photoUrl: game.resolvePhotoUrl(player.photoUrl),
+                    size: 18,
+                    fallback: player.level != null
+                        ? LevelBadge(level: player.level, size: 18)
+                        : const SizedBox(width: 18, height: 18),
+                  ),
                   const SizedBox(width: 4),
                 ],
                 Flexible(

@@ -9,6 +9,7 @@ import '../widgets/playing_card.dart';
 import '../widgets/draggable_chat_panel.dart';
 import '../widgets/connection_overlay.dart';
 import '../widgets/level_badge.dart';
+import '../widgets/profile_avatar.dart';
 import '../widgets/spectator_controls.dart';
 import '../l10n/app_localizations.dart';
 import '../l10n/l10n_helpers.dart';
@@ -791,22 +792,25 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
             ),
             child: Row(
               children: [
-                if (player.level != null)
-                  LevelBadge(level: player.level, size: 36)
-                else
-                  Container(
-                    width: 36,
-                    height: 36,
-                    decoration: BoxDecoration(
-                      color: const Color(0xFFE8F5E9),
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: const Icon(
-                      Icons.person,
-                      color: Color(0xFF2E7D32),
-                      size: 20,
-                    ),
-                  ),
+                ProfileAvatar(
+                  photoUrl: game.resolvePhotoUrl(player.photoUrl),
+                  size: 36,
+                  fallback: player.level != null
+                      ? LevelBadge(level: player.level, size: 36)
+                      : Container(
+                          width: 36,
+                          height: 36,
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFE8F5E9),
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: const Icon(
+                            Icons.person,
+                            color: Color(0xFF2E7D32),
+                            size: 20,
+                          ),
+                        ),
+                ),
                 const SizedBox(width: 10),
                 Expanded(
                   child: Text(

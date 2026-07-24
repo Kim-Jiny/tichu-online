@@ -725,6 +725,92 @@ function getMaintenanceStatus(locale) {
   };
 }
 
+// ── Profile photo (UGC) upload ──────────────────────────────────────────────
+// See server/deploy/PROFILE_PHOTO_PLAN.md. Reuses hmlove-minio (scoped key).
+const sharp = require('sharp');
+const minioClient = require('./storage/minioClient');
+
+// Short-lived, one-time upload tokens. Issued over the authenticated WS
+// (request_upload_token) and consumed by the HTTP POST /upload/profile-photo —
+// the HTTP request carries no WS identity, so this bridges auth for all login
+// types (regular / social).
+const uploadTokens = new Map(); // token -> { userId, expiresAt }
+const UPLOAD_TOKEN_TTL_MS = 3 * 60 * 1000;
+const UPLOAD_MAX_BYTES = 5 * 1024 * 1024;
+const UPLOAD_ALLOWED_MIME = new Set(['image/jpeg', 'image/png', 'image/webp']);
+
+function httpErr(status, message) { const e = new Error(message); e.statusCode = status; return e; }
+
+function issueUploadToken(userId) {
+  const token = crypto.randomBytes(24).toString('base64url');
+  uploadTokens.set(token, { userId, expiresAt: Date.now() + UPLOAD_TOKEN_TTL_MS });
+  return token;
+}
+function consumeUploadToken(token) {
+  const rec = token && uploadTokens.get(token);
+  if (rec) uploadTokens.delete(token); // one-time use
+  if (!rec || rec.expiresAt < Date.now()) return null;
+  return rec.userId;
+}
+setInterval(() => {
+  const now = Date.now();
+  for (const [t, r] of uploadTokens) if (r.expiresAt < now) uploadTokens.delete(t);
+}, 60000).unref();
+
+// Eligibility: must hold the active (unexpired) profile-photo shop item.
+async function profilePhotoRow(userId) {
+  const { pool } = require('./db/database');
+  const r = await pool.query(
+    'SELECT profile_photo_key, profile_photo_status, profile_photo_expires_at FROM tc_users WHERE id = $1',
+    [userId],
+  );
+  return r.rows[0] || null;
+}
+function isPhotoEligible(row) {
+  return !!row
+    && row.profile_photo_status === 'active'
+    && (!row.profile_photo_expires_at || new Date(row.profile_photo_expires_at) > new Date());
+}
+
+// Parse a single-file multipart upload into a buffer, enforcing size + MIME.
+function parseUploadedImage(req) {
+  const Busboy = require('busboy');
+  return new Promise((resolve, reject) => {
+    let bb;
+    try { bb = Busboy({ headers: req.headers, limits: { files: 1, fileSize: UPLOAD_MAX_BYTES } }); }
+    catch (_) { return reject(httpErr(400, 'bad_request')); }
+    let sawFile = false; let mimeType = null; const chunks = []; let settled = false;
+    const fail = (code, msg) => { if (settled) return; settled = true; try { req.unpipe(bb); } catch (_) {} reject(httpErr(code, msg)); };
+    bb.on('file', (_name, stream, info) => {
+      sawFile = true; mimeType = info && info.mimeType;
+      if (!UPLOAD_ALLOWED_MIME.has(mimeType)) { stream.resume(); return fail(415, 'unsupported_type'); }
+      stream.on('data', (d) => chunks.push(d));
+      stream.on('limit', () => { stream.resume(); fail(413, 'file_too_large'); });
+    });
+    bb.on('error', () => fail(400, 'parse_error'));
+    bb.on('close', () => {
+      if (settled) return;
+      if (!sawFile) return fail(400, 'no_file');
+      settled = true; resolve({ buffer: Buffer.concat(chunks), mimeType });
+    });
+    req.pipe(bb);
+  });
+}
+
+async function handleRequestUploadToken(ws) {
+  if (ws.userId == null) { sendTo(ws, { type: 'upload_token_error', reason: 'not_logged_in' }); return; }
+  if (!minioClient.isEnabled()) { sendTo(ws, { type: 'upload_token_error', reason: 'storage_unavailable' }); return; }
+  try {
+    if (!isPhotoEligible(await profilePhotoRow(ws.userId))) {
+      sendTo(ws, { type: 'upload_token_error', reason: 'no_active_item' });
+      return;
+    }
+    sendTo(ws, { type: 'upload_token', token: issueUploadToken(ws.userId), expiresIn: Math.floor(UPLOAD_TOKEN_TTL_MS / 1000) });
+  } catch (_) {
+    sendTo(ws, { type: 'upload_token_error', reason: 'server_error' });
+  }
+}
+
 // Create HTTP server for health checks (required by Render) and admin dashboard
 const server = http.createServer(async (req, res) => {
   const url = new URL(req.url, `http://${req.headers.host}`);
@@ -779,6 +865,47 @@ const server = http.createServer(async (req, res) => {
   // App Store Server Notifications V2 (public — Apple calls this). Auth is
   // the JWS signature chain verified inside parseAppleNotification, NOT the
   // network, so this must stay reachable through the public edge.
+  // Profile photo upload (multipart). Auth = one-time WS-issued Bearer token.
+  if (pathname === '/upload/profile-photo' && req.method === 'POST') {
+    try {
+      const auth = req.headers['authorization'] || '';
+      const userId = consumeUploadToken(auth.startsWith('Bearer ') ? auth.slice(7) : '');
+      if (userId == null) throw httpErr(401, 'invalid_or_expired_token');
+      if (!minioClient.isEnabled()) throw httpErr(503, 'storage_unavailable');
+      const row = await profilePhotoRow(userId);
+      if (!isPhotoEligible(row)) throw httpErr(403, 'no_active_item');
+
+      const { buffer } = await parseUploadedImage(req);
+      // sharp strips metadata (incl. EXIF/GPS) by default; .rotate() honours the
+      // EXIF orientation first, then squares to 512 and re-encodes as JPEG.
+      const processed = await sharp(buffer)
+        .rotate()
+        .resize(512, 512, { fit: 'cover' })
+        .jpeg({ quality: 85 })
+        .toBuffer();
+
+      const { key, url } = await minioClient.uploadProfilePhoto(userId, processed, 'image/jpeg');
+      const { pool } = require('./db/database');
+      await pool.query('UPDATE tc_users SET profile_photo_key = $1 WHERE id = $2', [key, userId]);
+      if (row.profile_photo_key && row.profile_photo_key !== key) {
+        minioClient.deleteProfilePhoto(row.profile_photo_key); // best-effort, don't await
+      }
+      // Let same-room players see the new photo immediately.
+      const uws = [...wss.clients].find((c) => c.userId === userId);
+      if (uws && uws.roomId) {
+        broadcastGameEvent(uws.roomId, { type: 'profile_photo_updated', playerId: uws.playerId, url });
+      }
+      res.writeHead(200, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ ok: true, url }));
+    } catch (e) {
+      const code = e.statusCode || 500;
+      if (code >= 500) console.error('[profile-photo] upload error:', e);
+      res.writeHead(code, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ error: e.message || 'upload_failed' }));
+    }
+    return;
+  }
+
   if (pathname === '/iap/apple/notifications' && req.method === 'POST') {
     let notif;
     try {
@@ -1799,6 +1926,9 @@ async function handleMessage(ws, data) {
       break;
     case 'login':
       await handleLogin(ws, data);
+      break;
+    case 'request_upload_token':
+      await handleRequestUploadToken(ws);
       break;
     case 'check_nickname':
       await handleCheckNickname(ws, data);

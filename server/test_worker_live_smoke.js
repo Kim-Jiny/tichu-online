@@ -31,7 +31,7 @@ function bootServer() {
   return new Promise((resolve, reject) => {
     const child = spawn('node', ['server.js'], {
       cwd: __dirname,
-      env: { ...process.env, PORT: String(PORT), DIAG: '1', DIAG_BOT_SLOW_MS: '0' },
+      env: { ...process.env, PORT: String(PORT), DIAG: '1', DIAG_BOT_SLOW_MS: '0', DIAG_SUMMARY_MS: '3000' },
     });
     const onData = (d) => {
       logbuf += d.toString();
@@ -180,7 +180,11 @@ async function main() {
 
   check(boughtWorker, 'server did not start the worker pool');
   check(serverSaw(/tichu game started/), 'game never started');
-  check(serverSaw(/via=worker/), 'no bot decision ran in a worker (via=worker missing) — offload not exercised');
+  // Offload is confirmed by the 30s pool summary showing worker compute time
+  // (mc = maxComputeMs, set only when a worker completes a decision). Per-
+  // decision `via=worker` logs were intentionally removed as noise, so the
+  // aggregate is the signal now.
+  check(/\/mc[1-9]/.test(logbuf), 'no worker compute recorded (mc=0) — offload not exercised');
   check(host.rounds >= 1 || host.done, `game did not complete a round (rounds=${host.rounds}, done=${host.done})`);
 
   // Hard failures: async-glue crashes / unhandled rejections / worker breakage.
@@ -215,12 +219,12 @@ async function main() {
   for (const l of bLines.slice(0, 15)) console.log('   ' + l.trim());
 
   // Informational counts.
-  const workerDecisions = (logbuf.match(/via=worker/g) || []).length;
+  const maxMc = Math.max(0, ...(logbuf.match(/\/mc(\d+)/g) || []).map((s) => parseInt(s.slice(3), 10)));
   const botFallbacks = (logbuf.match(/bot-worker-fallback/g) || []).length;
   const actionFailed = (logbuf.match(/\[BOT\].*action failed/g) || []).length;
   const matchSaved = serverSaw(/Match result saved/);
   console.log(`  rounds=${host.rounds} gameEnd=${host.done} matchSaved=${matchSaved}`);
-  console.log(`  worker decisions=${workerDecisions}  worker-fallbacks=${botFallbacks}  bot action-failed=${actionFailed}`);
+  console.log(`  worker max compute=${maxMc}ms  worker-fallbacks=${botFallbacks}  bot action-failed=${actionFailed}`);
   const diagBots = (logbuf.match(/bots=q\S+/g) || []).slice(-1)[0];
   if (diagBots) console.log(`  last DIAG pool stats: ${diagBots}`);
 

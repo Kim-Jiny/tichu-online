@@ -1227,6 +1227,7 @@ const DIAG_ON = process.env.DIAG !== '0';
 const DIAG_SLOW_MS = diagNumberEnv('DIAG_SLOW_MS', 40);
 const DIAG_BOT_SLOW_MS = diagNumberEnv('DIAG_BOT_SLOW_MS', 100);
 const DIAG_STALL_MS = diagNumberEnv('DIAG_STALL_MS', 200);
+const DIAG_SUMMARY_MS = diagNumberEnv('DIAG_SUMMARY_MS', 30000); // baseline summary cadence (lower in tests)
 
 if (DIAG_ON) {
   const DIAG_PROBE_MS = 1000;
@@ -1286,12 +1287,30 @@ if (DIAG_ON) {
       console.log(`[DIAG] STALL ${Math.round(lag)}ms gc=${gcInProbe.toFixed(0)}ms(major=${gcMajorInProbe.toFixed(0)},${gcShare}%) | rss=${(m.rss / MB).toFixed(0)}MB heapUsed=${(m.heapUsed / MB).toFixed(0)}MB heapTotal=${(m.heapTotal / MB).toFixed(0)}MB rooms=${lobby.rooms.size} clients=${wss.clients.size}`);
     }
     // Baseline summary every 30s even when nothing stalls.
-    if (Date.now() - diagLastReport >= 30000) {
+    if (Date.now() - diagLastReport >= DIAG_SUMMARY_MS) {
       const m = process.memoryUsage();
+      // Bot/room health: total bots + "ghost" rooms (an in-progress game with
+      // ZERO humans). Ghost should stay 0 — a room whose last human left/AFK'd
+      // is torn down (closeRoom), so a rising ghost/bot count means rooms (and
+      // their bots) are leaking rather than being cleaned up. Single pass, no
+      // per-room array allocation. ~2.4µs for 100 rooms, once per 30s.
+      let totalBots = 0;
+      let ghostRooms = 0;
+      for (const [, rm] of lobby.rooms) {
+        if (!rm || !Array.isArray(rm.players)) continue;
+        let humans = 0;
+        let bots = 0;
+        for (const p of rm.players) {
+          if (!p) continue;
+          if (p.isBot) bots++; else humans++;
+        }
+        totalBots += bots;
+        if (rm.game && humans === 0) ghostRooms++; // in-game room with no humans
+      }
       const botDiag = botPool
         ? ` bots=q${botPool.queueDepth}/f${botPool.inFlight}/maxq${botPool.stats.maxQueue}/slow${botPool.stats.slow}/stale${botPool.stats.stale}/to${botPool.stats.timeouts}/er${botPool.stats.errors}/mqw${botPool.stats.maxQWaitMs.toFixed(0)}/mc${botPool.stats.maxComputeMs.toFixed(0)}/mt${botPool.stats.maxTotalMs.toFixed(0)}${botPool.disabled ? '/DISABLED' : ''}`
         : '';
-      console.log(`[DIAG] 30s | maxLag=${Math.round(diagMaxLag)}ms gc=${winGcMs.toFixed(0)}ms(major=${winGcMajorMs.toFixed(0)},maxProbe=${winMaxGcProbe.toFixed(0)}) rss=${(m.rss / MB).toFixed(0)}MB heapUsed=${(m.heapUsed / MB).toFixed(0)}MB heapTotal=${(m.heapTotal / MB).toFixed(0)}MB rooms=${lobby.rooms.size} clients=${wss.clients.size}${botDiag}`);
+      console.log(`[DIAG] 30s | maxLag=${Math.round(diagMaxLag)}ms gc=${winGcMs.toFixed(0)}ms(major=${winGcMajorMs.toFixed(0)},maxProbe=${winMaxGcProbe.toFixed(0)}) rss=${(m.rss / MB).toFixed(0)}MB heapUsed=${(m.heapUsed / MB).toFixed(0)}MB heapTotal=${(m.heapTotal / MB).toFixed(0)}MB rooms=${lobby.rooms.size}(bots${totalBots},ghost${ghostRooms}) clients=${wss.clients.size}${botDiag}`);
       diagMaxLag = 0;
       winGcMs = 0;
       winGcMajorMs = 0;

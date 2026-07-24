@@ -49,6 +49,13 @@ services:
       - PORT=3000
       - INSTANCE_NAME=blue
       - BOT_WORKERS=2
+      # Profile photos — reuse hmlove-minio (bucket-scoped key, see .env)
+      - MINIO_ENDPOINT=${MINIO_ENDPOINT}
+      - MINIO_PORT=${MINIO_PORT}
+      - MINIO_USE_SSL=${MINIO_USE_SSL}
+      - MINIO_BUCKET=${MINIO_BUCKET}
+      - MINIO_ACCESS_KEY=${MINIO_ACCESS_KEY}
+      - MINIO_SECRET_KEY=${MINIO_SECRET_KEY}
       - PEER_URL=http://tichu-online-green:3000
       - INTERNAL_MIGRATE_TOKEN=${INTERNAL_MIGRATE_TOKEN}
       - DATABASE_URL=${DATABASE_URL}
@@ -71,6 +78,13 @@ services:
       - PORT=3000
       - INSTANCE_NAME=green
       - BOT_WORKERS=2
+      # Profile photos — reuse hmlove-minio (bucket-scoped key, see .env)
+      - MINIO_ENDPOINT=${MINIO_ENDPOINT}
+      - MINIO_PORT=${MINIO_PORT}
+      - MINIO_USE_SSL=${MINIO_USE_SSL}
+      - MINIO_BUCKET=${MINIO_BUCKET}
+      - MINIO_ACCESS_KEY=${MINIO_ACCESS_KEY}
+      - MINIO_SECRET_KEY=${MINIO_SECRET_KEY}
       - PEER_URL=http://tichu-online-blue:3000
       - INTERNAL_MIGRATE_TOKEN=${INTERNAL_MIGRATE_TOKEN}
       - DATABASE_URL=${DATABASE_URL}

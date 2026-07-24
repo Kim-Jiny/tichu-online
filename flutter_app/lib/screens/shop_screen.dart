@@ -916,8 +916,8 @@ class _ShopScreenState extends State<ShopScreen> {
     }
     for (final g in groups) {
       if (g.length > 1) {
-        g.sort((a, b) => ((a['duration_days'] ?? 0) as int)
-            .compareTo((b['duration_days'] ?? 0) as int));
+        g.sort((a, b) => ((a['duration_days'] as num?)?.toInt() ?? 0)
+            .compareTo((b['duration_days'] as num?)?.toInt() ?? 0));
       }
     }
     return ListView.separated(

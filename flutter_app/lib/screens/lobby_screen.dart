@@ -5389,6 +5389,7 @@ class _LobbyScreenState extends State<LobbyScreen> {
                 child: ProfileAvatar(
                   photoUrl: game.resolvePhotoUrl(player.photoUrl),
                   size: 28,
+                  blocked: game.blockedUsers.contains(player.name),
                   fallback: LevelBadge(level: player.level, size: 28),
                 ),
               ),

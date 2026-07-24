@@ -795,6 +795,7 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
                 ProfileAvatar(
                   photoUrl: game.resolvePhotoUrl(player.photoUrl),
                   size: 36,
+                  blocked: game.blockedUsers.contains(player.name),
                   fallback: player.level != null
                       ? LevelBadge(level: player.level, size: 36)
                       : Container(
@@ -2405,6 +2406,8 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
                                               player.photoUrl,
                                             ),
                                             size: compact ? 14 : 16,
+                                            blocked: game
+                                                .blockedUsers.contains(player.name),
                                             fallback: SizedBox(
                                               width: compact ? 14 : 16,
                                               height: compact ? 14 : 16,

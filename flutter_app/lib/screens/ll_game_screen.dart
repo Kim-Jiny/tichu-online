@@ -541,6 +541,7 @@ class _LLGameScreenState extends State<LLGameScreen> {
                 ProfileAvatar(
                   photoUrl: game.resolvePhotoUrl(p.photoUrl),
                   size: 36,
+                  blocked: game.blockedUsers.contains(p.name),
                   fallback: p.level != null
                       ? LevelBadge(level: p.level, size: 36)
                       : Container(
@@ -1581,6 +1582,9 @@ class _LLGameScreenState extends State<LLGameScreen> {
                                 photoUrl: _gameService
                                     ?.resolvePhotoUrl(player.photoUrl),
                                 size: ultraTight ? 13 : 16,
+                                blocked: _gameService
+                                        ?.blockedUsers.contains(player.name) ??
+                                    false,
                                 fallback: SizedBox(
                                   width: ultraTight ? 13 : 16,
                                   height: ultraTight ? 13 : 16,

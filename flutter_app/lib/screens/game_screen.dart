@@ -2674,7 +2674,9 @@ class _GameScreenState extends State<GameScreen> {
               timeoutCount: partner?.timeoutCount ?? 0,
               teamLabel: _teamForPosition(state, 'partner'),
               isMyTeam: true,
-              photoUrl: game.resolvePhotoUrl(partner?.photoUrl),
+              photoUrl: game.blockedUsers.contains(partner?.name ?? '')
+                  ? null
+                  : game.resolvePhotoUrl(partner?.photoUrl),
             ),
           ),
           const SizedBox(height: 3),
@@ -2725,7 +2727,9 @@ class _GameScreenState extends State<GameScreen> {
                   timeoutCount: left?.timeoutCount ?? 0,
                   teamLabel: _teamForPosition(state, 'left'),
                   isMyTeam: false,
-                  photoUrl: game.resolvePhotoUrl(left?.photoUrl),
+                  photoUrl: game.blockedUsers.contains(left?.name ?? '')
+                      ? null
+                      : game.resolvePhotoUrl(left?.photoUrl),
                 ),
               ),
               Text(
@@ -2767,7 +2771,9 @@ class _GameScreenState extends State<GameScreen> {
                   timeoutCount: right?.timeoutCount ?? 0,
                   teamLabel: _teamForPosition(state, 'right'),
                   isMyTeam: false,
-                  photoUrl: game.resolvePhotoUrl(right?.photoUrl),
+                  photoUrl: game.blockedUsers.contains(right?.name ?? '')
+                      ? null
+                      : game.resolvePhotoUrl(right?.photoUrl),
                 ),
               ),
               Text(

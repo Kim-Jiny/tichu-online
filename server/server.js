@@ -749,6 +749,10 @@ const UPLOAD_ALLOWED_MIME = new Set(['image/jpeg', 'image/png', 'image/webp']);
 function httpErr(status, message) { const e = new Error(message); e.statusCode = status; return e; }
 
 function issueUploadToken(userId) {
+  // Invalidate any prior outstanding token for this user so two concurrent
+  // uploads can't each store a fresh object (only the last DB pointer wins,
+  // orphaning the other). One live token per user.
+  for (const [t, r] of uploadTokens) if (r.userId === userId) uploadTokens.delete(t);
   const token = crypto.randomBytes(24).toString('base64url');
   uploadTokens.set(token, { userId, expiresAt: Date.now() + UPLOAD_TOKEN_TTL_MS });
   return token;
@@ -825,7 +829,9 @@ function parseUploadedImage(req) {
     try { bb = Busboy({ headers: req.headers, limits: { files: 1, fileSize: UPLOAD_MAX_BYTES } }); }
     catch (_) { return reject(httpErr(400, 'bad_request')); }
     let sawFile = false; let mimeType = null; const chunks = []; let settled = false;
-    const fail = (code, msg) => { if (settled) return; settled = true; try { req.unpipe(bb); } catch (_) {} reject(httpErr(code, msg)); };
+    // Drain (resume) after unpiping so a still-uploading client's remaining
+    // body doesn't wedge the socket / block keep-alive reuse on rejection.
+    const fail = (code, msg) => { if (settled) return; settled = true; try { req.unpipe(bb); req.resume(); } catch (_) {} reject(httpErr(code, msg)); };
     bb.on('file', (_name, stream, info) => {
       sawFile = true; mimeType = info && info.mimeType;
       if (!UPLOAD_ALLOWED_MIME.has(mimeType)) { stream.resume(); return fail(415, 'unsupported_type'); }

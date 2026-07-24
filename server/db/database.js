@@ -3004,8 +3004,13 @@ async function adminClearProfilePhoto(nickname) {
       [nickname],
     );
     if (before.rows.length === 0) return { success: false, oldKey: null };
+    // Only drop the photo (key), NOT the paid item status: isPhotoEligible
+    // requires status='active', so setting 'none' here would block the user from
+    // re-uploading a compliant photo within their remaining paid window. Expiry
+    // still gates eligibility, and the hourly cleanup flips status to 'none' when
+    // the window actually ends.
     await client.query(
-      `UPDATE tc_users SET profile_photo_key = NULL, profile_photo_status = 'none' WHERE nickname = $1`,
+      `UPDATE tc_users SET profile_photo_key = NULL WHERE nickname = $1`,
       [nickname],
     );
     return { success: true, oldKey: before.rows[0].profile_photo_key || null };

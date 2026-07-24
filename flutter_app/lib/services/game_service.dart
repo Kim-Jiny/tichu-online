@@ -206,6 +206,9 @@ class GameService extends ChangeNotifier {
     _network.send({'type': 'request_upload_token'});
     Future.delayed(const Duration(seconds: 12), () {
       if (!c.isCompleted) c.complete((token: null, error: 'timeout'));
+      // Clear the field so a late upload_token reply can't call complete() on
+      // this already-completed completer (StateError).
+      if (identical(_uploadTokenCompleter, c)) _uploadTokenCompleter = null;
     });
     return c.future;
   }
@@ -596,17 +599,23 @@ class GameService extends ChangeNotifier {
         break;
 
       case 'upload_token':
-        _uploadTokenCompleter?.complete(
-          (token: data['token'] as String?, error: null),
-        );
-        _uploadTokenCompleter = null;
+        {
+          final c = _uploadTokenCompleter;
+          _uploadTokenCompleter = null;
+          if (c != null && !c.isCompleted) {
+            c.complete((token: data['token'] as String?, error: null));
+          }
+        }
         break;
 
       case 'upload_token_error':
-        _uploadTokenCompleter?.complete(
-          (token: null, error: data['reason'] as String? ?? 'error'),
-        );
-        _uploadTokenCompleter = null;
+        {
+          final c = _uploadTokenCompleter;
+          _uploadTokenCompleter = null;
+          if (c != null && !c.isCompleted) {
+            c.complete((token: null, error: data['reason'] as String? ?? 'error'));
+          }
+        }
         break;
 
       case 'profile_photo_updated':

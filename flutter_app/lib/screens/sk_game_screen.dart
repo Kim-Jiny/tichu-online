@@ -563,6 +563,7 @@ class _SKGameScreenState extends State<SKGameScreen> {
                 ProfileAvatar(
                   photoUrl: game.resolvePhotoUrl(p.photoUrl),
                   size: 36,
+                  blocked: game.blockedUsers.contains(p.name),
                   fallback: p.level != null
                       ? LevelBadge(level: p.level, size: 36)
                       : Container(
@@ -2419,6 +2420,7 @@ class _SKGameScreenState extends State<SKGameScreen> {
                               child: ProfileAvatar(
                                 photoUrl: game.resolvePhotoUrl(p.photoUrl),
                                 size: compact ? 14 : 16,
+                                blocked: game.blockedUsers.contains(p.name),
                                 fallback: SizedBox(
                                   width: compact ? 14 : 16,
                                   height: compact ? 14 : 16,

@@ -462,6 +462,7 @@ class _SpectatorScreenState extends State<SpectatorScreen> {
                   ProfileAvatar(
                     photoUrl: game.resolvePhotoUrl(player.photoUrl),
                     size: 18,
+                    blocked: game.blockedUsers.contains(player.name),
                     fallback: player.level != null
                         ? LevelBadge(level: player.level, size: 18)
                         : const SizedBox(width: 18, height: 18),

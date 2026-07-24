@@ -2831,6 +2831,16 @@ class L10nEn extends L10n {
   String get mtPrevTrick => 'Prev trick';
 
   @override
+  String get profilePhotoChanged => 'Profile photo updated';
+
+  @override
+  String get profilePhotoNeedItem => 'You need an active profile photo pass';
+
+  @override
+  String get profilePhotoUploadFailed =>
+      'Photo upload failed. Please try again';
+
+  @override
   String get mtSetting => 'Setting';
 
   @override

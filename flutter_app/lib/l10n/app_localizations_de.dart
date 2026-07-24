@@ -2846,6 +2846,17 @@ class L10nDe extends L10n {
   String get mtPrevTrick => 'Vorheriger Stich';
 
   @override
+  String get profilePhotoChanged => 'Profilbild aktualisiert';
+
+  @override
+  String get profilePhotoNeedItem =>
+      'Du benötigst einen aktiven Profilbild-Pass';
+
+  @override
+  String get profilePhotoUploadFailed =>
+      'Foto-Upload fehlgeschlagen. Bitte erneut versuchen';
+
+  @override
   String get mtSetting => 'Setting';
 
   @override

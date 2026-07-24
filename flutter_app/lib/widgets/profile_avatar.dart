@@ -27,6 +27,10 @@ class ProfileAvatar extends StatelessWidget {
   /// Optional ring around the avatar (only drawn when a photo is shown).
   final BoxBorder? border;
 
+  /// Corner radius. Null → a circle; a value → a rounded square (to match a
+  /// host surface whose default avatar is a rounded rect).
+  final double? borderRadius;
+
   const ProfileAvatar({
     super.key,
     required this.photoUrl,
@@ -34,6 +38,7 @@ class ProfileAvatar extends StatelessWidget {
     required this.fallback,
     this.blocked = false,
     this.border,
+    this.borderRadius,
   });
 
   @override
@@ -54,18 +59,25 @@ class ProfileAvatar extends StatelessWidget {
       placeholder: (_, _) => fallback,
       errorWidget: (_, _, _) => fallback,
     );
+    final clipped = borderRadius == null
+        ? ClipOval(child: image)
+        : ClipRRect(
+            borderRadius: BorderRadius.circular(borderRadius!),
+            child: image,
+          );
     if (border == null) {
-      return SizedBox(
-        width: size,
-        height: size,
-        child: ClipOval(child: image),
-      );
+      return SizedBox(width: size, height: size, child: clipped);
     }
     return Container(
       width: size,
       height: size,
-      decoration: BoxDecoration(shape: BoxShape.circle, border: border),
-      child: ClipOval(child: image),
+      decoration: BoxDecoration(
+        shape: borderRadius == null ? BoxShape.circle : BoxShape.rectangle,
+        borderRadius:
+            borderRadius == null ? null : BorderRadius.circular(borderRadius!),
+        border: border,
+      ),
+      child: clipped,
     );
   }
 }

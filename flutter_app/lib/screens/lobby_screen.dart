@@ -5,6 +5,7 @@ import 'package:provider/provider.dart';
 import '../l10n/app_localizations.dart';
 import '../l10n/l10n_helpers.dart';
 import '../services/game_service.dart';
+import '../services/profile_photo_service.dart';
 import '../utils/level_curve.dart';
 import '../services/locale_service.dart';
 import '../services/session_service.dart';
@@ -17,6 +18,7 @@ import 'rules_screen.dart';
 import 'friends_screen.dart';
 import '../widgets/connection_overlay.dart';
 import '../widgets/level_badge.dart';
+import '../widgets/profile_avatar.dart';
 import '../widgets/title_chip.dart';
 import '../services/ad_service.dart';
 import '../services/kakao_invite_share_service.dart';
@@ -3810,6 +3812,25 @@ class _LobbyScreenState extends State<LobbyScreen> {
     );
   }
 
+  // Pick + upload a new profile photo for the current user, then surface the
+  // outcome. Eligibility (owning an active photo item) is already gated by the
+  // caller and re-checked server-side at token issuance.
+  Future<void> _changeProfilePhoto(BuildContext ctx, GameService game) async {
+    final l10n = L10n.of(ctx);
+    final messenger = ScaffoldMessenger.of(ctx);
+    final result = await ProfilePhotoService.pickAndUpload(game);
+    if (result.cancelled) return;
+    final String msg;
+    if (result.ok) {
+      msg = l10n.profilePhotoChanged;
+    } else if (result.error == 'no_active_item') {
+      msg = l10n.profilePhotoNeedItem;
+    } else {
+      msg = l10n.profilePhotoUploadFailed;
+    }
+    messenger.showSnackBar(SnackBar(content: Text(msg)));
+  }
+
   // Show user profile dialog with stats.
   // [dialogContext] lets callers (e.g. the Settings screen) open the dialog
   // on top of their own route instead of the lobby — the default falls back
@@ -3854,17 +3875,77 @@ class _LobbyScreenState extends State<LobbyScreen> {
                       children: [
                         Row(
                           children: [
-                            Container(
-                              width: 38,
-                              height: 38,
-                              decoration: BoxDecoration(
-                                color: const Color(0xFFE8F0F7),
-                                borderRadius: BorderRadius.circular(12),
-                              ),
-                              child: const Icon(
-                                Icons.person_outline,
-                                color: Color(0xFF4F6B7A),
-                              ),
+                            Builder(
+                              builder: (_) {
+                                final inner = profile?['profile'] as Map?;
+                                final rawPhoto = isMe
+                                    ? game.myPhotoUrl
+                                    : inner?['photoUrl'] as String?;
+                                const fallback = SizedBox(
+                                  width: 38,
+                                  height: 38,
+                                  child: DecoratedBox(
+                                    decoration: BoxDecoration(
+                                      color: Color(0xFFE8F0F7),
+                                      borderRadius:
+                                          BorderRadius.all(Radius.circular(12)),
+                                    ),
+                                    child: Icon(
+                                      Icons.person_outline,
+                                      color: Color(0xFF4F6B7A),
+                                    ),
+                                  ),
+                                );
+                                final avatar = ProfileAvatar(
+                                  photoUrl: game.resolvePhotoUrl(rawPhoto),
+                                  size: 38,
+                                  borderRadius: 12,
+                                  blocked: isBlockedUser,
+                                  fallback: fallback,
+                                );
+                                if (!isMe) return avatar;
+                                // Own profile: allow changing the photo while
+                                // the paid item is active + unexpired.
+                                final status =
+                                    inner?['profilePhotoStatus'] as String?;
+                                final expRaw = inner?['profilePhotoExpiresAt']
+                                    as String?;
+                                final eligible = status == 'active' &&
+                                    (expRaw == null ||
+                                        (DateTime.tryParse(expRaw)
+                                                ?.isAfter(DateTime.now()) ??
+                                            false));
+                                if (!eligible) return avatar;
+                                return GestureDetector(
+                                  onTap: () => _changeProfilePhoto(ctx, game),
+                                  child: Stack(
+                                    clipBehavior: Clip.none,
+                                    children: [
+                                      avatar,
+                                      Positioned(
+                                        right: -3,
+                                        bottom: -3,
+                                        child: Container(
+                                          padding: const EdgeInsets.all(2),
+                                          decoration: BoxDecoration(
+                                            color: const Color(0xFF6C63FF),
+                                            shape: BoxShape.circle,
+                                            border: Border.all(
+                                              color: Colors.white,
+                                              width: 1.5,
+                                            ),
+                                          ),
+                                          child: const Icon(
+                                            Icons.photo_camera,
+                                            size: 11,
+                                            color: Colors.white,
+                                          ),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                );
+                              },
                             ),
                             const SizedBox(width: 12),
                             Expanded(
@@ -5302,7 +5383,13 @@ class _LobbyScreenState extends State<LobbyScreen> {
             if (player != null && !isBot && player.level != null)
               Padding(
                 padding: const EdgeInsets.only(right: 6),
-                child: LevelBadge(level: player.level, size: 28),
+                // Paid profile photo takes the level-badge spot; the badge is
+                // the fallback so photo-less players look exactly as before.
+                child: ProfileAvatar(
+                  photoUrl: game.resolvePhotoUrl(player.photoUrl),
+                  size: 28,
+                  fallback: LevelBadge(level: player.level, size: 28),
+                ),
               ),
             // Bot badge with speed indicator
             if (isBot)

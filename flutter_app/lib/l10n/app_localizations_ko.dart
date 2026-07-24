@@ -2768,6 +2768,15 @@ class L10nKo extends L10n {
   String get mtPrevTrick => '이전 트릭';
 
   @override
+  String get profilePhotoChanged => '프로필 사진이 변경되었습니다';
+
+  @override
+  String get profilePhotoNeedItem => '프로필 사진 이용권이 필요합니다';
+
+  @override
+  String get profilePhotoUploadFailed => '사진 업로드에 실패했습니다. 다시 시도해 주세요';
+
+  @override
   String get mtSetting => '세팅';
 
   @override

@@ -5169,6 +5169,24 @@ abstract class L10n {
   /// **'Prev trick'**
   String get mtPrevTrick;
 
+  /// No description provided for @profilePhotoChanged.
+  ///
+  /// In en, this message translates to:
+  /// **'Profile photo updated'**
+  String get profilePhotoChanged;
+
+  /// No description provided for @profilePhotoNeedItem.
+  ///
+  /// In en, this message translates to:
+  /// **'You need an active profile photo pass'**
+  String get profilePhotoNeedItem;
+
+  /// No description provided for @profilePhotoUploadFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Photo upload failed. Please try again'**
+  String get profilePhotoUploadFailed;
+
   /// No description provided for @mtSetting.
   ///
   /// In en, this message translates to:

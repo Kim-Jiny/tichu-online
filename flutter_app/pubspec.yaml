@@ -70,6 +70,7 @@ dependencies:
   # The app is otherwise WS-only, so these are the first http/image deps.
   image_picker: ^1.1.2
   http: ^1.2.2
+  http_parser: ^4.0.2 # MediaType for the multipart upload Content-Type
   cached_network_image: ^3.4.1
 
 dev_dependencies:

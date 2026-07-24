@@ -180,6 +180,36 @@ class GameService extends ChangeNotifier {
   /// active server host. Used by avatar widgets.
   String? resolvePhotoUrl(String? url) => _network.resolveMediaUrl(url);
 
+  /// HTTP(S) base for the profile-photo upload endpoint.
+  String get httpBase => _network.httpBase;
+
+  /// Apply a freshly uploaded (or cleared) own avatar URL locally. The server
+  /// also broadcasts profile_photo_updated when in a room, but this covers the
+  /// lobby case where there's no room to broadcast to.
+  void setMyPhotoUrl(String? url) {
+    myPhotoUrl = url;
+    notifyListeners();
+  }
+
+  // One-time upload token bridge: request_upload_token (WS) -> upload_token /
+  // upload_token_error. The HTTP multipart upload authenticates with the token.
+  Completer<({String? token, String? error})>? _uploadTokenCompleter;
+
+  /// Ask the server for a short-lived upload token. Resolves with the token, or
+  /// an error reason (not_logged_in / storage_unavailable / no_active_item /
+  /// server_error / timeout). Coalesces concurrent requests.
+  Future<({String? token, String? error})> requestUploadToken() {
+    final existing = _uploadTokenCompleter;
+    if (existing != null && !existing.isCompleted) return existing.future;
+    final c = Completer<({String? token, String? error})>();
+    _uploadTokenCompleter = c;
+    _network.send({'type': 'request_upload_token'});
+    Future.delayed(const Duration(seconds: 12), () {
+      if (!c.isCompleted) c.complete((token: null, error: 'timeout'));
+    });
+    return c.future;
+  }
+
   // Report result
   String? reportResultMessage;
   bool? reportResultSuccess;
@@ -563,6 +593,20 @@ class GameService extends ChangeNotifier {
         // so it MUST run after login_success — not on raw WS connect.
         _network.flushRetryQueue();
         notifyListeners();
+        break;
+
+      case 'upload_token':
+        _uploadTokenCompleter?.complete(
+          (token: data['token'] as String?, error: null),
+        );
+        _uploadTokenCompleter = null;
+        break;
+
+      case 'upload_token_error':
+        _uploadTokenCompleter?.complete(
+          (token: null, error: data['reason'] as String? ?? 'error'),
+        );
+        _uploadTokenCompleter = null;
         break;
 
       case 'profile_photo_updated':

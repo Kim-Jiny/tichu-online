@@ -534,6 +534,9 @@ const RANDOM_SEATING_MIN_VERSION = '2.3.0';
 // purchased new banner would silently fall back to the default look — gate
 // show/buy on this version to avoid a "bought but invisible" UX.
 const NEW_BANNER_MIN_VERSION = '2.4.0';
+// Profile photo (UGC) client. Older clients have no upload UI, so the shop
+// items are hidden from them. Bump to match the actual release version.
+const PROFILE_PHOTO_MIN_VERSION = '2.8.0';
 // SK_EXPANSION_UPDATE_MESSAGE removed – now uses t(locale, 'sk_expansion_update_required')
 
 function compareVersions(v1, v2) {
@@ -575,6 +578,10 @@ function clientSupportsRandomSeating(ws) {
 
 function clientSupportsNewBanners(ws) {
   return compareVersions(ws.appVersion, NEW_BANNER_MIN_VERSION) >= 0;
+}
+
+function clientSupportsProfilePhoto(ws) {
+  return compareVersions(ws.appVersion, PROFILE_PHOTO_MIN_VERSION) >= 0;
 }
 
 function itemRequiresMightyClient(itemKey) {
@@ -6873,6 +6880,10 @@ async function handleGetShopItems(ws) {
     }
     if (!clientSupportsNewBanners(ws)) {
       result.items = result.items.filter((item) => !itemRequiresNewBannerClient(item.item_key));
+    }
+    if (!clientSupportsProfilePhoto(ws)) {
+      // Older clients have no upload UI — hide the profile-photo shop items.
+      result.items = result.items.filter((item) => item.effect_type !== 'profile_photo');
     }
   }
   sendTo(ws, { type: 'shop_items_result', ...result });

@@ -680,15 +680,20 @@ async function initDatabase() {
         ('leave_reduce_1', '탈주 카운트 -1', '탈주 카운트 -1', 'Leave Count -1', 'Flucht-Zähler -1', 'utility', 150, FALSE, TRUE, NULL, TRUE, 'leave_count_reduce', 1, '{}'::jsonb),
         ('leave_reduce_3', '탈주 카운트 -3', '탈주 카운트 -3', 'Leave Count -3', 'Flucht-Zähler -3', 'utility', 400, FALSE, TRUE, NULL, TRUE, 'leave_count_reduce', 3, '{}'::jsonb),
         ('nickname_change', '닉네임 변경권', '닉네임 변경권', 'Nickname Change', 'Nickname-Änderung', 'utility', 500, FALSE, TRUE, NULL, TRUE, 'nickname_change', NULL, '{}'::jsonb),
-        ('top_card_counter_7d', '티츄 탑패 카운터(7일)', '티츄 탑패 카운터(7일)', 'Tichu Top Card Counter (7d)', 'Tichu-Trumpfzähler (7T)', 'utility', 1000, FALSE, FALSE, 7, TRUE, NULL, NULL, '{}'::jsonb),
+        ('top_card_counter_7d', '티츄 탑패 카운터(7일)', '티츄 탑패 카운터(7일)', 'Tichu Top Card Counter (7d)', 'Tichu-Trumpfzähler (7T)', 'utility', 1000, FALSE, FALSE, 7, TRUE, 'top_card_counter', NULL, '{}'::jsonb),
+        ('top_card_counter_30d', '티츄 탑패 카운터(30일)', '티츄 탑패 카운터(30일)', 'Tichu Top Card Counter (30d)', 'Tichu-Trumpfzähler (30T)', 'utility', 3000, FALSE, FALSE, 30, TRUE, 'top_card_counter', NULL, '{}'::jsonb),
         ('stats_reset', '전적 초기화권', '전적 초기화권', 'Stats Reset', 'Statistik-Reset', 'utility', 2000, FALSE, TRUE, NULL, TRUE, 'stats_reset', NULL, '{}'::jsonb),
         ('season_stats_reset', '전체 랭킹전적 초기화권', '전체 랭킹전적 초기화권', 'All Ranked Stats Reset', 'Alle-Ranglistenstatistik-Reset', 'utility', 1500, FALSE, TRUE, NULL, TRUE, 'season_stats_reset', NULL, '{}'::jsonb),
         ('tichu_season_stats_reset', '티츄 랭킹전적 초기화권', '티츄 랭킹전적 초기화권', 'Tichu Ranked Stats Reset', 'Tichu-Ranglistenstatistik-Reset', 'utility', 700, FALSE, TRUE, NULL, TRUE, 'tichu_season_stats_reset', NULL, '{}'::jsonb),
         ('sk_season_stats_reset', '스컬킹 랭킹전적 초기화권', '스컬킹 랭킹전적 초기화권', 'Skull King Ranked Stats Reset', 'Skull-King-Ranglistenstatistik-Reset', 'utility', 700, FALSE, TRUE, NULL, TRUE, 'sk_season_stats_reset', NULL, '{}'::jsonb),
         ('mighty_season_stats_reset', '마이티 랭킹전적 초기화권', '마이티 랭킹전적 초기화권', 'Mighty Ranked Stats Reset', 'Mighty-Ranglistenstatistik-Reset', 'utility', 700, FALSE, TRUE, NULL, TRUE, 'mighty_season_stats_reset', NULL, '{}'::jsonb),
         ('leave_reset', '탈주 카운트 초기화', '탈주 카운트 초기화', 'Leave Count Reset', 'Flucht-Zähler-Reset', 'utility', 2000, FALSE, TRUE, NULL, TRUE, 'leave_count_reset', NULL, '{}'::jsonb),
-        ('mighty_trump_counter_7d', '마이티 기루다 카운터(7일)', '마이티 기루다 카운터(7일)', 'Mighty Trump Counter (7d)', 'Mighty-Trumpfzähler (7T)', 'utility', 1000, FALSE, FALSE, 7, TRUE, NULL, NULL, '{}'::jsonb),
-        ('mighty_prev_trick_7d', '마이티 이전 트릭 확인(7일)', '마이티 이전 트릭 확인(7일)', 'Mighty Previous Trick Viewer (7d)', 'Mighty-Vorheriger-Stich-Anzeige (7T)', 'utility', 1000, FALSE, FALSE, 7, TRUE, NULL, NULL, '{}'::jsonb),
+        ('mighty_trump_counter_7d', '마이티 기루다 카운터(7일)', '마이티 기루다 카운터(7일)', 'Mighty Trump Counter (7d)', 'Mighty-Trumpfzähler (7T)', 'utility', 1000, FALSE, FALSE, 7, TRUE, 'mighty_trump_counter', NULL, '{}'::jsonb),
+        ('mighty_trump_counter_30d', '마이티 기루다 카운터(30일)', '마이티 기루다 카운터(30일)', 'Mighty Trump Counter (30d)', 'Mighty-Trumpfzähler (30T)', 'utility', 3000, FALSE, FALSE, 30, TRUE, 'mighty_trump_counter', NULL, '{}'::jsonb),
+        ('mighty_prev_trick_7d', '마이티 이전 트릭 확인(7일)', '마이티 이전 트릭 확인(7일)', 'Mighty Previous Trick Viewer (7d)', 'Mighty-Vorheriger-Stich-Anzeige (7T)', 'utility', 1000, FALSE, FALSE, 7, TRUE, 'mighty_prev_trick', NULL, '{}'::jsonb),
+        ('mighty_prev_trick_30d', '마이티 이전 트릭 확인(30일)', '마이티 이전 트릭 확인(30일)', 'Mighty Previous Trick Viewer (30d)', 'Mighty-Vorheriger-Stich-Anzeige (30T)', 'utility', 3000, FALSE, FALSE, 30, TRUE, 'mighty_prev_trick', NULL, '{}'::jsonb),
+        ('profile_photo_7d', '프로필 사진(7일)', '프로필 사진(7일)', 'Profile Photo (7d)', 'Profilbild (7T)', 'feature', 1000, FALSE, FALSE, 7, TRUE, 'profile_photo', NULL, '{}'::jsonb),
+        ('profile_photo_30d', '프로필 사진(30일)', '프로필 사진(30일)', 'Profile Photo (30d)', 'Profilbild (30T)', 'feature', 3000, FALSE, FALSE, 30, TRUE, 'profile_photo', NULL, '{}'::jsonb),
         ('banner_season_gold', '티츄 시즌 골드 배너', '티츄 시즌 골드 배너', 'Tichu Season Gold Banner', 'Tichu-Saison-Gold-Banner', 'banner', 0, TRUE, FALSE, 30, FALSE, NULL, NULL, '{}'::jsonb),
         ('banner_season_silver', '티츄 시즌 실버 배너', '티츄 시즌 실버 배너', 'Tichu Season Silver Banner', 'Tichu-Saison-Silber-Banner', 'banner', 0, TRUE, FALSE, 30, FALSE, NULL, NULL, '{}'::jsonb),
         ('banner_season_bronze', '티츄 시즌 브론즈 배너', '티츄 시즌 브론즈 배너', 'Tichu Season Bronze Banner', 'Tichu-Saison-Bronze-Banner', 'banner', 0, TRUE, FALSE, 30, FALSE, NULL, NULL, '{}'::jsonb),
@@ -705,7 +710,10 @@ async function initDatabase() {
         name_de = EXCLUDED.name_de,
         price = EXCLUDED.price,
         is_permanent = EXCLUDED.is_permanent,
-        duration_days = EXCLUDED.duration_days
+        duration_days = EXCLUDED.duration_days,
+        category = EXCLUDED.category,
+        effect_type = EXCLUDED.effect_type,
+        effect_value = EXCLUDED.effect_value
       `
     );
 
@@ -1707,32 +1715,21 @@ async function getUserProfile(nickname, locale = 'ko') {
     );
     const reportCount = parseInt(reportRes.rows[0].count, 10) || 0;
 
-    // Check active top card counter item
-    const topCardRes = await client.query(
-      `SELECT 1 FROM tc_user_items
-       WHERE nickname = $1 AND item_key = 'top_card_counter_7d'
-         AND (expires_at IS NULL OR expires_at >= NOW()) LIMIT 1`,
-      [nickname]
-    );
-    const hasTopCardCounter = topCardRes.rows.length > 0;
-
-    // Check active mighty trump counter item
-    const mightyTrumpRes = await client.query(
-      `SELECT 1 FROM tc_user_items
-       WHERE nickname = $1 AND item_key = 'mighty_trump_counter_7d'
-         AND (expires_at IS NULL OR expires_at >= NOW()) LIMIT 1`,
-      [nickname]
-    );
-    const hasMightyTrumpCounter = mightyTrumpRes.rows.length > 0;
-
-    // Check active mighty previous-trick viewer item
-    const mightyPrevTrickRes = await client.query(
-      `SELECT 1 FROM tc_user_items
-       WHERE nickname = $1 AND item_key = 'mighty_prev_trick_7d'
-         AND (expires_at IS NULL OR expires_at >= NOW()) LIMIT 1`,
-      [nickname]
-    );
-    const hasMightyPrevTrick = mightyPrevTrickRes.rows.length > 0;
+    // Feature gates are keyed by effect_type (the feature), not a single
+    // item_key, so any duration tier (7d / 30d / future) enables the feature.
+    const featureActive = async (effectType) => {
+      const r = await client.query(
+        `SELECT 1 FROM tc_user_items ui
+         JOIN tc_shop_items si ON si.item_key = ui.item_key
+         WHERE ui.nickname = $1 AND si.effect_type = $2
+           AND (ui.expires_at IS NULL OR ui.expires_at >= NOW()) LIMIT 1`,
+        [nickname, effectType],
+      );
+      return r.rows.length > 0;
+    };
+    const hasTopCardCounter = await featureActive('top_card_counter');
+    const hasMightyTrumpCounter = await featureActive('mighty_trump_counter');
+    const hasMightyPrevTrick = await featureActive('mighty_prev_trick');
 
     const skWinRate = user.sk_total_games > 0
       ? Math.round((user.sk_wins / user.sk_total_games) * 100)
@@ -2402,6 +2399,70 @@ async function buyItem(nickname, itemKey) {
     if (gold < item.price) {
       await client.query('ROLLBACK');
       return { success: false, messageKey: 'db_insufficient_gold' };
+    }
+
+    // ── Feature items: capability-for-N-days grouped by effect_type so tiers
+    // (7d / 30d) cross-extend a single expiry instead of stacking rows. ──────
+    // Profile photo lives on tc_users (the upload gate reads it there).
+    if (item.effect_type === 'profile_photo') {
+      const days = item.duration_days || 30;
+      await client.query(
+        `UPDATE tc_users
+         SET gold = gold - $2,
+             profile_photo_status = 'active',
+             profile_photo_expires_at = CASE
+               WHEN profile_photo_expires_at IS NULL OR profile_photo_expires_at < NOW()
+                 THEN NOW() + ($3 || ' days')::interval
+               ELSE profile_photo_expires_at + ($3 || ' days')::interval
+             END
+         WHERE nickname = $1`,
+        [nickname, item.price, days],
+      );
+      await client.query(
+        `INSERT INTO tc_gold_history (nickname, gold_delta, source, title, description)
+         VALUES ($1, $2, 'shop_purchase', $3, 'shop_purchase')`,
+        [nickname, -item.price, `${item.name_ko}|${item.name_en}|${item.name_de}`],
+      );
+      await client.query('COMMIT');
+      return { success: true, profilePhoto: true };
+    }
+    // Gameplay counters/viewers: extend any active tier of the same feature.
+    const FEATURE_EFFECTS = new Set(['top_card_counter', 'mighty_trump_counter', 'mighty_prev_trick']);
+    if (FEATURE_EFFECTS.has(item.effect_type)) {
+      const days = item.duration_days || 30;
+      const existing = await client.query(
+        `SELECT ui.item_key FROM tc_user_items ui
+         JOIN tc_shop_items si ON si.item_key = ui.item_key
+         WHERE ui.nickname = $1 AND si.effect_type = $2
+           AND (ui.expires_at IS NULL OR ui.expires_at >= NOW())
+         ORDER BY ui.expires_at DESC NULLS LAST LIMIT 1`,
+        [nickname, item.effect_type],
+      );
+      if (existing.rows.length > 0) {
+        await client.query(
+          `UPDATE tc_user_items
+           SET expires_at = CASE
+             WHEN expires_at IS NULL OR expires_at < NOW() THEN NOW() + ($2 || ' days')::interval
+             ELSE expires_at + ($2 || ' days')::interval
+           END
+           WHERE nickname = $1 AND item_key = $3`,
+          [nickname, days, existing.rows[0].item_key],
+        );
+      } else {
+        await client.query(
+          `INSERT INTO tc_user_items (nickname, item_key, expires_at, is_active, source)
+           VALUES ($1, $2, NOW() + ($3 || ' days')::interval, FALSE, 'shop')`,
+          [nickname, itemKey, days],
+        );
+      }
+      await client.query(`UPDATE tc_users SET gold = gold - $2 WHERE nickname = $1`, [nickname, item.price]);
+      await client.query(
+        `INSERT INTO tc_gold_history (nickname, gold_delta, source, title, description)
+         VALUES ($1, $2, 'shop_purchase', $3, 'shop_purchase')`,
+        [nickname, -item.price, `${item.name_ko}|${item.name_en}|${item.name_de}`],
+      );
+      await client.query('COMMIT');
+      return { success: true, extended: existing.rows.length > 0 };
     }
 
     // Prevent duplicate ownership / extend duration for temp items

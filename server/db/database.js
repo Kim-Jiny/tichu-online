@@ -1688,6 +1688,7 @@ async function getUserProfile(nickname, locale = 'ko') {
               u.mighty_total_games, u.mighty_wins, u.mighty_losses, u.mighty_rating,
               u.mighty_season_rating, u.mighty_season_games, u.mighty_season_wins, u.mighty_season_losses,
               u.card_view_pref,
+              u.profile_photo_key, u.profile_photo_status, u.profile_photo_expires_at,
               e.banner_key, e.theme_key, e.title_key,
               si.${titleCol} AS title_name
        FROM tc_users u
@@ -1797,6 +1798,9 @@ async function getUserProfile(nickname, locale = 'ko') {
       mightySeasonLosses: user.mighty_season_losses,
       mightySeasonWinRate,
       cardViewPref: user.card_view_pref || 'ask',
+      profilePhotoKey: user.profile_photo_key || null,
+      profilePhotoStatus: user.profile_photo_status || 'none',
+      profilePhotoExpiresAt: user.profile_photo_expires_at || null,
     };
   } catch (err) {
     console.error('Get user profile error:', err);

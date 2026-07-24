@@ -779,6 +779,44 @@ function isPhotoEligible(row) {
     && (!row.profile_photo_expires_at || new Date(row.profile_photo_expires_at) > new Date());
 }
 
+// Public avatar URL from a getUserProfile() result, only while the paid photo
+// is active + unexpired. Null → client shows the default avatar.
+function profilePhotoUrlFrom(profile) {
+  if (!profile || profile.profilePhotoStatus !== 'active' || !profile.profilePhotoKey) return null;
+  if (profile.profilePhotoExpiresAt && new Date(profile.profilePhotoExpiresAt) <= new Date()) return null;
+  return minioClient.publicUrl(profile.profilePhotoKey);
+}
+
+// Sweep profile photos whose paid duration has lapsed: delete the object from
+// storage and reset the row to 'none' so serialize() stops surfacing it. The
+// counter items expire via tc_user_items (cleanupExpiredItems); profile photos
+// live on tc_users and need this dedicated pass. Best-effort — a failed minio
+// delete leaves an orphan object but still clears the DB pointer on retry.
+async function cleanupExpiredProfilePhotos() {
+  if (!minioClient.isEnabled()) return;
+  try {
+    const { pool } = require('./db/database');
+    const expired = await pool.query(
+      `SELECT id, profile_photo_key FROM tc_users
+       WHERE profile_photo_status = 'active'
+         AND profile_photo_expires_at IS NOT NULL
+         AND profile_photo_expires_at < NOW()`,
+    );
+    for (const u of expired.rows) {
+      if (u.profile_photo_key) await minioClient.deleteProfilePhoto(u.profile_photo_key);
+      await pool.query(
+        `UPDATE tc_users SET profile_photo_key = NULL, profile_photo_status = 'none' WHERE id = $1`,
+        [u.id],
+      );
+    }
+    if (expired.rows.length) {
+      console.log(`[profile-photo] cleaned up ${expired.rows.length} expired photo(s)`);
+    }
+  } catch (e) {
+    console.error('[profile-photo] cleanup error:', e && e.message);
+  }
+}
+
 // Parse a single-file multipart upload into a buffer, enforcing size + MIME.
 function parseUploadedImage(req) {
   const Busboy = require('busboy');
@@ -897,10 +935,17 @@ const server = http.createServer(async (req, res) => {
       if (row.profile_photo_key && row.profile_photo_key !== key) {
         minioClient.deleteProfilePhoto(row.profile_photo_key); // best-effort, don't await
       }
-      // Let same-room players see the new photo immediately.
+      // Let same-room players see the new photo immediately, and keep ws +
+      // the in-room player object in sync so later re-serializations carry it.
       const uws = [...wss.clients].find((c) => c.userId === userId);
-      if (uws && uws.roomId) {
-        broadcastGameEvent(uws.roomId, { type: 'profile_photo_updated', playerId: uws.playerId, url });
+      if (uws) {
+        uws.photoUrl = url;
+        if (uws.roomId) {
+          const room = lobby.getRoom(uws.roomId);
+          const player = room?.players?.find((p) => p && p.id === uws.playerId);
+          if (player) player.photoUrl = url;
+          broadcastGameEvent(uws.roomId, { type: 'profile_photo_updated', playerId: uws.playerId, url });
+        }
       }
       res.writeHead(200, { 'Content-Type': 'application/json' });
       res.end(JSON.stringify({ ok: true, url }));
@@ -1535,6 +1580,8 @@ function localizeTitleName(titleKey, fallbackName, locale) {
   await refreshTitleTranslations();
   await loadMaintenanceConfig();
   await ensureSeasonCycle();
+  await cleanupExpiredProfilePhotos();
+  setInterval(cleanupExpiredProfilePhotos, 60 * 60 * 1000).unref();
 
   server.listen(PORT, () => {
     console.log(`Tichu server running on port ${PORT} (instance=${INSTANCE_NAME})`);
@@ -1579,6 +1626,7 @@ function serializeRoom(room) {
         titleName: p.titleName || null,
         level: p.isBot ? null : (p.level || 1),
         bannerKey: p.isBot ? null : (p.bannerKey || null),
+        photoUrl: p.isBot ? null : (p.photoUrl || null),
         seasonRating: p.isBot ? null : (p.seasonRating ?? null),
         skSeasonRating: p.isBot ? null : (p.skSeasonRating ?? null),
         mightySeasonRating: p.isBot ? null : (p.mightySeasonRating ?? null),
@@ -2753,6 +2801,11 @@ async function handleReconnection(ws) {
   ws.titleKey = titleKey;
   ws.titleName = titleName;
   ws.bannerKey = bannerKey;
+  // Public avatar URL, only while the paid photo is active + unexpired. Null
+  // falls the client back to the default avatar. The object itself is publicly
+  // fetchable, so per-viewer block filtering is done client-side (except the
+  // profile popup, which the server already filters by isBlocked).
+  ws.photoUrl = profilePhotoUrlFrom(profile);
   ws.level = (profile && Number.isFinite(profile.level)) ? profile.level : 1;
   ws.seasonRating = Number.isFinite(profile?.seasonRating) ? profile.seasonRating : null;
   ws.skSeasonRating = Number.isFinite(profile?.skSeasonRating) ? profile.skSeasonRating : null;
@@ -2998,6 +3051,7 @@ async function handleReconnection(ws) {
         }
         player.level = ws.level || 1;
         player.bannerKey = ws.bannerKey;
+        player.photoUrl = ws.photoUrl || null;
         player.seasonRating = ws.seasonRating;
         player.skSeasonRating = ws.skSeasonRating;
         player.mightySeasonRating = ws.mightySeasonRating;
@@ -3059,6 +3113,7 @@ async function handleReconnection(ws) {
     pushAdminPayment: ws.pushAdminPayment !== false,
     maintenanceStatus: getMaintenanceStatus(ws.locale),
     cardViewPref: ws.cardViewPref || 'ask',
+    photoUrl: ws.photoUrl || null,
   });
   sendTo(ws, {
     type: 'room_list',
@@ -3161,6 +3216,7 @@ function handleCreateRoom(ws, data) {
   }
   room.players[0].level = ws.level || 1;
   room.players[0].bannerKey = ws.bannerKey;
+  room.players[0].photoUrl = ws.photoUrl || null;
   room.players[0].seasonRating = ws.seasonRating;
   room.players[0].skSeasonRating = ws.skSeasonRating;
   room.players[0].mightySeasonRating = ws.mightySeasonRating;
@@ -3218,6 +3274,7 @@ async function handleJoinRoom(ws, data) {
       }
       p.level = ws.level || 1;
       p.bannerKey = ws.bannerKey;
+      p.photoUrl = ws.photoUrl || null;
       p.seasonRating = ws.seasonRating;
       p.skSeasonRating = ws.skSeasonRating;
       p.mightySeasonRating = ws.mightySeasonRating;
@@ -4109,6 +4166,7 @@ function handleSwitchToPlayer(ws, data) {
       }
       p.level = ws.level || 1;
       p.bannerKey = ws.bannerKey;
+      p.photoUrl = ws.photoUrl || null;
       p.seasonRating = ws.seasonRating;
       p.skSeasonRating = ws.skSeasonRating;
       p.mightySeasonRating = ws.mightySeasonRating;
@@ -4136,6 +4194,9 @@ async function handleGetProfile(ws, data) {
   const profile = await getUserProfile(targetNickname, ws.locale || 'ko');
   const recentMatches = await getRecentMatches(targetNickname, 20);
   const isBlocked = (await getBlockedUsers(ws.nickname)).includes(targetNickname);
+  // Attach the resolved avatar URL; hide it from viewers who blocked the target
+  // so an offensive photo can't be forced on someone who opted out.
+  if (profile) profile.photoUrl = isBlocked ? null : profilePhotoUrlFrom(profile);
   sendTo(ws, {
     type: 'profile_result',
     nickname: targetNickname,

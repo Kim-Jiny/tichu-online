@@ -119,6 +119,7 @@ class LobbyManager {
             titleName: p.titleName || null,
             level: typeof p.level === 'number' ? p.level : null,
             bannerKey: p.bannerKey || null,
+            photoUrl: p.photoUrl || null,
             seasonRating: typeof p.seasonRating === 'number' ? p.seasonRating : null,
             skSeasonRating: typeof p.skSeasonRating === 'number' ? p.skSeasonRating : null,
             mightySeasonRating: typeof p.mightySeasonRating === 'number' ? p.mightySeasonRating : null,

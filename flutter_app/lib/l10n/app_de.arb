@@ -264,6 +264,7 @@
   "lobbyReportReasonAbuse": "Beleidigung/Beschimpfung",
   "lobbyReportReasonSpam": "Spam/Flooding",
   "lobbyReportReasonNickname": "Unangemessener Spitzname",
+  "lobbyReportReasonPhoto": "Unangemessenes Profilbild",
   "lobbyReportReasonGameplay": "Spielstörung",
   "lobbyReportReasonOther": "Sonstiges",
   "lobbyProfileNotFound": "Profil nicht gefunden",

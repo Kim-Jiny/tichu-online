@@ -801,6 +801,9 @@ class L10nEn extends L10n {
   String get lobbyReportReasonNickname => 'Inappropriate Nickname';
 
   @override
+  String get lobbyReportReasonPhoto => 'Inappropriate profile photo';
+
+  @override
   String get lobbyReportReasonGameplay => 'Gameplay Disruption';
 
   @override

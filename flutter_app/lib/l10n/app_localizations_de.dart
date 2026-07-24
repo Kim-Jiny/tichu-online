@@ -811,6 +811,9 @@ class L10nDe extends L10n {
   String get lobbyReportReasonNickname => 'Unangemessener Spitzname';
 
   @override
+  String get lobbyReportReasonPhoto => 'Unangemessenes Profilbild';
+
+  @override
   String get lobbyReportReasonGameplay => 'Spielstörung';
 
   @override

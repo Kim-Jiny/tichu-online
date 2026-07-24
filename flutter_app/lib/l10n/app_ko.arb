@@ -256,6 +256,7 @@
   "lobbyReportReasonAbuse": "욕설/비방",
   "lobbyReportReasonSpam": "도배/스팸",
   "lobbyReportReasonNickname": "부적절한 닉네임",
+  "lobbyReportReasonPhoto": "부적절한 프로필 사진",
   "lobbyReportReasonGameplay": "게임 방해",
   "lobbyReportReasonOther": "기타",
   "lobbyProfileNotFound": "프로필을 찾을 수 없습니다",

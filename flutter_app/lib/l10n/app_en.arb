@@ -327,6 +327,7 @@
   "lobbyReportReasonAbuse": "Abuse/Insults",
   "lobbyReportReasonSpam": "Spam/Flooding",
   "lobbyReportReasonNickname": "Inappropriate Nickname",
+  "lobbyReportReasonPhoto": "Inappropriate profile photo",
   "lobbyReportReasonGameplay": "Gameplay Disruption",
   "lobbyReportReasonOther": "Other",
   "lobbyProfileNotFound": "Profile not found",

@@ -3630,6 +3630,7 @@ class _LobbyScreenState extends State<LobbyScreen> {
       l10n.lobbyReportReasonAbuse,
       l10n.lobbyReportReasonSpam,
       l10n.lobbyReportReasonNickname,
+      l10n.lobbyReportReasonPhoto,
       l10n.lobbyReportReasonGameplay,
       l10n.lobbyReportReasonOther,
     ];

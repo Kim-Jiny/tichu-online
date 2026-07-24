@@ -776,6 +776,9 @@ class L10nKo extends L10n {
   String get lobbyReportReasonNickname => '부적절한 닉네임';
 
   @override
+  String get lobbyReportReasonPhoto => '부적절한 프로필 사진';
+
+  @override
   String get lobbyReportReasonGameplay => '게임 방해';
 
   @override

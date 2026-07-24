@@ -1569,6 +1569,12 @@ abstract class L10n {
   /// **'Inappropriate Nickname'**
   String get lobbyReportReasonNickname;
 
+  /// No description provided for @lobbyReportReasonPhoto.
+  ///
+  /// In en, this message translates to:
+  /// **'Inappropriate profile photo'**
+  String get lobbyReportReasonPhoto;
+
   /// No description provided for @lobbyReportReasonGameplay.
   ///
   /// In en, this message translates to:

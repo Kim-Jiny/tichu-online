@@ -1573,6 +1573,20 @@ class _LLGameScreenState extends State<LLGameScreen> {
                                 shape: BoxShape.circle,
                               ),
                             ),
+                          if (player.photoUrl != null)
+                            Padding(
+                              padding:
+                                  EdgeInsets.only(right: ultraTight ? 2 : 3),
+                              child: ProfileAvatar(
+                                photoUrl: _gameService
+                                    ?.resolvePhotoUrl(player.photoUrl),
+                                size: ultraTight ? 13 : 16,
+                                fallback: SizedBox(
+                                  width: ultraTight ? 13 : 16,
+                                  height: ultraTight ? 13 : 16,
+                                ),
+                              ),
+                            ),
                           Flexible(
                             child: Text(
                               player.name,

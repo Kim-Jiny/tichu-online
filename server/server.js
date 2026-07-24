@@ -4671,9 +4671,15 @@ function _broadcastState(roomId, room) {
 
   // Build connection status map (skip null slots)
   const connectionStatus = {};
+  // Avatar URLs by player id. The game state (getStateForPlayer) only knows
+  // ids/names, so we splice in each player's active profile photo from the room
+  // during the decoration pass below — this is what puts avatars on in-play
+  // nameplates across all game types without touching the game classes.
+  const photoByPid = {};
   for (const player of room.players) {
     if (player === null) continue;
     connectionStatus[player.id] = player.connected !== false;
+    if (player.photoUrl) photoByPid[player.id] = player.photoUrl;
   }
 
   const spectatorList = room.spectators.map((s) => ({ id: s.id, nickname: s.nickname }));
@@ -4712,6 +4718,7 @@ function _broadcastState(roomId, room) {
         ...p,
         connected: connectionStatus[p.id] !== false,
         timeoutCount: roomTimeouts[p.name] || 0,
+        photoUrl: photoByPid[p.id] || null,
       }));
       state.turnDeadline = room.turnDeadline;
       state.cardViewers = room.getViewersForPlayer(player.id);
@@ -4746,6 +4753,7 @@ function _broadcastState(roomId, room) {
         ...p,
         connected: connectionStatus[p.id] !== false,
         timeoutCount: roomTimeouts[p.name] || 0,
+        photoUrl: photoByPid[p.id] || null,
       }));
       spectatorState.turnDeadline = room.turnDeadline;
       spectatorState.spectators = spectatorList;

@@ -11,6 +11,7 @@ class SKPlayer {
   final List<String> cards;
   final bool canViewCards;
   final bool connected;
+  final String? photoUrl;
 
   SKPlayer({
     required this.id,
@@ -25,6 +26,7 @@ class SKPlayer {
     this.cards = const [],
     this.canViewCards = false,
     this.connected = true,
+    this.photoUrl,
   });
 
   factory SKPlayer.fromJson(Map<String, dynamic> json) {
@@ -41,6 +43,7 @@ class SKPlayer {
       cards: List<String>.from(json['cards'] ?? const []),
       canViewCards: json['canViewCards'] == true,
       connected: json['connected'] != false,
+      photoUrl: json['photoUrl'] as String?,
     );
   }
 }

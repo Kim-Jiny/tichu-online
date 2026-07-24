@@ -11,6 +11,7 @@ class MightyPlayer {
   final int timeoutCount;
   final List<String> cards;
   final bool canViewCards;
+  final String? photoUrl;
 
   MightyPlayer({
     required this.id,
@@ -25,6 +26,7 @@ class MightyPlayer {
     this.timeoutCount = 0,
     this.cards = const [],
     this.canViewCards = false,
+    this.photoUrl,
   });
 
   factory MightyPlayer.fromJson(Map<String, dynamic> json) {
@@ -41,6 +43,7 @@ class MightyPlayer {
       timeoutCount: json['timeoutCount'] ?? 0,
       cards: List<String>.from(json['cards'] ?? const []),
       canViewCards: json['canViewCards'] == true,
+      photoUrl: json['photoUrl'] as String?,
     );
   }
 }

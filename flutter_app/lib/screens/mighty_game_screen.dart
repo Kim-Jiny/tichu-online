@@ -2395,6 +2395,22 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
                                             color: const Color(0xFFE53935),
                                           ),
                                         ),
+                                      if (player.photoUrl != null)
+                                        Padding(
+                                          padding: EdgeInsets.only(
+                                            right: compact ? 2 : 3,
+                                          ),
+                                          child: ProfileAvatar(
+                                            photoUrl: game.resolvePhotoUrl(
+                                              player.photoUrl,
+                                            ),
+                                            size: compact ? 14 : 16,
+                                            fallback: SizedBox(
+                                              width: compact ? 14 : 16,
+                                              height: compact ? 14 : 16,
+                                            ),
+                                          ),
+                                        ),
                                       Flexible(
                                         child: Text(
                                           player.name,

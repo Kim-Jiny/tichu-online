@@ -11,6 +11,7 @@ class LLPlayer {
   final List<String> cards;
   final bool canViewCards;
   final bool connected;
+  final String? photoUrl;
 
   LLPlayer({
     required this.id,
@@ -25,6 +26,7 @@ class LLPlayer {
     this.cards = const [],
     this.canViewCards = false,
     this.connected = true,
+    this.photoUrl,
   });
 
   factory LLPlayer.fromJson(Map<String, dynamic> json) {
@@ -41,6 +43,7 @@ class LLPlayer {
       cards: List<String>.from(json['cards'] ?? const []),
       canViewCards: json['canViewCards'] == true,
       connected: json['connected'] != false,
+      photoUrl: json['photoUrl'] as String?,
     );
   }
 }

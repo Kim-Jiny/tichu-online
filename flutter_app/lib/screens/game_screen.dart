@@ -2,6 +2,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../services/game_service.dart';
+import '../widgets/profile_avatar.dart';
 import '../utils/level_curve.dart';
 import '../services/session_service.dart';
 import '../models/game_state.dart';
@@ -2673,6 +2674,7 @@ class _GameScreenState extends State<GameScreen> {
               timeoutCount: partner?.timeoutCount ?? 0,
               teamLabel: _teamForPosition(state, 'partner'),
               isMyTeam: true,
+              photoUrl: game.resolvePhotoUrl(partner?.photoUrl),
             ),
           ),
           const SizedBox(height: 3),
@@ -2723,6 +2725,7 @@ class _GameScreenState extends State<GameScreen> {
                   timeoutCount: left?.timeoutCount ?? 0,
                   teamLabel: _teamForPosition(state, 'left'),
                   isMyTeam: false,
+                  photoUrl: game.resolvePhotoUrl(left?.photoUrl),
                 ),
               ),
               Text(
@@ -2764,6 +2767,7 @@ class _GameScreenState extends State<GameScreen> {
                   timeoutCount: right?.timeoutCount ?? 0,
                   teamLabel: _teamForPosition(state, 'right'),
                   isMyTeam: false,
+                  photoUrl: game.resolvePhotoUrl(right?.photoUrl),
                 ),
               ),
               Text(
@@ -4467,6 +4471,7 @@ class _GameScreenState extends State<GameScreen> {
     int timeoutCount = 0,
     String? teamLabel,
     bool isMyTeam = false,
+    String? photoUrl,
   }) {
     final maxLen = _maxNameLen;
     final displayName = name.length > maxLen ? '${name.substring(0, maxLen)}..' : name;
@@ -4474,6 +4479,17 @@ class _GameScreenState extends State<GameScreen> {
     return Column(
       mainAxisSize: MainAxisSize.min,
       children: [
+        // Paid avatar sits above the name pill; only added when present so
+        // photo-less players keep the exact original nameplate layout.
+        if (photoUrl != null)
+          Padding(
+            padding: EdgeInsets.only(bottom: 3 * s),
+            child: ProfileAvatar(
+              photoUrl: photoUrl,
+              size: 26 * s,
+              fallback: SizedBox(width: 26 * s, height: 26 * s),
+            ),
+          ),
         if (badge != null)
           Padding(
             padding: const EdgeInsets.only(bottom: 2),

@@ -221,6 +221,7 @@
   "ll_update_required": "Please update the app to play Love Letter",
   "mighty_update_required": "Please update the app to play Mighty",
   "banner_update_required": "Please update the app to buy or use this banner",
+  "profile_photo_storage_unavailable": "Profile photo storage is temporarily unavailable. Please try again shortly",
   "ll_not_play_phase": "Not in the play phase",
   "ll_not_your_turn": "It's not your turn",
   "ll_eliminated": "You are already eliminated",

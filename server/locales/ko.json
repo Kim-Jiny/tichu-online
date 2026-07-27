@@ -221,6 +221,7 @@
   "ll_update_required": "러브레터를 플레이하려면 앱을 업데이트해 주세요",
   "mighty_update_required": "마이티를 플레이하려면 앱을 업데이트해 주세요",
   "banner_update_required": "이 배너를 구매·사용하려면 앱을 업데이트해 주세요",
+  "profile_photo_storage_unavailable": "프로필 사진 저장소를 일시적으로 사용할 수 없습니다. 잠시 후 다시 시도해 주세요",
   "ll_not_play_phase": "플레이 페이즈가 아닙니다",
   "ll_not_your_turn": "당신의 차례가 아닙니다",
   "ll_eliminated": "이미 탈락했습니다",

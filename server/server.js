@@ -7033,14 +7033,27 @@ async function handleBuyItem(ws, data) {
   // Profile-photo items need the 2.8.0 upload UI; the shop list already hides
   // them from older clients, so this only blocks a stale/tampered client from
   // spending gold on an item it can't use.
-  if (typeof itemKey === 'string' && itemKey.startsWith('profile_photo') && !clientSupportsProfilePhoto(ws)) {
-    sendTo(ws, {
-      type: 'purchase_result',
-      success: false,
-      itemKey,
-      message: t(ws.locale, 'banner_update_required'),
-    });
-    return;
+  if (typeof itemKey === 'string' && itemKey.startsWith('profile_photo')) {
+    if (!clientSupportsProfilePhoto(ws)) {
+      sendTo(ws, {
+        type: 'purchase_result',
+        success: false,
+        itemKey,
+        message: t(ws.locale, 'banner_update_required'),
+      });
+      return;
+    }
+    // Storage down / unconfigured: the entitlement would tick with no way to
+    // upload. Refuse rather than take gold for an item that can't be used.
+    if (!minioClient.isEnabled()) {
+      sendTo(ws, {
+        type: 'purchase_result',
+        success: false,
+        itemKey,
+        message: t(ws.locale, 'profile_photo_storage_unavailable'),
+      });
+      return;
+    }
   }
   const result = await buyItem(ws.nickname, itemKey);
   sendTo(ws, { type: 'purchase_result', itemKey, ...result });

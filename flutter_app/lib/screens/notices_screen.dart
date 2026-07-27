@@ -24,7 +24,12 @@ class _NoticesScreenState extends State<NoticesScreen> {
   void initState() {
     super.initState();
     final game = context.read<GameService>();
-    game.markCurrentNoticesAsRead();
+    // markCurrentNoticesAsRead() calls notifyListeners(); running it synchronously
+    // here fires a Provider rebuild during the build phase → "setState() called
+    // during build" assertion. Defer to just after the first frame.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) game.markCurrentNoticesAsRead();
+    });
     game.requestNotices(markReadOnReceive: true);
   }
 

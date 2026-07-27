@@ -5409,6 +5409,27 @@ async function handleTurnTimeout(roomId, playerId) {
   const room = lobby.getRoom(roomId);
   if (!room || !room.game) return;
 
+  // Guard against a SPURIOUS timeout: only penalize (and eventually desert) a
+  // player when they genuinely still need to act right now. If the timer fires
+  // when it's not actually this player's turn / not the actionable phase (a
+  // stale timer, or the turn already advanced), the auto-play below would no-op
+  // while the count kept climbing → the player is wrongly deserted after 3 with
+  // no card ever played (reported SK bug). In that case just re-sync the timer
+  // to the real current actor and bail without counting.
+  {
+    const g = room.game;
+    let needsToAct = true;
+    if (room.gameType === 'skull_king') {
+      needsToAct = (g.state === 'playing' && g.currentPlayer === playerId)
+        || (g.state === 'bidding' && g.bids && g.bids[playerId] === null);
+    }
+    if (!needsToAct) {
+      console.warn(`[TIMEOUT] spurious timer ignored: room=${roomId} type=${room.gameType} player=${playerId} state=${g.state} current=${g.currentPlayer}`);
+      sendGameStateToAll(roomId);
+      return;
+    }
+  }
+
   // Use nickname as key so timeout count persists across reconnections
   const nickname = room.game.playerNames[playerId] || playerId;
 

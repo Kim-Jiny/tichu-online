@@ -2442,7 +2442,8 @@ async function buyItem(nickname, itemKey) {
          ORDER BY ui.expires_at DESC NULLS LAST LIMIT 1`,
         [nickname, item.effect_type],
       );
-      if (existing.rows.length > 0) {
+      const isExtend = existing.rows.length > 0;
+      if (isExtend) {
         await client.query(
           `UPDATE tc_user_items
            SET expires_at = CASE
@@ -2460,13 +2461,20 @@ async function buyItem(nickname, itemKey) {
         );
       }
       await client.query(`UPDATE tc_users SET gold = gold - $2 WHERE nickname = $1`, [nickname, item.price]);
-      await client.query(
-        `INSERT INTO tc_gold_history (nickname, gold_delta, source, title, description)
-         VALUES ($1, $2, 'shop_purchase', $3, 'shop_purchase')`,
-        [nickname, -item.price, `${item.name_ko}|${item.name_en}|${item.name_de}`],
-      );
+      // Gold-history: only record an explicit row on EXTEND. A fresh purchase
+      // already surfaces in getGoldHistory via the tc_user_items.acquired_at
+      // UNION branch, so writing an explicit row too would double-list the same
+      // buy (extends don't move acquired_at, so they need the explicit row to
+      // appear at the right time — matching the legacy temp-item path).
+      if (isExtend) {
+        await client.query(
+          `INSERT INTO tc_gold_history (nickname, gold_delta, source, title, description)
+           VALUES ($1, $2, 'shop_purchase', $3, 'shop_purchase')`,
+          [nickname, -item.price, `${item.name_ko}|${item.name_en}|${item.name_de}`],
+        );
+      }
       await client.query('COMMIT');
-      return { success: true, extended: existing.rows.length > 0 };
+      return { success: true, extended: isExtend };
     }
 
     // Prevent duplicate ownership / extend duration for temp items

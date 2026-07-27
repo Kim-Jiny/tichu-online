@@ -2907,6 +2907,14 @@ async function handleReconnection(ws) {
           roomName: room.name,
         });
 
+        // Reconnecting remaps the player's id (updatePlayerId), so a turn timer
+        // armed for the OLD id is now stale. startTurnTimer won't replace a live
+        // timer (`if (turnTimers[roomId]) return`), so without clearing it here
+        // the stale timer keeps firing for the pre-reconnect id — its auto-play
+        // no-ops (id != currentPlayer) while the timeout count climbs, deserting
+        // the just-returned player. Clear it so sendGameStateToAll re-arms fresh
+        // for the remapped current player.
+        clearTurnTimer(room.id);
         // Send current room and game state
         broadcastRoomState(room.id);
         sendGameStateToAll(room.id);

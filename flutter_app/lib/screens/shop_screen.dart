@@ -902,7 +902,12 @@ class _ShopScreenState extends State<ShopScreen> {
     final indexByEffect = <String, int>{};
     for (final item in items) {
       final et = item['effect_type']?.toString() ?? '';
-      if (et.isEmpty) {
+      final dur = (item['duration_days'] as num?)?.toInt() ?? 0;
+      // Only merge true DURATION tiers (same effect_type + a duration) into one
+      // card. Consumables that share an effect_type but have no duration
+      // (e.g. 탈주 카운트 -1 / -3) must stay as separate rows, else the tier
+      // chips render blank.
+      if (et.isEmpty || dur <= 0) {
         groups.add([item]);
         continue;
       }
@@ -920,17 +925,38 @@ class _ShopScreenState extends State<ShopScreen> {
             .compareTo((b['duration_days'] as num?)?.toInt() ?? 0));
       }
     }
+    // Cluster by game/theme so utility items read as groups (티츄끼리, 마이티끼리,
+    // 탈주끼리, …). Stable: ties keep first-appearance order, so single-theme
+    // tabs (banner/title/theme) are left exactly as-is.
+    final ordered = List<List<Map<String, dynamic>>>.from(groups);
+    final origIndex = {for (var i = 0; i < groups.length; i++) groups[i]: i};
+    ordered.sort((a, b) {
+      final r = _themeRank(a.first['item_key']?.toString() ?? '')
+          .compareTo(_themeRank(b.first['item_key']?.toString() ?? ''));
+      return r != 0 ? r : origIndex[a]!.compareTo(origIndex[b]!);
+    });
     return ListView.separated(
       padding: const EdgeInsets.fromLTRB(14, 10, 14, 20),
-      itemCount: groups.length,
+      itemCount: ordered.length,
       separatorBuilder: (_, _) => const SizedBox(height: 8),
       itemBuilder: (context, index) {
-        final g = groups[index];
+        final g = ordered[index];
         return g.length == 1
             ? _buildShopRow(context, game, g.first)
             : _buildGroupedFeatureCard(context, game, g);
       },
     );
+  }
+
+  // Theme rank for shop ordering: groups same-game/same-purpose items together.
+  // Only meaningful in the utility tab (mixed themes); other categories all
+  // fall through to the same bucket and keep their order via the stable tiebreak.
+  int _themeRank(String key) {
+    if (key.startsWith('top_card_counter') || key.startsWith('tichu_')) return 0; // 티츄
+    if (key.startsWith('mighty_')) return 1; // 마이티
+    if (key.startsWith('sk_')) return 2; // 스컬킹
+    if (key.startsWith('leave_')) return 3; // 탈주
+    return 4; // 기타(닉네임 변경, 전체 전적/시즌 초기화 등)
   }
 
   // Base feature name without the trailing "(7일)/(30일)" duration suffix the
@@ -949,10 +975,19 @@ class _ShopScreenState extends State<ShopScreen> {
     final first = tiers.first;
     final baseName = _stripDurationSuffix(_getLocalizedItemName(first));
     final description = _getLocalizedItemDescription(first);
-    final ownedActive = tiers.any((t) {
+    Map<String, dynamic>? ownedInv;
+    for (final t in tiers) {
       final key = t['item_key']?.toString() ?? '';
-      return game.inventoryItems.any((i) => i['item_key'] == key);
-    });
+      final matches = game.inventoryItems.where((i) => i['item_key'] == key);
+      if (matches.isNotEmpty) {
+        ownedInv = matches.first;
+        break;
+      }
+    }
+    final ownedActive = ownedInv != null;
+    final ownedExpiry = ownedInv?['expires_at'];
+    final ownedExpiryText =
+        ownedExpiry != null ? _formatExpire(context, ownedExpiry) : null;
 
     return Container(
       padding: const EdgeInsets.all(10),
@@ -1004,6 +1039,25 @@ class _ShopScreenState extends State<ShopScreen> {
                       color: Color(0xFF8A7A72),
                       height: 1.3,
                     ),
+                  ),
+                ],
+                if (ownedExpiryText != null) ...[
+                  const SizedBox(height: 3),
+                  Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const Icon(Icons.schedule,
+                          size: 12, color: Color(0xFF7E57C2)),
+                      const SizedBox(width: 3),
+                      Text(
+                        ownedExpiryText,
+                        style: const TextStyle(
+                          fontSize: 11,
+                          fontWeight: FontWeight.w600,
+                          color: Color(0xFF7E57C2),
+                        ),
+                      ),
+                    ],
                   ),
                 ],
                 const SizedBox(height: 8),

@@ -120,6 +120,20 @@ for (const { gameType, nicknames } of CASES) {
       expected[game.playerNames[pid]] = (i + 1) * 7;
     });
   }
+  // Rotation state that belongs to the match, not the round — it must
+  // survive the hop rather than being re-rolled on the peer.
+  let rotation = null;
+  if (gameType === 'skull_king') {
+    game.initialDealerIndex = 2;
+    rotation = { dealer: 2 };
+  } else if (gameType === 'mighty') {
+    game.dealerIndex = 3;
+    rotation = { dealer: (3 + 1) % game.playerCount }; // startNewRound advances one seat
+  } else if (gameType === 'love_letter') {
+    game.currentPlayer = game.playerIds[2];
+    rotation = { leader: game.playerNames[game.playerIds[2]] };
+  }
+
   const blueSeatOrder = game.playerIds.map((id) => game.playerNames[id]);
   const blueTeams = gameType === 'tichu'
     ? { teamA: game.teams.teamA.map((id) => game.playerNames[id]), teamB: game.teams.teamB.map((id) => game.playerNames[id]) }
@@ -181,6 +195,17 @@ for (const { gameType, nicknames } of CASES) {
     // SK deals `round` cards — resuming at round 4 must deal 4, not 1.
     const handSizes = resumed.playerIds.map((pid) => resumed.hands[pid].length);
     check('SK dealt round-4 hands (4 cards)', handSizes.every((n) => n === 4), `hand sizes ${handSizes}`);
+    check('SK dealer rotation continues', resumed.initialDealerIndex === rotation.dealer,
+      `got ${resumed.initialDealerIndex}, expected ${rotation.dealer}`);
+  }
+  if (gameType === 'mighty') {
+    check('mighty dealer advanced exactly one seat', resumed.dealerIndex === rotation.dealer,
+      `got ${resumed.dealerIndex}, expected ${rotation.dealer}`);
+  }
+  if (gameType === 'love_letter') {
+    check('LL leader carried (last round winner leads)',
+      resumed.playerNames[resumed.currentPlayer] === rotation.leader,
+      `got ${resumed.playerNames[resumed.currentPlayer]}, expected ${rotation.leader}`);
   }
 
   // ---------- roster drift must invalidate the carried state ----------

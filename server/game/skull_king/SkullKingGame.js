@@ -351,6 +351,10 @@ class SkullKingGame {
       round: this.round,
       seatOrder: this.playerIds.map((id) => this.playerNames[id]),
       totals,
+      // Dealer rotates off this across the whole match (see startNextRound),
+      // so re-rolling it on the peer would make the dealer jump mid-match.
+      // Safe as a bare index because the seating is restored verbatim.
+      initialDealerIndex: this.initialDealerIndex,
     };
   }
 
@@ -358,15 +362,19 @@ class SkullKingGame {
   // counter has to be seeded BEFORE the deal — hence startNextRound()
   // here instead of start(), which would reset it to 0 and deal round 1.
   resumeMatch(progress) {
-    this.initialDealerIndex = Math.floor(Math.random() * this.playerCount);
-    this.round = progress?.round || 0;
-    if (progress) {
-      const byNickname = {};
-      for (const pid of this.playerIds) byNickname[this.playerNames[pid]] = pid;
-      for (const [nickname, score] of Object.entries(progress.totals || {})) {
-        const pid = byNickname[nickname];
-        if (pid !== undefined) this.totalScores[pid] = score;
-      }
+    if (!progress) {
+      this.start();
+      return;
+    }
+    this.round = progress.round || 0;
+    this.initialDealerIndex = Number.isInteger(progress.initialDealerIndex)
+      ? progress.initialDealerIndex % this.playerCount
+      : Math.floor(Math.random() * this.playerCount);
+    const byNickname = {};
+    for (const pid of this.playerIds) byNickname[this.playerNames[pid]] = pid;
+    for (const [nickname, score] of Object.entries(progress.totals || {})) {
+      const pid = byNickname[nickname];
+      if (pid !== undefined) this.totalScores[pid] = score;
     }
     this.startNextRound();
   }

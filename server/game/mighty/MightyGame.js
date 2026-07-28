@@ -1245,21 +1245,33 @@ class MightyGame {
       round: this.round,
       seatOrder: this.playerIds.map((id) => this.playerNames[id]),
       totals,
+      // The dealer advances one seat per round; restarting the rotation on
+      // the peer would deal out of turn. Safe as a bare index because the
+      // seating is restored verbatim.
+      dealerIndex: this.dealerIndex,
     };
   }
 
-  // Called instead of start() when a room resumes a migrated match.
-  // start() zeroes the scores and deals round 1, so seed afterwards.
+  // Called instead of start() when a room resumes a migrated match. The
+  // round counter and dealer have to be seeded BEFORE startNewRound(),
+  // which advances both.
   resumeMatch(progress) {
-    this.start();
-    if (!progress) return;
-    this.round = (progress.round || 0) + 1;
+    if (!progress) {
+      this.start();
+      return;
+    }
+    for (const pid of this.playerIds) this.scores[pid] = 0;
+    this.round = progress.round || 0;
+    this.dealerIndex = Number.isInteger(progress.dealerIndex)
+      ? progress.dealerIndex % this.playerCount
+      : 0;
     const byNickname = {};
     for (const pid of this.playerIds) byNickname[this.playerNames[pid]] = pid;
     for (const [nickname, score] of Object.entries(progress.totals || {})) {
       const pid = byNickname[nickname];
       if (pid !== undefined) this.scores[pid] = score;
     }
+    this.startNewRound();
   }
 
   // ─── STATE FOR PLAYER ───────────────────────────────────

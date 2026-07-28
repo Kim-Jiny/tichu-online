@@ -787,21 +787,33 @@ class LoveLetterGame {
       round: this.round,
       seatOrder: this.playerIds.map((id) => this.playerNames[id]),
       totals,
+      // Whoever won the last round leads the next one. Only round 1 picks
+      // a leader at random, so this has to ride along or the peer would
+      // re-roll it mid-match.
+      leader: this.currentPlayer ? this.playerNames[this.currentPlayer] || null : null,
     };
   }
 
-  // Called instead of start() when a room resumes a migrated match.
-  // start() deals a fresh round with the tokens at zero, so seed after.
+  // Called instead of start() when a room resumes a migrated match. The
+  // round counter and the leader have to be seeded BEFORE the deal:
+  // startNextRound() only honours this.currentPlayer once past round 1.
   resumeMatch(progress) {
-    this.start();
-    if (!progress) return;
-    this.round = (progress.round || 0) + 1;
+    if (!progress) {
+      this.start();
+      return;
+    }
+    this.round = progress.round || 0;
     const byNickname = {};
     for (const pid of this.playerIds) byNickname[this.playerNames[pid]] = pid;
     for (const [nickname, tokens] of Object.entries(progress.totals || {})) {
       const pid = byNickname[nickname];
       if (pid !== undefined) this.tokens[pid] = tokens;
     }
+    const leader = progress.leader ? byNickname[progress.leader] : undefined;
+    this.currentPlayer = leader !== undefined
+      ? leader
+      : this.playerIds[Math.floor(Math.random() * this.playerCount)];
+    this.startNextRound();
   }
 
   updatePlayerId(oldPlayerId, newPlayerId) {

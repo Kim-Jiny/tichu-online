@@ -2218,19 +2218,28 @@ wss.on('connection', (ws, req) => {
           const disconnectedRoomId = ws.roomId;
           room.markPlayerDisconnected(disconnectedPlayerId);
           broadcastRoomState(disconnectedRoomId);
-          const timerKey = `${disconnectedRoomId}_${disconnectedPlayerId}`;
-          waitingRoomTimers[timerKey] = setTimeout(() => {
-            delete waitingRoomTimers[timerKey];
-            const r = lobby.getRoom(disconnectedRoomId);
-            if (!r) return;
-            r.removePlayer(disconnectedPlayerId);
-            if (r.getHumanPlayerCount() === 0) {
-              removeRoomAndNotifySpectators(disconnectedRoomId);
-            } else {
-              broadcastRoomState(disconnectedRoomId);
-            }
-            broadcastRoomList();
-          }, 30000);
+          // ...except in a room waiting to resume a migrated match. Those
+          // seats belong to the match, not to the lobby: dropping one makes
+          // the carried standings fail their roster check and the match
+          // restarts from zero (and with a single human, removePlayer takes
+          // the whole room with it). Someone who reconnects and drops again
+          // during the resume window must keep their seat. If nobody ever
+          // comes back, the 30-minute abandoned-room sweep still collects it.
+          if (!isMigratedResumeRoom(room)) {
+            const timerKey = `${disconnectedRoomId}_${disconnectedPlayerId}`;
+            waitingRoomTimers[timerKey] = setTimeout(() => {
+              delete waitingRoomTimers[timerKey];
+              const r = lobby.getRoom(disconnectedRoomId);
+              if (!r) return;
+              r.removePlayer(disconnectedPlayerId);
+              if (r.getHumanPlayerCount() === 0) {
+                removeRoomAndNotifySpectators(disconnectedRoomId);
+              } else {
+                broadcastRoomState(disconnectedRoomId);
+              }
+              broadcastRoomList();
+            }, 30000);
+          }
         }
       }
       ws.roomId = null;
@@ -2262,10 +2271,33 @@ const DRAIN_FROZEN_ACTIONS = new Set([
   'start_game', 'next_round',
 ]);
 
+// Rooms adopted from a draining peer at a round boundary are briefly parked
+// in the lobby with matchProgress until auto-resume fires. They look like
+// normal waiting rooms, but changing the roster/seats would make the carried
+// standings unusable. Freeze only those room-shape edits; start_game is left
+// open because it consumes matchProgress and resumes the match immediately.
+const MIGRATED_RESUME_FROZEN_ACTIONS = new Set([
+  'join_room', 'join_room_by_invite',
+  'change_room_name', 'toggle_ready', 'change_team', 'kick_player',
+  'add_bot', 'block_slot', 'unblock_slot', 'set_random_seating',
+  'switch_to_spectator', 'switch_to_player',
+]);
+
+function isMigratedResumeRoom(room) {
+  return !!room && !room.game && !!room.matchProgress;
+}
+
 async function handleMessage(ws, data) {
   if (isDraining && DRAIN_FROZEN_ACTIONS.has(data.type)) {
     sendTo(ws, { type: 'error', message: t(ws.locale, 'server_restarting') });
     return;
+  }
+  if (MIGRATED_RESUME_FROZEN_ACTIONS.has(data.type) && ws.roomId) {
+    const room = lobby.getRoom(ws.roomId);
+    if (isMigratedResumeRoom(room)) {
+      sendTo(ws, { type: 'error', message: t(ws.locale, 'server_restarting') });
+      return;
+    }
   }
   // Leaving is kept out of the frozen set above so nobody is ever trapped in a
   // room — but not while the room IS the snapshot in flight. Waiting, or
@@ -3568,6 +3600,10 @@ async function handleJoinRoom(ws, data) {
   const room = lobby.getRoom(data.roomId);
   if (!room) {
     sendTo(ws, { type: 'error', message: t(ws.locale, 'room_not_found') });
+    return;
+  }
+  if (isMigratedResumeRoom(room)) {
+    sendTo(ws, { type: 'error', message: t(ws.locale, 'server_restarting') });
     return;
   }
   // SK version gating

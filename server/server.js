@@ -1789,6 +1789,51 @@ function readJsonBody(req, limitBytes = 1024 * 1024) {
 // expected human players in `playerSessions` so the existing reconnect
 // flow drops them straight into the migrated room when their client
 // reconnects to us.
+// A room can arrive AFTER the people who belong in it. Someone whose socket
+// dropped during the drain reconnects through the load balancer, lands here
+// while their room is still on the peer finishing its round, and ends up in
+// the lobby. The session pointers registered above only help clients that log
+// in later — this one is already past that point, and would sit in the lobby
+// watching their game fail to exist (observed in a smoke test: the player gave
+// up and created a new room).
+//
+// So pull them in directly. Same effect as the reconnect path, minus the login.
+function attachWaitingMembers(room, data) {
+  const players = new Set(
+    (data.players || []).filter((p) => p && !p.isBot && p.nickname).map((p) => p.nickname),
+  );
+  const watchers = new Set((data.spectators || []).filter(Boolean));
+  let attached = 0;
+
+  for (const ws of wss.clients) {
+    if (ws.readyState !== ws.OPEN || !ws.nickname || ws.roomId) continue;
+
+    if (players.has(ws.nickname)) {
+      if (!room.reconnectPlayer(ws.nickname, ws.playerId).success) continue;
+      ws.roomId = room.id;
+      ws.isSpectator = false;
+      playerSessions.delete(ws.nickname);
+      sendTo(ws, { type: 'room_joined', roomId: room.id, roomName: room.name });
+      attached++;
+    } else if (watchers.has(ws.nickname)) {
+      if (!room.addSpectator(ws.playerId, ws.nickname, '').success) continue;
+      ws.roomId = room.id;
+      ws.isSpectator = true;
+      spectatorSessions.delete(ws.nickname);
+      sendTo(ws, { type: 'spectate_joined', roomId: room.id, roomName: room.name });
+      attached++;
+    }
+  }
+
+  if (attached > 0) {
+    console.log(`[adoptRoom] ${room.id}: pulled ${attached} member(s) in from the lobby`);
+    broadcastRoomState(room.id);
+    broadcastRoomList();
+    // They may be all it was waiting for.
+    maybeAutoResumeMatch(room.id);
+  }
+}
+
 async function handleAdoptRoomsRequest(req, res) {
   const body = await readJsonBody(req);
   const rooms = Array.isArray(body?.rooms) ? body.rooms : [];
@@ -1832,6 +1877,7 @@ async function handleAdoptRoomsRequest(req, res) {
         spectatorSessions.set(nickname, { roomId: room.id, disconnectedAt: now });
       }
     }
+    attachWaitingMembers(room, data);
   }
   // Anything we couldn't take (a duplicate id, a malformed entry) must read
   // as a failure on the sender's side — it still holds the only copy of that

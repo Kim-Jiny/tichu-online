@@ -341,6 +341,13 @@ class SkullKingGame {
   // ─── MATCH MIGRATION (blue/green drain) ─────────────────
   // See TichuGame.getMatchProgress. Nickname-keyed so the payload
   // survives the playerId remap a reconnect performs on the peer.
+  //
+  // scoreHistory is deliberately NOT carried: its entries are keyed by
+  // playerId, and on the peer those ids are reissued before the game
+  // object exists, so updatePlayerId never gets a chance to remap them.
+  // Standings (totalScores) do carry, so the match continues correctly —
+  // only the per-round breakdown restarts. Tichu can carry its history
+  // because its entries are team-keyed and hold no ids.
 
   getMatchProgress() {
     const totals = {};

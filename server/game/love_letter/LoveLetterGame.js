@@ -777,6 +777,11 @@ class LoveLetterGame {
   // ─── MATCH MIGRATION (blue/green drain) ─────────────────
   // See TichuGame.getMatchProgress. Nickname-keyed so the payload
   // survives the playerId remap a reconnect performs on the peer.
+  //
+  // roundHistory is deliberately NOT carried — its entries are keyed by
+  // playerId, which the peer reissues before the game object exists, so
+  // updatePlayerId never gets to remap them. Standings do carry, so only
+  // the per-round breakdown restarts. See SkullKingGame for the same note.
 
   getMatchProgress() {
     const totals = {};

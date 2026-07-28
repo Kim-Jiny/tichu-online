@@ -1310,10 +1310,10 @@ const RESUME_DEADLINE_MS = 60000;  // some still missing: go without them
 const roomProgress = {}; // roomId -> { sig, since, warned }
 const FREEZE_WARN_MS = 5 * 60 * 1000;
 const trickEndTimers = {}; // roomId -> setTimeout handle for skull king trick reveal
-// Love Letter: backup auto-ack timer for BOT effect owners only. The primary
+// Love Letter: backup auto-ack timer for a resolved effect. The primary
 // 2.5s auto-ack lives in trickEndTimers; this fires just after it as a safety
 // net so a slipped/never-armed primary (reconnect race) costs a brief blip
-// instead of the ~8s stuck-bot watchdog. Idempotent — see autoAckResolvedLLEffect.
+// instead of stranding the room. Idempotent — see autoAckResolvedLLEffect.
 const llAckBackupTimers = {}; // roomId -> setTimeout handle
 const turnTimerPhases = {}; // roomId -> phase name (to prevent phase timer reset)
 const waitingRoomTimers = {}; // `${roomId}_${playerId}` -> setTimeout handle for waiting room disconnect
@@ -1658,6 +1658,16 @@ function localizeTitleName(titleKey, fallbackName, locale) {
 // only state that outlives the round is the cumulative score and the
 // seating (see each engine's getMatchProgress). Returns null for rooms
 // that aren't safe to migrate.
+// Seats with nobody in them, by current index. See the blockedSlots note in
+// serializeRoom.
+function emptySlots(room) {
+  const out = [];
+  for (let i = 0; i < room.maxPlayers; i++) {
+    if (!room.players[i]) out.push(i);
+  }
+  return out;
+}
+
 function serializeRoom(room) {
   if (!room) return null;
   let matchProgress = null;
@@ -1681,8 +1691,18 @@ function serializeRoom(room) {
     turnTimeLimit: room.turnTimeLimit,
     targetScore: room.targetScore,
     skExpansions: [...(room.skExpansions || [])],
-    blockedSlots: [...(room.blockedSlots || [])],
-    autoBlockedSlots: [...(room.autoBlockedSlots || [])],
+    // startGame compacts room.players for SK/LL/mighty (the pre-game layout
+    // is stashed in _preGamePlayers), so mid-match the slot indices we emit
+    // above no longer line up with room.blockedSlots, which still describes
+    // the pre-game seating. Re-derive from the seats that are actually empty
+    // now — otherwise a 5-player mighty room whose blocked seat wasn't the
+    // last one fails mighty's "every non-blocked seat must be filled" check
+    // on the peer and loses the match. Left as plain blocks rather than
+    // auto-blocks: the shift makes the original mapping unrecoverable, and a
+    // seat that stays shut is a far safer wrong guess than one that reopens
+    // mid-match.
+    blockedSlots: matchProgress ? emptySlots(room) : [...(room.blockedSlots || [])],
+    autoBlockedSlots: matchProgress ? [] : [...(room.autoBlockedSlots || [])],
     randomSeating: !!room.randomSeating,
     players: room.players.map((p, slot) => {
       if (!p) return null;
@@ -1694,8 +1714,9 @@ function serializeRoom(room) {
         botSpeed: p.botSpeed || null,
         botStrategy: p.isBot ? room.bots.get(p.id)?.strategy || null : null,
         // Players pulled out of a live match are already committed to it,
-        // so land them pre-readied on the peer — the host only has to
-        // start the next round.
+        // so land them pre-readied on the peer — it resumes on its own
+        // (maybeAutoResumeMatch), and a stale unready flag would only
+        // misrepresent the room in the meantime.
         ready: matchProgress ? true : !!p.ready,
         titleKey: p.titleKey || null,
         titleName: p.titleName || null,
@@ -1877,6 +1898,11 @@ async function maybeMigrateRoom(roomId) {
 
   const data = serializeRoom(room);
   if (!data) {
+    // Shouldn't happen (we only get here at a round boundary, and every
+    // engine implements getMatchProgress) — but if it ever does, close the
+    // sockets rather than dropping the room out from under them: a client
+    // left holding a room that no longer exists just hangs until SIGKILL.
+    for (const p of humans) findWsByPlayerId(p.id)?.close(1001);
     lobby.removeRoom(roomId);
     return;
   }
@@ -1903,11 +1929,10 @@ async function maybeMigrateRoom(roomId) {
 
   for (const p of humans) findWsByPlayerId(p.id)?.close(1001);
 
-  // Spectators don't get pre-registered on the peer (the room lands
-  // there in a 'waiting' state — a resumed match only re-enters play
-  // when the host starts the next round), so just drop them — their
-  // client reconnects to green's empty lobby. Without this they'd hang
-  // on a dead WS until docker SIGKILL.
+  // Spectators don't get pre-registered on the peer (the room lands there
+  // in a 'waiting' state and only re-enters play once maybeAutoResumeMatch
+  // fires), so just drop them — their client reconnects to the peer's
+  // lobby. Without this they'd hang on a dead WS until docker SIGKILL.
   for (const spectator of room.spectators || []) {
     findWsByPlayerId(spectator.id)?.close(1001);
   }
@@ -4738,14 +4763,18 @@ function _sendGameStateToAllImpl(roomId) {
         autoAckResolvedLLEffect(roomId);
       }, 2500);
     }
-    // Backup auto-ack for BOT effect owners. A bot has no turn-timer, so if the
-    // primary above ever slips — never armed because the slot was occupied, or
-    // cleared by a reconnect race — the bot would freeze until the ~8s stuck-bot
-    // watchdog. This independent timer fires just after the presentation window
-    // and self-heals to a brief blip. Idempotent (autoAckResolvedLLEffect no-ops
-    // once the primary advanced), so it never double-acks. Humans need no backup:
-    // they can ack from the UI.
-    if (room.isBot(room.game.pendingEffect.playerId) && !llAckBackupTimers[roomId]) {
+    // Backup auto-ack. A resolved effect gets no turn timer (startTurnTimer
+    // only arms for unresolved ones), so if the primary above ever slips —
+    // never armed because the slot was occupied, or cleared by a reconnect
+    // race — nothing else advances the room. This independent timer fires
+    // just after the presentation window and self-heals to a brief blip.
+    // Idempotent (autoAckResolvedLLEffect no-ops once the primary advanced),
+    // so it never double-acks.
+    //
+    // Armed for human owners too, not just bots: a human who can ack from the
+    // UI doesn't need it, but a disconnected one is exactly as stuck as a bot
+    // and — unlike a bot — isn't covered by the stuck-bot watchdog either.
+    if (!llAckBackupTimers[roomId]) {
       llAckBackupTimers[roomId] = setTimeout(() => {
         delete llAckBackupTimers[roomId];
         autoAckResolvedLLEffect(roomId);

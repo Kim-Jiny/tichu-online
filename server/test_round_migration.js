@@ -25,6 +25,12 @@ function check(label, cond, detail) {
   }
 }
 
+function emptySlots(room) {
+  const out = [];
+  for (let i = 0; i < room.maxPlayers; i++) if (!room.players[i]) out.push(i);
+  return out;
+}
+
 // Mirrors server.js serializeRoom() for the fields this test cares about.
 function serializeRoom(room) {
   if (!room) return null;
@@ -46,8 +52,10 @@ function serializeRoom(room) {
     turnTimeLimit: room.turnTimeLimit,
     isRanked: !!room.isRanked,
     skExpansions: [...(room.skExpansions || [])],
-    blockedSlots: [...(room.blockedSlots || [])],
-    autoBlockedSlots: [...(room.autoBlockedSlots || [])],
+    // Mirrors server.js: mid-match the players array is compacted, so the
+    // pre-game blockedSlots indices no longer apply.
+    blockedSlots: matchProgress ? emptySlots(room) : [...(room.blockedSlots || [])],
+    autoBlockedSlots: matchProgress ? [] : [...(room.autoBlockedSlots || [])],
     randomSeating: !!room.randomSeating,
     matchProgress,
     players: room.players.map((p, slot) => {
@@ -220,6 +228,55 @@ for (const { gameType, nicknames } of CASES) {
     : Object.values(driftField).reduce((a, b) => a + b, 0);
   check('roster drift discards stale progress', driftTotal === 0 && driftRoom.game.round === 1,
     `total=${driftTotal} round=${driftRoom.game.round}`);
+}
+
+// ── 5-player mighty in a 6-seat room ───────────────────────────────────────
+// startGame compacts room.players, so a blocked seat that isn't the last one
+// ends up describing a seat that is now occupied. Serialising the pre-game
+// blockedSlots verbatim made mighty's "every non-blocked seat must be filled"
+// check reject the migrated roster on the peer, losing the whole match.
+console.log('\n=== mighty 5p in a 6-seat room, blocked seat in the middle ===');
+{
+  const blue = new LobbyManager();
+  const room = blue.createRoom('방', 'blue-host', '앨리스', '', false, 30, 50, 'mighty', 6);
+  room.players = [
+    { id: 'blue-앨리스', nickname: '앨리스', connected: true, isBot: false },
+    { id: 'blue-밥', nickname: '밥', connected: true, isBot: false },
+    null, // host blocked this middle seat for 5-player mode
+    { id: 'blue-캐럴', nickname: '캐럴', connected: true, isBot: false },
+    { id: 'blue-데이브', nickname: '데이브', connected: true, isBot: false },
+    { id: 'blue-이브', nickname: '이브', connected: true, isBot: false },
+  ];
+  room.blockedSlots = new Set([2]);
+  room.hostId = 'blue-앨리스';
+  room.hostNickname = '앨리스';
+
+  check('starts on blue', room.startGame() === true);
+  room.game.round = 3;
+  room.game.playerIds.forEach((pid, i) => { room.game.scores[pid] = (i + 1) * 7; });
+  const expected = {};
+  room.game.playerIds.forEach((pid) => { expected[room.game.playerNames[pid]] = room.game.scores[pid]; });
+  room.game.state = 'round_end';
+
+  const payload = serializeRoom(room);
+  check('blocked seat re-derived to the empty one', JSON.stringify(payload.blockedSlots) === '[5]',
+    JSON.stringify(payload.blockedSlots));
+
+  const green = new LobbyManager();
+  const greenRoom = green.adoptRoom(JSON.parse(JSON.stringify(payload)));
+  for (const p of greenRoom.players) {
+    if (p) greenRoom.reconnectPlayer(p.nickname, `green-${p.nickname}`);
+  }
+  check('resumes on the peer', greenRoom.startGame() === true);
+  if (greenRoom.game) {
+    const got = {};
+    for (const pid of greenRoom.game.playerIds) got[greenRoom.game.playerNames[pid]] = greenRoom.game.scores[pid];
+    check('standings survived', JSON.stringify(got) === JSON.stringify(expected),
+      `${JSON.stringify(got)} vs ${JSON.stringify(expected)}`);
+    check('round advanced to 4', greenRoom.game.round === 4, `got ${greenRoom.game.round}`);
+    check('still a 5-player game', greenRoom.game.playerIds.length === 5,
+      `got ${greenRoom.game.playerIds.length}`);
+  }
 }
 
 console.log(`\n${failures === 0 ? 'ALL PASS' : `${failures} FAILURE(S)`}`);

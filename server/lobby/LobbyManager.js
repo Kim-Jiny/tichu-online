@@ -77,21 +77,34 @@ class LobbyManager {
       // require the origin stamp to match before saying yes — reporting a
       // stranger's room as adopted would make the sender delete the only
       // copy of it.
-      // The fingerprint has to match too. Same origin with different content
-      // means the sender kept mutating the room after the attempt we already
-      // took (a waiting room that has since started a game, say) — saying yes
-      // would confirm our stale copy and make the sender drop the newer one.
-      if (existing.migrationOrigin
-          && existing.migrationOrigin === data.migrationOrigin
+      const sameOrigin = !!existing.migrationOrigin
+        && existing.migrationOrigin === data.migrationOrigin;
+
+      // Identical re-send: the answer we sent was lost. Say yes again.
+      if (sameOrigin
           && existing.migrationFingerprint
           && existing.migrationFingerprint === data.migrationFingerprint) {
         console.log(`[adoptRoom] ${data.id} already adopted from ${data.migrationOrigin} — treating as success`);
         return existing;
       }
-      if (existing.migrationOrigin === data.migrationOrigin) {
-        console.warn(`[adoptRoom] ${data.id} re-sent from ${data.migrationOrigin} with different content — refusing (stale copy here)`);
+
+      // Same room, newer content: the sender kept mutating it after the
+      // attempt we took. Confirming our stale copy would make it delete the
+      // newer one, but simply refusing strands the room on a dying instance
+      // until SIGKILL. Take the newer snapshot instead — safe precisely while
+      // nobody has arrived here yet, which is the case for as long as the
+      // sender still holds the sockets (i.e. the whole lost-response window).
+      const occupied = existing.game
+        || existing.players.some((p) => p !== null && !p.isBot && p.connected);
+      if (sameOrigin && !occupied) {
+        console.warn(`[adoptRoom] ${data.id} re-sent from ${data.migrationOrigin} with newer content — replacing our unoccupied copy`);
+        this.rooms.delete(data.id);
+      } else {
+        if (sameOrigin) {
+          console.warn(`[adoptRoom] ${data.id} re-sent from ${data.migrationOrigin} with different content but players are already here — refusing`);
+        }
+        return null;
       }
-      return null;
     }
 
     const room = new GameRoom(

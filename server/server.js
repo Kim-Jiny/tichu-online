@@ -2222,7 +2222,29 @@ wss.on('connection', (ws, req) => {
   });
 });
 
+// Actions that change what a room looks like. While draining, this instance's
+// rooms are snapshots in flight to the peer — possibly already adopted there,
+// with only our response lost. Any mutation after that makes our copy diverge
+// from the peer's, and the retry is then refused on fingerprint mismatch,
+// leaving the room stuck here until SIGKILL. Freeze them; every one of these
+// works normally once the room lands on the peer seconds later.
+//
+// Deliberately NOT frozen: leave_room / leave_game (never trap someone in a
+// room), chat, and the in-round play actions — a round already in progress
+// has to be able to finish, since that boundary is what triggers migration.
+const DRAIN_FROZEN_ACTIONS = new Set([
+  'create_room', 'join_room', 'join_room_by_invite',
+  'change_room_name', 'toggle_ready', 'change_team', 'kick_player',
+  'add_bot', 'block_slot', 'unblock_slot', 'set_random_seating',
+  'switch_to_spectator', 'switch_to_player',
+  'start_game', 'next_round',
+]);
+
 async function handleMessage(ws, data) {
+  if (isDraining && DRAIN_FROZEN_ACTIONS.has(data.type)) {
+    sendTo(ws, { type: 'error', message: t(ws.locale, 'server_restarting') });
+    return;
+  }
   switch (data.type) {
     // NOTE: 'ping' is handled earlier in ws.on('message'), before this queue,
     // so the pong is never delayed by a slow in-flight handler. It never
@@ -4111,16 +4133,7 @@ function handleStartGame(ws) {
     sendTo(ws, { type: 'error', message: t(ws.locale, 'game_already_in_progress') });
     return;
   }
-  // Draining: this room is on its way to the peer, and a snapshot of it may
-  // already be sitting there from an attempt whose response we lost. Letting a
-  // game start now would make the next retry carry different content than the
-  // peer already holds — it refuses that (fingerprint mismatch), so the match
-  // would be stuck here until SIGKILL. The room resumes on the peer instead,
-  // where the host can start straight away.
-  if (isDraining) {
-    sendTo(ws, { type: 'error', message: t(ws.locale, 'server_restarting') });
-    return;
-  }
+  // (Draining is handled centrally — see DRAIN_FROZEN_ACTIONS.)
   if (room.hostId !== ws.playerId) {
     sendTo(ws, { type: 'error', message: t(ws.locale, 'host_only_start') });
     return;

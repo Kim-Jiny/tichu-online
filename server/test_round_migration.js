@@ -320,5 +320,57 @@ console.log('\n=== migrated twice before anyone reconnects ===');
   }
 }
 
+// ── adoptRoom identity rules ───────────────────────────────────────────────
+// The peer must never answer "already adopted" for a room it doesn't actually
+// hold in that exact shape: the sender deletes its copy on success.
+console.log('\n=== adoptRoom: retries, collisions and stale re-sends ===');
+{
+  const payloadFor = (id, { origin, fingerprint, name = '방' }) => ({
+    id, name, gameType: 'tichu', maxPlayers: 4, targetScore: 1000,
+    hostId: 'h1', hostNickname: '앨리스', turnTimeLimit: 30,
+    blockedSlots: [], autoBlockedSlots: [], skExpansions: [],
+    matchProgress: null,
+    migrationOrigin: origin,
+    migrationFingerprint: fingerprint,
+    players: [{ slot: 0, id: 'h1', nickname: '앨리스', isBot: false, ready: true }],
+  });
+
+  const peer = new LobbyManager();
+  const base = payloadFor('room_x_1', { origin: 'blue:room_x_1', fingerprint: 'fp1' });
+  check('first adopt succeeds', !!peer.adoptRoom(JSON.parse(JSON.stringify(base))));
+
+  check('identical re-send is idempotent success',
+    peer.adoptRoom(JSON.parse(JSON.stringify(base))) !== null);
+
+  // Nobody has reconnected here yet (adoptRoom marks humans disconnected), so
+  // a newer snapshot should replace ours rather than jam the sender's retry.
+  const newer = payloadFor('room_x_1', { origin: 'blue:room_x_1', fingerprint: 'fp2', name: '이름바뀜' });
+  check('newer content from the same origin replaces an unoccupied copy',
+    peer.adoptRoom(JSON.parse(JSON.stringify(newer))) !== null);
+  check('and the newer content actually won', peer.getRoom('room_x_1').name === '이름바뀜',
+    peer.getRoom('room_x_1').name);
+
+  // Once somebody is actually sitting here, replacing would yank the room out
+  // from under them — refuse instead.
+  peer.getRoom('room_x_1').players[0].connected = true;
+  const newer2 = payloadFor('room_x_1', { origin: 'blue:room_x_1', fingerprint: 'fp3', name: '또바뀜' });
+  check('a re-send is refused once players have arrived',
+    peer.adoptRoom(JSON.parse(JSON.stringify(newer2))) === null);
+  check('the occupied room is left alone', peer.getRoom('room_x_1').name === '이름바뀜',
+    peer.getRoom('room_x_1').name);
+
+  // A genuinely different room wearing the same id must never be accepted.
+  const stranger = payloadFor('room_x_1', { origin: 'green:someone-else', fingerprint: 'fpX' });
+  check('a different origin with the same id is refused',
+    peer.adoptRoom(JSON.parse(JSON.stringify(stranger))) === null);
+
+  // Unstamped payloads (older peer, or a plain collision) get no special
+  // treatment either.
+  const peer2 = new LobbyManager();
+  peer2.adoptRoom(payloadFor('room_y_1', { origin: undefined, fingerprint: undefined }));
+  check('an unstamped duplicate is refused',
+    peer2.adoptRoom(payloadFor('room_y_1', { origin: undefined, fingerprint: undefined })) === null);
+}
+
 console.log(`\n${failures === 0 ? 'ALL PASS' : `${failures} FAILURE(S)`}`);
 process.exit(failures === 0 ? 0 : 1);

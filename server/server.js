@@ -8,6 +8,7 @@ const http = require('http');
 const serverStartedAt = new Date().toISOString();
 const LobbyManager = require('./lobby/LobbyManager');
 const { findAbandonedRooms } = require('./lobby/zombieSweep');
+const { playerStillNeedsToAct } = require('./game/turnGuard');
 const GameRoom = require('./game/GameRoom');
 const { decideBotAction } = require('./game/BotPlayer');
 const { decideSKBotAction } = require('./game/skull_king/SkullKingBot');
@@ -4755,6 +4756,12 @@ function _sendGameStateToAllImpl(roomId) {
   }
 
   if (room.gameType === 'mighty' && room.game.state === 'trick_end') {
+    // These early-return branches skip startTurnTimer, which is what would
+    // normally drop a timer belonging to the state we just left. Drop it here
+    // instead — nobody owes a turn action during a trick/round screen, and a
+    // survivor fires into a state where the auto-play no-ops while the
+    // timeout count climbs toward a bogus desertion. See game/turnGuard.js.
+    clearTurnTimer(roomId);
     if (trickEndTimers[roomId]) clearTimeout(trickEndTimers[roomId]);
     trickEndTimers[roomId] = setTimeout(() => {
       delete trickEndTimers[roomId];
@@ -4772,6 +4779,7 @@ function _sendGameStateToAllImpl(roomId) {
   }
 
   if (room.gameType === 'skull_king' && room.game.state === 'trick_end') {
+    clearTurnTimer(roomId); // see the mighty trick_end branch above
     if (trickEndTimers[roomId]) clearTimeout(trickEndTimers[roomId]);
     // Voided tricks (Kraken / White Whale) need a longer display window so
     // players can actually read the "트릭 무효" banner and effect reason.
@@ -4793,6 +4801,7 @@ function _sendGameStateToAllImpl(roomId) {
 
   // Auto next round after delay
   if (room.game.state === 'round_end') {
+    clearTurnTimer(roomId); // see the mighty trick_end branch above
     // Draining: this is the boundary we've been waiting for. Park here
     // instead of dealing another hand and hand the match to the peer —
     // the cumulative score rides along and the room resumes there.
@@ -5599,12 +5608,10 @@ async function handleTurnTimeout(roomId, playerId) {
   // to the real current actor and bail without counting.
   {
     const g = room.game;
-    let needsToAct = true;
-    if (room.gameType === 'skull_king') {
-      needsToAct = (g.state === 'playing' && g.currentPlayer === playerId)
-        || (g.state === 'bidding' && g.bids && g.bids[playerId] === null);
-    }
-    if (!needsToAct) {
+    // Every game type, not just SK: Love Letter carries an unresolved
+    // pendingEffect into round_end/game_end, and mighty/tichu have their own
+    // states where the armed actor has already moved on. See game/turnGuard.js.
+    if (!playerStillNeedsToAct(room.gameType, g, playerId)) {
       console.warn(`[TIMEOUT] spurious timer ignored: room=${roomId} type=${room.gameType} player=${playerId} state=${g.state} current=${g.currentPlayer}`);
       sendGameStateToAll(roomId);
       return;

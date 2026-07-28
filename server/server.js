@@ -2253,7 +2253,12 @@ async function handleMessage(ws, data) {
   // still here — a split room. Mid-round leaving stays open (that room isn't
   // migratable yet, and desertion has to keep working), and the block lasts
   // only until the room hands off, normally seconds.
-  if (isDraining && (data.type === 'leave_room' || data.type === 'leave_game') && ws.roomId && !ws.isSpectator) {
+  //
+  // Only when there is actually a peer to hand off to. Without one there is no
+  // second copy to diverge from — maybeMigrateRoom just closes the sockets and
+  // drops the room — so blocking would trap people for nothing.
+  if (isDraining && PEER_URL && INTERNAL_MIGRATE_TOKEN
+      && (data.type === 'leave_room' || data.type === 'leave_game') && ws.roomId && !ws.isSpectator) {
     const room = lobby.getRoom(ws.roomId);
     if (room && (!room.game || room.game.state === 'round_end')) {
       sendTo(ws, { type: 'error', message: t(ws.locale, 'server_restarting') });

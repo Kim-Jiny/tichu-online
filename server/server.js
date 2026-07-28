@@ -1685,7 +1685,7 @@ function serializeRoom(room) {
     // restarting the match from zero. Pass them straight through.
     matchProgress = room.matchProgress;
   }
-  return {
+  const payload = {
     matchProgress,
     // Stable across retries, so the peer can tell "this is the room I already
     // took, the sender just never saw my answer" from a genuine id clash.
@@ -1742,6 +1742,17 @@ function serializeRoom(room) {
       };
     }),
   };
+
+  // Content hash of everything above. The peer treats a re-sent room as an
+  // idempotent success (a retry whose response we lost), which is only sound
+  // while the snapshot is identical — if this instance kept mutating the room
+  // between attempts, "already adopted" would confirm a STALE copy and we'd
+  // delete the newer one. Mismatched fingerprints are refused instead.
+  payload.migrationFingerprint = crypto
+    .createHash('sha1')
+    .update(JSON.stringify(payload))
+    .digest('hex');
+  return payload;
 }
 
 // Read up to 1MB of JSON body from an incoming request. Migration
@@ -4098,6 +4109,16 @@ function handleStartGame(ws) {
   if (!room) { sendTo(ws, { type: 'room_closed' }); ws.roomId = null; return; }
   if (room.game) {
     sendTo(ws, { type: 'error', message: t(ws.locale, 'game_already_in_progress') });
+    return;
+  }
+  // Draining: this room is on its way to the peer, and a snapshot of it may
+  // already be sitting there from an attempt whose response we lost. Letting a
+  // game start now would make the next retry carry different content than the
+  // peer already holds — it refuses that (fingerprint mismatch), so the match
+  // would be stuck here until SIGKILL. The room resumes on the peer instead,
+  // where the host can start straight away.
+  if (isDraining) {
+    sendTo(ws, { type: 'error', message: t(ws.locale, 'server_restarting') });
     return;
   }
   if (room.hostId !== ws.playerId) {

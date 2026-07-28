@@ -52,6 +52,7 @@
   "game_still_in_progress": "The game is still in progress",
   "revoke_failed": "Failed to cancel the request",
   "game_already_in_progress": "A game is already in progress",
+  "server_restarting": "The server is restarting — please start again in a moment",
   "four_players_required": "4 players are required to start",
   "mighty_players_required": "Mighty needs {count} players to start",
   "all_players_must_ready": "All players must be ready",

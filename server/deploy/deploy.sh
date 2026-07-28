@@ -60,7 +60,25 @@ if [ ! -f "$APP_DIR/.env" ]; then
 fi
 
 # ----- 2. Decide slot direction -----
-ACTIVE=$(cat "$ACTIVE_FILE" 2>/dev/null || echo "blue")
+# The nginx upstream is what actually receives traffic, so trust it ahead of
+# the bookkeeping file. If a run ever dies between the upstream swap and the
+# file write, the file names the slot that is no longer live — and believing
+# it would make this run rebuild the container currently serving players.
+ACTIVE=""
+if [ -f "$PROXY_CONF" ]; then
+  # -E: alternation in a BRE is a GNU extension, and this has to be readable
+  # on any sed the box ships with.
+  ACTIVE=$(sed -nE 's/.*server tichu-online-(blue|green):3000;.*/\1/p' "$PROXY_CONF" | head -1)
+fi
+if [ -n "$ACTIVE" ]; then
+  FILE_ACTIVE=$(cat "$ACTIVE_FILE" 2>/dev/null || echo "")
+  if [ -n "$FILE_ACTIVE" ] && [ "$FILE_ACTIVE" != "$ACTIVE" ]; then
+    log "WARN: $ACTIVE_FILE says '$FILE_ACTIVE' but nginx routes to '$ACTIVE' — trusting nginx (previous deploy likely died mid-run)"
+  fi
+else
+  ACTIVE=$(cat "$ACTIVE_FILE" 2>/dev/null || echo "blue")
+  log "could not read upstream from $PROXY_CONF; falling back to $ACTIVE_FILE ($ACTIVE)"
+fi
 if [ "$ACTIVE" = "blue" ]; then INACTIVE="green"; else INACTIVE="blue"; fi
 log "active=$ACTIVE → switching to $INACTIVE"
 
@@ -94,13 +112,17 @@ sed "s|{{ACTIVE}}|$INACTIVE|g" "$TEMPLATE" > "$PROXY_CONF.new"
 mv "$PROXY_CONF.new" "$PROXY_CONF"
 docker exec nginx nginx -t
 docker exec nginx nginx -s reload
-log "nginx reloaded — new connections route to $INACTIVE"
+# Record the swap HERE, not after the drain. Traffic has already moved; if the
+# script dies during the drain below (SSH drop, CI kill, reboot) the file must
+# already name the live slot, or the next deploy rebuilds the container that is
+# serving players.
+echo "$INACTIVE" > "$ACTIVE_FILE"
+log "nginx reloaded — new connections route to $INACTIVE (active_slot updated)"
 
 # ----- 6. Drain the outgoing slot (graceful stop, 10-minute grace) -----
 log "stopping tichu-online-$ACTIVE with up to ${DRAIN_TIMEOUT_SEC}s drain grace"
 docker compose --profile "$ACTIVE" stop -t "$DRAIN_TIMEOUT_SEC" "server-$ACTIVE" || true
 docker compose --profile "$ACTIVE" rm -f "server-$ACTIVE" || true
 
-# ----- 7. Persist the new active slot -----
-echo "$INACTIVE" > "$ACTIVE_FILE"
+# ----- 7. Done (active_slot was already persisted at the swap) -----
 log "done. active=$INACTIVE"

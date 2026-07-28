@@ -77,9 +77,19 @@ class LobbyManager {
       // require the origin stamp to match before saying yes — reporting a
       // stranger's room as adopted would make the sender delete the only
       // copy of it.
-      if (existing.migrationOrigin && existing.migrationOrigin === data.migrationOrigin) {
+      // The fingerprint has to match too. Same origin with different content
+      // means the sender kept mutating the room after the attempt we already
+      // took (a waiting room that has since started a game, say) — saying yes
+      // would confirm our stale copy and make the sender drop the newer one.
+      if (existing.migrationOrigin
+          && existing.migrationOrigin === data.migrationOrigin
+          && existing.migrationFingerprint
+          && existing.migrationFingerprint === data.migrationFingerprint) {
         console.log(`[adoptRoom] ${data.id} already adopted from ${data.migrationOrigin} — treating as success`);
         return existing;
+      }
+      if (existing.migrationOrigin === data.migrationOrigin) {
+        console.warn(`[adoptRoom] ${data.id} re-sent from ${data.migrationOrigin} with different content — refusing (stale copy here)`);
       }
       return null;
     }
@@ -112,6 +122,7 @@ class LobbyManager {
     // Identifies the room this was migrated from, so a retried adopt can be
     // recognised as idempotent rather than a collision.
     room.migrationOrigin = data.migrationOrigin || null;
+    room.migrationFingerprint = data.migrationFingerprint || null;
 
     if (Array.isArray(data.players)) {
       for (const p of data.players) {

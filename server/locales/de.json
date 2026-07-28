@@ -55,6 +55,7 @@
   "game_still_in_progress": "Das Spiel läuft noch",
   "revoke_failed": "Anfrage konnte nicht zurückgezogen werden",
   "game_already_in_progress": "Ein Spiel läuft bereits",
+  "server_restarting": "Der Server startet neu — bitte gleich erneut starten",
   "four_players_required": "4 Spieler werden benötigt",
   "mighty_players_required": "Mighty benötigt {count} Spieler zum Start",
   "all_players_must_ready": "Alle Spieler müssen bereit sein",

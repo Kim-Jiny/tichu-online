@@ -1791,9 +1791,20 @@ async function handleAdoptRoomsRequest(req, res) {
   const body = await readJsonBody(req);
   const rooms = Array.isArray(body?.rooms) ? body.rooms : [];
   let adopted = 0;
+  // Rooms we refused because we already own that exact room and players are
+  // in it. The sender is holding a copy that has been overtaken — it needs to
+  // know the difference between "try again" and "let go", or it sits on those
+  // players until SIGKILL while the rest of the room plays on over here.
+  const superseded = [];
   for (const data of rooms) {
     const room = lobby.adoptRoom(data);
-    if (!room) continue;
+    if (!room) {
+      const existing = data && data.id ? lobby.getRoom(data.id) : null;
+      if (existing && data.migrationOrigin && existing.migrationOrigin === data.migrationOrigin) {
+        superseded.push(data.id);
+      }
+      continue;
+    }
     adopted++;
     if (Array.isArray(data.players)) {
       const now = Date.now();
@@ -1816,7 +1827,7 @@ async function handleAdoptRoomsRequest(req, res) {
   // 200 so even a caller that only checks the status code retries.
   const ok = adopted === rooms.length;
   res.writeHead(ok ? 200 : 409, { 'Content-Type': 'application/json' });
-  res.end(JSON.stringify({ adopted, requested: rooms.length }));
+  res.end(JSON.stringify({ adopted, requested: rooms.length, superseded }));
 }
 
 // A room adopted mid-match lands here in the waiting state, holding the
@@ -1950,16 +1961,27 @@ async function maybeMigrateRoom(roomId) {
       // retries for every other room too, right up to SIGKILL.
       signal: AbortSignal.timeout(5000),
     });
-    if (!r.ok) throw new Error(`peer responded ${r.status}`);
-    // A 200 is not enough: the peer skips rooms it can't take (duplicate id,
-    // malformed entry) and used to report that as success, after which we
-    // deleted the only remaining copy. Require it to have taken the room.
     const body = await r.json().catch(() => null);
-    if (!body || body.adopted !== 1) {
-      throw new Error(`peer adopted ${body ? body.adopted : '?'}/1`);
+    // A refusal can still be terminal. If the peer already owns this room and
+    // players are in it — someone whose connection dropped reconnected there
+    // while we were retrying — then our copy is the overtaken one. Retrying
+    // can never win, and holding on would strand the players still here (they
+    // can't even leave: see DRAIN_FROZEN_ACTIONS) until SIGKILL. Let go so
+    // they follow the room over.
+    const overtaken = !!body && Array.isArray(body.superseded) && body.superseded.includes(roomId);
+    if (!overtaken) {
+      if (!r.ok) throw new Error(`peer responded ${r.status}`);
+      // A 200 is not enough: the peer skips rooms it can't take (duplicate id,
+      // malformed entry) and used to report that as success, after which we
+      // deleted the only remaining copy. Require it to have taken the room.
+      if (!body || body.adopted !== 1) {
+        throw new Error(`peer adopted ${body ? body.adopted : '?'}/1`);
+      }
     }
     delete migrateFailures[roomId];
-    console.log(`[${INSTANCE_NAME}] migrated ${roomId} to peer`);
+    console.log(overtaken
+      ? `[${INSTANCE_NAME}] ${roomId} superseded on peer — releasing our copy`
+      : `[${INSTANCE_NAME}] migrated ${roomId} to peer`);
   } catch (err) {
     // Leave the room exactly as it is — players still connected, game parked
     // at the round boundary with its timers already cleared — and let the

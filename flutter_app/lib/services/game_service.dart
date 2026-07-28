@@ -359,7 +359,10 @@ class GameService extends ChangeNotifier {
   // The promise can also just not come true: the old server may be killed
   // mid-drain, or the room may die over there. Nothing would tell us, so the
   // banner gets its own expiry rather than sitting on screen forever.
-  static const _matchIncomingTtl = Duration(minutes: 1);
+  // 3 minutes, not 1: a smoke test measured a 55s wait for the round in
+  // progress on the old server to finish, which would have left the banner
+  // expiring five seconds before the match actually arrived.
+  static const _matchIncomingTtl = Duration(minutes: 3);
   bool _matchIncoming = false;
   Timer? _matchIncomingTimer;
   bool get matchIncoming => _matchIncoming && currentRoomId.isEmpty;

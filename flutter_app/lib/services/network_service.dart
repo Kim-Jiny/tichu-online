@@ -65,7 +65,10 @@ class NetworkService extends ChangeNotifier {
     );
   }
 
-  Future<void> connect([String? url]) async {
+  Future<void> connect(
+    [String? url,
+    Duration handshakeTimeout = const Duration(seconds: 8)]
+  ) async {
     if (_isConnected) return;
     if (_isConnecting) {
       await waitForConnection();
@@ -87,7 +90,7 @@ class NetworkService extends ChangeNotifier {
       // background) can otherwise hang on `.ready` for the OS TCP timeout
       // (tens of seconds), stalling reconnect and leaving the "connecting"
       // overlay stuck. Time out fast so reconnect() retries a fresh socket.
-      await _channel!.ready.timeout(const Duration(seconds: 8));
+      await _channel!.ready.timeout(handshakeTimeout);
 
       _isConnecting = false;
       _isConnected = true;
@@ -402,7 +405,15 @@ class NetworkService extends ChangeNotifier {
     const delays = [1, 2, 3, 5, 8]; // seconds – fast initial retries
     for (int i = 0; i < delays.length; i++) {
       try {
-        await connect(_serverUrl);
+        // Give the first try a short leash. A healthy handshake takes well
+        // under a second, and the common failure right after a resume is the
+        // radio not being ready — waiting the full 8s there just adds 8s of
+        // spinner before the retry that was going to work anyway. Later
+        // attempts get the longer bound for genuinely slow networks.
+        await connect(
+          _serverUrl,
+          i == 0 ? const Duration(seconds: 3) : const Duration(seconds: 8),
+        );
         return true;
       } catch (_) {
         await Future.delayed(Duration(seconds: delays[i]));

@@ -130,7 +130,13 @@ class AuthService {
       if (provider == 'google' || provider == 'apple') {
         final user = _auth.currentUser;
         if (user == null) return null;
-        return await user.getIdToken(true);
+        // NOT force-refreshed. Firebase caches the ID token for an hour and
+        // refreshes on its own once it nears expiry, so forcing it here only
+        // bought a guaranteed network round trip — paid on every reconnect,
+        // including the one right after the app resumes, when the radio is
+        // still waking up. That round trip was a visible chunk of the
+        // "connecting" spinner.
+        return await user.getIdToken();
       } else if (provider == 'kakao') {
         // Check if Kakao token is still valid
         try {

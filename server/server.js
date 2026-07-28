@@ -7,6 +7,7 @@ const crypto = require('crypto');
 const http = require('http');
 const serverStartedAt = new Date().toISOString();
 const LobbyManager = require('./lobby/LobbyManager');
+const { findAbandonedRooms } = require('./lobby/zombieSweep');
 const GameRoom = require('./game/GameRoom');
 const { decideBotAction } = require('./game/BotPlayer');
 const { decideSKBotAction } = require('./game/skull_king/SkullKingBot');
@@ -1304,6 +1305,9 @@ const roundEndTimers = {}; // roomId -> setTimeout handle for auto next round
 const resumeTimers = {};  // roomId -> setTimeout handle for auto match resume
 const RESUME_ALL_BACK_MS = 5000;   // everyone reconnected: brief settle
 const RESUME_DEADLINE_MS = 60000;  // some still missing: go without them
+// Frozen-room detector — see the [FREEZE] block in the watchdog interval.
+const roomProgress = {}; // roomId -> { sig, since, warned }
+const FREEZE_WARN_MS = 5 * 60 * 1000;
 const trickEndTimers = {}; // roomId -> setTimeout handle for skull king trick reveal
 // Love Letter: backup auto-ack timer for BOT effect owners only. The primary
 // 2.5s auto-ack lives in trickEndTimers; this fires just after it as a safety
@@ -1367,31 +1371,21 @@ setInterval(() => {
       inviteLinkTokens.delete(token);
     }
   }
-  // Clean up zombie rooms: no game, and all humans disconnected for >= 30 min
-  let zombieRemoved = false;
-  for (const [id, room] of lobby.rooms) {
-    if (room.game) continue;
-    const humans = room.players.filter(p => p !== null && !p.isBot);
-    if (humans.length === 0) {
-      // No humans at all (shouldn't happen, but clean up)
-      console.log(`[Cleanup] Removing zombie room: ${id} (no humans)`);
-      removeRoomAndNotifySpectators(id);
-      zombieRemoved = true;
-      continue;
-    }
-    // All humans must be disconnected AND their sessions expired (30min+)
-    const allHumansGoneLongEnough = humans.every(p => {
-      if (p.connected) return false;
-      const session = playerSessions.get(p.nickname);
-      return !session || (now - session.disconnectedAt > maxAge);
-    });
-    if (allHumansGoneLongEnough) {
-      console.log(`[Cleanup] Removing zombie room: ${id} (all humans disconnected 30min+)`);
-      removeRoomAndNotifySpectators(id);
-      zombieRemoved = true;
-    }
+  // Clean up abandoned rooms — including ones with a game still in progress,
+  // which have no other exit path. See lobby/zombieSweep.js.
+  const abandoned = findAbandonedRooms({
+    rooms: lobby.rooms,
+    playerSessions,
+    now,
+    maxAge,
+  });
+  for (const { id, reason, stuckIn } of abandoned) {
+    // A room reaped here while still mid-game is evidence of a freeze, and
+    // stuckIn names the state it died in.
+    console.log(`[Cleanup] Removing zombie room: ${id} (${reason})${stuckIn ? ` (game abandoned in ${stuckIn})` : ''}`);
+    removeRoomAndNotifySpectators(id);
   }
-  if (zombieRemoved) broadcastRoomList();
+  if (abandoned.length > 0) broadcastRoomList();
 }, 5 * 60 * 1000);
 
 // WebSocket heartbeat: detect zombie connections (network died without proper close).
@@ -1495,10 +1489,14 @@ if (DIAG_ON) {
     if (Date.now() - diagLastReport >= DIAG_SUMMARY_MS) {
       const m = process.memoryUsage();
       // Bot/room health: total bots + "ghost" rooms (an in-progress game with
-      // ZERO humans). Ghost should stay 0 — a room whose last human left/AFK'd
-      // is torn down (closeRoom), so a rising ghost/bot count means rooms (and
+      // ZERO humans present). Ghost should stay 0 — a room whose last human
+      // left/AFK'd is torn down, so a rising ghost/bot count means rooms (and
       // their bots) are leaking rather than being cleaned up. Single pass, no
       // per-room array allocation. ~2.4µs for 100 rooms, once per 30s.
+      //
+      // Counts CONNECTED humans, not occupied seats: a disconnected player
+      // keeps their slot for reconnection, so seat-counting reported ghost=0
+      // for exactly the leak this metric exists to catch.
       let totalBots = 0;
       let ghostRooms = 0;
       for (const [, rm] of lobby.rooms) {
@@ -1507,10 +1505,10 @@ if (DIAG_ON) {
         let bots = 0;
         for (const p of rm.players) {
           if (!p) continue;
-          if (p.isBot) bots++; else humans++;
+          if (p.isBot) bots++; else if (p.connected) humans++;
         }
         totalBots += bots;
-        if (rm.game && humans === 0) ghostRooms++; // in-game room with no humans
+        if (rm.game && humans === 0) ghostRooms++; // in-game room with nobody present
       }
       const botDiag = botPool
         ? ` bots=q${botPool.queueDepth}/f${botPool.inFlight}/maxq${botPool.stats.maxQueue}/slow${botPool.stats.slow}/stale${botPool.stats.stale}/to${botPool.stats.timeouts}/er${botPool.stats.errors}/mqw${botPool.stats.maxQWaitMs.toFixed(0)}/mc${botPool.stats.maxComputeMs.toFixed(0)}/mt${botPool.stats.maxTotalMs.toFixed(0)}${botPool.disabled ? '/DISABLED' : ''}`
@@ -1559,6 +1557,40 @@ setInterval(() => {
       : '';
     console.log(`[BOT] WATCHDOG recovering stranded bot turn: room=${roomId} type=${room?.gameType} state=${room?.game?.state} actor=${actor} pendingCheck=${!!pendingBotCheck[roomId]}${llEff}`);
     try { scheduleBotActions(roomId, true); } catch (e) { console.error('[BOT] WATCHDOG reschedule failed', e); }
+  }
+
+  // Frozen-room detector. A live game's signature changes constantly — turn
+  // limits cap at a couple of minutes, round/trick screens advance in
+  // seconds — so a signature that hasn't moved in FREEZE_WARN_MS means
+  // nothing is ever going to move it: turn timers only cover `playing` and a
+  // few named phases, and the stuck-bot watchdog above deliberately skips
+  // round_end/trick_end/dealing. The 30-min zombie sweep eventually reaps
+  // such a room, but by then the evidence is gone — so dump it here, once
+  // per stall, with the timer/actor state needed to find the cause.
+  const freezeNow = Date.now();
+  for (const [roomId, room] of lobby.rooms) {
+    if (!room || !room.game) { delete roomProgress[roomId]; continue; }
+    const g = room.game;
+    const sig = `${g.state}|${g.round ?? ''}|${g.currentPlayer ?? ''}|${g.trickNumber ?? ''}`;
+    const prev = roomProgress[roomId];
+    if (!prev || prev.sig !== sig) {
+      roomProgress[roomId] = { sig, since: freezeNow, warned: false };
+      continue;
+    }
+    if (prev.warned || freezeNow - prev.since < FREEZE_WARN_MS) continue;
+    prev.warned = true;
+    const actor = typeof g.getPendingActor === 'function' ? g.getPendingActor() : g.currentPlayer;
+    const humansPresent = room.players.filter(p => p !== null && !p.isBot && p.connected).length;
+    console.warn(
+      `[FREEZE] room=${roomId} type=${room.gameType} state=${g.state}`
+      + ` stuck=${Math.round((freezeNow - prev.since) / 1000)}s`
+      + ` actor=${actor || '-'}${actor && room.isBot(actor) ? '(bot)' : ''}`
+      + ` humansPresent=${humansPresent}`
+      + ` timers=turn${turnTimers[roomId] ? 1 : 0}/round${roundEndTimers[roomId] ? 1 : 0}`
+      + `/trick${trickEndTimers[roomId] ? 1 : 0}/bot${pendingBotTimers[roomId] ? 1 : 0}`
+      + `/autoReturn${autoReturnTimers[roomId] ? 1 : 0}`
+      + ` inFlight=${botDecisionInFlight[roomId] || 0}`,
+    );
   }
 }, BOT_WATCHDOG_MS).unref();
 // ──────────────────────────────────────────────────────────────────────────────
@@ -6089,6 +6121,7 @@ function clearRoomTimers(roomId, room = null) {
   }
   delete pendingBotCheck[roomId];
   delete botDecisionInFlight[roomId];
+  delete roomProgress[roomId];
   // Card-view request timers live on the room object; clear them too.
   if (room && room.cardRequestTimers) {
     for (const key of Object.keys(room.cardRequestTimers)) {

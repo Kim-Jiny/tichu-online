@@ -255,6 +255,7 @@
     }
   },
   "lobbyStartGame": "Spiel starten",
+  "lobbyMatchIncoming": "Server-Update läuft — du steigst in der nächsten Runde automatisch wieder ein",
   "lobbyReady": "Bereit",
   "lobbyReadyDone": "Bereit!",
   "lobbyReportTitle": "{nickname} melden",

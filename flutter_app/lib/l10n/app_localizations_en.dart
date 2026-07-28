@@ -771,6 +771,10 @@ class L10nEn extends L10n {
   String get lobbyStartGame => 'Start Game';
 
   @override
+  String get lobbyMatchIncoming =>
+      'Server update in progress — you\'ll rejoin automatically at the next round';
+
+  @override
   String get lobbyReady => 'Ready';
 
   @override

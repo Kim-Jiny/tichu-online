@@ -350,6 +350,19 @@ class GameService extends ChangeNotifier {
   String? timeoutPlayerName; // show "시간 초과!" banner
   String? desertedPlayerName; // show desertion message
   String? desertedReason; // 'leave' or 'timeout'
+
+  // A deploy is moving our match between servers. We reconnected here before
+  // the room did, so we're in the lobby; the server pulls us in once it
+  // arrives. Derived from being roomless so every path that puts us in a room
+  // — pulled in, joined another, created one — clears it for free.
+  //
+  // The promise can also just not come true: the old server may be killed
+  // mid-drain, or the room may die over there. Nothing would tell us, so the
+  // banner gets its own expiry rather than sitting on screen forever.
+  static const _matchIncomingTtl = Duration(minutes: 1);
+  bool _matchIncoming = false;
+  Timer? _matchIncomingTimer;
+  bool get matchIncoming => _matchIncoming && currentRoomId.isEmpty;
   int myTimeoutCount = 0; // Bug #6: own timeout count (0-2)
 
   // Dragon given
@@ -669,6 +682,16 @@ class GameService extends ChangeNotifier {
             (data['rooms'] as List?)?.map((r) => Room.fromJson(r)).toList() ??
             [];
         roomListReceived = true;
+        notifyListeners();
+        break;
+
+      case 'match_incoming':
+        _matchIncoming = true;
+        _matchIncomingTimer?.cancel();
+        _matchIncomingTimer = Timer(_matchIncomingTtl, () {
+          _matchIncoming = false;
+          notifyListeners();
+        });
         notifyListeners();
         break;
 
@@ -3778,6 +3801,7 @@ class GameService extends ChangeNotifier {
   @override
   void dispose() {
     _disposed = true; // C2: Mark as disposed
+    _matchIncomingTimer?.cancel();
     if (_shareInviteLinkCompleter != null &&
         !_shareInviteLinkCompleter!.isCompleted) {
       _shareInviteLinkCompleter!.completeError(

@@ -313,6 +313,7 @@
     }
   },
   "lobbyStartGame": "Start Game",
+  "lobbyMatchIncoming": "Server update in progress — you'll rejoin automatically at the next round",
   "lobbyReady": "Ready",
   "lobbyReadyDone": "Ready!",
   "lobbyReportTitle": "Report {nickname}",

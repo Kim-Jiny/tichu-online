@@ -908,6 +908,16 @@ const server = http.createServer(async (req, res) => {
       res.end('forbidden');
       return;
     }
+    if (req.method === 'POST' && pathname === '/internal/pending-rooms') {
+      try {
+        await handlePendingRoomsRequest(req, res);
+      } catch (err) {
+        console.error('[pending-rooms] error:', err);
+        res.writeHead(500, { 'Content-Type': 'text/plain' });
+        res.end('error');
+      }
+      return;
+    }
     if (req.method === 'POST' && pathname === '/internal/adopt-rooms') {
       try {
         await handleAdoptRoomsRequest(req, res);
@@ -1296,6 +1306,13 @@ let nextPlayerId = 1;
 // Track nickname -> roomId for reconnection during games
 const playerSessions = new Map(); // nickname -> { roomId, disconnectedAt }
 const spectatorSessions = new Map(); // nickname -> { roomId, disconnectedAt }
+// Rooms the draining peer told us it still holds. Someone whose socket dropped
+// mid-drain reconnects HERE (our /health is the one the LB likes now) while
+// their game is still finishing a round over there — this is what lets us tell
+// them "your match is coming" instead of dropping them in a bare lobby, where
+// the last tester concluded the game was gone and started a new one.
+// nickname -> { roomId, roomName, since }
+const pendingArrivals = new Map();
 
 // Turn timer system
 const turnTimers = {};    // roomId -> setTimeout handle
@@ -1366,6 +1383,12 @@ setInterval(() => {
     if (now - session.disconnectedAt > maxAge) {
       spectatorSessions.delete(nickname);
     }
+  }
+  // A drain that never delivered (peer SIGKILLed, notice raced a crash) would
+  // otherwise promise a match that is never coming. The window can't outlive
+  // the grace period, so anything older is stale.
+  for (const [nickname, info] of pendingArrivals) {
+    if (now - info.since > 20 * 60 * 1000) pendingArrivals.delete(nickname);
   }
   for (const [token, payload] of inviteLinkTokens) {
     if (now - payload.createdAt > 7 * 24 * 60 * 60 * 1000) {
@@ -1810,6 +1833,7 @@ function attachWaitingMembers(room, data) {
 
     if (players.has(ws.nickname)) {
       if (!room.reconnectPlayer(ws.nickname, ws.playerId).success) continue;
+      pendingArrivals.delete(ws.nickname);
       ws.roomId = room.id;
       ws.isSpectator = false;
       playerSessions.delete(ws.nickname);
@@ -1817,6 +1841,7 @@ function attachWaitingMembers(room, data) {
       attached++;
     } else if (watchers.has(ws.nickname)) {
       if (!room.addSpectator(ws.playerId, ws.nickname, '').success) continue;
+      pendingArrivals.delete(ws.nickname);
       ws.roomId = room.id;
       ws.isSpectator = true;
       spectatorSessions.delete(ws.nickname);
@@ -1832,6 +1857,34 @@ function attachWaitingMembers(room, data) {
     // They may be all it was waiting for.
     maybeAutoResumeMatch(room.id);
   }
+}
+
+// /internal/pending-rooms — the peer entering drain tells us which rooms it
+// still holds and who belongs to them, so we can hold a "your match is on its
+// way" state for anyone who reconnects here before the room does.
+async function handlePendingRoomsRequest(req, res) {
+  const body = await readJsonBody(req);
+  const rooms = Array.isArray(body?.rooms) ? body.rooms : [];
+  const now = Date.now();
+  let noted = 0;
+  for (const r of rooms) {
+    if (!r || !r.id || !Array.isArray(r.members)) continue;
+    for (const nickname of r.members) {
+      if (!nickname) continue;
+      pendingArrivals.set(nickname, { roomId: r.id, roomName: r.name || '', since: now });
+      noted++;
+      // Someone may already be sitting in our lobby wondering where their
+      // game went — tell them now rather than only on their next login.
+      for (const ws of wss.clients) {
+        if (ws.readyState === ws.OPEN && ws.nickname === nickname && !ws.roomId) {
+          sendTo(ws, { type: 'match_incoming', roomName: r.name || '' });
+        }
+      }
+    }
+  }
+  if (noted > 0) console.log(`[pending-rooms] peer is still finishing ${rooms.length} room(s); holding ${noted} member(s)`);
+  res.writeHead(200, { 'Content-Type': 'application/json' });
+  res.end(JSON.stringify({ noted }));
 }
 
 async function handleAdoptRoomsRequest(req, res) {
@@ -1877,6 +1930,10 @@ async function handleAdoptRoomsRequest(req, res) {
         spectatorSessions.set(nickname, { roomId: room.id, disconnectedAt: now });
       }
     }
+    for (const p of data.players || []) {
+      if (p && !p.isBot && p.nickname) pendingArrivals.delete(p.nickname);
+    }
+    for (const nickname of data.spectators || []) pendingArrivals.delete(nickname);
     attachWaitingMembers(room, data);
   }
   // Anything we couldn't take (a duplicate id, a malformed entry) must read
@@ -1954,6 +2011,40 @@ function startResumedMatch(roomId) {
   broadcastRoomState(roomId);
   broadcastRoomList();
   sendGameStateToAll(roomId);
+}
+
+// Hand the peer a list of the rooms still finishing here, so it can hold their
+// members instead of showing them an empty lobby. Best-effort: a failure just
+// means those players see the lobby, which is what happened before this
+// existed.
+async function notifyPeerOfPendingRooms() {
+  if (!PEER_URL || !INTERNAL_MIGRATE_TOKEN) return;
+  const rooms = [];
+  for (const [, room] of lobby.rooms) {
+    const members = room.players
+      .filter((p) => p !== null && !p.isBot && p.nickname)
+      .map((p) => p.nickname);
+    for (const s of room.spectators || []) {
+      if (s.nickname) members.push(s.nickname);
+    }
+    if (members.length > 0) rooms.push({ id: room.id, name: room.name, members });
+  }
+  if (rooms.length === 0) return;
+  try {
+    const r = await fetch(`${PEER_URL}/internal/pending-rooms`, {
+      method: 'POST',
+      headers: {
+        'X-Internal-Token': INTERNAL_MIGRATE_TOKEN,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ rooms }),
+      signal: AbortSignal.timeout(5000),
+    });
+    if (!r.ok) throw new Error(`peer responded ${r.status}`);
+    console.log(`[${INSTANCE_NAME}] told peer about ${rooms.length} room(s) still finishing here`);
+  } catch (err) {
+    console.error(`[${INSTANCE_NAME}] pending-rooms notice failed:`, err.message || err);
+  }
 }
 
 // Migrate one room to the peer instance. No-op outside of drain mode and
@@ -2099,6 +2190,12 @@ process.on('SIGTERM', async () => {
   }
 
   console.log(`[${INSTANCE_NAME}] drain initial pass complete; waiting for in-game rooms to reach a round boundary`);
+
+  // Tell the peer who belongs to the rooms we couldn't hand over yet. Their
+  // players are still connected here right now, but any one of them who drops
+  // from this point lands over there — and without this notice the peer has no
+  // way to know their match still exists.
+  await notifyPeerOfPendingRooms();
 
   // Poll for full drain — when no rooms remain (every in-game room has
   // hit a round boundary and migrated), exit. Otherwise we'd sit on the
@@ -3526,6 +3623,15 @@ async function handleReconnection(ws) {
     type: 'room_list',
     rooms: filterRoomsForClient(ws, lobby.getRoomList()),
   });
+  // Landing in the lobby, but the draining peer says a match of theirs is
+  // still finishing a round over there. Say so — otherwise this looks like
+  // the game simply vanished, and the last tester responded by starting a
+  // new room. They keep the lobby; we pull them in when the room arrives
+  // (attachWaitingMembers).
+  const incoming = pendingArrivals.get(ws.nickname);
+  if (incoming) {
+    sendTo(ws, { type: 'match_incoming', roomName: incoming.roomName || '' });
+  }
   // Send unread DM count on login
   getTotalUnreadDmCount(ws.nickname).then(count => {
     sendTo(ws, { type: 'unread_dm_count', count });
@@ -5846,17 +5952,31 @@ async function handleTurnTimeout(roomId, playerId) {
   // Use nickname as key so timeout count persists across reconnections
   const nickname = room.game.playerNames[playerId] || playerId;
 
-  // Increment timeout count
-  if (!timeoutCounts[roomId]) timeoutCounts[roomId] = {};
-  if (!timeoutCounts[roomId][nickname]) timeoutCounts[roomId][nickname] = 0;
-  timeoutCounts[roomId][nickname]++;
+  // While draining, don't hold a missed turn against anyone. A player who has
+  // gone quiet here is very likely already on the peer: our /health is 503, so
+  // the load balancer sends every reconnect there and they physically cannot
+  // come back to this instance. Counting those turns would desert them for a
+  // disconnect the deploy caused — and desertion removes the room, so the
+  // match dies before it can migrate. Seen exactly that in a smoke test: a
+  // backgrounded player was deserted 3 turns into the drain and the room was
+  // gone by the time they reappeared on the other side.
+  //
+  // Auto-play below still runs, so the round keeps moving and reaches the
+  // boundary the handover needs.
+  if (!isDraining) {
+    if (!timeoutCounts[roomId]) timeoutCounts[roomId] = {};
+    if (!timeoutCounts[roomId][nickname]) timeoutCounts[roomId][nickname] = 0;
+    timeoutCounts[roomId][nickname]++;
 
-  logVerboseConnection(`[TIMEOUT] ${nickname} (${playerId}) timeout #${timeoutCounts[roomId][nickname]}`);
+    logVerboseConnection(`[TIMEOUT] ${nickname} (${playerId}) timeout #${timeoutCounts[roomId][nickname]}`);
 
-  // 3 timeouts → desertion (S2: await async handleDesertion)
-  if (timeoutCounts[roomId][nickname] >= 3) {
-    await handleDesertion(roomId, playerId, 'timeout');
-    return;
+    // 3 timeouts → desertion (S2: await async handleDesertion)
+    if (timeoutCounts[roomId][nickname] >= 3) {
+      await handleDesertion(roomId, playerId, 'timeout');
+      return;
+    }
+  } else {
+    logVerboseConnection(`[TIMEOUT] ${nickname} (${playerId}) missed a turn while draining — not counted`);
   }
 
   // Broadcast timeout event
@@ -5864,7 +5984,9 @@ async function handleTurnTimeout(roomId, playerId) {
     type: 'turn_timeout',
     player: playerId,
     playerName: nickname,
-    count: timeoutCounts[roomId][nickname],
+    // Undefined while draining — we skip the counting entirely there, and the
+    // room may never have had a timeout to create the bucket.
+    count: timeoutCounts[roomId]?.[nickname] ?? 0,
   });
 
   // Auto action

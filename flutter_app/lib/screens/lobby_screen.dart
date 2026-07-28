@@ -1526,6 +1526,7 @@ class _LobbyScreenState extends State<LobbyScreen> {
       body = Column(
         children: [
           _buildLobbyHeader(game, isLandscape: true),
+          if (game.matchIncoming) _buildMatchIncomingBanner(),
           if (hasTopNotices)
             Padding(
               padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
@@ -1543,6 +1544,8 @@ class _LobbyScreenState extends State<LobbyScreen> {
       body = Column(
         children: [
           _buildLobbyHeader(game, isLandscape: false),
+
+          if (game.matchIncoming) _buildMatchIncomingBanner(),
 
           // Maintenance notice banner
           if (game.hasMaintenanceNotice) _buildMaintenanceBanner(game),
@@ -1793,6 +1796,45 @@ class _LobbyScreenState extends State<LobbyScreen> {
         ],
       ),
     ];
+  }
+
+  Widget _buildMatchIncomingBanner() {
+    // A deploy is moving our match to this server. It lands here when the
+    // round in progress on the old one finishes, and the server puts us back
+    // in automatically — so say that rather than leave the lobby looking like
+    // the game disappeared.
+    return Container(
+      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+      decoration: BoxDecoration(
+        color: const Color(0xFFDEDBFA),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: const Color(0xFF9A8FE8)),
+      ),
+      child: Row(
+        children: [
+          const SizedBox(
+            width: 16,
+            height: 16,
+            child: CircularProgressIndicator(
+              strokeWidth: 2,
+              valueColor: AlwaysStoppedAnimation(Color(0xFF4A4080)),
+            ),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Text(
+              L10n.of(context).lobbyMatchIncoming,
+              style: const TextStyle(
+                fontSize: 13,
+                fontWeight: FontWeight.w600,
+                color: Color(0xFF4A4080),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
   }
 
   Widget _buildMaintenanceBanner(GameService game) {

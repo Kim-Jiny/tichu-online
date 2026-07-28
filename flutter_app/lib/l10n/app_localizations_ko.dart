@@ -747,6 +747,9 @@ class L10nKo extends L10n {
   String get lobbyStartGame => '게임 시작';
 
   @override
+  String get lobbyMatchIncoming => '서버 업데이트로 인해 다음 라운드에 자동 합류됩니다';
+
+  @override
   String get lobbyReady => '준비';
 
   @override

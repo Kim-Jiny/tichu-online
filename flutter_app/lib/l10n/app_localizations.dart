@@ -1515,6 +1515,12 @@ abstract class L10n {
   /// **'Start Game'**
   String get lobbyStartGame;
 
+  /// No description provided for @lobbyMatchIncoming.
+  ///
+  /// In en, this message translates to:
+  /// **'Server update in progress — you\'ll rejoin automatically at the next round'**
+  String get lobbyMatchIncoming;
+
   /// No description provided for @lobbyReady.
   ///
   /// In en, this message translates to:

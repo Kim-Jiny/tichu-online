@@ -247,6 +247,7 @@
   "lobbyRandomSeatingOff": "고정팀",
   "lobbySkullKingPlayers": "스컬킹 · {count}인",
   "lobbyStartGame": "게임 시작",
+  "lobbyMatchIncoming": "서버 업데이트로 인해 다음 라운드에 자동 합류됩니다",
   "lobbyReady": "준비",
   "lobbyReadyDone": "준비완료!",
   "lobbyReportTitle": "{nickname} 신고",

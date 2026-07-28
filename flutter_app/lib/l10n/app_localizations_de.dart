@@ -781,6 +781,10 @@ class L10nDe extends L10n {
   String get lobbyStartGame => 'Spiel starten';
 
   @override
+  String get lobbyMatchIncoming =>
+      'Server-Update läuft — du steigst in der nächsten Runde automatisch wieder ein';
+
+  @override
   String get lobbyReady => 'Bereit';
 
   @override

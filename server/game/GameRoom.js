@@ -47,6 +47,9 @@ class GameRoom {
     // the next startGame, which resumes the match instead of starting a
     // fresh one. Null for rooms that weren't migrated.
     this.matchProgress = null;
+    // "<instance>:<roomId>" of the room this was migrated from, so a retried
+    // adopt reads as idempotent instead of an id collision. Null if local.
+    this.migrationOrigin = null;
     // Bot tracking
     this.bots = new Map(); // botId -> BotPlayer
     // Spectator card view permissions: { spectatorId: Set of playerId }

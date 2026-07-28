@@ -1687,6 +1687,11 @@ function serializeRoom(room) {
   }
   return {
     matchProgress,
+    // Stable across retries, so the peer can tell "this is the room I already
+    // took, the sender just never saw my answer" from a genuine id clash.
+    // Without it a lost response is unrecoverable: every retry looks like a
+    // duplicate and the sender burns the whole drain window failing.
+    migrationOrigin: `${INSTANCE_NAME}:${room.id}`,
     id: room.id,
     name: room.name,
     isPrivate: !!room.isPrivate,
@@ -1928,6 +1933,11 @@ async function maybeMigrateRoom(roomId) {
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({ rooms: [data] }),
+      // Without this a peer that accepts the connection but never answers
+      // hangs here forever. The drain sweep is serialised behind one
+      // in-flight attempt, so that one stuck request would freeze the
+      // retries for every other room too, right up to SIGKILL.
+      signal: AbortSignal.timeout(5000),
     });
     if (!r.ok) throw new Error(`peer responded ${r.status}`);
     // A 200 is not enough: the peer skips rooms it can't take (duplicate id,

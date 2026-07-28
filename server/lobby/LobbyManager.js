@@ -69,7 +69,20 @@ class LobbyManager {
   // room — the caller (peer) should validate before sending.
   adoptRoom(data) {
     if (!data || !data.id) return null;
-    if (this.rooms.has(data.id)) return null;
+
+    const existing = this.rooms.get(data.id);
+    if (existing) {
+      // A retry after a response the sender never saw. Ids carry a per-boot
+      // token so this should only ever be the same room arriving twice, but
+      // require the origin stamp to match before saying yes — reporting a
+      // stranger's room as adopted would make the sender delete the only
+      // copy of it.
+      if (existing.migrationOrigin && existing.migrationOrigin === data.migrationOrigin) {
+        console.log(`[adoptRoom] ${data.id} already adopted from ${data.migrationOrigin} — treating as success`);
+        return existing;
+      }
+      return null;
+    }
 
     const room = new GameRoom(
       data.id,
@@ -96,6 +109,9 @@ class LobbyManager {
     // the cumulative score + seating. startGame consumes this to resume
     // the match rather than start a new one.
     room.matchProgress = data.matchProgress || null;
+    // Identifies the room this was migrated from, so a retried adopt can be
+    // recognised as idempotent rather than a collision.
+    room.migrationOrigin = data.migrationOrigin || null;
 
     if (Array.isArray(data.players)) {
       for (const p of data.players) {

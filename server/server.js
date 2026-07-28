@@ -1299,6 +1299,11 @@ const spectatorSessions = new Map(); // nickname -> { roomId, disconnectedAt }
 const turnTimers = {};    // roomId -> setTimeout handle
 const timeoutCounts = {}; // roomId -> { playerId: count }
 const roundEndTimers = {}; // roomId -> setTimeout handle for auto next round
+// Rooms adopted mid-match (blue/green drain) auto-resume once their players
+// are back — see maybeAutoResumeMatch.
+const resumeTimers = {};  // roomId -> setTimeout handle for auto match resume
+const RESUME_ALL_BACK_MS = 5000;   // everyone reconnected: brief settle
+const RESUME_DEADLINE_MS = 60000;  // some still missing: go without them
 const trickEndTimers = {}; // roomId -> setTimeout handle for skull king trick reveal
 // Love Letter: backup auto-ack timer for BOT effect owners only. The primary
 // 2.5s auto-ack lives in trickEndTimers; this fires just after it as a safety
@@ -1729,6 +1734,79 @@ async function handleAdoptRoomsRequest(req, res) {
   }
   res.writeHead(200, { 'Content-Type': 'application/json' });
   res.end(JSON.stringify({ adopted }));
+}
+
+// A room adopted mid-match lands here in the waiting state, holding the
+// standings it had on the peer. Rather than making the host press start
+// again, pick the match back up on our own once the players are here.
+// Called whenever someone reconnects into such a room.
+function maybeAutoResumeMatch(roomId) {
+  const room = lobby.getRoom(roomId);
+  if (!room || room.game || !room.matchProgress) return;
+  if (isDraining) return; // on our way out — don't deal a round we can't finish
+
+  const humans = room.players.filter((p) => p !== null && !p.isBot);
+  const present = humans.filter((p) => p.connected);
+  if (present.length === 0) return; // nobody back yet; wait for the first
+
+  const everyoneBack = present.length === humans.length;
+  if (resumeTimers[roomId]) {
+    // A deadline is already ticking. Only worth touching if the last
+    // straggler just arrived — then we can go early.
+    if (!everyoneBack) return;
+    clearTimeout(resumeTimers[roomId]);
+  }
+
+  const delay = everyoneBack ? RESUME_ALL_BACK_MS : RESUME_DEADLINE_MS;
+  resumeTimers[roomId] = setTimeout(() => {
+    delete resumeTimers[roomId];
+    startResumedMatch(roomId);
+  }, delay);
+
+  // Unknown message types are ignored client-side, so this is safe to send
+  // to older clients — they simply see the round appear after the delay.
+  broadcastGameEvent(roomId, {
+    type: 'match_resuming',
+    delayMs: delay,
+    round: (room.matchProgress.round || 0) + 1,
+  });
+}
+
+function startResumedMatch(roomId) {
+  const room = lobby.getRoom(roomId);
+  if (!room || room.game || !room.matchProgress) return;
+  if (isDraining) return;
+
+  const humans = room.players.filter((p) => p !== null && !p.isBot);
+  if (!humans.some((p) => p.connected)) return; // everyone left again
+
+  // Same bookkeeping handleStartGame does: drop waiting-room kick timers and
+  // make sure anyone who hasn't reconnected yet can still find their way in.
+  for (const player of humans) {
+    const timerKey = `${roomId}_${player.id}`;
+    if (waitingRoomTimers[timerKey]) {
+      clearTimeout(waitingRoomTimers[timerKey]);
+      delete waitingRoomTimers[timerKey];
+    }
+    if (player.connected === false) {
+      playerSessions.set(player.nickname, { roomId, disconnectedAt: Date.now() });
+    }
+  }
+
+  if (!room.startGame()) {
+    // Roster no longer supports a start (someone left for good). Drop the
+    // carried standings so the room behaves like any other waiting room.
+    console.log(`[${INSTANCE_NAME}] resume ${roomId}: roster no longer startable — dropping carried match`);
+    room.matchProgress = null;
+    broadcastRoomState(roomId);
+    broadcastRoomList();
+    return;
+  }
+
+  console.log(`[${INSTANCE_NAME}] resumed migrated ${room.gameType} match in ${roomId}`);
+  broadcastRoomState(roomId);
+  broadcastRoomList();
+  sendGameStateToAll(roomId);
 }
 
 // Migrate one room to the peer instance. No-op outside of drain mode and
@@ -2965,6 +3043,9 @@ async function handleReconnection(ws) {
         broadcastRoomState(room.id);
         sendGameStateToAll(room.id);
         broadcastRoomList();
+        // If this room came over from a draining peer mid-match, the player
+        // who just landed may be the one it was waiting on.
+        maybeAutoResumeMatch(room.id);
         return;
       }
     }
@@ -3164,6 +3245,10 @@ async function handleReconnection(ws) {
         notifyLegacyRandomSeatingClient(room, ws);
         broadcastRoomState(room.id);
         broadcastRoomList();
+        // A room adopted mid-match has no game object, so its players all
+        // come back through this waiting-room path — this is where the
+        // auto-resume gets its cue.
+        maybeAutoResumeMatch(room.id);
         return;
       }
     }
@@ -5983,6 +6068,10 @@ function clearRoomTimers(roomId, room = null) {
   if (roundEndTimers[roomId]) {
     clearTimeout(roundEndTimers[roomId]);
     delete roundEndTimers[roomId];
+  }
+  if (resumeTimers[roomId]) {
+    clearTimeout(resumeTimers[roomId]);
+    delete resumeTimers[roomId];
   }
   Object.keys(waitingRoomTimers).forEach((key) => {
     if (!key.startsWith(`${roomId}_`)) return;

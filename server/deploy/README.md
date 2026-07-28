@@ -165,18 +165,26 @@ bash /opt/services/tichu-online/deploy.sh
 
 내부 동작:
 1. `git pull origin main`
-2. `active_slot` 읽고 비활성 슬롯 결정
+2. 현재 슬롯 결정 — nginx conf의 upstream을 먼저 읽고, 못 읽으면 `active_slot` 폴백
 3. 새 이미지 빌드 + 비활성 슬롯에 시작
 4. 헬스체크 통과 대기 (최대 60초)
-5. nginx 템플릿 치환 + reload
-6. 옛 슬롯에 `SIGTERM` (10분 grace) → drain → kill
-7. `active_slot` 갱신
+5. nginx 템플릿 치환 + reload → **곧바로 `active_slot` 갱신**
+6. 옛 슬롯에 `SIGTERM` (`DRAIN_TIMEOUT_SEC` grace, 현재 15분) → drain → kill
+
+`active_slot`을 drain 전에 쓰는 이유: 트래픽은 5단계에서 이미 옮겨간다.
+drain 도중 스크립트가 죽었을 때 파일이 옛 슬롯을 가리키고 있으면, 다음
+배포가 지금 서비스 중인 컨테이너를 rebuild/stop 해버린다. 2단계에서
+nginx conf를 우선으로 보는 것도 같은 이유의 이중 안전장치다.
+
+drain은 **한 라운드**만 기다린다. 라운드가 끝나는 순간 방이 누적 점수와
+함께 새 슬롯으로 이관되고, 거기서 자동으로 다음 라운드가 시작된다
+(매치 전체가 끝날 때까지 기다리지 않는다).
 
 에러 시 자동 롤백 (헬스체크 실패하면 비활성 슬롯 컨테이너 정리하고 종료).
 
 ### 동시 배포 차단
 
-`deploy.sh`는 `$BASE_DIR/.deploy.lock`에 `flock`을 잡는다. drain 대기(최대 10분) 도중 두 번째 실행은 즉시 거부된다. 직전 실행이 비정상 종료되어 lock이 남았다면 수동으로 `rm $BASE_DIR/.deploy.lock` 후 재시도.
+`deploy.sh`는 `$BASE_DIR/.deploy.lock`에 `flock`을 잡는다. drain 대기(최대 `DRAIN_TIMEOUT_SEC`, 현재 15분) 도중 두 번째 실행은 즉시 거부된다. 직전 실행이 비정상 종료되어 lock이 남았다면 수동으로 `rm $BASE_DIR/.deploy.lock` 후 재시도.
 
 ---
 
@@ -225,8 +233,9 @@ docker exec nginx nginx -t && docker exec nginx nginx -s reload
 # 슬롯 갱신
 echo "$GOOD" > /opt/services/tichu-online/active_slot
 
-# 새 슬롯 정리
-docker compose --profile $BAD stop -t 600 server-$BAD || true
+# 새 슬롯 정리 (-t 는 compose의 stop_grace_period와 맞춘다. 짧게 주면
+# 방들이 옛 슬롯으로 되돌아가기 전에 SIGKILL 된다)
+docker compose --profile $BAD stop -t 900 server-$BAD || true
 docker compose --profile $BAD rm -f server-$BAD || true
 ```
 
@@ -250,7 +259,7 @@ docker compose --profile $BAD rm -f server-$BAD || true
 
 ### 양쪽 컨테이너가 동시에 살아있음
 - 정상 (배포 중 잠깐). 배포 완료 후 옛 슬롯이 자동 정리되어야 함
-- 10분 후에도 살아있으면: `docker compose --profile <slot> stop -t 0 server-<slot>`로 강제 정리
+- drain grace(`DRAIN_TIMEOUT_SEC`, 현재 15분)를 넘겨도 살아있으면: `docker compose --profile <slot> stop -t 0 server-<slot>`로 강제 정리
 
 ### 옛 단일 deploy.sh가 다시 실행됨 (실수)
 - 옛 `deploy.sh`는 `docker compose down/up`을 그대로 시도해서 새 구조의 프로필 기반 서비스를 못 띄움

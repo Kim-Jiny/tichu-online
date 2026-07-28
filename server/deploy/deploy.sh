@@ -4,8 +4,8 @@
 # Reads the currently active slot from $ACTIVE_FILE, brings up the
 # inactive slot with the latest code, swaps nginx upstream to the new
 # slot once /health goes green, then graceful-stops the old slot
-# (10-minute SIGTERM grace lets in-progress games finish or migrate
-# via /internal/adopt-rooms).
+# (SIGTERM grace of DRAIN_TIMEOUT_SEC lets in-progress games reach a round
+# boundary and migrate via /internal/adopt-rooms).
 #
 # First-time bootstrap is documented in server/deploy/README.md.
 #
@@ -119,7 +119,7 @@ docker exec nginx nginx -s reload
 echo "$INACTIVE" > "$ACTIVE_FILE"
 log "nginx reloaded — new connections route to $INACTIVE (active_slot updated)"
 
-# ----- 6. Drain the outgoing slot (graceful stop, 10-minute grace) -----
+# ----- 6. Drain the outgoing slot (graceful stop, DRAIN_TIMEOUT_SEC grace) -----
 log "stopping tichu-online-$ACTIVE with up to ${DRAIN_TIMEOUT_SEC}s drain grace"
 docker compose --profile "$ACTIVE" stop -t "$DRAIN_TIMEOUT_SEC" "server-$ACTIVE" || true
 docker compose --profile "$ACTIVE" rm -f "server-$ACTIVE" || true

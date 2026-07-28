@@ -2292,6 +2292,18 @@ async function handleMessage(ws, data) {
     sendTo(ws, { type: 'error', message: t(ws.locale, 'server_restarting') });
     return;
   }
+  // Leaving frees the seat (removePlayer), which fails the roster check at
+  // resume and restarts the match from zero — so it waits too, but only until
+  // the match picks back up (auto-resume fires within 60s of the first player
+  // returning). After that it is a normal in-game leave/desertion again.
+  // Spectators aren't in the roster, so they're free to go.
+  if ((data.type === 'leave_room' || data.type === 'leave_game') && ws.roomId && !ws.isSpectator) {
+    const room = lobby.getRoom(ws.roomId);
+    if (isMigratedResumeRoom(room)) {
+      sendTo(ws, { type: 'error', message: t(ws.locale, 'room_resuming_match') });
+      return;
+    }
+  }
   if (MIGRATED_RESUME_FROZEN_ACTIONS.has(data.type) && ws.roomId) {
     const room = lobby.getRoom(ws.roomId);
     if (isMigratedResumeRoom(room)) {
@@ -2823,6 +2835,18 @@ async function handleLogin(ws, data) {
             roomId: client.roomId,
             disconnectedAt: Date.now(),
           });
+        } else if (oldRoom && isMigratedResumeRoom(oldRoom)) {
+          // Looks like a waiting room, but the seat belongs to a match that is
+          // mid-flight. Freeing it would fail the roster check at resume and
+          // restart the match from zero — and this path runs on an ordinary
+          // duplicate login, i.e. someone simply reopening the app. Treat it
+          // like the in-game branch above: hold the seat, keep the session.
+          oldRoom.markPlayerDisconnected(client.playerId);
+          playerSessions.set(client.nickname, {
+            roomId: client.roomId,
+            disconnectedAt: Date.now(),
+          });
+          broadcastRoomState(client.roomId);
         } else if (oldRoom) {
           // Waiting room (no game) - clean up properly
           const timerKey = `${client.roomId}_${client.playerId}`;

@@ -46,7 +46,30 @@ restore_conf_on_fail() {
     rm -f "$CONF_BACKUP" || true
   fi
 }
-trap restore_conf_on_fail EXIT INT TERM
+# A signal is not a failed command: $? at that moment is whatever ran last,
+# often 0, so the exit-status test above would skip the restore precisely when
+# we need it (Ctrl-C or a CI kill between the conf swap and the reload). Signals
+# get their own handler that restores unconditionally, then leaves via the
+# conventional 128+signal code with the EXIT trap disarmed so it can't run twice.
+restore_conf_on_signal() {
+  sig="$1"
+  if [ -n "$CONF_BACKUP" ] && [ -f "$CONF_BACKUP" ]; then
+    log "interrupted by $sig before the upstream swap was confirmed — restoring $PROXY_CONF"
+    cp "$CONF_BACKUP" "$PROXY_CONF" || true
+    docker exec nginx nginx -s reload || true
+    rm -f "$CONF_BACKUP" || true
+  fi
+  CONF_BACKUP=""
+  trap - EXIT
+  case "$sig" in
+    INT) exit 130 ;;
+    TERM) exit 143 ;;
+    *) exit 1 ;;
+  esac
+}
+trap restore_conf_on_fail EXIT
+trap 'restore_conf_on_signal INT' INT
+trap 'restore_conf_on_signal TERM' TERM
 
 # Concurrent-deploy guard. The drain step blocks for up to
 # DRAIN_TIMEOUT_SEC; if a second invocation fires while the first is

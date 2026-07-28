@@ -1,6 +1,15 @@
 const GameRoom = require('../game/GameRoom');
 const { BotPlayer } = require('../game/BotPlayer');
 
+// Room ids must be unique across INSTANCES, not just within one process.
+// A deploy points nginx at the incoming slot before draining the outgoing one
+// (see server/deploy/deploy.sh), so for the whole drain window — up to
+// stop_grace_period — both are live and handing out ids. With a bare
+// per-process counter they both start at room_1, and every colliding id makes
+// the peer refuse the migration as a duplicate, killing the match it carried.
+// A per-boot token keeps them disjoint; it also survives blue→green→blue
+// redeploys, where a plain INSTANCE_NAME prefix would repeat.
+const BOOT_TOKEN = require('crypto').randomBytes(3).toString('hex');
 let nextRoomId = 1;
 
 class LobbyManager {
@@ -9,7 +18,7 @@ class LobbyManager {
   }
 
   createRoom(name, hostId, hostNickname, password = '', isRanked = false, turnTimeLimit = 30, targetScore = 1000, gameType = 'tichu', maxPlayers = 4, skExpansions = []) {
-    const roomId = `room_${nextRoomId++}`;
+    const roomId = `room_${BOOT_TOKEN}_${nextRoomId++}`;
     const room = new GameRoom(roomId, name, hostId, hostNickname, password, isRanked, turnTimeLimit, targetScore, gameType, maxPlayers, skExpansions);
     this.rooms.set(roomId, room);
     console.log(`Room created: ${name} (${roomId}) by ${hostNickname}`);

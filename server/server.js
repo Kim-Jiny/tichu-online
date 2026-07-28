@@ -1308,6 +1308,8 @@ const RESUME_ALL_BACK_MS = 5000;   // everyone reconnected: brief settle
 const RESUME_DEADLINE_MS = 60000;  // some still missing: go without them
 // Frozen-room detector — see the [FREEZE] block in the watchdog interval.
 const roomProgress = {}; // roomId -> { sig, since, warned }
+// Consecutive failed peer-adopt attempts per room, for retry log throttling.
+const migrateFailures = {}; // roomId -> count
 const FREEZE_WARN_MS = 5 * 60 * 1000;
 const trickEndTimers = {}; // roomId -> setTimeout handle for skull king trick reveal
 // Love Letter: backup auto-ack timer for a resolved effect. The primary
@@ -1792,8 +1794,13 @@ async function handleAdoptRoomsRequest(req, res) {
       }
     }
   }
-  res.writeHead(200, { 'Content-Type': 'application/json' });
-  res.end(JSON.stringify({ adopted }));
+  // Anything we couldn't take (a duplicate id, a malformed entry) must read
+  // as a failure on the sender's side — it still holds the only copy of that
+  // room, and treating a partial adopt as success deletes it. 409 rather than
+  // 200 so even a caller that only checks the status code retries.
+  const ok = adopted === rooms.length;
+  res.writeHead(ok ? 200 : 409, { 'Content-Type': 'application/json' });
+  res.end(JSON.stringify({ adopted, requested: rooms.length }));
 }
 
 // A room adopted mid-match lands here in the waiting state, holding the
@@ -1923,14 +1930,28 @@ async function maybeMigrateRoom(roomId) {
       body: JSON.stringify({ rooms: [data] }),
     });
     if (!r.ok) throw new Error(`peer responded ${r.status}`);
+    // A 200 is not enough: the peer skips rooms it can't take (duplicate id,
+    // malformed entry) and used to report that as success, after which we
+    // deleted the only remaining copy. Require it to have taken the room.
+    const body = await r.json().catch(() => null);
+    if (!body || body.adopted !== 1) {
+      throw new Error(`peer adopted ${body ? body.adopted : '?'}/1`);
+    }
+    delete migrateFailures[roomId];
     console.log(`[${INSTANCE_NAME}] migrated ${roomId} to peer`);
   } catch (err) {
-    console.error(`[${INSTANCE_NAME}] migrate ${roomId} failed:`, err.message || err);
-    // Failure is recoverable from the user's POV — when we close their
-    // WS below they'll reconnect to the peer's empty lobby and have to
-    // recreate the room. A match in progress loses its standings, but
-    // no hand is lost mid-play: we only ever get here at a round
-    // boundary.
+    // Leave the room exactly as it is — players still connected, game parked
+    // at the round boundary with its timers already cleared — and let the
+    // drain poll try again. Dropping it here on a transient failure (peer
+    // still warming up, a blip, a bad token) would throw away a live match
+    // for something that resolves on the next attempt seconds later. If it
+    // never resolves, docker's stop_grace_period is the backstop.
+    const n = (migrateFailures[roomId] = (migrateFailures[roomId] || 0) + 1);
+    // Retries run every 2s; don't paper the log with hundreds of lines.
+    if (n === 1 || n % 15 === 0) {
+      console.error(`[${INSTANCE_NAME}] migrate ${roomId} failed (attempt ${n}, will retry):`, err.message || err);
+    }
+    return;
   }
 
   for (const p of humans) findWsByPlayerId(p.id)?.close(1001);

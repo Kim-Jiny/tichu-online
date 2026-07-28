@@ -2245,6 +2245,21 @@ async function handleMessage(ws, data) {
     sendTo(ws, { type: 'error', message: t(ws.locale, 'server_restarting') });
     return;
   }
+  // Leaving is kept out of the frozen set above so nobody is ever trapped in a
+  // room — but not while the room IS the snapshot in flight. Waiting, or
+  // parked at a round boundary, is exactly when the peer may already hold a
+  // copy: leaving now changes ours after the fact, the retry can't reconcile,
+  // and this player can reconnect onto the peer's copy while the others are
+  // still here — a split room. Mid-round leaving stays open (that room isn't
+  // migratable yet, and desertion has to keep working), and the block lasts
+  // only until the room hands off, normally seconds.
+  if (isDraining && (data.type === 'leave_room' || data.type === 'leave_game') && ws.roomId && !ws.isSpectator) {
+    const room = lobby.getRoom(ws.roomId);
+    if (room && (!room.game || room.game.state === 'round_end')) {
+      sendTo(ws, { type: 'error', message: t(ws.locale, 'server_restarting') });
+      return;
+    }
+  }
   switch (data.type) {
     // NOTE: 'ping' is handled earlier in ws.on('message'), before this queue,
     // so the pong is never delayed by a slow in-flight handler. It never

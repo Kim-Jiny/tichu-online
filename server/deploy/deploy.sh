@@ -27,6 +27,27 @@ DRAIN_TIMEOUT_SEC=900   # docker stop -t (matches stop_grace_period in compose)
 
 log() { echo "[deploy] $*"; }
 
+# The next deploy reads $PROXY_CONF to decide which slot is live, so the file
+# must never claim a swap that nginx isn't actually serving. Between writing
+# the new conf and confirming the reload we keep a backup here; if the script
+# exits non-zero in that window — failed reload, SSH drop, CI kill — put the
+# old conf back and reload, so file and reality stay in agreement.
+# Cleared once the swap is confirmed, so a later failure (during the drain)
+# does not roll back a swap that already happened.
+CONF_BACKUP=""
+restore_conf_on_fail() {
+  rc=$?
+  if [ "$rc" -ne 0 ] && [ -n "$CONF_BACKUP" ] && [ -f "$CONF_BACKUP" ]; then
+    log "upstream swap unconfirmed (exit $rc) — restoring previous $PROXY_CONF"
+    cp "$CONF_BACKUP" "$PROXY_CONF" || true
+    docker exec nginx nginx -s reload || true
+  fi
+  if [ "$rc" -eq 0 ] && [ -n "$CONF_BACKUP" ] && [ -f "$CONF_BACKUP" ]; then
+    rm -f "$CONF_BACKUP" || true
+  fi
+}
+trap restore_conf_on_fail EXIT INT TERM
+
 # Concurrent-deploy guard. The drain step blocks for up to
 # DRAIN_TIMEOUT_SEC; if a second invocation fires while the first is
 # still in that window it would (a) read a stale active_slot and (b)
@@ -108,10 +129,26 @@ fi
 
 # ----- 5. Swap nginx upstream -----
 log "rewriting $PROXY_CONF (upstream → tichu-online-$INACTIVE)"
+CONF_BACKUP="$PROXY_CONF.pre-$INACTIVE.$$"
+cp "$PROXY_CONF" "$CONF_BACKUP"
 sed "s|{{ACTIVE}}|$INACTIVE|g" "$TEMPLATE" > "$PROXY_CONF.new"
 mv "$PROXY_CONF.new" "$PROXY_CONF"
-docker exec nginx nginx -t
-docker exec nginx nginx -s reload
+# From here until the reload is confirmed, the file is ahead of what nginx is
+# serving. Any failure exits non-zero and the EXIT trap puts the old conf back.
+if ! docker exec nginx nginx -t; then
+  log "ABORT: nginx config test failed"
+  exit 1
+fi
+if ! docker exec nginx nginx -s reload; then
+  log "ABORT: nginx reload failed"
+  exit 1
+fi
+# Reload confirmed — the file now matches reality. Clear the guard BEFORE
+# deleting the backup: if we died between the two, a stray backup file is
+# harmless, whereas a still-armed guard would roll back a swap that worked.
+CONFIRMED_BACKUP="$CONF_BACKUP"
+CONF_BACKUP=""
+rm -f "$CONFIRMED_BACKUP"
 # Record the swap HERE, not after the drain. Traffic has already moved; if the
 # script dies during the drain below (SSH drop, CI kill, reboot) the file must
 # already name the live slot, or the next deploy rebuilds the container that is

@@ -1,4 +1,3 @@
-import 'dart:io' show Platform;
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../l10n/app_localizations.dart';
@@ -51,27 +50,29 @@ class _ConnectionOverlayState extends State<ConnectionOverlay>
       if (_globalReconnecting) return;
 
       final network = context.read<NetworkService>();
-      final wasPausedLong = _pausedAt != null &&
-          DateTime.now().difference(_pausedAt!).inSeconds >= 2;
+      final pausedFor = _pausedAt == null
+          ? Duration.zero
+          : DateTime.now().difference(_pausedAt!);
       _pausedAt = null;
 
-      if (Platform.isAndroid) {
-        if (network.shouldAutoReconnect &&
-            !network.isConnected &&
-            !network.isConnecting) {
-          _startReconnect();
-        } else if (wasPausedLong &&
-            network.shouldAutoReconnect &&
-            !network.isConnected) {
-          _startReconnect();
-        }
-      } else {
-        if (network.shouldAutoReconnect &&
-            !network.isConnected &&
-            !network.isConnecting) {
-          _startReconnect();
-        }
+      if (!network.shouldAutoReconnect) return;
+
+      if (!network.isConnected) {
+        if (!network.isConnecting) _startReconnect();
+        return;
       }
+
+      // Still "connected" — but after time in the background that usually
+      // means a socket the OS closed without us hearing about it. Both
+      // platforms behave the same way here; the old Android-only branch below
+      // this check was dead code, since it also required !isConnected.
+      //
+      // checkAliveAfterResume tears the socket down (or probes it, for a
+      // short pause), and the resulting disconnect notification brings us
+      // back through _onNetworkChanged to reconnect. Waiting for the periodic
+      // heartbeat to work this out instead cost several seconds of a frozen
+      // screen before the spinner even appeared.
+      network.checkAliveAfterResume(pausedFor);
     }
   }
 

@@ -196,6 +196,29 @@ class NetworkService extends ChangeNotifier {
     }
   }
 
+  /// Liveness check to run when the app comes back to the foreground.
+  ///
+  /// A socket the OS killed while we were suspended never delivers a FIN, so
+  /// `isConnected` still reads true and every "reconnect if disconnected"
+  /// check declines to act. Nothing then notices until the periodic heartbeat
+  /// happens to tick and find a pong older than its 15s dead window — several
+  /// seconds of the app looking alive but frozen before recovery even starts.
+  ///
+  /// Past [assumeDeadAfter] of suspension the socket is almost certainly gone,
+  /// so skip the probe and tear it down immediately; below that a ping is
+  /// cheap and avoids dropping a connection that actually survived.
+  static const Duration assumeDeadAfter = Duration(seconds: 10);
+
+  void checkAliveAfterResume(Duration pausedFor) {
+    if (!_isConnected || _channel == null) return;
+    if (pausedFor >= assumeDeadAfter) {
+      debugPrint('[Network] Resumed after ${pausedFor.inSeconds}s — assuming the socket is dead');
+      disconnect(intentional: false);
+      return;
+    }
+    _probeConnectionNow();
+  }
+
   // Fast liveness check after a connectivity change: ping now and, if no fresh
   // pong arrives shortly, declare the socket dead and reconnect. Faster than the
   // periodic heartbeat for the common WiFi↔cellular case.

@@ -130,6 +130,40 @@ for (const { gameType, nicknames } of CASES) {
       expected[game.playerNames[pid]] = (i + 1) * 7;
     });
   }
+  // Per-round history. Its entries reference players by playerId, and the
+  // peer reissues every id before the game exists — so this is the part that
+  // silently points at nobody if the nickname round-trip is wrong. Seed one
+  // entry naming a specific player in every id-bearing field.
+  const historyOwner = game.playerIds[1];
+  const historyOwnerNick = game.playerNames[historyOwner];
+  if (gameType === 'skull_king') {
+    game.scoreHistory = [{
+      round: 3,
+      scores: Object.fromEntries(game.playerIds.map((pid, i) => [pid, { bid: i, tricks: i, bonus: 0, roundScore: i * 10 }])),
+    }];
+  } else if (gameType === 'mighty') {
+    game.scoreHistory = [{
+      round: 3,
+      bid: 14,
+      declarer: historyOwner,
+      partner: game.playerIds[2],
+      dealMisser: historyOwner,
+      success: true,
+      scores: Object.fromEntries(game.playerIds.map((pid, i) => [pid, i * 3])),
+    }];
+  } else if (gameType === 'love_letter') {
+    game.roundHistory = [{
+      round: 3,
+      winner: historyOwner,
+      winnerName: historyOwnerNick,
+      winners: [historyOwner],
+      winnerNames: [historyOwnerNick],
+      finalHands: Object.fromEntries(game.playerIds.map((pid, i) => [pid, `ll_card_${i}`])),
+    }];
+  } else {
+    game.scoreHistory = [{ round: 3, teamA: 320, teamB: 180 }];
+  }
+
   // Rotation state that belongs to the match, not the round — it must
   // survive the hop rather than being re-rolled on the peer.
   let rotation = null;
@@ -184,6 +218,36 @@ for (const { gameType, nicknames } of CASES) {
   check('seating preserved', JSON.stringify(resumedSeatOrder) === JSON.stringify(blueSeatOrder),
     `${JSON.stringify(resumedSeatOrder)} vs ${JSON.stringify(blueSeatOrder)}`);
   check('round counter advanced to 4', resumed.round === 4, `got ${resumed.round}`);
+
+  // The scoreboard's per-round rows must survive, still attributed to the
+  // right players under their NEW ids.
+  {
+    const hist = gameType === 'love_letter' ? resumed.roundHistory : resumed.scoreHistory;
+    check('per-round history carried', Array.isArray(hist) && hist.length === 1,
+      `got ${Array.isArray(hist) ? hist.length : typeof hist} entries`);
+    const e = (hist || [])[0] || {};
+    const ownerNow = resumed.playerIds.find((pid) => resumed.playerNames[pid] === historyOwnerNick);
+    if (gameType === 'skull_king') {
+      check('SK round scores follow the new ids',
+        !!e.scores && e.scores[ownerNow] && e.scores[ownerNow].roundScore === 10,
+        JSON.stringify(e.scores));
+    } else if (gameType === 'mighty') {
+      check('mighty declarer/dealMisser follow the new ids',
+        e.declarer === ownerNow && e.dealMisser === ownerNow, `declarer=${e.declarer} owner=${ownerNow}`);
+      check('mighty round scores follow the new ids', !!e.scores && e.scores[ownerNow] === 3,
+        JSON.stringify(e.scores));
+      check('no stale id survived in the entry',
+        !Object.keys(e.scores || {}).some((k) => k.startsWith('blue-')), JSON.stringify(e.scores));
+    } else if (gameType === 'love_letter') {
+      check('LL winner follows the new ids', e.winner === ownerNow, `winner=${e.winner} owner=${ownerNow}`);
+      check('LL winners[] follows the new ids', JSON.stringify(e.winners) === JSON.stringify([ownerNow]),
+        JSON.stringify(e.winners));
+      check('LL finalHands follow the new ids', !!e.finalHands && e.finalHands[ownerNow] === 'll_card_1',
+        JSON.stringify(e.finalHands));
+    } else {
+      check('tichu team history carried verbatim', e.teamA === 320 && e.teamB === 180, JSON.stringify(e));
+    }
+  }
 
   if (gameType === 'tichu') {
     check('team totals carried', resumed.totalScores.teamA === 320 && resumed.totalScores.teamB === 180,

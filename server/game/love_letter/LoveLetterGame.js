@@ -6,6 +6,7 @@
  */
 
 const { deal, getCardInfo, sortCards, CARD_TYPE, CARD_VALUES, GUESSABLE_TYPES } = require('./LoveLetterDeck');
+const { mapKeys, mapId, mapIds } = require('../historyIds');
 
 class LoveLetterGame {
   constructor(playerIds, playerNames, options = {}) {
@@ -777,13 +778,9 @@ class LoveLetterGame {
   // ─── MATCH MIGRATION (blue/green drain) ─────────────────
   // See TichuGame.getMatchProgress. Nickname-keyed so the payload
   // survives the playerId remap a reconnect performs on the peer.
-  //
-  // roundHistory is deliberately NOT carried — its entries are keyed by
-  // playerId, which the peer reissues before the game object exists, so
-  // updatePlayerId never gets to remap them. Standings do carry, so only
-  // the per-round breakdown restarts. See SkullKingGame for the same note.
 
   getMatchProgress() {
+    const toNickname = (pid) => this.playerNames[pid];
     const totals = {};
     for (const pid of this.playerIds) {
       totals[this.playerNames[pid]] = this.tokens[pid] || 0;
@@ -792,6 +789,16 @@ class LoveLetterGame {
       round: this.round,
       seatOrder: this.playerIds.map((id) => this.playerNames[id]),
       totals,
+      // Per-round breakdown for the scoreboard. winnerName/winnerNames are
+      // already nicknames; these are the id-bearing fields (the same ones
+      // updatePlayerId rewrites, plus `winners`, which it misses — see the
+      // note on updatePlayerId).
+      history: this.roundHistory.map((entry) => ({
+        ...entry,
+        winner: mapId(entry.winner, toNickname),
+        winners: mapIds(entry.winners, toNickname),
+        finalHands: mapKeys(entry.finalHands, toNickname),
+      })),
       // Whoever won the last round leads the next one. Only round 1 picks
       // a leader at random, so this has to ride along or the peer would
       // re-roll it mid-match.
@@ -814,6 +821,15 @@ class LoveLetterGame {
       const pid = byNickname[nickname];
       if (pid !== undefined) this.tokens[pid] = tokens;
     }
+    const toId = (nickname) => byNickname[nickname];
+    this.roundHistory = Array.isArray(progress.history)
+      ? progress.history.map((entry) => ({
+        ...entry,
+        winner: mapId(entry.winner, toId),
+        winners: mapIds(entry.winners, toId),
+        finalHands: mapKeys(entry.finalHands, toId),
+      }))
+      : [];
     const leader = progress.leader ? byNickname[progress.leader] : undefined;
     this.currentPlayer = leader !== undefined
       ? leader

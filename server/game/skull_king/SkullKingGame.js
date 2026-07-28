@@ -9,6 +9,7 @@
 const { createDeck, deal, getCardInfo, sortCards, CARD_TYPE, SK_EXPANSIONS } = require('./SkullKingDeck');
 const { resolveTrick } = require('./SkullKingTrickResolver');
 const { calculateRoundScore } = require('./SkullKingScoreCalc');
+const { mapKeys } = require('../historyIds');
 
 const TOTAL_ROUNDS = 10;
 const LOOT_BONUS_POINTS = 20;
@@ -341,15 +342,9 @@ class SkullKingGame {
   // ─── MATCH MIGRATION (blue/green drain) ─────────────────
   // See TichuGame.getMatchProgress. Nickname-keyed so the payload
   // survives the playerId remap a reconnect performs on the peer.
-  //
-  // scoreHistory is deliberately NOT carried: its entries are keyed by
-  // playerId, and on the peer those ids are reissued before the game
-  // object exists, so updatePlayerId never gets a chance to remap them.
-  // Standings (totalScores) do carry, so the match continues correctly —
-  // only the per-round breakdown restarts. Tichu can carry its history
-  // because its entries are team-keyed and hold no ids.
 
   getMatchProgress() {
+    const toNickname = (pid) => this.playerNames[pid];
     const totals = {};
     for (const pid of this.playerIds) {
       totals[this.playerNames[pid]] = this.totalScores[pid] || 0;
@@ -358,6 +353,12 @@ class SkullKingGame {
       round: this.round,
       seatOrder: this.playerIds.map((id) => this.playerNames[id]),
       totals,
+      // Per-round breakdown for the scoreboard. `scores` is the only
+      // id-bearing field — same set updatePlayerId rewrites.
+      history: this.scoreHistory.map((entry) => ({
+        ...entry,
+        scores: mapKeys(entry.scores, toNickname),
+      })),
       // Dealer rotates off this across the whole match (see startNextRound),
       // so re-rolling it on the peer would make the dealer jump mid-match.
       // Safe as a bare index because the seating is restored verbatim.
@@ -383,6 +384,13 @@ class SkullKingGame {
       const pid = byNickname[nickname];
       if (pid !== undefined) this.totalScores[pid] = score;
     }
+    const toId = (nickname) => byNickname[nickname];
+    this.scoreHistory = Array.isArray(progress.history)
+      ? progress.history.map((entry) => ({
+        ...entry,
+        scores: mapKeys(entry.scores, toId),
+      }))
+      : [];
     this.startNextRound();
   }
 

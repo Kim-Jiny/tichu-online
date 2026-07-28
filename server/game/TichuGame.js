@@ -1213,7 +1213,9 @@ class TichuGame {
       round: this.round,
       seatOrder: this.playerIds.map((id) => this.playerNames[id]),
       teamTotals: { ...this.totalScores },
-      scoreHistory: this.scoreHistory.map((e) => ({ ...e })),
+      // Tichu's entries are {round, teamA, teamB} — team-keyed, no playerIds,
+      // so unlike the other engines they need no translation.
+      history: this.scoreHistory.map((e) => ({ ...e })),
     };
   }
 
@@ -1228,8 +1230,8 @@ class TichuGame {
       teamA: progress.teamTotals?.teamA || 0,
       teamB: progress.teamTotals?.teamB || 0,
     };
-    this.scoreHistory = Array.isArray(progress.scoreHistory)
-      ? progress.scoreHistory.map((e) => ({ ...e }))
+    this.scoreHistory = Array.isArray(progress.history)
+      ? progress.history.map((e) => ({ ...e }))
       : [];
   }
 

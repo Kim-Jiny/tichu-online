@@ -109,8 +109,16 @@ class _ConnectionOverlayState extends State<ConnectionOverlay>
       }
 
       final session = context.read<SessionService>();
+      // Timed so the spinner's length can be attributed rather than guessed at:
+      // socket vs. login/restore. Testers report it feeling long and the two
+      // halves need very different fixes.
+      final startedAt = DateTime.now();
+      final network = context.read<NetworkService>();
       final success = await session.reconnectAndRestore()
           .timeout(const Duration(seconds: 30), onTimeout: () => false);
+      final ms = DateTime.now().difference(startedAt).inMilliseconds;
+      debugPrint('[Reconnect] restore took ${ms}ms (success=$success, '
+          'connected=${network.isConnected})');
 
       // If a newer attempt was started (e.g. timeout triggered _goToLogin then retry),
       // this zombie result should be ignored

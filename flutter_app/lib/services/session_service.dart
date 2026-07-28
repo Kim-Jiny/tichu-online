@@ -217,9 +217,18 @@ class SessionService extends ChangeNotifier {
   }
 
   Future<bool> reconnectAndRestore() async {
+    final t0 = DateTime.now();
     final success = await _network.reconnect();
-    if (!success) return false;
-    return restoreSavedSession();
+    final socketMs = DateTime.now().difference(t0).inMilliseconds;
+    if (!success) {
+      debugPrint('[Reconnect] socket failed after ${socketMs}ms');
+      return false;
+    }
+    final t1 = DateTime.now();
+    final restored = await restoreSavedSession();
+    debugPrint('[Reconnect] socket ${socketMs}ms, '
+        'login+restore ${DateTime.now().difference(t1).inMilliseconds}ms');
+    return restored;
   }
 
   Future<void> logout() async {

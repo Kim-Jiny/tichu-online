@@ -1865,6 +1865,11 @@ function attachWaitingMembers(room, data) {
 async function handlePendingRoomsRequest(req, res) {
   const body = await readJsonBody(req);
   const rooms = Array.isArray(body?.rooms) ? body.rooms : [];
+  // Nicknames that have since left one of those rooms — the promise no longer
+  // holds for them and a "you'll rejoin next round" banner would be a lie.
+  for (const nickname of body?.released || []) {
+    if (nickname) pendingArrivals.delete(nickname);
+  }
   const now = Date.now();
   let noted = 0;
   for (const r of rooms) {
@@ -1930,10 +1935,11 @@ async function handleAdoptRoomsRequest(req, res) {
         spectatorSessions.set(nickname, { roomId: room.id, disconnectedAt: now });
       }
     }
-    for (const p of data.players || []) {
-      if (p && !p.isBot && p.nickname) pendingArrivals.delete(p.nickname);
+    // Everyone pointed at this room, not just those still in it — someone who
+    // left mid-drain would otherwise keep the promise until it expired.
+    for (const [nickname, info] of pendingArrivals) {
+      if (info.roomId === room.id) pendingArrivals.delete(nickname);
     }
-    for (const nickname of data.spectators || []) pendingArrivals.delete(nickname);
     attachWaitingMembers(room, data);
   }
   // Anything we couldn't take (a duplicate id, a malformed entry) must read
@@ -2013,6 +2019,22 @@ function startResumedMatch(roomId) {
   sendGameStateToAll(roomId);
 }
 
+// Tell the peer someone is no longer part of a room we announced, so it stops
+// promising them a match. Fire-and-forget: the worst case is a stale banner
+// that the client drops on its own timer anyway.
+function releasePeerPending(nickname) {
+  if (!isDraining || !PEER_URL || !INTERNAL_MIGRATE_TOKEN || !nickname) return;
+  fetch(`${PEER_URL}/internal/pending-rooms`, {
+    method: 'POST',
+    headers: {
+      'X-Internal-Token': INTERNAL_MIGRATE_TOKEN,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({ rooms: [], released: [nickname] }),
+    signal: AbortSignal.timeout(5000),
+  }).catch(() => { /* best effort */ });
+}
+
 // Hand the peer a list of the rooms still finishing here, so it can hold their
 // members instead of showing them an empty lobby. Best-effort: a failure just
 // means those players see the lobby, which is what happened before this
@@ -2021,12 +2043,14 @@ async function notifyPeerOfPendingRooms() {
   if (!PEER_URL || !INTERNAL_MIGRATE_TOKEN) return;
   const rooms = [];
   for (const [, room] of lobby.rooms) {
+    // Players only. The banner promises a seat back at the next round, which
+    // is meaningless to someone who was just watching — and a spectator who
+    // leaves the room after this notice goes out would keep seeing it, since
+    // the peer has no way to hear about that. Spectators are still restored:
+    // the adopt payload carries them and attachWaitingMembers puts them back.
     const members = room.players
       .filter((p) => p !== null && !p.isBot && p.nickname)
       .map((p) => p.nickname);
-    for (const s of room.spectators || []) {
-      if (s.nickname) members.push(s.nickname);
-    }
     if (members.length > 0) rooms.push({ id: room.id, name: room.name, members });
   }
   if (rooms.length === 0) return;
@@ -3649,6 +3673,8 @@ function handleCreateRoom(ws, data) {
   }
   // Cap to 20 chars, matching handleChangeRoomName — an uncapped name (bounded
   // only by maxPayload) would be re-broadcast to every lobby client.
+  // They've moved on — don't promise a match that's coming any more.
+  pendingArrivals.delete(ws.nickname);
   const roomName = (data.roomName || `${ws.nickname}'s Room`).trim().slice(0, 20);
   const isRanked = !!data.isRanked;
   const gameType = data.gameType === 'skull_king' ? 'skull_king'
@@ -3759,6 +3785,7 @@ async function handleJoinRoom(ws, data) {
     sendTo(ws, { type: 'error', message: t(ws.locale, 'room_resuming_match') });
     return;
   }
+  pendingArrivals.delete(ws.nickname); // joining something else ends the wait
   // SK version gating
   if (!clientCanAccessRoom(ws, room)) {
     sendTo(ws, { type: 'error', message: roomAccessUpdateMessage(ws.locale, room, 'play') });
@@ -3889,6 +3916,7 @@ async function handleLeaveRoom(ws) {
         await handleDesertion(roomId, ws.playerId);
         // handleDesertion already removes player and cleans up
       } else {
+        releasePeerPending(ws.nickname);
         room.removePlayer(ws.playerId);
         if (room.getHumanPlayerCount() === 0) {
           removeRoomAndNotifySpectators(roomId);
@@ -3947,6 +3975,7 @@ async function handleLeaveGame(ws) {
   }
 
   // Remove player from room
+  releasePeerPending(ws.nickname);
   room.removePlayer(ws.playerId);
   ws.roomId = null;
 
@@ -5722,6 +5751,30 @@ function scheduleBotActions(roomId, forceReschedule = false) {
 
 // --- Turn Timer System ---
 
+// How long to give someone before auto-playing their turn.
+//
+// While draining, a player who has gone quiet is already on the other
+// instance — our /health is 503, so the load balancer sends every reconnect
+// there and they cannot come back here to play this turn. Burning the full
+// timer on them only delays the round boundary the room needs to migrate,
+// which is exactly what strands them in the new lobby waiting for it. They
+// can't act either way; auto-play for them promptly instead.
+//
+// Anyone still connected keeps their normal clock — they're playing, and
+// rushing them to speed up someone else's handover would be a poor trade.
+const DRAIN_ABSENT_TURN_MS = 1000;
+
+function isAbsentDuringDrain(room, playerId) {
+  if (!isDraining || !playerId) return false;
+  const p = room.players.find((x) => x !== null && x.id === playerId);
+  return !!p && !p.isBot && !p.connected;
+}
+
+function turnTimeLimitMs(room, playerId, multiplier = 1) {
+  if (isAbsentDuringDrain(room, playerId)) return DRAIN_ABSENT_TURN_MS;
+  return room.turnTimeLimit * multiplier * 1000;
+}
+
 function startTurnTimer(roomId) {
   const room = lobby.getRoom(roomId);
   if (!room || !room.game) return;
@@ -5737,7 +5790,9 @@ function startTurnTimer(roomId) {
       pid => room.game.largeTichuResponses[pid] === undefined && !room.isBot(pid)
     );
     if (pending.length === 0) return;
-    const timeLimit = room.turnTimeLimit * 2 * 1000;
+    const timeLimit = pending.every((pid) => isAbsentDuringDrain(room, pid))
+      ? DRAIN_ABSENT_TURN_MS
+      : room.turnTimeLimit * 2 * 1000;
     room.turnDeadline = Date.now() + timeLimit;
     turnTimerPhases[roomId] = 'large_tichu_phase';
     turnTimers[roomId] = setTimeout(() => {
@@ -5755,7 +5810,9 @@ function startTurnTimer(roomId) {
       pid => !room.game.exchangeDone[pid] && !room.isBot(pid)
     );
     if (pending.length === 0) return;
-    const timeLimit = room.turnTimeLimit * 2 * 1000;
+    const timeLimit = pending.every((pid) => isAbsentDuringDrain(room, pid))
+      ? DRAIN_ABSENT_TURN_MS
+      : room.turnTimeLimit * 2 * 1000;
     room.turnDeadline = Date.now() + timeLimit;
     turnTimerPhases[roomId] = 'card_exchange';
     turnTimers[roomId] = setTimeout(() => {
@@ -5772,7 +5829,9 @@ function startTurnTimer(roomId) {
       pid => room.game.bids[pid] === null && !room.isBot(pid)
     );
     if (pending.length === 0) return;
-    const timeLimit = room.turnTimeLimit * 2 * 1000;
+    const timeLimit = pending.every((pid) => isAbsentDuringDrain(room, pid))
+      ? DRAIN_ABSENT_TURN_MS
+      : room.turnTimeLimit * 2 * 1000;
     room.turnDeadline = Date.now() + timeLimit;
     turnTimerPhases[roomId] = 'sk_bidding';
     turnTimers[roomId] = setTimeout(() => {
@@ -5786,7 +5845,7 @@ function startTurnTimer(roomId) {
     clearTurnTimer(roomId);
     const currentPlayer = room.game.currentPlayer;
     if (!currentPlayer || room.isBot(currentPlayer)) return;
-    const timeLimit = room.turnTimeLimit * 1000;
+    const timeLimit = turnTimeLimitMs(room, currentPlayer);
     room.turnDeadline = Date.now() + timeLimit;
     turnTimers[roomId] = setTimeout(() => {
       handleTurnTimeout(roomId, currentPlayer);
@@ -5799,7 +5858,7 @@ function startTurnTimer(roomId) {
     clearTurnTimer(roomId);
     const declarer = room.game.declarer;
     if (!declarer || room.isBot(declarer)) return;
-    const timeLimit = room.turnTimeLimit * 2 * 1000;
+    const timeLimit = turnTimeLimitMs(room, declarer, 2);
     room.turnDeadline = Date.now() + timeLimit;
     turnTimers[roomId] = setTimeout(() => {
       handleTurnTimeout(roomId, declarer);
@@ -5813,7 +5872,7 @@ function startTurnTimer(roomId) {
     clearTurnTimer(roomId);
     const declarer = room.game.declarer;
     if (!declarer || room.isBot(declarer)) return;
-    const timeLimit = room.turnTimeLimit * 1000;
+    const timeLimit = turnTimeLimitMs(room, declarer);
     room.turnDeadline = Date.now() + timeLimit;
     turnTimers[roomId] = setTimeout(() => {
       handleTurnTimeout(roomId, declarer);
@@ -5828,7 +5887,7 @@ function startTurnTimer(roomId) {
     if (eff && !eff.resolved) {
       const targetPlayer = eff.playerId;
       if (!targetPlayer || room.isBot(targetPlayer)) return;
-      const timeLimit = room.turnTimeLimit * 1000;
+      const timeLimit = turnTimeLimitMs(room, targetPlayer);
       room.turnDeadline = Date.now() + timeLimit;
       turnTimers[roomId] = setTimeout(() => {
         handleTurnTimeout(roomId, targetPlayer);
@@ -5860,7 +5919,7 @@ function startTurnTimer(roomId) {
   if (!targetPlayer) return;
   if (room.isBot(targetPlayer)) return; // Bots don't need timers
 
-  const timeLimit = room.turnTimeLimit * 1000;
+  const timeLimit = turnTimeLimitMs(room, targetPlayer);
   room.turnDeadline = Date.now() + timeLimit;
 
   turnTimers[roomId] = setTimeout(() => {
@@ -6111,6 +6170,7 @@ async function handleDesertion(roomId, playerId, reason = 'leave') {
   game.deserted = true;
   game.resultSaved = true;
   const deserterNick = game.playerNames[playerId];
+  releasePeerPending(deserterNick);
 
   // Broadcast desertion event
   broadcastGameEvent(roomId, {

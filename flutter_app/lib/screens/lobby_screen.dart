@@ -1813,14 +1813,10 @@ class _LobbyScreenState extends State<LobbyScreen> {
       ),
       child: Row(
         children: [
-          const SizedBox(
-            width: 16,
-            height: 16,
-            child: CircularProgressIndicator(
-              strokeWidth: 2,
-              valueColor: AlwaysStoppedAnimation(Color(0xFF4A4080)),
-            ),
-          ),
+          // Not a spinner: nothing is loading here and the wait is on the
+          // other server finishing its round. This says "your game is being
+          // moved here", which is what is actually happening.
+          const Icon(Icons.swap_horiz_rounded, size: 20, color: Color(0xFF4A4080)),
           const SizedBox(width: 12),
           Expanded(
             child: Text(

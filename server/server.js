@@ -1301,11 +1301,9 @@ const spectatorSessions = new Map(); // nickname -> { roomId, disconnectedAt }
 const turnTimers = {};    // roomId -> setTimeout handle
 const timeoutCounts = {}; // roomId -> { playerId: count }
 const roundEndTimers = {}; // roomId -> setTimeout handle for auto next round
-// Rooms adopted mid-match (blue/green drain) auto-resume once their players
-// are back — see maybeAutoResumeMatch.
+// Rooms adopted mid-match (blue/green drain) resume as soon as anyone is
+// back — see maybeAutoResumeMatch.
 const resumeTimers = {};  // roomId -> setTimeout handle for auto match resume
-const RESUME_ALL_BACK_MS = 5000;   // everyone reconnected: brief settle
-const RESUME_DEADLINE_MS = 60000;  // some still missing: go without them
 // Frozen-room detector — see the [FREEZE] block in the watchdog interval.
 const roomProgress = {}; // roomId -> { sig, since, warned }
 // Consecutive failed peer-adopt attempts per room, for retry log throttling.
@@ -1687,6 +1685,10 @@ function serializeRoom(room) {
   }
   const payload = {
     matchProgress,
+    // Nicknames only: the peer re-adds each spectator under a fresh id when
+    // they reconnect (handleReconnection -> addSpectator), so all it needs is
+    // a pointer telling it which room they belong to.
+    spectators: (room.spectators || []).map((s) => s.nickname).filter(Boolean),
     // Stable across retries, so the peer can tell "this is the room I already
     // took, the sender just never saw my answer" from a genuine id clash.
     // Without it a lost response is unrecoverable: every retry looks like a
@@ -1820,6 +1822,16 @@ async function handleAdoptRoomsRequest(req, res) {
         });
       }
     }
+    // Same for anyone who was watching. Without this they land in the lobby
+    // and have to find the room again — measured at ~18s of fumbling in a
+    // smoke test, against ~0.5s for the players.
+    if (Array.isArray(data.spectators)) {
+      const now = Date.now();
+      for (const nickname of data.spectators) {
+        if (!nickname) continue;
+        spectatorSessions.set(nickname, { roomId: room.id, disconnectedAt: now });
+      }
+    }
   }
   // Anything we couldn't take (a duplicate id, a malformed entry) must read
   // as a failure on the sender's side — it still holds the only copy of that
@@ -1839,31 +1851,26 @@ function maybeAutoResumeMatch(roomId) {
   if (!room || room.game || !room.matchProgress) return;
   if (isDraining) return; // on our way out — don't deal a round we can't finish
 
+  // As soon as ANYONE is back, deal the next round. We deliberately do not
+  // hold for the others: a round in progress doesn't wait on a disconnected
+  // player either — it auto-plays their turn and they slot back in when they
+  // return. Waiting here would be a different rule for no reason, and it buys
+  // the players who DID come back a stretch of staring at what looks like a
+  // room waiting for the host to press start (measured at ~14s in a smoke
+  // test, with a backgrounded phone as the straggler).
+  //
+  // Anyone still away gets a playerSessions pointer from startResumedMatch,
+  // so they drop straight into the running game.
   const humans = room.players.filter((p) => p !== null && !p.isBot);
-  const present = humans.filter((p) => p.connected);
-  if (present.length === 0) return; // nobody back yet; wait for the first
+  if (!humans.some((p) => p.connected)) return; // nobody back yet
+  if (resumeTimers[roomId]) return; // already on its way
 
-  const everyoneBack = present.length === humans.length;
-  if (resumeTimers[roomId]) {
-    // A deadline is already ticking. Only worth touching if the last
-    // straggler just arrived — then we can go early.
-    if (!everyoneBack) return;
-    clearTimeout(resumeTimers[roomId]);
-  }
-
-  const delay = everyoneBack ? RESUME_ALL_BACK_MS : RESUME_DEADLINE_MS;
+  // Next tick rather than synchronously: handleReconnection is still sending
+  // this player their room state, and we'd rather not re-enter mid-flight.
   resumeTimers[roomId] = setTimeout(() => {
     delete resumeTimers[roomId];
     startResumedMatch(roomId);
-  }, delay);
-
-  // Unknown message types are ignored client-side, so this is safe to send
-  // to older clients — they simply see the round appear after the delay.
-  broadcastGameEvent(roomId, {
-    type: 'match_resuming',
-    delayMs: delay,
-    round: (room.matchProgress.round || 0) + 1,
-  });
+  }, 0);
 }
 
 function startResumedMatch(roomId) {
@@ -1999,10 +2006,10 @@ async function maybeMigrateRoom(roomId) {
 
   for (const p of humans) findWsByPlayerId(p.id)?.close(1001);
 
-  // Spectators don't get pre-registered on the peer (the room lands there
-  // in a 'waiting' state and only re-enters play once maybeAutoResumeMatch
-  // fires), so just drop them — their client reconnects to the peer's
-  // lobby. Without this they'd hang on a dead WS until docker SIGKILL.
+  // Spectators travel too — the peer registered a spectatorSessions pointer
+  // for each of them at adopt time, so closing the socket sends them back to
+  // the same room rather than the lobby. Without this close they'd hang on a
+  // dead WS until docker SIGKILL.
   for (const spectator of room.spectators || []) {
     findWsByPlayerId(spectator.id)?.close(1001);
   }

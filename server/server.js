@@ -2798,6 +2798,55 @@ async function handleDeleteAccount(ws) {
   }
 }
 
+// Boot any other socket already logged in under this nickname. Extracted
+// because the plain-login and social-login flows both need it and had drifted:
+// the resume-room guard below was added to one copy and not the other, so a
+// social login still freed the seat of a match waiting to resume.
+function disconnectDuplicateLogins(ws, nickname) {
+  for (const client of wss.clients) {
+    if (client === ws || client.nickname !== nickname || client.readyState !== client.OPEN) continue;
+    // Preemptively store session before close (close handler is async)
+    if (client.roomId) {
+      const oldRoom = lobby.getRoom(client.roomId);
+      if (client.isSpectator && oldRoom) {
+        oldRoom.removeSpectator(client.playerId);
+        if (oldRoom.game) _broadcastState(client.roomId, oldRoom);
+        broadcastRoomState(client.roomId);
+        broadcastRoomList();
+      } else if (oldRoom && (oldRoom.game || isMigratedResumeRoom(oldRoom))) {
+        // In a game, or in a room whose seats belong to a match waiting to
+        // resume: hold the seat and keep the session. Freeing it would fail
+        // the roster check at resume and restart the match from zero — and
+        // this path runs on an ordinary duplicate login, i.e. someone simply
+        // reopening the app.
+        oldRoom.markPlayerDisconnected(client.playerId);
+        playerSessions.set(client.nickname, {
+          roomId: client.roomId,
+          disconnectedAt: Date.now(),
+        });
+        broadcastRoomState(client.roomId);
+      } else if (oldRoom) {
+        // Waiting room (no game) - clean up properly
+        const timerKey = `${client.roomId}_${client.playerId}`;
+        if (waitingRoomTimers[timerKey]) {
+          clearTimeout(waitingRoomTimers[timerKey]);
+          delete waitingRoomTimers[timerKey];
+        }
+        oldRoom.removePlayer(client.playerId);
+        if (oldRoom.getHumanPlayerCount() === 0) {
+          removeRoomAndNotifySpectators(client.roomId);
+        } else {
+          broadcastRoomState(client.roomId);
+        }
+        broadcastRoomList();
+      }
+    }
+    sendTo(client, { type: 'kicked', reason: 'duplicate_login', message: t(client.locale, 'duplicate_login') });
+    client.roomId = null; // Prevent close handler from double-processing
+    client.close();
+  }
+}
+
 async function handleLogin(ws, data) {
   const { username, password } = data;
   // Extract locale early so maintenance message is localized
@@ -2819,55 +2868,7 @@ async function handleLogin(ws, data) {
   }
 
   // S3: Disconnect existing connection with same nickname to prevent duplicate login
-  for (const client of wss.clients) {
-    if (client !== ws && client.nickname === result.nickname && client.readyState === client.OPEN) {
-      // Preemptively store session before close (close handler is async)
-      if (client.roomId) {
-        const oldRoom = lobby.getRoom(client.roomId);
-        if (client.isSpectator && oldRoom) {
-          oldRoom.removeSpectator(client.playerId);
-          if (oldRoom.game) _broadcastState(client.roomId, oldRoom);
-          broadcastRoomState(client.roomId);
-          broadcastRoomList();
-        } else if (oldRoom && oldRoom.game) {
-          oldRoom.markPlayerDisconnected(client.playerId);
-          playerSessions.set(client.nickname, {
-            roomId: client.roomId,
-            disconnectedAt: Date.now(),
-          });
-        } else if (oldRoom && isMigratedResumeRoom(oldRoom)) {
-          // Looks like a waiting room, but the seat belongs to a match that is
-          // mid-flight. Freeing it would fail the roster check at resume and
-          // restart the match from zero — and this path runs on an ordinary
-          // duplicate login, i.e. someone simply reopening the app. Treat it
-          // like the in-game branch above: hold the seat, keep the session.
-          oldRoom.markPlayerDisconnected(client.playerId);
-          playerSessions.set(client.nickname, {
-            roomId: client.roomId,
-            disconnectedAt: Date.now(),
-          });
-          broadcastRoomState(client.roomId);
-        } else if (oldRoom) {
-          // Waiting room (no game) - clean up properly
-          const timerKey = `${client.roomId}_${client.playerId}`;
-          if (waitingRoomTimers[timerKey]) {
-            clearTimeout(waitingRoomTimers[timerKey]);
-            delete waitingRoomTimers[timerKey];
-          }
-          oldRoom.removePlayer(client.playerId);
-          if (oldRoom.getHumanPlayerCount() === 0) {
-            removeRoomAndNotifySpectators(client.roomId);
-          } else {
-            broadcastRoomState(client.roomId);
-          }
-          broadcastRoomList();
-        }
-      }
-      sendTo(client, { type: 'kicked', reason: 'duplicate_login', message: t(client.locale, 'duplicate_login') });
-      client.roomId = null; // Prevent close handler from double-processing
-      client.close();
-    }
-  }
+  disconnectDuplicateLogins(ws, result.nickname);
 
   ws.playerId = `player_${nextPlayerId++}`;
   ws.nickname = result.nickname;
@@ -2934,43 +2935,7 @@ async function handleSocialLogin(ws, data) {
       }
 
       // Existing user - proceed with login flow (same as handleLogin post-auth)
-      // Disconnect existing connection with same nickname
-      for (const client of wss.clients) {
-        if (client !== ws && client.nickname === result.nickname && client.readyState === client.OPEN) {
-          if (client.roomId) {
-            const oldRoom = lobby.getRoom(client.roomId);
-            if (client.isSpectator && oldRoom) {
-              oldRoom.removeSpectator(client.playerId);
-              if (oldRoom.game) _broadcastState(client.roomId, oldRoom);
-              broadcastRoomState(client.roomId);
-              broadcastRoomList();
-            } else if (oldRoom && oldRoom.game) {
-              oldRoom.markPlayerDisconnected(client.playerId);
-              playerSessions.set(client.nickname, {
-                roomId: client.roomId,
-                disconnectedAt: Date.now(),
-              });
-            } else if (oldRoom) {
-              // Waiting room (no game) - clean up properly
-              const timerKey = `${client.roomId}_${client.playerId}`;
-              if (waitingRoomTimers[timerKey]) {
-                clearTimeout(waitingRoomTimers[timerKey]);
-                delete waitingRoomTimers[timerKey];
-              }
-              oldRoom.removePlayer(client.playerId);
-              if (oldRoom.getHumanPlayerCount() === 0) {
-                removeRoomAndNotifySpectators(client.roomId);
-              } else {
-                broadcastRoomState(client.roomId);
-              }
-              broadcastRoomList();
-            }
-          }
-          sendTo(client, { type: 'kicked', reason: 'duplicate_login', message: t(client.locale, 'duplicate_login') });
-          client.roomId = null;
-          client.close();
-        }
-      }
+      disconnectDuplicateLogins(ws, result.nickname);
 
       ws.playerId = `player_${nextPlayerId++}`;
       ws.nickname = result.nickname;

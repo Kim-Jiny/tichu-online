@@ -2295,7 +2295,10 @@ async function handleMessage(ws, data) {
   if (MIGRATED_RESUME_FROZEN_ACTIONS.has(data.type) && ws.roomId) {
     const room = lobby.getRoom(ws.roomId);
     if (isMigratedResumeRoom(room)) {
-      sendTo(ws, { type: 'error', message: t(ws.locale, 'server_restarting') });
+      // Not "the server is restarting" — that was the OTHER instance, and it
+      // is already gone. From here it is just a room about to pick its match
+      // back up, which is what the player should be told.
+      sendTo(ws, { type: 'error', message: t(ws.locale, 'room_resuming_match') });
       return;
     }
   }
@@ -3603,7 +3606,9 @@ async function handleJoinRoom(ws, data) {
     return;
   }
   if (isMigratedResumeRoom(room)) {
-    sendTo(ws, { type: 'error', message: t(ws.locale, 'server_restarting') });
+    // Seats here belong to a match that is mid-flight, not to an open lobby
+    // room — see MIGRATED_RESUME_FROZEN_ACTIONS.
+    sendTo(ws, { type: 'error', message: t(ws.locale, 'room_resuming_match') });
     return;
   }
   // SK version gating

@@ -26,10 +26,12 @@ x-server-common: &server-common
   cpu_shares: 4096
   cpus: 3.5
   mem_limit: 2g
-  # SIGTERM grace window. Long-running games on the outgoing slot get
-  # up to 10 minutes to finish (or migrate via /internal/adopt-rooms)
-  # before docker SIGKILL.
-  stop_grace_period: 10m
+  # SIGTERM grace window. Rooms on the outgoing slot migrate via
+  # /internal/adopt-rooms at the next round boundary, so this only has to
+  # cover one round (a few minutes) — not a whole match to targetScore.
+  # 15m leaves headroom for a slow round before docker SIGKILL.
+  # Keep in sync with DRAIN_TIMEOUT_SEC in server/deploy/deploy.sh.
+  stop_grace_period: 15m
   depends_on:
     db:
       condition: service_healthy

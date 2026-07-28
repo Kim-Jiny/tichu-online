@@ -1202,6 +1202,37 @@ class TichuGame {
     this.start();
   }
 
+  // ─── MATCH MIGRATION (blue/green drain) ─────────────────
+  // A match can hop instances only at a round boundary, where the state
+  // worth carrying is just the cumulative score plus the seating (which
+  // is what defines the teams). Keyed by nickname rather than playerId:
+  // reconnecting on the peer hands every client a fresh playerId.
+
+  getMatchProgress() {
+    return {
+      round: this.round,
+      seatOrder: this.playerIds.map((id) => this.playerNames[id]),
+      teamTotals: { ...this.totalScores },
+      scoreHistory: this.scoreHistory.map((e) => ({ ...e })),
+    };
+  }
+
+  // Called instead of start() when a room resumes a migrated match.
+  // start() deals a fresh round and leaves the totals at zero, so the
+  // carried-over state is seeded afterwards.
+  resumeMatch(progress) {
+    this.start();
+    if (!progress) return;
+    this.round = (progress.round || 0) + 1;
+    this.totalScores = {
+      teamA: progress.teamTotals?.teamA || 0,
+      teamB: progress.teamTotals?.teamB || 0,
+    };
+    this.scoreHistory = Array.isArray(progress.scoreHistory)
+      ? progress.scoreHistory.map((e) => ({ ...e }))
+      : [];
+  }
+
   clone() {
     const c = Object.create(TichuGame.prototype);
     c.playerIds = this.playerIds;

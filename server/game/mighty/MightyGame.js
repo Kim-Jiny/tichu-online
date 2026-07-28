@@ -1232,6 +1232,36 @@ class MightyGame {
     }
   }
 
+  // ─── MATCH MIGRATION (blue/green drain) ─────────────────
+  // See TichuGame.getMatchProgress. Nickname-keyed so the payload
+  // survives the playerId remap a reconnect performs on the peer.
+
+  getMatchProgress() {
+    const totals = {};
+    for (const pid of this.playerIds) {
+      totals[this.playerNames[pid]] = this.scores[pid] || 0;
+    }
+    return {
+      round: this.round,
+      seatOrder: this.playerIds.map((id) => this.playerNames[id]),
+      totals,
+    };
+  }
+
+  // Called instead of start() when a room resumes a migrated match.
+  // start() zeroes the scores and deals round 1, so seed afterwards.
+  resumeMatch(progress) {
+    this.start();
+    if (!progress) return;
+    this.round = (progress.round || 0) + 1;
+    const byNickname = {};
+    for (const pid of this.playerIds) byNickname[this.playerNames[pid]] = pid;
+    for (const [nickname, score] of Object.entries(progress.totals || {})) {
+      const pid = byNickname[nickname];
+      if (pid !== undefined) this.scores[pid] = score;
+    }
+  }
+
   // ─── STATE FOR PLAYER ───────────────────────────────────
 
   buildStateBroadcastCache() {

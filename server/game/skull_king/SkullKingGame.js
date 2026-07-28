@@ -338,6 +338,39 @@ class SkullKingGame {
     }
   }
 
+  // ─── MATCH MIGRATION (blue/green drain) ─────────────────
+  // See TichuGame.getMatchProgress. Nickname-keyed so the payload
+  // survives the playerId remap a reconnect performs on the peer.
+
+  getMatchProgress() {
+    const totals = {};
+    for (const pid of this.playerIds) {
+      totals[this.playerNames[pid]] = this.totalScores[pid] || 0;
+    }
+    return {
+      round: this.round,
+      seatOrder: this.playerIds.map((id) => this.playerNames[id]),
+      totals,
+    };
+  }
+
+  // Unlike the other games SK deals exactly `round` cards, so the round
+  // counter has to be seeded BEFORE the deal — hence startNextRound()
+  // here instead of start(), which would reset it to 0 and deal round 1.
+  resumeMatch(progress) {
+    this.initialDealerIndex = Math.floor(Math.random() * this.playerCount);
+    this.round = progress?.round || 0;
+    if (progress) {
+      const byNickname = {};
+      for (const pid of this.playerIds) byNickname[this.playerNames[pid]] = pid;
+      for (const [nickname, score] of Object.entries(progress.totals || {})) {
+        const pid = byNickname[nickname];
+        if (pid !== undefined) this.totalScores[pid] = score;
+      }
+    }
+    this.startNextRound();
+  }
+
   getLegalCards(playerId) {
     const hand = this.hands[playerId];
     if (!hand || hand.length === 0) return [];

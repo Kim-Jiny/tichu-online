@@ -774,6 +774,36 @@ class LoveLetterGame {
     }
   }
 
+  // ─── MATCH MIGRATION (blue/green drain) ─────────────────
+  // See TichuGame.getMatchProgress. Nickname-keyed so the payload
+  // survives the playerId remap a reconnect performs on the peer.
+
+  getMatchProgress() {
+    const totals = {};
+    for (const pid of this.playerIds) {
+      totals[this.playerNames[pid]] = this.tokens[pid] || 0;
+    }
+    return {
+      round: this.round,
+      seatOrder: this.playerIds.map((id) => this.playerNames[id]),
+      totals,
+    };
+  }
+
+  // Called instead of start() when a room resumes a migrated match.
+  // start() deals a fresh round with the tokens at zero, so seed after.
+  resumeMatch(progress) {
+    this.start();
+    if (!progress) return;
+    this.round = (progress.round || 0) + 1;
+    const byNickname = {};
+    for (const pid of this.playerIds) byNickname[this.playerNames[pid]] = pid;
+    for (const [nickname, tokens] of Object.entries(progress.totals || {})) {
+      const pid = byNickname[nickname];
+      if (pid !== undefined) this.tokens[pid] = tokens;
+    }
+  }
+
   updatePlayerId(oldPlayerId, newPlayerId) {
     const idx = this.playerIds.indexOf(oldPlayerId);
     if (idx === -1) return;

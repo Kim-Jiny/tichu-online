@@ -1609,15 +1609,28 @@ function localizeTitleName(titleKey, fallbackName, locale) {
   });
 })();
 
-// Capture a waiting room's metadata for migration to a peer instance.
-// Only the fields the peer needs to recreate the same room layout —
-// volatile in-memory state (game, chat history, spectator perms,
-// timers) is intentionally dropped. Returns null for rooms that are
-// not safe to migrate (a game is in progress).
+// Capture a room's metadata for migration to a peer instance. Only the
+// fields the peer needs to recreate the same room layout — volatile
+// in-memory state (hands, chat history, spectator perms, timers) is
+// intentionally dropped.
+//
+// A room with a match in progress is migratable only at a round
+// boundary: mid-round there are hands, tricks and pending turn timers
+// that we deliberately don't try to serialise, but at round_end the
+// only state that outlives the round is the cumulative score and the
+// seating (see each engine's getMatchProgress). Returns null for rooms
+// that aren't safe to migrate.
 function serializeRoom(room) {
   if (!room) return null;
-  if (room.game) return null;
+  let matchProgress = null;
+  if (room.game) {
+    if (room.game.state !== 'round_end') return null;
+    if (typeof room.game.getMatchProgress !== 'function') return null;
+    matchProgress = room.game.getMatchProgress();
+    if (!matchProgress) return null;
+  }
   return {
+    matchProgress,
     id: room.id,
     name: room.name,
     isPrivate: !!room.isPrivate,
@@ -1642,7 +1655,10 @@ function serializeRoom(room) {
         isBot: !!p.isBot,
         botSpeed: p.botSpeed || null,
         botStrategy: p.isBot ? room.bots.get(p.id)?.strategy || null : null,
-        ready: !!p.ready,
+        // Players pulled out of a live match are already committed to it,
+        // so land them pre-readied on the peer — the host only has to
+        // start the next round.
+        ready: matchProgress ? true : !!p.ready,
         titleKey: p.titleKey || null,
         titleName: p.titleName || null,
         level: p.isBot ? null : (p.level || 1),
@@ -1715,18 +1731,24 @@ async function handleAdoptRoomsRequest(req, res) {
   res.end(JSON.stringify({ adopted }));
 }
 
-// Migrate one waiting room to the peer instance. No-op outside of drain
-// mode, single-instance deploys (PEER_URL unset), and rooms that still
-// have a game in progress. After a successful peer adopt, we close the
-// human players' WebSockets — their clients reconnect through the LB,
-// land on the peer (since this instance's /health is now 503), and the
-// peer's already-registered playerSessions entry routes them straight
-// into the same-id room. Bot-only rooms have no humans to migrate, so
-// they're just dropped.
+// Migrate one room to the peer instance. No-op outside of drain mode and
+// for rooms mid-round (only a round boundary is migratable — see
+// serializeRoom). After a successful peer adopt, we close the human
+// players' WebSockets — their clients reconnect through the LB, land on
+// the peer (since this instance's /health is now 503), and the peer's
+// already-registered playerSessions entry routes them straight into the
+// same-id room. Bot-only rooms have no humans to migrate, so they're
+// just dropped.
 async function maybeMigrateRoom(roomId) {
   if (!isDraining) return;
   const room = lobby.getRoom(roomId);
-  if (!room || room.game) return;
+  if (!room) return;
+  if (room.game && room.game.state !== 'round_end') return;
+
+  // Whatever happens below, this room leaves this instance — kill its
+  // timers now so a pending auto-next-round can't deal a fresh hand into
+  // a room we're in the middle of handing off.
+  clearRoomTimers(roomId, room);
 
   const humans = room.players.filter(p => p && !p.isBot);
   if (humans.length === 0) {
@@ -1763,14 +1785,16 @@ async function maybeMigrateRoom(roomId) {
     console.error(`[${INSTANCE_NAME}] migrate ${roomId} failed:`, err.message || err);
     // Failure is recoverable from the user's POV — when we close their
     // WS below they'll reconnect to the peer's empty lobby and have to
-    // recreate the room. Game state is unaffected since this room had
-    // no game in progress.
+    // recreate the room. A match in progress loses its standings, but
+    // no hand is lost mid-play: we only ever get here at a round
+    // boundary.
   }
 
   for (const p of humans) findWsByPlayerId(p.id)?.close(1001);
 
-  // Spectators don't get pre-registered on the peer (the room migrates
-  // back to a 'waiting' state with no game), so just drop them — their
+  // Spectators don't get pre-registered on the peer (the room lands
+  // there in a 'waiting' state — a resumed match only re-enters play
+  // when the host starts the next round), so just drop them — their
   // client reconnects to green's empty lobby. Without this they'd hang
   // on a dead WS until docker SIGKILL.
   for (const spectator of room.spectators || []) {
@@ -1786,9 +1810,10 @@ async function maybeMigrateRoom(roomId) {
 //   2. Migrate every waiting room (no game in progress) to the peer.
 //   3. Close every WS that isn't tied to a room — those users go
 //      straight to the peer's lobby on reconnect.
-//   4. Game-in-progress rooms keep playing here. scheduleAutoReturnToRoom
-//      will fire maybeMigrateRoom once each game ends, draining them
-//      one-by-one. The container's stop_grace_period (10m) is the cap.
+//   4. Rooms mid-round keep playing here until the round ends; the
+//      round_end handler then migrates them instead of dealing another
+//      hand, so the wait is one round rather than a whole match. The
+//      container's stop_grace_period (15m) is the cap.
 process.on('SIGTERM', async () => {
   if (isDraining) return;
   console.log(`[${INSTANCE_NAME}] SIGTERM received — entering drain mode`);
@@ -1799,7 +1824,8 @@ process.on('SIGTERM', async () => {
   const roomIds = [...lobby.rooms.keys()];
   for (const id of roomIds) {
     const room = lobby.getRoom(id);
-    if (!room || room.game) continue;
+    if (!room) continue;
+    if (room.game && room.game.state !== 'round_end') continue;
     try { await maybeMigrateRoom(id); } catch (err) {
       console.error(`[${INSTANCE_NAME}] drain migrate ${id}:`, err);
     }
@@ -1813,13 +1839,33 @@ process.on('SIGTERM', async () => {
     }
   }
 
-  console.log(`[${INSTANCE_NAME}] drain initial pass complete; waiting for in-game rooms to finish`);
+  console.log(`[${INSTANCE_NAME}] drain initial pass complete; waiting for in-game rooms to reach a round boundary`);
 
-  // Poll for full drain — when no rooms remain (all in-game rooms have
-  // finished and migrated), exit. Otherwise we'd sit on the empty
-  // process until docker's stop_grace_period (10 min) hits SIGKILL,
-  // which makes idle deploys feel slow.
-  const drainPoll = setInterval(() => {
+  // Poll for full drain — when no rooms remain (every in-game room has
+  // hit a round boundary and migrated), exit. Otherwise we'd sit on the
+  // empty process until docker's stop_grace_period hits SIGKILL, which
+  // makes idle deploys feel slow.
+  //
+  // The sweep is a backstop: the round_end handler migrates rooms as
+  // soon as they get there. This catches rooms that reached a boundary
+  // through some other path (a game abandoned, a player leaving).
+  let sweeping = false;
+  const drainPoll = setInterval(async () => {
+    if (!sweeping) {
+      sweeping = true;
+      try {
+        for (const id of [...lobby.rooms.keys()]) {
+          const room = lobby.getRoom(id);
+          if (!room) continue;
+          if (room.game && room.game.state !== 'round_end') continue;
+          try { await maybeMigrateRoom(id); } catch (err) {
+            console.error(`[${INSTANCE_NAME}] drain sweep ${id}:`, err);
+          }
+        }
+      } finally {
+        sweeping = false;
+      }
+    }
     if (lobby.rooms.size === 0) {
       clearInterval(drainPoll);
       console.log(`[${INSTANCE_NAME}] drain complete — closing server and exiting`);
@@ -4630,6 +4676,16 @@ function _sendGameStateToAllImpl(roomId) {
 
   // Auto next round after delay
   if (room.game.state === 'round_end') {
+    // Draining: this is the boundary we've been waiting for. Park here
+    // instead of dealing another hand and hand the match to the peer —
+    // the cumulative score rides along and the room resumes there.
+    if (isDraining) {
+      _broadcastState(roomId, room);
+      maybeMigrateRoom(roomId).catch((err) => {
+        console.error(`[${INSTANCE_NAME}] drain migrate ${roomId}:`, err);
+      });
+      return;
+    }
     if (roundEndTimers[roomId]) clearTimeout(roundEndTimers[roomId]);
     const roundEndDelay = room.gameType === 'skull_king' ? 5000 : room.gameType === 'love_letter' ? 4000 : room.gameType === 'mighty' ? 5000 : 3000;
     roundEndTimers[roomId] = setTimeout(() => {
@@ -5900,6 +5956,14 @@ function closeRoom(roomId, messageType = 'room_closed') {
       }
     }
   }
+  clearRoomTimers(roomId, room);
+  lobby.removeRoom(roomId);
+}
+
+// Drop every timer keyed to a room. Shared by closeRoom and the drain
+// migration path — both make the room disappear from this instance, so
+// a surviving timer would fire against a room that no longer exists.
+function clearRoomTimers(roomId, room = null) {
   if (autoReturnTimers[roomId]) {
     clearTimeout(autoReturnTimers[roomId]);
     delete autoReturnTimers[roomId];
@@ -5943,7 +6007,6 @@ function closeRoom(roomId, messageType = 'room_closed') {
     }
     room.cardRequestTimers = {};
   }
-  lobby.removeRoom(roomId);
 }
 
 function removeRoomAndNotifySpectators(roomId) {

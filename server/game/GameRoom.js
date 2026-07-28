@@ -42,6 +42,11 @@ class GameRoom {
     this.randomSeating = false;
     this.spectators = []; // { id, nickname }
     this.game = null;
+    // Cross-round state carried over when this room was adopted from a
+    // draining peer mid-match (see LobbyManager.adoptRoom). Consumed by
+    // the next startGame, which resumes the match instead of starting a
+    // fresh one. Null for rooms that weren't migrated.
+    this.matchProgress = null;
     // Bot tracking
     this.bots = new Map(); // botId -> BotPlayer
     // Spectator card view permissions: { spectatorId: Set of playerId }
@@ -700,20 +705,33 @@ class GameRoom {
       // Tichu: all slots must be non-null
       if (this.players.some((p) => p === null)) return false;
     }
-    const playerIds = this.players.map((p) => p.id);
-    if (this.gameType === 'skull_king' || this.gameType === 'love_letter' || this.gameType === 'mighty' || this.isRanked || this.randomSeating) {
-      // SK/LL/ranked/random-seating Tichu: fully shuffle all seats. For
-      // random-seating Tichu this also produces the random team assignment
-      // the host opted into.
-      for (let i = playerIds.length - 1; i > 0; i--) {
-        const j = Math.floor(Math.random() * (i + 1));
-        [playerIds[i], playerIds[j]] = [playerIds[j], playerIds[i]];
-      }
+    // A resumed match keeps the seating it had on the old instance — for
+    // Tichu the seat order *is* the team split, so reshuffling would
+    // scramble the carried-over scores. Everything else gets the usual
+    // randomisation.
+    const resume = this._takeMatchProgress();
+    let playerIds;
+    if (resume) {
+      const idByNickname = new Map(
+        this.players.filter((p) => p !== null).map((p) => [p.nickname, p.id]),
+      );
+      playerIds = resume.seatOrder.map((nickname) => idByNickname.get(nickname));
     } else {
-      // Tichu normal: keep teams (0,2 vs 1,3) but randomly swap which team sits where
-      if (Math.random() < 0.5) {
-        [playerIds[0], playerIds[1]] = [playerIds[1], playerIds[0]];
-        [playerIds[2], playerIds[3]] = [playerIds[3], playerIds[2]];
+      playerIds = this.players.map((p) => p.id);
+      if (this.gameType === 'skull_king' || this.gameType === 'love_letter' || this.gameType === 'mighty' || this.isRanked || this.randomSeating) {
+        // SK/LL/ranked/random-seating Tichu: fully shuffle all seats. For
+        // random-seating Tichu this also produces the random team assignment
+        // the host opted into.
+        for (let i = playerIds.length - 1; i > 0; i--) {
+          const j = Math.floor(Math.random() * (i + 1));
+          [playerIds[i], playerIds[j]] = [playerIds[j], playerIds[i]];
+        }
+      } else {
+        // Tichu normal: keep teams (0,2 vs 1,3) but randomly swap which team sits where
+        if (Math.random() < 0.5) {
+          [playerIds[0], playerIds[1]] = [playerIds[1], playerIds[0]];
+          [playerIds[2], playerIds[3]] = [playerIds[3], playerIds[2]];
+        }
       }
     }
     const playerNames = {};
@@ -724,26 +742,49 @@ class GameRoom {
         MightyGame = require('./mighty/MightyGame');
       }
       this.game = new MightyGame(playerIds, playerNames, { targetScore: this.targetScore });
-      this.game.start();
     } else if (this.gameType === 'skull_king') {
       if (!SkullKingGame) {
         SkullKingGame = require('./skull_king/SkullKingGame');
       }
       this.game = new SkullKingGame(playerIds, playerNames, { expansions: this.skExpansions });
-      this.game.start();
     } else if (this.gameType === 'love_letter') {
       if (!LoveLetterGame) {
         LoveLetterGame = require('./love_letter/LoveLetterGame');
       }
       this.game = new LoveLetterGame(playerIds, playerNames, {});
-      this.game.start();
     } else {
       this.game = new TichuGame(playerIds, playerNames);
       this.game.targetScore = this.targetScore;
+    }
+    // resumeMatch() deals the next round of a migrated match and seeds the
+    // cumulative score; start() begins a brand-new one.
+    if (resume) {
+      this.game.resumeMatch(resume);
+    } else {
       this.game.start();
     }
     console.log(`${this.gameType} game started in room ${this.name}`);
     return true;
+  }
+
+  // Consume the match state carried over from a draining peer, but only
+  // if it still describes the current roster. Anything that changed while
+  // the room sat waiting — a player who never reconnected, a bot filling
+  // an empty seat, a nickname collision — makes the saved seating and
+  // scores meaningless, so we drop them and start a fresh match instead.
+  _takeMatchProgress() {
+    const progress = this.matchProgress;
+    this.matchProgress = null;
+    if (!progress || !Array.isArray(progress.seatOrder)) return null;
+
+    const seated = this.players.filter((p) => p !== null);
+    if (progress.seatOrder.length !== seated.length) return null;
+
+    const nicknames = new Set(seated.map((p) => p.nickname));
+    if (nicknames.size !== seated.length) return null;
+    if (!progress.seatOrder.every((nickname) => nicknames.has(nickname))) return null;
+
+    return progress;
   }
 
   toggleReady(playerId) {

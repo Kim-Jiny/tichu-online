@@ -23,7 +23,7 @@ TEMPLATE="$APP_DIR/server/deploy/tichu.conf.template"
 REPO_URL="https://github.com/Kim-Jiny/tichu-online.git"
 BRANCH="main"
 HEALTH_TIMEOUT_SEC=60
-DRAIN_TIMEOUT_SEC=600   # docker stop -t (matches stop_grace_period in compose)
+DRAIN_TIMEOUT_SEC=900   # docker stop -t (matches stop_grace_period in compose)
 
 log() { echo "[deploy] $*"; }
 

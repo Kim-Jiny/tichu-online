@@ -83,6 +83,10 @@ class LobbyManager {
     room.blockedSlots = new Set(Array.isArray(data.blockedSlots) ? data.blockedSlots : []);
     room.autoBlockedSlots = new Set(Array.isArray(data.autoBlockedSlots) ? data.autoBlockedSlots : []);
     room.randomSeating = !!data.randomSeating;
+    // Mid-match migration: the peer was at a round boundary and handed us
+    // the cumulative score + seating. startGame consumes this to resume
+    // the match rather than start a new one.
+    room.matchProgress = data.matchProgress || null;
 
     if (Array.isArray(data.players)) {
       for (const p of data.players) {
@@ -129,7 +133,10 @@ class LobbyManager {
     }
 
     this.rooms.set(room.id, room);
-    console.log(`[adoptRoom] adopted ${room.id} (${room.name}) from peer`);
+    console.log(
+      `[adoptRoom] adopted ${room.id} (${room.name}) from peer`
+      + (room.matchProgress ? ` — resuming ${room.gameType} match at round ${room.matchProgress.round}` : ''),
+    );
     return room;
   }
 

@@ -40,6 +40,8 @@ function serializeRoom(room) {
     if (typeof room.game.getMatchProgress !== 'function') return null;
     matchProgress = room.game.getMatchProgress();
     if (!matchProgress) return null;
+  } else if (room.matchProgress) {
+    matchProgress = room.matchProgress; // adopted but not resumed yet
   }
   return {
     id: room.id,
@@ -276,6 +278,45 @@ console.log('\n=== mighty 5p in a 6-seat room, blocked seat in the middle ===');
     check('round advanced to 4', greenRoom.game.round === 4, `got ${greenRoom.game.round}`);
     check('still a 5-player game', greenRoom.game.playerIds.length === 5,
       `got ${greenRoom.game.playerIds.length}`);
+  }
+}
+
+// ── two deploys back to back ───────────────────────────────────────────────
+// A room adopted mid-match sits in the waiting state until its players return
+// (up to the resume deadline). If the new instance drains inside that window
+// the room hops again with matchProgress but no game object — the standings
+// have to ride along or the match silently restarts from zero.
+console.log('\n=== migrated twice before anyone reconnects ===');
+{
+  const blue = new LobbyManager();
+  const room = blue.createRoom('방', 'blue-host', '앨리스', '', false, 30, 1000, 'tichu', 4);
+  seatPlayers(room, ['앨리스', '밥', '캐럴', '데이브']);
+  room.startGame();
+  room.game.round = 4;
+  room.game.totalScores = { teamA: 430, teamB: 275 };
+  room.game.state = 'round_end';
+
+  const hop1 = serializeRoom(room);
+  const green = new LobbyManager();
+  const onGreen = green.adoptRoom(JSON.parse(JSON.stringify(hop1)));
+  check('green holds the standings without a game object',
+    !!onGreen.matchProgress && onGreen.game === null);
+
+  const hop2 = serializeRoom(onGreen);
+  check('an unresumed room still serialises its standings', !!hop2 && !!hop2.matchProgress,
+    JSON.stringify(hop2 && hop2.matchProgress));
+
+  const blueAgain = new LobbyManager();
+  const back = blueAgain.adoptRoom(JSON.parse(JSON.stringify(hop2)));
+  for (const p of back.players) {
+    if (p) back.reconnectPlayer(p.nickname, `hop2-${p.nickname}`);
+  }
+  check('resumes after the second hop', back.startGame() === true);
+  if (back.game) {
+    check('standings survived both hops',
+      back.game.totalScores.teamA === 430 && back.game.totalScores.teamB === 275,
+      JSON.stringify(back.game.totalScores));
+    check('round still advanced exactly once', back.game.round === 5, `got ${back.game.round}`);
   }
 }
 

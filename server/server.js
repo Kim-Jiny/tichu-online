@@ -1676,6 +1676,12 @@ function serializeRoom(room) {
     if (typeof room.game.getMatchProgress !== 'function') return null;
     matchProgress = room.game.getMatchProgress();
     if (!matchProgress) return null;
+  } else if (room.matchProgress) {
+    // Adopted mid-match but not resumed yet — still waiting on players, or
+    // inside the resume delay. Two deploys in quick succession would
+    // otherwise hop this room again and silently drop the standings,
+    // restarting the match from zero. Pass them straight through.
+    matchProgress = room.matchProgress;
   }
   return {
     matchProgress,

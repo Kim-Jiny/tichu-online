@@ -1141,8 +1141,17 @@ class _ShopScreenState extends State<ShopScreen> {
     final isPermanent = item['is_permanent'] == true;
     final durationDays = item['duration_days'];
     final itemKey = item['item_key']?.toString() ?? '';
-    final owned = game.inventoryItems.any((i) => i['item_key'] == itemKey);
+    // Titles, themes and banners are all duration items, so keying the owned
+    // state off isPermanent hid it for every one of them: you could hold a
+    // title and the shop would still look like you had never bought it, with
+    // no expiry anywhere. Read the inventory row itself.
+    final ownedMatches = game.inventoryItems.where((i) => i['item_key'] == itemKey);
+    final ownedInv = ownedMatches.isEmpty ? null : ownedMatches.first;
+    final owned = ownedInv != null;
     final ownedPermanent = owned && isPermanent;
+    final ownedExpiry = ownedInv?['expires_at'];
+    final ownedExpiryText =
+        ownedExpiry != null ? _formatExpire(context, ownedExpiry) : null;
     final onSale = _isOnSale(item);
     final saleWindow = _saleWindowText(item);
 
@@ -1178,10 +1187,10 @@ class _ShopScreenState extends State<ShopScreen> {
                             style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: Color(0xFF4A3A33)),
                           ),
                         ),
-                        if (ownedPermanent)
-                          _badge(l10n.shopItemOwned, const Color(0xFF7E57C2), const Color(0xFFEDE7F6))
-                        else if (isSeason)
+                        if (isSeason)
                           _badge(l10n.shopTagSeason, const Color(0xFF1565C0), const Color(0xFFE3F2FD))
+                        else if (owned)
+                          _badge(l10n.shopItemOwned, const Color(0xFF7E57C2), const Color(0xFFEDE7F6))
                         else if (onSale)
                           _badge('SALE', const Color(0xFFD32F2F), const Color(0xFFFFEBEE)),
                       ],
@@ -1195,6 +1204,27 @@ class _ShopScreenState extends State<ShopScreen> {
                       overflow: TextOverflow.ellipsis,
                       style: const TextStyle(fontSize: 11.5, color: Color(0xFF8A7A72), height: 1.3),
                     ),
+                    // Same treatment the grouped feature card gives: holding
+                    // something is only useful information if you can also see
+                    // until when.
+                    if (ownedExpiryText != null) ...[
+                      const SizedBox(height: 3),
+                      Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          const Icon(Icons.schedule, size: 12, color: Color(0xFF7E57C2)),
+                          const SizedBox(width: 3),
+                          Text(
+                            ownedExpiryText,
+                            style: const TextStyle(
+                              fontSize: 11,
+                              fontWeight: FontWeight.w600,
+                              color: Color(0xFF7E57C2),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
                     const SizedBox(height: 8),
                     // Bottom row: gold price on the left, sale window on the
                     // right (replaces the inline buy button — purchasing now
@@ -2040,8 +2070,13 @@ class _ShopScreenState extends State<ShopScreen> {
     final category = item['category']?.toString() ?? '';
     final itemKey = item['item_key']?.toString() ?? '';
     final canBuy = game.gold >= price;
-    final owned = game.inventoryItems.any((i) => i['item_key'] == itemKey);
+    final ownedMatches = game.inventoryItems.where((i) => i['item_key'] == itemKey);
+    final ownedInv = ownedMatches.isEmpty ? null : ownedMatches.first;
+    final owned = ownedInv != null;
     final ownedPermanent = owned && isPermanent;
+    final ownedExpiry = ownedInv?['expires_at'];
+    final ownedExpiryText =
+        ownedExpiry != null ? _formatExpire(context, ownedExpiry) : null;
     final onSale = _isOnSale(item);
 
     final visual = _resolveThumbnailStyle(itemKey, category, item);
@@ -2164,14 +2199,32 @@ class _ShopScreenState extends State<ShopScreen> {
                         child: Text(name,
                             style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Color(0xFF4A3A33))),
                       ),
-                      if (ownedPermanent)
-                        _badge(l10n.shopItemOwned, const Color(0xFF7E57C2), const Color(0xFFEDE7F6))
-                      else if (isSeason)
+                      if (isSeason)
                         _badge(l10n.shopTagSeason, const Color(0xFF1565C0), const Color(0xFFE3F2FD))
+                      else if (owned)
+                        _badge(l10n.shopItemOwned, const Color(0xFF7E57C2), const Color(0xFFEDE7F6))
                       else if (onSale)
                         _badge('SALE', const Color(0xFFD32F2F), const Color(0xFFFFEBEE)),
                     ],
                   ),
+                  if (ownedExpiryText != null) ...[
+                    const SizedBox(height: 6),
+                    Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        const Icon(Icons.schedule, size: 13, color: Color(0xFF7E57C2)),
+                        const SizedBox(width: 4),
+                        Text(
+                          ownedExpiryText,
+                          style: const TextStyle(
+                            fontSize: 12.5,
+                            fontWeight: FontWeight.w600,
+                            color: Color(0xFF7E57C2),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
                   if (description.isNotEmpty) ...[
                     const SizedBox(height: 10),
                     Text(description,

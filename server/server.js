@@ -2097,7 +2097,11 @@ function startResumedMatch(roomId) {
     if (absent) {
       console.log(`[${INSTANCE_NAME}] resume ${roomId}: ${absent.nickname} is playing elsewhere — deserting`);
       // One call ends the match for the whole table, so the first is enough.
-      handleDesertion(roomId, absent.id, 'leave').catch((e) =>
+      // No leave-count or ranked ban: they were shown a banner promising the
+      // match would come to them, killed time in the lobby the way it invited
+      // them to, and the deploy is what made the two mutually exclusive.
+      // Deserting them is bookkeeping, not a verdict.
+      handleDesertion(roomId, absent.id, 'leave', { penalize: false }).catch((e) =>
         console.error(`[${INSTANCE_NAME}] no-show desertion failed:`, e));
     }
   }
@@ -6274,7 +6278,10 @@ function handleResetTimeout(ws) {
   sendTo(ws, { type: 'timeout_reset', count: 0 });
 }
 
-async function handleDesertion(roomId, playerId, reason = 'leave') {
+// options.penalize=false records the desertion normally — event, result,
+// game end — but skips the leave-count bump and ranked ban. For desertions
+// this instance decided on someone's behalf rather than ones they chose.
+async function handleDesertion(roomId, playerId, reason = 'leave', options = {}) {
   const room = lobby.getRoom(roomId);
   if (!room || !room.game) return;
 
@@ -6313,7 +6320,8 @@ async function handleDesertion(roomId, playerId, reason = 'leave') {
   const otherHumans = room.players.filter(
     (p) => p !== null && !p.isBot && p.id !== playerId,
   ).length;
-  if (deserterNick && !playerId.startsWith('bot_') && otherHumans > 0) {
+  if (options.penalize !== false
+      && deserterNick && !playerId.startsWith('bot_') && otherHumans > 0) {
     // These are non-critical side effects. They MUST NOT abort desertion: we
     // already claimed the game terminally (deserted/resultSaved above), so if a
     // DB blip (e.g. pool.connect() failure) threw out of here, we'd skip the

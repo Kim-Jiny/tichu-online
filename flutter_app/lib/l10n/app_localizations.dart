@@ -5223,6 +5223,36 @@ abstract class L10n {
   /// **'Camera access was denied. Allow it in Settings to take a photo'**
   String get profilePhotoCameraDenied;
 
+  /// No description provided for @profilePhotoCameraDeniedTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Camera permission needed'**
+  String get profilePhotoCameraDeniedTitle;
+
+  /// No description provided for @profilePhotoCameraDeniedBody.
+  ///
+  /// In en, this message translates to:
+  /// **'To take a photo, allow camera access in Settings.'**
+  String get profilePhotoCameraDeniedBody;
+
+  /// No description provided for @profilePhotoOpenSettings.
+  ///
+  /// In en, this message translates to:
+  /// **'Open Settings'**
+  String get profilePhotoOpenSettings;
+
+  /// No description provided for @profilePhotoPhotoDeniedTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Photo access needed'**
+  String get profilePhotoPhotoDeniedTitle;
+
+  /// No description provided for @profilePhotoPhotoDeniedBody.
+  ///
+  /// In en, this message translates to:
+  /// **'To choose a photo, allow photo access in Settings.'**
+  String get profilePhotoPhotoDeniedBody;
+
   /// No description provided for @profilePhotoCropTitle.
   ///
   /// In en, this message translates to:

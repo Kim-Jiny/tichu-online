@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:image_picker/image_picker.dart' show ImageSource;
 
 import '../l10n/app_localizations.dart';
@@ -440,13 +441,32 @@ Future<void> changeProfilePhoto(BuildContext context, GameService game) async {
   }
 
   if (result.cancelled) return;
+
+  // A denial can only be undone in system settings, so a snackbar telling them
+  // to go there is a dead end — offer to take them.
+  if (result.error == 'camera_denied' || result.error == 'photo_denied') {
+    final camera = result.error == 'camera_denied';
+    // The context this was called with belongs to the profile dialog, which is
+    // very likely gone by now — the user was off in the system picker. The
+    // navigator outlives all of it.
+    if (!navigator.mounted) return;
+    await _promptOpenSettings(
+      navigator.context,
+      title: camera
+          ? l10n.profilePhotoCameraDeniedTitle
+          : l10n.profilePhotoPhotoDeniedTitle,
+      body: camera
+          ? l10n.profilePhotoCameraDeniedBody
+          : l10n.profilePhotoPhotoDeniedBody,
+    );
+    return;
+  }
+
   final String msg;
   if (result.ok) {
     msg = l10n.profilePhotoChanged;
   } else if (result.error == 'no_active_item') {
     msg = l10n.profilePhotoNeedItem;
-  } else if (result.error == 'camera_denied') {
-    msg = l10n.profilePhotoCameraDenied;
   } else if (result.error == 'image_rejected') {
     msg = l10n.profilePhotoRejected;
   } else if (result.error == 'moderation_unavailable') {
@@ -455,6 +475,50 @@ Future<void> changeProfilePhoto(BuildContext context, GameService game) async {
     msg = l10n.profilePhotoUploadFailed;
   }
   messenger.showSnackBar(SnackBar(content: Text(msg)));
+}
+
+/// Ask whether to jump to the system settings page for this app, and go there
+/// if they say yes.
+///
+/// The channel is hand-rolled on both platforms (MainActivity.kt,
+/// AppDelegate.swift). url_launcher can open `app-settings:` on iOS but has no
+/// Android equivalent, and a permissions plugin would add a pod to a project
+/// that has already lost time to CocoaPods conflicts.
+const _appSettingsChannel = MethodChannel('com.jiny.tichuOnline/app_settings');
+
+Future<void> _promptOpenSettings(
+  BuildContext context, {
+  required String title,
+  required String body,
+}) async {
+  final l10n = L10n.of(context);
+  final go = await showDialog<bool>(
+    context: context,
+    builder: (ctx) => AlertDialog(
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      title: Text(title),
+      content: Text(body),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(ctx, false),
+          child: Text(l10n.commonCancel),
+        ),
+        ElevatedButton(
+          onPressed: () => Navigator.pop(ctx, true),
+          child: Text(l10n.profilePhotoOpenSettings),
+        ),
+      ],
+    ),
+  );
+  if (go != true) return;
+  try {
+    await _appSettingsChannel.invokeMethod<bool>('openAppSettings');
+  } on PlatformException {
+    // Nothing useful to say — they are already looking at instructions that
+    // name the settings screen.
+  } on MissingPluginException {
+    // Desktop/web builds have no host side; the dialog text still stands.
+  }
 }
 
 /// A strip that says the upload is running, without taking the screen away.

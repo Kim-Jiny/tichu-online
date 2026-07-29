@@ -99,8 +99,14 @@ class ProfilePhotoService {
       // Worth separating from a generic failure: the user has to go to system
       // Settings to undo it, and "upload failed, try again" would send them
       // round the same loop forever.
-      if (e.code == 'camera_access_denied' || e.code == 'photo_access_denied') {
+      // Split the two: the settings screen the user must visit is the same,
+      // but telling them "allow the camera" when they denied the photo library
+      // sends them looking for the wrong switch.
+      if (e.code == 'camera_access_denied') {
         return const PhotoUploadResult.failure('camera_denied');
+      }
+      if (e.code == 'photo_access_denied') {
+        return const PhotoUploadResult.failure('photo_denied');
       }
       return const PhotoUploadResult.failure('picker_error');
     } catch (_) {

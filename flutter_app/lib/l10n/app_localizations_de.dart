@@ -2877,6 +2877,23 @@ class L10nDe extends L10n {
       'Kamerazugriff wurde verweigert. Erlaube ihn in den Einstellungen';
 
   @override
+  String get profilePhotoCameraDeniedTitle => 'Kamerazugriff erforderlich';
+
+  @override
+  String get profilePhotoCameraDeniedBody =>
+      'Erlaube den Kamerazugriff in den Einstellungen, um ein Foto aufzunehmen.';
+
+  @override
+  String get profilePhotoOpenSettings => 'Einstellungen öffnen';
+
+  @override
+  String get profilePhotoPhotoDeniedTitle => 'Fotozugriff erforderlich';
+
+  @override
+  String get profilePhotoPhotoDeniedBody =>
+      'Erlaube den Fotozugriff in den Einstellungen, um ein Bild auszuwählen.';
+
+  @override
   String get profilePhotoCropTitle => 'Foto zuschneiden';
 
   @override

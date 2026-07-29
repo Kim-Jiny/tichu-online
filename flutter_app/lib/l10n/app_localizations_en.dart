@@ -2861,6 +2861,23 @@ class L10nEn extends L10n {
       'Camera access was denied. Allow it in Settings to take a photo';
 
   @override
+  String get profilePhotoCameraDeniedTitle => 'Camera permission needed';
+
+  @override
+  String get profilePhotoCameraDeniedBody =>
+      'To take a photo, allow camera access in Settings.';
+
+  @override
+  String get profilePhotoOpenSettings => 'Open Settings';
+
+  @override
+  String get profilePhotoPhotoDeniedTitle => 'Photo access needed';
+
+  @override
+  String get profilePhotoPhotoDeniedBody =>
+      'To choose a photo, allow photo access in Settings.';
+
+  @override
   String get profilePhotoCropTitle => 'Crop photo';
 
   @override

@@ -17,7 +17,7 @@ const { decideMightyBotAction } = require('./game/mighty/MightyBot');
 const { BotWorkerPool } = require('./bots/BotWorkerPool');
 const {
   initDatabase, registerUser, loginUser, checkNickname, deleteUser,
-  blockUser, unblockUser, getBlockedUsers, reportUser,
+  blockUser, unblockUser, getBlockedUsers, reportUser, getReportedNicknames,
   addFriend, getFriends, getPendingFriendRequests,
   acceptFriendRequest, rejectFriendRequest, removeFriend,
   saveMatchResult, saveMatchResultWithStats, updateUserStats, getUserProfile, getRecentMatches, updateCardViewPref,
@@ -3451,6 +3451,15 @@ async function handleReconnection(ws) {
   // fetchable, so per-viewer block filtering is done client-side (except the
   // profile popup, which the server already filters by isBlocked).
   ws.photoUrl = profilePhotoUrlFrom(profile);
+  // Whose photos this viewer must never be shown: anyone they blocked, plus
+  // anyone they reported. Held per connection so the room/game broadcasts can
+  // filter without a query each time; kept current by the block/report
+  // handlers. A report has to take effect the moment it is filed — leaving the
+  // image on screen while the report sits in a queue is the whole complaint.
+  ws.hiddenPhotos = new Set([
+    ...(await getBlockedUsers(ws.nickname).catch(() => [])),
+    ...(await getReportedNicknames(ws.nickname).catch(() => [])),
+  ]);
   ws.level = (profile && Number.isFinite(profile.level)) ? profile.level : 1;
   ws.seasonRating = Number.isFinite(profile?.seasonRating) ? profile.seasonRating : null;
   ws.skSeasonRating = Number.isFinite(profile?.skSeasonRating) ? profile.skSeasonRating : null;
@@ -3631,7 +3640,7 @@ async function handleReconnection(ws) {
           state.spectatorCount = room.spectators.length;
           sendTo(ws, { type: 'spectator_game_state', state });
         } else {
-          sendTo(ws, { type: 'room_state', room: room.getState() });
+          sendTo(ws, { type: 'room_state', room: personalizeRoomState(room.getState(), ws) });
         }
         broadcastRoomList();
         return;
@@ -4197,7 +4206,7 @@ function handleCheckRoom(ws) {
     return;
   }
   // Room exists - send current state
-  sendTo(ws, { type: 'room_state', room: room.getState() });
+  sendTo(ws, { type: 'room_state', room: personalizeRoomState(room.getState(), ws) });
   // S27: Also send game state if game is active
   if (room.game) {
     const spectatorList = room.spectators.map((s) => ({ id: s.id, nickname: s.nickname }));
@@ -4270,7 +4279,7 @@ function handleSpectateRoom(ws, data) {
     sendTo(ws, { type: 'spectator_game_state', state });
   } else {
     // Send waiting room state
-    sendTo(ws, { type: 'room_state', room: room.getState() });
+    sendTo(ws, { type: 'room_state', room: personalizeRoomState(room.getState(), ws) });
   }
 }
 
@@ -4872,9 +4881,11 @@ async function handleGetProfile(ws, data) {
   const profile = await getUserProfile(targetNickname, ws.locale || 'ko');
   const recentMatches = await getRecentMatches(targetNickname, 20);
   const isBlocked = (await getBlockedUsers(ws.nickname)).includes(targetNickname);
-  // Attach the resolved avatar URL; hide it from viewers who blocked the target
-  // so an offensive photo can't be forced on someone who opted out.
-  if (profile) profile.photoUrl = isBlocked ? null : profilePhotoUrlFrom(profile);
+  // Attach the resolved avatar URL, unless this viewer blocked or reported the
+  // target — an image someone has objected to must not be forced back on them.
+  if (profile) {
+    profile.photoUrl = visiblePhoto(ws, targetNickname, profilePhotoUrlFrom(profile));
+  }
   sendTo(ws, {
     type: 'profile_result',
     nickname: targetNickname,
@@ -5418,7 +5429,7 @@ function _broadcastState(roomId, room) {
         ...p,
         connected: connectionStatus[p.id] !== false,
         timeoutCount: roomTimeouts[p.name] || 0,
-        photoUrl: photoByPid[p.id] || null,
+        photoUrl: visiblePhoto(ws, p.name, photoByPid[p.id]),
       }));
       state.turnDeadline = room.turnDeadline;
       state.cardViewers = room.getViewersForPlayer(player.id);
@@ -5453,7 +5464,7 @@ function _broadcastState(roomId, room) {
         ...p,
         connected: connectionStatus[p.id] !== false,
         timeoutCount: roomTimeouts[p.name] || 0,
-        photoUrl: photoByPid[p.id] || null,
+        photoUrl: visiblePhoto(ws, p.name, photoByPid[p.id]),
       }));
       spectatorState.turnDeadline = room.turnDeadline;
       spectatorState.spectators = spectatorList;
@@ -6567,14 +6578,34 @@ function broadcastGameEvent(roomId, event) {
 
 /** Rewrite each player's titleName in a room state payload so it reflects
  *  the recipient's locale rather than the title-owner's locale. */
-function localizeRoomStateTitles(state, locale) {
+// A photo the viewer is allowed to see, or null. Both room state and game state
+// carry the nickname as `name` (see GameRoom.getState) — reading `nickname`
+// there silently matches nothing and the filter never fires.
+function visiblePhoto(ws, nickname, url) {
+  if (!url) return null;
+  return ws?.hiddenPhotos?.has(nickname) ? null : url;
+}
+
+// Room state as this particular viewer should see it: titles in their locale,
+// and no profile photo for anyone they blocked or reported. One pass, one
+// clone — the broadcast is already per-socket, so this costs nothing extra.
+function personalizeRoomState(state, ws) {
   if (!state || !Array.isArray(state.players)) return state;
-  const localized = { ...state, players: state.players.map(p => {
-    if (p === null) return null;
-    if (!p.titleKey) return p;
-    return { ...p, titleName: localizeTitleName(p.titleKey, p.titleName, locale) };
-  }) };
-  return localized;
+  const locale = ws?.locale || 'ko';
+  const hidden = ws?.hiddenPhotos;
+  return {
+    ...state,
+    players: state.players.map((p) => {
+      if (p === null) return null;
+      const retitle = !!p.titleKey;
+      const unphoto = !!p.photoUrl && !!hidden && hidden.has(p.name);
+      if (!retitle && !unphoto) return p;
+      const out = { ...p };
+      if (retitle) out.titleName = localizeTitleName(p.titleKey, p.titleName, locale);
+      if (unphoto) out.photoUrl = null;
+      return out;
+    }),
+  };
 }
 
 function broadcastRoomState(roomId) {
@@ -6582,8 +6613,7 @@ function broadcastRoomState(roomId) {
   if (!room) return;
   const roomState = room.getState();
   const sendLocalized = (ws) => {
-    const locale = ws?.locale || 'ko';
-    sendTo(ws, { type: 'room_state', room: localizeRoomStateTitles(roomState, locale) });
+    sendTo(ws, { type: 'room_state', room: personalizeRoomState(roomState, ws) });
   };
   // Send to players (skip null slots)
   for (const player of room.players) {
@@ -6774,7 +6804,14 @@ async function handleBlockUser(ws, data) {
     return;
   }
   const result = await blockUser(ws.nickname, targetNickname);
+  if (result.success) ws.hiddenPhotos?.add(targetNickname);
   sendTo(ws, { type: 'block_result', success: result.success, nickname: targetNickname, blocked: true });
+  // Repaint whatever they are looking at so the avatar goes now, not on the
+  // next unrelated state change.
+  if (ws.roomId) {
+    broadcastRoomState(ws.roomId);
+    if (lobby.getRoom(ws.roomId)?.game) sendGameStateToAll(ws.roomId);
+  }
 }
 
 // Unblock user handler
@@ -6786,7 +6823,17 @@ async function handleUnblockUser(ws, data) {
   const targetNickname = data.nickname;
   if (!targetNickname) return;
   const result = await unblockUser(ws.nickname, targetNickname);
+  if (result.success) {
+    // Unblocking does not undo a report. Only give the photo back if they
+    // never reported this person.
+    const reported = await getReportedNicknames(ws.nickname).catch(() => []);
+    if (!reported.includes(targetNickname)) ws.hiddenPhotos?.delete(targetNickname);
+  }
   sendTo(ws, { type: 'block_result', success: result.success, nickname: targetNickname, blocked: false });
+  if (ws.roomId) {
+    broadcastRoomState(ws.roomId);
+    if (lobby.getRoom(ws.roomId)?.game) sendGameStateToAll(ws.roomId);
+  }
 }
 
 // Get blocked users handler
@@ -6830,6 +6877,14 @@ async function handleReportUser(ws, data) {
     message: resultMessage(result, ws.locale),
   });
   if (result.success) {
+    // Take the photo away from the reporter immediately. Waiting for an admin
+    // to look at the queue means they keep staring at the thing they just
+    // objected to, possibly for hours.
+    ws.hiddenPhotos?.add(targetNickname);
+    if (ws.roomId) {
+      broadcastRoomState(ws.roomId);
+      if (lobby.getRoom(ws.roomId)?.game) sendGameStateToAll(ws.roomId);
+    }
     await notifyAdminUsers(
       'report',
       'New Report',

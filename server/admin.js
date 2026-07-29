@@ -3029,6 +3029,40 @@ async function handleAdminRoute(req, res, url, pathname, method, lobby, wss, mai
     const reports = await getReportGroup(target, roomId);
     if (reports.length === 0) return html(res, layout('찾을 수 없음', '<div class="empty">신고를 찾을 수 없습니다</div>', 'reports'), 404);
 
+    // The photo is the thing most UGC reports are actually about, so put it on
+    // this screen instead of making a moderator go find the user page. Same
+    // clear-photo endpoint; it comes back here rather than to the user page.
+    let photoHtml = '';
+    try {
+      const reported = await getUserDetail(target);
+      const photoActive = reported
+        && reported.profile_photo_status === 'active'
+        && reported.profile_photo_key
+        && (!reported.profile_photo_expires_at
+            || new Date(reported.profile_photo_expires_at) > new Date());
+      if (photoActive) {
+        const photoUrl = minioClient.publicUrl(reported.profile_photo_key);
+        const back = `/tc-backstage/reports/group?target=${encodeURIComponent(target)}&room=${encodeURIComponent(roomId)}`;
+        photoHtml = `
+        <h3 style="margin-top:16px">프로필 사진</h3>
+        <div style="display:flex;align-items:center;gap:16px;flex-wrap:wrap">
+          <img src="${escapeHtml(photoUrl)}" alt="프로필 사진" style="width:120px;height:120px;border-radius:12px;object-fit:cover;border:1px solid #eee">
+          <div style="font-size:13px;color:#666">
+            <div>만료: ${reported.profile_photo_expires_at ? formatDate(reported.profile_photo_expires_at) : '무기한'}</div>
+            <div style="margin-top:4px">신고자에게는 이미 숨겨진 상태입니다</div>
+          </div>
+          <form method="POST" action="/tc-backstage/users/${encodeURIComponent(target)}/clear-photo?back=${encodeURIComponent(back)}" style="margin-left:auto"
+            onsubmit="return confirm('${jsEscape(target)} 유저의 프로필 사진을 강제 삭제하시겠습니까? (남은 이용권은 유지되어 재업로드 가능)')">
+            <button type="submit" class="btn btn-secondary" style="color:#c62828;border-color:#f0c0c0">사진 강제 삭제</button>
+          </form>
+        </div>`;
+      } else {
+        photoHtml = '<h3 style="margin-top:16px">프로필 사진</h3><div style="color:#888">설정된 프로필 사진 없음</div>';
+      }
+    } catch (e) {
+      photoHtml = '<h3 style="margin-top:16px">프로필 사진</h3><div style="color:#888">조회 실패</div>';
+    }
+
     const groupStatus = reports.some(r => r.status === 'pending') ? 'pending'
       : reports.some(r => r.status === 'reviewed') ? 'reviewed' : 'resolved';
 
@@ -3070,6 +3104,7 @@ async function handleAdminRoute(req, res, url, pathname, method, lobby, wss, mai
           <div class="label">상태</div><div class="value">${statusBadge(groupStatus)}</div>
           <div class="label">신고 수</div><div class="value"><strong>${reports.length}</strong>건</div>
         </div>
+        ${photoHtml}
         <h3 style="margin-top:16px">신고자 목록</h3>
         ${reportsHtml}
         ${chatHtml ? `<h3 style="margin-top:16px">채팅 내역</h3>${chatHtml}` : ''}
@@ -3537,7 +3572,24 @@ async function handleAdminRoute(req, res, url, pathname, method, lobby, wss, mai
     const nickname = decodeURIComponent(clearPhotoMatch[1]);
     const { oldKey } = await adminClearProfilePhoto(nickname);
     if (oldKey) await minioClient.deleteProfilePhoto(oldKey); // best-effort
-    return redirect(res, `/tc-backstage/users/${encodeURIComponent(nickname)}`);
+    // Anyone in a room with them is still holding the old URL. Clear it on the
+    // live objects and repaint, or the deleted photo stays on screen until
+    // those clients happen to reconnect.
+    if (wss && lobby) {
+      for (const client of wss.clients) {
+        if (client.nickname !== nickname) continue;
+        client.photoUrl = null;
+        const room = client.roomId ? lobby.getRoom(client.roomId) : null;
+        const seat = room?.players?.find((p) => p && p.id === client.playerId);
+        if (seat) seat.photoUrl = null;
+      }
+    }
+    // Only same-origin paths, so ?back= can't be turned into an open redirect.
+    const back = url.searchParams.get('back');
+    const dest = back && back.startsWith('/tc-backstage/')
+      ? back
+      : `/tc-backstage/users/${encodeURIComponent(nickname)}`;
+    return redirect(res, dest);
   }
 
   // Ban user (delete account)

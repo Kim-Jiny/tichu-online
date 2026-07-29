@@ -1275,6 +1275,22 @@ async function getBlockedUsers(nickname) {
 }
 
 // Report user
+// Everyone this user has reported. Their profile photos are hidden from the
+// reporter on sight — a UGC image someone has just flagged must not keep
+// showing up in front of them while the report sits in a queue.
+async function getReportedNicknames(reporterNickname) {
+  const client = await pool.connect();
+  try {
+    const result = await client.query(
+      'SELECT DISTINCT reported_nickname FROM tc_reports WHERE reporter_nickname = $1',
+      [reporterNickname],
+    );
+    return result.rows.map((r) => r.reported_nickname);
+  } finally {
+    client.release();
+  }
+}
+
 async function reportUser(reporterNickname, reportedNickname, reason, roomId, chatContext = []) {
   const client = await pool.connect();
   try {
@@ -7601,6 +7617,7 @@ module.exports = {
   useItem,
   changeNickname,
   incrementLeaveCount,
+  getReportedNicknames,
   setRankedBan,
   getRankedBan,
   setChatBan,

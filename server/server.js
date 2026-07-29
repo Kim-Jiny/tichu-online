@@ -4280,12 +4280,14 @@ function handleSpectateRoom(ws, data) {
   broadcastRoomList();
 
   if (room.game) {
-    // Send current game state if game is in progress (without card permissions initially)
-    const permittedPlayers = room.getPermittedPlayers(ws.playerId);
-    const state = room.game.getStateForSpectator(permittedPlayers);
-    state.spectators = room.spectators.map((s) => ({ id: s.id, nickname: s.nickname }));
-    state.spectatorCount = room.spectators.length;
-    sendTo(ws, { type: 'spectator_game_state', state });
+    // Go through the normal broadcast rather than hand-rolling a payload here.
+    // The hand-rolled one carried the raw engine state and none of the
+    // decoration sendGameStateToAll adds — photoUrl, connected, timeoutCount —
+    // so a spectator joining a game in progress saw no profile photos at all
+    // until the next full broadcast happened along, which in a slow game can be
+    // minutes. Two paths building the same message is how that drift happened;
+    // one path is the fix.
+    sendGameStateToAll(room.id);
   } else {
     // Send waiting room state
     sendTo(ws, { type: 'room_state', room: personalizeRoomState(room.getState(), ws) });

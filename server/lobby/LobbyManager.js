@@ -10,6 +10,15 @@ const { BotPlayer } = require('../game/BotPlayer');
 // A per-boot token keeps them disjoint; it also survives blue→green→blue
 // redeploys, where a plain INSTANCE_NAME prefix would repeat.
 const BOOT_TOKEN = require('crypto').randomBytes(3).toString('hex');
+// Ids for seats arriving from a peer. Player ids are minted per process
+// (`player_7`, `bot_3`) starting from 1, so a migrated room's ids collide
+// head-on with ids this process has already handed to unrelated people —
+// and with ids a previous boot of this same process handed out, if the room
+// migrates back. Observed: an adopted seat kept the peer's `player_1` while a
+// local client also held `player_1`; the reconnect wrote one seat's id over
+// the other's, leaving a nameless seat and a player with an empty hand. This
+// boot's token cannot be produced by any other process or boot.
+let nextAdoptedId = 1;
 let nextRoomId = 1;
 
 class LobbyManager {
@@ -137,20 +146,31 @@ class LobbyManager {
     room.migrationOrigin = data.migrationOrigin || null;
     room.migrationFingerprint = data.migrationFingerprint || null;
 
+    // Old id -> the one this instance will use, so hostId follows the seats.
+    // Nothing else needs translating: matchProgress is nickname-keyed, and
+    // spectators arrive with their own live ids on reconnect.
+    const idMap = new Map();
+    const mintId = (oldId, isBot) => {
+      const fresh = `${isBot ? 'bot' : 'player'}_${BOOT_TOKEN}_${nextAdoptedId++}`;
+      if (oldId) idMap.set(oldId, fresh);
+      return fresh;
+    };
+
     if (Array.isArray(data.players)) {
       for (const p of data.players) {
         if (!p || typeof p.slot !== 'number') continue;
         if (p.slot < 0 || p.slot >= room.maxPlayers) continue;
+        const freshId = mintId(p.id, !!p.isBot);
         if (p.isBot) {
           // Recreate a fresh bot — game-state learning is empty, but
           // migration only happens between rounds so it doesn't matter.
           const speed = ['fast', 'normal', 'slow'].includes(p.botSpeed) ? p.botSpeed : 'normal';
           // BotPlayer normalises strategy itself; pass through and let it
           // fall back to 'heuristic' on garbage input.
-          const bot = new BotPlayer(p.id, p.nickname, speed, p.botStrategy);
-          room.bots.set(p.id, bot);
+          const bot = new BotPlayer(freshId, p.nickname, speed, p.botStrategy);
+          room.bots.set(freshId, bot);
           room.players[p.slot] = {
-            id: p.id,
+            id: freshId,
             nickname: p.nickname,
             connected: true,
             isBot: true,
@@ -164,7 +184,7 @@ class LobbyManager {
           // so peer adoption doesn't blank out the slot until the user
           // re-joins from scratch.
           room.players[p.slot] = {
-            id: p.id || null,
+            id: freshId,
             nickname: p.nickname,
             connected: false,
             ready: !!p.ready,
@@ -180,6 +200,8 @@ class LobbyManager {
         }
       }
     }
+
+    if (room.hostId && idMap.has(room.hostId)) room.hostId = idMap.get(room.hostId);
 
     this.rooms.set(room.id, room);
     console.log(

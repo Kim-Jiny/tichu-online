@@ -3001,73 +3001,10 @@ class _SKGameScreenState extends State<SKGameScreen> {
       message: message,
       isMe: isMe,
       game: game,
-      onTap: isMe || sender.isEmpty
-          ? null
-          : () => _showUserActionDialog(sender, game),
+      onTap: sender.isEmpty ? null : () => _showPlayerProfileDialog(sender, game),
       mineColor: const Color(0xFF21455F),
     );
   }
-  void _showUserActionDialog(String nickname, GameService game) {
-    showModalBottomSheet<void>(
-      context: context,
-      backgroundColor: Colors.transparent,
-      builder: (ctx) {
-        final isBlocked = game.isBlocked(nickname);
-        return Container(
-          margin: const EdgeInsets.all(12),
-          padding: const EdgeInsets.fromLTRB(18, 14, 18, 18),
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(20),
-          ),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Text(
-                nickname,
-                style: const TextStyle(
-                  fontSize: 17,
-                  fontWeight: FontWeight.w800,
-                  color: Color(0xFF3E312A),
-                ),
-              ),
-              const SizedBox(height: 14),
-              ListTile(
-                leading: const Icon(Icons.account_circle_outlined),
-                title: Text(L10n.of(context).skGameViewProfile),
-                onTap: () {
-                  Navigator.pop(ctx);
-                  _showPlayerProfileDialog(nickname, game);
-                },
-              ),
-              ListTile(
-                leading: Icon(
-                  isBlocked ? Icons.lock_open_rounded : Icons.block_outlined,
-                  color: isBlocked
-                      ? const Color(0xFF4CAF50)
-                      : const Color(0xFFE53935),
-                ),
-                title: Text(
-                  isBlocked
-                      ? L10n.of(context).skGameUnblock
-                      : L10n.of(context).skGameBlock,
-                ),
-                onTap: () {
-                  Navigator.pop(ctx);
-                  if (isBlocked) {
-                    game.unblockUserAction(nickname);
-                  } else {
-                    game.blockUserAction(nickname);
-                  }
-                },
-              ),
-            ],
-          ),
-        );
-      },
-    );
-  }
-
   void _showScoreHistoryDialog(SKGameStateData state) {
     final cumulativeScores = <String, int>{
       for (final p in state.players) p.id: 0,

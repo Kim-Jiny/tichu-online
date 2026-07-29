@@ -3486,6 +3486,9 @@ class _LLGameScreenState extends State<LLGameScreen> {
       message: message,
       isMe: isMe,
       game: _gameService!,
+      onTap: sender.isEmpty
+          ? null
+          : () => _showPlayerProfileDialog(sender, _gameService!),
     );
   }
   void _scrollChatToBottom() {

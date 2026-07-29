@@ -1534,6 +1534,9 @@ class _SpectatorScreenState extends State<SpectatorScreen> {
       message: message,
       isMe: isMe,
       game: context.read<GameService>(),
+      onTap: sender.isEmpty
+          ? null
+          : () => _showPlayerProfileDialog(sender, context.read<GameService>()),
     );
   }
   void _scrollChatToBottom() {

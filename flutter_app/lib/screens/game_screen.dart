@@ -1085,18 +1085,34 @@ class _GameScreenState extends State<GameScreen> {
                   children: [
                     Row(
                       children: [
-                        Container(
-                          width: 38,
-                          height: 38,
-                          decoration: BoxDecoration(
-                            color: const Color(0xFFE8F0F7),
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          child: const Icon(
-                            Icons.person_outline,
-                            color: Color(0xFF4F6B7A),
-                          ),
-                        ),
+                        // The in-game profile popup is its own dialog per screen, and none of
+                        // them ever showed the paid photo — only the lobby's did.
+                        Builder(builder: (_) {
+                          final inner = profile?['profile'] as Map?;
+                          final rawPhoto = isMe
+                                ? game.myPhotoUrl
+                                : inner?['photoUrl'] as String?;
+                          return ProfileAvatar(
+                            photoUrl: game.resolvePhotoUrl(rawPhoto),
+                            size: 38,
+                            borderRadius: 12,
+                            blocked: isBlockedUser,
+                            fallback: const SizedBox(
+                              width: 38,
+                              height: 38,
+                              child: DecoratedBox(
+                                decoration: BoxDecoration(
+                                  color: Color(0xFFE8F0F7),
+                                  borderRadius: BorderRadius.all(Radius.circular(12)),
+                                ),
+                                child: Icon(
+                                  Icons.person_outline,
+                                  color: Color(0xFF4F6B7A),
+                                ),
+                              ),
+                            ),
+                          );
+                        }),
                         const SizedBox(width: 12),
                         Expanded(
                           child: Column(

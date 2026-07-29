@@ -2783,6 +2783,18 @@ class L10nKo extends L10n {
   String get profilePhotoUploadFailed => '사진 업로드에 실패했습니다. 다시 시도해 주세요';
 
   @override
+  String get profilePhotoSourceTitle => '프로필 사진 변경';
+
+  @override
+  String get profilePhotoFromCamera => '카메라로 촬영';
+
+  @override
+  String get profilePhotoFromGallery => '갤러리에서 선택';
+
+  @override
+  String get profilePhotoCameraDenied => '카메라 접근이 거부되었습니다. 설정에서 권한을 허용해 주세요';
+
+  @override
   String get mtSetting => '세팅';
 
   @override

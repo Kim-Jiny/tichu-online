@@ -5199,6 +5199,30 @@ abstract class L10n {
   /// **'Photo upload failed. Please try again'**
   String get profilePhotoUploadFailed;
 
+  /// No description provided for @profilePhotoSourceTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Change profile photo'**
+  String get profilePhotoSourceTitle;
+
+  /// No description provided for @profilePhotoFromCamera.
+  ///
+  /// In en, this message translates to:
+  /// **'Take a photo'**
+  String get profilePhotoFromCamera;
+
+  /// No description provided for @profilePhotoFromGallery.
+  ///
+  /// In en, this message translates to:
+  /// **'Choose from gallery'**
+  String get profilePhotoFromGallery;
+
+  /// No description provided for @profilePhotoCameraDenied.
+  ///
+  /// In en, this message translates to:
+  /// **'Camera access was denied. Allow it in Settings to take a photo'**
+  String get profilePhotoCameraDenied;
+
   /// No description provided for @mtSetting.
   ///
   /// In en, this message translates to:

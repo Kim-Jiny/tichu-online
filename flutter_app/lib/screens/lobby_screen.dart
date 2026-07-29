@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:image_picker/image_picker.dart' show ImageSource;
 import 'package:provider/provider.dart';
 import '../l10n/app_localizations.dart';
 import '../l10n/l10n_helpers.dart';
@@ -3857,17 +3858,62 @@ class _LobbyScreenState extends State<LobbyScreen> {
   Future<void> _changeProfilePhoto(BuildContext ctx, GameService game) async {
     final l10n = L10n.of(ctx);
     final messenger = ScaffoldMessenger.of(ctx);
-    final result = await ProfilePhotoService.pickAndUpload(game);
+    final source = await _askPhotoSource(ctx, l10n);
+    if (source == null) return; // dismissed the sheet
+    final result = await ProfilePhotoService.pickAndUpload(game, source: source);
     if (result.cancelled) return;
     final String msg;
     if (result.ok) {
       msg = l10n.profilePhotoChanged;
     } else if (result.error == 'no_active_item') {
       msg = l10n.profilePhotoNeedItem;
+    } else if (result.error == 'camera_denied') {
+      msg = l10n.profilePhotoCameraDenied;
     } else {
       msg = l10n.profilePhotoUploadFailed;
     }
     messenger.showSnackBar(SnackBar(content: Text(msg)));
+  }
+
+  /// Camera or gallery. Returns null when the sheet is dismissed, which is a
+  /// cancel rather than a failure — no snackbar for it.
+  Future<ImageSource?> _askPhotoSource(BuildContext ctx, L10n l10n) {
+    return showModalBottomSheet<ImageSource>(
+      context: ctx,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (sheetCtx) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Padding(
+              padding: const EdgeInsets.fromLTRB(20, 18, 20, 8),
+              child: Text(
+                l10n.profilePhotoSourceTitle,
+                style: const TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ),
+            ListTile(
+              leading: const Icon(Icons.photo_camera_rounded,
+                  color: Color(0xFF6C63FF)),
+              title: Text(l10n.profilePhotoFromCamera),
+              onTap: () => Navigator.pop(sheetCtx, ImageSource.camera),
+            ),
+            ListTile(
+              leading: const Icon(Icons.photo_library_rounded,
+                  color: Color(0xFF6C63FF)),
+              title: Text(l10n.profilePhotoFromGallery),
+              onTap: () => Navigator.pop(sheetCtx, ImageSource.gallery),
+            ),
+            const SizedBox(height: 8),
+          ],
+        ),
+      ),
+    );
   }
 
   // Show user profile dialog with stats.

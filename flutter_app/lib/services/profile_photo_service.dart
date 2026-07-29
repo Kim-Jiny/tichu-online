@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'package:flutter/services.dart';
 import 'package:http/http.dart' as http;
 import 'package:http_parser/http_parser.dart';
 import 'package:image_picker/image_picker.dart';
@@ -28,9 +29,10 @@ class PhotoUploadResult {
 }
 
 /// Profile-photo picking + upload. The app is otherwise WebSocket-only; this is
-/// the one HTTP multipart flow. Steps: pick from gallery -> request a one-time
-/// WS upload token -> POST the image to /upload/profile-photo. The server strips
-/// EXIF, squares to 512, and re-encodes, so no client-side crop is needed.
+/// the one HTTP multipart flow. Steps: pick from gallery or camera -> request a
+/// one-time WS upload token -> POST the image to /upload/profile-photo. The
+/// server strips EXIF, squares to 512, and re-encodes, so no client-side crop
+/// is needed.
 class ProfilePhotoService {
   static final ImagePicker _picker = ImagePicker();
 
@@ -47,15 +49,31 @@ class ProfilePhotoService {
   }
 
   /// Pick an image and upload it as the caller's profile photo.
-  static Future<PhotoUploadResult> pickAndUpload(GameService game) async {
+  ///
+  /// [source] is the user's choice of camera or gallery. Neither needs a
+  /// permission we declare ourselves: iOS 14+ picks through PHPicker (out of
+  /// process, no prompt) and asks for the camera under NSCameraUsageDescription
+  /// on its own, while on Android both go out as intents to the system apps.
+  static Future<PhotoUploadResult> pickAndUpload(
+    GameService game, {
+    ImageSource source = ImageSource.gallery,
+  }) async {
     final XFile? file;
     try {
       file = await _picker.pickImage(
-        source: ImageSource.gallery,
+        source: source,
         maxWidth: 1024,
         maxHeight: 1024,
         imageQuality: 90,
       );
+    } on PlatformException catch (e) {
+      // Worth separating from a generic failure: the user has to go to system
+      // Settings to undo it, and "upload failed, try again" would send them
+      // round the same loop forever.
+      if (e.code == 'camera_access_denied' || e.code == 'photo_access_denied') {
+        return const PhotoUploadResult.failure('camera_denied');
+      }
+      return const PhotoUploadResult.failure('picker_error');
     } catch (_) {
       return const PhotoUploadResult.failure('picker_error');
     }

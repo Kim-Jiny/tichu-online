@@ -1,5 +1,11 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS"/>
+    <!-- Deliberately NO android.permission.CAMERA. Profile photos are taken via
+         image_picker, which fires ACTION_IMAGE_CAPTURE and hands off to the
+         system camera app — that needs no permission from us. Declaring CAMERA
+         would flip Android into REQUIRING a runtime grant for that same intent,
+         so adding it "for completeness" breaks capture until the user accepts a
+         prompt we never show. Same for READ_MEDIA_IMAGES and gallery picking. -->
     <application
         android:label="Tichu Online"
         android:name="${applicationName}"

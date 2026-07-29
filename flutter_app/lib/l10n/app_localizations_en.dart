@@ -2848,6 +2848,19 @@ class L10nEn extends L10n {
       'Photo upload failed. Please try again';
 
   @override
+  String get profilePhotoSourceTitle => 'Change profile photo';
+
+  @override
+  String get profilePhotoFromCamera => 'Take a photo';
+
+  @override
+  String get profilePhotoFromGallery => 'Choose from gallery';
+
+  @override
+  String get profilePhotoCameraDenied =>
+      'Camera access was denied. Allow it in Settings to take a photo';
+
+  @override
   String get mtSetting => 'Setting';
 
   @override

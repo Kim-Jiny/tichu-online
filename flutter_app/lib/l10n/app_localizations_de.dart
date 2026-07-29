@@ -2864,6 +2864,19 @@ class L10nDe extends L10n {
       'Foto-Upload fehlgeschlagen. Bitte erneut versuchen';
 
   @override
+  String get profilePhotoSourceTitle => 'Profilbild ändern';
+
+  @override
+  String get profilePhotoFromCamera => 'Foto aufnehmen';
+
+  @override
+  String get profilePhotoFromGallery => 'Aus Galerie wählen';
+
+  @override
+  String get profilePhotoCameraDenied =>
+      'Kamerazugriff wurde verweigert. Erlaube ihn in den Einstellungen';
+
+  @override
   String get mtSetting => 'Setting';
 
   @override

@@ -34,6 +34,13 @@ server {
     # the active slot's container is recreated mid-deploy.
     resolver 127.0.0.11 valid=10s ipv6=off;
 
+    # Profile-photo uploads. The app caps them at 5MB and answers with a JSON
+    # error above that; nginx's own default is 1MB, so without this a photo
+    # between the two is rejected out here with an HTML 413 the client can't
+    # parse — it just reports "upload failed" for some pictures and not others.
+    # Sits above the app's limit so the app's message is always the one seen.
+    client_max_body_size 6m;
+
     # Internal-only endpoints (room migration). nginx blocks them at the
     # public edge; the in-network call from the peer container
     # (http://tichu-online-blue:3000/internal/...) bypasses this since

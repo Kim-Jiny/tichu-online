@@ -16,6 +16,11 @@ jobs:
           key: ${{ secrets.SERVER_SSH_KEY }}
           port: ${{ secrets.SERVER_PORT }}
           passphrase: ${{ secrets.SERVER_SSH_PASSPHRASE }}
-          command_timeout: 15m
+          # Must outlast a worst-case deploy, not just a typical one: image
+          # build + 60s health wait + a drain that can hold the old slot for
+          # DRAIN_TIMEOUT_SEC (900s) while a round finishes. At 15m the SSH
+          # session could die mid-drain and report a failure for a deploy that
+          # had already swapped traffic over successfully.
+          command_timeout: 25m
           script: |
             /opt/services/tichu-online/deploy.sh

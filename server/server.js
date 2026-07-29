@@ -966,9 +966,20 @@ const server = http.createServer(async (req, res) => {
 
       // Screen before anything is stored. Apple 1.2 wants objectionable
       // material filtered on the way in, not only taken down after a report.
+      const scanStart = Date.now();
       const scan = await visionSafeSearch.screen(processed);
+      // Log every outcome, including the boring one. Without a line for 'ok'
+      // there is no way to tell "screened and clean" from "screening never
+      // ran" — which is exactly the question asked the first time a photo went
+      // through, and the log could not answer it.
+      console.log(
+        `[profile-photo] screened user=${userId} verdict=${scan.verdict}`
+        + (scan.scores ? ` ${Object.entries(scan.scores).map(([k, v]) => `${k}=${v}`).join(' ')}` : '')
+        + (scan.reason ? ` reason=${scan.reason}` : '')
+        + ` ${Date.now() - scanStart}ms`,
+      );
       if (scan.verdict === 'reject') {
-        console.warn(`[profile-photo] rejected user=${userId} worst=${scan.worst} scores=${JSON.stringify(scan.scores)}`);
+        console.warn(`[profile-photo] rejected user=${userId} worst=${scan.worst}`);
         throw httpErr(422, 'image_rejected');
       }
       if (scan.verdict === 'error') {
@@ -979,7 +990,7 @@ const server = http.createServer(async (req, res) => {
         throw httpErr(503, 'moderation_unavailable');
       }
       if (scan.verdict === 'review') {
-        console.warn(`[profile-photo] flagged for review user=${userId} worst=${scan.worst} scores=${JSON.stringify(scan.scores)} labels=${(scan.labels || []).join(',')}`);
+        console.warn(`[profile-photo] flagged for review user=${userId} worst=${scan.worst} labels=${(scan.labels || []).join(',')}`);
       }
 
       const { key, url } = await minioClient.uploadProfilePhoto(userId, processed, 'image/jpeg');

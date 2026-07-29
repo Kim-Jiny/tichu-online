@@ -18,6 +18,20 @@ set -euo pipefail
 
 cd "$(dirname "$0")"
 
+# Free the port before starting. SIGTERM is deliberately NOT used: it triggers
+# the production drain, which holds the port until every room empties — so a
+# restart while you are sitting in a test room hangs forever and the new
+# process dies on EADDRINUSE. Locally there is nothing to drain to.
+if command -v lsof >/dev/null 2>&1; then
+  OLD_PIDS=$(lsof -tiTCP:"${PORT:-8080}" -sTCP:LISTEN 2>/dev/null || true)
+  if [ -n "$OLD_PIDS" ]; then
+    echo "[local] stopping previous server ($OLD_PIDS)"
+    # shellcheck disable=SC2086
+    kill -9 $OLD_PIDS 2>/dev/null || true
+    sleep 1
+  fi
+fi
+
 MINIO_BIN="${MINIO_BIN:-$HOME/.local/bin/minio}"
 MINIO_DATA="${MINIO_DATA:-$HOME/.tichu-minio/data}"
 MINIO_LOG="${MINIO_LOG:-$HOME/.tichu-minio/minio.log}"

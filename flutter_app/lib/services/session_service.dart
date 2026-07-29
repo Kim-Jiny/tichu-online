@@ -163,18 +163,28 @@ class SessionService extends ChangeNotifier {
       final savedProvider = await AuthService.getSavedProvider();
       if (savedProvider != null) {
         _setRestorePhase(RestorePhase.refreshingSocialToken);
+        // Split so the 2s "connecting" can be attributed: provider token,
+        // our own login round trip, or the post-login data fetch.
+        final tTok = DateTime.now();
         final token = await AuthService.refreshToken(savedProvider);
+        final tokenMs = DateTime.now().difference(tTok).inMilliseconds;
         if (token != null && token.isNotEmpty) {
           _setRestorePhase(RestorePhase.restoringSocialSession);
+          final tLogin = DateTime.now();
           final result = await loginWithSocial(
             savedProvider,
             token,
             persistProvider: true,
           );
+          final loginMs = DateTime.now().difference(tLogin).inMilliseconds;
           if (result.status == SessionAuthStatus.success) {
+            final tPost = DateTime.now();
             await _refreshPostLoginData();
+            debugPrint('[Reconnect] token ${tokenMs}ms, login ${loginMs}ms, '
+                'postLogin ${DateTime.now().difference(tPost).inMilliseconds}ms');
             return true;
           }
+          debugPrint('[Reconnect] token ${tokenMs}ms, login ${loginMs}ms (failed)');
           if (result.status == SessionAuthStatus.needsNickname) {
             _setRestoreFailure('needs_nickname');
             return false;
@@ -334,6 +344,7 @@ class SessionService extends ChangeNotifier {
 
   Future<void> _refreshPostLoginData() async {
     _setRestorePhase(RestorePhase.restoringRoomState);
+    final tRoom = DateTime.now();
     var restored = false;
     const restoreTimeouts = <Duration>[
       Duration(seconds: 8),
@@ -346,6 +357,8 @@ class SessionService extends ChangeNotifier {
         break;
       }
     }
+    debugPrint('[Reconnect] checkRoom ${DateTime.now().difference(tRoom).inMilliseconds}ms '
+        '(restored=$restored)');
     if (!restored) {
       _game.fallbackToLobbyAfterRestoreFailure();
     }

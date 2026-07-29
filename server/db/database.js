@@ -1212,6 +1212,11 @@ async function deleteUser(nickname) {
       `UPDATE tc_users SET nickname = $2, is_deleted = true, deleted_at = NOW(),
        username = SUBSTRING('del_' || username || $3 FROM 1 FOR 50),
        password_hash = '',
+       -- The object is deleted by the caller, so leaving the pointer behind
+       -- would only describe a file that no longer exists — and it kept the
+       -- row showing up in the moderation gallery as a broken thumbnail.
+       profile_photo_key = NULL,
+       profile_photo_status = 'none',
        auth_provider = CASE WHEN auth_provider IS NOT NULL THEN SUBSTRING('del_' || auth_provider FROM 1 FOR 20) ELSE NULL END,
        provider_uid = CASE WHEN provider_uid IS NOT NULL THEN SUBSTRING('del_' || provider_uid || $3 FROM 1 FOR 100) ELSE NULL END,
        fcm_token = NULL
@@ -3087,6 +3092,7 @@ async function listActiveProfilePhotos({ page = 1, limit = 24 } = {}) {
     const where = `
       WHERE u.profile_photo_status = 'active'
         AND u.profile_photo_key IS NOT NULL
+        AND COALESCE(u.is_deleted, false) = false
         AND (u.profile_photo_expires_at IS NULL OR u.profile_photo_expires_at > NOW())`;
     const totalRes = await client.query(`SELECT COUNT(*) FROM tc_users u ${where}`);
     const rows = await client.query(

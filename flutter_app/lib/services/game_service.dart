@@ -1030,6 +1030,16 @@ class GameService extends ChangeNotifier {
 
       case 'game_state':
         if (currentRoomId.isEmpty) break; // Already left
+        // A game is running for us, so the promise is settled either way:
+        // this is the migrated match we were waiting for, or we committed to
+        // a different one (in which case the old match won't claim us — see
+        // attachWaitingMembers). Being in a room only HIDES the banner; it has
+        // to actually go off here, or it reappears the moment we're back in
+        // the lobby.
+        if (_matchIncoming) {
+          _matchIncoming = false;
+          _matchIncomingTimer?.cancel();
+        }
         final state = data['state'] as Map<String, dynamic>?;
         if (state != null) {
           final stateGameType = state['gameType'] as String? ?? 'tichu';

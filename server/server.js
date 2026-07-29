@@ -2218,6 +2218,21 @@ process.on('SIGTERM', async () => {
     }
   }
 
+  // Re-arm turn timers that are already ticking. startTurnTimer leaves a live
+  // timer alone, so a clock started before this moment keeps its full length —
+  // and the absent-player fast lane would only kick in from the NEXT turn.
+  // Measured cost of not doing this: the first turn after SIGTERM ran the full
+  // 40s+ while everyone waited on a player who had already moved to the peer.
+  for (const [roomId, room] of lobby.rooms) {
+    if (!room || !room.game) continue;
+    const actor = typeof room.game.getPendingActor === 'function'
+      ? room.game.getPendingActor()
+      : room.game.currentPlayer;
+    if (!isAbsentDuringDrain(room, actor)) continue;
+    clearTurnTimer(roomId);
+    startTurnTimer(roomId);
+  }
+
   console.log(`[${INSTANCE_NAME}] drain initial pass complete; waiting for in-game rooms to reach a round boundary`);
 
   // Tell the peer who belongs to the rooms we couldn't hand over yet. Their
@@ -2382,6 +2397,11 @@ wss.on('connection', (ws, req) => {
         } else if (room.game) {
           // Game in progress - mark as disconnected, don't remove
           room.markPlayerDisconnected(ws.playerId);
+          // Dropping out mid-drain: whatever clock is running for them was
+          // sized for a player who could still act. Drop it so the re-arm
+          // below picks the absent-player length instead of making the table
+          // wait out a full turn for someone now on the peer.
+          if (isDraining) clearTurnTimer(ws.roomId);
           // Store session for reconnection
           if (ws.nickname) {
             playerSessions.set(ws.nickname, {

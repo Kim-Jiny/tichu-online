@@ -2078,6 +2078,10 @@ class _SKGameScreenState extends State<SKGameScreen> {
           final timeoutHeight = compact ? 12.0 : 16.0;
           final dotSize = compact ? 5.0 : 6.0;
           final offlineIconSize = compact ? 10.0 : 12.0;
+          // Sized against the name it sits beside; the seat is inside a
+          // FittedBox, so this scales down with everything else on a tight
+          // board rather than pushing the name out.
+          final avatarSize = compact ? 14.0 : 18.0;
           final nameFontSize = compact ? 10.0 : 11.0;
           final scoreFontSize = compact ? 13.0 : 15.0;
           final bidHeight = compact ? 14.0 : 18.0;
@@ -2175,6 +2179,25 @@ class _SKGameScreenState extends State<SKGameScreen> {
                                       Icons.wifi_off,
                                       size: offlineIconSize,
                                       color: const Color(0xFFE53935),
+                                    ),
+                                  ),
+                                // Spectators get their own seat widget, and it
+                                // never had the avatar the player seat has.
+                                if (p.photoUrl != null)
+                                  Padding(
+                                    padding: EdgeInsets.only(
+                                      right: compact ? 2 : 3,
+                                    ),
+                                    child: ProfileAvatar(
+                                      photoUrl:
+                                          game.resolvePhotoUrl(p.photoUrl),
+                                      size: avatarSize,
+                                      blocked: game.blockedUsers
+                                          .contains(p.name),
+                                      fallback: SizedBox(
+                                        width: avatarSize,
+                                        height: avatarSize,
+                                      ),
                                     ),
                                   ),
                                 Flexible(

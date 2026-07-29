@@ -17,7 +17,8 @@ Article 4 (User Obligations)
   - Misappropriate another person's information
   - Interfere with the operation of the Service
   - Use abusive, defamatory, discriminatory, or hateful language toward others
-  - Post obscene or violent content
+  - Post or upload obscene or violent content
+  - Use another person's photograph, likeness, or copyrighted work as a profile photo without authorisation
   - Use the Service for illegal or improper purposes
   - Exploit in-game bugs or play the game in an abnormal manner
 2. If a User breaches the above obligations, use of the Service may be restricted.
@@ -27,12 +28,19 @@ Article 5 (Provision and Change of the Service)
 2. The service provider will give prior notice of any change to the Service.
 
 Article 6 (Management of Postings)
-1. Copyright in postings created by a User (chat messages, nicknames, etc.) belongs to that User.
+1. Copyright in postings created or uploaded by a User (chat messages, nicknames, profile photos, etc.) belongs to that User.
 2. The service provider may delete or restrict, without prior notice, postings that:
   - Defame or damage the reputation of other Users
   - Violate public order and good morals
   - Are related to crime
   - Infringe the service provider's copyright or other intellectual property rights
+  - Use another person's photograph, likeness, or copyrighted work as a profile photo without authorisation
+
+Article 6-2 (User-Generated Content and Handling of Reports)
+1. There is no tolerance for objectionable content or abusive users.
+2. Users may report or block another User from the profile dialog and from the chat panel. The profile photo of a blocked or reported User is hidden from that User immediately.
+3. The service provider reviews reported content within 24 hours of receiving a single report and, where it breaches these Terms, removes it and takes any other action required.
+4. A User whose profile photo has been removed may upload a different one while their entitlement remains valid. In the event of repeated breaches, the service provider may restrict use of the Service, suspend access to the profile photo feature, or terminate the account.
 
 Article 7 (Protection of Personal Information)
 The service provider strives to protect Users' personal information and processes it in accordance with applicable laws.
@@ -69,4 +77,6 @@ Article 13 (Business Information)
 - Hosting provider: Contabo GmbH (Germany)
 
 Addendum
-These Terms take effect on May 15, 2026.
+1. These Terms take effect on May 15, 2026.
+2. This amendment (adding provisions on user-generated content such as profile photos) takes effect on July 29, 2026.
+2. This amendment (adding provisions on user-generated content such as profile photos) takes effect on July 29, 2026.

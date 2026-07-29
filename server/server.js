@@ -3098,6 +3098,13 @@ async function handleDeleteAccount(ws) {
   spectatorSessions.delete(nickname);
 
   const result = await deleteUser(nickname);
+  // The row is gone, which means the object key is gone with it — delete the
+  // image now or it stays in the bucket, publicly readable, after the person
+  // asked to be erased. Best effort: a storage hiccup must not fail the
+  // deletion the user already asked for and the DB already committed.
+  if (result.success && result.photoKey) {
+    await minioClient.deleteProfilePhoto(result.photoKey);
+  }
   if (result.success) {
     ws.nickname = null;
     ws.playerId = null;

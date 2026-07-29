@@ -1166,6 +1166,11 @@ async function checkNickname(nickname) {
 }
 
 // Delete user account
+// The profile photo object has to be deleted from storage too, and only this
+// function knows its key — so hand it back and let the caller (which has the
+// storage client) remove it. Without that the image outlives the account: the
+// row goes, the key with it, and a picture of someone who asked to be deleted
+// sits in a publicly readable bucket forever.
 async function deleteUser(nickname) {
   if (!nickname) {
     return { success: false, messageKey: 'db_nickname_needed' };
@@ -1188,6 +1193,12 @@ async function deleteUser(nickname) {
     const deletedNickname = (nickname + suffix).slice(0, 50);
 
     // Clean up personal relationship data only
+    const photoRow = await client.query(
+      'SELECT profile_photo_key FROM tc_users WHERE nickname = $1',
+      [nickname],
+    );
+    const photoKey = photoRow.rows[0]?.profile_photo_key || null;
+
     await client.query('DELETE FROM tc_blocked_users WHERE blocker_nickname = $1 OR blocked_nickname = $1', [nickname]);
     await client.query('DELETE FROM tc_friends WHERE user_nickname = $1 OR friend_nickname = $1', [nickname]);
     await client.query('DELETE FROM tc_dm_messages WHERE sender_nickname = $1 OR receiver_nickname = $1', [nickname]);
@@ -1213,7 +1224,7 @@ async function deleteUser(nickname) {
     // tc_season_rankings, tc_gold_history, tc_reports, tc_inquiries
 
     await client.query('COMMIT');
-    return { success: true, messageKey: 'db_account_deleted_success' };
+    return { success: true, messageKey: 'db_account_deleted_success', photoKey };
   } catch (err) {
     await client.query('ROLLBACK');
     console.error('Delete user error:', err);

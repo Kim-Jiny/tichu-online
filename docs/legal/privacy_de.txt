@@ -4,6 +4,7 @@ Datenschutzrichtlinie
 Der Dienst erhebt für die Registrierung und Nutzung des Dienstes folgende Daten:
 - Erforderlich: ID, Nickname, Passwort
 - Optional: E-Mail und Social-Account-Kennung bei Social-Login
+- Optional: Profilbild (ein vom Nutzer hochgeladenes Bild) – wird nur erhoben, wenn der Nutzer die Profilbild-Berechtigung erworben und ein Bild hochgeladen hat
 - Automatisch erhoben: Geräteinformationen (Modell, OS-Version), App-Version, IP-Adresse, Push-Benachrichtigungstoken, Nutzungsaufzeichnungen, App-Start- und Ereignisinformationen, Werbekennung (im Rahmen der Geräteeinstellungen und Nutzereinwilligung)
 - Zahlungsinformationen: Transaktions-ID, Produktkennung, Kauf-/Erstattungsverlauf, Store-Kontobindungswert (Hash/UUID auf Basis der Nutzerkonto-ID)
   Hinweis: Zahlungsmitteldaten wie Kartennummern werden von Apple/Google verarbeitet; der Dienst erhebt oder speichert sie nicht.
@@ -19,6 +20,7 @@ Der Dienst erhebt für die Registrierung und Nutzung des Dienstes folgende Daten
 
 3. Aufbewahrungs- und Nutzungsdauer
 - Wird bei Kündigung der Mitgliedschaft unverzüglich gelöscht.
+- Ein Profilbild wird automatisch gelöscht, wenn die Laufzeit der Berechtigung endet, und wird bei Kündigung zusammen mit dem Konto gelöscht. Es wird ebenfalls unverzüglich gelöscht, wenn ein Betreiber es nach einer Meldung entfernt.
 - Gemäß dem koreanischen Gesetz zum Verbraucherschutz im elektronischen Handel werden jedoch Aufzeichnungen über Zahlung und Lieferung von Waren sowie über Widerruf, Verträge, Verbraucherbeschwerden und Streitbeilegung 5 Jahre lang aufbewahrt.
 - Soweit andere geltende Gesetze eine Aufbewahrung verlangen, werden die Daten für den entsprechenden Zeitraum gespeichert.
 
@@ -41,8 +43,14 @@ Nutzer können ihre personenbezogenen Daten jederzeit einsehen, ändern oder lö
 - Verschlüsselte Speicherung von Passwörtern
 - SSL/TLS-verschlüsselte Kommunikation
 - Verwaltung von Zugriffsrechten
+- Profilbilder werden vor der Speicherung von EXIF- und sonstigen Metadaten (Aufnahmegerät, Standort und Ähnliches) bereinigt
 
-8. Datenschutzbeauftragter und Unternehmensinformationen
+8. Hinweise zu Profilbildern
+- Ein Profilbild ist eine öffentliche Information, die anderen Nutzern im Spiel angezeigt wird. Wer die Bildadresse kennt, kann ohne Anmeldung darauf zugreifen. Laden Sie daher keine Bilder hoch, die nicht öffentlich sein sollen.
+- Laden Sie keine Fotos oder Bildnisse anderer Personen ohne Berechtigung hoch.
+- Unangemessene Profilbilder können in der App über das Profilfenster oder das Chatfenster gemeldet werden. Meldungen werden innerhalb von 24 Stunden geprüft und bearbeitet. Das Profilbild eines von Ihnen gemeldeten oder blockierten Nutzers wird Ihnen sofort nicht mehr angezeigt.
+
+9. Datenschutzbeauftragter und Unternehmensinformationen
 - Firmenname: Jinsoft / Vertreter (Datenschutzbeauftragter): Mijin Kim
 - Gewerbeanmeldenummer: 827-53-01093
 - Versandhandels-Meldenummer: 2026-Goyang Deogyang-gu-0658
@@ -50,3 +58,4 @@ Nutzer können ihre personenbezogenen Daten jederzeit einsehen, ändern oder lö
 - Kontakt: kjinyz@naver.com (verfügbar über In-App-Einstellungen > Kontakt)
 
 Datum des Inkrafttretens: 15. Mai 2026
+Datum des Inkrafttretens der Änderung: 29. Juli 2026 (Aufnahme von Bestimmungen zu Profilbildern)

@@ -17,7 +17,8 @@ Artikel 4 (Pflichten des Nutzers)
   - Informationen einer anderen Person missbräuchlich verwenden
   - den Betrieb des Dienstes stören
   - beleidigende, verleumderische, diskriminierende oder hasserfüllte Sprache gegenüber anderen verwenden
-  - obszöne oder gewalttätige Inhalte veröffentlichen
+  - obszöne oder gewalttätige Inhalte veröffentlichen oder hochladen
+  - Fotos, Bildnisse oder urheberrechtlich geschützte Werke anderer Personen ohne Berechtigung als Profilbild verwenden
   - den Dienst für rechtswidrige oder unlautere Zwecke nutzen
   - In-Game-Fehler ausnutzen oder das Spiel auf abnormale Weise spielen
 2. Verstößt ein Nutzer gegen die oben genannten Pflichten, kann die Nutzung des Dienstes eingeschränkt werden.
@@ -27,12 +28,19 @@ Artikel 5 (Bereitstellung und Änderung des Dienstes)
 2. Der Diensteanbieter kündigt Änderungen des Dienstes vorab an.
 
 Artikel 6 (Verwaltung von Beiträgen)
-1. Das Urheberrecht an von einem Nutzer erstellten Beiträgen (Chatnachrichten, Nicknamen usw.) liegt bei diesem Nutzer.
+1. Das Urheberrecht an von einem Nutzer erstellten oder hochgeladenen Beiträgen (Chatnachrichten, Nicknamen, Profilbilder usw.) liegt bei diesem Nutzer.
 2. Der Diensteanbieter kann ohne vorherige Ankündigung Beiträge löschen oder einschränken, die:
   - andere Nutzer verleumden oder deren Ruf schädigen
   - gegen die öffentliche Ordnung und die guten Sitten verstoßen
   - mit Straftaten in Zusammenhang stehen
   - das Urheberrecht oder andere Schutzrechte des Diensteanbieters verletzen
+  - Fotos, Bildnisse oder urheberrechtlich geschützte Werke anderer Personen ohne Berechtigung als Profilbild verwenden
+
+Artikel 6-2 (Nutzergenerierte Inhalte und Bearbeitung von Meldungen)
+1. Für anstößige Inhalte und missbräuchliches Verhalten gilt eine Null-Toleranz-Politik.
+2. Nutzer können andere Nutzer über das Profilfenster und über das Chatfenster melden oder blockieren. Das Profilbild eines blockierten oder gemeldeten Nutzers wird dem meldenden Nutzer sofort nicht mehr angezeigt.
+3. Der Diensteanbieter prüft gemeldete Inhalte innerhalb von 24 Stunden nach Eingang bereits einer einzelnen Meldung und entfernt sie, sofern sie gegen diese Bedingungen verstoßen, und ergreift alle weiteren erforderlichen Maßnahmen.
+4. Wurde ein Profilbild entfernt, kann der Nutzer während der Laufzeit seiner Berechtigung ein anderes hochladen. Bei wiederholten Verstößen kann der Diensteanbieter die Nutzung des Dienstes einschränken, die Profilbildfunktion sperren oder das Konto kündigen.
 
 Artikel 7 (Schutz personenbezogener Daten)
 Der Diensteanbieter bemüht sich um den Schutz der personenbezogenen Daten der Nutzer und verarbeitet sie gemäß den geltenden Gesetzen.
@@ -69,4 +77,6 @@ Artikel 13 (Unternehmensinformationen)
 - Hosting-Anbieter: Contabo GmbH (Deutschland)
 
 Anhang
-Diese Bedingungen treten am 15. Mai 2026 in Kraft.
+1. Diese Bedingungen treten am 15. Mai 2026 in Kraft.
+2. Diese Änderung (Aufnahme von Bestimmungen zu nutzergenerierten Inhalten wie Profilbildern) tritt am 29. Juli 2026 in Kraft.
+2. Diese Änderung (Aufnahme von Bestimmungen zu nutzergenerierten Inhalten wie Profilbildern) tritt am 29. Juli 2026 in Kraft.

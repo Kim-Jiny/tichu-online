@@ -3604,7 +3604,10 @@ async function handleAdminRoute(req, res, url, pathname, method, lobby, wss, mai
   const banMatch = pathname.match(/^\/tc-backstage\/users\/([^/]+)\/ban$/);
   if (banMatch && method === 'POST') {
     const nickname = decodeURIComponent(banMatch[1]);
-    await deleteUser(nickname);
+    const del = await deleteUser(nickname);
+    // Same as the user-initiated path: the key dies with the row, so the object
+    // has to go now or it is orphaned in the bucket forever.
+    if (del?.photoKey) await minioClient.deleteProfilePhoto(del.photoKey);
     return redirect(res, '/tc-backstage/users');
   }
 

@@ -4,6 +4,7 @@ Privacy Policy
 The Service collects the following information for sign-up and use of the Service:
 - Required: ID, nickname, password
 - Optional: email and social account identifier when using social login
+- Optional: profile photo (an image uploaded by the User) — collected only where the User has purchased the profile photo entitlement and uploaded an image
 - Automatically collected: device information (model, OS version), app version, IP address, push notification token, service usage records, app launch/event information, advertising identifier (within device settings and user consent)
 - Payment information: transaction ID, product identifier, purchase/refund history, store account binding value (user account ID-based hash/UUID)
   Note: Payment instrument details such as card numbers are processed by Apple/Google; the Service does not collect or store them.
@@ -19,6 +20,7 @@ The Service collects the following information for sign-up and use of the Servic
 
 3. Retention and Use Period
 - Deleted immediately upon membership withdrawal.
+- A profile photo is deleted automatically when the entitlement period expires, and is deleted together with the account on withdrawal. It is also deleted immediately where an operator removes it following a report.
 - However, pursuant to the Act on Consumer Protection in Electronic Commerce, records on payment and supply of goods, and records on withdrawal of subscription, contracts, consumer complaints, and dispute resolution are retained for 5 years.
 - Where other applicable laws require retention, the information is kept for the corresponding period.
 
@@ -41,8 +43,14 @@ Users may view, modify, or delete their personal information at any time, and ma
 - Encrypted storage of passwords
 - SSL/TLS encrypted communication
 - Access privilege management
+- Profile photos are stripped of EXIF and other metadata (capture device, location, and similar) before being stored
 
-8. Personal Information Protection Officer and Business Information
+8. Notice Regarding Profile Photos
+- A profile photo is public information shown to other Users inside the game. Anyone who knows the image address can access it without signing in, so please do not upload an image you would not want made public.
+- Do not upload another person's photograph or likeness without authorisation.
+- An inappropriate profile photo can be reported from the profile dialog or the chat panel in the app. Reports are reviewed and acted on within 24 hours. The profile photo of a User you have reported or blocked is hidden from you immediately.
+
+9. Personal Information Protection Officer and Business Information
 - Business name: Jinsoft / Representative (Personal Information Protection Officer): Mijin Kim
 - Business registration number: 827-53-01093
 - Mail-order business report number: 2026-Goyang Deogyang-gu-0658
@@ -50,3 +58,4 @@ Users may view, modify, or delete their personal information at any time, and ma
 - Contact: kjinyz@naver.com (available via in-app Settings > Contact Us)
 
 Effective date: May 15, 2026
+Amendment effective date: July 29, 2026 (profile photo provisions added)

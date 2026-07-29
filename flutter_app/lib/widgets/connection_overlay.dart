@@ -16,7 +16,18 @@ class ConnectionOverlay extends StatefulWidget {
 
 class _ConnectionOverlayState extends State<ConnectionOverlay>
     with WidgetsBindingObserver {
-  static bool _globalReconnecting = false;
+  // Shared across every ConnectionOverlay in the tree (game screens, lobby,
+  // spectator) — but as a ValueNotifier, not a bare static.
+  //
+  // It used to be a plain bool flipped alongside setState, which only rebuilt
+  // the instance that flipped it. During a migration the screen changes while
+  // the reconnect is in flight: the game screen's overlay starts it, the lobby
+  // mounts its own overlay (reading the flag as true, so it dims too), and
+  // then the original unmounts — so the `finally` that clears the flag hits a
+  // dead widget and nobody repaints. The lobby stayed dimmed and unusable
+  // until some unrelated rebuild happened, measured at 27 seconds in a smoke
+  // test. A notifier wakes whichever overlay is actually on screen.
+  static final ValueNotifier<bool> _reconnecting = ValueNotifier<bool>(false);
   static int _reconnectAttemptId = 0;
 
   bool _inForeground = true;
@@ -47,7 +58,7 @@ class _ConnectionOverlayState extends State<ConnectionOverlay>
       _inForeground = false;
     } else if (state == AppLifecycleState.resumed) {
       _inForeground = true;
-      if (_globalReconnecting) return;
+      if (_reconnecting.value) return;
 
       final network = context.read<NetworkService>();
       final pausedFor = _pausedAt == null
@@ -77,7 +88,7 @@ class _ConnectionOverlayState extends State<ConnectionOverlay>
   }
 
   void _onNetworkChanged() {
-    if (!mounted || !_inForeground || _globalReconnecting) return;
+    if (!mounted || !_inForeground || _reconnecting.value) return;
     final network = context.read<NetworkService>();
     if (network.shouldAutoReconnect &&
         !network.isConnected &&
@@ -86,14 +97,13 @@ class _ConnectionOverlayState extends State<ConnectionOverlay>
     }
   }
 
-  // Toggle the reconnecting flag AND rebuild so the overlay shows/hides.
+  // Whichever overlay is mounted right now picks this up.
   void _setReconnecting(bool v) {
-    _globalReconnecting = v;
-    if (mounted) setState(() {});
+    _reconnecting.value = v;
   }
 
   Future<void> _startReconnect() async {
-    if (_globalReconnecting) return;
+    if (_reconnecting.value) return;
     _setReconnecting(true);
     final myAttemptId = ++_reconnectAttemptId;
 
@@ -144,7 +154,14 @@ class _ConnectionOverlayState extends State<ConnectionOverlay>
 
   @override
   Widget build(BuildContext context) {
-    if (!_globalReconnecting) return widget.child;
+    return ValueListenableBuilder<bool>(
+      valueListenable: _reconnecting,
+      builder: (context, reconnecting, child) =>
+          reconnecting ? _buildDimmed(context) : widget.child,
+    );
+  }
+
+  Widget _buildDimmed(BuildContext context) {
     // While reconnecting, dim + block the (frozen) UI and show a clear spinner
     // so the user knows the app is working, not stuck.
     return Stack(

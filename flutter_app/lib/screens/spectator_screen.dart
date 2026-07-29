@@ -11,6 +11,7 @@ import '../widgets/connection_overlay.dart';
 import '../widgets/draggable_chat_panel.dart';
 import '../widgets/level_badge.dart';
 import '../widgets/profile_avatar.dart';
+import '../widgets/chat_bubble.dart';
 import '../widgets/player_profile_header.dart';
 import '../widgets/title_chip.dart';
 import '../widgets/spectator_controls.dart';
@@ -1528,64 +1529,13 @@ class _SpectatorScreenState extends State<SpectatorScreen> {
   }
 
   Widget _buildChatBubble(String sender, String message, bool isMe) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 8),
-      child: Row(
-        mainAxisAlignment: isMe ? MainAxisAlignment.end : MainAxisAlignment.start,
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          if (!isMe) ...[
-            // Chat lines carry only a nickname, so the photo comes from whatever
-            // roster is loaded; the initial-letter circle stays as the fallback.
-            ProfileAvatar(
-              photoUrl: context.read<GameService>().chatPhotoUrlFor(sender),
-              size: 28,
-              blocked: context.read<GameService>().blockedUsers.contains(sender),
-              fallback: CircleAvatar(
-                radius: 14,
-                backgroundColor: const Color(0xFFE0E0E0),
-                child: Text(
-                  sender.isNotEmpty ? sender[0] : '?',
-                  style: const TextStyle(fontSize: 12, color: Color(0xFF5A4038)),
-                ),
-              ),
-            ),
-            const SizedBox(width: 6),
-          ],
-          Flexible(
-            child: Column(
-              crossAxisAlignment: isMe ? CrossAxisAlignment.end : CrossAxisAlignment.start,
-              children: [
-                if (!isMe)
-                  Padding(
-                    padding: const EdgeInsets.only(bottom: 2),
-                    child: Text(
-                      sender,
-                      style: const TextStyle(fontSize: 11, color: Color(0xFF8A8A8A)),
-                    ),
-                  ),
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                  decoration: BoxDecoration(
-                    color: isMe ? const Color(0xFF64B5F6) : const Color(0xFFF0F0F0),
-                    borderRadius: BorderRadius.circular(16),
-                  ),
-                  child: Text(
-                    message,
-                    style: TextStyle(
-                      fontSize: 14,
-                      color: isMe ? Colors.white : const Color(0xFF333333),
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
+    return ChatBubble(
+      sender: sender,
+      message: message,
+      isMe: isMe,
+      game: context.read<GameService>(),
     );
   }
-
   void _scrollChatToBottom() {
     // ListView is reverse:true so offset 0 == bottom.
     WidgetsBinding.instance.addPostFrameCallback((_) {

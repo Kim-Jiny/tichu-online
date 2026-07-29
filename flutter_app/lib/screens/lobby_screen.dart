@@ -3862,17 +3862,41 @@ class _LobbyScreenState extends State<LobbyScreen> {
     // Both grabbed before the first await: the sheet and the picker are long
     // enough gaps that ctx can be gone by the time we come back.
     final navigator = Navigator.of(ctx);
+    final overlay = Overlay.of(ctx, rootOverlay: true);
     final source = await _askPhotoSource(ctx, l10n);
     if (source == null) return; // dismissed the sheet
-    final result = await ProfilePhotoService.pickAndUpload(
-      game,
-      source: source,
-      // Square it here rather than letting the server centre-crop blind — that
-      // is what was lopping the top off portraits.
-      crop: (bytes) => navigator.push<Uint8List>(
-        MaterialPageRoute(builder: (_) => PhotoCropScreen(bytes: bytes)),
-      ),
-    );
+
+    // An OverlayEntry rather than a dialog route: insert/remove are synchronous,
+    // so there is no window where the upload finishes before the spinner has
+    // finished being pushed and we end up popping the wrong thing.
+    OverlayEntry? spinner;
+    void removeSpinner() {
+      spinner?.remove();
+      spinner = null;
+    }
+
+    final PhotoUploadResult result;
+    try {
+      result = await ProfilePhotoService.pickAndUpload(
+        game,
+        source: source,
+        // Square it here rather than letting the server centre-crop blind —
+        // that is what was lopping the top off portraits.
+        crop: (bytes) => navigator.push<Uint8List>(
+          MaterialPageRoute(builder: (_) => PhotoCropScreen(bytes: bytes)),
+        ),
+        // Upload can take the full 30s timeout on a bad connection. Without
+        // this the screen simply sits there and the user assumes it failed.
+        onUploadBegin: () {
+          spinner = OverlayEntry(
+            builder: (_) => _UploadingBarrier(label: l10n.profilePhotoUploading),
+          );
+          overlay.insert(spinner!);
+        },
+      );
+    } finally {
+      removeSpinner();
+    }
     if (result.cancelled) return;
     final String msg;
     if (result.ok) {
@@ -3887,6 +3911,9 @@ class _LobbyScreenState extends State<LobbyScreen> {
     messenger.showSnackBar(SnackBar(content: Text(msg)));
   }
 
+  /// Blocks the whole screen while the photo is in flight. Deliberately opaque
+  /// to touches: a second tap during the upload would burn the one-time token
+  /// and start a competing request.
   /// Camera or gallery. Returns null when the sheet is dismissed, which is a
   /// cancel rather than a failure — no snackbar for it.
   Future<ImageSource?> _askPhotoSource(BuildContext ctx, L10n l10n) {
@@ -5869,3 +5896,42 @@ class _LobbyScreenState extends State<LobbyScreen> {
   }
 }
 
+/// Full-screen "uploading" barrier, shown as an OverlayEntry above whatever
+/// route is current (including the profile dialog).
+class _UploadingBarrier extends StatelessWidget {
+  final String label;
+  const _UploadingBarrier({required this.label});
+
+  @override
+  Widget build(BuildContext context) {
+    return AbsorbPointer(
+      child: Material(
+        type: MaterialType.transparency,
+        child: Container(
+          color: Colors.black54,
+          alignment: Alignment.center,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const SizedBox(
+                width: 44,
+                height: 44,
+                child: CircularProgressIndicator(
+                    color: Colors.white, strokeWidth: 3),
+              ),
+              const SizedBox(height: 18),
+              Text(
+                label,
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontSize: 16,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}

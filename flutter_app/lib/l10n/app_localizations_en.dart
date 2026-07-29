@@ -2868,6 +2868,9 @@ class L10nEn extends L10n {
       'Drag and pinch to frame the part you want';
 
   @override
+  String get profilePhotoUploading => 'Uploading photo...';
+
+  @override
   String get mtSetting => 'Setting';
 
   @override

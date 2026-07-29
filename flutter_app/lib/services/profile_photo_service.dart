@@ -76,10 +76,15 @@ class ProfilePhotoService {
   /// returning null means they backed out of the crop step, which is a cancel.
   /// Callers own it because it needs to push a route, and this service has no
   /// business navigating.
+  ///
+  /// [onUploadBegin] fires once the user has no more decisions to make and the
+  /// network work starts. That is the only stretch worth a spinner — everything
+  /// before it is the user's own picking and framing.
   static Future<PhotoUploadResult> pickAndUpload(
     GameService game, {
     ImageSource source = ImageSource.gallery,
     Future<Uint8List?> Function(Uint8List bytes)? crop,
+    void Function()? onUploadBegin,
   }) async {
     _configureAndroidPicker();
     final XFile? file;
@@ -103,12 +108,6 @@ class ProfilePhotoService {
     }
     if (file == null) return const PhotoUploadResult.cancelled();
 
-    // One-time token (server also re-checks eligibility on the HTTP request).
-    final tok = await game.requestUploadToken();
-    if (tok.token == null) {
-      return PhotoUploadResult.failure(tok.error ?? 'no_token');
-    }
-
     Uint8List bytes;
     MediaType contentType;
     String filename = file.name.isNotEmpty ? file.name : 'avatar.jpg';
@@ -126,6 +125,17 @@ class ProfilePhotoService {
       bytes = cropped;
       contentType = MediaType('image', 'png');
       filename = 'avatar.png';
+    }
+
+    onUploadBegin?.call();
+
+    // One-time token (server also re-checks eligibility on the HTTP request).
+    // Asked for AFTER the crop, not before: the token lives 3 minutes, and
+    // somebody framing their photo carefully can outlast that — which would
+    // land them a 401 on an upload they did nothing wrong in.
+    final tok = await game.requestUploadToken();
+    if (tok.token == null) {
+      return PhotoUploadResult.failure(tok.error ?? 'no_token');
     }
 
     try {

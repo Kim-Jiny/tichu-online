@@ -5235,6 +5235,12 @@ abstract class L10n {
   /// **'Drag and pinch to frame the part you want'**
   String get profilePhotoCropHint;
 
+  /// No description provided for @profilePhotoUploading.
+  ///
+  /// In en, this message translates to:
+  /// **'Uploading photo...'**
+  String get profilePhotoUploading;
+
   /// No description provided for @mtSetting.
   ///
   /// In en, this message translates to:

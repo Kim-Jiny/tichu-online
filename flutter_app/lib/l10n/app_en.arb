@@ -1287,6 +1287,7 @@
   "profilePhotoCameraDenied": "Camera access was denied. Allow it in Settings to take a photo",
   "profilePhotoCropTitle": "Crop photo",
   "profilePhotoCropHint": "Drag and pinch to frame the part you want",
+  "profilePhotoUploading": "Uploading photo...",
   "mtSetting": "Setting",
   "mtSettingConfirmTitle": "Declare setting",
   "mtSettingConfirmBody": "Declare that you will win every remaining trick. Your hand will be revealed and the round ends immediately.",

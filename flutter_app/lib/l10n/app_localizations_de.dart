@@ -2884,6 +2884,9 @@ class L10nDe extends L10n {
       'Ziehen und zoomen, um den gewünschten Ausschnitt zu wählen';
 
   @override
+  String get profilePhotoUploading => 'Foto wird hochgeladen...';
+
+  @override
   String get mtSetting => 'Setting';
 
   @override

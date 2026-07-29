@@ -922,6 +922,7 @@
   "profilePhotoCameraDenied": "카메라 접근이 거부되었습니다. 설정에서 권한을 허용해 주세요",
   "profilePhotoCropTitle": "사진 자르기",
   "profilePhotoCropHint": "손가락으로 옮기고 확대해서 원하는 부분을 맞춰 주세요",
+  "profilePhotoUploading": "사진 업로드 중...",
   "mtSetting": "세팅",
   "mtSettingConfirmTitle": "세팅 선언",
   "mtSettingConfirmBody": "남은 모든 트릭을 이길 수 있다고 선언합니다. 내 손패가 모두에게 공개되고 라운드가 종료됩니다.",

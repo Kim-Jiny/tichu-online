@@ -1,12 +1,10 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:image_picker/image_picker.dart' show ImageSource;
 import 'package:provider/provider.dart';
 import '../l10n/app_localizations.dart';
 import '../l10n/l10n_helpers.dart';
 import '../services/game_service.dart';
-import '../services/profile_photo_service.dart';
 import '../utils/level_curve.dart';
 import '../services/locale_service.dart';
 import '../services/session_service.dart';
@@ -17,10 +15,10 @@ import 'shop_screen.dart';
 import 'settings_screen.dart';
 import 'rules_screen.dart';
 import 'friends_screen.dart';
-import 'photo_crop_screen.dart';
 import '../widgets/connection_overlay.dart';
 import '../widgets/level_badge.dart';
 import '../widgets/profile_avatar.dart';
+import '../widgets/player_profile_header.dart';
 import '../widgets/title_chip.dart';
 import '../services/ad_service.dart';
 import '../services/kakao_invite_share_service.dart';
@@ -3856,105 +3854,11 @@ class _LobbyScreenState extends State<LobbyScreen> {
   // Pick + upload a new profile photo for the current user, then surface the
   // outcome. Eligibility (owning an active photo item) is already gated by the
   // caller and re-checked server-side at token issuance.
-  Future<void> _changeProfilePhoto(BuildContext ctx, GameService game) async {
-    final l10n = L10n.of(ctx);
-    final messenger = ScaffoldMessenger.of(ctx);
-    // Both grabbed before the first await: the sheet and the picker are long
-    // enough gaps that ctx can be gone by the time we come back.
-    final navigator = Navigator.of(ctx);
-    final overlay = Overlay.of(ctx, rootOverlay: true);
-    final source = await _askPhotoSource(ctx, l10n);
-    if (source == null) return; // dismissed the sheet
-
-    // An OverlayEntry rather than a dialog route: insert/remove are synchronous,
-    // so there is no window where the upload finishes before the spinner has
-    // finished being pushed and we end up popping the wrong thing.
-    OverlayEntry? spinner;
-    void removeSpinner() {
-      spinner?.remove();
-      spinner = null;
-    }
-
-    final PhotoUploadResult result;
-    try {
-      result = await ProfilePhotoService.pickAndUpload(
-        game,
-        source: source,
-        // Square it here rather than letting the server centre-crop blind —
-        // that is what was lopping the top off portraits.
-        crop: (bytes) => navigator.push<Uint8List>(
-          MaterialPageRoute(builder: (_) => PhotoCropScreen(bytes: bytes)),
-        ),
-        // Upload can take the full 30s timeout on a bad connection. Without
-        // this the screen simply sits there and the user assumes it failed.
-        onUploadBegin: () {
-          spinner = OverlayEntry(
-            builder: (_) => _UploadingBarrier(label: l10n.profilePhotoUploading),
-          );
-          overlay.insert(spinner!);
-        },
-      );
-    } finally {
-      removeSpinner();
-    }
-    if (result.cancelled) return;
-    final String msg;
-    if (result.ok) {
-      msg = l10n.profilePhotoChanged;
-    } else if (result.error == 'no_active_item') {
-      msg = l10n.profilePhotoNeedItem;
-    } else if (result.error == 'camera_denied') {
-      msg = l10n.profilePhotoCameraDenied;
-    } else {
-      msg = l10n.profilePhotoUploadFailed;
-    }
-    messenger.showSnackBar(SnackBar(content: Text(msg)));
-  }
-
   /// Blocks the whole screen while the photo is in flight. Deliberately opaque
   /// to touches: a second tap during the upload would burn the one-time token
   /// and start a competing request.
   /// Camera or gallery. Returns null when the sheet is dismissed, which is a
   /// cancel rather than a failure — no snackbar for it.
-  Future<ImageSource?> _askPhotoSource(BuildContext ctx, L10n l10n) {
-    return showModalBottomSheet<ImageSource>(
-      context: ctx,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-      ),
-      builder: (sheetCtx) => SafeArea(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Padding(
-              padding: const EdgeInsets.fromLTRB(20, 18, 20, 8),
-              child: Text(
-                l10n.profilePhotoSourceTitle,
-                style: const TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-            ),
-            ListTile(
-              leading: const Icon(Icons.photo_camera_rounded,
-                  color: Color(0xFF6C63FF)),
-              title: Text(l10n.profilePhotoFromCamera),
-              onTap: () => Navigator.pop(sheetCtx, ImageSource.camera),
-            ),
-            ListTile(
-              leading: const Icon(Icons.photo_library_rounded,
-                  color: Color(0xFF6C63FF)),
-              title: Text(l10n.profilePhotoFromGallery),
-              onTap: () => Navigator.pop(sheetCtx, ImageSource.gallery),
-            ),
-            const SizedBox(height: 8),
-          ],
-        ),
-      ),
-    );
-  }
-
   // Show user profile dialog with stats.
   // [dialogContext] lets callers (e.g. the Settings screen) open the dialog
   // on top of their own route instead of the lobby — the default falls back
@@ -3979,8 +3883,6 @@ class _LobbyScreenState extends State<LobbyScreen> {
                 final isLoading =
                     profile == null || profile['nickname'] != nickname;
 
-                final isMe = nickname == game.playerName;
-                final isBlockedUser = game.blockedUsers.contains(nickname);
                 return AlertDialog(
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(24),
@@ -3997,179 +3899,17 @@ class _LobbyScreenState extends State<LobbyScreen> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Row(
-                          children: [
-                            Builder(
-                              builder: (_) {
-                                final inner = profile?['profile'] as Map?;
-                                final rawPhoto = isMe
-                                    ? game.myPhotoUrl
-                                    : inner?['photoUrl'] as String?;
-                                const fallback = SizedBox(
-                                  width: 38,
-                                  height: 38,
-                                  child: DecoratedBox(
-                                    decoration: BoxDecoration(
-                                      color: Color(0xFFE8F0F7),
-                                      borderRadius:
-                                          BorderRadius.all(Radius.circular(12)),
-                                    ),
-                                    child: Icon(
-                                      Icons.person_outline,
-                                      color: Color(0xFF4F6B7A),
-                                    ),
-                                  ),
-                                );
-                                final avatar = ProfileAvatar(
-                                  photoUrl: game.resolvePhotoUrl(rawPhoto),
-                                  size: 38,
-                                  borderRadius: 12,
-                                  blocked: isBlockedUser,
-                                  fallback: fallback,
-                                );
-                                if (!isMe) return avatar;
-                                // Own profile: allow changing the photo while
-                                // the paid item is active + unexpired.
-                                final status =
-                                    inner?['profilePhotoStatus'] as String?;
-                                final expRaw = inner?['profilePhotoExpiresAt']
-                                    as String?;
-                                final eligible = status == 'active' &&
-                                    (expRaw == null ||
-                                        (DateTime.tryParse(expRaw)
-                                                ?.isAfter(DateTime.now()) ??
-                                            false));
-                                if (!eligible) return avatar;
-                                return GestureDetector(
-                                  onTap: () => _changeProfilePhoto(ctx, game),
-                                  child: Stack(
-                                    clipBehavior: Clip.none,
-                                    children: [
-                                      avatar,
-                                      Positioned(
-                                        right: -3,
-                                        bottom: -3,
-                                        child: Container(
-                                          padding: const EdgeInsets.all(2),
-                                          decoration: BoxDecoration(
-                                            color: const Color(0xFF6C63FF),
-                                            shape: BoxShape.circle,
-                                            border: Border.all(
-                                              color: Colors.white,
-                                              width: 1.5,
-                                            ),
-                                          ),
-                                          child: const Icon(
-                                            Icons.photo_camera,
-                                            size: 11,
-                                            color: Colors.white,
-                                          ),
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                );
-                              },
-                            ),
-                            const SizedBox(width: 12),
-                            Expanded(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text(
-                                    nickname,
-                                    style: const TextStyle(
-                                      fontSize: 17,
-                                      fontWeight: FontWeight.w800,
-                                      color: Color(0xFF3E312A),
-                                    ),
-                                    overflow: TextOverflow.ellipsis,
-                                  ),
-                                  const SizedBox(height: 2),
-                                  Builder(
-                                    builder: (_) {
-                                      final inner = profile?['profile'] as Map?;
-                                      return _buildProfileSubtitle(
-                                        (inner?['level'] as int?) ?? 1,
-                                        (inner?['expTotal'] as int?) ?? 0,
-                                      );
-                                    },
-                                  ),
-                                ],
-                              ),
-                            ),
-                          ],
-                        ),
-                        if (!isMe) ...[
-                          const SizedBox(height: 12),
-                          Wrap(
-                            spacing: 8,
-                            runSpacing: 8,
-                            children: [
-                              if (game.friends.contains(nickname))
-                                _buildTitleIconButton(
-                                  icon: Icons.check,
-                                  color: const Color(0xFFBDBDBD),
-                                  tooltip: l10n.lobbyAlreadyFriend,
-                                  onTap: () {},
-                                )
-                              else if (game.sentFriendRequests.contains(
-                                nickname,
-                              ))
-                                _buildTitleIconButton(
-                                  icon: Icons.hourglass_top,
-                                  color: const Color(0xFFBDBDBD),
-                                  tooltip: l10n.lobbyRequestPending,
-                                  onTap: () {},
-                                )
-                              else
-                                _buildTitleIconButton(
-                                  icon: Icons.person_add,
-                                  color: const Color(0xFF81C784),
-                                  tooltip: l10n.lobbyAddFriend,
-                                  onTap: () {
-                                    game.addFriendAction(nickname);
-                                    Navigator.pop(ctx);
-                                    ScaffoldMessenger.of(context).showSnackBar(
-                                      SnackBar(
-                                        content: Text(
-                                          l10n.lobbyFriendRequestSent,
-                                        ),
-                                      ),
-                                    );
-                                  },
-                                ),
-                              _buildTitleIconButton(
-                                icon: isBlockedUser
-                                    ? Icons.block
-                                    : Icons.shield_outlined,
-                                color: isBlockedUser
-                                    ? const Color(0xFF64B5F6)
-                                    : const Color(0xFFFF8A65),
-                                tooltip: isBlockedUser
-                                    ? l10n.lobbyUnblock
-                                    : l10n.lobbyBlock,
-                                onTap: () {
-                                  if (isBlockedUser) {
-                                    game.unblockUserAction(nickname);
-                                    ScaffoldMessenger.of(context).showSnackBar(
-                                      SnackBar(
-                                        content: Text(l10n.lobbyUnblocked),
-                                      ),
-                                    );
-                                  } else {
-                                    game.blockUserAction(nickname);
-                                    ScaffoldMessenger.of(context).showSnackBar(
-                                      SnackBar(
-                                        content: Text(l10n.lobbyBlocked),
-                                      ),
-                                    );
-                                  }
-                                },
-                              ),
-                            ],
+                        PlayerProfileHeader(
+                          nickname: nickname,
+                          profile: profile,
+                          game: game,
+                          subtitle: l10n.lobbyPlayerProfile,
+                          subtitleBuilder: (inner) => _buildProfileSubtitle(
+                            (inner?['level'] as int?) ?? 1,
+                            (inner?['expTotal'] as int?) ?? 0,
                           ),
-                        ],
+                          onCloseDialog: () => Navigator.pop(ctx),
+                        ),
                       ],
                     ),
                   ),
@@ -4572,31 +4312,6 @@ class _LobbyScreenState extends State<LobbyScreen> {
         const SizedBox(height: 12),
         _buildRecentMatches(filteredMatches, profileNickname),
       ],
-    );
-  }
-
-  Widget _buildTitleIconButton({
-    required IconData icon,
-    required Color color,
-    required String tooltip,
-    required VoidCallback onTap,
-  }) {
-    return Tooltip(
-      message: tooltip,
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(12),
-        child: Container(
-          width: 28,
-          height: 28,
-          decoration: BoxDecoration(
-            color: color.withValues(alpha: 0.15),
-            borderRadius: BorderRadius.circular(10),
-            border: Border.all(color: color.withValues(alpha: 0.35)),
-          ),
-          child: Icon(icon, size: 16, color: color),
-        ),
-      ),
     );
   }
 
@@ -5912,40 +5627,3 @@ class _LobbyScreenState extends State<LobbyScreen> {
 
 /// Full-screen "uploading" barrier, shown as an OverlayEntry above whatever
 /// route is current (including the profile dialog).
-class _UploadingBarrier extends StatelessWidget {
-  final String label;
-  const _UploadingBarrier({required this.label});
-
-  @override
-  Widget build(BuildContext context) {
-    return AbsorbPointer(
-      child: Material(
-        type: MaterialType.transparency,
-        child: Container(
-          color: Colors.black54,
-          alignment: Alignment.center,
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              const SizedBox(
-                width: 44,
-                height: 44,
-                child: CircularProgressIndicator(
-                    color: Colors.white, strokeWidth: 3),
-              ),
-              const SizedBox(height: 18),
-              Text(
-                label,
-                style: const TextStyle(
-                  color: Colors.white,
-                  fontSize: 16,
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-}

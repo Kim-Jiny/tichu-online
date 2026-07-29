@@ -11,6 +11,7 @@ import '../widgets/connection_overlay.dart';
 import '../widgets/draggable_chat_panel.dart';
 import '../widgets/level_badge.dart';
 import '../widgets/profile_avatar.dart';
+import '../widgets/player_profile_header.dart';
 import '../widgets/spectator_controls.dart';
 import '../l10n/app_localizations.dart';
 import '../l10n/l10n_helpers.dart';
@@ -3879,8 +3880,6 @@ class _LLGameScreenState extends State<LLGameScreen> {
             final profile = game.profileFor(nickname);
             final isLoading =
                 profile == null || profile['nickname'] != nickname;
-            final isMe = nickname == game.playerName;
-            final isBlockedUser = game.isBlocked(nickname);
 
             return AlertDialog(
               shape: RoundedRectangleBorder(
@@ -3898,144 +3897,17 @@ class _LLGameScreenState extends State<LLGameScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Row(
-                      children: [
-                        // The in-game profile popup is its own dialog per screen, and none of
-                        // them ever showed the paid photo — only the lobby's did.
-                        Builder(builder: (_) {
-                          final inner = profile?['profile'] as Map?;
-                          final rawPhoto = isMe
-                                ? game.myPhotoUrl
-                                : inner?['photoUrl'] as String?;
-                          return ProfileAvatar(
-                            photoUrl: game.resolvePhotoUrl(rawPhoto),
-                            size: 38,
-                            borderRadius: 12,
-                            blocked: isBlockedUser,
-                            fallback: const SizedBox(
-                              width: 38,
-                              height: 38,
-                              child: DecoratedBox(
-                                decoration: BoxDecoration(
-                                  color: Color(0xFFE8F0F7),
-                                  borderRadius: BorderRadius.all(Radius.circular(12)),
-                                ),
-                                child: Icon(
-                                  Icons.person_outline,
-                                  color: Color(0xFF4F6B7A),
-                                ),
-                              ),
-                            ),
-                          );
-                        }),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                nickname,
-                                style: const TextStyle(
-                                  fontSize: 17,
-                                  fontWeight: FontWeight.w800,
-                                  color: Color(0xFF3E312A),
-                                ),
-                                overflow: TextOverflow.ellipsis,
-                              ),
-                              const SizedBox(height: 2),
-                              Builder(
-                                builder: (_) {
-                                  final inner = profile?['profile'] as Map?;
-                                  return _buildProfileSubtitle(
-                                    (inner?['level'] as int?) ?? 1,
-                                    (inner?['expTotal'] as int?) ?? 0,
-                                  );
-                                },
-                              ),
-                            ],
-                          ),
-                        ),
-                      ],
-                    ),
-                    if (!isMe) ...[
-                      const SizedBox(height: 12),
-                      Wrap(
-                        spacing: 8,
-                        runSpacing: 8,
-                        children: [
-                          if (game.friends.contains(nickname))
-                            _buildProfileIconButton(
-                              icon: Icons.check,
-                              color: const Color(0xFFBDBDBD),
-                              tooltip: L10n.of(context).gameAlreadyFriend,
-                              onTap: () {},
-                            )
-                          else if (game.sentFriendRequests.contains(nickname))
-                            _buildProfileIconButton(
-                              icon: Icons.hourglass_top,
-                              color: const Color(0xFFBDBDBD),
-                              tooltip: L10n.of(context).gameRequestPending,
-                              onTap: () {},
-                            )
-                          else
-                            _buildProfileIconButton(
-                              icon: Icons.person_add,
-                              color: const Color(0xFF81C784),
-                              tooltip: L10n.of(context).gameAddFriend,
-                              onTap: () {
-                                game.addFriendAction(nickname);
-                                Navigator.pop(ctx);
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  SnackBar(
-                                    content: Text(
-                                      L10n.of(context).gameFriendRequestSent,
-                                    ),
-                                  ),
-                                );
-                              },
-                            ),
-                          _buildProfileIconButton(
-                            icon: isBlockedUser
-                                ? Icons.block
-                                : Icons.shield_outlined,
-                            color: isBlockedUser
-                                ? const Color(0xFF64B5F6)
-                                : const Color(0xFFFF8A65),
-                            tooltip: isBlockedUser
-                                ? L10n.of(context).gameUnblock
-                                : L10n.of(context).gameBlock,
-                            onTap: () {
-                              if (isBlockedUser) {
-                                game.unblockUserAction(nickname);
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  SnackBar(
-                                    content: Text(
-                                      L10n.of(context).gameUnblocked,
-                                    ),
-                                  ),
-                                );
-                              } else {
-                                game.blockUserAction(nickname);
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  SnackBar(
-                                    content: Text(L10n.of(context).gameBlocked),
-                                  ),
-                                );
-                              }
-                            },
-                          ),
-                          _buildProfileIconButton(
-                            icon: Icons.flag,
-                            color: const Color(0xFFE57373),
-                            tooltip: L10n.of(context).gameReport,
-                            onTap: () {
-                              Navigator.pop(ctx);
-                              _showReportDialog(nickname, game);
-                            },
-                          ),
-                        ],
+                    PlayerProfileHeader(
+                      nickname: nickname,
+                      profile: profile,
+                      game: game,
+                      subtitle: L10n.of(context).gamePlayerProfile,
+                      subtitleBuilder: (inner) => _buildProfileSubtitle(
+                        (inner?['level'] as int?) ?? 1,
+                        (inner?['expTotal'] as int?) ?? 0,
                       ),
-                    ],
+                      onCloseDialog: () => Navigator.pop(ctx),
+                    ),
                   ],
                 ),
               ),
@@ -4064,31 +3936,6 @@ class _LLGameScreenState extends State<LLGameScreen> {
           },
         );
       },
-    );
-  }
-
-  Widget _buildProfileIconButton({
-    required IconData icon,
-    required Color color,
-    required String tooltip,
-    required VoidCallback onTap,
-  }) {
-    return Tooltip(
-      message: tooltip,
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(12),
-        child: Container(
-          width: 28,
-          height: 28,
-          decoration: BoxDecoration(
-            color: color.withValues(alpha: 0.15),
-            borderRadius: BorderRadius.circular(10),
-            border: Border.all(color: color.withValues(alpha: 0.35)),
-          ),
-          child: Icon(icon, size: 16, color: color),
-        ),
-      ),
     );
   }
 
@@ -4604,213 +4451,6 @@ class _LLGameScreenState extends State<LLGameScreen> {
     }
   }
 
-  void _showReportDialog(String nickname, GameService game) {
-    final reasonController = TextEditingController();
-    final l10n = L10n.of(context);
-    final reasons = [
-      l10n.gameReportReasonAbuse,
-      l10n.gameReportReasonSpam,
-      l10n.gameReportReasonNickname,
-      l10n.gameReportReasonGameplay,
-      l10n.gameReportReasonOther,
-    ];
-    String? selectedReason;
-    showDialog(
-      context: context,
-      builder: (context) => StatefulBuilder(
-        builder: (ctx, setState) {
-          final media = MediaQuery.of(ctx);
-          return AnimatedPadding(
-            duration: const Duration(milliseconds: 180),
-            curve: Curves.easeOut,
-            padding: EdgeInsets.only(bottom: media.viewInsets.bottom),
-            child: AlertDialog(
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(20),
-              ),
-              title: Row(
-                children: [
-                  const Icon(Icons.flag, color: Color(0xFFE57373)),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: Text(
-                      L10n.of(context).gameReportTitle(nickname),
-                      style: const TextStyle(fontWeight: FontWeight.bold),
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                  ),
-                ],
-              ),
-              content: ConstrainedBox(
-                constraints: BoxConstraints(
-                  maxWidth: 420,
-                  maxHeight: media.size.height * 0.55,
-                ),
-                child: SingleChildScrollView(
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Container(
-                        width: double.infinity,
-                        padding: const EdgeInsets.all(10),
-                        decoration: BoxDecoration(
-                          color: const Color(0xFFFFF1F1),
-                          borderRadius: BorderRadius.circular(12),
-                          border: Border.all(color: const Color(0xFFF0C7C7)),
-                        ),
-                        child: Text(
-                          L10n.of(context).gameReportWarning,
-                          style: const TextStyle(
-                            fontSize: 12,
-                            color: Color(0xFF9A4A4A),
-                            height: 1.4,
-                          ),
-                        ),
-                      ),
-                      const SizedBox(height: 12),
-                      Align(
-                        alignment: Alignment.centerLeft,
-                        child: Text(
-                          L10n.of(context).gameSelectReason,
-                          style: TextStyle(
-                            fontSize: 12,
-                            fontWeight: FontWeight.bold,
-                            color: Colors.grey.shade700,
-                          ),
-                        ),
-                      ),
-                      const SizedBox(height: 6),
-                      Wrap(
-                        spacing: 8,
-                        runSpacing: 8,
-                        children: reasons.map((r) {
-                          final sel = selectedReason == r;
-                          return InkWell(
-                            onTap: () => setState(() => selectedReason = r),
-                            borderRadius: BorderRadius.circular(16),
-                            child: Container(
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 12,
-                                vertical: 6,
-                              ),
-                              decoration: BoxDecoration(
-                                color: sel
-                                    ? const Color(0xFFDDECF7)
-                                    : const Color(0xFFF6F2F0),
-                                borderRadius: BorderRadius.circular(16),
-                                border: Border.all(
-                                  color: sel
-                                      ? const Color(0xFF9EC5E6)
-                                      : const Color(0xFFE2D8D4),
-                                ),
-                              ),
-                              child: Text(
-                                r,
-                                style: TextStyle(
-                                  fontSize: 12,
-                                  color: sel
-                                      ? const Color(0xFF3E6D8E)
-                                      : const Color(0xFF6A5A52),
-                                  fontWeight: sel
-                                      ? FontWeight.bold
-                                      : FontWeight.normal,
-                                ),
-                              ),
-                            ),
-                          );
-                        }).toList(),
-                      ),
-                      const SizedBox(height: 12),
-                      TextField(
-                        controller: reasonController,
-                        maxLines: 3,
-                        decoration: InputDecoration(
-                          hintText: L10n.of(context).gameReportDetailHint,
-                          filled: true,
-                          fillColor: const Color(0xFFF7F2F0),
-                          border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(12),
-                            borderSide: const BorderSide(
-                              color: Color(0xFFE0D6D1),
-                            ),
-                          ),
-                          enabledBorder: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(12),
-                            borderSide: const BorderSide(
-                              color: Color(0xFFE0D6D1),
-                            ),
-                          ),
-                          focusedBorder: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(12),
-                            borderSide: const BorderSide(
-                              color: Color(0xFFB9A8A1),
-                            ),
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-              actions: [
-                TextButton(
-                  onPressed: () => Navigator.pop(ctx),
-                  child: Text(L10n.of(context).gameCancel),
-                ),
-                ElevatedButton(
-                  onPressed: selectedReason == null
-                      ? null
-                      : () {
-                          final detail = reasonController.text.trim();
-                          final reason = detail.isEmpty
-                              ? selectedReason!
-                              : '${selectedReason!} / $detail';
-                          Navigator.pop(ctx);
-                          game.reportResultSuccess = null;
-                          game.reportResultMessage = null;
-                          game.reportUserAction(nickname, reason);
-                          late void Function() listener;
-                          Timer? cleanupTimer;
-                          listener = () {
-                            if (game.reportResultMessage != null) {
-                              game.removeListener(listener);
-                              cleanupTimer?.cancel();
-                              if (mounted) {
-                                ScaffoldMessenger.of(this.context).showSnackBar(
-                                  SnackBar(
-                                    content: Text(game.reportResultMessage!),
-                                    backgroundColor:
-                                        game.reportResultSuccess == true
-                                        ? null
-                                        : const Color(0xFFE57373),
-                                  ),
-                                );
-                              }
-                              game.reportResultSuccess = null;
-                              game.reportResultMessage = null;
-                            }
-                          };
-                          game.addListener(listener);
-                          cleanupTimer = Timer(
-                            const Duration(seconds: 10),
-                            () => game.removeListener(listener),
-                          );
-                        },
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFFE57373),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                  ),
-                  child: Text(L10n.of(context).gameReportSubmit),
-                ),
-              ],
-            ),
-          );
-        },
-      ),
-    ).whenComplete(reasonController.dispose);
-  }
 }
 
 class _EffectStatusSegment {

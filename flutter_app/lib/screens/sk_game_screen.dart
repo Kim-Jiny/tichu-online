@@ -9,6 +9,7 @@ import '../models/player.dart';
 import '../widgets/connection_overlay.dart';
 import '../widgets/level_badge.dart';
 import '../widgets/profile_avatar.dart';
+import '../widgets/player_profile_header.dart';
 import '../widgets/draggable_chat_panel.dart';
 import '../widgets/spectator_controls.dart';
 import '../l10n/app_localizations.dart';
@@ -4696,7 +4697,6 @@ class _SKGameScreenState extends State<SKGameScreen> {
               final profile = game.profileFor(nickname);
               final isLoading =
                   profile == null || profile['nickname'] != nickname;
-              final isBlockedUser = game.isBlocked(nickname);
 
               return AlertDialog(
                 shape: RoundedRectangleBorder(
@@ -4714,134 +4714,14 @@ class _SKGameScreenState extends State<SKGameScreen> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Row(
-                        children: [
-                          // The in-game profile popup is its own dialog per screen, and none of
-                          // them ever showed the paid photo — only the lobby's did.
-                          Builder(builder: (_) {
-                            final inner = profile?['profile'] as Map?;
-                            final rawPhoto = inner?['photoUrl'] as String?;
-                            return ProfileAvatar(
-                              photoUrl: game.resolvePhotoUrl(rawPhoto),
-                              size: 38,
-                              borderRadius: 12,
-                              blocked: isBlockedUser,
-                              fallback: const SizedBox(
-                                width: 38,
-                                height: 38,
-                                child: DecoratedBox(
-                                  decoration: BoxDecoration(
-                                    color: Color(0xFFE8F0F7),
-                                    borderRadius: BorderRadius.all(Radius.circular(12)),
-                                  ),
-                                  child: Icon(
-                                    Icons.person_outline,
-                                    color: Color(0xFF4F6B7A),
-                                  ),
-                                ),
-                              ),
-                            );
-                          }),
-                          const SizedBox(width: 12),
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  nickname,
-                                  style: const TextStyle(
-                                    fontSize: 17,
-                                    fontWeight: FontWeight.w800,
-                                    color: Color(0xFF3E312A),
-                                  ),
-                                  overflow: TextOverflow.ellipsis,
-                                ),
-                                const SizedBox(height: 2),
-                                Text(
-                                  L10n.of(context).skGamePlayerProfile,
-                                  style: const TextStyle(
-                                    fontSize: 12,
-                                    color: Color(0xFF84766E),
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ],
+                      PlayerProfileHeader(
+                        nickname: nickname,
+                        profile: profile,
+                        game: game,
+                        subtitle: L10n.of(context).skGamePlayerProfile,
+                        isBot: isBot,
+                        onCloseDialog: () => Navigator.pop(ctx),
                       ),
-                      const SizedBox(height: 12),
-                      if (!isBot)
-                        Wrap(
-                          spacing: 8,
-                          runSpacing: 8,
-                          children: [
-                            if (game.friends.contains(nickname))
-                              _buildProfileIconButton(
-                                icon: Icons.check,
-                                color: const Color(0xFFBDBDBD),
-                                tooltip: L10n.of(context).skGameAlreadyFriend,
-                                onTap: () {},
-                              )
-                            else if (game.sentFriendRequests.contains(nickname))
-                              _buildProfileIconButton(
-                                icon: Icons.hourglass_top,
-                                color: const Color(0xFFBDBDBD),
-                                tooltip: L10n.of(context).skGameRequestPending,
-                                onTap: () {},
-                              )
-                            else
-                              _buildProfileIconButton(
-                                icon: Icons.person_add,
-                                color: const Color(0xFF81C784),
-                                tooltip: L10n.of(context).skGameAddFriend,
-                                onTap: () {
-                                  game.addFriendAction(nickname);
-                                  Navigator.pop(ctx);
-                                  ScaffoldMessenger.of(context).showSnackBar(
-                                    SnackBar(
-                                      content: Text(
-                                        L10n.of(
-                                          context,
-                                        ).skGameFriendRequestSent,
-                                      ),
-                                    ),
-                                  );
-                                },
-                              ),
-                            _buildProfileIconButton(
-                              icon: isBlockedUser
-                                  ? Icons.block
-                                  : Icons.shield_outlined,
-                              color: isBlockedUser
-                                  ? const Color(0xFF64B5F6)
-                                  : const Color(0xFFFF8A65),
-                              tooltip: isBlockedUser
-                                  ? L10n.of(context).skGameUnblockUser
-                                  : L10n.of(context).skGameBlockUser,
-                              onTap: () {
-                                if (isBlockedUser) {
-                                  game.unblockUserAction(nickname);
-                                  ScaffoldMessenger.of(context).showSnackBar(
-                                    SnackBar(
-                                      content: Text(
-                                        L10n.of(context).skGameUserUnblocked,
-                                      ),
-                                    ),
-                                  );
-                                } else {
-                                  game.blockUserAction(nickname);
-                                  ScaffoldMessenger.of(context).showSnackBar(
-                                    SnackBar(
-                                      content: Text(
-                                        L10n.of(context).skGameUserBlocked,
-                                      ),
-                                    ),
-                                  );
-                                }
-                              },
-                            ),
-                          ],
-                        ),
                     ],
                   ),
                 ),
@@ -5168,33 +5048,6 @@ class _SKGameScreenState extends State<SKGameScreen> {
     );
   }
 
-  Widget _buildProfileIconButton({
-    required IconData icon,
-    required Color color,
-    required String tooltip,
-    required VoidCallback onTap,
-  }) {
-    return Tooltip(
-      message: tooltip,
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(12),
-        child: Container(
-          width: 28,
-          height: 28,
-          decoration: BoxDecoration(
-            color: color.withValues(alpha: 0.15),
-            borderRadius: BorderRadius.circular(10),
-            border: Border.all(color: color.withValues(alpha: 0.35)),
-          ),
-          child: Icon(icon, size: 16, color: color),
-        ),
-      ),
-    );
-  }
-
-  // ── SK Card Widget ──
-  // Suit symbols and colors for number cards
   static const _suitColors = {
     'yellow': Color(0xFFD4A017),
     'green': Color(0xFF2E7D32),

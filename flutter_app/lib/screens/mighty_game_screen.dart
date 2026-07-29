@@ -10,6 +10,7 @@ import '../widgets/draggable_chat_panel.dart';
 import '../widgets/connection_overlay.dart';
 import '../widgets/level_badge.dart';
 import '../widgets/profile_avatar.dart';
+import '../widgets/player_profile_header.dart';
 import '../widgets/spectator_controls.dart';
 import '../l10n/app_localizations.dart';
 import '../l10n/l10n_helpers.dart';
@@ -7465,8 +7466,6 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
             final profile = game.profileFor(nickname);
             final isLoading =
                 profile == null || profile['nickname'] != nickname;
-            final isMe = nickname == game.playerName;
-            final isBlockedUser = game.isBlocked(nickname);
             final l10n = L10n.of(context);
 
             return AlertDialog(
@@ -7485,132 +7484,16 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Row(
-                      children: [
-                        // The in-game profile popup is its own dialog per screen, and none of
-                        // them ever showed the paid photo — only the lobby's did.
-                        Builder(builder: (_) {
-                          final inner = profile?['profile'] as Map?;
-                          final rawPhoto = isMe
-                                ? game.myPhotoUrl
-                                : inner?['photoUrl'] as String?;
-                          return ProfileAvatar(
-                            photoUrl: game.resolvePhotoUrl(rawPhoto),
-                            size: 38,
-                            borderRadius: 12,
-                            blocked: isBlockedUser,
-                            fallback: const SizedBox(
-                              width: 38,
-                              height: 38,
-                              child: DecoratedBox(
-                                decoration: BoxDecoration(
-                                  color: Color(0xFFE8F5E9),
-                                  borderRadius: BorderRadius.all(Radius.circular(12)),
-                                ),
-                                child: Icon(
-                                  Icons.person_outline,
-                                  color: Color(0xFF2E7D32),
-                                ),
-                              ),
-                            ),
-                          );
-                        }),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                nickname,
-                                style: const TextStyle(
-                                  fontSize: 17,
-                                  fontWeight: FontWeight.w800,
-                                  color: Color(0xFF3E312A),
-                                ),
-                                overflow: TextOverflow.ellipsis,
-                              ),
-                              const SizedBox(height: 2),
-                              Text(
-                                isMe
-                                    ? l10n.gameMyProfile
-                                    : l10n.gamePlayerProfile,
-                                style: const TextStyle(
-                                  fontSize: 12,
-                                  color: Color(0xFF84766E),
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ],
+                    PlayerProfileHeader(
+                      nickname: nickname,
+                      profile: profile,
+                      game: game,
+                      subtitle: L10n.of(context).gamePlayerProfile,
+                      isBot: isBot,
+                      onCloseDialog: () => Navigator.pop(ctx),
+                      placeholderBackground: const Color(0xFFE8F5E9),
+                      placeholderForeground: const Color(0xFF2E7D32),
                     ),
-                    if (!isMe && !isBot) ...[
-                      const SizedBox(height: 12),
-                      Wrap(
-                        spacing: 8,
-                        runSpacing: 8,
-                        children: [
-                          if (game.friends.contains(nickname))
-                            _buildProfileIconBtn(
-                              Icons.check,
-                              const Color(0xFFBDBDBD),
-                              l10n.gameAlreadyFriend,
-                              () {},
-                            )
-                          else if (game.sentFriendRequests.contains(nickname))
-                            _buildProfileIconBtn(
-                              Icons.hourglass_top,
-                              const Color(0xFFBDBDBD),
-                              l10n.gameRequestPending,
-                              () {},
-                            )
-                          else
-                            _buildProfileIconBtn(
-                              Icons.person_add,
-                              const Color(0xFF81C784),
-                              l10n.gameAddFriend,
-                              () {
-                                game.addFriendAction(nickname);
-                                Navigator.pop(ctx);
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  SnackBar(
-                                    content: Text(l10n.gameFriendRequestSent),
-                                  ),
-                                );
-                              },
-                            ),
-                          _buildProfileIconBtn(
-                            isBlockedUser ? Icons.block : Icons.shield_outlined,
-                            isBlockedUser
-                                ? const Color(0xFF64B5F6)
-                                : const Color(0xFFFF8A65),
-                            isBlockedUser ? l10n.gameUnblock : l10n.gameBlock,
-                            () {
-                              if (isBlockedUser) {
-                                game.unblockUserAction(nickname);
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  SnackBar(content: Text(l10n.gameUnblocked)),
-                                );
-                              } else {
-                                game.blockUserAction(nickname);
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  SnackBar(content: Text(l10n.gameBlocked)),
-                                );
-                              }
-                            },
-                          ),
-                          _buildProfileIconBtn(
-                            Icons.flag,
-                            const Color(0xFFE57373),
-                            l10n.gameReport,
-                            () {
-                              Navigator.pop(ctx);
-                              _showReportDialog(nickname, game);
-                            },
-                          ),
-                        ],
-                      ),
-                    ],
                   ],
                 ),
               ),
@@ -7639,31 +7522,6 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
           },
         );
       },
-    );
-  }
-
-  Widget _buildProfileIconBtn(
-    IconData icon,
-    Color color,
-    String tooltip,
-    VoidCallback onTap,
-  ) {
-    return Tooltip(
-      message: tooltip,
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(12),
-        child: Container(
-          width: 28,
-          height: 28,
-          decoration: BoxDecoration(
-            color: color.withValues(alpha: 0.15),
-            borderRadius: BorderRadius.circular(10),
-            border: Border.all(color: color.withValues(alpha: 0.35)),
-          ),
-          child: Icon(icon, size: 16, color: color),
-        ),
-      ),
     );
   }
 
@@ -8167,148 +8025,6 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
     }
   }
 
-  void _showReportDialog(String nickname, GameService game) {
-    final reasonController = TextEditingController();
-    final l10n = L10n.of(context);
-    final reasons = [
-      l10n.gameReportReasonAbuse,
-      l10n.gameReportReasonSpam,
-      l10n.gameReportReasonNickname,
-      l10n.gameReportReasonGameplay,
-      l10n.gameReportReasonOther,
-    ];
-    String? selectedReason;
-
-    showDialog(
-      context: context,
-      builder: (context) => StatefulBuilder(
-        builder: (ctx, setState) {
-          final media = MediaQuery.of(ctx);
-          return AnimatedPadding(
-            duration: const Duration(milliseconds: 180),
-            curve: Curves.easeOut,
-            padding: EdgeInsets.only(bottom: media.viewInsets.bottom),
-            child: AlertDialog(
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(20),
-              ),
-              title: Row(
-                children: [
-                  const Icon(Icons.flag, color: Color(0xFFE57373)),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: Text(
-                      l10n.gameReportTitle(nickname),
-                      style: const TextStyle(fontWeight: FontWeight.bold),
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                  ),
-                ],
-              ),
-              content: ConstrainedBox(
-                constraints: BoxConstraints(
-                  maxWidth: 420,
-                  maxHeight: media.size.height * 0.55,
-                ),
-                child: SingleChildScrollView(
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Container(
-                        width: double.infinity,
-                        padding: const EdgeInsets.all(10),
-                        decoration: BoxDecoration(
-                          color: const Color(0xFFFFF1F1),
-                          borderRadius: BorderRadius.circular(12),
-                          border: Border.all(color: const Color(0xFFF0C7C7)),
-                        ),
-                        child: Text(
-                          l10n.gameReportWarning,
-                          style: const TextStyle(
-                            fontSize: 12,
-                            color: Color(0xFF9A4A4A),
-                            height: 1.4,
-                          ),
-                        ),
-                      ),
-                      const SizedBox(height: 12),
-                      Align(
-                        alignment: Alignment.centerLeft,
-                        child: Text(
-                          l10n.gameSelectReason,
-                          style: TextStyle(
-                            fontSize: 12,
-                            fontWeight: FontWeight.bold,
-                            color: Colors.grey.shade700,
-                          ),
-                        ),
-                      ),
-                      const SizedBox(height: 6),
-                      Wrap(
-                        spacing: 8,
-                        runSpacing: 8,
-                        children: reasons.map((r) {
-                          final isSelected = selectedReason == r;
-                          return ChoiceChip(
-                            label: Text(
-                              r,
-                              style: TextStyle(
-                                fontSize: 12,
-                                color: isSelected
-                                    ? Colors.white
-                                    : const Color(0xFF5A4038),
-                              ),
-                            ),
-                            selected: isSelected,
-                            selectedColor: const Color(0xFFE57373),
-                            backgroundColor: const Color(0xFFF5F0EB),
-                            onSelected: (_) =>
-                                setState(() => selectedReason = r),
-                          );
-                        }).toList(),
-                      ),
-                      const SizedBox(height: 12),
-                      TextField(
-                        controller: reasonController,
-                        maxLines: 3,
-                        maxLength: 200,
-                        decoration: InputDecoration(
-                          hintText: l10n.gameReportDetailHint,
-                          hintStyle: const TextStyle(fontSize: 12),
-                          border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-              actions: [
-                TextButton(
-                  onPressed: () => Navigator.pop(ctx),
-                  child: Text(l10n.gameClose),
-                ),
-                ElevatedButton(
-                  onPressed: selectedReason == null
-                      ? null
-                      : () {
-                          final detail = reasonController.text.trim();
-                          final reason = detail.isEmpty
-                              ? selectedReason!
-                              : '${selectedReason!} / $detail';
-                          Navigator.pop(ctx);
-                          game.reportUserAction(nickname, reason);
-                        },
-                  child: Text(l10n.gameReportSubmit),
-                ),
-              ],
-            ),
-          );
-        },
-      ),
-    ).whenComplete(reasonController.dispose);
-  }
 }
 
 class _ContractChangeInfo {

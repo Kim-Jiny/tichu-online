@@ -3072,6 +3072,48 @@ async function setAdminMemo(nickname, memo) {
 // serialize() stops surfacing it and returns the old object key so the caller
 // can delete it from storage. Keeps the paid duration expiry so the user can
 // re-upload a compliant photo within their remaining window.
+// Every profile photo currently on display, newest first.
+//
+// Moderation cannot only be report-driven: nobody reports the photo they never
+// see, and a report queue tells you nothing about what is already out there.
+// This is the browse-everything view.
+//
+// Reported users float to the top — a photo somebody has already objected to is
+// the one worth looking at first.
+async function listActiveProfilePhotos({ page = 1, limit = 24 } = {}) {
+  const client = await pool.connect();
+  try {
+    const offset = (page - 1) * limit;
+    const where = `
+      WHERE u.profile_photo_status = 'active'
+        AND u.profile_photo_key IS NOT NULL
+        AND (u.profile_photo_expires_at IS NULL OR u.profile_photo_expires_at > NOW())`;
+    const totalRes = await client.query(`SELECT COUNT(*) FROM tc_users u ${where}`);
+    const rows = await client.query(
+      `SELECT u.nickname, u.profile_photo_key, u.profile_photo_expires_at,
+              (SELECT COUNT(*) FROM tc_reports r
+                WHERE r.reported_nickname = u.nickname) AS report_count
+       FROM tc_users u
+       ${where}
+       ORDER BY report_count DESC, u.profile_photo_expires_at ASC NULLS LAST
+       LIMIT $1 OFFSET $2`,
+      [limit, offset],
+    );
+    return {
+      success: true,
+      photos: rows.rows,
+      total: parseInt(totalRes.rows[0].count, 10),
+      page,
+      limit,
+    };
+  } catch (err) {
+    console.error('List active profile photos error:', err);
+    return { success: false, photos: [], total: 0, page, limit };
+  } finally {
+    client.release();
+  }
+}
+
 async function adminClearProfilePhoto(nickname) {
   const client = await pool.connect();
   try {
@@ -7676,6 +7718,7 @@ module.exports = {
   getChatBan,
   setAdminMemo,
   adminClearProfilePhoto,
+  listActiveProfilePhotos,
   getActiveSeason,
   createSeason,
   getSeasons,

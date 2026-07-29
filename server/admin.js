@@ -4,7 +4,7 @@ const logBuffer = require('./logBuffer');
 const {
   verifyAdmin, getInquiries, getInquiryById, resolveInquiry,
   getReports, getReportGroup, updateReportGroupStatus,
-  getUsers, getUserDetail, getAdminGoldHistory, getAdminPurchaseHistory, deleteUser, getDashboardStats, getDashboardActivityTopPlayers, getAdminRecentMatches, setChatBan, setAdminMemo, adminClearProfilePhoto, getRecentMatches, adminAdjustGold, adminAdjustExp, setUserAdmin,
+  getUsers, getUserDetail, listActiveProfilePhotos, getAdminGoldHistory, getAdminPurchaseHistory, deleteUser, getDashboardStats, getDashboardActivityTopPlayers, getAdminRecentMatches, setChatBan, setAdminMemo, adminClearProfilePhoto, getRecentMatches, adminAdjustGold, adminAdjustExp, setUserAdmin,
   getAttendanceDashboardStats, listAttendanceLog, getAttendanceBreakdown, getAttendanceForNickname,
   getDetailedAdminStats,
   getAllShopItemsAdmin, addShopItem, updateShopItem, deleteShopItem, getShopItemById,
@@ -520,6 +520,7 @@ input[type="text"], input[type="password"] { width: 100%; padding: 10px 12px; bo
     <div class="nav-section-label">Operations</div>
     <a href="/tc-backstage/inquiries" class="${activePage === 'inquiries' ? 'active' : ''}" onclick="closeSidebar()">문의</a>
     <a href="/tc-backstage/reports" class="${activePage === 'reports' ? 'active' : ''}" onclick="closeSidebar()">신고</a>
+    <a href="/tc-backstage/profile-photos" class="${activePage === 'profile-photos' ? 'active' : ''}" onclick="closeSidebar()">프로필사진</a>
     <a href="/tc-backstage/users" class="${activePage === 'users' ? 'active' : ''}" onclick="closeSidebar()">유저</a>
     <a href="/tc-backstage/shop" class="${activePage === 'shop' ? 'active' : ''}" onclick="closeSidebar()">상점</a>
     <a href="/tc-backstage/attendance" class="${activePage === 'attendance' ? 'active' : ''}" onclick="closeSidebar()">출석</a>
@@ -2972,6 +2973,53 @@ async function handleAdminRoute(req, res, url, pathname, method, lobby, wss, mai
   }
 
   // ===== Reports (grouped by reported_nickname + room_id) =====
+  // Every profile photo on display. Report-driven moderation only ever sees
+  // what somebody complained about; this is for looking before anyone does.
+  if (pathname === '/tc-backstage/profile-photos' && method === 'GET') {
+    const page = Math.max(1, parseInt(url.searchParams.get('page'), 10) || 1);
+    const LIMIT = 24;
+    const data = await listActiveProfilePhotos({ page, limit: LIMIT });
+    const back = `/tc-backstage/profile-photos${page > 1 ? `?page=${page}` : ''}`;
+
+    const cards = data.photos.map((p) => {
+      const photoUrl = minioClient.publicUrl(p.profile_photo_key);
+      const reports = parseInt(p.report_count, 10) || 0;
+      const userUrl = `/tc-backstage/users/${encodeURIComponent(p.nickname)}`;
+      return `
+      <div style="border:1px solid #e8e8e8;border-radius:12px;overflow:hidden;background:#fff">
+        <a href="${escapeHtml(photoUrl)}" target="_blank" rel="noopener">
+          <img src="${escapeHtml(photoUrl)}" alt="" loading="lazy"
+               style="width:100%;aspect-ratio:1;object-fit:cover;display:block;background:#f4f4f4">
+        </a>
+        <div style="padding:10px">
+          <div style="display:flex;align-items:center;gap:6px;margin-bottom:4px">
+            <a href="${userUrl}" style="font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${escapeHtml(p.nickname)}</a>
+            ${reports > 0 ? `<span class="badge" style="background:#ffebee;color:#c62828">신고 ${reports}</span>` : ''}
+          </div>
+          <div class="muted" style="font-size:11px">만료 ${p.profile_photo_expires_at ? formatDate(p.profile_photo_expires_at) : '무기한'}</div>
+          <form method="POST" action="/tc-backstage/users/${encodeURIComponent(p.nickname)}/clear-photo?back=${encodeURIComponent(back)}"
+                style="margin-top:8px"
+                onsubmit="return confirm('${jsEscape(p.nickname)} 유저의 프로필 사진을 강제 삭제하시겠습니까? (남은 이용권은 유지되어 재업로드 가능)')">
+            <button type="submit" class="btn btn-secondary" style="width:100%;color:#c62828;border-color:#f0c0c0">삭제</button>
+          </form>
+        </div>
+      </div>`;
+    }).join('');
+
+    const content = `
+      <h1 class="page-title">프로필 사진 (${formatNumber(data.total)})</h1>
+      <div class="muted" style="margin-bottom:12px">
+        신고 여부와 무관하게 현재 노출 중인 사진을 모두 보여줍니다. 신고가 있는 유저가 먼저,
+        그다음 만료가 임박한 순입니다. 이미지를 누르면 원본이 열립니다.
+      </div>
+      ${data.photos.length === 0
+        ? '<div class="empty">노출 중인 프로필 사진이 없습니다</div>'
+        : `<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:12px">${cards}</div>`}
+      ${pagination(data.page, data.total, data.limit, '/tc-backstage/profile-photos')}
+    `;
+    return html(res, layout('프로필 사진', content, 'profile-photos'));
+  }
+
   if (pathname === '/tc-backstage/reports' && method === 'GET') {
     const page = parseInt(url.searchParams.get('page') || '1');
     const data = await getReports(page, 20);

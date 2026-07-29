@@ -5505,17 +5505,31 @@ class _LobbyScreenState extends State<LobbyScreen> {
             // indicator itself is now a 👑 emoji overhanging the top-left
             // corner (see Positioned below).
             if (player != null && !isBot && player.level != null)
-              Padding(
-                padding: const EdgeInsets.only(right: 6),
+              Builder(builder: (_) {
                 // Paid profile photo takes the level-badge spot; the badge is
                 // the fallback so photo-less players look exactly as before.
-                child: ProfileAvatar(
-                  photoUrl: game.resolvePhotoUrl(player.photoUrl),
-                  size: 28,
-                  blocked: game.blockedUsers.contains(player.name),
-                  fallback: LevelBadge(level: player.level, size: 28),
-                ),
-              ),
+                //
+                // A photo gets a bigger circle than the badge it replaces: 28
+                // was sized for a level number, and a face at that size is
+                // barely readable. Sized off what will ACTUALLY be drawn, not
+                // just off having a URL — otherwise a viewer who hides this
+                // player's photo would get an outsized level badge, which both
+                // looks wrong and quietly tells them a photo is there.
+                final resolved = game.resolvePhotoUrl(player.photoUrl);
+                final hidden = game.blockedUsers.contains(player.name);
+                final showsPhoto = resolved != null && !hidden;
+                // The seat row is 56 tall with no vertical padding.
+                final avatarSize = showsPhoto ? 40.0 : 28.0;
+                return Padding(
+                  padding: const EdgeInsets.only(right: 6),
+                  child: ProfileAvatar(
+                    photoUrl: resolved,
+                    size: avatarSize,
+                    blocked: hidden,
+                    fallback: LevelBadge(level: player.level, size: avatarSize),
+                  ),
+                );
+              }),
             // Bot badge with speed indicator
             if (isBot)
               Container(

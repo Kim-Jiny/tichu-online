@@ -68,6 +68,11 @@ dependencies:
   # Profile-photo UGC (2.8.0): pick from gallery, upload via HTTP multipart to
   # https://tichu.jiny.shop/upload/profile-photo, display cached network avatars.
   # The app is otherwise WS-only, so these are the first http/image deps.
+  # Crop output is encoded here rather than by dart:ui, which only writes PNG.
+  # A 512² PNG of a photo runs ~700KB; the same frame as JPEG is ~55KB, and the
+  # server re-encodes to JPEG anyway — so the PNG was pure upload cost.
+  # Pure Dart, no platform channel.
+  image: ^4.2.0
   image_picker: ^1.1.2
   # Direct deps only so the Android system photo picker can be switched on
   # (ImagePickerAndroid.useAndroidPhotoPicker) — image_picker itself exposes no

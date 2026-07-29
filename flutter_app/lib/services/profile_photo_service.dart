@@ -120,11 +120,11 @@ class ProfilePhotoService {
     if (crop != null) {
       final cropped = await crop(bytes);
       if (cropped == null) return const PhotoUploadResult.cancelled();
-      // The crop step re-encodes as PNG (dart:ui writes nothing else), so the
-      // declared type has to follow or the server rejects it on MIME.
+      // The crop step re-encodes as JPEG, so the declared type has to follow
+      // or the server rejects it on MIME.
       bytes = cropped;
-      contentType = MediaType('image', 'png');
-      filename = 'avatar.png';
+      contentType = MediaType('image', 'jpeg');
+      filename = 'avatar.jpg';
     }
 
     onUploadBegin?.call();

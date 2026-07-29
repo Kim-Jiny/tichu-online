@@ -50,16 +50,41 @@ Future<ui.Image> _stripedAt(
 }
 
 /// Colour at a fractional position, (0,0) top-left to (1,1) bottom-right.
-Future<int> _pixelAt(Uint8List png, double fx, double fy) async {
-  final image = await decodeImageFromList(png);
+Future<(int, int, int)> _pixelAt(Uint8List bytes, double fx, double fy) async {
+  final image = await decodeImageFromList(bytes);
   final data = await image.toByteData(format: ui.ImageByteFormat.rawRgba);
   final x = (fx * (image.width - 1)).round();
   final y = (fy * (image.height - 1)).round();
   final o = (y * image.width + x) * 4;
   final b = data!.buffer.asUint8List();
-  final argb = (b[o + 3] << 24) | (b[o] << 16) | (b[o + 1] << 8) | b[o + 2];
+  final rgb = (b[o], b[o + 1], b[o + 2]);
   image.dispose();
-  return argb;
+  return rgb;
+}
+
+/// The export is JPEG, so colours come back near — not equal. The tolerance is
+/// far tighter than the distance between any two test bands, so a crop landing
+/// on the wrong region still fails loudly.
+void expectColor((int, int, int) actual, int expectedArgb, String where) {
+  final want = (
+    (expectedArgb >> 16) & 0xFF,
+    (expectedArgb >> 8) & 0xFF,
+    expectedArgb & 0xFF,
+  );
+  const tolerance = 32;
+  final ok = (actual.$1 - want.$1).abs() <= tolerance
+      && (actual.$2 - want.$2).abs() <= tolerance
+      && (actual.$3 - want.$3).abs() <= tolerance;
+  expect(ok, isTrue, reason: '$where: got $actual, wanted ~$want');
+}
+
+/// True when the colour is nowhere near the given one.
+bool isNotColor((int, int, int) actual, int argb) {
+  final want = ((argb >> 16) & 0xFF, (argb >> 8) & 0xFF, argb & 0xFF);
+  const tolerance = 32;
+  return (actual.$1 - want.$1).abs() > tolerance
+      || (actual.$2 - want.$2).abs() > tolerance
+      || (actual.$3 - want.$3).abs() > tolerance;
 }
 
 /// The initial, untouched state the screen puts an image in: cover-scaled and
@@ -105,10 +130,10 @@ void main() {
     final out = await _exportUntouched(image, 300);
     image.dispose();
     expect(out, isNotNull);
-    expect(await _pixelAt(out!, 0.10, 0.5), _red);
-    expect(await _pixelAt(out, 0.35, 0.5), _green);
-    expect(await _pixelAt(out, 0.60, 0.5), _blue);
-    expect(await _pixelAt(out, 0.90, 0.5), _yellow);
+    expectColor(await _pixelAt(out!, 0.10, 0.5), _red, 'band 1');
+    expectColor(await _pixelAt(out, 0.35, 0.5), _green, 'band 2');
+    expectColor(await _pixelAt(out, 0.60, 0.5), _blue, 'band 3');
+    expectColor(await _pixelAt(out, 0.90, 0.5), _yellow, 'band 4');
   });
 
   test('a wide source keeps the middle, not an edge', () async {
@@ -123,10 +148,12 @@ void main() {
     final out = await _exportUntouched(image, 300);
     image.dispose();
     expect(out, isNotNull);
-    expect(await _pixelAt(out!, 0.20, 0.5), _green);
-    expect(await _pixelAt(out, 0.80, 0.5), _blue);
-    expect(await _pixelAt(out, 0.02, 0.5), isNot(_red));
-    expect(await _pixelAt(out, 0.98, 0.5), isNot(_yellow));
+    expectColor(await _pixelAt(out!, 0.20, 0.5), _green, 'left of the middle');
+    expectColor(await _pixelAt(out, 0.80, 0.5), _blue, 'right of the middle');
+    expect(isNotColor(await _pixelAt(out, 0.02, 0.5), _red), isTrue,
+        reason: 'band 1 must not be in the export');
+    expect(isNotColor(await _pixelAt(out, 0.98, 0.5), _yellow), isTrue,
+        reason: 'band 4 must not be in the export');
   });
 
   test('a tall source keeps the middle band, dropping top and bottom',
@@ -144,9 +171,18 @@ void main() {
     expect(out, isNotNull);
     // Inset from the very edge: the crop boundary lands exactly on the colour
     // boundary, so the outermost row is a resampling blend of the two.
-    expect(await _pixelAt(out!, 0.5, 0.02), _green);
-    expect(await _pixelAt(out, 0.5, 0.50), _green);
-    expect(await _pixelAt(out, 0.5, 0.98), _green);
+    expectColor(await _pixelAt(out!, 0.5, 0.02), _green, 'top of the crop');
+    expectColor(await _pixelAt(out, 0.5, 0.50), _green, 'middle of the crop');
+    expectColor(await _pixelAt(out, 0.5, 0.98), _green, 'bottom of the crop');
+  });
+
+  test('the export is JPEG, not the PNG dart:ui would give', () async {
+    final image = await _banded(800, 400, const [Color(_red)]);
+    final out = await _exportUntouched(image, 300);
+    image.dispose();
+    // JPEG SOI marker. The point of the exercise is the size difference, so
+    // assert the format rather than trusting the call chain.
+    expect(out!.sublist(0, 2), [0xFF, 0xD8]);
   });
 
   test('the export is 512 square whatever went in', () async {

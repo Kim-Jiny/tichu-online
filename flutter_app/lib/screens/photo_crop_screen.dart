@@ -12,6 +12,7 @@ import 'dart:typed_data';
 import 'dart:ui' as ui;
 
 import 'package:flutter/material.dart';
+import 'package:image/image.dart' as img;
 
 import '../l10n/app_localizations.dart';
 
@@ -59,9 +60,14 @@ Rect visibleSourceRect({
   );
 }
 
-/// Redraw [src] of [image] as a [size]² PNG.
+/// Redraw [src] of [image] as a [size]² JPEG.
+///
+/// JPEG, not the PNG dart:ui would hand back: a 512² PNG of an actual photo
+/// runs ~700KB — bigger than the original the picker gave us — while the same
+/// frame as JPEG is ~55KB, and the server re-encodes to JPEG regardless. The
+/// PNG was pure upload cost, paid on the user's mobile connection.
 Future<Uint8List?> renderSquare(ui.Image image, Rect src,
-    {double size = 512}) async {
+    {double size = 512, int quality = 85}) async {
   if (src.width <= 0 || src.height <= 0) return null;
   final recorder = ui.PictureRecorder();
   final canvas = Canvas(recorder);
@@ -74,17 +80,27 @@ Future<Uint8List?> renderSquare(ui.Image image, Rect src,
   final picture = recorder.endRecording();
   ui.Image? out;
   try {
-    out = await picture.toImage(size.toInt(), size.toInt());
-    final data = await out.toByteData(format: ui.ImageByteFormat.png);
-    return data?.buffer.asUint8List();
+    final edge = size.toInt();
+    out = await picture.toImage(edge, edge);
+    // Raw pixels rather than PNG: encoding to PNG only to decode it again
+    // would cost time and buy nothing.
+    final data = await out.toByteData(format: ui.ImageByteFormat.rawRgba);
+    if (data == null) return null;
+    final frame = img.Image.fromBytes(
+      width: edge,
+      height: edge,
+      bytes: data.buffer,
+      numChannels: 4,
+      order: img.ChannelOrder.rgba,
+    );
+    return img.encodeJpg(frame, quality: quality);
   } finally {
     out?.dispose();
     picture.dispose();
   }
 }
 
-/// Pops [Uint8List] PNG bytes of the chosen square, or null on cancel. PNG
-/// because dart:ui only encodes to PNG; the server re-encodes to JPEG anyway.
+/// Pops [Uint8List] JPEG bytes of the chosen square, or null on cancel.
 class PhotoCropScreen extends StatefulWidget {
   final Uint8List bytes;
   const PhotoCropScreen({super.key, required this.bytes});

@@ -2868,7 +2868,11 @@ class L10nEn extends L10n {
       'Drag and pinch to frame the part you want';
 
   @override
-  String get profilePhotoUploading => 'Uploading photo...';
+  String get profilePhotoUploading =>
+      'Uploading your profile photo. It will appear once it finishes';
+
+  @override
+  String get profilePhotoUploadBusy => 'An upload is already in progress';
 
   @override
   String get mtSetting => 'Setting';

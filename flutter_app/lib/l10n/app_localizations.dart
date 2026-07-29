@@ -5238,8 +5238,14 @@ abstract class L10n {
   /// No description provided for @profilePhotoUploading.
   ///
   /// In en, this message translates to:
-  /// **'Uploading photo...'**
+  /// **'Uploading your profile photo. It will appear once it finishes'**
   String get profilePhotoUploading;
+
+  /// No description provided for @profilePhotoUploadBusy.
+  ///
+  /// In en, this message translates to:
+  /// **'An upload is already in progress'**
+  String get profilePhotoUploadBusy;
 
   /// No description provided for @mtSetting.
   ///

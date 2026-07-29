@@ -2884,7 +2884,11 @@ class L10nDe extends L10n {
       'Ziehen und zoomen, um den gewünschten Ausschnitt zu wählen';
 
   @override
-  String get profilePhotoUploading => 'Foto wird hochgeladen...';
+  String get profilePhotoUploading =>
+      'Profilbild wird hochgeladen. Es erscheint, sobald der Vorgang abgeschlossen ist';
+
+  @override
+  String get profilePhotoUploadBusy => 'Ein Upload läuft bereits';
 
   @override
   String get mtSetting => 'Setting';

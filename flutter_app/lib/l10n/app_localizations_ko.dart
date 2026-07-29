@@ -2801,7 +2801,10 @@ class L10nKo extends L10n {
   String get profilePhotoCropHint => '손가락으로 옮기고 확대해서 원하는 부분을 맞춰 주세요';
 
   @override
-  String get profilePhotoUploading => '사진 업로드 중...';
+  String get profilePhotoUploading => '프로필 사진 업로드 중입니다. 완료되면 반영됩니다';
+
+  @override
+  String get profilePhotoUploadBusy => '이미 업로드가 진행 중입니다';
 
   @override
   String get mtSetting => '세팅';

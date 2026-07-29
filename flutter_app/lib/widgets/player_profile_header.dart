@@ -350,10 +350,26 @@ void showEnlargedProfilePhoto(
   );
 }
 
+/// One change at a time. The upload no longer blocks the screen, so nothing
+/// stops a second tap — and the server invalidates the previous token when it
+/// issues a new one, which would fail the upload already in flight.
+bool _changeInFlight = false;
+
 /// Pick a source, crop, upload — the flow behind tapping your own avatar.
+///
+/// The upload runs in the background. An earlier version threw a full-screen
+/// barrier over everything until it finished, which was fine in a lobby and
+/// bad everywhere else: the barrier outlived the screen it was raised on, so a
+/// host starting the game mid-upload left the player unable to touch their own
+/// first turn. Nothing here is worth blocking a game for — it is a cosmetic
+/// that can land whenever it lands.
 Future<void> changeProfilePhoto(BuildContext context, GameService game) async {
   final l10n = L10n.of(context);
   final messenger = ScaffoldMessenger.of(context);
+  if (_changeInFlight) {
+    messenger.showSnackBar(SnackBar(content: Text(l10n.profilePhotoUploadBusy)));
+    return;
+  }
   // Both taken before the first await: the sheet and the picker are long
   // enough gaps that the context can be gone by the time we come back.
   final navigator = Navigator.of(context);
@@ -395,10 +411,11 @@ Future<void> changeProfilePhoto(BuildContext context, GameService game) async {
   if (source == null) return; // dismissed the sheet
 
   // An OverlayEntry rather than a dialog route: insert/remove are synchronous,
-  // so there is no window where the upload finishes before the spinner has
-  // finished being pushed and we end up popping the wrong thing.
-  OverlayEntry? spinner;
+  // and it rides above whatever screen the player moves to while the upload
+  // runs. It ignores pointers, so riding along costs them nothing.
+  OverlayEntry? notice;
   final PhotoUploadResult result;
+  _changeInFlight = true;
   try {
     result = await ProfilePhotoService.pickAndUpload(
       game,
@@ -408,17 +425,18 @@ Future<void> changeProfilePhoto(BuildContext context, GameService game) async {
       crop: (bytes) => navigator.push(
         MaterialPageRoute(builder: (_) => PhotoCropScreen(bytes: bytes)),
       ),
-      // Upload can take the full 30s timeout on a bad connection. Without this
-      // the screen simply sits there and the user assumes it failed.
+      // Upload can take the full 30s timeout on a bad connection. Say so, or
+      // the photo simply doesn't change and the user assumes it failed.
       onUploadBegin: () {
-        spinner = OverlayEntry(
-          builder: (_) => _UploadingBarrier(label: l10n.profilePhotoUploading),
+        notice = OverlayEntry(
+          builder: (_) => _UploadingNotice(label: l10n.profilePhotoUploading),
         );
-        overlay.insert(spinner!);
+        overlay.insert(notice!);
       },
     );
   } finally {
-    spinner?.remove();
+    notice?.remove();
+    _changeInFlight = false;
   }
 
   if (result.cancelled) return;
@@ -435,40 +453,52 @@ Future<void> changeProfilePhoto(BuildContext context, GameService game) async {
   messenger.showSnackBar(SnackBar(content: Text(msg)));
 }
 
-/// Blocks the screen while the photo is in flight. Opaque to touches: a second
-/// tap during the upload would burn the one-time token and start a competing
-/// request.
-class _UploadingBarrier extends StatelessWidget {
+/// A strip that says the upload is running, without taking the screen away.
+/// Wrapped in IgnorePointer so every tap goes straight through to the game
+/// underneath — the whole point of moving the upload to the background.
+class _UploadingNotice extends StatelessWidget {
   final String label;
-  const _UploadingBarrier({required this.label});
+  const _UploadingNotice({required this.label});
 
   @override
   Widget build(BuildContext context) {
-    return AbsorbPointer(
-      child: Material(
-        type: MaterialType.transparency,
-        child: Container(
-          color: Colors.black54,
-          alignment: Alignment.center,
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              const SizedBox(
-                width: 44,
-                height: 44,
-                child:
-                    CircularProgressIndicator(color: Colors.white, strokeWidth: 3),
-              ),
-              const SizedBox(height: 18),
-              Text(
-                label,
-                style: const TextStyle(
-                  color: Colors.white,
-                  fontSize: 16,
-                  fontWeight: FontWeight.w600,
+    final media = MediaQuery.of(context);
+    return Positioned(
+      left: 12,
+      right: 12,
+      bottom: media.padding.bottom + 16,
+      child: IgnorePointer(
+        child: Material(
+          type: MaterialType.transparency,
+          child: Container(
+            padding:
+                const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+            decoration: BoxDecoration(
+              color: Colors.black.withValues(alpha: 0.82),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const SizedBox(
+                  width: 16,
+                  height: 16,
+                  child: CircularProgressIndicator(
+                      color: Colors.white, strokeWidth: 2),
                 ),
-              ),
-            ],
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Text(
+                    label,
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 13,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ),
+              ],
+            ),
           ),
         ),
       ),

@@ -29,6 +29,7 @@ Der Dienst gibt personenbezogene Daten der Nutzer grundsätzlich nicht an Dritte
 - Apple Inc. / Google LLC: Abwicklung von In-App-Käufen, Beleg-Verifizierung und Erstattungsbestätigung (verbunden mit der Nutzung der Store-Zahlungssysteme)
 - Google LLC (Firebase): Verifizierung von Social-Login-Token, Versand von Push-Benachrichtigungen, App-Analyse und Fehlerdiagnose
 - Google LLC (Google Mobile Ads/AdMob): Bereitstellung von Werbung und Messung der Werbeleistung
+- Google LLC (Cloud Vision): automatisierte Prüfung hochgeladener Profilbilder auf unangemessene Inhalte (Bilder werden ausschließlich zur Prüfung übermittelt und nicht gesondert gespeichert)
 - Kakao Corp.: Kontoidentifikation und E-Mail-Bestätigung bei Nutzung des Kakao-Social-Logins
 - Contabo GmbH (Deutschland): Hosting der Server und Datenbank des Dienstes (die Dienstinfrastruktur wird über die in Deutschland ansässige Contabo GmbH betrieben, wodurch personenbezogene Daten im Ausland verarbeitet und gespeichert werden)
 - Soweit gesetzlich erforderlich
@@ -48,6 +49,7 @@ Nutzer können ihre personenbezogenen Daten jederzeit einsehen, ändern oder lö
 8. Hinweise zu Profilbildern
 - Ein Profilbild ist eine öffentliche Information, die anderen Nutzern im Spiel angezeigt wird. Wer die Bildadresse kennt, kann ohne Anmeldung darauf zugreifen. Laden Sie daher keine Bilder hoch, die nicht öffentlich sein sollen.
 - Laden Sie keine Fotos oder Bildnisse anderer Personen ohne Berechtigung hoch.
+- Hochgeladene Bilder werden automatisch geprüft und nicht übernommen, wenn sie als unangemessen eingestuft werden.
 - Unangemessene Profilbilder können in der App über das Profilfenster oder das Chatfenster gemeldet werden. Meldungen werden innerhalb von 24 Stunden geprüft und bearbeitet. Das Profilbild eines von Ihnen gemeldeten oder blockierten Nutzers wird Ihnen sofort nicht mehr angezeigt.
 
 9. Datenschutzbeauftragter und Unternehmensinformationen

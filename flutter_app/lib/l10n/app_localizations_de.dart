@@ -2888,7 +2888,15 @@ class L10nDe extends L10n {
       'Profilbild wird hochgeladen. Es erscheint, sobald der Vorgang abgeschlossen ist';
 
   @override
-  String get profilePhotoUploadBusy => 'Ein Upload läuft bereits';
+  String get profilePhotoUploadBusy => 'Eine Bildänderung läuft bereits';
+
+  @override
+  String get profilePhotoRejected =>
+      'Dieses Bild wurde als unangemessen eingestuft und kann nicht verwendet werden';
+
+  @override
+  String get profilePhotoModerationDown =>
+      'Das Bild konnte nicht geprüft werden. Bitte versuche es in Kürze erneut';
 
   @override
   String get mtSetting => 'Setting';

@@ -447,6 +447,10 @@ Future<void> changeProfilePhoto(BuildContext context, GameService game) async {
     msg = l10n.profilePhotoNeedItem;
   } else if (result.error == 'camera_denied') {
     msg = l10n.profilePhotoCameraDenied;
+  } else if (result.error == 'image_rejected') {
+    msg = l10n.profilePhotoRejected;
+  } else if (result.error == 'moderation_unavailable') {
+    msg = l10n.profilePhotoModerationDown;
   } else {
     msg = l10n.profilePhotoUploadFailed;
   }

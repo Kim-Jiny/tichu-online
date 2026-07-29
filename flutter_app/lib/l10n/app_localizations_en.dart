@@ -2872,7 +2872,15 @@ class L10nEn extends L10n {
       'Uploading your profile photo. It will appear once it finishes';
 
   @override
-  String get profilePhotoUploadBusy => 'An upload is already in progress';
+  String get profilePhotoUploadBusy => 'A photo change is already in progress';
+
+  @override
+  String get profilePhotoRejected =>
+      'This image was judged inappropriate and cannot be used';
+
+  @override
+  String get profilePhotoModerationDown =>
+      'The image couldn\'t be screened. Please try again shortly';
 
   @override
   String get mtSetting => 'Setting';

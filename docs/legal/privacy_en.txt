@@ -29,6 +29,7 @@ The Service does not, in principle, provide users' personal information to third
 - Apple Inc. / Google LLC: in-app purchase processing, receipt verification, and refund confirmation (incidental to the use of Store payment systems)
 - Google LLC (Firebase): social login token verification, push notification delivery, app analytics, and error diagnosis
 - Google LLC (Google Mobile Ads/AdMob): advertising delivery and advertising performance measurement
+- Google LLC (Cloud Vision): automated screening of uploaded profile photos for inappropriate content (images are sent for screening only and are not retained separately)
 - Kakao Corp.: account identification and email confirmation when using Kakao social login
 - Contabo GmbH (Germany): hosting of the Service's servers and database (the Service infrastructure is operated through Contabo GmbH located in Germany, and accordingly personal information is processed and stored overseas)
 - Where required by law
@@ -48,6 +49,7 @@ Users may view, modify, or delete their personal information at any time, and ma
 8. Notice Regarding Profile Photos
 - A profile photo is public information shown to other Users inside the game. Anyone who knows the image address can access it without signing in, so please do not upload an image you would not want made public.
 - Do not upload another person's photograph or likeness without authorisation.
+- Uploaded photos are screened automatically and are not accepted where they are judged inappropriate.
 - An inappropriate profile photo can be reported from the profile dialog or the chat panel in the app. Reports are reviewed and acted on within 24 hours. The profile photo of a User you have reported or blocked is hidden from you immediately.
 
 9. Personal Information Protection Officer and Business Information

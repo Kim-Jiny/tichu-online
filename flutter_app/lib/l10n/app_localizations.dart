@@ -5244,8 +5244,20 @@ abstract class L10n {
   /// No description provided for @profilePhotoUploadBusy.
   ///
   /// In en, this message translates to:
-  /// **'An upload is already in progress'**
+  /// **'A photo change is already in progress'**
   String get profilePhotoUploadBusy;
+
+  /// No description provided for @profilePhotoRejected.
+  ///
+  /// In en, this message translates to:
+  /// **'This image was judged inappropriate and cannot be used'**
+  String get profilePhotoRejected;
+
+  /// No description provided for @profilePhotoModerationDown.
+  ///
+  /// In en, this message translates to:
+  /// **'The image couldn\'t be screened. Please try again shortly'**
+  String get profilePhotoModerationDown;
 
   /// No description provided for @mtSetting.
   ///

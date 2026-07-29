@@ -739,6 +739,7 @@ function getMaintenanceStatus(locale) {
 // See server/deploy/PROFILE_PHOTO_PLAN.md. Reuses hmlove-minio (scoped key).
 const sharp = require('sharp');
 const minioClient = require('./storage/minioClient');
+const visionSafeSearch = require('./moderation/visionSafeSearch');
 
 // Short-lived, one-time upload tokens. Issued over the authenticated WS
 // (request_upload_token) and consumed by the HTTP POST /upload/profile-photo —
@@ -961,6 +962,24 @@ const server = http.createServer(async (req, res) => {
           .toBuffer();
       } catch (_) {
         throw httpErr(400, 'invalid_image');
+      }
+
+      // Screen before anything is stored. Apple 1.2 wants objectionable
+      // material filtered on the way in, not only taken down after a report.
+      const scan = await visionSafeSearch.screen(processed);
+      if (scan.verdict === 'reject') {
+        console.warn(`[profile-photo] rejected user=${userId} worst=${scan.worst} scores=${JSON.stringify(scan.scores)}`);
+        throw httpErr(422, 'image_rejected');
+      }
+      if (scan.verdict === 'error') {
+        // Fail closed. This is a paid cosmetic, not a path anyone is blocked
+        // on; letting an unscreened image through because the screener was
+        // down is the worse of the two outcomes.
+        console.error(`[profile-photo] screening failed user=${userId} reason=${scan.reason} ${scan.detail || ''}`);
+        throw httpErr(503, 'moderation_unavailable');
+      }
+      if (scan.verdict === 'review') {
+        console.warn(`[profile-photo] flagged for review user=${userId} worst=${scan.worst} scores=${JSON.stringify(scan.scores)} labels=${(scan.labels || []).join(',')}`);
       }
 
       const { key, url } = await minioClient.uploadProfilePhoto(userId, processed, 'image/jpeg');

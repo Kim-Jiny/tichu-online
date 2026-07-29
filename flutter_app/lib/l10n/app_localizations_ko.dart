@@ -2804,7 +2804,13 @@ class L10nKo extends L10n {
   String get profilePhotoUploading => '프로필 사진 업로드 중입니다. 완료되면 반영됩니다';
 
   @override
-  String get profilePhotoUploadBusy => '이미 업로드가 진행 중입니다';
+  String get profilePhotoUploadBusy => '사진 변경이 진행 중입니다';
+
+  @override
+  String get profilePhotoRejected => '부적절한 이미지로 판단되어 등록할 수 없습니다';
+
+  @override
+  String get profilePhotoModerationDown => '이미지 검사를 할 수 없어 잠시 후 다시 시도해 주세요';
 
   @override
   String get mtSetting => '세팅';

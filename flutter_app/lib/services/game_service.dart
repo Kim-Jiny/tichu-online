@@ -698,6 +698,17 @@ class GameService extends ChangeNotifier {
         notifyListeners();
         break;
 
+      // The room we were promised went away without ever migrating — the last
+      // players deserted it, or it couldn't be handed over. Nothing is coming,
+      // so drop the banner now instead of making them sit out its full TTL.
+      case 'match_cancelled':
+        if (_matchIncoming) {
+          _matchIncoming = false;
+          _matchIncomingTimer?.cancel();
+          notifyListeners();
+        }
+        break;
+
       case 'room_joined':
         currentRoomId = data['roomId'] ?? '';
         currentRoomName = data['roomName'] ?? '';

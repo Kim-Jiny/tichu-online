@@ -1873,7 +1873,16 @@ async function handlePendingRoomsRequest(req, res) {
   // Nicknames that have since left one of those rooms — the promise no longer
   // holds for them and a "you'll rejoin next round" banner would be a lie.
   for (const nickname of body?.released || []) {
-    if (nickname) pendingArrivals.delete(nickname);
+    if (!nickname) continue;
+    pendingArrivals.delete(nickname);
+    // They may already be sitting in our lobby staring at the banner. Dropping
+    // the map entry only helps a future login, so say it out loud. Clients too
+    // old to know this type ignore it and fall back to the banner's own TTL.
+    for (const ws of wss.clients) {
+      if (ws.readyState === ws.OPEN && ws.nickname === nickname && !ws.roomId) {
+        sendTo(ws, { type: 'match_cancelled' });
+      }
+    }
   }
   const now = Date.now();
   let noted = 0;
@@ -2040,6 +2049,29 @@ function releasePeerPending(nickname) {
   }).catch(() => { /* best effort */ });
 }
 
+// Everyone still seated in a room that is disappearing WITHOUT migrating —
+// deserted, emptied out, or dropped because we couldn't serialize it. The
+// peer announced this room to them at drain start; if we go quiet now, the
+// last player standing waits out the banner's whole TTL for a match that no
+// longer exists. Found on a real device: one of two players left mid-round,
+// the game ended, the room was removed, and the other player's banner stayed.
+function releasePeerPendingForRoom(room) {
+  if (!isDraining || !PEER_URL || !INTERNAL_MIGRATE_TOKEN || !room) return;
+  const nicknames = room.players
+    .filter((p) => p !== null && !p.isBot && p.nickname)
+    .map((p) => p.nickname);
+  if (nicknames.length === 0) return;
+  fetch(`${PEER_URL}/internal/pending-rooms`, {
+    method: 'POST',
+    headers: {
+      'X-Internal-Token': INTERNAL_MIGRATE_TOKEN,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({ rooms: [], released: nicknames }),
+    signal: AbortSignal.timeout(5000),
+  }).catch(() => { /* best effort */ });
+}
+
 // Hand the peer a list of the rooms still finishing here, so it can hold their
 // members instead of showing them an empty lobby. Best-effort: a failure just
 // means those players see the lobby, which is what happened before this
@@ -2115,6 +2147,7 @@ async function maybeMigrateRoom(roomId) {
     // engine implements getMatchProgress) — but if it ever does, close the
     // sockets rather than dropping the room out from under them: a client
     // left holding a room that no longer exists just hangs until SIGKILL.
+    releasePeerPendingForRoom(room);
     for (const p of humans) findWsByPlayerId(p.id)?.close(1001);
     lobby.removeRoom(roomId);
     return;
@@ -6490,6 +6523,7 @@ function broadcastRoomState(roomId) {
 // Notify all connected participants and remove room
 function closeRoom(roomId, messageType = 'room_closed') {
   const room = lobby.getRoom(roomId);
+  releasePeerPendingForRoom(room);
   if (room) {
     for (const player of room.players) {
       if (player === null || room.isBot(player.id)) continue;

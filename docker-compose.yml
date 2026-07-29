@@ -58,6 +58,12 @@ services:
       - MINIO_BUCKET=${MINIO_BUCKET}
       - MINIO_ACCESS_KEY=${MINIO_ACCESS_KEY}
       - MINIO_SECRET_KEY=${MINIO_SECRET_KEY}
+      # Screen uploads through Cloud Vision SafeSearch. Reuses the Play service
+      # account below; the GCP project needs the Vision API enabled and billing
+      # linked (the free tier still requires a billing account). Screening
+      # failures are fail-closed, so turning this on makes an API outage look
+      # like "upload rejected" — the server logs one line per screening.
+      - VISION_ENABLED=true
       - PEER_URL=http://tichu-online-green:3000
       - INTERNAL_MIGRATE_TOKEN=${INTERNAL_MIGRATE_TOKEN}
       - DATABASE_URL=${DATABASE_URL}
@@ -87,6 +93,12 @@ services:
       - MINIO_BUCKET=${MINIO_BUCKET}
       - MINIO_ACCESS_KEY=${MINIO_ACCESS_KEY}
       - MINIO_SECRET_KEY=${MINIO_SECRET_KEY}
+      # Screen uploads through Cloud Vision SafeSearch. Reuses the Play service
+      # account below; the GCP project needs the Vision API enabled and billing
+      # linked (the free tier still requires a billing account). Screening
+      # failures are fail-closed, so turning this on makes an API outage look
+      # like "upload rejected" — the server logs one line per screening.
+      - VISION_ENABLED=true
       - PEER_URL=http://tichu-online-blue:3000
       - INTERNAL_MIGRATE_TOKEN=${INTERNAL_MIGRATE_TOKEN}
       - DATABASE_URL=${DATABASE_URL}

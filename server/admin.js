@@ -3582,6 +3582,14 @@ async function handleAdminRoute(req, res, url, pathname, method, lobby, wss, mai
         const room = client.roomId ? lobby.getRoom(client.roomId) : null;
         const seat = room?.players?.find((p) => p && p.id === client.playerId);
         if (seat) seat.photoUrl = null;
+        // Clearing the fields is not enough — without a repaint the deleted
+        // photo stays on everyone's screen until some unrelated state change.
+        if (room && maintenanceFns.broadcastRoomState) {
+          maintenanceFns.broadcastRoomState(client.roomId);
+          if (room.game && maintenanceFns.sendGameStateToAll) {
+            maintenanceFns.sendGameStateToAll(client.roomId);
+          }
+        }
       }
     }
     // Only same-origin paths, so ?back= can't be turned into an open redirect.

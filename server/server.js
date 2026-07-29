@@ -885,7 +885,7 @@ const server = http.createServer(async (req, res) => {
 
   if (pathname.startsWith('/tc-backstage')) {
     try {
-      await handleAdminRoute(req, res, url, pathname, req.method, lobby, wss, { getMaintenanceConfig, setMaintenanceConfig, getMaintenanceStatus, sendPushNotification, sendBroadcastPush, runGoogleVoidedPoll, closeRoom, broadcastRoomList });
+      await handleAdminRoute(req, res, url, pathname, req.method, lobby, wss, { getMaintenanceConfig, setMaintenanceConfig, getMaintenanceStatus, sendPushNotification, sendBroadcastPush, runGoogleVoidedPoll, closeRoom, broadcastRoomList, broadcastRoomState, sendGameStateToAll });
     } catch (err) {
       console.error('Admin route error:', err);
       res.writeHead(500, { 'Content-Type': 'text/plain' });
@@ -969,16 +969,24 @@ const server = http.createServer(async (req, res) => {
       if (row.profile_photo_key && row.profile_photo_key !== key) {
         minioClient.deleteProfilePhoto(row.profile_photo_key); // best-effort, don't await
       }
-      // Let same-room players see the new photo immediately, and keep ws +
-      // the in-room player object in sync so later re-serializations carry it.
+      // Keep ws + the in-room player object in sync so later re-serializations
+      // carry it, then repaint. Without the repaint nothing changes on screen
+      // until some unrelated state change happens to come along — in a waiting
+      // room that can be never, so the uploader sat looking at their old photo.
       const uws = [...wss.clients].find((c) => c.userId === userId);
       if (uws) {
         uws.photoUrl = url;
+        // Only the uploader is told the URL directly. Everyone else learns
+        // through room/game state, which filters photos per viewer — sending
+        // this event to the room would hand the raw URL to people who have
+        // blocked or reported them.
+        sendTo(uws, { type: 'profile_photo_updated', playerId: uws.playerId, url });
         if (uws.roomId) {
           const room = lobby.getRoom(uws.roomId);
           const player = room?.players?.find((p) => p && p.id === uws.playerId);
           if (player) player.photoUrl = url;
-          broadcastGameEvent(uws.roomId, { type: 'profile_photo_updated', playerId: uws.playerId, url });
+          broadcastRoomState(uws.roomId);
+          if (room?.game) sendGameStateToAll(uws.roomId);
         }
       }
       res.writeHead(200, { 'Content-Type': 'application/json' });

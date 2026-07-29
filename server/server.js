@@ -1821,6 +1821,41 @@ function readJsonBody(req, limitBytes = 1024 * 1024) {
 // up and created a new room).
 //
 // So pull them in directly. Same effect as the reconnect path, minus the login.
+// Someone we promised a match to has committed to a live game instead. The
+// promise is off — say so, or the banner comes back the moment they return to
+// the lobby, pointing at a match that resumed without them.
+function cancelPendingFor(ws) {
+  pendingArrivals.delete(ws.nickname);
+  sendTo(ws, { type: 'match_cancelled' });
+}
+
+// Free the seat someone is holding in a waiting room so they can be moved into
+// their migrated match. Mirrors the duplicate-login cleanup: kill the removal
+// timer, drop them, and take the room with them if they were the last human.
+function vacateWaitingRoom(ws) {
+  const other = lobby.getRoom(ws.roomId);
+  if (!other) { ws.roomId = null; return; }
+  const timerKey = `${ws.roomId}_${ws.playerId}`;
+  if (waitingRoomTimers[timerKey]) {
+    clearTimeout(waitingRoomTimers[timerKey]);
+    delete waitingRoomTimers[timerKey];
+  }
+  const leftRoomId = ws.roomId;
+  if (ws.isSpectator) other.removeSpectator(ws.playerId);
+  else other.removePlayer(ws.playerId);
+  ws.roomId = null;
+  ws.isSpectator = false;
+  if (other.getHumanPlayerCount() === 0) {
+    removeRoomAndNotifySpectators(leftRoomId); // sends room_closed to them
+  } else {
+    // Nothing else would tell them the seat is gone, and the room_joined that
+    // normally follows can still be skipped if the roster check rejects them.
+    sendTo(ws, { type: 'room_left' });
+    broadcastRoomState(leftRoomId);
+  }
+  broadcastRoomList();
+}
+
 function attachWaitingMembers(room, data) {
   const players = new Set(
     (data.players || []).filter((p) => p && !p.isBot && p.nickname).map((p) => p.nickname),
@@ -1829,12 +1864,27 @@ function attachWaitingMembers(room, data) {
   let attached = 0;
 
   for (const ws of wss.clients) {
-    // Anyone already in a room is left alone — they killed time in the lobby
-    // and started something else, and yanking them out of a live game to
-    // return them to an older one would be worse than letting the old seat
-    // lapse. It lapses the normal way: this instance isn't draining, so the
-    // usual desertion rules apply to the seat they never came back to.
-    if (ws.readyState !== ws.OPEN || !ws.nickname || ws.roomId) continue;
+    if (ws.readyState !== ws.OPEN || !ws.nickname) continue;
+    if (!players.has(ws.nickname) && !watchers.has(ws.nickname)) continue;
+    if (ws.roomId === room.id) continue; // already home
+
+    if (ws.roomId) {
+      const other = lobby.getRoom(ws.roomId);
+      // Mid-game elsewhere: they made a real choice, and yanking them out of a
+      // hand in progress would be worse than letting the old seat lapse. It
+      // lapses the normal way — this instance isn't draining, so the usual
+      // desertion rules apply to the seat they never came back to.
+      if (other && other.game) {
+        cancelPendingFor(ws);
+        (room.migrationNoShows ||= new Set()).add(ws.nickname);
+        continue;
+      }
+      // Just parked in a waiting room, though, is not a choice worth losing a
+      // match over. Measured: a player who made a room while waiting was
+      // skipped here, so the match resumed without them and then timed their
+      // seat out — from a room they couldn't even see. Move them.
+      vacateWaitingRoom(ws);
+    }
 
     if (players.has(ws.nickname)) {
       if (!room.reconnectPlayer(ws.nickname, ws.playerId).success) continue;
@@ -2031,6 +2081,26 @@ function startResumedMatch(roomId) {
   broadcastRoomState(roomId);
   broadcastRoomList();
   sendGameStateToAll(roomId);
+
+  // Someone on the roster is provably not coming back — they were already
+  // playing a different game here when their old match arrived. A six-player
+  // Mighty cannot quietly carry on as five, which is what happened before
+  // this: the seat stayed empty and got timed out of a room its owner could
+  // not even see. Resume, then close the match out the honest way. Desertion
+  // records it, scores it, and ends it for everyone at once.
+  const noShows = room.migrationNoShows;
+  room.migrationNoShows = null;
+  if (noShows && noShows.size > 0) {
+    const absent = room.players.find(
+      (p) => p !== null && !p.isBot && noShows.has(p.nickname),
+    );
+    if (absent) {
+      console.log(`[${INSTANCE_NAME}] resume ${roomId}: ${absent.nickname} is playing elsewhere — deserting`);
+      // One call ends the match for the whole table, so the first is enough.
+      handleDesertion(roomId, absent.id, 'leave').catch((e) =>
+        console.error(`[${INSTANCE_NAME}] no-show desertion failed:`, e));
+    }
+  }
 }
 
 // Tell the peer someone is no longer part of a room we announced, so it stops

@@ -53,6 +53,10 @@ class GameRoom {
     // than confirming a stale copy. Null for rooms that weren't migrated.
     this.migrationOrigin = null;
     this.migrationFingerprint = null;
+    // Nicknames on the carried roster that we know are not coming back — they
+    // committed to a different live game on this instance while their old
+    // match was still finishing on the peer. Consumed once, at resume.
+    this.migrationNoShows = null;
     // Bot tracking
     this.bots = new Map(); // botId -> BotPlayer
     // Spectator card view permissions: { spectatorId: Set of playerId }

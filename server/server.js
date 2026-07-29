@@ -8,6 +8,7 @@ const http = require('http');
 const serverStartedAt = new Date().toISOString();
 const LobbyManager = require('./lobby/LobbyManager');
 const { findAbandonedRooms } = require('./lobby/zombieSweep');
+const { freezeThresholdMs } = require('./game/freezeWatch');
 const { playerStillNeedsToAct } = require('./game/turnGuard');
 const GameRoom = require('./game/GameRoom');
 const { decideBotAction } = require('./game/BotPlayer');
@@ -1325,7 +1326,6 @@ const resumeTimers = {};  // roomId -> setTimeout handle for auto match resume
 const roomProgress = {}; // roomId -> { sig, since, warned }
 // Consecutive failed peer-adopt attempts per room, for retry log throttling.
 const migrateFailures = {}; // roomId -> count
-const FREEZE_WARN_MS = 5 * 60 * 1000;
 const trickEndTimers = {}; // roomId -> setTimeout handle for skull king trick reveal
 // Love Letter: backup auto-ack timer for a resolved effect. The primary
 // 2.5s auto-ack lives in trickEndTimers; this fires just after it as a safety
@@ -1583,14 +1583,15 @@ setInterval(() => {
     try { scheduleBotActions(roomId, true); } catch (e) { console.error('[BOT] WATCHDOG reschedule failed', e); }
   }
 
-  // Frozen-room detector. A live game's signature changes constantly — turn
-  // limits cap at a couple of minutes, round/trick screens advance in
-  // seconds — so a signature that hasn't moved in FREEZE_WARN_MS means
-  // nothing is ever going to move it: turn timers only cover `playing` and a
-  // few named phases, and the stuck-bot watchdog above deliberately skips
-  // round_end/trick_end/dealing. The 30-min zombie sweep eventually reaps
-  // such a room, but by then the evidence is gone — so dump it here, once
-  // per stall, with the timer/actor state needed to find the cause.
+  // Frozen-room detector. A live game's signature keeps changing while anything
+  // is driving it, so a signature that has not moved for longer than the room's
+  // own turn limit allows means nothing is ever going to move it: turn timers
+  // only cover `playing` and a few named phases, and the stuck-bot watchdog
+  // above deliberately skips round_end/trick_end/dealing. The 30-min zombie
+  // sweep eventually reaps such a room, but by then the evidence is gone — so
+  // dump it here, once per stall, with the timer/actor state needed to find the
+  // cause. Threshold is per-room because the turn limit is per-room; see
+  // game/freezeWatch.js.
   const freezeNow = Date.now();
   for (const [roomId, room] of lobby.rooms) {
     if (!room || !room.game) { delete roomProgress[roomId]; continue; }
@@ -1601,7 +1602,7 @@ setInterval(() => {
       roomProgress[roomId] = { sig, since: freezeNow, warned: false };
       continue;
     }
-    if (prev.warned || freezeNow - prev.since < FREEZE_WARN_MS) continue;
+    if (prev.warned || freezeNow - prev.since < freezeThresholdMs(room.turnTimeLimit)) continue;
     prev.warned = true;
     const actor = typeof g.getPendingActor === 'function' ? g.getPendingActor() : g.currentPlayer;
     const humansPresent = room.players.filter(p => p !== null && !p.isBot && p.connected).length;

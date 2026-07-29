@@ -1829,6 +1829,11 @@ function attachWaitingMembers(room, data) {
   let attached = 0;
 
   for (const ws of wss.clients) {
+    // Anyone already in a room is left alone — they killed time in the lobby
+    // and started something else, and yanking them out of a live game to
+    // return them to an older one would be worse than letting the old seat
+    // lapse. It lapses the normal way: this instance isn't draining, so the
+    // usual desertion rules apply to the seat they never came back to.
     if (ws.readyState !== ws.OPEN || !ws.nickname || ws.roomId) continue;
 
     if (players.has(ws.nickname)) {
@@ -3673,8 +3678,6 @@ function handleCreateRoom(ws, data) {
   }
   // Cap to 20 chars, matching handleChangeRoomName — an uncapped name (bounded
   // only by maxPayload) would be re-broadcast to every lobby client.
-  // They've moved on — don't promise a match that's coming any more.
-  pendingArrivals.delete(ws.nickname);
   const roomName = (data.roomName || `${ws.nickname}'s Room`).trim().slice(0, 20);
   const isRanked = !!data.isRanked;
   const gameType = data.gameType === 'skull_king' ? 'skull_king'
@@ -3785,7 +3788,6 @@ async function handleJoinRoom(ws, data) {
     sendTo(ws, { type: 'error', message: t(ws.locale, 'room_resuming_match') });
     return;
   }
-  pendingArrivals.delete(ws.nickname); // joining something else ends the wait
   // SK version gating
   if (!clientCanAccessRoom(ws, room)) {
     sendTo(ws, { type: 'error', message: roomAccessUpdateMessage(ws.locale, room, 'play') });

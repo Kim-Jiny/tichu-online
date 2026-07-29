@@ -1389,13 +1389,17 @@ class _ShopScreenState extends State<ShopScreen> {
     final isActive = item['is_active'] == true;
     final itemKey = item['item_key']?.toString() ?? '';
     final effectType = item['effect_type']?.toString() ?? '';
-    final isPassiveUtility = itemKey.startsWith('top_card_counter')
+    // Nothing to equip or use: these are simply on while they last. Profile
+    // photo belongs here too — the picture itself is set from the profile
+    // screen, so an "equip" button on this row would do nothing at all.
+    final noEquipAction = itemKey.startsWith('top_card_counter')
         || itemKey.startsWith('mighty_trump_counter')
-        || itemKey.startsWith('mighty_prev_trick');
-    final isConsumable = category == 'utility' && !isPassiveUtility;
+        || itemKey.startsWith('mighty_prev_trick')
+        || effectType == 'profile_photo';
+    final isConsumable = category == 'utility' && !noEquipAction;
     final expiresAt = item['expires_at'];
     final expiresText = expiresAt != null ? _formatExpire(context, expiresAt) : null;
-    final equipped = isActive && !isPassiveUtility;
+    final equipped = isActive && !noEquipAction;
 
     return Material(
       color: Colors.white,
@@ -1434,7 +1438,7 @@ class _ShopScreenState extends State<ShopScreen> {
                         ),
                         if (equipped)
                           _badge(l10n.shopStatusInUse, const Color(0xFF1565C0), const Color(0xFFDDECF7))
-                        else if (isPassiveUtility)
+                        else if (noEquipAction)
                           _badge(l10n.shopStatusActivated, const Color(0xFF1565C0), const Color(0xFFDDECF7)),
                       ],
                     ),
@@ -1455,7 +1459,7 @@ class _ShopScreenState extends State<ShopScreen> {
                     Row(
                       children: [
                         const Spacer(),
-                        if (!isPassiveUtility)
+                        if (!noEquipAction)
                           SizedBox(
                             height: 30,
                             child: ElevatedButton(
@@ -1972,10 +1976,13 @@ class _ShopScreenState extends State<ShopScreen> {
 
     final name = _getLocalizedItemName(item);
     final category = item['category']?.toString() ?? '';
-    final isPassiveUtility = itemKey.startsWith('top_card_counter')
+    // Same rule as the inventory row: offering "equip now" for a profile photo
+    // would hand the user a button that does nothing.
+    final noEquipAction = itemKey.startsWith('top_card_counter')
         || itemKey.startsWith('mighty_trump_counter')
-        || itemKey.startsWith('mighty_prev_trick');
-    final isConsumable = category == 'utility' && !isPassiveUtility;
+        || itemKey.startsWith('mighty_prev_trick')
+        || item['effect_type']?.toString() == 'profile_photo';
+    final isConsumable = category == 'utility' && !noEquipAction;
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
@@ -1986,7 +1993,7 @@ class _ShopScreenState extends State<ShopScreen> {
               ? L10n.of(context).shopExtendDone(name)
               : isConsumable
                   ? L10n.of(context).shopPurchaseDoneConsumable
-                  : isPassiveUtility
+                  : noEquipAction
                       ? L10n.of(context).shopPurchaseDonePassive
                       : L10n.of(context).shopPurchaseDoneEquip,
         ),
@@ -1995,7 +2002,7 @@ class _ShopScreenState extends State<ShopScreen> {
             onPressed: () => Navigator.pop(ctx),
             child: Text(L10n.of(context).commonClose),
           ),
-          if (!extended && !isConsumable && !isPassiveUtility)
+          if (!extended && !isConsumable && !noEquipAction)
             ElevatedButton(
               onPressed: () {
                 Navigator.pop(ctx);

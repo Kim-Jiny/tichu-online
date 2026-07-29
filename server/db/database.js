@@ -2371,7 +2371,48 @@ async function getUserItems(nickname) {
       `,
       [nickname]
     );
-    return { success: true, items: result.rows };
+    const items = result.rows;
+
+    // The profile-photo entitlement does not live in tc_user_items — the upload
+    // gate reads it off tc_users, so buyItem writes it there. Nothing else
+    // knows that, which left it invisible: it never showed in the inventory,
+    // the shop never displayed an expiry for it, and the shop offered "buy"
+    // instead of "extend" because it decides both from this list. Surface it
+    // here as a row so all three follow from one place.
+    const photo = await client.query(
+      `SELECT profile_photo_status, profile_photo_expires_at, profile_photo_key
+       FROM tc_users WHERE nickname = $1`,
+      [nickname],
+    );
+    const row = photo.rows[0];
+    const photoActive = row
+      && row.profile_photo_status === 'active'
+      && (!row.profile_photo_expires_at || new Date(row.profile_photo_expires_at) > new Date());
+    if (photoActive) {
+      // Any tier key will do — the shop groups the tiers and matches on the
+      // first one it finds — but the display name must be the capability, not
+      // a tier: the two tiers cross-extend one expiry, so "프로필 사진(7일)"
+      // would be a lie about what they hold.
+      const tier = await client.query(
+        `SELECT * FROM tc_shop_items WHERE effect_type = 'profile_photo'
+         ORDER BY duration_days ASC LIMIT 1`,
+      );
+      const t = tier.rows[0];
+      if (t) {
+        const baseName = (n) => (n || '').replace(/\s*\([^)]*\)\s*$/, '').trim();
+        items.unshift({
+          ...t,
+          name_ko: baseName(t.name_ko),
+          name: baseName(t.name_ko),
+          name_en: baseName(t.name_en),
+          name_de: baseName(t.name_de),
+          acquired_at: null,
+          expires_at: row.profile_photo_expires_at,
+          is_active: !!row.profile_photo_key,
+        });
+      }
+    }
+    return { success: true, items };
   } catch (err) {
     console.error('Get user items error:', err);
     return { success: false, messageKey: 'db_inventory_fetch_failed' };

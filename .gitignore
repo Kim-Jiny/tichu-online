@@ -35,3 +35,4 @@ server/node_modules/
 
 # Release build artifacts (AAB/IPA archives)
 releases/
+dist/

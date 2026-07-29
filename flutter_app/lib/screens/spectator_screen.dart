@@ -1174,6 +1174,23 @@ class _SpectatorScreenState extends State<SpectatorScreen> {
                   padding: EdgeInsets.only(right: 4),
                   child: Icon(Icons.wifi_off, size: 12, color: Colors.red),
                 ),
+              // Spectating a game used to be the one place a paid profile photo
+              // never appeared: this view is separate from both the player's
+              // game screen and the spectator waiting room, and only those two
+              // had the avatar.
+              if (player['photoUrl'] != null)
+                Padding(
+                  padding: EdgeInsets.only(right: compact ? 3 : 4),
+                  child: ProfileAvatar(
+                    photoUrl: game.resolvePhotoUrl(player['photoUrl'] as String?),
+                    size: compact ? 16 : 20,
+                    blocked: game.blockedUsers.contains(name),
+                    fallback: SizedBox(
+                      width: compact ? 16 : 20,
+                      height: compact ? 16 : 20,
+                    ),
+                  ),
+                ),
               Flexible(
                 child: Text(
                   name,

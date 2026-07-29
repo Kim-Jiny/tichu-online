@@ -154,56 +154,67 @@ class _ConnectionOverlayState extends State<ConnectionOverlay>
 
   @override
   Widget build(BuildContext context) {
+    // The app always sits inside the same Stack, dimmed or not. Swapping
+    // between `widget.child` and `Stack([widget.child, ...])` looks harmless
+    // but changes the child's depth, so Flutter throws the whole subtree away
+    // and inflates a new one — providers included — on every reconnect, twice
+    // (once to dim, once to undim). Screens lost their State each time; the
+    // visible symptom was the lobby rebuilding its banner ads and the ad
+    // plugin asserting "This AdWidget is already in the Widget tree" while the
+    // old and new copies briefly overlapped.
+    //
+    // Passing widget.child through `child:` also keeps it out of the rebuild
+    // entirely — the notifier only repaints the overlay layer.
     return ValueListenableBuilder<bool>(
       valueListenable: _reconnecting,
-      builder: (context, reconnecting, child) =>
-          reconnecting ? _buildDimmed(context) : widget.child,
+      child: widget.child,
+      builder: (context, reconnecting, child) => Stack(
+        children: [
+          child!,
+          if (reconnecting) _buildDimmed(context),
+        ],
+      ),
     );
   }
 
   Widget _buildDimmed(BuildContext context) {
     // While reconnecting, dim + block the (frozen) UI and show a clear spinner
     // so the user knows the app is working, not stuck.
-    return Stack(
-      children: [
-        widget.child,
-        Positioned.fill(
-          child: AbsorbPointer(
-            // Material provides the text-style baseline so the label doesn't get
-            // the yellow "no Material ancestor" debug underline (this overlay
-            // sits above the app, outside any Scaffold).
-            child: Material(
-              type: MaterialType.transparency,
-              child: Container(
-                color: Colors.black54,
-                alignment: Alignment.center,
-                child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  const SizedBox(
-                    width: 44,
-                    height: 44,
-                    child: CircularProgressIndicator(
-                      color: Colors.white,
-                      strokeWidth: 3,
-                    ),
+    return Positioned.fill(
+      child: AbsorbPointer(
+        // Material provides the text-style baseline so the label doesn't get
+        // the yellow "no Material ancestor" debug underline (this overlay
+        // sits above the app, outside any Scaffold).
+        child: Material(
+          type: MaterialType.transparency,
+          child: Container(
+            color: Colors.black54,
+            alignment: Alignment.center,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const SizedBox(
+                  width: 44,
+                  height: 44,
+                  child: CircularProgressIndicator(
+                    color: Colors.white,
+                    strokeWidth: 3,
                   ),
-                  const SizedBox(height: 18),
-                  Text(
-                    L10n.of(context).serviceRestoreConnecting,
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontSize: 16,
-                      fontWeight: FontWeight.w600,
-                    ),
+                ),
+                const SizedBox(height: 18),
+                Text(
+                  L10n.of(context).serviceRestoreConnecting,
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 16,
+                    fontWeight: FontWeight.w600,
                   ),
-                ],
-              ),
+                ),
+              ],
             ),
           ),
-          ),
         ),
-      ],
+      ),
     );
   }
 }

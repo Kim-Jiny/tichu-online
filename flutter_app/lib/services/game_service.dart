@@ -180,6 +180,43 @@ class GameService extends ChangeNotifier {
   /// active server host. Used by avatar widgets.
   String? resolvePhotoUrl(String? url) => _network.resolveMediaUrl(url);
 
+  /// Resolved avatar for whoever sent a chat line, or null.
+  ///
+  /// Chat payloads carry a nickname and nothing else, so the photo has to come
+  /// from whichever roster we are currently holding — the room state in a
+  /// waiting room, the game state once play starts. Returns an absolute URL,
+  /// already filtered: the server omits photos of people this viewer blocked
+  /// or reported, so anything found here is safe to show.
+  String? chatPhotoUrlFor(String nickname) {
+    if (nickname == playerName) return resolvePhotoUrl(myPhotoUrl);
+    for (final p in roomPlayers) {
+      if (p != null && p.name == nickname && p.photoUrl != null) {
+        return resolvePhotoUrl(p.photoUrl);
+      }
+    }
+    for (final p in gameState?.players ?? const []) {
+      if (p.name == nickname && p.photoUrl != null) {
+        return resolvePhotoUrl(p.photoUrl);
+      }
+    }
+    for (final p in skGameState?.players ?? const []) {
+      if (p.name == nickname && p.photoUrl != null) {
+        return resolvePhotoUrl(p.photoUrl);
+      }
+    }
+    for (final p in llGameState?.players ?? const []) {
+      if (p.name == nickname && p.photoUrl != null) {
+        return resolvePhotoUrl(p.photoUrl);
+      }
+    }
+    for (final p in mightyGameState?.players ?? const []) {
+      if (p.name == nickname && p.photoUrl != null) {
+        return resolvePhotoUrl(p.photoUrl);
+      }
+    }
+    return null;
+  }
+
   /// HTTP(S) base for the profile-photo upload endpoint.
   String get httpBase => _network.httpBase;
 

@@ -1535,12 +1535,19 @@ class _SpectatorScreenState extends State<SpectatorScreen> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           if (!isMe) ...[
-            CircleAvatar(
-              radius: 14,
-              backgroundColor: const Color(0xFFE0E0E0),
-              child: Text(
-                sender.isNotEmpty ? sender[0] : '?',
-                style: const TextStyle(fontSize: 12, color: Color(0xFF5A4038)),
+            // Chat lines carry only a nickname, so the photo comes from whatever
+            // roster is loaded; the initial-letter circle stays as the fallback.
+            ProfileAvatar(
+              photoUrl: context.read<GameService>().chatPhotoUrlFor(sender),
+              size: 28,
+              blocked: context.read<GameService>().blockedUsers.contains(sender),
+              fallback: CircleAvatar(
+                radius: 14,
+                backgroundColor: const Color(0xFFE0E0E0),
+                child: Text(
+                  sender.isNotEmpty ? sender[0] : '?',
+                  style: const TextStyle(fontSize: 12, color: Color(0xFF5A4038)),
+                ),
               ),
             ),
             const SizedBox(width: 6),

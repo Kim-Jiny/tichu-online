@@ -3318,14 +3318,18 @@ class _LobbyScreenState extends State<LobbyScreen> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             if (!isMe) ...[
-              CircleAvatar(
-                radius: 12,
-                backgroundColor: const Color(0xFFE0D8D4),
-                child: Text(
-                  sender.isNotEmpty ? sender[0] : '?',
-                  style: const TextStyle(
-                    fontSize: 10,
-                    color: Color(0xFF5A4038),
+              // Chat lines carry only a nickname, so the photo comes from whatever
+              // roster is loaded; the initial-letter circle stays as the fallback.
+              ProfileAvatar(
+                photoUrl: game.chatPhotoUrlFor(sender),
+                size: 24,
+                blocked: game.blockedUsers.contains(sender),
+                fallback: CircleAvatar(
+                  radius: 12,
+                  backgroundColor: const Color(0xFFE0D8D4),
+                  child: Text(
+                    sender.isNotEmpty ? sender[0] : '?',
+                    style: const TextStyle(fontSize: 10, color: Color(0xFF5A4038)),
                   ),
                 ),
               ),

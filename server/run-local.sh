@@ -75,6 +75,18 @@ if [ "${1:-}" != "--no-minio" ]; then
   ensure_bucket
 fi
 
+# Optional: image-moderation credentials. Kept outside the repo so a service
+# account key can never be committed by accident; skip the file and uploads
+# simply go unscreened, which is what a local box wants by default.
+VISION_ENV="${VISION_ENV:-$HOME/.tichu-vision.env}"
+if [ -f "$VISION_ENV" ]; then
+  # shellcheck disable=SC1090
+  set -a; . "$VISION_ENV"; set +a
+  echo "[local] image moderation ON (from $VISION_ENV)"
+else
+  echo "[local] image moderation off (no $VISION_ENV)"
+fi
+
 echo "[local] server on http://$LAN_IP:8080  (photos via http://$LAN_IP:9000/$BUCKET)"
 exec env \
   PORT="${PORT:-8080}" \
@@ -86,4 +98,7 @@ exec env \
   MINIO_ACCESS_KEY="$KEY" \
   MINIO_SECRET_KEY="$SECRET" \
   MINIO_PUBLIC_BASE="http://$LAN_IP:9000/$BUCKET" \
+  VISION_ENABLED="${VISION_ENABLED:-}" \
+  VISION_SA_EMAIL="${VISION_SA_EMAIL:-}" \
+  VISION_SA_PRIVATE_KEY="${VISION_SA_PRIVATE_KEY:-}" \
   node server.js

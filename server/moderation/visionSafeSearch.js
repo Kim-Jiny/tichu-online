@@ -122,6 +122,27 @@ async function getAccessToken() {
 }
 
 /**
+ * Turn one safeSearchAnnotation into a verdict.
+ *
+ * Split out so the thresholds can be tested without sending anything to
+ * Google — and without needing the very material this exists to keep out.
+ */
+function classify(safe) {
+  const scores = {};
+  let worstRank = 0;
+  let worst = null;
+  for (const c of CATEGORIES) {
+    const value = (safe && safe[c]) || 'UNKNOWN';
+    scores[c] = value;
+    const rank = RANK[value] ?? 0;
+    if (rank > worstRank) { worstRank = rank; worst = c; }
+  }
+  if (worstRank >= REJECT_AT) return { verdict: 'reject', worst, scores };
+  if (worstRank >= REVIEW_AT) return { verdict: 'review', worst, scores };
+  return { verdict: 'ok', worst, scores };
+}
+
+/**
  * Screen one image.
  *
  * @returns {Promise<{verdict:'ok'|'review'|'reject'|'skipped', worst?:string,
@@ -165,24 +186,11 @@ async function screen(buffer) {
     const r = json.responses?.[0];
     if (r?.error) return { verdict: 'error', reason: r.error.message || 'api_error' };
 
-    const safe = r?.safeSearchAnnotation || {};
-    const scores = {};
-    let worstRank = 0;
-    let worst = null;
-    for (const c of CATEGORIES) {
-      const value = safe[c] || 'UNKNOWN';
-      scores[c] = value;
-      const rank = RANK[value] ?? 0;
-      if (rank > worstRank) { worstRank = rank; worst = c; }
-    }
     const labels = (r?.labelAnnotations || []).map((l) => l.description);
-
-    if (worstRank >= REJECT_AT) return { verdict: 'reject', worst, scores, labels };
-    if (worstRank >= REVIEW_AT) return { verdict: 'review', worst, scores, labels };
-    return { verdict: 'ok', scores, labels };
+    return { ...classify(r?.safeSearchAnnotation), labels };
   } catch (e) {
     return { verdict: 'error', reason: e.message || 'unknown' };
   }
 }
 
-module.exports = { screen, isEnabled, CATEGORIES, RANK, REJECT_AT, REVIEW_AT };
+module.exports = { screen, classify, isEnabled, CATEGORIES, RANK, REJECT_AT, REVIEW_AT };

@@ -17,6 +17,7 @@ import 'shop_screen.dart';
 import 'settings_screen.dart';
 import 'rules_screen.dart';
 import 'friends_screen.dart';
+import 'photo_crop_screen.dart';
 import '../widgets/connection_overlay.dart';
 import '../widgets/level_badge.dart';
 import '../widgets/profile_avatar.dart';
@@ -3858,9 +3859,20 @@ class _LobbyScreenState extends State<LobbyScreen> {
   Future<void> _changeProfilePhoto(BuildContext ctx, GameService game) async {
     final l10n = L10n.of(ctx);
     final messenger = ScaffoldMessenger.of(ctx);
+    // Both grabbed before the first await: the sheet and the picker are long
+    // enough gaps that ctx can be gone by the time we come back.
+    final navigator = Navigator.of(ctx);
     final source = await _askPhotoSource(ctx, l10n);
     if (source == null) return; // dismissed the sheet
-    final result = await ProfilePhotoService.pickAndUpload(game, source: source);
+    final result = await ProfilePhotoService.pickAndUpload(
+      game,
+      source: source,
+      // Square it here rather than letting the server centre-crop blind — that
+      // is what was lopping the top off portraits.
+      crop: (bytes) => navigator.push<Uint8List>(
+        MaterialPageRoute(builder: (_) => PhotoCropScreen(bytes: bytes)),
+      ),
+    );
     if (result.cancelled) return;
     final String msg;
     if (result.ok) {

@@ -69,6 +69,11 @@ dependencies:
   # https://tichu.jiny.shop/upload/profile-photo, display cached network avatars.
   # The app is otherwise WS-only, so these are the first http/image deps.
   image_picker: ^1.1.2
+  # Direct deps only so the Android system photo picker can be switched on
+  # (ImagePickerAndroid.useAndroidPhotoPicker) — image_picker itself exposes no
+  # way to do it. Versions follow whatever image_picker already resolves to.
+  image_picker_android: ^0.8.12
+  image_picker_platform_interface: ^2.10.0
   http: ^1.2.2
   http_parser: ^4.0.2 # MediaType for the multipart upload Content-Type
   cached_network_image: ^3.4.1

@@ -928,6 +928,8 @@
   "profilePhotoFromCamera": "Foto aufnehmen",
   "profilePhotoFromGallery": "Aus Galerie wählen",
   "profilePhotoCameraDenied": "Kamerazugriff wurde verweigert. Erlaube ihn in den Einstellungen",
+  "profilePhotoCropTitle": "Foto zuschneiden",
+  "profilePhotoCropHint": "Ziehen und zoomen, um den gewünschten Ausschnitt zu wählen",
   "mtSetting": "Setting",
   "mtSettingConfirmTitle": "Setting erklären",
   "mtSettingConfirmBody": "Erkläre, dass du jeden verbleibenden Stich gewinnst. Deine Hand wird aufgedeckt und die Runde endet sofort.",

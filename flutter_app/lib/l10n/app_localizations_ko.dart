@@ -2795,6 +2795,12 @@ class L10nKo extends L10n {
   String get profilePhotoCameraDenied => '카메라 접근이 거부되었습니다. 설정에서 권한을 허용해 주세요';
 
   @override
+  String get profilePhotoCropTitle => '사진 자르기';
+
+  @override
+  String get profilePhotoCropHint => '손가락으로 옮기고 확대해서 원하는 부분을 맞춰 주세요';
+
+  @override
   String get mtSetting => '세팅';
 
   @override

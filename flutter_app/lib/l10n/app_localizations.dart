@@ -5223,6 +5223,18 @@ abstract class L10n {
   /// **'Camera access was denied. Allow it in Settings to take a photo'**
   String get profilePhotoCameraDenied;
 
+  /// No description provided for @profilePhotoCropTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Crop photo'**
+  String get profilePhotoCropTitle;
+
+  /// No description provided for @profilePhotoCropHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Drag and pinch to frame the part you want'**
+  String get profilePhotoCropHint;
+
   /// No description provided for @mtSetting.
   ///
   /// In en, this message translates to:

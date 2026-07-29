@@ -2877,6 +2877,13 @@ class L10nDe extends L10n {
       'Kamerazugriff wurde verweigert. Erlaube ihn in den Einstellungen';
 
   @override
+  String get profilePhotoCropTitle => 'Foto zuschneiden';
+
+  @override
+  String get profilePhotoCropHint =>
+      'Ziehen und zoomen, um den gewünschten Ausschnitt zu wählen';
+
+  @override
   String get mtSetting => 'Setting';
 
   @override

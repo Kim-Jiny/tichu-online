@@ -1,8 +1,12 @@
 import 'dart:convert';
+import 'dart:io' show Platform;
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/services.dart';
 import 'package:http/http.dart' as http;
 import 'package:http_parser/http_parser.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:image_picker_android/image_picker_android.dart';
+import 'package:image_picker_platform_interface/image_picker_platform_interface.dart';
 import 'game_service.dart';
 
 /// Outcome of a pick-and-upload attempt. [cancelled] means the user backed out
@@ -36,6 +40,19 @@ class PhotoUploadResult {
 class ProfilePhotoService {
   static final ImagePicker _picker = ImagePicker();
 
+  /// Opt into Android's system photo picker. The plugin still defaults to
+  /// `useAndroidPhotoPicker = false`, which opens the old ACTION_GET_CONTENT
+  /// document browser instead of the picker every Android 13+ user knows. The
+  /// plugin manifest already ships the Play Services backport module, so older
+  /// devices get it too. Costs no permission either way.
+  static bool _androidPickerConfigured = false;
+  static void _configureAndroidPicker() {
+    if (_androidPickerConfigured || kIsWeb || !Platform.isAndroid) return;
+    _androidPickerConfigured = true;
+    final platform = ImagePickerPlatform.instance;
+    if (platform is ImagePickerAndroid) platform.useAndroidPhotoPicker = true;
+  }
+
   static MediaType _mediaTypeFor(XFile file) {
     final mime = file.mimeType;
     if (mime != null && mime.startsWith('image/')) {
@@ -54,10 +71,17 @@ class ProfilePhotoService {
   /// permission we declare ourselves: iOS 14+ picks through PHPicker (out of
   /// process, no prompt) and asks for the camera under NSCameraUsageDescription
   /// on its own, while on Android both go out as intents to the system apps.
+  ///
+  /// [crop] is handed the picked bytes and returns the square the user framed;
+  /// returning null means they backed out of the crop step, which is a cancel.
+  /// Callers own it because it needs to push a route, and this service has no
+  /// business navigating.
   static Future<PhotoUploadResult> pickAndUpload(
     GameService game, {
     ImageSource source = ImageSource.gallery,
+    Future<Uint8List?> Function(Uint8List bytes)? crop,
   }) async {
+    _configureAndroidPicker();
     final XFile? file;
     try {
       file = await _picker.pickImage(
@@ -85,16 +109,34 @@ class ProfilePhotoService {
       return PhotoUploadResult.failure(tok.error ?? 'no_token');
     }
 
+    Uint8List bytes;
+    MediaType contentType;
+    String filename = file.name.isNotEmpty ? file.name : 'avatar.jpg';
     try {
-      final bytes = await file.readAsBytes();
+      bytes = await file.readAsBytes();
+    } catch (_) {
+      return const PhotoUploadResult.failure('picker_error');
+    }
+    contentType = _mediaTypeFor(file);
+    if (crop != null) {
+      final cropped = await crop(bytes);
+      if (cropped == null) return const PhotoUploadResult.cancelled();
+      // The crop step re-encodes as PNG (dart:ui writes nothing else), so the
+      // declared type has to follow or the server rejects it on MIME.
+      bytes = cropped;
+      contentType = MediaType('image', 'png');
+      filename = 'avatar.png';
+    }
+
+    try {
       final uri = Uri.parse('${game.httpBase}/upload/profile-photo');
       final req = http.MultipartRequest('POST', uri)
         ..headers['Authorization'] = 'Bearer ${tok.token}'
         ..files.add(http.MultipartFile.fromBytes(
           'photo',
           bytes,
-          filename: file.name.isNotEmpty ? file.name : 'avatar.jpg',
-          contentType: _mediaTypeFor(file),
+          filename: filename,
+          contentType: contentType,
         ));
       final streamed = await req.send().timeout(const Duration(seconds: 30));
       final resp = await http.Response.fromStream(streamed);

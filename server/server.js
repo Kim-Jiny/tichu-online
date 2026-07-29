@@ -3644,10 +3644,7 @@ async function handleReconnection(ws) {
         if (room.game) {
           const permittedPlayers = room.getPermittedPlayers(ws.playerId);
           const state = room.game.getStateForSpectator(permittedPlayers);
-          state.turnDeadline = room.turnDeadline;
-          state.spectators = room.spectators.map((s) => ({ id: s.id, nickname: s.nickname }));
-          state.spectatorCount = room.spectators.length;
-          sendTo(ws, { type: 'spectator_game_state', state });
+          sendTo(ws, { type: 'spectator_game_state', state: decorateSpectatorState(room, ws, state) });
         } else {
           sendTo(ws, { type: 'room_state', room: personalizeRoomState(room.getState(), ws) });
         }
@@ -4221,10 +4218,7 @@ function handleCheckRoom(ws) {
     const spectatorList = room.spectators.map((s) => ({ id: s.id, nickname: s.nickname }));
     if (ws.isSpectator) {
       const state = room.game.getStateForSpectator(room.getPermittedPlayers(ws.playerId));
-      state.turnDeadline = room.turnDeadline;
-      state.spectators = spectatorList;
-      state.spectatorCount = room.spectators.length;
-      sendTo(ws, { type: 'spectator_game_state', state });
+      sendTo(ws, { type: 'spectator_game_state', state: decorateSpectatorState(room, ws, state) });
     } else {
       const state = room.game.getStateForPlayer(ws.playerId);
       state.turnDeadline = room.turnDeadline;
@@ -4339,9 +4333,7 @@ function handleRequestCardView(ws, data) {
         sendTo(ws, { type: 'game_state', state });
       } else {
         const state = room.game.getStateForSpectator(permittedPlayers);
-        state.spectators = room.spectators.map((s) => ({ id: s.id, nickname: s.nickname }));
-        state.spectatorCount = room.spectators.length;
-        sendTo(ws, { type: 'spectator_game_state', state });
+        sendTo(ws, { type: 'spectator_game_state', state: decorateSpectatorState(room, ws, state) });
       }
     }
     return;
@@ -4379,9 +4371,7 @@ function handleRequestCardView(ws, data) {
         sendTo(ws, { type: 'game_state', state });
       } else {
         const state = room.game.getStateForSpectator(permittedPlayers);
-        state.spectators = room.spectators.map((s) => ({ id: s.id, nickname: s.nickname }));
-        state.spectatorCount = room.spectators.length;
-        sendTo(ws, { type: 'spectator_game_state', state });
+        sendTo(ws, { type: 'spectator_game_state', state: decorateSpectatorState(room, ws, state) });
       }
     }
     return;
@@ -4474,9 +4464,7 @@ function handleRespondCardView(ws, data) {
         sendTo(spectatorWs, { type: 'game_state', state });
       } else {
         const state = room.game.getStateForSpectator(permittedPlayers);
-        state.spectators = room.spectators.map((s) => ({ id: s.id, nickname: s.nickname }));
-        state.spectatorCount = room.spectators.length;
-        sendTo(spectatorWs, { type: 'spectator_game_state', state });
+        sendTo(spectatorWs, { type: 'spectator_game_state', state: decorateSpectatorState(room, spectatorWs, state) });
       }
     }
   }
@@ -4512,9 +4500,7 @@ function handleRevokeCardView(ws, data) {
   if (spectatorWs && room.game) {
     const permittedPlayers = room.getPermittedPlayers(spectatorId);
     const state = room.game.getStateForSpectator(permittedPlayers);
-    state.spectators = room.spectators.map((s) => ({ id: s.id, nickname: s.nickname }));
-    state.spectatorCount = room.spectators.length;
-    sendTo(spectatorWs, { type: 'spectator_game_state', state });
+    sendTo(spectatorWs, { type: 'spectator_game_state', state: decorateSpectatorState(room, spectatorWs, state) });
   }
 
   // Send updated game state to the player (cardViewers refreshed)
@@ -5471,15 +5457,7 @@ function _broadcastState(roomId, room) {
         console.log(`[DIAG] state-build ${__stateMs.toFixed(0)}ms room=${roomId} type=${room.gameType} phase=${room.game.state} recipient=${spectatorId} spectator=1`);
       }
       const __db = __diagOn ? process.hrtime.bigint() : 0n;
-      spectatorState.players = spectatorState.players.map(p => ({
-        ...p,
-        connected: connectionStatus[p.id] !== false,
-        timeoutCount: roomTimeouts[p.name] || 0,
-        photoUrl: visiblePhoto(ws, p.name, photoByPid[p.id]),
-      }));
-      spectatorState.turnDeadline = room.turnDeadline;
-      spectatorState.spectators = spectatorList;
-      spectatorState.spectatorCount = spectatorList.length;
+      decorateSpectatorState(room, ws, spectatorState);
       if (__diagOn) {
         const __decorMs = Number(process.hrtime.bigint() - __db) / 1e6;
         __tDecor += __decorMs;
@@ -6595,6 +6573,37 @@ function broadcastGameEvent(roomId, event) {
 function visiblePhoto(ws, nickname, url) {
   if (!url) return null;
   return ws?.hiddenPhotos?.has(nickname) ? null : url;
+}
+
+// Everything a spectator payload needs on top of the raw engine state: who is
+// connected, timeout counts, and each player's profile photo filtered for this
+// viewer. getStateForSpectator knows none of it — it only has ids and names.
+//
+// One implementation because there are seven places that send this message
+// (card-view request/respond/revoke, reconnect, check-room, spectate-join, and
+// the periodic broadcast) and six of them had grown their own version with the
+// decoration missing. The visible result: a spectator's profile photos vanished
+// the moment they asked to see someone's cards.
+function decorateSpectatorState(room, ws, state) {
+  const connected = {};
+  const photoByPid = {};
+  for (const p of room.players) {
+    if (p === null) continue;
+    connected[p.id] = p.connected !== false;
+    if (p.photoUrl) photoByPid[p.id] = p.photoUrl;
+  }
+  const roomTimeouts = timeoutCounts[room.id] || {};
+  const spectatorList = room.spectators.map((sp) => ({ id: sp.id, nickname: sp.nickname }));
+  state.players = (state.players || []).map((p) => ({
+    ...p,
+    connected: connected[p.id] !== false,
+    timeoutCount: roomTimeouts[p.name] || 0,
+    photoUrl: visiblePhoto(ws, p.name, photoByPid[p.id]),
+  }));
+  state.turnDeadline = room.turnDeadline;
+  state.spectators = spectatorList;
+  state.spectatorCount = spectatorList.length;
+  return state;
 }
 
 // Room state as this particular viewer should see it: titles in their locale,

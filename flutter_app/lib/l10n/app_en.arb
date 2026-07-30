@@ -1982,5 +1982,8 @@
   "lobbyShareSheetTitle": "Share room",
   "lobbyShareCopyLink": "Copy link",
   "lobbyShareKakao": "Share on KakaoTalk",
-  "lobbyShareCopied": "Link copied to clipboard"
+  "lobbyShareCopied": "Link copied to clipboard",
+  "lobbySwitchToSpectator": "Become a spectator",
+  "lobbySwitchToSpectatorDesc": "Give up your seat and just watch",
+  "lobbyRoomTools": "Room tools"
 }

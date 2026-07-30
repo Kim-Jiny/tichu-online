@@ -7772,6 +7772,24 @@ abstract class L10n {
   /// In en, this message translates to:
   /// **'Link copied to clipboard'**
   String get lobbyShareCopied;
+
+  /// No description provided for @lobbySwitchToSpectator.
+  ///
+  /// In en, this message translates to:
+  /// **'Become a spectator'**
+  String get lobbySwitchToSpectator;
+
+  /// No description provided for @lobbySwitchToSpectatorDesc.
+  ///
+  /// In en, this message translates to:
+  /// **'Give up your seat and just watch'**
+  String get lobbySwitchToSpectatorDesc;
+
+  /// No description provided for @lobbyRoomTools.
+  ///
+  /// In en, this message translates to:
+  /// **'Room tools'**
+  String get lobbyRoomTools;
 }
 
 class _L10nDelegate extends LocalizationsDelegate<L10n> {

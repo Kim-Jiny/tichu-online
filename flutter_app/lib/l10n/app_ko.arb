@@ -1400,5 +1400,8 @@
   "lobbyShareSheetTitle": "방 공유",
   "lobbyShareCopyLink": "링크 복사",
   "lobbyShareKakao": "카카오톡으로 공유",
-  "lobbyShareCopied": "클립보드에 복사되었습니다"
+  "lobbyShareCopied": "클립보드에 복사되었습니다",
+  "lobbySwitchToSpectator": "관전자로 전환",
+  "lobbySwitchToSpectatorDesc": "내 자리를 비우고 관전만 합니다",
+  "lobbyRoomTools": "대기실 도구"
 }

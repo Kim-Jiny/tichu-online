@@ -1396,5 +1396,8 @@
   "lobbyShareSheetTitle": "Raum teilen",
   "lobbyShareCopyLink": "Link kopieren",
   "lobbyShareKakao": "Über KakaoTalk teilen",
-  "lobbyShareCopied": "Link in die Zwischenablage kopiert"
+  "lobbyShareCopied": "Link in die Zwischenablage kopiert",
+  "lobbySwitchToSpectator": "Zuschauer werden",
+  "lobbySwitchToSpectatorDesc": "Platz freigeben und nur zusehen",
+  "lobbyRoomTools": "Raum-Werkzeuge"
 }

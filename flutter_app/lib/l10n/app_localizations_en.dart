@@ -4356,4 +4356,13 @@ class L10nEn extends L10n {
 
   @override
   String get lobbyShareCopied => 'Link copied to clipboard';
+
+  @override
+  String get lobbySwitchToSpectator => 'Become a spectator';
+
+  @override
+  String get lobbySwitchToSpectatorDesc => 'Give up your seat and just watch';
+
+  @override
+  String get lobbyRoomTools => 'Room tools';
 }

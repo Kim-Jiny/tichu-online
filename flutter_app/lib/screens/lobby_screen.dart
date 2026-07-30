@@ -2733,10 +2733,13 @@ class _LobbyScreenState extends State<LobbyScreen> {
 
   /// The icon row that drops out from under the header's ⋯.
   ///
-  /// A bottom sheet for three toggles put a modal in front of the room for
-  /// something that is not a decision; the game screens drop a row of the same
-  /// buttons instead.
+  /// This replaces the "room tools" bottom sheet: a modal list for three
+  /// shortcuts was heavier than the shortcuts. Each entry keeps a small caption —
+  /// four bare icons would be a guessing game, and two of them (switch to
+  /// spectating vs. see who is spectating) used to both be an eye.
   Widget _buildRoomMoreMenu(GameService game, bool isKoreanUser) {
+    final l10n = L10n.of(context);
+    final unread = game.pendingFriendRequestCount + game.totalUnreadDmCount;
     return Positioned(
       top: 70,
       right: 12,
@@ -2747,10 +2750,10 @@ class _LobbyScreenState extends State<LobbyScreen> {
           scale: _roomMoreOpen ? 1 : 0.95,
           duration: const Duration(milliseconds: 160),
           child: Container(
-            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 6),
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
             decoration: BoxDecoration(
               color: Colors.white.withValues(alpha: 0.97),
-              borderRadius: BorderRadius.circular(14),
+              borderRadius: BorderRadius.circular(16),
               boxShadow: [
                 BoxShadow(
                   color: Colors.black.withValues(alpha: 0.15),
@@ -2762,39 +2765,117 @@ class _LobbyScreenState extends State<LobbyScreen> {
             child: Row(
               mainAxisSize: MainAxisSize.min,
               children: [
-                _roomIconButton(
+                _roomMoreItem(
                   icon: Icons.share_rounded,
-                  onTap: () {
-                    setState(() => _roomMoreOpen = false);
-                    _showShareRoomSheet(game, isKoreanUser);
-                  },
+                  label: l10n.lobbyShareSheetTitle,
+                  onTap: () => _showShareRoomSheet(game, isKoreanUser),
                 ),
-                _roomIconButton(
-                  icon: Icons.visibility,
-                  onTap: () {
-                    setState(() => _roomMoreOpen = false);
-                    game.switchToSpectator();
-                  },
-                ),
-                // Host only — a non-host got a dialog they cannot change
-                // anything in.
-                if (game.isHost)
-                  _roomIconButton(
-                    icon: Icons.settings,
-                    onTap: () {
-                      setState(() => _roomMoreOpen = false);
-                      _showRoomSettingsDialog(game);
-                    },
+                _roomMoreItem(
+                  icon: Icons.forum_outlined,
+                  label: l10n.lobbyFriendsDm,
+                  badgeCount: unread,
+                  onTap: () => Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (_) => const FriendsScreen()),
                   ),
-                _roomIconButton(
-                  icon: Icons.list_alt,
-                  onTap: () {
-                    setState(() => _roomMoreOpen = false);
-                    _showRoomUtilitySheet(game);
-                  },
+                ),
+                // Changes what YOU are in the room.
+                _roomMoreItem(
+                  icon: Icons.swap_horiz,
+                  label: l10n.lobbySwitchToSpectator,
+                  onTap: () => game.switchToSpectator(),
+                ),
+                // Shows who else is watching.
+                _roomMoreItem(
+                  icon: Icons.people_outline,
+                  label: l10n.lobbySpectatorListTitle,
+                  badgeCount: game.spectators.length,
+                  onTap: () => _showSpectatorListDialog(game),
                 ),
               ],
             ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  /// One entry in the ⋯ row: icon button with a small caption under it.
+  Widget _roomMoreItem({
+    required IconData icon,
+    required String label,
+    required VoidCallback onTap,
+    int badgeCount = 0,
+  }) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 2),
+      child: GestureDetector(
+        behavior: HitTestBehavior.opaque,
+        onTap: () {
+          setState(() => _roomMoreOpen = false);
+          onTap();
+        },
+        child: SizedBox(
+          width: 62,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Stack(
+                clipBehavior: Clip.none,
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(9),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFF6F3F2),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Icon(
+                      icon,
+                      size: 19,
+                      color: const Color(0xFF6A5A52),
+                    ),
+                  ),
+                  if (badgeCount > 0)
+                    Positioned(
+                      right: -4,
+                      top: -4,
+                      child: Container(
+                        constraints: const BoxConstraints(minWidth: 16),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 4,
+                          vertical: 1,
+                        ),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFE53935),
+                          borderRadius: BorderRadius.circular(999),
+                          border: Border.all(color: Colors.white, width: 1.2),
+                        ),
+                        child: Text(
+                          badgeCount > 99 ? '99+' : '$badgeCount',
+                          textAlign: TextAlign.center,
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 8,
+                            fontWeight: FontWeight.w800,
+                          ),
+                        ),
+                      ),
+                    ),
+                ],
+              ),
+              const SizedBox(height: 4),
+              Text(
+                label,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                textAlign: TextAlign.center,
+                style: const TextStyle(
+                  fontSize: 9,
+                  fontWeight: FontWeight.w600,
+                  color: Color(0xFF8A7A72),
+                ),
+              ),
+            ],
           ),
         ),
       ),
@@ -2910,6 +2991,13 @@ class _LobbyScreenState extends State<LobbyScreen> {
             icon: Icons.person_add_alt_1,
             onTap: () => _showInviteFriendsDialog(game),
           ),
+          // Host-only anyway, so it belongs in the row — hiding it behind ⋯ did
+          // not save a non-host anything.
+          if (game.isHost)
+            _roomIconButton(
+              icon: Icons.settings,
+              onTap: () => _showRoomSettingsDialog(game),
+            ),
           _roomIconButton(
             icon: Icons.more_horiz,
             active: _roomMoreOpen,
@@ -3375,194 +3463,6 @@ class _LobbyScreenState extends State<LobbyScreen> {
     game.sendChatMessage(message);
     _chatController.clear();
     _scrollChatToBottom();
-  }
-
-  void _showRoomUtilitySheet(GameService game) {
-    final l10n = L10n.of(context);
-    final unreadCount =
-        game.pendingFriendRequestCount + game.totalUnreadDmCount;
-    showModalBottomSheet(
-      context: context,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
-      ),
-      builder: (ctx) => SafeArea(
-        top: false,
-        child: Padding(
-          padding: const EdgeInsets.fromLTRB(20, 16, 20, 20),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Center(
-                child: Container(
-                  width: 40,
-                  height: 4,
-                  decoration: BoxDecoration(
-                    color: const Color(0xFFD8CEC8),
-                    borderRadius: BorderRadius.circular(999),
-                  ),
-                ),
-              ),
-              const SizedBox(height: 16),
-              Text(
-                l10n.lobbyWaitingRoomTools,
-                style: const TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.w800,
-                  color: Color(0xFF4E342E),
-                ),
-              ),
-              const SizedBox(height: 6),
-              Text(
-                l10n.lobbyWaitingRoomToolsDesc,
-                style: const TextStyle(
-                  fontSize: 13,
-                  height: 1.35,
-                  color: Color(0xFF8A7A72),
-                ),
-              ),
-              const SizedBox(height: 16),
-              ListTile(
-                contentPadding: const EdgeInsets.symmetric(horizontal: 4),
-                leading: Stack(
-                  clipBehavior: Clip.none,
-                  children: [
-                    Container(
-                      width: 42,
-                      height: 42,
-                      decoration: BoxDecoration(
-                        color: const Color(0xFFF3E5F5),
-                        borderRadius: BorderRadius.circular(14),
-                      ),
-                      child: const Icon(
-                        Icons.forum_outlined,
-                        color: Color(0xFF7E57C2),
-                      ),
-                    ),
-                    if (unreadCount > 0)
-                      Positioned(
-                        right: -4,
-                        top: -4,
-                        child: Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 5,
-                            vertical: 2,
-                          ),
-                          decoration: const BoxDecoration(
-                            color: Color(0xFFE53935),
-                            borderRadius: BorderRadius.all(
-                              Radius.circular(999),
-                            ),
-                          ),
-                          child: Text(
-                            unreadCount > 9 ? '9+' : '$unreadCount',
-                            style: const TextStyle(
-                              color: Colors.white,
-                              fontSize: 10,
-                              fontWeight: FontWeight.w800,
-                            ),
-                          ),
-                        ),
-                      ),
-                  ],
-                ),
-                title: Text(
-                  l10n.lobbyFriendsDm,
-                  style: const TextStyle(
-                    fontWeight: FontWeight.w700,
-                    color: Color(0xFF4E342E),
-                  ),
-                ),
-                subtitle: Text(
-                  unreadCount > 0
-                      ? l10n.lobbyUnreadDmCount(unreadCount)
-                      : l10n.lobbyFriendsDmDesc,
-                  style: const TextStyle(color: Color(0xFF8A7A72)),
-                ),
-                trailing: const Icon(
-                  Icons.chevron_right,
-                  color: Color(0xFF8A7A72),
-                ),
-                onTap: () {
-                  Navigator.pop(ctx);
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(builder: (_) => const FriendsScreen()),
-                  );
-                },
-              ),
-              // Moved here from the header: the header row is now icon-only and
-              // switching to spectator is a rare, deliberate action.
-              ListTile(
-                contentPadding: const EdgeInsets.symmetric(horizontal: 4),
-                leading: Container(
-                  width: 42,
-                  height: 42,
-                  decoration: BoxDecoration(
-                    color: const Color(0xFFF6F3F2),
-                    borderRadius: BorderRadius.circular(14),
-                  ),
-                  child: const Icon(
-                    Icons.visibility,
-                    color: Color(0xFF8A7A72),
-                  ),
-                ),
-                title: Text(
-                  l10n.lobbySpectate,
-                  style: const TextStyle(
-                    fontWeight: FontWeight.w700,
-                    color: Color(0xFF4E342E),
-                  ),
-                ),
-                trailing: const Icon(
-                  Icons.chevron_right,
-                  color: Color(0xFF8A7A72),
-                ),
-                onTap: () {
-                  Navigator.pop(ctx);
-                  game.switchToSpectator();
-                },
-              ),
-              ListTile(
-                contentPadding: const EdgeInsets.symmetric(horizontal: 4),
-                leading: Container(
-                  width: 42,
-                  height: 42,
-                  decoration: BoxDecoration(
-                    color: const Color(0xFFF6F3F2),
-                    borderRadius: BorderRadius.circular(14),
-                  ),
-                  child: const Icon(
-                    Icons.visibility_outlined,
-                    color: Color(0xFF8A7A72),
-                  ),
-                ),
-                title: Text(
-                  l10n.lobbySpectatorListTitle,
-                  style: const TextStyle(
-                    fontWeight: FontWeight.w700,
-                    color: Color(0xFF4E342E),
-                  ),
-                ),
-                subtitle: Text(
-                  l10n.lobbyCurrentSpectators(game.spectators.length),
-                  style: const TextStyle(color: Color(0xFF8A7A72)),
-                ),
-                trailing: const Icon(
-                  Icons.chevron_right,
-                  color: Color(0xFF8A7A72),
-                ),
-                onTap: () {
-                  Navigator.pop(ctx);
-                  _showSpectatorListDialog(game);
-                },
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
   }
 
   // Pick + upload a new profile photo for the current user, then surface the

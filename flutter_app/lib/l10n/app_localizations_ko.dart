@@ -4253,4 +4253,13 @@ class L10nKo extends L10n {
 
   @override
   String get lobbyShareCopied => '클립보드에 복사되었습니다';
+
+  @override
+  String get lobbySwitchToSpectator => '관전자로 전환';
+
+  @override
+  String get lobbySwitchToSpectatorDesc => '내 자리를 비우고 관전만 합니다';
+
+  @override
+  String get lobbyRoomTools => '대기실 도구';
 }

@@ -4392,4 +4392,13 @@ class L10nDe extends L10n {
 
   @override
   String get lobbyShareCopied => 'Link in die Zwischenablage kopiert';
+
+  @override
+  String get lobbySwitchToSpectator => 'Zuschauer werden';
+
+  @override
+  String get lobbySwitchToSpectatorDesc => 'Platz freigeben und nur zusehen';
+
+  @override
+  String get lobbyRoomTools => 'Raum-Werkzeuge';
 }

@@ -2200,7 +2200,7 @@ class _LobbyScreenState extends State<LobbyScreen> {
     if (isLL) {
       stripColor = const Color(0xFFE91E63);
       badgeBgColor = const Color(0xFFE91E63);
-      badgeText = '💌 ${l10n.lobbyLoveLetterBadge}';
+      badgeText = l10n.lobbyLoveLetterBadge;
     } else if (isMighty) {
       stripColor = const Color(0xFF5C6BC0);
       badgeBgColor = const Color(0xFF5C6BC0);

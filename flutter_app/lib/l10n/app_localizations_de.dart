@@ -640,10 +640,10 @@ class L10nDe extends L10n {
       'Keine Räume vorhanden!\nErstelle doch einen!';
 
   @override
-  String get lobbySkullKingBadge => '☠️ Skull King';
+  String get lobbySkullKingBadge => 'Skull King';
 
   @override
-  String get lobbyMightyBadge => '🃑 Mighty';
+  String get lobbyMightyBadge => 'Mighty';
 
   @override
   String get lobbyTichuBadge => 'Tichu';

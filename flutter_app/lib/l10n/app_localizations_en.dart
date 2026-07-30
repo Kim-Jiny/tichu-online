@@ -630,10 +630,10 @@ class L10nEn extends L10n {
   String get lobbyEmptyRoomList => 'No rooms yet!\nWhy not create one?';
 
   @override
-  String get lobbySkullKingBadge => '☠️ Skull King';
+  String get lobbySkullKingBadge => 'Skull King';
 
   @override
-  String get lobbyMightyBadge => '🃑 Mighty';
+  String get lobbyMightyBadge => 'Mighty';
 
   @override
   String get lobbyTichuBadge => 'Tichu';

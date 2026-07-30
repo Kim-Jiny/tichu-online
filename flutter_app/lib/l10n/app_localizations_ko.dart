@@ -608,10 +608,10 @@ class L10nKo extends L10n {
   String get lobbyEmptyRoomList => '방이 없어요!\n지금 바로 만들어볼까요?';
 
   @override
-  String get lobbySkullKingBadge => '☠️ 스컬킹';
+  String get lobbySkullKingBadge => '스컬킹';
 
   @override
-  String get lobbyMightyBadge => '🃑 마이티';
+  String get lobbyMightyBadge => '마이티';
 
   @override
   String get lobbyTichuBadge => '티츄';

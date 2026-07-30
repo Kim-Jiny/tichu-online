@@ -2096,7 +2096,6 @@ class _SKGameScreenState extends State<SKGameScreen> {
           final horizontalPadding = compact ? 5.0 : 6.0;
           final verticalPadding = compact ? 4.0 : 6.0;
           final timeoutHeight = compact ? 12.0 : 16.0;
-          final dotSize = compact ? 5.0 : 6.0;
           final offlineIconSize = compact ? 10.0 : 12.0;
           // Sized against the name it sits beside; the seat is inside a
           // FittedBox, so this scales down with everything else on a tight
@@ -2178,18 +2177,6 @@ class _SKGameScreenState extends State<SKGameScreen> {
                               mainAxisAlignment: MainAxisAlignment.center,
                               mainAxisSize: MainAxisSize.min,
                               children: [
-                                if (isCurrentTurn)
-                                  Container(
-                                    width: dotSize,
-                                    height: dotSize,
-                                    margin: EdgeInsets.only(
-                                      right: compact ? 3 : 4,
-                                    ),
-                                    decoration: const BoxDecoration(
-                                      color: Color(0xFFE6A800),
-                                      shape: BoxShape.circle,
-                                    ),
-                                  ),
                                 if (!p.connected)
                                   Padding(
                                     padding: EdgeInsets.only(
@@ -2374,11 +2361,10 @@ class _SKGameScreenState extends State<SKGameScreen> {
           final horizontalPadding = compact ? 5.0 : 8.0;
           final verticalPadding = compact ? 4.0 : 8.0;
           final timeoutHeight = compact ? 12.0 : 16.0;
-          final dotSize = compact ? 5.0 : 6.0;
           final offlineIconSize = compact ? 10.0 : 12.0;
           final nameFontSize = isSelf ? 12.0 : (compact ? 10.0 : 11.0);
-          final scoreFontSize = isSelf ? 16.0 : (compact ? 13.0 : 15.0);
-          final bidHeight = compact ? 14.0 : 18.0;
+          final scoreFontSize = isSelf ? 16.0 : (compact ? 12.0 : 13.5);
+          final bidHeight = compact ? 13.0 : 16.0;
           final bidFontSize = compact ? 10.0 : 11.0;
           final bidHorizontalPadding = compact ? 4.0 : 6.0;
           final bidTopMargin = compact ? 1.0 : 2.0;
@@ -2426,19 +2412,24 @@ class _SKGameScreenState extends State<SKGameScreen> {
                     mainAxisSize: MainAxisSize.min,
                     crossAxisAlignment: CrossAxisAlignment.center,
                     children: [
-                      SizedBox(
-                        height: timeoutHeight,
-                        child: p.timeoutCount > 0
-                            ? Text(
-                                '⏱ ${p.timeoutCount}/3',
-                                style: TextStyle(
-                                  color: const Color(0xFFE65100),
-                                  fontSize: compact ? 8.5 : 10,
-                                  fontWeight: FontWeight.w800,
-                                ),
-                              )
-                            : null,
-                      ),
+                      // Only when there is a count to show. Reserving the
+                      // row unconditionally cost 16dp of the label's height,
+                      // and since the whole label is scaled down to fit the
+                      // seat box, that 16dp was being taken out of the
+                      // avatar — raising avatarDiameter just tightened the
+                      // scale factor by the same amount.
+                      if (p.timeoutCount > 0)
+                        SizedBox(
+                          height: timeoutHeight,
+                          child: Text(
+                            '⏱ ${p.timeoutCount}/3',
+                            style: TextStyle(
+                              color: const Color(0xFFE65100),
+                              fontSize: compact ? 8.5 : 10,
+                              fontWeight: FontWeight.w800,
+                            ),
+                          ),
+                        ),
                       // Own row rather than inline before the name: inline it
                       // had to stay at 14-16px to leave the name any width at
                       // all, which is too small to recognise a face.
@@ -2461,16 +2452,6 @@ class _SKGameScreenState extends State<SKGameScreen> {
                         mainAxisAlignment: MainAxisAlignment.center,
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          if (isCurrentTurn)
-                            Container(
-                              width: dotSize,
-                              height: dotSize,
-                              margin: EdgeInsets.only(right: compact ? 3 : 4),
-                              decoration: const BoxDecoration(
-                                color: Color(0xFFE6A800),
-                                shape: BoxShape.circle,
-                              ),
-                            ),
                           if (!p.connected)
                             Padding(
                               padding: EdgeInsets.only(right: compact ? 2 : 3),

@@ -614,6 +614,7 @@ class _LobbyScreenState extends State<LobbyScreen> {
     final passwordController = TextEditingController();
     bool isPrivate = false;
     bool isRanked = false;
+    bool allowSpectators = true;
     final timeLimitController = TextEditingController(text: '30');
     final targetScoreController = TextEditingController(text: '1000');
     String selectedGameType = 'tichu';
@@ -1205,6 +1206,14 @@ class _LobbyScreenState extends State<LobbyScreen> {
                           decoration: fieldDecoration(l10n.lobbyPasswordHint),
                         ),
                       ],
+                      const SizedBox(height: 12),
+                      optionCard(
+                        title: l10n.lobbyAllowSpectators,
+                        description: l10n.lobbyAllowSpectatorsDesc,
+                        value: allowSpectators,
+                        onChanged: (v) =>
+                            setState(() => allowSpectators = v),
+                      ),
                       if (selectedGameType != 'love_letter' &&
                           context.read<GameService>().authProvider !=
                               'local') ...[
@@ -1416,6 +1425,7 @@ class _LobbyScreenState extends State<LobbyScreen> {
                     skExpansions: selectedGameType == 'skull_king'
                         ? skExpansionsSelected.toList()
                         : const [],
+                    allowSpectators: allowSpectators,
                   );
                   Navigator.pop(context);
                   setState(() => _inRoom = true);
@@ -2385,6 +2395,7 @@ class _LobbyScreenState extends State<LobbyScreen> {
                               ),
                             ),
                           ),
+                        if (room.allowSpectators)
                         GestureDetector(
                           onTap: () => _spectateWithPasswordCheck(room),
                           child: Container(

@@ -1987,5 +1987,7 @@
   "lobbySwitchToSpectatorDesc": "Give up your seat and just watch",
   "lobbyRoomTools": "Room tools",
   "lobbyRoomPlaying": "Playing",
-  "lobbyNoRoomsForFilter": "No rooms for the selected games"
+  "lobbyNoRoomsForFilter": "No rooms for the selected games",
+  "lobbyAllowSpectators": "Allow spectators",
+  "lobbyAllowSpectatorsDesc": "Others can watch this room. Turn off to keep it closed."
 }

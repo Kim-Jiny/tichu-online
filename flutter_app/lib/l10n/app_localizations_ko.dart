@@ -4268,4 +4268,11 @@ class L10nKo extends L10n {
 
   @override
   String get lobbyNoRoomsForFilter => '선택한 게임의 방이 없어요';
+
+  @override
+  String get lobbyAllowSpectators => '관전 허용';
+
+  @override
+  String get lobbyAllowSpectatorsDesc =>
+      '다른 사람이 이 방을 관전할 수 있습니다. 끄면 아무도 들어올 수 없습니다.';
 }

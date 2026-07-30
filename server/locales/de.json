@@ -222,7 +222,6 @@
   "sk_invalid_card": "Ungültige Karte",
   "sk_tigress_choice_required": "Tigress-Auswahl erforderlich (Pirat/Flucht)",
   "sk_not_round_end": "Nicht im Rundenend-Zustand",
-
   "ll_update_required": "Bitte aktualisiere die App, um Love Letter zu spielen",
   "ll_not_play_phase": "Nicht in der Spielphase",
   "ll_not_your_turn": "Du bist nicht am Zug",
@@ -238,7 +237,6 @@
   "ll_effect_not_resolved": "Effekt noch nicht aufgelöst",
   "ll_not_round_end": "Nicht im Rundenend-Zustand",
   "ll_invalid_effect": "Ungültiger Effekt",
-
   "mighty_invalid_action": "Ungültige Aktion",
   "mighty_not_bidding_phase": "Nicht in der Gebotsphase",
   "mighty_bid_invalid_points": "Ungültiger Gebotsbetrag",
@@ -266,5 +264,6 @@
   "mighty_deal_miss_hand_too_strong": "Deine Hand ist zu stark für einen Deal-Miss",
   "mighty_not_kill_phase": "Nicht in der Kill-Phase",
   "mighty_invalid_kill_target": "Ungültiges Kill-Zielkarte",
-  "mighty_kill_in_own_hand": "Du kannst keine Karte aus deiner eigenen Hand killen"
+  "mighty_kill_in_own_hand": "Du kannst keine Karte aus deiner eigenen Hand killen",
+  "spectators_not_allowed": "Dieser Raum erlaubt keine Zuschauer"
 }

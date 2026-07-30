@@ -9,6 +9,9 @@ class Room {
   final bool isPlaying;
   final bool isPrivate;
   final bool isRanked;
+
+  /// Host may forbid spectating entirely; the list hides its spectate button.
+  final bool allowSpectators;
   final bool gameInProgress;
   final int turnTimeLimit;
   final int targetScore;
@@ -34,6 +37,7 @@ class Room {
     this.isPlaying = false,
     this.isPrivate = false,
     this.isRanked = false,
+    this.allowSpectators = true,
     this.gameInProgress = false,
     this.turnTimeLimit = 30,
     this.targetScore = 1000,
@@ -70,6 +74,7 @@ class Room {
       isPlaying: json['isPlaying'] ?? false,
       isPrivate: json['isPrivate'] ?? false,
       isRanked: json['isRanked'] ?? false,
+      allowSpectators: json['allowSpectators'] ?? true,
       gameInProgress: json['gameInProgress'] ?? false,
       turnTimeLimit: json['turnTimeLimit'] ?? 30,
       targetScore: json['targetScore'] ?? 1000,

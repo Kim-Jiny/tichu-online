@@ -2886,6 +2886,7 @@ class GameService extends ChangeNotifier {
     String gameType = 'tichu',
     int maxPlayers = 4,
     List<String> skExpansions = const [],
+    bool allowSpectators = true,
   }) {
     final msg = <String, dynamic>{
       'type': 'create_room',
@@ -2894,6 +2895,7 @@ class GameService extends ChangeNotifier {
       'isRanked': isRanked,
       'turnTimeLimit': turnTimeLimit,
       'targetScore': targetScore,
+      'allowSpectators': allowSpectators,
     };
     if (gameType == 'skull_king') {
       msg['gameType'] = 'skull_king';

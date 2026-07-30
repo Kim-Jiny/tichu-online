@@ -7802,6 +7802,18 @@ abstract class L10n {
   /// In en, this message translates to:
   /// **'No rooms for the selected games'**
   String get lobbyNoRoomsForFilter;
+
+  /// No description provided for @lobbyAllowSpectators.
+  ///
+  /// In en, this message translates to:
+  /// **'Allow spectators'**
+  String get lobbyAllowSpectators;
+
+  /// No description provided for @lobbyAllowSpectatorsDesc.
+  ///
+  /// In en, this message translates to:
+  /// **'Others can watch this room. Turn off to keep it closed.'**
+  String get lobbyAllowSpectatorsDesc;
 }
 
 class _L10nDelegate extends LocalizationsDelegate<L10n> {

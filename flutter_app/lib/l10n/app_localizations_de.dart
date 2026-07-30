@@ -4407,4 +4407,11 @@ class L10nDe extends L10n {
 
   @override
   String get lobbyNoRoomsForFilter => 'Keine Räume für die gewählten Spiele';
+
+  @override
+  String get lobbyAllowSpectators => 'Zuschauer erlauben';
+
+  @override
+  String get lobbyAllowSpectatorsDesc =>
+      'Andere können diesen Raum ansehen. Aus = niemand kommt herein.';
 }

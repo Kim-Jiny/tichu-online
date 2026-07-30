@@ -4371,4 +4371,11 @@ class L10nEn extends L10n {
 
   @override
   String get lobbyNoRoomsForFilter => 'No rooms for the selected games';
+
+  @override
+  String get lobbyAllowSpectators => 'Allow spectators';
+
+  @override
+  String get lobbyAllowSpectatorsDesc =>
+      'Others can watch this room. Turn off to keep it closed.';
 }

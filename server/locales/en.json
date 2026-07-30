@@ -219,7 +219,6 @@
   "sk_invalid_card": "Invalid card",
   "sk_tigress_choice_required": "Tigress choice required (pirate/escape)",
   "sk_not_round_end": "Not in the round-end state",
-
   "ll_update_required": "Please update the app to play Love Letter",
   "mighty_update_required": "Please update the app to play Mighty",
   "banner_update_required": "Please update the app to buy or use this banner",
@@ -238,7 +237,6 @@
   "ll_effect_not_resolved": "Effect not yet resolved",
   "ll_not_round_end": "Not in the round-end state",
   "ll_invalid_effect": "Invalid effect",
-
   "mighty_invalid_action": "Invalid action",
   "mighty_not_bidding_phase": "Not in the bidding phase",
   "mighty_bid_invalid_points": "Invalid bid amount",
@@ -266,5 +264,6 @@
   "mighty_deal_miss_hand_too_strong": "Your hand is too strong to declare a deal miss",
   "mighty_not_kill_phase": "Not in the kill-declaration phase",
   "mighty_invalid_kill_target": "Invalid kill target card",
-  "mighty_kill_in_own_hand": "Cannot kill a card that is in your own hand"
+  "mighty_kill_in_own_hand": "Cannot kill a card that is in your own hand",
+  "spectators_not_allowed": "This room does not allow spectators"
 }

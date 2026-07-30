@@ -3939,7 +3939,8 @@ function handleCreateRoom(ws, data) {
     targetScore,
     gameType,
     maxPlayers,
-    skExpansions
+    skExpansions,
+    data.allowSpectators !== false
   );
   ws.roomId = room.id;
   // Set title + level + season-rating on host player
@@ -4301,6 +4302,11 @@ function handleSpectateRoom(ws, data) {
   const room = lobby.getRoom(data.roomId);
   if (!room) {
     sendTo(ws, { type: 'error', message: t(ws.locale, 'room_not_found') });
+    return;
+  }
+  // Host turned spectating off for this room.
+  if (room.allowSpectators === false) {
+    sendTo(ws, { type: 'error', message: t(ws.locale, 'spectators_not_allowed') });
     return;
   }
   // SK version gating for spectators

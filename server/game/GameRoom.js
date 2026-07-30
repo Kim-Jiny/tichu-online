@@ -9,10 +9,13 @@ let nextBotNum = 1;
 
 
 class GameRoom {
-  constructor(id, name, hostId, hostNickname, password = '', isRanked = false, turnTimeLimit = 30, targetScore = 1000, gameType = 'tichu', maxPlayers = 4, skExpansions = []) {
+  constructor(id, name, hostId, hostNickname, password = '', isRanked = false, turnTimeLimit = 30, targetScore = 1000, gameType = 'tichu', maxPlayers = 4, skExpansions = [], allowSpectators = true) {
     this.id = id;
     this.name = name;
     this.hostId = hostId;
+    // Host can shut spectating off entirely. Some people do not want an audience
+    // for their cards, and card-view requests only cover consent per-hand.
+    this.allowSpectators = allowSpectators !== false;
     this.hostNickname = hostNickname;
     this.password = password;
     this.isPrivate = !!password;
@@ -851,6 +854,7 @@ class GameRoom {
       name: this.name,
       isPrivate: this.isPrivate,
       isRanked: this.isRanked,
+      allowSpectators: this.allowSpectators !== false,
       gameType: this.gameType,
       maxPlayers: this.maxPlayers,
       hostId: this.hostId,

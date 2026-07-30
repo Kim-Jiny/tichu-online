@@ -219,7 +219,6 @@
   "sk_invalid_card": "유효하지 않은 카드입니다",
   "sk_tigress_choice_required": "Tigress 선택이 필요합니다 (pirate/escape)",
   "sk_not_round_end": "라운드 종료 상태가 아닙니다",
-
   "ll_update_required": "러브레터를 플레이하려면 앱을 업데이트해 주세요",
   "mighty_update_required": "마이티를 플레이하려면 앱을 업데이트해 주세요",
   "banner_update_required": "이 배너를 구매·사용하려면 앱을 업데이트해 주세요",
@@ -238,7 +237,6 @@
   "ll_effect_not_resolved": "효과가 아직 해결되지 않았습니다",
   "ll_not_round_end": "라운드 종료 상태가 아닙니다",
   "ll_invalid_effect": "유효하지 않은 효과입니다",
-
   "mighty_invalid_action": "유효하지 않은 액션입니다",
   "mighty_not_bidding_phase": "비딩 단계가 아닙니다",
   "mighty_bid_invalid_points": "유효하지 않은 비드 점수입니다",
@@ -266,5 +264,6 @@
   "mighty_deal_miss_hand_too_strong": "손패가 너무 강해 딜미스를 선언할 수 없습니다",
   "mighty_not_kill_phase": "킬 선언 단계가 아닙니다",
   "mighty_invalid_kill_target": "유효하지 않은 킬 대상 카드입니다",
-  "mighty_kill_in_own_hand": "자신의 손패에 있는 카드는 킬할 수 없습니다"
+  "mighty_kill_in_own_hand": "자신의 손패에 있는 카드는 킬할 수 없습니다",
+  "spectators_not_allowed": "이 방은 관전을 허용하지 않습니다"
 }

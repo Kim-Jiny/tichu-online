@@ -1401,5 +1401,7 @@
   "lobbySwitchToSpectatorDesc": "Platz freigeben und nur zusehen",
   "lobbyRoomTools": "Raum-Werkzeuge",
   "lobbyRoomPlaying": "Läuft",
-  "lobbyNoRoomsForFilter": "Keine Räume für die gewählten Spiele"
+  "lobbyNoRoomsForFilter": "Keine Räume für die gewählten Spiele",
+  "lobbyAllowSpectators": "Zuschauer erlauben",
+  "lobbyAllowSpectatorsDesc": "Andere können diesen Raum ansehen. Aus = niemand kommt herein."
 }

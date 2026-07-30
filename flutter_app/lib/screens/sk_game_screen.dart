@@ -2072,6 +2072,12 @@ class _SKGameScreenState extends State<SKGameScreen> {
     final isViewing = _viewingPlayerId == p.id && isApproved;
 
     return GestureDetector(
+      // Tapping a seat asks to see that player's cards, which left a spectator
+      // with no way to open a profile at all — so no way to block or report
+      // someone whose nickname or photo is the problem. Long-press is the only
+      // free gesture here; the tap has to stay on card view.
+      onLongPress: () =>
+          _showPlayerProfileDialog(p.name, game, isBot: p.isBot),
       onTap: () {
         if (isApproved) {
           setState(() {
@@ -2091,8 +2097,10 @@ class _SKGameScreenState extends State<SKGameScreen> {
       },
       child: LayoutBuilder(
         builder: (context, constraints) {
+          // 90, not 98: the seat box is exactly 98 wide, so `<= 98` was always
+          // true and every spectator seat silently took the compact sizes.
           final compact =
-              constraints.maxHeight <= 72 || constraints.maxWidth <= 98;
+              constraints.maxHeight <= 72 || constraints.maxWidth <= 90;
           final horizontalPadding = compact ? 5.0 : 6.0;
           final verticalPadding = compact ? 4.0 : 6.0;
           final timeoutHeight = compact ? 12.0 : 16.0;
@@ -2100,7 +2108,7 @@ class _SKGameScreenState extends State<SKGameScreen> {
           // Sized against the name it sits beside; the seat is inside a
           // FittedBox, so this scales down with everything else on a tight
           // board rather than pushing the name out.
-          final avatarSize = compact ? 14.0 : 18.0;
+          final avatarSize = compact ? 24.0 : 28.0;
           final nameFontSize = compact ? 10.0 : 11.0;
           final scoreFontSize = compact ? 13.0 : 15.0;
           final bidHeight = compact ? 14.0 : 18.0;
@@ -2160,19 +2168,36 @@ class _SKGameScreenState extends State<SKGameScreen> {
                           mainAxisSize: MainAxisSize.min,
                           crossAxisAlignment: CrossAxisAlignment.center,
                           children: [
-                            SizedBox(
-                              height: timeoutHeight,
-                              child: p.timeoutCount > 0
-                                  ? Text(
-                                      '⏱ ${p.timeoutCount}/3',
-                                      style: TextStyle(
-                                        color: const Color(0xFFE65100),
-                                        fontSize: compact ? 8.5 : 10,
-                                        fontWeight: FontWeight.w800,
-                                      ),
-                                    )
-                                  : null,
-                            ),
+                            if (p.timeoutCount > 0)
+                              SizedBox(
+                                height: timeoutHeight,
+                                child: Text(
+                                  '⏱ ${p.timeoutCount}/3',
+                                  style: TextStyle(
+                                    color: const Color(0xFFE65100),
+                                    fontSize: compact ? 8.5 : 10,
+                                    fontWeight: FontWeight.w800,
+                                  ),
+                                ),
+                              ),
+                            // Own row, like the player seat: inline beside the
+                            // name it had to stay at 14-18px to leave the name
+                            // any width, which is too small to make out a face.
+                            if (p.photoUrl != null || p.isBot)
+                              Padding(
+                                padding: EdgeInsets.only(bottom: spacing),
+                                child: ProfileAvatar(
+                                  photoUrl: game.resolvePhotoUrl(p.photoUrl),
+                                  size: avatarSize,
+                                  blocked: game.blockedUsers.contains(p.name),
+                                  fallback: p.isBot
+                                      ? BotAvatar(size: avatarSize, name: p.name)
+                                      : SizedBox(
+                                          width: avatarSize,
+                                          height: avatarSize,
+                                        ),
+                                ),
+                              ),
                             Row(
                               mainAxisAlignment: MainAxisAlignment.center,
                               mainAxisSize: MainAxisSize.min,
@@ -2186,30 +2211,6 @@ class _SKGameScreenState extends State<SKGameScreen> {
                                       Icons.wifi_off,
                                       size: offlineIconSize,
                                       color: const Color(0xFFE53935),
-                                    ),
-                                  ),
-                                // Spectators get their own seat widget, and it
-                                // never had the avatar the player seat has.
-                                if (p.photoUrl != null || p.isBot)
-                                  Padding(
-                                    padding: EdgeInsets.only(
-                                      right: compact ? 2 : 3,
-                                    ),
-                                    child: ProfileAvatar(
-                                      photoUrl:
-                                          game.resolvePhotoUrl(p.photoUrl),
-                                      size: avatarSize,
-                                      blocked: game.blockedUsers
-                                          .contains(p.name),
-                                      fallback: p.isBot
-                                          ? BotAvatar(
-                                              size: avatarSize,
-                                              name: p.name,
-                                            )
-                                          : SizedBox(
-                                              width: avatarSize,
-                                              height: avatarSize,
-                                            ),
                                     ),
                                   ),
                                 Flexible(

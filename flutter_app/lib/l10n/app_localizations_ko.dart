@@ -4236,4 +4236,9 @@ class L10nKo extends L10n {
   String spectatorCardCount(int count) {
     return '$count장';
   }
+
+  @override
+  String spectatorTargetScore(int score) {
+    return '목표 $score점';
+  }
 }

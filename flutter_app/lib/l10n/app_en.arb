@@ -1976,5 +1976,7 @@
   "profileBotHeadline": "AI opponent",
   "profileBotBody": "Bots are not accounts, so there are no stats, and friend, block and report don't apply.",
   "spectatorCardCount": "{count} cards",
-  "@spectatorCardCount": {"placeholders": {"count": {"type": "int"}}}
+  "@spectatorCardCount": {"placeholders": {"count": {"type": "int"}}},
+  "spectatorTargetScore": "to {score}",
+  "@spectatorTargetScore": {"placeholders": {"score": {"type": "int"}}}
 }

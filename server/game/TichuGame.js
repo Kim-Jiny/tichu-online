@@ -1458,6 +1458,9 @@ class TichuGame {
     return {
       phase: this.state,
       round: this.round,
+      // The spectator payload never carried this, so the spectator board had no
+      // way to say what score the game is being played to.
+      targetScore: this.targetScore,
       players: players,
       currentPlayer: this.currentPlayer,
       currentPlayerName: this.playerNames[this.currentPlayer],

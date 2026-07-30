@@ -35,7 +35,38 @@ class SpectatorActionButton extends StatelessWidget {
     return GestureDetector(
       onTap: onTap,
       behavior: HitTestBehavior.opaque,
-      child: Stack(
+      child: SpectatorActionSurface(
+        icon: icon,
+        active: active,
+        badgeCount: badgeCount,
+        iconColor: iconColor,
+      ),
+    );
+  }
+}
+
+/// The visual of a spectator-bar action, without the tap.
+///
+/// Split out so a menu anchor can look exactly like the buttons beside it —
+/// PopupMenuButton wants to own the gesture, and a hand-copied style drifted
+/// immediately (a bordered circle next to rounded squares).
+class SpectatorActionSurface extends StatelessWidget {
+  final IconData icon;
+  final bool active;
+  final int badgeCount;
+  final Color? iconColor;
+
+  const SpectatorActionSurface({
+    super.key,
+    required this.icon,
+    required this.active,
+    this.badgeCount = 0,
+    this.iconColor,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Stack(
         clipBehavior: Clip.none,
         children: [
           AnimatedContainer(
@@ -83,7 +114,6 @@ class SpectatorActionButton extends StatelessWidget {
               ),
             ),
         ],
-      ),
     );
   }
 }

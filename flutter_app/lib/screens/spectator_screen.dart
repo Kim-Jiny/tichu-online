@@ -28,6 +28,7 @@ class _SpectatorScreenState extends State<SpectatorScreen> {
   bool _isLeaving = false;
   bool _chatOpen = false;
   bool _soundPanelOpen = false;
+  bool _moreOpen = false;
   final TextEditingController _chatController = TextEditingController();
   final ScrollController _chatScrollController = ScrollController();
 
@@ -556,6 +557,7 @@ class _SpectatorScreenState extends State<SpectatorScreen> {
     final round = state['round'] ?? 1;
     final callRank = state['callRank'] as String?;
     final scoreHistory = (state['scoreHistory'] as List?) ?? [];
+    final targetScore = state['targetScore'] as int?;
 
     return Stack(
       children: [
@@ -569,6 +571,7 @@ class _SpectatorScreenState extends State<SpectatorScreen> {
               totalScores,
               scoreHistory,
               isLandscape,
+              targetScore: targetScore,
             ),
             Expanded(
               child: Padding(
@@ -598,6 +601,9 @@ class _SpectatorScreenState extends State<SpectatorScreen> {
         // _buildErrorBanner so spectators don't get silent no-ops.
         if (game.errorMessage != null)
           _buildSpectatorErrorBanner(game.errorMessage!),
+
+        // Icon row dropped out from under the more button
+        if (_moreOpen) _buildSpectatorMoreMenu(game, scoreHistory, totalScores),
 
         // Sound panel overlay
         if (_soundPanelOpen) _buildSoundPanel(game),
@@ -910,25 +916,24 @@ class _SpectatorScreenState extends State<SpectatorScreen> {
     int round,
     Map<String, dynamic> scores,
     List scoreHistory,
-    bool isLandscape,
-  ) {
+    bool isLandscape, {
+    int? targetScore,
+  }) {
+    // Flat bar, not a floating card. A card here fought with the board's own
+    // cards below it — two levels of elevation stacked in the top 90dp — and the
+    // 12dp margin on every side ate width the room name needed.
     return Container(
-      margin: const EdgeInsets.all(12),
-      padding: EdgeInsets.symmetric(
-        horizontal: isLandscape ? 10 : 12,
-        vertical: isLandscape ? 6 : 8,
+      padding: EdgeInsets.fromLTRB(
+        isLandscape ? 10 : 8,
+        isLandscape ? 6 : 8,
+        isLandscape ? 10 : 12,
+        isLandscape ? 6 : 8,
       ),
-      decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: 0.95),
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: const Color(0xFFE0D8D4)),
-        boxShadow: [
-          BoxShadow(
-            color: const Color(0xFFD9CCC8).withValues(alpha: 0.35),
-            blurRadius: 8,
-            offset: const Offset(0, 3),
-          ),
-        ],
+      decoration: const BoxDecoration(
+        color: Color(0xFFFDFBFA),
+        border: Border(
+          bottom: BorderSide(color: Color(0xFFEDE4E0)),
+        ),
       ),
       child: isLandscape
           ? Row(
@@ -1056,7 +1061,7 @@ class _SpectatorScreenState extends State<SpectatorScreen> {
                     const SizedBox(width: 6),
                     _buildChatButton(game),
                     const SizedBox(width: 6),
-                    _buildSpectatorMoreButton(game, scoreHistory, scores),
+                    _buildSpectatorMoreButton(game),
                   ],
                 ),
                 const SizedBox(height: 6),
@@ -1067,6 +1072,18 @@ class _SpectatorScreenState extends State<SpectatorScreen> {
                       style:
                           const TextStyle(color: Color(0xFF8A7E78), fontSize: 12),
                     ),
+                    // What score the game is played to. Players see it in their
+                    // own top bar; spectators had no way to know.
+                    if (targetScore != null) ...[
+                      const SizedBox(width: 6),
+                      Text(
+                        L10n.of(context).spectatorTargetScore(targetScore),
+                        style: const TextStyle(
+                          color: Color(0xFFA89C96),
+                          fontSize: 11,
+                        ),
+                      ),
+                    ],
                     const Spacer(),
                     _buildScoreChip(
                       'A',
@@ -1219,6 +1236,41 @@ class _SpectatorScreenState extends State<SpectatorScreen> {
                 const Padding(
                   padding: EdgeInsets.only(right: 4),
                   child: Icon(Icons.wifi_off, size: 12, color: Colors.red),
+                ),
+              // Team letter, the same badge the player screen puts before a
+              // nickname. The slot's background tint alone was too quiet to map
+              // a name to the "A:" / "B:" score chips at a glance.
+              if (team == 'A' || team == 'B')
+                Padding(
+                  padding: EdgeInsets.only(right: compact ? 3 : 4),
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 4,
+                      vertical: 1,
+                    ),
+                    decoration: BoxDecoration(
+                      color: team == 'A'
+                          ? const Color(0xFFE3F0FF)
+                          : const Color(0xFFFFE8EC),
+                      borderRadius: BorderRadius.circular(6),
+                      border: Border.all(
+                        color: team == 'A'
+                            ? const Color(0xFF4A90D9)
+                            : const Color(0xFFD24B4B),
+                        width: 0.7,
+                      ),
+                    ),
+                    child: Text(
+                      team,
+                      style: TextStyle(
+                        fontSize: compact ? 8 : 9,
+                        fontWeight: FontWeight.bold,
+                        color: team == 'A'
+                            ? const Color(0xFF4A90D9)
+                            : const Color(0xFFD24B4B),
+                      ),
+                    ),
+                  ),
                 ),
               Flexible(
                 child: Text(
@@ -1501,7 +1553,9 @@ class _SpectatorScreenState extends State<SpectatorScreen> {
 
   Widget _buildSoundPanel(GameService game) {
     return Positioned(
-      top: 96,
+      // Below the more-menu row it is opened from (menu sits at 96 and is ~52
+      // tall), not on top of it.
+      top: 154,
       right: 12,
       child: SpectatorSoundPanel(game: game, width: 180),
     );
@@ -1521,87 +1575,89 @@ class _SpectatorScreenState extends State<SpectatorScreen> {
   /// PopupMenuButton rather than the game screen's custom overlay: there is no
   /// panel state to coordinate here — every item just opens a dialog or flips a
   /// flag the existing buttons already flipped.
-  Widget _buildSpectatorMoreButton(
+  /// Toggles the icon row that drops out from under the bar.
+  ///
+  /// Same shape as the game screen's more menu (a floating row of the same
+  /// buttons) rather than a text PopupMenu — every other control in this bar is
+  /// an icon, and a platform menu looked pasted on.
+  Widget _buildSpectatorMoreButton(GameService game) {
+    return SpectatorActionButton(
+      icon: Icons.more_horiz,
+      active: _moreOpen,
+      onTap: () => setState(() {
+        _moreOpen = !_moreOpen;
+        // The sound panel lives inside this menu; don't leave it floating once
+        // the parent closes.
+        if (!_moreOpen) _soundPanelOpen = false;
+      }),
+    );
+  }
+
+  Widget _buildSpectatorMoreMenu(
     GameService game,
     List scoreHistory,
     Map<String, dynamic> scores,
   ) {
-    final l10n = L10n.of(context);
-    return PopupMenuButton<String>(
-      tooltip: '',
-      padding: EdgeInsets.zero,
-      position: PopupMenuPosition.under,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-      icon: Container(
-        padding: const EdgeInsets.all(7),
-        decoration: BoxDecoration(
-          color: Colors.white.withValues(alpha: 0.8),
-          shape: BoxShape.circle,
-          border: Border.all(color: const Color(0xFFE0D8D4)),
-        ),
-        child: const Icon(
-          Icons.more_horiz,
-          size: 18,
-          color: Color(0xFF6A5A52),
+    return Positioned(
+      // Just under the flat bar (two rows + padding), so it doesn't cover the
+      // score chips on the second line.
+      top: 96,
+      right: 12,
+      child: AnimatedOpacity(
+        opacity: _moreOpen ? 1 : 0,
+        duration: const Duration(milliseconds: 160),
+        child: AnimatedScale(
+          scale: _moreOpen ? 1 : 0.95,
+          duration: const Duration(milliseconds: 160),
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+            decoration: BoxDecoration(
+              color: Colors.white.withValues(alpha: 0.97),
+              borderRadius: BorderRadius.circular(14),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: 0.15),
+                  blurRadius: 8,
+                  offset: const Offset(0, 3),
+                ),
+              ],
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                SpectatorActionButton(
+                  icon: Icons.history,
+                  active: false,
+                  onTap: () {
+                    setState(() => _moreOpen = false);
+                    showTichuScoreHistoryDialog(
+                      context,
+                      history: scoreHistory
+                          .whereType<Map>()
+                          .map((e) => Map<String, dynamic>.from(e))
+                          .toList(),
+                      totalA: scores['teamA'] ?? 0,
+                      totalB: scores['teamB'] ?? 0,
+                    );
+                  },
+                ),
+                const SizedBox(width: 6),
+                SpectatorActionButton(
+                  icon: Icons.people_outline,
+                  active: false,
+                  badgeCount: game.spectators.length,
+                  onTap: () {
+                    setState(() => _moreOpen = false);
+                    showSpectatorListDialog(context, game.spectators);
+                  },
+                ),
+                const SizedBox(width: 6),
+                _buildSoundButton(game),
+              ],
+            ),
+          ),
         ),
       ),
-      onSelected: (value) {
-        switch (value) {
-          case 'history':
-            showTichuScoreHistoryDialog(
-              context,
-              history: scoreHistory
-                  .whereType<Map>()
-                  .map((e) => Map<String, dynamic>.from(e))
-                  .toList(),
-              totalA: scores['teamA'] ?? 0,
-              totalB: scores['teamB'] ?? 0,
-            );
-            break;
-          case 'spectators':
-            showSpectatorListDialog(context, game.spectators);
-            break;
-          case 'sound':
-            setState(() => _soundPanelOpen = !_soundPanelOpen);
-            break;
-        }
-      },
-      itemBuilder: (_) => [
-        PopupMenuItem(
-          value: 'history',
-          child: Row(
-            children: [
-              const Icon(Icons.history, size: 18, color: Color(0xFF6A5A52)),
-              const SizedBox(width: 10),
-              Text(l10n.gameScoreHistory),
-            ],
-          ),
-        ),
-        PopupMenuItem(
-          value: 'spectators',
-          child: Row(
-            children: [
-              const Icon(Icons.people_outline, size: 18, color: Color(0xFF6A5A52)),
-              const SizedBox(width: 10),
-              Text('${l10n.spectatorListTitle} ${game.spectators.length}'),
-            ],
-          ),
-        ),
-        PopupMenuItem(
-          value: 'sound',
-          child: Row(
-            children: [
-              Icon(
-                _soundPanelOpen ? Icons.volume_up : Icons.volume_up_outlined,
-                size: 18,
-                color: const Color(0xFF6A5A52),
-              ),
-              const SizedBox(width: 10),
-              Text(l10n.gameSoundEffects),
-            ],
-          ),
-        ),
-      ],
     );
   }
 

@@ -4375,4 +4375,9 @@ class L10nDe extends L10n {
   String spectatorCardCount(int count) {
     return '$count Karten';
   }
+
+  @override
+  String spectatorTargetScore(int score) {
+    return 'bis $score';
+  }
 }

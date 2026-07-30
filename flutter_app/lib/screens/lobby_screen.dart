@@ -973,137 +973,68 @@ class _LobbyScreenState extends State<LobbyScreen> {
                             fontSize: 12,
                           ),
                         ),
-                        const SizedBox(height: 2),
-                        Text(
-                          l10n.lobbyExpansionDesc,
-                          style: const TextStyle(
-                            fontSize: 10,
-                            color: Color(0xFF7E7069),
-                          ),
-                        ),
-                        const SizedBox(height: 8),
-                        Column(
-                          children: [
-                            for (final entry in [
-                              [
-                                'kraken',
-                                l10n.lobbyExpKraken,
-                                l10n.lobbyExpKrakenDesc,
-                              ],
-                              [
-                                'white_whale',
-                                l10n.lobbyExpWhiteWhale,
-                                l10n.lobbyExpWhiteWhaleDesc,
-                              ],
-                              [
-                                'loot',
-                                l10n.lobbyExpLoot,
-                                l10n.lobbyExpLootDesc,
-                              ],
-                            ])
-                              Padding(
-                                padding: EdgeInsets.only(
-                                  bottom: entry[0] == 'loot' ? 0 : 6,
-                                ),
-                                child: GestureDetector(
-                                  onTap: () => setState(() {
-                                    if (skExpansionsSelected.contains(
-                                      entry[0],
-                                    )) {
-                                      skExpansionsSelected.remove(entry[0]);
-                                    } else {
-                                      skExpansionsSelected.add(entry[0]);
-                                    }
-                                  }),
-                                  child: AnimatedContainer(
-                                    duration: const Duration(milliseconds: 150),
-                                    padding: const EdgeInsets.symmetric(
-                                      vertical: 10,
-                                      horizontal: 12,
-                                    ),
-                                    decoration: BoxDecoration(
-                                      color:
-                                          skExpansionsSelected.contains(
-                                            entry[0],
-                                          )
-                                          ? accent.withValues(alpha: 0.25)
-                                          : Colors.white,
-                                      borderRadius: BorderRadius.circular(10),
-                                      border: Border.all(
-                                        color:
-                                            skExpansionsSelected.contains(
-                                              entry[0],
-                                            )
-                                            ? accent
-                                            : const Color(0xFFE0D8D4),
-                                        width:
-                                            skExpansionsSelected.contains(
-                                              entry[0],
-                                            )
-                                            ? 1.5
-                                            : 1,
+                        const SizedBox(height: 4),
+                        // Same row-plus-divider language as the toggles below.
+                        // These were three bordered checkbox cards whose fill,
+                        // border, weight and text colour all changed with the
+                        // value — a third of the dialog spent restating three
+                        // booleans. The one-line effect ("트릭 무효화") stays:
+                        // it is the only part that tells you anything.
+                        for (final entry in [
+                          ['kraken', l10n.lobbyExpKraken, l10n.lobbyExpKrakenDesc],
+                          [
+                            'white_whale',
+                            l10n.lobbyExpWhiteWhale,
+                            l10n.lobbyExpWhiteWhaleDesc,
+                          ],
+                          ['loot', l10n.lobbyExpLoot, l10n.lobbyExpLootDesc],
+                        ])
+                          Container(
+                            padding: const EdgeInsets.symmetric(vertical: 4),
+                            decoration: const BoxDecoration(
+                              border: Border(
+                                bottom: BorderSide(color: Color(0x22000000)),
+                              ),
+                            ),
+                            child: Row(
+                              children: [
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        entry[1],
+                                        style: const TextStyle(
+                                          fontSize: 13,
+                                          fontWeight: FontWeight.w700,
+                                          color: Color(0xFF4B3C35),
+                                        ),
                                       ),
-                                    ),
-                                    child: Row(
-                                      children: [
-                                        Icon(
-                                          skExpansionsSelected.contains(
-                                                entry[0],
-                                              )
-                                              ? Icons.check_box
-                                              : Icons.check_box_outline_blank,
-                                          size: 20,
-                                          color:
-                                              skExpansionsSelected.contains(
-                                                entry[0],
-                                              )
-                                              ? accent
-                                              : const Color(0xFFC0B5AE),
+                                      Text(
+                                        entry[2],
+                                        style: const TextStyle(
+                                          fontSize: 11,
+                                          color: Color(0xFF7E7069),
                                         ),
-                                        const SizedBox(width: 10),
-                                        Expanded(
-                                          child: Column(
-                                            crossAxisAlignment:
-                                                CrossAxisAlignment.start,
-                                            children: [
-                                              Text(
-                                                entry[1],
-                                                style: TextStyle(
-                                                  fontSize: 13,
-                                                  fontWeight:
-                                                      skExpansionsSelected
-                                                          .contains(entry[0])
-                                                      ? FontWeight.bold
-                                                      : FontWeight.w600,
-                                                  color:
-                                                      skExpansionsSelected
-                                                          .contains(entry[0])
-                                                      ? const Color(0xFF3E312A)
-                                                      : const Color(0xFF8A7A72),
-                                                ),
-                                              ),
-                                              const SizedBox(height: 2),
-                                              Text(
-                                                entry[2],
-                                                style: TextStyle(
-                                                  fontSize: 10,
-                                                  color:
-                                                      skExpansionsSelected
-                                                          .contains(entry[0])
-                                                      ? const Color(0xFF5F4E46)
-                                                      : const Color(0xFFAAA09C),
-                                                ),
-                                              ),
-                                            ],
-                                          ),
-                                        ),
-                                      ],
-                                    ),
+                                      ),
+                                    ],
                                   ),
                                 ),
-                              ),
-                          ],
-                        ),
+                                Switch(
+                                  value:
+                                      skExpansionsSelected.contains(entry[0]),
+                                  onChanged: (v) => setState(() {
+                                    if (v) {
+                                      skExpansionsSelected.add(entry[0]);
+                                    } else {
+                                      skExpansionsSelected.remove(entry[0]);
+                                    }
+                                  }),
+                                ),
+                              ],
+                            ),
+                          ),
                       ],
                       const SizedBox(height: 16),
                       // Name field with the dice on the same line. The random

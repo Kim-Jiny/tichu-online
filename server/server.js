@@ -8,6 +8,7 @@ const http = require('http');
 const serverStartedAt = new Date().toISOString();
 const LobbyManager = require('./lobby/LobbyManager');
 const { findAbandonedRooms } = require('./lobby/zombieSweep');
+const fillerRooms = require('./lobby/fillerRooms');
 const { freezeThresholdMs } = require('./game/freezeWatch');
 const { playerStillNeedsToAct } = require('./game/turnGuard');
 const GameRoom = require('./game/GameRoom');
@@ -3978,6 +3979,12 @@ async function handleJoinRoom(ws, data) {
     sendTo(ws, { type: 'error', message: t(ws.locale, 'room_resuming_match') });
     return;
   }
+  // Filler rooms are spectate-only: every seat is taken by design, and letting a
+  // real player sit in one would mean playing a match nobody records.
+  if (fillerRooms.isFillerRoom(room.id)) {
+    sendTo(ws, { type: 'error', message: t(ws.locale, 'room_full') });
+    return;
+  }
   // SK version gating
   if (!clientCanAccessRoom(ws, room)) {
     sendTo(ws, { type: 'error', message: roomAccessUpdateMessage(ws.locale, room, 'play') });
@@ -5021,6 +5028,12 @@ function handleGameAction(ws, data) {
 async function saveGameResult(room) {
   if (!room.game) return;
   if (room.game.resultSaved) return;
+  // Admin-created filler rooms have no real player in them, so a saved match
+  // would only add noise to rankings and match history.
+  if (fillerRooms.isFillerRoom(room.id)) {
+    room.game.resultSaved = true;
+    return;
+  }
   room.game.resultSaved = true;
   clearTurnTimer(room.id);
   if (roundEndTimers[room.id]) {
@@ -6162,7 +6175,12 @@ async function handleTurnTimeout(roomId, playerId) {
   //
   // Auto-play below still runs, so the round keeps moving and reaches the
   // boundary the handover needs.
-  if (!isDraining) {
+  // A filler host has no player behind it; its turns are played by
+  // lobby/fillerRooms.js. If a tick ever loses a race with the turn timer we
+  // must not "desert" it — that would delete the room an admin asked for.
+  if (fillerRooms.isFillerHost(playerId)) {
+    logVerboseConnection(`[TIMEOUT] filler host ${nickname} — not counted`);
+  } else if (!isDraining) {
     if (!timeoutCounts[roomId]) timeoutCounts[roomId] = {};
     if (!timeoutCounts[roomId][nickname]) timeoutCounts[roomId][nickname] = 0;
     timeoutCounts[roomId][nickname]++;
@@ -6780,6 +6798,18 @@ function clearRoomTimers(roomId, room = null) {
 function removeRoomAndNotifySpectators(roomId) {
   closeRoom(roomId);
 }
+
+// Wire the filler-room manager to the pieces it needs. Injected rather than
+// required the other way round: server.js boots the server on require, so the
+// module cannot reach back into it.
+fillerRooms.init({
+  lobby,
+  broadcastRoomState: (id) => broadcastRoomState(id),
+  broadcastRoomList: () => broadcastRoomList(),
+  sendGameStateToAll: (id) => sendGameStateToAll(id),
+  broadcastGameEvent: (id, e) => broadcastGameEvent(id, e),
+  playerStillNeedsToAct,
+});
 
 function broadcastRoomList() {
   const allRooms = lobby.getRoomList();

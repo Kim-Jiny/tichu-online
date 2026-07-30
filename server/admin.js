@@ -18,6 +18,7 @@ const {
 } = require('./db/database');
 const { refundGoogleOrder } = require('./iap/GoogleVerify');
 const minioClient = require('./storage/minioClient');
+const fillerRooms = require('./lobby/fillerRooms');
 
 // In-memory session store: token -> { username, createdAt }
 const sessions = new Map();
@@ -521,6 +522,7 @@ input[type="text"], input[type="password"] { width: 100%; padding: 10px 12px; bo
     <a href="/tc-backstage/inquiries" class="${activePage === 'inquiries' ? 'active' : ''}" onclick="closeSidebar()">문의</a>
     <a href="/tc-backstage/reports" class="${activePage === 'reports' ? 'active' : ''}" onclick="closeSidebar()">신고</a>
     <a href="/tc-backstage/profile-photos" class="${activePage === 'profile-photos' ? 'active' : ''}" onclick="closeSidebar()">프로필사진</a>
+    <a href="/tc-backstage/filler-rooms" class="${activePage === 'filler-rooms' ? 'active' : ''}" onclick="closeSidebar()">봇방</a>
     <a href="/tc-backstage/users" class="${activePage === 'users' ? 'active' : ''}" onclick="closeSidebar()">유저</a>
     <a href="/tc-backstage/shop" class="${activePage === 'shop' ? 'active' : ''}" onclick="closeSidebar()">상점</a>
     <a href="/tc-backstage/attendance" class="${activePage === 'attendance' ? 'active' : ''}" onclick="closeSidebar()">출석</a>
@@ -2975,6 +2977,109 @@ async function handleAdminRoute(req, res, url, pathname, method, lobby, wss, mai
   // ===== Reports (grouped by reported_nickname + room_id) =====
   // Every profile photo on display. Report-driven moderation only ever sees
   // what somebody complained about; this is for looking before anyone does.
+  if (pathname === '/tc-backstage/filler-rooms' && method === 'POST') {
+    const body = await parseBody(req);
+    if (body.action === 'dismantle') {
+      const result = fillerRooms.dismantle(body.roomId || '');
+      if (!result.success) console.warn('[admin] filler dismantle:', result.message);
+    } else {
+      const result = fillerRooms.create({
+        nickname: body.nickname || '',
+        gameType: body.gameType || 'tichu',
+        botSpeed: body.botSpeed || 'normal',
+        roomName: body.roomName || '',
+      });
+      if (!result.success) {
+        return html(res, layout('봇방', `
+          <h1 class="page-title">봇방</h1>
+          <div class="empty" style="color:#c62828">추가 실패: ${escapeHtml(result.message)}</div>
+          <a class="btn btn-secondary" href="/tc-backstage/filler-rooms">돌아가기</a>
+        `, 'filler-rooms'));
+      }
+    }
+    return redirect(res, '/tc-backstage/filler-rooms');
+  }
+
+  if (pathname === '/tc-backstage/filler-rooms' && method === 'GET') {
+    const rows = fillerRooms.list();
+    const GAME_LABEL = {
+      tichu: '티츄',
+      skull_king: '스컬킹',
+      love_letter: '러브레터',
+      mighty: '마이티',
+    };
+    const SPEED_LABEL = { fast: '빠름', normal: '보통', slow: '느림' };
+
+    const list = rows.map((r) => `
+      <tr>
+        <td><strong>${escapeHtml(r.nickname)}</strong></td>
+        <td>${escapeHtml(GAME_LABEL[r.gameType] || r.gameType)}</td>
+        <td>${escapeHtml(SPEED_LABEL[r.botSpeed] || r.botSpeed)}</td>
+        <td>${r.inGame ? `<span class="badge" style="background:#e8f5e9;color:#2e7d32">게임 중</span> <span class="muted">${escapeHtml(String(r.phase || ''))}</span>` : '<span class="badge">대기</span>'}</td>
+        <td>${r.spectators}</td>
+        <td class="muted">${formatDate(new Date(r.createdAt))}</td>
+        <td>
+          <form method="POST" action="/tc-backstage/filler-rooms" style="margin:0"
+                onsubmit="return confirm('${jsEscape(r.nickname)} 봇방을 해체하시겠습니까?')">
+            <input type="hidden" name="action" value="dismantle">
+            <input type="hidden" name="roomId" value="${escapeHtml(r.roomId)}">
+            <button type="submit" class="btn btn-secondary" style="color:#c62828;border-color:#f0c0c0">해체</button>
+          </form>
+        </td>
+      </tr>`).join('');
+
+    const content = `
+      <h1 class="page-title">봇방 (${rows.length})</h1>
+      <div class="muted" style="margin-bottom:12px">
+        모든 좌석이 채워진 방을 만들어 방 목록에 노출합니다. 관전만 가능하고, 해체할 때까지
+        스스로 게임을 반복합니다. 실제 유저가 없는 방이므로 전적·랭킹에는 아무것도 기록되지
+        않습니다. 서버를 재시작하면 사라지니 다시 추가해야 합니다.
+      </div>
+
+      <div class="card" style="margin-bottom:16px">
+        <form method="POST" action="/tc-backstage/filler-rooms"
+              style="display:flex;gap:8px;flex-wrap:wrap;align-items:flex-end">
+          <label style="display:flex;flex-direction:column;gap:4px">
+            <span class="muted" style="font-size:12px">닉네임 (2~10자)</span>
+            <input name="nickname" required maxlength="10" placeholder="예: 티츄지기"
+                   style="padding:8px;border:1px solid #ddd;border-radius:8px">
+          </label>
+          <label style="display:flex;flex-direction:column;gap:4px">
+            <span class="muted" style="font-size:12px">방 이름 (비우면 닉네임)</span>
+            <input name="roomName" maxlength="20" placeholder="예: 구경하세요"
+                   style="padding:8px;border:1px solid #ddd;border-radius:8px">
+          </label>
+          <label style="display:flex;flex-direction:column;gap:4px">
+            <span class="muted" style="font-size:12px">게임</span>
+            <select name="gameType" style="padding:8px;border:1px solid #ddd;border-radius:8px">
+              <option value="tichu">티츄 (4인)</option>
+              <option value="skull_king">스컬킹 (6인)</option>
+              <option value="love_letter">러브레터 (4인)</option>
+              <option value="mighty">마이티 (5인)</option>
+            </select>
+          </label>
+          <label style="display:flex;flex-direction:column;gap:4px">
+            <span class="muted" style="font-size:12px">봇 속도</span>
+            <select name="botSpeed" style="padding:8px;border:1px solid #ddd;border-radius:8px">
+              <option value="slow">느림</option>
+              <option value="normal" selected>보통</option>
+              <option value="fast">빠름</option>
+            </select>
+          </label>
+          <button type="submit" class="btn">추가</button>
+        </form>
+      </div>
+
+      ${rows.length === 0
+        ? '<div class="empty">돌아가는 봇방이 없습니다</div>'
+        : `<table class="table">
+             <thead><tr><th>닉네임</th><th>게임</th><th>봇 속도</th><th>상태</th><th>관전자</th><th>생성</th><th></th></tr></thead>
+             <tbody>${list}</tbody>
+           </table>`}
+    `;
+    return html(res, layout('봇방', content, 'filler-rooms'));
+  }
+
   if (pathname === '/tc-backstage/profile-photos' && method === 'GET') {
     const page = Math.max(1, parseInt(url.searchParams.get('page'), 10) || 1);
     const LIMIT = 24;

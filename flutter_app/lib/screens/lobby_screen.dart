@@ -3296,9 +3296,9 @@ class _LobbyScreenState extends State<LobbyScreen> {
   Widget _buildRoomChatContainer(GameService game, {double? height}) {
     final chat = Container(
       decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: 0.7),
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: const Color(0xFFEDE4E0)),
+        color: Colors.white.withValues(alpha: 0.72),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: const Color(0xFFE6DDD8)),
       ),
       child: _buildRoomChat(game),
     );
@@ -3623,19 +3623,21 @@ class _LobbyScreenState extends State<LobbyScreen> {
       );
     }
 
+    // Same surface as the seat rows above it — it used to have its own indigo
+    // tint and radius, so the panel read as two different kinds of thing.
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
       decoration: BoxDecoration(
-        color: const Color(0xFFF5F5F8),
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: const Color(0xFFE0E0E8)),
+        color: Colors.white.withValues(alpha: 0.72),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: const Color(0xFFE6DDD8)),
       ),
       child: Row(
         children: [
           const Icon(
             Icons.smart_toy,
             size: 16,
-            color: Color(0xFF3949AB),
+            color: Color(0xFF7A6A62),
           ),
           const SizedBox(width: 6),
           Expanded(

@@ -28,7 +28,6 @@ class _SpectatorScreenState extends State<SpectatorScreen> {
   bool _isLeaving = false;
   bool _chatOpen = false;
   bool _soundPanelOpen = false;
-  bool _moreOpen = false;
   final TextEditingController _chatController = TextEditingController();
   final ScrollController _chatScrollController = ScrollController();
 
@@ -602,9 +601,6 @@ class _SpectatorScreenState extends State<SpectatorScreen> {
         if (game.errorMessage != null)
           _buildSpectatorErrorBanner(game.errorMessage!),
 
-        // Icon row dropped out from under the more button
-        if (_moreOpen) _buildSpectatorMoreMenu(game, scoreHistory, totalScores),
-
         // Sound panel overlay
         if (_soundPanelOpen) _buildSoundPanel(game),
 
@@ -985,22 +981,29 @@ class _SpectatorScreenState extends State<SpectatorScreen> {
                   ),
                 ),
                 const SizedBox(width: 6),
-                _buildScoreChip(
-                  'A',
-                  scores['teamA'] ?? 0,
-                  const Color(0xFF6A9BD1),
-                  compact: true,
-                ),
-                const SizedBox(width: 4),
-                _buildScoreChip(
-                  'B',
-                  scores['teamB'] ?? 0,
-                  const Color(0xFFF5B8C0),
-                  compact: true,
+                _buildScoreHistoryTap(
+                  scoreHistory,
+                  scores,
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      _buildScoreChip(
+                        'A',
+                        scores['teamA'] ?? 0,
+                        const Color(0xFF6A9BD1),
+                        compact: true,
+                      ),
+                      const SizedBox(width: 4),
+                      _buildScoreChip(
+                        'B',
+                        scores['teamB'] ?? 0,
+                        const Color(0xFFF5B8C0),
+                        compact: true,
+                      ),
+                    ],
+                  ),
                 ),
                 const SizedBox(width: 6),
-                _buildScoreHistoryButton(game, scoreHistory, scores),
-                const SizedBox(width: 4),
                 _buildSpectatorButton(game),
                 const SizedBox(width: 4),
                 _buildSoundButton(game),
@@ -1059,9 +1062,11 @@ class _SpectatorScreenState extends State<SpectatorScreen> {
                       ),
                     ),
                     const SizedBox(width: 6),
-                    _buildChatButton(game),
+                    _buildSpectatorButton(game),
                     const SizedBox(width: 6),
-                    _buildSpectatorMoreButton(game),
+                    _buildSoundButton(game),
+                    const SizedBox(width: 6),
+                    _buildChatButton(game),
                   ],
                 ),
                 const SizedBox(height: 6),
@@ -1085,21 +1090,54 @@ class _SpectatorScreenState extends State<SpectatorScreen> {
                       ),
                     ],
                     const Spacer(),
-                    _buildScoreChip(
-                      'A',
-                      scores['teamA'] ?? 0,
-                      const Color(0xFF6A9BD1),
-                    ),
-                    const SizedBox(width: 6),
-                    _buildScoreChip(
-                      'B',
-                      scores['teamB'] ?? 0,
-                      const Color(0xFFF5B8C0),
+                    // The score itself opens the history — it is what you are
+                    // already looking at when you wonder how it got there, and
+                    // it saves a slot in the bar.
+                    _buildScoreHistoryTap(
+                      scoreHistory,
+                      scores,
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          _buildScoreChip(
+                            'A',
+                            scores['teamA'] ?? 0,
+                            const Color(0xFF6A9BD1),
+                          ),
+                          const SizedBox(width: 6),
+                          _buildScoreChip(
+                            'B',
+                            scores['teamB'] ?? 0,
+                            const Color(0xFFF5B8C0),
+                          ),
+                        ],
+                      ),
                     ),
                   ],
                 ),
               ],
             ),
+    );
+  }
+
+  /// Wraps the score chips so tapping them opens the round-by-round history.
+  Widget _buildScoreHistoryTap(
+    List scoreHistory,
+    Map<String, dynamic> scores, {
+    required Widget child,
+  }) {
+    return GestureDetector(
+      behavior: HitTestBehavior.opaque,
+      onTap: () => showTichuScoreHistoryDialog(
+        context,
+        history: scoreHistory
+            .whereType<Map>()
+            .map((e) => Map<String, dynamic>.from(e))
+            .toList(),
+        totalA: scores['teamA'] ?? 0,
+        totalB: scores['teamB'] ?? 0,
+      ),
+      child: child,
     );
   }
 
@@ -1553,9 +1591,7 @@ class _SpectatorScreenState extends State<SpectatorScreen> {
 
   Widget _buildSoundPanel(GameService game) {
     return Positioned(
-      // Below the more-menu row it is opened from (menu sits at 96 and is ~52
-      // tall), not on top of it.
-      top: 154,
+      top: 96,
       right: 12,
       child: SpectatorSoundPanel(game: game, width: 180),
     );
@@ -1567,117 +1603,6 @@ class _SpectatorScreenState extends State<SpectatorScreen> {
       active: false,
       badgeCount: game.spectators.length,
       onTap: () => showSpectatorListDialog(context, game.spectators),
-    );
-  }
-
-  /// Score history, spectator list and sound, folded into one button.
-  ///
-  /// PopupMenuButton rather than the game screen's custom overlay: there is no
-  /// panel state to coordinate here — every item just opens a dialog or flips a
-  /// flag the existing buttons already flipped.
-  /// Toggles the icon row that drops out from under the bar.
-  ///
-  /// Same shape as the game screen's more menu (a floating row of the same
-  /// buttons) rather than a text PopupMenu — every other control in this bar is
-  /// an icon, and a platform menu looked pasted on.
-  Widget _buildSpectatorMoreButton(GameService game) {
-    return SpectatorActionButton(
-      icon: Icons.more_horiz,
-      active: _moreOpen,
-      onTap: () => setState(() {
-        _moreOpen = !_moreOpen;
-        // The sound panel lives inside this menu; don't leave it floating once
-        // the parent closes.
-        if (!_moreOpen) _soundPanelOpen = false;
-      }),
-    );
-  }
-
-  Widget _buildSpectatorMoreMenu(
-    GameService game,
-    List scoreHistory,
-    Map<String, dynamic> scores,
-  ) {
-    return Positioned(
-      // Just under the flat bar (two rows + padding), so it doesn't cover the
-      // score chips on the second line.
-      top: 96,
-      right: 12,
-      child: AnimatedOpacity(
-        opacity: _moreOpen ? 1 : 0,
-        duration: const Duration(milliseconds: 160),
-        child: AnimatedScale(
-          scale: _moreOpen ? 1 : 0.95,
-          duration: const Duration(milliseconds: 160),
-          child: Container(
-            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
-            decoration: BoxDecoration(
-              color: Colors.white.withValues(alpha: 0.97),
-              borderRadius: BorderRadius.circular(14),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withValues(alpha: 0.15),
-                  blurRadius: 8,
-                  offset: const Offset(0, 3),
-                ),
-              ],
-            ),
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                SpectatorActionButton(
-                  icon: Icons.history,
-                  active: false,
-                  onTap: () {
-                    setState(() => _moreOpen = false);
-                    showTichuScoreHistoryDialog(
-                      context,
-                      history: scoreHistory
-                          .whereType<Map>()
-                          .map((e) => Map<String, dynamic>.from(e))
-                          .toList(),
-                      totalA: scores['teamA'] ?? 0,
-                      totalB: scores['teamB'] ?? 0,
-                    );
-                  },
-                ),
-                const SizedBox(width: 6),
-                SpectatorActionButton(
-                  icon: Icons.people_outline,
-                  active: false,
-                  badgeCount: game.spectators.length,
-                  onTap: () {
-                    setState(() => _moreOpen = false);
-                    showSpectatorListDialog(context, game.spectators);
-                  },
-                ),
-                const SizedBox(width: 6),
-                _buildSoundButton(game),
-              ],
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildScoreHistoryButton(
-    GameService game,
-    List scoreHistory,
-    Map<String, dynamic> scores,
-  ) {
-    return SpectatorActionButton(
-      icon: Icons.history,
-      active: false,
-      onTap: () => showTichuScoreHistoryDialog(
-        context,
-        history: scoreHistory
-            .whereType<Map>()
-            .map((e) => Map<String, dynamic>.from(e))
-            .toList(),
-        totalA: scores['teamA'] ?? 0,
-        totalB: scores['teamB'] ?? 0,
-      ),
     );
   }
 

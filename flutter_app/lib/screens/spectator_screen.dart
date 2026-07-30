@@ -11,6 +11,7 @@ import '../widgets/draggable_chat_panel.dart';
 import '../widgets/level_badge.dart';
 import '../widgets/profile_avatar.dart';
 import '../widgets/bot_avatar.dart';
+import '../widgets/host_crown.dart';
 import '../widgets/chat_bubble.dart';
 import '../widgets/player_profile_body.dart';
 import '../widgets/player_profile_header.dart';
@@ -550,12 +551,9 @@ class _SpectatorScreenState extends State<SpectatorScreen> {
           ),
         if (!isEmpty && player.isHost)
           const Positioned(
-            left: -2,
-            top: -6,
-            child: Text(
-              '👑',
-              style: TextStyle(fontSize: 18, height: 1.0),
-            ),
+            left: -3,
+            top: -7,
+            child: HostCrown(size: 22),
           ),
       ],
     );

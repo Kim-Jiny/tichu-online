@@ -1173,7 +1173,7 @@ class _SKGameScreenState extends State<SKGameScreen> {
     // longer competes with the name for width) buys the clearance and a bigger
     // avatar at the same time.
     const seatWidth = 98.0;
-    const seatHeight = 100.0;
+    const seatHeight = 106.0;
 
     return Padding(
       padding: const EdgeInsets.fromLTRB(8, 6, 8, 8),
@@ -1769,7 +1769,7 @@ class _SKGameScreenState extends State<SKGameScreen> {
     // longer competes with the name for width) buys the clearance and a bigger
     // avatar at the same time.
     const seatWidth = 98.0;
-    const seatHeight = 100.0;
+    const seatHeight = 106.0;
     final opponents = state.players
         .where((p) => p.position != 'self')
         .toList(growable: false);
@@ -2383,7 +2383,7 @@ class _SKGameScreenState extends State<SKGameScreen> {
           final bidHorizontalPadding = compact ? 4.0 : 6.0;
           final bidTopMargin = compact ? 1.0 : 2.0;
           final spacing = compact ? 1.0 : 2.0;
-          final avatarDiameter = isSelf ? 30.0 : (compact ? 24.0 : 28.0);
+          final avatarDiameter = isSelf ? 34.0 : (compact ? 28.0 : 32.0);
           final contentWidth = math.max(
             24.0,
             (constraints.maxWidth - horizontalPadding * 2) * 0.7,

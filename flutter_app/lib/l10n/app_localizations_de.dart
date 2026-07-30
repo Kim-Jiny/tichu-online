@@ -4360,4 +4360,14 @@ class L10nDe extends L10n {
   String adminWinLoss(int wins, int losses) {
     return '${wins}S/${losses}N';
   }
+
+  @override
+  String get profileBotSubtitle => 'Bot';
+
+  @override
+  String get profileBotHeadline => 'KI-Gegner';
+
+  @override
+  String get profileBotBody =>
+      'Bots sind keine Konten – daher gibt es keine Statistiken, und Freundschaft, Blockieren und Melden gelten nicht.';
 }

@@ -7718,6 +7718,24 @@ abstract class L10n {
   /// In en, this message translates to:
   /// **'{wins}W/{losses}L'**
   String adminWinLoss(int wins, int losses);
+
+  /// No description provided for @profileBotSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Bot'**
+  String get profileBotSubtitle;
+
+  /// No description provided for @profileBotHeadline.
+  ///
+  /// In en, this message translates to:
+  /// **'AI opponent'**
+  String get profileBotHeadline;
+
+  /// No description provided for @profileBotBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Bots are not accounts, so there are no stats, and friend, block and report don\'t apply.'**
+  String get profileBotBody;
 }
 
 class _L10nDelegate extends LocalizationsDelegate<L10n> {

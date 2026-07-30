@@ -8,6 +8,7 @@ import '../l10n/app_localizations.dart';
 import '../screens/photo_crop_screen.dart';
 import '../services/game_service.dart';
 import '../services/profile_photo_service.dart';
+import 'bot_avatar.dart';
 import 'profile_avatar.dart';
 
 /// Header of the player-profile popup: avatar, nickname, and the friend /
@@ -112,7 +113,18 @@ class PlayerProfileHeader extends StatelessWidget {
                     overflow: TextOverflow.ellipsis,
                   ),
                   const SizedBox(height: 2),
-                  if (subtitleBuilder != null)
+                  // Bots get the plain label in every screen: four of the six
+                  // build a level/exp strip here, and for a bot that strip is
+                  // rendered from a profile that will never arrive.
+                  if (isBot)
+                    Text(
+                      l10n.profileBotSubtitle,
+                      style: const TextStyle(
+                        fontSize: 12,
+                        color: Color(0xFF84766E),
+                      ),
+                    )
+                  else if (subtitleBuilder != null)
                     subtitleBuilder!(inner)
                   else
                     Text(
@@ -157,6 +169,12 @@ class PlayerProfileHeader extends StatelessWidget {
     bool blocked,
     bool editable,
   ) {
+    if (isBot) {
+      // Bots never have a photo, so the shared placeholder left every bot popup
+      // opening on the same anonymous person icon. Rounded square to match the
+      // human avatars beside it.
+      return BotAvatar(size: 38, name: nickname, borderRadius: 12);
+    }
     final avatar = ProfileAvatar(
       photoUrl: resolved,
       size: 38,
@@ -777,6 +795,69 @@ void showProfileReportDialog(
           ),
         );
       },
+    ),
+  );
+}
+
+/// Body of a bot's profile popup.
+///
+/// Bots have no account, so `requestProfile` comes back empty and every popup
+/// rendered its "profile not found" error — which reads as a bug rather than as
+/// "this is a bot". Shared by the six screens that open a profile popup, for the
+/// same reason the header is.
+Widget botProfileBody(BuildContext context) {
+  final l10n = L10n.of(context);
+  // Wrapped so the card keeps its natural height: the dialog hands its content
+  // a tight vertical constraint, and without this the card stretched down the
+  // whole popup with the text stranded at the top.
+  return Column(
+    mainAxisSize: MainAxisSize.min,
+    children: [_botCard(l10n)],
+  );
+}
+
+Widget _botCard(L10n l10n) {
+  return Container(
+    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+    decoration: BoxDecoration(
+      color: const Color(0xFFF3F4FB),
+      borderRadius: BorderRadius.circular(14),
+      border: Border.all(color: const Color(0xFFDCDEF0)),
+    ),
+    child: Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Icon(
+          Icons.smart_toy_rounded,
+          size: 20,
+          color: Color(0xFF3949AB),
+        ),
+        const SizedBox(width: 10),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                l10n.profileBotHeadline,
+                style: const TextStyle(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w800,
+                  color: Color(0xFF3949AB),
+                ),
+              ),
+              const SizedBox(height: 4),
+              Text(
+                l10n.profileBotBody,
+                style: const TextStyle(
+                  fontSize: 12,
+                  height: 1.4,
+                  color: Color(0xFF5C5F73),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
     ),
   );
 }

@@ -523,7 +523,7 @@ class _LLGameScreenState extends State<LLGameScreen> {
     final p = player;
     final bool isReady = p.isReady;
     return GestureDetector(
-      onTap: () => _showPlayerProfileDialog(p.name, game),
+      onTap: () => _showPlayerProfileDialog(p.name, game, isBot: p.isBot),
       child: Stack(
         clipBehavior: Clip.none,
         children: [
@@ -3819,8 +3819,14 @@ class _LLGameScreenState extends State<LLGameScreen> {
 
   // ====================== PROFILE DIALOG ======================
 
-  void _showPlayerProfileDialog(String nickname, GameService game) {
-    game.requestProfile(nickname);
+  void _showPlayerProfileDialog(
+    String nickname,
+    GameService game, {
+    bool isBot = false,
+  }) {
+    // A bot has no account, so this would only ever come back empty and the
+    // popup would render its "profile not found" error.
+    if (!isBot) game.requestProfile(nickname);
 
     showDialog(
       context: context,
@@ -3865,12 +3871,15 @@ class _LLGameScreenState extends State<LLGameScreen> {
                         (inner?['level'] as int?) ?? 1,
                         (inner?['expTotal'] as int?) ?? 0,
                       ),
+                      isBot: isBot,
                       onCloseDialog: () => Navigator.pop(ctx),
                     ),
                   ],
                 ),
               ),
-              content: isLoading
+              content: isBot
+                  ? SizedBox(width: 320, child: botProfileBody(context))
+                  : isLoading
                   ? const SizedBox(
                       height: 140,
                       width: 360,

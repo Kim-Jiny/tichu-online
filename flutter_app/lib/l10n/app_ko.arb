@@ -1391,5 +1391,8 @@
   "adminReportRoom": "방: {roomId}",
   "adminInquiryTitle": "문의 #{id}",
   "adminReportTitle": "신고: {nickname}",
-  "adminWinLoss": "{wins}승 {losses}패"
+  "adminWinLoss": "{wins}승 {losses}패",
+  "profileBotSubtitle": "봇",
+  "profileBotHeadline": "AI 상대",
+  "profileBotBody": "봇은 계정이 아니라서 전적이 없고, 친구 추가·차단·신고 대상이 아닙니다."
 }

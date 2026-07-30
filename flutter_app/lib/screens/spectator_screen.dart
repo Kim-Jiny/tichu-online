@@ -536,7 +536,8 @@ class _SpectatorScreenState extends State<SpectatorScreen> {
     }
 
     return GestureDetector(
-      onTap: () => _showPlayerProfileDialog(name, game),
+      onTap: () =>
+          _showPlayerProfileDialog(name, game, isBot: player.isBot),
       child: stacked,
     );
   }
@@ -1846,8 +1847,14 @@ class _SpectatorScreenState extends State<SpectatorScreen> {
 
   // ====================== PROFILE DIALOG ======================
 
-  void _showPlayerProfileDialog(String nickname, GameService game) {
-    game.requestProfile(nickname);
+  void _showPlayerProfileDialog(
+    String nickname,
+    GameService game, {
+    bool isBot = false,
+  }) {
+    // A bot has no account, so this would only ever come back empty and the
+    // popup would render its "profile not found" error.
+    if (!isBot) game.requestProfile(nickname);
 
     showDialog(
       context: context,
@@ -1880,12 +1887,15 @@ class _SpectatorScreenState extends State<SpectatorScreen> {
                         (inner?['level'] as int?) ?? 1,
                         (inner?['expTotal'] as int?) ?? 0,
                       ),
+                      isBot: isBot,
                       onCloseDialog: () => Navigator.pop(ctx),
                     ),
                   ],
                 ),
               ),
-              content: isLoading
+              content: isBot
+                  ? SizedBox(width: 320, child: botProfileBody(context))
+                  : isLoading
                   ? const SizedBox(
                       height: 140,
                       width: 360,

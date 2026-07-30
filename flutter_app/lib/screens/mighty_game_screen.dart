@@ -7459,7 +7459,9 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
     GameService game, {
     bool isBot = false,
   }) {
-    game.requestProfile(nickname);
+    // A bot has no account, so this would only ever come back empty and the
+    // popup would render its "profile not found" error.
+    if (!isBot) game.requestProfile(nickname);
     showDialog(
       context: context,
       builder: (ctx) {
@@ -7508,7 +7510,9 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
                   ],
                 ),
               ),
-              content: isLoading
+              content: isBot
+                  ? SizedBox(width: 320, child: botProfileBody(context))
+                  : isLoading
                   ? const SizedBox(
                       height: 140,
                       width: 360,

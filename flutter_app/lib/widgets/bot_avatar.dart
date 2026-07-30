@@ -29,11 +29,16 @@ class BotAvatar extends StatelessWidget {
   /// noise.
   final bool showBadge;
 
+  /// Corner radius. Null → a circle; a value → a rounded square, to match a
+  /// host surface whose other avatars are rounded rects (the profile popup).
+  final double? borderRadius;
+
   const BotAvatar({
     super.key,
     required this.size,
     required this.name,
     this.showBadge = false,
+    this.borderRadius,
   });
 
   static const _artCount = 6;
@@ -57,11 +62,23 @@ class BotAvatar extends StatelessWidget {
 
   int get _slot => _number <= 0 ? 0 : (_number - 1) % _artCount;
 
+  Widget _clip({required Widget child}) {
+    final radius = borderRadius;
+    return radius == null
+        ? ClipOval(child: child)
+        : ClipRRect(borderRadius: BorderRadius.circular(radius), child: child);
+  }
+
   @override
   Widget build(BuildContext context) {
     final (background, foreground) = _palette[_slot];
+    final radius = borderRadius;
     final glyph = DecoratedBox(
-      decoration: BoxDecoration(color: background, shape: BoxShape.circle),
+      decoration: BoxDecoration(
+        color: background,
+        shape: radius == null ? BoxShape.circle : BoxShape.rectangle,
+        borderRadius: radius == null ? null : BorderRadius.circular(radius),
+      ),
       child: Center(
         child: Icon(
           Icons.smart_toy_rounded,
@@ -74,7 +91,7 @@ class BotAvatar extends StatelessWidget {
     final avatar = SizedBox(
       width: size,
       height: size,
-      child: ClipOval(
+      child: _clip(
         child: Image.asset(
           'assets/bots/bot${_slot + 1}.png',
           width: size,

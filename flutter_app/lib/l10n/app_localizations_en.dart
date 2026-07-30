@@ -4324,4 +4324,14 @@ class L10nEn extends L10n {
   String adminWinLoss(int wins, int losses) {
     return '${wins}W/${losses}L';
   }
+
+  @override
+  String get profileBotSubtitle => 'Bot';
+
+  @override
+  String get profileBotHeadline => 'AI opponent';
+
+  @override
+  String get profileBotBody =>
+      'Bots are not accounts, so there are no stats, and friend, block and report don\'t apply.';
 }

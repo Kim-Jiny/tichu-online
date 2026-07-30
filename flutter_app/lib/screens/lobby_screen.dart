@@ -2097,7 +2097,13 @@ class _LobbyScreenState extends State<LobbyScreen> {
           child: GestureDetector(
             behavior: HitTestBehavior.opaque,
             onTap: () => setState(() {
-              if (!_hiddenGameTypes.remove(type)) _hiddenGameTypes.add(type);
+              if (_hiddenGameTypes.remove(type)) return;
+              // The last one on stays on. Turning everything off leaves a list
+              // that can only ever be empty, which is not a state anyone wants
+              // to arrive at by tapping.
+              if (_hiddenGameTypes.length < games.length - 1) {
+                _hiddenGameTypes.add(type);
+              }
             }),
             child: AnimatedContainer(
               duration: const Duration(milliseconds: 160),

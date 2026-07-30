@@ -1378,9 +1378,20 @@ class _SpectatorScreenState extends State<SpectatorScreen> {
               ),
             )
           else if (canSeeCards && cards.isNotEmpty)
-            vertical
-                ? _buildRotatedCards(cards, isLeft: isLeft, compact: compact)
-                : _buildHorizontalCards(cards, compact: compact)
+            // Only the card strip gives way when the slot runs out of height.
+            // Moving the avatar onto its own row cost ~28dp, and a 13-card
+            // vertical strip in a side slot overflowed the bottom by that much.
+            // Scaling the whole seat instead would shrink the avatar and name
+            // back down, which is what this change was for.
+            Flexible(
+              child: FittedBox(
+                fit: BoxFit.scaleDown,
+                alignment: Alignment.topCenter,
+                child: vertical
+                    ? _buildRotatedCards(cards, isLeft: isLeft, compact: compact)
+                    : _buildHorizontalCards(cards, compact: compact),
+              ),
+            )
           else
             _buildCardRequestArea(
               game,

@@ -886,23 +886,29 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
           SpectatorHeader(
             game: game,
             statusLine: roundText,
-            statusTrailing: Text(
-              l10n.spectatorTargetScore(game.roomTargetScore),
-              style: const TextStyle(
-                color: Color(0xFFA89C96),
-                fontSize: 11,
-                fontWeight: FontWeight.w700,
-              ),
+            statusTrailing: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  l10n.spectatorTargetScore(game.roomTargetScore),
+                  style: const TextStyle(
+                    color: Color(0xFFA89C96),
+                    fontSize: 11,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+                // Same slot Tichu uses for its tappable score chips.
+                if (state.scoreHistory.isNotEmpty) ...[
+                  const SizedBox(width: 8),
+                  SpectatorStatusChip(
+                    icon: Icons.history,
+                    label: l10n.gameScoreHistory,
+                    onTap: () => _showScoreHistoryDialog(state, game),
+                  ),
+                ],
+              ],
             ),
             actions: [
-              if (state.scoreHistory.isNotEmpty) ...[
-                _buildTopActionButton(
-                  icon: Icons.history,
-                  active: false,
-                  onTap: () => _showScoreHistoryDialog(state, game),
-                ),
-                const SizedBox(width: 6),
-              ],
               _buildTopActionButton(
                 icon: Icons.chat_bubble_outline,
                 active: _chatOpen,

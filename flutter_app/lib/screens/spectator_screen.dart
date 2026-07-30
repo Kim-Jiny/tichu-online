@@ -1058,30 +1058,6 @@ class _SpectatorScreenState extends State<SpectatorScreen> {
                       icon: const Icon(Icons.arrow_back, color: Color(0xFF6A5A52)),
                     ),
                     const SizedBox(width: 8),
-                    Container(
-                      padding:
-                          const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                      decoration: BoxDecoration(
-                        color: const Color(0xFFE8E0F8),
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          const Icon(Icons.visibility, size: 14, color: Color(0xFF4A4080)),
-                          const SizedBox(width: 4),
-                          Text(
-                            L10n.of(context).spectatorWatching,
-                            style: const TextStyle(
-                              fontSize: 12,
-                              fontWeight: FontWeight.bold,
-                              color: Color(0xFF4A4080),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                    const SizedBox(width: 8),
                     // The room name was nowhere in this bar, while four icon
                     // buttons sat where it could go. Chat keeps its own button
                     // because its unread badge is the one that matters live;
@@ -1109,6 +1085,38 @@ class _SpectatorScreenState extends State<SpectatorScreen> {
                 const SizedBox(height: 6),
                 Row(
                   children: [
+                    // On the status line, matching SpectatorHeader — on the
+                    // title row it was squeezing the room name.
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 8,
+                        vertical: 3,
+                      ),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFE8E0F8),
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          const Icon(
+                            Icons.visibility,
+                            size: 12,
+                            color: Color(0xFF4A4080),
+                          ),
+                          const SizedBox(width: 4),
+                          Text(
+                            L10n.of(context).spectatorWatching,
+                            style: const TextStyle(
+                              fontSize: 11,
+                              fontWeight: FontWeight.bold,
+                              color: Color(0xFF4A4080),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(width: 8),
                     Text(
                       'R$round | ${_getPhaseText(phase)}',
                       style:

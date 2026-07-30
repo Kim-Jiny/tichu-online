@@ -701,35 +701,7 @@ class SpectatorHeader extends StatelessWidget {
                 constraints:
                     const BoxConstraints.tightFor(width: 36, height: 36),
               ),
-              const SizedBox(width: 4),
-              Container(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                decoration: BoxDecoration(
-                  color: const Color(0xFFE8E0F8),
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    const Icon(
-                      Icons.visibility,
-                      size: 14,
-                      color: Color(0xFF4A4080),
-                    ),
-                    const SizedBox(width: 4),
-                    Text(
-                      L10n.of(context).spectatorWatching,
-                      style: const TextStyle(
-                        fontSize: 12,
-                        fontWeight: FontWeight.bold,
-                        color: Color(0xFF4A4080),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              const SizedBox(width: 8),
+              const SizedBox(width: 6),
               Expanded(
                 child: Text(
                   game.currentRoomName,
@@ -749,6 +721,37 @@ class SpectatorHeader extends StatelessWidget {
           const SizedBox(height: 6),
           Row(
             children: [
+              // The badge lives on the status line, not the title row: four
+              // action buttons plus the badge left the room name a few
+              // characters ("러...") on Love Letter.
+              Container(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFE8E0F8),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const Icon(
+                      Icons.visibility,
+                      size: 12,
+                      color: Color(0xFF4A4080),
+                    ),
+                    const SizedBox(width: 4),
+                    Text(
+                      L10n.of(context).spectatorWatching,
+                      style: const TextStyle(
+                        fontSize: 11,
+                        fontWeight: FontWeight.bold,
+                        color: Color(0xFF4A4080),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(width: 8),
               Expanded(
                 child: Text(
                   statusLine,
@@ -764,6 +767,52 @@ class SpectatorHeader extends StatelessWidget {
             ],
           ),
         ],
+      ),
+    );
+  }
+}
+
+/// Small tappable chip for the right end of [SpectatorHeader]'s status line —
+/// the same slot Tichu uses for its tap-for-history score chips.
+class SpectatorStatusChip extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  final VoidCallback onTap;
+
+  const SpectatorStatusChip({
+    super.key,
+    required this.icon,
+    required this.label,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      behavior: HitTestBehavior.opaque,
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(10),
+          border: Border.all(color: const Color(0xFFE6DDD8)),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(icon, size: 13, color: _kTextSubtle),
+            const SizedBox(width: 4),
+            Text(
+              label,
+              style: const TextStyle(
+                fontSize: 11,
+                fontWeight: FontWeight.w700,
+                color: _kTextSubtle,
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }

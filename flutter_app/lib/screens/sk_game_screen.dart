@@ -905,6 +905,13 @@ class _SKGameScreenState extends State<SKGameScreen> {
       statusLine:
           '${l10n.skGameRoundTrick(state.round, state.trickNumber)} · '
           '${state.phase == 'bidding' ? l10n.skGameBiddingInProgress(currentPlayerName) : l10n.skGamePlayerTurn(currentPlayerName)}',
+      // On the status line, in the slot Tichu uses for its tappable score
+      // chips — the icon-only button in the title row was easy to overlook.
+      statusTrailing: SpectatorStatusChip(
+        icon: Icons.history_rounded,
+        label: l10n.gameScoreHistory,
+        onTap: () => _showScoreHistoryDialog(state),
+      ),
       actions: [
         if (state.expansions.isNotEmpty) ...[
           _buildTopActionButton(
@@ -914,12 +921,6 @@ class _SKGameScreenState extends State<SKGameScreen> {
           ),
           const SizedBox(width: 6),
         ],
-        _buildTopActionButton(
-          icon: Icons.history_rounded,
-          active: false,
-          onTap: () => _showScoreHistoryDialog(state),
-        ),
-        const SizedBox(width: 6),
         _buildTopActionButton(
           icon: Icons.chat_bubble_outline_rounded,
           active: _chatOpen,

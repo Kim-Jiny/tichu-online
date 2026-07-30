@@ -780,12 +780,16 @@ class _LobbyScreenState extends State<LobbyScreen> {
                           String gameEmoji;
                           Color gameBgColor;
                           Color gameFgColor;
+                          // Same colours as the room list's strips, badges
+                          // and filters — the dialog had its own palette
+                          // (purple Tichu, yellow-on-navy SK) so the same game
+                          // wore different colours two screens apart.
                           switch (selectedGameType) {
                             case 'skull_king':
                               gameLabel = l10n.lobbySkullKing;
                               gameEmoji = '⚓';
-                              gameBgColor = const Color(0xFF2D2D3D);
-                              gameFgColor = const Color(0xFFFFD54F);
+                              gameBgColor = const Color(0xFF21455F);
+                              gameFgColor = Colors.white;
                               break;
                             case 'love_letter':
                               gameLabel = l10n.lobbyLoveLetter;
@@ -796,13 +800,13 @@ class _LobbyScreenState extends State<LobbyScreen> {
                             case 'mighty':
                               gameLabel = l10n.lobbyMighty;
                               gameEmoji = '🃑';
-                              gameBgColor = const Color(0xFF1565C0);
+                              gameBgColor = const Color(0xFF5C6BC0);
                               gameFgColor = Colors.white;
                               break;
                             default:
                               gameLabel = l10n.lobbyTichu;
                               gameEmoji = '🃏';
-                              gameBgColor = const Color(0xFF7E57C2);
+                              gameBgColor = const Color(0xFF64B5F6);
                               gameFgColor = Colors.white;
                           }
                           void selectGame(String type) {
@@ -973,68 +977,109 @@ class _LobbyScreenState extends State<LobbyScreen> {
                             fontSize: 12,
                           ),
                         ),
-                        const SizedBox(height: 4),
-                        // Same row-plus-divider language as the toggles below.
-                        // These were three bordered checkbox cards whose fill,
-                        // border, weight and text colour all changed with the
-                        // value — a third of the dialog spent restating three
-                        // booleans. The one-line effect ("트릭 무효화") stays:
-                        // it is the only part that tells you anything.
-                        for (final entry in [
-                          ['kraken', l10n.lobbyExpKraken, l10n.lobbyExpKrakenDesc],
-                          [
-                            'white_whale',
-                            l10n.lobbyExpWhiteWhale,
-                            l10n.lobbyExpWhiteWhaleDesc,
-                          ],
-                          ['loot', l10n.lobbyExpLoot, l10n.lobbyExpLootDesc],
-                        ])
-                          Container(
-                            padding: const EdgeInsets.symmetric(vertical: 4),
-                            decoration: const BoxDecoration(
-                              border: Border(
-                                bottom: BorderSide(color: Color(0x22000000)),
-                              ),
-                            ),
-                            child: Row(
-                              children: [
-                                Expanded(
-                                  child: Column(
-                                    crossAxisAlignment:
-                                        CrossAxisAlignment.start,
-                                    children: [
-                                      Text(
-                                        entry[1],
-                                        style: const TextStyle(
-                                          fontSize: 13,
-                                          fontWeight: FontWeight.w700,
-                                          color: Color(0xFF4B3C35),
-                                        ),
-                                      ),
-                                      Text(
-                                        entry[2],
-                                        style: const TextStyle(
-                                          fontSize: 11,
-                                          color: Color(0xFF7E7069),
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                                Switch(
-                                  value:
-                                      skExpansionsSelected.contains(entry[0]),
-                                  onChanged: (v) => setState(() {
-                                    if (v) {
-                                      skExpansionsSelected.add(entry[0]);
-                                    } else {
-                                      skExpansionsSelected.remove(entry[0]);
-                                    }
-                                  }),
-                                ),
+                        const SizedBox(height: 8),
+                        // One row, three equal buttons; pressed = filled. The
+                        // switch rows this replaces read as three settings —
+                        // these are a pick-any-of-three, which is a button
+                        // group. The one-line effect stays as the caption.
+                        Row(
+                          children: [
+                            for (final (i, entry) in [
+                              [
+                                'kraken',
+                                l10n.lobbyExpKraken,
+                                l10n.lobbyExpKrakenDesc,
                               ],
-                            ),
-                          ),
+                              [
+                                'white_whale',
+                                l10n.lobbyExpWhiteWhale,
+                                l10n.lobbyExpWhiteWhaleDesc,
+                              ],
+                              [
+                                'loot',
+                                l10n.lobbyExpLoot,
+                                l10n.lobbyExpLootDesc,
+                              ],
+                            ].indexed) ...[
+                              if (i > 0) const SizedBox(width: 6),
+                              Expanded(
+                                child: Builder(
+                                  builder: (_) {
+                                    final selected = skExpansionsSelected
+                                        .contains(entry[0]);
+                                    return GestureDetector(
+                                      behavior: HitTestBehavior.opaque,
+                                      onTap: () => setState(() {
+                                        if (selected) {
+                                          skExpansionsSelected
+                                              .remove(entry[0]);
+                                        } else {
+                                          skExpansionsSelected.add(entry[0]);
+                                        }
+                                      }),
+                                      child: AnimatedContainer(
+                                        duration: const Duration(
+                                          milliseconds: 150,
+                                        ),
+                                        padding: const EdgeInsets.symmetric(
+                                          vertical: 8,
+                                          horizontal: 4,
+                                        ),
+                                        decoration: BoxDecoration(
+                                          // Solid brown, not the theme accent:
+                                          // the accent is a pale peach and a
+                                          // pale fill did not read as "on".
+                                          color: selected
+                                              ? const Color(0xFF6A5A52)
+                                              : Colors.white.withValues(
+                                                  alpha: 0.82,
+                                                ),
+                                          borderRadius:
+                                              BorderRadius.circular(12),
+                                          border: Border.all(
+                                            color: selected
+                                                ? const Color(0xFF6A5A52)
+                                                : const Color(0xFFE0D5D0),
+                                          ),
+                                        ),
+                                        child: Column(
+                                          children: [
+                                            Text(
+                                              entry[1],
+                                              maxLines: 1,
+                                              overflow: TextOverflow.ellipsis,
+                                              style: TextStyle(
+                                                fontSize: 12,
+                                                fontWeight: FontWeight.w800,
+                                                color: selected
+                                                    ? Colors.white
+                                                    : const Color(0xFF8A7A72),
+                                              ),
+                                            ),
+                                            const SizedBox(height: 2),
+                                            Text(
+                                              entry[2],
+                                              maxLines: 1,
+                                              overflow: TextOverflow.ellipsis,
+                                              style: TextStyle(
+                                                fontSize: 9,
+                                                color: selected
+                                                    ? Colors.white.withValues(
+                                                        alpha: 0.85,
+                                                      )
+                                                    : const Color(0xFFAAA09C),
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                      ),
+                                    );
+                                  },
+                                ),
+                              ),
+                            ],
+                          ],
+                        ),
                       ],
                       const SizedBox(height: 16),
                       // Name field with the dice on the same line. The random
@@ -1050,7 +1095,7 @@ class _LobbyScreenState extends State<LobbyScreen> {
                           ),
                           const SizedBox(width: 8),
                           Material(
-                            color: Colors.white.withValues(alpha: 0.82),
+                            color: Colors.white,
                             borderRadius: BorderRadius.circular(12),
                             child: InkWell(
                               borderRadius: BorderRadius.circular(12),
@@ -1061,12 +1106,20 @@ class _LobbyScreenState extends State<LobbyScreen> {
                                 );
                                 controller.text = randomName;
                               }),
-                              child: Padding(
-                                padding: const EdgeInsets.all(12),
-                                child: Icon(
-                                  Icons.casino_outlined,
+                              child: Container(
+                                padding: const EdgeInsets.all(11),
+                                decoration: BoxDecoration(
+                                  borderRadius: BorderRadius.circular(12),
+                                  border: Border.all(
+                                    color: const Color(0xFFD8CCC6),
+                                  ),
+                                ),
+                                // Dark, not the pale theme accent — it was
+                                // nearly invisible against the white square.
+                                child: const Icon(
+                                  Icons.casino,
                                   size: 20,
-                                  color: accent,
+                                  color: Color(0xFF6A5A52),
                                 ),
                               ),
                             ),

@@ -3933,30 +3933,67 @@ class _LobbyScreenState extends State<LobbyScreen> {
             // Level badge takes the previous host-pill spot. The host
             // indicator itself is now a 👑 emoji overhanging the top-left
             // corner (see Positioned below).
-            if (player != null && !isBot && player.level != null)
+            if (player != null && !isBot)
               Builder(builder: (_) {
-                // Paid profile photo takes the level-badge spot; the badge is
-                // the fallback so photo-less players look exactly as before.
-                //
-                // A photo gets a bigger circle than the badge it replaces: 28
-                // was sized for a level number, and a face at that size is
-                // barely readable. Sized off what will ACTUALLY be drawn, not
-                // just off having a URL — otherwise a viewer who hides this
-                // player's photo would get an outsized level badge, which both
-                // looks wrong and quietly tells them a photo is there.
+                // The level badge used to BE the avatar, so a player with a paid
+                // photo showed no level at all, and a photo-less one showed a
+                // brown disc with a number where a face goes. One 38dp avatar —
+                // photo, else a plain silhouette — with the level as a corner
+                // chip, the same shape the bot marker uses. The seat row is 56
+                // tall with no vertical padding.
                 final resolved = game.resolvePhotoUrl(player.photoUrl);
                 final hidden = game.blockedUsers.contains(player.name);
-                final showsPhoto = resolved != null && !hidden;
-                // The seat row is 56 tall with no vertical padding.
-                final avatarSize = showsPhoto ? 40.0 : 28.0;
+                const avatarSize = 38.0;
+                final avatar = ProfileAvatar(
+                  photoUrl: resolved,
+                  size: avatarSize,
+                  blocked: hidden,
+                  fallback: Container(
+                    width: avatarSize,
+                    height: avatarSize,
+                    decoration: const BoxDecoration(
+                      color: Color(0xFFF0E7E3),
+                      shape: BoxShape.circle,
+                    ),
+                    alignment: Alignment.center,
+                    child: const Icon(
+                      Icons.person,
+                      size: 23,
+                      color: Color(0xFF9C8B84),
+                    ),
+                  ),
+                );
                 return Padding(
                   padding: const EdgeInsets.only(right: 6),
-                  child: ProfileAvatar(
-                    photoUrl: resolved,
-                    size: avatarSize,
-                    blocked: hidden,
-                    fallback: LevelBadge(level: player.level, size: avatarSize),
-                  ),
+                  child: player.level == null
+                      ? avatar
+                      : SizedBox(
+                          width: avatarSize,
+                          height: avatarSize,
+                          child: Stack(
+                            clipBehavior: Clip.none,
+                            children: [
+                              avatar,
+                              Positioned(
+                                right: -3,
+                                bottom: -3,
+                                child: Container(
+                                  decoration: BoxDecoration(
+                                    shape: BoxShape.circle,
+                                    border: Border.all(
+                                      color: Colors.white,
+                                      width: 1.2,
+                                    ),
+                                  ),
+                                  child: LevelBadge(
+                                    level: player.level,
+                                    size: 14,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
                 );
               }),
             // Bots have no level and never had a photo, so this slot was empty
@@ -3970,16 +4007,19 @@ class _LobbyScreenState extends State<LobbyScreen> {
                 // sit beside the seat: avatar + chip together left the nickname
                 // no width at all, and it rendered as nothing — so you could
                 // not tell 봇 1 from 봇 2.
-                child: BotAvatar(size: 36, name: player.name, showBadge: true),
+                child: BotAvatar(
+                  size: 36,
+                  name: player.name,
+                  showBadge: true,
+                  speed: player.botSpeed,
+                ),
               ),
-            // Speed / strategy chip. Only when there is something to say —
-            // default-speed, default-strategy bots are the common case and the
-            // corner marker already covers "this is a bot".
+            // Strategy chip only. Speed used to have its own icon here; it is
+            // now the colour of the avatar's corner marker (slow green, normal
+            // blue, fast red), so the icon was saying the same thing twice.
             if (isBot)
               Builder(
                 builder: (_) {
-                  final showSpeed =
-                      player.botSpeed != null && player.botSpeed != 'normal';
                   final strategy = player.botStrategy;
                   final showStrategy =
                       strategy != null &&
@@ -3987,9 +4027,7 @@ class _LobbyScreenState extends State<LobbyScreen> {
                       strategy != BotStrategy.winrate &&
                       strategy != BotStrategy.mixOracle &&
                       strategy != BotStrategy.legacyMixExpectimax;
-                  if (!showSpeed && !showStrategy) {
-                    return const SizedBox.shrink();
-                  }
+                  if (!showStrategy) return const SizedBox.shrink();
                   return Container(
                     margin: const EdgeInsets.only(right: 6),
                     padding: const EdgeInsets.symmetric(
@@ -4000,31 +4038,13 @@ class _LobbyScreenState extends State<LobbyScreen> {
                       color: const Color(0xFFC5CAE9),
                       borderRadius: BorderRadius.circular(8),
                     ),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        if (showSpeed)
-                          Icon(
-                            player.botSpeed == 'fast'
-                                ? Icons.fast_forward
-                                : Icons.slow_motion_video,
-                            size: 10,
-                            color: player.botSpeed == 'fast'
-                                ? const Color(0xFFE65100)
-                                : const Color(0xFF558B2F),
-                          ),
-                        if (showSpeed && showStrategy)
-                          const SizedBox(width: 3),
-                        if (showStrategy)
-                          Text(
-                            _shortStrategyLabel(strategy),
-                            style: const TextStyle(
-                              fontSize: 9,
-                              fontWeight: FontWeight.bold,
-                              color: Color(0xFF6A1B9A),
-                            ),
-                          ),
-                      ],
+                    child: Text(
+                      _shortStrategyLabel(strategy),
+                      style: const TextStyle(
+                        fontSize: 9,
+                        fontWeight: FontWeight.bold,
+                        color: Color(0xFF6A1B9A),
+                      ),
                     ),
                   );
                 },

@@ -33,12 +33,18 @@ class BotAvatar extends StatelessWidget {
   /// host surface whose other avatars are rounded rects (the profile popup).
   final double? borderRadius;
 
+  /// Bot speed — 'slow' | 'normal' | 'fast'. Colours the corner marker, so how
+  /// fast a bot plays is readable from the seat itself instead of only from a
+  /// separate chip: slow green, normal blue, fast red.
+  final String? speed;
+
   const BotAvatar({
     super.key,
     required this.size,
     required this.name,
     this.showBadge = false,
     this.borderRadius,
+    this.speed,
   });
 
   static const _artCount = 6;
@@ -106,6 +112,11 @@ class BotAvatar extends StatelessWidget {
     if (!showBadge) return avatar;
 
     final badge = size * 0.42;
+    final badgeColor = switch (speed) {
+      'slow' => const Color(0xFF2E7D32),
+      'fast' => const Color(0xFFC62828),
+      _ => const Color(0xFF1565C0),
+    };
     return SizedBox(
       width: size,
       height: size,
@@ -119,7 +130,7 @@ class BotAvatar extends StatelessWidget {
               width: badge,
               height: badge,
               decoration: BoxDecoration(
-                color: const Color(0xFF3949AB),
+                color: badgeColor,
                 shape: BoxShape.circle,
                 border: Border.all(color: Colors.white, width: 1.5),
               ),

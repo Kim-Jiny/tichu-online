@@ -403,17 +403,22 @@ class _SpectatorScreenState extends State<SpectatorScreen> {
   /// Waiting-room seat avatar: photo, bot art, or the nickname's initial.
   ///
   /// A level badge filled this slot before, and at 34dp a brown disc with a
-  /// number in it reads as a score rather than as a person. The level still
-  /// shows, as a small corner chip, the way the bot marker does.
+  /// number in it reads as a score rather than as a person. Photo-less players
+  /// get a plain default-avatar silhouette; the level still shows, as a small
+  /// corner chip, the way the bot marker does.
   Widget _seatAvatar(GameService game, Player player) {
     const size = 34.0;
-    final initial = player.name.isEmpty ? '?' : player.name.characters.first;
     final avatar = ProfileAvatar(
       photoUrl: game.resolvePhotoUrl(player.photoUrl),
       size: size,
       blocked: game.blockedUsers.contains(player.name),
       fallback: player.isBot
-          ? BotAvatar(size: size, name: player.name)
+          ? BotAvatar(
+              size: size,
+              name: player.name,
+              showBadge: true,
+              speed: player.botSpeed,
+            )
           : Container(
               width: size,
               height: size,
@@ -422,13 +427,10 @@ class _SpectatorScreenState extends State<SpectatorScreen> {
                 shape: BoxShape.circle,
               ),
               alignment: Alignment.center,
-              child: Text(
-                initial,
-                style: const TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.w700,
-                  color: Color(0xFF6A5A52),
-                ),
+              child: const Icon(
+                Icons.person,
+                size: 21,
+                color: Color(0xFF9C8B84),
               ),
             ),
     );
@@ -446,9 +448,9 @@ class _SpectatorScreenState extends State<SpectatorScreen> {
             child: Container(
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
-                border: Border.all(color: Colors.white, width: 1.5),
+                border: Border.all(color: Colors.white, width: 1.2),
               ),
-              child: LevelBadge(level: player.level, size: 17),
+              child: LevelBadge(level: player.level, size: 14),
             ),
           ),
         ],
@@ -1308,7 +1310,11 @@ class _SpectatorScreenState extends State<SpectatorScreen> {
                 size: compact ? 24 : 28,
                 blocked: game.blockedUsers.contains(name),
                 fallback: isBot
-                    ? BotAvatar(size: compact ? 24 : 28, name: name)
+                    ? BotAvatar(
+                        size: compact ? 24 : 28,
+                        name: name,
+                        showBadge: true,
+                      )
                     : SizedBox(
                         width: compact ? 24 : 28,
                         height: compact ? 24 : 28,

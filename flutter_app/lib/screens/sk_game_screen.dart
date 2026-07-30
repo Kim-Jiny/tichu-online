@@ -1166,8 +1166,14 @@ class _SKGameScreenState extends State<SKGameScreen> {
     final isLandscape =
         MediaQuery.of(context).orientation == Orientation.landscape;
     const playedCardWidth = 72 * 0.7;
-    const seatWidth = 118.0;
-    const seatHeight = 92.0;
+    // 118 wide could not clear the 180-wide trick panel: at 4 opponents the two
+    // side seats sit at 172°/368°, i.e. at full X radius and at the panel's own
+    // height, and half-seat + half-panel exceeds half the board on a 360dp
+    // phone. Narrower box + the avatar moved onto its own row (where it no
+    // longer competes with the name for width) buys the clearance and a bigger
+    // avatar at the same time.
+    const seatWidth = 98.0;
+    const seatHeight = 100.0;
 
     return Padding(
       padding: const EdgeInsets.fromLTRB(8, 6, 8, 8),
@@ -1756,8 +1762,14 @@ class _SKGameScreenState extends State<SKGameScreen> {
     final isLandscape =
         MediaQuery.of(context).orientation == Orientation.landscape;
     const playedCardWidth = 72 * 0.7;
-    const seatWidth = 118.0;
-    const seatHeight = 92.0;
+    // 118 wide could not clear the 180-wide trick panel: at 4 opponents the two
+    // side seats sit at 172°/368°, i.e. at full X radius and at the panel's own
+    // height, and half-seat + half-panel exceeds half the board on a 360dp
+    // phone. Narrower box + the avatar moved onto its own row (where it no
+    // longer competes with the name for width) buys the clearance and a bigger
+    // avatar at the same time.
+    const seatWidth = 98.0;
+    const seatHeight = 100.0;
     final opponents = state.players
         .where((p) => p.position != 'self')
         .toList(growable: false);
@@ -2371,6 +2383,7 @@ class _SKGameScreenState extends State<SKGameScreen> {
           final bidHorizontalPadding = compact ? 4.0 : 6.0;
           final bidTopMargin = compact ? 1.0 : 2.0;
           final spacing = compact ? 1.0 : 2.0;
+          final avatarDiameter = isSelf ? 30.0 : (compact ? 24.0 : 28.0);
           final contentWidth = math.max(
             24.0,
             (constraints.maxWidth - horizontalPadding * 2) * 0.7,
@@ -2426,6 +2439,24 @@ class _SKGameScreenState extends State<SKGameScreen> {
                               )
                             : null,
                       ),
+                      // Own row rather than inline before the name: inline it
+                      // had to stay at 14-16px to leave the name any width at
+                      // all, which is too small to recognise a face.
+                      if (p.photoUrl != null || p.isBot)
+                        Padding(
+                          padding: EdgeInsets.only(bottom: spacing),
+                          child: ProfileAvatar(
+                            photoUrl: game.resolvePhotoUrl(p.photoUrl),
+                            size: avatarDiameter,
+                            blocked: game.blockedUsers.contains(p.name),
+                            fallback: p.isBot
+                                ? BotAvatar(size: avatarDiameter, name: p.name)
+                                : SizedBox(
+                                    width: avatarDiameter,
+                                    height: avatarDiameter,
+                                  ),
+                          ),
+                        ),
                       Row(
                         mainAxisAlignment: MainAxisAlignment.center,
                         mainAxisSize: MainAxisSize.min,
@@ -2447,25 +2478,6 @@ class _SKGameScreenState extends State<SKGameScreen> {
                                 Icons.wifi_off,
                                 size: offlineIconSize,
                                 color: const Color(0xFFE53935),
-                              ),
-                            ),
-                          if (p.photoUrl != null || p.isBot)
-                            Padding(
-                              padding:
-                                  EdgeInsets.only(right: compact ? 2 : 3),
-                              child: ProfileAvatar(
-                                photoUrl: game.resolvePhotoUrl(p.photoUrl),
-                                size: compact ? 14 : 16,
-                                blocked: game.blockedUsers.contains(p.name),
-                                fallback: p.isBot
-                                    ? BotAvatar(
-                                        size: compact ? 14 : 16,
-                                        name: p.name,
-                                      )
-                                    : SizedBox(
-                                        width: compact ? 14 : 16,
-                                        height: compact ? 14 : 16,
-                                      ),
                               ),
                             ),
                           Flexible(
@@ -3243,8 +3255,9 @@ class _SKGameScreenState extends State<SKGameScreen> {
     if (state.currentTrick.isEmpty) {
       return Center(
         child: Container(
-          width: 180,
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+          // Trimmed with the seat boxes so the side seats clear it.
+          width: 164,
+          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
           decoration: BoxDecoration(
             color: Colors.white.withValues(alpha: 0.5),
             borderRadius: BorderRadius.circular(16),

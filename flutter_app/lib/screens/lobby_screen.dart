@@ -661,46 +661,39 @@ class _LobbyScreenState extends State<LobbyScreen> {
             );
           }
 
+          // Title only. Each section also carried a sentence restating what the
+          // controls under it obviously do ("플레이할 게임을 선택합니다" over a game
+          // picker), which is most of the dialog's height and none of its
+          // information. The parameter stays so call sites don't all change.
           Widget sectionTitle(String title, String subtitle) {
-            return Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  title,
-                  style: const TextStyle(
-                    fontSize: 13,
-                    fontWeight: FontWeight.w700,
-                    color: Color(0xFF3E312A),
-                  ),
-                ),
-                const SizedBox(height: 2),
-                Text(
-                  subtitle,
-                  style: const TextStyle(
-                    fontSize: 11,
-                    color: Color(0xFF7E7069),
-                  ),
-                ),
-              ],
+            return Text(
+              title,
+              style: const TextStyle(
+                fontSize: 13,
+                fontWeight: FontWeight.w700,
+                color: Color(0xFF3E312A),
+              ),
             );
           }
 
           Widget optionCard({
             required String title,
-            required String description,
+            String? description,
             required bool value,
             required ValueChanged<bool> onChanged,
             bool enabled = true,
           }) {
-            return Container(
-              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-              decoration: BoxDecoration(
-                color: Colors.white.withValues(alpha: enabled ? 0.72 : 0.42),
-                borderRadius: BorderRadius.circular(14),
-                border: Border.all(
-                  color: value
-                      ? accent.withValues(alpha: 0.65)
-                      : const Color(0xFFE0D5D0),
+            // A row with a divider, not a card. Each option used to be its own
+            // bordered box whose border colour also encoded the value — a card
+            // per switch inside a card inside the dialog, saying with a border
+            // what the switch already says.
+            return Opacity(
+              opacity: enabled ? 1 : 0.5,
+              child: Container(
+              padding: const EdgeInsets.symmetric(vertical: 8),
+              decoration: const BoxDecoration(
+                border: Border(
+                  bottom: BorderSide(color: Color(0x22000000)),
                 ),
               ),
               child: Row(
@@ -719,16 +712,20 @@ class _LobbyScreenState extends State<LobbyScreen> {
                                 : const Color(0xFF9A8E8A),
                           ),
                         ),
-                        const SizedBox(height: 4),
-                        Text(
-                          description,
-                          style: TextStyle(
-                            fontSize: 11,
-                            color: enabled
-                                ? const Color(0xFF7E7069)
-                                : const Color(0xFFAAA09C),
+                        // Only where the switch has consequences you cannot
+                        // see (ranked pins the score and clears private).
+                        if (description != null) ...[
+                          const SizedBox(height: 4),
+                          Text(
+                            description,
+                            style: TextStyle(
+                              fontSize: 11,
+                              color: enabled
+                                  ? const Color(0xFF7E7069)
+                                  : const Color(0xFFAAA09C),
+                            ),
                           ),
-                        ),
+                        ],
                       ],
                     ),
                   ),
@@ -736,10 +733,25 @@ class _LobbyScreenState extends State<LobbyScreen> {
                   Switch(value: value, onChanged: enabled ? onChanged : null),
                 ],
               ),
+              ),
             );
           }
 
-          return AlertDialog(
+          // Keyboard-first dismissal: while the keyboard is up, a tap on the
+          // barrier (or the back button) closes the KEYBOARD, not the dialog —
+          // losing half-entered settings to a mis-tap is worse than needing a
+          // second tap to leave. Taps inside the dialog on non-interactive
+          // space also just drop focus.
+          final keyboardUp = MediaQuery.viewInsetsOf(context).bottom > 0;
+          return PopScope(
+            canPop: !keyboardUp,
+            onPopInvokedWithResult: (didPop, _) {
+              if (!didPop) FocusManager.instance.primaryFocus?.unfocus();
+            },
+            child: GestureDetector(
+              behavior: HitTestBehavior.translucent,
+              onTap: () => FocusManager.instance.primaryFocus?.unfocus(),
+              child: AlertDialog(
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(24),
             ),
@@ -748,69 +760,20 @@ class _LobbyScreenState extends State<LobbyScreen> {
             content: ConstrainedBox(
               constraints: const BoxConstraints(maxWidth: 440),
               child: SingleChildScrollView(
-                child: Container(
-                  padding: const EdgeInsets.all(10),
-                  decoration: BoxDecoration(
-                    gradient: LinearGradient(
-                      begin: Alignment.topLeft,
-                      end: Alignment.bottomRight,
-                      colors: [
-                        themeColors.first.withValues(alpha: 0.92),
-                        themeColors.last.withValues(alpha: 0.76),
-                      ],
-                    ),
-                    borderRadius: BorderRadius.circular(18),
-                  ),
+                // No inner panel: the dialog already has a background, and a
+                // gradient box inside it just drew a second edge around the
+                // same content.
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 2),
                   child: Column(
                     mainAxisSize: MainAxisSize.min,
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Row(
-                        children: [
-                          Container(
-                            width: 38,
-                            height: 38,
-                            decoration: BoxDecoration(
-                              color: Colors.white.withValues(alpha: 0.28),
-                              borderRadius: BorderRadius.circular(12),
-                            ),
-                            child: const Icon(
-                              Icons.add_home_work_rounded,
-                              color: Color(0xFF3E312A),
-                            ),
-                          ),
-                          const SizedBox(width: 12),
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  l10n.lobbyCreateRoom,
-                                  style: const TextStyle(
-                                    fontSize: 18,
-                                    fontWeight: FontWeight.w800,
-                                    color: Color(0xFF2F241F),
-                                  ),
-                                ),
-                                const SizedBox(height: 2),
-                                Text(
-                                  l10n.lobbyCreateRoomSubtitle,
-                                  style: const TextStyle(
-                                    fontSize: 12,
-                                    color: Color(0xFF695D57),
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 16),
-                      sectionTitle(
-                        l10n.lobbySelectGame,
-                        l10n.lobbySelectGameDesc,
-                      ),
-                      const SizedBox(height: 10),
+                      // No title: you arrive here by pressing "새 방 만들기", and
+                      // the confirm button at the bottom says it again. Same for
+                      // the section captions above a game picker and a name
+                      // field — they named what was already visible.
+                      const SizedBox(height: 4),
                       Builder(
                         builder: (ctx) {
                           String gameLabel;
@@ -1143,57 +1106,48 @@ class _LobbyScreenState extends State<LobbyScreen> {
                         ),
                       ],
                       const SizedBox(height: 16),
-                      sectionTitle(
-                        l10n.lobbyBasicInfo,
-                        l10n.lobbyBasicInfoDesc,
-                      ),
-                      const SizedBox(height: 10),
+                      // Name field with the dice on the same line. The random
+                      // button was a low-contrast text button floating above the
+                      // field, easy to miss entirely.
                       Row(
                         children: [
-                          Text(
-                            l10n.lobbyRoomName,
-                            style: const TextStyle(
-                              fontWeight: FontWeight.w700,
-                              fontSize: 12,
+                          Expanded(
+                            child: TextField(
+                              controller: controller,
+                              decoration: fieldDecoration(randomName),
                             ),
                           ),
-                          const Spacer(),
-                          TextButton.icon(
-                            onPressed: () => setState(() {
-                              randomName = _generateRandomRoomName(
-                                gameType: selectedGameType,
-                                l10n: l10n,
-                              );
-                              controller.text = randomName;
-                            }),
-                            style: TextButton.styleFrom(
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 8,
+                          const SizedBox(width: 8),
+                          Material(
+                            color: Colors.white.withValues(alpha: 0.82),
+                            borderRadius: BorderRadius.circular(12),
+                            child: InkWell(
+                              borderRadius: BorderRadius.circular(12),
+                              onTap: () => setState(() {
+                                randomName = _generateRandomRoomName(
+                                  gameType: selectedGameType,
+                                  l10n: l10n,
+                                );
+                                controller.text = randomName;
+                              }),
+                              child: Padding(
+                                padding: const EdgeInsets.all(12),
+                                child: Icon(
+                                  Icons.casino_outlined,
+                                  size: 20,
+                                  color: accent,
+                                ),
                               ),
-                              minimumSize: const Size(0, 28),
-                              tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                              foregroundColor: accent,
-                            ),
-                            icon: const Icon(Icons.casino_outlined, size: 16),
-                            label: Text(
-                              l10n.lobbyRandom,
-                              overflow: TextOverflow.ellipsis,
-                              maxLines: 1,
                             ),
                           ),
                         ],
                       ),
-                      const SizedBox(height: 6),
-                      TextField(
-                        controller: controller,
-                        decoration: fieldDecoration(randomName),
-                      ),
-                      const SizedBox(height: 12),
+                      const SizedBox(height: 8),
                       optionCard(
                         title: l10n.lobbyPrivateRoom,
                         description: isRanked
                             ? l10n.lobbyPrivateRoomDescRanked
-                            : l10n.lobbyPrivateRoomDesc,
+                            : null,
                         value: isPrivate,
                         enabled: !isRanked,
                         onChanged: (v) => setState(() => isPrivate = v),
@@ -1206,10 +1160,8 @@ class _LobbyScreenState extends State<LobbyScreen> {
                           decoration: fieldDecoration(l10n.lobbyPasswordHint),
                         ),
                       ],
-                      const SizedBox(height: 12),
                       optionCard(
                         title: l10n.lobbyAllowSpectators,
-                        description: l10n.lobbyAllowSpectatorsDesc,
                         value: allowSpectators,
                         onChanged: (v) =>
                             setState(() => allowSpectators = v),
@@ -1217,7 +1169,6 @@ class _LobbyScreenState extends State<LobbyScreen> {
                       if (selectedGameType != 'love_letter' &&
                           context.read<GameService>().authProvider !=
                               'local') ...[
-                        const SizedBox(height: 12),
                         optionCard(
                           title: l10n.lobbyRanked,
                           description: selectedGameType == 'skull_king'
@@ -1317,35 +1268,10 @@ class _LobbyScreenState extends State<LobbyScreen> {
                           ],
                         ],
                       ),
-                      const SizedBox(height: 10),
-                      Container(
-                        width: double.infinity,
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 12,
-                          vertical: 10,
-                        ),
-                        decoration: BoxDecoration(
-                          color: Colors.white.withValues(alpha: 0.55),
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        child: Text(
-                          isRanked
-                              ? (selectedGameType == 'skull_king'
-                                    ? l10n.lobbyRankedInfoSk
-                                    : selectedGameType == 'mighty'
-                                    ? l10n.lobbyRankedInfoMighty
-                                    : l10n.lobbyRankedFixedScoreInfo)
-                              : (selectedGameType == 'mighty'
-                                    ? l10n.lobbyNormalSettingsInfoMighty
-                                    : selectedGameType == 'tichu'
-                                    ? l10n.lobbyNormalSettingsInfo
-                                    : l10n.lobbyNormalSettingsInfoTimeOnly),
-                          style: const TextStyle(
-                            fontSize: 11,
-                            color: Color(0xFF6D615B),
-                          ),
-                        ),
-                      ),
+                      // The info box that sat here restated things already on
+                      // screen: the ranked rules are the ranked toggle's own
+                      // description, and the valid ranges are the fields'
+                      // placeholders (out-of-range input is clamped anyway).
                       if (errorText != null) ...[
                         const SizedBox(height: 12),
                         Container(
@@ -1450,6 +1376,8 @@ class _LobbyScreenState extends State<LobbyScreen> {
                 ),
               ),
             ],
+              ),
+            ),
           );
         },
       ),

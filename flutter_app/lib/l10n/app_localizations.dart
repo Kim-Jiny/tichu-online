@@ -7736,6 +7736,12 @@ abstract class L10n {
   /// In en, this message translates to:
   /// **'Bots are not accounts, so there are no stats, and friend, block and report don\'t apply.'**
   String get profileBotBody;
+
+  /// No description provided for @spectatorCardCount.
+  ///
+  /// In en, this message translates to:
+  /// **'{count} cards'**
+  String spectatorCardCount(int count);
 }
 
 class _L10nDelegate extends LocalizationsDelegate<L10n> {

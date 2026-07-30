@@ -4334,4 +4334,9 @@ class L10nEn extends L10n {
   @override
   String get profileBotBody =>
       'Bots are not accounts, so there are no stats, and friend, block and report don\'t apply.';
+
+  @override
+  String spectatorCardCount(int count) {
+    return '$count cards';
+  }
 }

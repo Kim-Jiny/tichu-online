@@ -1150,7 +1150,15 @@ class _SpectatorScreenState extends State<SpectatorScreen> {
             ? const Color(0xFFFBECEF)
             : Colors.white.withValues(alpha: 0.98);
 
-    return Container(
+    final isBot = player['isBot'] == true;
+    // Spectating a game had no way into a profile at all — so no way to block or
+    // report someone whose nickname or photo is the problem. The tap belongs to
+    // the card-view button inside, so the seat takes a long-press, and the name
+    // row below takes a tap of its own since nothing else wants it.
+    return GestureDetector(
+      onTap: () => _showPlayerProfileDialog(name, game, isBot: isBot),
+      onLongPress: () => _showPlayerProfileDialog(name, game, isBot: isBot),
+      child: Container(
       margin: EdgeInsets.all(compact ? 2 : 4),
       padding: EdgeInsets.all(compact ? 6 : 8),
       decoration: BoxDecoration(
@@ -1171,6 +1179,24 @@ class _SpectatorScreenState extends State<SpectatorScreen> {
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
+          // Own row rather than inline before the name. The side slots are only
+          // ~79dp wide, so an inline avatar had to stay at 16-20px to leave the
+          // nickname any room — too small to make out a face.
+          if (player['photoUrl'] != null || isBot)
+            Padding(
+              padding: EdgeInsets.only(bottom: compact ? 2 : 3),
+              child: ProfileAvatar(
+                photoUrl: game.resolvePhotoUrl(player['photoUrl'] as String?),
+                size: compact ? 24 : 28,
+                blocked: game.blockedUsers.contains(name),
+                fallback: isBot
+                    ? BotAvatar(size: compact ? 24 : 28, name: name)
+                    : SizedBox(
+                        width: compact ? 24 : 28,
+                        height: compact ? 24 : 28,
+                      ),
+              ),
+            ),
           // Player name and status
           Row(
             mainAxisSize: MainAxisSize.min,
@@ -1180,25 +1206,6 @@ class _SpectatorScreenState extends State<SpectatorScreen> {
                 const Padding(
                   padding: EdgeInsets.only(right: 4),
                   child: Icon(Icons.wifi_off, size: 12, color: Colors.red),
-                ),
-              // Spectating a game used to be the one place a paid profile photo
-              // never appeared: this view is separate from both the player's
-              // game screen and the spectator waiting room, and only those two
-              // had the avatar.
-              if (player['photoUrl'] != null || player['isBot'] == true)
-                Padding(
-                  padding: EdgeInsets.only(right: compact ? 3 : 4),
-                  child: ProfileAvatar(
-                    photoUrl: game.resolvePhotoUrl(player['photoUrl'] as String?),
-                    size: compact ? 16 : 20,
-                    blocked: game.blockedUsers.contains(name),
-                    fallback: player['isBot'] == true
-                        ? BotAvatar(size: compact ? 16 : 20, name: name)
-                        : SizedBox(
-                            width: compact ? 16 : 20,
-                            height: compact ? 16 : 20,
-                          ),
-                  ),
                 ),
               Flexible(
                 child: Text(
@@ -1211,46 +1218,49 @@ class _SpectatorScreenState extends State<SpectatorScreen> {
                   ),
                 ),
               ),
-              if (hasLargeTichu) ...[
-                const SizedBox(width: 4),
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFFE86A6A),
-                    borderRadius: BorderRadius.circular(4),
-                  ),
-                  child: const Text(
-                    'LT',
-                    style: TextStyle(color: Colors.white, fontSize: 8),
-                  ),
-                ),
-              ] else if (hasSmallTichu) ...[
-                const SizedBox(width: 4),
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFFF1A15F),
-                    borderRadius: BorderRadius.circular(4),
-                  ),
-                  child: const Text(
-                    'T',
-                    style: TextStyle(color: Colors.white, fontSize: 8),
-                  ),
-                ),
-              ],
-              if (hasFinished && finishPosition > 0) ...[
-                const SizedBox(width: 4),
-                Text(
-                  '#$finishPosition',
-                  style: const TextStyle(
-                    color: Color(0xFF6BBE7A),
-                    fontWeight: FontWeight.bold,
-                    fontSize: 10,
-                  ),
-                ),
-              ],
             ],
           ),
+          // Badges on their own line. Sharing the name's row meant every badge
+          // stole width from it — a finish rank (#1) was enough to ellipsize a
+          // perfectly short nickname in the ~79dp side slots.
+          if (hasLargeTichu || hasSmallTichu || (hasFinished && finishPosition > 0))
+            Padding(
+              padding: const EdgeInsets.only(top: 2),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  // "LT"/"T" at 8pt read as noise — a Tichu call is the most
+                  // consequential thing a spectator can notice about a hand.
+                  // Same wording and colours as the player screen's badge
+                  // ("라지"/"스몰", red/blue), just sized for the slot.
+                  if (hasLargeTichu)
+                    _tichuCallBadge(
+                      L10n.of(context).gameBadgeLarge,
+                      const Color(0xFFFF4444),
+                      const Color(0xFFCC0000),
+                    )
+                  else if (hasSmallTichu)
+                    _tichuCallBadge(
+                      L10n.of(context).gameBadgeSmall,
+                      const Color(0xFF2979FF),
+                      const Color(0xFF1565C0),
+                    ),
+                  if (hasFinished && finishPosition > 0) ...[
+                    if (hasLargeTichu || hasSmallTichu)
+                      const SizedBox(width: 4),
+                    Text(
+                      '#$finishPosition',
+                      style: const TextStyle(
+                        color: Color(0xFF6BBE7A),
+                        fontWeight: FontWeight.bold,
+                        fontSize: 10,
+                      ),
+                    ),
+                  ],
+                ],
+              ),
+            ),
           const SizedBox(height: 4),
           // Cards or request button
           if (hasFinished && cardCount == 0)
@@ -1278,6 +1288,26 @@ class _SpectatorScreenState extends State<SpectatorScreen> {
               compact: compact,
             ),
         ],
+      ),
+      ),
+    );
+  }
+
+  Widget _tichuCallBadge(String label, Color bg, Color border) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
+      decoration: BoxDecoration(
+        color: bg,
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: border, width: 1),
+      ),
+      child: Text(
+        label,
+        style: const TextStyle(
+          color: Colors.white,
+          fontSize: 10,
+          fontWeight: FontWeight.bold,
+        ),
       ),
     );
   }
@@ -1394,8 +1424,16 @@ class _SpectatorScreenState extends State<SpectatorScreen> {
               size: compact ? 16 : 20,
             ),
             SizedBox(height: compact ? 1 : 2),
+            // Side slots are ~79dp wide and the full label broke into three
+            // lines there ("패 보 기 요 청 (4 장)"). The eye icon above already
+            // says what the button does, so the count alone is enough.
             Text(
-              L10n.of(context).spectatorRequestCardView(cardCount),
+              vertical
+                  ? L10n.of(context).spectatorCardCount(cardCount)
+                  : L10n.of(context).spectatorRequestCardView(cardCount),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              softWrap: false,
               style: TextStyle(
                 color: const Color(0xFF4F88C8),
                 fontSize: compact ? 9 : 10,

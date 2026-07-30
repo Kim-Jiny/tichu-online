@@ -4231,4 +4231,9 @@ class L10nKo extends L10n {
 
   @override
   String get profileBotBody => '봇은 계정이 아니라서 전적이 없고, 친구 추가·차단·신고 대상이 아닙니다.';
+
+  @override
+  String spectatorCardCount(int count) {
+    return '$count장';
+  }
 }

@@ -4370,4 +4370,9 @@ class L10nDe extends L10n {
   @override
   String get profileBotBody =>
       'Bots sind keine Konten – daher gibt es keine Statistiken, und Freundschaft, Blockieren und Melden gelten nicht.';
+
+  @override
+  String spectatorCardCount(int count) {
+    return '$count Karten';
+  }
 }

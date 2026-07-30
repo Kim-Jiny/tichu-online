@@ -1390,5 +1390,6 @@
   "llCardPrincess": "Prinzessin",
   "profileBotSubtitle": "Bot",
   "profileBotHeadline": "KI-Gegner",
-  "profileBotBody": "Bots sind keine Konten – daher gibt es keine Statistiken, und Freundschaft, Blockieren und Melden gelten nicht."
+  "profileBotBody": "Bots sind keine Konten – daher gibt es keine Statistiken, und Freundschaft, Blockieren und Melden gelten nicht.",
+  "spectatorCardCount": "{count} Karten"
 }

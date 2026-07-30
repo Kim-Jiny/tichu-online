@@ -620,10 +620,14 @@ class _GameScreenState extends State<GameScreen> {
           ),
         // Trick-play log overlay (LL-style) — what was played in the
         // current trick. Clears between tricks. Sits below the timer.
+        //
+        // Kept to the left third: the partner's nameplate is centred at the same
+        // height, and a full-width log ran its longest lines ("봇 2: 5스트레이트(5장)
+        // - 콜A") straight underneath the avatar. Lines already ellipsize.
         Positioned(
           top: 82,
           left: 12,
-          right: 12,
+          width: MediaQuery.of(context).size.width * 0.38,
           child: IgnorePointer(child: _buildTrickLogOverlay(state)),
         ),
       ],
@@ -2207,6 +2211,8 @@ class _GameScreenState extends State<GameScreen> {
                   ? null
                   : game.resolvePhotoUrl(partner?.photoUrl),
               isBot: partner?.isBot ?? false,
+              avatarSize: 40,
+              avatarBeside: true,
             ),
           ),
           const SizedBox(height: 3),
@@ -2221,9 +2227,9 @@ class _GameScreenState extends State<GameScreen> {
           // Card backs
           _buildOverlappedHand(
             count: partner?.cardCount ?? 0,
-            cardWidth: 26 * _s,
-            cardHeight: 36 * _s,
-            overlap: 16 * _s,
+            cardWidth: 30 * _s,
+            cardHeight: 42 * _s,
+            overlap: 19 * _s,
             maxVisible: 14,
           ),
         ],
@@ -2241,7 +2247,7 @@ class _GameScreenState extends State<GameScreen> {
       children: [
         // Left player
         SizedBox(
-          width: 70 * _s,
+          width: 80 * _s,
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
@@ -2261,6 +2267,7 @@ class _GameScreenState extends State<GameScreen> {
                       ? null
                       : game.resolvePhotoUrl(left?.photoUrl),
                   isBot: left?.isBot ?? false,
+                  avatarSize: 34,
                 ),
               ),
               Text(
@@ -2270,9 +2277,9 @@ class _GameScreenState extends State<GameScreen> {
               const SizedBox(height: 4),
               _buildOverlappedHandVertical(
                 count: left?.cardCount ?? 0,
-                cardWidth: 22 * _s,
-                cardHeight: 30 * _s,
-                overlap: 22 * _s,
+                cardWidth: 26 * _s,
+                cardHeight: 36 * _s,
+                overlap: 25 * _s,
                 maxVisible: 14,
               ),
             ],
@@ -2286,7 +2293,7 @@ class _GameScreenState extends State<GameScreen> {
 
         // Right player
         SizedBox(
-          width: 70 * _s,
+          width: 80 * _s,
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
@@ -2306,6 +2313,7 @@ class _GameScreenState extends State<GameScreen> {
                       ? null
                       : game.resolvePhotoUrl(right?.photoUrl),
                   isBot: right?.isBot ?? false,
+                  avatarSize: 34,
                 ),
               ),
               Text(
@@ -2315,9 +2323,9 @@ class _GameScreenState extends State<GameScreen> {
               const SizedBox(height: 4),
               _buildOverlappedHandVertical(
                 count: right?.cardCount ?? 0,
-                cardWidth: 22 * _s,
-                cardHeight: 30 * _s,
-                overlap: 22 * _s,
+                cardWidth: 26 * _s,
+                cardHeight: 36 * _s,
+                overlap: 25 * _s,
                 maxVisible: 14,
               ),
             ],
@@ -2780,10 +2788,14 @@ class _GameScreenState extends State<GameScreen> {
   }
 
   Widget _buildOverlappedTrick(List<String> cards, {TrickPlay? lastPlay}) {
-    const double cardW = 36;
-    const double cardH = 50;
-    const double minOverlap = 20;
-    const double maxOverlap = 30;
+    // Scaled, not fixed: the trick is what the table is actually looking at and
+    // 36x50 read small, but a fixed bump would wrap a plain 4-card play onto two
+    // rows on the narrowest phones. Long combos still fit — the layout below
+    // tightens the overlap and falls back to two rows.
+    final double cardW = 44 * _s;
+    final double cardH = 61 * _s;
+    final double minOverlap = 22 * _s;
+    final double maxOverlap = 32 * _s;
 
     // Phoenix-as-single → overlay a chip on the card showing what rank
     // it beat (e.g. "↑Q"), so the table can read the play at a glance.
@@ -4011,26 +4023,33 @@ class _GameScreenState extends State<GameScreen> {
     bool isMyTeam = false,
     String? photoUrl,
     bool isBot = false,
+    double avatarSize = 26,
+    bool avatarBeside = false,
   }) {
     final maxLen = _maxNameLen;
     final displayName = name.length > maxLen ? '${name.substring(0, maxLen)}..' : name;
     final s = _s;
-    return Column(
+    // Only built when there is something to show, so photo-less, non-bot
+    // players keep the exact original nameplate layout.
+    final avatar = (photoUrl != null || isBot)
+        ? ProfileAvatar(
+            photoUrl: photoUrl,
+            size: avatarSize * s,
+            fallback: isBot
+                ? BotAvatar(size: avatarSize * s, name: name)
+                : SizedBox(width: avatarSize * s, height: avatarSize * s),
+          )
+        : null;
+    final plate = Column(
       mainAxisSize: MainAxisSize.min,
       children: [
-        // Paid avatar sits above the name pill; only added when present so
-        // photo-less players keep the exact original nameplate layout.
-        if (photoUrl != null || isBot)
-          Padding(
-            padding: EdgeInsets.only(bottom: 3 * s),
-            child: ProfileAvatar(
-              photoUrl: photoUrl,
-              size: 26 * s,
-              fallback: isBot
-                  ? BotAvatar(size: 26 * s, name: name)
-                  : SizedBox(width: 26 * s, height: 26 * s),
-            ),
-          ),
+        // The avatar goes above the pill by default. `avatarBeside` puts it to
+        // the left instead: the partner seat sits at the top of the board where
+        // vertical space is what everything else is competing for, and width is
+        // free — so there it can be half again as big without costing the board
+        // a single pixel.
+        if (avatar != null && !avatarBeside)
+          Padding(padding: EdgeInsets.only(bottom: 3 * s), child: avatar),
         if (badge != null)
           Padding(
             padding: const EdgeInsets.only(bottom: 2),
@@ -4143,6 +4162,16 @@ class _GameScreenState extends State<GameScreen> {
             ),
           ),
         ),
+      ],
+    );
+    if (avatar == null || !avatarBeside) return plate;
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.center,
+      children: [
+        avatar,
+        SizedBox(width: 6 * s),
+        plate,
       ],
     );
   }

@@ -4252,17 +4252,12 @@ function handleCheckRoom(ws) {
   sendTo(ws, { type: 'room_state', room: personalizeRoomState(room.getState(), ws) });
   // S27: Also send game state if game is active
   if (room.game) {
-    const spectatorList = room.spectators.map((s) => ({ id: s.id, nickname: s.nickname }));
     if (ws.isSpectator) {
       const state = room.game.getStateForSpectator(room.getPermittedPlayers(ws.playerId));
       sendTo(ws, { type: 'spectator_game_state', state: decorateSpectatorState(room, ws, state) });
     } else {
       const state = room.game.getStateForPlayer(ws.playerId);
-      state.turnDeadline = room.turnDeadline;
-      state.cardViewers = room.getViewersForPlayer(ws.playerId);
-      state.spectators = spectatorList;
-      state.spectatorCount = room.spectators.length;
-      sendTo(ws, { type: 'game_state', state });
+      sendTo(ws, { type: 'game_state', state: decoratePlayerState(room, ws, state) });
     }
     sendTo(ws, {
       type: 'restore_complete',
@@ -4365,9 +4360,7 @@ function handleRequestCardView(ws, data) {
         // Killed-mighty player still receives the normal player state; refresh
         // just them so the newly granted cards appear on the scoreboard.
         const state = room.game.getStateForPlayer(ws.playerId, permittedPlayers);
-        state.spectators = room.spectators.map((s) => ({ id: s.id, nickname: s.nickname }));
-        state.spectatorCount = room.spectators.length;
-        sendTo(ws, { type: 'game_state', state });
+        sendTo(ws, { type: 'game_state', state: decoratePlayerState(room, ws, state) });
       } else {
         const state = room.game.getStateForSpectator(permittedPlayers);
         sendTo(ws, { type: 'spectator_game_state', state: decorateSpectatorState(room, ws, state) });
@@ -4403,9 +4396,7 @@ function handleRequestCardView(ws, data) {
       const permittedPlayers = room.getPermittedPlayers(ws.playerId);
       if (isKilledMighty) {
         const state = room.game.getStateForPlayer(ws.playerId, permittedPlayers);
-        state.spectators = room.spectators.map((s) => ({ id: s.id, nickname: s.nickname }));
-        state.spectatorCount = room.spectators.length;
-        sendTo(ws, { type: 'game_state', state });
+        sendTo(ws, { type: 'game_state', state: decoratePlayerState(room, ws, state) });
       } else {
         const state = room.game.getStateForSpectator(permittedPlayers);
         sendTo(ws, { type: 'spectator_game_state', state: decorateSpectatorState(room, ws, state) });
@@ -4496,9 +4487,7 @@ function handleRespondCardView(ws, data) {
         && room.game.excludedPlayers && room.game.excludedPlayers.has(spectatorId);
       if (isKilledRequester) {
         const state = room.game.getStateForPlayer(spectatorId, permittedPlayers);
-        state.spectators = room.spectators.map((s) => ({ id: s.id, nickname: s.nickname }));
-        state.spectatorCount = room.spectators.length;
-        sendTo(spectatorWs, { type: 'game_state', state });
+        sendTo(spectatorWs, { type: 'game_state', state: decoratePlayerState(room, spectatorWs, state) });
       } else {
         const state = room.game.getStateForSpectator(permittedPlayers);
         sendTo(spectatorWs, { type: 'spectator_game_state', state: decorateSpectatorState(room, spectatorWs, state) });
@@ -4509,11 +4498,7 @@ function handleRespondCardView(ws, data) {
   // Send updated game state to the approving player so cardViewers refreshes immediately
   if (allow && room.game) {
     const playerState = room.game.getStateForPlayer(ws.playerId);
-    playerState.turnDeadline = room.turnDeadline;
-    playerState.cardViewers = room.getViewersForPlayer(ws.playerId);
-    playerState.spectators = room.spectators.map((s) => ({ id: s.id, nickname: s.nickname }));
-    playerState.spectatorCount = room.spectators.length;
-    sendTo(ws, { type: 'game_state', state: playerState });
+    sendTo(ws, { type: 'game_state', state: decoratePlayerState(room, ws, playerState) });
   }
 }
 
@@ -5414,28 +5399,10 @@ function _broadcastState(roomId, room) {
     room.pruneCardViewPermissions();
   }
 
-  // Build connection status map (skip null slots)
-  const connectionStatus = {};
-  // Avatar URLs by player id. The game state (getStateForPlayer) only knows
-  // ids/names, so we splice in each player's active profile photo from the room
-  // during the decoration pass below — this is what puts avatars on in-play
-  // nameplates across all game types without touching the game classes.
-  const photoByPid = {};
-  // Which seats are bots. Same reasoning: the engines never knew, so the game
-  // screens couldn't tell a bot from a human and had to fall back to reading
-  // the nickname.
-  const isBotById = {};
-  for (const player of room.players) {
-    if (player === null) continue;
-    connectionStatus[player.id] = player.connected !== false;
-    if (player.photoUrl) photoByPid[player.id] = player.photoUrl;
-    if (player.isBot) isBotById[player.id] = true;
-  }
-
-  const spectatorList = room.spectators.map((s) => ({ id: s.id, nickname: s.nickname }));
-
-  // Build timeout count map by player name
-  const roomTimeouts = timeoutCounts[roomId] || {};
+  // Connection / timeout / photo / bot facts, gathered once and reused for
+  // every recipient below. The per-viewer part (photo filtering) still happens
+  // per socket inside the decorators.
+  const seats = roomSeatInfo(room);
 
   const isMighty = room.gameType === 'mighty';
   const gameStateCache = typeof room.game.buildStateBroadcastCache === 'function'
@@ -5464,17 +5431,7 @@ function _broadcastState(roomId, room) {
         console.log(`[DIAG] state-build ${__stateMs.toFixed(0)}ms room=${roomId} type=${room.gameType} phase=${room.game.state} recipient=${player.id} cards=${room.game.hands?.[player.id]?.length ?? '-'}`);
       }
       const __db = __diagOn ? process.hrtime.bigint() : 0n;
-      state.players = state.players.map(p => ({
-        ...p,
-        connected: connectionStatus[p.id] !== false,
-        timeoutCount: roomTimeouts[p.name] || 0,
-        photoUrl: visiblePhoto(ws, p.name, photoByPid[p.id]),
-        isBot: !!isBotById[p.id],
-      }));
-      state.turnDeadline = room.turnDeadline;
-      state.cardViewers = room.getViewersForPlayer(player.id);
-      state.spectators = spectatorList;
-      state.spectatorCount = spectatorList.length;
+      decoratePlayerState(room, ws, state, seats);
       if (__diagOn) {
         const __decorMs = Number(process.hrtime.bigint() - __db) / 1e6;
         __tDecor += __decorMs;
@@ -5500,7 +5457,7 @@ function _broadcastState(roomId, room) {
         console.log(`[DIAG] state-build ${__stateMs.toFixed(0)}ms room=${roomId} type=${room.gameType} phase=${room.game.state} recipient=${spectatorId} spectator=1`);
       }
       const __db = __diagOn ? process.hrtime.bigint() : 0n;
-      decorateSpectatorState(room, ws, spectatorState);
+      decorateSpectatorState(room, ws, spectatorState, seats);
       if (__diagOn) {
         const __decorMs = Number(process.hrtime.bigint() - __db) / 1e6;
         __tDecor += __decorMs;
@@ -6618,16 +6575,12 @@ function visiblePhoto(ws, nickname, url) {
   return ws?.hiddenPhotos?.has(nickname) ? null : url;
 }
 
-// Everything a spectator payload needs on top of the raw engine state: who is
-// connected, timeout counts, and each player's profile photo filtered for this
-// viewer. getStateForSpectator knows none of it — it only has ids and names.
-//
-// One implementation because there are seven places that send this message
-// (card-view request/respond/revoke, reconnect, check-room, spectate-join, and
-// the periodic broadcast) and six of them had grown their own version with the
-// decoration missing. The visible result: a spectator's profile photos vanished
-// the moment they asked to see someone's cards.
-function decorateSpectatorState(room, ws, state) {
+// The seat facts the game engines do not have. getStateForPlayer /
+// getStateForSpectator only know ids and names; who is connected, whose turn
+// timeouts are stacking up, which seats are bots, and each player's active
+// profile photo all live on the room. Gathered once so a broadcast can reuse it
+// for every recipient.
+function roomSeatInfo(room) {
   const connected = {};
   const photoByPid = {};
   const isBotById = {};
@@ -6637,21 +6590,56 @@ function decorateSpectatorState(room, ws, state) {
     if (p.photoUrl) photoByPid[p.id] = p.photoUrl;
     if (p.isBot) isBotById[p.id] = true;
   }
-  const roomTimeouts = timeoutCounts[room.id] || {};
-  const spectatorList = room.spectators.map((sp) => ({ id: sp.id, nickname: sp.nickname }));
+  return {
+    connected,
+    photoByPid,
+    isBotById,
+    timeouts: timeoutCounts[room.id] || {},
+    spectators: room.spectators.map((sp) => ({ id: sp.id, nickname: sp.nickname })),
+  };
+}
+
+// The part of the decoration that is identical for players and spectators.
+// Photo filtering is per-viewer (blocked/reported users lose their avatar for
+// that viewer only), so this runs once per socket, not once per broadcast.
+function decorateSeats(ws, state, seats) {
   state.players = (state.players || []).map((p) => ({
     ...p,
-    connected: connected[p.id] !== false,
-    timeoutCount: roomTimeouts[p.name] || 0,
-    photoUrl: visiblePhoto(ws, p.name, photoByPid[p.id]),
-    // The engines don't track which seats are bots — the room does. Spliced in
-    // here for the same reason photoUrl is: the game screens need it (to draw a
-    // bot avatar instead of a blank) and only this layer knows it.
-    isBot: !!isBotById[p.id],
+    connected: seats.connected[p.id] !== false,
+    timeoutCount: seats.timeouts[p.name] || 0,
+    photoUrl: visiblePhoto(ws, p.name, seats.photoByPid[p.id]),
+    isBot: !!seats.isBotById[p.id],
   }));
+  state.spectators = seats.spectators;
+  state.spectatorCount = seats.spectators.length;
+  return state;
+}
+
+// Everything a player's game_state needs on top of the raw engine state.
+//
+// One implementation because six places send this message (reconnect /
+// check-room, the two always-allow card-view shortcuts, card-view respond and
+// revoke, and the periodic broadcast) and five of them had grown their own
+// subset of the list. The visible result: approving a card-view request wiped
+// every avatar off the approver's own board, because that path rebuilt the
+// state and spliced back only turnDeadline and cardViewers.
+function decoratePlayerState(room, ws, state, seats) {
+  decorateSeats(ws, state, seats || roomSeatInfo(room));
   state.turnDeadline = room.turnDeadline;
-  state.spectators = spectatorList;
-  state.spectatorCount = spectatorList.length;
+  state.cardViewers = room.getViewersForPlayer(ws.playerId);
+  return state;
+}
+
+// Same for a spectator payload. Spectators have no cards of their own, so there
+// is no cardViewers list to attach.
+//
+// Seven places send this one (card-view request/respond/revoke, reconnect,
+// check-room, spectate-join, and the broadcast) and six of them had the same
+// decoration missing — a spectator's profile photos vanished the moment they
+// asked to see someone's cards.
+function decorateSpectatorState(room, ws, state, seats) {
+  decorateSeats(ws, state, seats || roomSeatInfo(room));
+  state.turnDeadline = room.turnDeadline;
   return state;
 }
 

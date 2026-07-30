@@ -410,7 +410,11 @@ class _SpectatorScreenState extends State<SpectatorScreen> {
       // Fixed height equalizes empty / filled-no-title / filled-with-title
       // states. Without this the title row added ~18px so empty slots
       // looked shorter than seated ones.
-      height: 100,
+      //
+      // 108, not 100: the avatar here went from a 28dp icon to a 34dp avatar, and
+      // a player who also has a title chip would have overflowed the old height
+      // by a couple of pixels.
+      height: 108,
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 14),
       decoration: BoxDecoration(
         color: isEmpty ? const Color(0xFFF7F2F0) : Colors.white,
@@ -428,13 +432,31 @@ class _SpectatorScreenState extends State<SpectatorScreen> {
         mainAxisSize: MainAxisSize.min,
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Icon(
-            isEmpty ? Icons.person_add : Icons.person,
-            color: isEmpty
-                ? const Color(0xFF9AA7B0)
-                : const Color(0xFF6A5A52),
-            size: 28,
-          ),
+          // The seated case drew a generic silhouette here and then repeated
+          // the player's real avatar at 18dp beside the name — a photo owner saw
+          // an anonymous icon above their own face. One avatar, in the slot the
+          // silhouette had.
+          if (isEmpty)
+            const Icon(
+              Icons.person_add,
+              color: Color(0xFF9AA7B0),
+              size: 28,
+            )
+          else
+            ProfileAvatar(
+              photoUrl: game.resolvePhotoUrl(player.photoUrl),
+              size: 34,
+              blocked: game.blockedUsers.contains(player.name),
+              fallback: player.isBot
+                  ? BotAvatar(size: 34, name: player.name)
+                  : player.level != null
+                      ? LevelBadge(level: player.level, size: 34)
+                      : const Icon(
+                          Icons.person,
+                          color: Color(0xFF6A5A52),
+                          size: 28,
+                        ),
+            ),
           const SizedBox(height: 6),
           if (!isEmpty && player.titleName != null) ...[
             TitleChip(
@@ -460,21 +482,6 @@ class _SpectatorScreenState extends State<SpectatorScreen> {
               mainAxisSize: MainAxisSize.min,
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                if (player.photoUrl != null ||
-                    player.level != null ||
-                    player.isBot) ...[
-                  ProfileAvatar(
-                    photoUrl: game.resolvePhotoUrl(player.photoUrl),
-                    size: 18,
-                    blocked: game.blockedUsers.contains(player.name),
-                    fallback: player.isBot
-                        ? BotAvatar(size: 18, name: player.name)
-                        : player.level != null
-                            ? LevelBadge(level: player.level, size: 18)
-                            : const SizedBox(width: 18, height: 18),
-                  ),
-                  const SizedBox(width: 4),
-                ],
                 Flexible(
                   child: Text(
                     name,

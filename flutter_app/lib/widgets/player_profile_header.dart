@@ -87,8 +87,12 @@ class PlayerProfileHeader extends StatelessWidget {
     final inner = profile?['profile'] as Map?;
     // Our own photo comes from the live value rather than the fetched profile:
     // right after an upload the profile payload is still the old one.
-    final rawPhoto =
-        _isMe ? game.myPhotoUrl : inner?['photoUrl'] as String?;
+    // Falls back to the fetched profile when the live value is missing: the
+    // live one exists so a fresh upload shows immediately, not as the only
+    // source.
+    final rawPhoto = _isMe
+        ? (game.myPhotoUrl ?? inner?['photoUrl'] as String?)
+        : inner?['photoUrl'] as String?;
     final resolved = game.resolvePhotoUrl(rawPhoto);
     final isBlockedUser = game.isBlocked(nickname);
     final editable = _canEditPhoto(inner);

@@ -3528,6 +3528,12 @@ async function handleReconnection(ws) {
           playerId: ws.playerId,
           nickname: ws.nickname,
           bindingToken,
+          // The client keeps its own copy of this so a fresh upload shows before
+          // the profile payload catches up, and seeds it from here — except this
+          // field was never sent, so a player who already had a photo saw the
+          // default avatar in their own profile popup while every other screen
+          // showed the photo.
+          photoUrl: ws.photoUrl || null,
           themeKey,
           titleKey,
           hasTopCardCounter,
@@ -3565,6 +3571,7 @@ async function handleReconnection(ws) {
           playerId: ws.playerId,
           nickname: ws.nickname,
           bindingToken,
+          photoUrl: ws.photoUrl || null,
           themeKey,
           titleKey,
           hasTopCardCounter,
@@ -3619,6 +3626,7 @@ async function handleReconnection(ws) {
           playerId: ws.playerId,
           nickname: ws.nickname,
           bindingToken,
+          photoUrl: ws.photoUrl || null,
           themeKey,
           titleKey,
           hasTopCardCounter,
@@ -3656,6 +3664,7 @@ async function handleReconnection(ws) {
           playerId: ws.playerId,
           nickname: ws.nickname,
           bindingToken,
+          photoUrl: ws.photoUrl || null,
           themeKey,
           titleKey,
           hasTopCardCounter,
@@ -3715,6 +3724,7 @@ async function handleReconnection(ws) {
             playerId: ws.playerId,
             nickname: ws.nickname,
             bindingToken,
+            photoUrl: ws.photoUrl || null,
             themeKey,
             titleKey,
             hasTopCardCounter,
@@ -3774,6 +3784,7 @@ async function handleReconnection(ws) {
           playerId: ws.playerId,
           nickname: ws.nickname,
           bindingToken,
+          photoUrl: ws.photoUrl || null,
           themeKey,
           titleKey,
           hasTopCardCounter,

@@ -11,6 +11,7 @@ import '../widgets/level_badge.dart';
 import '../widgets/profile_avatar.dart';
 import '../widgets/bot_avatar.dart';
 import '../widgets/chat_bubble.dart';
+import '../widgets/player_profile_body.dart';
 import '../widgets/player_profile_header.dart';
 import '../widgets/draggable_chat_panel.dart';
 import '../widgets/spectator_controls.dart';
@@ -4572,7 +4573,6 @@ class _SKGameScreenState extends State<SKGameScreen> {
     showDialog(
       context: context,
       builder: (ctx) {
-        String selectedGame = 'skull_king';
         return StatefulBuilder(
           builder: (ctx, setDialogState) => Consumer<GameService>(
             builder: (ctx, game, _) {
@@ -4610,6 +4610,10 @@ class _SKGameScreenState extends State<SKGameScreen> {
                         profile: profile,
                         game: game,
                         subtitle: L10n.of(context).skGamePlayerProfile,
+                        subtitleBuilder: (inner) => profileLevelStrip(
+                          (inner?['level'] as int?) ?? 1,
+                          (inner?['expTotal'] as int?) ?? 0,
+                        ),
                         isBot: isBot,
                         onCloseDialog: () => Navigator.pop(ctx),
                       ),
@@ -4630,11 +4634,10 @@ class _SKGameScreenState extends State<SKGameScreen> {
                           maxHeight: 400,
                         ),
                         child: SingleChildScrollView(
-                          child: _buildProfileContent(
-                            profile,
-                            selectedGame: selectedGame,
-                            onGameChanged: (g) =>
-                                setDialogState(() => selectedGame = g),
+                          child: PlayerProfileBody(
+                            data: profile,
+                            game: game,
+                            initialGame: 'skull_king',
                           ),
                         ),
                       ),
@@ -4649,295 +4652,6 @@ class _SKGameScreenState extends State<SKGameScreen> {
           ),
         );
       },
-    );
-  }
-
-  Widget _buildProfileContent(
-    Map<String, dynamic> data, {
-    required String selectedGame,
-    required ValueChanged<String> onGameChanged,
-  }) {
-    final profile = data['profile'] as Map<String, dynamic>?;
-    if (profile == null) {
-      return Text(
-        L10n.of(context).skGameProfileNotFound,
-        style: const TextStyle(color: Color(0xFF8A7A72)),
-      );
-    }
-
-    final l10n = L10n.of(context);
-    final totalGames = profile['totalGames'] ?? 0;
-    final wins = profile['wins'] ?? 0;
-    final losses = profile['losses'] ?? 0;
-    final winRate = profile['winRate'] ?? 0;
-    final level = profile['level'] ?? 1;
-
-    // Game selector config
-    String gameLabel;
-    String gameEmoji;
-    Color gameBgColor;
-    Color gameFgColor;
-    switch (selectedGame) {
-      case 'skull_king':
-        gameLabel = l10n.lobbySkullKing;
-        gameEmoji = '⚓';
-        gameBgColor = const Color(0xFF2D2D3D);
-        gameFgColor = const Color(0xFFFFD54F);
-        break;
-      case 'love_letter':
-        gameLabel = l10n.lobbyLoveLetter;
-        gameEmoji = '❤️';
-        gameBgColor = const Color(0xFFE91E63);
-        gameFgColor = Colors.white;
-        break;
-      default:
-        gameLabel = l10n.lobbyTichu;
-        gameEmoji = '🃏';
-        gameBgColor = const Color(0xFF7E57C2);
-        gameFgColor = Colors.white;
-    }
-
-    return Column(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        // Level
-        Container(
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-          decoration: BoxDecoration(
-            color: Colors.white.withValues(alpha: 0.95),
-            borderRadius: BorderRadius.circular(12),
-            border: Border.all(color: const Color(0xFFE0D8D4)),
-          ),
-          child: Row(
-            children: [
-              Text(
-                'Lv.$level',
-                style: const TextStyle(
-                  fontSize: 14,
-                  fontWeight: FontWeight.bold,
-                  color: Color(0xFF5A4038),
-                ),
-              ),
-            ],
-          ),
-        ),
-        const SizedBox(height: 10),
-        // Game selector button
-        InkWell(
-          onTap: () {
-            showModalBottomSheet(
-              context: context,
-              shape: const RoundedRectangleBorder(
-                borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
-              ),
-              builder: (bCtx) => SafeArea(
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    const SizedBox(height: 8),
-                    Container(
-                      width: 36,
-                      height: 4,
-                      decoration: BoxDecoration(
-                        color: Colors.grey[300],
-                        borderRadius: BorderRadius.circular(2),
-                      ),
-                    ),
-                    const SizedBox(height: 12),
-                    ListTile(
-                      leading: const Text('🃏', style: TextStyle(fontSize: 20)),
-                      title: Text(l10n.lobbyTichu),
-                      trailing: selectedGame == 'tichu'
-                          ? const Icon(Icons.check, color: Color(0xFF7E57C2))
-                          : null,
-                      onTap: () {
-                        Navigator.pop(bCtx);
-                        onGameChanged('tichu');
-                      },
-                    ),
-                    ListTile(
-                      leading: const Text('⚓', style: TextStyle(fontSize: 20)),
-                      title: Text(l10n.lobbySkullKing),
-                      trailing: selectedGame == 'skull_king'
-                          ? const Icon(Icons.check, color: Color(0xFF2D2D3D))
-                          : null,
-                      onTap: () {
-                        Navigator.pop(bCtx);
-                        onGameChanged('skull_king');
-                      },
-                    ),
-                    ListTile(
-                      leading: const Text('❤️', style: TextStyle(fontSize: 20)),
-                      title: Text(l10n.lobbyLoveLetter),
-                      trailing: selectedGame == 'love_letter'
-                          ? const Icon(Icons.check, color: Color(0xFFE91E63))
-                          : null,
-                      onTap: () {
-                        Navigator.pop(bCtx);
-                        onGameChanged('love_letter');
-                      },
-                    ),
-                    const SizedBox(height: 8),
-                  ],
-                ),
-              ),
-            );
-          },
-          borderRadius: BorderRadius.circular(12),
-          child: Container(
-            width: double.infinity,
-            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-            decoration: BoxDecoration(
-              color: gameBgColor,
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: Row(
-              children: [
-                Text(gameEmoji, style: const TextStyle(fontSize: 18)),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: Text(
-                    gameLabel,
-                    style: TextStyle(
-                      fontSize: 14,
-                      fontWeight: FontWeight.bold,
-                      color: gameFgColor,
-                    ),
-                  ),
-                ),
-                Icon(Icons.arrow_drop_down, color: gameFgColor),
-              ],
-            ),
-          ),
-        ),
-        const SizedBox(height: 10),
-        if (selectedGame == 'tichu')
-          _buildStatsCard(
-            title: l10n.skGameTichuRecord,
-            icon: Icons.style,
-            iconColor: const Color(0xFFFFB74D),
-            bgColor: const Color(0xFFF5F5F5),
-            games: totalGames,
-            wins: wins,
-            losses: losses,
-            winRate: winRate,
-          )
-        else if (selectedGame == 'skull_king')
-          Builder(
-            builder: (_) {
-              final skGames = profile['skTotalGames'] ?? 0;
-              final skWins = profile['skWins'] ?? 0;
-              final skLosses = profile['skLosses'] ?? 0;
-              final skWinRate = profile['skWinRate'] ?? 0;
-              return _buildStatsCard(
-                title: l10n.skGameSkullKingRecord,
-                icon: Icons.anchor,
-                iconColor: const Color(0xFF3949AB),
-                bgColor: const Color(0xFFE8EAF6),
-                games: skGames,
-                wins: skWins,
-                losses: skLosses,
-                winRate: skWinRate,
-              );
-            },
-          )
-        else
-          Builder(
-            builder: (_) {
-              final llGames = profile['llTotalGames'] ?? 0;
-              final llWins = profile['llWins'] ?? 0;
-              final llLosses = profile['llLosses'] ?? 0;
-              final llWinRate = profile['llWinRate'] ?? 0;
-              return _buildStatsCard(
-                title: l10n.skGameLoveLetterRecord,
-                icon: Icons.favorite,
-                iconColor: const Color(0xFFE91E63),
-                bgColor: const Color(0xFFFCE4EC),
-                games: llGames,
-                wins: llWins,
-                losses: llLosses,
-                winRate: llWinRate,
-              );
-            },
-          ),
-      ],
-    );
-  }
-
-  Widget _buildStatsCard({
-    required String title,
-    required IconData icon,
-    required Color iconColor,
-    required Color bgColor,
-    required int games,
-    required int wins,
-    required int losses,
-    required int winRate,
-  }) {
-    return Container(
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: bgColor,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: bgColor.withValues(alpha: 0.6)),
-      ),
-      child: Column(
-        children: [
-          Row(
-            children: [
-              Icon(icon, color: iconColor, size: 16),
-              const SizedBox(width: 6),
-              Text(
-                title,
-                style: const TextStyle(
-                  fontSize: 13,
-                  fontWeight: FontWeight.bold,
-                  color: Color(0xFF5A4038),
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 8),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-            children: [
-              _buildStatChip(
-                L10n.of(context).skGameStatRecord,
-                L10n.of(context).skGameRecordFormat(games, wins, losses),
-              ),
-              _buildStatChip(L10n.of(context).skGameStatWinRate, '$winRate%'),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildStatChip(String label, String value) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(10),
-        border: Border.all(color: const Color(0xFFE0D8D4)),
-      ),
-      child: Column(
-        children: [
-          Text(
-            label,
-            style: const TextStyle(fontSize: 10, color: Color(0xFF8A7A72)),
-          ),
-          const SizedBox(height: 2),
-          Text(
-            value,
-            style: const TextStyle(
-              fontSize: 12,
-              fontWeight: FontWeight.bold,
-              color: Color(0xFF5A4038),
-            ),
-          ),
-        ],
-      ),
     );
   }
 

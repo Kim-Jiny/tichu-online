@@ -8,6 +8,7 @@ import '../l10n/app_localizations.dart';
 import '../screens/photo_crop_screen.dart';
 import '../services/game_service.dart';
 import '../services/profile_photo_service.dart';
+import '../utils/level_curve.dart';
 import 'bot_avatar.dart';
 import 'profile_avatar.dart';
 
@@ -859,5 +860,43 @@ Widget _botCard(L10n l10n) {
         ),
       ],
     ),
+  );
+}
+
+/// Level + experience strip shown under the nickname in a profile popup.
+///
+/// Four of the six popups carried a byte-identical private copy of this, and
+/// the two that did not (Skull King, Mighty) ended up looking different from the
+/// rest — Skull King showed a bare "Lv.N" box in the body instead.
+Widget profileLevelStrip(int level, int expTotal) {
+  final p = LevelCurve.progress(level, expTotal);
+  return Row(
+    children: [
+      Text(
+        'Lv.$level',
+        style: const TextStyle(
+          fontSize: 12,
+          fontWeight: FontWeight.w700,
+          color: Color(0xFF5A4038),
+        ),
+      ),
+      const SizedBox(width: 8),
+      Expanded(
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(4),
+          child: LinearProgressIndicator(
+            value: p.fraction,
+            minHeight: 4,
+            backgroundColor: const Color(0xFFEFE7E3),
+            valueColor: const AlwaysStoppedAnimation(Colors.black),
+          ),
+        ),
+      ),
+      const SizedBox(width: 6),
+      Text(
+        '${p.expInLevel}/${p.expToNext}',
+        style: const TextStyle(fontSize: 9, color: Color(0xFF9A8E8A)),
+      ),
+    ],
   );
 }

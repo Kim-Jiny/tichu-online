@@ -239,18 +239,16 @@ class _ShopScreenState extends State<ShopScreen> {
     _inventoryTabController.value = tabController.index;
   }
 
-  /// Header, wallet and the gold-charge action in one flat bar.
+  /// Header, wallet and the gold-charge action in one flat row.
   ///
   /// Was two stacked rounded cards (title card, then wallet card), which cost
-  /// ~150px of height and read as two unrelated things. This is one surface with
-  /// a hairline bottom, like an app bar.
+  /// ~150px of height and read as two unrelated things.
   Widget _buildTopBar(BuildContext context, GameService game) {
     final l10n = L10n.of(context);
-    return Container(
-      decoration: const BoxDecoration(
-        color: Color(0xFFFFFDFC),
-        border: Border(bottom: BorderSide(color: Color(0xFFEFE7E3))),
-      ),
+    // Transparent: the theme gradient runs behind the header and the white
+    // starts at the sheet, so the top of the screen is one colour instead of a
+    // white band pasted over it.
+    return Padding(
       padding: const EdgeInsets.fromLTRB(4, 2, 8, 8),
       child: Column(
         children: [

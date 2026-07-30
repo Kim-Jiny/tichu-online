@@ -7838,6 +7838,12 @@ abstract class L10n {
   /// In en, this message translates to:
   /// **'Tap anywhere to dismiss'**
   String get gameTapToClose;
+
+  /// No description provided for @profilePhotoUploadNotice.
+  ///
+  /// In en, this message translates to:
+  /// **'Uploaded photos are screened automatically and shown to other players. Photos of other people and inappropriate images are not accepted.'**
+  String get profilePhotoUploadNotice;
 }
 
 class _L10nDelegate extends LocalizationsDelegate<L10n> {

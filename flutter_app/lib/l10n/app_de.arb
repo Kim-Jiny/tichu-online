@@ -1407,5 +1407,6 @@
   "profilePhotoDelete": "Foto entfernen",
   "profilePhotoDeleteConfirm": "Profilfoto entfernen? Für den Rest deines Passes kannst du ein neues hochladen.",
   "profilePhotoDeleted": "Profilfoto entfernt",
-  "gameTapToClose": "Zum Schließen tippen"
+  "gameTapToClose": "Zum Schließen tippen",
+  "profilePhotoUploadNotice": "Hochgeladene Fotos werden automatisch geprüft und anderen Spielern gezeigt. Fotos anderer Personen und unangemessene Bilder werden nicht akzeptiert."
 }

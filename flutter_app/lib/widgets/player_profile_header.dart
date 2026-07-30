@@ -419,6 +419,21 @@ Future<void> changeProfilePhoto(
               style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
             ),
           ),
+          // Said before the picker opens, not after a rejection: the photo is
+          // machine-screened and public. Both the privacy policy and the terms
+          // say so, but this is where someone is actually about to upload.
+          Padding(
+            padding: const EdgeInsets.fromLTRB(20, 0, 20, 12),
+            child: Text(
+              l10n.profilePhotoUploadNotice,
+              textAlign: TextAlign.center,
+              style: const TextStyle(
+                fontSize: 12,
+                height: 1.35,
+                color: Color(0xFF8A8078),
+              ),
+            ),
+          ),
           ListTile(
             leading: const Icon(Icons.photo_camera_rounded,
                 color: Color(0xFF6C63FF)),

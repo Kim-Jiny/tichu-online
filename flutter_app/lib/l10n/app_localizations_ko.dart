@@ -4288,4 +4288,8 @@ class L10nKo extends L10n {
 
   @override
   String get gameTapToClose => '화면을 탭하면 닫힙니다';
+
+  @override
+  String get profilePhotoUploadNotice =>
+      '올린 사진은 자동 검사를 거쳐 다른 이용자에게 공개됩니다. 타인의 사진이나 부적절한 이미지는 등록할 수 없습니다.';
 }

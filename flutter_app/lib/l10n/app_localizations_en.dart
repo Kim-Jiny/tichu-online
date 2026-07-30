@@ -4391,4 +4391,8 @@ class L10nEn extends L10n {
 
   @override
   String get gameTapToClose => 'Tap anywhere to dismiss';
+
+  @override
+  String get profilePhotoUploadNotice =>
+      'Uploaded photos are screened automatically and shown to other players. Photos of other people and inappropriate images are not accepted.';
 }

@@ -1993,5 +1993,6 @@
   "profilePhotoDelete": "Remove photo",
   "profilePhotoDeleteConfirm": "Remove your profile photo? You can upload another for the rest of your pass.",
   "profilePhotoDeleted": "Profile photo removed",
-  "gameTapToClose": "Tap anywhere to dismiss"
+  "gameTapToClose": "Tap anywhere to dismiss",
+  "profilePhotoUploadNotice": "Uploaded photos are screened automatically and shown to other players. Photos of other people and inappropriate images are not accepted."
 }

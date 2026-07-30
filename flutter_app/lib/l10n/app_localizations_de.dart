@@ -4427,4 +4427,8 @@ class L10nDe extends L10n {
 
   @override
   String get gameTapToClose => 'Zum Schließen tippen';
+
+  @override
+  String get profilePhotoUploadNotice =>
+      'Hochgeladene Fotos werden automatisch geprüft und anderen Spielern gezeigt. Fotos anderer Personen und unangemessene Bilder werden nicht akzeptiert.';
 }

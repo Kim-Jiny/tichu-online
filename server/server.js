@@ -5421,10 +5421,15 @@ function _broadcastState(roomId, room) {
   // during the decoration pass below — this is what puts avatars on in-play
   // nameplates across all game types without touching the game classes.
   const photoByPid = {};
+  // Which seats are bots. Same reasoning: the engines never knew, so the game
+  // screens couldn't tell a bot from a human and had to fall back to reading
+  // the nickname.
+  const isBotById = {};
   for (const player of room.players) {
     if (player === null) continue;
     connectionStatus[player.id] = player.connected !== false;
     if (player.photoUrl) photoByPid[player.id] = player.photoUrl;
+    if (player.isBot) isBotById[player.id] = true;
   }
 
   const spectatorList = room.spectators.map((s) => ({ id: s.id, nickname: s.nickname }));
@@ -5464,6 +5469,7 @@ function _broadcastState(roomId, room) {
         connected: connectionStatus[p.id] !== false,
         timeoutCount: roomTimeouts[p.name] || 0,
         photoUrl: visiblePhoto(ws, p.name, photoByPid[p.id]),
+        isBot: !!isBotById[p.id],
       }));
       state.turnDeadline = room.turnDeadline;
       state.cardViewers = room.getViewersForPlayer(player.id);
@@ -6624,10 +6630,12 @@ function visiblePhoto(ws, nickname, url) {
 function decorateSpectatorState(room, ws, state) {
   const connected = {};
   const photoByPid = {};
+  const isBotById = {};
   for (const p of room.players) {
     if (p === null) continue;
     connected[p.id] = p.connected !== false;
     if (p.photoUrl) photoByPid[p.id] = p.photoUrl;
+    if (p.isBot) isBotById[p.id] = true;
   }
   const roomTimeouts = timeoutCounts[room.id] || {};
   const spectatorList = room.spectators.map((sp) => ({ id: sp.id, nickname: sp.nickname }));
@@ -6636,6 +6644,10 @@ function decorateSpectatorState(room, ws, state) {
     connected: connected[p.id] !== false,
     timeoutCount: roomTimeouts[p.name] || 0,
     photoUrl: visiblePhoto(ws, p.name, photoByPid[p.id]),
+    // The engines don't track which seats are bots — the room does. Spliced in
+    // here for the same reason photoUrl is: the game screens need it (to draw a
+    // bot avatar instead of a blank) and only this layer knows it.
+    isBot: !!isBotById[p.id],
   }));
   state.turnDeadline = room.turnDeadline;
   state.spectators = spectatorList;

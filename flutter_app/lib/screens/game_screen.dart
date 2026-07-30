@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../services/game_service.dart';
 import '../widgets/profile_avatar.dart';
+import '../widgets/bot_avatar.dart';
 import '../widgets/chat_bubble.dart';
 import '../widgets/player_profile_header.dart';
 import '../utils/level_curve.dart';
@@ -2205,6 +2206,7 @@ class _GameScreenState extends State<GameScreen> {
               photoUrl: game.blockedUsers.contains(partner?.name ?? '')
                   ? null
                   : game.resolvePhotoUrl(partner?.photoUrl),
+              isBot: partner?.isBot ?? false,
             ),
           ),
           const SizedBox(height: 3),
@@ -2258,6 +2260,7 @@ class _GameScreenState extends State<GameScreen> {
                   photoUrl: game.blockedUsers.contains(left?.name ?? '')
                       ? null
                       : game.resolvePhotoUrl(left?.photoUrl),
+                  isBot: left?.isBot ?? false,
                 ),
               ),
               Text(
@@ -2302,6 +2305,7 @@ class _GameScreenState extends State<GameScreen> {
                   photoUrl: game.blockedUsers.contains(right?.name ?? '')
                       ? null
                       : game.resolvePhotoUrl(right?.photoUrl),
+                  isBot: right?.isBot ?? false,
                 ),
               ),
               Text(
@@ -4006,6 +4010,7 @@ class _GameScreenState extends State<GameScreen> {
     String? teamLabel,
     bool isMyTeam = false,
     String? photoUrl,
+    bool isBot = false,
   }) {
     final maxLen = _maxNameLen;
     final displayName = name.length > maxLen ? '${name.substring(0, maxLen)}..' : name;
@@ -4015,13 +4020,15 @@ class _GameScreenState extends State<GameScreen> {
       children: [
         // Paid avatar sits above the name pill; only added when present so
         // photo-less players keep the exact original nameplate layout.
-        if (photoUrl != null)
+        if (photoUrl != null || isBot)
           Padding(
             padding: EdgeInsets.only(bottom: 3 * s),
             child: ProfileAvatar(
               photoUrl: photoUrl,
               size: 26 * s,
-              fallback: SizedBox(width: 26 * s, height: 26 * s),
+              fallback: isBot
+                  ? BotAvatar(size: 26 * s, name: name)
+                  : SizedBox(width: 26 * s, height: 26 * s),
             ),
           ),
         if (badge != null)

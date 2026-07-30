@@ -9,6 +9,7 @@ import '../models/player.dart';
 import '../widgets/connection_overlay.dart';
 import '../widgets/level_badge.dart';
 import '../widgets/profile_avatar.dart';
+import '../widgets/bot_avatar.dart';
 import '../widgets/chat_bubble.dart';
 import '../widgets/player_profile_header.dart';
 import '../widgets/draggable_chat_panel.dart';
@@ -566,7 +567,12 @@ class _SKGameScreenState extends State<SKGameScreen> {
                   photoUrl: game.resolvePhotoUrl(p.photoUrl),
                   size: 36,
                   blocked: game.blockedUsers.contains(p.name),
-                  fallback: p.level != null
+                  // Bots have no level, so this slot used to be a generic
+                  // person icon — the one place in the room where you couldn't
+                  // tell which bot was which at a glance.
+                  fallback: p.isBot
+                      ? BotAvatar(size: 36, name: p.name)
+                      : p.level != null
                       ? LevelBadge(level: p.level, size: 36)
                       : Container(
                           width: 36,
@@ -2185,7 +2191,7 @@ class _SKGameScreenState extends State<SKGameScreen> {
                                   ),
                                 // Spectators get their own seat widget, and it
                                 // never had the avatar the player seat has.
-                                if (p.photoUrl != null)
+                                if (p.photoUrl != null || p.isBot)
                                   Padding(
                                     padding: EdgeInsets.only(
                                       right: compact ? 2 : 3,
@@ -2196,10 +2202,15 @@ class _SKGameScreenState extends State<SKGameScreen> {
                                       size: avatarSize,
                                       blocked: game.blockedUsers
                                           .contains(p.name),
-                                      fallback: SizedBox(
-                                        width: avatarSize,
-                                        height: avatarSize,
-                                      ),
+                                      fallback: p.isBot
+                                          ? BotAvatar(
+                                              size: avatarSize,
+                                              name: p.name,
+                                            )
+                                          : SizedBox(
+                                              width: avatarSize,
+                                              height: avatarSize,
+                                            ),
                                     ),
                                   ),
                                 Flexible(
@@ -2438,7 +2449,7 @@ class _SKGameScreenState extends State<SKGameScreen> {
                                 color: const Color(0xFFE53935),
                               ),
                             ),
-                          if (p.photoUrl != null)
+                          if (p.photoUrl != null || p.isBot)
                             Padding(
                               padding:
                                   EdgeInsets.only(right: compact ? 2 : 3),
@@ -2446,10 +2457,15 @@ class _SKGameScreenState extends State<SKGameScreen> {
                                 photoUrl: game.resolvePhotoUrl(p.photoUrl),
                                 size: compact ? 14 : 16,
                                 blocked: game.blockedUsers.contains(p.name),
-                                fallback: SizedBox(
-                                  width: compact ? 14 : 16,
-                                  height: compact ? 14 : 16,
-                                ),
+                                fallback: p.isBot
+                                    ? BotAvatar(
+                                        size: compact ? 14 : 16,
+                                        name: p.name,
+                                      )
+                                    : SizedBox(
+                                        width: compact ? 14 : 16,
+                                        height: compact ? 14 : 16,
+                                      ),
                               ),
                             ),
                           Flexible(

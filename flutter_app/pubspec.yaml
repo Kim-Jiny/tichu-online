@@ -117,6 +117,7 @@ flutter:
     - assets/cards/
     - assets/sfx/
     - assets/icons/
+    - assets/bots/
     - assets/icon.png
     - assets/logo.png
     - assets/logo2.png

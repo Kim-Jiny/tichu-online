@@ -13,6 +13,10 @@ class LLPlayer {
   final bool connected;
   final String? photoUrl;
 
+  /// Server-side flag; the engines never knew, so this is spliced in when the
+  /// state is sent. Lets a seat draw a bot avatar instead of an empty circle.
+  final bool isBot;
+
   LLPlayer({
     required this.id,
     required this.name,
@@ -27,6 +31,7 @@ class LLPlayer {
     this.canViewCards = false,
     this.connected = true,
     this.photoUrl,
+    this.isBot = false,
   });
 
   factory LLPlayer.fromJson(Map<String, dynamic> json) {
@@ -44,6 +49,7 @@ class LLPlayer {
       canViewCards: json['canViewCards'] == true,
       connected: json['connected'] != false,
       photoUrl: json['photoUrl'] as String?,
+      isBot: json['isBot'] == true,
     );
   }
 }

@@ -18,6 +18,7 @@ import 'friends_screen.dart';
 import '../widgets/connection_overlay.dart';
 import '../widgets/level_badge.dart';
 import '../widgets/profile_avatar.dart';
+import '../widgets/bot_avatar.dart';
 import '../widgets/chat_bubble.dart';
 import '../widgets/player_profile_header.dart';
 import '../widgets/title_chip.dart';
@@ -4887,57 +4888,75 @@ class _LobbyScreenState extends State<LobbyScreen> {
                   ),
                 );
               }),
-            // Bot badge with speed indicator
+            // Bots have no level and never had a photo, so this slot was empty
+            // for them and every bot row looked alike apart from its number.
+            // Sized like the other games' waiting rooms rather than like the
+            // level badge it sits next to.
+            if (player != null && isBot)
+              Padding(
+                padding: const EdgeInsets.only(right: 6),
+                // The corner marker replaces the "BOT" text chip that used to
+                // sit beside the seat: avatar + chip together left the nickname
+                // no width at all, and it rendered as nothing — so you could
+                // not tell 봇 1 from 봇 2.
+                child: BotAvatar(size: 36, name: player.name, showBadge: true),
+              ),
+            // Speed / strategy chip. Only when there is something to say —
+            // default-speed, default-strategy bots are the common case and the
+            // corner marker already covers "this is a bot".
             if (isBot)
-              Container(
-                margin: const EdgeInsets.only(right: 6),
-                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                decoration: BoxDecoration(
-                  color: const Color(0xFFC5CAE9),
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    const Text(
-                      'BOT',
-                      style: TextStyle(
-                        fontSize: 10,
-                        fontWeight: FontWeight.bold,
-                        color: Color(0xFF3949AB),
-                      ),
+              Builder(
+                builder: (_) {
+                  final showSpeed =
+                      player.botSpeed != null && player.botSpeed != 'normal';
+                  final strategy = player.botStrategy;
+                  final showStrategy =
+                      strategy != null &&
+                      strategy != BotStrategy.heuristic &&
+                      strategy != BotStrategy.winrate &&
+                      strategy != BotStrategy.mixOracle &&
+                      strategy != BotStrategy.legacyMixExpectimax;
+                  if (!showSpeed && !showStrategy) {
+                    return const SizedBox.shrink();
+                  }
+                  return Container(
+                    margin: const EdgeInsets.only(right: 6),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 6,
+                      vertical: 2,
                     ),
-                    if (player.botSpeed != null &&
-                        player.botSpeed != 'normal') ...[
-                      const SizedBox(width: 3),
-                      Icon(
-                        player.botSpeed == 'fast'
-                            ? Icons.fast_forward
-                            : Icons.slow_motion_video,
-                        size: 10,
-                        color: player.botSpeed == 'fast'
-                            ? const Color(0xFFE65100)
-                            : const Color(0xFF558B2F),
-                      ),
-                    ],
-                    if (player.botStrategy != null &&
-                        player.botStrategy != BotStrategy.heuristic &&
-                        player.botStrategy != BotStrategy.winrate &&
-                        player.botStrategy != BotStrategy.mixOracle &&
-                        player.botStrategy !=
-                            BotStrategy.legacyMixExpectimax) ...[
-                      const SizedBox(width: 3),
-                      Text(
-                        _shortStrategyLabel(player.botStrategy!),
-                        style: const TextStyle(
-                          fontSize: 9,
-                          fontWeight: FontWeight.bold,
-                          color: Color(0xFF6A1B9A),
-                        ),
-                      ),
-                    ],
-                  ],
-                ),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFC5CAE9),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        if (showSpeed)
+                          Icon(
+                            player.botSpeed == 'fast'
+                                ? Icons.fast_forward
+                                : Icons.slow_motion_video,
+                            size: 10,
+                            color: player.botSpeed == 'fast'
+                                ? const Color(0xFFE65100)
+                                : const Color(0xFF558B2F),
+                          ),
+                        if (showSpeed && showStrategy)
+                          const SizedBox(width: 3),
+                        if (showStrategy)
+                          Text(
+                            _shortStrategyLabel(strategy),
+                            style: const TextStyle(
+                              fontSize: 9,
+                              fontWeight: FontWeight.bold,
+                              color: Color(0xFF6A1B9A),
+                            ),
+                          ),
+                      ],
+                    ),
+                  );
+                },
               ),
             // Blocked indicator
             if (isBlockedPlayer)

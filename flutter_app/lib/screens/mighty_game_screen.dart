@@ -10,6 +10,7 @@ import '../widgets/draggable_chat_panel.dart';
 import '../widgets/connection_overlay.dart';
 import '../widgets/level_badge.dart';
 import '../widgets/profile_avatar.dart';
+import '../widgets/bot_avatar.dart';
 import '../widgets/player_profile_header.dart';
 import '../widgets/spectator_controls.dart';
 import '../l10n/app_localizations.dart';
@@ -797,7 +798,12 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
                   photoUrl: game.resolvePhotoUrl(player.photoUrl),
                   size: 36,
                   blocked: game.blockedUsers.contains(player.name),
-                  fallback: player.level != null
+                  // Bots have no level, so this slot used to be a generic
+                  // person icon — the one place in the room where you couldn't
+                  // tell which bot was which at a glance.
+                  fallback: player.isBot
+                      ? BotAvatar(size: 36, name: player.name)
+                      : player.level != null
                       ? LevelBadge(level: player.level, size: 36)
                       : Container(
                           width: 36,
@@ -2397,7 +2403,7 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
                                             color: const Color(0xFFE53935),
                                           ),
                                         ),
-                                      if (player.photoUrl != null)
+                                      if (player.photoUrl != null || player.isBot)
                                         Padding(
                                           padding: EdgeInsets.only(
                                             right: compact ? 2 : 3,
@@ -2409,10 +2415,15 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
                                             size: compact ? 14 : 16,
                                             blocked: game
                                                 .blockedUsers.contains(player.name),
-                                            fallback: SizedBox(
-                                              width: compact ? 14 : 16,
-                                              height: compact ? 14 : 16,
-                                            ),
+                                            fallback: player.isBot
+                                                ? BotAvatar(
+                                                    size: compact ? 14 : 16,
+                                                    name: player.name,
+                                                  )
+                                                : SizedBox(
+                                                    width: compact ? 14 : 16,
+                                                    height: compact ? 14 : 16,
+                                                  ),
                                           ),
                                         ),
                                       Flexible(

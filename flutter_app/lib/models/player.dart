@@ -41,6 +41,10 @@ class Player {
   /// Public avatar URL (paid profile-photo item, active + unexpired). Null =
   /// default avatar. Always null for bots. Server resolves eligibility.
   final String? photoUrl;
+
+  /// Server-side flag; the engines never knew, so this is spliced in when the
+  /// state is sent. Lets a seat draw a bot avatar instead of an empty circle.
+  final bool isBot;
   final String? botSpeed;
   final String? botStrategy;
   /// Player's account level. Null for bots and (transitionally) for old
@@ -68,6 +72,7 @@ class Player {
     this.titleName,
     this.bannerKey,
     this.photoUrl,
+    this.isBot = false,
     this.botSpeed,
     this.botStrategy,
     this.level,
@@ -93,6 +98,7 @@ class Player {
       titleName: json['titleName'] as String?,
       bannerKey: json['bannerKey'] as String?,
       photoUrl: json['photoUrl'] as String?,
+      isBot: json['isBot'] == true,
       botSpeed: json['botSpeed'] as String?,
       botStrategy: json['botStrategy'] as String?,
       level: (json['level'] as num?)?.toInt(),

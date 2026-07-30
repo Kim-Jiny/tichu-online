@@ -11,6 +11,7 @@ import '../widgets/connection_overlay.dart';
 import '../widgets/draggable_chat_panel.dart';
 import '../widgets/level_badge.dart';
 import '../widgets/profile_avatar.dart';
+import '../widgets/bot_avatar.dart';
 import '../widgets/chat_bubble.dart';
 import '../widgets/player_profile_header.dart';
 import '../widgets/title_chip.dart';
@@ -459,14 +460,18 @@ class _SpectatorScreenState extends State<SpectatorScreen> {
               mainAxisSize: MainAxisSize.min,
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                if (player.photoUrl != null || player.level != null) ...[
+                if (player.photoUrl != null ||
+                    player.level != null ||
+                    player.isBot) ...[
                   ProfileAvatar(
                     photoUrl: game.resolvePhotoUrl(player.photoUrl),
                     size: 18,
                     blocked: game.blockedUsers.contains(player.name),
-                    fallback: player.level != null
-                        ? LevelBadge(level: player.level, size: 18)
-                        : const SizedBox(width: 18, height: 18),
+                    fallback: player.isBot
+                        ? BotAvatar(size: 18, name: player.name)
+                        : player.level != null
+                            ? LevelBadge(level: player.level, size: 18)
+                            : const SizedBox(width: 18, height: 18),
                   ),
                   const SizedBox(width: 4),
                 ],
@@ -1179,17 +1184,19 @@ class _SpectatorScreenState extends State<SpectatorScreen> {
               // never appeared: this view is separate from both the player's
               // game screen and the spectator waiting room, and only those two
               // had the avatar.
-              if (player['photoUrl'] != null)
+              if (player['photoUrl'] != null || player['isBot'] == true)
                 Padding(
                   padding: EdgeInsets.only(right: compact ? 3 : 4),
                   child: ProfileAvatar(
                     photoUrl: game.resolvePhotoUrl(player['photoUrl'] as String?),
                     size: compact ? 16 : 20,
                     blocked: game.blockedUsers.contains(name),
-                    fallback: SizedBox(
-                      width: compact ? 16 : 20,
-                      height: compact ? 16 : 20,
-                    ),
+                    fallback: player['isBot'] == true
+                        ? BotAvatar(size: compact ? 16 : 20, name: name)
+                        : SizedBox(
+                            width: compact ? 16 : 20,
+                            height: compact ? 16 : 20,
+                          ),
                   ),
                 ),
               Flexible(

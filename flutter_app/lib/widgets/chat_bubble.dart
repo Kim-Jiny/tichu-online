@@ -24,7 +24,6 @@ class ChatBubble extends StatelessWidget {
   final double bottomSpacing;
   final double avatarRadius;
   final Color avatarBackground;
-  final double letterFontSize;
   final double senderFontSize;
   final double messageFontSize;
   final double bubbleRadius;
@@ -47,7 +46,6 @@ class ChatBubble extends StatelessWidget {
     this.bottomSpacing = 8,
     this.avatarRadius = 14,
     this.avatarBackground = const Color(0xFFE0E0E0),
-    this.letterFontSize = 12,
     this.senderFontSize = 11,
     this.messageFontSize = 14,
     this.bubbleRadius = 16,
@@ -69,7 +67,9 @@ class ChatBubble extends StatelessWidget {
       children: [
         if (!isMe && hasSender) ...[
           // Chat lines carry only a nickname, so the photo comes from whatever
-          // roster is loaded; the initial-letter circle stays as the fallback.
+          // roster is loaded. No photo → the same default-avatar silhouette the
+          // seats use, rather than an initial letter, so one person looks like
+          // one person everywhere.
           ProfileAvatar(
             photoUrl: game.chatPhotoUrlFor(sender),
             size: avatarRadius * 2,
@@ -77,12 +77,10 @@ class ChatBubble extends StatelessWidget {
             fallback: CircleAvatar(
               radius: avatarRadius,
               backgroundColor: avatarBackground,
-              child: Text(
-                sender[0],
-                style: TextStyle(
-                  fontSize: letterFontSize,
-                  color: const Color(0xFF5A4038),
-                ),
+              child: Icon(
+                Icons.person,
+                size: avatarRadius * 1.15,
+                color: const Color(0xFF9C8B84),
               ),
             ),
           ),

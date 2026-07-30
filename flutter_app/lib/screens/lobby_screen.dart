@@ -3441,7 +3441,6 @@ class _LobbyScreenState extends State<LobbyScreen> {
       bottomSpacing: 6,
       avatarRadius: 12,
       avatarBackground: const Color(0xFFE0D8D4),
-      letterFontSize: 10,
       senderFontSize: 10,
       messageFontSize: 13,
       bubbleRadius: 12,

@@ -78,6 +78,8 @@ const {
   clearInvalidFcmToken,
   loadTitleTranslations,
   adminClearProfilePhoto,
+  getReportedPhotoKeys,
+  isPhotoKeyReported,
 } = require('./db/database');
 
 const { verifyApple } = require('./iap/AppleVerify');
@@ -825,7 +827,7 @@ async function cleanupExpiredProfilePhotos() {
        SELECT profile_photo_key FROM victims`,
     );
     for (const u of cleared.rows) {
-      if (u.profile_photo_key) await minioClient.deleteProfilePhoto(u.profile_photo_key);
+      if (u.profile_photo_key) await deletePhotoObjectUnlessReported(u.profile_photo_key);
     }
     if (cleared.rows.length) {
       console.log(`[profile-photo] cleaned up ${cleared.rows.length} expired photo(s)`);
@@ -867,13 +869,31 @@ function parseUploadedImage(req) {
 // photo for the rest of their window. The object is deleted from storage, and
 // every live copy of the URL (ws, the room seat) is cleared and repainted, the
 // same dance the upload path does in the other direction.
+// Delete a photo object from storage — unless some report references it, in
+// which case it stays as evidence: "what image was reported" must remain
+// answerable in the admin after the owner deletes or replaces the photo.
+// The DB pointer is cleared by the callers either way, so a kept object is
+// invisible everywhere except the admin's report view.
+async function deletePhotoObjectUnlessReported(key) {
+  if (!key) return;
+  try {
+    if (await isPhotoKeyReported(key)) {
+      console.log(`[profile-photo] keeping reported object as evidence: ${key}`);
+      return;
+    }
+    await minioClient.deleteProfilePhoto(key);
+  } catch (e) {
+    console.warn('[profile-photo] object delete failed:', e.message);
+  }
+}
+
 async function handleDeleteProfilePhoto(ws) {
   if (!ws.userId) {
     sendTo(ws, { type: 'error', message: t(ws.locale, 'login_required') });
     return;
   }
   const { oldKey } = await adminClearProfilePhoto(ws.nickname);
-  if (oldKey) minioClient.deleteProfilePhoto(oldKey); // best-effort
+  if (oldKey) deletePhotoObjectUnlessReported(oldKey); // best-effort
   ws.photoUrl = null;
   sendTo(ws, { type: 'profile_photo_updated', playerId: ws.playerId, url: null });
   if (ws.roomId) {
@@ -1023,7 +1043,7 @@ const server = http.createServer(async (req, res) => {
       const { pool } = require('./db/database');
       await pool.query('UPDATE tc_users SET profile_photo_key = $1 WHERE id = $2', [key, userId]);
       if (row.profile_photo_key && row.profile_photo_key !== key) {
-        minioClient.deleteProfilePhoto(row.profile_photo_key); // best-effort, don't await
+        deletePhotoObjectUnlessReported(row.profile_photo_key); // best-effort, don't await
       }
       // Keep ws + the in-room player object in sync so later re-serializations
       // carry it, then repaint. Without the repaint nothing changes on screen
@@ -3162,7 +3182,7 @@ async function handleDeleteAccount(ws) {
   // asked to be erased. Best effort: a storage hiccup must not fail the
   // deletion the user already asked for and the DB already committed.
   if (result.success && result.photoKey) {
-    await minioClient.deleteProfilePhoto(result.photoKey);
+    await deletePhotoObjectUnlessReported(result.photoKey);
   }
   if (result.success) {
     ws.nickname = null;
@@ -3531,10 +3551,15 @@ async function handleReconnection(ws) {
   // filter without a query each time; kept current by the block/report
   // handlers. A report has to take effect the moment it is filed — leaving the
   // image on screen while the report sits in a queue is the whole complaint.
-  ws.hiddenPhotos = new Set([
-    ...(await getBlockedUsers(ws.nickname).catch(() => [])),
-    ...(await getReportedNicknames(ws.nickname).catch(() => [])),
-  ]);
+  ws.hiddenPhotos = new Set(
+    await getBlockedUsers(ws.nickname).catch(() => []),
+  );
+  // Reports hide by PHOTO, not by person: the report was about a specific
+  // image, so a replacement photo shows again. The keys were snapshotted into
+  // the report rows when they were filed.
+  ws.reportedPhotoKeys = new Set(
+    await getReportedPhotoKeys(ws.nickname).catch(() => []),
+  );
   ws.level = (profile && Number.isFinite(profile.level)) ? profile.level : 1;
   ws.seasonRating = Number.isFinite(profile?.seasonRating) ? profile.seasonRating : null;
   ws.skSeasonRating = Number.isFinite(profile?.skSeasonRating) ? profile.skSeasonRating : null;
@@ -6633,9 +6658,22 @@ function broadcastGameEvent(roomId, event) {
 // A photo the viewer is allowed to see, or null. Both room state and game state
 // carry the nickname as `name` (see GameRoom.getState) — reading `nickname`
 // there silently matches nothing and the filter never fires.
+// The key is the tail of every photo URL we build (`<base>/<userId>/<ts>.jpg`),
+// so it can be recovered from the URL regardless of which base built it.
+function photoKeyFromUrl(url) {
+  const parts = String(url).split('/');
+  return parts.length >= 2 ? parts.slice(-2).join('/') : null;
+}
+
 function visiblePhoto(ws, nickname, url) {
   if (!url) return null;
-  return ws?.hiddenPhotos?.has(nickname) ? null : url;
+  if (ws?.hiddenPhotos?.has(nickname)) return null;
+  // Hide only the exact photo that was reported; a new upload shows again.
+  if (ws?.reportedPhotoKeys?.size) {
+    const key = photoKeyFromUrl(url);
+    if (key && ws.reportedPhotoKeys.has(key)) return null;
+  }
+  return url;
 }
 
 // The seat facts the game engines do not have. getStateForPlayer /
@@ -6956,10 +6994,10 @@ async function handleUnblockUser(ws, data) {
   if (!targetNickname) return;
   const result = await unblockUser(ws.nickname, targetNickname);
   if (result.success) {
-    // Unblocking does not undo a report. Only give the photo back if they
-    // never reported this person.
-    const reported = await getReportedNicknames(ws.nickname).catch(() => []);
-    if (!reported.includes(targetNickname)) ws.hiddenPhotos?.delete(targetNickname);
+    // Reports hide by photo key now, so unblocking can simply return the
+    // nickname-level hide; any reported photo stays hidden through
+    // reportedPhotoKeys regardless.
+    ws.hiddenPhotos?.delete(targetNickname);
   }
   sendTo(ws, { type: 'block_result', success: result.success, nickname: targetNickname, blocked: false });
   if (ws.roomId) {
@@ -7011,8 +7049,9 @@ async function handleReportUser(ws, data) {
   if (result.success) {
     // Take the photo away from the reporter immediately. Waiting for an admin
     // to look at the queue means they keep staring at the thing they just
-    // objected to, possibly for hours.
-    ws.hiddenPhotos?.add(targetNickname);
+    // objected to, possibly for hours. Keyed to the photo, not the person —
+    // if they upload something else, that one shows.
+    if (result.photoKey) ws.reportedPhotoKeys?.add(result.photoKey);
     if (ws.roomId) {
       broadcastRoomState(ws.roomId);
       if (lobby.getRoom(ws.roomId)?.game) sendGameStateToAll(ws.roomId);

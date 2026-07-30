@@ -19,6 +19,7 @@ const {
 const { refundGoogleOrder } = require('./iap/GoogleVerify');
 const minioClient = require('./storage/minioClient');
 const fillerRooms = require('./lobby/fillerRooms');
+const { isPhotoKeyReported } = require('./db/database');
 
 // In-memory session store: token -> { username, createdAt }
 const sessions = new Map();
@@ -3183,8 +3184,12 @@ async function handleAdminRoute(req, res, url, pathname, method, lobby, wss, mai
     if (reports.length === 0) return html(res, layout('찾을 수 없음', '<div class="empty">신고를 찾을 수 없습니다</div>', 'reports'), 404);
 
     // The photo is the thing most UGC reports are actually about, so put it on
-    // this screen instead of making a moderator go find the user page. Same
-    // clear-photo endpoint; it comes back here rather than to the user page.
+    // this screen instead of making a moderator go find the user page.
+    //
+    // Two images can be relevant now: the SNAPSHOT taken when the report was
+    // filed (kept in storage as evidence even if the owner deleted or replaced
+    // it) and the CURRENT photo, which may be a different, newer upload that
+    // the reporter can see again. Show both when they differ.
     let photoHtml = '';
     try {
       const reported = await getUserDetail(target);
@@ -3193,21 +3198,42 @@ async function handleAdminRoute(req, res, url, pathname, method, lobby, wss, mai
         && reported.profile_photo_key
         && (!reported.profile_photo_expires_at
             || new Date(reported.profile_photo_expires_at) > new Date());
-      if (photoActive) {
-        const photoUrl = minioClient.publicUrl(reported.profile_photo_key);
-        const back = `/tc-backstage/reports/group?target=${encodeURIComponent(target)}&room=${encodeURIComponent(roomId)}`;
+      const currentKey = photoActive ? reported.profile_photo_key : null;
+      const snapKeys = [
+        ...new Set(reports.map((r) => r.reported_photo_key).filter(Boolean)),
+      ];
+      const back = `/tc-backstage/reports/group?target=${encodeURIComponent(target)}&room=${encodeURIComponent(roomId)}`;
+      const img = (key, label, note) => `
+        <div style="text-align:center">
+          <img src="${escapeHtml(minioClient.publicUrl(key))}" alt="${escapeHtml(label)}"
+               style="width:120px;height:120px;border-radius:12px;object-fit:cover;border:1px solid #eee">
+          <div style="font-size:12px;color:#666;margin-top:4px">${escapeHtml(label)}</div>
+          ${note ? `<div style="font-size:11px;color:#999">${escapeHtml(note)}</div>` : ''}
+        </div>`;
+
+      const pieces = [];
+      for (const key of snapKeys) {
+        pieces.push(img(
+          key,
+          '신고된 사진',
+          key === currentKey ? '현재도 이 사진' : '보존된 증거 (현재는 교체/삭제됨)',
+        ));
+      }
+      if (currentKey && !snapKeys.includes(currentKey)) {
+        pieces.push(img(currentKey, '현재 사진', '신고 이후 새로 올린 사진 — 신고자에게 보입니다'));
+      }
+
+      if (pieces.length > 0) {
+        const clearBtn = currentKey ? `
+          <form method="POST" action="/tc-backstage/users/${encodeURIComponent(target)}/clear-photo?back=${encodeURIComponent(back)}" style="margin-left:auto"
+            onsubmit="return confirm('${jsEscape(target)} 유저의 현재 프로필 사진을 강제 삭제하시겠습니까? (남은 이용권은 유지되어 재업로드 가능)')">
+            <button type="submit" class="btn btn-secondary" style="color:#c62828;border-color:#f0c0c0">현재 사진 강제 삭제</button>
+          </form>` : '';
         photoHtml = `
         <h3 style="margin-top:16px">프로필 사진</h3>
-        <div style="display:flex;align-items:center;gap:16px;flex-wrap:wrap">
-          <img src="${escapeHtml(photoUrl)}" alt="프로필 사진" style="width:120px;height:120px;border-radius:12px;object-fit:cover;border:1px solid #eee">
-          <div style="font-size:13px;color:#666">
-            <div>만료: ${reported.profile_photo_expires_at ? formatDate(reported.profile_photo_expires_at) : '무기한'}</div>
-            <div style="margin-top:4px">신고자에게는 이미 숨겨진 상태입니다</div>
-          </div>
-          <form method="POST" action="/tc-backstage/users/${encodeURIComponent(target)}/clear-photo?back=${encodeURIComponent(back)}" style="margin-left:auto"
-            onsubmit="return confirm('${jsEscape(target)} 유저의 프로필 사진을 강제 삭제하시겠습니까? (남은 이용권은 유지되어 재업로드 가능)')">
-            <button type="submit" class="btn btn-secondary" style="color:#c62828;border-color:#f0c0c0">사진 강제 삭제</button>
-          </form>
+        <div style="display:flex;align-items:flex-start;gap:16px;flex-wrap:wrap">
+          ${pieces.join('')}
+          ${clearBtn}
         </div>`;
       } else {
         photoHtml = '<h3 style="margin-top:16px">프로필 사진</h3><div style="color:#888">설정된 프로필 사진 없음</div>';
@@ -3724,7 +3750,11 @@ async function handleAdminRoute(req, res, url, pathname, method, lobby, wss, mai
   if (clearPhotoMatch && method === 'POST') {
     const nickname = decodeURIComponent(clearPhotoMatch[1]);
     const { oldKey } = await adminClearProfilePhoto(nickname);
-    if (oldKey) await minioClient.deleteProfilePhoto(oldKey); // best-effort
+    // Kept in storage if any report references it — the report view must still
+    // be able to show what was reported.
+    if (oldKey && !(await isPhotoKeyReported(oldKey))) {
+      await minioClient.deleteProfilePhoto(oldKey); // best-effort
+    }
     // Anyone in a room with them is still holding the old URL. Clear it on the
     // live objects and repaint, or the deleted photo stays on screen until
     // those clients happen to reconnect.
@@ -3760,7 +3790,9 @@ async function handleAdminRoute(req, res, url, pathname, method, lobby, wss, mai
     const del = await deleteUser(nickname);
     // Same as the user-initiated path: the key dies with the row, so the object
     // has to go now or it is orphaned in the bucket forever.
-    if (del?.photoKey) await minioClient.deleteProfilePhoto(del.photoKey);
+    if (del?.photoKey && !(await isPhotoKeyReported(del.photoKey))) {
+      await minioClient.deleteProfilePhoto(del.photoKey);
+    }
     return redirect(res, '/tc-backstage/users');
   }
 

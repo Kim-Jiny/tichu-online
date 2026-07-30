@@ -191,6 +191,11 @@ async function initDatabase() {
     await client.query(`ALTER TABLE tc_match_history ADD COLUMN IF NOT EXISTS deserter_nickname VARCHAR(50) DEFAULT NULL`);
 
     // User stats columns
+    // Snapshot of the target's profile photo at the moment of the report.
+    // Report-side hiding keys off this (a NEW photo shows again), and the
+    // object with this key is kept in storage as evidence even if the owner
+    // deletes or replaces it.
+    await client.query(`ALTER TABLE tc_reports ADD COLUMN IF NOT EXISTS reported_photo_key TEXT DEFAULT NULL`);
     await client.query(`ALTER TABLE tc_users ADD COLUMN IF NOT EXISTS total_games INT DEFAULT 0`);
     await client.query(`ALTER TABLE tc_users ADD COLUMN IF NOT EXISTS wins INT DEFAULT 0`);
     await client.query(`ALTER TABLE tc_users ADD COLUMN IF NOT EXISTS losses INT DEFAULT 0`);
@@ -1307,6 +1312,28 @@ async function getReportedNicknames(reporterNickname) {
   }
 }
 
+// Every photo key this reporter has reported. The hide follows the key: a new
+// upload has a new key and shows again.
+async function getReportedPhotoKeys(reporterNickname) {
+  const result = await pool.query(
+    `SELECT DISTINCT reported_photo_key FROM tc_reports
+      WHERE reporter_nickname = $1 AND reported_photo_key IS NOT NULL`,
+    [reporterNickname]
+  );
+  return result.rows.map((r) => r.reported_photo_key);
+}
+
+// Is this object referenced by any report? If so it is evidence and must not be
+// deleted from storage, no matter who asks (owner, expiry sweep, admin clear).
+async function isPhotoKeyReported(key) {
+  if (!key) return false;
+  const result = await pool.query(
+    `SELECT 1 FROM tc_reports WHERE reported_photo_key = $1 LIMIT 1`,
+    [key]
+  );
+  return result.rows.length > 0;
+}
+
 async function reportUser(reporterNickname, reportedNickname, reason, roomId, chatContext = []) {
   const client = await pool.connect();
   try {
@@ -1320,11 +1347,19 @@ async function reportUser(reporterNickname, reportedNickname, reason, roomId, ch
     }
 
     const chatContextJson = JSON.stringify(chatContext);
-    await client.query(
-      'INSERT INTO tc_reports (reporter_nickname, reported_nickname, reason, room_id, chat_context) VALUES ($1, $2, $3, $4, $5)',
-      [reporterNickname, reportedNickname, reason, roomId, chatContextJson]
+    // Snapshot whatever photo the target is showing right now. The report is
+    // about THIS image: hiding follows the key (not the person), and the admin
+    // can still see the reported image after the owner swaps or deletes it.
+    const snap = await client.query(
+      `SELECT profile_photo_key FROM tc_users WHERE nickname = $1`,
+      [reportedNickname]
     );
-    return { success: true, messageKey: 'db_report_success' };
+    const photoKey = snap.rows[0]?.profile_photo_key || null;
+    await client.query(
+      'INSERT INTO tc_reports (reporter_nickname, reported_nickname, reason, room_id, chat_context, reported_photo_key) VALUES ($1, $2, $3, $4, $5, $6)',
+      [reporterNickname, reportedNickname, reason, roomId, chatContextJson, photoKey]
+    );
+    return { success: true, messageKey: 'db_report_success', photoKey };
   } catch (err) {
     console.error('Report user error:', err);
     return { success: false, messageKey: 'db_report_failed' };
@@ -7724,6 +7759,8 @@ module.exports = {
   getChatBan,
   setAdminMemo,
   adminClearProfilePhoto,
+  getReportedPhotoKeys,
+  isPhotoKeyReported,
   listActiveProfilePhotos,
   getActiveSeason,
   createSeason,

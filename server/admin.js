@@ -2983,12 +2983,19 @@ async function handleAdminRoute(req, res, url, pathname, method, lobby, wss, mai
     if (body.action === 'dismantle') {
       const result = fillerRooms.dismantle(body.roomId || '');
       if (!result.success) console.warn('[admin] filler dismantle:', result.message);
+    } else if (body.action === 'spectators') {
+      const result = fillerRooms.setAllowSpectators(
+        body.roomId || '',
+        body.allow === '1',
+      );
+      if (!result.success) console.warn('[admin] filler spectators:', result.message);
     } else {
       const result = fillerRooms.create({
         nickname: body.nickname || '',
         gameType: body.gameType || 'tichu',
         botSpeed: body.botSpeed || 'normal',
         roomName: body.roomName || '',
+        allowSpectators: body.allowSpectators !== '0',
       });
       if (!result.success) {
         return html(res, layout('봇방', `
@@ -3017,6 +3024,19 @@ async function handleAdminRoute(req, res, url, pathname, method, lobby, wss, mai
         <td>${escapeHtml(GAME_LABEL[r.gameType] || r.gameType)}</td>
         <td>${escapeHtml(SPEED_LABEL[r.botSpeed] || r.botSpeed)}</td>
         <td>${r.inGame ? `<span class="badge" style="background:#e8f5e9;color:#2e7d32">게임 중</span> <span class="muted">${escapeHtml(String(r.phase || ''))}</span>` : '<span class="badge">대기</span>'}</td>
+        <td>
+          <form method="POST" action="/tc-backstage/filler-rooms" style="margin:0">
+            <input type="hidden" name="action" value="spectators">
+            <input type="hidden" name="roomId" value="${escapeHtml(r.roomId)}">
+            <input type="hidden" name="allow" value="${r.allowSpectators ? '0' : '1'}">
+            <button type="submit" class="btn btn-secondary"
+                    title="${r.allowSpectators ? '관전을 막습니다' : '관전을 허용합니다'}">
+              ${r.allowSpectators
+                ? '<span style="color:#2e7d32">허용</span>'
+                : '<span style="color:#c62828">차단</span>'}
+            </button>
+          </form>
+        </td>
         <td>${r.spectators}</td>
         <td class="muted">${formatDate(new Date(r.createdAt))}</td>
         <td>
@@ -3032,9 +3052,11 @@ async function handleAdminRoute(req, res, url, pathname, method, lobby, wss, mai
     const content = `
       <h1 class="page-title">봇방 (${rows.length})</h1>
       <div class="muted" style="margin-bottom:12px">
-        모든 좌석이 채워진 방을 만들어 방 목록에 노출합니다. 관전만 가능하고, 해체할 때까지
-        스스로 게임을 반복합니다. 실제 유저가 없는 방이므로 전적·랭킹에는 아무것도 기록되지
-        않습니다. 서버를 재시작하면 사라지니 다시 추가해야 합니다.
+        모든 좌석이 채워진 방을 만들어 방 목록에 노출합니다. 자리에 앉을 수는 없고, 해체할
+        때까지 스스로 게임을 반복합니다. 실제 유저가 없는 방이므로 전적·랭킹에는 아무것도
+        기록되지 않습니다. 서버를 재시작하면 사라지니 다시 추가해야 합니다.<br>
+        관전 열의 버튼을 누르면 허용/차단이 즉시 바뀝니다(이미 보고 있는 사람은 그대로
+        남고, 새로 들어오려는 사람만 막힙니다). 차단하면 방 목록에서 관전 버튼도 사라집니다.
       </div>
 
       <div class="card" style="margin-bottom:16px">
@@ -3067,6 +3089,13 @@ async function handleAdminRoute(req, res, url, pathname, method, lobby, wss, mai
               <option value="fast">빠름</option>
             </select>
           </label>
+          <label style="display:flex;flex-direction:column;gap:4px">
+            <span class="muted" style="font-size:12px">관전</span>
+            <select name="allowSpectators" style="padding:8px;border:1px solid #ddd;border-radius:8px">
+              <option value="1" selected>허용</option>
+              <option value="0">차단</option>
+            </select>
+          </label>
           <button type="submit" class="btn">추가</button>
         </form>
       </div>
@@ -3074,7 +3103,7 @@ async function handleAdminRoute(req, res, url, pathname, method, lobby, wss, mai
       ${rows.length === 0
         ? '<div class="empty">돌아가는 봇방이 없습니다</div>'
         : `<table class="table">
-             <thead><tr><th>닉네임</th><th>게임</th><th>봇 속도</th><th>상태</th><th>관전자</th><th>생성</th><th></th></tr></thead>
+             <thead><tr><th>닉네임</th><th>게임</th><th>봇 속도</th><th>상태</th><th>관전</th><th>관전자</th><th>생성</th><th></th></tr></thead>
              <tbody>${list}</tbody>
            </table>`}
     `;

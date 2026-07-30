@@ -18,8 +18,10 @@
  * The host never has a socket, so nothing is ever sent to it: the broadcast loop
  * looks the recipient up with findWsByPlayerId and skips misses.
  *
- * Rooms are spectate-only (join is refused elsewhere) and their results are never
- * saved — no real player is in them, so a record would be noise in the rankings.
+ * Nobody can take a seat (join is refused elsewhere — every seat is filled by
+ * design), and their results are never saved: no real player is in them, so a
+ * record would be noise in the rankings. Spectating is on by default and can be
+ * switched off per room, which leaves the room as pure lobby decoration.
  *
  * State is in memory: a restart drops the rooms, and the admin re-adds them.
  */
@@ -79,6 +81,8 @@ function list() {
       inGame: !!(room && room.game),
       phase: room && room.game ? room.game.state : null,
       spectators: room ? room.spectators.length : 0,
+      // Read from the room, not a stored copy — the admin can flip it live.
+      allowSpectators: room ? room.allowSpectators !== false : false,
     };
   });
 }
@@ -86,7 +90,13 @@ function list() {
 /**
  * @returns {{success: boolean, message?: string, roomId?: string}}
  */
-function create({ nickname, gameType = 'tichu', botSpeed = 'normal', roomName }) {
+function create({
+  nickname,
+  gameType = 'tichu',
+  botSpeed = 'normal',
+  roomName,
+  allowSpectators = true,
+}) {
   if (!deps) return { success: false, message: 'filler rooms not initialised' };
   const name = (nickname || '').trim();
   if (name.length < 2 || name.length > 10) {
@@ -112,6 +122,7 @@ function create({ nickname, gameType = 'tichu', botSpeed = 'normal', roomName })
     gameType,
     maxPlayers,
     [],
+    allowSpectators !== false,
   );
 
   // The constructor seats the host as an ordinary un-ready player. Mark it so the
@@ -145,8 +156,29 @@ function create({ nickname, gameType = 'tichu', botSpeed = 'normal', roomName })
   deps.broadcastRoomState(room.id);
   deps.broadcastRoomList();
   ensureTicker();
-  console.log(`[filler] created ${room.id} "${name}" type=${gameType} bots=${botSpeed}`);
+  console.log(
+    `[filler] created ${room.id} "${name}" type=${gameType} bots=${botSpeed}`
+    + ` spectators=${allowSpectators !== false ? 'on' : 'off'}`,
+  );
   return { success: true, roomId: room.id };
+}
+
+/**
+ * Flip spectating for a running filler room.
+ *
+ * Applies to people trying to come in: anyone already watching stays, the same
+ * way changing any room setting does not evict whoever is already seated.
+ */
+function setAllowSpectators(roomId, allow) {
+  const info = active.get(roomId);
+  if (!info) return { success: false, message: '없는 채움 방입니다' };
+  const room = deps.lobby.getRoom(roomId);
+  if (!room) return { success: false, message: '방이 이미 사라졌습니다' };
+  room.allowSpectators = allow !== false;
+  deps.broadcastRoomState(roomId);
+  deps.broadcastRoomList();
+  console.log(`[filler] ${roomId} allowSpectators=${room.allowSpectators}`);
+  return { success: true };
 }
 
 function dismantle(roomId) {
@@ -235,6 +267,7 @@ function stopTicker() {
 module.exports = {
   init,
   create,
+  setAllowSpectators,
   dismantle,
   dismantleAll,
   list,

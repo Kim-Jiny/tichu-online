@@ -1927,7 +1927,9 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
           final height = constraints.maxHeight;
           final centerX = width / 2;
           const seatWidth = 116.0;
-          const seatHeight = 90.0;
+          // 96, not 90: fits the avatar row without the FittedBox scaling the
+          // whole label (and the nickname with it) down.
+          const seatHeight = 96.0;
           const playedCardWidth = 72 * 0.7;
           const playedCardHeight = 72.0;
           final spectatorBoardDrop = _mightySmallDeviceBoardDrop(
@@ -2463,31 +2465,44 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
                                     child: Center(child: roleLabel),
                                   ),
                                   // Own row rather than inline before the
-                                  // name — same change as the SK and LL seats:
-                                  // inline it was capped at 14-16px to leave
-                                  // the name any width.
-                                  if (player.photoUrl != null || player.isBot)
-                                    Padding(
-                                      padding:
-                                          EdgeInsets.only(bottom: spacing),
-                                      child: ProfileAvatar(
-                                        photoUrl: game.resolvePhotoUrl(
-                                          player.photoUrl,
-                                        ),
-                                        size: compact ? 24 : 28,
-                                        blocked: game.blockedUsers
-                                            .contains(player.name),
-                                        fallback: player.isBot
-                                            ? BotAvatar(
-                                                size: compact ? 24 : 28,
-                                                name: player.name,
-                                              )
-                                            : SizedBox(
-                                                width: compact ? 24 : 28,
-                                                height: compact ? 24 : 28,
-                                              ),
+                                  // name (same as SK/LL), and rendered for
+                                  // EVERY seat — photo-less seats get the
+                                  // default silhouette. Not cosmetic: the
+                                  // label scales down to fit the seat box, so
+                                  // when only some seats had an avatar their
+                                  // labels shrank (smaller name and all) while
+                                  // avatar-less seats rendered full size — the
+                                  // seats came out visibly different sizes.
+                                  Padding(
+                                    padding: EdgeInsets.only(bottom: spacing),
+                                    child: ProfileAvatar(
+                                      photoUrl: game.resolvePhotoUrl(
+                                        player.photoUrl,
                                       ),
+                                      size: compact ? 24 : 28,
+                                      blocked: game.blockedUsers
+                                          .contains(player.name),
+                                      fallback: player.isBot
+                                          ? BotAvatar(
+                                              size: compact ? 24 : 28,
+                                              name: player.name,
+                                            )
+                                          : Container(
+                                              width: compact ? 24 : 28,
+                                              height: compact ? 24 : 28,
+                                              decoration: const BoxDecoration(
+                                                color: Color(0xFFF0E7E3),
+                                                shape: BoxShape.circle,
+                                              ),
+                                              child: Icon(
+                                                Icons.person,
+                                                size: compact ? 15 : 17,
+                                                color:
+                                                    const Color(0xFF9C8B84),
+                                              ),
+                                            ),
                                     ),
+                                  ),
                                   Row(
                                     mainAxisAlignment: MainAxisAlignment.center,
                                     mainAxisSize: MainAxisSize.min,
@@ -2529,20 +2544,24 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
                                       fontWeight: FontWeight.w800,
                                     ),
                                   ),
-                                  SizedBox(height: spacing),
-                                  SizedBox(
-                                    height: timeoutHeight,
-                                    child: player.timeoutCount > 0
-                                        ? Text(
-                                            '⏱ ${player.timeoutCount}/3',
-                                            style: TextStyle(
-                                              fontSize: metaFontSize,
-                                              fontWeight: FontWeight.w800,
-                                              color: const Color(0xFFE65100),
-                                            ),
-                                          )
-                                        : null,
-                                  ),
+                                  // Only when there is a count: the always-
+                                  // reserved row pushed the label over the seat
+                                  // box, and the FittedBox paid for it by
+                                  // scaling the avatar down.
+                                  if (player.timeoutCount > 0) ...[
+                                    SizedBox(height: spacing),
+                                    SizedBox(
+                                      height: timeoutHeight,
+                                      child: Text(
+                                        '⏱ ${player.timeoutCount}/3',
+                                        style: TextStyle(
+                                          fontSize: metaFontSize,
+                                          fontWeight: FontWeight.w800,
+                                          color: const Color(0xFFE65100),
+                                        ),
+                                      ),
+                                    ),
+                                  ],
                                 ],
                               ),
                             ),

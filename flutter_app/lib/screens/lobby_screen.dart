@@ -2577,17 +2577,54 @@ class _LobbyScreenState extends State<LobbyScreen> {
     );
   }
 
+  /// One chip in the waiting room's action row.
+  Widget _roomActionChip({
+    required IconData icon,
+    required String label,
+    required VoidCallback onTap,
+  }) {
+    return GestureDetector(
+      onTap: onTap,
+      behavior: HitTestBehavior.opaque,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(10),
+          border: Border.all(color: const Color(0xFFE6DDD8)),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(icon, size: 14, color: const Color(0xFF7A6A62)),
+            const SizedBox(width: 5),
+            Text(
+              label,
+              style: const TextStyle(
+                fontSize: 12,
+                fontWeight: FontWeight.w600,
+                color: Color(0xFF6A5A52),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   Widget _buildRoomHeader(GameService game, {required bool isLandscape}) {
     final messenger = ScaffoldMessenger.of(context);
     final isKoreanUser =
         context.read<LocaleService>().effectiveLocale.languageCode == 'ko';
+    // Flat bar, not a floating card — same treatment as the spectator header.
+    // Three stacked cards (header, players, chat) put three elevations on one
+    // screen, and the 16dp margin on every side cost width the room title needs.
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-      decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: 0.95),
-        borderRadius: BorderRadius.circular(18),
+      padding: EdgeInsets.fromLTRB(8, isLandscape ? 6 : 8, 12, isLandscape ? 6 : 8),
+      decoration: const BoxDecoration(
+        color: Color(0xFFFDFBFA),
+        border: Border(bottom: BorderSide(color: Color(0xFFEDE4E0))),
       ),
-      margin: EdgeInsets.all(isLandscape ? 12 : 16),
       child: Column(
         children: [
           Row(
@@ -2694,171 +2731,29 @@ class _LobbyScreenState extends State<LobbyScreen> {
               spacing: 6,
               runSpacing: 6,
               children: [
-                GestureDetector(
+                // One style for all four. They used to be four hand-built pills
+                // in four different pastels, which read as four unrelated things
+                // rather than as the room's action row.
+                _roomActionChip(
+                  icon: Icons.person_add,
+                  label: L10n.of(context).lobbyInvite,
                   onTap: () => _showInviteFriendsDialog(game),
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 10,
-                      vertical: 6,
-                    ),
-                    decoration: BoxDecoration(
-                      color: const Color(0xFFF3E5F5),
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        const Icon(
-                          Icons.person_add,
-                          size: 14,
-                          color: Color(0xFF7E57C2),
-                        ),
-                        const SizedBox(width: 4),
-                        Text(
-                          L10n.of(context).lobbyInvite,
-                          style: const TextStyle(
-                            fontSize: 12,
-                            fontWeight: FontWeight.bold,
-                            color: Color(0xFF7E57C2),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
                 ),
-                GestureDetector(
+                _roomActionChip(
+                  icon: Icons.visibility,
+                  label: L10n.of(context).lobbySpectate,
                   onTap: () => game.switchToSpectator(),
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 10,
-                      vertical: 6,
-                    ),
-                    decoration: BoxDecoration(
-                      color: const Color(0xFFE8E0F8),
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        const Icon(
-                          Icons.visibility,
-                          size: 14,
-                          color: Color(0xFF4A4080),
-                        ),
-                        const SizedBox(width: 4),
-                        Text(
-                          L10n.of(context).lobbySpectate,
-                          style: const TextStyle(
-                            fontSize: 12,
-                            fontWeight: FontWeight.bold,
-                            color: Color(0xFF4A4080),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
                 ),
-                Stack(
-                  clipBehavior: Clip.none,
-                  children: [
-                    GestureDetector(
-                      onTap: () => _showRoomUtilitySheet(game),
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 10,
-                          vertical: 6,
-                        ),
-                        decoration: BoxDecoration(
-                          color: const Color(0xFFF6F3F2),
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            const Icon(
-                              Icons.more_horiz,
-                              size: 14,
-                              color: Color(0xFF8A7A72),
-                            ),
-                            const SizedBox(width: 4),
-                            Text(
-                              L10n.of(context).lobbyMore,
-                              style: const TextStyle(
-                                fontSize: 12,
-                                fontWeight: FontWeight.w700,
-                                color: Color(0xFF8A7A72),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-                    if ((game.pendingFriendRequestCount +
-                            game.totalUnreadDmCount) >
-                        0)
-                      Positioned(
-                        right: -6,
-                        top: -6,
-                        child: Container(
-                          padding: const EdgeInsets.all(4),
-                          decoration: const BoxDecoration(
-                            color: Color(0xFFE53935),
-                            shape: BoxShape.circle,
-                          ),
-                          constraints: const BoxConstraints(
-                            minWidth: 18,
-                            minHeight: 18,
-                          ),
-                          child: Text(
-                            (game.pendingFriendRequestCount +
-                                        game.totalUnreadDmCount) >
-                                    9
-                                ? '9+'
-                                : '${game.pendingFriendRequestCount + game.totalUnreadDmCount}',
-                            style: const TextStyle(
-                              color: Colors.white,
-                              fontSize: 10,
-                              fontWeight: FontWeight.bold,
-                            ),
-                            textAlign: TextAlign.center,
-                          ),
-                        ),
-                      ),
-                  ],
+                _roomActionChip(
+                  icon: Icons.more_horiz,
+                  label: L10n.of(context).lobbyMore,
+                  onTap: () => _showRoomUtilitySheet(game),
                 ),
-                if (game.isHost)
-                  GestureDetector(
-                    onTap: () => _showRoomSettingsDialog(game),
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 10,
-                        vertical: 6,
-                      ),
-                      decoration: BoxDecoration(
-                        color: const Color(0xFFE3F2FD),
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          const Icon(
-                            Icons.settings,
-                            size: 14,
-                            color: Color(0xFF1E88E5),
-                          ),
-                          const SizedBox(width: 4),
-                          Text(
-                            L10n.of(context).lobbyRoomSettings,
-                            style: const TextStyle(
-                              fontSize: 12,
-                              fontWeight: FontWeight.bold,
-                              color: Color(0xFF1E88E5),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
+                _roomActionChip(
+                  icon: Icons.settings,
+                  label: L10n.of(context).lobbyRoomSettings,
+                  onTap: () => _showRoomSettingsDialog(game),
+                ),
               ],
             ),
           ),
@@ -2868,19 +2763,11 @@ class _LobbyScreenState extends State<LobbyScreen> {
   }
 
   Widget _buildRoomPlayersPanel(GameService game) {
+    // No card of its own: the seat rows inside already carry their own fills,
+    // and wrapping them in a white panel on a tinted page just added a border to
+    // look past.
     return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: 0.95),
-        borderRadius: BorderRadius.circular(20),
-        boxShadow: [
-          BoxShadow(
-            color: const Color(0xFFD9CCC8).withValues(alpha: 0.4),
-            blurRadius: 10,
-            offset: const Offset(0, 4),
-          ),
-        ],
-      ),
+      padding: const EdgeInsets.symmetric(vertical: 12),
       child: Column(
         children: [
           if (game.isRankedRoom) ...[
@@ -3163,15 +3050,9 @@ class _LobbyScreenState extends State<LobbyScreen> {
   Widget _buildRoomChatContainer(GameService game, {double? height}) {
     final chat = Container(
       decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: 0.95),
-        borderRadius: BorderRadius.circular(20),
-        boxShadow: [
-          BoxShadow(
-            color: const Color(0xFFD9CCC8).withValues(alpha: 0.4),
-            blurRadius: 10,
-            offset: const Offset(0, 4),
-          ),
-        ],
+        color: Colors.white.withValues(alpha: 0.7),
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: const Color(0xFFEDE4E0)),
       ),
       child: _buildRoomChat(game),
     );
@@ -3861,18 +3742,19 @@ class _LobbyScreenState extends State<LobbyScreen> {
               final bannerGradient = (!isEmpty && !isBot)
                   ? game.bannerGradient(player.bannerKey)
                   : null;
+              // One neutral fill. Five different tints (ready green, bot indigo,
+              // blocked pink, blocked-slot grey, plain beige) made four seats look
+              // like four unrelated widgets; ready and "my slot" are already said
+              // by the border, and "bot" by the avatar's corner marker.
               final fallbackColor = isSlotBlocked
-                  ? const Color(0xFFEDE9E6)
-                  : isReady
-                  ? const Color(0xFFE8F5E9)
-                  : isBot
-                  ? const Color(0xFFE8EAF6)
+                  ? const Color(0xFFEFEBE9)
                   : isBlockedPlayer
-                  ? const Color(0xFFFAF0F0)
-                  : const Color(0xFFFAF6F4);
+                  ? const Color(0xFFFAF3F3)
+                  : Colors.white.withValues(alpha: 0.72);
               return Container(
                 width: double.infinity,
-                height: 56,
+                // 60, not 56: the avatar grew to 38dp with a corner level chip.
+                height: 60,
                 padding: const EdgeInsets.symmetric(horizontal: 12),
                 decoration: BoxDecoration(
                   color: bannerGradient == null ? fallbackColor : null,
@@ -3883,16 +3765,10 @@ class _LobbyScreenState extends State<LobbyScreen> {
                     // border instead of a tinted background, so the banner
                     // gradient stays visible.
                     color: isSlotBlocked
-                        ? const Color(0xFFBBB1A8)
-                        : isMySlot
+                        ? const Color(0xFFCFC7C0)
+                        : (isMySlot || isReady)
                         ? const Color(0xFF66BB6A)
-                        : isReady
-                        ? const Color(0xFF66BB6A)
-                        : isBot
-                        ? const Color(0xFFC5CAE9)
-                        : isBlockedPlayer
-                        ? const Color(0xFFE0B0B0)
-                        : const Color(0xFFDDD0CC),
+                        : const Color(0xFFE6DDD8),
                     width: (isMySlot || isReady) ? 2 : 1,
                   ),
                 ),

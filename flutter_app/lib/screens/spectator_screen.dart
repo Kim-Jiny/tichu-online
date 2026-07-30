@@ -184,12 +184,12 @@ class _SpectatorScreenState extends State<SpectatorScreen> {
           children: [
             // Top bar
             Container(
-              margin: const EdgeInsets.all(12),
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-              decoration: BoxDecoration(
-                color: Colors.white.withValues(alpha: 0.95),
-                borderRadius: BorderRadius.circular(16),
-                border: Border.all(color: const Color(0xFFE0D8D4)),
+              // Flat, like the in-game spectator header — the waiting room used
+              // a floating card while the game view next to it did not.
+              padding: const EdgeInsets.fromLTRB(8, 8, 12, 8),
+              decoration: const BoxDecoration(
+                color: Color(0xFFFDFBFA),
+                border: Border(bottom: BorderSide(color: Color(0xFFEDE4E0))),
               ),
               child: Row(
                 children: [
@@ -251,18 +251,6 @@ class _SpectatorScreenState extends State<SpectatorScreen> {
                       maxWidth: isLandscape ? 920 : 560,
                     ),
                     padding: EdgeInsets.all(isLandscape ? 20 : 16),
-                    decoration: BoxDecoration(
-                      color: Colors.white.withValues(alpha: 0.95),
-                      borderRadius: BorderRadius.circular(20),
-                      border: Border.all(color: const Color(0xFFE0D8D4)),
-                      boxShadow: [
-                        BoxShadow(
-                          color: const Color(0xFFD9CCC8).withValues(alpha: 0.4),
-                          blurRadius: 10,
-                          offset: const Offset(0, 4),
-                        ),
-                      ],
-                    ),
                     child: Column(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
@@ -377,14 +365,11 @@ class _SpectatorScreenState extends State<SpectatorScreen> {
     required Color color,
     required List<Widget> children,
   }) {
+    // Label + seats, no box. The seats have their own outlines, so a card
+    // around them was a third nested border (page → panel → team → seat).
     return Container(
       width: 320,
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: const Color(0xFFF9F6F4),
-        borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: const Color(0xFFE6DDD8)),
-      ),
+      padding: const EdgeInsets.symmetric(vertical: 8),
       child: Column(
         children: [
           _buildWaitingTeamLabel(label: label, color: color),

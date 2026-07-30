@@ -897,141 +897,70 @@ class _SKGameScreenState extends State<SKGameScreen> {
     final currentPlayerName = state.players
         .firstWhere((p) => p.id == displayId, orElse: () => state.players.first)
         .name;
-
-    return Container(
-      margin: const EdgeInsets.fromLTRB(10, 8, 10, 6),
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-      decoration: BoxDecoration(
-        color: const Color(0xFF21455F).withValues(alpha: 0.92),
-        borderRadius: BorderRadius.circular(18),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.12),
-            blurRadius: 10,
-            offset: const Offset(0, 4),
-          ),
-        ],
-      ),
-      child: Row(
-        children: [
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-            decoration: BoxDecoration(
-              color: Colors.white.withValues(alpha: 0.12),
-              borderRadius: BorderRadius.circular(999),
-              border: Border.all(color: Colors.white.withValues(alpha: 0.14)),
-            ),
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                const Icon(
-                  Icons.visibility_rounded,
-                  size: 14,
-                  color: Colors.white,
-                ),
-                const SizedBox(width: 5),
-                Text(
-                  L10n.of(context).skGameSpectating,
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontSize: 12,
-                    fontWeight: FontWeight.w800,
-                  ),
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(width: 10),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  L10n.of(
-                    context,
-                  ).skGameRoundTrick(state.round, state.trickNumber),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: TextStyle(
-                    color: Colors.white.withValues(alpha: 0.92),
-                    fontSize: 13,
-                    fontWeight: FontWeight.w800,
-                  ),
-                ),
-                const SizedBox(height: 2),
-                Text(
-                  state.phase == 'bidding'
-                      ? L10n.of(
-                          context,
-                        ).skGameBiddingInProgress(currentPlayerName)
-                      : L10n.of(context).skGamePlayerTurn(currentPlayerName),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: TextStyle(
-                    color: Colors.white.withValues(alpha: 0.78),
-                    fontSize: 11,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-              ],
-            ),
-          ),
-          if (state.expansions.isNotEmpty) ...[
-            _buildTopActionButton(
-              icon: Icons.help_outline,
-              active: false,
-              onTap: () => _showExpansionGuide(state),
-            ),
-            const SizedBox(width: 6),
-          ],
+    final l10n = L10n.of(context);
+    // Shared flat header (see SpectatorHeader): this used to be a dark navy
+    // pill card unlike any other game's spectator bar.
+    return SpectatorHeader(
+      game: game,
+      statusLine:
+          '${l10n.skGameRoundTrick(state.round, state.trickNumber)} · '
+          '${state.phase == 'bidding' ? l10n.skGameBiddingInProgress(currentPlayerName) : l10n.skGamePlayerTurn(currentPlayerName)}',
+      actions: [
+        if (state.expansions.isNotEmpty) ...[
           _buildTopActionButton(
-            icon: Icons.history_rounded,
+            icon: Icons.help_outline,
             active: false,
-            onTap: () => _showScoreHistoryDialog(state),
+            onTap: () => _showExpansionGuide(state),
           ),
           const SizedBox(width: 6),
-          _buildTopActionButton(
-            icon: Icons.chat_bubble_outline_rounded,
-            active: _chatOpen,
-            badgeCount: _chatOpen
-                ? 0
-                : (game.chatMessages.length - _readChatCount).clamp(0, 99),
-            onTap: () {
-              setState(() {
-                _chatOpen = !_chatOpen;
-                if (_chatOpen) {
-                  _readChatCount = game.chatMessages.length;
-                  _moreOpen = false;
-                  _soundPanelOpen = false;
-                }
-              });
-            },
-          ),
-          const SizedBox(width: 6),
-          _buildTopActionButton(
-            icon: Icons.more_horiz,
-            active: _moreOpen,
-            onTap: () {
-              setState(() {
-                _moreOpen = !_moreOpen;
-                if (_moreOpen) {
-                  _chatOpen = false;
-                  _soundPanelOpen = false;
-                } else {
-                  _soundPanelOpen = false;
-                }
-              });
-            },
-          ),
         ],
-      ),
+        _buildTopActionButton(
+          icon: Icons.history_rounded,
+          active: false,
+          onTap: () => _showScoreHistoryDialog(state),
+        ),
+        const SizedBox(width: 6),
+        _buildTopActionButton(
+          icon: Icons.chat_bubble_outline_rounded,
+          active: _chatOpen,
+          badgeCount: _chatOpen
+              ? 0
+              : (game.chatMessages.length - _readChatCount).clamp(0, 99),
+          onTap: () {
+            setState(() {
+              _chatOpen = !_chatOpen;
+              if (_chatOpen) {
+                _readChatCount = game.chatMessages.length;
+                _moreOpen = false;
+                _soundPanelOpen = false;
+              }
+            });
+          },
+        ),
+        const SizedBox(width: 6),
+        _buildTopActionButton(
+          icon: Icons.more_horiz,
+          active: _moreOpen,
+          onTap: () {
+            setState(() {
+              _moreOpen = !_moreOpen;
+              if (_moreOpen) {
+                _chatOpen = false;
+                _soundPanelOpen = false;
+              } else {
+                _soundPanelOpen = false;
+              }
+            });
+          },
+        ),
+      ],
     );
   }
 
   Widget _buildMoreMenu(GameService game) {
     final hasViewers = game.cardViewers.isNotEmpty;
     return Positioned(
-      top: 58,
+      top: game.isSpectator ? 96 : 58,
       right: 8,
       child: Container(
         // Players see 4 actions (incl. card-view); spectators have no cards so
@@ -2812,7 +2741,7 @@ class _SKGameScreenState extends State<SKGameScreen> {
 
   Widget _buildViewersPanel(GameService game) {
     return Positioned(
-      top: 58,
+      top: game.isSpectator ? 96 : 58,
       right: 8,
       child: Container(
         width: 200,

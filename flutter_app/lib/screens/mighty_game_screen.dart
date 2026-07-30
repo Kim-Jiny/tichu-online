@@ -874,6 +874,78 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
         (state.phase == 'bidding' &&
             (hasCurrentBidder || state.dealMissPool > 0));
 
+    // Spectators get the shared flat header (see SpectatorHeader) so all four
+    // games' spectator bars look alike; the chip row below stays for players.
+    if (game.isSpectator) {
+      final l10n = L10n.of(context);
+      final roundText = state.phase == 'round_end'
+          ? l10n.mtRoundOnly(state.round.toString())
+          : l10n.mtRoundPhase(state.round.toString(), _phaseLabel(state.phase));
+      return Column(
+        children: [
+          SpectatorHeader(
+            game: game,
+            statusLine: roundText,
+            statusTrailing: Text(
+              l10n.spectatorTargetScore(game.roomTargetScore),
+              style: const TextStyle(
+                color: Color(0xFFA89C96),
+                fontSize: 11,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+            actions: [
+              if (state.scoreHistory.isNotEmpty) ...[
+                _buildTopActionButton(
+                  icon: Icons.history,
+                  active: false,
+                  onTap: () => _showScoreHistoryDialog(state, game),
+                ),
+                const SizedBox(width: 6),
+              ],
+              _buildTopActionButton(
+                icon: Icons.chat_bubble_outline,
+                active: _chatOpen,
+                badgeCount: _chatOpen
+                    ? 0
+                    : (game.chatMessages.length - _readChatCount).clamp(0, 99),
+                onTap: () {
+                  setState(() {
+                    _chatOpen = !_chatOpen;
+                    if (_chatOpen) {
+                      _readChatCount = game.chatMessages.length;
+                      _moreOpen = false;
+                      _viewersOpen = false;
+                      _soundPanelOpen = false;
+                      _scrollChatToBottom();
+                    }
+                  });
+                },
+              ),
+              const SizedBox(width: 6),
+              _buildTopActionButton(
+                icon: Icons.more_horiz,
+                active: _moreOpen,
+                onTap: () {
+                  setState(() {
+                    _moreOpen = !_moreOpen;
+                    if (_moreOpen) {
+                      _chatOpen = false;
+                      _viewersOpen = false;
+                      _soundPanelOpen = false;
+                    } else {
+                      _soundPanelOpen = false;
+                    }
+                  });
+                },
+              ),
+            ],
+          ),
+          if (showContractInfo) _buildContractInfoBar(state, game),
+        ],
+      );
+    }
+
     return Column(
       children: [
         Container(

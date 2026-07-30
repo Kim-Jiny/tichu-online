@@ -643,3 +643,129 @@ void showLLScoreHistoryDialog(
     ),
   );
 }
+
+/// The spectator top bar, shaped like the Tichu spectator screen's header:
+/// a flat full-width strip (no floating card) with a hairline under it.
+///
+///   ← [👁 관전 중] 방 이름                     [actions…]
+///   status line                                [statusTrailing]
+///
+/// Each game's spectator view had grown its own header — Skull King a dark
+/// navy pill card, Love Letter a plain white strip with no room name and no
+/// way to tell you were spectating, Mighty a row of chips — so switching games
+/// as a spectator felt like switching apps. The game-specific parts (status
+/// text, action buttons, an extra chip on the right) come in as parameters;
+/// the frame is fixed.
+class SpectatorHeader extends StatelessWidget {
+  final GameService game;
+
+  /// One line under the title row: round, phase, whose turn — whatever the
+  /// game wants to say. Ellipsized, never wraps.
+  final String statusLine;
+
+  /// Action buttons for the right side of the title row. Callers include
+  /// their own gaps (`SizedBox(width: 6)`) between them.
+  final List<Widget> actions;
+
+  /// Optional chip at the right end of the status line (draw pile, target
+  /// score…).
+  final Widget? statusTrailing;
+
+  const SpectatorHeader({
+    super.key,
+    required this.game,
+    required this.statusLine,
+    this.actions = const [],
+    this.statusTrailing,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.fromLTRB(8, 8, 12, 8),
+      decoration: const BoxDecoration(
+        color: Color(0xFFFDFBFA),
+        border: Border(bottom: BorderSide(color: Color(0xFFEDE4E0))),
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Row(
+            children: [
+              IconButton(
+                // Spectators leave immediately — there is no game state of
+                // theirs to protect with a confirm.
+                onPressed: () => game.leaveRoom(),
+                icon: const Icon(Icons.arrow_back, color: Color(0xFF6A5A52)),
+                padding: EdgeInsets.zero,
+                constraints:
+                    const BoxConstraints.tightFor(width: 36, height: 36),
+              ),
+              const SizedBox(width: 4),
+              Container(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFE8E0F8),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const Icon(
+                      Icons.visibility,
+                      size: 14,
+                      color: Color(0xFF4A4080),
+                    ),
+                    const SizedBox(width: 4),
+                    Text(
+                      L10n.of(context).spectatorWatching,
+                      style: const TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.bold,
+                        color: Color(0xFF4A4080),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  game.currentRoomName,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(
+                    color: Color(0xFF4E3A34),
+                    fontSize: 14,
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
+              ),
+              const SizedBox(width: 6),
+              ...actions,
+            ],
+          ),
+          const SizedBox(height: 6),
+          Row(
+            children: [
+              Expanded(
+                child: Text(
+                  statusLine,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(
+                    color: Color(0xFF8A7E78),
+                    fontSize: 12,
+                  ),
+                ),
+              ),
+              ?statusTrailing,
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+}
+

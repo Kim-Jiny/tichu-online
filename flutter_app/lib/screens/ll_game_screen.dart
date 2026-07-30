@@ -627,6 +627,84 @@ class _LLGameScreenState extends State<LLGameScreen> {
     final l10n = L10n.of(context);
     final unread = gs.chatMessages.length - _readChatCount;
 
+    // Spectators get the shared flat header (see SpectatorHeader) so all four
+    // games' spectator bars look alike; this one had no room name and no sign
+    // that you were spectating at all.
+    if (gs.isSpectator) {
+      return SpectatorHeader(
+        game: gs,
+        statusLine: '${l10n.llRound} ${state.round}',
+        statusTrailing: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Icon(Icons.style, color: Color(0xFF8A7A72), size: 14),
+            const SizedBox(width: 4),
+            Text(
+              '${state.drawPileCount}',
+              style: const TextStyle(
+                color: Color(0xFF8A7A72),
+                fontSize: 12,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          _buildTopActionButton(
+            icon: Icons.history,
+            active: false,
+            onTap: () => showLLScoreHistoryDialog(
+              context,
+              roundHistory: state.roundHistory,
+              players: state.players,
+              targetTokens: state.targetTokens,
+            ),
+          ),
+          const SizedBox(width: 4),
+          _buildTopActionButton(
+            icon: Icons.help_outline,
+            active: false,
+            onTap: () {
+              setState(() => _soundPanelOpen = false);
+              _showCardGuide(context);
+            },
+          ),
+          const SizedBox(width: 4),
+          _buildTopActionButton(
+            icon: Icons.chat_bubble_outline,
+            active: _chatOpen,
+            badgeCount: _chatOpen ? 0 : unread.clamp(0, 99),
+            onTap: () {
+              setState(() {
+                _chatOpen = !_chatOpen;
+                if (_chatOpen) {
+                  _readChatCount = gs.chatMessages.length;
+                  _soundPanelOpen = false;
+                  _viewersOpen = false;
+                  _moreOpen = false;
+                }
+              });
+            },
+          ),
+          const SizedBox(width: 4),
+          _buildTopActionButton(
+            icon: Icons.more_horiz,
+            active: _moreOpen,
+            onTap: () {
+              setState(() {
+                _moreOpen = !_moreOpen;
+                if (_moreOpen) {
+                  _chatOpen = false;
+                  _soundPanelOpen = false;
+                  _viewersOpen = false;
+                }
+              });
+            },
+          ),
+        ],
+      );
+    }
+
     return Container(
       decoration: BoxDecoration(
         color: Colors.white.withValues(alpha: 0.9),
@@ -747,7 +825,7 @@ class _LLGameScreenState extends State<LLGameScreen> {
     final hasMuted = gs.sfxVolume <= 0.01;
     final hasViewers = gs.cardViewers.isNotEmpty;
     return Positioned(
-      top: 54,
+      top: gs.isSpectator ? 96 : 54,
       right: 8,
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
@@ -860,7 +938,7 @@ class _LLGameScreenState extends State<LLGameScreen> {
         : l10n.gameSoundEffects;
 
     return Positioned(
-      top: 54,
+      top: gs.isSpectator ? 96 : 54,
       right: 8,
       child: Container(
         width: 190,
@@ -903,7 +981,7 @@ class _LLGameScreenState extends State<LLGameScreen> {
 
   Widget _buildViewersPanel(GameService game) {
     return Positioned(
-      top: 54,
+      top: game.isSpectator ? 96 : 54,
       right: 8,
       child: Container(
         width: 220,

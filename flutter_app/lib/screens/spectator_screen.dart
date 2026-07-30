@@ -1036,14 +1036,27 @@ class _SpectatorScreenState extends State<SpectatorScreen> {
                         ],
                       ),
                     ),
-                    const Spacer(),
-                    _buildScoreHistoryButton(game, scoreHistory, scores),
-                    const SizedBox(width: 6),
-                    _buildSpectatorButton(game),
-                    const SizedBox(width: 6),
-                    _buildSoundButton(game),
+                    const SizedBox(width: 8),
+                    // The room name was nowhere in this bar, while four icon
+                    // buttons sat where it could go. Chat keeps its own button
+                    // because its unread badge is the one that matters live;
+                    // the other three are look-ups and settings.
+                    Expanded(
+                      child: Text(
+                        game.currentRoomName,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(
+                          color: Color(0xFF4E3A34),
+                          fontSize: 14,
+                          fontWeight: FontWeight.w800,
+                        ),
+                      ),
+                    ),
                     const SizedBox(width: 6),
                     _buildChatButton(game),
+                    const SizedBox(width: 6),
+                    _buildSpectatorMoreButton(game, scoreHistory, scores),
                   ],
                 ),
                 const SizedBox(height: 6),
@@ -1500,6 +1513,95 @@ class _SpectatorScreenState extends State<SpectatorScreen> {
       active: false,
       badgeCount: game.spectators.length,
       onTap: () => showSpectatorListDialog(context, game.spectators),
+    );
+  }
+
+  /// Score history, spectator list and sound, folded into one button.
+  ///
+  /// PopupMenuButton rather than the game screen's custom overlay: there is no
+  /// panel state to coordinate here — every item just opens a dialog or flips a
+  /// flag the existing buttons already flipped.
+  Widget _buildSpectatorMoreButton(
+    GameService game,
+    List scoreHistory,
+    Map<String, dynamic> scores,
+  ) {
+    final l10n = L10n.of(context);
+    return PopupMenuButton<String>(
+      tooltip: '',
+      padding: EdgeInsets.zero,
+      position: PopupMenuPosition.under,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+      icon: Container(
+        padding: const EdgeInsets.all(7),
+        decoration: BoxDecoration(
+          color: Colors.white.withValues(alpha: 0.8),
+          shape: BoxShape.circle,
+          border: Border.all(color: const Color(0xFFE0D8D4)),
+        ),
+        child: const Icon(
+          Icons.more_horiz,
+          size: 18,
+          color: Color(0xFF6A5A52),
+        ),
+      ),
+      onSelected: (value) {
+        switch (value) {
+          case 'history':
+            showTichuScoreHistoryDialog(
+              context,
+              history: scoreHistory
+                  .whereType<Map>()
+                  .map((e) => Map<String, dynamic>.from(e))
+                  .toList(),
+              totalA: scores['teamA'] ?? 0,
+              totalB: scores['teamB'] ?? 0,
+            );
+            break;
+          case 'spectators':
+            showSpectatorListDialog(context, game.spectators);
+            break;
+          case 'sound':
+            setState(() => _soundPanelOpen = !_soundPanelOpen);
+            break;
+        }
+      },
+      itemBuilder: (_) => [
+        PopupMenuItem(
+          value: 'history',
+          child: Row(
+            children: [
+              const Icon(Icons.history, size: 18, color: Color(0xFF6A5A52)),
+              const SizedBox(width: 10),
+              Text(l10n.gameScoreHistory),
+            ],
+          ),
+        ),
+        PopupMenuItem(
+          value: 'spectators',
+          child: Row(
+            children: [
+              const Icon(Icons.people_outline, size: 18, color: Color(0xFF6A5A52)),
+              const SizedBox(width: 10),
+              Text('${l10n.spectatorListTitle} ${game.spectators.length}'),
+            ],
+          ),
+        ),
+        PopupMenuItem(
+          value: 'sound',
+          child: Row(
+            children: [
+              Icon(
+                _soundPanelOpen ? Icons.volume_up : Icons.volume_up_outlined,
+                size: 18,
+                color: const Color(0xFF6A5A52),
+              ),
+              const SizedBox(width: 10),
+              Text(l10n.gameSoundEffects),
+            ],
+          ),
+        ),
+      ],
     );
   }
 

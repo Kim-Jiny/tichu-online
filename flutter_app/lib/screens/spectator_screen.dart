@@ -400,6 +400,62 @@ class _SpectatorScreenState extends State<SpectatorScreen> {
     );
   }
 
+  /// Waiting-room seat avatar: photo, bot art, or the nickname's initial.
+  ///
+  /// A level badge filled this slot before, and at 34dp a brown disc with a
+  /// number in it reads as a score rather than as a person. The level still
+  /// shows, as a small corner chip, the way the bot marker does.
+  Widget _seatAvatar(GameService game, Player player) {
+    const size = 34.0;
+    final initial = player.name.isEmpty ? '?' : player.name.characters.first;
+    final avatar = ProfileAvatar(
+      photoUrl: game.resolvePhotoUrl(player.photoUrl),
+      size: size,
+      blocked: game.blockedUsers.contains(player.name),
+      fallback: player.isBot
+          ? BotAvatar(size: size, name: player.name)
+          : Container(
+              width: size,
+              height: size,
+              decoration: const BoxDecoration(
+                color: Color(0xFFF0E7E3),
+                shape: BoxShape.circle,
+              ),
+              alignment: Alignment.center,
+              child: Text(
+                initial,
+                style: const TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w700,
+                  color: Color(0xFF6A5A52),
+                ),
+              ),
+            ),
+    );
+    if (player.isBot || player.level == null) return avatar;
+    return SizedBox(
+      width: size,
+      height: size,
+      child: Stack(
+        clipBehavior: Clip.none,
+        children: [
+          avatar,
+          Positioned(
+            right: -3,
+            bottom: -3,
+            child: Container(
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                border: Border.all(color: Colors.white, width: 1.5),
+              ),
+              child: LevelBadge(level: player.level, size: 17),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   Widget _buildPlayerSlot(GameService game, Player? player, int slotIndex) {
     final bool isEmpty = player == null;
     final String name = isEmpty ? '' : player.name;
@@ -443,20 +499,7 @@ class _SpectatorScreenState extends State<SpectatorScreen> {
               size: 28,
             )
           else
-            ProfileAvatar(
-              photoUrl: game.resolvePhotoUrl(player.photoUrl),
-              size: 34,
-              blocked: game.blockedUsers.contains(player.name),
-              fallback: player.isBot
-                  ? BotAvatar(size: 34, name: player.name)
-                  : player.level != null
-                      ? LevelBadge(level: player.level, size: 34)
-                      : const Icon(
-                          Icons.person,
-                          color: Color(0xFF6A5A52),
-                          size: 28,
-                        ),
-            ),
+            _seatAvatar(game, player),
           const SizedBox(height: 6),
           if (!isEmpty && player.titleName != null) ...[
             TitleChip(

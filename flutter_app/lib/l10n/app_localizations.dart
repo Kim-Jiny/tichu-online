@@ -7284,7 +7284,7 @@ abstract class L10n {
   /// No description provided for @attendanceBannerSubtitle.
   ///
   /// In en, this message translates to:
-  /// **'Watch an ad to claim {reward} gold!'**
+  /// **'Claim +{reward} gold'**
   String attendanceBannerSubtitle(int reward);
 
   /// No description provided for @attendanceBannerCompletedTitle.
@@ -7844,6 +7844,30 @@ abstract class L10n {
   /// In en, this message translates to:
   /// **'Uploaded photos are screened automatically and shown to other players. Photos of other people and inappropriate images are not accepted.'**
   String get profilePhotoUploadNotice;
+
+  /// No description provided for @shopChargeGold.
+  ///
+  /// In en, this message translates to:
+  /// **'Buy gold'**
+  String get shopChargeGold;
+
+  /// No description provided for @shopAdWatchTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Watch ad for 50 Gold'**
+  String get shopAdWatchTitle;
+
+  /// No description provided for @shopAdWatchProgress.
+  ///
+  /// In en, this message translates to:
+  /// **'{current}/{max} today'**
+  String shopAdWatchProgress(int current, int max);
+
+  /// No description provided for @shopAdRewardDoneSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Come back tomorrow'**
+  String get shopAdRewardDoneSubtitle;
 }
 
 class _L10nDelegate extends LocalizationsDelegate<L10n> {

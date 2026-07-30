@@ -4075,7 +4075,7 @@ class L10nEn extends L10n {
         intl.NumberFormat.decimalPattern(localeName);
     final String rewardString = rewardNumberFormat.format(reward);
 
-    return 'Watch an ad to claim $rewardString gold!';
+    return 'Claim +$rewardString gold';
   }
 
   @override
@@ -4395,4 +4395,18 @@ class L10nEn extends L10n {
   @override
   String get profilePhotoUploadNotice =>
       'Uploaded photos are screened automatically and shown to other players. Photos of other people and inappropriate images are not accepted.';
+
+  @override
+  String get shopChargeGold => 'Buy gold';
+
+  @override
+  String get shopAdWatchTitle => 'Watch ad for 50 Gold';
+
+  @override
+  String shopAdWatchProgress(int current, int max) {
+    return '$current/$max today';
+  }
+
+  @override
+  String get shopAdRewardDoneSubtitle => 'Come back tomorrow';
 }

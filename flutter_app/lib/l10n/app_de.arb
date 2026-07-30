@@ -1249,7 +1249,7 @@
   "goldHistoryAttendance": "Tägliche Anwesenheit",
   "attendanceBannerTitle": "Heutige Anwesenheit! Tag {day}",
   "@attendanceBannerTitle": { "placeholders": { "day": { "type": "int" } } },
-  "attendanceBannerSubtitle": "Werbung ansehen für {reward} Gold!",
+  "attendanceBannerSubtitle": "+{reward} Gold holen",
   "@attendanceBannerSubtitle": { "placeholders": { "reward": { "type": "int", "format": "decimalPattern" } } },
   "attendanceBannerCompletedTitle": "Tag {day} eingecheckt! 🎉",
   "@attendanceBannerCompletedTitle": { "placeholders": { "day": { "type": "int" } } },
@@ -1408,5 +1408,9 @@
   "profilePhotoDeleteConfirm": "Profilfoto entfernen? Für den Rest deines Passes kannst du ein neues hochladen.",
   "profilePhotoDeleted": "Profilfoto entfernt",
   "gameTapToClose": "Zum Schließen tippen",
-  "profilePhotoUploadNotice": "Hochgeladene Fotos werden automatisch geprüft und anderen Spielern gezeigt. Fotos anderer Personen und unangemessene Bilder werden nicht akzeptiert."
+  "profilePhotoUploadNotice": "Hochgeladene Fotos werden automatisch geprüft und anderen Spielern gezeigt. Fotos anderer Personen und unangemessene Bilder werden nicht akzeptiert.",
+  "shopChargeGold": "Gold kaufen",
+  "shopAdWatchTitle": "Werbung für 50 Gold",
+  "shopAdWatchProgress": "Heute {current}/{max}",
+  "shopAdRewardDoneSubtitle": "Morgen wieder verfügbar"
 }

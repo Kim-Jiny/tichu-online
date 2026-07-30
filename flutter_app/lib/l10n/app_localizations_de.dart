@@ -4112,7 +4112,7 @@ class L10nDe extends L10n {
         intl.NumberFormat.decimalPattern(localeName);
     final String rewardString = rewardNumberFormat.format(reward);
 
-    return 'Werbung ansehen für $rewardString Gold!';
+    return '+$rewardString Gold holen';
   }
 
   @override
@@ -4431,4 +4431,18 @@ class L10nDe extends L10n {
   @override
   String get profilePhotoUploadNotice =>
       'Hochgeladene Fotos werden automatisch geprüft und anderen Spielern gezeigt. Fotos anderer Personen und unangemessene Bilder werden nicht akzeptiert.';
+
+  @override
+  String get shopChargeGold => 'Gold kaufen';
+
+  @override
+  String get shopAdWatchTitle => 'Werbung für 50 Gold';
+
+  @override
+  String shopAdWatchProgress(int current, int max) {
+    return 'Heute $current/$max';
+  }
+
+  @override
+  String get shopAdRewardDoneSubtitle => 'Morgen wieder verfügbar';
 }

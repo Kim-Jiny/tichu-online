@@ -1846,7 +1846,7 @@
   "goldHistoryAttendance": "Daily check-in",
   "attendanceBannerTitle": "Today's check-in! Day {day}",
   "@attendanceBannerTitle": { "placeholders": { "day": { "type": "int" } } },
-  "attendanceBannerSubtitle": "Watch an ad to claim {reward} gold!",
+  "attendanceBannerSubtitle": "Claim +{reward} gold",
   "@attendanceBannerSubtitle": { "placeholders": { "reward": { "type": "int", "format": "decimalPattern" } } },
   "attendanceBannerCompletedTitle": "Day {day} check-in done! 🎉",
   "@attendanceBannerCompletedTitle": { "placeholders": { "day": { "type": "int" } } },
@@ -1994,5 +1994,10 @@
   "profilePhotoDeleteConfirm": "Remove your profile photo? You can upload another for the rest of your pass.",
   "profilePhotoDeleted": "Profile photo removed",
   "gameTapToClose": "Tap anywhere to dismiss",
-  "profilePhotoUploadNotice": "Uploaded photos are screened automatically and shown to other players. Photos of other people and inappropriate images are not accepted."
+  "profilePhotoUploadNotice": "Uploaded photos are screened automatically and shown to other players. Photos of other people and inappropriate images are not accepted.",
+  "shopChargeGold": "Buy gold",
+  "shopAdWatchTitle": "Watch ad for 50 Gold",
+  "shopAdWatchProgress": "{current}/{max} today",
+  "shopAdRewardDoneSubtitle": "Come back tomorrow",
+  "@shopAdWatchProgress": {"placeholders": {"current": {"type": "int"}, "max": {"type": "int"}}}
 }

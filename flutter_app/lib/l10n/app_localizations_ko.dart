@@ -3976,7 +3976,7 @@ class L10nKo extends L10n {
         intl.NumberFormat.decimalPattern(localeName);
     final String rewardString = rewardNumberFormat.format(reward);
 
-    return '광고 보고 $rewardString골드 받기!';
+    return '+$rewardString골드 받기';
   }
 
   @override
@@ -4292,4 +4292,18 @@ class L10nKo extends L10n {
   @override
   String get profilePhotoUploadNotice =>
       '올린 사진은 자동 검사를 거쳐 다른 이용자에게 공개됩니다. 타인의 사진이나 부적절한 이미지는 등록할 수 없습니다.';
+
+  @override
+  String get shopChargeGold => '골드 충전';
+
+  @override
+  String get shopAdWatchTitle => '광고 보고 50골드';
+
+  @override
+  String shopAdWatchProgress(int current, int max) {
+    return '오늘 $current/$max회';
+  }
+
+  @override
+  String get shopAdRewardDoneSubtitle => '내일 다시 받을 수 있어요';
 }

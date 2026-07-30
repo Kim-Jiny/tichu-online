@@ -79,6 +79,7 @@ class _ShopScreenState extends State<ShopScreen> {
       if (dt == null) return null;
       return '${dt.month.toString().padLeft(2, '0')}/${dt.day.toString().padLeft(2, '0')}';
     }
+
     final sf = fmt(s);
     final ef = fmt(e);
     if (sf != null && ef != null) return '$sf ~ $ef';
@@ -142,12 +143,17 @@ class _ShopScreenState extends State<ShopScreen> {
       rewardedAdLoadCallback: RewardedAdLoadCallback(
         onAdLoaded: (ad) {
           _attendanceAdLoadInFlight = false;
-          if (!mounted) { ad.dispose(); return; }
+          if (!mounted) {
+            ad.dispose();
+            return;
+          }
           _attendanceAd = ad;
           _attendanceAdReady.value = true; // enables the dialog claim button
         },
         onAdFailedToLoad: (error) {
-          debugPrint('[AdService] Attendance rewarded FAILED: ${error.message}');
+          debugPrint(
+            '[AdService] Attendance rewarded FAILED: ${error.message}',
+          );
           _attendanceAdLoadInFlight = false;
           // The screen may have been disposed (which disposes the notifier)
           // before a late load-failure arrives — don't touch it then.
@@ -206,23 +212,16 @@ class _ShopScreenState extends State<ShopScreen> {
                     _maybeShowNicknameChangeResult(context, game);
                     _maybeShowAdRewardResult(context, game);
                   });
+                  // Header and wallet are one flat bar, the two reward actions
+                  // are one short strip, and everything below is a single sheet.
+                  // Before this the screen was six stacked white cards with the
+                  // item list squeezed into what was left — under half the
+                  // screen on a phone.
                   return Column(
                     children: [
                       _buildTopBar(context, game),
-                      _buildWalletBar(game),
-                      if (_shouldShowAttendanceBanner(game))
-                        _buildAttendanceBanner(game),
-                      if (_rewardedAdReady) _buildAdRewardButton(game),
-                      const SizedBox(height: 8),
-                      _buildTabs(),
-                      Expanded(
-                        child: TabBarView(
-                          children: [
-                            _buildShopTab(game),
-                            _buildInventoryTab(game),
-                          ],
-                        ),
-                      ),
+                      _buildRewardStrip(game),
+                      Expanded(child: _buildContentSheet(game)),
                     ],
                   );
                 },
@@ -240,138 +239,254 @@ class _ShopScreenState extends State<ShopScreen> {
     _inventoryTabController.value = tabController.index;
   }
 
+  /// Header, wallet and the gold-charge action in one flat bar.
+  ///
+  /// Was two stacked rounded cards (title card, then wallet card), which cost
+  /// ~150px of height and read as two unrelated things. This is one surface with
+  /// a hairline bottom, like an app bar.
   Widget _buildTopBar(BuildContext context, GameService game) {
+    final l10n = L10n.of(context);
     return Container(
-      margin: const EdgeInsets.all(16),
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: 0.95),
-        borderRadius: BorderRadius.circular(18),
+      decoration: const BoxDecoration(
+        color: Color(0xFFFFFDFC),
+        border: Border(bottom: BorderSide(color: Color(0xFFEFE7E3))),
       ),
-      child: Row(
+      padding: const EdgeInsets.fromLTRB(4, 2, 8, 8),
+      child: Column(
         children: [
-          IconButton(
-            onPressed: () => Navigator.pop(context),
-            icon: const Icon(Icons.arrow_back),
-            color: const Color(0xFF8A7A72),
+          Row(
+            children: [
+              IconButton(
+                onPressed: () => Navigator.pop(context),
+                icon: const Icon(Icons.arrow_back),
+                color: const Color(0xFF8A7A72),
+                visualDensity: VisualDensity.compact,
+              ),
+              Text(
+                l10n.shopTitle,
+                style: const TextStyle(
+                  fontSize: 19,
+                  fontWeight: FontWeight.bold,
+                  color: Color(0xFF5A4038),
+                ),
+              ),
+              const Spacer(),
+              const Icon(
+                Icons.warning_amber_rounded,
+                color: Color(0xFFE57373),
+                size: 16,
+              ),
+              const SizedBox(width: 3),
+              Text(
+                l10n.shopDesertionCount(game.leaveCount),
+                style: const TextStyle(
+                  fontSize: 12,
+                  color: Color(0xFF9A6A6A),
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+              IconButton(
+                onPressed: () {
+                  game.requestWallet();
+                  game.requestShopItems();
+                  game.requestInventory();
+                },
+                icon: const Icon(Icons.refresh, size: 20),
+                color: const Color(0xFF8A7A72),
+                visualDensity: VisualDensity.compact,
+              ),
+            ],
           ),
-          const SizedBox(width: 4),
-          Text(
-            L10n.of(context).shopTitle,
-            style: const TextStyle(
-              fontSize: 20,
-              fontWeight: FontWeight.bold,
-              color: Color(0xFF5A4038),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(8, 0, 0, 0),
+            child: Row(
+              children: [
+                Expanded(
+                  child: InkWell(
+                    borderRadius: BorderRadius.circular(10),
+                    onTap: () => _showGoldHistoryDialog(game),
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 4),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          const Icon(
+                            Icons.monetization_on,
+                            size: 20,
+                            color: Color(0xFFFFB74D),
+                          ),
+                          const SizedBox(width: 6),
+                          Flexible(
+                            child: FittedBox(
+                              fit: BoxFit.scaleDown,
+                              alignment: Alignment.centerLeft,
+                              child: Text(
+                                l10n.shopGoldAmount(game.gold),
+                                maxLines: 1,
+                                style: const TextStyle(
+                                  fontSize: 15,
+                                  fontWeight: FontWeight.bold,
+                                  color: Color(0xFF5A4038),
+                                ),
+                              ),
+                            ),
+                          ),
+                          const Icon(
+                            Icons.chevron_right,
+                            size: 18,
+                            color: Color(0xFFB89C76),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 8),
+                InkWell(
+                  borderRadius: BorderRadius.circular(10),
+                  onTap: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(builder: (_) => const GoldShopScreen()),
+                    );
+                  },
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 12,
+                      vertical: 7,
+                    ),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFFFE9B0),
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        const Icon(
+                          Icons.add_circle,
+                          size: 15,
+                          color: Color(0xFFB07A12),
+                        ),
+                        const SizedBox(width: 5),
+                        Text(
+                          l10n.shopChargeGold,
+                          style: const TextStyle(
+                            fontSize: 13,
+                            fontWeight: FontWeight.bold,
+                            color: Color(0xFFB07A12),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ],
             ),
-          ),
-          const Spacer(),
-          const Icon(Icons.warning_amber_rounded,
-              color: Color(0xFFE57373), size: 18),
-          const SizedBox(width: 4),
-          Text(
-            L10n.of(context).shopDesertionCount(game.leaveCount),
-            style: const TextStyle(
-              fontSize: 12,
-              color: Color(0xFF9A6A6A),
-              fontWeight: FontWeight.w600,
-            ),
-          ),
-          const SizedBox(width: 4),
-          IconButton(
-            onPressed: () {
-              game.requestWallet();
-              game.requestShopItems();
-              game.requestInventory();
-            },
-            icon: const Icon(Icons.refresh),
-            color: const Color(0xFF8A7A72),
           ),
         ],
       ),
     );
   }
 
-  Widget _buildWalletBar(GameService game) {
-    return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 16),
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-      decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: 0.95),
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: const Color(0xFFE0D8D4)),
-      ),
+  /// The two daily rewards as one short strip.
+  ///
+  /// They used to be two full-width blocks stacked on top of each other — a
+  /// gradient attendance banner and a purple ad button — about 110px before the
+  /// tabs even started. Side by side they cost one 46px row.
+  Widget _buildRewardStrip(GameService game) {
+    final hasAttendance = _shouldShowAttendanceBanner(game);
+    if (!hasAttendance && !_rewardedAdReady) return const SizedBox.shrink();
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(12, 10, 12, 10),
       child: Row(
         children: [
-          Expanded(
-            child: InkWell(
-              borderRadius: BorderRadius.circular(12),
-              onTap: () => _showGoldHistoryDialog(game),
-              child: Padding(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 4, vertical: 4),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    const Icon(Icons.monetization_on,
-                        color: Color(0xFFFFB74D)),
-                    const SizedBox(width: 6),
-                    Flexible(
-                      child: FittedBox(
-                        fit: BoxFit.scaleDown,
-                        alignment: Alignment.centerLeft,
-                        child: Text(
-                          L10n.of(context).shopGoldAmount(game.gold),
-                          maxLines: 1,
-                          style: const TextStyle(
-                            fontSize: 14,
-                            fontWeight: FontWeight.bold,
-                            color: Color(0xFF5A4038),
-                          ),
-                        ),
-                      ),
-                    ),
-                    const SizedBox(width: 4),
-                    const Icon(
-                      Icons.chevron_right,
-                      size: 18,
-                      color: Color(0xFFB89C76),
-                    ),
-                  ],
-                ),
-              ),
-            ),
+          if (hasAttendance) Expanded(child: _buildAttendanceTile(game)),
+          if (hasAttendance && _rewardedAdReady) const SizedBox(width: 8),
+          if (_rewardedAdReady) Expanded(child: _buildAdRewardTile(game)),
+        ],
+      ),
+    );
+  }
+
+  /// Shared shape for the two reward tiles so they read as one pair.
+  Widget _buildRewardTile({
+    required List<Color> gradient,
+    required IconData icon,
+    required String title,
+    required String subtitle,
+    required VoidCallback? onTap,
+    Widget? leadingOverride,
+  }) {
+    return InkWell(
+      borderRadius: BorderRadius.circular(12),
+      onTap: onTap,
+      child: Container(
+        height: 46,
+        padding: const EdgeInsets.symmetric(horizontal: 10),
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            colors: gradient,
+            begin: Alignment.centerLeft,
+            end: Alignment.centerRight,
           ),
-          const SizedBox(width: 8),
-          InkWell(
-            borderRadius: BorderRadius.circular(12),
-            onTap: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                    builder: (_) => const GoldShopScreen()),
-              );
-            },
-            child: Container(
-              padding:
-                  const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-              decoration: BoxDecoration(
-                color: const Color(0xFFFFE9B0),
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: const Color(0xFFE7B84B)),
-              ),
-              child: const Row(
-                mainAxisSize: MainAxisSize.min,
+          borderRadius: BorderRadius.circular(12),
+        ),
+        child: Row(
+          children: [
+            leadingOverride ?? Icon(icon, color: Colors.white, size: 18),
+            const SizedBox(width: 8),
+            Expanded(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Icon(Icons.add_circle,
-                      size: 16, color: Color(0xFFB07A12)),
-                  SizedBox(width: 5),
-                  Text('골드 충전',
-                      style: TextStyle(
-                          fontSize: 13,
-                          fontWeight: FontWeight.bold,
-                          color: Color(0xFFB07A12))),
+                  Text(
+                    title,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontWeight: FontWeight.w800,
+                      fontSize: 12.5,
+                      height: 1.15,
+                    ),
+                  ),
+                  Text(
+                    subtitle,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 11,
+                      height: 1.2,
+                    ),
+                  ),
                 ],
               ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  /// White rounded sheet holding the tabs and the item list.
+  ///
+  /// The list gets everything below the header: one surface instead of a tab
+  /// card, a category card and a card per item.
+  Widget _buildContentSheet(GameService game) {
+    return Container(
+      decoration: const BoxDecoration(
+        color: Color(0xFFFFFDFC),
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      clipBehavior: Clip.antiAlias,
+      child: Column(
+        children: [
+          _buildTabs(),
+          Expanded(
+            child: TabBarView(
+              children: [_buildShopTab(game), _buildInventoryTab(game)],
             ),
           ),
         ],
@@ -461,7 +576,10 @@ class _ShopScreenState extends State<ShopScreen> {
                           if (game.goldHistoryError != null) {
                             return Center(
                               child: Text(
-                                localizeServiceMessage(game.goldHistoryError!, L10n.of(context)),
+                                localizeServiceMessage(
+                                  game.goldHistoryError!,
+                                  L10n.of(context),
+                                ),
                                 textAlign: TextAlign.center,
                                 style: const TextStyle(
                                   color: Color(0xFF8A7A72),
@@ -488,14 +606,17 @@ class _ShopScreenState extends State<ShopScreen> {
                                 const SizedBox(height: 10),
                             itemBuilder: (context, index) {
                               final item = game.goldHistory[index];
-                              final delta = (item['goldDelta'] as num?)?.toInt() ?? 0;
+                              final delta =
+                                  (item['goldDelta'] as num?)?.toInt() ?? 0;
                               final positive = delta >= 0;
                               return Container(
                                 padding: const EdgeInsets.all(14),
                                 decoration: BoxDecoration(
                                   color: Colors.white,
                                   borderRadius: BorderRadius.circular(16),
-                                  border: Border.all(color: const Color(0xFFE6DEDA)),
+                                  border: Border.all(
+                                    color: const Color(0xFFE6DEDA),
+                                  ),
                                 ),
                                 child: Row(
                                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -510,7 +631,9 @@ class _ShopScreenState extends State<ShopScreen> {
                                         borderRadius: BorderRadius.circular(14),
                                       ),
                                       child: Icon(
-                                        positive ? Icons.south_west : Icons.north_east,
+                                        positive
+                                            ? Icons.south_west
+                                            : Icons.north_east,
                                         color: positive
                                             ? const Color(0xFF43A047)
                                             : const Color(0xFFFB8C00),
@@ -519,10 +642,18 @@ class _ShopScreenState extends State<ShopScreen> {
                                     const SizedBox(width: 12),
                                     Expanded(
                                       child: Column(
-                                        crossAxisAlignment: CrossAxisAlignment.start,
+                                        crossAxisAlignment:
+                                            CrossAxisAlignment.start,
                                         children: [
                                           Text(
-                                            localizeGoldTitle(item['title']?.toString(), item['source']?.toString(), L10n.of(context), Localizations.localeOf(context).languageCode),
+                                            localizeGoldTitle(
+                                              item['title']?.toString(),
+                                              item['source']?.toString(),
+                                              L10n.of(context),
+                                              Localizations.localeOf(
+                                                context,
+                                              ).languageCode,
+                                            ),
                                             style: const TextStyle(
                                               fontSize: 14,
                                               fontWeight: FontWeight.w800,
@@ -531,7 +662,11 @@ class _ShopScreenState extends State<ShopScreen> {
                                           ),
                                           const SizedBox(height: 3),
                                           Text(
-                                            localizeGoldDescription(item['description']?.toString(), item['source']?.toString(), L10n.of(context)),
+                                            localizeGoldDescription(
+                                              item['description']?.toString(),
+                                              item['source']?.toString(),
+                                              L10n.of(context),
+                                            ),
                                             style: const TextStyle(
                                               fontSize: 12,
                                               color: Color(0xFF8A7A72),
@@ -539,7 +674,9 @@ class _ShopScreenState extends State<ShopScreen> {
                                           ),
                                           const SizedBox(height: 6),
                                           Text(
-                                            _formatHistoryDate(item['createdAt']),
+                                            _formatHistoryDate(
+                                              item['createdAt'],
+                                            ),
                                             style: const TextStyle(
                                               fontSize: 11,
                                               color: Color(0xFFB0A39E),
@@ -574,7 +711,9 @@ class _ShopScreenState extends State<ShopScreen> {
                       child: Container(
                         width: double.infinity,
                         padding: const EdgeInsets.symmetric(
-                            horizontal: 12, vertical: 12),
+                          horizontal: 12,
+                          vertical: 12,
+                        ),
                         decoration: BoxDecoration(
                           color: const Color(0xFFFFF6E7),
                           borderRadius: BorderRadius.circular(12),
@@ -622,8 +761,13 @@ class _ShopScreenState extends State<ShopScreen> {
       context: context,
       builder: (dialogContext) => LayoutBuilder(
         builder: (context, constraints) => Dialog(
-          insetPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 28),
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+          insetPadding: const EdgeInsets.symmetric(
+            horizontal: 24,
+            vertical: 28,
+          ),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(24),
+          ),
           child: ConstrainedBox(
             constraints: BoxConstraints(
               maxWidth: 420,
@@ -814,19 +958,28 @@ class _ShopScreenState extends State<ShopScreen> {
   }
 
   Widget _buildTabs() {
-    return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 16),
-      decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: 0.95),
-        borderRadius: BorderRadius.circular(14),
+    return DecoratedBox(
+      decoration: const BoxDecoration(
+        border: Border(bottom: BorderSide(color: Color(0xFFEFE7E3))),
       ),
       child: TabBar(
         labelColor: const Color(0xFF5A4038),
         unselectedLabelColor: const Color(0xFF9A8E8A),
-        indicatorColor: const Color(0xFFB9A8A1),
+        indicatorColor: const Color(0xFF7E57C2),
+        indicatorWeight: 2.5,
+        indicatorSize: TabBarIndicatorSize.label,
+        dividerColor: Colors.transparent,
+        labelStyle: const TextStyle(
+          fontSize: 14.5,
+          fontWeight: FontWeight.w800,
+        ),
+        unselectedLabelStyle: const TextStyle(
+          fontSize: 14.5,
+          fontWeight: FontWeight.w600,
+        ),
         tabs: [
-          Tab(text: L10n.of(context).shopTabShop),
-          Tab(text: L10n.of(context).shopTabInventory),
+          Tab(height: 42, text: L10n.of(context).shopTabShop),
+          Tab(height: 42, text: L10n.of(context).shopTabInventory),
         ],
       ),
     );
@@ -868,11 +1021,31 @@ class _ShopScreenState extends State<ShopScreen> {
           Expanded(
             child: TabBarView(
               children: [
-                _buildShopList(context, game, _filterShop(game.shopItems, 'banner')),
-                _buildShopList(context, game, _filterShop(game.shopItems, 'title')),
-                _buildShopList(context, game, _filterShop(game.shopItems, 'theme')),
-                _buildShopList(context, game, _filterShop(game.shopItems, 'utility')),
-                _buildShopList(context, game, _filterShop(game.shopItems, 'feature')),
+                _buildShopList(
+                  context,
+                  game,
+                  _filterShop(game.shopItems, 'banner'),
+                ),
+                _buildShopList(
+                  context,
+                  game,
+                  _filterShop(game.shopItems, 'title'),
+                ),
+                _buildShopList(
+                  context,
+                  game,
+                  _filterShop(game.shopItems, 'theme'),
+                ),
+                _buildShopList(
+                  context,
+                  game,
+                  _filterShop(game.shopItems, 'utility'),
+                ),
+                _buildShopList(
+                  context,
+                  game,
+                  _filterShop(game.shopItems, 'feature'),
+                ),
               ],
             ),
           ),
@@ -921,8 +1094,11 @@ class _ShopScreenState extends State<ShopScreen> {
     }
     for (final g in groups) {
       if (g.length > 1) {
-        g.sort((a, b) => ((a['duration_days'] as num?)?.toInt() ?? 0)
-            .compareTo((b['duration_days'] as num?)?.toInt() ?? 0));
+        g.sort(
+          (a, b) => ((a['duration_days'] as num?)?.toInt() ?? 0).compareTo(
+            (b['duration_days'] as num?)?.toInt() ?? 0,
+          ),
+        );
       }
     }
     // Cluster by game/theme so utility items read as groups (티츄끼리, 마이티끼리,
@@ -931,14 +1107,24 @@ class _ShopScreenState extends State<ShopScreen> {
     final ordered = List<List<Map<String, dynamic>>>.from(groups);
     final origIndex = {for (var i = 0; i < groups.length; i++) groups[i]: i};
     ordered.sort((a, b) {
-      final r = _themeRank(a.first['item_key']?.toString() ?? '')
-          .compareTo(_themeRank(b.first['item_key']?.toString() ?? ''));
+      final r = _themeRank(
+        a.first['item_key']?.toString() ?? '',
+      ).compareTo(_themeRank(b.first['item_key']?.toString() ?? ''));
       return r != 0 ? r : origIndex[a]!.compareTo(origIndex[b]!);
     });
+    // Hairline separators, not gaps between cards: on the sheet these read as
+    // one list, and dropping the per-item border + margin fits ~2 more rows on
+    // a phone screen.
     return ListView.separated(
-      padding: const EdgeInsets.fromLTRB(14, 10, 14, 20),
+      padding: const EdgeInsets.only(bottom: 24),
       itemCount: ordered.length,
-      separatorBuilder: (_, _) => const SizedBox(height: 8),
+      separatorBuilder: (_, _) => const Divider(
+        height: 1,
+        thickness: 1,
+        indent: 16,
+        endIndent: 16,
+        color: Color(0xFFF2ECE9),
+      ),
       itemBuilder: (context, index) {
         final g = ordered[index];
         return g.length == 1
@@ -952,7 +1138,10 @@ class _ShopScreenState extends State<ShopScreen> {
   // Only meaningful in the utility tab (mixed themes); other categories all
   // fall through to the same bucket and keep their order via the stable tiebreak.
   int _themeRank(String key) {
-    if (key.startsWith('top_card_counter') || key.startsWith('tichu_')) return 0; // 티츄
+    // 티츄
+    if (key.startsWith('top_card_counter') || key.startsWith('tichu_')) {
+      return 0;
+    }
     if (key.startsWith('mighty_')) return 1; // 마이티
     if (key.startsWith('sk_')) return 2; // 스컬킹
     if (key.startsWith('leave_')) return 3; // 탈주
@@ -986,20 +1175,16 @@ class _ShopScreenState extends State<ShopScreen> {
     }
     final ownedActive = ownedInv != null;
     final ownedExpiry = ownedInv?['expires_at'];
-    final ownedExpiryText =
-        ownedExpiry != null ? _formatExpire(context, ownedExpiry) : null;
+    final ownedExpiryText = ownedExpiry != null
+        ? _formatExpire(context, ownedExpiry)
+        : null;
 
     return Container(
-      padding: const EdgeInsets.all(10),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: const Color(0xFFE7E0DC)),
-      ),
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.center,
         children: [
-          _buildShopRowVisual(first, 72),
+          _buildShopRowVisual(first, 58),
           const SizedBox(width: 12),
           Expanded(
             child: Column(
@@ -1046,8 +1231,11 @@ class _ShopScreenState extends State<ShopScreen> {
                   Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      const Icon(Icons.schedule,
-                          size: 12, color: Color(0xFF7E57C2)),
+                      const Icon(
+                        Icons.schedule,
+                        size: 12,
+                        color: Color(0xFF7E57C2),
+                      ),
                       const SizedBox(width: 3),
                       Text(
                         ownedExpiryText,
@@ -1064,8 +1252,9 @@ class _ShopScreenState extends State<ShopScreen> {
                 Wrap(
                   spacing: 8,
                   runSpacing: 6,
-                  children:
-                      tiers.map((t) => _buildTierChip(context, t)).toList(),
+                  children: tiers
+                      .map((t) => _buildTierChip(context, t))
+                      .toList(),
                 ),
               ],
             ),
@@ -1081,8 +1270,9 @@ class _ShopScreenState extends State<ShopScreen> {
   Widget _buildTierChip(BuildContext context, Map<String, dynamic> tier) {
     final name = _getLocalizedItemName(tier);
     final match = RegExp(r'\(([^)]*)\)\s*$').firstMatch(name);
-    final durationLabel =
-        match != null ? match.group(1)! : '${tier['duration_days'] ?? ''}';
+    final durationLabel = match != null
+        ? match.group(1)!
+        : '${tier['duration_days'] ?? ''}';
     final price = tier['price'] ?? 0;
     final onSale = _isOnSale(tier);
     return Material(
@@ -1105,8 +1295,11 @@ class _ShopScreenState extends State<ShopScreen> {
                 ),
               ),
               const SizedBox(width: 6),
-              const Icon(Icons.monetization_on,
-                  size: 12, color: Color(0xFFF0B400)),
+              const Icon(
+                Icons.monetization_on,
+                size: 12,
+                color: Color(0xFFF0B400),
+              ),
               const SizedBox(width: 2),
               Text(
                 '$price',
@@ -1145,32 +1338,29 @@ class _ShopScreenState extends State<ShopScreen> {
     // state off isPermanent hid it for every one of them: you could hold a
     // title and the shop would still look like you had never bought it, with
     // no expiry anywhere. Read the inventory row itself.
-    final ownedMatches = game.inventoryItems.where((i) => i['item_key'] == itemKey);
+    final ownedMatches = game.inventoryItems.where(
+      (i) => i['item_key'] == itemKey,
+    );
     final ownedInv = ownedMatches.isEmpty ? null : ownedMatches.first;
     final owned = ownedInv != null;
     final ownedPermanent = owned && isPermanent;
     final ownedExpiry = ownedInv?['expires_at'];
-    final ownedExpiryText =
-        ownedExpiry != null ? _formatExpire(context, ownedExpiry) : null;
+    final ownedExpiryText = ownedExpiry != null
+        ? _formatExpire(context, ownedExpiry)
+        : null;
     final onSale = _isOnSale(item);
     final saleWindow = _saleWindowText(item);
 
     return Material(
-      color: Colors.white,
-      borderRadius: BorderRadius.circular(14),
+      color: Colors.transparent,
       child: InkWell(
         onTap: () => _showItemDetailSheet(context, item),
-        borderRadius: BorderRadius.circular(14),
-        child: Container(
-          padding: const EdgeInsets.all(10),
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(14),
-            border: Border.all(color: const Color(0xFFE7E0DC)),
-          ),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
           child: Row(
             crossAxisAlignment: CrossAxisAlignment.center,
             children: [
-              _buildShopRowVisual(item, 72),
+              _buildShopRowVisual(item, 58),
               const SizedBox(width: 12),
               Expanded(
                 child: Column(
@@ -1184,25 +1374,50 @@ class _ShopScreenState extends State<ShopScreen> {
                             name,
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
-                            style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: Color(0xFF4A3A33)),
+                            style: const TextStyle(
+                              fontSize: 14,
+                              fontWeight: FontWeight.bold,
+                              color: Color(0xFF4A3A33),
+                            ),
                           ),
                         ),
                         if (isSeason)
-                          _badge(l10n.shopTagSeason, const Color(0xFF1565C0), const Color(0xFFE3F2FD))
+                          _badge(
+                            l10n.shopTagSeason,
+                            const Color(0xFF1565C0),
+                            const Color(0xFFE3F2FD),
+                          )
                         else if (owned)
-                          _badge(l10n.shopItemOwned, const Color(0xFF7E57C2), const Color(0xFFEDE7F6))
+                          _badge(
+                            l10n.shopItemOwned,
+                            const Color(0xFF7E57C2),
+                            const Color(0xFFEDE7F6),
+                          )
                         else if (onSale)
-                          _badge('SALE', const Color(0xFFD32F2F), const Color(0xFFFFEBEE)),
+                          _badge(
+                            'SALE',
+                            const Color(0xFFD32F2F),
+                            const Color(0xFFFFEBEE),
+                          ),
                       ],
                     ),
                     const SizedBox(height: 2),
                     Text(
                       description.isNotEmpty
                           ? description
-                          : _buildItemTag(context, isSeason, isPermanent, durationDays),
+                          : _buildItemTag(
+                              context,
+                              isSeason,
+                              isPermanent,
+                              durationDays,
+                            ),
                       maxLines: 2,
                       overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(fontSize: 11.5, color: Color(0xFF8A7A72), height: 1.3),
+                      style: const TextStyle(
+                        fontSize: 11.5,
+                        color: Color(0xFF8A7A72),
+                        height: 1.3,
+                      ),
                     ),
                     // Same treatment the grouped feature card gives: holding
                     // something is only useful information if you can also see
@@ -1212,7 +1427,11 @@ class _ShopScreenState extends State<ShopScreen> {
                       Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          const Icon(Icons.schedule, size: 12, color: Color(0xFF7E57C2)),
+                          const Icon(
+                            Icons.schedule,
+                            size: 12,
+                            color: Color(0xFF7E57C2),
+                          ),
                           const SizedBox(width: 3),
                           Text(
                             ownedExpiryText,
@@ -1232,23 +1451,42 @@ class _ShopScreenState extends State<ShopScreen> {
                     Row(
                       children: [
                         if (!ownedPermanent) ...[
-                          const Icon(Icons.monetization_on, size: 14, color: Color(0xFFF0B400)),
+                          const Icon(
+                            Icons.monetization_on,
+                            size: 14,
+                            color: Color(0xFFF0B400),
+                          ),
                           const SizedBox(width: 3),
-                          Text('$price', style: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: Color(0xFF4A4080))),
+                          Text(
+                            '$price',
+                            style: const TextStyle(
+                              fontSize: 13,
+                              fontWeight: FontWeight.bold,
+                              color: Color(0xFF4A4080),
+                            ),
+                          ),
                         ],
                         const Spacer(),
                         if (saleWindow != null)
                           Row(
                             mainAxisSize: MainAxisSize.min,
                             children: [
-                              Icon(Icons.schedule, size: 12, color: onSale ? const Color(0xFFD32F2F) : const Color(0xFF9A8E8A)),
+                              Icon(
+                                Icons.schedule,
+                                size: 12,
+                                color: onSale
+                                    ? const Color(0xFFD32F2F)
+                                    : const Color(0xFF9A8E8A),
+                              ),
                               const SizedBox(width: 3),
                               Text(
                                 saleWindow,
                                 style: TextStyle(
                                   fontSize: 11,
                                   fontWeight: FontWeight.w600,
-                                  color: onSale ? const Color(0xFFD32F2F) : const Color(0xFF9A8E8A),
+                                  color: onSale
+                                      ? const Color(0xFFD32F2F)
+                                      : const Color(0xFF9A8E8A),
                                 ),
                               ),
                             ],
@@ -1259,7 +1497,11 @@ class _ShopScreenState extends State<ShopScreen> {
                 ),
               ),
               const SizedBox(width: 6),
-              const Icon(Icons.chevron_right, size: 20, color: Color(0xFFB0A8A2)),
+              const Icon(
+                Icons.chevron_right,
+                size: 20,
+                color: Color(0xFFB0A8A2),
+              ),
             ],
           ),
         ),
@@ -1271,10 +1513,14 @@ class _ShopScreenState extends State<ShopScreen> {
     final category = item['category']?.toString() ?? '';
     final itemKey = item['item_key']?.toString() ?? '';
     final visual = _resolveThumbnailStyle(itemKey, category, item);
-    final gradient = (visual['gradient'] as List<Color>?) ?? [Colors.white, Colors.grey.shade100];
+    final gradient =
+        (visual['gradient'] as List<Color>?) ??
+        [Colors.white, Colors.grey.shade100];
     final iconData = (visual['icon'] as IconData?) ?? Icons.flag;
-    final iconColor = (visual['iconColor'] as Color?) ?? const Color(0xFF888888);
-    final borderColor = (visual['borderColor'] as Color?) ?? const Color(0xFFE0D8D4);
+    final iconColor =
+        (visual['iconColor'] as Color?) ?? const Color(0xFF888888);
+    final borderColor =
+        (visual['borderColor'] as Color?) ?? const Color(0xFFE0D8D4);
     return Container(
       width: size,
       height: size,
@@ -1287,7 +1533,9 @@ class _ShopScreenState extends State<ShopScreen> {
         borderRadius: BorderRadius.circular(12),
         border: Border.all(color: borderColor.withValues(alpha: 0.7)),
       ),
-      child: Center(child: Icon(iconData, color: iconColor, size: size * 0.45)),
+      child: Center(
+        child: Icon(iconData, color: iconColor, size: size * 0.45),
+      ),
     );
   }
 
@@ -1298,11 +1546,18 @@ class _ShopScreenState extends State<ShopScreen> {
         color: bg,
         borderRadius: BorderRadius.circular(8),
       ),
-      child: Text(text, style: TextStyle(fontSize: 10, color: fg, fontWeight: FontWeight.w700)),
+      child: Text(
+        text,
+        style: TextStyle(fontSize: 10, color: fg, fontWeight: FontWeight.w700),
+      ),
     );
   }
 
-  void _showExtendConfirmDialog(BuildContext context, GameService game, Map<String, dynamic> item) {
+  void _showExtendConfirmDialog(
+    BuildContext context,
+    GameService game,
+    Map<String, dynamic> item,
+  ) {
     final name = _getLocalizedItemName(item);
     final itemKey = item['item_key']?.toString() ?? '';
     final price = item['price'] ?? 0;
@@ -1314,7 +1569,9 @@ class _ShopScreenState extends State<ShopScreen> {
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
         title: Text(L10n.of(context).shopExtendTitle),
         content: Text(
-          L10n.of(context).shopExtendConfirm(name, durationDays as int, price as int),
+          L10n.of(
+            context,
+          ).shopExtendConfirm(name, durationDays as int, price as int),
         ),
         actions: [
           TextButton(
@@ -1355,7 +1612,9 @@ class _ShopScreenState extends State<ShopScreen> {
     }
 
     return DefaultTabController(
-      length: 5,
+      // 6 with 기능: a purchased feature item (profile photo) has a category the
+      // inventory had no tab for, so it was owned and invisible here.
+      length: 6,
       initialIndex: _inventoryTabController.value,
       child: Builder(
         builder: (context) {
@@ -1373,16 +1632,30 @@ class _ShopScreenState extends State<ShopScreen> {
                 L10n.of(context).shopCategoryTitle,
                 L10n.of(context).shopCategoryTheme,
                 L10n.of(context).shopCategoryUtil,
+                L10n.of(context).shopCategoryFeature,
                 L10n.of(context).shopCategorySeason,
               ]),
               Expanded(
                 child: TabBarView(
                   children: [
-                    _buildInventoryList(_filterInventory(game.inventoryItems, 'banner')),
-                    _buildInventoryList(_filterInventory(game.inventoryItems, 'title')),
-                    _buildInventoryList(_filterInventory(game.inventoryItems, 'theme')),
-                    _buildInventoryList(_filterInventory(game.inventoryItems, 'utility')),
-                    _buildInventoryList(_filterInventory(game.inventoryItems, 'season')),
+                    _buildInventoryList(
+                      _filterInventory(game.inventoryItems, 'banner'),
+                    ),
+                    _buildInventoryList(
+                      _filterInventory(game.inventoryItems, 'title'),
+                    ),
+                    _buildInventoryList(
+                      _filterInventory(game.inventoryItems, 'theme'),
+                    ),
+                    _buildInventoryList(
+                      _filterInventory(game.inventoryItems, 'utility'),
+                    ),
+                    _buildInventoryList(
+                      _filterInventory(game.inventoryItems, 'feature'),
+                    ),
+                    _buildInventoryList(
+                      _filterInventory(game.inventoryItems, 'season'),
+                    ),
                   ],
                 ),
               ),
@@ -1403,10 +1676,17 @@ class _ShopScreenState extends State<ShopScreen> {
       );
     }
     return ListView.separated(
-      padding: const EdgeInsets.fromLTRB(16, 12, 16, 20),
+      padding: const EdgeInsets.only(bottom: 24),
       itemCount: items.length,
-      separatorBuilder: (_, _) => const SizedBox(height: 8),
-      itemBuilder: (context, index) => _buildInventoryItem(context, items[index]),
+      separatorBuilder: (_, _) => const Divider(
+        height: 1,
+        thickness: 1,
+        indent: 16,
+        endIndent: 16,
+        color: Color(0xFFF2ECE9),
+      ),
+      itemBuilder: (context, index) =>
+          _buildInventoryItem(context, items[index]),
     );
   }
 
@@ -1422,34 +1702,38 @@ class _ShopScreenState extends State<ShopScreen> {
     // Nothing to equip or use: these are simply on while they last. Profile
     // photo belongs here too — the picture itself is set from the profile
     // screen, so an "equip" button on this row would do nothing at all.
-    final noEquipAction = itemKey.startsWith('top_card_counter')
-        || itemKey.startsWith('mighty_trump_counter')
-        || itemKey.startsWith('mighty_prev_trick')
-        || effectType == 'profile_photo';
+    final noEquipAction =
+        itemKey.startsWith('top_card_counter') ||
+        itemKey.startsWith('mighty_trump_counter') ||
+        itemKey.startsWith('mighty_prev_trick') ||
+        effectType == 'profile_photo';
     final isConsumable = category == 'utility' && !noEquipAction;
     final expiresAt = item['expires_at'];
-    final expiresText = expiresAt != null ? _formatExpire(context, expiresAt) : null;
+    final expiresText = expiresAt != null
+        ? _formatExpire(context, expiresAt)
+        : null;
     final equipped = isActive && !noEquipAction;
 
     return Material(
-      color: Colors.white,
-      borderRadius: BorderRadius.circular(14),
+      // Equipped is now a tinted row with a left accent bar instead of a blue
+      // card outline — there are no cards left to outline.
+      color: equipped ? const Color(0xFFF3F8FD) : Colors.transparent,
       child: InkWell(
         onTap: () => _showItemDetailSheet(context, item),
-        borderRadius: BorderRadius.circular(14),
         child: Container(
-          padding: const EdgeInsets.all(10),
+          padding: const EdgeInsets.fromLTRB(14, 10, 14, 10),
           decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(14),
-            border: Border.all(
-              color: equipped ? const Color(0xFF5C9DD6) : const Color(0xFFE7E0DC),
-              width: equipped ? 1.6 : 1,
+            border: Border(
+              left: BorderSide(
+                color: equipped ? const Color(0xFF5C9DD6) : Colors.transparent,
+                width: 3,
+              ),
             ),
           ),
           child: Row(
             crossAxisAlignment: CrossAxisAlignment.center,
             children: [
-              _buildShopRowVisual(item, 72),
+              _buildShopRowVisual(item, 58),
               const SizedBox(width: 12),
               Expanded(
                 child: Column(
@@ -1463,13 +1747,25 @@ class _ShopScreenState extends State<ShopScreen> {
                             name,
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
-                            style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: Color(0xFF4A3A33)),
+                            style: const TextStyle(
+                              fontSize: 14,
+                              fontWeight: FontWeight.bold,
+                              color: Color(0xFF4A3A33),
+                            ),
                           ),
                         ),
                         if (equipped)
-                          _badge(l10n.shopStatusInUse, const Color(0xFF1565C0), const Color(0xFFDDECF7))
+                          _badge(
+                            l10n.shopStatusInUse,
+                            const Color(0xFF1565C0),
+                            const Color(0xFFDDECF7),
+                          )
                         else if (noEquipAction)
-                          _badge(l10n.shopStatusActivated, const Color(0xFF1565C0), const Color(0xFFDDECF7)),
+                          _badge(
+                            l10n.shopStatusActivated,
+                            const Color(0xFF1565C0),
+                            const Color(0xFFDDECF7),
+                          ),
                       ],
                     ),
                     const SizedBox(height: 2),
@@ -1479,11 +1775,21 @@ class _ShopScreenState extends State<ShopScreen> {
                           : (expiresText ?? l10n.shopPermanentOwned),
                       maxLines: description.isNotEmpty ? 2 : 1,
                       overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(fontSize: 11.5, color: Color(0xFF8A7A72), height: 1.3),
+                      style: const TextStyle(
+                        fontSize: 11.5,
+                        color: Color(0xFF8A7A72),
+                        height: 1.3,
+                      ),
                     ),
                     if (description.isNotEmpty && expiresText != null) ...[
                       const SizedBox(height: 2),
-                      Text(expiresText, style: const TextStyle(fontSize: 10.5, color: Color(0xFFA0938C))),
+                      Text(
+                        expiresText,
+                        style: const TextStyle(
+                          fontSize: 10.5,
+                          color: Color(0xFFA0938C),
+                        ),
+                      ),
                     ],
                     const SizedBox(height: 8),
                     Row(
@@ -1497,21 +1803,36 @@ class _ShopScreenState extends State<ShopScreen> {
                                   ? null
                                   : () {
                                       if (effectType == 'nickname_change') {
-                                        _showNicknameChangeDialog(context, game);
+                                        _showNicknameChangeDialog(
+                                          context,
+                                          game,
+                                        );
                                       } else if (isConsumable) {
-                                        _runItemAction(itemKey, () => game.useItem(itemKey));
+                                        _runItemAction(
+                                          itemKey,
+                                          () => game.useItem(itemKey),
+                                        );
                                       } else {
-                                        _runItemAction(itemKey, () => game.equipItem(itemKey));
+                                        _runItemAction(
+                                          itemKey,
+                                          () => game.equipItem(itemKey),
+                                        );
                                       }
                                     },
                               style: ElevatedButton.styleFrom(
                                 backgroundColor: isConsumable
                                     ? const Color(0xFFFFE0B2)
-                                    : (equipped ? const Color(0xFFE3F2FD) : const Color(0xFFB3E5FC)),
+                                    : (equipped
+                                          ? const Color(0xFFE3F2FD)
+                                          : const Color(0xFFB3E5FC)),
                                 foregroundColor: const Color(0xFF4A3A33),
                                 elevation: 0,
-                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                                padding: const EdgeInsets.symmetric(horizontal: 14),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(10),
+                                ),
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 14,
+                                ),
                                 minimumSize: const Size(0, 30),
                                 tapTargetSize: MaterialTapTargetSize.shrinkWrap,
                               ),
@@ -1525,8 +1846,13 @@ class _ShopScreenState extends State<ShopScreen> {
                                       ),
                                     )
                                   : Text(
-                                      isConsumable ? l10n.shopButtonUse : l10n.shopButtonEquip,
-                                      style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w700),
+                                      isConsumable
+                                          ? l10n.shopButtonUse
+                                          : l10n.shopButtonEquip,
+                                      style: const TextStyle(
+                                        fontSize: 12,
+                                        fontWeight: FontWeight.w700,
+                                      ),
                                     ),
                             ),
                           ),
@@ -1557,7 +1883,11 @@ class _ShopScreenState extends State<ShopScreen> {
   // Fallback chain: server-driven visual (admin-editable) → legacy hardcoded
   // switch (kept so v2.3.0+26 items still render even if a backfill row is
   // missing) → category default.
-  Map<String, Object> _resolveThumbnailStyle(String itemKey, String category, Map<String, dynamic>? item) {
+  Map<String, Object> _resolveThumbnailStyle(
+    String itemKey,
+    String category,
+    Map<String, dynamic>? item,
+  ) {
     final serverVisual = ShopVisual.fromItemMap(item);
     final fromServer = serverVisual?.thumbnailLegacyMap();
     if (fromServer != null) return fromServer;
@@ -2008,24 +2338,29 @@ class _ShopScreenState extends State<ShopScreen> {
     final category = item['category']?.toString() ?? '';
     // Same rule as the inventory row: offering "equip now" for a profile photo
     // would hand the user a button that does nothing.
-    final noEquipAction = itemKey.startsWith('top_card_counter')
-        || itemKey.startsWith('mighty_trump_counter')
-        || itemKey.startsWith('mighty_prev_trick')
-        || item['effect_type']?.toString() == 'profile_photo';
+    final noEquipAction =
+        itemKey.startsWith('top_card_counter') ||
+        itemKey.startsWith('mighty_trump_counter') ||
+        itemKey.startsWith('mighty_prev_trick') ||
+        item['effect_type']?.toString() == 'profile_photo';
     final isConsumable = category == 'utility' && !noEquipAction;
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: Text(extended ? L10n.of(context).shopExtendComplete : L10n.of(context).shopPurchaseComplete),
+        title: Text(
+          extended
+              ? L10n.of(context).shopExtendComplete
+              : L10n.of(context).shopPurchaseComplete,
+        ),
         content: Text(
           extended
               ? L10n.of(context).shopExtendDone(name)
               : isConsumable
-                  ? L10n.of(context).shopPurchaseDoneConsumable
-                  : noEquipAction
-                      ? L10n.of(context).shopPurchaseDonePassive
-                      : L10n.of(context).shopPurchaseDoneEquip,
+              ? L10n.of(context).shopPurchaseDoneConsumable
+              : noEquipAction
+              ? L10n.of(context).shopPurchaseDonePassive
+              : L10n.of(context).shopPurchaseDoneEquip,
         ),
         actions: [
           TextButton(
@@ -2070,19 +2405,25 @@ class _ShopScreenState extends State<ShopScreen> {
     final category = item['category']?.toString() ?? '';
     final itemKey = item['item_key']?.toString() ?? '';
     final canBuy = game.gold >= price;
-    final ownedMatches = game.inventoryItems.where((i) => i['item_key'] == itemKey);
+    final ownedMatches = game.inventoryItems.where(
+      (i) => i['item_key'] == itemKey,
+    );
     final ownedInv = ownedMatches.isEmpty ? null : ownedMatches.first;
     final owned = ownedInv != null;
     final ownedPermanent = owned && isPermanent;
     final ownedExpiry = ownedInv?['expires_at'];
-    final ownedExpiryText =
-        ownedExpiry != null ? _formatExpire(context, ownedExpiry) : null;
+    final ownedExpiryText = ownedExpiry != null
+        ? _formatExpire(context, ownedExpiry)
+        : null;
     final onSale = _isOnSale(item);
 
     final visual = _resolveThumbnailStyle(itemKey, category, item);
-    final gradient = (visual['gradient'] as List<Color>?) ?? [Colors.white, Colors.grey.shade100];
+    final gradient =
+        (visual['gradient'] as List<Color>?) ??
+        [Colors.white, Colors.grey.shade100];
     final iconData = (visual['icon'] as IconData?) ?? Icons.flag;
-    final iconColor = (visual['iconColor'] as Color?) ?? const Color(0xFF888888);
+    final iconColor =
+        (visual['iconColor'] as Color?) ?? const Color(0xFF888888);
 
     showModalBottomSheet(
       context: context,
@@ -2090,7 +2431,7 @@ class _ShopScreenState extends State<ShopScreen> {
       isScrollControlled: true,
       builder: (ctx) {
         return DraggableScrollableSheet(
-          initialChildSize: 0.55,
+          initialChildSize: 0.6,
           minChildSize: 0.35,
           maxChildSize: 0.9,
           expand: false,
@@ -2099,216 +2440,325 @@ class _ShopScreenState extends State<ShopScreen> {
               color: Color(0xFFFAF6F2),
               borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
             ),
-            child: SingleChildScrollView(
-              controller: scrollCtl,
-              padding: const EdgeInsets.fromLTRB(20, 10, 20, 24),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Center(
-                    child: Container(
-                      width: 40, height: 4,
-                      margin: const EdgeInsets.only(bottom: 16),
-                      decoration: BoxDecoration(
-                        color: const Color(0xFFD8CEC8),
-                        borderRadius: BorderRadius.circular(2),
-                      ),
-                    ),
-                  ),
-                  Container(
-                    height: 140,
-                    decoration: BoxDecoration(
-                      gradient: LinearGradient(
-                        begin: Alignment.topLeft, end: Alignment.bottomRight,
-                        colors: gradient,
-                      ),
-                      borderRadius: BorderRadius.circular(16),
-                    ),
-                    child: Center(child: Icon(iconData, color: iconColor, size: 64)),
-                  ),
-                  // For banners, show a waiting-room-slot preview so the user
-                  // can see how the in-game gradient + nickname text color
-                  // actually combine before purchase.
-                  if (category == 'banner') ...[
-                    const SizedBox(height: 14),
-                    const Text(
-                      '대기실 미리보기',
-                      style: TextStyle(
-                        fontSize: 12,
-                        fontWeight: FontWeight.w700,
-                        color: Color(0xFF8A7A72),
-                      ),
-                    ),
-                    const SizedBox(height: 6),
-                    // Consumer makes the preview reactive — when the profile
-                    // request resolves the level badge swaps in without the
-                    // user having to reopen the sheet.
-                    Consumer<GameService>(
-                      builder: (_, g, _) {
-                        final previewGradient = g.bannerGradient(itemKey);
-                        final previewTextColor = g.bannerTextColor(itemKey);
-                        final fallbackGradient = LinearGradient(
-                          begin: Alignment.topLeft,
-                          end: Alignment.bottomRight,
-                          colors: gradient,
-                        );
-                        final ownData = g.playerName.isNotEmpty
-                            ? g.profileFor(g.playerName)
-                            : null;
-                        final inner = ownData?['profile'] as Map?;
-                        final myLevel = (inner?['level'] as int?) ?? 1;
-                        return Container(
-                          width: double.infinity,
-                          height: 56,
-                          padding: const EdgeInsets.symmetric(horizontal: 12),
-                          decoration: BoxDecoration(
-                            gradient: previewGradient ?? fallbackGradient,
-                            borderRadius: BorderRadius.circular(16),
-                            border: Border.all(
-                              color: const Color(0xFFDDD0CC),
+            // Price and CTA are pinned below the scroll area. Inside it they sat
+            // past the fold at the sheet's initial height, so the buy button was
+            // only reachable by dragging the sheet up first — and the last of it
+            // hid behind the navigation bar.
+            child: Column(
+              children: [
+                Expanded(
+                  child: SingleChildScrollView(
+                    controller: scrollCtl,
+                    padding: const EdgeInsets.fromLTRB(20, 10, 20, 8),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Center(
+                          child: Container(
+                            width: 40,
+                            height: 4,
+                            margin: const EdgeInsets.only(bottom: 16),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFFD8CEC8),
+                              borderRadius: BorderRadius.circular(2),
                             ),
                           ),
-                          child: Row(
-                            children: [
-                              LevelBadge(level: myLevel, size: 28),
-                              const SizedBox(width: 10),
-                              Expanded(
-                                child: Text(
-                                  g.playerName.isNotEmpty
-                                      ? g.playerName
-                                      : '닉네임',
-                                  overflow: TextOverflow.ellipsis,
-                                  style: TextStyle(
-                                    fontSize: 16,
-                                    fontWeight: FontWeight.bold,
-                                    color: previewTextColor ??
-                                        const Color(0xFF5A4038),
+                        ),
+                        Container(
+                          height: 140,
+                          decoration: BoxDecoration(
+                            gradient: LinearGradient(
+                              begin: Alignment.topLeft,
+                              end: Alignment.bottomRight,
+                              colors: gradient,
+                            ),
+                            borderRadius: BorderRadius.circular(16),
+                          ),
+                          child: Center(
+                            child: Icon(iconData, color: iconColor, size: 64),
+                          ),
+                        ),
+                        // For banners, show a waiting-room-slot preview so the user
+                        // can see how the in-game gradient + nickname text color
+                        // actually combine before purchase.
+                        if (category == 'banner') ...[
+                          const SizedBox(height: 14),
+                          const Text(
+                            '대기실 미리보기',
+                            style: TextStyle(
+                              fontSize: 12,
+                              fontWeight: FontWeight.w700,
+                              color: Color(0xFF8A7A72),
+                            ),
+                          ),
+                          const SizedBox(height: 6),
+                          // Consumer makes the preview reactive — when the profile
+                          // request resolves the level badge swaps in without the
+                          // user having to reopen the sheet.
+                          Consumer<GameService>(
+                            builder: (_, g, _) {
+                              final previewGradient = g.bannerGradient(itemKey);
+                              final previewTextColor = g.bannerTextColor(
+                                itemKey,
+                              );
+                              final fallbackGradient = LinearGradient(
+                                begin: Alignment.topLeft,
+                                end: Alignment.bottomRight,
+                                colors: gradient,
+                              );
+                              final ownData = g.playerName.isNotEmpty
+                                  ? g.profileFor(g.playerName)
+                                  : null;
+                              final inner = ownData?['profile'] as Map?;
+                              final myLevel = (inner?['level'] as int?) ?? 1;
+                              return Container(
+                                width: double.infinity,
+                                height: 56,
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 12,
+                                ),
+                                decoration: BoxDecoration(
+                                  gradient: previewGradient ?? fallbackGradient,
+                                  borderRadius: BorderRadius.circular(16),
+                                  border: Border.all(
+                                    color: const Color(0xFFDDD0CC),
                                   ),
+                                ),
+                                child: Row(
+                                  children: [
+                                    LevelBadge(level: myLevel, size: 28),
+                                    const SizedBox(width: 10),
+                                    Expanded(
+                                      child: Text(
+                                        g.playerName.isNotEmpty
+                                            ? g.playerName
+                                            : '닉네임',
+                                        overflow: TextOverflow.ellipsis,
+                                        style: TextStyle(
+                                          fontSize: 16,
+                                          fontWeight: FontWeight.bold,
+                                          color:
+                                              previewTextColor ??
+                                              const Color(0xFF5A4038),
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              );
+                            },
+                          ),
+                        ],
+                        const SizedBox(height: 16),
+                        Row(
+                          children: [
+                            Expanded(
+                              child: Text(
+                                name,
+                                style: const TextStyle(
+                                  fontSize: 20,
+                                  fontWeight: FontWeight.bold,
+                                  color: Color(0xFF4A3A33),
+                                ),
+                              ),
+                            ),
+                            if (isSeason)
+                              _badge(
+                                l10n.shopTagSeason,
+                                const Color(0xFF1565C0),
+                                const Color(0xFFE3F2FD),
+                              )
+                            else if (owned)
+                              _badge(
+                                l10n.shopItemOwned,
+                                const Color(0xFF7E57C2),
+                                const Color(0xFFEDE7F6),
+                              )
+                            else if (onSale)
+                              _badge(
+                                'SALE',
+                                const Color(0xFFD32F2F),
+                                const Color(0xFFFFEBEE),
+                              ),
+                          ],
+                        ),
+                        if (ownedExpiryText != null) ...[
+                          const SizedBox(height: 6),
+                          Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              const Icon(
+                                Icons.schedule,
+                                size: 13,
+                                color: Color(0xFF7E57C2),
+                              ),
+                              const SizedBox(width: 4),
+                              Text(
+                                ownedExpiryText,
+                                style: const TextStyle(
+                                  fontSize: 12.5,
+                                  fontWeight: FontWeight.w600,
+                                  color: Color(0xFF7E57C2),
                                 ),
                               ),
                             ],
                           ),
-                        );
-                      },
+                        ],
+                        if (description.isNotEmpty) ...[
+                          const SizedBox(height: 10),
+                          Text(
+                            description,
+                            style: const TextStyle(
+                              fontSize: 13.5,
+                              color: Color(0xFF5A4038),
+                              height: 1.5,
+                            ),
+                          ),
+                        ],
+                        const SizedBox(height: 14),
+                        Wrap(
+                          spacing: 6,
+                          runSpacing: 6,
+                          children: [
+                            _chip(_categoryLabel(context, category)),
+                            _chip(
+                              isPermanent
+                                  ? l10n.shopDetailPermanent
+                                  : (durationDays != null
+                                        ? l10n.shopDetailDuration(
+                                            durationDays as int,
+                                          )
+                                        : l10n.shopTagDurationOnly),
+                            ),
+                            if (isSeason) _chip(l10n.shopTagSeason),
+                          ],
+                        ),
+                        if (_saleWindowText(item) != null) ...[
+                          const SizedBox(height: 10),
+                          Row(
+                            children: [
+                              Icon(
+                                Icons.schedule,
+                                size: 14,
+                                color: onSale
+                                    ? const Color(0xFFD32F2F)
+                                    : const Color(0xFF9A8E8A),
+                              ),
+                              const SizedBox(width: 4),
+                              Text(
+                                '판매기간 ${_saleWindowText(item)}',
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.w600,
+                                  color: onSale
+                                      ? const Color(0xFFD32F2F)
+                                      : const Color(0xFF9A8E8A),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ],
+                      ],
                     ),
-                  ],
-                  const SizedBox(height: 16),
-                  Row(
+                  ),
+                ),
+                Container(
+                  padding: EdgeInsets.fromLTRB(
+                    20,
+                    12,
+                    20,
+                    12 + MediaQuery.viewPaddingOf(ctx).bottom,
+                  ),
+                  decoration: const BoxDecoration(
+                    color: Color(0xFFFAF6F2),
+                    border: Border(top: BorderSide(color: Color(0xFFEDE4DE))),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Expanded(
-                        child: Text(name,
-                            style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Color(0xFF4A3A33))),
+                      Row(
+                        children: [
+                          const Icon(
+                            Icons.monetization_on,
+                            size: 18,
+                            color: Color(0xFFF0B400),
+                          ),
+                          const SizedBox(width: 4),
+                          Text(
+                            '$price G',
+                            style: const TextStyle(
+                              fontSize: 18,
+                              fontWeight: FontWeight.bold,
+                              color: Color(0xFF4A4080),
+                            ),
+                          ),
+                        ],
                       ),
-                      if (isSeason)
-                        _badge(l10n.shopTagSeason, const Color(0xFF1565C0), const Color(0xFFE3F2FD))
-                      else if (owned)
-                        _badge(l10n.shopItemOwned, const Color(0xFF7E57C2), const Color(0xFFEDE7F6))
-                      else if (onSale)
-                        _badge('SALE', const Color(0xFFD32F2F), const Color(0xFFFFEBEE)),
+                      const SizedBox(height: 10),
+                      Builder(
+                        builder: (_) {
+                          // Season banners are reward-only — once owned, they can
+                          // not be re-purchased or extended through the shop. Treat
+                          // owned-season the same as owned-permanent here.
+                          final lockedAsOwned =
+                              ownedPermanent || (isSeason && owned);
+                          return SizedBox(
+                            width: double.infinity,
+                            height: 46,
+                            child: ElevatedButton(
+                              onPressed: lockedAsOwned
+                                  ? null
+                                  : (canBuy
+                                        ? () {
+                                            Navigator.pop(ctx);
+                                            if (owned) {
+                                              _showExtendConfirmDialog(
+                                                context,
+                                                game,
+                                                item,
+                                              );
+                                            } else {
+                                              game.buyItem(itemKey);
+                                            }
+                                          }
+                                        : null),
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: owned
+                                    ? const Color(0xFFBBDEFB)
+                                    : const Color(0xFFC7E6D0),
+                                foregroundColor: owned
+                                    ? const Color(0xFF1565C0)
+                                    : const Color(0xFF2E5A3A),
+                                disabledBackgroundColor: const Color(
+                                  0xFFE5E5E5,
+                                ),
+                                disabledForegroundColor: const Color(
+                                  0xFF9A9A9A,
+                                ),
+                                elevation: 0,
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+                              ),
+                              child: Text(
+                                lockedAsOwned
+                                    ? l10n.shopItemOwned
+                                    : (owned
+                                          ? l10n.shopButtonExtend
+                                          : l10n.shopButtonPurchase),
+                                style: const TextStyle(
+                                  fontSize: 15,
+                                  fontWeight: FontWeight.w700,
+                                ),
+                              ),
+                            ),
+                          );
+                        },
+                      ),
                     ],
                   ),
-                  if (ownedExpiryText != null) ...[
-                    const SizedBox(height: 6),
-                    Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        const Icon(Icons.schedule, size: 13, color: Color(0xFF7E57C2)),
-                        const SizedBox(width: 4),
-                        Text(
-                          ownedExpiryText,
-                          style: const TextStyle(
-                            fontSize: 12.5,
-                            fontWeight: FontWeight.w600,
-                            color: Color(0xFF7E57C2),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ],
-                  if (description.isNotEmpty) ...[
-                    const SizedBox(height: 10),
-                    Text(description,
-                        style: const TextStyle(fontSize: 13.5, color: Color(0xFF5A4038), height: 1.5)),
-                  ],
-                  const SizedBox(height: 14),
-                  Wrap(
-                    spacing: 6, runSpacing: 6,
-                    children: [
-                      _chip(_categoryLabel(context, category)),
-                      _chip(isPermanent ? l10n.shopDetailPermanent
-                          : (durationDays != null ? l10n.shopDetailDuration(durationDays as int) : l10n.shopTagDurationOnly)),
-                      if (isSeason) _chip(l10n.shopTagSeason),
-                    ],
-                  ),
-                  if (_saleWindowText(item) != null) ...[
-                    const SizedBox(height: 10),
-                    Row(
-                      children: [
-                        Icon(Icons.schedule, size: 14, color: onSale ? const Color(0xFFD32F2F) : const Color(0xFF9A8E8A)),
-                        const SizedBox(width: 4),
-                        Text(
-                          '판매기간 ${_saleWindowText(item)}',
-                          style: TextStyle(
-                            fontSize: 12,
-                            fontWeight: FontWeight.w600,
-                            color: onSale ? const Color(0xFFD32F2F) : const Color(0xFF9A8E8A),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ],
-                  const SizedBox(height: 18),
-                  Row(
-                    children: [
-                      const Icon(Icons.monetization_on, size: 18, color: Color(0xFFF0B400)),
-                      const SizedBox(width: 4),
-                      Text('$price G',
-                          style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Color(0xFF4A4080))),
-                    ],
-                  ),
-                  const SizedBox(height: 14),
-                  Builder(
-                    builder: (_) {
-                      // Season banners are reward-only — once owned, they can
-                      // not be re-purchased or extended through the shop. Treat
-                      // owned-season the same as owned-permanent here.
-                      final lockedAsOwned = ownedPermanent || (isSeason && owned);
-                      return SizedBox(
-                        width: double.infinity,
-                        height: 46,
-                        child: ElevatedButton(
-                          onPressed: lockedAsOwned
-                              ? null
-                              : (canBuy
-                                  ? () {
-                                      Navigator.pop(ctx);
-                                      if (owned) {
-                                        _showExtendConfirmDialog(context, game, item);
-                                      } else {
-                                        game.buyItem(itemKey);
-                                      }
-                                    }
-                                  : null),
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: owned ? const Color(0xFFBBDEFB) : const Color(0xFFC7E6D0),
-                            foregroundColor: owned ? const Color(0xFF1565C0) : const Color(0xFF2E5A3A),
-                            disabledBackgroundColor: const Color(0xFFE5E5E5),
-                            disabledForegroundColor: const Color(0xFF9A9A9A),
-                            elevation: 0,
-                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                          ),
-                          child: Text(
-                            lockedAsOwned
-                                ? l10n.shopItemOwned
-                                : (owned ? l10n.shopButtonExtend : l10n.shopButtonPurchase),
-                            style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w700),
-                          ),
-                        ),
-                      );
-                    },
-                  ),
-                ],
-              ),
+                ),
+              ],
             ),
           ),
         );
@@ -2323,10 +2773,16 @@ class _ShopScreenState extends State<ShopScreen> {
         color: const Color(0xFFEFE7E3),
         borderRadius: BorderRadius.circular(8),
       ),
-      child: Text(label, style: const TextStyle(fontSize: 11, color: Color(0xFF6A5A52), fontWeight: FontWeight.w600)),
+      child: Text(
+        label,
+        style: const TextStyle(
+          fontSize: 11,
+          color: Color(0xFF6A5A52),
+          fontWeight: FontWeight.w600,
+        ),
+      ),
     );
   }
-
 
   void _showNicknameChangeDialog(BuildContext context, GameService game) {
     final controller = TextEditingController();
@@ -2349,7 +2805,10 @@ class _ShopScreenState extends State<ShopScreen> {
               decoration: InputDecoration(
                 hintText: L10n.of(context).shopNicknameChangeHint,
                 border: const OutlineInputBorder(),
-                contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                contentPadding: const EdgeInsets.symmetric(
+                  horizontal: 12,
+                  vertical: 8,
+                ),
               ),
             ),
           ],
@@ -2364,7 +2823,11 @@ class _ShopScreenState extends State<ShopScreen> {
               final nick = controller.text.trim();
               if (nick.length < 2 || nick.length > 10) {
                 ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(content: Text(L10n.of(context).shopNicknameChangeValidation)),
+                  SnackBar(
+                    content: Text(
+                      L10n.of(context).shopNicknameChangeValidation,
+                    ),
+                  ),
                 );
                 return;
               }
@@ -2394,19 +2857,63 @@ class _ShopScreenState extends State<ShopScreen> {
     }
   }
 
+  /// Category selector as pill chips — the same language the lobby's game
+  /// filters use. A second boxed TabBar under the first one made the top of the
+  /// screen read as three separate headers.
   Widget _buildCategoryTabs(List<String> labels) {
-    return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 16),
-      decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: 0.95),
-        borderRadius: BorderRadius.circular(14),
-      ),
-      child: TabBar(
-        isScrollable: true,
-        labelColor: const Color(0xFF5A4038),
-        unselectedLabelColor: const Color(0xFF9A8E8A),
-        indicatorColor: const Color(0xFFB9A8A1),
-        tabs: labels.map((t) => Tab(text: t)).toList(),
+    // Builder, not this.context: the category controller is the inner
+    // DefaultTabController, and the State's own context sits above it — looking
+    // up from there finds the 상점/인벤토리 controller instead.
+    return Builder(
+      builder: (tabCtx) {
+        final controller = DefaultTabController.of(tabCtx);
+        return AnimatedBuilder(
+          animation: controller.animation ?? controller,
+          builder: (context, _) {
+            return SingleChildScrollView(
+              scrollDirection: Axis.horizontal,
+              padding: const EdgeInsets.fromLTRB(12, 10, 12, 8),
+              child: Row(
+                children: [
+                  for (var i = 0; i < labels.length; i++) ...[
+                    if (i > 0) const SizedBox(width: 6),
+                    _buildCategoryChip(
+                      labels[i],
+                      selected: controller.index == i,
+                      onTap: () => controller.animateTo(i),
+                    ),
+                  ],
+                ],
+              ),
+            );
+          },
+        );
+      },
+    );
+  }
+
+  Widget _buildCategoryChip(
+    String label, {
+    required bool selected,
+    required VoidCallback onTap,
+  }) {
+    return Material(
+      color: selected ? const Color(0xFF7E57C2) : const Color(0xFFF3EFF9),
+      borderRadius: BorderRadius.circular(999),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(999),
+        onTap: onTap,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
+          child: Text(
+            label,
+            style: TextStyle(
+              fontSize: 13,
+              fontWeight: FontWeight.w700,
+              color: selected ? Colors.white : const Color(0xFF7A6E82),
+            ),
+          ),
+        ),
       ),
     );
   }
@@ -2416,7 +2923,9 @@ class _ShopScreenState extends State<ShopScreen> {
     String category,
   ) {
     if (category == 'all') return items;
-    return items.where((i) => (i['category']?.toString() ?? '') == category).toList();
+    return items
+        .where((i) => (i['category']?.toString() ?? '') == category)
+        .toList();
   }
 
   List<Map<String, dynamic>> _filterInventory(
@@ -2427,10 +2936,17 @@ class _ShopScreenState extends State<ShopScreen> {
     if (category == 'season') {
       return items.where((i) => i['is_season'] == true).toList();
     }
-    return items.where((i) => (i['category']?.toString() ?? '') == category).toList();
+    return items
+        .where((i) => (i['category']?.toString() ?? '') == category)
+        .toList();
   }
 
-  String _buildItemTag(BuildContext context, bool isSeason, bool isPermanent, dynamic durationDays) {
+  String _buildItemTag(
+    BuildContext context,
+    bool isSeason,
+    bool isPermanent,
+    dynamic durationDays,
+  ) {
     final l10n = L10n.of(context);
     if (isSeason) {
       return l10n.shopTagSeason;
@@ -2447,7 +2963,9 @@ class _ShopScreenState extends State<ShopScreen> {
   String _formatExpire(BuildContext context, dynamic value) {
     try {
       final dt = DateTime.parse(value.toString()).toLocal();
-      return L10n.of(context).shopExpireDate('${dt.year}.${dt.month}.${dt.day}');
+      return L10n.of(
+        context,
+      ).shopExpireDate('${dt.year}.${dt.month}.${dt.day}');
     } catch (_) {
       return L10n.of(context).shopExpireSoon;
     }
@@ -2474,75 +2992,27 @@ class _ShopScreenState extends State<ShopScreen> {
   bool _shouldShowAttendanceBanner(GameService game) =>
       game.attendanceState != null;
 
-  Widget _buildAttendanceBanner(GameService game) {
+  Widget _buildAttendanceTile(GameService game) {
     final s = game.attendanceState!;
     final claimed = s['claimedToday'] == true;
     final reward = (s['todayRewardGold'] as int?) ?? 50;
     final day = (s['todayDay'] as int?) ?? 1;
     final isLastDay = day == 7;
     final l10n = L10n.of(context);
-    final gradient = claimed
-        ? const [Color(0xFFA5D6A7), Color(0xFF66BB6A)]
-        : isLastDay
-            ? const [Color(0xFFFFD54F), Color(0xFFFFA000)]
-            : const [Color(0xFFFFE082), Color(0xFFFFB74D)];
-    final icon = claimed ? Icons.check_circle : Icons.event_available;
-    final title = claimed
-        ? l10n.attendanceBannerCompletedTitle(day)
-        : l10n.attendanceBannerTitle(day);
-    final subtitle = claimed
-        ? l10n.attendanceBannerCompletedSubtitle
-        : l10n.attendanceBannerSubtitle(reward);
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
-      child: InkWell(
-        borderRadius: BorderRadius.circular(14),
-        onTap: () => _showAttendanceDialog(game),
-        child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-          decoration: BoxDecoration(
-            gradient: LinearGradient(
-              colors: gradient,
-              begin: Alignment.centerLeft,
-              end: Alignment.centerRight,
-            ),
-            borderRadius: BorderRadius.circular(14),
-            boxShadow: const [
-              BoxShadow(color: Color(0x33000000), blurRadius: 6, offset: Offset(0, 2)),
-            ],
-          ),
-          child: Row(
-            children: [
-              Icon(icon, color: Colors.white, size: 24),
-              const SizedBox(width: 10),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      title,
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontWeight: FontWeight.w900,
-                        fontSize: 14,
-                      ),
-                    ),
-                    const SizedBox(height: 2),
-                    Text(
-                      subtitle,
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontSize: 12,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              const Icon(Icons.chevron_right, color: Colors.white),
-            ],
-          ),
-        ),
-      ),
+    return _buildRewardTile(
+      gradient: claimed
+          ? const [Color(0xFF81C784), Color(0xFF4CAF50)]
+          : isLastDay
+          ? const [Color(0xFFFFCA28), Color(0xFFFF8F00)]
+          : const [Color(0xFFFFD180), Color(0xFFFFA726)],
+      icon: claimed ? Icons.check_circle : Icons.event_available,
+      title: claimed
+          ? l10n.attendanceBannerCompletedTitle(day)
+          : l10n.attendanceBannerTitle(day),
+      subtitle: claimed
+          ? l10n.attendanceBannerCompletedSubtitle
+          : l10n.attendanceBannerSubtitle(reward),
+      onTap: () => _showAttendanceDialog(game),
     );
   }
 
@@ -2582,12 +3052,15 @@ class _ShopScreenState extends State<ShopScreen> {
           final claimedToday = s['claimedToday'] == true;
           final cycleClaimed = (s['cycleClaimedDays'] as int?) ?? 0;
           final todayDay = (s['todayDay'] as int?) ?? 1;
-          final rewards = (s['weekRewards'] as List?)?.cast<int>()
-              ?? const [50,50,50,50,50,50,1000];
+          final rewards =
+              (s['weekRewards'] as List?)?.cast<int>() ??
+              const [50, 50, 50, 50, 50, 50, 1000];
           final resetClock = _formatResetClock(s['resetAtUtc'] as String?);
 
           return Dialog(
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(20),
+            ),
             child: Padding(
               padding: const EdgeInsets.fromLTRB(20, 18, 20, 16),
               child: Column(
@@ -2595,13 +3068,17 @@ class _ShopScreenState extends State<ShopScreen> {
                 children: [
                   Row(
                     children: [
-                      const Icon(Icons.event_available, color: Color(0xFFFFA000)),
+                      const Icon(
+                        Icons.event_available,
+                        color: Color(0xFFFFA000),
+                      ),
                       const SizedBox(width: 8),
                       Expanded(
                         child: Text(
                           l.attendanceDialogTitle,
                           style: const TextStyle(
-                            fontSize: 18, fontWeight: FontWeight.w900,
+                            fontSize: 18,
+                            fontWeight: FontWeight.w900,
                             color: Color(0xFF5A4038),
                           ),
                         ),
@@ -2616,7 +3093,10 @@ class _ShopScreenState extends State<ShopScreen> {
                   const SizedBox(height: 4),
                   Text(
                     l.attendanceResetInfo(resetClock),
-                    style: const TextStyle(color: Color(0xFF8A7A72), fontSize: 12),
+                    style: const TextStyle(
+                      color: Color(0xFF8A7A72),
+                      fontSize: 12,
+                    ),
                   ),
                   const SizedBox(height: 14),
                   // 7-day grid (4 + 3)
@@ -2633,7 +3113,13 @@ class _ShopScreenState extends State<ShopScreen> {
                       final isClaimed = day <= cycleClaimed;
                       final isToday = !claimedToday && day == todayDay;
                       final isFinale = day == 7;
-                      return _attendanceDayCell(day, reward, isClaimed, isToday, isFinale);
+                      return _attendanceDayCell(
+                        day,
+                        reward,
+                        isClaimed,
+                        isToday,
+                        isFinale,
+                      );
                     }),
                   ),
                   const SizedBox(height: 16),
@@ -2665,8 +3151,10 @@ class _ShopScreenState extends State<ShopScreen> {
                         // Disable on: claim in flight, state refresh in flight
                         // (avoid wasting the ad on a stale claimedToday about to
                         // flip), already claimed, or the ad not yet loaded.
-                        final busy = g.attendanceClaiming || g.attendanceLoading;
-                        final claimed = g.attendanceState?['claimedToday'] == true;
+                        final busy =
+                            g.attendanceClaiming || g.attendanceLoading;
+                        final claimed =
+                            g.attendanceState?['claimedToday'] == true;
                         final enabled = adReady && !busy && !claimed;
                         return ElevatedButton.icon(
                           onPressed: enabled ? () => _attendanceClaim(g) : null,
@@ -2674,15 +3162,20 @@ class _ShopScreenState extends State<ShopScreen> {
                               ? const SizedBox(
                                   width: 18,
                                   height: 18,
-                                  child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                                  child: CircularProgressIndicator(
+                                    strokeWidth: 2,
+                                    color: Colors.white,
+                                  ),
                                 )
                               : const Icon(Icons.play_circle_outline),
                           label: Text(
                             busy
                                 ? l.attendanceClaiming
                                 : !adReady
-                                    ? l.attendanceAdLoading
-                                    : l.attendanceWatchAdAndClaim((s['todayRewardGold'] as int?) ?? 50),
+                                ? l.attendanceAdLoading
+                                : l.attendanceWatchAdAndClaim(
+                                    (s['todayRewardGold'] as int?) ?? 50,
+                                  ),
                           ),
                           style: ElevatedButton.styleFrom(
                             backgroundColor: const Color(0xFFFFB300),
@@ -2690,7 +3183,10 @@ class _ShopScreenState extends State<ShopScreen> {
                             disabledBackgroundColor: const Color(0xFFFFD180),
                             disabledForegroundColor: Colors.white,
                             minimumSize: const Size.fromHeight(48),
-                            textStyle: const TextStyle(fontWeight: FontWeight.w800, fontSize: 14),
+                            textStyle: const TextStyle(
+                              fontWeight: FontWeight.w800,
+                              fontSize: 14,
+                            ),
                           ),
                         );
                       },
@@ -2704,17 +3200,23 @@ class _ShopScreenState extends State<ShopScreen> {
     );
   }
 
-  Widget _attendanceDayCell(int day, int reward, bool claimed, bool today, bool finale) {
+  Widget _attendanceDayCell(
+    int day,
+    int reward,
+    bool claimed,
+    bool today,
+    bool finale,
+  ) {
     final bg = claimed
         ? const Color(0xFFE8F5E9)
         : today
-            ? const Color(0xFFFFF8E1)
-            : Colors.white;
+        ? const Color(0xFFFFF8E1)
+        : Colors.white;
     final borderColor = today
         ? const Color(0xFFFFB300)
         : claimed
-            ? const Color(0xFF66BB6A)
-            : const Color(0xFFE0DAD6);
+        ? const Color(0xFF66BB6A)
+        : const Color(0xFFE0DAD6);
     return Container(
       decoration: BoxDecoration(
         color: bg,
@@ -2736,28 +3238,34 @@ class _ShopScreenState extends State<ShopScreen> {
               style: TextStyle(
                 fontSize: 11,
                 fontWeight: FontWeight.w700,
-                color: claimed ? const Color(0xFF2E7D32) : const Color(0xFF8A7A72),
+                color: claimed
+                    ? const Color(0xFF2E7D32)
+                    : const Color(0xFF8A7A72),
               ),
             ),
-          const SizedBox(height: 4),
-          Icon(
-            claimed ? Icons.check_circle : Icons.monetization_on,
-            color: claimed
-                ? const Color(0xFF43A047)
-                : (finale ? const Color(0xFFFFA000) : const Color(0xFFFFC107)),
-            size: finale ? 22 : 18,
-          ),
-          const SizedBox(height: 4),
-          Text(
-            '$reward',
-            style: TextStyle(
-              fontSize: finale ? 13 : 11,
-              fontWeight: FontWeight.w900,
-              color: finale ? const Color(0xFFE65100) : const Color(0xFF5A4038),
+            const SizedBox(height: 4),
+            Icon(
+              claimed ? Icons.check_circle : Icons.monetization_on,
+              color: claimed
+                  ? const Color(0xFF43A047)
+                  : (finale
+                        ? const Color(0xFFFFA000)
+                        : const Color(0xFFFFC107)),
+              size: finale ? 22 : 18,
             ),
-          ),
-        ],
-      ),
+            const SizedBox(height: 4),
+            Text(
+              '$reward',
+              style: TextStyle(
+                fontSize: finale ? 13 : 11,
+                fontWeight: FontWeight.w900,
+                color: finale
+                    ? const Color(0xFFE65100)
+                    : const Color(0xFF5A4038),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -2796,77 +3304,74 @@ class _ShopScreenState extends State<ShopScreen> {
         _preloadAttendanceAd();
       },
     );
-    await ad.show(onUserEarnedReward: (a, reward) {
-      // Server is the source of truth; double-claim safe.
-      game.claimAttendance();
-    });
+    await ad.show(
+      onUserEarnedReward: (a, reward) {
+        // Server is the source of truth; double-claim safe.
+        game.claimAttendance();
+      },
+    );
   }
 
-  Widget _buildAdRewardButton(GameService game) {
+  Widget _buildAdRewardTile(GameService game) {
+    final l10n = L10n.of(context);
     final canWatch = _todayAdCount < AdService.maxDailyRewards;
-    return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
-      child: SizedBox(
-        width: double.infinity,
-        height: 44,
-        child: ElevatedButton.icon(
-          onPressed: (canWatch && !_adLoading)
-              ? () {
-                  final ad = _rewardedAd;
-                  if (ad == null) return;
-                  setState(() {
-                    _adLoading = true;
-                    _rewardedAd = null;
-                    _rewardedAdReady = false;
-                  });
-                  ad.fullScreenContentCallback = FullScreenContentCallback(
-                    onAdDismissedFullScreenContent: (ad) {
-                      ad.dispose();
-                      _preloadRewardedAd(); // 다음 광고 미리 로드
-                    },
-                    onAdFailedToShowFullScreenContent: (ad, error) {
-                      ad.dispose();
-                      if (mounted) {
-                        setState(() => _adLoading = false);
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(content: Text(L10n.of(context).shopAdCannotShow)),
-                        );
-                      }
-                      _preloadRewardedAd();
-                    },
-                  );
-                  ad.show(
-                    onUserEarnedReward: (ad, reward) async {
-                      await AdService.incrementRewardCount();
-                      game.claimAdReward();
-                      await _loadAdCount();
-                      if (mounted) setState(() => _adLoading = false);
-                    },
-                  );
-                }
-              : null,
-          icon: _adLoading
-              ? const SizedBox(
-                  width: 18,
-                  height: 18,
-                  child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
-                )
-              : const Icon(Icons.play_circle_fill, size: 20),
-          label: Text(
-            canWatch
-                ? L10n.of(context).shopAdWatchForGold(_todayAdCount, AdService.maxDailyRewards)
-                : L10n.of(context).shopAdRewardDone,
-            style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
-          ),
-          style: ElevatedButton.styleFrom(
-            backgroundColor: canWatch ? const Color(0xFF7E57C2) : Colors.grey,
-            foregroundColor: Colors.white,
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(12),
-            ),
-          ),
-        ),
-      ),
+    final enabled = canWatch && !_adLoading;
+    return _buildRewardTile(
+      gradient: enabled
+          ? const [Color(0xFF9575CD), Color(0xFF7E57C2)]
+          : const [Color(0xFFBDBDBD), Color(0xFF9E9E9E)],
+      icon: Icons.play_circle_fill,
+      leadingOverride: _adLoading
+          ? const SizedBox(
+              width: 18,
+              height: 18,
+              child: CircularProgressIndicator(
+                strokeWidth: 2,
+                color: Colors.white,
+              ),
+            )
+          : null,
+      title: canWatch ? l10n.shopAdWatchTitle : l10n.shopAdRewardDone,
+      subtitle: canWatch
+          ? l10n.shopAdWatchProgress(_todayAdCount, AdService.maxDailyRewards)
+          : l10n.shopAdRewardDoneSubtitle,
+      onTap: enabled
+          ? () {
+              final ad = _rewardedAd;
+              if (ad == null) return;
+              setState(() {
+                _adLoading = true;
+                _rewardedAd = null;
+                _rewardedAdReady = false;
+              });
+              ad.fullScreenContentCallback = FullScreenContentCallback(
+                onAdDismissedFullScreenContent: (ad) {
+                  ad.dispose();
+                  _preloadRewardedAd(); // 다음 광고 미리 로드
+                },
+                onAdFailedToShowFullScreenContent: (ad, error) {
+                  ad.dispose();
+                  if (mounted) {
+                    setState(() => _adLoading = false);
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text(L10n.of(context).shopAdCannotShow),
+                      ),
+                    );
+                  }
+                  _preloadRewardedAd();
+                },
+              );
+              ad.show(
+                onUserEarnedReward: (ad, reward) async {
+                  await AdService.incrementRewardCount();
+                  game.claimAdReward();
+                  await _loadAdCount();
+                  if (mounted) setState(() => _adLoading = false);
+                },
+              );
+            }
+          : null,
     );
   }
 

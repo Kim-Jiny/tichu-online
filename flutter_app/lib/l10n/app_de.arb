@@ -1400,5 +1400,6 @@
   "lobbySwitchToSpectator": "Zuschauer werden",
   "lobbySwitchToSpectatorDesc": "Platz freigeben und nur zusehen",
   "lobbyRoomTools": "Raum-Werkzeuge",
-  "lobbyRoomPlaying": "Läuft"
+  "lobbyRoomPlaying": "Läuft",
+  "lobbyNoRoomsForFilter": "Keine Räume für die gewählten Spiele"
 }

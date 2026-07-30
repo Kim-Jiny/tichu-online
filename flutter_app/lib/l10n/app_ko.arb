@@ -1404,5 +1404,6 @@
   "lobbySwitchToSpectator": "관전자로 전환",
   "lobbySwitchToSpectatorDesc": "내 자리를 비우고 관전만 합니다",
   "lobbyRoomTools": "대기실 도구",
-  "lobbyRoomPlaying": "게임 중"
+  "lobbyRoomPlaying": "게임 중",
+  "lobbyNoRoomsForFilter": "선택한 게임의 방이 없어요"
 }

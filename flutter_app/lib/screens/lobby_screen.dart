@@ -37,6 +37,11 @@ class _LobbyScreenState extends State<LobbyScreen> {
   bool _inRoom = false;
   bool _roomMoreOpen = false;
 
+  /// Game types the player has switched off in the room list. Empty = show all,
+  /// which is the default: you open the lobby to see what is there, not to
+  /// configure it first.
+  final Set<String> _hiddenGameTypes = {};
+
   // 채팅
   final TextEditingController _chatController = TextEditingController();
   final ScrollController _chatScrollController = ScrollController();
@@ -1968,17 +1973,21 @@ class _LobbyScreenState extends State<LobbyScreen> {
         children: [
           Row(
             children: [
-              Text(
-                L10n.of(context).lobbyRoomListTitle,
-                style: const TextStyle(fontSize: 16, color: Color(0xFF8A7A72)),
+              // The "게임 방 리스트" caption said nothing you could not see, so the
+              // row it occupied now carries the game filters instead.
+              Expanded(
+                child: SingleChildScrollView(
+                  scrollDirection: Axis.horizontal,
+                  child: Row(children: _buildGameFilterChips()),
+                ),
               ),
-              const Spacer(),
               IconButton(
                 onPressed: () {
                   game.requestRoomList();
                 },
                 icon: const Icon(Icons.refresh),
                 color: const Color(0xFF8A7A72),
+                visualDensity: VisualDensity.compact,
               ),
             ],
           ),
@@ -2070,7 +2079,71 @@ class _LobbyScreenState extends State<LobbyScreen> {
     );
   }
 
-  Widget _buildRoomList(List<Room> rooms) {
+  /// One toggle per game type. Coloured while its rooms are showing, drained
+  /// when they are hidden — the colour matches that game's strip and badge in the
+  /// rows below, so the filter and the thing it filters read as the same family.
+  List<Widget> _buildGameFilterChips() {
+    final l10n = L10n.of(context);
+    final games = [
+      ('tichu', l10n.lobbyTichu, const Color(0xFF64B5F6)),
+      ('mighty', l10n.rankingMighty, const Color(0xFF5C6BC0)),
+      ('skull_king', l10n.lobbySkullKing, const Color(0xFF21455F)),
+      ('love_letter', l10n.lobbyLoveLetter, const Color(0xFFE91E63)),
+    ];
+    return [
+      for (final (type, label, color) in games)
+        Padding(
+          padding: const EdgeInsets.only(right: 6),
+          child: GestureDetector(
+            behavior: HitTestBehavior.opaque,
+            onTap: () => setState(() {
+              if (!_hiddenGameTypes.remove(type)) _hiddenGameTypes.add(type);
+            }),
+            child: AnimatedContainer(
+              duration: const Duration(milliseconds: 160),
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+              decoration: BoxDecoration(
+                color: _hiddenGameTypes.contains(type)
+                    ? Colors.white.withValues(alpha: 0.6)
+                    : color,
+                borderRadius: BorderRadius.circular(10),
+                border: Border.all(
+                  color: _hiddenGameTypes.contains(type)
+                      ? const Color(0xFFE6DDD8)
+                      : color,
+                ),
+              ),
+              child: Text(
+                label,
+                style: TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w700,
+                  color: _hiddenGameTypes.contains(type)
+                      ? const Color(0xFFB4A8A2)
+                      : Colors.white,
+                ),
+              ),
+            ),
+          ),
+        ),
+    ];
+  }
+
+  Widget _buildRoomList(List<Room> allRooms) {
+    final rooms = _hiddenGameTypes.isEmpty
+        ? allRooms
+        : allRooms
+              .where((r) => !_hiddenGameTypes.contains(r.gameType))
+              .toList();
+    if (rooms.isEmpty) {
+      return Center(
+        child: Text(
+          L10n.of(context).lobbyNoRoomsForFilter,
+          style: const TextStyle(color: Color(0xFF9C8B84)),
+          textAlign: TextAlign.center,
+        ),
+      );
+    }
     // Waiting rooms on top, in-progress rooms at the bottom.
     // Stable sort so server-provided order is preserved within each group.
     final sorted = [...rooms]

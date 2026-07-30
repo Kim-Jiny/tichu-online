@@ -1986,5 +1986,6 @@
   "lobbySwitchToSpectator": "Become a spectator",
   "lobbySwitchToSpectatorDesc": "Give up your seat and just watch",
   "lobbyRoomTools": "Room tools",
-  "lobbyRoomPlaying": "Playing"
+  "lobbyRoomPlaying": "Playing",
+  "lobbyNoRoomsForFilter": "No rooms for the selected games"
 }

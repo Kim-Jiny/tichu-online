@@ -4265,4 +4265,7 @@ class L10nKo extends L10n {
 
   @override
   String get lobbyRoomPlaying => '게임 중';
+
+  @override
+  String get lobbyNoRoomsForFilter => '선택한 게임의 방이 없어요';
 }

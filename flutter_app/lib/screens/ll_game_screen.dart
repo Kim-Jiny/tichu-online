@@ -820,7 +820,15 @@ class _LLGameScreenState extends State<LLGameScreen> {
                   _soundPanelOpen = false;
                   _viewersOpen = false;
                 });
-                _showExitDialog(context, gs);
+                // Spectators leave immediately: the confirm exists to stop a
+                // player abandoning a live game (team damage, desertion), and
+                // a spectator loses nothing by leaving. The other games'
+                // spectator views leave without asking.
+                if (gs.isSpectator) {
+                  gs.leaveRoom();
+                } else {
+                  _showExitDialog(context, gs);
+                }
               },
             ),
           ],
@@ -1223,11 +1231,21 @@ class _LLGameScreenState extends State<LLGameScreen> {
                   height: seat.height,
                   child: gs.isSpectator
                       ? _buildSpectatorSeat(state, gs, seat)
-                      : _buildPlayerSeatCard(
-                          context,
-                          state,
-                          seat.player,
-                          compact: seat.compact,
+                      // Tappable: this was the one in-game view of Love Letter
+                      // with no way into a profile at all — so no way to block
+                      // or report from the table.
+                      : GestureDetector(
+                          onTap: () => _showPlayerProfileDialog(
+                            seat.player.name,
+                            gs,
+                            isBot: seat.player.isBot,
+                          ),
+                          child: _buildPlayerSeatCard(
+                            context,
+                            state,
+                            seat.player,
+                            compact: seat.compact,
+                          ),
                         ),
                 ),
               for (final seat in seatLayouts)
@@ -1470,6 +1488,11 @@ class _LLGameScreenState extends State<LLGameScreen> {
     final isViewing = _viewingPlayerId == p.id && isApproved;
 
     return GestureDetector(
+      // The tap belongs to card view, so — as in the Skull King spectator
+      // seats — profiles ride on long-press. Without it a spectator had no way
+      // to block or report anyone.
+      onLongPress: () =>
+          _showPlayerProfileDialog(p.name, game, isBot: p.isBot),
       onTap: () {
         if (isApproved) {
           setState(() {
@@ -1566,32 +1589,35 @@ class _LLGameScreenState extends State<LLGameScreen> {
                     mainAxisSize: MainAxisSize.min,
                     crossAxisAlignment: CrossAxisAlignment.center,
                     children: [
+                      // Own row rather than inline before the name — same
+                      // change as the Skull King seats: inline it had to stay
+                      // at 13-16px to leave the name any width, which is too
+                      // small to make out a face.
+                      if (player.photoUrl != null || player.isBot)
+                        Padding(
+                          padding: EdgeInsets.only(bottom: spacing),
+                          child: ProfileAvatar(
+                            photoUrl:
+                                _gameService?.resolvePhotoUrl(player.photoUrl),
+                            size: ultraTight ? 22 : 26,
+                            blocked: _gameService?.blockedUsers
+                                    .contains(player.name) ??
+                                false,
+                            fallback: player.isBot
+                                ? BotAvatar(
+                                    size: ultraTight ? 22 : 26,
+                                    name: player.name,
+                                  )
+                                : SizedBox(
+                                    width: ultraTight ? 22 : 26,
+                                    height: ultraTight ? 22 : 26,
+                                  ),
+                          ),
+                        ),
                       Row(
                         mainAxisAlignment: MainAxisAlignment.center,
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          if (player.photoUrl != null || player.isBot)
-                            Padding(
-                              padding:
-                                  EdgeInsets.only(right: ultraTight ? 2 : 3),
-                              child: ProfileAvatar(
-                                photoUrl: _gameService
-                                    ?.resolvePhotoUrl(player.photoUrl),
-                                size: ultraTight ? 13 : 16,
-                                blocked: _gameService
-                                        ?.blockedUsers.contains(player.name) ??
-                                    false,
-                                fallback: player.isBot
-                                    ? BotAvatar(
-                                        size: ultraTight ? 13 : 16,
-                                        name: player.name,
-                                      )
-                                    : SizedBox(
-                                        width: ultraTight ? 13 : 16,
-                                        height: ultraTight ? 13 : 16,
-                                      ),
-                              ),
-                            ),
                           Flexible(
                             child: Text(
                               player.name,

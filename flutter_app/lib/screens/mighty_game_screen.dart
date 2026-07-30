@@ -2286,6 +2286,14 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
     return Opacity(
       opacity: isExcluded ? 0.45 : 1.0,
       child: GestureDetector(
+        // The tap is overloaded (card view for spectators, point cards, then
+        // profile), so for a spectator it never reaches the profile. Long-press
+        // goes straight there, as in the SK and LL seats.
+        onLongPress: () => _showPlayerProfileDialog(
+          player.name,
+          game,
+          isBot: player.id.startsWith('bot_'),
+        ),
         onTap: () => _handleTableSeatTap(
           state,
           game,
@@ -2376,6 +2384,32 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
                                     height: roleLabelHeight,
                                     child: Center(child: roleLabel),
                                   ),
+                                  // Own row rather than inline before the
+                                  // name — same change as the SK and LL seats:
+                                  // inline it was capped at 14-16px to leave
+                                  // the name any width.
+                                  if (player.photoUrl != null || player.isBot)
+                                    Padding(
+                                      padding:
+                                          EdgeInsets.only(bottom: spacing),
+                                      child: ProfileAvatar(
+                                        photoUrl: game.resolvePhotoUrl(
+                                          player.photoUrl,
+                                        ),
+                                        size: compact ? 24 : 28,
+                                        blocked: game.blockedUsers
+                                            .contains(player.name),
+                                        fallback: player.isBot
+                                            ? BotAvatar(
+                                                size: compact ? 24 : 28,
+                                                name: player.name,
+                                              )
+                                            : SizedBox(
+                                                width: compact ? 24 : 28,
+                                                height: compact ? 24 : 28,
+                                              ),
+                                      ),
+                                    ),
                                   Row(
                                     mainAxisAlignment: MainAxisAlignment.center,
                                     mainAxisSize: MainAxisSize.min,
@@ -2389,29 +2423,6 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
                                             Icons.wifi_off,
                                             size: offlineIconSize,
                                             color: const Color(0xFFE53935),
-                                          ),
-                                        ),
-                                      if (player.photoUrl != null || player.isBot)
-                                        Padding(
-                                          padding: EdgeInsets.only(
-                                            right: compact ? 2 : 3,
-                                          ),
-                                          child: ProfileAvatar(
-                                            photoUrl: game.resolvePhotoUrl(
-                                              player.photoUrl,
-                                            ),
-                                            size: compact ? 14 : 16,
-                                            blocked: game
-                                                .blockedUsers.contains(player.name),
-                                            fallback: player.isBot
-                                                ? BotAvatar(
-                                                    size: compact ? 14 : 16,
-                                                    name: player.name,
-                                                  )
-                                                : SizedBox(
-                                                    width: compact ? 14 : 16,
-                                                    height: compact ? 14 : 16,
-                                                  ),
                                           ),
                                         ),
                                       Flexible(

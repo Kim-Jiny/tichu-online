@@ -7790,6 +7790,12 @@ abstract class L10n {
   /// In en, this message translates to:
   /// **'Room tools'**
   String get lobbyRoomTools;
+
+  /// No description provided for @lobbyRoomPlaying.
+  ///
+  /// In en, this message translates to:
+  /// **'Playing'**
+  String get lobbyRoomPlaying;
 }
 
 class _L10nDelegate extends LocalizationsDelegate<L10n> {

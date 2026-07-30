@@ -1403,5 +1403,6 @@
   "lobbyShareCopied": "클립보드에 복사되었습니다",
   "lobbySwitchToSpectator": "관전자로 전환",
   "lobbySwitchToSpectatorDesc": "내 자리를 비우고 관전만 합니다",
-  "lobbyRoomTools": "대기실 도구"
+  "lobbyRoomTools": "대기실 도구",
+  "lobbyRoomPlaying": "게임 중"
 }

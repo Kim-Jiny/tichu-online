@@ -1985,5 +1985,6 @@
   "lobbyShareCopied": "Link copied to clipboard",
   "lobbySwitchToSpectator": "Become a spectator",
   "lobbySwitchToSpectatorDesc": "Give up your seat and just watch",
-  "lobbyRoomTools": "Room tools"
+  "lobbyRoomTools": "Room tools",
+  "lobbyRoomPlaying": "Playing"
 }

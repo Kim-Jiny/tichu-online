@@ -4365,4 +4365,7 @@ class L10nEn extends L10n {
 
   @override
   String get lobbyRoomTools => 'Room tools';
+
+  @override
+  String get lobbyRoomPlaying => 'Playing';
 }

@@ -1399,5 +1399,6 @@
   "lobbyShareCopied": "Link in die Zwischenablage kopiert",
   "lobbySwitchToSpectator": "Zuschauer werden",
   "lobbySwitchToSpectatorDesc": "Platz freigeben und nur zusehen",
-  "lobbyRoomTools": "Raum-Werkzeuge"
+  "lobbyRoomTools": "Raum-Werkzeuge",
+  "lobbyRoomPlaying": "Läuft"
 }

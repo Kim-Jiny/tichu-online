@@ -4262,4 +4262,7 @@ class L10nKo extends L10n {
 
   @override
   String get lobbyRoomTools => '대기실 도구';
+
+  @override
+  String get lobbyRoomPlaying => '게임 중';
 }

@@ -4401,4 +4401,7 @@ class L10nDe extends L10n {
 
   @override
   String get lobbyRoomTools => 'Raum-Werkzeuge';
+
+  @override
+  String get lobbyRoomPlaying => 'Läuft';
 }

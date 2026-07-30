@@ -1958,20 +1958,11 @@ class _LobbyScreenState extends State<LobbyScreen> {
   }
 
   Widget _buildRoomListPanel(GameService game) {
+    // No panel card: the rows inside are already surfaces, so the white box
+    // around them was one more border to look past — same as the waiting room.
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 16),
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: 0.95),
-        borderRadius: BorderRadius.circular(24),
-        boxShadow: [
-          BoxShadow(
-            color: const Color(0xFFD9CCC8).withValues(alpha: 0.6),
-            blurRadius: 20,
-            offset: const Offset(0, 10),
-          ),
-        ],
-      ),
+      padding: const EdgeInsets.symmetric(vertical: 4),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -2118,72 +2109,37 @@ class _LobbyScreenState extends State<LobbyScreen> {
     final isMighty = room.gameType == 'mighty';
     final l10n = L10n.of(context);
 
-    // Game type colors
-    final Color bgColor;
-    final Color borderColor;
+    // Only the left strip and the game badge carry the game's colour. Every game
+    // used to repaint the whole row — background, border, name, subtitle, and a
+    // second variant for in-progress — so eight colour sets turned the list into
+    // a swatch chart and nothing stood out inside a row.
     final Color stripColor;
     final Color badgeBgColor;
-    final Color badgeTextColor;
     final String badgeText;
-    final Color nameColor;
-    final Color subTextColor;
+    const badgeTextColor = Colors.white;
 
     if (isLL) {
-      bgColor = isInProgress
-          ? const Color(0xFFFCE4EC)
-          : const Color(0xFFFFF0F5);
-      borderColor = isInProgress
-          ? const Color(0xFFF48FB1)
-          : const Color(0xFFF8BBD0);
       stripColor = const Color(0xFFE91E63);
       badgeBgColor = const Color(0xFFE91E63);
-      badgeTextColor = Colors.white;
       badgeText = '💌 ${l10n.lobbyLoveLetterBadge}';
-      nameColor = const Color(0xFF880E4F);
-      subTextColor = const Color(0xFFAD1457);
     } else if (isMighty) {
-      bgColor = isInProgress
-          ? const Color(0xFFE8EAF6)
-          : const Color(0xFFEDE7F6);
-      borderColor = isInProgress
-          ? const Color(0xFF9FA8DA)
-          : const Color(0xFFB39DDB);
       stripColor = const Color(0xFF5C6BC0);
       badgeBgColor = const Color(0xFF5C6BC0);
-      badgeTextColor = Colors.white;
       badgeText = l10n.lobbyMightyBadge;
-      nameColor = const Color(0xFF283593);
-      subTextColor = const Color(0xFF5C6BC0);
     } else if (isSK) {
-      bgColor = isInProgress
-          ? const Color(0xFFDCE8F0)
-          : const Color(0xFFE8F0F6);
-      borderColor = isInProgress
-          ? const Color(0xFFA0BCD0)
-          : const Color(0xFFB8CCDD);
       stripColor = const Color(0xFF21455F);
       badgeBgColor = const Color(0xFF21455F);
-      badgeTextColor = Colors.white;
       badgeText = l10n.lobbySkullKingBadge;
-      nameColor = const Color(0xFF1A3548);
-      subTextColor = const Color(0xFF546E7A);
     } else {
-      bgColor = isInProgress
-          ? const Color(0xFFDEEEFC)
-          : const Color(0xFFEAF4FD);
-      borderColor = isInProgress
-          ? const Color(0xFF90CAF9)
-          : const Color(0xFFBBDEFB);
       stripColor = const Color(0xFF64B5F6);
       badgeBgColor = const Color(0xFF64B5F6);
-      badgeTextColor = Colors.white;
       badgeText = l10n.lobbyTichuBadge;
-      nameColor = const Color(0xFF1565C0);
-      subTextColor = const Color(0xFF42A5F5);
     }
+    const nameColor = Color(0xFF4E3A34);
+    const subTextColor = Color(0xFF9C8B84);
 
     return Material(
-      color: bgColor,
+      color: Colors.white.withValues(alpha: 0.72),
       borderRadius: BorderRadius.circular(16),
       child: InkWell(
         onTap: () {
@@ -2207,7 +2163,7 @@ class _LobbyScreenState extends State<LobbyScreen> {
         child: Container(
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(16),
-            border: Border.all(color: borderColor),
+            border: Border.all(color: const Color(0xFFE6DDD8)),
           ),
           child: IntrinsicHeight(
             child: Row(
@@ -2325,87 +2281,89 @@ class _LobbyScreenState extends State<LobbyScreen> {
                             ],
                           ),
                         ),
+                        // The eye used to mean two different things: a button
+                        // that takes you into spectating (waiting rooms) and a
+                        // read-out of how many people are already watching
+                        // (running games). Now the button is always the button,
+                        // and the count only appears when there is one.
                         if (isInProgress)
                           Container(
                             padding: const EdgeInsets.symmetric(
-                              horizontal: 10,
-                              vertical: 6,
+                              horizontal: 8,
+                              vertical: 4,
                             ),
-                            margin: const EdgeInsets.only(right: 8),
+                            margin: const EdgeInsets.only(right: 6),
                             decoration: BoxDecoration(
-                              color: isSK
-                                  ? const Color(0xFFCCD0DD)
-                                  : const Color(0xFFD8CCF6),
-                              borderRadius: BorderRadius.circular(12),
+                              color: const Color(0xFFF0EBE8),
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            child: Text(
+                              l10n.lobbyRoomPlaying,
+                              style: const TextStyle(
+                                fontSize: 11,
+                                fontWeight: FontWeight.w700,
+                                color: Color(0xFF8A7A72),
+                              ),
+                            ),
+                          ),
+                        GestureDetector(
+                          onTap: () => _spectateWithPasswordCheck(room),
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 8,
+                              vertical: 7,
+                            ),
+                            margin: const EdgeInsets.only(right: 6),
+                            decoration: BoxDecoration(
+                              color: Colors.white,
+                              borderRadius: BorderRadius.circular(10),
+                              border: Border.all(
+                                color: const Color(0xFFE6DDD8),
+                              ),
                             ),
                             child: Row(
+                              mainAxisSize: MainAxisSize.min,
                               children: [
-                                Icon(
+                                const Icon(
                                   Icons.visibility,
-                                  size: 14,
-                                  color: isSK
-                                      ? const Color(0xFF3A3A50)
-                                      : const Color(0xFF6C63FF),
+                                  size: 16,
+                                  color: Color(0xFF7A6A62),
                                 ),
-                                const SizedBox(width: 4),
-                                Text(
-                                  '${room.spectatorCount}',
-                                  style: TextStyle(
-                                    fontSize: 12,
-                                    color: isSK
-                                        ? const Color(0xFF3A3A50)
-                                        : const Color(0xFF6C63FF),
-                                    fontWeight: FontWeight.bold,
+                                if (room.spectatorCount > 0) ...[
+                                  const SizedBox(width: 4),
+                                  Text(
+                                    '${room.spectatorCount}',
+                                    style: const TextStyle(
+                                      fontSize: 12,
+                                      fontWeight: FontWeight.w700,
+                                      color: Color(0xFF7A6A62),
+                                    ),
                                   ),
-                                ),
+                                ],
                               ],
                             ),
                           ),
-                        if (!isInProgress)
-                          GestureDetector(
-                            onTap: () {
-                              _spectateWithPasswordCheck(room);
-                            },
-                            child: Container(
-                              padding: const EdgeInsets.all(8),
-                              margin: const EdgeInsets.only(right: 8),
-                              decoration: BoxDecoration(
-                                color: isSK
-                                    ? const Color(0xFFD8DAE4)
-                                    : const Color(0xFFE0D8F4),
-                                borderRadius: BorderRadius.circular(12),
-                              ),
-                              child: Icon(
-                                Icons.visibility,
-                                size: 18,
-                                color: isSK
-                                    ? const Color(0xFF3A3A50)
-                                    : const Color(0xFF6C63FF),
-                              ),
-                            ),
-                          ),
+                        ),
                         Container(
                           padding: const EdgeInsets.symmetric(
-                            horizontal: 12,
+                            horizontal: 10,
                             vertical: 6,
                           ),
                           decoration: BoxDecoration(
-                            color: isInProgress
-                                ? (isSK
-                                      ? const Color(0xFFD4D8E4)
-                                      : const Color(0xFFD4CCF0))
-                                : (isSK
-                                      ? const Color(0xFFD8DAE4)
-                                      : const Color(0xFFE0D8F4)),
-                            borderRadius: BorderRadius.circular(12),
+                            color: const Color(0xFFF6F3F2),
+                            borderRadius: BorderRadius.circular(10),
                           ),
                           child: Text(
                             '${room.playerCount}/${room.effectiveMaxPlayers}',
                             style: TextStyle(
-                              fontSize: 14,
-                              color: isSK
-                                  ? const Color(0xFF3A3A50)
-                                  : const Color(0xFF4A4070),
+                              fontSize: 13,
+                              fontWeight: FontWeight.w800,
+                              // Same reading as the waiting room's header: green
+                              // when there is no seat left, amber while there is.
+                              color:
+                                  room.playerCount >= room.effectiveMaxPlayers
+                                  ? const Color(0xFF4CAF50)
+                                  : const Color(0xFFFF9800),
                             ),
                           ),
                         ),

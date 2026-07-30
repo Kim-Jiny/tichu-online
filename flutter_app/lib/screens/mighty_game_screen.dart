@@ -2303,7 +2303,6 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
             final verticalPadding = compact ? 4.0 : 6.0;
             final timeoutHeight = compact ? 11.0 : 12.0;
             final roleLabelHeight = compact ? 15.0 : 16.0;
-            final dotSize = compact ? 5.0 : 6.0;
             final offlineIconSize = compact ? 10.0 : 11.0;
             final nameFontSize = compact ? 10.0 : 11.0;
             final scoreFontSize = compact ? 13.0 : 15.0;
@@ -2381,18 +2380,6 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
                                     mainAxisAlignment: MainAxisAlignment.center,
                                     mainAxisSize: MainAxisSize.min,
                                     children: [
-                                      if (isCurrentTurn)
-                                        Container(
-                                          width: dotSize,
-                                          height: dotSize,
-                                          margin: EdgeInsets.only(
-                                            right: compact ? 3 : 4,
-                                          ),
-                                          decoration: const BoxDecoration(
-                                            color: Color(0xFFE6A800),
-                                            shape: BoxShape.circle,
-                                          ),
-                                        ),
                                       if (!player.connected)
                                         Padding(
                                           padding: EdgeInsets.only(
@@ -7480,7 +7467,7 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
             final profile = game.profileFor(nickname);
             final isLoading =
                 profile == null || profile['nickname'] != nickname;
-            final l10n = L10n.of(context);
+            final l10n = L10n.of(ctx);
 
             return AlertDialog(
               shape: RoundedRectangleBorder(
@@ -7502,7 +7489,7 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
                       nickname: nickname,
                       profile: profile,
                       game: game,
-                      subtitle: L10n.of(context).gamePlayerProfile,
+                      subtitle: L10n.of(ctx).gamePlayerProfile,
                       subtitleBuilder: (inner) => profileLevelStrip(
                         (inner?['level'] as int?) ?? 1,
                         (inner?['expTotal'] as int?) ?? 0,

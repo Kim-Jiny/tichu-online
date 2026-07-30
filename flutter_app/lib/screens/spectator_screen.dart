@@ -1882,7 +1882,7 @@ class _SpectatorScreenState extends State<SpectatorScreen> {
                       nickname: nickname,
                       profile: profile,
                       game: game,
-                      subtitle: L10n.of(context).gamePlayerProfile,
+                      subtitle: L10n.of(ctx).gamePlayerProfile,
                       subtitleBuilder: (inner) => profileLevelStrip(
                         (inner?['level'] as int?) ?? 1,
                         (inner?['expTotal'] as int?) ?? 0,
@@ -1917,7 +1917,7 @@ class _SpectatorScreenState extends State<SpectatorScreen> {
               actions: [
                 TextButton(
                   onPressed: () => Navigator.pop(ctx),
-                  child: Text(L10n.of(context).gameClose),
+                  child: Text(L10n.of(ctx).gameClose),
                 ),
               ],
             );

@@ -4609,7 +4609,7 @@ class _SKGameScreenState extends State<SKGameScreen> {
                         nickname: nickname,
                         profile: profile,
                         game: game,
-                        subtitle: L10n.of(context).skGamePlayerProfile,
+                        subtitle: L10n.of(ctx).skGamePlayerProfile,
                         subtitleBuilder: (inner) => profileLevelStrip(
                           (inner?['level'] as int?) ?? 1,
                           (inner?['expTotal'] as int?) ?? 0,
@@ -4644,7 +4644,7 @@ class _SKGameScreenState extends State<SKGameScreen> {
                 actions: [
                   TextButton(
                     onPressed: () => Navigator.pop(ctx),
-                    child: Text(L10n.of(context).commonClose),
+                    child: Text(L10n.of(ctx).commonClose),
                   ),
                 ],
               );

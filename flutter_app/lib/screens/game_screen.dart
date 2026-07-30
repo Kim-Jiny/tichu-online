@@ -1048,7 +1048,7 @@ class _GameScreenState extends State<GameScreen> {
                       nickname: nickname,
                       profile: profile,
                       game: game,
-                      subtitle: L10n.of(context).gamePlayerProfile,
+                      subtitle: L10n.of(ctx).gamePlayerProfile,
                       subtitleBuilder: (inner) => profileLevelStrip(
                         (inner?['level'] as int?) ?? 1,
                         (inner?['expTotal'] as int?) ?? 0,
@@ -1083,7 +1083,7 @@ class _GameScreenState extends State<GameScreen> {
               actions: [
                 TextButton(
                   onPressed: () => Navigator.pop(ctx),
-                  child: Text(L10n.of(context).gameClose),
+                  child: Text(L10n.of(ctx).gameClose),
                 ),
               ],
             );
@@ -3628,16 +3628,6 @@ class _GameScreenState extends State<GameScreen> {
                       Icons.wifi_off,
                       size: 12 * s,
                       color: Colors.red,
-                    ),
-                  )
-                else if (isTurn)
-                  Container(
-                    width: 6 * s,
-                    height: 6 * s,
-                    margin: EdgeInsets.only(right: 4 * s),
-                    decoration: const BoxDecoration(
-                      color: Color(0xFFE6A800),
-                      shape: BoxShape.circle,
                     ),
                   ),
                 Flexible(

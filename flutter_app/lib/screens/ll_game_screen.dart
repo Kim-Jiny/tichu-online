@@ -1570,18 +1570,6 @@ class _LLGameScreenState extends State<LLGameScreen> {
                         mainAxisAlignment: MainAxisAlignment.center,
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          if (isCurrent)
-                            Container(
-                              width: ultraTight ? 5 : 6,
-                              height: ultraTight ? 5 : 6,
-                              margin: EdgeInsets.only(
-                                right: ultraTight ? 3 : 4,
-                              ),
-                              decoration: const BoxDecoration(
-                                color: Color(0xFFE6A800),
-                                shape: BoxShape.circle,
-                              ),
-                            ),
                           if (player.photoUrl != null || player.isBot)
                             Padding(
                               padding:
@@ -3866,7 +3854,7 @@ class _LLGameScreenState extends State<LLGameScreen> {
                       nickname: nickname,
                       profile: profile,
                       game: game,
-                      subtitle: L10n.of(context).gamePlayerProfile,
+                      subtitle: L10n.of(ctx).gamePlayerProfile,
                       subtitleBuilder: (inner) => profileLevelStrip(
                         (inner?['level'] as int?) ?? 1,
                         (inner?['expTotal'] as int?) ?? 0,
@@ -3901,7 +3889,7 @@ class _LLGameScreenState extends State<LLGameScreen> {
               actions: [
                 TextButton(
                   onPressed: () => Navigator.pop(ctx),
-                  child: Text(L10n.of(context).gameClose),
+                  child: Text(L10n.of(ctx).gameClose),
                 ),
               ],
             );

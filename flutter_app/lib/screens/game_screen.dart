@@ -2175,17 +2175,9 @@ class _GameScreenState extends State<GameScreen> {
                 color: enemyLeading ? enemyColor : const Color(0xFF8A7A72),
               ),
             ),
-            // Target score (finish line) so players don't have to open the
-            // history dialog to see how many points end the game.
-            SizedBox(width: 6 * _s),
-            Text(
-              '/ ${context.read<GameService>().roomTargetScore}',
-              style: TextStyle(
-                fontSize: 11 * _s,
-                fontWeight: FontWeight.w700,
-                color: const Color(0xFF8A7A72),
-              ),
-            ),
+            // The finish line moved into the score-history dialog: next to the
+            // running score it read as a fraction ("25 / 1000") rather than a
+            // goal, and this bar is the one thing always on screen.
             SizedBox(width: 4 * _s),
             Icon(Icons.history, size: 12 * _s, color: const Color(0xFF8A7A72)),
           ],
@@ -2201,6 +2193,7 @@ class _GameScreenState extends State<GameScreen> {
       totalA: state.totalScores['teamA'] ?? 0,
       totalB: state.totalScores['teamB'] ?? 0,
       myTeam: state.myTeam,
+      targetScore: context.read<GameService>().roomTargetScore,
     );
   }
 

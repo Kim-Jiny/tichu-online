@@ -1021,6 +1021,7 @@ class _SpectatorScreenState extends State<SpectatorScreen> {
                 _buildScoreHistoryTap(
                   scoreHistory,
                   scores,
+                  targetScore: targetScore,
                   child: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
@@ -1141,6 +1142,7 @@ class _SpectatorScreenState extends State<SpectatorScreen> {
                     _buildScoreHistoryTap(
                       scoreHistory,
                       scores,
+                      targetScore: targetScore,
                       child: Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
@@ -1170,6 +1172,7 @@ class _SpectatorScreenState extends State<SpectatorScreen> {
     List scoreHistory,
     Map<String, dynamic> scores, {
     required Widget child,
+    int? targetScore,
   }) {
     return GestureDetector(
       behavior: HitTestBehavior.opaque,
@@ -1181,6 +1184,7 @@ class _SpectatorScreenState extends State<SpectatorScreen> {
             .toList(),
         totalA: scores['teamA'] ?? 0,
         totalB: scores['teamB'] ?? 0,
+        targetScore: targetScore,
       ),
       child: child,
     );

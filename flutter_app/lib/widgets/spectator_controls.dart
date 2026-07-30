@@ -272,6 +272,7 @@ void showTichuScoreHistoryDialog(
   required int totalA,
   required int totalB,
   String myTeam = 'A',
+  int? targetScore,
 }) {
   final myTotal = myTeam == 'A' ? totalA : totalB;
   final enemyTotal = myTeam == 'A' ? totalB : totalA;
@@ -304,6 +305,19 @@ void showTichuScoreHistoryDialog(
                       color: _kTextPrimary,
                     ),
                   ),
+                  const Spacer(),
+                  // The finish line belongs here rather than beside the running
+                  // score on the board, where it read as "25 / 1000" — a
+                  // fraction, not a goal.
+                  if (targetScore != null)
+                    Text(
+                      L10n.of(context).spectatorTargetScore(targetScore),
+                      style: const TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w700,
+                        color: _kTextSubtle,
+                      ),
+                    ),
                 ],
               ),
               const SizedBox(height: 14),

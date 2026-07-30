@@ -206,7 +206,7 @@ class PlayerProfileHeader extends StatelessWidget {
     return GestureDetector(
       onTap: () {
         if (editable) {
-          changeProfilePhoto(context, game);
+          changeProfilePhoto(context, game, canDelete: resolved != null);
         } else {
           showEnlargedProfilePhoto(context, resolved!, nickname);
         }
@@ -387,7 +387,11 @@ bool _changeInFlight = false;
 /// host starting the game mid-upload left the player unable to touch their own
 /// first turn. Nothing here is worth blocking a game for — it is a cosmetic
 /// that can land whenever it lands.
-Future<void> changeProfilePhoto(BuildContext context, GameService game) async {
+Future<void> changeProfilePhoto(
+  BuildContext context,
+  GameService game, {
+  bool canDelete = false,
+}) async {
   final l10n = L10n.of(context);
   final messenger = ScaffoldMessenger.of(context);
   if (_changeInFlight) {
@@ -399,7 +403,7 @@ Future<void> changeProfilePhoto(BuildContext context, GameService game) async {
   final navigator = Navigator.of(context);
   final overlay = Overlay.of(context, rootOverlay: true);
 
-  final source = await showModalBottomSheet<ImageSource>(
+  final choice = await showModalBottomSheet<Object>(
     context: context,
     shape: const RoundedRectangleBorder(
       borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
@@ -427,12 +431,98 @@ Future<void> changeProfilePhoto(BuildContext context, GameService game) async {
             title: Text(l10n.profilePhotoFromGallery),
             onTap: () => Navigator.pop(sheetCtx, ImageSource.gallery),
           ),
+          // Only when there is a photo to remove. Deleting keeps the paid
+          // pass — the server only drops the key — so another photo can be
+          // uploaded afterwards.
+          if (canDelete)
+            ListTile(
+              leading: const Icon(
+                Icons.delete_outline,
+                color: Color(0xFFE57373),
+              ),
+              title: Text(
+                l10n.profilePhotoDelete,
+                style: const TextStyle(color: Color(0xFFC62828)),
+              ),
+              onTap: () => Navigator.pop(sheetCtx, 'delete'),
+            ),
           const SizedBox(height: 8),
         ],
       ),
     ),
   );
-  if (source == null) return; // dismissed the sheet
+  if (choice == null) return; // dismissed the sheet
+
+  if (choice == 'delete') {
+    // The sheet closed across an await; the original context may be gone.
+    if (!context.mounted) return;
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(22)),
+        backgroundColor: const Color(0xFFFDFBFA),
+        titlePadding: const EdgeInsets.fromLTRB(24, 24, 24, 0),
+        contentPadding: const EdgeInsets.fromLTRB(24, 12, 24, 8),
+        actionsPadding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
+        title: Text(
+          l10n.profilePhotoDelete,
+          style: const TextStyle(
+            fontSize: 18,
+            fontWeight: FontWeight.w800,
+            color: Color(0xFF3E312A),
+          ),
+        ),
+        content: Text(
+          l10n.profilePhotoDeleteConfirm,
+          style: const TextStyle(
+            fontSize: 15,
+            height: 1.5,
+            color: Color(0xFF5A4038),
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            style: TextButton.styleFrom(
+              padding: const EdgeInsets.symmetric(
+                horizontal: 18,
+                vertical: 12,
+              ),
+              foregroundColor: const Color(0xFF8A7A72),
+              textStyle: const TextStyle(
+                fontSize: 15,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+            child: Text(l10n.commonCancel),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            style: FilledButton.styleFrom(
+              backgroundColor: const Color(0xFFC62828),
+              padding: const EdgeInsets.symmetric(
+                horizontal: 20,
+                vertical: 12,
+              ),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
+              textStyle: const TextStyle(
+                fontSize: 15,
+                fontWeight: FontWeight.w800,
+              ),
+            ),
+            child: Text(l10n.profilePhotoDelete),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true) return;
+    game.deleteProfilePhoto();
+    messenger.showSnackBar(SnackBar(content: Text(l10n.profilePhotoDeleted)));
+    return;
+  }
+  final source = choice as ImageSource;
 
   // An OverlayEntry rather than a dialog route: insert/remove are synchronous,
   // and it rides above whatever screen the player moves to while the upload

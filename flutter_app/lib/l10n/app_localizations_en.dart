@@ -4378,4 +4378,14 @@ class L10nEn extends L10n {
   @override
   String get lobbyAllowSpectatorsDesc =>
       'Others can watch this room. Turn off to keep it closed.';
+
+  @override
+  String get profilePhotoDelete => 'Remove photo';
+
+  @override
+  String get profilePhotoDeleteConfirm =>
+      'Remove your profile photo? You can upload another for the rest of your pass.';
+
+  @override
+  String get profilePhotoDeleted => 'Profile photo removed';
 }

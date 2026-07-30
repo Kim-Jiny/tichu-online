@@ -77,6 +77,7 @@ const {
   getPushHistory,
   clearInvalidFcmToken,
   loadTitleTranslations,
+  adminClearProfilePhoto,
 } = require('./db/database');
 
 const { verifyApple } = require('./iap/AppleVerify');
@@ -859,6 +860,30 @@ function parseUploadedImage(req) {
     });
     req.pipe(bb);
   });
+}
+
+// Owner removes their own photo. Mirrors the admin clear-photo route: only the
+// key is dropped — the paid item status stays, so they can upload a different
+// photo for the rest of their window. The object is deleted from storage, and
+// every live copy of the URL (ws, the room seat) is cleared and repainted, the
+// same dance the upload path does in the other direction.
+async function handleDeleteProfilePhoto(ws) {
+  if (!ws.userId) {
+    sendTo(ws, { type: 'error', message: t(ws.locale, 'login_required') });
+    return;
+  }
+  const { oldKey } = await adminClearProfilePhoto(ws.nickname);
+  if (oldKey) minioClient.deleteProfilePhoto(oldKey); // best-effort
+  ws.photoUrl = null;
+  sendTo(ws, { type: 'profile_photo_updated', playerId: ws.playerId, url: null });
+  if (ws.roomId) {
+    const room = lobby.getRoom(ws.roomId);
+    const player = room?.players?.find((p) => p && p.id === ws.playerId);
+    if (player) player.photoUrl = null;
+    broadcastRoomState(ws.roomId);
+    if (room?.game) sendGameStateToAll(ws.roomId);
+  }
+  console.log(`[profile-photo] self-deleted by ${ws.nickname}`);
 }
 
 async function handleRequestUploadToken(ws) {
@@ -2692,6 +2717,9 @@ async function handleMessage(ws, data) {
       break;
     case 'request_upload_token':
       await handleRequestUploadToken(ws);
+      break;
+    case 'delete_profile_photo':
+      await handleDeleteProfilePhoto(ws);
       break;
     case 'check_nickname':
       await handleCheckNickname(ws, data);

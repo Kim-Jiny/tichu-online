@@ -1403,5 +1403,8 @@
   "lobbyRoomPlaying": "Läuft",
   "lobbyNoRoomsForFilter": "Keine Räume für die gewählten Spiele",
   "lobbyAllowSpectators": "Zuschauer erlauben",
-  "lobbyAllowSpectatorsDesc": "Andere können diesen Raum ansehen. Aus = niemand kommt herein."
+  "lobbyAllowSpectatorsDesc": "Andere können diesen Raum ansehen. Aus = niemand kommt herein.",
+  "profilePhotoDelete": "Foto entfernen",
+  "profilePhotoDeleteConfirm": "Profilfoto entfernen? Für den Rest deines Passes kannst du ein neues hochladen.",
+  "profilePhotoDeleted": "Profilfoto entfernt"
 }

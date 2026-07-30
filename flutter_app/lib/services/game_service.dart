@@ -228,6 +228,13 @@ class GameService extends ChangeNotifier {
     notifyListeners();
   }
 
+  /// Remove my profile photo. The server clears the key (the paid pass stays,
+  /// so another photo can be uploaded), deletes the object, and answers with
+  /// profile_photo_updated url:null — the same message an upload ends with.
+  void deleteProfilePhoto() {
+    _network.send({'type': 'delete_profile_photo'});
+  }
+
   // One-time upload token bridge: request_upload_token (WS) -> upload_token /
   // upload_token_error. The HTTP multipart upload authenticates with the token.
   Completer<({String? token, String? error})>? _uploadTokenCompleter;

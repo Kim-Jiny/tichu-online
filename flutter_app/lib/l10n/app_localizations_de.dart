@@ -4414,4 +4414,14 @@ class L10nDe extends L10n {
   @override
   String get lobbyAllowSpectatorsDesc =>
       'Andere können diesen Raum ansehen. Aus = niemand kommt herein.';
+
+  @override
+  String get profilePhotoDelete => 'Foto entfernen';
+
+  @override
+  String get profilePhotoDeleteConfirm =>
+      'Profilfoto entfernen? Für den Rest deines Passes kannst du ein neues hochladen.';
+
+  @override
+  String get profilePhotoDeleted => 'Profilfoto entfernt';
 }

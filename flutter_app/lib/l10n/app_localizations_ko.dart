@@ -4275,4 +4275,14 @@ class L10nKo extends L10n {
   @override
   String get lobbyAllowSpectatorsDesc =>
       '다른 사람이 이 방을 관전할 수 있습니다. 끄면 아무도 들어올 수 없습니다.';
+
+  @override
+  String get profilePhotoDelete => '사진 삭제';
+
+  @override
+  String get profilePhotoDeleteConfirm =>
+      '프로필 사진을 삭제할까요? 남은 이용 기간에는 다시 올릴 수 있습니다.';
+
+  @override
+  String get profilePhotoDeleted => '프로필 사진을 삭제했습니다';
 }

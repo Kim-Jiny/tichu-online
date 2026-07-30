@@ -3433,34 +3433,51 @@ class _GameScreenState extends State<GameScreen> {
       final receivedPartner = state.receivedFrom?['partner'];
       final receivedRight = state.receivedFrom?['right'];
 
+      // Tap anywhere to dismiss, and it goes by itself after a few seconds.
+      //
+      // Two reasons. The close button used to call Navigator.pop with the
+      // SCREEN's context, not the dialog's — when the room vanished under it
+      // (desertion, room closed) the game screen was gone and that pop had
+      // nothing valid to work with, so the popup could not be closed at all and
+      // sat on top of the waiting room. And this is a read-only summary: making
+      // someone find a button to dismiss what is effectively a notification is
+      // work for nothing.
       showDialog(
         context: context,
-        builder: (_) => _buildDialog(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Text(
-                L10n.of(context).gameReceivedCards,
-                style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+        barrierDismissible: true,
+        builder: (dialogCtx) {
+          return _AutoDismissDialog(
+            duration: const Duration(seconds: 6),
+            child: _buildDialog(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    L10n.of(dialogCtx).gameReceivedCards,
+                    style: const TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  _buildExchangeSummaryRowLine([
+                    _ExchangeSummaryItem(leftName, receivedLeft),
+                    _ExchangeSummaryItem(partnerName, receivedPartner),
+                    _ExchangeSummaryItem(rightName, receivedRight),
+                  ]),
+                  const SizedBox(height: 12),
+                  Text(
+                    L10n.of(dialogCtx).gameTapToClose,
+                    style: const TextStyle(
+                      fontSize: 12,
+                      color: Color(0xFF9A8E8A),
+                    ),
+                  ),
+                ],
               ),
-              const SizedBox(height: 12),
-              _buildExchangeSummaryRowLine([
-                _ExchangeSummaryItem(leftName, receivedLeft),
-                _ExchangeSummaryItem(partnerName, receivedPartner),
-                _ExchangeSummaryItem(rightName, receivedRight),
-              ]),
-              const SizedBox(height: 16),
-              ElevatedButton(
-                onPressed: () => Navigator.pop(context),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFFE8E0DC),
-                  foregroundColor: const Color(0xFF6A5A52),
-                ),
-                child: Text(L10n.of(context).gameClose),
-              ),
-            ],
-          ),
-        ),
+            ),
+          );
+        },
       );
     });
   }
@@ -3818,5 +3835,65 @@ class _ExchangeSummaryItem {
   final String name;
   final String? cardId;
   const _ExchangeSummaryItem(this.name, this.cardId);
+}
+
+/// Dialog contents that close on a tap anywhere, and on their own after
+/// [duration] — the way Mighty announces a call or a deal-miss.
+///
+/// The timer lives here, inside the dialog route, on purpose. The received-cards
+/// popup used to close through the game screen's own context, so when the room
+/// vanished underneath it (desertion, room closed) there was nothing left to pop
+/// with and the popup sat on the waiting room, uncloseable. A timer owned by the
+/// route is cancelled when the route goes, and pops only itself.
+class _AutoDismissDialog extends StatefulWidget {
+  final Duration duration;
+  final Widget child;
+
+  const _AutoDismissDialog({required this.duration, required this.child});
+
+  @override
+  State<_AutoDismissDialog> createState() => _AutoDismissDialogState();
+}
+
+class _AutoDismissDialogState extends State<_AutoDismissDialog> {
+  Timer? _timer;
+  ModalRoute<dynamic>? _route;
+
+  @override
+  void initState() {
+    super.initState();
+    _timer = Timer(widget.duration, _close);
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    // Held rather than looked up at fire time: by then this context can be
+    // deactivated, and the lookup throws.
+    _route = ModalRoute.of(context);
+  }
+
+  @override
+  void dispose() {
+    _timer?.cancel();
+    super.dispose();
+  }
+
+  void _close() {
+    if (!mounted) return;
+    // Not on top any more: something opened over this, and popping would take
+    // that instead. A tap can still dismiss this one once it's visible again.
+    if (_route?.isCurrent != true) return;
+    Navigator.of(context).pop();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      behavior: HitTestBehavior.opaque,
+      onTap: _close,
+      child: widget.child,
+    );
+  }
 }
 

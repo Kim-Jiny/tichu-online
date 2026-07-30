@@ -1406,5 +1406,6 @@
   "lobbyAllowSpectatorsDesc": "Andere können diesen Raum ansehen. Aus = niemand kommt herein.",
   "profilePhotoDelete": "Foto entfernen",
   "profilePhotoDeleteConfirm": "Profilfoto entfernen? Für den Rest deines Passes kannst du ein neues hochladen.",
-  "profilePhotoDeleted": "Profilfoto entfernt"
+  "profilePhotoDeleted": "Profilfoto entfernt",
+  "gameTapToClose": "Zum Schließen tippen"
 }

@@ -1992,5 +1992,6 @@
   "lobbyAllowSpectatorsDesc": "Others can watch this room. Turn off to keep it closed.",
   "profilePhotoDelete": "Remove photo",
   "profilePhotoDeleteConfirm": "Remove your profile photo? You can upload another for the rest of your pass.",
-  "profilePhotoDeleted": "Profile photo removed"
+  "profilePhotoDeleted": "Profile photo removed",
+  "gameTapToClose": "Tap anywhere to dismiss"
 }

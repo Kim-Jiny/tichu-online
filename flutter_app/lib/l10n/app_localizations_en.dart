@@ -4388,4 +4388,7 @@ class L10nEn extends L10n {
 
   @override
   String get profilePhotoDeleted => 'Profile photo removed';
+
+  @override
+  String get gameTapToClose => 'Tap anywhere to dismiss';
 }

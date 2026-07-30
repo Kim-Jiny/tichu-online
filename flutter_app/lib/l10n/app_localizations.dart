@@ -7832,6 +7832,12 @@ abstract class L10n {
   /// In en, this message translates to:
   /// **'Profile photo removed'**
   String get profilePhotoDeleted;
+
+  /// No description provided for @gameTapToClose.
+  ///
+  /// In en, this message translates to:
+  /// **'Tap anywhere to dismiss'**
+  String get gameTapToClose;
 }
 
 class _L10nDelegate extends LocalizationsDelegate<L10n> {

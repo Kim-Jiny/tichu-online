@@ -898,14 +898,12 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
                   ),
                 ),
                 // Same slot Tichu uses for its tappable score chips.
-                if (state.scoreHistory.isNotEmpty) ...[
-                  const SizedBox(width: 8),
-                  SpectatorStatusChip(
-                    icon: Icons.history,
-                    label: l10n.gameScoreHistory,
-                    onTap: () => _showScoreHistoryDialog(state, game),
-                  ),
-                ],
+                const SizedBox(width: 8),
+                SpectatorStatusChip(
+                  icon: Icons.history,
+                  label: l10n.gameScoreHistory,
+                  onTap: () => _showScoreHistoryDialog(state, game),
+                ),
               ],
             ),
             actions: [
@@ -956,44 +954,10 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
       children: [
         Container(
           padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
-          child: LayoutBuilder(
-            builder: (context, constraints) {
-              // Show the target chip only if it actually fits — measure the
-              // round-phase chip text at the real font scale so a small screen
-              // with small text can still show it (vs a fixed width threshold).
-              final roundText = state.phase == 'round_end'
-                  ? L10n.of(context).mtRoundOnly(state.round.toString())
-                  : L10n.of(context).mtRoundPhase(
-                      state.round.toString(),
-                      _phaseLabel(state.phase),
-                    );
-              final scaler = MediaQuery.textScalerOf(context);
-              double measure(String s, double size, FontWeight w) {
-                final tp = TextPainter(
-                  text: TextSpan(
-                    text: s,
-                    style: TextStyle(fontSize: size, fontWeight: w),
-                  ),
-                  textDirection: TextDirection.ltr,
-                  textScaler: scaler,
-                  maxLines: 1,
-                )..layout();
-                return tp.width;
-              }
-
-              // round chip: h-padding(20) + icon(14) + gap(5) + text
-              final roundChipW =
-                  39 + measure(roundText, 13, FontWeight.bold);
-              // target chip: h-padding(16) + flag(12) + gap(3) + number, plus
-              // the 6px gap before it.
-              final targetChipW =
-                  37 + measure('${game.roomTargetScore}', 12, FontWeight.w800);
-              // action buttons (~41 each; history is conditional; 6px gaps).
-              final buttonsW =
-                  (state.scoreHistory.isNotEmpty ? 47.0 : 0.0) + 47 + 41;
-              final showTarget = constraints.maxWidth >=
-                  roundChipW + targetChipW + buttonsW + 8;
-              return Row(
+          // The finish line is not here: as a bare number beside the round it
+          // read as part of the score rather than as a goal. It lives in the
+          // score-history popup, spelled out.
+          child: Row(
                 children: [
                   Container(
                 padding: const EdgeInsets.symmetric(
@@ -1028,51 +992,18 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
                   ],
                 ),
               ),
-                  // Target score (finish line), shown only when there's room
-                  // (omitted on narrow screens so the row never overflows).
-                  if (showTarget) ...[
-                    const SizedBox(width: 6),
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 8,
-                        vertical: 4,
-                      ),
-                      decoration: BoxDecoration(
-                        color: const Color(0xFFEFF4F0),
-                        borderRadius: BorderRadius.circular(10),
-                        border: Border.all(color: const Color(0xFFD3E1D8)),
-                      ),
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          const Icon(
-                            Icons.flag_rounded,
-                            size: 12,
-                            color: Color(0xFF5E8A72),
-                          ),
-                          const SizedBox(width: 3),
-                          Text(
-                            '${game.roomTargetScore}',
-                            style: const TextStyle(
-                              fontSize: 12,
-                              fontWeight: FontWeight.w800,
-                              color: Color(0xFF41715A),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ],
                   const Spacer(),
-                  if (state.scoreHistory.isNotEmpty)
-                Padding(
-                  padding: const EdgeInsets.only(right: 6),
-                  child: _buildTopActionButton(
-                    icon: Icons.history,
-                    active: false,
-                    onTap: () => _showScoreHistoryDialog(state, game),
+                  // Shown from round 1 on: the popup itself says when there is
+                  // nothing to show, rather than the button appearing later and
+                  // moving everything beside it.
+                  Padding(
+                    padding: const EdgeInsets.only(right: 6),
+                    child: _buildTopActionButton(
+                      icon: Icons.history,
+                      active: false,
+                      onTap: () => _showScoreHistoryDialog(state, game),
+                    ),
                   ),
-                ),
               Padding(
                 padding: const EdgeInsets.only(right: 6),
                 child: _buildTopActionButton(
@@ -1115,8 +1046,6 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
                 },
               ),
                 ],
-              );
-            },
           ),
         ),
         if (showContractInfo) _buildContractInfoBar(state, game),
@@ -7237,23 +7166,14 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
                     ),
                   ),
                   const SizedBox(width: 8),
-                  Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 8,
-                      vertical: 3,
-                    ),
-                    decoration: BoxDecoration(
-                      color: const Color(0xFFEAF2FF),
-                      borderRadius: BorderRadius.circular(999),
-                      border: Border.all(color: const Color(0xFFC9DCF7)),
-                    ),
-                    child: Text(
-                      '/${game.roomTargetScore}',
-                      style: const TextStyle(
-                        fontSize: 11,
-                        fontWeight: FontWeight.w700,
-                        color: Color(0xFF295EA8),
-                      ),
+                  // Spelled out, the same way Tichu's history popup does it:
+                  // "/50" beside a running total reads as a fraction.
+                  Text(
+                    L10n.of(context).spectatorTargetScore(game.roomTargetScore),
+                    style: const TextStyle(
+                      fontSize: 11,
+                      fontWeight: FontWeight.w700,
+                      color: Color(0xFF6B7A90),
                     ),
                   ),
                 ],
@@ -7269,7 +7189,20 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
             ),
           ],
         ),
-        content: SizedBox(
+        content: state.scoreHistory.isEmpty
+            ? Padding(
+                padding: const EdgeInsets.symmetric(vertical: 20),
+                child: Text(
+                  L10n.of(ctx).gameNoCompletedRounds,
+                  textAlign: TextAlign.center,
+                  style: const TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w600,
+                    color: Color(0xFF6B7A90),
+                  ),
+                ),
+              )
+            : SizedBox(
           width: double.maxFinite,
           child: SingleChildScrollView(
             scrollDirection: Axis.vertical,

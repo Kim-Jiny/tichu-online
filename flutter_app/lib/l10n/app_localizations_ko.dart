@@ -4285,4 +4285,7 @@ class L10nKo extends L10n {
 
   @override
   String get profilePhotoDeleted => '프로필 사진을 삭제했습니다';
+
+  @override
+  String get gameTapToClose => '화면을 탭하면 닫힙니다';
 }

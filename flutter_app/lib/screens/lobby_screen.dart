@@ -618,6 +618,7 @@ class _LobbyScreenState extends State<LobbyScreen> {
     final timeLimitController = TextEditingController(text: '30');
     final targetScoreController = TextEditingController(text: '1000');
     String selectedGameType = 'tichu';
+    bool gamePickerOpen = false;
     final Set<String> skExpansionsSelected = <String>{};
     String? errorText;
     void Function(void Function())? dialogSetState;
@@ -743,6 +744,26 @@ class _LobbyScreenState extends State<LobbyScreen> {
           // second tap to leave. Taps inside the dialog on non-interactive
           // space also just drop focus.
           final keyboardUp = MediaQuery.viewInsetsOf(context).bottom > 0;
+          void selectGame(String type) {
+            setState(() {
+              selectedGameType = type;
+              randomName = _generateRandomRoomName(
+                gameType: selectedGameType,
+                l10n: l10n,
+              );
+              if (selectedGameType == 'skull_king' ||
+                  selectedGameType == 'love_letter' ||
+                  selectedGameType == 'mighty') {
+                isRanked = false;
+              }
+              if (selectedGameType == 'mighty') {
+                targetScoreController.text = '50';
+              } else if (selectedGameType == 'tichu') {
+                targetScoreController.text = '1000';
+              }
+            });
+          }
+
           return PopScope(
             canPop: !keyboardUp,
             onPopInvokedWithResult: (didPop, _) {
@@ -765,7 +786,13 @@ class _LobbyScreenState extends State<LobbyScreen> {
                 // same content.
                 child: Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 2),
-                  child: Column(
+                  // Stack so the game picker can FLOAT over the options below
+                  // instead of pushing them down — expanding in place made the
+                  // whole dialog taller every time it opened.
+                  child: Stack(
+                    clipBehavior: Clip.none,
+                    children: [
+                      Column(
                     mainAxisSize: MainAxisSize.min,
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
@@ -809,162 +836,54 @@ class _LobbyScreenState extends State<LobbyScreen> {
                               gameBgColor = const Color(0xFF64B5F6);
                               gameFgColor = Colors.white;
                           }
-                          void selectGame(String type) {
-                            setState(() {
-                              selectedGameType = type;
-                              randomName = _generateRandomRoomName(
-                                gameType: selectedGameType,
-                                l10n: l10n,
-                              );
-                              if (selectedGameType == 'skull_king' ||
-                                  selectedGameType == 'love_letter' ||
-                                  selectedGameType == 'mighty') {
-                                isRanked = false;
-                              }
-                              if (selectedGameType == 'mighty') {
-                                targetScoreController.text = '50';
-                              } else if (selectedGameType == 'tichu') {
-                                targetScoreController.text = '1000';
-                              }
-                            });
-                          }
-
-                          return InkWell(
-                            onTap: () {
-                              showModalBottomSheet(
-                                context: ctx,
-                                shape: const RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.vertical(
-                                    top: Radius.circular(16),
-                                  ),
+                          return Column(
+                            children: [
+                              InkWell(
+                                onTap: () => setState(
+                                  () => gamePickerOpen = !gamePickerOpen,
                                 ),
-                                builder: (sheetCtx) => SafeArea(
-                                  child: Column(
-                                    mainAxisSize: MainAxisSize.min,
+                                borderRadius: BorderRadius.circular(12),
+                                child: Container(
+                                  width: double.infinity,
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 14,
+                                    vertical: 10,
+                                  ),
+                                  decoration: BoxDecoration(
+                                    color: gameBgColor,
+                                    borderRadius: BorderRadius.circular(12),
+                                  ),
+                                  child: Row(
                                     children: [
-                                      const SizedBox(height: 8),
-                                      Container(
-                                        width: 36,
-                                        height: 4,
-                                        decoration: BoxDecoration(
-                                          color: Colors.grey[300],
-                                          borderRadius: BorderRadius.circular(
-                                            2,
+                                      Text(
+                                        gameEmoji,
+                                        style: const TextStyle(fontSize: 18),
+                                      ),
+                                      const SizedBox(width: 8),
+                                      Expanded(
+                                        child: Text(
+                                          gameLabel,
+                                          style: TextStyle(
+                                            fontSize: 14,
+                                            fontWeight: FontWeight.bold,
+                                            color: gameFgColor,
                                           ),
                                         ),
                                       ),
-                                      const SizedBox(height: 12),
-                                      ListTile(
-                                        leading: const Text(
-                                          '🃏',
-                                          style: TextStyle(fontSize: 20),
+                                      AnimatedRotation(
+                                        turns: gamePickerOpen ? 0.5 : 0,
+                                        duration:
+                                            const Duration(milliseconds: 160),
+                                        child: Icon(
+                                          Icons.arrow_drop_down,
+                                          color: gameFgColor,
                                         ),
-                                        title: Text(l10n.lobbyTichu),
-                                        trailing: selectedGameType == 'tichu'
-                                            ? const Icon(
-                                                Icons.check,
-                                                color: Color(0xFF7E57C2),
-                                              )
-                                            : null,
-                                        onTap: () {
-                                          Navigator.pop(sheetCtx);
-                                          selectGame('tichu');
-                                        },
                                       ),
-                                      ListTile(
-                                        leading: const Text(
-                                          '⚓',
-                                          style: TextStyle(fontSize: 20),
-                                        ),
-                                        title: Text(l10n.lobbySkullKing),
-                                        trailing:
-                                            selectedGameType == 'skull_king'
-                                            ? const Icon(
-                                                Icons.check,
-                                                color: Color(0xFF2D2D3D),
-                                              )
-                                            : null,
-                                        onTap: () {
-                                          Navigator.pop(sheetCtx);
-                                          selectGame('skull_king');
-                                        },
-                                      ),
-                                      ListTile(
-                                        leading: const Text(
-                                          '❤️',
-                                          style: TextStyle(fontSize: 20),
-                                        ),
-                                        title: Text(l10n.lobbyLoveLetter),
-                                        trailing:
-                                            selectedGameType == 'love_letter'
-                                            ? const Icon(
-                                                Icons.check,
-                                                color: Color(0xFFE91E63),
-                                              )
-                                            : null,
-                                        onTap: () {
-                                          Navigator.pop(sheetCtx);
-                                          selectGame('love_letter');
-                                        },
-                                      ),
-                                      ListTile(
-                                        leading: const Text(
-                                          '🃑',
-                                          style: TextStyle(fontSize: 20),
-                                        ),
-                                        title: Text(l10n.lobbyMighty),
-                                        trailing: selectedGameType == 'mighty'
-                                            ? const Icon(
-                                                Icons.check,
-                                                color: Color(0xFF1565C0),
-                                              )
-                                            : null,
-                                        onTap: () {
-                                          Navigator.pop(sheetCtx);
-                                          selectGame('mighty');
-                                        },
-                                      ),
-                                      const SizedBox(height: 8),
                                     ],
                                   ),
                                 ),
-                              );
-                            },
-                            borderRadius: BorderRadius.circular(12),
-                            child: Container(
-                              width: double.infinity,
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 14,
-                                vertical: 10,
                               ),
-                              decoration: BoxDecoration(
-                                color: gameBgColor,
-                                borderRadius: BorderRadius.circular(12),
-                              ),
-                              child: Row(
-                                children: [
-                                  Text(
-                                    gameEmoji,
-                                    style: const TextStyle(fontSize: 18),
-                                  ),
-                                  const SizedBox(width: 8),
-                                  Expanded(
-                                    child: Text(
-                                      gameLabel,
-                                      style: TextStyle(
-                                        fontSize: 14,
-                                        fontWeight: FontWeight.bold,
-                                        color: gameFgColor,
-                                      ),
-                                    ),
-                                  ),
-                                  Icon(
-                                    Icons.arrow_drop_down,
-                                    color: gameFgColor,
-                                  ),
-                                ],
-                              ),
-                            ),
+                            ],
                           );
                         },
                       ),
@@ -1279,6 +1198,89 @@ class _LobbyScreenState extends State<LobbyScreen> {
                           ),
                         ),
                       ],
+                    ],
+                      ),
+                      if (gamePickerOpen)
+                        Positioned(
+                          top: 52,
+                          left: 0,
+                          right: 0,
+                          child: Material(
+                            color: Colors.transparent,
+                            child: Container(
+                              decoration: BoxDecoration(
+                                color: Colors.white,
+                                borderRadius: BorderRadius.circular(12),
+                                border: Border.all(
+                                  color: const Color(0xFFE0D5D0),
+                                ),
+                                boxShadow: [
+                                  BoxShadow(
+                                    color:
+                                        Colors.black.withValues(alpha: 0.14),
+                                    blurRadius: 10,
+                                    offset: const Offset(0, 4),
+                                  ),
+                                ],
+                              ),
+                              child: Column(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  for (final (type, label, emoji, color) in [
+                                    ('tichu', l10n.lobbyTichu, '🃏',
+                                        const Color(0xFF64B5F6)),
+                                    ('mighty', l10n.lobbyMighty, '🃑',
+                                        const Color(0xFF5C6BC0)),
+                                    ('skull_king', l10n.lobbySkullKing, '⚓',
+                                        const Color(0xFF21455F)),
+                                    ('love_letter', l10n.lobbyLoveLetter,
+                                        '❤️', const Color(0xFFE91E63)),
+                                  ])
+                                    InkWell(
+                                      onTap: () {
+                                        selectGame(type);
+                                        setState(
+                                            () => gamePickerOpen = false);
+                                      },
+                                      child: Padding(
+                                        padding: const EdgeInsets.symmetric(
+                                          horizontal: 12,
+                                          vertical: 10,
+                                        ),
+                                        child: Row(
+                                          children: [
+                                            Text(
+                                              emoji,
+                                              style: const TextStyle(
+                                                fontSize: 16,
+                                              ),
+                                            ),
+                                            const SizedBox(width: 10),
+                                            Expanded(
+                                              child: Text(
+                                                label,
+                                                style: TextStyle(
+                                                  fontSize: 13,
+                                                  fontWeight: FontWeight.w700,
+                                                  color: color,
+                                                ),
+                                              ),
+                                            ),
+                                            if (selectedGameType == type)
+                                              Icon(
+                                                Icons.check,
+                                                size: 18,
+                                                color: color,
+                                              ),
+                                          ],
+                                        ),
+                                      ),
+                                    ),
+                                ],
+                              ),
+                            ),
+                          ),
+                        ),
                     ],
                   ),
                 ),

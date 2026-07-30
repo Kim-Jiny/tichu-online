@@ -1392,5 +1392,9 @@
   "profileBotHeadline": "KI-Gegner",
   "profileBotBody": "Bots sind keine Konten – daher gibt es keine Statistiken, und Freundschaft, Blockieren und Melden gelten nicht.",
   "spectatorCardCount": "{count} Karten",
-  "spectatorTargetScore": "bis {score}"
+  "spectatorTargetScore": "bis {score}",
+  "lobbyShareSheetTitle": "Raum teilen",
+  "lobbyShareCopyLink": "Link kopieren",
+  "lobbyShareKakao": "Über KakaoTalk teilen",
+  "lobbyShareCopied": "Link in die Zwischenablage kopiert"
 }

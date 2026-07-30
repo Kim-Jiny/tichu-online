@@ -7748,6 +7748,30 @@ abstract class L10n {
   /// In en, this message translates to:
   /// **'to {score}'**
   String spectatorTargetScore(int score);
+
+  /// No description provided for @lobbyShareSheetTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Share room'**
+  String get lobbyShareSheetTitle;
+
+  /// No description provided for @lobbyShareCopyLink.
+  ///
+  /// In en, this message translates to:
+  /// **'Copy link'**
+  String get lobbyShareCopyLink;
+
+  /// No description provided for @lobbyShareKakao.
+  ///
+  /// In en, this message translates to:
+  /// **'Share on KakaoTalk'**
+  String get lobbyShareKakao;
+
+  /// No description provided for @lobbyShareCopied.
+  ///
+  /// In en, this message translates to:
+  /// **'Link copied to clipboard'**
+  String get lobbyShareCopied;
 }
 
 class _L10nDelegate extends LocalizationsDelegate<L10n> {

@@ -4380,4 +4380,16 @@ class L10nDe extends L10n {
   String spectatorTargetScore(int score) {
     return 'bis $score';
   }
+
+  @override
+  String get lobbyShareSheetTitle => 'Raum teilen';
+
+  @override
+  String get lobbyShareCopyLink => 'Link kopieren';
+
+  @override
+  String get lobbyShareKakao => 'Über KakaoTalk teilen';
+
+  @override
+  String get lobbyShareCopied => 'Link in die Zwischenablage kopiert';
 }

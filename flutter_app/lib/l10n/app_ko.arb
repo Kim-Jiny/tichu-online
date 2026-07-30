@@ -1396,5 +1396,9 @@
   "profileBotHeadline": "AI 상대",
   "profileBotBody": "봇은 계정이 아니라서 전적이 없고, 친구 추가·차단·신고 대상이 아닙니다.",
   "spectatorCardCount": "{count}장",
-  "spectatorTargetScore": "목표 {score}점"
+  "spectatorTargetScore": "목표 {score}점",
+  "lobbyShareSheetTitle": "방 공유",
+  "lobbyShareCopyLink": "링크 복사",
+  "lobbyShareKakao": "카카오톡으로 공유",
+  "lobbyShareCopied": "클립보드에 복사되었습니다"
 }

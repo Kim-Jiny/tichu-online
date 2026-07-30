@@ -4241,4 +4241,16 @@ class L10nKo extends L10n {
   String spectatorTargetScore(int score) {
     return '목표 $score점';
   }
+
+  @override
+  String get lobbyShareSheetTitle => '방 공유';
+
+  @override
+  String get lobbyShareCopyLink => '링크 복사';
+
+  @override
+  String get lobbyShareKakao => '카카오톡으로 공유';
+
+  @override
+  String get lobbyShareCopied => '클립보드에 복사되었습니다';
 }

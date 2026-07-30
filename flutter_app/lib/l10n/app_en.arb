@@ -1978,5 +1978,9 @@
   "spectatorCardCount": "{count} cards",
   "@spectatorCardCount": {"placeholders": {"count": {"type": "int"}}},
   "spectatorTargetScore": "to {score}",
-  "@spectatorTargetScore": {"placeholders": {"score": {"type": "int"}}}
+  "@spectatorTargetScore": {"placeholders": {"score": {"type": "int"}}},
+  "lobbyShareSheetTitle": "Share room",
+  "lobbyShareCopyLink": "Copy link",
+  "lobbyShareKakao": "Share on KakaoTalk",
+  "lobbyShareCopied": "Link copied to clipboard"
 }

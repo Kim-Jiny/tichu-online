@@ -35,6 +35,7 @@ class LobbyScreen extends StatefulWidget {
 
 class _LobbyScreenState extends State<LobbyScreen> {
   bool _inRoom = false;
+  bool _roomMoreOpen = false;
 
   // 채팅
   final TextEditingController _chatController = TextEditingController();
@@ -2516,9 +2517,18 @@ class _LobbyScreenState extends State<LobbyScreen> {
   }
 
   Widget _buildRoomView(GameService game, {required bool isLandscape}) {
+    final isKoreanUser =
+        context.read<LocaleService>().effectiveLocale.languageCode == 'ko';
     return GestureDetector(
-      onTap: () => FocusScope.of(context).unfocus(),
-      child: Column(
+      onTap: () {
+        FocusScope.of(context).unfocus();
+        // Tapping the room closes the drop menu, the way tapping outside a
+        // popup does.
+        if (_roomMoreOpen) setState(() => _roomMoreOpen = false);
+      },
+      child: Stack(
+        children: [
+          Column(
         children: [
           _buildRoomHeader(game, isLandscape: isLandscape),
 
@@ -2572,120 +2582,80 @@ class _LobbyScreenState extends State<LobbyScreen> {
                 ),
               ),
             ),
+          ],
+          ),
+          if (_roomMoreOpen) _buildRoomMoreMenu(game, isKoreanUser),
         ],
       ),
     );
   }
 
-  /// One chip in the waiting room's action row.
-  Widget _roomActionChip({
-    required IconData icon,
-    required String label,
-    required VoidCallback onTap,
-  }) {
-    return GestureDetector(
-      onTap: onTap,
-      behavior: HitTestBehavior.opaque,
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(10),
-          border: Border.all(color: const Color(0xFFE6DDD8)),
-        ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(icon, size: 14, color: const Color(0xFF7A6A62)),
-            const SizedBox(width: 5),
-            Text(
-              label,
-              style: const TextStyle(
-                fontSize: 12,
-                fontWeight: FontWeight.w600,
-                color: Color(0xFF6A5A52),
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildRoomHeader(GameService game, {required bool isLandscape}) {
+  /// Share the room: copy the invite link, or hand it to KakaoTalk.
+  ///
+  /// The button used to go straight to Kakao, which is a dead end for anyone not
+  /// sharing there — the link itself works anywhere.
+  void _showShareRoomSheet(GameService game, bool isKoreanUser) {
+    final l10n = L10n.of(context);
     final messenger = ScaffoldMessenger.of(context);
-    final isKoreanUser =
-        context.read<LocaleService>().effectiveLocale.languageCode == 'ko';
-    // Flat bar, not a floating card — same treatment as the spectator header.
-    // Three stacked cards (header, players, chat) put three elevations on one
-    // screen, and the 16dp margin on every side cost width the room title needs.
-    return Container(
-      padding: EdgeInsets.fromLTRB(8, isLandscape ? 6 : 8, 12, isLandscape ? 6 : 8),
-      decoration: const BoxDecoration(
-        color: Color(0xFFFDFBFA),
-        border: Border(bottom: BorderSide(color: Color(0xFFEDE4E0))),
+    showModalBottomSheet(
+      context: context,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
       ),
-      child: Column(
-        children: [
-          Row(
+      builder: (ctx) => SafeArea(
+        top: false,
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(20, 16, 20, 20),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              IconButton(
-                onPressed: () {
-                  game.leaveRoom();
-                  setState(() => _inRoom = false);
-                  // No immediate re-check here: _inRoom flips to false before the
-                  // server confirms, so the strengthened _onInquiryUpdate guard
-                  // would defer anyway. The server-confirm notify re-fires the
-                  // listener once truly on the lobby.
+              Center(
+                child: Container(
+                  width: 40,
+                  height: 4,
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFD8CEC8),
+                    borderRadius: BorderRadius.circular(999),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 16),
+              Text(
+                l10n.lobbyShareSheetTitle,
+                style: const TextStyle(
+                  fontSize: 17,
+                  fontWeight: FontWeight.w800,
+                  color: Color(0xFF4E342E),
+                ),
+              ),
+              const SizedBox(height: 8),
+              _shareSheetTile(
+                icon: Icons.link,
+                label: l10n.lobbyShareCopyLink,
+                onTap: () async {
+                  Navigator.pop(ctx);
+                  final url = await game.createShareInviteLink();
+                  if (!mounted) return;
+                  if (url == null || url.isEmpty) {
+                    messenger.showSnackBar(
+                      SnackBar(content: Text(l10n.commonError)),
+                    );
+                    return;
+                  }
+                  await Clipboard.setData(ClipboardData(text: url));
+                  if (!mounted) return;
+                  messenger.showSnackBar(
+                    SnackBar(content: Text(l10n.lobbyShareCopied)),
+                  );
                 },
-                icon: const Icon(Icons.arrow_back),
-                color: const Color(0xFF8A7A72),
-                padding: EdgeInsets.zero,
-                constraints: const BoxConstraints(),
               ),
-              const SizedBox(width: 8),
-              Expanded(
-                child: Text(
-                  game.currentRoomName,
-                  style: const TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
-                    color: Color(0xFF5A4038),
-                  ),
-                  overflow: TextOverflow.ellipsis,
-                ),
-              ),
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                margin: const EdgeInsets.only(right: 8),
-                decoration: BoxDecoration(
-                  color: const Color(0xFFF0EBE8),
-                  borderRadius: BorderRadius.circular(10),
-                ),
-                child: Text(
-                  game.currentGameType == 'skull_king' ||
-                          game.currentGameType == 'love_letter'
-                      ? L10n.of(context).lobbyRoomInfoSk(
-                          game.roomTurnTimeLimit,
-                          game.playerCount,
-                          game.effectiveRoomMaxPlayers,
-                        )
-                      : L10n.of(context).lobbyRoomInfoTichu(
-                          game.roomTurnTimeLimit,
-                          game.roomTargetScore,
-                        ),
-                  style: const TextStyle(
-                    fontSize: 12,
-                    color: Color(0xFF8A7A72),
-                  ),
-                ),
-              ),
-              if (isKoreanUser) ...[
-                const SizedBox(width: 8),
-                _buildIconButton(
-                  icon: Icons.share_rounded,
-                  color: const Color(0xFFF57C00),
+              if (isKoreanUser)
+                _shareSheetTile(
+                  icon: Icons.chat_bubble,
+                  label: l10n.lobbyShareKakao,
                   onTap: () async {
+                    Navigator.pop(ctx);
                     try {
                       await KakaoInviteShareService.instance.shareRoomInvite(
                         game,
@@ -2698,64 +2668,252 @@ class _LobbyScreenState extends State<LobbyScreen> {
                     }
                   },
                 ),
-                const SizedBox(width: 8),
-              ],
-              Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 12,
-                  vertical: 6,
-                ),
-                decoration: BoxDecoration(
-                  color: game.playerCount >= game.effectiveRoomMaxPlayers
-                      ? const Color(0xFFE8F5E9)
-                      : const Color(0xFFFFF8E1),
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: Text(
-                  '${game.playerCount}/${game.effectiveRoomMaxPlayers}',
-                  style: TextStyle(
-                    fontSize: 14,
-                    fontWeight: FontWeight.bold,
-                    color: game.playerCount >= game.effectiveRoomMaxPlayers
-                        ? const Color(0xFF4CAF50)
-                        : const Color(0xFFFF9800),
-                  ),
-                ),
-              ),
             ],
           ),
-          const SizedBox(height: 8),
-          Align(
-            alignment: Alignment.centerLeft,
-            child: Wrap(
-              spacing: 6,
-              runSpacing: 6,
-              children: [
-                // One style for all four. They used to be four hand-built pills
-                // in four different pastels, which read as four unrelated things
-                // rather than as the room's action row.
-                _roomActionChip(
-                  icon: Icons.person_add,
-                  label: L10n.of(context).lobbyInvite,
-                  onTap: () => _showInviteFriendsDialog(game),
-                ),
-                _roomActionChip(
-                  icon: Icons.visibility,
-                  label: L10n.of(context).lobbySpectate,
-                  onTap: () => game.switchToSpectator(),
-                ),
-                _roomActionChip(
-                  icon: Icons.more_horiz,
-                  label: L10n.of(context).lobbyMore,
-                  onTap: () => _showRoomUtilitySheet(game),
-                ),
-                _roomActionChip(
-                  icon: Icons.settings,
-                  label: L10n.of(context).lobbyRoomSettings,
-                  onTap: () => _showRoomSettingsDialog(game),
+        ),
+      ),
+    );
+  }
+
+  Widget _shareSheetTile({
+    required IconData icon,
+    required String label,
+    required VoidCallback onTap,
+  }) {
+    return ListTile(
+      contentPadding: const EdgeInsets.symmetric(horizontal: 4),
+      leading: Container(
+        width: 42,
+        height: 42,
+        decoration: BoxDecoration(
+          color: const Color(0xFFF6F3F2),
+          borderRadius: BorderRadius.circular(14),
+        ),
+        child: Icon(icon, color: const Color(0xFF8A7A72)),
+      ),
+      title: Text(
+        label,
+        style: const TextStyle(
+          fontWeight: FontWeight.w700,
+          color: Color(0xFF4E342E),
+        ),
+      ),
+      trailing: const Icon(Icons.chevron_right, color: Color(0xFF8A7A72)),
+      onTap: onTap,
+    );
+  }
+
+  /// Icon-only action in the waiting room header.
+  Widget _roomIconButton({
+    required IconData icon,
+    required VoidCallback onTap,
+    bool active = false,
+  }) {
+    return GestureDetector(
+      onTap: onTap,
+      behavior: HitTestBehavior.opaque,
+      child: Container(
+        margin: const EdgeInsets.only(left: 4),
+        padding: const EdgeInsets.all(8),
+        decoration: BoxDecoration(
+          color: active ? const Color(0xFF6A5A52) : Colors.white,
+          borderRadius: BorderRadius.circular(10),
+          border: Border.all(
+            color: active ? const Color(0xFF6A5A52) : const Color(0xFFE6DDD8),
+          ),
+        ),
+        child: Icon(
+          icon,
+          size: 18,
+          color: active ? Colors.white : const Color(0xFF7A6A62),
+        ),
+      ),
+    );
+  }
+
+  /// The icon row that drops out from under the header's ⋯.
+  ///
+  /// A bottom sheet for three toggles put a modal in front of the room for
+  /// something that is not a decision; the game screens drop a row of the same
+  /// buttons instead.
+  Widget _buildRoomMoreMenu(GameService game, bool isKoreanUser) {
+    return Positioned(
+      top: 70,
+      right: 12,
+      child: AnimatedOpacity(
+        opacity: _roomMoreOpen ? 1 : 0,
+        duration: const Duration(milliseconds: 160),
+        child: AnimatedScale(
+          scale: _roomMoreOpen ? 1 : 0.95,
+          duration: const Duration(milliseconds: 160),
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 6),
+            decoration: BoxDecoration(
+              color: Colors.white.withValues(alpha: 0.97),
+              borderRadius: BorderRadius.circular(14),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: 0.15),
+                  blurRadius: 8,
+                  offset: const Offset(0, 3),
                 ),
               ],
             ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                _roomIconButton(
+                  icon: Icons.share_rounded,
+                  onTap: () {
+                    setState(() => _roomMoreOpen = false);
+                    _showShareRoomSheet(game, isKoreanUser);
+                  },
+                ),
+                _roomIconButton(
+                  icon: Icons.visibility,
+                  onTap: () {
+                    setState(() => _roomMoreOpen = false);
+                    game.switchToSpectator();
+                  },
+                ),
+                // Host only — a non-host got a dialog they cannot change
+                // anything in.
+                if (game.isHost)
+                  _roomIconButton(
+                    icon: Icons.settings,
+                    onTap: () {
+                      setState(() => _roomMoreOpen = false);
+                      _showRoomSettingsDialog(game);
+                    },
+                  ),
+                _roomIconButton(
+                  icon: Icons.list_alt,
+                  onTap: () {
+                    setState(() => _roomMoreOpen = false);
+                    _showRoomUtilitySheet(game);
+                  },
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildRoomHeader(GameService game, {required bool isLandscape}) {
+    // Flat bar, not a floating card — same treatment as the spectator header.
+    // Three stacked cards (header, players, chat) put three elevations on one
+    // screen, and the 16dp margin on every side cost width the room title needs.
+    return Container(
+      padding: EdgeInsets.fromLTRB(8, isLandscape ? 6 : 8, 12, isLandscape ? 6 : 8),
+      decoration: const BoxDecoration(
+        color: Color(0xFFFDFBFA),
+        border: Border(bottom: BorderSide(color: Color(0xFFEDE4E0))),
+      ),
+      // One row: back, a title block (room name + its rules underneath), then
+      // icon-only actions. It was two rows — title with two chips and a share
+      // button, then four labelled pastel chips — which spent ~110dp of height
+      // and still truncated the room name. Labels moved into the icons' own
+      // affordance; switch-to-spectator moved into the ⋯ sheet.
+      child: Row(
+        children: [
+          IconButton(
+            onPressed: () {
+              game.leaveRoom();
+              setState(() => _inRoom = false);
+              // No immediate re-check here: _inRoom flips to false before the
+              // server confirms, so the strengthened _onInquiryUpdate guard
+              // would defer anyway. The server-confirm notify re-fires the
+              // listener once truly on the lobby.
+            },
+            icon: const Icon(Icons.arrow_back),
+            color: const Color(0xFF8A7A72),
+            padding: EdgeInsets.zero,
+            constraints: const BoxConstraints(),
+          ),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Builder(
+              builder: (_) {
+                final isSeatCounted =
+                    game.currentGameType == 'skull_king' ||
+                    game.currentGameType == 'love_letter';
+                final full =
+                    game.playerCount >= game.effectiveRoomMaxPlayers;
+                return Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      game.currentRoomName,
+                      style: const TextStyle(
+                        fontSize: 17,
+                        fontWeight: FontWeight.w800,
+                        color: Color(0xFF4E3A34),
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    const SizedBox(height: 1),
+                    Row(
+                      children: [
+                        Flexible(
+                          child: Text(
+                            isSeatCounted
+                                ? L10n.of(context).lobbyRoomInfoSk(
+                                    game.roomTurnTimeLimit,
+                                    game.playerCount,
+                                    game.effectiveRoomMaxPlayers,
+                                  )
+                                : L10n.of(context).lobbyRoomInfoTichu(
+                                    game.roomTurnTimeLimit,
+                                    game.roomTargetScore,
+                                  ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: const TextStyle(
+                              fontSize: 11,
+                              color: Color(0xFF9C8B84),
+                            ),
+                          ),
+                        ),
+                        // The SK/LL string already carries the seat count.
+                        if (!isSeatCounted) ...[
+                          const Text(
+                            ' · ',
+                            style: TextStyle(
+                              fontSize: 11,
+                              color: Color(0xFFC4B8B2),
+                            ),
+                          ),
+                          Text(
+                            '${game.playerCount}/${game.effectiveRoomMaxPlayers}',
+                            style: TextStyle(
+                              fontSize: 11,
+                              fontWeight: FontWeight.w800,
+                              color: full
+                                  ? const Color(0xFF4CAF50)
+                                  : const Color(0xFFFF9800),
+                            ),
+                          ),
+                        ],
+                      ],
+                    ),
+                  ],
+                );
+              },
+            ),
+          ),
+          const SizedBox(width: 6),
+          _roomIconButton(
+            icon: Icons.person_add_alt_1,
+            onTap: () => _showInviteFriendsDialog(game),
+          ),
+          _roomIconButton(
+            icon: Icons.more_horiz,
+            active: _roomMoreOpen,
+            onTap: () => setState(() => _roomMoreOpen = !_roomMoreOpen),
           ),
         ],
       ),
@@ -3334,6 +3492,38 @@ class _LobbyScreenState extends State<LobbyScreen> {
                   );
                 },
               ),
+              // Moved here from the header: the header row is now icon-only and
+              // switching to spectator is a rare, deliberate action.
+              ListTile(
+                contentPadding: const EdgeInsets.symmetric(horizontal: 4),
+                leading: Container(
+                  width: 42,
+                  height: 42,
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFF6F3F2),
+                    borderRadius: BorderRadius.circular(14),
+                  ),
+                  child: const Icon(
+                    Icons.visibility,
+                    color: Color(0xFF8A7A72),
+                  ),
+                ),
+                title: Text(
+                  l10n.lobbySpectate,
+                  style: const TextStyle(
+                    fontWeight: FontWeight.w700,
+                    color: Color(0xFF4E342E),
+                  ),
+                ),
+                trailing: const Icon(
+                  Icons.chevron_right,
+                  color: Color(0xFF8A7A72),
+                ),
+                onTap: () {
+                  Navigator.pop(ctx);
+                  game.switchToSpectator();
+                },
+              ),
               ListTile(
                 contentPadding: const EdgeInsets.symmetric(horizontal: 4),
                 leading: Container(
@@ -3637,42 +3827,123 @@ class _LobbyScreenState extends State<LobbyScreen> {
     );
   }
 
+  /// Seating mode: fixed teams vs random teams.
+  ///
+  /// It used to be one chip showing only the current mode, which reads as a
+  /// label — nobody could tell it was a switch, and a non-host who did try got
+  /// no response because only the host may change it. Now the host sees both
+  /// options with the active one filled, and everyone else sees a plain
+  /// read-only chip.
   Widget _buildRandomSeatingChip(GameService game) {
     final on = game.roomRandomSeating;
-    final canToggle = game.isHost;
-    final fg = on ? const Color(0xFF7B1FA2) : const Color(0xFF8A7A72);
-    final bg = on ? const Color(0xFFF3E5F5) : const Color(0xFFF6F3F2);
-    final border = on ? const Color(0xFFCE93D8) : const Color(0xFFE0DAD6);
-    final label = on
-        ? L10n.of(context).lobbyRandomSeatingOn
-        : L10n.of(context).lobbyRandomSeatingOff;
-    final child = Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
+    final l10n = L10n.of(context);
+    final fixedLabel = l10n.lobbyRandomSeatingOff;
+    final randomLabel = l10n.lobbyRandomSeatingOn;
+
+    if (!game.isHost) {
+      return Container(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
+        decoration: BoxDecoration(
+          color: const Color(0xFFF6F3F2),
+          borderRadius: BorderRadius.circular(12),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(
+              on ? Icons.shuffle : Icons.groups,
+              size: 14,
+              color: const Color(0xFF9C8B84),
+            ),
+            const SizedBox(width: 6),
+            Text(
+              on ? randomLabel : fixedLabel,
+              style: const TextStyle(
+                fontSize: 12,
+                fontWeight: FontWeight.w700,
+                color: Color(0xFF8A7A72),
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+
+    Widget segment({
+      required String label,
+      required IconData icon,
+      required bool selected,
+      required VoidCallback onTap,
+    }) {
+      return GestureDetector(
+        onTap: selected ? null : onTap,
+        behavior: HitTestBehavior.opaque,
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 160),
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+          decoration: BoxDecoration(
+            color: selected ? Colors.white : Colors.transparent,
+            borderRadius: BorderRadius.circular(10),
+            boxShadow: selected
+                ? [
+                    BoxShadow(
+                      color: Colors.black.withValues(alpha: 0.08),
+                      blurRadius: 4,
+                    ),
+                  ]
+                : null,
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(
+                icon,
+                size: 14,
+                color: selected
+                    ? const Color(0xFF6A5A52)
+                    : const Color(0xFFA89C96),
+              ),
+              const SizedBox(width: 5),
+              Text(
+                label,
+                style: TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w700,
+                  color: selected
+                      ? const Color(0xFF5A4038)
+                      : const Color(0xFFA89C96),
+                ),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+
+    return Container(
+      padding: const EdgeInsets.all(3),
       decoration: BoxDecoration(
-        color: bg,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: border, width: 1),
+        color: const Color(0xFFF0EBE8),
+        borderRadius: BorderRadius.circular(13),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(on ? Icons.shuffle_on : Icons.shuffle, size: 14, color: fg),
-          const SizedBox(width: 6),
-          Text(
-            label,
-            style: TextStyle(
-              fontSize: 12,
-              fontWeight: FontWeight.w700,
-              color: fg,
-            ),
+          segment(
+            label: fixedLabel,
+            icon: Icons.groups,
+            selected: !on,
+            onTap: () => game.setRandomSeating(false),
+          ),
+          const SizedBox(width: 2),
+          segment(
+            label: randomLabel,
+            icon: Icons.shuffle,
+            selected: on,
+            onTap: () => game.setRandomSeating(true),
           ),
         ],
       ),
-    );
-    if (!canToggle) return child;
-    return GestureDetector(
-      onTap: () => game.setRandomSeating(!on),
-      child: child,
     );
   }
 

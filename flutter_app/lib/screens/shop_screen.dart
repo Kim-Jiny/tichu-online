@@ -7,6 +7,7 @@ import '../models/shop_visual.dart';
 import '../services/game_service.dart';
 import '../services/ad_service.dart';
 import '../widgets/level_badge.dart';
+import '../widgets/gold_icon.dart';
 import 'gold_shop_screen.dart';
 
 class ShopScreen extends StatefulWidget {
@@ -308,11 +309,7 @@ class _ShopScreenState extends State<ShopScreen> {
                       child: Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          const Icon(
-                            Icons.monetization_on,
-                            size: 20,
-                            color: Color(0xFFFFB74D),
-                          ),
+                          const GoldIcon(size: 20),
                           const SizedBox(width: 6),
                           Flexible(
                             child: FittedBox(
@@ -517,10 +514,7 @@ class _ShopScreenState extends State<ShopScreen> {
                             color: const Color(0xFFFFF3E0),
                             borderRadius: BorderRadius.circular(14),
                           ),
-                          child: const Icon(
-                            Icons.monetization_on,
-                            color: Color(0xFFFFB74D),
-                          ),
+                          child: const Center(child: GoldIcon(size: 24)),
                         ),
                         const SizedBox(width: 12),
                         Expanded(
@@ -787,10 +781,7 @@ class _ShopScreenState extends State<ShopScreen> {
                             color: const Color(0xFFFFF3E0),
                             borderRadius: BorderRadius.circular(14),
                           ),
-                          child: const Icon(
-                            Icons.monetization_on,
-                            color: Color(0xFFFFB74D),
-                          ),
+                          child: const Center(child: GoldIcon(size: 24)),
                         ),
                         const SizedBox(width: 12),
                         Expanded(
@@ -1293,11 +1284,7 @@ class _ShopScreenState extends State<ShopScreen> {
                 ),
               ),
               const SizedBox(width: 6),
-              const Icon(
-                Icons.monetization_on,
-                size: 12,
-                color: Color(0xFFF0B400),
-              ),
+              const GoldIcon(size: 13),
               const SizedBox(width: 2),
               Text(
                 '$price',
@@ -1449,11 +1436,7 @@ class _ShopScreenState extends State<ShopScreen> {
                     Row(
                       children: [
                         if (!ownedPermanent) ...[
-                          const Icon(
-                            Icons.monetization_on,
-                            size: 14,
-                            color: Color(0xFFF0B400),
-                          ),
+                          const GoldIcon(size: 15),
                           const SizedBox(width: 3),
                           Text(
                             '$price',
@@ -2676,11 +2659,7 @@ class _ShopScreenState extends State<ShopScreen> {
                     children: [
                       Row(
                         children: [
-                          const Icon(
-                            Icons.monetization_on,
-                            size: 18,
-                            color: Color(0xFFF0B400),
-                          ),
+                          const GoldIcon(size: 19),
                           const SizedBox(width: 4),
                           Text(
                             '$price G',
@@ -3242,15 +3221,13 @@ class _ShopScreenState extends State<ShopScreen> {
               ),
             ),
             const SizedBox(height: 4),
-            Icon(
-              claimed ? Icons.check_circle : Icons.monetization_on,
-              color: claimed
-                  ? const Color(0xFF43A047)
-                  : (finale
-                        ? const Color(0xFFFFA000)
-                        : const Color(0xFFFFC107)),
-              size: finale ? 22 : 18,
-            ),
+            claimed
+                ? Icon(
+                    Icons.check_circle,
+                    color: const Color(0xFF43A047),
+                    size: finale ? 22 : 18,
+                  )
+                : GoldIcon(size: finale ? 22 : 18),
             const SizedBox(height: 4),
             Text(
               '$reward',

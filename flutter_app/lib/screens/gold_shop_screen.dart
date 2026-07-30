@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import 'package:in_app_purchase/in_app_purchase.dart';
 import '../services/game_service.dart';
 import '../services/iap_service.dart';
+import '../widgets/gold_icon.dart';
 
 class GoldShopScreen extends StatefulWidget {
   const GoldShopScreen({super.key});
@@ -208,7 +209,7 @@ class _GoldShopScreenState extends State<GoldShopScreen> {
             ),
           ),
           const Spacer(),
-          const Icon(Icons.monetization_on, color: Color(0xFFFFB74D), size: 20),
+          const GoldIcon(size: 20),
           const SizedBox(width: 5),
           Consumer<GameService>(
             builder: (_, game, _) => Text(
@@ -341,10 +342,8 @@ class _GoldShopScreenState extends State<GoldShopScreen> {
                   iconCount,
                   (i) => Padding(
                     padding: EdgeInsets.only(left: i == 0 ? 0 : 1),
-                    child: Icon(
-                      Icons.monetization_on,
-                      color: const Color(0xFFB07A12),
-                      size: iconCount == 1 ? 22 : (iconCount == 2 ? 17 : 14),
+                    child: GoldIcon(
+                      size: iconCount == 1 ? 24 : (iconCount == 2 ? 19 : 15),
                     ),
                   ),
                 ),

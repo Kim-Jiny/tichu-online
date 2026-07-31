@@ -4085,7 +4085,7 @@ class L10nEn extends L10n {
 
   @override
   String attendanceBannerTitle(int day) {
-    return 'Today\'s check-in! Day $day';
+    return 'Check-in: Day $day';
   }
 
   @override
@@ -4099,7 +4099,7 @@ class L10nEn extends L10n {
 
   @override
   String attendanceBannerCompletedTitle(int day) {
-    return 'Day $day check-in done! 🎉';
+    return 'Day $day done! 🎉';
   }
 
   @override

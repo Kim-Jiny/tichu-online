@@ -3439,7 +3439,9 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
 
   // Sentinel used to insert a SuitIcon into a localized message that takes
   // a {suit} placeholder. Picked so it won't collide with real translations.
-  static const String _trumpChangeSentinel = ' SUIT ';
+  // Written as escapes, not raw NULs: a literal NUL in the source makes grep,
+  // diff and review tools treat this 300KB file as binary and silently skip it.
+  static const String _trumpChangeSentinel = '\u0000SUIT\u0000';
 
   /// Builds an alert-dialog body for the trump-change confirm flow. The
   /// localized text contains [_trumpChangeSentinel] where the suit should

@@ -7296,7 +7296,7 @@ abstract class L10n {
   /// No description provided for @attendanceBannerTitle.
   ///
   /// In en, this message translates to:
-  /// **'Today\'s check-in! Day {day}'**
+  /// **'Check-in: Day {day}'**
   String attendanceBannerTitle(int day);
 
   /// No description provided for @attendanceBannerSubtitle.
@@ -7308,7 +7308,7 @@ abstract class L10n {
   /// No description provided for @attendanceBannerCompletedTitle.
   ///
   /// In en, this message translates to:
-  /// **'Day {day} check-in done! 🎉'**
+  /// **'Day {day} done! 🎉'**
   String attendanceBannerCompletedTitle(int day);
 
   /// No description provided for @attendanceBannerCompletedSubtitle.

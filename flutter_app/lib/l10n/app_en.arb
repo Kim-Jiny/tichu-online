@@ -2289,7 +2289,7 @@
   "goldHistoryShopPurchase": "Shop purchase",
   "goldHistoryIapPurchase": "Gold top-up",
   "goldHistoryAttendance": "Daily check-in",
-  "attendanceBannerTitle": "Today's check-in! Day {day}",
+  "attendanceBannerTitle": "Check-in: Day {day}",
   "@attendanceBannerTitle": {
     "placeholders": {
       "day": {
@@ -2306,7 +2306,7 @@
       }
     }
   },
-  "attendanceBannerCompletedTitle": "Day {day} check-in done! 🎉",
+  "attendanceBannerCompletedTitle": "Day {day} done! 🎉",
   "@attendanceBannerCompletedTitle": {
     "placeholders": {
       "day": {

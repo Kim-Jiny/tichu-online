@@ -4522,10 +4522,10 @@ class L10nDe extends L10n {
   String get gameReportDetailLabel => 'Details (optional)';
 
   @override
-  String get shopFeatureInUse => 'Aktiv';
+  String get shopFeatureInUse => 'Eingeschaltet';
 
   @override
-  String get shopFeatureOff => 'Aus';
+  String get shopFeatureOff => 'Ausgeschaltet';
 
   @override
   String get shopPurchaseDonePassive2 =>

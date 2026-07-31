@@ -1999,5 +1999,9 @@
   "shopAdWatchTitle": "Watch ad for 50 Gold",
   "shopAdWatchProgress": "{current}/{max} today",
   "shopAdRewardDoneSubtitle": "Come back tomorrow",
-  "@shopAdWatchProgress": {"placeholders": {"current": {"type": "int"}, "max": {"type": "int"}}}
+  "@shopAdWatchProgress": {"placeholders": {"current": {"type": "int"}, "max": {"type": "int"}}},
+  "profilePrivateTitle": "This profile is private",
+  "profilePrivateBody": "They show their records to friends only",
+  "profilePrivateHidePhoto": "Hide photo",
+  "profilePrivateHidePhotoDesc": "When on, your profile photo is hidden from non-friends in the waiting room and in game too"
 }

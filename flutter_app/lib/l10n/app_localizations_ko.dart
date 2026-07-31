@@ -4306,4 +4306,17 @@ class L10nKo extends L10n {
 
   @override
   String get shopAdRewardDoneSubtitle => '내일 다시 받을 수 있어요';
+
+  @override
+  String get profilePrivateTitle => '프로필 비공개 유저입니다';
+
+  @override
+  String get profilePrivateBody => '친구에게만 전적을 공개하고 있어요';
+
+  @override
+  String get profilePrivateHidePhoto => '사진 비공개';
+
+  @override
+  String get profilePrivateHidePhotoDesc =>
+      '켜면 대기실과 게임 화면에 보이는 프로필 사진까지 친구가 아닌 사람에게 숨겨집니다';
 }

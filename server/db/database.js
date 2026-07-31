@@ -216,6 +216,11 @@ async function initDatabase() {
     await client.query(`ALTER TABLE tc_users ADD COLUMN IF NOT EXISTS profile_photo_key VARCHAR(255)`);        // minio object key (NULL = default avatar)
     await client.query(`ALTER TABLE tc_users ADD COLUMN IF NOT EXISTS profile_photo_expires_at TIMESTAMP`);    // 7-day item expiry (NULL = inactive)
     await client.query(`ALTER TABLE tc_users ADD COLUMN IF NOT EXISTS profile_photo_status VARCHAR(20) DEFAULT 'none'`); // none | active
+    // Profile privacy: the entitlement itself is an ordinary feature item in
+    // tc_user_items (effect_type 'profile_private'); only the owner's choice of
+    // how far it reaches lives here.
+    await client.query(`ALTER TABLE tc_users ADD COLUMN IF NOT EXISTS profile_private_hide_photo BOOLEAN DEFAULT FALSE`);
+
 
     // Device info columns
     await client.query(`ALTER TABLE tc_users ADD COLUMN IF NOT EXISTS fcm_token TEXT`);
@@ -699,6 +704,8 @@ async function initDatabase() {
         ('mighty_prev_trick_30d', '마이티 이전 트릭 확인(30일)', '마이티 이전 트릭 확인(30일)', 'Mighty Previous Trick Viewer (30d)', 'Mighty-Vorheriger-Stich-Anzeige (30T)', 'utility', 3000, FALSE, FALSE, 30, TRUE, 'mighty_prev_trick', NULL, '{}'::jsonb),
         ('profile_photo_7d', '프로필 사진(7일)', '프로필 사진(7일)', 'Profile Photo (7d)', 'Profilbild (7T)', 'feature', 1000, FALSE, FALSE, 7, TRUE, 'profile_photo', NULL, '{}'::jsonb),
         ('profile_photo_30d', '프로필 사진(30일)', '프로필 사진(30일)', 'Profile Photo (30d)', 'Profilbild (30T)', 'feature', 3000, FALSE, FALSE, 30, TRUE, 'profile_photo', NULL, '{}'::jsonb),
+        ('profile_private_7d', '프로필 비공개(7일)', '프로필 비공개(7일)', 'Private Profile (7d)', 'Privates Profil (7T)', 'feature', 1000, FALSE, FALSE, 7, TRUE, 'profile_private', NULL, '{}'::jsonb),
+        ('profile_private_30d', '프로필 비공개(30일)', '프로필 비공개(30일)', 'Private Profile (30d)', 'Privates Profil (30T)', 'feature', 3000, FALSE, FALSE, 30, TRUE, 'profile_private', NULL, '{}'::jsonb),
         ('banner_season_gold', '티츄 시즌 골드 배너', '티츄 시즌 골드 배너', 'Tichu Season Gold Banner', 'Tichu-Saison-Gold-Banner', 'banner', 0, TRUE, FALSE, 30, FALSE, NULL, NULL, '{}'::jsonb),
         ('banner_season_silver', '티츄 시즌 실버 배너', '티츄 시즌 실버 배너', 'Tichu Season Silver Banner', 'Tichu-Saison-Silber-Banner', 'banner', 0, TRUE, FALSE, 30, FALSE, NULL, NULL, '{}'::jsonb),
         ('banner_season_bronze', '티츄 시즌 브론즈 배너', '티츄 시즌 브론즈 배너', 'Tichu Season Bronze Banner', 'Tichu-Saison-Bronze-Banner', 'banner', 0, TRUE, FALSE, 30, FALSE, NULL, NULL, '{}'::jsonb),
@@ -721,6 +728,18 @@ async function initDatabase() {
         effect_value = EXCLUDED.effect_value
       `
     );
+
+    // What the pass does belongs on the shop page, where someone decides
+    // whether to buy it — not crammed into the profile panel afterwards.
+    // Only fills a blank description, so an admin edit is never overwritten.
+    await client.query(`
+      UPDATE tc_shop_items SET
+        description_ko = '친구가 아닌 사람에게는 전적·레벨·매너지수 등 프로필 정보가 보이지 않습니다. 프로필 사진은 그대로 공개되며, 내 프로필에서 ''사진 비공개''를 켜면 대기실과 게임 화면에 보이는 사진까지 숨겨집니다.',
+        description_en = 'People who are not your friends cannot see your records, level or manner score. Your profile photo stays visible; turn on "Hide photo" in your profile and it is hidden too, in the waiting room and in game.',
+        description_de = 'Nicht-Freunde sehen weder Statistiken noch Level oder Manier-Punkte. Dein Profilbild bleibt sichtbar; aktiviere „Foto verbergen“ in deinem Profil, und es wird auch im Warteraum und im Spiel verborgen.'
+      WHERE item_key IN ('profile_private_7d', 'profile_private_30d')
+        AND (description_ko IS NULL OR description_ko = ''
+             OR description_ko LIKE '%사진까지 숨길 수 있습니다%')`);
 
     // Backfill metadata.visual for items shipped without it. Only writes when
     // metadata.visual is missing, so admin edits made later are never
@@ -1756,6 +1775,7 @@ async function getUserProfile(nickname, locale = 'ko') {
               u.mighty_season_rating, u.mighty_season_games, u.mighty_season_wins, u.mighty_season_losses,
               u.card_view_pref,
               u.profile_photo_key, u.profile_photo_status, u.profile_photo_expires_at,
+              u.profile_private_hide_photo,
               e.banner_key, e.theme_key, e.title_key,
               si.${titleCol} AS title_name
        FROM tc_users u
@@ -1798,6 +1818,21 @@ async function getUserProfile(nickname, locale = 'ko') {
     const hasTopCardCounter = await featureActive('top_card_counter');
     const hasMightyTrumpCounter = await featureActive('mighty_trump_counter');
     const hasMightyPrevTrick = await featureActive('mighty_prev_trick');
+    // Privacy needs the expiry too, not just a boolean: the owner's own popup
+    // shows how long it runs, and the visibility cache re-checks it rather than
+    // querying on every broadcast.
+    const privateRow = await client.query(
+      `SELECT COUNT(*)::int AS n, MAX(ui.expires_at) AS expires_at
+       FROM tc_user_items ui
+       JOIN tc_shop_items si ON si.item_key = ui.item_key
+       WHERE ui.nickname = $1 AND si.effect_type = 'profile_private'
+         AND (ui.expires_at IS NULL OR ui.expires_at >= NOW())`,
+      [nickname],
+    );
+    const hasProfilePrivate = (privateRow.rows[0]?.n || 0) > 0;
+    const profilePrivateExpiresAt = hasProfilePrivate
+      ? (privateRow.rows[0].expires_at || null)
+      : null;
 
     const skWinRate = user.sk_total_games > 0
       ? Math.round((user.sk_wins / user.sk_total_games) * 100)
@@ -1868,12 +1903,37 @@ async function getUserProfile(nickname, locale = 'ko') {
       profilePhotoKey: user.profile_photo_key || null,
       profilePhotoStatus: user.profile_photo_status || 'none',
       profilePhotoExpiresAt: user.profile_photo_expires_at || null,
+      hasProfilePrivate,
+      profilePrivateExpiresAt,
+      profilePrivateHidePhoto: user.profile_private_hide_photo === true,
     };
   } catch (err) {
     console.error('Get user profile error:', err);
     return null;
   } finally {
     client.release();
+  }
+}
+
+/**
+ * The owner's choice of how far their privacy reaches: records only (default)
+ * or the profile photo as well.
+ *
+ * Stored regardless of whether the entitlement is currently active — it is a
+ * preference, and it must survive a lapsed pass so re-buying does not silently
+ * come back with a different setting than the user left it on.
+ */
+async function setProfilePrivateHidePhoto(nickname, hide) {
+  try {
+    const r = await pool.query(
+      `UPDATE tc_users SET profile_private_hide_photo = $2 WHERE nickname = $1`,
+      [nickname, hide === true],
+    );
+    if (r.rowCount === 0) return { success: false, messageKey: 'db_user_not_found' };
+    return { success: true, hidePhoto: hide === true };
+  } catch (err) {
+    console.error('Set profile private hide photo error:', err);
+    return { success: false, messageKey: 'db_update_failed' };
   }
 }
 
@@ -2539,7 +2599,7 @@ async function buyItem(nickname, itemKey) {
       return { success: true, profilePhoto: true };
     }
     // Gameplay counters/viewers: extend any active tier of the same feature.
-    const FEATURE_EFFECTS = new Set(['top_card_counter', 'mighty_trump_counter', 'mighty_prev_trick']);
+    const FEATURE_EFFECTS = new Set(['top_card_counter', 'mighty_trump_counter', 'mighty_prev_trick', 'profile_private']);
     if (FEATURE_EFFECTS.has(item.effect_type)) {
       const days = item.duration_days || 30;
       const existing = await client.query(
@@ -7731,6 +7791,7 @@ module.exports = {
   reportUser,
   addFriend,
   getFriends,
+  setProfilePrivateHidePhoto,
   getPendingFriendRequests,
   acceptFriendRequest,
   rejectFriendRequest,

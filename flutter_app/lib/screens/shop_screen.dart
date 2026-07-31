@@ -1687,7 +1687,8 @@ class _ShopScreenState extends State<ShopScreen> {
         itemKey.startsWith('top_card_counter') ||
         itemKey.startsWith('mighty_trump_counter') ||
         itemKey.startsWith('mighty_prev_trick') ||
-        effectType == 'profile_photo';
+        effectType == 'profile_photo' ||
+        effectType == 'profile_private';
     final isConsumable = category == 'utility' && !noEquipAction;
     final expiresAt = item['expires_at'];
     final expiresText = expiresAt != null
@@ -2246,6 +2247,25 @@ class _ShopScreenState extends State<ShopScreen> {
           'gradient': [const Color(0xFFE1F5FE), const Color(0xFFB3E5FC)],
           'borderColor': const Color(0xFF81D4FA),
         };
+      // Feature items: 'feature' has no category fallback of its own, so both
+      // tiers of each are named here rather than falling through to the grey
+      // "category" box.
+      case 'profile_photo_7d':
+      case 'profile_photo_30d':
+        return {
+          'icon': Icons.account_circle,
+          'iconColor': const Color(0xFF5C6BC0),
+          'gradient': [const Color(0xFFE8EAF6), const Color(0xFFC5CAE9)],
+          'borderColor': const Color(0xFF9FA8DA),
+        };
+      case 'profile_private_7d':
+      case 'profile_private_30d':
+        return {
+          'icon': Icons.lock_rounded,
+          'iconColor': const Color(0xFF7E57C2),
+          'gradient': [const Color(0xFFF3E5F5), const Color(0xFFD1C4E9)],
+          'borderColor': const Color(0xFFB39DDB),
+        };
     }
 
     // Fallback by category
@@ -2323,7 +2343,8 @@ class _ShopScreenState extends State<ShopScreen> {
         itemKey.startsWith('top_card_counter') ||
         itemKey.startsWith('mighty_trump_counter') ||
         itemKey.startsWith('mighty_prev_trick') ||
-        item['effect_type']?.toString() == 'profile_photo';
+        item['effect_type']?.toString() == 'profile_photo' ||
+        item['effect_type']?.toString() == 'profile_private';
     final isConsumable = category == 'utility' && !noEquipAction;
     showDialog(
       context: context,

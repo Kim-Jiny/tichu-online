@@ -4445,4 +4445,17 @@ class L10nDe extends L10n {
 
   @override
   String get shopAdRewardDoneSubtitle => 'Morgen wieder verfügbar';
+
+  @override
+  String get profilePrivateTitle => 'Dieses Profil ist privat';
+
+  @override
+  String get profilePrivateBody => 'Statistiken werden nur Freunden gezeigt';
+
+  @override
+  String get profilePrivateHidePhoto => 'Foto verbergen';
+
+  @override
+  String get profilePrivateHidePhotoDesc =>
+      'Wenn aktiv, ist dein Profilbild auch im Warteraum und im Spiel für Nicht-Freunde verborgen';
 }

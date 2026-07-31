@@ -1412,5 +1412,11 @@
   "shopChargeGold": "Gold kaufen",
   "shopAdWatchTitle": "Werbung für 50 Gold",
   "shopAdWatchProgress": "Heute {current}/{max}",
-  "shopAdRewardDoneSubtitle": "Morgen wieder verfügbar"
+  "shopAdRewardDoneSubtitle": "Morgen wieder verfügbar",
+  "profilePrivateTitle": "Dieses Profil ist privat",
+  "profilePrivateBody": "Statistiken werden nur Freunden gezeigt",
+  "profilePrivateOwnTitle": "Privates Profil aktiv",
+  "profilePrivateOwnUntil": "bis {date}",
+  "profilePrivateHidePhoto": "Foto verbergen",
+  "profilePrivateHidePhotoDesc": "Wenn aktiv, ist dein Profilbild auch im Warteraum und im Spiel für Nicht-Freunde verborgen"
 }

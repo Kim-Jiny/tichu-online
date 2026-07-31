@@ -7868,6 +7868,30 @@ abstract class L10n {
   /// In en, this message translates to:
   /// **'Come back tomorrow'**
   String get shopAdRewardDoneSubtitle;
+
+  /// No description provided for @profilePrivateTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'This profile is private'**
+  String get profilePrivateTitle;
+
+  /// No description provided for @profilePrivateBody.
+  ///
+  /// In en, this message translates to:
+  /// **'They show their records to friends only'**
+  String get profilePrivateBody;
+
+  /// No description provided for @profilePrivateHidePhoto.
+  ///
+  /// In en, this message translates to:
+  /// **'Hide photo'**
+  String get profilePrivateHidePhoto;
+
+  /// No description provided for @profilePrivateHidePhotoDesc.
+  ///
+  /// In en, this message translates to:
+  /// **'When on, your profile photo is hidden from non-friends in the waiting room and in game too'**
+  String get profilePrivateHidePhotoDesc;
 }
 
 class _L10nDelegate extends LocalizationsDelegate<L10n> {

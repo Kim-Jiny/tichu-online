@@ -1667,6 +1667,22 @@ class GameService extends ChangeNotifier {
 
       case 'profile_result':
         _profiles.store(data);
+        // My own profile carries the privacy setting; someone else's never does
+        // (the server strips it), so this can't be overwritten by looking a
+        // stranger up.
+        if (data['nickname'] == playerName) {
+          final p = data['profile'];
+          if (p is Map && p['profilePrivateHidePhoto'] != null) {
+            profilePrivateHidePhoto = p['profilePrivateHidePhoto'] == true;
+          }
+        }
+        notifyListeners();
+        break;
+
+      case 'profile_private_result':
+        if (data['success'] == true) {
+          profilePrivateHidePhoto = data['hidePhoto'] == true;
+        }
         notifyListeners();
         break;
 
@@ -3183,6 +3199,17 @@ class GameService extends ChangeNotifier {
   // Kick player (host only)
   void kickPlayer(String targetPlayerId) {
     _network.send({'type': 'kick_player', 'playerId': targetPlayerId});
+  }
+
+  /// How far the profile-privacy pass reaches: records only (false) or the
+  /// profile photo as well (true). Mirrors the server's stored preference so the
+  /// switch can render before the next profile fetch lands.
+  bool profilePrivateHidePhoto = false;
+
+  void setProfilePrivateHidePhoto(bool hide) {
+    profilePrivateHidePhoto = hide;
+    notifyListeners();
+    _network.send({'type': 'set_profile_private_photo', 'hide': hide});
   }
 
   // Request user profile

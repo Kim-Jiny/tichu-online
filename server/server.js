@@ -20,7 +20,7 @@ const { BotWorkerPool } = require('./bots/BotWorkerPool');
 const {
   initDatabase, registerUser, loginUser, checkNickname, deleteUser,
   blockUser, unblockUser, getBlockedUsers, reportUser, getReportedNicknames,
-  addFriend, getFriends, getPendingFriendRequests,
+  addFriend, getFriends, getPendingFriendRequests, setProfilePrivateHidePhoto,
   acceptFriendRequest, rejectFriendRequest, removeFriend,
   saveMatchResult, saveMatchResultWithStats, updateUserStats, getUserProfile, getRecentMatches, updateCardViewPref,
   submitInquiry, getUserInquiries, markInquiriesRead, getRankings,
@@ -544,6 +544,10 @@ const NEW_BANNER_MIN_VERSION = '2.4.0';
 // Profile photo (UGC) client. Older clients have no upload UI, so the shop
 // items are hidden from them. Bump to match the actual release version.
 const PROFILE_PHOTO_MIN_VERSION = '2.8.0';
+// Profile privacy pass. Ships in the same unreleased build as the photo item
+// and needs the same client work (the redacted popup, and the owner's toggle
+// for whether the photo is included), so it rides the same minimum.
+const PROFILE_PRIVATE_MIN_VERSION = PROFILE_PHOTO_MIN_VERSION;
 // SK_EXPANSION_UPDATE_MESSAGE removed – now uses t(locale, 'sk_expansion_update_required')
 
 function compareVersions(v1, v2) {
@@ -589,6 +593,10 @@ function clientSupportsNewBanners(ws) {
 
 function clientSupportsProfilePhoto(ws) {
   return compareVersions(ws.appVersion, PROFILE_PHOTO_MIN_VERSION) >= 0;
+}
+
+function clientSupportsProfilePrivate(ws) {
+  return compareVersions(ws.appVersion, PROFILE_PRIVATE_MIN_VERSION) >= 0;
 }
 
 function itemRequiresMightyClient(itemKey) {
@@ -2819,6 +2827,9 @@ async function handleMessage(ws, data) {
     case 'get_profile':
       await handleGetProfile(ws, data);
       break;
+    case 'set_profile_private_photo':
+      await handleSetProfilePrivatePhoto(ws, data);
+      break;
     case 'create_share_invite_link':
       handleCreateShareInviteLink(ws);
       break;
@@ -3560,6 +3571,15 @@ async function handleReconnection(ws) {
   ws.reportedPhotoKeys = new Set(
     await getReportedPhotoKeys(ws.nickname).catch(() => []),
   );
+  // Friends see past a privacy pass, so the check has to be answerable without
+  // a query in the broadcast path. Kept current by the friend accept/remove
+  // handlers on both sides.
+  ws.friends = new Set(await getFriends(ws.nickname).catch(() => []));
+  setProfilePrivacyCache(ws.nickname, {
+    active: profile?.hasProfilePrivate === true,
+    expiresAt: profile?.profilePrivateExpiresAt || null,
+    hidePhoto: profile?.profilePrivateHidePhoto === true,
+  });
   ws.level = (profile && Number.isFinite(profile.level)) ? profile.level : 1;
   ws.seasonRating = Number.isFinite(profile?.seasonRating) ? profile.seasonRating : null;
   ws.skSeasonRating = Number.isFinite(profile?.skSeasonRating) ? profile.skSeasonRating : null;
@@ -4961,6 +4981,52 @@ function handleSwitchToPlayer(ws, data) {
   broadcastRoomList();
 }
 
+/** Re-read one user's privacy state into the broadcast cache. */
+async function refreshProfilePrivacy(nickname) {
+  if (!nickname) return null;
+  const profile = await getUserProfile(nickname, 'ko').catch(() => null);
+  setProfilePrivacyCache(nickname, {
+    active: profile?.hasProfilePrivate === true,
+    expiresAt: profile?.profilePrivateExpiresAt || null,
+    hidePhoto: profile?.profilePrivateHidePhoto === true,
+  });
+  return profile;
+}
+
+/**
+ * The pass holder choosing how far it reaches: records only (default), or the
+ * profile photo as well.
+ *
+ * Allowed without an active pass — it is a stored preference, and refusing to
+ * remember it would mean the setting silently resets every time a pass lapses.
+ * It simply has no effect until a pass is active.
+ */
+async function handleSetProfilePrivatePhoto(ws, data) {
+  if (!ws.nickname) {
+    sendTo(ws, { type: 'error', message: t(ws.locale, 'login_required') });
+    return;
+  }
+  const hide = data?.hide === true;
+  const result = await setProfilePrivateHidePhoto(ws.nickname, hide);
+  if (!result.success) {
+    sendTo(ws, {
+      type: 'profile_private_result',
+      success: false,
+      message: t(ws.locale, result.messageKey || 'db_update_failed'),
+    });
+    return;
+  }
+  await refreshProfilePrivacy(ws.nickname);
+  sendTo(ws, { type: 'profile_private_result', success: true, hidePhoto: hide });
+  // Seats already on screen are showing the old answer: everyone in the room
+  // needs a state with the photo added or dropped for this viewer.
+  if (ws.roomId) {
+    broadcastRoomState(ws.roomId);
+    const room = lobby.getRoom(ws.roomId);
+    if (room?.game) sendGameStateToAll(ws.roomId);
+  }
+}
+
 // Get user profile handler
 async function handleGetProfile(ws, data) {
   if (!ws.nickname) {
@@ -4975,12 +5041,40 @@ async function handleGetProfile(ws, data) {
   // Viewer's locale picks the title display name; the inspected user's own
   // locale preference is irrelevant to what the viewer should see.
   const profile = await getUserProfile(targetNickname, ws.locale || 'ko');
-  const recentMatches = await getRecentMatches(targetNickname, 20);
   const isBlocked = (await getBlockedUsers(ws.nickname)).includes(targetNickname);
+  // Privacy pass: strangers get the identity (so they can still report, invite
+  // or add as friend) and nothing that counts as a record. Redacted HERE rather
+  // than left to the client — the numbers must not travel to someone who is not
+  // allowed to see them.
+  const hidden = profileHiddenFrom(ws, targetNickname);
+  if (profile && hidden) {
+    const redacted = {
+      nickname: profile.nickname,
+      isPrivate: true,
+      bannerKey: profile.bannerKey,
+      titleKey: profile.titleKey,
+      titleName: profile.titleName,
+      photoUrl: visiblePhoto(ws, targetNickname, profilePhotoUrlFrom(profile)),
+    };
+    sendTo(ws, {
+      type: 'profile_result',
+      nickname: targetNickname,
+      profile: redacted,
+      recentMatches: [],
+      isBlocked,
+    });
+    return;
+  }
+  const recentMatches = await getRecentMatches(targetNickname, 20);
   // Attach the resolved avatar URL, unless this viewer blocked or reported the
   // target — an image someone has objected to must not be forced back on them.
   if (profile) {
     profile.photoUrl = visiblePhoto(ws, targetNickname, profilePhotoUrlFrom(profile));
+    // Own popup shows the pass and its reach; friends need neither.
+    if (ws.nickname !== targetNickname) {
+      delete profile.profilePrivateHidePhoto;
+      delete profile.profilePrivateExpiresAt;
+    }
   }
   sendTo(ws, {
     type: 'profile_result',
@@ -6665,6 +6759,51 @@ function photoKeyFromUrl(url) {
   return parts.length >= 2 ? parts.slice(-2).join('/') : null;
 }
 
+/**
+ * Who currently holds the profile-privacy pass, and how far they set it to
+ * reach. nickname -> { until: epoch ms | null, hidePhoto: boolean }.
+ *
+ * In memory because visiblePhoto runs for every seat of every broadcast — a
+ * query there would be a query per player per state change. Written on login,
+ * on purchase and on toggle; entries are re-checked against `until` on read, so
+ * an expiry needs no sweeper to take effect.
+ */
+const profilePrivacy = new Map();
+
+function setProfilePrivacyCache(nickname, { active, expiresAt, hidePhoto }) {
+  if (!nickname) return;
+  if (!active) {
+    profilePrivacy.delete(nickname);
+    return;
+  }
+  profilePrivacy.set(nickname, {
+    until: expiresAt ? new Date(expiresAt).getTime() : null,
+    hidePhoto: hidePhoto === true,
+  });
+}
+
+function profilePrivacyOf(nickname) {
+  const entry = profilePrivacy.get(nickname);
+  if (!entry) return null;
+  if (entry.until !== null && entry.until <= Date.now()) {
+    profilePrivacy.delete(nickname);
+    return null;
+  }
+  return entry;
+}
+
+/** Does this viewer get to see past `nickname`'s privacy? Self and friends do. */
+function seesPrivateProfile(ws, nickname) {
+  if (!ws?.nickname) return false;
+  if (ws.nickname === nickname) return true;
+  return ws.friends?.has(nickname) === true;
+}
+
+/** Records hidden from this viewer? */
+function profileHiddenFrom(ws, nickname) {
+  return !!profilePrivacyOf(nickname) && !seesPrivateProfile(ws, nickname);
+}
+
 function visiblePhoto(ws, nickname, url) {
   if (!url) return null;
   if (ws?.hiddenPhotos?.has(nickname)) return null;
@@ -6673,6 +6812,9 @@ function visiblePhoto(ws, nickname, url) {
     const key = photoKeyFromUrl(url);
     if (key && ws.reportedPhotoKeys.has(key)) return null;
   }
+  // Privacy pass, and this holder chose to include the photo in it.
+  const privacy = profilePrivacyOf(nickname);
+  if (privacy?.hidePhoto && !seesPrivateProfile(ws, nickname)) return null;
   return url;
 }
 
@@ -6750,17 +6892,20 @@ function decorateSpectatorState(room, ws, state, seats) {
 function personalizeRoomState(state, ws) {
   if (!state || !Array.isArray(state.players)) return state;
   const locale = ws?.locale || 'ko';
-  const hidden = ws?.hiddenPhotos;
   return {
     ...state,
     players: state.players.map((p) => {
       if (p === null) return null;
       const retitle = !!p.titleKey;
-      const unphoto = !!p.photoUrl && !!hidden && hidden.has(p.name);
+      // visiblePhoto, not a local blocked-only check: reports and the privacy
+      // pass hide photos too, and the waiting room was applying neither — a
+      // reported photo stayed on the seat until the game started.
+      const photoUrl = p.photoUrl ? visiblePhoto(ws, p.name, p.photoUrl) : p.photoUrl;
+      const unphoto = p.photoUrl !== photoUrl;
       if (!retitle && !unphoto) return p;
       const out = { ...p };
       if (retitle) out.titleName = localizeTitleName(p.titleKey, p.titleName, locale);
-      if (unphoto) out.photoUrl = null;
+      if (unphoto) out.photoUrl = photoUrl;
       return out;
     }),
   };
@@ -7963,6 +8108,11 @@ async function handleGetShopItems(ws) {
       // Older clients have no upload UI — hide the profile-photo shop items.
       result.items = result.items.filter((item) => item.effect_type !== 'profile_photo');
     }
+    if (!clientSupportsProfilePrivate(ws)) {
+      // No redacted popup and no reach toggle on old clients: they would hold a
+      // pass they cannot see the state of, or configure.
+      result.items = result.items.filter((item) => item.effect_type !== 'profile_private');
+    }
   }
   sendTo(ws, { type: 'shop_items_result', ...result });
 }
@@ -8043,7 +8193,25 @@ async function handleBuyItem(ws, data) {
       return;
     }
   }
+  // Same reason as the shop filter above; this only stops a stale or tampered
+  // client from spending gold on a pass it cannot manage.
+  if (typeof itemKey === 'string' && itemKey.startsWith('profile_private')
+      && !clientSupportsProfilePrivate(ws)) {
+    sendTo(ws, {
+      type: 'purchase_result',
+      success: false,
+      itemKey,
+      message: t(ws.locale, 'banner_update_required'),
+    });
+    return;
+  }
   const result = await buyItem(ws.nickname, itemKey);
+  // The visibility cache is what every broadcast reads; refresh it here so the
+  // pass takes effect on this purchase, not on the next login.
+  if (result?.success && typeof itemKey === 'string'
+      && itemKey.startsWith('profile_private')) {
+    await refreshProfilePrivacy(ws.nickname);
+  }
   sendTo(ws, { type: 'purchase_result', itemKey, ...result });
 }
 
@@ -8272,8 +8440,12 @@ async function handleAcceptFriendRequest(ws, data) {
   sendTo(ws, { type: 'friend_request_result', action: 'accept', nickname, success: result.success });
   // Notify the requester that their request was accepted
   if (result.success) {
+    // Both cached friend sets move now, not on next login: a privacy pass must
+    // open up the moment the friendship exists, in both directions.
+    ws.friends?.add(nickname);
     const requesterWs = findWsByNickname(nickname);
     if (requesterWs) {
+      requesterWs.friends?.add(ws.nickname);
       sendTo(requesterWs, { type: 'friend_request_accepted', nickname: ws.nickname });
     }
   }
@@ -8303,8 +8475,10 @@ async function handleRemoveFriend(ws, data) {
   sendTo(ws, { type: 'friend_removed', nickname, success: result.success });
   // Notify the other user
   if (result.success) {
+    ws.friends?.delete(nickname);
     const otherWs = findWsByNickname(nickname);
     if (otherWs) {
+      otherWs.friends?.delete(ws.nickname);
       sendTo(otherWs, { type: 'friend_removed', nickname: ws.nickname, success: true });
     }
   }

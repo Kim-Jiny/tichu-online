@@ -4409,4 +4409,17 @@ class L10nEn extends L10n {
 
   @override
   String get shopAdRewardDoneSubtitle => 'Come back tomorrow';
+
+  @override
+  String get profilePrivateTitle => 'This profile is private';
+
+  @override
+  String get profilePrivateBody => 'They show their records to friends only';
+
+  @override
+  String get profilePrivateHidePhoto => 'Hide photo';
+
+  @override
+  String get profilePrivateHidePhotoDesc =>
+      'When on, your profile photo is hidden from non-friends in the waiting room and in game too';
 }

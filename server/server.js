@@ -2623,8 +2623,12 @@ setTimeout(runGoogleVoidedPoll, 60 * 1000);
  * waiting, and there is nothing here worth a table.
  */
 const LOGIN_WINDOW_MS = 15 * 60 * 1000;
-const LOGIN_MAX_FAILS = 10;      // per account within the window
-const LOGIN_MAX_FAILS_IP = 30;   // per source address (a household shares one)
+const LOGIN_MAX_FAILS = 10;   // per account within the window
+// Per source address. Deliberately loose: Korean carriers put large numbers of
+// mobile users behind one public address (CGNAT), so a strict IP limit locks
+// out strangers who share a NAT with one person fumbling their password. The
+// per-account limit is the one doing the real work here.
+const LOGIN_MAX_FAILS_IP = 100;
 const loginFails = new Map(); // key -> { count, first, until }
 
 function loginThrottleKey(kind, value) {
@@ -5324,12 +5328,15 @@ async function handleGetProfile(ws, data) {
   // allowed to see them.
   const hidden = profileHiddenFrom(ws, targetNickname);
   if (profile && hidden) {
+    // A reported title stays hidden here too — this branch builds its own
+    // payload, so the filter the normal path applies has to be repeated.
+    const titleHidden = titleReported(ws, targetNickname, profile.titleName);
     const redacted = {
       nickname: profile.nickname,
       isPrivate: true,
       bannerKey: profile.bannerKey,
-      titleKey: profile.titleKey,
-      titleName: profile.titleName,
+      titleKey: titleHidden ? null : profile.titleKey,
+      titleName: titleHidden ? null : profile.titleName,
       photoUrl: visiblePhoto(ws, targetNickname, profilePhotoUrlFrom(profile)),
     };
     sendTo(ws, {

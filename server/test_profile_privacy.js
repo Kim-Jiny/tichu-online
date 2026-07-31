@@ -254,6 +254,31 @@ async function main() {
       .find((p) => p && p.name === 'privOwner');
     check(!!seatForFriend?.photoUrl, 'friend still gets the photo on the room seat');
 
+    // ── becoming friends mid-room reveals the photo without a re-login ───
+    // The seat payload is pushed on change, and a friendship is not a change
+    // the room knows about — so this used to leave the new friend looking at a
+    // default avatar until something unrelated repainted the room.
+    const newPal = await account('pal', 'privPal');
+    newPal.forget();
+    newPal.send({ type: 'join_room', roomId: joined.roomId });
+    const palRoom = await newPal.waitFor('room_state', 8000);
+    const seatBefore = (palRoom.room?.players || [])
+      .find((p) => p && p.name === 'privOwner');
+    check(!seatBefore?.photoUrl, 'a stranger joining sees no photo');
+
+    newPal.send({ type: 'add_friend', nickname: 'privOwner' });
+    await sleep(400);
+    newPal.forget();
+    owner2.send({ type: 'accept_friend_request', nickname: 'privPal' });
+    const palRoomAfter = await newPal.waitFor('room_state', 8000);
+    const seatAfter = (palRoomAfter.room?.players || [])
+      .find((p) => p && p.name === 'privOwner');
+    check(
+      !!seatAfter?.photoUrl,
+      'accepting the friend request repaints the seat with the photo',
+    );
+    newPal.ws.close();
+
     for (const c of [owner2, stranger, friend]) c.ws.close();
     console.log('\nALL PASS');
     stop();

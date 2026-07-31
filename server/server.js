@@ -8837,6 +8837,25 @@ async function handleGetPendingFriendRequests(ws) {
 }
 
 // Accept friend request handler
+/**
+ * Repaint both sides' rooms after a friendship changes.
+ *
+ * Photo visibility depends on the friend relation, and room/game payloads are
+ * pushed on change — becoming friends is not a change either room knows about,
+ * so without this the new friend's photo stays hidden (default avatar) until
+ * something unrelated happens to trigger a broadcast.
+ */
+function repaintRoomsFor(...sockets) {
+  const rooms = new Set();
+  for (const sock of sockets) {
+    if (sock?.roomId) rooms.add(sock.roomId);
+  }
+  for (const roomId of rooms) {
+    broadcastRoomState(roomId);
+    if (lobby.getRoom(roomId)?.game) sendGameStateToAll(roomId);
+  }
+}
+
 async function handleAcceptFriendRequest(ws, data) {
   if (!ws.nickname) {
     sendTo(ws, { type: 'error', message: t(ws.locale, 'login_required') });
@@ -8856,6 +8875,7 @@ async function handleAcceptFriendRequest(ws, data) {
       requesterWs.friends?.add(ws.nickname);
       sendTo(requesterWs, { type: 'friend_request_accepted', nickname: ws.nickname });
     }
+    repaintRoomsFor(ws, requesterWs);
   }
 }
 
@@ -8889,6 +8909,8 @@ async function handleRemoveFriend(ws, data) {
       otherWs.friends?.delete(ws.nickname);
       sendTo(otherWs, { type: 'friend_removed', nickname: ws.nickname, success: true });
     }
+    // Same in reverse: a privacy-pass holder's photo has to go back to hidden.
+    repaintRoomsFor(ws, otherWs);
   }
 }
 

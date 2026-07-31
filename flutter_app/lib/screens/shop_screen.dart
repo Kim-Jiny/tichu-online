@@ -6,6 +6,7 @@ import '../l10n/l10n_helpers.dart';
 import '../models/shop_visual.dart';
 import '../services/game_service.dart';
 import '../services/ad_service.dart';
+import '../utils/gold_format.dart';
 import '../widgets/level_badge.dart';
 import '../widgets/playing_card.dart';
 import '../widgets/profile_avatar.dart';
@@ -723,7 +724,7 @@ class _ShopScreenState extends State<ShopScreen> {
                                     ),
                                     const SizedBox(width: 8),
                                     Text(
-                                      '${positive ? '+' : ''}$delta',
+                                      '${positive ? '+' : ''}${formatGold(delta)}',
                                       style: TextStyle(
                                         fontSize: 15,
                                         fontWeight: FontWeight.w900,
@@ -1336,7 +1337,7 @@ class _ShopScreenState extends State<ShopScreen> {
               GoldIcon(size: 13, amount: price is int ? price : null),
               const SizedBox(width: 2),
               Text(
-                '$price',
+                formatGold(price),
                 style: TextStyle(
                   fontSize: 12,
                   fontWeight: FontWeight.bold,
@@ -1491,7 +1492,7 @@ class _ShopScreenState extends State<ShopScreen> {
                           ),
                           const SizedBox(width: 3),
                           Text(
-                            '$price',
+                            formatGold(price),
                             style: const TextStyle(
                               fontSize: 13,
                               fontWeight: FontWeight.bold,
@@ -2735,7 +2736,7 @@ class _ShopScreenState extends State<ShopScreen> {
                             GoldIcon(size: 19, amount: price),
                             const SizedBox(width: 4),
                             Text(
-                              '$price G',
+                              '${formatGold(price)} G',
                               style: const TextStyle(
                                 fontSize: 18,
                                 fontWeight: FontWeight.bold,
@@ -2914,7 +2915,7 @@ class _ShopScreenState extends State<ShopScreen> {
                   GoldIcon(size: 14, amount: price),
                   const SizedBox(width: 3),
                   Text(
-                    '$price',
+                    formatGold(price),
                     style: const TextStyle(
                       fontSize: 13,
                       fontWeight: FontWeight.w800,

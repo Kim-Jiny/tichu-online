@@ -3365,7 +3365,12 @@ class L10nEn extends L10n {
 
   @override
   String shopGoldAmount(int gold) {
-    return '$gold Gold';
+    final intl.NumberFormat goldNumberFormat = intl.NumberFormat.decimalPattern(
+      localeName,
+    );
+    final String goldString = goldNumberFormat.format(gold);
+
+    return '$goldString Gold';
   }
 
   @override
@@ -3381,7 +3386,12 @@ class L10nEn extends L10n {
 
   @override
   String shopGoldCurrent(int gold) {
-    return 'Current gold: $gold';
+    final intl.NumberFormat goldNumberFormat = intl.NumberFormat.decimalPattern(
+      localeName,
+    );
+    final String goldString = goldNumberFormat.format(gold);
+
+    return 'Current gold: $goldString';
   }
 
   @override

@@ -1,13 +1,10 @@
 {
   "@@locale": "en",
-
   "appTitle": "Tichu Online",
-
   "languageAuto": "Auto (System)",
   "languageEnglish": "English",
   "languageKorean": "Korean",
   "languageGerman": "German",
-
   "settingsTitle": "Settings",
   "settingsLanguage": "Language",
   "settingsAppInfo": "App Info",
@@ -26,7 +23,6 @@
   "settingsTheme": "Theme",
   "settingsSound": "Sound",
   "settingsAdminCenter": "Admin Center",
-
   "commonOk": "OK",
   "commonCancel": "Cancel",
   "commonTotal": "Total",
@@ -36,7 +32,6 @@
   "commonConfirm": "Confirm",
   "commonLink": "Link",
   "commonError": "Error",
-
   "settingsHeaderTitle": "Settings",
   "settingsNotificationsSection": "Notifications",
   "settingsPushNotifications": "Push Notifications",
@@ -54,7 +49,9 @@
   "settingsSocialLinked": "{provider} linked",
   "@settingsSocialLinked": {
     "placeholders": {
-      "provider": { "type": "String" }
+      "provider": {
+        "type": "String"
+      }
     }
   },
   "settingsNoLinkedAccount": "No linked account (ranked play unavailable)",
@@ -67,10 +64,11 @@
   "settingsLinkFailed": "Linking failed: {error}",
   "@settingsLinkFailed": {
     "placeholders": {
-      "error": { "type": "String" }
+      "error": {
+        "type": "String"
+      }
     }
   },
-
   "noticeTitle": "Notices",
   "noticeEmpty": "No notices available",
   "noticeRetry": "Retry",
@@ -78,7 +76,6 @@
   "noticeCategoryUpdate": "Update",
   "noticeCategoryPreview": "Update Preview",
   "noticeCategoryGeneral": "Notice",
-
   "inquiryTitle": "Submit Inquiry",
   "inquiryCategory": "Category",
   "inquiryCategoryBug": "Bug Report",
@@ -99,23 +96,24 @@
   "inquiryAnswerDate": "Answered on: {date}",
   "@inquiryAnswerDate": {
     "placeholders": {
-      "date": { "type": "String" }
+      "date": {
+        "type": "String"
+      }
     }
   },
   "inquiryNoAnswer": "No answer has been registered yet.",
-
   "linkDialogTitle": "Link Social Account",
   "linkDialogContent": "Select a social account to link",
-
   "textViewLoadFailed": "Failed to load content.",
-
   "loginEnterUsername": "Please enter your username",
   "loginEnterPassword": "Please enter your password",
   "loginFailed": "Login failed",
   "loginSocialFailed": "Social login failed: {error}",
   "@loginSocialFailed": {
     "placeholders": {
-      "error": { "type": "String" }
+      "error": {
+        "type": "String"
+      }
     }
   },
   "loginSocialFailedGeneric": "Social login failed",
@@ -159,12 +157,13 @@
   "loginSetNicknameTitle": "Set Nickname",
   "loginSetNicknameDesc": "Choose a nickname to use in the game",
   "loginGetStarted": "Get Started",
-
   "lobbyRoomInviteTitle": "Room Invite",
   "lobbyRoomInviteMessage": "{nickname} invited you to a room!",
   "@lobbyRoomInviteMessage": {
     "placeholders": {
-      "nickname": { "type": "String" }
+      "nickname": {
+        "type": "String"
+      }
     }
   },
   "lobbyDecline": "Decline",
@@ -174,7 +173,9 @@
   "lobbyInviteSent": "Invitation sent to {nickname}",
   "@lobbyInviteSent": {
     "placeholders": {
-      "nickname": { "type": "String" }
+      "nickname": {
+        "type": "String"
+      }
     }
   },
   "lobbyInvite": "Invite",
@@ -194,7 +195,9 @@
   "lobbyPlayerCount": "{count}P",
   "@lobbyPlayerCount": {
     "placeholders": {
-      "count": { "type": "int" }
+      "count": {
+        "type": "int"
+      }
     }
   },
   "lobbyExpansionOptional": "Expansions (Optional)",
@@ -246,14 +249,20 @@
   "lobbyRoomTimeSec": "{seconds}s",
   "@lobbyRoomTimeSec": {
     "placeholders": {
-      "seconds": { "type": "int" }
+      "seconds": {
+        "type": "int"
+      }
     }
   },
   "lobbyRoomTimeAndScore": "{seconds}s · {score}pts",
   "@lobbyRoomTimeAndScore": {
     "placeholders": {
-      "seconds": { "type": "int" },
-      "score": { "type": "int" }
+      "seconds": {
+        "type": "int"
+      },
+      "score": {
+        "type": "int"
+      }
     }
   },
   "lobbyExpKrakenShort": "Kraken",
@@ -262,7 +271,9 @@
   "lobbyInProgress": "Spectating {count}",
   "@lobbyInProgress": {
     "placeholders": {
-      "count": { "type": "int" }
+      "count": {
+        "type": "int"
+      }
     }
   },
   "lobbySocialLinkRequired": "Social Link Required",
@@ -288,14 +299,18 @@
   "lobbyUnreadDmCount": "You have {count} unread requests and DMs.",
   "@lobbyUnreadDmCount": {
     "placeholders": {
-      "count": { "type": "int" }
+      "count": {
+        "type": "int"
+      }
     }
   },
   "lobbyFriendsDmDesc": "View your friends list and DM conversations.",
   "lobbyCurrentSpectators": "View {count} current spectators.",
   "@lobbyCurrentSpectators": {
     "placeholders": {
-      "count": { "type": "int" }
+      "count": {
+        "type": "int"
+      }
     }
   },
   "lobbyMore": "More",
@@ -309,7 +324,9 @@
   "lobbySkullKingPlayers": "Skull King · {count}P",
   "@lobbySkullKingPlayers": {
     "placeholders": {
-      "count": { "type": "int" }
+      "count": {
+        "type": "int"
+      }
     }
   },
   "lobbyStartGame": "Start Game",
@@ -319,7 +336,9 @@
   "lobbyReportTitle": "Report {nickname}",
   "@lobbyReportTitle": {
     "placeholders": {
-      "nickname": { "type": "String" }
+      "nickname": {
+        "type": "String"
+      }
     }
   },
   "lobbyReportWarning": "Reports are reviewed by the moderation team.\nFalse reports may result in penalties.",
@@ -346,22 +365,32 @@
   "lobbyRecordFormat": "{games}G {wins}W {losses}L",
   "@lobbyRecordFormat": {
     "placeholders": {
-      "games": { "type": "int" },
-      "wins": { "type": "int" },
-      "losses": { "type": "int" }
+      "games": {
+        "type": "int"
+      },
+      "wins": {
+        "type": "int"
+      },
+      "losses": {
+        "type": "int"
+      }
     }
   },
   "lobbyRecentMatches": "Recent Matches ({count})",
   "@lobbyRecentMatches": {
     "placeholders": {
-      "count": { "type": "int" }
+      "count": {
+        "type": "int"
+      }
     }
   },
   "lobbyRecentMatchesTitle": "Recent Matches",
   "lobbyRecentMatchesDesc": "View results of the last {count} matches.",
   "@lobbyRecentMatchesDesc": {
     "placeholders": {
-      "count": { "type": "int" }
+      "count": {
+        "type": "int"
+      }
     }
   },
   "lobbySeeMore": "See More",
@@ -377,8 +406,12 @@
   "lobbyRankAndScore": "#{rank} ({score}pts)",
   "@lobbyRankAndScore": {
     "placeholders": {
-      "rank": { "type": "String" },
-      "score": { "type": "int" }
+      "rank": {
+        "type": "String"
+      },
+      "score": {
+        "type": "int"
+      }
     }
   },
   "lobbyMannerGood": "Good",
@@ -389,20 +422,26 @@
   "lobbyManner": "Manner {label}",
   "@lobbyManner": {
     "placeholders": {
-      "label": { "type": "String" }
+      "label": {
+        "type": "String"
+      }
     }
   },
   "lobbyDesertions": "Desertions {count}",
   "@lobbyDesertions": {
     "placeholders": {
-      "count": { "type": "int" }
+      "count": {
+        "type": "int"
+      }
     }
   },
   "lobbyKick": "Kick",
   "lobbyKickConfirm": "Kick {playerName}?",
   "@lobbyKickConfirm": {
     "placeholders": {
-      "playerName": { "type": "String" }
+      "playerName": {
+        "type": "String"
+      }
     }
   },
   "lobbyHost": "Host",
@@ -428,16 +467,26 @@
   "lobbyRoomInfoSk": "{seconds}s · {players}/{maxPlayers}P",
   "@lobbyRoomInfoSk": {
     "placeholders": {
-      "seconds": { "type": "int" },
-      "players": { "type": "int" },
-      "maxPlayers": { "type": "int" }
+      "seconds": {
+        "type": "int"
+      },
+      "players": {
+        "type": "int"
+      },
+      "maxPlayers": {
+        "type": "int"
+      }
     }
   },
   "lobbyRoomInfoTichu": "{seconds}s · {score}pts",
   "@lobbyRoomInfoTichu": {
     "placeholders": {
-      "seconds": { "type": "int" },
-      "score": { "type": "int" }
+      "seconds": {
+        "type": "int"
+      },
+      "score": {
+        "type": "int"
+      }
     }
   },
   "lobbyRandomAdjTichu1": "Joyful",
@@ -472,7 +521,6 @@
   "lobbyRandomNounSk6": "Sea Battle",
   "lobbyRandomNounSk7": "Adventure",
   "lobbyRandomNounSk8": "Kraken",
-
   "skGameRecoveringGame": "Recovering game...",
   "skGameCheckingState": "Checking game state...",
   "skGameReloadingRoom": "Reloading room info...",
@@ -490,21 +538,29 @@
   "skGameRoundTrick": "Round {round} Trick {trick}",
   "@skGameRoundTrick": {
     "placeholders": {
-      "round": { "type": "int" },
-      "trick": { "type": "int" }
+      "round": {
+        "type": "int"
+      },
+      "trick": {
+        "type": "int"
+      }
     }
   },
   "skGameSpectating": "Spectating",
-  "skGameBiddingInProgress": "Bidding in progress \u00b7 Leader: {name}",
+  "skGameBiddingInProgress": "Bidding in progress · Leader: {name}",
   "@skGameBiddingInProgress": {
     "placeholders": {
-      "name": { "type": "String" }
+      "name": {
+        "type": "String"
+      }
     }
   },
   "skGamePlayerTurn": "{name}'s turn",
   "@skGamePlayerTurn": {
     "placeholders": {
-      "name": { "type": "String" }
+      "name": {
+        "type": "String"
+      }
     }
   },
   "skGameLeaveTitle": "Leave Game",
@@ -514,64 +570,84 @@
   "skGameLeaderLabelShort": "Leader",
   "@skGameLeaderLabel": {
     "placeholders": {
-      "name": { "type": "String" }
+      "name": {
+        "type": "String"
+      }
     }
   },
   "skGameMyTurn": "My Turn",
   "skGameWaitingFor": "Waiting for {name}",
   "@skGameWaitingFor": {
     "placeholders": {
-      "name": { "type": "String" }
+      "name": {
+        "type": "String"
+      }
     }
   },
   "skGameSecondsShort": "{seconds}s",
   "@skGameSecondsShort": {
     "placeholders": {
-      "seconds": { "type": "int" }
+      "seconds": {
+        "type": "int"
+      }
     }
   },
   "skGameTapToRequestCards": "Tap a profile above to request to view their hand",
   "skGameRequestingCardView": "Requesting to view {name}'s hand...",
   "@skGameRequestingCardView": {
     "placeholders": {
-      "name": { "type": "String" }
+      "name": {
+        "type": "String"
+      }
     }
   },
   "skGamePlayerHand": "{name}'s hand",
   "@skGamePlayerHand": {
     "placeholders": {
-      "name": { "type": "String" }
+      "name": {
+        "type": "String"
+      }
     }
   },
   "skGameNoCards": "No cards",
   "skGameCardViewRejected": "{name} declined the request. Tap another player.",
   "@skGameCardViewRejected": {
     "placeholders": {
-      "name": { "type": "String" }
+      "name": {
+        "type": "String"
+      }
     }
   },
   "skGameTimeout": "{name} timed out!",
   "@skGameTimeout": {
     "placeholders": {
-      "name": { "type": "String" }
+      "name": {
+        "type": "String"
+      }
     }
   },
   "skGameDesertionTimeout": "{name} deserted! (3 timeouts)",
   "@skGameDesertionTimeout": {
     "placeholders": {
-      "name": { "type": "String" }
+      "name": {
+        "type": "String"
+      }
     }
   },
   "skGameDesertionLeave": "{name} left the game",
   "@skGameDesertionLeave": {
     "placeholders": {
-      "name": { "type": "String" }
+      "name": {
+        "type": "String"
+      }
     }
   },
   "skGameCardViewRequest": "{name} is requesting to view your hand",
   "@skGameCardViewRequest": {
     "placeholders": {
-      "name": { "type": "String" }
+      "name": {
+        "type": "String"
+      }
     }
   },
   "skGameReject": "Reject",
@@ -586,40 +662,52 @@
   "skGameScoreHistory": "Score History",
   "skGameBiddingPhase": "Bidding...",
   "skGamePlayCard": "Play a card",
-  "skGameKrakenActivated": "\uD83D\uDC19 Kraken activated",
-  "skGameWhiteWhaleActivated": "\uD83D\uDC0B White Whale activated",
-  "skGameWhiteWhaleNullify": "\uD83D\uDC0B White Whale \u00b7 Special cards nullified",
+  "skGameKrakenActivated": "🐙 Kraken activated",
+  "skGameWhiteWhaleActivated": "🐋 White Whale activated",
+  "skGameWhiteWhaleNullify": "🐋 White Whale · Special cards nullified",
   "skGameTrickVoided": "Trick Voided",
   "skGameLeadPlayer": "{name} leads next",
   "@skGameLeadPlayer": {
     "placeholders": {
-      "name": { "type": "String" }
+      "name": {
+        "type": "String"
+      }
     }
   },
   "skGameTrickWinner": "{name} wins",
   "@skGameTrickWinner": {
     "placeholders": {
-      "name": { "type": "String" }
+      "name": {
+        "type": "String"
+      }
     }
   },
   "skGameCheckingCards": "Checking cards...",
-  "skGameBonusWithLoot": "Bonus +{bonus} (\uD83D\uDCB0 +{loot})",
+  "skGameBonusWithLoot": "Bonus +{bonus} (💰 +{loot})",
   "@skGameBonusWithLoot": {
     "placeholders": {
-      "bonus": { "type": "int" },
-      "loot": { "type": "int" }
+      "bonus": {
+        "type": "int"
+      },
+      "loot": {
+        "type": "int"
+      }
     }
   },
   "skGameBonus": "Bonus +{bonus}",
   "@skGameBonus": {
     "placeholders": {
-      "bonus": { "type": "int" }
+      "bonus": {
+        "type": "int"
+      }
     }
   },
   "skGameBidDone": "Bid: {bid} wins",
   "@skGameBidDone": {
     "placeholders": {
-      "bid": { "type": "int" }
+      "bid": {
+        "type": "int"
+      }
     }
   },
   "skGameWaitingOthers": "Waiting for other players...",
@@ -627,7 +715,9 @@
   "skGameBidSubmit": "Bid {bid} wins",
   "@skGameBidSubmit": {
     "placeholders": {
-      "bid": { "type": "int" }
+      "bid": {
+        "type": "int"
+      }
     }
   },
   "skGameSelectNumber": "Select a number",
@@ -639,7 +729,9 @@
   "skGameRoundResult": "Round {round} Results",
   "@skGameRoundResult": {
     "placeholders": {
-      "round": { "type": "int" }
+      "round": {
+        "type": "int"
+      }
     }
   },
   "skGameBidTricks": "Bid/Won",
@@ -654,7 +746,9 @@
   "skGameAutoReturnCountdown": "Returning to waiting room in {seconds}s",
   "@skGameAutoReturnCountdown": {
     "placeholders": {
-      "seconds": { "type": "int" }
+      "seconds": {
+        "type": "int"
+      }
     }
   },
   "skGameReturningToRoom": "Returning to waiting room...",
@@ -676,12 +770,17 @@
   "skGameRecordFormat": "{games}G {wins}W {losses}L",
   "@skGameRecordFormat": {
     "placeholders": {
-      "games": { "type": "int" },
-      "wins": { "type": "int" },
-      "losses": { "type": "int" }
+      "games": {
+        "type": "int"
+      },
+      "wins": {
+        "type": "int"
+      },
+      "losses": {
+        "type": "int"
+      }
     }
   },
-
   "gameSparrowCall": "Mahjong Call",
   "gameSelectNumberToCall": "Select a number to call",
   "gameNoCall": "No Call",
@@ -718,9 +817,15 @@
   "gameRecordFormat": "{games}G {wins}W {losses}L",
   "@gameRecordFormat": {
     "placeholders": {
-      "games": { "type": "int" },
-      "wins": { "type": "int" },
-      "losses": { "type": "int" }
+      "games": {
+        "type": "int"
+      },
+      "wins": {
+        "type": "int"
+      },
+      "losses": {
+        "type": "int"
+      }
     }
   },
   "gameMannerGood": "Good",
@@ -731,21 +836,27 @@
   "gameManner": "Manner {label}",
   "@gameManner": {
     "placeholders": {
-      "label": { "type": "String" }
+      "label": {
+        "type": "String"
+      }
     }
   },
   "gameDesertionLabel": "Desertions",
   "gameDesertions": "Desertions {count}",
   "@gameDesertions": {
     "placeholders": {
-      "count": { "type": "int" }
+      "count": {
+        "type": "int"
+      }
     }
   },
   "gameRecentMatchesTitle": "Recent Matches",
   "gameRecentMatchesDesc": "View results of the last {count} matches.",
   "@gameRecentMatchesDesc": {
     "placeholders": {
-      "count": { "type": "int" }
+      "count": {
+        "type": "int"
+      }
     }
   },
   "gameRecentMatchesThree": "Recent Matches (3)",
@@ -767,7 +878,9 @@
   "gameReportTitle": "Report {nickname}",
   "@gameReportTitle": {
     "placeholders": {
-      "nickname": { "type": "String" }
+      "nickname": {
+        "type": "String"
+      }
     }
   },
   "gameReportWarning": "Reports are reviewed by the moderation team.\nFalse reports may result in penalties.",
@@ -781,26 +894,34 @@
   "gameTimeout": "{playerName} timed out!",
   "@gameTimeout": {
     "placeholders": {
-      "playerName": { "type": "String" }
+      "playerName": {
+        "type": "String"
+      }
     }
   },
   "gameDesertionTimeout": "{playerName} deserted! (3 timeouts)",
   "@gameDesertionTimeout": {
     "placeholders": {
-      "playerName": { "type": "String" }
+      "playerName": {
+        "type": "String"
+      }
     }
   },
   "gameDesertionLeave": "{playerName} has left the game",
   "@gameDesertionLeave": {
     "placeholders": {
-      "playerName": { "type": "String" }
+      "playerName": {
+        "type": "String"
+      }
     }
   },
   "gameSpectator": "Spectator",
   "gameCardViewRequest": "{nickname} is requesting to view your cards",
   "@gameCardViewRequest": {
     "placeholders": {
-      "nickname": { "type": "String" }
+      "nickname": {
+        "type": "String"
+      }
     }
   },
   "gameReject": "Reject",
@@ -824,33 +945,45 @@
   "gamePlayerTurn": "{name}'s turn",
   "@gamePlayerTurn": {
     "placeholders": {
-      "name": { "type": "String" }
+      "name": {
+        "type": "String"
+      }
     }
   },
   "gameCall": "Call {rank}",
   "@gameCall": {
     "placeholders": {
-      "rank": { "type": "String" }
+      "rank": {
+        "type": "String"
+      }
     }
   },
   "gameMyTurnShort": "My Turn",
   "gamePlayerTurnShort": "{name} Turn",
   "@gamePlayerTurnShort": {
     "placeholders": {
-      "name": { "type": "String" }
+      "name": {
+        "type": "String"
+      }
     }
   },
   "gamePlayerWaiting": "{name} Waiting",
   "@gamePlayerWaiting": {
     "placeholders": {
-      "name": { "type": "String" }
+      "name": {
+        "type": "String"
+      }
     }
   },
   "gameTimerLabel": "{turnLabel} {seconds}s",
   "@gameTimerLabel": {
     "placeholders": {
-      "turnLabel": { "type": "String" },
-      "seconds": { "type": "int" }
+      "turnLabel": {
+        "type": "String"
+      },
+      "seconds": {
+        "type": "int"
+      }
     }
   },
   "gameScoreHistory": "Score History",
@@ -859,13 +992,17 @@
   "gameTeamLabel": "Team {label}",
   "@gameTeamLabel": {
     "placeholders": {
-      "label": { "type": "String" }
+      "label": {
+        "type": "String"
+      }
     }
   },
   "gameDogPlayedBy": "{name} played the Dog",
   "@gameDogPlayedBy": {
     "placeholders": {
-      "name": { "type": "String" }
+      "name": {
+        "type": "String"
+      }
     }
   },
   "gameDogPlayed": "The Dog was played",
@@ -882,7 +1019,9 @@
   "gameSelectExchangeCard": "Select card to exchange ({count}/3)",
   "@gameSelectExchangeCard": {
     "placeholders": {
-      "count": { "type": "int" }
+      "count": {
+        "type": "int"
+      }
     }
   },
   "gameReset": "Reset",
@@ -901,7 +1040,9 @@
   "gameRankedScore": "Ranked Score {score}",
   "@gameRankedScore": {
     "placeholders": {
-      "score": { "type": "int" }
+      "score": {
+        "type": "int"
+      }
     }
   },
   "gameRankDiamond": "Diamond",
@@ -911,13 +1052,17 @@
   "gameFinishPosition": "Place {position}!",
   "@gameFinishPosition": {
     "placeholders": {
-      "position": { "type": "int" }
+      "position": {
+        "type": "int"
+      }
     }
   },
   "gameCardCount": "{count} cards",
   "@gameCardCount": {
     "placeholders": {
-      "count": { "type": "int" }
+      "count": {
+        "type": "int"
+      }
     }
   },
   "gamePhaseLargeTichu": "Large Tichu Declaration",
@@ -930,7 +1075,6 @@
   "gameBadgeLarge": "Large",
   "gameBadgeSmall": "Small",
   "gameNotAfk": "Not AFK",
-
   "spectatorRecovering": "Recovering spectator view...",
   "spectatorTransitioning": "Transitioning spectator view...",
   "spectatorRecheckingState": "Rechecking current spectator state.",
@@ -943,15 +1087,21 @@
   "spectatorTeamWin": "Team {team} wins!",
   "@spectatorTeamWin": {
     "placeholders": {
-      "team": { "type": "String" }
+      "team": {
+        "type": "String"
+      }
     }
   },
   "spectatorDraw": "Draw!",
   "spectatorTeamScores": "Team A: {scoreA} | Team B: {scoreB}",
   "@spectatorTeamScores": {
     "placeholders": {
-      "scoreA": { "type": "int" },
-      "scoreB": { "type": "int" }
+      "scoreA": {
+        "type": "int"
+      },
+      "scoreB": {
+        "type": "int"
+      }
     }
   },
   "spectatorAutoReturn": "Moving to waiting room in 3s...",
@@ -964,13 +1114,17 @@
   "spectatorRequesting": "Requesting... ({count} cards)",
   "@spectatorRequesting": {
     "placeholders": {
-      "count": { "type": "int" }
+      "count": {
+        "type": "int"
+      }
     }
   },
   "spectatorRequestCardView": "View hand ({count} cards)",
   "@spectatorRequestCardView": {
     "placeholders": {
-      "count": { "type": "int" }
+      "count": {
+        "type": "int"
+      }
     }
   },
   "spectatorSoundEffects": "Sound Effects",
@@ -983,18 +1137,17 @@
   "spectatorPlayedCards": "{name}'s play",
   "@spectatorPlayedCards": {
     "placeholders": {
-      "name": { "type": "String" }
+      "name": {
+        "type": "String"
+      }
     }
   },
-
   "rulesTitle": "Game Rules",
   "rulesTabTichu": "Tichu",
   "rulesTabSkullKing": "Skull King",
   "rulesTabLoveLetter": "Love Letter",
-
   "rulesTichuGoalTitle": "Game Objective",
   "rulesTichuGoalBody": "A trick-taking game for 4 players in 2 teams (partners sit across from each other). The first team to reach the target score wins.",
-
   "rulesTichuCardCompositionTitle": "Card Composition (56 cards total)",
   "rulesTichuNumberCards": "Number Cards (2 – A)",
   "rulesTichuNumberCardsSub": "4 suits × 13 cards",
@@ -1006,7 +1159,6 @@
   "rulesTichuPhoenixSub": "Wild card (-25 points)",
   "rulesTichuDragon": "Dragon",
   "rulesTichuDragonSub": "Strongest card (+25 points)",
-
   "rulesTichuSpecialTitle": "Special Card Rules",
   "rulesTichuSpecialMahjongTitle": "Mahjong",
   "rulesTichuSpecialMahjongLine1": "The player holding this card leads the very first trick.",
@@ -1021,7 +1173,6 @@
   "rulesTichuSpecialDragonTitle": "Dragon",
   "rulesTichuSpecialDragonLine1": "The strongest card; can only be played as a single.",
   "rulesTichuSpecialDragonLine2": "Worth +25 points, but the trick won with the Dragon must be given to one opponent.",
-
   "rulesTichuDeclarationTitle": "Tichu Declaration",
   "rulesTichuDeclarationBody": "A Tichu declaration is a bet that you will be the first to empty your hand this round. Success earns bonus points for your team; failure deducts points.",
   "rulesTichuLargeTichu": "Large Tichu",
@@ -1031,34 +1182,31 @@
   "rulesTichuDeclSuccess": "Success {points}",
   "@rulesTichuDeclSuccess": {
     "placeholders": {
-      "points": { "type": "String" }
+      "points": {
+        "type": "String"
+      }
     }
   },
   "rulesTichuDeclFail": "Fail {points}",
   "@rulesTichuDeclFail": {
     "placeholders": {
-      "points": { "type": "String" }
+      "points": {
+        "type": "String"
+      }
     }
   },
-
   "rulesTichuFlowTitle": "Turn Sequence",
   "rulesTichuFlowBody": "1. All players receive 8 cards each.\n2. After viewing 8 cards, you may declare Large Tichu.\n3. The remaining 6 cards are dealt, totaling 14.\n4. Each player passes 1 card to each of the other 3 players.\n5. After the exchange, before playing any card, you may declare Small Tichu.\n6. The player holding the Mahjong leads the first trick.",
-
   "rulesTichuPlayTitle": "Play Rules",
   "rulesTichuPlayBody": "• You can only play the same type of combination as the leading play, but higher. (e.g., a higher single over a single, a higher pair over a pair)\n• Available combinations:\n   - Single (1 card)\n   - Pair (2 cards of the same number)\n   - Triple (3 cards of the same number)\n   - Full House (Triple + Pair)\n   - Straight (5+ consecutive numbers)\n   - Consecutive Pairs (2+ consecutive pairs = 4+ cards)\n• You may pass on your turn if you cannot or do not want to play.",
-
   "rulesTichuBombTitle": "Bomb",
   "rulesTichuBombBody": "A Bomb can be played at any time, even out of turn, and beats any combination.\n\n• Four-of-a-Kind Bomb: 4 cards of the same number (e.g., 7♠ 7♥ 7♦ 7♣)\n• Straight Flush Bomb: 5+ consecutive cards of the same suit\n\nBomb hierarchy:\n  Straight Flush > Four-of-a-Kind\n  Same type: higher number / longer straight wins",
-
   "rulesTichuScoringTitle": "Scoring",
   "rulesTichuScoringBody": "Card points:\n• 5: 5 points\n• 10, K: 10 points\n• Dragon: +25 points / Phoenix: -25 points\n• All other cards: 0 points\n\nRound settlement:\n• The player who finishes 1st takes all trick points collected by the last-place (4th) player.\n• Cards remaining in the last player's hand go to the opposing team.\n• If both partners on one team finish 1st and 2nd (\"Double Victory\"), that round ends immediately — the winning team gets +200 points (no trick point calculation).\n• Tichu declaration success/failure bonuses are added on top.",
-
   "rulesTichuWinTitle": "Victory Condition",
   "rulesTichuWinBody": "The first team to reach the target score (default 1000 points) set when creating the room wins. Ranked games use a fixed target of 1000 points.",
-
   "rulesSkGoalTitle": "Game Objective",
   "rulesSkGoalBody": "A trick-taking game for 2–6 players (free-for-all). Over 10 rounds, you must accurately predict the number of tricks you will win each round to score points.",
-
   "rulesSkCardCompositionTitle": "Card Composition (65 base cards)",
   "rulesSkNumberCards": "Number Cards (1 – 13)",
   "rulesSkNumberCardsSub": "4 suits × 13 cards (Yellow / Green / Purple / Black)",
@@ -1076,13 +1224,13 @@
   "rulesSkCardCount": "{count} cards",
   "@rulesSkCardCount": {
     "placeholders": {
-      "count": { "type": "int" }
+      "count": {
+        "type": "int"
+      }
     }
   },
-
   "rulesSkTrumpTitle": "Black suit = Trump",
   "rulesSkTrumpBody": "Black number cards beat all other suit number cards regardless of number. However, you must follow the lead suit (the suit of the first number card) if you can, and may only play black when you have no cards of the led suit.",
-
   "rulesSkSpecialTitle": "Special Card Rules",
   "rulesSkSpecialEscapeTitle": "Escape",
   "rulesSkSpecialEscapeLine1": "Never wins a trick. Can be played at any time regardless of suit following.",
@@ -1105,13 +1253,10 @@
   "rulesSkTigressPreviewTitle": "In-game display example",
   "rulesSkTigressChoiceEscape": "Played as Escape",
   "rulesSkTigressChoicePirate": "Played as Pirate",
-
   "rulesSkFlowTitle": "Turn Sequence",
   "rulesSkFlowBody": "1. In Round N, each player receives N cards. (Rounds 1–10)\n2. All players simultaneously predict (bid) the number of tricks they will win.\n3. Starting from the lead player, cards are played following suit-following rules.\n4. After each round, scores are calculated based on bid success/failure.",
-
   "rulesSkScoringTitle": "Scoring",
   "rulesSkScoringBody": "• Bid 0 success (0 tricks won): +10 × round number\n• Bid 0 failure: -10 × round number\n• Bid N success (exactly N tricks won): +20 × N + bonus\n• Bid N failure: -10 × |difference| (no bonus)\n• Bonuses are only awarded when the bid is exact.",
-
   "rulesSkExample1Title": "Example 1. Simple bid success",
   "rulesSkExample1Setup": "Round 3 · Bid 2 · 2 tricks won · No bonus",
   "rulesSkExample1Calc": "20 × 2 = 40",
@@ -1136,23 +1281,19 @@
   "rulesSkExample6Setup": "Round 7 · Bid 0 · 1 trick won",
   "rulesSkExample6Calc": "-10 × 7 = -70",
   "rulesSkExample6Result": "-70 pts",
-
   "rulesSkWinTitle": "Victory Condition",
   "rulesSkWinBody": "After all 10 rounds, the player with the highest cumulative score wins.",
-
   "rulesSkExpansionTitle": "Expansions (Optional)",
   "skGameIncludedExpansions": "Included Expansions",
   "rulesSkExpansionBody": "Each expansion can be individually selected when creating a room. Expansion cards are shuffled into the base deck.",
-  "rulesSkExpKraken": "\uD83D\uDC19 Kraken",
+  "rulesSkExpKraken": "🐙 Kraken",
   "rulesSkExpKrakenDesc": "A trick containing the Kraken is voided. No one wins the trick and no bonuses are awarded. The player who would have won without the Kraken leads the next trick.",
-  "rulesSkExpWhiteWhale": "\uD83D\uDC0B White Whale",
+  "rulesSkExpWhiteWhale": "🐋 White Whale",
   "rulesSkExpWhiteWhaleDesc": "Neutralizes all special card effects. Only number cards are compared in the trick, and the highest number wins regardless of suit. If no number cards are present, the trick is voided.",
-  "rulesSkExpLoot": "\uD83D\uDCB0 Loot",
+  "rulesSkExpLoot": "💰 Loot",
   "rulesSkExpLootDesc": "The trick winner earns +20 bonus per Loot card in the trick, and each player who played a Loot card also earns +20 as their own bonus. (Only awarded on bid success)",
-
   "rulesLlGoalTitle": "Game Objective",
   "rulesLlGoalBody": "A card game for 2–4 players. Each round, the last player standing or the player with the highest card when the deck runs out wins a token. The first player to collect enough tokens wins the game.",
-
   "rulesLlCardCompositionTitle": "Card Composition (16 cards total)",
   "rulesLlGuard": "Guard",
   "rulesLlGuardSub": "Guess an opponent's card to eliminate them",
@@ -1170,7 +1311,6 @@
   "rulesLlCountessSub": "Must be played if holding King or Prince",
   "rulesLlPrincess": "Princess",
   "rulesLlPrincessSub": "Eliminated if played or discarded",
-
   "rulesLlCardEffectsTitle": "Detailed Card Effects",
   "rulesLlEffectGuardTitle": "Guard (1)",
   "rulesLlEffectGuardLine1": "Name a player and guess a non-Guard card they might hold.",
@@ -1192,13 +1332,10 @@
   "rulesLlEffectCountessLine2": "Otherwise, it can be freely played and has no effect.",
   "rulesLlEffectPrincessTitle": "Princess (8)",
   "rulesLlEffectPrincessLine1": "If this card is played or discarded for any reason, you are immediately eliminated.",
-
   "rulesLlFlowTitle": "Turn Sequence",
   "rulesLlFlowBody": "1. Remove 1 card face-down from the deck. (In a 2-player game, 3 additional cards are removed face-up.)\n2. Deal 1 card to each player.\n3. On your turn, draw 1 card from the deck, then play 1 of your 2 cards and resolve its effect.\n4. After resolving the effect, play passes to the next player.\n5. The round ends when only 1 player remains or the deck is empty.",
-
   "rulesLlWinTitle": "Victory Condition",
   "rulesLlWinBody": "When the round ends, the surviving player with the highest card wins a token. Tiebreakers (in order):\n1. Highest total value of cards played during the round.\n2. If still tied, all tied players win a token.\n\nTokens needed to win:\n• 2 players: 4 tokens\n• 3 players: 3 tokens\n• 4 players: 2 tokens",
-
   "rulesTabMighty": "Mighty",
   "rulesMtGoalTitle": "Game Objective",
   "rulesMtGoalBody": "A trick-taking card game for 5 or 6 players. One player becomes the declarer and chooses a friend; together they try to win enough point cards to meet the bid. The remaining players form the defence and try to stop them.\n\nWith 6 players the kill-mighty variant applies automatically. If the host locks one seat, the room plays classic 5-player mighty.",
@@ -1231,19 +1368,31 @@
   "rulesMtScoringBody": "20 point cards in the deck (A, K, Q, J, 10 × 4 suits = 20).\n\n[Success Score]\nBase = (Bid − minBid + 1) × 2 + (points collected − bid)\n\nDistribution:\n• Declarer: Base × 2\n• Friend: Base × 1\n• Each Defender: −Base\n\nMultipliers (stack):\n• Solo (no friend): ×2\n• Run (all 20 pts): ×2\n• No Trump: ×2\n• Bid 20: ×2\nMax: ×16 (solo + run + NT + bid 20)\n\n[Failure Score]\nUnit = (bid − points collected)\n\nDistribution:\n• Declarer: −Unit × 2\n• Friend: −Unit\n• Each Defender: +Unit\n\nFailure multipliers:\n• Solo (no friend): declarer −Unit × 2 × 2 = ×4 (no partner, one extra defender)\n• Backrun (declarer team ≤ 10 pts collected = defenders ≥ 10 pts): ×2 to all sides, regardless of bid level\n\n[Success example]\nBid 13, 15 pts with a friend:\nBase = (1×2) + 2 = 4\nDeclarer +8, Friend +4, Defenders −4 each\n\n[Failure example]\nBid 17, 15 pts with a friend (short by 2):\nUnit = 2  (no backrun)\nDeclarer −4, Friend −2, Defenders +2 each\n\n[Failure + backrun]\nBid 17, 10 pts (backrun):\nUnit = 7 × 2 = 14\nDeclarer −28, Friend −14, Defenders +14 each\n\n[Failure + solo + backrun]\nBid 17, solo, 5 pts (short by 12, backrun):\nUnit = 12 × 2 = 24\nDeclarer −24 × 4 = −96, Defenders +24 each",
   "rulesMtWinTitle": "Victory Condition",
   "rulesMtWinBody": "After all 10 tricks are played, count the point cards collected by the declarer's team.\n\n• If they meet or exceed the bid → Declarer team wins.\n• If they fall short → Defence team wins.\n\nScores are accumulated over multiple rounds. The player with the highest score at the end of the session wins.",
-
   "mtPhaseBidding": "Bidding",
   "mtPhaseKitty": "Kitty",
   "mtPhasePlaying": "Playing",
   "mtPhaseRoundEnd": "Round End",
   "mtPhaseGameEnd": "Game End",
   "mtRoundPhase": "Round {round} · {phase}",
-  "@mtRoundPhase": { "placeholders": { "round": {}, "phase": {} } },
+  "@mtRoundPhase": {
+    "placeholders": {
+      "round": {},
+      "phase": {}
+    }
+  },
   "mtRoundOnly": "Round {round}",
-  "@mtRoundOnly": { "placeholders": { "round": {} } },
+  "@mtRoundOnly": {
+    "placeholders": {
+      "round": {}
+    }
+  },
   "mtSolo": "Solo",
   "mtFriendLabel": "Friend: {label}",
-  "@mtFriendLabel": { "placeholders": { "label": {} } },
+  "@mtFriendLabel": {
+    "placeholders": {
+      "label": {}
+    }
+  },
   "mtChat": "Chat",
   "mtTypeMessage": "Type a message...",
   "mtLeaveGame": "Leave Game?",
@@ -1253,25 +1402,61 @@
   "mtDeclarer": "Declarer",
   "mtFriend": "Friend",
   "mtPointCardsTitle": "{name} - Point Cards ({count}P)",
-  "@mtPointCardsTitle": { "placeholders": { "name": {}, "count": {} } },
+  "@mtPointCardsTitle": {
+    "placeholders": {
+      "name": {},
+      "count": {}
+    }
+  },
   "mtNoPointCards": "No point cards yet",
   "mtClose": "Close",
   "mtYourTurn": "Your turn",
   "mtWaiting": "Waiting...",
   "mtPlayed": "{current}/{total} played",
-  "@mtPlayed": { "placeholders": { "current": {}, "total": {} } },
+  "@mtPlayed": {
+    "placeholders": {
+      "current": {},
+      "total": {}
+    }
+  },
   "mtFriendRevealed": "Friend: {card} → {name}",
-  "@mtFriendRevealed": { "placeholders": { "card": {}, "name": {} } },
+  "@mtFriendRevealed": {
+    "placeholders": {
+      "card": {},
+      "name": {}
+    }
+  },
   "mtFriendHidden": "Friend: {card}",
-  "@mtFriendHidden": { "placeholders": { "card": {} } },
+  "@mtFriendHidden": {
+    "placeholders": {
+      "card": {}
+    }
+  },
   "mtWins": "{name} wins!",
-  "@mtWins": { "placeholders": { "name": {} } },
+  "@mtWins": {
+    "placeholders": {
+      "name": {}
+    }
+  },
   "mtCurrentBid": "Current bid: {points} {suit}",
-  "@mtCurrentBid": { "placeholders": { "points": {}, "suit": {} } },
+  "@mtCurrentBid": {
+    "placeholders": {
+      "points": {},
+      "suit": {}
+    }
+  },
   "mtCurrentBidPoints": "Current bid: {points}",
-  "@mtCurrentBidPoints": { "placeholders": { "points": {} } },
+  "@mtCurrentBidPoints": {
+    "placeholders": {
+      "points": {}
+    }
+  },
   "mtBidPoints": "Bid {points}",
-  "@mtBidPoints": { "placeholders": { "points": {} } },
+  "@mtBidPoints": {
+    "placeholders": {
+      "points": {}
+    }
+  },
   "mtBidInProgress": "Bidding in progress",
   "mtPass": "Pass",
   "mtDealMiss": "Deal miss",
@@ -1310,25 +1495,58 @@
   "mtPrevTrickTitle": "Trick {number}",
   "mtPrevTrickWinner": "Winner: {name}",
   "mtDealMissPool": "Deal miss {points}",
-  "@mtDealMissPool": { "placeholders": { "points": {} } },
+  "@mtDealMissPool": {
+    "placeholders": {
+      "points": {}
+    }
+  },
   "mtDealMissReveal": "{name} declared deal miss with a {score}-point hand",
-  "@mtDealMissReveal": { "placeholders": { "name": {}, "score": {} } },
+  "@mtDealMissReveal": {
+    "placeholders": {
+      "name": {},
+      "score": {}
+    }
+  },
   "mtDealMissTapToClose": "Tap anywhere to dismiss",
   "mtKillPhase": "Kill Declaration",
   "mtKillPhasePrompt": "Choose a card to kill",
   "mtKillPhaseWait": "{name} is choosing a card to kill",
-  "@mtKillPhaseWait": { "placeholders": { "name": {} } },
+  "@mtKillPhaseWait": {
+    "placeholders": {
+      "name": {}
+    }
+  },
   "mtKillResultKilled": "{declarer} named {target} → {victim} eliminated",
-  "@mtKillResultKilled": { "placeholders": { "declarer": {}, "target": {}, "victim": {} } },
+  "@mtKillResultKilled": {
+    "placeholders": {
+      "declarer": {},
+      "target": {},
+      "victim": {}
+    }
+  },
   "mtKillResultSuicide": "{declarer} named {target} but it was in the kitty. Self-KO!",
-  "@mtKillResultSuicide": { "placeholders": { "declarer": {}, "target": {} } },
+  "@mtKillResultSuicide": {
+    "placeholders": {
+      "declarer": {},
+      "target": {}
+    }
+  },
   "mtKillExcluded": "OUT",
   "mtKillConfirm": "Kill",
   "mtPoints": "Points:",
   "mtBid": "Bid {points} {suit}",
-  "@mtBid": { "placeholders": { "points": {}, "suit": {} } },
+  "@mtBid": {
+    "placeholders": {
+      "points": {},
+      "suit": {}
+    }
+  },
   "mtWaitingFor": "Waiting for {name}",
-  "@mtWaitingFor": { "placeholders": { "name": {} } },
+  "@mtWaitingFor": {
+    "placeholders": {
+      "name": {}
+    }
+  },
   "mtExchangingKitty": "Declarer is exchanging kitty...",
   "mtDiscard3": "Discard 3 cards",
   "mtFriendColon": "Friend:",
@@ -1342,11 +1560,17 @@
   "mtTrumpPenalty": "Bid +{penalty}",
   "@mtTrumpPenalty": {
     "placeholders": {
-      "penalty": {"type": "int"}
+      "penalty": {
+        "type": "int"
+      }
     }
   },
   "mtPlayTimer": "Play ({seconds}s)",
-  "@mtPlayTimer": { "placeholders": { "seconds": {} } },
+  "@mtPlayTimer": {
+    "placeholders": {
+      "seconds": {}
+    }
+  },
   "mtPlay": "Play",
   "mtSelectCard": "Select a card",
   "mtJokerSelectSuit": "Select a joker suit",
@@ -1358,15 +1582,31 @@
   "mtYes": "Yes",
   "mtNo": "No",
   "mtRoundResult": "Round {round} Result",
-  "@mtRoundResult": { "placeholders": { "round": {} } },
+  "@mtRoundResult": {
+    "placeholders": {
+      "round": {}
+    }
+  },
   "mtDeclarerWins": "Declarer wins! ({points}P)",
-  "@mtDeclarerWins": { "placeholders": { "points": {} } },
+  "@mtDeclarerWins": {
+    "placeholders": {
+      "points": {}
+    }
+  },
   "mtDeclarerFails": "Declarer fails ({points}P)",
-  "@mtDeclarerFails": { "placeholders": { "points": {} } },
+  "@mtDeclarerFails": {
+    "placeholders": {
+      "points": {}
+    }
+  },
   "mtNextRound": "Next round preparing...",
   "mtGameOver": "Game Over",
   "mtReturningIn": "Returning in {seconds}...",
-  "@mtReturningIn": { "placeholders": { "seconds": {} } },
+  "@mtReturningIn": {
+    "placeholders": {
+      "seconds": {}
+    }
+  },
   "mtReturningToRoom": "Returning to room...",
   "mtScoreHistory": "Score History",
   "mtRoundAbbr": "R",
@@ -1374,7 +1614,11 @@
   "mtContract": "Contract",
   "mtContractWithPoints": "Bid {points}",
   "@mtContractWithPoints": {
-    "placeholders": { "points": { "type": "int" } }
+    "placeholders": {
+      "points": {
+        "type": "int"
+      }
+    }
   },
   "mtLead": "Lead",
   "mtResult": "Result",
@@ -1384,7 +1628,6 @@
   "mtFriendCardSolo": "Solo",
   "mtFriendCard1st": "1st Trick",
   "mtJokerAbbr": "JK",
-
   "friendsTitle": "Friends",
   "friendsTabFriends": "Friends",
   "friendsTabSearch": "Search",
@@ -1393,7 +1636,9 @@
   "friendsStatusPlayingInRoom": "Playing in {roomName}",
   "@friendsStatusPlayingInRoom": {
     "placeholders": {
-      "roomName": { "type": "String" }
+      "roomName": {
+        "type": "String"
+      }
     }
   },
   "friendsStatusOnline": "Online",
@@ -1405,7 +1650,9 @@
   "friendsInviteSent": "Sent an invite to {nickname}",
   "@friendsInviteSent": {
     "placeholders": {
-      "nickname": { "type": "String" }
+      "nickname": {
+        "type": "String"
+      }
     }
   },
   "friendsJoinRoom": "Join",
@@ -1419,7 +1666,9 @@
   "friendsRequestSentSnackbar": "Sent a friend request to {nickname}",
   "@friendsRequestSentSnackbar": {
     "placeholders": {
-      "nickname": { "type": "String" }
+      "nickname": {
+        "type": "String"
+      }
     }
   },
   "friendsAddFriend": "Add Friend",
@@ -1427,7 +1676,9 @@
   "friendsAccepted": "You are now friends with {nickname}",
   "@friendsAccepted": {
     "placeholders": {
-      "nickname": { "type": "String" }
+      "nickname": {
+        "type": "String"
+      }
     }
   },
   "friendsAccept": "Accept",
@@ -1439,16 +1690,19 @@
   "friendsRemoveConfirm": "Remove {nickname} from your friends list?",
   "@friendsRemoveConfirm": {
     "placeholders": {
-      "nickname": { "type": "String" }
+      "nickname": {
+        "type": "String"
+      }
     }
   },
   "friendsRemoved": "Removed {nickname} from your friends list",
   "@friendsRemoved": {
     "placeholders": {
-      "nickname": { "type": "String" }
+      "nickname": {
+        "type": "String"
+      }
     }
   },
-
   "rankingTitle": "Rankings",
   "rankingTichu": "Tichu",
   "rankingSkullKing": "Skull King",
@@ -1456,10 +1710,18 @@
   "rankingRecordWithWinRate": "Record {total}G {wins}W {losses}L · Win rate {winRate}%",
   "@rankingRecordWithWinRate": {
     "placeholders": {
-      "total": { "type": "int" },
-      "wins": { "type": "int" },
-      "losses": { "type": "int" },
-      "winRate": { "type": "int" }
+      "total": {
+        "type": "int"
+      },
+      "wins": {
+        "type": "int"
+      },
+      "losses": {
+        "type": "int"
+      },
+      "winRate": {
+        "type": "int"
+      }
     }
   },
   "rankingSeasonScore": "Season Score",
@@ -1474,9 +1736,15 @@
   "rankingMightyMatchDetail": "{declarer} bid {bid} {trump}",
   "@rankingMightyMatchDetail": {
     "placeholders": {
-      "declarer": { "type": "String" },
-      "bid": { "type": "int" },
-      "trump": { "type": "String" }
+      "declarer": {
+        "type": "String"
+      },
+      "bid": {
+        "type": "int"
+      },
+      "trump": {
+        "type": "String"
+      }
     }
   },
   "rankingLoveLetterRecord": "Love Letter Record",
@@ -1485,21 +1753,31 @@
   "rankingRecordFormat": "{games}G {wins}W {losses}L",
   "@rankingRecordFormat": {
     "placeholders": {
-      "games": { "type": "int" },
-      "wins": { "type": "int" },
-      "losses": { "type": "int" }
+      "games": {
+        "type": "int"
+      },
+      "wins": {
+        "type": "int"
+      },
+      "losses": {
+        "type": "int"
+      }
     }
   },
   "rankingGold": "{gold} Gold",
   "@rankingGold": {
     "placeholders": {
-      "gold": { "type": "int" }
+      "gold": {
+        "type": "int"
+      }
     }
   },
   "rankingDesertions": "Desertions {count}",
   "@rankingDesertions": {
     "placeholders": {
-      "count": { "type": "int" }
+      "count": {
+        "type": "int"
+      }
     }
   },
   "rankingRecentMatchesHeader": "Recent Matches (3)",
@@ -1510,32 +1788,43 @@
   "rankingSkRankScore": "#{rank} {score}pts",
   "@rankingSkRankScore": {
     "placeholders": {
-      "rank": { "type": "String" },
-      "score": { "type": "int" }
+      "rank": {
+        "type": "String"
+      },
+      "score": {
+        "type": "int"
+      }
     }
   },
   "rankingRecentMatchesTitle": "Recent Matches",
   "rankingMannerScore": "Manner",
-
   "shopTitle": "Shop",
   "shopGoldAmount": "{gold} Gold",
   "@shopGoldAmount": {
     "placeholders": {
-      "gold": { "type": "int" }
+      "gold": {
+        "type": "int",
+        "format": "decimalPattern"
+      }
     }
   },
   "shopHowToEarn": "How to Earn",
   "shopDesertionCount": "Left {count}",
   "@shopDesertionCount": {
     "placeholders": {
-      "count": { "type": "int" }
+      "count": {
+        "type": "int"
+      }
     }
   },
   "shopGoldHistory": "Gold History",
   "shopGoldCurrent": "Current gold: {gold}",
   "@shopGoldCurrent": {
     "placeholders": {
-      "gold": { "type": "int" }
+      "gold": {
+        "type": "int",
+        "format": "decimalPattern"
+      }
     }
   },
   "shopGoldHistoryDesc": "Shows game results, ad rewards, shop purchases, and season rewards in recent order.",
@@ -1578,9 +1867,15 @@
   "shopExtendConfirm": "You already own this item.\nExtend {name} by {days} days?\n\nCost: {price} Gold",
   "@shopExtendConfirm": {
     "placeholders": {
-      "name": { "type": "String" },
-      "days": { "type": "int" },
-      "price": { "type": "int" }
+      "name": {
+        "type": "String"
+      },
+      "days": {
+        "type": "int"
+      },
+      "price": {
+        "type": "int"
+      }
     }
   },
   "shopExtendAction": "Extend",
@@ -1595,14 +1890,18 @@
   "shopTagDuration": "{days}d duration",
   "@shopTagDuration": {
     "placeholders": {
-      "days": { "type": "int" }
+      "days": {
+        "type": "int"
+      }
     }
   },
   "shopTagDurationOnly": "Limited",
   "shopExpireDate": "Expires: {date}",
   "@shopExpireDate": {
     "placeholders": {
-      "date": { "type": "String" }
+      "date": {
+        "type": "String"
+      }
     }
   },
   "shopExpireSoon": "Expiring soon",
@@ -1611,7 +1910,9 @@
   "shopExtendDone": "{name} duration has been extended.",
   "@shopExtendDone": {
     "placeholders": {
-      "name": { "type": "String" }
+      "name": {
+        "type": "String"
+      }
     }
   },
   "shopPurchaseDoneConsumable": "Purchase complete.\nPlease use it from your inventory.",
@@ -1628,14 +1929,18 @@
   "shopDetailDuration": "{days}d duration",
   "@shopDetailDuration": {
     "placeholders": {
-      "days": { "type": "int" }
+      "days": {
+        "type": "int"
+      }
     }
   },
   "shopEffectNicknameChange": "Effect: 1 nickname change",
   "shopEffectLeaveReduce": "Effect: Desertions -{value}",
   "@shopEffectLeaveReduce": {
     "placeholders": {
-      "value": { "type": "String" }
+      "value": {
+        "type": "String"
+      }
     }
   },
   "shopEffectStatsReset": "Effect: Reset all stats (wins/losses/games)",
@@ -1647,7 +1952,9 @@
   "shopPriceGold": "{price} Gold",
   "@shopPriceGold": {
     "placeholders": {
-      "price": { "type": "int" }
+      "price": {
+        "type": "int"
+      }
     }
   },
   "shopNicknameChangeTitle": "Change Nickname",
@@ -1659,12 +1966,15 @@
   "shopAdWatchForGold": "Watch ad for 50 Gold ({current}/{max})",
   "@shopAdWatchForGold": {
     "placeholders": {
-      "current": { "type": "int" },
-      "max": { "type": "int" }
+      "current": {
+        "type": "int"
+      },
+      "max": {
+        "type": "int"
+      }
     }
   },
   "shopAdRewardDone": "Daily ad rewards complete",
-
   "appForceUpdateTitle": "Update Required",
   "appForceUpdateBody": "A new version has been released.\nPlease update to continue using the app.",
   "appForceUpdateButton": "Update",
@@ -1672,7 +1982,6 @@
   "appEulaLoadFailed": "Unable to load Terms of Service. Please check your network connection.",
   "appEulaAgree": "I agree to the Terms of Service",
   "appEulaStart": "Get Started",
-
   "serviceRestoreRefreshingSocial": "Verifying social login info...",
   "serviceRestoreSocialLogin": "Logging in with social account...",
   "serviceRestoreLocalLogin": "Logging in with saved account...",
@@ -1711,45 +2020,57 @@
   "serviceInquiryReply": "Inquiry reply received: {title}",
   "@serviceInquiryReply": {
     "placeholders": {
-      "title": { "type": "String" }
+      "title": {
+        "type": "String"
+      }
     }
   },
   "serviceInquiryDefault": "Inquiry",
   "serviceChatBanned": "Chat restricted ({remaining} remaining)",
   "@serviceChatBanned": {
     "placeholders": {
-      "remaining": { "type": "String" }
+      "remaining": {
+        "type": "String"
+      }
     }
   },
   "serviceChatBanHoursMinutes": "{hours}h {minutes}m",
   "@serviceChatBanHoursMinutes": {
     "placeholders": {
-      "hours": { "type": "int" },
-      "minutes": { "type": "int" }
+      "hours": {
+        "type": "int"
+      },
+      "minutes": {
+        "type": "int"
+      }
     }
   },
   "serviceChatBanMinutes": "{minutes}m",
   "@serviceChatBanMinutes": {
     "placeholders": {
-      "minutes": { "type": "int" }
+      "minutes": {
+        "type": "int"
+      }
     }
   },
   "serviceAdRewardSuccess": "Received 50 Gold! (Remaining: {remaining})",
   "@serviceAdRewardSuccess": {
     "placeholders": {
-      "remaining": { "type": "int" }
+      "remaining": {
+        "type": "int"
+      }
     }
   },
-
   "lobbyLoveLetter": "Love Letter",
   "lobbyLoveLetterBadge": "Love Letter",
   "lobbyLoveLetterPlayers": "Love Letter · {count}P",
   "@lobbyLoveLetterPlayers": {
     "placeholders": {
-      "count": { "type": "int" }
+      "count": {
+        "type": "int"
+      }
     }
   },
-
   "llRound": "Round",
   "llPlay": "Play",
   "llConfirm": "Confirm",
@@ -1761,46 +2082,166 @@
   "llGameEnd": "Game Over",
   "llWins": "Wins",
   "llReturnIn": "Returning in",
-
   "llGuardSelectTarget": "Guard: Select a target and guess a card",
   "llGuardGuessCard": "Guess which card they hold:",
   "llSelectTargetFor": "Select target for:",
-
   "llGuardEffect": "{name} is using Guard...",
-  "@llGuardEffect": { "placeholders": { "name": { "type": "String" } } },
+  "@llGuardEffect": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
   "llSpyEffect": "{name} is using Spy...",
-  "@llSpyEffect": { "placeholders": { "name": { "type": "String" } } },
+  "@llSpyEffect": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
   "llBaronEffect": "{name} is using Baron...",
-  "@llBaronEffect": { "placeholders": { "name": { "type": "String" } } },
+  "@llBaronEffect": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
   "llPrinceEffect": "{name} is using Prince...",
-  "@llPrinceEffect": { "placeholders": { "name": { "type": "String" } } },
+  "@llPrinceEffect": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
   "llKingEffect": "{name} is using King...",
-  "@llKingEffect": { "placeholders": { "name": { "type": "String" } } },
+  "@llKingEffect": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
   "llHandmaidEffect": "{name} used Handmaid",
-  "@llHandmaidEffect": { "placeholders": { "name": { "type": "String" } } },
+  "@llHandmaidEffect": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
   "llBlockedByHandmaid": "{name}'s {card} was blocked by Handmaid",
-  "@llBlockedByHandmaid": { "placeholders": { "name": { "type": "String" }, "card": { "type": "String" } } },
-
+  "@llBlockedByHandmaid": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      },
+      "card": {
+        "type": "String"
+      }
+    }
+  },
   "llGuardCorrect": "{actor} guessed {target}'s card correctly! Eliminated!",
-  "@llGuardCorrect": { "placeholders": { "actor": { "type": "String" }, "target": { "type": "String" } } },
+  "@llGuardCorrect": {
+    "placeholders": {
+      "actor": {
+        "type": "String"
+      },
+      "target": {
+        "type": "String"
+      }
+    }
+  },
   "llGuardWrong": "{actor} guessed wrong about {target}",
-  "@llGuardWrong": { "placeholders": { "actor": { "type": "String" }, "target": { "type": "String" } } },
+  "@llGuardWrong": {
+    "placeholders": {
+      "actor": {
+        "type": "String"
+      },
+      "target": {
+        "type": "String"
+      }
+    }
+  },
   "llSpyReveal": "{target}'s card:",
-  "@llSpyReveal": { "placeholders": { "target": { "type": "String" } } },
+  "@llSpyReveal": {
+    "placeholders": {
+      "target": {
+        "type": "String"
+      }
+    }
+  },
   "llSpySawYour": "{actor} saw your card",
-  "@llSpySawYour": { "placeholders": { "actor": { "type": "String" } } },
+  "@llSpySawYour": {
+    "placeholders": {
+      "actor": {
+        "type": "String"
+      }
+    }
+  },
   "llSpyPeeked": "{actor} peeked at {target}'s card",
-  "@llSpyPeeked": { "placeholders": { "actor": { "type": "String" }, "target": { "type": "String" } } },
+  "@llSpyPeeked": {
+    "placeholders": {
+      "actor": {
+        "type": "String"
+      },
+      "target": {
+        "type": "String"
+      }
+    }
+  },
   "llBaronTie": "{actor} and {target} tied",
-  "@llBaronTie": { "placeholders": { "actor": { "type": "String" }, "target": { "type": "String" } } },
+  "@llBaronTie": {
+    "placeholders": {
+      "actor": {
+        "type": "String"
+      },
+      "target": {
+        "type": "String"
+      }
+    }
+  },
   "llBaronLose": "{loser} was eliminated by Baron comparison with {winner}",
-  "@llBaronLose": { "placeholders": { "loser": { "type": "String" }, "winner": { "type": "String" } } },
+  "@llBaronLose": {
+    "placeholders": {
+      "loser": {
+        "type": "String"
+      },
+      "winner": {
+        "type": "String"
+      }
+    }
+  },
   "llPrinceEliminated": "{target} was forced to discard Princess! Eliminated!",
-  "@llPrinceEliminated": { "placeholders": { "target": { "type": "String" } } },
+  "@llPrinceEliminated": {
+    "placeholders": {
+      "target": {
+        "type": "String"
+      }
+    }
+  },
   "llPrinceDiscard": "{target} discarded and drew a new card",
-  "@llPrinceDiscard": { "placeholders": { "target": { "type": "String" } } },
+  "@llPrinceDiscard": {
+    "placeholders": {
+      "target": {
+        "type": "String"
+      }
+    }
+  },
   "llKingSwap": "{actor} and {target} swapped hands",
-  "@llKingSwap": { "placeholders": { "actor": { "type": "String" }, "target": { "type": "String" } } },
+  "@llKingSwap": {
+    "placeholders": {
+      "actor": {
+        "type": "String"
+      },
+      "target": {
+        "type": "String"
+      }
+    }
+  },
   "llEliminated": "OUT",
   "llSetAsideFaceUp": "Set aside (face-up)",
   "llSetAsideHidden": "Set aside (hidden)",
@@ -1813,13 +2254,14 @@
   "llCardKing": "King",
   "llCardCountess": "Countess",
   "llCardPrincess": "Princess",
-
   "llCardGuideTitle": "Card Guide",
   "llGuardPeek": "Peek",
   "llDiscardedCardsTitle": "{playerName}'s discards",
   "@llDiscardedCardsTitle": {
     "placeholders": {
-      "playerName": {"type": "String"}
+      "playerName": {
+        "type": "String"
+      }
     }
   },
   "llDescGuard": "1 · Guard: Name a player and guess their card. If correct, they're eliminated!",
@@ -1830,34 +2272,66 @@
   "llDescKing": "6 · King: Trade cards with another player.",
   "llDescCountess": "7 · Countess: Must be played if you hold King or Prince.",
   "llDescPrincess": "8 · Princess: If you play this card, you are eliminated!",
-
   "maintenanceTitle": "Server Under Maintenance",
   "maintenanceCountdown": "Remaining: {time}",
   "@maintenanceCountdown": {
     "placeholders": {
-      "time": { "type": "String" }
+      "time": {
+        "type": "String"
+      }
     }
   },
   "maintenanceRetry": "Retry",
   "maintenanceEnded": "Maintenance over, reconnecting...",
-
   "goldHistoryShopPurchase": "Shop purchase",
   "goldHistoryIapPurchase": "Gold top-up",
   "goldHistoryAttendance": "Daily check-in",
   "attendanceBannerTitle": "Today's check-in! Day {day}",
-  "@attendanceBannerTitle": { "placeholders": { "day": { "type": "int" } } },
+  "@attendanceBannerTitle": {
+    "placeholders": {
+      "day": {
+        "type": "int"
+      }
+    }
+  },
   "attendanceBannerSubtitle": "Claim +{reward} gold",
-  "@attendanceBannerSubtitle": { "placeholders": { "reward": { "type": "int", "format": "decimalPattern" } } },
+  "@attendanceBannerSubtitle": {
+    "placeholders": {
+      "reward": {
+        "type": "int",
+        "format": "decimalPattern"
+      }
+    }
+  },
   "attendanceBannerCompletedTitle": "Day {day} check-in done! 🎉",
-  "@attendanceBannerCompletedTitle": { "placeholders": { "day": { "type": "int" } } },
+  "@attendanceBannerCompletedTitle": {
+    "placeholders": {
+      "day": {
+        "type": "int"
+      }
+    }
+  },
   "attendanceBannerCompletedSubtitle": "Come back tomorrow for the next reward",
   "attendanceDialogTitle": "Daily check-in",
   "attendanceResetInfo": "Resets daily at {clock}",
-  "@attendanceResetInfo": { "placeholders": { "clock": { "type": "String" } } },
+  "@attendanceResetInfo": {
+    "placeholders": {
+      "clock": {
+        "type": "String"
+      }
+    }
+  },
   "attendanceDoneToday": "Checked in for today! Come back tomorrow 🎉",
   "attendanceClaiming": "Processing...",
   "attendanceWatchAdAndClaim": "Watch ad & claim {reward} gold",
-  "@attendanceWatchAdAndClaim": { "placeholders": { "reward": { "type": "int", "format": "decimalPattern" } } },
+  "@attendanceWatchAdAndClaim": {
+    "placeholders": {
+      "reward": {
+        "type": "int",
+        "format": "decimalPattern"
+      }
+    }
+  },
   "attendanceAdNotReady": "Ad is still loading. Please try again in a moment.",
   "attendanceAdLoading": "Loading ad…",
   "goldHistoryIapRefund": "Gold refund",
@@ -1879,30 +2353,41 @@
   "goldHistoryFinalScore": "Final score {scoreA}:{scoreB}",
   "@goldHistoryFinalScore": {
     "placeholders": {
-      "scoreA": { "type": "String" },
-      "scoreB": { "type": "String" }
+      "scoreA": {
+        "type": "String"
+      },
+      "scoreB": {
+        "type": "String"
+      }
     }
   },
   "goldHistorySeasonRank": "Season rank: {rank}",
   "@goldHistorySeasonRank": {
     "placeholders": {
-      "rank": { "type": "String" }
+      "rank": {
+        "type": "String"
+      }
     }
   },
   "goldHistorySkRankScore": "Rank {rank} ({score} pts)",
   "@goldHistorySkRankScore": {
     "placeholders": {
-      "rank": { "type": "String" },
-      "score": { "type": "String" }
+      "rank": {
+        "type": "String"
+      },
+      "score": {
+        "type": "String"
+      }
     }
   },
   "goldHistoryAdminBy": "By admin: {admin}",
   "@goldHistoryAdminBy": {
     "placeholders": {
-      "admin": { "type": "String" }
+      "admin": {
+        "type": "String"
+      }
     }
   },
-
   "adminCenterTitle": "Admin Center",
   "adminTabInquiries": "Inquiries",
   "adminTabReports": "Reports",
@@ -1944,41 +2429,65 @@
   "adminReportCount": "{count} reports",
   "@adminReportCount": {
     "placeholders": {
-      "count": { "type": "int" }
+      "count": {
+        "type": "int"
+      }
     }
   },
   "adminReportRoom": "Room: {roomId}",
   "@adminReportRoom": {
     "placeholders": {
-      "roomId": { "type": "String" }
+      "roomId": {
+        "type": "String"
+      }
     }
   },
   "adminInquiryTitle": "Inquiry #{id}",
   "@adminInquiryTitle": {
     "placeholders": {
-      "id": { "type": "int" }
+      "id": {
+        "type": "int"
+      }
     }
   },
   "adminReportTitle": "Report: {nickname}",
   "@adminReportTitle": {
     "placeholders": {
-      "nickname": { "type": "String" }
+      "nickname": {
+        "type": "String"
+      }
     }
   },
   "adminWinLoss": "{wins}W/{losses}L",
   "@adminWinLoss": {
     "placeholders": {
-      "wins": { "type": "int" },
-      "losses": { "type": "int" }
+      "wins": {
+        "type": "int"
+      },
+      "losses": {
+        "type": "int"
+      }
     }
   },
   "profileBotSubtitle": "Bot",
   "profileBotHeadline": "AI opponent",
   "profileBotBody": "Bots are not accounts, so there are no stats, and friend, block and report don't apply.",
   "spectatorCardCount": "{count} cards",
-  "@spectatorCardCount": {"placeholders": {"count": {"type": "int"}}},
+  "@spectatorCardCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "spectatorTargetScore": "to {score}",
-  "@spectatorTargetScore": {"placeholders": {"score": {"type": "int"}}},
+  "@spectatorTargetScore": {
+    "placeholders": {
+      "score": {
+        "type": "int"
+      }
+    }
+  },
   "lobbyShareSheetTitle": "Share room",
   "lobbyShareCopyLink": "Copy link",
   "lobbyShareKakao": "Share on KakaoTalk",
@@ -1999,7 +2508,16 @@
   "shopAdWatchTitle": "Watch ad for 50 Gold",
   "shopAdWatchProgress": "{current}/{max} today",
   "shopAdRewardDoneSubtitle": "Come back tomorrow",
-  "@shopAdWatchProgress": {"placeholders": {"current": {"type": "int"}, "max": {"type": "int"}}},
+  "@shopAdWatchProgress": {
+    "placeholders": {
+      "current": {
+        "type": "int"
+      },
+      "max": {
+        "type": "int"
+      }
+    }
+  },
   "profilePrivateTitle": "This profile is private",
   "profilePrivateBody": "They show their records to friends only",
   "profilePrivateHidePhoto": "Hide photo",

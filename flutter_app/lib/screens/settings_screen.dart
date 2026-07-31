@@ -6,6 +6,7 @@ import 'package:url_launcher/url_launcher.dart';
 import '../l10n/app_localizations.dart';
 import '../l10n/l10n_helpers.dart';
 import '../services/game_service.dart';
+import '../widgets/choice_pill.dart';
 import '../widgets/player_profile_header.dart';
 import '../widgets/profile_avatar.dart';
 import '../services/auth_service.dart';
@@ -273,128 +274,89 @@ class _SettingsScreenState extends State<SettingsScreen> {
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(20),
           ),
+          titlePadding: const EdgeInsets.fromLTRB(20, 20, 20, 0),
+          contentPadding: const EdgeInsets.fromLTRB(20, 14, 20, 8),
+          backgroundColor: const Color(0xFFFDFBFA),
           title: Row(
             children: [
-              const Icon(Icons.help_outline, color: Color(0xFFBA68C8)),
-              const SizedBox(width: 8),
+              Container(
+                width: 32,
+                height: 32,
+                decoration: BoxDecoration(
+                  color: const Color(0xFFF6EDFA),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: const Icon(
+                  Icons.help_outline,
+                  size: 19,
+                  color: Color(0xFFBA68C8),
+                ),
+              ),
+              const SizedBox(width: 10),
               Flexible(
-                child: Text(l10n.inquiryTitle, overflow: TextOverflow.ellipsis),
+                child: Text(
+                  l10n.inquiryTitle,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(
+                    fontSize: 17,
+                    fontWeight: FontWeight.w800,
+                    color: Color(0xFF4A3A33),
+                  ),
+                ),
               ),
             ],
           ),
-          content: SingleChildScrollView(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  l10n.inquiryCategory,
-                  style: const TextStyle(
-                    fontSize: 13,
-                    color: Color(0xFF8A8A8A),
+          content: SizedBox(
+            width: 360,
+            child: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  formFieldLabel(l10n.inquiryCategory),
+                  // One pill style for the four categories. Material's
+                  // ChoiceChip drew its own outline and a check mark, so the
+                  // selected one grew wider than the rest and the row reflowed
+                  // as you tapped.
+                  Wrap(
+                    spacing: 8,
+                    runSpacing: 8,
+                    children: [
+                      for (final entry in <MapEntry<String, String>>[
+                        MapEntry('bug', l10n.inquiryCategoryBug),
+                        MapEntry('suggestion', l10n.inquiryCategorySuggestion),
+                        MapEntry('payment', l10n.inquiryCategoryPayment),
+                        MapEntry('other', l10n.inquiryCategoryOther),
+                      ])
+                        ChoicePill(
+                          label: entry.value,
+                          selected: selectedCategory == entry.key,
+                          onTap: () =>
+                              setState(() => selectedCategory = entry.key),
+                        ),
+                    ],
                   ),
-                ),
-                const SizedBox(height: 6),
-                Wrap(
-                  spacing: 8,
-                  children: [
-                    ChoiceChip(
-                      label: Text(l10n.inquiryCategoryBug),
-                      selected: selectedCategory == 'bug',
-                      onSelected: (_) =>
-                          setState(() => selectedCategory = 'bug'),
-                      selectedColor: const Color(0xFFEDE7F6),
-                      labelStyle: TextStyle(
-                        color: selectedCategory == 'bug'
-                            ? const Color(0xFF6A4FA3)
-                            : const Color(0xFF5A4038),
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                    ChoiceChip(
-                      label: Text(l10n.inquiryCategorySuggestion),
-                      selected: selectedCategory == 'suggestion',
-                      onSelected: (_) =>
-                          setState(() => selectedCategory = 'suggestion'),
-                      selectedColor: const Color(0xFFEDE7F6),
-                      labelStyle: TextStyle(
-                        color: selectedCategory == 'suggestion'
-                            ? const Color(0xFF6A4FA3)
-                            : const Color(0xFF5A4038),
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                    ChoiceChip(
-                      label: Text(l10n.inquiryCategoryPayment),
-                      selected: selectedCategory == 'payment',
-                      onSelected: (_) =>
-                          setState(() => selectedCategory = 'payment'),
-                      selectedColor: const Color(0xFFEDE7F6),
-                      labelStyle: TextStyle(
-                        color: selectedCategory == 'payment'
-                            ? const Color(0xFF6A4FA3)
-                            : const Color(0xFF5A4038),
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                    ChoiceChip(
-                      label: Text(l10n.inquiryCategoryOther),
-                      selected: selectedCategory == 'other',
-                      onSelected: (_) =>
-                          setState(() => selectedCategory = 'other'),
-                      selectedColor: const Color(0xFFEDE7F6),
-                      labelStyle: TextStyle(
-                        color: selectedCategory == 'other'
-                            ? const Color(0xFF6A4FA3)
-                            : const Color(0xFF5A4038),
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 12),
-                Text(
-                  l10n.inquiryFieldTitle,
-                  style: const TextStyle(
-                    fontSize: 13,
-                    color: Color(0xFF8A8A8A),
+                  const SizedBox(height: 16),
+                  formFieldLabel(l10n.inquiryFieldTitle),
+                  TextField(
+                    controller: _inquiryTitleController,
+                    maxLength: 60,
+                    style: const TextStyle(fontSize: 14),
+                    decoration: formFieldDecoration(l10n.inquiryFieldTitleHint),
                   ),
-                ),
-                const SizedBox(height: 4),
-                TextField(
-                  controller: _inquiryTitleController,
-                  decoration: InputDecoration(
-                    hintText: l10n.inquiryFieldTitleHint,
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    contentPadding: const EdgeInsets.symmetric(
-                      horizontal: 12,
-                      vertical: 10,
+                  const SizedBox(height: 16),
+                  formFieldLabel(l10n.inquiryFieldContent),
+                  TextField(
+                    controller: _inquiryContentController,
+                    maxLines: 6,
+                    maxLength: 1000,
+                    style: const TextStyle(fontSize: 14),
+                    decoration: formFieldDecoration(
+                      l10n.inquiryFieldContentHint,
                     ),
                   ),
-                ),
-                const SizedBox(height: 12),
-                Text(
-                  l10n.inquiryFieldContent,
-                  style: const TextStyle(
-                    fontSize: 13,
-                    color: Color(0xFF8A8A8A),
-                  ),
-                ),
-                const SizedBox(height: 4),
-                TextField(
-                  controller: _inquiryContentController,
-                  maxLines: 5,
-                  decoration: InputDecoration(
-                    hintText: l10n.inquiryFieldContentHint,
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    contentPadding: const EdgeInsets.all(12),
-                  ),
-                ),
-              ],
+                ],
+              ),
             ),
           ),
           actions: [

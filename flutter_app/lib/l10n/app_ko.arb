@@ -1432,5 +1432,6 @@
   "customTitleSave": "적용",
   "customTitleButton": "칭호 만들기",
   "customTitleSaved": "칭호가 적용되었습니다",
-  "gameReportReasonTitle": "부적절한 칭호"
+  "gameReportReasonTitle": "부적절한 칭호",
+  "gameReportDetailLabel": "상세 내용 (선택)"
 }

@@ -3577,11 +3577,16 @@ class GameService extends ChangeNotifier {
   }
 
   // Report
-  void reportUserAction(String nickname, String reason) {
+  /// [reasonCode] tells the server WHAT was reported ('photo', 'title',
+  /// 'abuse', 'spam', …). The visible reason is localized text; the server
+  /// decides what to hide from this reporter, and it cannot do that by matching
+  /// Korean strings.
+  void reportUserAction(String nickname, String reason, {String? reasonCode}) {
     _network.send({
       'type': 'report_user',
       'nickname': nickname,
       'reason': reason,
+      if (reasonCode != null) 'reasonCode': reasonCode,
     });
   }
 

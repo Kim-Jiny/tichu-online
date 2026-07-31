@@ -10,6 +10,7 @@ import '../services/game_service.dart';
 import '../services/profile_photo_service.dart';
 import '../utils/level_curve.dart';
 import 'bot_avatar.dart';
+import 'choice_pill.dart';
 import 'profile_avatar.dart';
 
 /// Header of the player-profile popup: avatar, nickname, and the friend /
@@ -153,7 +154,7 @@ class PlayerProfileHeader extends StatelessWidget {
               _friendButton(context, l10n),
               _blockButton(context, l10n, isBlockedUser),
               _iconButton(
-                icon: Icons.flag,
+                icon: Icons.report_outlined,
                 color: const Color(0xFFE57373),
                 tooltip: l10n.gameReport,
                 onTap: () {
@@ -242,7 +243,7 @@ class PlayerProfileHeader extends StatelessWidget {
   Widget _friendButton(BuildContext context, L10n l10n) {
     if (game.friends.contains(nickname)) {
       return _iconButton(
-        icon: Icons.check,
+        icon: Icons.people_alt,
         color: const Color(0xFFBDBDBD),
         tooltip: l10n.gameAlreadyFriend,
         onTap: () {},
@@ -280,9 +281,7 @@ class PlayerProfileHeader extends StatelessWidget {
         final messenger = ScaffoldMessenger.of(context);
         if (blocked) {
           game.unblockUserAction(nickname);
-          messenger.showSnackBar(
-            SnackBar(content: Text(l10n.gameUnblocked)),
-          );
+          messenger.showSnackBar(SnackBar(content: Text(l10n.gameUnblocked)));
         } else {
           game.blockUserAction(nickname);
           messenger.showSnackBar(SnackBar(content: Text(l10n.gameBlocked)));
@@ -291,26 +290,41 @@ class PlayerProfileHeader extends StatelessWidget {
     );
   }
 
+  /// Action button in the profile header.
+  ///
+  /// Icon AND label. As a 28dp icon square with a tooltip, "차단" was a shield
+  /// and "신고" a flag — neither reads as what it does at a glance, and a
+  /// tooltip needs a long-press nobody performs before deciding whether to tap.
+  /// These are three buttons in a row; there is room to say what they are.
   Widget _iconButton({
     required IconData icon,
     required Color color,
     required String tooltip,
     required VoidCallback onTap,
   }) {
-    return Tooltip(
-      message: tooltip,
+    return Material(
+      color: color.withValues(alpha: 0.13),
+      borderRadius: BorderRadius.circular(999),
       child: InkWell(
         onTap: onTap,
-        borderRadius: BorderRadius.circular(12),
-        child: Container(
-          width: 28,
-          height: 28,
-          decoration: BoxDecoration(
-            color: color.withValues(alpha: 0.15),
-            borderRadius: BorderRadius.circular(10),
-            border: Border.all(color: color.withValues(alpha: 0.35)),
+        borderRadius: BorderRadius.circular(999),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(icon, size: 15, color: color),
+              const SizedBox(width: 5),
+              Text(
+                tooltip,
+                style: TextStyle(
+                  fontSize: 12.5,
+                  fontWeight: FontWeight.w700,
+                  color: color,
+                ),
+              ),
+            ],
           ),
-          child: Icon(icon, size: 16, color: color),
         ),
       ),
     );
@@ -395,7 +409,9 @@ Future<void> changeProfilePhoto(
   final l10n = L10n.of(context);
   final messenger = ScaffoldMessenger.of(context);
   if (_changeInFlight) {
-    messenger.showSnackBar(SnackBar(content: Text(l10n.profilePhotoUploadBusy)));
+    messenger.showSnackBar(
+      SnackBar(content: Text(l10n.profilePhotoUploadBusy)),
+    );
     return;
   }
   // Both taken before the first await: the sheet and the picker are long
@@ -435,14 +451,18 @@ Future<void> changeProfilePhoto(
             ),
           ),
           ListTile(
-            leading: const Icon(Icons.photo_camera_rounded,
-                color: Color(0xFF6C63FF)),
+            leading: const Icon(
+              Icons.photo_camera_rounded,
+              color: Color(0xFF6C63FF),
+            ),
             title: Text(l10n.profilePhotoFromCamera),
             onTap: () => Navigator.pop(sheetCtx, ImageSource.camera),
           ),
           ListTile(
-            leading: const Icon(Icons.photo_library_rounded,
-                color: Color(0xFF6C63FF)),
+            leading: const Icon(
+              Icons.photo_library_rounded,
+              color: Color(0xFF6C63FF),
+            ),
             title: Text(l10n.profilePhotoFromGallery),
             onTap: () => Navigator.pop(sheetCtx, ImageSource.gallery),
           ),
@@ -499,10 +519,7 @@ Future<void> changeProfilePhoto(
           TextButton(
             onPressed: () => Navigator.pop(ctx, false),
             style: TextButton.styleFrom(
-              padding: const EdgeInsets.symmetric(
-                horizontal: 18,
-                vertical: 12,
-              ),
+              padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 12),
               foregroundColor: const Color(0xFF8A7A72),
               textStyle: const TextStyle(
                 fontSize: 15,
@@ -515,10 +532,7 @@ Future<void> changeProfilePhoto(
             onPressed: () => Navigator.pop(ctx, true),
             style: FilledButton.styleFrom(
               backgroundColor: const Color(0xFFC62828),
-              padding: const EdgeInsets.symmetric(
-                horizontal: 20,
-                vertical: 12,
-              ),
+              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(12),
               ),
@@ -667,8 +681,7 @@ class _UploadingNotice extends StatelessWidget {
         child: Material(
           type: MaterialType.transparency,
           child: Container(
-            padding:
-                const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
             decoration: BoxDecoration(
               color: Colors.black.withValues(alpha: 0.82),
               borderRadius: BorderRadius.circular(12),
@@ -680,7 +693,9 @@ class _UploadingNotice extends StatelessWidget {
                   width: 16,
                   height: 16,
                   child: CircularProgressIndicator(
-                      color: Colors.white, strokeWidth: 2),
+                    color: Colors.white,
+                    strokeWidth: 2,
+                  ),
                 ),
                 const SizedBox(width: 10),
                 Expanded(
@@ -711,18 +726,26 @@ void showProfileReportDialog(
 ) {
   final reasonController = TextEditingController();
   final l10n = L10n.of(context);
-  final reasons = [
-    l10n.gameReportReasonAbuse,
-    l10n.gameReportReasonSpam,
-    l10n.gameReportReasonNickname,
-    // Titles are user-written now, so they need their own reason — "부적절한
-    // 닉네임" would file it against the wrong thing, and the admin queue is what
-    // triage reads.
-    l10n.gameReportReasonTitle,
-    l10n.gameReportReasonGameplay,
-    l10n.gameReportReasonOther,
+  // Each reason carries a code, because what gets hidden from the reporter
+  // depends on WHAT they reported — the photo, the title, or what the person is
+  // saying. The label alone cannot say that; it is localized text.
+  final inner = game.profileFor(nickname)?['profile'] as Map?;
+  final hasPhoto = (inner?['photoUrl']?.toString().isNotEmpty ?? false);
+  final hasCustomTitle =
+      (inner?['titleKey']?.toString().startsWith('custom:') ?? false);
+  final reasons = <MapEntry<String, String>>[
+    MapEntry('abuse', l10n.gameReportReasonAbuse),
+    MapEntry('spam', l10n.gameReportReasonSpam),
+    MapEntry('nickname', l10n.gameReportReasonNickname),
+    // Offered only when there is one to report: a photo reason on a user with
+    // the default avatar files a complaint about nothing.
+    if (hasPhoto) MapEntry('photo', l10n.lobbyReportReasonPhoto),
+    if (hasCustomTitle) MapEntry('title', l10n.gameReportReasonTitle),
+    MapEntry('gameplay', l10n.gameReportReasonGameplay),
+    MapEntry('other', l10n.gameReportReasonOther),
   ];
   String? selectedReason;
+  String? selectedReasonCode;
   final rootMessenger = ScaffoldMessenger.of(context);
 
   showDialog(
@@ -735,16 +758,36 @@ void showProfileReportDialog(
           curve: Curves.easeOut,
           padding: EdgeInsets.only(bottom: media.viewInsets.bottom),
           child: AlertDialog(
-            shape:
-                RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(20),
+            ),
+            backgroundColor: const Color(0xFFFDFBFA),
+            titlePadding: const EdgeInsets.fromLTRB(20, 20, 20, 0),
+            contentPadding: const EdgeInsets.fromLTRB(20, 14, 20, 8),
             title: Row(
               children: [
-                const Icon(Icons.flag, color: Color(0xFFE57373)),
-                const SizedBox(width: 8),
+                Container(
+                  width: 32,
+                  height: 32,
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFFFEDED),
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: const Icon(
+                    Icons.flag,
+                    size: 19,
+                    color: Color(0xFFE57373),
+                  ),
+                ),
+                const SizedBox(width: 10),
                 Expanded(
                   child: Text(
                     l10n.gameReportTitle(nickname),
-                    style: const TextStyle(fontWeight: FontWeight.bold),
+                    style: const TextStyle(
+                      fontSize: 17,
+                      fontWeight: FontWeight.w800,
+                      color: Color(0xFF4A3A33),
+                    ),
                     overflow: TextOverflow.ellipsis,
                   ),
                 ),
@@ -758,98 +801,62 @@ void showProfileReportDialog(
               child: SingleChildScrollView(
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Container(
-                      width: double.infinity,
-                      padding: const EdgeInsets.all(10),
-                      decoration: BoxDecoration(
-                        color: const Color(0xFFFFF1F1),
-                        borderRadius: BorderRadius.circular(12),
-                        border: Border.all(color: const Color(0xFFF0C7C7)),
-                      ),
-                      child: Text(
-                        l10n.gameReportWarning,
-                        style: const TextStyle(
-                          fontSize: 12,
-                          color: Color(0xFF9A4A4A),
-                          height: 1.4,
+                    // The warning reads better as a line of small print than as
+                    // a bordered red box shouting before anything is chosen.
+                    Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Padding(
+                          padding: EdgeInsets.only(top: 1),
+                          child: Icon(
+                            Icons.info_outline,
+                            size: 14,
+                            color: Color(0xFFC98A8A),
+                          ),
                         ),
-                      ),
-                    ),
-                    const SizedBox(height: 12),
-                    Align(
-                      alignment: Alignment.centerLeft,
-                      child: Text(
-                        l10n.gameSelectReason,
-                        style: TextStyle(
-                          fontSize: 12,
-                          fontWeight: FontWeight.bold,
-                          color: Colors.grey.shade700,
+                        const SizedBox(width: 6),
+                        Expanded(
+                          child: Text(
+                            l10n.gameReportWarning,
+                            style: const TextStyle(
+                              fontSize: 11.5,
+                              color: Color(0xFFA47C7C),
+                              height: 1.4,
+                            ),
+                          ),
                         ),
-                      ),
+                      ],
                     ),
-                    const SizedBox(height: 6),
+                    const SizedBox(height: 16),
+                    formFieldLabel(l10n.gameSelectReason),
                     Wrap(
                       spacing: 8,
                       runSpacing: 8,
-                      children: reasons.map((r) {
-                        final isSelected = selectedReason == r;
-                        return InkWell(
-                          onTap: () => setLocalState(() => selectedReason = r),
-                          borderRadius: BorderRadius.circular(16),
-                          child: Container(
-                            padding: const EdgeInsets.symmetric(
-                                horizontal: 12, vertical: 6),
-                            decoration: BoxDecoration(
-                              color: isSelected
-                                  ? const Color(0xFFDDECF7)
-                                  : const Color(0xFFF6F2F0),
-                              borderRadius: BorderRadius.circular(16),
-                              border: Border.all(
-                                color: isSelected
-                                    ? const Color(0xFF9EC5E6)
-                                    : const Color(0xFFE2D8D4),
-                              ),
+                      children: reasons
+                          .map(
+                            (r) => ChoicePill(
+                              label: r.value,
+                              selected: selectedReason == r.value,
+                              accent: const Color(0xFFD9534F),
+                              onTap: () => setLocalState(() {
+                                selectedReason = r.value;
+                                selectedReasonCode = r.key;
+                              }),
                             ),
-                            child: Text(
-                              r,
-                              style: TextStyle(
-                                fontSize: 12,
-                                color: isSelected
-                                    ? const Color(0xFF3E6D8E)
-                                    : const Color(0xFF6A5A52),
-                                fontWeight: isSelected
-                                    ? FontWeight.bold
-                                    : FontWeight.normal,
-                              ),
-                            ),
-                          ),
-                        );
-                      }).toList(),
+                          )
+                          .toList(),
                     ),
-                    const SizedBox(height: 12),
+                    const SizedBox(height: 16),
+                    formFieldLabel(l10n.gameReportDetailLabel),
                     TextField(
                       controller: reasonController,
                       maxLines: 3,
-                      decoration: InputDecoration(
-                        hintText: l10n.gameReportDetailHint,
-                        filled: true,
-                        fillColor: const Color(0xFFF7F2F0),
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(12),
-                          borderSide:
-                              const BorderSide(color: Color(0xFFE0D6D1)),
-                        ),
-                        enabledBorder: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(12),
-                          borderSide:
-                              const BorderSide(color: Color(0xFFE0D6D1)),
-                        ),
-                        focusedBorder: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(12),
-                          borderSide:
-                              const BorderSide(color: Color(0xFFB9A8A1)),
-                        ),
+                      maxLength: 500,
+                      style: const TextStyle(fontSize: 14),
+                      decoration: formFieldDecoration(
+                        l10n.gameReportDetailHint,
                       ),
                     ),
                   ],
@@ -872,7 +879,11 @@ void showProfileReportDialog(
                         Navigator.pop(ctx);
                         game.reportResultSuccess = null;
                         game.reportResultMessage = null;
-                        game.reportUserAction(nickname, reason);
+                        game.reportUserAction(
+                          nickname,
+                          reason,
+                          reasonCode: selectedReasonCode,
+                        );
                         // Drop the listener on a timer too, in case the server
                         // never answers — otherwise it outlives the dialog.
                         late void Function() listener;
@@ -885,8 +896,9 @@ void showProfileReportDialog(
                             rootMessenger.showSnackBar(
                               SnackBar(
                                 content: Text(game.reportResultMessage!),
-                                backgroundColor:
-                                    success ? null : const Color(0xFFE57373),
+                                backgroundColor: success
+                                    ? null
+                                    : const Color(0xFFE57373),
                               ),
                             );
                             game.reportResultSuccess = null;
@@ -901,7 +913,8 @@ void showProfileReportDialog(
                 style: ElevatedButton.styleFrom(
                   backgroundColor: const Color(0xFFE57373),
                   shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12)),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
                 ),
                 child: Text(l10n.gameReportSubmit),
               ),
@@ -960,10 +973,7 @@ Widget botProfileBody(BuildContext context) {
   // Wrapped so the card keeps its natural height: the dialog hands its content
   // a tight vertical constraint, and without this the card stretched down the
   // whole popup with the text stranded at the top.
-  return Column(
-    mainAxisSize: MainAxisSize.min,
-    children: [_botCard(l10n)],
-  );
+  return Column(mainAxisSize: MainAxisSize.min, children: [_botCard(l10n)]);
 }
 
 Widget _botCard(L10n l10n) {
@@ -977,11 +987,7 @@ Widget _botCard(L10n l10n) {
     child: Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Icon(
-          Icons.smart_toy_rounded,
-          size: 20,
-          color: Color(0xFF3949AB),
-        ),
+        const Icon(Icons.smart_toy_rounded, size: 20, color: Color(0xFF3949AB)),
         const SizedBox(width: 10),
         Expanded(
           child: Column(

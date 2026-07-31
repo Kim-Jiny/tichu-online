@@ -196,6 +196,12 @@ async function initDatabase() {
     // object with this key is kept in storage as evidence even if the owner
     // deletes or replaces it.
     await client.query(`ALTER TABLE tc_reports ADD COLUMN IF NOT EXISTS reported_photo_key TEXT DEFAULT NULL`);
+    // What the report was actually about. Hiding follows the complaint: a photo
+    // report hides that photo, a title report hides that title, and a report
+    // about someone's behaviour hides neither — before this, every report hid
+    // the reported user's photo from the reporter.
+    await client.query(`ALTER TABLE tc_reports ADD COLUMN IF NOT EXISTS reason_code VARCHAR(20)`);
+    await client.query(`ALTER TABLE tc_reports ADD COLUMN IF NOT EXISTS reported_title TEXT`);
     await client.query(`ALTER TABLE tc_users ADD COLUMN IF NOT EXISTS total_games INT DEFAULT 0`);
     await client.query(`ALTER TABLE tc_users ADD COLUMN IF NOT EXISTS wins INT DEFAULT 0`);
     await client.query(`ALTER TABLE tc_users ADD COLUMN IF NOT EXISTS losses INT DEFAULT 0`);
@@ -1456,12 +1462,31 @@ async function getReportedNicknames(reporterNickname) {
 // Every photo key this reporter has reported. The hide follows the key: a new
 // upload has a new key and shows again.
 async function getReportedPhotoKeys(reporterNickname) {
+  // reason_code = 'photo' only: the key is snapshotted on every report as
+  // evidence for the admin queue, but a report about someone's chat should not
+  // take their picture away from the reporter.
   const result = await pool.query(
     `SELECT DISTINCT reported_photo_key FROM tc_reports
-      WHERE reporter_nickname = $1 AND reported_photo_key IS NOT NULL`,
+      WHERE reporter_nickname = $1 AND reported_photo_key IS NOT NULL
+        AND reason_code = 'photo'`,
     [reporterNickname]
   );
   return result.rows.map((r) => r.reported_photo_key);
+}
+
+/**
+ * Titles this reporter objected to, as `nickname\u0000title` pairs.
+ *
+ * Keyed to the text, not the person, exactly like photos: write a different
+ * title and it shows again.
+ */
+async function getReportedTitles(reporterNickname) {
+  const result = await pool.query(
+    `SELECT DISTINCT reported_nickname, reported_title FROM tc_reports
+      WHERE reporter_nickname = $1 AND reported_title IS NOT NULL`,
+    [reporterNickname],
+  );
+  return result.rows.map((r) => `${r.reported_nickname}\u0000${r.reported_title}`);
 }
 
 // Is this object referenced by any report? If so it is evidence and must not be
@@ -1475,7 +1500,14 @@ async function isPhotoKeyReported(key) {
   return result.rows.length > 0;
 }
 
-async function reportUser(reporterNickname, reportedNickname, reason, roomId, chatContext = []) {
+async function reportUser(
+  reporterNickname,
+  reportedNickname,
+  reason,
+  roomId,
+  chatContext = [],
+  reasonCode = null,
+) {
   const client = await pool.connect();
   try {
     // Check for duplicate report (same reporter + target + room + reason)
@@ -1492,15 +1524,35 @@ async function reportUser(reporterNickname, reportedNickname, reason, roomId, ch
     // about THIS image: hiding follows the key (not the person), and the admin
     // can still see the reported image after the owner swaps or deletes it.
     const snap = await client.query(
-      `SELECT profile_photo_key FROM tc_users WHERE nickname = $1`,
+      `SELECT u.profile_photo_key, u.custom_title_text, e.title_key
+       FROM tc_users u
+       LEFT JOIN tc_user_equips e ON e.nickname = u.nickname
+       WHERE u.nickname = $1`,
       [reportedNickname]
     );
     const photoKey = snap.rows[0]?.profile_photo_key || null;
+    // Only a user-written title is reportable content; a catalog title is ours.
+    const wornCustom = (snap.rows[0]?.title_key || '').startsWith('custom:');
+    const titleText = wornCustom
+      ? (snap.rows[0]?.custom_title_text || null)
+      : null;
     await client.query(
-      'INSERT INTO tc_reports (reporter_nickname, reported_nickname, reason, room_id, chat_context, reported_photo_key) VALUES ($1, $2, $3, $4, $5, $6)',
-      [reporterNickname, reportedNickname, reason, roomId, chatContextJson, photoKey]
+      `INSERT INTO tc_reports
+        (reporter_nickname, reported_nickname, reason, room_id, chat_context,
+         reported_photo_key, reason_code, reported_title)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
+      [
+        reporterNickname, reportedNickname, reason, roomId, chatContextJson,
+        photoKey, reasonCode, reasonCode === 'title' ? titleText : null,
+      ],
     );
-    return { success: true, messageKey: 'db_report_success', photoKey };
+    // The caller hides only what the report named.
+    return {
+      success: true,
+      messageKey: 'db_report_success',
+      photoKey: reasonCode === 'photo' ? photoKey : null,
+      titleText: reasonCode === 'title' ? titleText : null,
+    };
   } catch (err) {
     console.error('Report user error:', err);
     return { success: false, messageKey: 'db_report_failed' };
@@ -8084,6 +8136,7 @@ module.exports = {
   setAdminMemo,
   adminClearProfilePhoto,
   getReportedPhotoKeys,
+  getReportedTitles,
   isPhotoKeyReported,
   listActiveProfilePhotos,
   getActiveSeason,

@@ -2533,5 +2533,6 @@
   "customTitleSave": "Apply",
   "customTitleButton": "Write title",
   "customTitleSaved": "Title applied",
-  "gameReportReasonTitle": "Inappropriate title"
+  "gameReportReasonTitle": "Inappropriate title",
+  "gameReportDetailLabel": "Details (optional)"
 }

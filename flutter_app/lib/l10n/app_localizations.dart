@@ -7964,6 +7964,12 @@ abstract class L10n {
   /// In en, this message translates to:
   /// **'Inappropriate title'**
   String get gameReportReasonTitle;
+
+  /// No description provided for @gameReportDetailLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Details (optional)'**
+  String get gameReportDetailLabel;
 }
 
 class _L10nDelegate extends LocalizationsDelegate<L10n> {

@@ -4469,4 +4469,7 @@ class L10nEn extends L10n {
 
   @override
   String get gameReportReasonTitle => 'Inappropriate title';
+
+  @override
+  String get gameReportDetailLabel => 'Details (optional)';
 }

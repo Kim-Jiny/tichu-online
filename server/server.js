@@ -80,6 +80,7 @@ const {
   loadTitleTranslations,
   adminClearProfilePhoto,
   getReportedPhotoKeys,
+  getReportedTitles,
   isPhotoKeyReported,
 } = require('./db/database');
 
@@ -3783,6 +3784,10 @@ async function handleReconnection(ws) {
   ws.reportedPhotoKeys = new Set(
     await getReportedPhotoKeys(ws.nickname).catch(() => []),
   );
+  // Same rule for user-written titles: the report was about that text.
+  ws.reportedTitles = new Set(
+    await getReportedTitles(ws.nickname).catch(() => []),
+  );
   // Friends see past a privacy pass, so the check has to be answerable without
   // a query in the broadcast path. Kept current by the friend accept/remove
   // handlers on both sides.
@@ -3971,7 +3976,7 @@ async function handleReconnection(ws) {
           roomId: room.id,
           roomName: room.name,
         });
-        sendTo(ws, { type: 'chat_history', messages: room.getChatHistory() });
+        sendTo(ws, { type: 'chat_history', messages: visibleChatHistory(ws, room) });
         broadcastRoomState(room.id);
         if (room.game) {
           const permittedPlayers = room.getPermittedPlayers(ws.playerId);
@@ -4313,7 +4318,7 @@ async function handleJoinRoom(ws, data) {
   }
   sendTo(ws, { type: 'room_joined', roomId: room.id, roomName: room.name });
   // 채팅 히스토리 전송
-  sendTo(ws, { type: 'chat_history', messages: room.getChatHistory() });
+  sendTo(ws, { type: 'chat_history', messages: visibleChatHistory(ws, room) });
   notifyLegacyRandomSeatingClient(room, ws);
   broadcastRoomState(room.id);
   broadcastRoomList();
@@ -4609,7 +4614,7 @@ function handleSpectateRoom(ws, data) {
   ws.isSpectator = true;
   sendTo(ws, { type: 'spectate_joined', roomId: room.id, roomName: room.name });
   // Send chat history to spectator
-  sendTo(ws, { type: 'chat_history', messages: room.getChatHistory() });
+  sendTo(ws, { type: 'chat_history', messages: visibleChatHistory(ws, room) });
   // Update room state/list for everyone
   broadcastRoomState(room.id);
   broadcastRoomList();
@@ -5296,6 +5301,10 @@ async function handleGetProfile(ws, data) {
   // target — an image someone has objected to must not be forced back on them.
   if (profile) {
     profile.photoUrl = visiblePhoto(ws, targetNickname, profilePhotoUrlFrom(profile));
+    if (titleReported(ws, targetNickname, profile.titleName)) {
+      profile.titleName = null;
+      profile.titleKey = null;
+    }
     // Own popup shows the pass and its reach; friends need neither.
     if (ws.nickname !== targetNickname) {
       delete profile.profilePrivateHidePhoto;
@@ -7030,6 +7039,42 @@ function profileHiddenFrom(ws, nickname) {
   return !!profilePrivacyOf(nickname) && !seesPrivateProfile(ws, nickname);
 }
 
+/**
+ * Titles this viewer reported, as `nickname\u0000title`. Keyed to the text, so
+ * writing a different one shows again — same rule as photos.
+ */
+function titleReported(ws, nickname, titleName) {
+  if (!titleName || !ws?.reportedTitles?.size) return false;
+  return ws.reportedTitles.has(`${nickname}\u0000${titleName}`);
+}
+
+/**
+ * Chat muted for this viewer, in this room only.
+ *
+ * Reporting abuse or spam should stop that person's chat from arriving — but
+ * for this room, not forever. Forever is what blocking is for, and a report is
+ * not a block.
+ */
+/** Room chat as this viewer should see it: muted senders dropped. */
+function visibleChatHistory(ws, room) {
+  const history = room.getChatHistory() || [];
+  if (!ws?.mutedChat?.get(room.id)?.size) return history;
+  const muted = ws.mutedChat.get(room.id);
+  return history.filter((m) => !muted.has(m.sender ?? m.nickname));
+}
+
+function chatMutedFor(ws, roomId, sender) {
+  if (!roomId || !ws?.mutedChat) return false;
+  return ws.mutedChat.get(roomId)?.has(sender) === true;
+}
+
+function muteChatInRoom(ws, roomId, sender) {
+  if (!roomId || !sender) return;
+  ws.mutedChat ??= new Map();
+  if (!ws.mutedChat.has(roomId)) ws.mutedChat.set(roomId, new Set());
+  ws.mutedChat.get(roomId).add(sender);
+}
+
 function visiblePhoto(ws, nickname, url) {
   if (!url) return null;
   if (ws?.hiddenPhotos?.has(nickname)) return null;
@@ -7072,13 +7117,17 @@ function roomSeatInfo(room) {
 // Photo filtering is per-viewer (blocked/reported users lose their avatar for
 // that viewer only), so this runs once per socket, not once per broadcast.
 function decorateSeats(ws, state, seats) {
-  state.players = (state.players || []).map((p) => ({
-    ...p,
-    connected: seats.connected[p.id] !== false,
-    timeoutCount: seats.timeouts[p.name] || 0,
-    photoUrl: visiblePhoto(ws, p.name, seats.photoByPid[p.id]),
-    isBot: !!seats.isBotById[p.id],
-  }));
+  state.players = (state.players || []).map((p) => {
+    const hideTitle = titleReported(ws, p.name, p.titleName);
+    return {
+      ...p,
+      connected: seats.connected[p.id] !== false,
+      timeoutCount: seats.timeouts[p.name] || 0,
+      photoUrl: visiblePhoto(ws, p.name, seats.photoByPid[p.id]),
+      isBot: !!seats.isBotById[p.id],
+      ...(hideTitle ? { titleName: null, titleKey: null } : {}),
+    };
+  });
   state.spectators = seats.spectators;
   state.spectatorCount = seats.spectators.length;
   return state;
@@ -7128,10 +7177,15 @@ function personalizeRoomState(state, ws) {
       // reported photo stayed on the seat until the game started.
       const photoUrl = p.photoUrl ? visiblePhoto(ws, p.name, p.photoUrl) : p.photoUrl;
       const unphoto = p.photoUrl !== photoUrl;
-      if (!retitle && !unphoto) return p;
+      const untitle = titleReported(ws, p.name, p.titleName);
+      if (!retitle && !unphoto && !untitle) return p;
       const out = { ...p };
       if (retitle) out.titleName = localizeTitleName(p.titleKey, p.titleName, locale);
       if (unphoto) out.photoUrl = photoUrl;
+      if (untitle) {
+        out.titleName = null;
+        out.titleKey = null;
+      }
       return out;
     }),
   };
@@ -7317,20 +7371,14 @@ async function handleChatMessage(ws, data) {
   }
 
   // Broadcast to all players in the room
-  room.getPlayerIds().forEach(playerId => {
-    const playerWs = findWsByPlayerId(playerId);
-    if (playerWs && !blockedSet.has(playerWs.nickname)) {
-      sendTo(playerWs, chatData);
-    }
-  });
-
-  // Also send to spectators
-  room.getSpectatorIds().forEach(specId => {
-    const specWs = findWsByPlayerId(specId);
-    if (specWs && !blockedSet.has(specWs.nickname)) {
-      sendTo(specWs, chatData);
-    }
-  });
+  const deliver = (target) => {
+    if (!target || blockedSet.has(target.nickname)) return;
+    // Reported for abuse/spam by this viewer, in this room.
+    if (chatMutedFor(target, room.id, ws.nickname)) return;
+    sendTo(target, chatData);
+  };
+  room.getPlayerIds().forEach((playerId) => deliver(findWsByPlayerId(playerId)));
+  room.getSpectatorIds().forEach((specId) => deliver(findWsByPlayerId(specId)));
 }
 
 // Block user handler
@@ -7411,18 +7459,38 @@ async function handleReportUser(ws, data) {
       chatContext = room.getChatHistory();
     }
   }
-  const result = await reportUser(ws.nickname, targetNickname, reason, ws.roomId || '', chatContext);
+  // What the reporter picked, as a code — the visible reason is a localized
+  // string and matching on it would break the moment someone reports in German.
+  const reasonCode = ['photo', 'title', 'abuse', 'spam', 'nickname', 'gameplay', 'other']
+    .includes(data.reasonCode) ? data.reasonCode : null;
+  const result = await reportUser(
+    ws.nickname,
+    targetNickname,
+    reason,
+    ws.roomId || '',
+    chatContext,
+    reasonCode,
+  );
   sendTo(ws, {
     type: 'report_result',
     success: result.success,
     message: resultMessage(result, ws.locale),
   });
   if (result.success) {
-    // Take the photo away from the reporter immediately. Waiting for an admin
-    // to look at the queue means they keep staring at the thing they just
-    // objected to, possibly for hours. Keyed to the photo, not the person —
-    // if they upload something else, that one shows.
+    // Hide exactly what was reported, and nothing else. Waiting for an admin to
+    // look at the queue means the reporter keeps staring at the thing they just
+    // objected to, possibly for hours — but a report about someone's chat is
+    // not a reason to take their picture away.
     if (result.photoKey) ws.reportedPhotoKeys?.add(result.photoKey);
+    if (result.titleText) {
+      ws.reportedTitles?.add(`${targetNickname}\u0000${result.titleText}`);
+    }
+    // Abuse and spam are about what the person is saying: mute them here, in
+    // this room. Muting them everywhere forever is blocking, which is its own
+    // button right next to this one.
+    if ((reasonCode === 'abuse' || reasonCode === 'spam') && ws.roomId) {
+      muteChatInRoom(ws, ws.roomId, targetNickname);
+    }
     if (ws.roomId) {
       broadcastRoomState(ws.roomId);
       if (lobby.getRoom(ws.roomId)?.game) sendGameStateToAll(ws.roomId);

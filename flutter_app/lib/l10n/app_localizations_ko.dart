@@ -4343,7 +4343,7 @@ class L10nKo extends L10n {
   String get customTitleEditTitle => '커스텀 칭호';
 
   @override
-  String get customTitleHint => '4글자까지';
+  String get customTitleHint => '예: 용사 (4글자까지)';
 
   @override
   String get customTitleRule => '한글·영문·숫자만, 4글자까지. 이모지·특수문자·공백은 쓸 수 없습니다.';
@@ -4368,4 +4368,39 @@ class L10nKo extends L10n {
 
   @override
   String get gameReportDetailLabel => '상세 내용 (선택)';
+
+  @override
+  String get shopFeatureInUse => '사용 중';
+
+  @override
+  String get shopFeatureOff => '사용 안 함';
+
+  @override
+  String get shopPurchaseDonePassive2 =>
+      '구매가 완료되었습니다.\n구매 즉시 적용되며 만료일까지 유지됩니다. 인벤토리에서 잠시 끄고 켤 수 있습니다.';
+
+  @override
+  String get shopCategoryProfile => '프로필';
+
+  @override
+  String get shopCustomTitleSample => '커스텀칭호';
+
+  @override
+  String get shopFeatureDisableTitle => '사용 중지할까요?';
+
+  @override
+  String get shopFeatureDisableBody =>
+      '사용을 중지해도 이용 기간은 계속 소모되며, 만료일은 그대로입니다. 언제든 다시 사용할 수 있습니다.';
+
+  @override
+  String get shopFeatureDisableConfirm => '사용 중지';
+
+  @override
+  String get shopFeatureEnableTitle => '다시 사용할까요?';
+
+  @override
+  String get shopFeatureEnableBody => '바로 적용됩니다. 이용 기간은 만료일까지입니다.';
+
+  @override
+  String get shopFeatureEnableConfirm => '사용하기';
 }

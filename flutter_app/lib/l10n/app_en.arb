@@ -2526,7 +2526,7 @@
   "shopPreviewNickname": "Nickname",
   "shopButtonUnequip": "Unequip",
   "customTitleEditTitle": "Custom title",
-  "customTitleHint": "Up to 4 characters",
+  "customTitleHint": "e.g. Ace (up to 4)",
   "customTitleRule": "Letters, Hangul and digits only, 4 characters max. No emoji, symbols or spaces.",
   "customTitleColorLabel": "Colour",
   "customTitlePreviewLabel": "Preview",
@@ -2534,5 +2534,16 @@
   "customTitleButton": "Write title",
   "customTitleSaved": "Title applied",
   "gameReportReasonTitle": "Inappropriate title",
-  "gameReportDetailLabel": "Details (optional)"
+  "gameReportDetailLabel": "Details (optional)",
+  "shopFeatureInUse": "In use",
+  "shopFeatureOff": "Off",
+  "shopPurchaseDonePassive2": "Purchase complete.\nIt applies right away and runs until it expires. You can switch it off and on from your inventory.",
+  "shopCategoryProfile": "Profile",
+  "shopCustomTitleSample": "YourTag",
+  "shopFeatureDisableTitle": "Turn this off?",
+  "shopFeatureDisableBody": "The pass keeps running while it is off — the expiry date does not change. You can turn it back on at any time.",
+  "shopFeatureDisableConfirm": "Turn off",
+  "shopFeatureEnableTitle": "Turn this back on?",
+  "shopFeatureEnableBody": "It applies right away, and runs until the pass expires.",
+  "shopFeatureEnableConfirm": "Turn on"
 }

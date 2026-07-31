@@ -1059,7 +1059,7 @@ class _ShopScreenState extends State<ShopScreen> {
             L10n.of(context).shopCategoryTitle,
             L10n.of(context).shopCategoryTheme,
             L10n.of(context).shopCategoryUtil,
-            L10n.of(context).shopCategoryFeature,
+            L10n.of(context).shopCategoryProfile,
           ]),
           Expanded(
             child: TabBarView(
@@ -1069,11 +1069,7 @@ class _ShopScreenState extends State<ShopScreen> {
                   game,
                   _filterShop(game.shopItems, 'banner'),
                 ),
-                _buildShopList(
-                  context,
-                  game,
-                  _filterShop(game.shopItems, 'title'),
-                ),
+                _buildShopList(context, game, _titleTabItems(game.shopItems)),
                 _buildShopList(
                   context,
                   game,
@@ -1084,11 +1080,7 @@ class _ShopScreenState extends State<ShopScreen> {
                   game,
                   _filterShop(game.shopItems, 'utility'),
                 ),
-                _buildShopList(
-                  context,
-                  game,
-                  _filterShop(game.shopItems, 'feature'),
-                ),
+                _buildShopList(context, game, _profileTabItems(game.shopItems)),
               ],
             ),
           ),
@@ -1666,7 +1658,7 @@ class _ShopScreenState extends State<ShopScreen> {
                 L10n.of(context).shopCategoryTitle,
                 L10n.of(context).shopCategoryTheme,
                 L10n.of(context).shopCategoryUtil,
-                L10n.of(context).shopCategoryFeature,
+                L10n.of(context).shopCategoryProfile,
                 L10n.of(context).shopCategorySeason,
               ]),
               Expanded(
@@ -1676,7 +1668,7 @@ class _ShopScreenState extends State<ShopScreen> {
                       _filterInventory(game.inventoryItems, 'banner'),
                     ),
                     _buildInventoryList(
-                      _filterInventory(game.inventoryItems, 'title'),
+                      _titleInventoryItems(game.inventoryItems),
                     ),
                     _buildInventoryList(
                       _filterInventory(game.inventoryItems, 'theme'),
@@ -1685,7 +1677,9 @@ class _ShopScreenState extends State<ShopScreen> {
                       _filterInventory(game.inventoryItems, 'utility'),
                     ),
                     _buildInventoryList(
-                      _filterInventory(game.inventoryItems, 'feature'),
+                      _profileTabItems(
+                        _filterInventory(game.inventoryItems, 'feature'),
+                      ),
                     ),
                     _buildInventoryList(
                       _filterInventory(game.inventoryItems, 'season'),
@@ -1744,6 +1738,17 @@ class _ShopScreenState extends State<ShopScreen> {
     // Custom title is the one feature item with something to set: the row's
     // button opens the editor instead of doing nothing.
     final isCustomTitle = effectType == 'custom_title';
+    // Passes that simply apply while they last. They cannot be equipped, but
+    // they can be switched off — the days run either way, and someone who wants
+    // the counter off for a few games should not have to lose the pass.
+    const toggleable = {
+      'top_card_counter',
+      'mighty_trump_counter',
+      'mighty_prev_trick',
+      'profile_private',
+    };
+    final isToggleable = toggleable.contains(effectType);
+    final featureOn = item['feature_disabled'] != true;
     final isConsumable = category == 'utility' && !noEquipAction;
     final expiresAt = item['expires_at'];
     final expiresText = expiresAt != null
@@ -1797,7 +1802,10 @@ class _ShopScreenState extends State<ShopScreen> {
                             const Color(0xFF1565C0),
                             const Color(0xFFDDECF7),
                           )
-                        else if (noEquipAction)
+                        // A pass that is switched off is not "활성화됨": the
+                        // button beside it already says 사용 안 함, and two
+                        // labels disagreeing is worse than one missing.
+                        else if (noEquipAction && (!isToggleable || featureOn))
                           _badge(
                             l10n.shopStatusActivated,
                             const Color(0xFF1565C0),
@@ -1806,6 +1814,19 @@ class _ShopScreenState extends State<ShopScreen> {
                       ],
                     ),
                     const SizedBox(height: 2),
+                    if (isCustomTitle && game.myCustomTitleText != null) ...[
+                      // What the pass is currently set to. Without it the row
+                      // says only that you hold a custom title, not which one.
+                      Padding(
+                        padding: const EdgeInsets.only(bottom: 2),
+                        child: TitleChip(
+                          titleKey:
+                              'custom:${game.myCustomTitleColor ?? 'rose'}',
+                          titleName: game.myCustomTitleText,
+                          fontSize: 12,
+                        ),
+                      ),
+                    ],
                     Text(
                       expiresText ?? l10n.shopPermanentOwned,
                       maxLines: 1,
@@ -1820,7 +1841,142 @@ class _ShopScreenState extends State<ShopScreen> {
                     Row(
                       children: [
                         const Spacer(),
-                        if (!noEquipAction || isCustomTitle)
+                        if (isToggleable)
+                          // A button that says the current state, not a switch:
+                          // switching it off costs days that keep running, so it
+                          // asks first — and a switch that opens a dialog is a
+                          // button wearing the wrong clothes.
+                          SizedBox(
+                            height: 30,
+                            child: ElevatedButton(
+                              onPressed: () => _showFeatureToggleDialog(
+                                context,
+                                game,
+                                effectType,
+                                featureOn,
+                              ),
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: featureOn
+                                    ? const Color(0xFFDDF0E4)
+                                    : const Color(0xFFEFEBE9),
+                                foregroundColor: featureOn
+                                    ? const Color(0xFF33734B)
+                                    : const Color(0xFF8A7A72),
+                                elevation: 0,
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 14,
+                                ),
+                                minimumSize: const Size(0, 30),
+                                tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(10),
+                                ),
+                              ),
+                              child: Text(
+                                featureOn
+                                    ? l10n.shopFeatureInUse
+                                    : l10n.shopFeatureOff,
+                                style: const TextStyle(
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.w700,
+                                ),
+                              ),
+                            ),
+                          )
+                        else if (isCustomTitle) ...[
+                          // Two things to do with a written title: change the
+                          // text, and take it off without losing it. Unequip is
+                          // the same slot clear as any other title; putting it
+                          // back on re-saves the stored text.
+                          if (game.myCustomTitleText != null)
+                            Padding(
+                              padding: const EdgeInsets.only(right: 6),
+                              child: SizedBox(
+                                height: 30,
+                                child: ElevatedButton(
+                                  onPressed: () {
+                                    final worn =
+                                        game.equippedTitle?.startsWith(
+                                          'custom:',
+                                        ) ==
+                                        true;
+                                    if (worn) {
+                                      _runItemAction(
+                                        itemKey,
+                                        () => game.unequipCategory('title'),
+                                      );
+                                    } else {
+                                      _runItemAction(
+                                        itemKey,
+                                        () => game.setCustomTitle(
+                                          game.myCustomTitleText!,
+                                          game.myCustomTitleColor ?? 'rose',
+                                        ),
+                                      );
+                                    }
+                                  },
+                                  style: ElevatedButton.styleFrom(
+                                    backgroundColor:
+                                        game.equippedTitle?.startsWith(
+                                              'custom:',
+                                            ) ==
+                                            true
+                                        ? const Color(0xFFE3F2FD)
+                                        : const Color(0xFFB3E5FC),
+                                    foregroundColor: const Color(0xFF4A3A33),
+                                    elevation: 0,
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 12,
+                                    ),
+                                    minimumSize: const Size(0, 30),
+                                    tapTargetSize:
+                                        MaterialTapTargetSize.shrinkWrap,
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(10),
+                                    ),
+                                  ),
+                                  child: Text(
+                                    game.equippedTitle?.startsWith('custom:') ==
+                                            true
+                                        ? l10n.shopButtonUnequip
+                                        : l10n.shopButtonEquip,
+                                    style: const TextStyle(
+                                      fontSize: 12,
+                                      fontWeight: FontWeight.w700,
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ),
+                          SizedBox(
+                            height: 30,
+                            child: ElevatedButton(
+                              onPressed: _busyItemKeys.contains(itemKey)
+                                  ? null
+                                  : () => _showCustomTitleDialog(context, game),
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: const Color(0xFFB3E5FC),
+                                foregroundColor: const Color(0xFF4A3A33),
+                                elevation: 0,
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 14,
+                                ),
+                                minimumSize: const Size(0, 30),
+                                tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(10),
+                                ),
+                              ),
+                              child: Text(
+                                l10n.customTitleButton,
+                                style: const TextStyle(
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.w700,
+                                ),
+                              ),
+                            ),
+                          ),
+                        ] else if (!noEquipAction)
                           SizedBox(
                             height: 30,
                             child: ElevatedButton(
@@ -2425,7 +2581,7 @@ class _ShopScreenState extends State<ShopScreen> {
               : isConsumable
               ? L10n.of(context).shopPurchaseDoneConsumable
               : noEquipAction
-              ? L10n.of(context).shopPurchaseDonePassive
+              ? L10n.of(context).shopPurchaseDonePassive2
               : L10n.of(context).shopPurchaseDoneEquip,
         ),
         actions: [
@@ -2600,6 +2756,10 @@ class _ShopScreenState extends State<ShopScreen> {
                               itemKey: itemKey,
                               itemName: name,
                               fallbackGradient: gradient,
+                              titleOverride:
+                                  effectTypeOf(item) == 'custom_title'
+                                  ? l10n.shopCustomTitleSample
+                                  : null,
                             ),
                           ),
                         ],
@@ -2940,11 +3100,14 @@ class _ShopScreenState extends State<ShopScreen> {
 
   /// The player's own equipped banner/title, read off their profile — the
   /// service tracks the title key but not its display name or the banner.
+  // Live values first, cached profile second: equipping updates the service
+  // immediately, while the profile is only as fresh as the last fetch — which
+  // is why a preview kept showing the banner you had just replaced.
   String? _myBannerKey(GameService g) =>
-      _myProfile(g)?['bannerKey']?.toString();
+      g.equippedBanner ?? _myProfile(g)?['bannerKey']?.toString();
 
   String? _myTitleName(GameService g) =>
-      _myProfile(g)?['titleName']?.toString();
+      g.equippedTitleName ?? _myProfile(g)?['titleName']?.toString();
 
   Map? _myProfile(GameService g) {
     if (g.playerName.isEmpty) return null;
@@ -2958,6 +3121,7 @@ class _ShopScreenState extends State<ShopScreen> {
     'top_card_counter',
     'mighty_trump_counter',
     'mighty_prev_trick',
+    'custom_title',
   };
 
   bool _hasPreview(String category, String effectType) =>
@@ -3076,6 +3240,10 @@ class _ShopScreenState extends State<ShopScreen> {
             ),
           ),
         );
+      case 'custom_title':
+        // Handled by the seat preview with a sample title — see the
+        // titleOverride path in _buildItemPreview.
+        return const SizedBox.shrink();
       default:
         // mighty_prev_trick — the little card row the button opens.
         return frame(
@@ -3136,9 +3304,10 @@ class _ShopScreenState extends State<ShopScreen> {
     required String itemKey,
     required String itemName,
     required List<Color> fallbackGradient,
+    String? titleOverride,
   }) {
     final l10n = L10n.of(context);
-    if (_previewEffects.contains(effectType)) {
+    if (titleOverride == null && _previewEffects.contains(effectType)) {
       return _buildFeaturePreview(effectType);
     }
     if (category == 'theme') {
@@ -3279,7 +3448,15 @@ class _ShopScreenState extends State<ShopScreen> {
               children: [
                 // A title preview shows THIS title; a banner preview keeps
                 // whatever title is equipped, so the seat reads as your own.
-                if (isBanner && _myTitleName(g) != null)
+                if (titleOverride != null)
+                  Padding(
+                    padding: const EdgeInsets.only(bottom: 2),
+                    child: TitleChip(
+                      titleKey: 'custom:rose',
+                      titleName: titleOverride,
+                    ),
+                  )
+                else if (isBanner && _myTitleName(g) != null)
                   Padding(
                     padding: const EdgeInsets.only(bottom: 2),
                     child: TitleChip(
@@ -3339,10 +3516,19 @@ class _ShopScreenState extends State<ShopScreen> {
   void _showCustomTitleDialog(BuildContext context, GameService game) {
     final l10n = L10n.of(context);
     final profile = _myProfile(game);
+    // Prefer what was last saved over the fetched profile: the save reply lands
+    // immediately, the profile refetch does not, and reopening the editor in
+    // between showed the previous title.
     final controller = TextEditingController(
-      text: profile?['customTitleText']?.toString() ?? '',
+      text:
+          game.myCustomTitleText ??
+          profile?['customTitleText']?.toString() ??
+          '',
     );
-    var colorId = profile?['customTitleColor']?.toString() ?? 'rose';
+    var colorId =
+        game.myCustomTitleColor ??
+        profile?['customTitleColor']?.toString() ??
+        'rose';
     if (!customTitleColors.containsKey(colorId)) colorId = 'rose';
 
     showDialog(
@@ -3419,14 +3605,17 @@ class _ShopScreenState extends State<ShopScreen> {
                               mainAxisSize: MainAxisSize.min,
                               mainAxisAlignment: MainAxisAlignment.center,
                               children: [
-                                TitleChip(
-                                  titleKey: 'custom:$colorId',
-                                  titleName: text.isEmpty
-                                      ? l10n.customTitleHint
-                                      : text,
-                                  fontSize: 12,
-                                ),
-                                const SizedBox(height: 2),
+                                // Nothing typed, nothing shown: the hint in the
+                                // chip previewed a title that will never exist,
+                                // and read as one already set.
+                                if (text.isNotEmpty) ...[
+                                  TitleChip(
+                                    titleKey: 'custom:$colorId',
+                                    titleName: text,
+                                    fontSize: 12,
+                                  ),
+                                  const SizedBox(height: 2),
+                                ],
                                 Text(
                                   game.playerName.isEmpty
                                       ? l10n.shopPreviewNickname
@@ -3516,6 +3705,74 @@ class _ShopScreenState extends State<ShopScreen> {
             ],
           );
         },
+      ),
+    );
+  }
+
+  /// Confirms switching a feature pass off (or back on).
+  ///
+  /// Off is the one that needs saying out loud: the days keep running, so
+  /// turning it off is not a pause and the expiry date does not move.
+  void _showFeatureToggleDialog(
+    BuildContext context,
+    GameService game,
+    String effectType,
+    bool currentlyOn,
+  ) {
+    final l10n = L10n.of(context);
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        backgroundColor: const Color(0xFFFDFBFA),
+        titlePadding: const EdgeInsets.fromLTRB(22, 22, 22, 0),
+        contentPadding: const EdgeInsets.fromLTRB(22, 12, 22, 8),
+        title: Text(
+          currentlyOn
+              ? l10n.shopFeatureDisableTitle
+              : l10n.shopFeatureEnableTitle,
+          style: const TextStyle(
+            fontSize: 17,
+            fontWeight: FontWeight.w800,
+            color: Color(0xFF4A3A33),
+          ),
+        ),
+        content: Text(
+          currentlyOn
+              ? l10n.shopFeatureDisableBody
+              : l10n.shopFeatureEnableBody,
+          style: const TextStyle(
+            fontSize: 13.5,
+            height: 1.45,
+            color: Color(0xFF6A5A52),
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: Text(l10n.commonCancel),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              Navigator.pop(ctx);
+              game.setFeatureEnabled(effectType, !currentlyOn);
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: currentlyOn
+                  ? const Color(0xFFF0DEDE)
+                  : const Color(0xFFC7E6D0),
+              foregroundColor: currentlyOn
+                  ? const Color(0xFFA33F3F)
+                  : const Color(0xFF2E5A3A),
+              elevation: 0,
+            ),
+            child: Text(
+              currentlyOn
+                  ? l10n.shopFeatureDisableConfirm
+                  : l10n.shopFeatureEnableConfirm,
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -3652,6 +3909,44 @@ class _ShopScreenState extends State<ShopScreen> {
         ),
       ),
     );
+  }
+
+  /// The 칭호 tab: the custom-title pass first, then the catalog titles.
+  ///
+  /// The pass is a 'feature' item on the server (an entitlement, not something
+  /// to equip), so it only showed under 기능 — where nobody shopping for a title
+  /// would look. It stays in 기능 too; this is the same item listed where it is
+  /// relevant.
+  List<Map<String, dynamic>> _titleTabItems(List<Map<String, dynamic>> items) {
+    final custom = items
+        .where((i) => (i['effect_type']?.toString() ?? '') == 'custom_title')
+        .toList();
+    return [...custom, ..._filterShop(items, 'title')];
+  }
+
+  /// The 프로필 tab: feature passes minus the custom title, which now lives in
+  /// 칭호 where someone shopping for a title will look for it.
+  List<Map<String, dynamic>> _profileTabItems(
+    List<Map<String, dynamic>> items,
+  ) {
+    return items
+        .where(
+          (i) =>
+              (i['category']?.toString() ?? '') == 'feature' &&
+              (i['effect_type']?.toString() ?? '') != 'custom_title',
+        )
+        .toList();
+  }
+
+  /// Owned titles: the custom-title pass first, then owned catalog titles.
+  /// Mirrors the shop tab, so the item is where it is looked for in both.
+  List<Map<String, dynamic>> _titleInventoryItems(
+    List<Map<String, dynamic>> items,
+  ) {
+    final custom = items
+        .where((i) => (i['effect_type']?.toString() ?? '') == 'custom_title')
+        .toList();
+    return [...custom, ..._filterInventory(items, 'title')];
   }
 
   List<Map<String, dynamic>> _filterShop(

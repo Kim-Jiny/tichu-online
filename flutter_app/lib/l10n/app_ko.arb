@@ -1425,7 +1425,7 @@
   "shopPreviewNickname": "닉네임",
   "shopButtonUnequip": "해제",
   "customTitleEditTitle": "커스텀 칭호",
-  "customTitleHint": "4글자까지",
+  "customTitleHint": "예: 용사 (4글자까지)",
   "customTitleRule": "한글·영문·숫자만, 4글자까지. 이모지·특수문자·공백은 쓸 수 없습니다.",
   "customTitleColorLabel": "색상",
   "customTitlePreviewLabel": "미리보기",
@@ -1433,5 +1433,16 @@
   "customTitleButton": "칭호 만들기",
   "customTitleSaved": "칭호가 적용되었습니다",
   "gameReportReasonTitle": "부적절한 칭호",
-  "gameReportDetailLabel": "상세 내용 (선택)"
+  "gameReportDetailLabel": "상세 내용 (선택)",
+  "shopFeatureInUse": "사용 중",
+  "shopFeatureOff": "사용 안 함",
+  "shopPurchaseDonePassive2": "구매가 완료되었습니다.\n구매 즉시 적용되며 만료일까지 유지됩니다. 인벤토리에서 잠시 끄고 켤 수 있습니다.",
+  "shopCategoryProfile": "프로필",
+  "shopCustomTitleSample": "커스텀칭호",
+  "shopFeatureDisableTitle": "사용 중지할까요?",
+  "shopFeatureDisableBody": "사용을 중지해도 이용 기간은 계속 소모되며, 만료일은 그대로입니다. 언제든 다시 사용할 수 있습니다.",
+  "shopFeatureDisableConfirm": "사용 중지",
+  "shopFeatureEnableTitle": "다시 사용할까요?",
+  "shopFeatureEnableBody": "바로 적용됩니다. 이용 기간은 만료일까지입니다.",
+  "shopFeatureEnableConfirm": "사용하기"
 }

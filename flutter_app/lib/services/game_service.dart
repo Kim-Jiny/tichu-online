@@ -17,7 +17,15 @@ import 'profile_store.dart';
 import 'restore_sync_tracker.dart';
 import 'sfx_service.dart';
 
-enum AppDestination { lobby, waitingRoom, game, spectator, skGame, llGame, mightyGame }
+enum AppDestination {
+  lobby,
+  waitingRoom,
+  game,
+  spectator,
+  skGame,
+  llGame,
+  mightyGame,
+}
 
 class GameService extends ChangeNotifier {
   final NetworkService _network;
@@ -41,6 +49,7 @@ class GameService extends ChangeNotifier {
 
   // Room info
   String currentRoomId = '';
+
   /// One-shot marker set when we initiate room entry (join/invite) and
   /// cleared when the first room_state arrives. Used to fire the
   /// `room_join` analytics event with accurate gameType/isRanked.
@@ -54,9 +63,11 @@ class GameService extends ChangeNotifier {
   int roomTargetScore = 1000;
   int roomMaxPlayers = 4;
   Set<int> roomBlockedSlots = <int>{};
+
   /// Tichu-only: host opted to randomize team assignment at startGame
   /// instead of using the fixed (0,2) vs (1,3) seat-to-team mapping.
   bool roomRandomSeating = false;
+
   /// Skull King expansions active in the current room. Subset of
   /// `['kraken', 'white_whale', 'loot']`. Only meaningful when
   /// [currentGameType] is `skull_king`.
@@ -149,6 +160,7 @@ class GameService extends ChangeNotifier {
   bool goldProductsLoading = false;
   List<Map<String, dynamic>> shopItems = [];
   List<Map<String, dynamic>> inventoryItems = [];
+
   /// Server-driven visual cache for banners/titles/themes. Populated once
   /// per login via `requestVisualCatalog()`. Lookup by itemKey → ShopVisual
   /// so renderers can use admin-edited gradient angle/stops instead of
@@ -171,6 +183,12 @@ class GameService extends ChangeNotifier {
 
   // Equipped title
   String? equippedTitle;
+
+  /// Display name of the equipped title, and the equipped banner key. Both are
+  /// on the profile payload too, but that is a cached fetch — equipping updates
+  /// these immediately so previews and seats don't keep showing the old one.
+  String? equippedTitleName;
+  String? equippedBanner;
 
   // Own active profile-photo URL (null = default avatar). Set from
   // login_success and refreshed after a successful upload.
@@ -606,7 +624,9 @@ class GameService extends ChangeNotifier {
     try {
       _handleMessage(data);
     } catch (e, st) {
-      debugPrint('[GameService] message handler error type=${data['type']}: $e\n$st');
+      debugPrint(
+        '[GameService] message handler error type=${data['type']}: $e\n$st',
+      );
     }
   }
 
@@ -648,7 +668,9 @@ class GameService extends ChangeNotifier {
         // Analytics: standard login event + bind userId so we can slice
         // funnels per player without leaking PII (nickname stays private).
         AnalyticsService.instance.logLogin(authProvider);
-        AnalyticsService.instance.setUserId(playerId.isNotEmpty ? playerId : null);
+        AnalyticsService.instance.setUserId(
+          playerId.isNotEmpty ? playerId : null,
+        );
         // Async FCM token update - don't block login
         _sendFcmTokenAsync();
         // Prefetch notices so the unread badge is accurate immediately.
@@ -681,7 +703,10 @@ class GameService extends ChangeNotifier {
           final c = _uploadTokenCompleter;
           _uploadTokenCompleter = null;
           if (c != null && !c.isCompleted) {
-            c.complete((token: null, error: data['reason'] as String? ?? 'error'));
+            c.complete((
+              token: null,
+              error: data['reason'] as String? ?? 'error',
+            ));
           }
         }
         break;
@@ -960,7 +985,7 @@ class GameService extends ChangeNotifier {
         roomMaxPlayers = 4;
         roomBlockedSlots = <int>{};
         roomRandomSeating = false;
-    roomSkExpansions = const [];
+        roomSkExpansions = const [];
         roomSkExpansions = const [];
         chatMessages = [];
         if (isDuplicateLogin) {
@@ -986,7 +1011,7 @@ class GameService extends ChangeNotifier {
         isHost = false;
         isRankedRoom = false;
         roomRandomSeating = false;
-    roomSkExpansions = const [];
+        roomSkExpansions = const [];
         roomSkExpansions = const [];
         roomTurnTimeLimit = 30;
         roomTargetScore = 1000;
@@ -1683,6 +1708,29 @@ class GameService extends ChangeNotifier {
           if (p is Map && p['profilePrivateHidePhoto'] != null) {
             profilePrivateHidePhoto = p['profilePrivateHidePhoto'] == true;
           }
+          if (p is Map) {
+            equippedBanner = p['bannerKey'] as String? ?? equippedBanner;
+            equippedTitleName = p['titleName'] as String? ?? equippedTitleName;
+          }
+          if (p is Map && p['customTitleText'] != null) {
+            myCustomTitleText = p['customTitleText'] as String?;
+            myCustomTitleColor = p['customTitleColor'] as String?;
+          }
+        }
+        notifyListeners();
+        break;
+
+      case 'feature_toggle_result':
+        if (data['success'] == true) {
+          // The server recomputes these; adopting its answer keeps the in-game
+          // widgets and the inventory switch from disagreeing.
+          hasTopCardCounter = data['hasTopCardCounter'] == true;
+          hasMightyTrumpCounter = data['hasMightyTrumpCounter'] == true;
+          hasMightyPrevTrick = data['hasMightyPrevTrick'] == true;
+          requestInventory();
+        } else {
+          shopActionSuccess = false;
+          shopActionMessage = data['message'] as String?;
         }
         notifyListeners();
         break;
@@ -1692,6 +1740,13 @@ class GameService extends ChangeNotifier {
         customTitleMessage = data['message'] as String?;
         if (data['success'] == true) {
           equippedTitle = data['titleKey'] as String?;
+          // Saving a custom title equips it, so the preview sources have to
+          // learn its name here too — otherwise the banner preview keeps
+          // drawing whatever catalog title was worn before.
+          equippedTitleName = data['titleName'] as String?;
+          myCustomTitleText = data['titleName'] as String?;
+          myCustomTitleColor = data['color'] as String?;
+          if (playerName.isNotEmpty) requestProfile(playerName);
         }
         // The inventory row shows the current text; refetch so it is not stale.
         requestInventory();
@@ -1752,8 +1807,7 @@ class GameService extends ChangeNotifier {
         goldProductsLoading = false;
         if (data['success'] == true) {
           final list = data['products'] as List? ?? [];
-          goldProducts =
-              list.map((e) => Map<String, dynamic>.from(e)).toList();
+          goldProducts = list.map((e) => Map<String, dynamic>.from(e)).toList();
         }
         notifyListeners();
         break;
@@ -1854,17 +1908,20 @@ class GameService extends ChangeNotifier {
         if (data['success'] == true) {
           attendanceState = {
             'claimedToday': data['claimedToday'] == true,
-            'cycleClaimedDays': (data['cycleClaimedDays'] as num?)?.toInt() ?? 0,
+            'cycleClaimedDays':
+                (data['cycleClaimedDays'] as num?)?.toInt() ?? 0,
             'todayDay': (data['todayDay'] as num?)?.toInt() ?? 1,
             'todayRewardGold': (data['todayRewardGold'] as num?)?.toInt() ?? 50,
             'weekRewards': (data['weekRewards'] as List? ?? const [])
-                .map((e) => (e as num).toInt()).toList(),
+                .map((e) => (e as num).toInt())
+                .toList(),
             'resetAtUtc': data['resetAtUtc'] as String?,
             'totalClaims': (data['totalClaims'] as num?)?.toInt() ?? 0,
           };
           attendanceError = null;
         } else {
-          attendanceError = data['message'] as String? ?? 'attendance_state_failed';
+          attendanceError =
+              data['message'] as String? ?? 'attendance_state_failed';
         }
         notifyListeners();
         break;
@@ -1875,11 +1932,13 @@ class GameService extends ChangeNotifier {
           if (st != null) {
             attendanceState = {
               'claimedToday': st['claimedToday'] == true,
-              'cycleClaimedDays': (st['cycleClaimedDays'] as num?)?.toInt() ?? 0,
+              'cycleClaimedDays':
+                  (st['cycleClaimedDays'] as num?)?.toInt() ?? 0,
               'todayDay': (st['todayDay'] as num?)?.toInt() ?? 1,
               'todayRewardGold': (st['todayRewardGold'] as num?)?.toInt() ?? 50,
               'weekRewards': (st['weekRewards'] as List? ?? const [])
-                  .map((e) => (e as num).toInt()).toList(),
+                  .map((e) => (e as num).toInt())
+                  .toList(),
               'resetAtUtc': st['resetAtUtc'] as String?,
               'totalClaims': (st['totalClaims'] as num?)?.toInt() ?? 0,
             };
@@ -1903,7 +1962,10 @@ class GameService extends ChangeNotifier {
           if (data['reason'] == 'already_claimed' && attendanceState != null) {
             attendanceState = {...attendanceState!, 'claimedToday': true};
           }
-          attendanceError = data['message'] as String? ?? data['reason'] as String? ?? 'claim_failed';
+          attendanceError =
+              data['message'] as String? ??
+              data['reason'] as String? ??
+              'claim_failed';
         }
         notifyListeners();
         break;
@@ -2040,6 +2102,10 @@ class GameService extends ChangeNotifier {
                 break;
               case 'title':
                 equippedTitle = null;
+                equippedTitleName = null;
+                break;
+              case 'banner':
+                equippedBanner = null;
                 break;
             }
           } else {
@@ -2050,8 +2116,16 @@ class GameService extends ChangeNotifier {
             final titleKey = data['titleKey'] as String?;
             if (titleKey != null) {
               equippedTitle = titleKey;
+              equippedTitleName = data['itemName'] as String?;
+            }
+            final bannerKey = data['bannerKey'] as String?;
+            if (bannerKey != null) {
+              equippedBanner = bannerKey;
             }
           }
+          // Everything else reads the cached profile (shop previews, the popup),
+          // so pull a fresh one instead of leaving them on the old cosmetics.
+          if (playerName.isNotEmpty) requestProfile(playerName);
         }
         notifyListeners();
         break;
@@ -2364,8 +2438,14 @@ class GameService extends ChangeNotifier {
     }
 
     // Card played: discard pile grew for any player
-    final prevDiscardTotal = prev.players.fold<int>(0, (s, p) => s + p.discardPile.length);
-    final nextDiscardTotal = next.players.fold<int>(0, (s, p) => s + p.discardPile.length);
+    final prevDiscardTotal = prev.players.fold<int>(
+      0,
+      (s, p) => s + p.discardPile.length,
+    );
+    final nextDiscardTotal = next.players.fold<int>(
+      0,
+      (s, p) => s + p.discardPile.length,
+    );
     if (nextDiscardTotal > prevDiscardTotal) {
       _sfx.play('card');
     }
@@ -2393,7 +2473,10 @@ class GameService extends ChangeNotifier {
     }
   }
 
-  void _handleMightySfxTransitions(MightyGameStateData? prev, MightyGameStateData next) {
+  void _handleMightySfxTransitions(
+    MightyGameStateData? prev,
+    MightyGameStateData next,
+  ) {
     if (prev == null) {
       if (next.isMyTurn) {
         _sfx.play('my_turn');
@@ -2426,7 +2509,8 @@ class GameService extends ChangeNotifier {
         final self = next.players.where((p) => p.position == 'self');
         if (self.isNotEmpty) {
           final myScore = next.scores[self.first.id] ?? 0;
-          final maxScore = next.scores.values.isEmpty ? 0
+          final maxScore = next.scores.values.isEmpty
+              ? 0
               : next.scores.values.reduce((a, b) => a > b ? a : b);
           _sfx.play(myScore >= maxScore ? 'victory' : 'defeat');
         }
@@ -2801,7 +2885,8 @@ class GameService extends ChangeNotifier {
 
   void requestAdminTodayMatches({bool? ranked, int limit = 100}) {
     // Reuse cached data when filter unchanged.
-    if (_adminTodayMatchesRanked == ranked && adminTodayMatches.isNotEmpty) return;
+    if (_adminTodayMatchesRanked == ranked && adminTodayMatches.isNotEmpty)
+      return;
     _adminTodayMatchesRanked = ranked;
     adminTodayMatchesLoading = true;
     adminTodayMatchesError = null;
@@ -3041,7 +3126,11 @@ class GameService extends ChangeNotifier {
     }
   }
 
-  void addBot({int? targetSlot, String speed = 'normal', String strategy = 'heuristic'}) {
+  void addBot({
+    int? targetSlot,
+    String speed = 'normal',
+    String strategy = 'heuristic',
+  }) {
     final msg = <String, dynamic>{
       'type': 'add_bot',
       'speed': speed,
@@ -3110,11 +3199,7 @@ class GameService extends ChangeNotifier {
 
   // Mighty actions
   void mightySubmitBid(int points, String suit) {
-    _network.send({
-      'type': 'submit_bid',
-      'points': points,
-      'suit': suit,
-    });
+    _network.send({'type': 'submit_bid', 'points': points, 'suit': suit});
   }
 
   void mightyPass() {
@@ -3149,7 +3234,11 @@ class GameService extends ChangeNotifier {
     _network.send({'type': 'raise_bid'});
   }
 
-  void mightyPlayCard(String cardId, {String? jokerSuit, bool jokerCall = false}) {
+  void mightyPlayCard(
+    String cardId, {
+    String? jokerSuit,
+    bool jokerCall = false,
+  }) {
     final msg = <String, dynamic>{'type': 'play_card', 'cardId': cardId};
     if (jokerSuit != null) msg['jokerSuit'] = jokerSuit;
     if (jokerCall) msg['jokerCall'] = true;
@@ -3491,12 +3580,23 @@ class GameService extends ChangeNotifier {
   String? customTitleMessage;
   bool? customTitleSuccess;
 
-  void setCustomTitle(String text, String colorId) {
+  /// My own custom title, as last saved. The profile payload also carries it,
+  /// but a fetch has to come back first — and the editor is usually reopened
+  /// before that, which is how it kept seeding the previous title.
+  String? myCustomTitleText;
+  String? myCustomTitleColor;
+
+  /// Switch a feature pass on or off. The days keep running either way.
+  void setFeatureEnabled(String effectType, bool enabled) {
     _network.send({
-      'type': 'set_custom_title',
-      'text': text,
-      'color': colorId,
+      'type': 'set_feature_enabled',
+      'effectType': effectType,
+      'enabled': enabled,
     });
+  }
+
+  void setCustomTitle(String text, String colorId) {
+    _network.send({'type': 'set_custom_title', 'text': text, 'color': colorId});
   }
 
   /// Take off whatever is equipped in this category (banner / title / theme).
@@ -3770,7 +3870,8 @@ class GameService extends ChangeNotifier {
       final prefs = await SharedPreferences.getInstance();
       final list = prefs.getStringList(_readNoticesPrefsKey) ?? const [];
       _readNoticeIds.addAll(list.map(int.tryParse).whereType<int>());
-      _noticesBootstrapped = prefs.getBool(_noticesBootstrappedPrefsKey) ?? false;
+      _noticesBootstrapped =
+          prefs.getBool(_noticesBootstrappedPrefsKey) ?? false;
       if (_disposed) return;
       notifyListeners();
     } catch (_) {

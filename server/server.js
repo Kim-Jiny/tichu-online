@@ -21,7 +21,7 @@ const {
   initDatabase, registerUser, loginUser, checkNickname, deleteUser,
   blockUser, unblockUser, getBlockedUsers, reportUser, getReportedNicknames,
   addFriend, getFriends, getPendingFriendRequests, setProfilePrivateHidePhoto,
-  unequipCategory, setCustomTitle, clearCustomTitle,
+  unequipCategory, setCustomTitle, clearCustomTitle, setFeatureEnabled,
   acceptFriendRequest, rejectFriendRequest, removeFriend,
   saveMatchResult, saveMatchResultWithStats, updateUserStats, getUserProfile, getRecentMatches, updateCardViewPref,
   submitInquiry, getUserInquiries, markInquiriesRead, getRankings,
@@ -3159,6 +3159,9 @@ async function handleMessage(ws, data) {
     case 'set_custom_title':
       await handleSetCustomTitle(ws, data);
       break;
+    case 'set_feature_enabled':
+      await handleSetFeatureEnabled(ws, data);
+      break;
     case 'use_item':
       await handleUseItem(ws, data);
       break;
@@ -5196,6 +5199,48 @@ function handleSwitchToPlayer(ws, data) {
   notifyLegacyRandomSeatingClient(room, ws);
   broadcastRoomState(ws.roomId);
   broadcastRoomList();
+}
+
+/**
+ * Owner switching a feature pass on or off.
+ *
+ * The days keep running either way — this decides whether the pass applies.
+ * The reply carries the recomputed capability flags because that is what the
+ * client gates its UI on, and it must not wait for the next login to find out.
+ */
+async function handleSetFeatureEnabled(ws, data) {
+  if (!ws.nickname) {
+    sendTo(ws, { type: 'error', message: t(ws.locale, 'login_required') });
+    return;
+  }
+  const effectType = data?.effectType?.toString() || '';
+  const enabled = data?.enabled === true;
+  const result = await setFeatureEnabled(ws.nickname, effectType, enabled);
+  if (!result.success) {
+    sendTo(ws, {
+      type: 'feature_toggle_result',
+      success: false,
+      message: t(ws.locale, result.messageKey || 'db_update_failed'),
+    });
+    return;
+  }
+  const profile = await refreshProfilePrivacy(ws.nickname);
+  sendTo(ws, {
+    type: 'feature_toggle_result',
+    success: true,
+    effectType,
+    enabled,
+    hasTopCardCounter: profile?.hasTopCardCounter === true,
+    hasMightyTrumpCounter: profile?.hasMightyTrumpCounter === true,
+    hasMightyPrevTrick: profile?.hasMightyPrevTrick === true,
+    hasProfilePrivate: profile?.hasProfilePrivate === true,
+  });
+  // Turning privacy off puts records (and possibly the photo) back in view for
+  // everyone in the room, so the seats have to be redrawn.
+  if (effectType === 'profile_private' && ws.roomId) {
+    broadcastRoomState(ws.roomId);
+    if (lobby.getRoom(ws.roomId)?.game) sendGameStateToAll(ws.roomId);
+  }
 }
 
 /** Re-read one user's privacy state into the broadcast cache. */

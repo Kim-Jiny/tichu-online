@@ -229,6 +229,15 @@ async function initDatabase() {
     // Custom title: the entitlement is an ordinary feature item in
     // tc_user_items; the text and its palette colour are the user's own and
     // live here so they survive a lapsed pass and come back on re-purchase.
+    // Feature passes the owner has switched off. Presence = off; the pass keeps
+    // running to its expiry either way — this only decides whether it applies.
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS tc_user_feature_off (
+        nickname VARCHAR(50) NOT NULL,
+        effect_type VARCHAR(40) NOT NULL,
+        PRIMARY KEY (nickname, effect_type)
+      )
+    `);
     await client.query(`ALTER TABLE tc_users ADD COLUMN IF NOT EXISTS custom_title_text VARCHAR(24)`);
     await client.query(`ALTER TABLE tc_users ADD COLUMN IF NOT EXISTS custom_title_color VARCHAR(16)`);
 
@@ -1990,9 +1999,21 @@ async function getUserProfile(nickname, locale = 'ko') {
       );
       return r.rows.length > 0;
     };
-    const hasTopCardCounter = await featureActive('top_card_counter');
-    const hasMightyTrumpCounter = await featureActive('mighty_trump_counter');
-    const hasMightyPrevTrick = await featureActive('mighty_prev_trick');
+    const offRes = await client.query(
+      `SELECT effect_type FROM tc_user_feature_off WHERE nickname = $1`,
+      [nickname],
+    );
+    const disabledFeatures = offRes.rows.map((r) => r.effect_type);
+    const isOff = (effectType) => disabledFeatures.includes(effectType);
+    // Owned AND switched on. Owning it is what the shop sells; using it is the
+    // owner's call, and they can turn it off without losing the days.
+    const hasTopCardCounter =
+      (await featureActive('top_card_counter')) && !isOff('top_card_counter');
+    const hasMightyTrumpCounter =
+      (await featureActive('mighty_trump_counter'))
+      && !isOff('mighty_trump_counter');
+    const hasMightyPrevTrick =
+      (await featureActive('mighty_prev_trick')) && !isOff('mighty_prev_trick');
     // Privacy needs the expiry too, not just a boolean: the owner's own popup
     // shows how long it runs, and the visibility cache re-checks it rather than
     // querying on every broadcast.
@@ -2004,7 +2025,8 @@ async function getUserProfile(nickname, locale = 'ko') {
          AND (ui.expires_at IS NULL OR ui.expires_at >= NOW())`,
       [nickname],
     );
-    const hasProfilePrivate = (privateRow.rows[0]?.n || 0) > 0;
+    const hasProfilePrivate =
+      (privateRow.rows[0]?.n || 0) > 0 && !isOff('profile_private');
     const hasCustomTitle = await featureActive('custom_title');
     const profilePrivateExpiresAt = hasProfilePrivate
       ? (privateRow.rows[0].expires_at || null)
@@ -2093,6 +2115,7 @@ async function getUserProfile(nickname, locale = 'ko') {
       hasCustomTitle,
       customTitleText: user.custom_title_text || null,
       customTitleColor: user.custom_title_color || null,
+      disabledFeatures,
     };
   } catch (err) {
     console.error('Get user profile error:', err);
@@ -2154,6 +2177,42 @@ async function setCustomTitle(nickname, text, colorId) {
     return { success: false, messageKey: 'db_update_failed' };
   } finally {
     client.release();
+  }
+}
+
+/**
+ * Switch a feature pass on or off for its owner.
+ *
+ * The pass keeps running to its expiry either way — this is "don't apply it for
+ * now", not a pause button. Stored as a row per switched-off feature.
+ */
+async function setFeatureEnabled(nickname, effectType, enabled) {
+  const ALLOWED = new Set([
+    'top_card_counter',
+    'mighty_trump_counter',
+    'mighty_prev_trick',
+    'profile_private',
+  ]);
+  if (!ALLOWED.has(effectType)) {
+    return { success: false, messageKey: 'db_item_not_found' };
+  }
+  try {
+    if (enabled) {
+      await pool.query(
+        `DELETE FROM tc_user_feature_off WHERE nickname = $1 AND effect_type = $2`,
+        [nickname, effectType],
+      );
+    } else {
+      await pool.query(
+        `INSERT INTO tc_user_feature_off (nickname, effect_type) VALUES ($1, $2)
+         ON CONFLICT DO NOTHING`,
+        [nickname, effectType],
+      );
+    }
+    return { success: true, effectType, enabled: enabled === true };
+  } catch (err) {
+    console.error('Set feature enabled error:', err);
+    return { success: false, messageKey: 'db_update_failed' };
   }
 }
 
@@ -2747,6 +2806,16 @@ async function getUserItems(nickname) {
       [nickname]
     );
     const items = result.rows;
+    // Each row says whether its feature is currently switched on, so the
+    // inventory can draw the toggle without a second round trip.
+    const off = await client.query(
+      `SELECT effect_type FROM tc_user_feature_off WHERE nickname = $1`,
+      [nickname],
+    );
+    const disabled = new Set(off.rows.map((r) => r.effect_type));
+    for (const it of items) {
+      it.feature_disabled = disabled.has(it.effect_type);
+    }
 
     // The profile-photo entitlement does not live in tc_user_items — the upload
     // gate reads it off tc_users, so buyItem writes it there. Nothing else
@@ -8107,6 +8176,7 @@ module.exports = {
   unequipCategory,
   setCustomTitle,
   clearCustomTitle,
+  setFeatureEnabled,
   getPendingFriendRequests,
   acceptFriendRequest,
   rejectFriendRequest,

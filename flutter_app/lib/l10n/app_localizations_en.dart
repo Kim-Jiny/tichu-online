@@ -4446,7 +4446,7 @@ class L10nEn extends L10n {
   String get customTitleEditTitle => 'Custom title';
 
   @override
-  String get customTitleHint => 'Up to 4 characters';
+  String get customTitleHint => 'e.g. Ace (up to 4)';
 
   @override
   String get customTitleRule =>
@@ -4472,4 +4472,40 @@ class L10nEn extends L10n {
 
   @override
   String get gameReportDetailLabel => 'Details (optional)';
+
+  @override
+  String get shopFeatureInUse => 'In use';
+
+  @override
+  String get shopFeatureOff => 'Off';
+
+  @override
+  String get shopPurchaseDonePassive2 =>
+      'Purchase complete.\nIt applies right away and runs until it expires. You can switch it off and on from your inventory.';
+
+  @override
+  String get shopCategoryProfile => 'Profile';
+
+  @override
+  String get shopCustomTitleSample => 'YourTag';
+
+  @override
+  String get shopFeatureDisableTitle => 'Turn this off?';
+
+  @override
+  String get shopFeatureDisableBody =>
+      'The pass keeps running while it is off — the expiry date does not change. You can turn it back on at any time.';
+
+  @override
+  String get shopFeatureDisableConfirm => 'Turn off';
+
+  @override
+  String get shopFeatureEnableTitle => 'Turn this back on?';
+
+  @override
+  String get shopFeatureEnableBody =>
+      'It applies right away, and runs until the pass expires.';
+
+  @override
+  String get shopFeatureEnableConfirm => 'Turn on';
 }

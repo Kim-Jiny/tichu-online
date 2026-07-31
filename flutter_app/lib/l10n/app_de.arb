@@ -1423,7 +1423,7 @@
   "shopPreviewNickname": "Nickname",
   "shopButtonUnequip": "Ablegen",
   "customTitleEditTitle": "Eigener Titel",
-  "customTitleHint": "Bis zu 4 Zeichen",
+  "customTitleHint": "z. B. Ass (max. 4)",
   "customTitleRule": "Nur Buchstaben, Hangul und Ziffern, max. 4 Zeichen. Keine Emojis, Sonderzeichen oder Leerzeichen.",
   "customTitleColorLabel": "Farbe",
   "customTitlePreviewLabel": "Vorschau",
@@ -1431,5 +1431,16 @@
   "customTitleButton": "Titel schreiben",
   "customTitleSaved": "Titel übernommen",
   "gameReportReasonTitle": "Unangemessener Titel",
-  "gameReportDetailLabel": "Details (optional)"
+  "gameReportDetailLabel": "Details (optional)",
+  "shopFeatureInUse": "Aktiv",
+  "shopFeatureOff": "Aus",
+  "shopPurchaseDonePassive2": "Kauf abgeschlossen.\nEs gilt sofort und läuft bis zum Ablauf. Du kannst es im Inventar aus- und einschalten.",
+  "shopCategoryProfile": "Profil",
+  "shopCustomTitleSample": "DeinTag",
+  "shopFeatureDisableTitle": "Deaktivieren?",
+  "shopFeatureDisableBody": "Die Laufzeit läuft weiter — das Ablaufdatum ändert sich nicht. Du kannst es jederzeit wieder aktivieren.",
+  "shopFeatureDisableConfirm": "Deaktivieren",
+  "shopFeatureEnableTitle": "Wieder aktivieren?",
+  "shopFeatureEnableBody": "Gilt sofort und läuft bis zum Ablauf der Berechtigung.",
+  "shopFeatureEnableConfirm": "Aktivieren"
 }

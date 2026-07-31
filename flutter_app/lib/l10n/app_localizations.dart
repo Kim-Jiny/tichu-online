@@ -7920,7 +7920,7 @@ abstract class L10n {
   /// No description provided for @customTitleHint.
   ///
   /// In en, this message translates to:
-  /// **'Up to 4 characters'**
+  /// **'e.g. Ace (up to 4)'**
   String get customTitleHint;
 
   /// No description provided for @customTitleRule.
@@ -7970,6 +7970,72 @@ abstract class L10n {
   /// In en, this message translates to:
   /// **'Details (optional)'**
   String get gameReportDetailLabel;
+
+  /// No description provided for @shopFeatureInUse.
+  ///
+  /// In en, this message translates to:
+  /// **'In use'**
+  String get shopFeatureInUse;
+
+  /// No description provided for @shopFeatureOff.
+  ///
+  /// In en, this message translates to:
+  /// **'Off'**
+  String get shopFeatureOff;
+
+  /// No description provided for @shopPurchaseDonePassive2.
+  ///
+  /// In en, this message translates to:
+  /// **'Purchase complete.\nIt applies right away and runs until it expires. You can switch it off and on from your inventory.'**
+  String get shopPurchaseDonePassive2;
+
+  /// No description provided for @shopCategoryProfile.
+  ///
+  /// In en, this message translates to:
+  /// **'Profile'**
+  String get shopCategoryProfile;
+
+  /// No description provided for @shopCustomTitleSample.
+  ///
+  /// In en, this message translates to:
+  /// **'YourTag'**
+  String get shopCustomTitleSample;
+
+  /// No description provided for @shopFeatureDisableTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Turn this off?'**
+  String get shopFeatureDisableTitle;
+
+  /// No description provided for @shopFeatureDisableBody.
+  ///
+  /// In en, this message translates to:
+  /// **'The pass keeps running while it is off — the expiry date does not change. You can turn it back on at any time.'**
+  String get shopFeatureDisableBody;
+
+  /// No description provided for @shopFeatureDisableConfirm.
+  ///
+  /// In en, this message translates to:
+  /// **'Turn off'**
+  String get shopFeatureDisableConfirm;
+
+  /// No description provided for @shopFeatureEnableTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Turn this back on?'**
+  String get shopFeatureEnableTitle;
+
+  /// No description provided for @shopFeatureEnableBody.
+  ///
+  /// In en, this message translates to:
+  /// **'It applies right away, and runs until the pass expires.'**
+  String get shopFeatureEnableBody;
+
+  /// No description provided for @shopFeatureEnableConfirm.
+  ///
+  /// In en, this message translates to:
+  /// **'Turn on'**
+  String get shopFeatureEnableConfirm;
 }
 
 class _L10nDelegate extends LocalizationsDelegate<L10n> {

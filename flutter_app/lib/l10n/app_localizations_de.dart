@@ -4482,7 +4482,7 @@ class L10nDe extends L10n {
   String get customTitleEditTitle => 'Eigener Titel';
 
   @override
-  String get customTitleHint => 'Bis zu 4 Zeichen';
+  String get customTitleHint => 'z. B. Ass (max. 4)';
 
   @override
   String get customTitleRule =>
@@ -4508,4 +4508,40 @@ class L10nDe extends L10n {
 
   @override
   String get gameReportDetailLabel => 'Details (optional)';
+
+  @override
+  String get shopFeatureInUse => 'Aktiv';
+
+  @override
+  String get shopFeatureOff => 'Aus';
+
+  @override
+  String get shopPurchaseDonePassive2 =>
+      'Kauf abgeschlossen.\nEs gilt sofort und läuft bis zum Ablauf. Du kannst es im Inventar aus- und einschalten.';
+
+  @override
+  String get shopCategoryProfile => 'Profil';
+
+  @override
+  String get shopCustomTitleSample => 'DeinTag';
+
+  @override
+  String get shopFeatureDisableTitle => 'Deaktivieren?';
+
+  @override
+  String get shopFeatureDisableBody =>
+      'Die Laufzeit läuft weiter — das Ablaufdatum ändert sich nicht. Du kannst es jederzeit wieder aktivieren.';
+
+  @override
+  String get shopFeatureDisableConfirm => 'Deaktivieren';
+
+  @override
+  String get shopFeatureEnableTitle => 'Wieder aktivieren?';
+
+  @override
+  String get shopFeatureEnableBody =>
+      'Gilt sofort und läuft bis zum Ablauf der Berechtigung.';
+
+  @override
+  String get shopFeatureEnableConfirm => 'Aktivieren';
 }

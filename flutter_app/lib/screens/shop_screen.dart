@@ -2485,9 +2485,7 @@ class _ShopScreenState extends State<ShopScreen> {
                         // Cosmetics are bought on how they look, so show the
                         // thing itself applied: a banner and a title on a
                         // waiting-room seat, a theme as the screen behind it.
-                        if (category == 'banner' ||
-                            category == 'title' ||
-                            category == 'theme') ...[
+                        if (_hasPreview(category, effectTypeOf(item))) ...[
                           const SizedBox(height: 14),
                           Text(
                             l10n.shopPreviewLabel,
@@ -2502,9 +2500,10 @@ class _ShopScreenState extends State<ShopScreen> {
                           // sheet is open fills in the level and photo without
                           // the user having to reopen it.
                           Consumer<GameService>(
-                            builder: (_, g, _) => _buildCosmeticPreview(
+                            builder: (_, g, _) => _buildItemPreview(
                               g,
                               category: category,
+                              effectType: effectTypeOf(item),
                               itemKey: itemKey,
                               itemName: name,
                               fallbackGradient: gradient,
@@ -2859,6 +2858,167 @@ class _ShopScreenState extends State<ShopScreen> {
     return g.profileFor(g.playerName)?['profile'] as Map?;
   }
 
+  String effectTypeOf(Map<String, dynamic> item) =>
+      item['effect_type']?.toString() ?? '';
+
+  static const _previewEffects = {
+    'top_card_counter',
+    'mighty_trump_counter',
+    'mighty_prev_trick',
+  };
+
+  bool _hasPreview(String category, String effectType) =>
+      category == 'banner' ||
+      category == 'title' ||
+      category == 'theme' ||
+      _previewEffects.contains(effectType);
+
+  /// What the in-game aid actually looks like on screen.
+  ///
+  /// A counter is bought sight unseen otherwise: the description says it counts
+  /// something, but not that it is a small chip in the corner of the board. This
+  /// mirrors the real widgets (game_screen's top-card counter, mighty's trump
+  /// chip) with sample numbers.
+  Widget _buildFeaturePreview(String effectType) {
+    Widget frame(Widget child) => Container(
+      height: 64,
+      width: double.infinity,
+      decoration: BoxDecoration(
+        color: const Color(0xFFF4EFEA),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: const Color(0xFFE6DDD8)),
+      ),
+      alignment: Alignment.center,
+      child: child,
+    );
+
+    switch (effectType) {
+      case 'top_card_counter':
+        return frame(
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+            decoration: BoxDecoration(
+              color: const Color(0xFFF8F4F0),
+              borderRadius: BorderRadius.circular(8),
+              border: Border.all(color: const Color(0xFFE6DCE8)),
+            ),
+            child: const Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  'A',
+                  style: TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.bold,
+                    color: Color(0xFF5A4038),
+                  ),
+                ),
+                Text(
+                  ':2',
+                  style: TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.bold,
+                    color: Color(0xFF8A7A6A),
+                  ),
+                ),
+                SizedBox(width: 8),
+                Text(
+                  'K',
+                  style: TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.bold,
+                    color: Color(0xFF5A4038),
+                  ),
+                ),
+                Text(
+                  ':3',
+                  style: TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.bold,
+                    color: Color(0xFF8A7A6A),
+                  ),
+                ),
+                SizedBox(width: 8),
+                Text('\u{1F409}', style: TextStyle(fontSize: 13)),
+                Text(
+                  '\u25CB',
+                  style: TextStyle(fontSize: 12, color: Color(0xFF4A90D9)),
+                ),
+                SizedBox(width: 6),
+                Text('\u{1F426}', style: TextStyle(fontSize: 13)),
+                Text(
+                  '\u2715',
+                  style: TextStyle(fontSize: 12, color: Color(0xFFCCC0B8)),
+                ),
+              ],
+            ),
+          ),
+        );
+      case 'mighty_trump_counter':
+        return frame(
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+            decoration: BoxDecoration(
+              color: Colors.white.withValues(alpha: 0.9),
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: const Color(0xFFCCCCCC)),
+            ),
+            child: const Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  '\u2660',
+                  style: TextStyle(fontSize: 15, color: Color(0xFF2E2E2E)),
+                ),
+                SizedBox(width: 4),
+                Text(
+                  '5',
+                  style: TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.bold,
+                    color: Color(0xFF2E2E2E),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+      default:
+        // mighty_prev_trick — the little card row the button opens.
+        return frame(
+          Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              for (final label in const ['\u2660A', '\u2665K', '\u26603'])
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 3),
+                  child: Container(
+                    width: 28,
+                    height: 40,
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(5),
+                      border: Border.all(color: const Color(0xFFD8CEC8)),
+                    ),
+                    alignment: Alignment.center,
+                    child: Text(
+                      label,
+                      style: TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.bold,
+                        color: label.startsWith('\u2665')
+                            ? const Color(0xFFD32F2F)
+                            : const Color(0xFF2E2E2E),
+                      ),
+                    ),
+                  ),
+                ),
+            ],
+          ),
+        );
+    }
+  }
+
   /// A banner / title / theme drawn the way it will actually appear.
   ///
   /// Banner and title share the waiting-room seat, because that is where they
@@ -2866,14 +3026,18 @@ class _ShopScreenState extends State<ShopScreen> {
   /// the nickname. The old banner preview predated that layout — it drew a
   /// standalone level badge beside the name, which is not a thing any screen
   /// shows any more.
-  Widget _buildCosmeticPreview(
+  Widget _buildItemPreview(
     GameService g, {
     required String category,
+    required String effectType,
     required String itemKey,
     required String itemName,
     required List<Color> fallbackGradient,
   }) {
     final l10n = L10n.of(context);
+    if (_previewEffects.contains(effectType)) {
+      return _buildFeaturePreview(effectType);
+    }
     if (category == 'theme') {
       final colors = g.themeGradientFor(itemKey);
       return Container(

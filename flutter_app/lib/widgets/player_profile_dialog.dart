@@ -74,10 +74,20 @@ void showPlayerProfileDialog(
               profile: profile,
               game: game,
               subtitle: subtitle ?? l10n.lobbyPlayerProfile,
-              subtitleBuilder: (inner) => profileLevelStrip(
-                (inner?['level'] as int?) ?? 1,
-                (inner?['expTotal'] as int?) ?? 0,
-              ),
+              // A private profile sends no level, and the strip's fallback
+              // ("Lv.1 0/100") reads as a real level rather than as a blank.
+              subtitleBuilder: (inner) => inner?['level'] == null
+                  ? Text(
+                      subtitle ?? l10n.lobbyPlayerProfile,
+                      style: const TextStyle(
+                        fontSize: 12,
+                        color: Color(0xFF84766E),
+                      ),
+                    )
+                  : profileLevelStrip(
+                      inner!['level'] as int,
+                      (inner['expTotal'] as int?) ?? 0,
+                    ),
               isBot: isBot,
               onCloseDialog: () => Navigator.pop(ctx),
               placeholderBackground: placeholderBackground,

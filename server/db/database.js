@@ -6190,12 +6190,25 @@ async function searchUsers(query, requesterNickname, locale = 'ko') {
               u.custom_title_text,
               e.banner_key, e.title_key,
               si.${titleCol} AS title_name,
+              u.profile_private_hide_photo,
               EXISTS (
                 SELECT 1 FROM tc_user_items ui
                 JOIN tc_shop_items s2 ON s2.item_key = ui.item_key
                 WHERE ui.nickname = u.nickname AND s2.effect_type = 'custom_title'
                   AND (ui.expires_at IS NULL OR ui.expires_at >= NOW())
-              ) AS has_custom_title
+              ) AS has_custom_title,
+              -- Privacy is read from the row, not from the broadcast cache:
+              -- that cache only knows people who have logged in since the
+              -- server started, and a search hit is usually offline.
+              EXISTS (
+                SELECT 1 FROM tc_user_items ui
+                JOIN tc_shop_items s3 ON s3.item_key = ui.item_key
+                WHERE ui.nickname = u.nickname AND s3.effect_type = 'profile_private'
+                  AND (ui.expires_at IS NULL OR ui.expires_at >= NOW())
+              ) AND NOT EXISTS (
+                SELECT 1 FROM tc_user_feature_off f
+                WHERE f.nickname = u.nickname AND f.effect_type = 'profile_private'
+              ) AS has_private
        FROM tc_users u
        LEFT JOIN tc_user_equips e ON e.nickname = u.nickname
        LEFT JOIN tc_shop_items si ON si.item_key = e.title_key
@@ -6219,6 +6232,8 @@ async function searchUsers(query, requesterNickname, locale = 'ko') {
         profilePhotoKey: r.profile_photo_key || null,
         profilePhotoStatus: r.profile_photo_status || 'none',
         profilePhotoExpiresAt: r.profile_photo_expires_at || null,
+        hasProfilePrivate: r.has_private === true,
+        profilePrivateHidePhoto: r.profile_private_hide_photo === true,
       };
     });
   } catch (err) {

@@ -5823,6 +5823,18 @@ abstract class L10n {
   /// **'Request received'**
   String get friendsRequestReceived;
 
+  /// No description provided for @friendsStatusPendingShort.
+  ///
+  /// In en, this message translates to:
+  /// **'Pending'**
+  String get friendsStatusPendingShort;
+
+  /// No description provided for @friendsStatusReceivedShort.
+  ///
+  /// In en, this message translates to:
+  /// **'Received'**
+  String get friendsStatusReceivedShort;
+
   /// No description provided for @friendsRequestSent.
   ///
   /// In en, this message translates to:
@@ -8048,6 +8060,114 @@ abstract class L10n {
   /// In en, this message translates to:
   /// **'Turn on'**
   String get shopFeatureEnableConfirm;
+
+  /// No description provided for @goldChargeTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Buy Gold'**
+  String get goldChargeTitle;
+
+  /// No description provided for @goldPaymentProcessing.
+  ///
+  /// In en, this message translates to:
+  /// **'Processing your payment...'**
+  String get goldPaymentProcessing;
+
+  /// No description provided for @goldPaymentAlreadyProcessed.
+  ///
+  /// In en, this message translates to:
+  /// **'This payment has already been processed.'**
+  String get goldPaymentAlreadyProcessed;
+
+  /// No description provided for @goldPaymentComplete.
+  ///
+  /// In en, this message translates to:
+  /// **'Payment complete'**
+  String get goldPaymentComplete;
+
+  /// No description provided for @goldGranted.
+  ///
+  /// In en, this message translates to:
+  /// **'+{amount} gold added'**
+  String goldGranted(String amount);
+
+  /// No description provided for @goldBalanceNow.
+  ///
+  /// In en, this message translates to:
+  /// **'Balance: {amount}'**
+  String goldBalanceNow(String amount);
+
+  /// No description provided for @goldPaymentFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Payment failed: {message}'**
+  String goldPaymentFailed(String message);
+
+  /// No description provided for @goldStoreLoadFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Could not load the products from the store.'**
+  String get goldStoreLoadFailed;
+
+  /// No description provided for @goldPurchaseStartFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Could not start the purchase: {error}'**
+  String goldPurchaseStartFailed(String error);
+
+  /// No description provided for @goldIapUnavailable.
+  ///
+  /// In en, this message translates to:
+  /// **'In-app purchases are not available on this device.'**
+  String get goldIapUnavailable;
+
+  /// No description provided for @goldNoProducts.
+  ///
+  /// In en, this message translates to:
+  /// **'No gold packs are on sale right now.'**
+  String get goldNoProducts;
+
+  /// No description provided for @goldUnit.
+  ///
+  /// In en, this message translates to:
+  /// **'gold'**
+  String get goldUnit;
+
+  /// No description provided for @goldBestValue.
+  ///
+  /// In en, this message translates to:
+  /// **'Best value'**
+  String get goldBestValue;
+
+  /// No description provided for @goldBonusIncluded.
+  ///
+  /// In en, this message translates to:
+  /// **'+{bonus} bonus'**
+  String goldBonusIncluded(String bonus);
+
+  /// No description provided for @goldNoticeTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Before you buy'**
+  String get goldNoticeTitle;
+
+  /// No description provided for @goldNoticeBody.
+  ///
+  /// In en, this message translates to:
+  /// **'• Gold is paid digital content for use inside the game only. It cannot be exchanged for cash, refunded as cash or transferred.\n• Gold is usable immediately after purchase, so gold you have already spent is excluded from withdrawal (refund).'**
+  String get goldNoticeBody;
+
+  /// No description provided for @goldNoticeMore.
+  ///
+  /// In en, this message translates to:
+  /// **'Refunds and payment support'**
+  String get goldNoticeMore;
+
+  /// No description provided for @goldNoticeDetails.
+  ///
+  /// In en, this message translates to:
+  /// **'• Refunds and cancellations follow the policies and procedures of the Apple App Store / Google Play.\n• Minors must have their legal guardian\'s consent before purchasing; purchases made without consent may be cancelled.\n• Payment enquiries: Settings > Contact us > \'Payment & refunds\'\n• Seller information and the full refund policy are stated in the Terms of Service and Privacy Policy in Settings.'**
+  String get goldNoticeDetails;
 }
 
 class _L10nDelegate extends LocalizationsDelegate<L10n> {

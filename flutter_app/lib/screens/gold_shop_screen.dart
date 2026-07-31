@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import '../l10n/app_localizations.dart';
 import 'package:in_app_purchase/in_app_purchase.dart';
 import '../services/game_service.dart';
 import '../services/iap_service.dart';
@@ -32,7 +33,7 @@ class _GoldShopScreenState extends State<GoldShopScreen> {
       ..onSuccess = _handleSuccess
       ..onError = _handleError
       ..onPending = () {
-        _toast('결제 처리 중입니다...');
+        _toast(L10n.of(context).goldPaymentProcessing);
       }
       ..onSettled = (_) {
         if (mounted) setState(() => _busyProductId = null);
@@ -76,7 +77,7 @@ class _GoldShopScreenState extends State<GoldShopScreen> {
   void _handleSuccess(int granted, int newGold) {
     if (!mounted) return;
     if (granted <= 0) {
-      _toast('이미 처리된 결제입니다.');
+      _toast(L10n.of(context).goldPaymentAlreadyProcessed);
       return;
     }
     // Real-money purchase deserves a clear confirmation (not just a 3s toast),
@@ -90,20 +91,20 @@ class _GoldShopScreenState extends State<GoldShopScreen> {
           children: [
             const Icon(Icons.check_circle, color: Color(0xFF66BB6A), size: 52),
             const SizedBox(height: 14),
-            const Text('결제 완료',
-                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Color(0xFF5A4038))),
+            Text(L10n.of(ctx).goldPaymentComplete,
+                style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Color(0xFF5A4038))),
             const SizedBox(height: 8),
-            Text('+$granted 골드가 지급되었습니다',
+            Text(L10n.of(ctx).goldGranted(_fmt(granted)),
                 style: const TextStyle(fontSize: 15, color: Color(0xFF5A4038))),
             const SizedBox(height: 4),
-            Text('보유 골드 $newGold',
+            Text(L10n.of(ctx).goldBalanceNow(_fmt(newGold)),
                 style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: Color(0xFFB35B19))),
           ],
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(ctx).pop(),
-            child: const Text('확인'),
+            child: Text(L10n.of(ctx).commonOk),
           ),
         ],
       ),
@@ -112,7 +113,7 @@ class _GoldShopScreenState extends State<GoldShopScreen> {
 
   void _handleError(String message) {
     if (!mounted) return;
-    _toast('결제 실패: $message');
+    _toast(L10n.of(context).goldPaymentFailed(message));
   }
 
   void _toast(String msg) {
@@ -125,8 +126,11 @@ class _GoldShopScreenState extends State<GoldShopScreen> {
   Future<void> _buy(Map<String, dynamic> product) async {
     final id = product['product_id']?.toString() ?? '';
     final pd = _details[id];
+    // Resolved before the await: the store call can outlive this screen, and
+    // reading localizations off a dead context is an error.
+    final l10n = L10n.of(context);
     if (pd == null) {
-      _toast('스토어에서 상품 정보를 불러오지 못했습니다.');
+      _toast(l10n.goldStoreLoadFailed);
       return;
     }
     setState(() => _busyProductId = id);
@@ -134,7 +138,7 @@ class _GoldShopScreenState extends State<GoldShopScreen> {
       await _iap.buy(pd);
     } catch (e) {
       if (mounted) setState(() => _busyProductId = null);
-      _toast('결제를 시작할 수 없습니다: $e');
+      _toast(l10n.goldPurchaseStartFailed('$e'));
     }
   }
 
@@ -200,9 +204,9 @@ class _GoldShopScreenState extends State<GoldShopScreen> {
             color: const Color(0xFF8A7A72),
             visualDensity: VisualDensity.compact,
           ),
-          const Text(
-            '골드 충전',
-            style: TextStyle(
+          Text(
+            L10n.of(context).goldChargeTitle,
+            style: const TextStyle(
               fontSize: 19,
               fontWeight: FontWeight.bold,
               color: Color(0xFF5A4038),
@@ -230,13 +234,13 @@ class _GoldShopScreenState extends State<GoldShopScreen> {
 
   Widget _buildBody(GameService game) {
     if (_storeUnavailable) {
-      return const Center(
+      return Center(
         child: Padding(
-          padding: EdgeInsets.all(24),
+          padding: const EdgeInsets.all(24),
           child: Text(
-            '이 기기에서는 인앱결제를 사용할 수 없습니다.',
+            L10n.of(context).goldIapUnavailable,
             textAlign: TextAlign.center,
-            style: TextStyle(color: Color(0xFF8A7A72)),
+            style: const TextStyle(color: Color(0xFF8A7A72)),
           ),
         ),
       );
@@ -246,10 +250,10 @@ class _GoldShopScreenState extends State<GoldShopScreen> {
     }
     final products = game.goldProducts;
     if (products.isEmpty) {
-      return const Center(
+      return Center(
         child: Text(
-          '판매 중인 골드 상품이 없습니다.',
-          style: TextStyle(color: Color(0xFF8A7A72)),
+          L10n.of(context).goldNoProducts,
+          style: const TextStyle(color: Color(0xFF8A7A72)),
         ),
       );
     }
@@ -346,9 +350,9 @@ class _GoldShopScreenState extends State<GoldShopScreen> {
                       ),
                     ),
                     const SizedBox(width: 4),
-                    const Text(
-                      '골드',
-                      style: TextStyle(
+                    Text(
+                      L10n.of(context).goldUnit,
+                      style: const TextStyle(
                         fontSize: 12,
                         fontWeight: FontWeight.w600,
                         color: Color(0xFF9A8E8A),
@@ -382,9 +386,15 @@ class _GoldShopScreenState extends State<GoldShopScreen> {
                   // "최대 혜택" sits here, not up with the amount: on the top
                   // line a third chip squeezed the biggest tier's number until
                   // it rendered smaller than the cheaper ones.
-                  Row(
+                  // Wrap, not Row: German needs a wider "best value" badge and
+                  // the bonus line lost its last word to an ellipsis on the very
+                  // tier the badge is advertising.
+                  Wrap(
+                    spacing: 5,
+                    runSpacing: 2,
+                    crossAxisAlignment: WrapCrossAlignment.center,
                     children: [
-                      if (isBest) ...[
+                      if (isBest)
                         Container(
                           padding: const EdgeInsets.symmetric(
                             horizontal: 6,
@@ -394,29 +404,23 @@ class _GoldShopScreenState extends State<GoldShopScreen> {
                             color: const Color(0xFFFFF3E0),
                             borderRadius: BorderRadius.circular(6),
                           ),
-                          child: const Text(
-                            '최대 혜택',
-                            style: TextStyle(
+                          child: Text(
+                            L10n.of(context).goldBestValue,
+                            style: const TextStyle(
                               color: Color(0xFFE07A1F),
                               fontWeight: FontWeight.bold,
                               fontSize: 10.5,
                             ),
                           ),
                         ),
-                        const SizedBox(width: 5),
-                      ],
-                      Flexible(
-                        child: Text(
-                          // Shorter than "기본 X + 보너스 Y": with the 최대 혜택
-                          // badge beside it, that form got ellipsised exactly on
-                          // the tier it mattered for.
-                          '보너스 +${_fmt(bonus)} 포함',
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: const TextStyle(
-                            color: Color(0xFF2E7D32),
-                            fontSize: 11.5,
-                          ),
+                      Text(
+                        // Shorter than "기본 X + 보너스 Y": with the badge beside
+                        // it, that form got ellipsised exactly on the tier it
+                        // mattered for.
+                        L10n.of(context).goldBonusIncluded(_fmt(bonus)),
+                        style: const TextStyle(
+                          color: Color(0xFF2E7D32),
+                          fontSize: 11.5,
                         ),
                       ),
                     ],
@@ -495,41 +499,31 @@ class _GoldShopScreenState extends State<GoldShopScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text(
-              '구매 전 안내',
-              style: TextStyle(
+            Text(
+              L10n.of(context).goldNoticeTitle,
+              style: const TextStyle(
                 fontSize: 13,
                 fontWeight: FontWeight.bold,
                 color: Color(0xFF5A4038),
               ),
             ),
             const SizedBox(height: 6),
-            const Text(
-              '• 골드는 게임 내에서만 사용하는 유료 디지털 콘텐츠이며 현금 환전·환급·양도가 불가합니다.\n'
-              '• 결제 즉시 사용 가능한 콘텐츠로, 이미 사용한 골드는 청약철회(환불) 대상에서 제외됩니다.',
-              style: muted,
-            ),
+            Text(L10n.of(context).goldNoticeBody, style: muted),
             ExpansionTile(
               tilePadding: EdgeInsets.zero,
               childrenPadding: const EdgeInsets.only(bottom: 8),
               expandedCrossAxisAlignment: CrossAxisAlignment.start,
               minTileHeight: 40,
-              title: const Text(
-                '환불·결제 문의 등 자세한 안내',
-                style: TextStyle(
+              title: Text(
+                L10n.of(context).goldNoticeMore,
+                style: const TextStyle(
                   fontSize: 12,
                   fontWeight: FontWeight.w600,
                   color: Color(0xFF8A7A72),
                 ),
               ),
-              children: const [
-                Text(
-                  '• 환불·결제취소는 Apple App Store / Google Play의 정책 및 절차에 따릅니다.\n'
-                  '• 미성년자는 법정대리인의 동의 후 결제해야 하며, 동의 없는 결제는 취소될 수 있습니다.\n'
-                  '• 결제 관련 문의: 설정 > 문의하기 > \'결제·환불\'\n'
-                  '• 판매자 정보 및 환불 정책 상세는 설정의 이용약관·개인정보처리방침에 표기됩니다.',
-                  style: muted,
-                ),
+              children: [
+                Text(L10n.of(context).goldNoticeDetails, style: muted),
               ],
             ),
           ],

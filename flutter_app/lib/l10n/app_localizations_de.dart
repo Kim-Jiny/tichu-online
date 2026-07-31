@@ -3230,6 +3230,12 @@ class L10nDe extends L10n {
   String get friendsRequestReceived => 'Anfrage erhalten';
 
   @override
+  String get friendsStatusPendingShort => 'Ausstehend';
+
+  @override
+  String get friendsStatusReceivedShort => 'Erhalten';
+
+  @override
   String get friendsRequestSent => 'Anfrage gesendet';
 
   @override
@@ -4116,7 +4122,7 @@ class L10nDe extends L10n {
 
   @override
   String attendanceBannerTitle(int day) {
-    return 'Heutige Anwesenheit! Tag $day';
+    return 'Anwesenheit: Tag $day';
   }
 
   @override
@@ -4130,7 +4136,7 @@ class L10nDe extends L10n {
 
   @override
   String attendanceBannerCompletedTitle(int day) {
-    return 'Tag $day eingecheckt! 🎉';
+    return 'Tag $day erledigt! 🎉';
   }
 
   @override
@@ -4550,4 +4556,73 @@ class L10nDe extends L10n {
 
   @override
   String get shopFeatureEnableConfirm => 'Aktivieren';
+
+  @override
+  String get goldChargeTitle => 'Gold kaufen';
+
+  @override
+  String get goldPaymentProcessing => 'Zahlung wird verarbeitet ...';
+
+  @override
+  String get goldPaymentAlreadyProcessed =>
+      'Diese Zahlung wurde bereits verarbeitet.';
+
+  @override
+  String get goldPaymentComplete => 'Zahlung abgeschlossen';
+
+  @override
+  String goldGranted(String amount) {
+    return '+$amount Gold gutgeschrieben';
+  }
+
+  @override
+  String goldBalanceNow(String amount) {
+    return 'Guthaben: $amount';
+  }
+
+  @override
+  String goldPaymentFailed(String message) {
+    return 'Zahlung fehlgeschlagen: $message';
+  }
+
+  @override
+  String get goldStoreLoadFailed =>
+      'Die Produkte konnten nicht aus dem Store geladen werden.';
+
+  @override
+  String goldPurchaseStartFailed(String error) {
+    return 'Der Kauf konnte nicht gestartet werden: $error';
+  }
+
+  @override
+  String get goldIapUnavailable =>
+      'In-App-Käufe sind auf diesem Gerät nicht verfügbar.';
+
+  @override
+  String get goldNoProducts => 'Zurzeit sind keine Gold-Pakete im Angebot.';
+
+  @override
+  String get goldUnit => 'Gold';
+
+  @override
+  String get goldBestValue => 'Top-Angebot';
+
+  @override
+  String goldBonusIncluded(String bonus) {
+    return '+$bonus Bonus';
+  }
+
+  @override
+  String get goldNoticeTitle => 'Vor dem Kauf';
+
+  @override
+  String get goldNoticeBody =>
+      '• Gold ist kostenpflichtiger digitaler Inhalt und nur im Spiel verwendbar. Es kann nicht in Bargeld getauscht, bar erstattet oder übertragen werden.\n• Gold ist sofort nach dem Kauf nutzbar; bereits ausgegebenes Gold ist vom Widerruf (Erstattung) ausgenommen.';
+
+  @override
+  String get goldNoticeMore => 'Erstattungen und Zahlungssupport';
+
+  @override
+  String get goldNoticeDetails =>
+      '• Erstattungen und Stornierungen richten sich nach den Richtlinien und Verfahren des Apple App Store / Google Play.\n• Minderjährige benötigen die Zustimmung ihrer Erziehungsberechtigten; Käufe ohne Zustimmung können storniert werden.\n• Fragen zur Zahlung: Einstellungen > Kontakt > „Zahlung & Erstattung“\n• Verkäuferinformationen und die vollständige Erstattungsrichtlinie stehen in den AGB und der Datenschutzerklärung in den Einstellungen.';
 }

@@ -1,13 +1,10 @@
 {
   "@@locale": "de",
-
   "appTitle": "Tichu Online",
-
   "languageAuto": "Automatisch (Systemsprache)",
   "languageEnglish": "English",
   "languageKorean": "Koreanisch",
   "languageGerman": "Deutsch",
-
   "settingsTitle": "Einstellungen",
   "settingsLanguage": "Sprache",
   "settingsAppInfo": "App-Info",
@@ -26,7 +23,6 @@
   "settingsTheme": "Design",
   "settingsSound": "Ton",
   "settingsAdminCenter": "Admin-Center",
-
   "commonOk": "OK",
   "commonCancel": "Abbrechen",
   "commonTotal": "Gesamt",
@@ -36,7 +32,6 @@
   "commonConfirm": "Bestätigen",
   "commonLink": "Verknüpfen",
   "commonError": "Fehler",
-
   "settingsHeaderTitle": "Einstellungen",
   "settingsNotificationsSection": "Benachrichtigungen",
   "settingsPushNotifications": "Push-Benachrichtigungen",
@@ -60,7 +55,6 @@
   "settingsDeleteAccountWithdraw": "Löschen",
   "settingsLinkComplete": "Verknüpfung abgeschlossen",
   "settingsLinkFailed": "Verknüpfung fehlgeschlagen: {error}",
-
   "noticeTitle": "Mitteilungen",
   "noticeEmpty": "Keine Mitteilungen vorhanden",
   "noticeRetry": "Erneut versuchen",
@@ -68,7 +62,6 @@
   "noticeCategoryUpdate": "Update",
   "noticeCategoryPreview": "Update-Vorschau",
   "noticeCategoryGeneral": "Mitteilung",
-
   "inquiryTitle": "Anfrage senden",
   "inquiryCategory": "Kategorie",
   "inquiryCategoryBug": "Fehlerbericht",
@@ -88,12 +81,9 @@
   "inquiryAnswerLabel": "Antwort",
   "inquiryAnswerDate": "Beantwortet am: {date}",
   "inquiryNoAnswer": "Es wurde noch keine Antwort registriert.",
-
   "linkDialogTitle": "Social-Konto verknüpfen",
   "linkDialogContent": "Wähle ein Social-Konto zum Verknüpfen",
-
   "textViewLoadFailed": "Inhalt konnte nicht geladen werden.",
-
   "loginEnterUsername": "Bitte Benutzername eingeben",
   "loginEnterPassword": "Bitte Passwort eingeben",
   "loginFailed": "Anmeldung fehlgeschlagen",
@@ -139,7 +129,6 @@
   "loginSetNicknameTitle": "Spitzname festlegen",
   "loginSetNicknameDesc": "Wähle einen Spitznamen für das Spiel",
   "loginGetStarted": "Los geht's",
-
   "lobbyRoomInviteTitle": "Raumeinladung",
   "lobbyRoomInviteMessage": "{nickname} hat dich in einen Raum eingeladen!",
   "lobbyDecline": "Ablehnen",
@@ -251,7 +240,9 @@
   "lobbyLoveLetterPlayers": "Love Letter · {count}P",
   "@lobbyLoveLetterPlayers": {
     "placeholders": {
-      "count": { "type": "int" }
+      "count": {
+        "type": "int"
+      }
     }
   },
   "lobbyStartGame": "Spiel starten",
@@ -358,7 +349,6 @@
   "lobbyRandomNounSk6": "Seeschlacht",
   "lobbyRandomNounSk7": "Abenteuer",
   "lobbyRandomNounSk8": "Kraken",
-
   "skGameRecoveringGame": "Spiel wird wiederhergestellt...",
   "skGameCheckingState": "Spielstatus wird geprüft...",
   "skGameReloadingRoom": "Rauminformationen werden neu geladen...",
@@ -406,14 +396,14 @@
   "skGameScoreHistory": "Punktehistorie",
   "skGameBiddingPhase": "Ansage läuft...",
   "skGamePlayCard": "Spiele eine Karte",
-  "skGameKrakenActivated": "\uD83D\uDC19 Kraken aktiviert",
-  "skGameWhiteWhaleActivated": "\uD83D\uDC0B White Whale aktiviert",
-  "skGameWhiteWhaleNullify": "\uD83D\uDC0B White Whale · Spezialkarten neutralisiert",
+  "skGameKrakenActivated": "🐙 Kraken aktiviert",
+  "skGameWhiteWhaleActivated": "🐋 White Whale aktiviert",
+  "skGameWhiteWhaleNullify": "🐋 White Whale · Spezialkarten neutralisiert",
   "skGameTrickVoided": "Trick ungültig",
   "skGameLeadPlayer": "{name} beginnt den nächsten Trick",
   "skGameTrickWinner": "{name} gewinnt",
   "skGameCheckingCards": "Karten werden geprüft...",
-  "skGameBonusWithLoot": "Bonus +{bonus} (\uD83D\uDCB0 +{loot})",
+  "skGameBonusWithLoot": "Bonus +{bonus} (💰 +{loot})",
   "skGameBonus": "Bonus +{bonus}",
   "skGameBidDone": "Ansage: {bid} Siege",
   "skGameWaitingOthers": "Warte auf andere Spieler...",
@@ -453,7 +443,6 @@
   "skGameStatRecord": "Bilanz",
   "skGameStatWinRate": "Siegquote",
   "skGameRecordFormat": "{games}S {wins}G {losses}V",
-
   "gameSparrowCall": "Mahjong-Ruf",
   "gameSelectNumberToCall": "Wähle eine Zahl zum Rufen",
   "gameNoCall": "Nicht rufen",
@@ -600,7 +589,6 @@
   "gameBadgeLarge": "Large",
   "gameBadgeSmall": "Small",
   "gameNotAfk": "Nicht AFK",
-
   "spectatorRecovering": "Zuschaueransicht wird wiederhergestellt...",
   "spectatorTransitioning": "Zuschaueransicht wird gewechselt...",
   "spectatorRecheckingState": "Aktueller Zuschauerstatus wird erneut geprüft.",
@@ -613,15 +601,21 @@
   "spectatorTeamWin": "Team {team} gewinnt!",
   "@spectatorTeamWin": {
     "placeholders": {
-      "team": { "type": "String" }
+      "team": {
+        "type": "String"
+      }
     }
   },
   "spectatorDraw": "Unentschieden!",
   "spectatorTeamScores": "Team A: {scoreA} | Team B: {scoreB}",
   "@spectatorTeamScores": {
     "placeholders": {
-      "scoreA": { "type": "int" },
-      "scoreB": { "type": "int" }
+      "scoreA": {
+        "type": "int"
+      },
+      "scoreB": {
+        "type": "int"
+      }
     }
   },
   "spectatorAutoReturn": "In 3 Sekunden zurück zum Warteraum...",
@@ -634,13 +628,17 @@
   "spectatorRequesting": "Anfrage... ({count} Karten)",
   "@spectatorRequesting": {
     "placeholders": {
-      "count": { "type": "int" }
+      "count": {
+        "type": "int"
+      }
     }
   },
   "spectatorRequestCardView": "Hand ansehen ({count} Karten)",
   "@spectatorRequestCardView": {
     "placeholders": {
-      "count": { "type": "int" }
+      "count": {
+        "type": "int"
+      }
     }
   },
   "spectatorSoundEffects": "Soundeffekte",
@@ -653,18 +651,17 @@
   "spectatorPlayedCards": "{name}: Karten",
   "@spectatorPlayedCards": {
     "placeholders": {
-      "name": { "type": "String" }
+      "name": {
+        "type": "String"
+      }
     }
   },
-
   "rulesTitle": "Spielregeln",
   "rulesTabTichu": "Tichu",
   "rulesTabSkullKing": "Skull King",
   "rulesTabLoveLetter": "Love Letter",
-
   "rulesTichuGoalTitle": "Spielziel",
   "rulesTichuGoalBody": "Ein Stichspiel für 4 Spieler in 2 Teams (Partner sitzen sich gegenüber). Das erste Team, das die Zielpunktzahl erreicht, gewinnt.",
-
   "rulesTichuCardCompositionTitle": "Kartenzusammensetzung (56 Karten)",
   "rulesTichuNumberCards": "Zahlenkarten (2 – A)",
   "rulesTichuNumberCardsSub": "4 Farben × 13 Karten",
@@ -676,7 +673,6 @@
   "rulesTichuPhoenixSub": "Jokerkarte (-25 Punkte)",
   "rulesTichuDragon": "Dragon",
   "rulesTichuDragonSub": "Stärkste Karte (+25 Punkte)",
-
   "rulesTichuSpecialTitle": "Spezialkarten-Regeln",
   "rulesTichuSpecialMahjongTitle": "Mahjong",
   "rulesTichuSpecialMahjongLine1": "Der Spieler mit dieser Karte beginnt den allerersten Stich.",
@@ -691,7 +687,6 @@
   "rulesTichuSpecialDragonTitle": "Dragon",
   "rulesTichuSpecialDragonLine1": "Die stärkste Karte; kann nur als Einzelkarte gespielt werden.",
   "rulesTichuSpecialDragonLine2": "Zählt +25 Punkte, aber der mit dem Dragon gewonnene Stich muss an einen Gegner abgegeben werden.",
-
   "rulesTichuDeclarationTitle": "Tichu-Ansage",
   "rulesTichuDeclarationBody": "Eine Tichu-Ansage ist eine Wette, dass du als Erster deine Hand leer spielst. Bei Erfolg gibt es Bonuspunkte, bei Misserfolg Abzüge.",
   "rulesTichuLargeTichu": "Large Tichu",
@@ -700,25 +695,18 @@
   "rulesTichuSmallTichuWhen": "Angesagt nach Erhalt aller 14 Karten, aber bevor eine Karte gespielt wird",
   "rulesTichuDeclSuccess": "Erfolg {points}",
   "rulesTichuDeclFail": "Misserfolg {points}",
-
   "rulesTichuFlowTitle": "Spielablauf",
   "rulesTichuFlowBody": "1. Alle Spieler erhalten zunächst 8 Karten.\n2. Nach Ansicht der 8 Karten kann Large Tichu angesagt werden.\n3. Die restlichen 6 Karten werden verteilt, insgesamt 14.\n4. Jeder Spieler tauscht je 1 Karte mit jedem der 3 anderen Spieler.\n5. Nach dem Tausch, vor dem Ausspielen, kann Small Tichu angesagt werden.\n6. Der Spieler mit dem Mahjong beginnt den ersten Stich.",
-
   "rulesTichuPlayTitle": "Spielregeln",
   "rulesTichuPlayBody": "• Nur die gleiche Art von Kombination kann über die führende gespielt werden, aber höher. (z.B. eine höhere Einzelkarte über eine Einzelkarte, ein höheres Pair über ein Pair)\n• Verfügbare Kombinationen:\n   - Single (1 Karte)\n   - Pair (2 gleiche Zahlen)\n   - Triple (3 gleiche Zahlen)\n   - Full House (Triple + Pair)\n   - Straight (5+ aufeinanderfolgende Zahlen)\n   - Consecutive Pairs (2+ aufeinanderfolgende Pairs = 4+ Karten)\n• Du kannst passen, wenn du nicht spielen kannst oder willst.",
-
   "rulesTichuBombTitle": "Bombe",
   "rulesTichuBombBody": "Eine Bombe kann jederzeit gespielt werden, auch außer der Reihe, und schlägt jede Kombination.\n\n• Vierling-Bombe: 4 gleiche Zahlen (z.B. 7♠ 7♥ 7♦ 7♣)\n• Straight-Flush-Bombe: 5+ aufeinanderfolgende Karten derselben Farbe\n\nBomben-Hierarchie:\n  Straight Flush > Vierling\n  Gleicher Typ: höhere Zahl / längerer Straight gewinnt",
-
   "rulesTichuScoringTitle": "Punktwertung",
   "rulesTichuScoringBody": "Kartenpunkte:\n• 5: 5 Punkte\n• 10, K: 10 Punkte\n• Dragon: +25 Punkte / Phoenix: -25 Punkte\n• Alle anderen Karten: 0 Punkte\n\nRundenabrechnung:\n• Der Erstplatzierte erhält alle Stichpunkte des Letztplatzierten (4.).\n• Karten in der Hand des Letztplatzierten gehen an das gegnerische Team.\n• Wenn beide Partner eines Teams als 1. und 2. fertig werden (\"Double Victory\"), endet die Runde sofort — +200 Punkte für das Gewinnerteam (keine Stichpunktwertung).\n• Tichu-Ansage-Boni werden hinzuaddiert.",
-
   "rulesTichuWinTitle": "Siegbedingung",
   "rulesTichuWinBody": "Das erste Team, das die beim Erstellen festgelegte Zielpunktzahl (Standard 1000) erreicht, gewinnt. Ranglistenspiele verwenden feste 1000 Punkte.",
-
   "rulesSkGoalTitle": "Spielziel",
   "rulesSkGoalBody": "Ein Stichspiel für 2–6 Spieler (Jeder gegen Jeden). Über 10 Runden musst du die Anzahl deiner gewonnenen Stiche pro Runde genau vorhersagen, um Punkte zu erhalten.",
-
   "rulesSkCardCompositionTitle": "Kartenzusammensetzung (65 Basiskarten)",
   "rulesSkNumberCards": "Zahlenkarten (1 – 13)",
   "rulesSkNumberCardsSub": "4 Farben × 13 Karten (Gelb / Grün / Lila / Schwarz)",
@@ -734,10 +722,8 @@
   "rulesSkTigressSub": "Wähle zwischen Pirate oder Escape",
   "rulesSkIncludedByDefault": "Standardmäßig enthalten",
   "rulesSkCardCount": "{count} Karten",
-
   "rulesSkTrumpTitle": "Schwarz = Trumpf",
   "rulesSkTrumpBody": "Schwarze Zahlenkarten schlagen alle anderen Farben unabhängig von der Zahl. Du musst jedoch der geführten Farbe folgen, wenn möglich, und darfst nur Schwarz spielen, wenn du keine Karte der geführten Farbe hast.",
-
   "rulesSkSpecialTitle": "Spezialkarten-Regeln",
   "rulesSkSpecialEscapeTitle": "Escape",
   "rulesSkSpecialEscapeLine1": "Gewinnt niemals einen Stich. Kann jederzeit unabhängig von der Farbfolge gespielt werden.",
@@ -760,13 +746,10 @@
   "rulesSkTigressPreviewTitle": "Anzeige im Spiel",
   "rulesSkTigressChoiceEscape": "Als Escape gespielt",
   "rulesSkTigressChoicePirate": "Als Pirate gespielt",
-
   "rulesSkFlowTitle": "Spielablauf",
   "rulesSkFlowBody": "1. In Runde N erhält jeder Spieler N Karten. (Runden 1–10)\n2. Alle Spieler sagen gleichzeitig voraus (Bid), wie viele Stiche sie gewinnen werden.\n3. Ab dem führenden Spieler werden Karten nach Farbfolge-Regeln gespielt.\n4. Nach jeder Runde werden Punkte basierend auf Bid-Erfolg/-Misserfolg berechnet.",
-
   "rulesSkScoringTitle": "Punktwertung",
   "rulesSkScoringBody": "• Bid 0 Erfolg (0 Stiche gewonnen): +10 × Rundennummer\n• Bid 0 Misserfolg: -10 × Rundennummer\n• Bid N Erfolg (genau N Stiche): +20 × N + Bonus\n• Bid N Misserfolg: -10 × |Differenz| (kein Bonus)\n• Boni werden nur bei exaktem Bid vergeben.",
-
   "rulesSkExample1Title": "Beispiel 1. Einfacher Bid-Erfolg",
   "rulesSkExample1Setup": "Runde 3 · Bid 2 · 2 Stiche · Kein Bonus",
   "rulesSkExample1Calc": "20 × 2 = 40",
@@ -791,23 +774,19 @@
   "rulesSkExample6Setup": "Runde 7 · Bid 0 · 1 Stich",
   "rulesSkExample6Calc": "-10 × 7 = -70",
   "rulesSkExample6Result": "-70 Pkt.",
-
   "rulesSkWinTitle": "Siegbedingung",
   "rulesSkWinBody": "Nach allen 10 Runden gewinnt der Spieler mit der höchsten Gesamtpunktzahl.",
-
   "rulesSkExpansionTitle": "Erweiterungen (Optional)",
   "skGameIncludedExpansions": "Enthaltene Erweiterungen",
   "rulesSkExpansionBody": "Jede Erweiterung kann beim Erstellen eines Raums einzeln ausgewählt werden. Erweiterungskarten werden in das Basisdeck gemischt.",
-  "rulesSkExpKraken": "\uD83D\uDC19 Kraken",
+  "rulesSkExpKraken": "🐙 Kraken",
   "rulesSkExpKrakenDesc": "Ein Stich mit dem Kraken wird ungültig. Niemand gewinnt den Stich und keine Boni werden vergeben. Der Spieler, der ohne Kraken gewonnen hätte, führt den nächsten Stich an.",
-  "rulesSkExpWhiteWhale": "\uD83D\uDC0B White Whale",
+  "rulesSkExpWhiteWhale": "🐋 White Whale",
   "rulesSkExpWhiteWhaleDesc": "Neutralisiert alle Spezialkarten-Effekte. Nur Zahlenkarten werden verglichen, und die höchste Zahl gewinnt unabhängig von der Farbe. Ohne Zahlenkarten wird der Stich ungültig.",
-  "rulesSkExpLoot": "\uD83D\uDCB0 Loot",
+  "rulesSkExpLoot": "💰 Loot",
   "rulesSkExpLootDesc": "Der Stichgewinner erhält +20 Bonus pro Loot-Karte im Stich, und jeder Spieler, der eine Loot-Karte gespielt hat, erhält ebenfalls +20 als eigenen Bonus. (Nur bei Bid-Erfolg)",
-
   "rulesLlGoalTitle": "Spielziel",
   "rulesLlGoalBody": "Ein Kartenspiel für 2–4 Spieler. Pro Runde gewinnt der letzte verbliebene Spieler oder der Spieler mit der höchsten Karte, wenn das Deck aufgebraucht ist, ein Token. Der erste Spieler, der genügend Token sammelt, gewinnt.",
-
   "rulesLlCardCompositionTitle": "Kartenzusammensetzung (16 Karten)",
   "rulesLlGuard": "Wache (Guard)",
   "rulesLlGuardSub": "Rate die Karte eines Gegners, um ihn zu eliminieren",
@@ -825,7 +804,6 @@
   "rulesLlCountessSub": "Muss gespielt werden, wenn König oder Prinz gehalten wird",
   "rulesLlPrincess": "Prinzessin (Princess)",
   "rulesLlPrincessSub": "Eliminiert, wenn gespielt oder abgeworfen",
-
   "rulesLlCardEffectsTitle": "Detaillierte Karteneffekte",
   "rulesLlEffectGuardTitle": "Wache (1)",
   "rulesLlEffectGuardLine1": "Nenne einen Spieler und rate eine Nicht-Wache-Karte, die er haben könnte.",
@@ -847,13 +825,10 @@
   "rulesLlEffectCountessLine2": "Ansonsten kann sie frei gespielt werden und hat keinen Effekt.",
   "rulesLlEffectPrincessTitle": "Prinzessin (8)",
   "rulesLlEffectPrincessLine1": "Wenn diese Karte aus irgendeinem Grund gespielt oder abgeworfen wird, bist du sofort eliminiert.",
-
   "rulesLlFlowTitle": "Spielablauf",
   "rulesLlFlowBody": "1. Entferne 1 Karte verdeckt aus dem Deck. (Bei 2 Spielern werden 3 zusätzliche Karten offen entfernt.)\n2. Teile jedem Spieler 1 Karte aus.\n3. Ziehe in deinem Zug 1 Karte vom Deck und spiele dann 1 deiner 2 Karten aus, um ihren Effekt auszulösen.\n4. Nach dem Effekt geht der Zug an den nächsten Spieler.\n5. Die Runde endet, wenn nur 1 Spieler übrig ist oder das Deck leer ist.",
-
   "rulesLlWinTitle": "Siegbedingung",
   "rulesLlWinBody": "Am Ende der Runde gewinnt der überlebende Spieler mit der höchsten Karte ein Token. Bei Gleichstand (in dieser Reihenfolge):\n1. Höhere Gesamtsumme der in dieser Runde gespielten Karten gewinnt.\n2. Bleibt es gleich, gewinnen alle Gleichplatzierten ein Token.\n\nBenötigte Token zum Sieg:\n• 2 Spieler: 4 Token\n• 3 Spieler: 3 Token\n• 4 Spieler: 2 Token",
-
   "rulesTabMighty": "Mighty",
   "rulesMtGoalTitle": "Spielziel",
   "rulesMtGoalBody": "Ein Stichkartenspiel für 5 oder 6 Spieler. Ein Spieler wird zum Alleinspieler und wählt einen Freund; gemeinsam versuchen sie, genügend Punktkarten zu gewinnen, um das Gebot zu erfüllen. Die übrigen Spieler bilden die Verteidigung und versuchen, sie aufzuhalten.\n\nMit 6 Spielern gilt automatisch die Kill-Mighty-Variante. Sperrt der Gastgeber einen Platz, wird im klassischen 5-Spieler-Modus gespielt.",
@@ -886,7 +861,6 @@
   "rulesMtScoringBody": "20 Punktkarten im Deck (A, K, Q, J, 10 × 4 Farben = 20).\n\n[Erfolgs-Wertung]\nBasis = (Gebot − minBid + 1) × 2 + (gesammelte Punkte − Gebot)\n\nVerteilung:\n• Alleinspieler: Basis × 2\n• Freund: Basis × 1\n• Jeder Verteidiger: −Basis\n\nMultiplikatoren (stapelbar):\n• Solo (kein Freund): ×2\n• Run (alle 20 Pkt): ×2\n• Ohne Trumpf (NT): ×2\n• Gebot 20: ×2\nMax: ×16\n\n[Misserfolgs-Wertung]\nEinheit = (Gebot − gesammelte Punkte)\n\nVerteilung:\n• Alleinspieler: −Einheit × 2\n• Freund: −Einheit\n• Jeder Verteidiger: +Einheit\n\nMisserfolgs-Multiplikatoren:\n• Solo (kein Freund): Alleinspieler −Einheit × 2 × 2 = ×4 (kein Partner, ein Verteidiger mehr)\n• Backrun (Spielerteam ≤ 10 Pkt = Verteidiger ≥ 10 Pkt): ×2 auf allen Seiten, unabhängig vom Gebot\n\n[Erfolgs-Beispiel]\nGebot 13, 15 Pkt mit Freund:\nBasis = (1×2) + 2 = 4\nAlleinspieler +8, Freund +4, Verteidiger je −4\n\n[Misserfolgs-Beispiel]\nGebot 17, 15 Pkt mit Freund (2 Pkt unter Gebot):\nEinheit = 2  (kein Backrun)\nAlleinspieler −4, Freund −2, Verteidiger je +2\n\n[Misserfolg + Backrun]\nGebot 17, 10 Pkt (Backrun):\nEinheit = 7 × 2 = 14\nAlleinspieler −28, Freund −14, Verteidiger je +14\n\n[Misserfolg + Solo + Backrun]\nGebot 17, Solo, 5 Pkt (12 Pkt unter Gebot, Backrun):\nEinheit = 12 × 2 = 24\nAlleinspieler −24 × 4 = −96, Verteidiger je +24",
   "rulesMtWinTitle": "Siegbedingung",
   "rulesMtWinBody": "Nach allen 10 Stichen werden die Punktkarten des Alleinspieler-Teams gezählt.\n\n• Gebot erreicht oder übertroffen → Alleinspieler-Team gewinnt.\n• Gebot verfehlt → Verteidigung gewinnt.\n\nPunkte werden über mehrere Runden gesammelt. Der Spieler mit der höchsten Punktzahl am Ende der Sitzung gewinnt.",
-
   "mtPhaseBidding": "Bieten",
   "mtPhaseKitty": "Kitty",
   "mtPhasePlaying": "Spielen",
@@ -1001,7 +975,11 @@
   "mtContract": "Vertrag",
   "mtContractWithPoints": "Gebot {points}",
   "@mtContractWithPoints": {
-    "placeholders": { "points": { "type": "int" } }
+    "placeholders": {
+      "points": {
+        "type": "int"
+      }
+    }
   },
   "mtLead": "Führung",
   "mtResult": "Ergebnis",
@@ -1011,7 +989,6 @@
   "mtFriendCardSolo": "Solo",
   "mtFriendCard1st": "1. Stich",
   "mtJokerAbbr": "JK",
-
   "friendsTitle": "Freunde",
   "friendsTabFriends": "Freunde",
   "friendsTabSearch": "Suche",
@@ -1032,6 +1009,8 @@
   "friendsSearchNoResults": "Keine Ergebnisse gefunden",
   "friendsStatusFriend": "Freund",
   "friendsRequestReceived": "Anfrage erhalten",
+  "friendsStatusPendingShort": "Ausstehend",
+  "friendsStatusReceivedShort": "Erhalten",
   "friendsRequestSent": "Anfrage gesendet",
   "friendsRequestSentSnackbar": "Freundschaftsanfrage an {nickname} gesendet",
   "friendsAddFriend": "Freund hinzufügen",
@@ -1045,7 +1024,6 @@
   "friendsRemoveTitle": "Freund entfernen",
   "friendsRemoveConfirm": "{nickname} aus der Freundesliste entfernen?",
   "friendsRemoved": "{nickname} aus der Freundesliste entfernt",
-
   "rankingTitle": "Rangliste",
   "rankingTichu": "Tichu",
   "rankingSkullKing": "Skull King",
@@ -1063,9 +1041,15 @@
   "rankingMightyMatchDetail": "{declarer} Gebot {bid} {trump}",
   "@rankingMightyMatchDetail": {
     "placeholders": {
-      "declarer": { "type": "String" },
-      "bid": { "type": "int" },
-      "trump": { "type": "String" }
+      "declarer": {
+        "type": "String"
+      },
+      "bid": {
+        "type": "int"
+      },
+      "trump": {
+        "type": "String"
+      }
     }
   },
   "rankingLoveLetterRecord": "Love Letter Statistik",
@@ -1082,7 +1066,6 @@
   "rankingSkRankScore": "#{rank} {score}Pkt.",
   "rankingRecentMatchesTitle": "Letzte Spiele",
   "rankingMannerScore": "Manieren",
-
   "shopTitle": "Shop",
   "shopGoldAmount": "{gold} Gold",
   "shopHowToEarn": "So verdienst du",
@@ -1172,7 +1155,6 @@
   "shopAdCannotShow": "Werbung kann nicht angezeigt werden",
   "shopAdWatchForGold": "Werbung sehen und 50 Gold erhalten ({current}/{max})",
   "shopAdRewardDone": "Tägliche Werbebelohnungen abgeschlossen",
-
   "appForceUpdateTitle": "Update erforderlich",
   "appForceUpdateBody": "Eine neue Version wurde veröffentlicht.\nBitte aktualisiere, um die App weiter zu nutzen.",
   "appForceUpdateButton": "Aktualisieren",
@@ -1180,7 +1162,6 @@
   "appEulaLoadFailed": "Nutzungsbedingungen konnten nicht geladen werden. Bitte Netzwerkverbindung prüfen.",
   "appEulaAgree": "Ich stimme den Nutzungsbedingungen zu",
   "appEulaStart": "Los geht's",
-
   "serviceRestoreRefreshingSocial": "Social-Login wird überprüft...",
   "serviceRestoreSocialLogin": "Anmeldung mit Social-Konto...",
   "serviceRestoreLocalLogin": "Anmeldung mit gespeichertem Konto...",
@@ -1222,7 +1203,6 @@
   "serviceChatBanHoursMinutes": "{hours}h {minutes}min",
   "serviceChatBanMinutes": "{minutes}min",
   "serviceAdRewardSuccess": "50 Gold erhalten! (Verbleibend: {remaining})",
-
   "llCardGuideTitle": "Kartenübersicht",
   "llGuardPeek": "Schauen",
   "llDiscardedCardsTitle": "Abgelegte Karten von {playerName}",
@@ -1234,34 +1214,66 @@
   "llDescKing": "6 · König: Tausche Karten mit einem anderen Spieler.",
   "llDescCountess": "7 · Gräfin: Muss gespielt werden, wenn du König oder Prinz hältst.",
   "llDescPrincess": "8 · Prinzessin: Wenn du diese Karte spielst, bist du eliminiert!",
-
   "maintenanceTitle": "Serverwartung",
   "maintenanceCountdown": "Verbleibend: {time}",
   "@maintenanceCountdown": {
     "placeholders": {
-      "time": { "type": "String" }
+      "time": {
+        "type": "String"
+      }
     }
   },
   "maintenanceRetry": "Erneut versuchen",
   "maintenanceEnded": "Wartung beendet, Neuverbindung...",
-
   "goldHistoryShopPurchase": "Shop-Kauf",
   "goldHistoryIapPurchase": "Gold-Aufladung",
   "goldHistoryAttendance": "Tägliche Anwesenheit",
-  "attendanceBannerTitle": "Heutige Anwesenheit! Tag {day}",
-  "@attendanceBannerTitle": { "placeholders": { "day": { "type": "int" } } },
+  "attendanceBannerTitle": "Anwesenheit: Tag {day}",
+  "@attendanceBannerTitle": {
+    "placeholders": {
+      "day": {
+        "type": "int"
+      }
+    }
+  },
   "attendanceBannerSubtitle": "+{reward} Gold holen",
-  "@attendanceBannerSubtitle": { "placeholders": { "reward": { "type": "int", "format": "decimalPattern" } } },
-  "attendanceBannerCompletedTitle": "Tag {day} eingecheckt! 🎉",
-  "@attendanceBannerCompletedTitle": { "placeholders": { "day": { "type": "int" } } },
+  "@attendanceBannerSubtitle": {
+    "placeholders": {
+      "reward": {
+        "type": "int",
+        "format": "decimalPattern"
+      }
+    }
+  },
+  "attendanceBannerCompletedTitle": "Tag {day} erledigt! 🎉",
+  "@attendanceBannerCompletedTitle": {
+    "placeholders": {
+      "day": {
+        "type": "int"
+      }
+    }
+  },
   "attendanceBannerCompletedSubtitle": "Komm morgen für die nächste Belohnung",
   "attendanceDialogTitle": "Tägliche Anwesenheit",
   "attendanceResetInfo": "Täglicher Reset um {clock}",
-  "@attendanceResetInfo": { "placeholders": { "clock": { "type": "String" } } },
+  "@attendanceResetInfo": {
+    "placeholders": {
+      "clock": {
+        "type": "String"
+      }
+    }
+  },
   "attendanceDoneToday": "Heute eingecheckt! Komm morgen wieder 🎉",
   "attendanceClaiming": "Wird verarbeitet...",
   "attendanceWatchAdAndClaim": "Werbung ansehen & {reward} Gold erhalten",
-  "@attendanceWatchAdAndClaim": { "placeholders": { "reward": { "type": "int", "format": "decimalPattern" } } },
+  "@attendanceWatchAdAndClaim": {
+    "placeholders": {
+      "reward": {
+        "type": "int",
+        "format": "decimalPattern"
+      }
+    }
+  },
   "attendanceAdNotReady": "Werbung wird geladen. Bitte gleich nochmal versuchen.",
   "attendanceAdLoading": "Anzeige wird geladen…",
   "goldHistoryIapRefund": "Gold-Rückerstattung",
@@ -1284,7 +1296,6 @@
   "goldHistorySeasonRank": "Saisonrang: {rank}",
   "goldHistorySkRankScore": "Rang {rank} ({score} Pkt.)",
   "goldHistoryAdminBy": "Von Admin: {admin}",
-
   "adminCenterTitle": "Admin-Zentrum",
   "adminTabInquiries": "Anfragen",
   "adminTabReports": "Meldungen",
@@ -1328,7 +1339,6 @@
   "adminInquiryTitle": "Anfrage #{id}",
   "adminReportTitle": "Meldung: {nickname}",
   "adminWinLoss": "{wins}S/{losses}N",
-
   "llRound": "Runde",
   "llPlay": "Spielen",
   "llConfirm": "Bestätigen",
@@ -1344,39 +1354,162 @@
   "llGuardGuessCard": "Rate, welche Karte der Spieler hat:",
   "llSelectTargetFor": "Wähle Ziel für:",
   "llGuardEffect": "{name} setzt die Wache ein...",
-  "@llGuardEffect": { "placeholders": { "name": { "type": "String" } } },
+  "@llGuardEffect": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
   "llSpyEffect": "{name} setzt den Spion ein...",
-  "@llSpyEffect": { "placeholders": { "name": { "type": "String" } } },
+  "@llSpyEffect": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
   "llBaronEffect": "{name} setzt den Baron ein...",
-  "@llBaronEffect": { "placeholders": { "name": { "type": "String" } } },
+  "@llBaronEffect": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
   "llPrinceEffect": "{name} setzt den Prinzen ein...",
-  "@llPrinceEffect": { "placeholders": { "name": { "type": "String" } } },
+  "@llPrinceEffect": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
   "llKingEffect": "{name} setzt den König ein...",
-  "@llKingEffect": { "placeholders": { "name": { "type": "String" } } },
+  "@llKingEffect": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
   "llHandmaidEffect": "{name} hat die Zofe gespielt",
-  "@llHandmaidEffect": { "placeholders": { "name": { "type": "String" } } },
+  "@llHandmaidEffect": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
   "llBlockedByHandmaid": "{name}s {card} wurde durch die Zofe geblockt",
-  "@llBlockedByHandmaid": { "placeholders": { "name": { "type": "String" }, "card": { "type": "String" } } },
+  "@llBlockedByHandmaid": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      },
+      "card": {
+        "type": "String"
+      }
+    }
+  },
   "llGuardCorrect": "{actor} hat die Karte von {target} richtig erraten! Eliminiert!",
-  "@llGuardCorrect": { "placeholders": { "actor": { "type": "String" }, "target": { "type": "String" } } },
+  "@llGuardCorrect": {
+    "placeholders": {
+      "actor": {
+        "type": "String"
+      },
+      "target": {
+        "type": "String"
+      }
+    }
+  },
   "llGuardWrong": "{actor} hat bei {target} falsch geraten",
-  "@llGuardWrong": { "placeholders": { "actor": { "type": "String" }, "target": { "type": "String" } } },
+  "@llGuardWrong": {
+    "placeholders": {
+      "actor": {
+        "type": "String"
+      },
+      "target": {
+        "type": "String"
+      }
+    }
+  },
   "llSpyReveal": "Karte von {target}:",
-  "@llSpyReveal": { "placeholders": { "target": { "type": "String" } } },
+  "@llSpyReveal": {
+    "placeholders": {
+      "target": {
+        "type": "String"
+      }
+    }
+  },
   "llSpySawYour": "{actor} hat deine Karte gesehen",
-  "@llSpySawYour": { "placeholders": { "actor": { "type": "String" } } },
+  "@llSpySawYour": {
+    "placeholders": {
+      "actor": {
+        "type": "String"
+      }
+    }
+  },
   "llSpyPeeked": "{actor} hat die Karte von {target} angesehen",
-  "@llSpyPeeked": { "placeholders": { "actor": { "type": "String" }, "target": { "type": "String" } } },
+  "@llSpyPeeked": {
+    "placeholders": {
+      "actor": {
+        "type": "String"
+      },
+      "target": {
+        "type": "String"
+      }
+    }
+  },
   "llBaronTie": "{actor} und {target} spielten unentschieden",
-  "@llBaronTie": { "placeholders": { "actor": { "type": "String" }, "target": { "type": "String" } } },
+  "@llBaronTie": {
+    "placeholders": {
+      "actor": {
+        "type": "String"
+      },
+      "target": {
+        "type": "String"
+      }
+    }
+  },
   "llBaronLose": "{loser} wurde durch den Baron-Vergleich mit {winner} eliminiert",
-  "@llBaronLose": { "placeholders": { "loser": { "type": "String" }, "winner": { "type": "String" } } },
+  "@llBaronLose": {
+    "placeholders": {
+      "loser": {
+        "type": "String"
+      },
+      "winner": {
+        "type": "String"
+      }
+    }
+  },
   "llPrinceEliminated": "{target} musste die Prinzessin ablegen! Eliminiert!",
-  "@llPrinceEliminated": { "placeholders": { "target": { "type": "String" } } },
+  "@llPrinceEliminated": {
+    "placeholders": {
+      "target": {
+        "type": "String"
+      }
+    }
+  },
   "llPrinceDiscard": "{target} hat abgelegt und eine neue Karte gezogen",
-  "@llPrinceDiscard": { "placeholders": { "target": { "type": "String" } } },
+  "@llPrinceDiscard": {
+    "placeholders": {
+      "target": {
+        "type": "String"
+      }
+    }
+  },
   "llKingSwap": "{actor} und {target} haben die Hände getauscht",
-  "@llKingSwap": { "placeholders": { "actor": { "type": "String" }, "target": { "type": "String" } } },
+  "@llKingSwap": {
+    "placeholders": {
+      "actor": {
+        "type": "String"
+      },
+      "target": {
+        "type": "String"
+      }
+    }
+  },
   "llEliminated": "RAUS",
   "llSetAsideFaceUp": "Beiseitegelegt (offen)",
   "llSetAsideHidden": "Beiseitegelegt (verdeckt)",
@@ -1444,5 +1577,23 @@
   "shopFeatureDisableConfirm": "Deaktivieren",
   "shopFeatureEnableTitle": "Wieder aktivieren?",
   "shopFeatureEnableBody": "Gilt sofort und läuft bis zum Ablauf der Berechtigung.",
-  "shopFeatureEnableConfirm": "Aktivieren"
+  "shopFeatureEnableConfirm": "Aktivieren",
+  "goldChargeTitle": "Gold kaufen",
+  "goldPaymentProcessing": "Zahlung wird verarbeitet ...",
+  "goldPaymentAlreadyProcessed": "Diese Zahlung wurde bereits verarbeitet.",
+  "goldPaymentComplete": "Zahlung abgeschlossen",
+  "goldGranted": "+{amount} Gold gutgeschrieben",
+  "goldBalanceNow": "Guthaben: {amount}",
+  "goldPaymentFailed": "Zahlung fehlgeschlagen: {message}",
+  "goldStoreLoadFailed": "Die Produkte konnten nicht aus dem Store geladen werden.",
+  "goldPurchaseStartFailed": "Der Kauf konnte nicht gestartet werden: {error}",
+  "goldIapUnavailable": "In-App-Käufe sind auf diesem Gerät nicht verfügbar.",
+  "goldNoProducts": "Zurzeit sind keine Gold-Pakete im Angebot.",
+  "goldUnit": "Gold",
+  "goldBestValue": "Top-Angebot",
+  "goldBonusIncluded": "+{bonus} Bonus",
+  "goldNoticeTitle": "Vor dem Kauf",
+  "goldNoticeBody": "• Gold ist kostenpflichtiger digitaler Inhalt und nur im Spiel verwendbar. Es kann nicht in Bargeld getauscht, bar erstattet oder übertragen werden.\n• Gold ist sofort nach dem Kauf nutzbar; bereits ausgegebenes Gold ist vom Widerruf (Erstattung) ausgenommen.",
+  "goldNoticeMore": "Erstattungen und Zahlungssupport",
+  "goldNoticeDetails": "• Erstattungen und Stornierungen richten sich nach den Richtlinien und Verfahren des Apple App Store / Google Play.\n• Minderjährige benötigen die Zustimmung ihrer Erziehungsberechtigten; Käufe ohne Zustimmung können storniert werden.\n• Fragen zur Zahlung: Einstellungen > Kontakt > „Zahlung & Erstattung“\n• Verkäuferinformationen und die vollständige Erstattungsrichtlinie stehen in den AGB und der Datenschutzerklärung in den Einstellungen."
 }

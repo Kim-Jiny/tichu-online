@@ -1663,6 +1663,8 @@
   "friendsSearchNoResults": "No results found",
   "friendsStatusFriend": "Friend",
   "friendsRequestReceived": "Request received",
+  "friendsStatusPendingShort": "Pending",
+  "friendsStatusReceivedShort": "Received",
   "friendsRequestSent": "Request sent",
   "friendsRequestSentSnackbar": "Sent a friend request to {nickname}",
   "@friendsRequestSentSnackbar": {
@@ -2547,5 +2549,58 @@
   "shopFeatureDisableConfirm": "Turn off",
   "shopFeatureEnableTitle": "Turn this back on?",
   "shopFeatureEnableBody": "It applies right away, and runs until the pass expires.",
-  "shopFeatureEnableConfirm": "Turn on"
+  "shopFeatureEnableConfirm": "Turn on",
+  "goldChargeTitle": "Buy Gold",
+  "goldPaymentProcessing": "Processing your payment...",
+  "goldPaymentAlreadyProcessed": "This payment has already been processed.",
+  "goldPaymentComplete": "Payment complete",
+  "goldGranted": "+{amount} gold added",
+  "@goldGranted": {
+    "placeholders": {
+      "amount": {
+        "type": "String"
+      }
+    }
+  },
+  "goldBalanceNow": "Balance: {amount}",
+  "@goldBalanceNow": {
+    "placeholders": {
+      "amount": {
+        "type": "String"
+      }
+    }
+  },
+  "goldPaymentFailed": "Payment failed: {message}",
+  "@goldPaymentFailed": {
+    "placeholders": {
+      "message": {
+        "type": "String"
+      }
+    }
+  },
+  "goldStoreLoadFailed": "Could not load the products from the store.",
+  "goldPurchaseStartFailed": "Could not start the purchase: {error}",
+  "@goldPurchaseStartFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "goldIapUnavailable": "In-app purchases are not available on this device.",
+  "goldNoProducts": "No gold packs are on sale right now.",
+  "goldUnit": "gold",
+  "goldBestValue": "Best value",
+  "goldBonusIncluded": "+{bonus} bonus",
+  "@goldBonusIncluded": {
+    "placeholders": {
+      "bonus": {
+        "type": "String"
+      }
+    }
+  },
+  "goldNoticeTitle": "Before you buy",
+  "goldNoticeBody": "• Gold is paid digital content for use inside the game only. It cannot be exchanged for cash, refunded as cash or transferred.\n• Gold is usable immediately after purchase, so gold you have already spent is excluded from withdrawal (refund).",
+  "goldNoticeMore": "Refunds and payment support",
+  "goldNoticeDetails": "• Refunds and cancellations follow the policies and procedures of the Apple App Store / Google Play.\n• Minors must have their legal guardian's consent before purchasing; purchases made without consent may be cancelled.\n• Payment enquiries: Settings > Contact us > 'Payment & refunds'\n• Seller information and the full refund policy are stated in the Terms of Service and Privacy Policy in Settings."
 }

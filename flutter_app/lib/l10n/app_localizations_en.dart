@@ -3213,6 +3213,12 @@ class L10nEn extends L10n {
   String get friendsRequestReceived => 'Request received';
 
   @override
+  String get friendsStatusPendingShort => 'Pending';
+
+  @override
+  String get friendsStatusReceivedShort => 'Received';
+
+  @override
   String get friendsRequestSent => 'Request sent';
 
   @override
@@ -4514,4 +4520,73 @@ class L10nEn extends L10n {
 
   @override
   String get shopFeatureEnableConfirm => 'Turn on';
+
+  @override
+  String get goldChargeTitle => 'Buy Gold';
+
+  @override
+  String get goldPaymentProcessing => 'Processing your payment...';
+
+  @override
+  String get goldPaymentAlreadyProcessed =>
+      'This payment has already been processed.';
+
+  @override
+  String get goldPaymentComplete => 'Payment complete';
+
+  @override
+  String goldGranted(String amount) {
+    return '+$amount gold added';
+  }
+
+  @override
+  String goldBalanceNow(String amount) {
+    return 'Balance: $amount';
+  }
+
+  @override
+  String goldPaymentFailed(String message) {
+    return 'Payment failed: $message';
+  }
+
+  @override
+  String get goldStoreLoadFailed =>
+      'Could not load the products from the store.';
+
+  @override
+  String goldPurchaseStartFailed(String error) {
+    return 'Could not start the purchase: $error';
+  }
+
+  @override
+  String get goldIapUnavailable =>
+      'In-app purchases are not available on this device.';
+
+  @override
+  String get goldNoProducts => 'No gold packs are on sale right now.';
+
+  @override
+  String get goldUnit => 'gold';
+
+  @override
+  String get goldBestValue => 'Best value';
+
+  @override
+  String goldBonusIncluded(String bonus) {
+    return '+$bonus bonus';
+  }
+
+  @override
+  String get goldNoticeTitle => 'Before you buy';
+
+  @override
+  String get goldNoticeBody =>
+      '• Gold is paid digital content for use inside the game only. It cannot be exchanged for cash, refunded as cash or transferred.\n• Gold is usable immediately after purchase, so gold you have already spent is excluded from withdrawal (refund).';
+
+  @override
+  String get goldNoticeMore => 'Refunds and payment support';
+
+  @override
+  String get goldNoticeDetails =>
+      '• Refunds and cancellations follow the policies and procedures of the Apple App Store / Google Play.\n• Minors must have their legal guardian\'s consent before purchasing; purchases made without consent may be cancelled.\n• Payment enquiries: Settings > Contact us > \'Payment & refunds\'\n• Seller information and the full refund policy are stated in the Terms of Service and Privacy Policy in Settings.';
 }

@@ -642,8 +642,17 @@ class _FriendsScreenState extends State<FriendsScreen> with TickerProviderStateM
                           titleName: user['titleName'] as String?,
                           level: user['level'] as int?,
                           isPrivate: user['isPrivate'] == true,
-                          trailing:
-                              _buildFriendStatusButton(nickname, friendStatus, game),
+                          // Capped: "Freund hinzufügen" is wide enough in
+                          // German to push the nickname into an ellipsis, and
+                          // the nickname is the thing being searched for.
+                          trailing: ConstrainedBox(
+                            constraints: const BoxConstraints(maxWidth: 132),
+                            child: _buildFriendStatusButton(
+                              nickname,
+                              friendStatus,
+                              game,
+                            ),
+                          ),
                           onTap: nickname.isEmpty
                               ? null
                               : () => showPlayerProfileDialog(context, nickname, game),
@@ -659,64 +668,64 @@ class _FriendsScreenState extends State<FriendsScreen> with TickerProviderStateM
 
   Widget _buildFriendStatusButton(String nickname, String status, GameService game) {
     final l10n = L10n.of(context);
+    // One word per state, and it yields before the nickname does: these sit in
+    // a row beside the name, and the German for "add friend" is twice the
+    // width of the English.
+    Widget chip(IconData? icon, String text, Color fg, Color bg,
+        {VoidCallback? onTap}) {
+      final body = Container(
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+        decoration: BoxDecoration(
+          color: bg,
+          borderRadius: BorderRadius.circular(8),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            if (icon != null) ...[
+              Icon(icon, size: 14, color: fg),
+              const SizedBox(width: 4),
+            ],
+            Flexible(
+              child: Text(
+                text,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.bold,
+                  color: fg,
+                ),
+              ),
+            ),
+          ],
+        ),
+      );
+      return onTap == null ? body : GestureDetector(onTap: onTap, child: body);
+    }
+
     switch (status) {
       case 'friend':
-        return Container(
-          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-          decoration: BoxDecoration(
-            color: const Color(0xFFE8F5E9),
-            borderRadius: BorderRadius.circular(8),
-          ),
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              const Icon(Icons.check, size: 14, color: Color(0xFF4CAF50)),
-              const SizedBox(width: 4),
-              Text(l10n.friendsStatusFriend, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Color(0xFF4CAF50))),
-            ],
-          ),
-        );
+        return chip(Icons.check, l10n.friendsStatusFriend,
+            const Color(0xFF4CAF50), const Color(0xFFE8F5E9));
       case 'pending_incoming':
-        return Container(
-          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-          decoration: BoxDecoration(
-            color: const Color(0xFFFFF3E0),
-            borderRadius: BorderRadius.circular(8),
-          ),
-          child: Text(l10n.friendsRequestReceived, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Color(0xFFE65100))),
-        );
+        return chip(null, l10n.friendsStatusReceivedShort,
+            const Color(0xFFE65100), const Color(0xFFFFF3E0));
       case 'pending_outgoing':
-        return Container(
-          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-          decoration: BoxDecoration(
-            color: const Color(0xFFE3F2FD),
-            borderRadius: BorderRadius.circular(8),
-          ),
-          child: Text(l10n.friendsRequestSent, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Color(0xFF1976D2))),
-        );
+        return chip(null, l10n.friendsStatusPendingShort,
+            const Color(0xFF1976D2), const Color(0xFFE3F2FD));
       default:
-        return GestureDetector(
+        return chip(
+          Icons.person_add,
+          l10n.gameAddFriend,
+          Colors.white,
+          const Color(0xFF7E57C2),
           onTap: () {
             game.addFriendAction(nickname);
             ScaffoldMessenger.of(context).showSnackBar(
               SnackBar(content: Text(l10n.friendsRequestSentSnackbar(nickname))),
             );
           },
-          child: Container(
-            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-            decoration: BoxDecoration(
-              color: const Color(0xFF7E57C2),
-              borderRadius: BorderRadius.circular(8),
-            ),
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                const Icon(Icons.person_add, size: 14, color: Colors.white),
-                const SizedBox(width: 4),
-                Text(l10n.friendsAddFriend, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.white)),
-              ],
-            ),
-          ),
         );
     }
   }

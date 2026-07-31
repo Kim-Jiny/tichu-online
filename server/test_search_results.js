@@ -126,12 +126,11 @@ async function main() {
         `INSERT INTO tc_user_items (nickname, item_key, expires_at, is_active, source)
          VALUES ('srcShy', 'profile_private_7d', NOW() + INTERVAL '7 days', TRUE, 'test')`);
     });
-    // Privacy and photos are read at login, so reconnect both.
+    // Deliberately NOT logging srcShy back in: the privacy cache is filled at
+    // login, and a search hit is usually someone offline. The pass has to hold
+    // anyway, which is read from their row.
     const shy = client('shy2');
     await shy.ready;
-    shy.send({ type: 'login', username: 'srcShy', password: 'test1234!',
-               deviceInfo: { appVersion: '2.8.0' } });
-    await shy.waitFor('login_success');
     await sleep(300);
 
     // ── an ordinary account: everything is there ────────────────────────
@@ -164,6 +163,9 @@ async function main() {
     // ── once they are friends, the private account opens up ─────────────
     seeker.send({ type: 'add_friend', nickname: 'srcShy' });
     await sleep(400);
+    shy.send({ type: 'login', username: 'srcShy', password: 'test1234!',
+               deviceInfo: { appVersion: '2.8.0' } });
+    await shy.waitFor('login_success');
     shy.send({ type: 'accept_friend_request', nickname: 'srcSeeker' });
     await sleep(600);
     const asFriend = await searchFor(seeker, 'srcShy', 'srcShy');

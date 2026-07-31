@@ -3140,6 +3140,12 @@ class L10nKo extends L10n {
   String get friendsRequestReceived => '요청 받음';
 
   @override
+  String get friendsStatusPendingShort => '요청 중';
+
+  @override
+  String get friendsStatusReceivedShort => '받음';
+
+  @override
   String get friendsRequestSent => '요청 보냄';
 
   @override
@@ -4409,4 +4415,70 @@ class L10nKo extends L10n {
 
   @override
   String get shopFeatureEnableConfirm => '사용하기';
+
+  @override
+  String get goldChargeTitle => '골드 충전';
+
+  @override
+  String get goldPaymentProcessing => '결제 처리 중입니다...';
+
+  @override
+  String get goldPaymentAlreadyProcessed => '이미 처리된 결제입니다.';
+
+  @override
+  String get goldPaymentComplete => '결제 완료';
+
+  @override
+  String goldGranted(String amount) {
+    return '+$amount 골드가 지급되었습니다';
+  }
+
+  @override
+  String goldBalanceNow(String amount) {
+    return '보유 골드 $amount';
+  }
+
+  @override
+  String goldPaymentFailed(String message) {
+    return '결제 실패: $message';
+  }
+
+  @override
+  String get goldStoreLoadFailed => '스토어에서 상품 정보를 불러오지 못했습니다.';
+
+  @override
+  String goldPurchaseStartFailed(String error) {
+    return '결제를 시작할 수 없습니다: $error';
+  }
+
+  @override
+  String get goldIapUnavailable => '이 기기에서는 인앱결제를 사용할 수 없습니다.';
+
+  @override
+  String get goldNoProducts => '판매 중인 골드 상품이 없습니다.';
+
+  @override
+  String get goldUnit => '골드';
+
+  @override
+  String get goldBestValue => '최대 혜택';
+
+  @override
+  String goldBonusIncluded(String bonus) {
+    return '보너스 +$bonus 포함';
+  }
+
+  @override
+  String get goldNoticeTitle => '구매 전 안내';
+
+  @override
+  String get goldNoticeBody =>
+      '• 골드는 게임 내에서만 사용하는 유료 디지털 콘텐츠이며 현금 환전·환급·양도가 불가합니다.\n• 결제 즉시 사용 가능한 콘텐츠로, 이미 사용한 골드는 청약철회(환불) 대상에서 제외됩니다.';
+
+  @override
+  String get goldNoticeMore => '환불·결제 문의 등 자세한 안내';
+
+  @override
+  String get goldNoticeDetails =>
+      '• 환불·결제취소는 Apple App Store / Google Play의 정책 및 절차에 따릅니다.\n• 미성년자는 법정대리인의 동의 후 결제해야 하며, 동의 없는 결제는 취소될 수 있습니다.\n• 결제 관련 문의: 설정 > 문의하기 > \'결제·환불\'\n• 판매자 정보 및 환불 정책 상세는 설정의 이용약관·개인정보처리방침에 표기됩니다.';
 }

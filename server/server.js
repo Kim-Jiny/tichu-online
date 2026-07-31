@@ -5321,6 +5321,17 @@ async function handleGetProfile(ws, data) {
     });
     return;
   }
+  // The privacy cache is filled at login, so a pass held by someone who has
+  // not connected since the last restart was invisible here and their records
+  // came through. The row is already loaded — trust it, and warm the cache for
+  // the broadcast paths while we are at it.
+  if (profile) {
+    setProfilePrivacyCache(targetNickname, {
+      active: profile.hasProfilePrivate === true,
+      expiresAt: profile.profilePrivateExpiresAt || null,
+      hidePhoto: profile.profilePrivateHidePhoto === true,
+    });
+  }
   const isBlocked = (await getBlockedUsers(ws.nickname)).includes(targetNickname);
   // Privacy pass: strangers get the identity (so they can still report, invite
   // or add as friend) and nothing that counts as a record. Redacted HERE rather
@@ -9033,8 +9044,13 @@ async function handleSearchUsers(ws, data) {
     // does: a private account shows who they are (you still have to be able to
     // find and add them) but not how they have been doing, and anything this
     // viewer has reported stays gone.
-    const hidden = profileHiddenFrom(ws, nick);
+    const hidden = (u.hasProfilePrivate || !!profilePrivacyOf(nick))
+      && !seesPrivateProfile(ws, nick);
     const hideTitle = titleReported(ws, nick, u.titleName);
+    let photo = visiblePhoto(ws, nick, profilePhotoUrlFrom(u));
+    // visiblePhoto only knows the cache, which is blank for anyone who has not
+    // logged in since the server started — most search hits.
+    if (photo && hidden && u.profilePrivateHidePhoto) photo = null;
     return {
       nickname: nick,
       friendStatus,
@@ -9043,7 +9059,7 @@ async function handleSearchUsers(ws, data) {
       bannerKey: u.bannerKey,
       titleKey: hideTitle ? null : u.titleKey,
       titleName: hideTitle ? null : u.titleName,
-      photoUrl: visiblePhoto(ws, nick, profilePhotoUrlFrom(u)),
+      photoUrl: photo,
     };
   });
   sendTo(ws, { type: 'search_users_result', users });

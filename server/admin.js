@@ -1125,11 +1125,21 @@ const SHOP_VISUAL_ICONS = [
 // effect_type values the server actually understands. Admin can choose a
 // type from this list and tweak effect_value, but cannot invent a brand new
 // effect category from the form (would need server-side handling).
+// Categories the shop form offers. Same rule as SHOP_EFFECT_TYPES: a category
+// missing here gets rewritten on save.
+const SHOP_CATEGORIES = ['banner', 'title', 'theme', 'card_skin', 'utility', 'feature'];
+
 const SHOP_EFFECT_TYPES = [
   'leave_count_reduce', 'leave_count_reset',
   'nickname_change', 'stats_reset',
   'season_stats_reset', 'tichu_season_stats_reset',
   'sk_season_stats_reset', 'mighty_season_stats_reset',
+  // Entitlements. These MUST be listed: the edit form writes back whatever the
+  // select holds, so a type missing here is silently cleared the first time
+  // anyone opens the item — which un-gates it (the version check keys off
+  // effect_type) and breaks the feature it grants.
+  'profile_photo', 'profile_private', 'custom_title',
+  'top_card_counter', 'mighty_trump_counter', 'mighty_prev_trick',
 ];
 
 function _normalizeHexColor(input, fallback) {
@@ -1195,8 +1205,14 @@ function shopForm(action, values, isEdit = false) {
     if (val === 'on' || val === true || val === 't') return 'checked';
     return '';
   };
-  const categories = ['banner', 'title', 'theme', 'card_skin', 'utility'];
-  const categoryOptions = categories.map(c =>
+  const categories = SHOP_CATEGORIES;
+  // An unknown current value is kept as its own option rather than dropped:
+  // the form writes back what the select holds, so a missing option silently
+  // re-categorises the item on save (this is how the profile passes ended up
+  // filed under 배너).
+  const withCurrent = (list, current) =>
+    current && !list.includes(current) ? [current, ...list] : list;
+  const categoryOptions = withCurrent(categories, v('category')).map(c =>
     `<option value="${c}" ${v('category') === c ? 'selected' : ''}>${c}</option>`
   ).join('');
 
@@ -1235,7 +1251,7 @@ function shopForm(action, values, isEdit = false) {
   const textColor      = formVisual('text_color', visual?.text?.color || '');
 
   const iconOptions = SHOP_VISUAL_ICONS.map(i => `<option value="${i}">`).join('');
-  const effectOptions = ['', ...SHOP_EFFECT_TYPES].map(e =>
+  const effectOptions = withCurrent(['', ...SHOP_EFFECT_TYPES], v('effect_type', '')).map(e =>
     `<option value="${e}" ${v('effect_type', '') === e ? 'selected' : ''}>${e || '-'}</option>`
   ).join('');
 
@@ -6137,4 +6153,4 @@ async function handleAdminRoute(req, res, url, pathname, method, lobby, wss, mai
   html(res, layout('찾을 수 없음', '<div class="empty">페이지를 찾을 수 없습니다</div>'), 404);
 }
 
-module.exports = { handleAdminRoute };
+module.exports = { handleAdminRoute, SHOP_EFFECT_TYPES, SHOP_CATEGORIES };

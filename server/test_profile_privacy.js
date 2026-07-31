@@ -139,8 +139,15 @@ async function main() {
     const stranger = await account('stranger', 'privStrgr');
     const friend = await account('friend', 'privFriend');
 
-    // A photo to hide, and gold to buy the pass with.
+    // A photo to hide, and gold to buy the pass with. The pass ships
+    // is_purchasable = FALSE (see the seed) and is switched on in admin once the
+    // client is live, so the test does that switch first — otherwise it would be
+    // testing the ship-dark flag rather than the feature.
     await withDb(async (c) => {
+      await c.query(
+        `UPDATE tc_shop_items SET is_purchasable = TRUE
+         WHERE effect_type IN ('profile_private', 'profile_photo')`,
+      );
       await c.query(
         `UPDATE tc_users SET gold = 99999,
            profile_photo_key = 'test/privOwner.jpg',

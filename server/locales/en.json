@@ -270,5 +270,6 @@
   "custom_title_charset": "Letters, Hangul and digits only (no emoji or symbols)",
   "custom_title_too_long": "Titles can be up to 4 characters",
   "custom_title_banned": "That title contains a word that is not allowed",
-  "custom_title_color": "That colour is not available"
+  "custom_title_color": "That colour is not available",
+  "login_throttled": "Too many sign-in attempts. Please try again in a little while"
 }

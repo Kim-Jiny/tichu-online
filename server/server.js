@@ -2609,6 +2609,112 @@ setInterval(runGoogleVoidedPoll, GOOGLE_VOIDED_POLL_MS);
 // First run shortly after boot (let env/DB settle).
 setTimeout(runGoogleVoidedPoll, 60 * 1000);
 
+/**
+ * Failed-login throttle.
+ *
+ * bcrypt makes a single guess slow, but nothing stopped a client from opening a
+ * socket and trying passwords in a loop — the cost of that loop is paid by the
+ * server's event loop, not the attacker's. Counted per account AND per IP so
+ * neither "one account, many sources" nor "one source, many accounts" walks
+ * through.
+ *
+ * In memory: a restart clears it, which is the same window an attacker gets by
+ * waiting, and there is nothing here worth a table.
+ */
+const LOGIN_WINDOW_MS = 15 * 60 * 1000;
+const LOGIN_MAX_FAILS = 10;      // per account within the window
+const LOGIN_MAX_FAILS_IP = 30;   // per source address (a household shares one)
+const loginFails = new Map(); // key -> { count, first, until }
+
+function loginThrottleKey(kind, value) {
+  return `${kind}:${String(value || '').toLowerCase()}`;
+}
+
+function loginBlockedFor(keys) {
+  const now = Date.now();
+  for (const key of keys) {
+    const rec = loginFails.get(key);
+    if (rec && rec.until && rec.until > now) {
+      return Math.ceil((rec.until - now) / 1000);
+    }
+  }
+  return 0;
+}
+
+function noteLoginFailure(keys, limits) {
+  const now = Date.now();
+  keys.forEach((key, i) => {
+    const rec = loginFails.get(key);
+    if (!rec || now - rec.first > LOGIN_WINDOW_MS) {
+      loginFails.set(key, { count: 1, first: now, until: 0 });
+      return;
+    }
+    rec.count += 1;
+    if (rec.count >= limits[i]) {
+      rec.until = now + LOGIN_WINDOW_MS;
+      rec.count = 0;
+      rec.first = now;
+      console.warn(`[login] throttled ${key} for ${LOGIN_WINDOW_MS / 60000}m`);
+    }
+  });
+}
+
+function clearLoginFailures(keys) {
+  for (const key of keys) loginFails.delete(key);
+}
+
+// Cheap sweep: the map only grows from failures, but a long-lived server with
+// a lot of typos would still accumulate.
+setInterval(() => {
+  const now = Date.now();
+  for (const [key, rec] of loginFails) {
+    if (now - rec.first > LOGIN_WINDOW_MS && (!rec.until || rec.until < now)) {
+      loginFails.delete(key);
+    }
+  }
+}, LOGIN_WINDOW_MS).unref();
+
+/**
+ * Per-connection message budget.
+ *
+ * maxPayload caps how BIG a message is; nothing capped how MANY. A single
+ * client looping sends is enough to keep the handler queue busy for everyone,
+ * because every message runs through the same per-socket promise chain.
+ *
+ * The ceiling is far above real play (a hand of cards is a handful of messages
+ * a second, and 'ping' never reaches here) — it exists to stop a loop, not to
+ * pace a player. Over the burst limit the message is dropped; a client that
+ * keeps flooding after that gets closed.
+ */
+const MSG_WINDOW_MS = 1000;
+const MSG_PER_WINDOW = 40;
+const MSG_DROPS_BEFORE_CLOSE = 200; // dropped in a row, i.e. still looping
+
+function messageAllowed(ws) {
+  const now = Date.now();
+  if (!ws._msgWindowStart || now - ws._msgWindowStart >= MSG_WINDOW_MS) {
+    // A window that stayed under the limit ends the streak: bursts happen
+    // (rejoining a room repaints a lot), sustained flooding does not.
+    if ((ws._msgCount || 0) <= MSG_PER_WINDOW) ws._msgDrops = 0;
+    ws._msgWindowStart = now;
+    ws._msgCount = 0;
+  }
+  ws._msgCount += 1;
+  if (ws._msgCount <= MSG_PER_WINDOW) return true;
+
+  ws._msgDrops = (ws._msgDrops || 0) + 1;
+  if (ws._msgDrops === 1) {
+    console.warn(
+      `[flood] ${ws.nickname || 'anon'} ${ws.clientIp || '?'} over ${MSG_PER_WINDOW}/s`,
+    );
+  }
+  if (ws._msgDrops >= MSG_DROPS_BEFORE_CLOSE) {
+    console.warn(`[flood] closing ${ws.nickname || 'anon'} ${ws.clientIp || '?'}`);
+    try { ws.close(1008, 'rate limit'); } catch { /* already going */ }
+  }
+  return false;
+}
+
 wss.on('connection', (ws, req) => {
   ws.playerId = null;
   ws.nickname = null;
@@ -2635,6 +2741,8 @@ wss.on('connection', (ws, req) => {
       sendTo(ws, { type: 'error', message: t(ws.locale, 'invalid_data') });
       return;
     }
+
+    if (!messageAllowed(ws)) return;
 
     // Heartbeat ping: answer immediately, BEFORE the per-client handler queue.
     // A slow in-flight handler (e.g. DB work) must not delay the pong, or the
@@ -3351,12 +3459,30 @@ async function handleLogin(ws, data) {
   const earlyLocale = (data.deviceInfo && data.deviceInfo.locale) || ws.locale || null;
   ws.locale = earlyLocale;
 
+  const throttleKeys = [
+    loginThrottleKey('user', username),
+    loginThrottleKey('ip', ws.clientIp),
+  ];
+  const blockedFor = loginBlockedFor(throttleKeys);
+  if (blockedFor > 0) {
+    sendTo(ws, {
+      type: 'login_error',
+      message: t(ws.locale, 'login_throttled'),
+      retryAfter: blockedFor,
+    });
+    return;
+  }
+
   const result = await loginUser(username, password);
 
   if (!result.success) {
+    noteLoginFailure(throttleKeys, [LOGIN_MAX_FAILS, LOGIN_MAX_FAILS_IP]);
     sendTo(ws, { type: 'login_error', message: resultMessage(result, ws.locale) });
     return;
   }
+  // A correct password clears the account's counter, so a user who finally
+  // remembers their password is not still serving out a lockout.
+  clearLoginFailures([throttleKeys[0]]);
 
   // Block login during maintenance
   const mStatus = getMaintenanceStatus(ws.locale);

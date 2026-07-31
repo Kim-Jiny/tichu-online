@@ -209,7 +209,9 @@ class _GoldShopScreenState extends State<GoldShopScreen> {
             ),
           ),
           const Spacer(),
-          const GoldIcon(size: 20),
+          Consumer<GameService>(
+            builder: (_, game, _) => GoldIcon(size: 20, amount: game.gold),
+          ),
           const SizedBox(width: 5),
           Consumer<GameService>(
             builder: (_, game, _) => Text(
@@ -305,15 +307,10 @@ class _GoldShopScreenState extends State<GoldShopScreen> {
     final pending = busy || pd == null;
 
     // Five identical coin icons said nothing about which tier was which. The
-    // badge grows and deepens with the amount, so the ladder is readable before
-    // any number is.
+    // art now steps with the amount (coin → pile → hoard) and the badge grows
+    // and deepens with it, so the ladder is readable before any number is.
     final t = count > 1 ? index / (count - 1) : 0.0;
-    final badgeSize = 38 + 10 * t;
-    final iconCount = index >= count - 1
-        ? 3
-        : index >= (count - 1) / 2
-            ? 2
-            : 1;
+    final badgeSize = 40 + 10 * t;
     final badgeGradient = [
       Color.lerp(const Color(0xFFFFF1CC), const Color(0xFFFFD166), t)!,
       Color.lerp(const Color(0xFFFFD98A), const Color(0xFFF5A623), t)!,
@@ -335,20 +332,8 @@ class _GoldShopScreenState extends State<GoldShopScreen> {
               ),
               borderRadius: BorderRadius.circular(12),
             ),
-            child: Center(
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: List.generate(
-                  iconCount,
-                  (i) => Padding(
-                    padding: EdgeInsets.only(left: i == 0 ? 0 : 1),
-                    child: GoldIcon(
-                      size: iconCount == 1 ? 24 : (iconCount == 2 ? 19 : 15),
-                    ),
-                  ),
-                ),
-              ),
-            ),
+            padding: const EdgeInsets.all(5),
+            child: Center(child: GoldIcon(size: badgeSize - 12, amount: total)),
           ),
           const SizedBox(width: 12),
           Expanded(

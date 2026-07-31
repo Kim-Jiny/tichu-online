@@ -309,7 +309,7 @@ class _ShopScreenState extends State<ShopScreen> {
                       child: Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          const GoldIcon(size: 20),
+                          GoldIcon(size: 20, amount: game.gold),
                           const SizedBox(width: 6),
                           Flexible(
                             child: FittedBox(
@@ -1284,7 +1284,7 @@ class _ShopScreenState extends State<ShopScreen> {
                 ),
               ),
               const SizedBox(width: 6),
-              const GoldIcon(size: 13),
+              GoldIcon(size: 13, amount: price is int ? price : null),
               const SizedBox(width: 2),
               Text(
                 '$price',
@@ -1436,7 +1436,7 @@ class _ShopScreenState extends State<ShopScreen> {
                     Row(
                       children: [
                         if (!ownedPermanent) ...[
-                          const GoldIcon(size: 15),
+                          GoldIcon(size: 15, amount: price is int ? price : null),
                           const SizedBox(width: 3),
                           Text(
                             '$price',
@@ -2659,7 +2659,7 @@ class _ShopScreenState extends State<ShopScreen> {
                     children: [
                       Row(
                         children: [
-                          const GoldIcon(size: 19),
+                          GoldIcon(size: 19, amount: price),
                           const SizedBox(width: 4),
                           Text(
                             '$price G',
@@ -3227,7 +3227,7 @@ class _ShopScreenState extends State<ShopScreen> {
                     color: const Color(0xFF43A047),
                     size: finale ? 22 : 18,
                   )
-                : GoldIcon(size: finale ? 22 : 18),
+                : GoldIcon(size: finale ? 22 : 18, amount: reward),
             const SizedBox(height: 4),
             Text(
               '$reward',

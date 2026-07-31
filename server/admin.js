@@ -4,7 +4,7 @@ const logBuffer = require('./logBuffer');
 const {
   verifyAdmin, getInquiries, getInquiryById, resolveInquiry,
   getReports, getReportGroup, updateReportGroupStatus,
-  getUsers, getUserDetail, clearCustomTitle, listActiveProfilePhotos, getAdminGoldHistory, getAdminPurchaseHistory, deleteUser, getDashboardStats, getDashboardActivityTopPlayers, getAdminRecentMatches, setChatBan, setAdminMemo, adminClearProfilePhoto, getRecentMatches, adminAdjustGold, adminAdjustExp, setUserAdmin,
+  getUsers, getUserDetail, clearCustomTitle, setCustomTitleByAdmin, listActiveProfilePhotos, getAdminGoldHistory, getAdminPurchaseHistory, deleteUser, getDashboardStats, getDashboardActivityTopPlayers, getAdminRecentMatches, setChatBan, setAdminMemo, adminClearProfilePhoto, getRecentMatches, adminAdjustGold, adminAdjustExp, setUserAdmin,
   getAttendanceDashboardStats, listAttendanceLog, getAttendanceBreakdown, getAttendanceForNickname,
   getDetailedAdminStats,
   getAllShopItemsAdmin, addShopItem, updateShopItem, deleteShopItem, getShopItemById,
@@ -18,7 +18,11 @@ const {
 } = require('./db/database');
 const { refundGoogleOrder } = require('./iap/GoogleVerify');
 const minioClient = require('./storage/minioClient');
-const { TITLE_COLORS: CUSTOM_TITLE_HEX } = require('./moderation/customTitle');
+const {
+  TITLE_COLORS: CUSTOM_TITLE_HEX,
+  validateAdminTitle,
+  ADMIN_MAX_LENGTH: TITLE_ADMIN_MAX,
+} = require('./moderation/customTitle');
 const fillerRooms = require('./lobby/fillerRooms');
 const { isPhotoKeyReported } = require('./db/database');
 
@@ -3493,6 +3497,20 @@ async function handleAdminRoute(req, res, url, pathname, method, lobby, wss, mai
     ]);
     if (!user) return html(res, layout('찾을 수 없음', '<div class="empty">유저를 찾을 수 없습니다</div>', 'users'), 404);
 
+    // Set-title bounces back here with a reason key when it refuses.
+    const TITLE_ERRORS = {
+      custom_title_empty: '칭호를 입력해 주세요.',
+      custom_title_charset: '보이지 않거나 글자 밖으로 삐져나오는 문자는 쓸 수 없습니다.',
+      custom_title_too_long: `칭호는 ${TITLE_ADMIN_MAX}자까지 저장됩니다.`,
+      custom_title_color: '색상을 다시 선택해 주세요.',
+      db_user_not_found: '유저를 찾을 수 없습니다.',
+      db_update_failed: '저장에 실패했습니다.',
+    };
+    const errKey = url.searchParams.get('err');
+    const errorBanner = errKey
+      ? `<div class="card" style="border-left:4px solid #e53935;color:#c62828">${escapeHtml(TITLE_ERRORS[errKey] || errKey)}</div>`
+      : '';
+
     const winRate = user.total_games > 0 ? Math.round((user.wins / user.total_games) * 100) : 0;
     const purchaseSummary = purchaseHistory?.summary || {
       totalSpent: 0,
@@ -3516,6 +3534,7 @@ async function handleAdminRoute(req, res, url, pathname, method, lobby, wss, mai
 
     const content = `
       ${pageHeader('유저 상세', '플레이 기록, 골드 흐름, 실제 구매 아이템까지 한 페이지에서 확인할 수 있게 구성했습니다.')}
+      ${errorBanner}
       ${summaryStrip([
         { label: '현재 골드', value: formatNumber(user.gold || 0), valueColor: '#d07a16', meta: `레벨 ${formatNumber(user.level || 1)}` },
         { label: '누적 구매', value: formatNumber(purchaseSummary.totalPurchases), meta: `총 ${formatNumber(purchaseSummary.totalSpent)} 골드 사용` },
@@ -3693,10 +3712,15 @@ async function handleAdminRoute(req, res, url, pathname, method, lobby, wss, mai
       ${(() => {
         const text = user.custom_title_text;
         const worn = (user.title_key || '').startsWith('custom:');
-        if (!text && !worn) return '';
+        // Always rendered, even with no title: this is also where an operator
+        // title is written, and there is nothing to click if the card only
+        // appears once one exists.
         const color = (user.title_key || '').startsWith('custom:')
           ? user.title_key.slice('custom:'.length)
-          : (user.custom_title_color || '');
+          : (user.custom_title_color || 'rose');
+        const colorOptions = Object.keys(CUSTOM_TITLE_HEX).map((c) =>
+          `<option value="${c}" ${c === color ? 'selected' : ''}>${c}</option>`
+        ).join('');
         return `<div class="card">
         <h3>커스텀 칭호</h3>
         <div style="display:flex;align-items:center;gap:16px;flex-wrap:wrap">
@@ -3709,11 +3733,23 @@ async function handleAdminRoute(req, res, url, pathname, method, lobby, wss, mai
               : '<span class="badge" style="background:#eee;color:#666">미착용</span>'}</div>
             <div style="margin-top:4px">색상: ${escapeHtml(color || '-')}</div>
           </div>
-          <form method="POST" action="/tc-backstage/users/${encodeURIComponent(user.nickname)}/clear-title" style="margin-left:auto"
+          ${text || worn ? `<form method="POST" action="/tc-backstage/users/${encodeURIComponent(user.nickname)}/clear-title" style="margin-left:auto"
             onsubmit="return confirm('${jsEscape(user.nickname)} 유저의 커스텀 칭호를 삭제하시겠습니까? (남은 이용권은 유지되어 다시 작성 가능)')">
             <button type="submit" class="btn btn-secondary" style="color:#c62828;border-color:#f0c0c0">칭호 삭제</button>
-          </form>
+          </form>` : ''}
         </div>
+        <form method="POST" action="/tc-backstage/users/${encodeURIComponent(user.nickname)}/set-title"
+          style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-top:14px;padding-top:14px;border-top:1px solid #eee">
+          <input type="text" name="title" value="${escapeHtml(text)}" maxlength="${TITLE_ADMIN_MAX}"
+            placeholder="운영자 칭호 (${TITLE_ADMIN_MAX}자까지)" required
+            style="flex:1;min-width:220px;padding:8px 12px;border-radius:8px;border:1px solid #ddd;font-size:14px">
+          <select name="color" style="padding:8px 12px;border-radius:8px;border:1px solid #ddd;font-size:14px">${colorOptions}</select>
+          <button type="submit" class="btn">칭호 지정</button>
+          <div style="flex-basis:100%;font-size:12px;color:#888">
+            운영자가 쓰는 칭호에는 글자 수 제한·허용문자·금지어가 적용되지 않습니다.
+            이용권이 없으면 무기한 이용권을 함께 지급하며, 이미 있으면 기간은 건드리지 않습니다.
+          </div>
+        </form>
       </div>`;
       })()}
 
@@ -3854,6 +3890,42 @@ async function handleAdminRoute(req, res, url, pathname, method, lobby, wss, mai
       ? back
       : `/tc-backstage/users/${encodeURIComponent(nickname)}`;
     return redirect(res, dest);
+  }
+
+  // Write a title from the console. Same live repaint as the clear path: the
+  // seats around them are holding the old one.
+  const setTitleMatch = pathname.match(/^\/tc-backstage\/users\/([^/]+)\/set-title$/);
+  if (setTitleMatch && method === 'POST') {
+    const nickname = decodeURIComponent(setTitleMatch[1]);
+    const body = await parseBody(req);
+    const checked = validateAdminTitle(body.title || '', body.color || 'rose');
+    if (!checked.ok) {
+      return redirect(res, `/tc-backstage/users/${encodeURIComponent(nickname)}?err=${encodeURIComponent(checked.reason)}`);
+    }
+    const result = await setCustomTitleByAdmin(nickname, checked.text, checked.color);
+    if (result.success && wss && lobby) {
+      for (const client of wss.clients) {
+        if (client.nickname !== nickname) continue;
+        client.titleKey = result.titleKey;
+        client.titleName = result.titleName;
+        const room = client.roomId ? lobby.getRoom(client.roomId) : null;
+        const seat = room?.players?.find((p) => p && p.id === client.playerId);
+        if (seat) {
+          seat.titleKey = result.titleKey;
+          seat.titleName = result.titleName;
+        }
+        if (room && maintenanceFns.broadcastRoomState) {
+          maintenanceFns.broadcastRoomState(client.roomId);
+          if (room.game && maintenanceFns.sendGameStateToAll) {
+            maintenanceFns.sendGameStateToAll(client.roomId);
+          }
+        }
+      }
+    }
+    const backTo = url.searchParams.get('back');
+    return redirect(res, backTo && backTo.startsWith('/tc-backstage/')
+      ? backTo
+      : `/tc-backstage/users/${encodeURIComponent(nickname)}`);
   }
 
   // Clear a user-written title. The entitlement is left alone on purpose —

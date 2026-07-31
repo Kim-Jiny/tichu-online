@@ -129,7 +129,41 @@ function graphemeLength(text) {
   return [...text].length;
 }
 
+/**
+ * The same check, for a title written by an operator rather than by a player.
+ *
+ * Everything that exists to keep players honest is dropped: the 4-character
+ * cap, the allow-list and the banned-word list. An operator title is usually
+ * exactly the thing a player may not write — "운영자" — and it is the operator's
+ * own account they are labelling.
+ *
+ * What stays is what protects the screen rather than the rules: characters that
+ * draw nothing or draw outside their cell still break every seat they appear
+ * on, and the column is VARCHAR(24), so a longer string would be truncated
+ * mid-character by the database instead of refused here.
+ */
+const ADMIN_MAX_LENGTH = 24;
+
+function validateAdminTitle(rawText, colorId) {
+  if (typeof rawText !== 'string') {
+    return { ok: false, reason: 'custom_title_empty' };
+  }
+  const text = rawText.normalize('NFC').trim();
+  if (text.length === 0) return { ok: false, reason: 'custom_title_empty' };
+  if (INVISIBLE.test(text) || COMBINING.test(text)) {
+    return { ok: false, reason: 'custom_title_charset' };
+  }
+  if (text.length > ADMIN_MAX_LENGTH) {
+    return { ok: false, reason: 'custom_title_too_long' };
+  }
+  if (!Object.prototype.hasOwnProperty.call(TITLE_COLORS, colorId)) {
+    return { ok: false, reason: 'custom_title_color' };
+  }
+  return { ok: true, text, color: colorId };
+}
+
 module.exports = {
-  validateCustomTitle, TITLE_COLORS, MAX_GRAPHEMES,
+  validateCustomTitle, validateAdminTitle,
+  TITLE_COLORS, MAX_GRAPHEMES, ADMIN_MAX_LENGTH,
   setBannedWords, getBannedWords, DEFAULT_BANNED,
 };

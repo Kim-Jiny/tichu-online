@@ -2223,6 +2223,88 @@ async function setFeatureEnabled(nickname, effectType, enabled) {
 }
 
 /** Admin/report path: wipe the text and take it off. */
+/**
+ * Write a title onto an account from the admin console.
+ *
+ * Two things differ from the player path. The entitlement is not required —
+ * an operator title is a label the operator puts on, not something bought — so
+ * one is granted alongside it (source 'admin', no expiry) rather than the write
+ * being refused. And the grant is what makes it show: every display path asks
+ * "is a custom_title pass live?", so without it the text would sit in the row
+ * and appear nowhere.
+ */
+async function setCustomTitleByAdmin(nickname, text, colorId) {
+  const client = await pool.connect();
+  try {
+    await client.query('BEGIN');
+    const exists = await client.query(
+      'SELECT 1 FROM tc_users WHERE nickname = $1', [nickname],
+    );
+    if (exists.rowCount === 0) {
+      await client.query('ROLLBACK');
+      return { success: false, messageKey: 'db_user_not_found' };
+    }
+    await client.query(
+      `UPDATE tc_users SET custom_title_text = $2, custom_title_color = $3
+       WHERE nickname = $1`,
+      [nickname, text, colorId],
+    );
+    // Only when they don't already own one: a player who bought the pass keeps
+    // their own expiry, and re-running this must not quietly extend it.
+    const owned = await client.query(
+      `SELECT 1 FROM tc_user_items ui
+       JOIN tc_shop_items si ON si.item_key = ui.item_key
+       WHERE ui.nickname = $1 AND si.effect_type = 'custom_title'
+         AND (ui.expires_at IS NULL OR ui.expires_at >= NOW()) LIMIT 1`,
+      [nickname],
+    );
+    if (owned.rowCount === 0) {
+      const item = await client.query(
+        `SELECT item_key FROM tc_shop_items
+         WHERE effect_type = 'custom_title' ORDER BY price ASC LIMIT 1`,
+      );
+      const itemKey = item.rows[0]?.item_key;
+      if (!itemKey) {
+        await client.query('ROLLBACK');
+        return { success: false, messageKey: 'db_item_not_found' };
+      }
+      await client.query(
+        `INSERT INTO tc_user_items (nickname, item_key, expires_at, is_active, source)
+         VALUES ($1, $2, NULL, TRUE, 'admin')`,
+        [nickname, itemKey],
+      );
+    }
+    // A switched-off pass would keep the operator title hidden.
+    await client.query(
+      `DELETE FROM tc_user_feature_off WHERE nickname = $1 AND effect_type = 'custom_title'`,
+      [nickname],
+    );
+    const titleKey = `custom:${colorId}`;
+    await client.query(
+      `INSERT INTO tc_user_equips (nickname, title_key, updated_at)
+       VALUES ($1, $2, NOW())
+       ON CONFLICT (nickname)
+       DO UPDATE SET title_key = EXCLUDED.title_key, updated_at = NOW()`,
+      [nickname, titleKey],
+    );
+    await client.query(
+      `UPDATE tc_user_items SET is_active = FALSE
+       WHERE nickname = $1 AND item_key IN (
+         SELECT item_key FROM tc_shop_items WHERE category = 'title'
+       )`,
+      [nickname],
+    );
+    await client.query('COMMIT');
+    return { success: true, titleKey, titleName: text, color: colorId };
+  } catch (err) {
+    await client.query('ROLLBACK').catch(() => {});
+    console.error('Set custom title (admin) error:', err);
+    return { success: false, messageKey: 'db_update_failed' };
+  } finally {
+    client.release();
+  }
+}
+
 async function clearCustomTitle(nickname) {
   const client = await pool.connect();
   try {
@@ -8265,6 +8347,7 @@ module.exports = {
   unequipCategory,
   setCustomTitle,
   clearCustomTitle,
+  setCustomTitleByAdmin,
   setFeatureEnabled,
   getPendingFriendRequests,
   acceptFriendRequest,

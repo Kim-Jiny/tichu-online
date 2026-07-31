@@ -10,6 +10,7 @@ import '../widgets/level_badge.dart';
 import '../widgets/playing_card.dart';
 import '../widgets/profile_avatar.dart';
 import '../widgets/title_chip.dart';
+import '../widgets/player_profile_dialog.dart';
 import '../widgets/gold_icon.dart';
 import 'gold_shop_screen.dart';
 
@@ -273,6 +274,11 @@ class _ShopScreenState extends State<ShopScreen> {
                 ),
               ),
               const Spacer(),
+              // Everything in here is bought for one's own profile, and until
+              // now there was no way to look at it from the shop — you had to
+              // leave, find a seat with your name on it and tap that.
+              _buildMyProfileButton(game),
+              const SizedBox(width: 6),
               const Icon(
                 Icons.warning_amber_rounded,
                 color: Color(0xFFE57373),
@@ -391,6 +397,50 @@ class _ShopScreenState extends State<ShopScreen> {
   /// They used to be two full-width blocks stacked on top of each other — a
   /// gradient attendance banner and a purple ad button — about 110px before the
   /// tabs even started. Side by side they cost one 46px row.
+  /// Own avatar in the header — opens the profile popup.
+  ///
+  /// Sized and placed like the other header icons rather than as a nameplate:
+  /// the shop title row also carries the desertion count and refresh, and a
+  /// nickname beside them left nothing for either.
+  Widget _buildMyProfileButton(GameService game) {
+    final nickname = game.playerName;
+    if (nickname.isEmpty) return const SizedBox.shrink();
+    return Tooltip(
+      message: L10n.of(context).lobbyPlayerProfile,
+      child: InkWell(
+        borderRadius: BorderRadius.circular(999),
+        onTap: () => showPlayerProfileDialog(context, nickname, game),
+        child: Padding(
+          padding: const EdgeInsets.all(3),
+          child: Container(
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              border: Border.all(color: const Color(0xFFE0D8D4), width: 1.5),
+            ),
+            child: ProfileAvatar(
+              photoUrl: game.resolvePhotoUrl(game.myPhotoUrl),
+              size: 26,
+              fallback: Container(
+                width: 26,
+                height: 26,
+                decoration: const BoxDecoration(
+                  color: Color(0xFFF0E7E3),
+                  shape: BoxShape.circle,
+                ),
+                alignment: Alignment.center,
+                child: const Icon(
+                  Icons.person,
+                  size: 16,
+                  color: Color(0xFF9C8B84),
+                ),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
   Widget _buildRewardStrip(GameService game) {
     final hasAttendance = _shouldShowAttendanceBanner(game);
     if (!hasAttendance && !_rewardedAdReady) return const SizedBox.shrink();

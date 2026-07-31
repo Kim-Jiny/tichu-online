@@ -1275,22 +1275,34 @@ function shopForm(action, values, isEdit = false) {
       <textarea name="description_en" rows="2" style="padding:10px;border:1px solid #ddd;border-radius:8px;font-size:14px;font-family:inherit" placeholder="Item description (optional)">${escapeHtml(v('description_en'))}</textarea>
       <label>설명 (Deutsch)</label>
       <textarea name="description_de" rows="2" style="padding:10px;border:1px solid #ddd;border-radius:8px;font-size:14px;font-family:inherit" placeholder="Artikelbeschreibung (optional)">${escapeHtml(v('description_de'))}</textarea>
-      <label>분류</label>
-      <select name="category" id="shopCategory" style="padding:10px;border:1px solid #ddd;border-radius:8px;font-size:14px">${categoryOptions}</select>
       <label>가격</label>
       <input type="number" name="price" value="${v('price', 0)}" min="0" style="padding:10px;border:1px solid #ddd;border-radius:8px;font-size:14px">
-      <label>영구</label>
-      <input type="checkbox" name="is_permanent" ${checked('is_permanent', true)} style="width:20px;height:20px">
-      <label>기간 (일)</label>
-      <input type="number" name="duration_days" value="${v('duration_days', '')}" min="1" style="padding:10px;border:1px solid #ddd;border-radius:8px;font-size:14px" placeholder="영구 아이템이면 비워두세요">
       <label>구매 가능</label>
       <input type="checkbox" name="is_purchasable" ${checked('is_purchasable', true)} style="width:20px;height:20px">
+      <label style="grid-column:1/-1;margin-top:6px;padding-top:14px;border-top:1px solid #eee;font-weight:700">
+        아이템 구조
+        <span style="font-weight:400;color:#888;font-size:12px">
+          — 분류·효과·기간. 판매를 켜고 끄거나 가격·문구만 고칠 때는 건드릴 필요가 없습니다.
+        </span>
+      </label>
+      ${isEdit ? `<label>구조 수정</label>
+      <div style="display:flex;align-items:center;gap:8px">
+        <input type="checkbox" name="structure" id="structureLock"
+          style="width:20px;height:20px" onchange="toggleStructure(this.checked)">
+        <span style="font-size:12px;color:#888" id="structureHint">잠겨 있습니다. 체크하면 아래 값을 저장에 포함합니다.</span>
+      </div>` : `<input type="hidden" name="structure" value="on">`}
+      <label>분류</label>
+      <select name="category" id="shopCategory" ${isEdit ? 'disabled' : ''} data-structure style="padding:10px;border:1px solid #ddd;border-radius:8px;font-size:14px">${categoryOptions}</select>
+      <label>영구</label>
+      <input type="checkbox" name="is_permanent" ${checked('is_permanent', true)} ${isEdit ? 'disabled' : ''} data-structure style="width:20px;height:20px">
+      <label>기간 (일)</label>
+      <input type="number" name="duration_days" value="${v('duration_days', '')}" min="1" ${isEdit ? 'disabled' : ''} data-structure style="padding:10px;border:1px solid #ddd;border-radius:8px;font-size:14px" placeholder="영구 아이템이면 비워두세요">
       <label>시즌 아이템</label>
-      <input type="checkbox" name="is_season" ${checked('is_season', false)} style="width:20px;height:20px">
+      <input type="checkbox" name="is_season" ${checked('is_season', false)} ${isEdit ? 'disabled' : ''} data-structure style="width:20px;height:20px">
       <label>효과 유형</label>
-      <select name="effect_type" style="padding:10px;border:1px solid #ddd;border-radius:8px;font-size:14px">${effectOptions}</select>
+      <select name="effect_type" ${isEdit ? 'disabled' : ''} data-structure style="padding:10px;border:1px solid #ddd;border-radius:8px;font-size:14px">${effectOptions}</select>
       <label>효과 수치</label>
-      <input type="number" name="effect_value" value="${v('effect_value', '')}" style="padding:10px;border:1px solid #ddd;border-radius:8px;font-size:14px" placeholder="해당 효과의 수치 (예: 카운트 감소량)">
+      <input type="number" name="effect_value" value="${v('effect_value', '')}" ${isEdit ? 'disabled' : ''} data-structure style="padding:10px;border:1px solid #ddd;border-radius:8px;font-size:14px" placeholder="해당 효과의 수치 (예: 카운트 감소량)">
       <label>판매 시작</label>
       <input type="datetime-local" name="sale_start" value="${formatDatetimeLocal(v('sale_start'))}" style="padding:10px;border:1px solid #ddd;border-radius:8px;font-size:14px">
       <label>판매 종료</label>
@@ -1354,6 +1366,21 @@ function shopForm(action, values, isEdit = false) {
 
     <link rel="stylesheet" href="https://fonts.googleapis.com/icon?family=Material+Icons">
     <script>
+      // Structural fields stay disabled until asked for. Disabled inputs are not
+      // submitted, and the server writes only what it receives — so a locked
+      // form physically cannot change what the item is.
+      function toggleStructure(on) {
+        document.querySelectorAll('[data-structure]').forEach(function (el) {
+          el.disabled = !on;
+        });
+        var hint = document.getElementById('structureHint');
+        if (hint) {
+          hint.textContent = on
+            ? '분류·효과·기간이 저장에 포함됩니다. 판매 중인 아이템이면 유저에게 보이는 위치가 바뀔 수 있습니다.'
+            : '잠겨 있습니다. 체크하면 아래 값을 저장에 포함합니다.';
+          hint.style.color = on ? '#c62828' : '#888';
+        }
+      }
       (function() {
         const previewCard  = document.getElementById('visualPreviewCard');
         const previewIcon  = document.getElementById('visualPreviewIcon');
@@ -1409,8 +1436,19 @@ function shopForm(action, values, isEdit = false) {
   </form>`;
 }
 
+/**
+ * Form body → update payload.
+ *
+ * What an item IS (분류/효과/기간/시즌) only travels when the form says it was
+ * unlocked, via the hidden `structure` marker. Everything structural is
+ * otherwise left out of the payload entirely, and updateShopItem writes only
+ * what it is given — so the everyday edit (이름/가격/판매 여부) cannot reshape
+ * the item even if a field fails to render or a browser drops it.
+ *
+ * The create form always sends the marker: a new row has to state what it is.
+ */
 function parseShopFormBody(body) {
-  return {
+  const data = {
     item_key: body.item_key || '',
     name_ko: body.name_ko || '',
     name_en: body.name_en || '',
@@ -1418,18 +1456,21 @@ function parseShopFormBody(body) {
     description_ko: body.description_ko || '',
     description_en: body.description_en || '',
     description_de: body.description_de || '',
-    category: body.category || 'banner',
     price: parseInt(body.price) || 0,
-    is_permanent: body.is_permanent === 'on',
-    duration_days: body.duration_days ? parseInt(body.duration_days) : null,
     is_purchasable: body.is_purchasable === 'on',
-    is_season: body.is_season === 'on',
-    effect_type: body.effect_type || null,
-    effect_value: body.effect_value ? parseInt(body.effect_value) : null,
     sale_start: body.sale_start || null,
     sale_end: body.sale_end || null,
     visual: buildVisualFromBody(body),
   };
+  if (body.structure === 'on') {
+    data.category = body.category || 'banner';
+    data.is_permanent = body.is_permanent === 'on';
+    data.duration_days = body.duration_days ? parseInt(body.duration_days) : null;
+    data.is_season = body.is_season === 'on';
+    data.effect_type = body.effect_type || null;
+    data.effect_value = body.effect_value ? parseInt(body.effect_value) : null;
+  }
+  return data;
 }
 
 const GOLD_PRODUCT_MSG = {
@@ -4005,62 +4046,111 @@ async function handleAdminRoute(req, res, url, pathname, method, lobby, wss, mai
     const items = await getAllShopItemsAdmin();
     const now = new Date();
 
-    function saleBadge(item) {
-      if (!item.sale_start && !item.sale_end) return '<span class="badge" style="background:#e8f5e9;color:#2e7d32">상시</span>';
+    function saleWindow(item) {
+      if (!item.sale_start && !item.sale_end) return '';
       const start = item.sale_start ? new Date(item.sale_start) : null;
       const end = item.sale_end ? new Date(item.sale_end) : null;
       if (start && start > now) return '<span class="badge" style="background:#e3f2fd;color:#1565c0">예정</span>';
-      if (end && end < now) return '<span class="badge" style="background:#f3e5f5;color:#6a1b9a">종료</span>';
-      return '<span class="badge" style="background:#e8f5e9;color:#2e7d32">판매중</span>';
+      if (end && end < now) return '<span class="badge" style="background:#f3e5f5;color:#6a1b9a">기간 종료</span>';
+      return '<span class="badge" style="background:#e8f5e9;color:#2e7d32">기간 중</span>';
     }
 
-    function shopCategoryBadge(cat) {
-      const colors = { banner: '#e3f2fd;color:#1565c0', title: '#fff3e0;color:#e65100', theme: '#e8eaf6;color:#283593', utility: '#fce4ec;color:#880e4f', card_skin: '#f1f8e9;color:#33691e' };
-      return `<span class="badge" style="background:${colors[cat] || '#f5f5f5;color:#333'}">${escapeHtml(cat)}</span>`;
+    // The everyday question about an item is "is it on sale", so that is the
+    // one thing this page lets you change — one button, no form fields, no way
+    // to reshape the item by accident.
+    function saleButton(item) {
+      const on = item.is_purchasable;
+      return `<form method="POST" action="/tc-backstage/shop/${item.id}/toggle-sale" style="display:inline">
+        <button type="submit" class="btn ${on ? 'btn-secondary' : 'btn-primary'}"
+          style="font-size:12px;padding:5px 12px;${on ? 'color:#2e7d32;border-color:#bfe0c5' : ''}">
+          ${on ? '판매 중 · 끄기' : '판매 꺼짐 · 켜기'}
+        </button>
+      </form>`;
     }
 
-    const activeItems = items.filter(item => {
-      const start = item.sale_start ? new Date(item.sale_start) : null;
-      const end = item.sale_end ? new Date(item.sale_end) : null;
-      return (!start || start <= now) && (!end || end >= now);
-    }).length;
-    const seasonalItems = items.filter(item => item.is_season).length;
-    const purchasableItems = items.filter(item => item.is_purchasable).length;
-    const avgPrice = items.length > 0 ? Math.round(items.reduce((sum, item) => sum + (parseInt(item.price) || 0), 0) / items.length) : 0;
-
-    let tableContent = '';
-    if (items.length > 0) {
-      tableContent = `<div class="table-wrap"><table>
-        <tr><th>ID</th><th>키</th><th>이름</th><th>분류</th><th>가격</th><th>구분</th><th>판매기간</th><th>상태</th><th></th></tr>
-        ${items.map(item => `<tr>
-          <td>${item.id}</td>
-          <td style="font-family:monospace;font-size:12px">${escapeHtml(item.item_key)}</td>
-          <td>${escapeHtml(item.name_ko)}</td>
-          <td>${shopCategoryBadge(item.category)}</td>
-          <td>${item.price}</td>
-          <td>${item.is_permanent ? '영구' : (item.duration_days ? item.duration_days + '일' : '-')}</td>
-          <td style="font-size:12px">${item.sale_start ? formatDate(item.sale_start) : '-'}<br>${item.sale_end ? '~ ' + formatDate(item.sale_end) : ''}</td>
-          <td>${saleBadge(item)}</td>
-          <td><a href="/tc-backstage/shop/${item.id}" class="btn btn-secondary">수정</a></td>
-        </tr>`).join('')}
-      </table></div>`;
-    } else {
-      tableContent = '<div class="empty">상점 아이템 없음</div>';
+    const GROUPS = [
+      { key: 'feature', label: '이용권', hint: '프로필 사진·비공개·커스텀 칭호. 효과 유형이 곧 기능이라 구조를 건드리면 앱에서 사라집니다.' },
+      { key: 'utility', label: '유틸', hint: '카운터, 닉네임 변경, 전적 초기화 등' },
+      { key: 'banner', label: '배너', hint: '' },
+      { key: 'title', label: '칭호', hint: '' },
+      { key: 'theme', label: '테마', hint: '' },
+      { key: 'card_skin', label: '카드 스킨', hint: '' },
+    ];
+    const seen = new Set(GROUPS.map((g) => g.key));
+    for (const item of items) {
+      if (item.category && !seen.has(item.category)) {
+        seen.add(item.category);
+        GROUPS.push({ key: item.category, label: item.category, hint: '' });
+      }
     }
+
+    const row = (item) => `<tr data-search="${escapeHtml(((item.item_key || '') + ' ' + (item.name_ko || '') + ' ' + (item.effect_type || '')).toLowerCase())}">
+      <td>
+        <div style="font-weight:600">${escapeHtml(item.name_ko)}</div>
+        <div style="font-family:monospace;font-size:11px;color:#999">${escapeHtml(item.item_key)}</div>
+      </td>
+      <td style="font-size:12px">${item.effect_type
+        ? `<span class="badge" style="background:#ede7f6;color:#5e35b1">${escapeHtml(item.effect_type)}</span>`
+        : '<span style="color:#bbb">-</span>'}</td>
+      <td style="text-align:right;font-weight:600;color:#d07a16">${formatNumber(item.price || 0)}</td>
+      <td style="font-size:12px">${item.is_permanent ? '영구' : (item.duration_days ? item.duration_days + '일' : '-')}</td>
+      <td style="font-size:12px">${saleWindow(item)}${item.is_season ? ' <span class="badge" style="background:#fff8e1;color:#8d6e00">시즌</span>' : ''}</td>
+      <td>${saleButton(item)}</td>
+      <td><a href="/tc-backstage/shop/${item.id}" class="btn btn-secondary" style="font-size:12px;padding:5px 12px">수정</a></td>
+    </tr>`;
+
+    const groupHtml = GROUPS.map((g) => {
+      const rows = items.filter((i) => (i.category || '') === g.key);
+      if (rows.length === 0) return '';
+      const onSale = rows.filter((i) => i.is_purchasable).length;
+      return `<div class="card">
+        <h3 style="margin-bottom:2px">${escapeHtml(g.label)}
+          <span style="font-weight:400;color:#888;font-size:13px">${rows.length}개 · 판매 중 ${onSale}개</span>
+        </h3>
+        ${g.hint ? `<div style="font-size:12px;color:#999;margin-bottom:10px">${escapeHtml(g.hint)}</div>` : '<div style="height:8px"></div>'}
+        <div class="table-wrap"><table>
+          <tr><th>아이템</th><th>효과</th><th style="text-align:right">가격</th><th>기간</th><th>판매기간</th><th>판매</th><th></th></tr>
+          ${rows.map(row).join('')}
+        </table></div>
+      </div>`;
+    }).join('');
+
+    const purchasableItems = items.filter((item) => item.is_purchasable).length;
+    const seasonalItems = items.filter((item) => item.is_season).length;
+    const featureItems = items.filter((item) => item.category === 'feature').length;
 
     const content = `
       ${pageHeader(
         '상점 아이템',
-        '판매 상태, 시즌 여부, 가격대를 빠르게 훑을 수 있도록 요약을 먼저 배치했습니다.',
+        '판매 여부는 목록에서 바로 켜고 끌 수 있습니다. 분류·효과 같은 구조는 수정 화면에서 잠금을 풀어야 바뀝니다.',
         `<a href="/tc-backstage/shop/add" class="btn btn-primary">+ 아이템 추가</a>`
       )}
       ${summaryStrip([
         { label: '전체 아이템', value: formatNumber(items.length) },
-        { label: '판매 가능', value: formatNumber(purchasableItems), valueColor: '#2e8b57', meta: `현재 판매중 ${formatNumber(activeItems)}개` },
+        { label: '판매 중', value: formatNumber(purchasableItems), valueColor: '#2e8b57' },
+        { label: '이용권', value: formatNumber(featureItems), valueColor: '#5e35b1', meta: '기능을 여는 아이템' },
         { label: '시즌 아이템', value: formatNumber(seasonalItems), valueColor: '#2878b8' },
-        { label: '평균 가격', value: formatNumber(avgPrice), meta: '골드 기준' }
       ])}
-      <div class="card">${tableContent}</div>
+      <div class="card" style="padding-bottom:14px">
+        <input type="text" id="shopSearch" placeholder="이름 · 키 · 효과로 찾기"
+          oninput="filterShop(this.value)"
+          style="width:100%;padding:10px 14px;border:1px solid #ddd;border-radius:10px;font-size:14px">
+      </div>
+      ${items.length ? groupHtml : '<div class="card"><div class="empty">상점 아이템 없음</div></div>'}
+      <script>
+        function filterShop(q) {
+          var needle = (q || '').trim().toLowerCase();
+          document.querySelectorAll('tr[data-search]').forEach(function (tr) {
+            tr.style.display = !needle || tr.dataset.search.indexOf(needle) !== -1 ? '' : 'none';
+          });
+          document.querySelectorAll('.card').forEach(function (card) {
+            var rows = card.querySelectorAll('tr[data-search]');
+            if (!rows.length) return;
+            var any = Array.prototype.some.call(rows, function (tr) { return tr.style.display !== 'none'; });
+            card.style.display = any ? '' : 'none';
+          });
+        }
+      </script>
     `;
     return html(res, layout('상점', content, 'shop'));
   }
@@ -4135,6 +4225,19 @@ async function handleAdminRoute(req, res, url, pathname, method, lobby, wss, mai
       return html(res, layout('수정', content, 'shop'));
     }
     return redirect(res, '/tc-backstage/shop/' + shopEditMatch[1]);
+  }
+
+  // Flip only the sale flag. Deliberately its own route: the edit form is the
+  // only place that can touch anything else, and this is the button people
+  // actually press.
+  const shopToggleMatch = pathname.match(/^\/tc-backstage\/shop\/(\d+)\/toggle-sale$/);
+  if (shopToggleMatch && method === 'POST') {
+    const id = parseInt(shopToggleMatch[1], 10);
+    const item = await getShopItemById(id);
+    if (item) {
+      await updateShopItem(id, { is_purchasable: !item.is_purchasable });
+    }
+    return redirect(res, '/tc-backstage/shop');
   }
 
   // Shop delete

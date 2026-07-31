@@ -56,6 +56,40 @@ async function main() {
       check(SHOP_CATEGORIES.includes(c), `category "${c}" is offered by the form`);
     }
 
+    // ── an everyday edit cannot reshape an item ─────────────────────────
+    // The console's edit form leaves the structural fields out unless they are
+    // unlocked, and the update must then leave them alone. This is the exact
+    // shape of the payload that form sends when locked.
+    const before = (await raw.query(
+      `SELECT id, category, effect_type, duration_days, is_permanent, is_season
+       FROM tc_shop_items WHERE item_key = 'custom_title_7d'`)).rows[0];
+    check(!!before, 'custom_title_7d is in the catalog');
+
+    const db2 = require('./db/database');
+    const upd = await db2.updateShopItem(before.id, {
+      name_ko: '커스텀 칭호 (7일)', name_en: 'Custom title (7d)', name_de: 'Eigener Titel (7T)',
+      description_ko: '', description_en: '', description_de: '',
+      price: 700, is_purchasable: true, sale_start: null, sale_end: null,
+    });
+    check(upd.success, 'a locked-form edit saves');
+
+    const after = (await raw.query(
+      `SELECT category, effect_type, duration_days, is_permanent, is_season, price
+       FROM tc_shop_items WHERE item_key = 'custom_title_7d'`)).rows[0];
+    check(after.price === 700, 'the price it did send is written');
+    check(after.category === before.category, 'category survives an edit that omits it');
+    check(after.effect_type === before.effect_type, 'effect_type survives an edit that omits it');
+    check(after.duration_days === before.duration_days, 'duration survives');
+    check(after.is_permanent === before.is_permanent, 'permanence survives');
+    check(after.is_season === before.is_season, 'season flag survives');
+
+    // …and an unlocked edit still can, on purpose.
+    const reshaped = await db2.updateShopItem(before.id, { category: 'utility' });
+    check(reshaped.success && reshaped.item.category === 'utility',
+      'an unlocked edit still changes it');
+    await raw.query(
+      `UPDATE tc_shop_items SET category = $1 WHERE id = $2`, [before.category, before.id]);
+
     console.log(failures ? `\n${failures} FAILED` : '\nALL PASS');
   } catch (e) {
     console.log(`\nFAIL: ${e.message}`);

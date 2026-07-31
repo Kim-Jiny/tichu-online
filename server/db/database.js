@@ -5744,36 +5744,62 @@ async function addShopItem(data) {
 async function updateShopItem(id, data) {
   const client = await pool.connect();
   try {
-    const hasVisualUpdate = Object.prototype.hasOwnProperty.call(data, 'visual');
-    let metadataExpr = 'metadata';
-    const params = [
-      id, data.name_ko || '', data.name_en || '', data.name_de || '',
-      data.description_ko || '', data.description_en || '', data.description_de || '',
-      data.category, data.price || 0,
-      data.is_permanent !== false, data.duration_days || null,
-      data.is_purchasable !== false, data.is_season || false,
-      data.effect_type || null, data.effect_value || null,
-      data.sale_start || null, data.sale_end || null,
-    ];
-    if (hasVisualUpdate) {
+    // Only the keys the caller actually sent are written. What an item IS —
+    // its category, the effect it grants, whether it is permanent or seasonal —
+    // is edited rarely and behind a lock in the console, so an edit that never
+    // mentions those fields must leave them alone. The old version defaulted
+    // every missing field (category fell back to 'banner', effect_type to
+    // NULL), which silently re-filed the profile passes as banners and stripped
+    // the effect that gates them.
+    const sets = [];
+    const params = [id];
+    const put = (col, value) => {
+      params.push(value);
+      sets.push(`${col} = $${params.length}`);
+    };
+    const has = (key) => Object.prototype.hasOwnProperty.call(data, key)
+      && data[key] !== undefined;
+
+    if (has('name_ko')) {
+      put('name', data.name_ko || '');
+      put('name_ko', data.name_ko || '');
+    }
+    if (has('name_en')) put('name_en', data.name_en || '');
+    if (has('name_de')) put('name_de', data.name_de || '');
+    if (has('description_ko')) put('description_ko', data.description_ko || '');
+    if (has('description_en')) put('description_en', data.description_en || '');
+    if (has('description_de')) put('description_de', data.description_de || '');
+    if (has('price')) put('price', data.price || 0);
+    if (has('is_purchasable')) put('is_purchasable', data.is_purchasable !== false);
+    if (has('sale_start')) put('sale_start', data.sale_start || null);
+    if (has('sale_end')) put('sale_end', data.sale_end || null);
+    // Structural — see above.
+    if (has('category')) put('category', data.category);
+    if (has('effect_type')) put('effect_type', data.effect_type || null);
+    if (has('effect_value')) put('effect_value', data.effect_value ?? null);
+    if (has('is_permanent')) put('is_permanent', data.is_permanent !== false);
+    if (has('duration_days')) put('duration_days', data.duration_days || null);
+    if (has('is_season')) put('is_season', data.is_season || false);
+
+    if (Object.prototype.hasOwnProperty.call(data, 'visual')) {
       if (data.visual === null) {
-        metadataExpr = `COALESCE(metadata, '{}'::jsonb) #- '{visual}'`;
+        sets.push(`metadata = COALESCE(metadata, '{}'::jsonb) #- '{visual}'`);
       } else {
-        metadataExpr = `jsonb_set(COALESCE(metadata, '{}'::jsonb), '{visual}', $${params.length + 1}::jsonb, true)`;
         params.push(JSON.stringify(data.visual));
+        sets.push(
+          `metadata = jsonb_set(COALESCE(metadata, '{}'::jsonb), '{visual}', $${params.length}::jsonb, true)`,
+        );
       }
     }
+    if (sets.length === 0) {
+      const current = await client.query('SELECT * FROM tc_shop_items WHERE id = $1', [id]);
+      if (current.rows.length === 0) return { success: false, messageKey: 'db_item_not_found' };
+      return { success: true, item: current.rows[0] };
+    }
+
     const result = await client.query(
-      `UPDATE tc_shop_items
-       SET name = $2, name_ko = $2, name_en = $3, name_de = $4,
-           description_ko = $5, description_en = $6, description_de = $7,
-           category = $8, price = $9, is_permanent = $10,
-           duration_days = $11, is_purchasable = $12, is_season = $13,
-           effect_type = $14, effect_value = $15, sale_start = $16, sale_end = $17,
-           metadata = ${metadataExpr}
-       WHERE id = $1
-       RETURNING *`,
-      params
+      `UPDATE tc_shop_items SET ${sets.join(', ')} WHERE id = $1 RETURNING *`,
+      params,
     );
     if (result.rows.length === 0) {
       return { success: false, messageKey: 'db_item_not_found' };

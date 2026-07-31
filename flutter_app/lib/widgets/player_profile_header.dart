@@ -71,6 +71,18 @@ class PlayerProfileHeader extends StatelessWidget {
 
   bool get _isMe => nickname == game.playerName;
 
+  /// The server answered and there is no account by that name.
+  ///
+  /// Names outlive accounts — an old season's ranking, a match row, a chat line
+  /// — and the popup opens on those too. There is nobody to add, block or
+  /// report, so the actions come off rather than writing rows against a name
+  /// that no longer belongs to anyone. Null means still loading, which is a
+  /// spinner, not a missing account.
+  bool get _accountMissing =>
+      profile != null &&
+      profile!['nickname'] == nickname &&
+      profile!['profile'] == null;
+
   /// Whether this viewer may swap the photo: their own, and only while the
   /// paid item is active and unexpired. The server re-checks at token
   /// issuance, so this only decides what the tap offers.
@@ -145,7 +157,7 @@ class PlayerProfileHeader extends StatelessWidget {
             ),
           ],
         ),
-        if (!isBot && !_isMe) ...[
+        if (!isBot && !_isMe && !_accountMissing) ...[
           const SizedBox(height: 12),
           Wrap(
             spacing: 8,

@@ -196,6 +196,28 @@ async function main() {
     const chat2 = host.seen.find((m) => m.type === 'chat_message' && m.sender === 'repRude');
     check(!!chat2, 'the chat mute does not follow them into another room');
 
+    // ── a name with no account behind it takes no action at all ────────
+    // Old rankings and match rows keep naming deleted accounts, and the popup
+    // opens on those names; reporting one used to file a ticket about a user
+    // the admin cannot look up.
+    for (const [type, extra] of [
+      ['report_user', { reason: '기타', reasonCode: 'other' }],
+      ['block_user', {}],
+      ['add_friend', {}],
+    ]) {
+      host.forget();
+      host.send({ type, nickname: '없는사람', ...extra });
+      const err = await host.waitFor('error', 2000);
+      check(!!err, `${type} on a deleted name is refused`);
+    }
+    const ghosts = await withDb((c) => c.query(
+      `SELECT (SELECT COUNT(*) FROM tc_reports WHERE reported_nickname = '없는사람') AS r,
+              (SELECT COUNT(*) FROM tc_blocked_users WHERE blocked_nickname = '없는사람') AS b,
+              (SELECT COUNT(*) FROM tc_friends WHERE friend_nickname = '없는사람') AS f`));
+    const g = ghosts.rows[0];
+    check(Number(g.r) + Number(g.b) + Number(g.f) === 0,
+      'and writes no rows against that name');
+
     for (const c of [host, rude2]) c.ws.close();
     console.log(failures ? `\n${failures} FAILED` : '\nALL PASS');
     stop();

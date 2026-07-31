@@ -1469,10 +1469,10 @@ class L10nKo extends L10n {
   String get gameFriendRequestSent => '친구 요청을 보냈습니다';
 
   @override
-  String get gameUnblock => '차단 해제';
+  String get gameUnblock => '해제';
 
   @override
-  String get gameBlock => '차단하기';
+  String get gameBlock => '차단';
 
   @override
   String get gameUnblocked => '차단이 해제되었습니다';
@@ -1481,7 +1481,7 @@ class L10nKo extends L10n {
   String get gameBlocked => '차단되었습니다';
 
   @override
-  String get gameReport => '신고하기';
+  String get gameReport => '신고';
 
   @override
   String get gameClose => '닫기';

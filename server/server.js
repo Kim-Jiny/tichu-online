@@ -7433,6 +7433,26 @@ async function handleChatMessage(ws, data) {
   room.getSpectatorIds().forEach((specId) => deliver(findWsByPlayerId(specId)));
 }
 
+// Is there an account behind this nickname?
+//
+// Names outlive accounts: an old season's ranking, a match row, a chat line all
+// keep naming someone who has since deleted their account, and the profile
+// popup opens on those names. Friending, blocking or reporting one of them
+// writes a row nobody can ever act on — the report queue in particular fills
+// with entries about a user the admin cannot find. Filler-room hosts count as
+// present: they have no account row, but a player looking at one sees an
+// ordinary opponent, so their block has to behave like an ordinary block.
+async function accountExists(nickname) {
+  if (!nickname) return false;
+  if (fillerRooms.isFillerNickname(nickname)) return true;
+  const { pool } = require('./db/database');
+  const r = await pool.query(
+    'SELECT 1 FROM tc_users WHERE nickname = $1 AND is_deleted IS NOT TRUE LIMIT 1',
+    [nickname],
+  );
+  return r.rowCount > 0;
+}
+
 // Block user handler
 async function handleBlockUser(ws, data) {
   if (!ws.nickname) {
@@ -7442,6 +7462,10 @@ async function handleBlockUser(ws, data) {
   const targetNickname = data.nickname;
   if (!targetNickname || targetNickname === ws.nickname) {
     sendTo(ws, { type: 'error', message: t(ws.locale, 'cannot_block') });
+    return;
+  }
+  if (!await accountExists(targetNickname)) {
+    sendTo(ws, { type: 'error', message: t(ws.locale, 'user_not_found') });
     return;
   }
   const result = await blockUser(ws.nickname, targetNickname);
@@ -7501,6 +7525,10 @@ async function handleReportUser(ws, data) {
   const reason = String(data.reason || '').slice(0, 500);
   if (!targetNickname || targetNickname === ws.nickname) {
     sendTo(ws, { type: 'error', message: t(ws.locale, 'cannot_report') });
+    return;
+  }
+  if (!await accountExists(targetNickname)) {
+    sendTo(ws, { type: 'error', message: t(ws.locale, 'user_not_found') });
     return;
   }
   // 채팅 컨텍스트 가져오기
@@ -8816,6 +8844,10 @@ async function handleAddFriend(ws, data) {
   const targetNickname = data.nickname;
   if (!targetNickname || targetNickname === ws.nickname) {
     sendTo(ws, { type: 'error', message: t(ws.locale, 'cannot_add_friend') });
+    return;
+  }
+  if (!await accountExists(targetNickname)) {
+    sendTo(ws, { type: 'error', message: t(ws.locale, 'user_not_found') });
     return;
   }
   const result = await addFriend(ws.nickname, targetNickname);

@@ -646,50 +646,44 @@ class _ShopScreenState extends State<ShopScreen> {
                             );
                           }
 
+                          // One line per entry: what it was, when, how much.
+                          // Each was a bordered card 14px-padded around three
+                          // stacked lines — four entries filled the popup and
+                          // the list read as a stack of receipts.
                           return ListView.separated(
                             itemCount: game.goldHistory.length,
                             separatorBuilder: (_, separatorIndex) =>
-                                const SizedBox(height: 10),
+                                const Divider(
+                                  height: 1,
+                                  thickness: 1,
+                                  color: Color(0xFFF2ECE9),
+                                ),
                             itemBuilder: (context, index) {
                               final item = game.goldHistory[index];
                               final delta =
                                   (item['goldDelta'] as num?)?.toInt() ?? 0;
                               final positive = delta >= 0;
-                              return Container(
-                                padding: const EdgeInsets.all(14),
-                                decoration: BoxDecoration(
-                                  color: Colors.white,
-                                  borderRadius: BorderRadius.circular(16),
-                                  border: Border.all(
-                                    color: const Color(0xFFE6DEDA),
-                                  ),
+                              return Padding(
+                                padding: const EdgeInsets.symmetric(
+                                  vertical: 9,
                                 ),
                                 child: Row(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
-                                    Container(
-                                      width: 40,
-                                      height: 40,
-                                      decoration: BoxDecoration(
-                                        color: positive
-                                            ? const Color(0xFFE8F5E9)
-                                            : const Color(0xFFFFF3E0),
-                                        borderRadius: BorderRadius.circular(14),
-                                      ),
-                                      child: Icon(
-                                        positive
-                                            ? Icons.south_west
-                                            : Icons.north_east,
-                                        color: positive
-                                            ? const Color(0xFF43A047)
-                                            : const Color(0xFFFB8C00),
-                                      ),
+                                    Icon(
+                                      positive
+                                          ? Icons.south_west
+                                          : Icons.north_east,
+                                      size: 16,
+                                      color: positive
+                                          ? const Color(0xFF43A047)
+                                          : const Color(0xFFFB8C00),
                                     ),
-                                    const SizedBox(width: 12),
+                                    const SizedBox(width: 8),
                                     Expanded(
                                       child: Column(
                                         crossAxisAlignment:
                                             CrossAxisAlignment.start,
+                                        mainAxisSize: MainAxisSize.min,
                                         children: [
                                           Text(
                                             localizeGoldTitle(
@@ -700,32 +694,28 @@ class _ShopScreenState extends State<ShopScreen> {
                                                 context,
                                               ).languageCode,
                                             ),
+                                            maxLines: 1,
+                                            overflow: TextOverflow.ellipsis,
                                             style: const TextStyle(
-                                              fontSize: 14,
-                                              fontWeight: FontWeight.w800,
+                                              fontSize: 13.5,
+                                              fontWeight: FontWeight.w700,
                                               color: Color(0xFF5A4038),
                                             ),
                                           ),
-                                          const SizedBox(height: 3),
+                                          const SizedBox(height: 2),
+                                          // Source and time on one line: the
+                                          // description repeated the title for
+                                          // most rows ("상점 구매" under an item
+                                          // name), so it earns half a line, not
+                                          // one of its own.
                                           Text(
-                                            localizeGoldDescription(
-                                              item['description']?.toString(),
-                                              item['source']?.toString(),
-                                              L10n.of(context),
-                                            ),
-                                            style: const TextStyle(
-                                              fontSize: 12,
-                                              color: Color(0xFF8A7A72),
-                                            ),
-                                          ),
-                                          const SizedBox(height: 6),
-                                          Text(
-                                            _formatHistoryDate(
-                                              item['createdAt'],
-                                            ),
+                                            '${localizeGoldDescription(item['description']?.toString(), item['source']?.toString(), L10n.of(context))}'
+                                            ' · ${_formatHistoryDate(item['createdAt'])}',
+                                            maxLines: 1,
+                                            overflow: TextOverflow.ellipsis,
                                             style: const TextStyle(
                                               fontSize: 11,
-                                              color: Color(0xFFB0A39E),
+                                              color: Color(0xFFA89C96),
                                             ),
                                           ),
                                         ],
@@ -735,7 +725,7 @@ class _ShopScreenState extends State<ShopScreen> {
                                     Text(
                                       '${positive ? '+' : ''}$delta',
                                       style: TextStyle(
-                                        fontSize: 16,
+                                        fontSize: 15,
                                         fontWeight: FontWeight.w900,
                                         color: positive
                                             ? const Color(0xFF43A047)
@@ -873,7 +863,11 @@ class _ShopScreenState extends State<ShopScreen> {
                       accent: const Color(0xFF43A047),
                       icon: Icons.emoji_events_outlined,
                     ),
-                    const SizedBox(height: 10),
+                    const Divider(
+                      height: 1,
+                      thickness: 1,
+                      color: Color(0xFFF2ECE9),
+                    ),
                     _buildGoldGuideItem(
                       title: L10n.of(context).shopGuideNormalLoss,
                       value: L10n.of(context).shopGuideNormalLossValue,
@@ -882,7 +876,11 @@ class _ShopScreenState extends State<ShopScreen> {
                       accent: const Color(0xFF1E88E5),
                       icon: Icons.sports_esports_outlined,
                     ),
-                    const SizedBox(height: 10),
+                    const Divider(
+                      height: 1,
+                      thickness: 1,
+                      color: Color(0xFFF2ECE9),
+                    ),
                     _buildGoldGuideItem(
                       title: L10n.of(context).shopGuideRankedWin,
                       value: L10n.of(context).shopGuideRankedWinValue,
@@ -891,7 +889,11 @@ class _ShopScreenState extends State<ShopScreen> {
                       accent: const Color(0xFFF9A825),
                       icon: Icons.military_tech_outlined,
                     ),
-                    const SizedBox(height: 10),
+                    const Divider(
+                      height: 1,
+                      thickness: 1,
+                      color: Color(0xFFF2ECE9),
+                    ),
                     _buildGoldGuideItem(
                       title: L10n.of(context).shopGuideRankedLoss,
                       value: L10n.of(context).shopGuideRankedLossValue,
@@ -900,7 +902,11 @@ class _ShopScreenState extends State<ShopScreen> {
                       accent: const Color(0xFFEF6C00),
                       icon: Icons.shield_outlined,
                     ),
-                    const SizedBox(height: 10),
+                    const Divider(
+                      height: 1,
+                      thickness: 1,
+                      color: Color(0xFFF2ECE9),
+                    ),
                     _buildGoldGuideItem(
                       title: L10n.of(context).shopGuideAdReward,
                       value: L10n.of(context).shopGuideAdRewardValue,
@@ -909,7 +915,11 @@ class _ShopScreenState extends State<ShopScreen> {
                       accent: const Color(0xFFFB8C00),
                       icon: Icons.ondemand_video_outlined,
                     ),
-                    const SizedBox(height: 10),
+                    const Divider(
+                      height: 1,
+                      thickness: 1,
+                      color: Color(0xFFF2ECE9),
+                    ),
                     _buildGoldGuideItem(
                       title: L10n.of(context).shopGuideSeasonReward,
                       value: L10n.of(context).shopGuideSeasonRewardValue,
@@ -928,6 +938,10 @@ class _ShopScreenState extends State<ShopScreen> {
     );
   }
 
+  /// One way to earn gold: what it is, how much, and the condition.
+  ///
+  /// Was a bordered card with a 42dp icon tile and a wrapped description — six
+  /// of them made the popup scroll on a phone for what is a short price list.
   Widget _buildGoldGuideItem({
     required String title,
     required String value,
@@ -936,63 +950,48 @@ class _ShopScreenState extends State<ShopScreen> {
     required Color accent,
     required IconData icon,
   }) {
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: const Color(0xFFE6DEDA)),
-      ),
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 9),
       child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Container(
-            width: 42,
-            height: 42,
-            decoration: BoxDecoration(
-              color: color,
-              borderRadius: BorderRadius.circular(14),
-            ),
-            child: Icon(icon, color: accent),
-          ),
-          const SizedBox(width: 12),
+          Icon(icon, size: 18, color: accent),
+          const SizedBox(width: 10),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
               children: [
-                Row(
-                  children: [
-                    Expanded(
-                      child: Text(
-                        title,
-                        style: const TextStyle(
-                          fontSize: 14,
-                          fontWeight: FontWeight.w800,
-                          color: Color(0xFF5A4038),
-                        ),
-                      ),
-                    ),
-                    Text(
-                      value,
-                      style: TextStyle(
-                        fontSize: 13,
-                        fontWeight: FontWeight.w900,
-                        color: accent,
-                      ),
-                    ),
-                  ],
+                Text(
+                  title,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(
+                    fontSize: 13.5,
+                    fontWeight: FontWeight.w700,
+                    color: Color(0xFF5A4038),
+                  ),
                 ),
-                const SizedBox(height: 4),
+                const SizedBox(height: 2),
                 Text(
                   description,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
                   style: const TextStyle(
-                    fontSize: 12,
-                    height: 1.35,
-                    color: Color(0xFF8A7A72),
+                    fontSize: 11,
+                    height: 1.3,
+                    color: Color(0xFFA89C96),
                   ),
                 ),
               ],
+            ),
+          ),
+          const SizedBox(width: 8),
+          Text(
+            value,
+            style: TextStyle(
+              fontSize: 14,
+              fontWeight: FontWeight.w900,
+              color: accent,
             ),
           ),
         ],

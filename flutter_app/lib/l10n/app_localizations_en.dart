@@ -4422,4 +4422,10 @@ class L10nEn extends L10n {
   @override
   String get profilePrivateHidePhotoDesc =>
       'When on, your profile photo is hidden from non-friends in the waiting room and in game too';
+
+  @override
+  String get shopPreviewLabel => 'Preview';
+
+  @override
+  String get shopPreviewNickname => 'Nickname';
 }

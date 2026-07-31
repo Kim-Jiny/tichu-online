@@ -2003,5 +2003,7 @@
   "profilePrivateTitle": "This profile is private",
   "profilePrivateBody": "They show their records to friends only",
   "profilePrivateHidePhoto": "Hide photo",
-  "profilePrivateHidePhotoDesc": "When on, your profile photo is hidden from non-friends in the waiting room and in game too"
+  "profilePrivateHidePhotoDesc": "When on, your profile photo is hidden from non-friends in the waiting room and in game too",
+  "shopPreviewLabel": "Preview",
+  "shopPreviewNickname": "Nickname"
 }

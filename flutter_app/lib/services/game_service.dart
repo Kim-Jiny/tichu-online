@@ -523,8 +523,12 @@ class GameService extends ChangeNotifier {
   }
 
   // Theme gradient colors based on equipped theme
-  List<Color> get themeGradient {
-    switch (equippedTheme) {
+  List<Color> get themeGradient => themeGradientFor(equippedTheme);
+
+  /// Gradient for any theme key, equipped or not — the shop needs to draw a
+  /// theme the player does not own yet.
+  List<Color> themeGradientFor(String? themeKey) {
+    switch (themeKey) {
       case 'theme_cotton':
         return const [Color(0xFFFFF8F0), Color(0xFFFFE8D8), Color(0xFFFFF0E8)];
       case 'theme_sky':
@@ -557,8 +561,12 @@ class GameService extends ChangeNotifier {
   }
 
   // Card back colors based on equipped theme: [background, border, innerBorder]
-  List<Color> get cardBackColors {
-    switch (equippedTheme) {
+  List<Color> get cardBackColors => cardBackColorsFor(equippedTheme);
+
+  /// Card-back colours for any theme key — the shop previews a theme the
+  /// player does not own yet.
+  List<Color> cardBackColorsFor(String? themeKey) {
+    switch (themeKey) {
       case 'theme_cotton':
         return const [Color(0xFFFFF0E0), Color(0xFFE8D8C8), Color(0xFFF0E0D0)];
       case 'theme_sky':

@@ -7892,6 +7892,18 @@ abstract class L10n {
   /// In en, this message translates to:
   /// **'When on, your profile photo is hidden from non-friends in the waiting room and in game too'**
   String get profilePrivateHidePhotoDesc;
+
+  /// No description provided for @shopPreviewLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Preview'**
+  String get shopPreviewLabel;
+
+  /// No description provided for @shopPreviewNickname.
+  ///
+  /// In en, this message translates to:
+  /// **'Nickname'**
+  String get shopPreviewNickname;
 }
 
 class _L10nDelegate extends LocalizationsDelegate<L10n> {

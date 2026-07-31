@@ -7,6 +7,8 @@ import '../models/shop_visual.dart';
 import '../services/game_service.dart';
 import '../services/ad_service.dart';
 import '../widgets/level_badge.dart';
+import '../widgets/profile_avatar.dart';
+import '../widgets/title_chip.dart';
 import '../widgets/gold_icon.dart';
 import 'gold_shop_screen.dart';
 
@@ -2480,75 +2482,33 @@ class _ShopScreenState extends State<ShopScreen> {
                             child: Icon(iconData, color: iconColor, size: 64),
                           ),
                         ),
-                        // For banners, show a waiting-room-slot preview so the user
-                        // can see how the in-game gradient + nickname text color
-                        // actually combine before purchase.
-                        if (category == 'banner') ...[
+                        // Cosmetics are bought on how they look, so show the
+                        // thing itself applied: a banner and a title on a
+                        // waiting-room seat, a theme as the screen behind it.
+                        if (category == 'banner' ||
+                            category == 'title' ||
+                            category == 'theme') ...[
                           const SizedBox(height: 14),
-                          const Text(
-                            '대기실 미리보기',
-                            style: TextStyle(
+                          Text(
+                            l10n.shopPreviewLabel,
+                            style: const TextStyle(
                               fontSize: 12,
                               fontWeight: FontWeight.w700,
                               color: Color(0xFF8A7A72),
                             ),
                           ),
                           const SizedBox(height: 6),
-                          // Consumer makes the preview reactive — when the profile
-                          // request resolves the level badge swaps in without the
-                          // user having to reopen the sheet.
+                          // Consumer, so a profile fetch that lands while the
+                          // sheet is open fills in the level and photo without
+                          // the user having to reopen it.
                           Consumer<GameService>(
-                            builder: (_, g, _) {
-                              final previewGradient = g.bannerGradient(itemKey);
-                              final previewTextColor = g.bannerTextColor(
-                                itemKey,
-                              );
-                              final fallbackGradient = LinearGradient(
-                                begin: Alignment.topLeft,
-                                end: Alignment.bottomRight,
-                                colors: gradient,
-                              );
-                              final ownData = g.playerName.isNotEmpty
-                                  ? g.profileFor(g.playerName)
-                                  : null;
-                              final inner = ownData?['profile'] as Map?;
-                              final myLevel = (inner?['level'] as int?) ?? 1;
-                              return Container(
-                                width: double.infinity,
-                                height: 56,
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 12,
-                                ),
-                                decoration: BoxDecoration(
-                                  gradient: previewGradient ?? fallbackGradient,
-                                  borderRadius: BorderRadius.circular(16),
-                                  border: Border.all(
-                                    color: const Color(0xFFDDD0CC),
-                                  ),
-                                ),
-                                child: Row(
-                                  children: [
-                                    LevelBadge(level: myLevel, size: 28),
-                                    const SizedBox(width: 10),
-                                    Expanded(
-                                      child: Text(
-                                        g.playerName.isNotEmpty
-                                            ? g.playerName
-                                            : '닉네임',
-                                        overflow: TextOverflow.ellipsis,
-                                        style: TextStyle(
-                                          fontSize: 16,
-                                          fontWeight: FontWeight.bold,
-                                          color:
-                                              previewTextColor ??
-                                              const Color(0xFF5A4038),
-                                        ),
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              );
-                            },
+                            builder: (_, g, _) => _buildCosmeticPreview(
+                              g,
+                              category: category,
+                              itemKey: itemKey,
+                              itemName: name,
+                              fallbackGradient: gradient,
+                            ),
                           ),
                         ],
                         const SizedBox(height: 16),
@@ -2882,6 +2842,203 @@ class _ShopScreenState extends State<ShopScreen> {
             ),
           ],
         ),
+      ),
+    );
+  }
+
+  /// The player's own equipped banner/title, read off their profile — the
+  /// service tracks the title key but not its display name or the banner.
+  String? _myBannerKey(GameService g) =>
+      _myProfile(g)?['bannerKey']?.toString();
+
+  String? _myTitleName(GameService g) =>
+      _myProfile(g)?['titleName']?.toString();
+
+  Map? _myProfile(GameService g) {
+    if (g.playerName.isEmpty) return null;
+    return g.profileFor(g.playerName)?['profile'] as Map?;
+  }
+
+  /// A banner / title / theme drawn the way it will actually appear.
+  ///
+  /// Banner and title share the waiting-room seat, because that is where they
+  /// live: 60dp tall, 38dp avatar with the level on its corner, title chip above
+  /// the nickname. The old banner preview predated that layout — it drew a
+  /// standalone level badge beside the name, which is not a thing any screen
+  /// shows any more.
+  Widget _buildCosmeticPreview(
+    GameService g, {
+    required String category,
+    required String itemKey,
+    required String itemName,
+    required List<Color> fallbackGradient,
+  }) {
+    final l10n = L10n.of(context);
+    if (category == 'theme') {
+      final colors = g.themeGradientFor(itemKey);
+      return Container(
+        // 100, not 96: 12 padding + 72 content + the 1px border on each side.
+        height: 100,
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
+            colors: colors,
+          ),
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: const Color(0xFFDDD0CC)),
+        ),
+        // A bare gradient says little; the surfaces the app puts on top of it
+        // are what makes a theme readable or not.
+        child: Row(
+          children: [
+            Expanded(
+              child: Container(
+                height: 72,
+                decoration: BoxDecoration(
+                  color: Colors.white.withValues(alpha: 0.85),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                alignment: Alignment.center,
+                child: Text(
+                  itemName,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w700,
+                    color: Color(0xFF5A4038),
+                  ),
+                ),
+              ),
+            ),
+            const SizedBox(width: 10),
+            Column(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                for (final c in g.cardBackColorsFor(itemKey).take(1))
+                  Container(
+                    width: 46,
+                    height: 72,
+                    decoration: BoxDecoration(
+                      color: c,
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(
+                        color: g.cardBackColorsFor(itemKey).length > 1
+                            ? g.cardBackColorsFor(itemKey)[1]
+                            : const Color(0xFFDDD0CC),
+                        width: 2,
+                      ),
+                    ),
+                  ),
+              ],
+            ),
+          ],
+        ),
+      );
+    }
+
+    final isBanner = category == 'banner';
+    final bannerKey = isBanner ? itemKey : _myBannerKey(g);
+    final previewGradient = g.bannerGradient(bannerKey);
+    final textColor = g.bannerTextColor(bannerKey);
+    final nickname = g.playerName.isNotEmpty
+        ? g.playerName
+        : l10n.shopPreviewNickname;
+    final ownData = g.playerName.isNotEmpty ? g.profileFor(g.playerName) : null;
+    final inner = ownData?['profile'] as Map?;
+    final myLevel = (inner?['level'] as int?) ?? 1;
+    final photo = g.resolvePhotoUrl(g.myPhotoUrl);
+    const avatarSize = 38.0;
+
+    return Container(
+      width: double.infinity,
+      height: 60,
+      padding: const EdgeInsets.symmetric(horizontal: 12),
+      decoration: BoxDecoration(
+        color: previewGradient == null
+            ? Colors.white.withValues(alpha: 0.72)
+            : null,
+        gradient: previewGradient,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: const Color(0xFFE6DDD8)),
+      ),
+      child: Row(
+        children: [
+          SizedBox(
+            width: avatarSize,
+            height: avatarSize,
+            child: Stack(
+              clipBehavior: Clip.none,
+              children: [
+                ProfileAvatar(
+                  photoUrl: photo,
+                  size: avatarSize,
+                  fallback: Container(
+                    width: avatarSize,
+                    height: avatarSize,
+                    decoration: const BoxDecoration(
+                      color: Color(0xFFF0E7E3),
+                      shape: BoxShape.circle,
+                    ),
+                    alignment: Alignment.center,
+                    child: const Icon(
+                      Icons.person,
+                      size: 23,
+                      color: Color(0xFF9C8B84),
+                    ),
+                  ),
+                ),
+                Positioned(
+                  right: -3,
+                  bottom: -3,
+                  child: Container(
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      border: Border.all(color: Colors.white, width: 1.2),
+                    ),
+                    child: LevelBadge(level: myLevel, size: 14),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                // A title preview shows THIS title; a banner preview keeps
+                // whatever title is equipped, so the seat reads as your own.
+                if (isBanner && _myTitleName(g) != null)
+                  Padding(
+                    padding: const EdgeInsets.only(bottom: 2),
+                    child: TitleChip(
+                      titleKey: g.equippedTitle,
+                      titleName: _myTitleName(g),
+                    ),
+                  )
+                else if (!isBanner)
+                  Padding(
+                    padding: const EdgeInsets.only(bottom: 2),
+                    child: TitleChip(titleKey: itemKey, titleName: itemName),
+                  ),
+                Text(
+                  nickname,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                    color: textColor ?? const Color(0xFF5A4038),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
       ),
     );
   }

@@ -4319,4 +4319,10 @@ class L10nKo extends L10n {
   @override
   String get profilePrivateHidePhotoDesc =>
       '켜면 대기실과 게임 화면에 보이는 프로필 사진까지 친구가 아닌 사람에게 숨겨집니다';
+
+  @override
+  String get shopPreviewLabel => '적용 미리보기';
+
+  @override
+  String get shopPreviewNickname => '닉네임';
 }

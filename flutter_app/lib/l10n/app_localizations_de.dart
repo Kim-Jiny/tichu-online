@@ -4458,4 +4458,10 @@ class L10nDe extends L10n {
   @override
   String get profilePrivateHidePhotoDesc =>
       'Wenn aktiv, ist dein Profilbild auch im Warteraum und im Spiel für Nicht-Freunde verborgen';
+
+  @override
+  String get shopPreviewLabel => 'Vorschau';
+
+  @override
+  String get shopPreviewNickname => 'Nickname';
 }

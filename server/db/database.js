@@ -729,6 +729,108 @@ async function initDatabase() {
       `
     );
 
+    // Shop copy. Every item needs a line saying what it actually does — an
+    // empty description leaves the detail sheet with a name and a price and
+    // nothing to decide on. Filled by category for the cosmetic families (they
+    // differ only in the picture) and by effect_type for the functional ones.
+    // Only writes where the description is blank, so admin edits stand.
+    const SHOP_DESCRIPTIONS = [
+      // [predicate SQL, params, ko, en, de]
+      [
+        `category = 'banner'`,
+        [],
+        '대기실과 게임 화면에서 내 이름 칸의 배경으로 적용됩니다. 닉네임 색도 배너에 맞춰 자동으로 조정됩니다.',
+        'Applied as the background of your name slot in the waiting room and in game. The nickname colour adjusts to the banner automatically.',
+        'Wird als Hintergrund deines Namensfelds im Warteraum und im Spiel angezeigt. Die Nickname-Farbe passt sich dem Banner automatisch an.',
+      ],
+      [
+        `category = 'title'`,
+        [],
+        '닉네임 위에 표시되는 칭호입니다. 대기실·게임·프로필 어디서나 함께 보입니다.',
+        'A title shown above your nickname — in the waiting room, in game and on your profile.',
+        'Ein Titel über deinem Nickname — im Warteraum, im Spiel und in deinem Profil.',
+      ],
+      [
+        `category = 'theme'`,
+        [],
+        '앱 전체의 배경색과 카드 뒷면 색이 바뀝니다.',
+        'Changes the app background and the card backs.',
+        'Ändert den App-Hintergrund und die Kartenrückseiten.',
+      ],
+      [
+        `effect_type = 'profile_photo'`,
+        [],
+        '기간 동안 내 사진을 프로필로 쓸 수 있습니다. 횟수 제한 없이 언제든 바꾸거나 삭제할 수 있고, 대기실·게임·프로필 어디서나 다른 사람에게 보입니다. (업로드한 사진은 자동 검수를 거칩니다)',
+        'Use your own photo as your profile picture for the duration. Change or remove it as often as you like; it is shown to other players in the waiting room, in game and on your profile. (Uploads are screened automatically.)',
+        'Nutze für die Laufzeit dein eigenes Foto als Profilbild. Beliebig oft änder- oder löschbar; es wird anderen im Warteraum, im Spiel und im Profil gezeigt. (Uploads werden automatisch geprüft.)',
+      ],
+      [
+        `effect_type = 'top_card_counter'`,
+        [],
+        '티츄 플레이 중 화면 위에 남은 A·K 장수와 용·봉황이 아직 안 나왔는지를 표시합니다.',
+        'While playing Tichu, shows how many Aces and Kings are left and whether the Dragon and Phoenix are still out.',
+        'Zeigt während einer Tichu-Partie, wie viele Asse und Könige noch übrig sind und ob Drache und Phönix noch im Spiel sind.',
+      ],
+      [
+        `effect_type = 'mighty_trump_counter'`,
+        [],
+        '마이티 플레이 중 기루다(으뜸패) 13장 가운데 몇 장이 남았는지 표시합니다.',
+        'While playing Mighty, shows how many of the 13 trump cards are still unplayed.',
+        'Zeigt während einer Mighty-Partie, wie viele der 13 Trumpfkarten noch nicht gespielt wurden.',
+      ],
+      [
+        `effect_type = 'mighty_prev_trick'`,
+        [],
+        '마이티에서 직전 트릭에 누가 어떤 카드를 냈는지 다시 볼 수 있습니다.',
+        'In Mighty, lets you look back at who played what in the previous trick.',
+        'In Mighty kannst du nachsehen, wer im vorherigen Stich was gespielt hat.',
+      ],
+      [
+        `effect_type = 'nickname_change'`,
+        [],
+        '닉네임을 원하는 이름으로 한 번 바꿉니다. 친구·전적·보유 아이템은 그대로 유지됩니다.',
+        'Change your nickname once. Friends, records and owned items all stay with you.',
+        'Ändere deinen Nickname einmalig. Freunde, Statistiken und Gegenstände bleiben erhalten.',
+      ],
+      [
+        `effect_type = 'leave_count_reduce'`,
+        [],
+        '탈주 횟수를 줄입니다. 탈주 기록은 프로필에 표시되므로 관리해 두면 좋습니다.',
+        'Reduces your desertion count. The count is shown on your profile, so it is worth keeping down.',
+        'Verringert deine Flucht-Zählung. Sie wird in deinem Profil angezeigt.',
+      ],
+      [
+        `effect_type = 'leave_count_reset'`,
+        [],
+        '탈주 횟수를 0으로 되돌립니다.',
+        'Resets your desertion count to zero.',
+        'Setzt deine Flucht-Zählung auf null zurück.',
+      ],
+      [
+        `effect_type = 'stats_reset'`,
+        [],
+        '모든 게임의 일반전 전적(판수·승패)을 0으로 되돌립니다. 랭킹 점수와 레벨은 그대로입니다.',
+        'Resets your casual records (games, wins, losses) for every game to zero. Ranked rating and level are untouched.',
+        'Setzt deine Freundschaftsspiel-Statistiken (Spiele, Siege, Niederlagen) aller Spiele auf null. Ranglistenwertung und Level bleiben.',
+      ],
+      [
+        `effect_type IN ('season_stats_reset', 'tichu_season_stats_reset', 'sk_season_stats_reset', 'mighty_season_stats_reset')`,
+        [],
+        '해당 게임의 이번 시즌 랭킹 전적을 초기화하고 점수를 시작값으로 되돌립니다.',
+        "Clears this season's ranked record for that game and returns the rating to its starting value.",
+        'Löscht die Ranglisten-Bilanz dieser Saison für das jeweilige Spiel und setzt die Wertung zurück.',
+      ],
+    ];
+    for (const [predicate, params, ko, en, de] of SHOP_DESCRIPTIONS) {
+      await client.query(
+        `UPDATE tc_shop_items
+         SET description_ko = $1, description_en = $2, description_de = $3
+         WHERE ${predicate}
+           AND (description_ko IS NULL OR description_ko = '')`,
+        [ko, en, de, ...params],
+      );
+    }
+
     // What the pass does belongs on the shop page, where someone decides
     // whether to buy it — not crammed into the profile panel afterwards.
     // Only fills a blank description, so an admin edit is never overwritten.

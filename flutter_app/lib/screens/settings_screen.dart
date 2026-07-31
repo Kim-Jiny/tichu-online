@@ -982,11 +982,13 @@ class _SettingsScreenState extends State<SettingsScreen> {
     );
   }
 
-  /// Avatar, nickname and level, tappable into the profile popup.
+  /// Avatar, nickname and level as a row inside the 계정 section, tappable into
+  /// the profile popup.
   ///
-  /// Same card shape and margins as the sections below it — the point is to put
-  /// the profile first, not to introduce a second visual language on the page.
-  Widget _buildProfileCard(BuildContext context, GameService game) {
+  /// Lives in the section rather than as a card above it: it is account
+  /// information, and a second card with its own margins above the first
+  /// section read as a different page element.
+  Widget _buildProfileRow(BuildContext context, GameService game) {
     final inner = game.playerName.isEmpty
         ? null
         : game.profileFor(game.playerName)?['profile'] as Map?;
@@ -994,71 +996,59 @@ class _SettingsScreenState extends State<SettingsScreen> {
     final expTotal = (inner?['expTotal'] as int?) ?? 0;
     final photo = game.resolvePhotoUrl(game.myPhotoUrl);
 
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16),
-      child: Material(
-        color: Colors.white.withValues(alpha: 0.95),
-        borderRadius: BorderRadius.circular(16),
-        child: InkWell(
-          borderRadius: BorderRadius.circular(16),
-          onTap: widget.onShowMyProfile == null
-              ? null
-              : () => widget.onShowMyProfile!(context),
-          child: Container(
-            padding: const EdgeInsets.all(14),
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(16),
-              border: Border.all(color: const Color(0xFFE0D8D4)),
+    return InkWell(
+      onTap: widget.onShowMyProfile == null
+          ? null
+          : () => widget.onShowMyProfile!(context),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+        child: Row(
+          children: [
+            ProfileAvatar(
+              photoUrl: photo,
+              size: 44,
+              borderRadius: 14,
+              fallback: Container(
+                width: 44,
+                height: 44,
+                decoration: BoxDecoration(
+                  color: const Color(0xFFF0E7E3),
+                  borderRadius: BorderRadius.circular(14),
+                ),
+                alignment: Alignment.center,
+                child: const Icon(
+                  Icons.person,
+                  size: 26,
+                  color: Color(0xFF9C8B84),
+                ),
+              ),
             ),
-            child: Row(
-              children: [
-                ProfileAvatar(
-                  photoUrl: photo,
-                  size: 52,
-                  borderRadius: 16,
-                  fallback: Container(
-                    width: 52,
-                    height: 52,
-                    decoration: BoxDecoration(
-                      color: const Color(0xFFF0E7E3),
-                      borderRadius: BorderRadius.circular(16),
-                    ),
-                    alignment: Alignment.center,
-                    child: const Icon(
-                      Icons.person,
-                      size: 30,
-                      color: Color(0xFF9C8B84),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    game.playerName.isEmpty ? '-' : game.playerName,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w800,
+                      color: Color(0xFF4A3A33),
                     ),
                   ),
-                ),
-                const SizedBox(width: 14),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Text(
-                        game.playerName.isEmpty ? '-' : game.playerName,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(
-                          fontSize: 18,
-                          fontWeight: FontWeight.w800,
-                          color: Color(0xFF4A3A33),
-                        ),
-                      ),
-                      const SizedBox(height: 6),
-                      // The same level/exp strip the profile popup draws, so the
-                      // two never disagree about how far along you are.
-                      profileLevelStrip(level, expTotal),
-                    ],
-                  ),
-                ),
-                const SizedBox(width: 8),
-                const Icon(Icons.chevron_right, color: Color(0xFFB0A8A4)),
-              ],
+                  const SizedBox(height: 5),
+                  // The same level/exp strip the profile popup draws, so the two
+                  // never disagree about how far along you are.
+                  profileLevelStrip(level, expTotal),
+                ],
+              ),
             ),
-          ),
+            const SizedBox(width: 8),
+            const Icon(Icons.chevron_right, color: Color(0xFFB0A8A4)),
+          ],
         ),
       ),
     );
@@ -1216,18 +1206,11 @@ class _SettingsScreenState extends State<SettingsScreen> {
                       padding: const EdgeInsets.only(bottom: 16),
                       child: Column(
                         children: [
-                          // Who this is, at the top. "내 프로필" is still in the
-                          // 계정 section below — this is the same destination,
-                          // put where the eye lands first.
-                          _buildProfileCard(context, game),
-                          const SizedBox(height: 12),
                           _buildSection(l10n.settingsAccountSection, [
-                            _buildRow(
-                              icon: Icons.account_circle,
-                              iconColor: const Color(0xFF64B5F6),
-                              title: l10n.settingsNickname,
-                              subtitle: game.playerName,
-                            ),
+                            // Avatar, nickname and level as the first row of the
+                            // account section — it says who this account is,
+                            // which is what a "닉네임" row was doing with less.
+                            _buildProfileRow(context, game),
                             const Divider(height: 1, color: Color(0xFFEAE2DE)),
                             _buildRow(
                               icon: Icons.link,

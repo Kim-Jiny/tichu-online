@@ -4,7 +4,9 @@ const logBuffer = require('./logBuffer');
 const {
   verifyAdmin, getInquiries, getInquiryById, resolveInquiry,
   getReports, getReportGroup, updateReportGroupStatus,
-  getUsers, getUserDetail, clearCustomTitle, setCustomTitleByAdmin, listActiveProfilePhotos, getAdminGoldHistory, getAdminPurchaseHistory, deleteUser, getDashboardStats, getDashboardActivityTopPlayers, getAdminRecentMatches, setChatBan, setAdminMemo, adminClearProfilePhoto, getRecentMatches, adminAdjustGold, adminAdjustExp, setUserAdmin,
+  getUsers, getUserDetail, clearCustomTitle, setCustomTitleByAdmin,
+  getSeasons, getSeasonRewardConfig, saveSeasonRewardConfig,
+  clearSeasonRewardConfig, getSeasonRewardsGranted, SEASON_GAME_TYPES, listActiveProfilePhotos, getAdminGoldHistory, getAdminPurchaseHistory, deleteUser, getDashboardStats, getDashboardActivityTopPlayers, getAdminRecentMatches, setChatBan, setAdminMemo, adminClearProfilePhoto, getRecentMatches, adminAdjustGold, adminAdjustExp, setUserAdmin,
   getAttendanceDashboardStats, listAttendanceLog, getAttendanceBreakdown, getAttendanceForNickname,
   getDetailedAdminStats,
   getAllShopItemsAdmin, addShopItem, updateShopItem, deleteShopItem, getShopItemById,
@@ -532,6 +534,7 @@ input[type="text"], input[type="password"] { width: 100%; padding: 10px 12px; bo
     <a href="/tc-backstage/users" class="${activePage === 'users' ? 'active' : ''}" onclick="closeSidebar()">유저</a>
     <a href="/tc-backstage/shop" class="${activePage === 'shop' ? 'active' : ''}" onclick="closeSidebar()">상점</a>
     <a href="/tc-backstage/attendance" class="${activePage === 'attendance' ? 'active' : ''}" onclick="closeSidebar()">출석</a>
+    <a href="/tc-backstage/seasons" class="${activePage === 'seasons' ? 'active' : ''}" onclick="closeSidebar()">시즌</a>
   </div>
   <div class="nav-section">
     <div class="nav-section-label">매출</div>
@@ -4153,6 +4156,188 @@ async function handleAdminRoute(req, res, url, pathname, method, lobby, wss, mai
       </script>
     `;
     return html(res, layout('상점', content, 'shop'));
+  }
+
+  // ── 시즌 ─────────────────────────────────────────────────────────────
+  const SEASON_GAME_LABELS = { tichu: '티츄', skull_king: '스컬킹', mighty: '마이티' };
+
+  function seasonRewardEditor(action, rows, { title, note, canReset, resetAction }) {
+    const byGame = SEASON_GAME_TYPES.map((gt) => ({
+      gameType: gt,
+      tiers: rows.filter((r) => r.game_type === gt).sort((a, b) => a.rank - b.rank),
+    }));
+    const tierRow = (gt, tier, i) => `<tr>
+      <td><input type="hidden" name="game_type_${gt}_${i}" value="${gt}">
+        <input type="number" name="rank_${gt}_${i}" value="${tier ? tier.rank : ''}" min="1" max="100"
+          style="width:70px;padding:6px 8px;border:1px solid #ddd;border-radius:6px" placeholder="순위"></td>
+      <td><input type="number" name="gold_${gt}_${i}" value="${tier ? tier.gold : ''}" min="0"
+          style="width:110px;padding:6px 8px;border:1px solid #ddd;border-radius:6px" placeholder="0"></td>
+      <td><input type="text" name="banner_${gt}_${i}" value="${escapeHtml(tier?.banner_key || '')}"
+          style="width:220px;padding:6px 8px;border:1px solid #ddd;border-radius:6px;font-family:monospace;font-size:12px"
+          placeholder="배너 없음"></td>
+      <td><input type="number" name="days_${gt}_${i}" value="${tier ? (tier.banner_days || 30) : 30}" min="1"
+          style="width:80px;padding:6px 8px;border:1px solid #ddd;border-radius:6px"></td>
+    </tr>`;
+
+    return `<form method="POST" action="${action}">
+      <div class="card">
+        <h3>${escapeHtml(title)}</h3>
+        ${note ? `<div style="font-size:12px;color:#888;margin-bottom:12px">${note}</div>` : ''}
+        ${byGame.map(({ gameType, tiers }) => `
+          <div style="margin-top:16px">
+            <div style="font-weight:700;margin-bottom:6px">${SEASON_GAME_LABELS[gameType] || gameType}</div>
+            <div class="table-wrap"><table>
+              <tr><th>순위</th><th>골드</th><th>배너 아이템 키</th><th>배너 기간(일)</th></tr>
+              ${Array.from({ length: Math.max(tiers.length + 2, 5) },
+                (_, i) => tierRow(gameType, tiers[i], i)).join('')}
+            </table></div>
+          </div>`).join('')}
+        <div style="display:flex;gap:8px;align-items:center;margin-top:18px">
+          <button type="submit" class="btn btn-primary">저장</button>
+          <span style="font-size:12px;color:#999">순위를 비우면 그 줄은 저장되지 않습니다. 지울 때도 순위를 비우면 됩니다.</span>
+        </div>
+      </div>
+    </form>
+    ${canReset ? `<form method="POST" action="${resetAction}" style="margin-top:12px"
+      onsubmit="return confirm('이 시즌 전용 설정을 지우고 기본 보상을 따르게 할까요?')">
+      <button type="submit" class="btn btn-secondary" style="color:#c62828;border-color:#f0c0c0">기본 보상으로 되돌리기</button>
+    </form>` : ''}`;
+  }
+
+  // Parses the flat rank_/gold_/banner_/days_ field names back into rows.
+  function parseSeasonRewardBody(body) {
+    const rows = [];
+    for (const key of Object.keys(body)) {
+      const m = key.match(/^rank_([a-z_]+)_(\d+)$/);
+      if (!m) continue;
+      const [, gt, i] = m;
+      const rank = parseInt(body[key], 10);
+      if (!Number.isFinite(rank) || rank < 1) continue;
+      rows.push({
+        game_type: gt,
+        rank,
+        gold: parseInt(body[`gold_${gt}_${i}`], 10) || 0,
+        banner_key: (body[`banner_${gt}_${i}`] || '').trim() || null,
+        banner_days: parseInt(body[`days_${gt}_${i}`], 10) || 30,
+      });
+    }
+    // Last one wins if an operator types the same rank twice; the unique index
+    // would otherwise reject the whole save with a constraint error.
+    const seen = new Map();
+    for (const r of rows) seen.set(`${r.game_type}#${r.rank}`, r);
+    return [...seen.values()];
+  }
+
+  if (pathname === '/tc-backstage/seasons' && method === 'GET') {
+    const seasons = (await getSeasons())?.seasons || [];
+    const defaults = await getSeasonRewardConfig(null);
+    const summary = SEASON_GAME_TYPES.map((gt) => {
+      const tiers = defaults.rows.filter((r) => r.game_type === gt);
+      return `${SEASON_GAME_LABELS[gt]} ${tiers.length}단계`;
+    }).join(' · ');
+
+    const rowsHtml = seasons.map((sn) => {
+      const active = sn.status === 'active';
+      return `<tr>
+        <td style="font-weight:600">${escapeHtml(sn.name)}</td>
+        <td style="font-size:12px">${formatDate(sn.start_at)} ~ ${formatDate(sn.end_at)}</td>
+        <td>${active
+          ? '<span class="badge" style="background:#e8f5e9;color:#2e7d32">진행 중</span>'
+          : '<span class="badge" style="background:#f5f5f5;color:#888">종료</span>'}</td>
+        <td><a href="/tc-backstage/seasons/${sn.id}/rewards" class="btn btn-secondary" style="font-size:12px;padding:5px 12px">
+          ${active ? '보상 설정' : '보상 보기'}</a></td>
+      </tr>`;
+    }).join('');
+
+    const content = `
+      ${pageHeader('시즌', '시즌은 매월 자동으로 열리고 닫힙니다. 닫힐 때 지급할 보상을 여기서 정합니다.')}
+      ${summaryStrip([
+        { label: '전체 시즌', value: formatNumber(seasons.length) },
+        { label: '진행 중', value: seasons.some((s) => s.status === 'active') ? '1' : '0', valueColor: '#2e8b57' },
+        { label: '기본 보상', value: summary || '없음', meta: '시즌별 설정이 없으면 이걸 따릅니다' },
+      ])}
+      <div class="card">
+        <h3>시즌 목록</h3>
+        <div class="table-wrap"><table>
+          <tr><th>시즌</th><th>기간</th><th>상태</th><th></th></tr>
+          ${rowsHtml || '<tr><td colspan="4"><div class="empty">시즌 없음</div></td></tr>'}
+        </table></div>
+      </div>
+      ${seasonRewardEditor('/tc-backstage/seasons/default/rewards', defaults.rows, {
+        title: '기본 보상',
+        note: '시즌별로 따로 정하지 않은 모든 시즌이 이 값으로 지급됩니다. 배너 키를 비우면 그 순위는 골드만 받습니다.',
+        canReset: false,
+      })}
+    `;
+    return html(res, layout('시즌', content, 'seasons'));
+  }
+
+  if (pathname === '/tc-backstage/seasons/default/rewards' && method === 'POST') {
+    const body = await parseBody(req);
+    await saveSeasonRewardConfig(null, parseSeasonRewardBody(body));
+    return redirect(res, '/tc-backstage/seasons');
+  }
+
+  const seasonRewardMatch = pathname.match(/^\/tc-backstage\/seasons\/(\d+)\/rewards$/);
+  if (seasonRewardMatch && method === 'GET') {
+    const seasonId = parseInt(seasonRewardMatch[1], 10);
+    const seasons = (await getSeasons())?.seasons || [];
+    const season = seasons.find((s) => s.id === seasonId);
+    if (!season) return html(res, layout('찾을 수 없음', '<div class="empty">시즌을 찾을 수 없습니다</div>', 'seasons'), 404);
+
+    const cfg = await getSeasonRewardConfig(seasonId);
+    const granted = await getSeasonRewardsGranted(seasonId);
+    const closed = season.status !== 'active';
+
+    const grantedHtml = granted.length === 0 ? '' : `<div class="card">
+      <h3>실제 지급 내역</h3>
+      <div class="table-wrap"><table>
+        <tr><th>순위</th><th>닉네임</th><th>골드</th><th>배너</th><th>지급 시각</th></tr>
+        ${granted.map((g) => `<tr>
+          <td>${g.rank}위</td>
+          <td><a href="/tc-backstage/users/${encodeURIComponent(g.nickname)}">${escapeHtml(g.nickname)}</a></td>
+          <td style="color:#d07a16;font-weight:600">${formatNumber(g.gold_reward || 0)}</td>
+          <td style="font-family:monospace;font-size:12px">${escapeHtml(g.banner_key || '-')}</td>
+          <td style="font-size:12px">${formatDate(g.created_at)}</td>
+        </tr>`).join('')}
+      </table></div>
+    </div>`;
+
+    const content = `
+      ${pageHeader(`시즌 보상: ${escapeHtml(season.name)}`,
+        `${formatDate(season.start_at)} ~ ${formatDate(season.end_at)} · ${closed ? '종료된 시즌' : '진행 중'}`,
+        `<a href="/tc-backstage/seasons" class="btn btn-secondary">목록으로</a>`)}
+      <div class="card" style="border-left:4px solid ${cfg.custom ? '#5e35b1' : '#bbb'}">
+        ${cfg.custom
+          ? '이 시즌은 <b>전용 보상</b>을 씁니다.'
+          : '이 시즌은 <b>기본 보상</b>을 따릅니다. 아래에서 저장하면 이 시즌 전용 설정이 만들어집니다.'}
+      </div>
+      ${closed
+        ? '<div class="card" style="color:#888">종료된 시즌이라 설정을 바꿔도 이미 지급된 보상에는 영향이 없습니다.</div>'
+        : ''}
+      ${grantedHtml}
+      ${seasonRewardEditor(`/tc-backstage/seasons/${seasonId}/rewards`, cfg.rows, {
+        title: '이 시즌 보상',
+        note: '배너 키를 비우면 그 순위는 골드만 받습니다.',
+        canReset: cfg.custom,
+        resetAction: `/tc-backstage/seasons/${seasonId}/rewards/reset`,
+      })}
+    `;
+    return html(res, layout(`시즌 보상: ${season.name}`, content, 'seasons'));
+  }
+
+  if (seasonRewardMatch && method === 'POST') {
+    const seasonId = parseInt(seasonRewardMatch[1], 10);
+    const body = await parseBody(req);
+    await saveSeasonRewardConfig(seasonId, parseSeasonRewardBody(body));
+    return redirect(res, `/tc-backstage/seasons/${seasonId}/rewards`);
+  }
+
+  const seasonResetMatch = pathname.match(/^\/tc-backstage\/seasons\/(\d+)\/rewards\/reset$/);
+  if (seasonResetMatch && method === 'POST') {
+    const seasonId = parseInt(seasonResetMatch[1], 10);
+    await clearSeasonRewardConfig(seasonId);
+    return redirect(res, `/tc-backstage/seasons/${seasonId}/rewards`);
   }
 
   // Shop add form

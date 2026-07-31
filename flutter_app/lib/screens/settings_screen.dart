@@ -6,6 +6,8 @@ import 'package:url_launcher/url_launcher.dart';
 import '../l10n/app_localizations.dart';
 import '../l10n/l10n_helpers.dart';
 import '../services/game_service.dart';
+import '../widgets/player_profile_header.dart';
+import '../widgets/profile_avatar.dart';
 import '../services/auth_service.dart';
 import '../services/locale_service.dart';
 import '../services/session_service.dart';
@@ -50,6 +52,13 @@ class _SettingsScreenState extends State<SettingsScreen> {
     );
     _bannerAd!.load();
     _loadAppVersion();
+    // The header block shows level and exp, which only arrive with a profile
+    // fetch. Deferred: requestProfile notifies listeners synchronously.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      final game = context.read<GameService>();
+      if (game.playerName.isNotEmpty) game.requestProfile(game.playerName);
+    });
   }
 
   @override
@@ -814,6 +823,83 @@ class _SettingsScreenState extends State<SettingsScreen> {
     );
   }
 
+  /// Avatar, nickname and level at the top, tappable into the profile popup.
+  Widget _buildProfileBlock(BuildContext context, GameService game, L10n l10n) {
+    final inner = game.playerName.isEmpty
+        ? null
+        : game.profileFor(game.playerName)?['profile'] as Map?;
+    final level = (inner?['level'] as int?) ?? 1;
+    final expTotal = (inner?['expTotal'] as int?) ?? 0;
+    final photo = game.resolvePhotoUrl(game.myPhotoUrl);
+
+    return Material(
+      color: const Color(0xFFFFFDFC),
+      child: InkWell(
+        onTap: widget.onShowMyProfile == null
+            ? null
+            : () => widget.onShowMyProfile!(context),
+        child: Container(
+          width: double.infinity,
+          padding: const EdgeInsets.fromLTRB(20, 16, 16, 16),
+          decoration: const BoxDecoration(
+            border: Border(
+              top: BorderSide(color: Color(0xFFEFE7E3)),
+              bottom: BorderSide(color: Color(0xFFEFE7E3)),
+            ),
+          ),
+          child: Row(
+            children: [
+              ProfileAvatar(
+                photoUrl: photo,
+                size: 52,
+                borderRadius: 16,
+                fallback: Container(
+                  width: 52,
+                  height: 52,
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFF0E7E3),
+                    borderRadius: BorderRadius.circular(16),
+                  ),
+                  alignment: Alignment.center,
+                  child: const Icon(
+                    Icons.person,
+                    size: 30,
+                    color: Color(0xFF9C8B84),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 14),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      game.playerName.isEmpty ? '-' : game.playerName,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.w800,
+                        color: Color(0xFF4A3A33),
+                      ),
+                    ),
+                    const SizedBox(height: 6),
+                    // Same level/exp strip the profile popup uses, so the two
+                    // never disagree about how far along you are.
+                    profileLevelStrip(level, expTotal),
+                  ],
+                ),
+              ),
+              const SizedBox(width: 8),
+              const Icon(Icons.chevron_right, color: Color(0xFFB0A8A4)),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
   Widget _buildRow({
     required IconData icon,
     required String title,
@@ -865,34 +951,38 @@ class _SettingsScreenState extends State<SettingsScreen> {
     );
   }
 
+  /// A labelled group of rows.
+  ///
+  /// Was a rounded, bordered card per group — eight of them stacked down the
+  /// page, each with its own outline, so the eye had to cross a border for every
+  /// setting. Now the label sits on the background and the rows sit on one
+  /// surface, the way the rest of the app was rebuilt.
   Widget _buildSection(String title, List<Widget> children) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Padding(
-            padding: const EdgeInsets.fromLTRB(6, 4, 6, 8),
-            child: Text(
-              title,
-              style: const TextStyle(
-                fontSize: 12,
-                fontWeight: FontWeight.w700,
-                color: Color(0xFF8A7A72),
-              ),
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Padding(
+          padding: const EdgeInsets.fromLTRB(20, 18, 20, 6),
+          child: Text(
+            title,
+            style: const TextStyle(
+              fontSize: 12,
+              fontWeight: FontWeight.w700,
+              color: Color(0xFF9A8E8A),
             ),
           ),
-          Container(
-            padding: const EdgeInsets.symmetric(vertical: 6),
-            decoration: BoxDecoration(
-              color: Colors.white.withValues(alpha: 0.95),
-              borderRadius: BorderRadius.circular(16),
-              border: Border.all(color: const Color(0xFFE0D8D4)),
+        ),
+        DecoratedBox(
+          decoration: const BoxDecoration(
+            color: Color(0xFFFFFDFC),
+            border: Border(
+              top: BorderSide(color: Color(0xFFEFE7E3)),
+              bottom: BorderSide(color: Color(0xFFEFE7E3)),
             ),
-            child: Column(children: children),
           ),
-        ],
-      ),
+          child: Column(children: children),
+        ),
+      ],
     );
   }
 
@@ -929,26 +1019,23 @@ class _SettingsScreenState extends State<SettingsScreen> {
               });
               return Column(
                 children: [
-                  Container(
-                    margin: const EdgeInsets.all(16),
-                    padding: const EdgeInsets.all(12),
-                    decoration: BoxDecoration(
-                      color: Colors.white.withValues(alpha: 0.95),
-                      borderRadius: BorderRadius.circular(18),
-                    ),
+                  // Flat header on the theme gradient, like the shop and the
+                  // room list — the white used to start here as a floating card.
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(4, 2, 16, 6),
                     child: Row(
                       children: [
                         IconButton(
                           onPressed: () => Navigator.pop(context),
                           icon: const Icon(Icons.arrow_back),
                           color: const Color(0xFF8A7A72),
+                          visualDensity: VisualDensity.compact,
                         ),
-                        const SizedBox(width: 4),
                         Flexible(
                           child: Text(
                             l10n.settingsHeaderTitle,
                             style: const TextStyle(
-                              fontSize: 20,
+                              fontSize: 19,
                               fontWeight: FontWeight.bold,
                               color: Color(0xFF5A4038),
                             ),
@@ -963,6 +1050,11 @@ class _SettingsScreenState extends State<SettingsScreen> {
                       padding: const EdgeInsets.only(bottom: 16),
                       child: Column(
                         children: [
+                          // Who this is, first. "내 프로필" used to be one row
+                          // among fifteen, three sections down — the first thing
+                          // anyone opens settings to check was the hardest to
+                          // find.
+                          _buildProfileBlock(context, game, l10n),
                           _buildSection(
                             l10n.settingsNotificationsSection,
                             [
@@ -1014,8 +1106,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
                             ],
                           ),
                           const SizedBox(height: 12),
+                          // Section label was the row's own title repeated —
+                          // "패 보기 요청 정책" twice, one under the other.
                           _buildSection(
-                            l10n.settingsCardViewPolicy,
+                            l10n.settingsGameSection,
                             [
                               _buildRow(
                                 icon: Icons.visibility_outlined,
@@ -1063,24 +1157,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
                           _buildSection(
                             l10n.settingsAccountSection,
                             [
-                              _buildRow(
-                                icon: Icons.person,
-                                iconColor: const Color(0xFF64B5F6),
-                                title: l10n.settingsMyProfile,
-                                subtitle: l10n.settingsProfileSubtitle,
-                                onTap: widget.onShowMyProfile == null
-                                    ? null
-                                    : () => widget.onShowMyProfile!(context),
-                                trailing: const Icon(Icons.chevron_right, color: Color(0xFFB0A8A4)),
-                              ),
-                              const Divider(height: 1, color: Color(0xFFEAE2DE)),
-                              _buildRow(
-                                icon: Icons.account_circle,
-                                iconColor: const Color(0xFF64B5F6),
-                                title: l10n.settingsNickname,
-                                subtitle: game.playerName,
-                              ),
-                              const Divider(height: 1, color: Color(0xFFEAE2DE)),
+                              // 내 프로필 / 닉네임 moved to the block at the
+                              // top: both answer "who am I", which is what the
+                              // header of a settings page is for.
+
                               _buildRow(
                                 icon: Icons.link,
                                 iconColor: const Color(0xFF7E57C2),

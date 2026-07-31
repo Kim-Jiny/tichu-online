@@ -4355,4 +4355,7 @@ class L10nKo extends L10n {
 
   @override
   String get gameReportReasonTitle => '부적절한 칭호';
+
+  @override
+  String get settingsGameSection => '게임';
 }

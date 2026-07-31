@@ -2014,5 +2014,6 @@
   "customTitlePreviewLabel": "Preview",
   "customTitleSave": "Apply",
   "customTitleButton": "Write title",
-  "customTitleSaved": "Title applied"
+  "customTitleSaved": "Title applied",
+  "gameReportReasonTitle": "Inappropriate title"
 }

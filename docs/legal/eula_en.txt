@@ -6,7 +6,7 @@ These Terms govern the rights, obligations, and responsibilities between the ser
 Article 2 (Definitions)
 1. "Service" means all games and related features provided by Tichu Online.
 2. "User" means a person who uses the Service under these Terms.
-3. "Content" means text, nicknames, chat messages, and similar items created or shared by a User within the Service.
+3. "Content" means text, nicknames, chat messages, profile photos, User-written titles, and similar items created, shared or uploaded by a User within the Service.
 
 Article 3 (Effect and Amendment of Terms)
 1. These Terms take effect by being posted on the Service screen or otherwise notified to Users.
@@ -39,8 +39,9 @@ Article 6 (Management of Postings)
 Article 6-2 (User-Generated Content and Handling of Reports)
 1. There is no tolerance for objectionable content or abusive users.
 2. Users may report or block another User from the profile dialog and from the chat panel. The profile photo of a blocked or reported User is hidden from that User immediately.
-3. The service provider reviews reported content within 24 hours of receiving a single report and, where it breaches these Terms, removes it and takes any other action required.
-4. A User whose profile photo has been removed may upload a different one while their entitlement remains valid. In the event of repeated breaches, the service provider may restrict use of the Service, suspend access to the profile photo feature, or terminate the account.
+3. Titles written by Users are limited to permitted characters and are checked against a word list when they are submitted. A title that passed that check may still be removed following a report.
+4. The service provider reviews reported content within 24 hours of receiving a single report and, where it breaches these Terms, removes it and takes any other action required.
+5. A User whose profile photo or title has been removed may submit a different one while their entitlement remains valid. In the event of repeated breaches, the service provider may restrict use of the Service, suspend access to that feature, or terminate the account.
 
 Article 7 (Protection of Personal Information)
 The service provider strives to protect Users' personal information and processes it in accordance with applicable laws.

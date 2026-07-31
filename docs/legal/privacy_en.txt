@@ -46,11 +46,12 @@ Users may view, modify, or delete their personal information at any time, and ma
 - Access privilege management
 - Profile photos are stripped of EXIF and other metadata (capture device, location, and similar) before being stored
 
-8. Notice Regarding Profile Photos
+8. Notice Regarding Profile Photos and User-Written Titles
 - A profile photo is public information shown to other Users inside the game. Anyone who knows the image address can access it without signing in, so please do not upload an image you would not want made public.
 - Do not upload another person's photograph or likeness without authorisation.
 - Uploaded photos are screened automatically and are not accepted where they are judged inappropriate.
 - An inappropriate profile photo can be reported from the profile dialog or the chat panel in the app. Reports are reviewed and acted on within 24 hours. The profile photo of a User you have reported or blocked is hidden from you immediately.
+- A title written by a User (custom title) is public information shown next to their nickname. Titles are checked against permitted characters and a word list when submitted, and an inappropriate title may be removed following a report.
 
 9. Personal Information Protection Officer and Business Information
 - Business name: Jinsoft / Representative (Personal Information Protection Officer): Mijin Kim

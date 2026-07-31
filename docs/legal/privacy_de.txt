@@ -46,11 +46,12 @@ Nutzer können ihre personenbezogenen Daten jederzeit einsehen, ändern oder lö
 - Verwaltung von Zugriffsrechten
 - Profilbilder werden vor der Speicherung von EXIF- und sonstigen Metadaten (Aufnahmegerät, Standort und Ähnliches) bereinigt
 
-8. Hinweise zu Profilbildern
+8. Hinweise zu Profilbildern und selbst geschriebenen Titeln
 - Ein Profilbild ist eine öffentliche Information, die anderen Nutzern im Spiel angezeigt wird. Wer die Bildadresse kennt, kann ohne Anmeldung darauf zugreifen. Laden Sie daher keine Bilder hoch, die nicht öffentlich sein sollen.
 - Laden Sie keine Fotos oder Bildnisse anderer Personen ohne Berechtigung hoch.
 - Hochgeladene Bilder werden automatisch geprüft und nicht übernommen, wenn sie als unangemessen eingestuft werden.
 - Unangemessene Profilbilder können in der App über das Profilfenster oder das Chatfenster gemeldet werden. Meldungen werden innerhalb von 24 Stunden geprüft und bearbeitet. Das Profilbild eines von Ihnen gemeldeten oder blockierten Nutzers wird Ihnen sofort nicht mehr angezeigt.
+- Ein selbst geschriebener Titel (eigener Titel) ist eine öffentliche Angabe, die neben dem Nickname angezeigt wird. Titel werden bei der Eingabe auf zulässige Zeichen und gegen eine Wortliste geprüft; ein unangemessener Titel kann nach einer Meldung entfernt werden.
 
 9. Datenschutzbeauftragter und Unternehmensinformationen
 - Firmenname: Jinsoft / Vertreter (Datenschutzbeauftragter): Mijin Kim

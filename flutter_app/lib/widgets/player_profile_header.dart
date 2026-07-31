@@ -715,6 +715,10 @@ void showProfileReportDialog(
     l10n.gameReportReasonAbuse,
     l10n.gameReportReasonSpam,
     l10n.gameReportReasonNickname,
+    // Titles are user-written now, so they need their own reason — "부적절한
+    // 닉네임" would file it against the wrong thing, and the admin queue is what
+    // triage reads.
+    l10n.gameReportReasonTitle,
     l10n.gameReportReasonGameplay,
     l10n.gameReportReasonOther,
   ];
@@ -915,6 +919,42 @@ void showProfileReportDialog(
 /// rendered its "profile not found" error — which reads as a bug rather than as
 /// "this is a bot". Shared by the six screens that open a profile popup, for the
 /// same reason the header is.
+///// The "this profile is private" panel. Shown for accounts with the privacy
+/// pass, and for the seats of an admin filler room.
+Widget privateProfileNotice(L10n l10n) {
+  return Container(
+    width: double.infinity,
+    padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 22),
+    decoration: BoxDecoration(
+      color: const Color(0xFFF6F3FA),
+      borderRadius: BorderRadius.circular(16),
+      border: Border.all(color: const Color(0xFFE4DCEF)),
+    ),
+    child: Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        const Icon(Icons.lock_rounded, size: 30, color: Color(0xFF7E57C2)),
+        const SizedBox(height: 10),
+        Text(
+          l10n.profilePrivateTitle,
+          textAlign: TextAlign.center,
+          style: const TextStyle(
+            fontSize: 14.5,
+            fontWeight: FontWeight.w800,
+            color: Color(0xFF5A4038),
+          ),
+        ),
+        const SizedBox(height: 5),
+        Text(
+          l10n.profilePrivateBody,
+          textAlign: TextAlign.center,
+          style: const TextStyle(fontSize: 12.5, color: Color(0xFF8A7A72)),
+        ),
+      ],
+    ),
+  );
+}
+
 Widget botProfileBody(BuildContext context) {
   final l10n = L10n.of(context);
   // Wrapped so the card keeps its natural height: the dialog hands its content

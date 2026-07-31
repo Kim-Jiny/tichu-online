@@ -4456,4 +4456,7 @@ class L10nEn extends L10n {
 
   @override
   String get customTitleSaved => 'Title applied';
+
+  @override
+  String get gameReportReasonTitle => 'Inappropriate title';
 }

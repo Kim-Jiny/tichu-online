@@ -4492,4 +4492,7 @@ class L10nDe extends L10n {
 
   @override
   String get customTitleSaved => 'Titel übernommen';
+
+  @override
+  String get gameReportReasonTitle => 'Unangemessener Titel';
 }

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../l10n/app_localizations.dart';
 import '../services/game_service.dart';
+import 'player_profile_header.dart';
 
 /// Body of the player-profile popup: manner/desertion, a game selector, that
 /// game's season and overall records, and recent matches.
@@ -941,39 +942,7 @@ class _PlayerProfileBodyState extends State<PlayerProfileBody> {
   }
 
   /// What a stranger sees instead of the records.
-  Widget _buildPrivateNotice(L10n l10n) {
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 22),
-      decoration: BoxDecoration(
-        color: const Color(0xFFF6F3FA),
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: const Color(0xFFE4DCEF)),
-      ),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          const Icon(Icons.lock_rounded, size: 30, color: Color(0xFF7E57C2)),
-          const SizedBox(height: 10),
-          Text(
-            l10n.profilePrivateTitle,
-            textAlign: TextAlign.center,
-            style: const TextStyle(
-              fontSize: 14.5,
-              fontWeight: FontWeight.w800,
-              color: Color(0xFF5A4038),
-            ),
-          ),
-          const SizedBox(height: 5),
-          Text(
-            l10n.profilePrivateBody,
-            textAlign: TextAlign.center,
-            style: const TextStyle(fontSize: 12.5, color: Color(0xFF8A7A72)),
-          ),
-        ],
-      ),
-    );
-  }
+  Widget _buildPrivateNotice(L10n l10n) => privateProfileNotice(l10n);
 
   /// The holder's own view of the pass: one switch for how far it reaches.
   ///

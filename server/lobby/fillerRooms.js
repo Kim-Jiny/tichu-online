@@ -71,6 +71,22 @@ function isFillerHost(playerId) {
   return false;
 }
 
+/**
+ * Is this nickname one of the synthetic hosts?
+ *
+ * The host seat has no account behind it, so a profile lookup for it finds
+ * nothing — callers use this to answer with "private profile" instead of
+ * "user not found", which is what a seat with no account should look like from
+ * the outside.
+ */
+function isFillerNickname(nickname) {
+  if (!nickname) return false;
+  for (const info of active.values()) {
+    if (info.nickname === nickname) return true;
+  }
+  return false;
+}
+
 function list() {
   return [...active.values()].map((info) => {
     const room = deps.lobby.getRoom(info.roomId);
@@ -273,5 +289,6 @@ module.exports = {
   list,
   isFillerRoom,
   isFillerHost,
+  isFillerNickname,
   MAX_PLAYERS,
 };

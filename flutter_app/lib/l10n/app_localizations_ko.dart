@@ -4352,4 +4352,7 @@ class L10nKo extends L10n {
 
   @override
   String get customTitleSaved => '칭호가 적용되었습니다';
+
+  @override
+  String get gameReportReasonTitle => '부적절한 칭호';
 }

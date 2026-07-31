@@ -7958,6 +7958,12 @@ abstract class L10n {
   /// In en, this message translates to:
   /// **'Title applied'**
   String get customTitleSaved;
+
+  /// No description provided for @gameReportReasonTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Inappropriate title'**
+  String get gameReportReasonTitle;
 }
 
 class _L10nDelegate extends LocalizationsDelegate<L10n> {

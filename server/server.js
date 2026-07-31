@@ -5127,6 +5127,20 @@ async function handleGetProfile(ws, data) {
   // Viewer's locale picks the title display name; the inspected user's own
   // locale preference is irrelevant to what the viewer should see.
   const profile = await getUserProfile(targetNickname, ws.locale || 'ko');
+  // The synthetic host of an admin filler room has no account, so the lookup
+  // finds nothing and the popup would say "프로필을 찾을 수 없습니다" — which
+  // reads as a bug on a seat that is sitting right there playing. Answer the way
+  // a private account answers.
+  if (!profile && fillerRooms.isFillerNickname(targetNickname)) {
+    sendTo(ws, {
+      type: 'profile_result',
+      nickname: targetNickname,
+      profile: { nickname: targetNickname, isPrivate: true },
+      recentMatches: [],
+      isBlocked: false,
+    });
+    return;
+  }
   const isBlocked = (await getBlockedUsers(ws.nickname)).includes(targetNickname);
   // Privacy pass: strangers get the identity (so they can still report, invite
   // or add as friend) and nothing that counts as a record. Redacted HERE rather

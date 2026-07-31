@@ -1429,5 +1429,6 @@
   "customTitlePreviewLabel": "Vorschau",
   "customTitleSave": "Übernehmen",
   "customTitleButton": "Titel schreiben",
-  "customTitleSaved": "Titel übernommen"
+  "customTitleSaved": "Titel übernommen",
+  "gameReportReasonTitle": "Unangemessener Titel"
 }

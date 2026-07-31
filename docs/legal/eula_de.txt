@@ -39,8 +39,9 @@ Artikel 6 (Verwaltung von Beiträgen)
 Artikel 6-2 (Nutzergenerierte Inhalte und Bearbeitung von Meldungen)
 1. Für anstößige Inhalte und missbräuchliches Verhalten gilt eine Null-Toleranz-Politik.
 2. Nutzer können andere Nutzer über das Profilfenster und über das Chatfenster melden oder blockieren. Das Profilbild eines blockierten oder gemeldeten Nutzers wird dem meldenden Nutzer sofort nicht mehr angezeigt.
-3. Der Diensteanbieter prüft gemeldete Inhalte innerhalb von 24 Stunden nach Eingang bereits einer einzelnen Meldung und entfernt sie, sofern sie gegen diese Bedingungen verstoßen, und ergreift alle weiteren erforderlichen Maßnahmen.
-4. Wurde ein Profilbild entfernt, kann der Nutzer während der Laufzeit seiner Berechtigung ein anderes hochladen. Bei wiederholten Verstößen kann der Diensteanbieter die Nutzung des Dienstes einschränken, die Profilbildfunktion sperren oder das Konto kündigen.
+3. Selbst geschriebene Titel sind auf zulässige Zeichen beschränkt und werden bei der Eingabe gegen eine Wortliste geprüft. Ein Titel, der diese Prüfung bestanden hat, kann nach einer Meldung dennoch entfernt werden.
+4. Der Diensteanbieter prüft gemeldete Inhalte innerhalb von 24 Stunden nach Eingang bereits einer einzelnen Meldung und entfernt sie, sofern sie gegen diese Bedingungen verstoßen, und ergreift alle weiteren erforderlichen Maßnahmen.
+5. Wurde ein Profilbild oder ein Titel entfernt, kann der Nutzer während der Laufzeit seiner Berechtigung ein neues einreichen. Bei wiederholten Verstößen kann der Diensteanbieter die Nutzung des Dienstes einschränken, die betreffende Funktion sperren oder das Konto kündigen.
 
 Artikel 7 (Schutz personenbezogener Daten)
 Der Diensteanbieter bemüht sich um den Schutz der personenbezogenen Daten der Nutzer und verarbeitet sie gemäß den geltenden Gesetzen.

@@ -17,6 +17,7 @@ import 'l10n/app_localizations.dart';
 import 'services/network_service.dart';
 import 'services/game_service.dart';
 import 'services/invite_link_service.dart';
+import 'widgets/draggable_chat_panel.dart';
 import 'services/session_service.dart';
 import 'services/locale_service.dart';
 import 'screens/game_screen.dart';
@@ -37,6 +38,10 @@ void main() async {
   await FirebaseAnalytics.instance.setAnalyticsCollectionEnabled(true);
   kakao.KakaoSdk.init(nativeAppKey: 'd9b4b3cfc86537fed9a80a659641ad30');
   await InviteLinkService.instance.initialize();
+  // Chat panel geometry, read before the first frame: loading it when the panel
+  // opens means one frame at the default size and a visible snap to the saved
+  // one.
+  await DraggableChatPanel.preloadGeometry();
   MobileAds.instance.updateRequestConfiguration(
     RequestConfiguration(testDeviceIds: ['45b45cb9d1be2ccb4c01a54eea9a0a64']),
   );

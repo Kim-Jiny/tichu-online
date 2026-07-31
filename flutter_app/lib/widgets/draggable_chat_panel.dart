@@ -44,11 +44,50 @@ class DraggableChatPanel extends StatefulWidget {
     this.persistKey = 'chat',
   });
 
+  /// Reads saved geometry into memory before any panel is built, so the first
+  /// open of a session doesn't paint the default size first.
+  static Future<void> preloadGeometry({String persistKey = 'chat'}) =>
+      _DraggableChatPanelState.preload(persistKey: persistKey);
+
   @override
   State<DraggableChatPanel> createState() => _DraggableChatPanelState();
 }
 
+/// Panel geometry as last left by the user.
+class _ChatGeometry {
+  final double left;
+  final double top;
+  final double width;
+  final double height;
+  final double opacity;
+
+  const _ChatGeometry(this.left, this.top, this.width, this.height, this.opacity);
+}
+
 class _DraggableChatPanelState extends State<DraggableChatPanel> {
+  /// Saved geometry, per persistKey, held for the life of the app.
+  ///
+  /// SharedPreferences is async, so reading it in initState paints one frame at
+  /// the default size before jumping to the saved one — reopening chat in a game
+  /// visibly snapped. The first read fills this map; every open after that
+  /// applies the size synchronously, and [preload] does the first read at
+  /// startup so even that one doesn't flash.
+  static final Map<String, _ChatGeometry> _cache = {};
+
+  /// Warms the cache before any panel is built. Safe to call more than once.
+  static Future<void> preload({String persistKey = 'chat'}) async {
+    if (_cache.containsKey(persistKey)) return;
+    final prefs = await SharedPreferences.getInstance();
+    final left = prefs.getDouble('chat_panel_${persistKey}_left');
+    final top = prefs.getDouble('chat_panel_${persistKey}_top');
+    final width = prefs.getDouble('chat_panel_${persistKey}_width');
+    final height = prefs.getDouble('chat_panel_${persistKey}_height');
+    final opacity = prefs.getDouble('chat_panel_${persistKey}_opacity') ?? 1.0;
+    if (left != null && top != null && width != null && height != null) {
+      _cache[persistKey] = _ChatGeometry(left, top, width, height, opacity);
+    }
+  }
+
   static const double _minWidth = 220;
   static const double _maxWidth = 360;
   static const double _minHeight = 160;
@@ -78,7 +117,18 @@ class _DraggableChatPanelState extends State<DraggableChatPanel> {
   @override
   void initState() {
     super.initState();
-    _loadGeometry();
+    // Cached from a previous open (or from preload at startup): apply before
+    // the first frame so the panel never appears at the wrong size.
+    final cached = _cache[widget.persistKey];
+    if (cached != null) {
+      _left = cached.left;
+      _top = cached.top;
+      _width = cached.width;
+      _height = cached.height;
+      _opacity = cached.opacity.clamp(_minOpacity, 1.0);
+    } else {
+      _loadGeometry();
+    }
   }
 
   Future<void> _loadGeometry() async {
@@ -105,9 +155,27 @@ class _DraggableChatPanelState extends State<DraggableChatPanel> {
         _height = height;
       }
     });
+    if (_left != null && _top != null && _width != null && _height != null) {
+      _cache[widget.persistKey] = _ChatGeometry(
+        _left!,
+        _top!,
+        _width!,
+        _height!,
+        _opacity,
+      );
+    }
   }
 
   Future<void> _saveGeometry() async {
+    if (_left != null && _top != null && _width != null && _height != null) {
+      _cache[widget.persistKey] = _ChatGeometry(
+        _left!,
+        _top!,
+        _width!,
+        _height!,
+        _opacity,
+      );
+    }
     final prefs = await SharedPreferences.getInstance();
     if (_left != null) await prefs.setDouble(_kLeft, _left!);
     if (_top != null) await prefs.setDouble(_kTop, _top!);
@@ -116,6 +184,16 @@ class _DraggableChatPanelState extends State<DraggableChatPanel> {
   }
 
   Future<void> _saveOpacity() async {
+    final geo = _cache[widget.persistKey];
+    if (geo != null) {
+      _cache[widget.persistKey] = _ChatGeometry(
+        geo.left,
+        geo.top,
+        geo.width,
+        geo.height,
+        _opacity,
+      );
+    }
     final prefs = await SharedPreferences.getInstance();
     await prefs.setDouble(_kOpacity, _opacity);
   }

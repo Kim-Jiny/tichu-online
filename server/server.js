@@ -1766,6 +1766,14 @@ function localizeTitleName(titleKey, fallbackName, locale) {
   await cleanupExpiredProfilePhotos();
   setInterval(cleanupExpiredProfilePhotos, 60 * 60 * 1000).unref();
 
+  // Say it out loud at boot. Screening silently not running is the one state
+  // that contradicts what the privacy policy and the store review notes claim,
+  // and 'skipped' looks exactly like 'clean' in the per-upload log line.
+  console.log(
+    `[profile-photo] SafeSearch screening: ${
+      visionSafeSearch.isEnabled() ? 'ENABLED' : 'DISABLED (uploads are NOT screened)'
+    }`,
+  );
   server.listen(PORT, () => {
     console.log(`Tichu server running on port ${PORT} (instance=${INSTANCE_NAME})`);
   });

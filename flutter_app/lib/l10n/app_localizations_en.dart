@@ -4428,4 +4428,7 @@ class L10nEn extends L10n {
 
   @override
   String get shopPreviewNickname => 'Nickname';
+
+  @override
+  String get shopButtonUnequip => 'Unequip';
 }

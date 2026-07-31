@@ -4325,4 +4325,7 @@ class L10nKo extends L10n {
 
   @override
   String get shopPreviewNickname => '닉네임';
+
+  @override
+  String get shopButtonUnequip => '해제';
 }

@@ -7904,6 +7904,12 @@ abstract class L10n {
   /// In en, this message translates to:
   /// **'Nickname'**
   String get shopPreviewNickname;
+
+  /// No description provided for @shopButtonUnequip.
+  ///
+  /// In en, this message translates to:
+  /// **'Unequip'**
+  String get shopButtonUnequip;
 }
 
 class _L10nDelegate extends LocalizationsDelegate<L10n> {

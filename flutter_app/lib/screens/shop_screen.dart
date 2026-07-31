@@ -1833,6 +1833,14 @@ class _ShopScreenState extends State<ShopScreen> {
                                           itemKey,
                                           () => game.useItem(itemKey),
                                         );
+                                      } else if (equipped) {
+                                        // Same button, other direction: what is
+                                        // on can be taken off. There was no way
+                                        // back to "no banner" once one was worn.
+                                        _runItemAction(
+                                          itemKey,
+                                          () => game.unequipCategory(category),
+                                        );
                                       } else {
                                         _runItemAction(
                                           itemKey,
@@ -1869,7 +1877,9 @@ class _ShopScreenState extends State<ShopScreen> {
                                   : Text(
                                       isConsumable
                                           ? l10n.shopButtonUse
-                                          : l10n.shopButtonEquip,
+                                          : (equipped
+                                                ? l10n.shopButtonUnequip
+                                                : l10n.shopButtonEquip),
                                       style: const TextStyle(
                                         fontSize: 12,
                                         fontWeight: FontWeight.w700,

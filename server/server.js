@@ -21,6 +21,7 @@ const {
   initDatabase, registerUser, loginUser, checkNickname, deleteUser,
   blockUser, unblockUser, getBlockedUsers, reportUser, getReportedNicknames,
   addFriend, getFriends, getPendingFriendRequests, setProfilePrivateHidePhoto,
+  unequipCategory,
   acceptFriendRequest, rejectFriendRequest, removeFriend,
   saveMatchResult, saveMatchResultWithStats, updateUserStats, getUserProfile, getRecentMatches, updateCardViewPref,
   submitInquiry, getUserInquiries, markInquiriesRead, getRankings,
@@ -2963,6 +2964,9 @@ async function handleMessage(ws, data) {
       break;
     case 'equip_item':
       await handleEquipItem(ws, data);
+      break;
+    case 'unequip_item':
+      await handleUnequipItem(ws, data);
       break;
     case 'use_item':
       await handleUseItem(ws, data);
@@ -8259,6 +8263,50 @@ async function handleEquipItem(ws, data) {
     }
   }
   sendTo(ws, { type: 'equip_result', ...result });
+}
+
+/**
+ * Take off an equipped cosmetic.
+ *
+ * Mirrors handleEquipItem's after-effects: the socket's copy of the key, the
+ * seat the user is already sitting in, and the room broadcast — otherwise the
+ * banner stays on the slot until they leave the room.
+ */
+async function handleUnequipItem(ws, data) {
+  if (!ws.nickname) {
+    sendTo(ws, { type: 'equip_result', success: false, message: t(ws.locale, 'login_required') });
+    return;
+  }
+  const category = data?.category?.toString() || '';
+  const result = await unequipCategory(ws.nickname, category);
+  if (result.success) {
+    if (category === 'title') {
+      ws.titleKey = null;
+      ws.titleName = null;
+    }
+    if (category === 'banner') ws.bannerKey = null;
+    if (ws.roomId) {
+      const room = lobby.getRoom(ws.roomId);
+      if (room) {
+        const p = room.players.find((p) => p !== null && p.id === ws.playerId);
+        if (p) {
+          if (category === 'title') {
+            p.titleKey = null;
+            p.titleName = null;
+          }
+          if (category === 'banner') p.bannerKey = null;
+        }
+        broadcastRoomState(ws.roomId);
+      }
+    }
+  }
+  sendTo(ws, {
+    type: 'equip_result',
+    unequipped: true,
+    category,
+    ...result,
+    message: result.success ? undefined : t(ws.locale, result.messageKey || 'db_equip_error'),
+  });
 }
 
 async function handleUseItem(ws, data) {

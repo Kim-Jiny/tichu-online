@@ -2904,6 +2904,47 @@ async function equipItem(nickname, itemKey, locale = 'ko') {
   }
 }
 
+/**
+ * Take off whatever is equipped in [category] (banner / title / theme / …).
+ *
+ * By category, not by item key: the point is "wear nothing", and the caller
+ * knows which slot it is clearing. Owning the item is not required — an expired
+ * banner still sitting in the equip row must be removable.
+ */
+async function unequipCategory(nickname, category) {
+  const fieldMap = {
+    banner: 'banner_key',
+    title: 'title_key',
+    theme: 'theme_key',
+    card_skin: 'card_skin_key',
+  };
+  const field = fieldMap[category];
+  if (!field) return { success: false, messageKey: 'db_item_not_equippable' };
+  const client = await pool.connect();
+  try {
+    await client.query(
+      `UPDATE tc_user_equips SET ${field} = NULL, updated_at = NOW()
+       WHERE nickname = $1`,
+      [nickname],
+    );
+    // is_active drives the inventory's "활성화됨" mark, so it has to come off
+    // with the equip itself or the row keeps claiming to be in use.
+    await client.query(
+      `UPDATE tc_user_items SET is_active = FALSE
+       WHERE nickname = $1 AND item_key IN (
+         SELECT item_key FROM tc_shop_items WHERE category = $2
+       )`,
+      [nickname, category],
+    );
+    return { success: true, category };
+  } catch (err) {
+    console.error('Unequip item error:', err);
+    return { success: false, messageKey: 'db_equip_error' };
+  } finally {
+    client.release();
+  }
+}
+
 // Use consumable item
 async function useItem(nickname, itemKey) {
   const client = await pool.connect();
@@ -7894,6 +7935,7 @@ module.exports = {
   addFriend,
   getFriends,
   setProfilePrivateHidePhoto,
+  unequipCategory,
   getPendingFriendRequests,
   acceptFriendRequest,
   rejectFriendRequest,

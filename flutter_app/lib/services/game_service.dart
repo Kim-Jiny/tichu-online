@@ -2020,13 +2020,26 @@ class GameService extends ChangeNotifier {
           }
         }
         if (type == 'equip_result' && data['success'] == true) {
-          final themeKey = data['themeKey'] as String?;
-          if (themeKey != null) {
-            equippedTheme = themeKey;
-          }
-          final titleKey = data['titleKey'] as String?;
-          if (titleKey != null) {
-            equippedTitle = titleKey;
+          if (data['unequipped'] == true) {
+            // Clearing a slot: the payload carries no key, so the category is
+            // what says which local copy to drop.
+            switch (data['category']) {
+              case 'theme':
+                equippedTheme = null;
+                break;
+              case 'title':
+                equippedTitle = null;
+                break;
+            }
+          } else {
+            final themeKey = data['themeKey'] as String?;
+            if (themeKey != null) {
+              equippedTheme = themeKey;
+            }
+            final titleKey = data['titleKey'] as String?;
+            if (titleKey != null) {
+              equippedTitle = titleKey;
+            }
           }
         }
         notifyListeners();
@@ -3460,6 +3473,11 @@ class GameService extends ChangeNotifier {
 
   void equipItem(String itemKey) {
     _network.send({'type': 'equip_item', 'itemKey': itemKey});
+  }
+
+  /// Take off whatever is equipped in this category (banner / title / theme).
+  void unequipCategory(String category) {
+    _network.send({'type': 'unequip_item', 'category': category});
   }
 
   void useItem(String itemKey) {

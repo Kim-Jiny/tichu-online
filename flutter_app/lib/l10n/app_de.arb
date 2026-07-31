@@ -1420,5 +1420,6 @@
   "profilePrivateHidePhoto": "Foto verbergen",
   "profilePrivateHidePhotoDesc": "Wenn aktiv, ist dein Profilbild auch im Warteraum und im Spiel für Nicht-Freunde verborgen",
   "shopPreviewLabel": "Vorschau",
-  "shopPreviewNickname": "Nickname"
+  "shopPreviewNickname": "Nickname",
+  "shopButtonUnequip": "Ablegen"
 }

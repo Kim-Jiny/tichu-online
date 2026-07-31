@@ -2005,5 +2005,6 @@
   "profilePrivateHidePhoto": "Hide photo",
   "profilePrivateHidePhotoDesc": "When on, your profile photo is hidden from non-friends in the waiting room and in game too",
   "shopPreviewLabel": "Preview",
-  "shopPreviewNickname": "Nickname"
+  "shopPreviewNickname": "Nickname",
+  "shopButtonUnequip": "Unequip"
 }

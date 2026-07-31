@@ -7,6 +7,7 @@ import '../models/shop_visual.dart';
 import '../services/game_service.dart';
 import '../services/ad_service.dart';
 import '../widgets/level_badge.dart';
+import '../widgets/playing_card.dart';
 import '../widgets/profile_avatar.dart';
 import '../widgets/title_chip.dart';
 import '../widgets/gold_icon.dart';
@@ -2955,6 +2956,9 @@ class _ShopScreenState extends State<ShopScreen> {
           ),
         );
       case 'mighty_trump_counter':
+        // SuitIcon, not a '♠' glyph: the app paints its suits so they look the
+        // same on every platform, and a system spade next to them is visibly a
+        // different shape.
         return frame(
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
@@ -2966,11 +2970,8 @@ class _ShopScreenState extends State<ShopScreen> {
             child: const Row(
               mainAxisSize: MainAxisSize.min,
               children: [
-                Text(
-                  '\u2660',
-                  style: TextStyle(fontSize: 15, color: Color(0xFF2E2E2E)),
-                ),
-                SizedBox(width: 4),
+                SuitIcon(suit: 'spade', size: 14),
+                SizedBox(width: 3),
                 Text(
                   '5',
                   style: TextStyle(
@@ -2989,7 +2990,11 @@ class _ShopScreenState extends State<ShopScreen> {
           Row(
             mainAxisSize: MainAxisSize.min,
             children: [
-              for (final label in const ['\u2660A', '\u2665K', '\u26603'])
+              for (final card in const [
+                ('spade', 'A'),
+                ('heart', 'K'),
+                ('spade', '3'),
+              ])
                 Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 3),
                   child: Container(
@@ -3000,16 +3005,22 @@ class _ShopScreenState extends State<ShopScreen> {
                       borderRadius: BorderRadius.circular(5),
                       border: Border.all(color: const Color(0xFFD8CEC8)),
                     ),
-                    alignment: Alignment.center,
-                    child: Text(
-                      label,
-                      style: TextStyle(
-                        fontSize: 12,
-                        fontWeight: FontWeight.bold,
-                        color: label.startsWith('\u2665')
-                            ? const Color(0xFFD32F2F)
-                            : const Color(0xFF2E2E2E),
-                      ),
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Text(
+                          card.$2,
+                          style: TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.bold,
+                            color:
+                                PlayingCard.suitColors[card.$1] ??
+                                const Color(0xFF2E2E2E),
+                          ),
+                        ),
+                        const SizedBox(height: 1),
+                        SuitIcon(suit: card.$1, size: 11),
+                      ],
                     ),
                   ),
                 ),

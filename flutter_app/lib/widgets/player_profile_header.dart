@@ -158,8 +158,13 @@ class PlayerProfileHeader extends StatelessWidget {
                 color: const Color(0xFFE57373),
                 tooltip: l10n.gameReport,
                 onTap: () {
+                  // Closing the profile dialog takes this widget's context
+                  // down with it, so the report dialog has to be opened on the
+                  // navigator that outlives it — same reason the friend and
+                  // block buttons grab their messenger before closing.
+                  final navigator = Navigator.of(context, rootNavigator: true);
                   onCloseDialog();
-                  showProfileReportDialog(context, nickname, game);
+                  showProfileReportDialog(navigator.context, nickname, game);
                 },
               ),
             ],

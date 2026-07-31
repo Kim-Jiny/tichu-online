@@ -1365,6 +1365,9 @@ async function deleteUser(nickname) {
     await client.query('DELETE FROM tc_dm_messages WHERE sender_nickname = $1 OR receiver_nickname = $1', [nickname]);
     await client.query('DELETE FROM tc_user_equips WHERE nickname = $1', [nickname]);
     await client.query('DELETE FROM tc_user_items WHERE nickname = $1', [nickname]);
+    // The nickname becomes available again, and these rows are keyed by it —
+    // whoever takes it next would inherit this account's switched-off passes.
+    await client.query('DELETE FROM tc_user_feature_off WHERE nickname = $1', [nickname]);
     await client.query('DELETE FROM tc_ad_rewards WHERE nickname = $1', [nickname]);
     await client.query('DELETE FROM tc_season_rewards WHERE nickname = $1', [nickname]);
 
@@ -1979,11 +1982,14 @@ async function getUserProfile(nickname, locale = 'ko') {
       ? Math.round((user.season_wins / user.season_games) * 100)
       : 0;
 
-    // Report count in last 6 months
+    // Report count in last 6 months — and never from before this account
+    // existed, since reports outlive a deleted account under its old nickname
+    // and the next owner of that nickname must not inherit the record.
     const reportRes = await client.query(
       `SELECT COUNT(*) FROM tc_reports
-       WHERE reported_nickname = $1 AND created_at >= NOW() - INTERVAL '6 months'`,
-      [nickname]
+       WHERE reported_nickname = $1 AND created_at >= NOW() - INTERVAL '6 months'
+         AND created_at >= $2`,
+      [nickname, user.created_at]
     );
     const reportCount = parseInt(reportRes.rows[0].count, 10) || 0;
 
@@ -2283,13 +2289,25 @@ async function getRecentMatches(nickname, limit = 5) {
     return map;
   };
   try {
+    // Match rows are keyed by nickname, and a nickname comes free again when
+    // its owner deletes the account (the soft delete renames the account row
+    // but keeps the history under the original name, on purpose). Whoever
+    // registers that nickname next would otherwise open their profile and find
+    // a stranger's games sitting in it. Bound every lookup to this account's
+    // own lifetime; a nickname with no live account (someone inspecting a
+    // deleted user) keeps the old, unbounded behaviour.
+    const since = (await client.query(
+      `SELECT created_at FROM tc_users WHERE nickname = $1`, [nickname]
+    )).rows[0]?.created_at || new Date(0);
+
     // Tichu matches
     const tichuResult = await client.query(
       `SELECT *, 'tichu'::text as game_type FROM tc_match_history
-       WHERE player_a1 = $1 OR player_a2 = $1 OR player_b1 = $1 OR player_b2 = $1
+       WHERE (player_a1 = $1 OR player_a2 = $1 OR player_b1 = $1 OR player_b2 = $1)
+         AND created_at >= $3
        ORDER BY created_at DESC
        LIMIT $2`,
-      [nickname, limit]
+      [nickname, limit, since]
     );
     const tichuMatches = tichuResult.rows.map(row => {
       const isTeamA = row.player_a1 === nickname || row.player_a2 === nickname;
@@ -2321,9 +2339,10 @@ async function getRecentMatches(nickname, limit = 5) {
       `SELECT h.*, p.score as my_score, p.rank as my_rank, p.is_winner as my_winner
        FROM tc_sk_match_history h
        JOIN tc_sk_match_players p ON p.match_id = h.id AND p.nickname = $1
+       WHERE h.created_at >= $3
        ORDER BY h.created_at DESC
        LIMIT $2`,
-      [nickname, limit]
+      [nickname, limit, since]
     );
     const skPlayers = await fetchPlayersByMatch(
       'tc_sk_match_players', skResult.rows.map(r => r.id));
@@ -2354,9 +2373,10 @@ async function getRecentMatches(nickname, limit = 5) {
       `SELECT h.*, p.score as my_score, p.rank as my_rank, p.is_winner as my_winner
        FROM tc_ll_match_history h
        JOIN tc_ll_match_players p ON p.match_id = h.id AND p.nickname = $1
+       WHERE h.created_at >= $3
        ORDER BY h.created_at DESC
        LIMIT $2`,
-      [nickname, limit]
+      [nickname, limit, since]
     );
     const llPlayers = await fetchPlayersByMatch(
       'tc_ll_match_players', llResult.rows.map(r => r.id));
@@ -2387,9 +2407,10 @@ async function getRecentMatches(nickname, limit = 5) {
       `SELECT h.*, p.score as my_score, p.rank as my_rank, p.is_winner as my_winner
        FROM tc_mighty_match_history h
        JOIN tc_mighty_match_players p ON p.match_id = h.id AND p.nickname = $1
+       WHERE h.created_at >= $3
        ORDER BY h.created_at DESC
        LIMIT $2`,
-      [nickname, limit]
+      [nickname, limit, since]
     );
     const mightyPlayers = await fetchPlayersByMatch(
       'tc_mighty_match_players', mightyResult.rows.map(r => r.id));
@@ -2464,6 +2485,12 @@ async function getWallet(nickname) {
 async function getGoldHistory(nickname, limit = 30) {
   const client = await pool.connect();
   try {
+    // Same nickname-recycling guard as getRecentMatches: match rows and
+    // tc_gold_history survive an account deletion under the original nickname,
+    // so the next owner of that nickname must not inherit the ledger.
+    const since = (await client.query(
+      `SELECT created_at FROM tc_users WHERE nickname = $1`, [nickname]
+    )).rows[0]?.created_at || new Date(0);
     const result = await client.query(
       `
       SELECT *
@@ -2581,10 +2608,11 @@ async function getGoldHistory(nickname, limit = 30) {
         WHERE gh.nickname = $1
       ) history
       WHERE history.gold_delta <> 0
+        AND history.created_at >= $3
       ORDER BY history.created_at DESC
       LIMIT $2
       `,
-      [nickname, limit]
+      [nickname, limit, since]
     );
 
     return {
@@ -3332,6 +3360,13 @@ async function changeNickname(oldNickname, newNickname) {
     // Update nickname in tc_user_equips
     await client.query(
       `UPDATE tc_user_equips SET nickname = $2 WHERE nickname = $1`,
+      [oldNickname, trimmed]
+    );
+
+    // Update nickname in tc_user_feature_off. Left behind, a switched-off pass
+    // would quietly switch itself back on the moment someone renames.
+    await client.query(
+      `UPDATE tc_user_feature_off SET nickname = $2 WHERE nickname = $1`,
       [oldNickname, trimmed]
     );
 

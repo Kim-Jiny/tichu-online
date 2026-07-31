@@ -831,4 +831,3 @@ class SpectatorStatusChip extends StatelessWidget {
     );
   }
 }
-

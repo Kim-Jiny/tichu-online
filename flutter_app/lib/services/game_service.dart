@@ -636,6 +636,12 @@ class GameService extends ChangeNotifier {
 
     switch (type) {
       case 'login_success':
+        // Logging in as someone else: everything this instance is holding was
+        // fetched for the previous account. reset() clears it on logout, but
+        // this does not depend on logout having run — a leftover profile or
+        // gold ledger from another account is the kind of bug a player reports
+        // as "I made a new account and my old record is still there".
+        _forgetPreviousAccount(data['nickname'] as String? ?? '');
         playerId = data['playerId'] ?? '';
         playerName = data['nickname'] ?? '';
         // Server-issued immutable account-binding token (bindingUuid of the
@@ -1705,14 +1711,14 @@ class GameService extends ChangeNotifier {
         // stranger up.
         if (data['nickname'] == playerName) {
           final p = data['profile'];
-          if (p is Map && p['profilePrivateHidePhoto'] != null) {
-            profilePrivateHidePhoto = p['profilePrivateHidePhoto'] == true;
-          }
+          // Assigned, not merged: the server always sends the full set for
+          // one's own profile, so a null here means "you don't have one" —
+          // keeping the previous value would carry another account's title
+          // over after a logout, which is exactly what used to happen.
           if (p is Map) {
-            equippedBanner = p['bannerKey'] as String? ?? equippedBanner;
-            equippedTitleName = p['titleName'] as String? ?? equippedTitleName;
-          }
-          if (p is Map && p['customTitleText'] != null) {
+            profilePrivateHidePhoto = p['profilePrivateHidePhoto'] == true;
+            equippedBanner = p['bannerKey'] as String?;
+            equippedTitleName = p['titleName'] as String?;
             myCustomTitleText = p['customTitleText'] as String?;
             myCustomTitleColor = p['customTitleColor'] as String?;
           }
@@ -2628,6 +2634,44 @@ class GameService extends ChangeNotifier {
     nicknameCheckMessage = null;
   }
 
+  /// Drops everything cached for whoever was logged in before [nickname].
+  ///
+  /// No-op when it is the same account (a reconnect or a session restore), so
+  /// coming back from a dropped connection does not blank the friends list.
+  void _forgetPreviousAccount(String nickname) {
+    if (playerName.isEmpty || playerName == nickname) return;
+    _profiles.clear();
+    goldHistory = [];
+    inventoryItems = [];
+    inventoryLoading = false;
+    shopItems = [];
+    shopLoading = false;
+    friends = [];
+    friendsData = [];
+    pendingFriendRequests = [];
+    pendingFriendRequestCount = 0;
+    sentFriendRequests = {};
+    blockedUsers = {};
+    dmConversations = [];
+    dmMessages = {};
+    totalUnreadDmCount = 0;
+    searchResults = [];
+    roomInvites = [];
+    inquiries = [];
+    myRank = null;
+    myRankData = null;
+    attendanceState = null;
+    adRewardRemaining = 0;
+    gold = 0;
+    leaveCount = 0;
+    equippedTitleName = null;
+    equippedBanner = null;
+    myCustomTitleText = null;
+    myCustomTitleColor = null;
+    profilePrivateHidePhoto = false;
+    isAdminUser = false;
+  }
+
   void reset() {
     _dogClearTimer?.cancel();
     _dogClearTimer = null;
@@ -2646,7 +2690,20 @@ class GameService extends ChangeNotifier {
     playerName = '';
     equippedTheme = null;
     equippedTitle = null;
+    equippedTitleName = null;
+    equippedBanner = null;
     myPhotoUrl = null;
+    myCustomTitleText = null;
+    myCustomTitleColor = null;
+    customTitleMessage = null;
+    customTitleSuccess = null;
+    profilePrivateHidePhoto = false;
+    attendanceState = null;
+    attendanceLoading = false;
+    attendanceError = null;
+    attendanceClaiming = false;
+    adRewardRemaining = 0;
+    iapBindingToken = null;
     currentRoomId = '';
     currentRoomName = '';
     roomPlayers = List.filled(4, null);
@@ -2672,6 +2729,9 @@ class GameService extends ChangeNotifier {
     spectators = [];
     gameState = null;
     skGameState = null;
+    llGameState = null;
+    mightyGameState = null;
+    _prevMightyGameState = null;
     errorMessage = null;
     chatMessages = [];
     blockedUsers = {};

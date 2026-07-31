@@ -4,7 +4,7 @@ const logBuffer = require('./logBuffer');
 const {
   verifyAdmin, getInquiries, getInquiryById, resolveInquiry,
   getReports, getReportGroup, updateReportGroupStatus,
-  getUsers, getUserDetail, listActiveProfilePhotos, getAdminGoldHistory, getAdminPurchaseHistory, deleteUser, getDashboardStats, getDashboardActivityTopPlayers, getAdminRecentMatches, setChatBan, setAdminMemo, adminClearProfilePhoto, getRecentMatches, adminAdjustGold, adminAdjustExp, setUserAdmin,
+  getUsers, getUserDetail, clearCustomTitle, listActiveProfilePhotos, getAdminGoldHistory, getAdminPurchaseHistory, deleteUser, getDashboardStats, getDashboardActivityTopPlayers, getAdminRecentMatches, setChatBan, setAdminMemo, adminClearProfilePhoto, getRecentMatches, adminAdjustGold, adminAdjustExp, setUserAdmin,
   getAttendanceDashboardStats, listAttendanceLog, getAttendanceBreakdown, getAttendanceForNickname,
   getDetailedAdminStats,
   getAllShopItemsAdmin, addShopItem, updateShopItem, deleteShopItem, getShopItemById,
@@ -18,6 +18,7 @@ const {
 } = require('./db/database');
 const { refundGoogleOrder } = require('./iap/GoogleVerify');
 const minioClient = require('./storage/minioClient');
+const { TITLE_COLORS: CUSTOM_TITLE_HEX } = require('./moderation/customTitle');
 const fillerRooms = require('./lobby/fillerRooms');
 const { isPhotoKeyReported } = require('./db/database');
 
@@ -3673,6 +3674,33 @@ async function handleAdminRoute(req, res, url, pathname, method, lobby, wss, mai
       </div>`;
       })()}
 
+      ${(() => {
+        const text = user.custom_title_text;
+        const worn = (user.title_key || '').startsWith('custom:');
+        if (!text && !worn) return '';
+        const color = (user.title_key || '').startsWith('custom:')
+          ? user.title_key.slice('custom:'.length)
+          : (user.custom_title_color || '');
+        return `<div class="card">
+        <h3>커스텀 칭호</h3>
+        <div style="display:flex;align-items:center;gap:16px;flex-wrap:wrap">
+          <div style="font-size:20px;font-weight:800;color:${escapeHtml(CUSTOM_TITLE_HEX[color] || '#5A4038')}">
+            ${escapeHtml(text || '(없음)')}
+          </div>
+          <div style="font-size:13px;color:#666">
+            <div>상태: ${worn
+              ? '<span class="badge" style="background:#e8f5e9;color:#2e7d32">착용 중</span>'
+              : '<span class="badge" style="background:#eee;color:#666">미착용</span>'}</div>
+            <div style="margin-top:4px">색상: ${escapeHtml(color || '-')}</div>
+          </div>
+          <form method="POST" action="/tc-backstage/users/${encodeURIComponent(user.nickname)}/clear-title" style="margin-left:auto"
+            onsubmit="return confirm('${jsEscape(user.nickname)} 유저의 커스텀 칭호를 삭제하시겠습니까? (남은 이용권은 유지되어 다시 작성 가능)')">
+            <button type="submit" class="btn btn-secondary" style="color:#c62828;border-color:#f0c0c0">칭호 삭제</button>
+          </form>
+        </div>
+      </div>`;
+      })()}
+
       <div class="card">
         <h3>채팅 금지</h3>
         <form method="POST" action="/tc-backstage/users/${encodeURIComponent(user.nickname)}/chat-ban" style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
@@ -3805,6 +3833,41 @@ async function handleAdminRoute(req, res, url, pathname, method, lobby, wss, mai
       }
     }
     // Only same-origin paths, so ?back= can't be turned into an open redirect.
+    const back = url.searchParams.get('back');
+    const dest = back && back.startsWith('/tc-backstage/')
+      ? back
+      : `/tc-backstage/users/${encodeURIComponent(nickname)}`;
+    return redirect(res, dest);
+  }
+
+  // Clear a user-written title. The entitlement is left alone on purpose —
+  // this is "that text has to go", not a refund; they can write another one,
+  // and repeat offenders are handled by ban/chat-ban like anywhere else.
+  const clearTitleMatch = pathname.match(/^\/tc-backstage\/users\/([^/]+)\/clear-title$/);
+  if (clearTitleMatch && method === 'POST') {
+    const nickname = decodeURIComponent(clearTitleMatch[1]);
+    await clearCustomTitle(nickname);
+    // Everyone in a room with them still has the old title on screen; clear the
+    // live objects and repaint, same as the photo path.
+    if (wss && lobby) {
+      for (const client of wss.clients) {
+        if (client.nickname !== nickname) continue;
+        client.titleKey = null;
+        client.titleName = null;
+        const room = client.roomId ? lobby.getRoom(client.roomId) : null;
+        const seat = room?.players?.find((p) => p && p.id === client.playerId);
+        if (seat) {
+          seat.titleKey = null;
+          seat.titleName = null;
+        }
+        if (room && maintenanceFns.broadcastRoomState) {
+          maintenanceFns.broadcastRoomState(client.roomId);
+          if (room.game && maintenanceFns.sendGameStateToAll) {
+            maintenanceFns.sendGameStateToAll(client.roomId);
+          }
+        }
+      }
+    }
     const back = url.searchParams.get('back');
     const dest = back && back.startsWith('/tc-backstage/')
       ? back

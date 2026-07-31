@@ -4123,12 +4123,19 @@ async function getUserDetail(nickname) {
               fcm_token, push_enabled, push_admin_inquiry, push_admin_report, is_admin, is_deleted, deleted_at, device_platform, device_model, os_version, app_version, last_ip, locale,
               sk_total_games, sk_wins, sk_losses, ll_total_games, ll_wins, ll_losses,
               mighty_total_games, mighty_wins, mighty_losses, mighty_rating,
-              profile_photo_key, profile_photo_status, profile_photo_expires_at
+              profile_photo_key, profile_photo_status, profile_photo_expires_at,
+              custom_title_text, custom_title_color
        FROM tc_users WHERE nickname = $1`,
       [nickname]
     );
     if (userResult.rows.length === 0) return null;
     const user = userResult.rows[0];
+
+    const equip = await client.query(
+      `SELECT title_key FROM tc_user_equips WHERE nickname = $1`,
+      [nickname],
+    );
+    user.title_key = equip.rows[0]?.title_key || null;
 
     const reportCount = await client.query(
       'SELECT COUNT(*) FROM tc_reports WHERE reported_nickname = $1',

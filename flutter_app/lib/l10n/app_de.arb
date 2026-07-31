@@ -1431,5 +1431,7 @@
   "customTitleButton": "Titel schreiben",
   "customTitleSaved": "Titel übernommen",
   "gameReportReasonTitle": "Unangemessener Titel",
-  "settingsGameSection": "Spiel"
+  "settingsGameSection": "Spiel",
+  "settingsSettingsGroup": "Einstellungen",
+  "settingsInfoGroup": "Info"
 }

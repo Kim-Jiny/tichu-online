@@ -7970,6 +7970,18 @@ abstract class L10n {
   /// In en, this message translates to:
   /// **'Game'**
   String get settingsGameSection;
+
+  /// No description provided for @settingsSettingsGroup.
+  ///
+  /// In en, this message translates to:
+  /// **'Settings'**
+  String get settingsSettingsGroup;
+
+  /// No description provided for @settingsInfoGroup.
+  ///
+  /// In en, this message translates to:
+  /// **'About'**
+  String get settingsInfoGroup;
 }
 
 class _L10nDelegate extends LocalizationsDelegate<L10n> {

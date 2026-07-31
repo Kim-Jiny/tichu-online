@@ -259,11 +259,20 @@ class PlayerProfileHeader extends StatelessWidget {
 
   Widget _friendButton(BuildContext context, L10n l10n) {
     if (game.friends.contains(nickname)) {
+      // Already friends: the button stays, in blue, and says so when tapped —
+      // a dead grey chip reads as "this is broken", and the three actions only
+      // fit on one line with one-word labels.
       return _iconButton(
         icon: Icons.people_alt,
-        color: const Color(0xFFBDBDBD),
+        color: const Color(0xFF4FC3F7),
         tooltip: l10n.gameAlreadyFriend,
-        onTap: () {},
+        onTap: () {
+          final messenger = ScaffoldMessenger.of(context);
+          messenger.hideCurrentSnackBar();
+          messenger.showSnackBar(
+            SnackBar(content: Text(l10n.gameAlreadyFriendToast)),
+          );
+        },
       );
     }
     if (game.sentFriendRequests.contains(nickname)) {

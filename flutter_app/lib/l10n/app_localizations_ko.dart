@@ -1457,13 +1457,16 @@ class L10nKo extends L10n {
   String get gamePlayerProfile => '플레이어 프로필';
 
   @override
-  String get gameAlreadyFriend => '이미 친구';
+  String get gameAlreadyFriend => '친구';
+
+  @override
+  String get gameAlreadyFriendToast => '이미 친구입니다';
 
   @override
   String get gameRequestPending => '요청 중';
 
   @override
-  String get gameAddFriend => '친구 추가';
+  String get gameAddFriend => '친구';
 
   @override
   String get gameFriendRequestSent => '친구 요청을 보냈습니다';

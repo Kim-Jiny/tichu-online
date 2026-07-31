@@ -1489,13 +1489,16 @@ class L10nEn extends L10n {
   String get gamePlayerProfile => 'Player Profile';
 
   @override
-  String get gameAlreadyFriend => 'Already friends';
+  String get gameAlreadyFriend => 'Friend';
+
+  @override
+  String get gameAlreadyFriendToast => 'You are already friends';
 
   @override
   String get gameRequestPending => 'Request pending';
 
   @override
-  String get gameAddFriend => 'Add Friend';
+  String get gameAddFriend => 'Friend';
 
   @override
   String get gameFriendRequestSent => 'Friend request sent';

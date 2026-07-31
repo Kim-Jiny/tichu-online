@@ -2808,8 +2808,14 @@ abstract class L10n {
   /// No description provided for @gameAlreadyFriend.
   ///
   /// In en, this message translates to:
-  /// **'Already friends'**
+  /// **'Friend'**
   String get gameAlreadyFriend;
+
+  /// No description provided for @gameAlreadyFriendToast.
+  ///
+  /// In en, this message translates to:
+  /// **'You are already friends'**
+  String get gameAlreadyFriendToast;
 
   /// No description provided for @gameRequestPending.
   ///
@@ -2820,7 +2826,7 @@ abstract class L10n {
   /// No description provided for @gameAddFriend.
   ///
   /// In en, this message translates to:
-  /// **'Add Friend'**
+  /// **'Friend'**
   String get gameAddFriend;
 
   /// No description provided for @gameFriendRequestSent.

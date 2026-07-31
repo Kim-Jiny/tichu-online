@@ -1499,13 +1499,16 @@ class L10nDe extends L10n {
   String get gamePlayerProfile => 'Spielerprofil';
 
   @override
-  String get gameAlreadyFriend => 'Bereits befreundet';
+  String get gameAlreadyFriend => 'Freund';
+
+  @override
+  String get gameAlreadyFriendToast => 'Ihr seid bereits befreundet';
 
   @override
   String get gameRequestPending => 'Anfrage ausstehend';
 
   @override
-  String get gameAddFriend => 'Freund hinzufügen';
+  String get gameAddFriend => 'Freund';
 
   @override
   String get gameFriendRequestSent => 'Freundschaftsanfrage gesendet';

@@ -4321,6 +4321,9 @@ class L10nKo extends L10n {
   String get profilePrivateTitle => '프로필 비공개 유저입니다';
 
   @override
+  String get profilePrivateBadge => '비공개';
+
+  @override
   String get profilePrivateBody => '친구에게만 전적을 공개하고 있어요';
 
   @override

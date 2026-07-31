@@ -3,7 +3,8 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../l10n/app_localizations.dart';
 import '../services/game_service.dart';
-import 'ranking_screen.dart';
+import '../widgets/player_profile_dialog.dart';
+import '../widgets/profile_identity_cell.dart';
 
 class FriendsScreen extends StatefulWidget {
   const FriendsScreen({
@@ -465,10 +466,12 @@ class _FriendsScreenState extends State<FriendsScreen> with TickerProviderStateM
                     const SizedBox(width: 4),
                     // Profile
                     _iconTapTarget(
-                      onTap: () => Navigator.push(
-                        context,
-                        MaterialPageRoute(builder: (_) => ProfileViewScreen(nickname: nickname)),
-                      ),
+                      // Same popup the lobby, the game board and search use —
+                      // the standalone profile screen predates the photo, the
+                      // custom title and the privacy pass, and shows none of
+                      // them.
+                      onTap: () =>
+                          showPlayerProfileDialog(context, nickname, game),
                       child: Container(
                         padding: const EdgeInsets.all(6),
                         decoration: BoxDecoration(
@@ -630,43 +633,20 @@ class _FriendsScreenState extends State<FriendsScreen> with TickerProviderStateM
                         final nickname = user['nickname'] as String? ?? '';
                         final friendStatus = user['friendStatus'] as String? ?? 'none';
 
-                        return GestureDetector(
-                          onTap: () => Navigator.push(
-                            context,
-                            MaterialPageRoute(builder: (_) => ProfileViewScreen(nickname: nickname)),
-                          ),
-                          child: Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-                          decoration: BoxDecoration(
-                            color: Colors.white.withValues(alpha: 0.85),
-                            borderRadius: BorderRadius.circular(14),
-                          ),
-                          child: Row(
-                            children: [
-                              CircleAvatar(
-                                radius: 16,
-                                backgroundColor: const Color(0xFFCE93D8),
-                                child: Text(
-                                  nickname.isNotEmpty ? nickname[0] : '?',
-                                  style: const TextStyle(fontSize: 14, color: Colors.white, fontWeight: FontWeight.bold),
-                                ),
-                              ),
-                              const SizedBox(width: 12),
-                              Expanded(
-                                child: Text(
-                                  nickname,
-                                  style: const TextStyle(
-                                    fontSize: 15,
-                                    fontWeight: FontWeight.w600,
-                                    color: Color(0xFF5A4038),
-                                  ),
-                                  overflow: TextOverflow.ellipsis,
-                                ),
-                              ),
+                        return ProfileIdentityCell(
+                          game: game,
+                          nickname: nickname,
+                          photoUrl: user['photoUrl'] as String?,
+                          bannerKey: user['bannerKey'] as String?,
+                          titleKey: user['titleKey'] as String?,
+                          titleName: user['titleName'] as String?,
+                          level: user['level'] as int?,
+                          isPrivate: user['isPrivate'] == true,
+                          trailing:
                               _buildFriendStatusButton(nickname, friendStatus, game),
-                            ],
-                          ),
-                        ),
+                          onTap: nickname.isEmpty
+                              ? null
+                              : () => showPlayerProfileDialog(context, nickname, game),
                         );
                       },
                     ),

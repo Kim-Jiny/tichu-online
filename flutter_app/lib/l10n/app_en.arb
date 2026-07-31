@@ -2519,6 +2519,7 @@
     }
   },
   "profilePrivateTitle": "This profile is private",
+  "profilePrivateBadge": "Private",
   "profilePrivateBody": "They show their records to friends only",
   "profilePrivateHidePhoto": "Hide photo",
   "profilePrivateHidePhotoDesc": "When on, your profile photo is hidden from non-friends in the waiting room and in game too",

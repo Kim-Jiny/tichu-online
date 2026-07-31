@@ -4424,6 +4424,9 @@ class L10nEn extends L10n {
   String get profilePrivateTitle => 'This profile is private';
 
   @override
+  String get profilePrivateBadge => 'Private';
+
+  @override
   String get profilePrivateBody => 'They show their records to friends only';
 
   @override

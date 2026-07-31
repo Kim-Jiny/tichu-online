@@ -7875,6 +7875,12 @@ abstract class L10n {
   /// **'This profile is private'**
   String get profilePrivateTitle;
 
+  /// No description provided for @profilePrivateBadge.
+  ///
+  /// In en, this message translates to:
+  /// **'Private'**
+  String get profilePrivateBadge;
+
   /// No description provided for @profilePrivateBody.
   ///
   /// In en, this message translates to:

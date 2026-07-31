@@ -8978,7 +8978,7 @@ async function handleSearchUsers(ws, data) {
     sendTo(ws, { type: 'search_users_result', users: [] });
     return;
   }
-  const nicknames = await searchUsers(query, ws.nickname);
+  const found = await searchUsers(query, ws.nickname, ws.locale || 'ko');
   const friendsList = await getFriends(ws.nickname);
   const pendingIncoming = await getPendingFriendRequests(ws.nickname);
   // Check outgoing pending: query tc_friends where I sent and status=pending
@@ -8991,12 +8991,28 @@ async function handleSearchUsers(ws, data) {
     );
     pendingOutgoing = res.rows.map(r => r.friend_nickname);
   } catch (_) {}
-  const users = nicknames.map(nick => {
+  const users = found.map((u) => {
+    const nick = u.nickname;
     let friendStatus = 'none';
     if (friendsList.includes(nick)) friendStatus = 'friend';
     else if (pendingIncoming.includes(nick)) friendStatus = 'pending_incoming';
     else if (pendingOutgoing.includes(nick)) friendStatus = 'pending_outgoing';
-    return { nickname: nick, friendStatus };
+    // A search hit is a profile, so it obeys the same rules the profile popup
+    // does: a private account shows who they are (you still have to be able to
+    // find and add them) but not how they have been doing, and anything this
+    // viewer has reported stays gone.
+    const hidden = profileHiddenFrom(ws, nick);
+    const hideTitle = titleReported(ws, nick, u.titleName);
+    return {
+      nickname: nick,
+      friendStatus,
+      isPrivate: hidden,
+      level: hidden ? null : u.level,
+      bannerKey: u.bannerKey,
+      titleKey: hideTitle ? null : u.titleKey,
+      titleName: hideTitle ? null : u.titleName,
+      photoUrl: visiblePhoto(ws, nick, profilePhotoUrlFrom(u)),
+    };
   });
   sendTo(ws, { type: 'search_users_result', users });
 }

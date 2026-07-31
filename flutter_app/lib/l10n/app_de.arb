@@ -1414,6 +1414,7 @@
   "shopAdWatchProgress": "Heute {current}/{max}",
   "shopAdRewardDoneSubtitle": "Morgen wieder verfügbar",
   "profilePrivateTitle": "Dieses Profil ist privat",
+  "profilePrivateBadge": "Privat",
   "profilePrivateBody": "Statistiken werden nur Freunden gezeigt",
   "profilePrivateOwnTitle": "Privates Profil aktiv",
   "profilePrivateOwnUntil": "bis {date}",

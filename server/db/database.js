@@ -6171,17 +6171,56 @@ async function updateConfig(key, value) {
 
 // === DM Functions ===
 
-async function searchUsers(query, requesterNickname) {
+/**
+ * Friend search results, with enough of each account to draw them as the
+ * player they are — photo, banner, title, level — instead of a name on a grey
+ * circle. One query for all 20 rather than a profile fetch per hit; the
+ * per-viewer filtering (privacy pass, reported photos and titles) happens in
+ * the caller, which is the only place that knows who is looking.
+ */
+async function searchUsers(query, requesterNickname, locale = 'ko') {
   const client = await pool.connect();
   try {
+    const titleCol = locale === 'en' ? 'name_en'
+      : locale === 'de' ? 'name_de'
+      : 'name_ko';
     const result = await client.query(
-      `SELECT nickname FROM tc_users
-       WHERE nickname ILIKE $1 AND nickname != $2 AND is_deleted IS NOT TRUE
-       ORDER BY nickname
+      `SELECT u.nickname, u.level,
+              u.profile_photo_key, u.profile_photo_status, u.profile_photo_expires_at,
+              u.custom_title_text,
+              e.banner_key, e.title_key,
+              si.${titleCol} AS title_name,
+              EXISTS (
+                SELECT 1 FROM tc_user_items ui
+                JOIN tc_shop_items s2 ON s2.item_key = ui.item_key
+                WHERE ui.nickname = u.nickname AND s2.effect_type = 'custom_title'
+                  AND (ui.expires_at IS NULL OR ui.expires_at >= NOW())
+              ) AS has_custom_title
+       FROM tc_users u
+       LEFT JOIN tc_user_equips e ON e.nickname = u.nickname
+       LEFT JOIN tc_shop_items si ON si.item_key = e.title_key
+       WHERE u.nickname ILIKE $1 AND u.nickname != $2 AND u.is_deleted IS NOT TRUE
+       ORDER BY u.nickname
        LIMIT 20`,
       [`%${query}%`, requesterNickname]
     );
-    return result.rows.map(r => r.nickname);
+    return result.rows.map((r) => {
+      // Same rule as getUserProfile: a `custom:` title only shows while the
+      // pass is live and something is written, and it never falls back to a
+      // catalog name.
+      const wearingCustom = (r.title_key || '').startsWith('custom:');
+      const customActive = wearingCustom && r.has_custom_title && !!r.custom_title_text;
+      return {
+        nickname: r.nickname,
+        level: r.level,
+        bannerKey: r.banner_key || null,
+        titleKey: wearingCustom && !customActive ? null : (r.title_key || null),
+        titleName: customActive ? r.custom_title_text : (r.title_name || null),
+        profilePhotoKey: r.profile_photo_key || null,
+        profilePhotoStatus: r.profile_photo_status || 'none',
+        profilePhotoExpiresAt: r.profile_photo_expires_at || null,
+      };
+    });
   } catch (err) {
     console.error('Search users error:', err);
     return [];

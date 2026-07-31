@@ -4460,6 +4460,9 @@ class L10nDe extends L10n {
   String get profilePrivateTitle => 'Dieses Profil ist privat';
 
   @override
+  String get profilePrivateBadge => 'Privat';
+
+  @override
   String get profilePrivateBody => 'Statistiken werden nur Freunden gezeigt';
 
   @override

@@ -12,8 +12,7 @@ import '../widgets/level_badge.dart';
 import '../widgets/profile_avatar.dart';
 import '../widgets/bot_avatar.dart';
 import '../widgets/chat_bubble.dart';
-import '../widgets/player_profile_body.dart';
-import '../widgets/player_profile_header.dart';
+import '../widgets/player_profile_dialog.dart';
 import '../widgets/spectator_controls.dart';
 import '../l10n/app_localizations.dart';
 import '../l10n/l10n_helpers.dart';
@@ -3916,90 +3915,15 @@ class _LLGameScreenState extends State<LLGameScreen> {
     GameService game, {
     bool isBot = false,
   }) {
-    // A bot has no account, so this would only ever come back empty and the
-    // popup would render its "profile not found" error.
-    if (!isBot) game.requestProfile(nickname);
-
-    showDialog(
-      context: context,
-      builder: (ctx) {
-        return Consumer<GameService>(
-          builder: (ctx, game, _) {
-            // Auto-dismiss when the game ends so the round/result screen isn't hidden behind the dialog.
-            final ll = game.llGameState;
-            if (ll == null || ll.phase == 'game_end') {
-              WidgetsBinding.instance.addPostFrameCallback((_) {
-                if (!ctx.mounted) return;
-                final route = ModalRoute.of(ctx);
-                if (route != null && route.isCurrent) Navigator.of(ctx).pop();
-              });
-            }
-            final profile = game.profileFor(nickname);
-            final isLoading =
-                profile == null || profile['nickname'] != nickname;
-
-            return AlertDialog(
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(24),
-              ),
-              titlePadding: const EdgeInsets.fromLTRB(18, 18, 18, 0),
-              contentPadding: const EdgeInsets.fromLTRB(18, 14, 18, 10),
-              title: Container(
-                padding: const EdgeInsets.all(14),
-                decoration: BoxDecoration(
-                  color: Colors.white.withValues(alpha: 0.92),
-                  borderRadius: BorderRadius.circular(18),
-                  border: Border.all(color: const Color(0xFFE8DDD8)),
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    PlayerProfileHeader(
-                      nickname: nickname,
-                      profile: profile,
-                      game: game,
-                      subtitle: L10n.of(ctx).gamePlayerProfile,
-                      subtitleBuilder: (inner) => profileLevelStrip(
-                        (inner?['level'] as int?) ?? 1,
-                        (inner?['expTotal'] as int?) ?? 0,
-                      ),
-                      isBot: isBot,
-                      onCloseDialog: () => Navigator.pop(ctx),
-                    ),
-                  ],
-                ),
-              ),
-              content: isBot
-                  ? SizedBox(width: 320, child: botProfileBody(context))
-                  : isLoading
-                  ? const SizedBox(
-                      height: 140,
-                      width: 360,
-                      child: Center(child: CircularProgressIndicator()),
-                    )
-                  : ConstrainedBox(
-                      constraints: const BoxConstraints(
-                        maxWidth: 420,
-                        maxHeight: 560,
-                      ),
-                      child: SingleChildScrollView(
-                        child: PlayerProfileBody(
-                          data: profile,
-                          game: game,
-                          initialGame: 'love_letter',
-                        ),
-                      ),
-                    ),
-              actions: [
-                TextButton(
-                  onPressed: () => Navigator.pop(ctx),
-                  child: Text(L10n.of(ctx).gameClose),
-                ),
-              ],
-            );
-          },
-        );
-      },
+    showPlayerProfileDialog(
+      context,
+      nickname,
+      game,
+      initialGame: 'love_letter',
+      subtitle: L10n.of(context).gamePlayerProfile,
+      isBot: isBot,
+      dismissWhen: (g) =>
+          g.llGameState == null || g.llGameState!.phase == 'game_end',
     );
   }
 

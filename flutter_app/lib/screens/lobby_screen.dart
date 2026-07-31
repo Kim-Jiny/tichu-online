@@ -20,8 +20,7 @@ import '../widgets/profile_avatar.dart';
 import '../widgets/bot_avatar.dart';
 import '../widgets/host_crown.dart';
 import '../widgets/chat_bubble.dart';
-import '../widgets/player_profile_body.dart';
-import '../widgets/player_profile_header.dart';
+import '../widgets/player_profile_dialog.dart';
 import '../widgets/title_chip.dart';
 import '../services/ad_service.dart';
 import '../services/kakao_invite_share_service.dart';
@@ -3444,81 +3443,11 @@ class _LobbyScreenState extends State<LobbyScreen> {
     GameService game, {
     BuildContext? dialogContext,
   }) {
-    game.requestProfile(nickname);
-    final l10n = L10n.of(dialogContext ?? context);
-
-    showDialog(
-      context: dialogContext ?? context,
-      builder: (ctx) {
-        return StatefulBuilder(
-          builder: (ctx, setDialogState) {
-            return Consumer<GameService>(
-              builder: (ctx, game, _) {
-                final profile = game.profileFor(nickname);
-                final isLoading =
-                    profile == null || profile['nickname'] != nickname;
-
-                return AlertDialog(
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(24),
-                  ),
-                  titlePadding: const EdgeInsets.fromLTRB(18, 18, 18, 0),
-                  contentPadding: const EdgeInsets.fromLTRB(18, 14, 18, 10),
-                  title: Container(
-                    padding: const EdgeInsets.all(14),
-                    decoration: BoxDecoration(
-                      color: Colors.white.withValues(alpha: 0.92),
-                      borderRadius: BorderRadius.circular(18),
-                      border: Border.all(color: const Color(0xFFE8DDD8)),
-                    ),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        PlayerProfileHeader(
-                          nickname: nickname,
-                          profile: profile,
-                          game: game,
-                          subtitle: l10n.lobbyPlayerProfile,
-                          subtitleBuilder: (inner) => profileLevelStrip(
-                            (inner?['level'] as int?) ?? 1,
-                            (inner?['expTotal'] as int?) ?? 0,
-                          ),
-                          onCloseDialog: () => Navigator.pop(ctx),
-                        ),
-                      ],
-                    ),
-                  ),
-                  content: isLoading
-                      ? const SizedBox(
-                          height: 140,
-                          width: 360,
-                          child: Center(child: CircularProgressIndicator()),
-                        )
-                      : ConstrainedBox(
-                          constraints: const BoxConstraints(
-                            maxWidth: 420,
-                            maxHeight: 560,
-                          ),
-                          child: SingleChildScrollView(
-                            child: PlayerProfileBody(
-                              data: profile,
-                              game: game,
-                              initialGame: game.currentGameType,
-                            ),
-                          ),
-                        ),
-                  actions: [
-                    TextButton(
-                      onPressed: () => Navigator.pop(ctx),
-                      child: Text(l10n.commonClose),
-                    ),
-                  ],
-                );
-              },
-            );
-          },
-        );
-      },
+    showPlayerProfileDialog(
+      dialogContext ?? context,
+      nickname,
+      game,
+      subtitle: L10n.of(dialogContext ?? context).lobbyPlayerProfile,
     );
   }
 

@@ -159,13 +159,16 @@ class PlayerProfileHeader extends StatelessWidget {
         ),
         if (!isBot && !_isMe && !_accountMissing) ...[
           const SizedBox(height: 12),
-          Wrap(
+          // Three equal columns rather than a Wrap: one-word labels fit on one
+          // line at any dialog width, and a row that sometimes wraps to two
+          // lines made the popup jump height between players.
+          Row(
             spacing: 8,
-            runSpacing: 8,
             children: [
-              _friendButton(context, l10n),
-              _blockButton(context, l10n, isBlockedUser),
-              _iconButton(
+              Expanded(child: _friendButton(context, l10n)),
+              Expanded(child: _blockButton(context, l10n, isBlockedUser)),
+              Expanded(
+                child: _iconButton(
                 icon: Icons.report_outlined,
                 color: const Color(0xFFE57373),
                 tooltip: l10n.gameReport,
@@ -177,7 +180,8 @@ class PlayerProfileHeader extends StatelessWidget {
                   final navigator = Navigator.of(context, rootNavigator: true);
                   onCloseDialog();
                   showProfileReportDialog(navigator.context, nickname, game);
-                },
+                  },
+                ),
               ),
             ],
           ),
@@ -338,15 +342,20 @@ class PlayerProfileHeader extends StatelessWidget {
           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
           child: Row(
             mainAxisSize: MainAxisSize.min,
+            mainAxisAlignment: MainAxisAlignment.center,
             children: [
               Icon(icon, size: 15, color: color),
               const SizedBox(width: 5),
-              Text(
-                tooltip,
-                style: TextStyle(
-                  fontSize: 12.5,
-                  fontWeight: FontWeight.w700,
-                  color: color,
+              Flexible(
+                child: Text(
+                  tooltip,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                    fontSize: 12.5,
+                    fontWeight: FontWeight.w700,
+                    color: color,
+                  ),
                 ),
               ),
             ],

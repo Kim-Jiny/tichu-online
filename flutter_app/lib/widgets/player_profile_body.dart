@@ -600,11 +600,10 @@ class _PlayerProfileBodyState extends State<PlayerProfileBody> {
     required List<Widget> chips,
   }) {
     return Container(
-      padding: const EdgeInsets.all(12),
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
       decoration: BoxDecoration(
         color: background,
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: background.withValues(alpha: 0.6)),
       ),
       child: Column(
         children: [
@@ -677,14 +676,8 @@ class _PlayerProfileBodyState extends State<PlayerProfileBody> {
     List<dynamic> recentMatches,
     String profileNickname,
   ) {
-    return Container(
+    return SizedBox(
       width: double.infinity,
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: 0.95),
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: const Color(0xFFE0D8D4)),
-      ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [

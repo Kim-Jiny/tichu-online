@@ -4495,13 +4495,4 @@ class L10nDe extends L10n {
 
   @override
   String get gameReportReasonTitle => 'Unangemessener Titel';
-
-  @override
-  String get settingsGameSection => 'Spiel';
-
-  @override
-  String get settingsSettingsGroup => 'Einstellungen';
-
-  @override
-  String get settingsInfoGroup => 'Info';
 }

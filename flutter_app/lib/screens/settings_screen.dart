@@ -61,8 +61,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
     );
     _bannerAd!.load();
     _loadAppVersion();
-    // The header block shows level and exp, which only arrive with a profile
-    // fetch. Deferred: requestProfile notifies listeners synchronously.
+    // The profile card shows level and exp, which only arrive with a fetch.
+    // Deferred: requestProfile notifies listeners synchronously.
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
       final game = context.read<GameService>();
@@ -982,8 +982,11 @@ class _SettingsScreenState extends State<SettingsScreen> {
     );
   }
 
-  /// Avatar, nickname and level at the top, tappable into the profile popup.
-  Widget _buildProfileBlock(BuildContext context, GameService game, L10n l10n) {
+  /// Avatar, nickname and level, tappable into the profile popup.
+  ///
+  /// Same card shape and margins as the sections below it — the point is to put
+  /// the profile first, not to introduce a second visual language on the page.
+  Widget _buildProfileCard(BuildContext context, GameService game) {
     final inner = game.playerName.isEmpty
         ? null
         : game.profileFor(game.playerName)?['profile'] as Map?;
@@ -991,68 +994,70 @@ class _SettingsScreenState extends State<SettingsScreen> {
     final expTotal = (inner?['expTotal'] as int?) ?? 0;
     final photo = game.resolvePhotoUrl(game.myPhotoUrl);
 
-    return Material(
-      color: const Color(0xFFFFFDFC),
-      child: InkWell(
-        onTap: widget.onShowMyProfile == null
-            ? null
-            : () => widget.onShowMyProfile!(context),
-        child: Container(
-          width: double.infinity,
-          padding: const EdgeInsets.fromLTRB(20, 16, 16, 16),
-          decoration: const BoxDecoration(
-            border: Border(
-              top: BorderSide(color: Color(0xFFEFE7E3)),
-              bottom: BorderSide(color: Color(0xFFEFE7E3)),
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16),
+      child: Material(
+        color: Colors.white.withValues(alpha: 0.95),
+        borderRadius: BorderRadius.circular(16),
+        child: InkWell(
+          borderRadius: BorderRadius.circular(16),
+          onTap: widget.onShowMyProfile == null
+              ? null
+              : () => widget.onShowMyProfile!(context),
+          child: Container(
+            padding: const EdgeInsets.all(14),
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(color: const Color(0xFFE0D8D4)),
             ),
-          ),
-          child: Row(
-            children: [
-              ProfileAvatar(
-                photoUrl: photo,
-                size: 52,
-                borderRadius: 16,
-                fallback: Container(
-                  width: 52,
-                  height: 52,
-                  decoration: BoxDecoration(
-                    color: const Color(0xFFF0E7E3),
-                    borderRadius: BorderRadius.circular(16),
-                  ),
-                  alignment: Alignment.center,
-                  child: const Icon(
-                    Icons.person,
-                    size: 30,
-                    color: Color(0xFF9C8B84),
-                  ),
-                ),
-              ),
-              const SizedBox(width: 14),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Text(
-                      game.playerName.isEmpty ? '-' : game.playerName,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(
-                        fontSize: 18,
-                        fontWeight: FontWeight.w800,
-                        color: Color(0xFF4A3A33),
-                      ),
+            child: Row(
+              children: [
+                ProfileAvatar(
+                  photoUrl: photo,
+                  size: 52,
+                  borderRadius: 16,
+                  fallback: Container(
+                    width: 52,
+                    height: 52,
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFF0E7E3),
+                      borderRadius: BorderRadius.circular(16),
                     ),
-                    const SizedBox(height: 6),
-                    // Same level/exp strip the profile popup uses, so the two
-                    // never disagree about how far along you are.
-                    profileLevelStrip(level, expTotal),
-                  ],
+                    alignment: Alignment.center,
+                    child: const Icon(
+                      Icons.person,
+                      size: 30,
+                      color: Color(0xFF9C8B84),
+                    ),
+                  ),
                 ),
-              ),
-              const SizedBox(width: 8),
-              const Icon(Icons.chevron_right, color: Color(0xFFB0A8A4)),
-            ],
+                const SizedBox(width: 14),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        game.playerName.isEmpty ? '-' : game.playerName,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.w800,
+                          color: Color(0xFF4A3A33),
+                        ),
+                      ),
+                      const SizedBox(height: 6),
+                      // The same level/exp strip the profile popup draws, so the
+                      // two never disagree about how far along you are.
+                      profileLevelStrip(level, expTotal),
+                    ],
+                  ),
+                ),
+                const SizedBox(width: 8),
+                const Icon(Icons.chevron_right, color: Color(0xFFB0A8A4)),
+              ],
+            ),
           ),
         ),
       ),
@@ -1063,7 +1068,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
     required IconData icon,
     required String title,
     Color? iconColor,
-    Color? titleColor,
     String? subtitle,
     Widget? trailing,
     VoidCallback? onTap,
@@ -1085,7 +1089,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     fontSize: 14,
                     fontWeight: FontWeight.w600,
                     color: enabled
-                        ? (titleColor ?? const Color(0xFF5A4038))
+                        ? const Color(0xFF5A4038)
                         : const Color(0xFFB0A8A4),
                   ),
                 ),
@@ -1112,193 +1116,32 @@ class _SettingsScreenState extends State<SettingsScreen> {
     return InkWell(onTap: onTap, child: content);
   }
 
-  static const _rowDivider = Divider(
-    height: 1,
-    thickness: 1,
-    indent: 56,
-    color: Color(0xFFF2ECE9),
-  );
-
-  /// Small label above a group. Sits on the sheet, not on the background —
-  /// labels on the gradient turned the page into pink and white stripes.
-  Widget _buildGroupLabel(String text) {
-    return Container(
-      width: double.infinity,
-      color: const Color(0xFFFFFDFC),
-      padding: const EdgeInsets.fromLTRB(20, 18, 20, 6),
-      child: Text(
-        text,
-        style: const TextStyle(
-          fontSize: 12,
-          fontWeight: FontWeight.w700,
-          color: Color(0xFF9A8E8A),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildGroup(List<Widget> children) {
-    return Container(
-      color: const Color(0xFFFFFDFC),
-      child: Column(children: children),
-    );
-  }
-
-  /// The three places people leave settings for: notices, a new inquiry, and
-  /// (for staff) the admin console. They were a section heading each, one row
-  /// deep. As tiles they are one tap and no scrolling.
-  Widget _buildQuickTiles(BuildContext context, GameService game, L10n l10n) {
-    Widget tile({
-      required IconData icon,
-      required Color color,
-      required String label,
-      required VoidCallback onTap,
-      int badge = 0,
-    }) {
-      return Expanded(
-        child: Material(
-          color: const Color(0xFFFFFDFC),
-          borderRadius: BorderRadius.circular(14),
-          child: InkWell(
-            borderRadius: BorderRadius.circular(14),
-            onTap: onTap,
-            child: Padding(
-              padding: const EdgeInsets.symmetric(vertical: 14),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Stack(
-                    clipBehavior: Clip.none,
-                    children: [
-                      Icon(icon, color: color, size: 24),
-                      if (badge > 0)
-                        Positioned(
-                          right: -8,
-                          top: -6,
-                          child: Container(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 5,
-                              vertical: 1,
-                            ),
-                            decoration: const BoxDecoration(
-                              color: Color(0xFFE53935),
-                              borderRadius: BorderRadius.all(
-                                Radius.circular(999),
-                              ),
-                            ),
-                            constraints: const BoxConstraints(minWidth: 16),
-                            child: Text(
-                              badge > 9 ? '9+' : '$badge',
-                              textAlign: TextAlign.center,
-                              style: const TextStyle(
-                                color: Colors.white,
-                                fontSize: 10,
-                                fontWeight: FontWeight.w800,
-                              ),
-                            ),
-                          ),
-                        ),
-                    ],
-                  ),
-                  const SizedBox(height: 8),
-                  Text(
-                    label,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(
-                      fontSize: 12,
-                      fontWeight: FontWeight.w700,
-                      color: Color(0xFF5A4038),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ),
-        ),
-      );
-    }
-
+  Widget _buildSection(String title, List<Widget> children) {
     return Padding(
-      padding: const EdgeInsets.fromLTRB(12, 10, 12, 2),
-      child: Row(
-        children: [
-          tile(
-            icon: Icons.campaign,
-            color: const Color(0xFF42A5F5),
-            label: l10n.settingsNotices,
-            onTap: _openNoticesPage,
-            badge: game.unreadNoticeCount,
-          ),
-          const SizedBox(width: 8),
-          tile(
-            icon: Icons.help_outline,
-            color: const Color(0xFFBA68C8),
-            label: l10n.settingsSubmitInquiry,
-            onTap: _showInquiryDialog,
-          ),
-          if (game.isAdminUser) ...[
-            const SizedBox(width: 8),
-            tile(
-              icon: Icons.admin_panel_settings_outlined,
-              color: const Color(0xFF7E57C2),
-              label: l10n.settingsAdminCenter,
-              onTap: () => Navigator.push(
-                context,
-                MaterialPageRoute(builder: (_) => const AdminCenterScreen()),
-              ),
-            ),
-          ],
-        ],
-      ),
-    );
-  }
-
-  /// Version as a footer caption rather than a row: it is something to read
-  /// once, not something to do. The update button appears only when behind.
-  Widget _buildVersionFooter(L10n l10n, GameService game) {
-    final outdated = _isOutdated(game.latestVersion);
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(20, 18, 20, 14),
+      padding: const EdgeInsets.symmetric(horizontal: 16),
       child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            '${l10n.settingsAppVersion} ${_appVersion.isEmpty ? '-' : _appVersion}',
-            style: TextStyle(
-              fontSize: 12,
-              color: outdated
-                  ? const Color(0xFFE53935)
-                  : const Color(0xFFA89C96),
-              fontWeight: outdated ? FontWeight.w700 : FontWeight.w500,
+          Padding(
+            padding: const EdgeInsets.fromLTRB(6, 4, 6, 8),
+            child: Text(
+              title,
+              style: const TextStyle(
+                fontSize: 12,
+                fontWeight: FontWeight.w700,
+                color: Color(0xFF8A7A72),
+              ),
             ),
           ),
-          if (outdated) ...[
-            const SizedBox(height: 8),
-            ElevatedButton(
-              onPressed: _openStore,
-              style: ElevatedButton.styleFrom(
-                backgroundColor: const Color(0xFFE53935),
-                foregroundColor: Colors.white,
-                elevation: 0,
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 16,
-                  vertical: 8,
-                ),
-                minimumSize: const Size(0, 34),
-                tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(10),
-                ),
-              ),
-              child: Text(
-                '${l10n.settingsNotLatestVersion} · ${l10n.settingsUpdate}',
-                style: const TextStyle(
-                  fontSize: 12,
-                  fontWeight: FontWeight.w700,
-                ),
-              ),
+          Container(
+            padding: const EdgeInsets.symmetric(vertical: 6),
+            decoration: BoxDecoration(
+              color: Colors.white.withValues(alpha: 0.95),
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(color: const Color(0xFFE0D8D4)),
             ),
-          ],
+            child: Column(children: children),
+          ),
         ],
       ),
     );
@@ -1339,23 +1182,26 @@ class _SettingsScreenState extends State<SettingsScreen> {
               });
               return Column(
                 children: [
-                  // Flat header on the theme gradient, like the shop and the
-                  // room list — the white used to start here as a floating card.
-                  Padding(
-                    padding: const EdgeInsets.fromLTRB(4, 2, 16, 6),
+                  Container(
+                    margin: const EdgeInsets.all(16),
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: Colors.white.withValues(alpha: 0.95),
+                      borderRadius: BorderRadius.circular(18),
+                    ),
                     child: Row(
                       children: [
                         IconButton(
                           onPressed: () => Navigator.pop(context),
                           icon: const Icon(Icons.arrow_back),
                           color: const Color(0xFF8A7A72),
-                          visualDensity: VisualDensity.compact,
                         ),
+                        const SizedBox(width: 4),
                         Flexible(
                           child: Text(
                             l10n.settingsHeaderTitle,
                             style: const TextStyle(
-                              fontSize: 19,
+                              fontSize: 20,
                               fontWeight: FontWeight.bold,
                               color: Color(0xFF5A4038),
                             ),
@@ -1370,114 +1216,19 @@ class _SettingsScreenState extends State<SettingsScreen> {
                       padding: const EdgeInsets.only(bottom: 16),
                       child: Column(
                         children: [
-                          // Who this is, first. It used to be one row among
-                          // fifteen, three sections down — the thing people open
-                          // settings to check was the hardest to find.
-                          _buildProfileBlock(context, game, l10n),
-                          _buildQuickTiles(context, game, l10n),
-                          // Everything that is genuinely a setting: one surface,
-                          // three groups. It was nine bordered cards, and the
-                          // labels ("공지사항", "문의") were section headings for a
-                          // single row each — a table of contents for a page you
-                          // could already see.
-                          _buildGroupLabel(l10n.settingsSettingsGroup),
-                          _buildGroup([
+                          // Who this is, at the top. "내 프로필" is still in the
+                          // 계정 section below — this is the same destination,
+                          // put where the eye lands first.
+                          _buildProfileCard(context, game),
+                          const SizedBox(height: 12),
+                          _buildSection(l10n.settingsAccountSection, [
                             _buildRow(
-                              icon: Icons.notifications,
+                              icon: Icons.account_circle,
                               iconColor: const Color(0xFF64B5F6),
-                              title: l10n.settingsPushNotifications,
-                              subtitle: l10n.settingsPushNotificationsDesc,
-                              trailing: Switch(
-                                value: game.pushEnabled,
-                                onChanged: (v) => game.setPushEnabled(v),
-                              ),
+                              title: l10n.settingsNickname,
+                              subtitle: game.playerName,
                             ),
-                            if (game.isAdminUser) ...[
-                              _rowDivider,
-                              _buildRow(
-                                icon: Icons.support_agent,
-                                iconColor: const Color(0xFFAB47BC),
-                                title: l10n.settingsInquiryNotifications,
-                                subtitle: l10n.settingsInquiryNotificationsDesc,
-                                trailing: Switch(
-                                  value: game.pushAdminInquiryEnabled,
-                                  onChanged: (v) =>
-                                      game.setAdminAlertPush(inquiry: v),
-                                ),
-                              ),
-                              _rowDivider,
-                              _buildRow(
-                                icon: Icons.report_gmailerrorred,
-                                iconColor: const Color(0xFFEF5350),
-                                title: l10n.settingsReportNotifications,
-                                subtitle: l10n.settingsReportNotificationsDesc,
-                                trailing: Switch(
-                                  value: game.pushAdminReportEnabled,
-                                  onChanged: (v) =>
-                                      game.setAdminAlertPush(report: v),
-                                ),
-                              ),
-                              _rowDivider,
-                              _buildRow(
-                                icon: Icons.payments_outlined,
-                                iconColor: const Color(0xFF26A69A),
-                                title: l10n.settingsPaymentNotifications,
-                                subtitle: l10n.settingsPaymentNotificationsDesc,
-                                trailing: Switch(
-                                  value: game.pushAdminPaymentEnabled,
-                                  onChanged: (v) =>
-                                      game.setAdminAlertPush(payment: v),
-                                ),
-                              ),
-                            ],
-                            _rowDivider,
-                            _buildRow(
-                              icon: Icons.visibility_outlined,
-                              iconColor: const Color(0xFF6A6090),
-                              title: l10n.settingsCardViewPolicy,
-                              subtitle: _cardViewPrefLabel(
-                                l10n,
-                                game.cardViewPref,
-                              ),
-                              trailing: const Icon(
-                                Icons.chevron_right,
-                                color: Color(0xFFB0A8A4),
-                              ),
-                              onTap: () =>
-                                  _showCardViewPrefDialog(context, game, l10n),
-                            ),
-                            _rowDivider,
-                            Builder(
-                              builder: (context) {
-                                final localeService = context
-                                    .watch<LocaleService>();
-                                final currentLabel =
-                                    localeService.userSelectedLocale == null
-                                    ? l10n.languageAuto
-                                    : _localeDisplayName(
-                                        l10n,
-                                        localeService.userSelectedLocale!,
-                                      );
-                                return _buildRow(
-                                  icon: Icons.language,
-                                  iconColor: const Color(0xFF42A5F5),
-                                  title: l10n.settingsLanguage,
-                                  subtitle: currentLabel,
-                                  onTap: () => _showLanguageDialog(
-                                    context,
-                                    localeService,
-                                    l10n,
-                                  ),
-                                  trailing: const Icon(
-                                    Icons.chevron_right,
-                                    color: Color(0xFFB0A8A4),
-                                  ),
-                                );
-                              },
-                            ),
-                          ]),
-                          _buildGroupLabel(l10n.settingsAccountSection),
-                          _buildGroup([
+                            const Divider(height: 1, color: Color(0xFFEAE2DE)),
                             _buildRow(
                               icon: Icons.link,
                               iconColor: const Color(0xFF7E57C2),
@@ -1508,55 +1259,291 @@ class _SettingsScreenState extends State<SettingsScreen> {
                                     )
                                   : null,
                             ),
-                            _rowDivider,
+                          ]),
+                          const SizedBox(height: 12),
+                          _buildSection(l10n.settingsNotificationsSection, [
                             _buildRow(
-                              icon: Icons.logout,
-                              iconColor: const Color(0xFF8A7A72),
-                              title: l10n.settingsLogout,
-                              onTap: _logout,
+                              icon: Icons.notifications,
+                              iconColor: const Color(0xFF64B5F6),
+                              title: l10n.settingsPushNotifications,
+                              subtitle: l10n.settingsPushNotificationsDesc,
+                              trailing: Switch(
+                                value: game.pushEnabled,
+                                onChanged: (v) => game.setPushEnabled(v),
+                              ),
                             ),
-                            _rowDivider,
-                            // Leaving for good sits at the bottom of its group,
-                            // in red, away from everything reversible.
+                            if (game.isAdminUser) ...[
+                              const Divider(
+                                height: 1,
+                                color: Color(0xFFEAE2DE),
+                              ),
+                              _buildRow(
+                                icon: Icons.support_agent,
+                                iconColor: const Color(0xFFAB47BC),
+                                title: l10n.settingsInquiryNotifications,
+                                subtitle: l10n.settingsInquiryNotificationsDesc,
+                                trailing: Switch(
+                                  value: game.pushAdminInquiryEnabled,
+                                  onChanged: (v) =>
+                                      game.setAdminAlertPush(inquiry: v),
+                                ),
+                              ),
+                              const Divider(
+                                height: 1,
+                                color: Color(0xFFEAE2DE),
+                              ),
+                              _buildRow(
+                                icon: Icons.report_gmailerrorred,
+                                iconColor: const Color(0xFFEF5350),
+                                title: l10n.settingsReportNotifications,
+                                subtitle: l10n.settingsReportNotificationsDesc,
+                                trailing: Switch(
+                                  value: game.pushAdminReportEnabled,
+                                  onChanged: (v) =>
+                                      game.setAdminAlertPush(report: v),
+                                ),
+                              ),
+                              const Divider(
+                                height: 1,
+                                color: Color(0xFFEAE2DE),
+                              ),
+                              _buildRow(
+                                icon: Icons.payments_outlined,
+                                iconColor: const Color(0xFF26A69A),
+                                title: l10n.settingsPaymentNotifications,
+                                subtitle: l10n.settingsPaymentNotificationsDesc,
+                                trailing: Switch(
+                                  value: game.pushAdminPaymentEnabled,
+                                  onChanged: (v) =>
+                                      game.setAdminAlertPush(payment: v),
+                                ),
+                              ),
+                            ],
+                          ]),
+                          const SizedBox(height: 12),
+                          _buildSection(l10n.settingsCardViewPolicy, [
                             _buildRow(
-                              icon: Icons.delete_forever,
-                              iconColor: const Color(0xFFC62828),
-                              titleColor: const Color(0xFFC62828),
-                              title: l10n.settingsDeleteAccount,
-                              onTap: _showDeleteAccountDialog,
+                              icon: Icons.visibility_outlined,
+                              iconColor: const Color(0xFF6A6090),
+                              title: l10n.settingsCardViewPolicy,
+                              subtitle: _cardViewPrefLabel(
+                                l10n,
+                                game.cardViewPref,
+                              ),
+                              trailing: const Icon(
+                                Icons.chevron_right,
+                                color: Color(0xFFB0A8A4),
+                              ),
+                              onTap: () =>
+                                  _showCardViewPrefDialog(context, game, l10n),
                             ),
                           ]),
-                          _buildGroupLabel(l10n.settingsInfoGroup),
-                          _buildGroup([
-                            _buildRow(
-                              icon: Icons.description_outlined,
-                              iconColor: const Color(0xFF8A7A72),
-                              title: l10n.settingsTermsOfService,
-                              onTap: () => _showTextViewDialog(
-                                l10n.settingsTermsOfService,
-                                game.eulaContent,
-                                isTermsOfService: true,
+                          if (game.isAdminUser) ...[
+                            const SizedBox(height: 12),
+                            _buildSection(l10n.settingsAdminSection, [
+                              _buildRow(
+                                icon: Icons.admin_panel_settings_outlined,
+                                iconColor: const Color(0xFF7E57C2),
+                                title: l10n.settingsAdminCenter,
+                                subtitle: l10n.settingsAdminCenterDesc,
+                                onTap: () {
+                                  Navigator.push(
+                                    context,
+                                    MaterialPageRoute(
+                                      builder: (_) => const AdminCenterScreen(),
+                                    ),
+                                  );
+                                },
                               ),
+                            ]),
+                          ],
+                          const SizedBox(height: 12),
+                          const SizedBox(height: 12),
+                          Builder(
+                            builder: (context) {
+                              final l10n = L10n.of(context);
+                              final localeService = context
+                                  .watch<LocaleService>();
+                              final currentLabel =
+                                  localeService.userSelectedLocale == null
+                                  ? l10n.languageAuto
+                                  : _localeDisplayName(
+                                      l10n,
+                                      localeService.userSelectedLocale!,
+                                    );
+                              return _buildSection(l10n.settingsLanguage, [
+                                _buildRow(
+                                  icon: Icons.language,
+                                  iconColor: const Color(0xFF42A5F5),
+                                  title: l10n.settingsLanguage,
+                                  subtitle: currentLabel,
+                                  onTap: () => _showLanguageDialog(
+                                    context,
+                                    localeService,
+                                    l10n,
+                                  ),
+                                  trailing: const Icon(
+                                    Icons.chevron_right,
+                                    color: Color(0xFFB0A8A4),
+                                  ),
+                                ),
+                              ]);
+                            },
+                          ),
+                          const SizedBox(height: 12),
+                          Builder(
+                            builder: (context) {
+                              final l10n = L10n.of(context);
+                              return _buildSection(l10n.settingsAppInfo, [
+                                Builder(
+                                  builder: (context) {
+                                    final outdated = _isOutdated(
+                                      game.latestVersion,
+                                    );
+                                    return _buildRow(
+                                      icon: Icons.info_outline,
+                                      iconColor: outdated
+                                          ? const Color(0xFFE53935)
+                                          : const Color(0xFF7E57C2),
+                                      title: l10n.settingsAppVersion,
+                                      subtitle: _appVersion.isEmpty
+                                          ? '-'
+                                          : (outdated
+                                                ? '$_appVersion · ${l10n.settingsNotLatestVersion}'
+                                                : _appVersion),
+                                      trailing: outdated
+                                          ? ElevatedButton(
+                                              onPressed: _openStore,
+                                              style: ElevatedButton.styleFrom(
+                                                backgroundColor: const Color(
+                                                  0xFFE53935,
+                                                ),
+                                                foregroundColor: Colors.white,
+                                                elevation: 0,
+                                                padding:
+                                                    const EdgeInsets.symmetric(
+                                                      horizontal: 14,
+                                                      vertical: 6,
+                                                    ),
+                                                minimumSize: const Size(0, 32),
+                                                tapTargetSize:
+                                                    MaterialTapTargetSize
+                                                        .shrinkWrap,
+                                                shape: RoundedRectangleBorder(
+                                                  borderRadius:
+                                                      BorderRadius.circular(10),
+                                                ),
+                                              ),
+                                              child: Text(
+                                                l10n.settingsUpdate,
+                                                style: const TextStyle(
+                                                  fontSize: 12,
+                                                  fontWeight: FontWeight.w700,
+                                                ),
+                                              ),
+                                            )
+                                          : null,
+                                    );
+                                  },
+                                ),
+                                const Divider(
+                                  height: 1,
+                                  color: Color(0xFFEAE2DE),
+                                ),
+                                _buildRow(
+                                  icon: Icons.description_outlined,
+                                  iconColor: const Color(0xFF8A7A72),
+                                  title: l10n.settingsTermsOfService,
+                                  onTap: () => _showTextViewDialog(
+                                    l10n.settingsTermsOfService,
+                                    game.eulaContent,
+                                    isTermsOfService: true,
+                                  ),
+                                  trailing: const Icon(
+                                    Icons.chevron_right,
+                                    color: Color(0xFFB0A8A4),
+                                  ),
+                                ),
+                                const Divider(
+                                  height: 1,
+                                  color: Color(0xFFEAE2DE),
+                                ),
+                                _buildRow(
+                                  icon: Icons.privacy_tip_outlined,
+                                  iconColor: const Color(0xFF8A7A72),
+                                  title: l10n.settingsPrivacyPolicy,
+                                  onTap: () => _showTextViewDialog(
+                                    l10n.settingsPrivacyPolicy,
+                                    game.privacyPolicy,
+                                  ),
+                                  trailing: const Icon(
+                                    Icons.chevron_right,
+                                    color: Color(0xFFB0A8A4),
+                                  ),
+                                ),
+                              ]);
+                            },
+                          ),
+                          const SizedBox(height: 12),
+                          _buildSection(L10n.of(context).settingsNotices, [
+                            _buildRow(
+                              icon: Icons.campaign,
+                              iconColor: const Color(0xFF42A5F5),
+                              title: L10n.of(context).settingsNotices,
+                              onTap: _openNoticesPage,
+                              trailing: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  if (game.unreadNoticeCount > 0)
+                                    Container(
+                                      margin: const EdgeInsets.only(right: 8),
+                                      padding: const EdgeInsets.symmetric(
+                                        horizontal: 7,
+                                        vertical: 2,
+                                      ),
+                                      decoration: const BoxDecoration(
+                                        color: Color(0xFFE53935),
+                                        borderRadius: BorderRadius.all(
+                                          Radius.circular(999),
+                                        ),
+                                      ),
+                                      constraints: const BoxConstraints(
+                                        minWidth: 18,
+                                        minHeight: 18,
+                                      ),
+                                      child: Text(
+                                        game.unreadNoticeCount > 9
+                                            ? '9+'
+                                            : '${game.unreadNoticeCount}',
+                                        style: const TextStyle(
+                                          color: Colors.white,
+                                          fontSize: 10,
+                                          fontWeight: FontWeight.w800,
+                                        ),
+                                        textAlign: TextAlign.center,
+                                      ),
+                                    ),
+                                  const Icon(
+                                    Icons.chevron_right,
+                                    color: Color(0xFFB0A8A4),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ]),
+                          const SizedBox(height: 12),
+                          _buildSection(l10n.settingsInquirySection, [
+                            _buildRow(
+                              icon: Icons.help_outline,
+                              iconColor: const Color(0xFFBA68C8),
+                              title: l10n.settingsSubmitInquiry,
+                              onTap: _showInquiryDialog,
                               trailing: const Icon(
                                 Icons.chevron_right,
                                 color: Color(0xFFB0A8A4),
                               ),
                             ),
-                            _rowDivider,
-                            _buildRow(
-                              icon: Icons.privacy_tip_outlined,
-                              iconColor: const Color(0xFF8A7A72),
-                              title: l10n.settingsPrivacyPolicy,
-                              onTap: () => _showTextViewDialog(
-                                l10n.settingsPrivacyPolicy,
-                                game.privacyPolicy,
-                              ),
-                              trailing: const Icon(
-                                Icons.chevron_right,
-                                color: Color(0xFFB0A8A4),
-                              ),
-                            ),
-                            _rowDivider,
+                            const Divider(height: 1, color: Color(0xFFEAE2DE)),
                             _buildRow(
                               icon: Icons.mark_email_read,
                               iconColor: const Color(0xFF1E88E5),
@@ -1585,7 +1572,31 @@ class _SettingsScreenState extends State<SettingsScreen> {
                               ),
                             ),
                           ]),
-                          _buildVersionFooter(l10n, game),
+                          const SizedBox(height: 12),
+                          _buildSection(l10n.settingsAccountManagement, [
+                            _buildRow(
+                              icon: Icons.logout,
+                              iconColor: const Color(0xFF8A7A72),
+                              title: l10n.settingsLogout,
+                              onTap: _logout,
+                              trailing: const Icon(
+                                Icons.chevron_right,
+                                color: Color(0xFFB0A8A4),
+                              ),
+                            ),
+                            const Divider(height: 1, color: Color(0xFFEAE2DE)),
+                            _buildRow(
+                              icon: Icons.delete_forever,
+                              iconColor: const Color(0xFFC62828),
+                              title: l10n.settingsDeleteAccount,
+                              onTap: _showDeleteAccountDialog,
+                              trailing: const Icon(
+                                Icons.chevron_right,
+                                color: Color(0xFFB0A8A4),
+                              ),
+                            ),
+                          ]),
+                          const SizedBox(height: 12),
                           if (_bannerAd != null && _bannerAdLoaded)
                             Center(
                               child: SizedBox(

@@ -2015,8 +2015,5 @@
   "customTitleSave": "Apply",
   "customTitleButton": "Write title",
   "customTitleSaved": "Title applied",
-  "gameReportReasonTitle": "Inappropriate title",
-  "settingsGameSection": "Game",
-  "settingsSettingsGroup": "Settings",
-  "settingsInfoGroup": "About"
+  "gameReportReasonTitle": "Inappropriate title"
 }

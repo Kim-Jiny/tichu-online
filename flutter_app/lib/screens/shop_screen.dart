@@ -1143,8 +1143,8 @@ class _ShopScreenState extends State<ShopScreen> {
       name.replaceFirst(RegExp(r'\s*\([^)]*\)\s*$'), '').trim();
 
   // A single card representing one feature with multiple duration tiers. The
-  // name/visual/description show once; each tier is a chip that opens the same
-  // detail sheet as a normal row (so the buy/extend flow is unchanged).
+  // name/visual show once; the tier chips and the row itself all open the same
+  // sheet, which is where both durations can be bought or extended.
   Widget _buildGroupedFeatureCard(
     BuildContext context,
     GameService game,
@@ -1152,15 +1152,10 @@ class _ShopScreenState extends State<ShopScreen> {
   ) {
     final first = tiers.first;
     final baseName = _stripDurationSuffix(_getLocalizedItemName(first));
-    final description = _getLocalizedItemDescription(first);
     Map<String, dynamic>? ownedInv;
     for (final t in tiers) {
-      final key = t['item_key']?.toString() ?? '';
-      final matches = game.inventoryItems.where((i) => i['item_key'] == key);
-      if (matches.isNotEmpty) {
-        ownedInv = matches.first;
-        break;
-      }
+      ownedInv = _ownedEntitlement(game, t);
+      if (ownedInv != null) break;
     }
     final ownedActive = ownedInv != null;
     final ownedExpiry = ownedInv?['expires_at'];
@@ -1168,87 +1163,82 @@ class _ShopScreenState extends State<ShopScreen> {
         ? _formatExpire(context, ownedExpiry)
         : null;
 
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.center,
-        children: [
-          _buildShopRowVisual(first, 58),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Row(
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        // Anywhere on the row, not only the chips: a row you cannot tap to read
+        // about is a dead end, and the chips are small targets.
+        onTap: () => _showItemDetailSheet(context, first, tiers: tiers),
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              _buildShopRowVisual(first, 58),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
                   children: [
-                    Expanded(
-                      child: Text(
-                        baseName,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(
-                          fontSize: 14,
-                          fontWeight: FontWeight.bold,
-                          color: Color(0xFF4A3A33),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: Text(
+                            baseName,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: const TextStyle(
+                              fontSize: 14,
+                              fontWeight: FontWeight.bold,
+                              color: Color(0xFF4A3A33),
+                            ),
+                          ),
                         ),
-                      ),
+                        if (ownedActive)
+                          _badge(
+                            L10n.of(context).shopItemOwned,
+                            const Color(0xFF7E57C2),
+                            const Color(0xFFEDE7F6),
+                          ),
+                      ],
                     ),
-                    if (ownedActive)
-                      _badge(
-                        L10n.of(context).shopItemOwned,
-                        const Color(0xFF7E57C2),
-                        const Color(0xFFEDE7F6),
-                      ),
-                  ],
-                ),
-                if (description.isNotEmpty) ...[
-                  const SizedBox(height: 2),
-                  Text(
-                    description,
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(
-                      fontSize: 11.5,
-                      color: Color(0xFF8A7A72),
-                      height: 1.3,
-                    ),
-                  ),
-                ],
-                if (ownedExpiryText != null) ...[
-                  const SizedBox(height: 3),
-                  Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      const Icon(
-                        Icons.schedule,
-                        size: 12,
-                        color: Color(0xFF7E57C2),
-                      ),
-                      const SizedBox(width: 3),
-                      Text(
-                        ownedExpiryText,
-                        style: const TextStyle(
-                          fontSize: 11,
-                          fontWeight: FontWeight.w600,
-                          color: Color(0xFF7E57C2),
-                        ),
+                    if (ownedExpiryText != null) ...[
+                      const SizedBox(height: 3),
+                      Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          const Icon(
+                            Icons.schedule,
+                            size: 12,
+                            color: Color(0xFF7E57C2),
+                          ),
+                          const SizedBox(width: 3),
+                          Text(
+                            ownedExpiryText,
+                            style: const TextStyle(
+                              fontSize: 11,
+                              fontWeight: FontWeight.w600,
+                              color: Color(0xFF7E57C2),
+                            ),
+                          ),
+                        ],
                       ),
                     ],
-                  ),
-                ],
-                const SizedBox(height: 8),
-                Wrap(
-                  spacing: 8,
-                  runSpacing: 6,
-                  children: tiers
-                      .map((t) => _buildTierChip(context, t))
-                      .toList(),
+                    const SizedBox(height: 8),
+                    Wrap(
+                      spacing: 8,
+                      runSpacing: 6,
+                      children: tiers
+                          .map((t) => _buildTierChip(context, t, tiers))
+                          .toList(),
+                    ),
+                  ],
                 ),
-              ],
-            ),
+              ),
+            ],
           ),
-        ],
+        ),
       ),
     );
   }
@@ -1256,7 +1246,11 @@ class _ShopScreenState extends State<ShopScreen> {
   // Duration option chip: "7일 · 1000골드". Reuses the server-localized "(7일)"
   // suffix so no new duration strings are needed. Tap -> detail sheet for that
   // exact tier.
-  Widget _buildTierChip(BuildContext context, Map<String, dynamic> tier) {
+  Widget _buildTierChip(
+    BuildContext context,
+    Map<String, dynamic> tier,
+    List<Map<String, dynamic>> tiers,
+  ) {
     final name = _getLocalizedItemName(tier);
     final match = RegExp(r'\(([^)]*)\)\s*$').firstMatch(name);
     final durationLabel = match != null
@@ -1268,7 +1262,9 @@ class _ShopScreenState extends State<ShopScreen> {
       color: onSale ? const Color(0xFFFFF3F3) : const Color(0xFFF4F1FB),
       borderRadius: BorderRadius.circular(10),
       child: InkWell(
-        onTap: () => _showItemDetailSheet(context, tier),
+        // Same sheet as the row: it carries both durations, so which chip was
+        // tapped no longer decides what can be bought.
+        onTap: () => _showItemDetailSheet(context, tier, tiers: tiers),
         borderRadius: BorderRadius.circular(10),
         child: Padding(
           padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
@@ -1313,7 +1309,6 @@ class _ShopScreenState extends State<ShopScreen> {
   ) {
     final l10n = L10n.of(context);
     final name = _getLocalizedItemName(item);
-    final description = _getLocalizedItemDescription(item);
     final price = item['price'] ?? 0;
     final isSeason = item['is_season'] == true;
     final isPermanent = item['is_permanent'] == true;
@@ -1387,16 +1382,17 @@ class _ShopScreenState extends State<ShopScreen> {
                       ],
                     ),
                     const SizedBox(height: 2),
+                    // What it is, not what it does: the list stays scannable at
+                    // one line per item and the description — which can run to
+                    // several sentences — belongs to the sheet the row opens.
                     Text(
-                      description.isNotEmpty
-                          ? description
-                          : _buildItemTag(
-                              context,
-                              isSeason,
-                              isPermanent,
-                              durationDays,
-                            ),
-                      maxLines: 2,
+                      _buildItemTag(
+                        context,
+                        isSeason,
+                        isPermanent,
+                        durationDays,
+                      ),
+                      maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       style: const TextStyle(
                         fontSize: 11.5,
@@ -1436,7 +1432,10 @@ class _ShopScreenState extends State<ShopScreen> {
                     Row(
                       children: [
                         if (!ownedPermanent) ...[
-                          GoldIcon(size: 15, amount: price is int ? price : null),
+                          GoldIcon(
+                            size: 15,
+                            amount: price is int ? price : null,
+                          ),
                           const SizedBox(width: 3),
                           Text(
                             '$price',
@@ -1675,7 +1674,6 @@ class _ShopScreenState extends State<ShopScreen> {
     final l10n = L10n.of(context);
     final game = context.read<GameService>();
     final name = _getLocalizedItemName(item);
-    final description = _getLocalizedItemDescription(item);
     final category = item['category']?.toString() ?? '';
     final isActive = item['is_active'] == true;
     final itemKey = item['item_key']?.toString() ?? '';
@@ -1752,10 +1750,8 @@ class _ShopScreenState extends State<ShopScreen> {
                     ),
                     const SizedBox(height: 2),
                     Text(
-                      description.isNotEmpty
-                          ? description
-                          : (expiresText ?? l10n.shopPermanentOwned),
-                      maxLines: description.isNotEmpty ? 2 : 1,
+                      expiresText ?? l10n.shopPermanentOwned,
+                      maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       style: const TextStyle(
                         fontSize: 11.5,
@@ -1763,16 +1759,6 @@ class _ShopScreenState extends State<ShopScreen> {
                         height: 1.3,
                       ),
                     ),
-                    if (description.isNotEmpty && expiresText != null) ...[
-                      const SizedBox(height: 2),
-                      Text(
-                        expiresText,
-                        style: const TextStyle(
-                          fontSize: 10.5,
-                          color: Color(0xFFA0938C),
-                        ),
-                      ),
-                    ],
                     const SizedBox(height: 8),
                     Row(
                       children: [
@@ -2395,10 +2381,27 @@ class _ShopScreenState extends State<ShopScreen> {
     );
   }
 
-  void _showItemDetailSheet(BuildContext context, Map<String, dynamic> item) {
+  /// Detail for one item, or for one feature sold in duration tiers.
+  ///
+  /// [tiers] is the whole group (7d + 30d). They share one entitlement on the
+  /// server — buying either extends the same expiry — so the sheet shows the
+  /// feature once and offers every tier as its own button. Before this, opening
+  /// the 7-day row while holding the 30-day one said "구매" and the other way
+  /// round said "연장": ownership was read per item_key, which is not what the
+  /// server does.
+  void _showItemDetailSheet(
+    BuildContext context,
+    Map<String, dynamic> item, {
+    List<Map<String, dynamic>>? tiers,
+  }) {
     final l10n = L10n.of(context);
     final game = context.read<GameService>();
-    final name = _getLocalizedItemName(item);
+    final tierList = (tiers != null && tiers.length > 1) ? tiers : null;
+    final name = tierList != null
+        ? _stripDurationSuffix(_getLocalizedItemName(item))
+        : _getLocalizedItemName(item);
+    // The only place the description is shown — the list rows deliberately
+    // don't carry it.
     final description = _getLocalizedItemDescription(item);
     final price = (item['price'] ?? 0) as int;
     final isSeason = item['is_season'] == true;
@@ -2407,10 +2410,7 @@ class _ShopScreenState extends State<ShopScreen> {
     final category = item['category']?.toString() ?? '';
     final itemKey = item['item_key']?.toString() ?? '';
     final canBuy = game.gold >= price;
-    final ownedMatches = game.inventoryItems.where(
-      (i) => i['item_key'] == itemKey,
-    );
-    final ownedInv = ownedMatches.isEmpty ? null : ownedMatches.first;
+    final ownedInv = _ownedEntitlement(game, item);
     final owned = ownedInv != null;
     final ownedPermanent = owned && isPermanent;
     final ownedExpiry = ownedInv?['expires_at'];
@@ -2678,81 +2678,99 @@ class _ShopScreenState extends State<ShopScreen> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Row(
-                        children: [
-                          GoldIcon(size: 19, amount: price),
-                          const SizedBox(width: 4),
-                          Text(
-                            '$price G',
-                            style: const TextStyle(
-                              fontSize: 18,
-                              fontWeight: FontWeight.bold,
-                              color: Color(0xFF4A4080),
+                      if (tierList == null)
+                        Row(
+                          children: [
+                            GoldIcon(size: 19, amount: price),
+                            const SizedBox(width: 4),
+                            Text(
+                              '$price G',
+                              style: const TextStyle(
+                                fontSize: 18,
+                                fontWeight: FontWeight.bold,
+                                color: Color(0xFF4A4080),
+                              ),
                             ),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 10),
-                      Builder(
-                        builder: (_) {
-                          // Season banners are reward-only — once owned, they can
-                          // not be re-purchased or extended through the shop. Treat
-                          // owned-season the same as owned-permanent here.
-                          final lockedAsOwned =
-                              ownedPermanent || (isSeason && owned);
-                          return SizedBox(
-                            width: double.infinity,
-                            height: 46,
-                            child: ElevatedButton(
-                              onPressed: lockedAsOwned
-                                  ? null
-                                  : (canBuy
-                                        ? () {
-                                            Navigator.pop(ctx);
-                                            if (owned) {
-                                              _showExtendConfirmDialog(
-                                                context,
-                                                game,
-                                                item,
-                                              );
-                                            } else {
-                                              game.buyItem(itemKey);
+                          ],
+                        ),
+                      if (tierList == null) const SizedBox(height: 10),
+                      if (tierList != null)
+                        Row(
+                          children: [
+                            for (var i = 0; i < tierList.length; i++) ...[
+                              if (i > 0) const SizedBox(width: 8),
+                              Expanded(
+                                child: _buildTierActionButton(
+                                  ctx,
+                                  game,
+                                  tierList[i],
+                                  extend: owned,
+                                ),
+                              ),
+                            ],
+                          ],
+                        )
+                      else
+                        Builder(
+                          builder: (_) {
+                            // Season banners are reward-only — once owned, they can
+                            // not be re-purchased or extended through the shop. Treat
+                            // owned-season the same as owned-permanent here.
+                            final lockedAsOwned =
+                                ownedPermanent || (isSeason && owned);
+                            return SizedBox(
+                              width: double.infinity,
+                              height: 46,
+                              child: ElevatedButton(
+                                onPressed: lockedAsOwned
+                                    ? null
+                                    : (canBuy
+                                          ? () {
+                                              Navigator.pop(ctx);
+                                              if (owned) {
+                                                _showExtendConfirmDialog(
+                                                  context,
+                                                  game,
+                                                  item,
+                                                );
+                                              } else {
+                                                game.buyItem(itemKey);
+                                              }
                                             }
-                                          }
-                                        : null),
-                              style: ElevatedButton.styleFrom(
-                                backgroundColor: owned
-                                    ? const Color(0xFFBBDEFB)
-                                    : const Color(0xFFC7E6D0),
-                                foregroundColor: owned
-                                    ? const Color(0xFF1565C0)
-                                    : const Color(0xFF2E5A3A),
-                                disabledBackgroundColor: const Color(
-                                  0xFFE5E5E5,
+                                          : null),
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: owned
+                                      ? const Color(0xFFBBDEFB)
+                                      : const Color(0xFFC7E6D0),
+                                  foregroundColor: owned
+                                      ? const Color(0xFF1565C0)
+                                      : const Color(0xFF2E5A3A),
+                                  disabledBackgroundColor: const Color(
+                                    0xFFE5E5E5,
+                                  ),
+                                  disabledForegroundColor: const Color(
+                                    0xFF9A9A9A,
+                                  ),
+                                  elevation: 0,
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(12),
+                                  ),
                                 ),
-                                disabledForegroundColor: const Color(
-                                  0xFF9A9A9A,
-                                ),
-                                elevation: 0,
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(12),
+                                child: Text(
+                                  lockedAsOwned
+                                      ? l10n.shopItemOwned
+                                      : (owned
+                                            ? l10n.shopButtonExtend
+                                            : l10n.shopButtonPurchase),
+                                  style: const TextStyle(
+                                    fontSize: 15,
+                                    fontWeight: FontWeight.w700,
+                                  ),
                                 ),
                               ),
-                              child: Text(
-                                lockedAsOwned
-                                    ? l10n.shopItemOwned
-                                    : (owned
-                                          ? l10n.shopButtonExtend
-                                          : l10n.shopButtonPurchase),
-                                style: const TextStyle(
-                                  fontSize: 15,
-                                  fontWeight: FontWeight.w700,
-                                ),
-                              ),
-                            ),
-                          );
-                        },
-                      ),
+                            );
+                          },
+                        ),
                     ],
                   ),
                 ),
@@ -2761,6 +2779,110 @@ class _ShopScreenState extends State<ShopScreen> {
           ),
         );
       },
+    );
+  }
+
+  /// The inventory row that makes this item "owned".
+  ///
+  /// Matched by effect_type when the item has one, because that is how the
+  /// server grants and extends these: the 7-day and 30-day rows of one feature
+  /// are the same entitlement.
+  Map<String, dynamic>? _ownedEntitlement(
+    GameService game,
+    Map<String, dynamic> item,
+  ) {
+    final itemKey = item['item_key']?.toString() ?? '';
+    final effectType = item['effect_type']?.toString() ?? '';
+    final byKey = game.inventoryItems.where((i) => i['item_key'] == itemKey);
+    if (byKey.isNotEmpty) return byKey.first;
+    if (effectType.isEmpty) return null;
+    final byEffect = game.inventoryItems.where(
+      (i) => (i['effect_type']?.toString() ?? '') == effectType,
+    );
+    return byEffect.isEmpty ? null : byEffect.first;
+  }
+
+  /// One duration tier as a buy/extend button: "7일 · 1000 구매".
+  Widget _buildTierActionButton(
+    BuildContext sheetCtx,
+    GameService game,
+    Map<String, dynamic> tier, {
+    required bool extend,
+  }) {
+    final l10n = L10n.of(sheetCtx);
+    final price = (tier['price'] ?? 0) as int;
+    final tierKey = tier['item_key']?.toString() ?? '';
+    final canBuy = game.gold >= price;
+    final name = _getLocalizedItemName(tier);
+    final match = RegExp(r'\(([^)]*)\)\s*$').firstMatch(name);
+    final durationLabel = match != null
+        ? match.group(1)!
+        : '${tier['duration_days'] ?? ''}';
+    return SizedBox(
+      height: 46,
+      child: ElevatedButton(
+        onPressed: canBuy
+            ? () {
+                Navigator.pop(sheetCtx);
+                if (extend) {
+                  _showExtendConfirmDialog(context, game, tier);
+                } else {
+                  game.buyItem(tierKey);
+                }
+              }
+            : null,
+        style: ElevatedButton.styleFrom(
+          backgroundColor: extend
+              ? const Color(0xFFBBDEFB)
+              : const Color(0xFFC7E6D0),
+          foregroundColor: extend
+              ? const Color(0xFF1565C0)
+              : const Color(0xFF2E5A3A),
+          disabledBackgroundColor: const Color(0xFFE5E5E5),
+          disabledForegroundColor: const Color(0xFF9A9A9A),
+          elevation: 0,
+          padding: const EdgeInsets.symmetric(horizontal: 6),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+          ),
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(
+              durationLabel,
+              maxLines: 1,
+              style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w700),
+            ),
+            const SizedBox(height: 1),
+            FittedBox(
+              fit: BoxFit.scaleDown,
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  GoldIcon(size: 14, amount: price),
+                  const SizedBox(width: 3),
+                  Text(
+                    '$price',
+                    style: const TextStyle(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w800,
+                    ),
+                  ),
+                  const SizedBox(width: 4),
+                  Text(
+                    extend ? l10n.shopButtonExtend : l10n.shopButtonPurchase,
+                    style: const TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
     );
   }
 

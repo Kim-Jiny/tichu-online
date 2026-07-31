@@ -2006,5 +2006,13 @@
   "profilePrivateHidePhotoDesc": "When on, your profile photo is hidden from non-friends in the waiting room and in game too",
   "shopPreviewLabel": "Preview",
   "shopPreviewNickname": "Nickname",
-  "shopButtonUnequip": "Unequip"
+  "shopButtonUnequip": "Unequip",
+  "customTitleEditTitle": "Custom title",
+  "customTitleHint": "Up to 4 characters",
+  "customTitleRule": "Letters, Hangul and digits only, 4 characters max. No emoji, symbols or spaces.",
+  "customTitleColorLabel": "Colour",
+  "customTitlePreviewLabel": "Preview",
+  "customTitleSave": "Apply",
+  "customTitleButton": "Write title",
+  "customTitleSaved": "Title applied"
 }

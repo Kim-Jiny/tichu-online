@@ -4431,4 +4431,29 @@ class L10nEn extends L10n {
 
   @override
   String get shopButtonUnequip => 'Unequip';
+
+  @override
+  String get customTitleEditTitle => 'Custom title';
+
+  @override
+  String get customTitleHint => 'Up to 4 characters';
+
+  @override
+  String get customTitleRule =>
+      'Letters, Hangul and digits only, 4 characters max. No emoji, symbols or spaces.';
+
+  @override
+  String get customTitleColorLabel => 'Colour';
+
+  @override
+  String get customTitlePreviewLabel => 'Preview';
+
+  @override
+  String get customTitleSave => 'Apply';
+
+  @override
+  String get customTitleButton => 'Write title';
+
+  @override
+  String get customTitleSaved => 'Title applied';
 }

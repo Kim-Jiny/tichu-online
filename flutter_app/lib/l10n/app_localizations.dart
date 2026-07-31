@@ -7910,6 +7910,54 @@ abstract class L10n {
   /// In en, this message translates to:
   /// **'Unequip'**
   String get shopButtonUnequip;
+
+  /// No description provided for @customTitleEditTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Custom title'**
+  String get customTitleEditTitle;
+
+  /// No description provided for @customTitleHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Up to 4 characters'**
+  String get customTitleHint;
+
+  /// No description provided for @customTitleRule.
+  ///
+  /// In en, this message translates to:
+  /// **'Letters, Hangul and digits only, 4 characters max. No emoji, symbols or spaces.'**
+  String get customTitleRule;
+
+  /// No description provided for @customTitleColorLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Colour'**
+  String get customTitleColorLabel;
+
+  /// No description provided for @customTitlePreviewLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Preview'**
+  String get customTitlePreviewLabel;
+
+  /// No description provided for @customTitleSave.
+  ///
+  /// In en, this message translates to:
+  /// **'Apply'**
+  String get customTitleSave;
+
+  /// No description provided for @customTitleButton.
+  ///
+  /// In en, this message translates to:
+  /// **'Write title'**
+  String get customTitleButton;
+
+  /// No description provided for @customTitleSaved.
+  ///
+  /// In en, this message translates to:
+  /// **'Title applied'**
+  String get customTitleSaved;
 }
 
 class _L10nDelegate extends LocalizationsDelegate<L10n> {

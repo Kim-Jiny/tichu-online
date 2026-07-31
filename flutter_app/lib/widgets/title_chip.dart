@@ -22,11 +22,14 @@ class TitleChip extends StatelessWidget {
     final name = titleName;
     if (name == null || name.isEmpty) return const SizedBox.shrink();
     final color = titleColorFor(titleKey);
+    // A user-written title carries no icon: the catalog icons say "this is one
+    // of ours", and a self-chosen title must not be able to borrow that.
+    final custom = isCustomTitleKey(titleKey);
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: [
-        Icon(titleIconFor(titleKey), size: iconSize, color: color),
-        const SizedBox(width: 3),
+        if (!custom) Icon(titleIconFor(titleKey), size: iconSize, color: color),
+        if (!custom) const SizedBox(width: 3),
         Flexible(
           child: Text(
             name,
@@ -99,7 +102,29 @@ IconData titleIconFor(String? titleKey) {
   }
 }
 
+/// Custom titles are worn as `custom:<palette id>` in the same slot as catalog
+/// titles, so no payload needed a new field for them.
+bool isCustomTitleKey(String? titleKey) =>
+    titleKey != null && titleKey.startsWith('custom:');
+
+/// The palette the server accepts. Ids, not free colour: a free colour can be
+/// the background colour, and an invisible title is not a title.
+const Map<String, Color> customTitleColors = {
+  'rose': Color(0xFFD64550),
+  'amber': Color(0xFFC97A0B),
+  'green': Color(0xFF2E7D32),
+  'teal': Color(0xFF00796B),
+  'blue': Color(0xFF1565C0),
+  'violet': Color(0xFF6A3FB5),
+  'pink': Color(0xFFC2185B),
+  'slate': Color(0xFF455A64),
+};
+
 Color titleColorFor(String? titleKey) {
+  if (isCustomTitleKey(titleKey)) {
+    return customTitleColors[titleKey!.substring('custom:'.length)] ??
+        const Color(0xFF5A4038);
+  }
   switch (titleKey) {
     case 'title_sweet':
       return const Color(0xFFEC407A);

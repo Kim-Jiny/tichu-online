@@ -215,6 +215,7 @@ class _ShopScreenState extends State<ShopScreen> {
                     _maybeShowShopActionResult(context, game);
                     _maybeShowPurchaseDialog(context, game);
                     _maybeShowNicknameChangeResult(context, game);
+                    _maybeShowCustomTitleResult(context, game);
                     _maybeShowAdRewardResult(context, game);
                   });
                   // Header and wallet are one flat bar, the two reward actions
@@ -1740,6 +1741,9 @@ class _ShopScreenState extends State<ShopScreen> {
         itemKey.startsWith('mighty_prev_trick') ||
         effectType == 'profile_photo' ||
         effectType == 'profile_private';
+    // Custom title is the one feature item with something to set: the row's
+    // button opens the editor instead of doing nothing.
+    final isCustomTitle = effectType == 'custom_title';
     final isConsumable = category == 'utility' && !noEquipAction;
     final expiresAt = item['expires_at'];
     final expiresText = expiresAt != null
@@ -1816,7 +1820,7 @@ class _ShopScreenState extends State<ShopScreen> {
                     Row(
                       children: [
                         const Spacer(),
-                        if (!noEquipAction)
+                        if (!noEquipAction || isCustomTitle)
                           SizedBox(
                             height: 30,
                             child: ElevatedButton(
@@ -1828,6 +1832,8 @@ class _ShopScreenState extends State<ShopScreen> {
                                           context,
                                           game,
                                         );
+                                      } else if (effectType == 'custom_title') {
+                                        _showCustomTitleDialog(context, game);
                                       } else if (isConsumable) {
                                         _runItemAction(
                                           itemKey,
@@ -1875,7 +1881,9 @@ class _ShopScreenState extends State<ShopScreen> {
                                       ),
                                     )
                                   : Text(
-                                      isConsumable
+                                      isCustomTitle
+                                          ? l10n.customTitleButton
+                                          : isConsumable
                                           ? l10n.shopButtonUse
                                           : (equipped
                                                 ? l10n.shopButtonUnequip
@@ -2307,6 +2315,13 @@ class _ShopScreenState extends State<ShopScreen> {
           'gradient': [const Color(0xFFE8EAF6), const Color(0xFFC5CAE9)],
           'borderColor': const Color(0xFF9FA8DA),
         };
+      case 'custom_title_7d':
+        return {
+          'icon': Icons.drive_file_rename_outline,
+          'iconColor': const Color(0xFFC2185B),
+          'gradient': [const Color(0xFFFCE4EC), const Color(0xFFF8BBD0)],
+          'borderColor': const Color(0xFFF48FB1),
+        };
       case 'profile_private_7d':
       case 'profile_private_30d':
         return {
@@ -2439,6 +2454,23 @@ class _ShopScreenState extends State<ShopScreen> {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text(msg),
+        backgroundColor: ok ? const Color(0xFF66BB6A) : const Color(0xFFEF5350),
+      ),
+    );
+  }
+
+  /// Why a title was refused (four characters, a banned word, a colour that is
+  /// not in the palette) has to be said out loud — the editor closes on submit,
+  /// so a silent rejection would look like it worked.
+  void _maybeShowCustomTitleResult(BuildContext context, GameService game) {
+    if (game.customTitleSuccess == null) return;
+    final ok = game.customTitleSuccess == true;
+    final msg = game.customTitleMessage;
+    game.customTitleSuccess = null;
+    game.customTitleMessage = null;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(ok ? L10n.of(context).customTitleSaved : (msg ?? '')),
         backgroundColor: ok ? const Color(0xFF66BB6A) : const Color(0xFFEF5350),
       ),
     );
@@ -3292,6 +3324,198 @@ class _ShopScreenState extends State<ShopScreen> {
           color: Color(0xFF6A5A52),
           fontWeight: FontWeight.w600,
         ),
+      ),
+    );
+  }
+
+  /// Editor for the user-written title.
+  ///
+  /// The live preview is the point: it is drawn with the same TitleChip the
+  /// waiting room uses, so what is on screen here is exactly what other players
+  /// will see — including that a custom title carries no icon.
+  ///
+  /// The 4-character limit and the character set are enforced here for feedback
+  /// only; the server validates again and is the one that decides.
+  void _showCustomTitleDialog(BuildContext context, GameService game) {
+    final l10n = L10n.of(context);
+    final profile = _myProfile(game);
+    final controller = TextEditingController(
+      text: profile?['customTitleText']?.toString() ?? '',
+    );
+    var colorId = profile?['customTitleColor']?.toString() ?? 'rose';
+    if (!customTitleColors.containsKey(colorId)) colorId = 'rose';
+
+    showDialog(
+      context: context,
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setSheetState) {
+          final text = controller.text.trim();
+          return AlertDialog(
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(20),
+            ),
+            backgroundColor: const Color(0xFFFDFBFA),
+            title: Text(
+              l10n.customTitleEditTitle,
+              style: const TextStyle(
+                fontSize: 17,
+                fontWeight: FontWeight.w800,
+                color: Color(0xFF4A3A33),
+              ),
+            ),
+            // Scrollable: the keyboard is up the whole time this dialog is
+            // open, and the preview plus the rule line do not fit in what is
+            // left on a phone.
+            content: SizedBox(
+              width: 340,
+              child: SingleChildScrollView(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    TextField(
+                      controller: controller,
+                      autofocus: true,
+                      maxLength: 4,
+                      textAlign: TextAlign.center,
+                      style: const TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.w700,
+                      ),
+                      decoration: InputDecoration(
+                        hintText: l10n.customTitleHint,
+                        counterText: '',
+                        border: const OutlineInputBorder(),
+                        contentPadding: const EdgeInsets.symmetric(
+                          horizontal: 12,
+                          vertical: 12,
+                        ),
+                      ),
+                      onChanged: (_) => setSheetState(() {}),
+                    ),
+                    const SizedBox(height: 14),
+                    Text(
+                      l10n.customTitlePreviewLabel,
+                      style: const TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w700,
+                        color: Color(0xFF8A7A72),
+                      ),
+                    ),
+                    const SizedBox(height: 6),
+                    Container(
+                      width: double.infinity,
+                      height: 60,
+                      padding: const EdgeInsets.symmetric(horizontal: 12),
+                      decoration: BoxDecoration(
+                        color: Colors.white.withValues(alpha: 0.72),
+                        borderRadius: BorderRadius.circular(16),
+                        border: Border.all(color: const Color(0xFFE6DDD8)),
+                      ),
+                      child: Row(
+                        children: [
+                          Expanded(
+                            child: Column(
+                              mainAxisSize: MainAxisSize.min,
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                TitleChip(
+                                  titleKey: 'custom:$colorId',
+                                  titleName: text.isEmpty
+                                      ? l10n.customTitleHint
+                                      : text,
+                                  fontSize: 12,
+                                ),
+                                const SizedBox(height: 2),
+                                Text(
+                                  game.playerName.isEmpty
+                                      ? l10n.shopPreviewNickname
+                                      : game.playerName,
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: const TextStyle(
+                                    fontSize: 16,
+                                    fontWeight: FontWeight.bold,
+                                    color: Color(0xFF5A4038),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: 10),
+                    Text(
+                      l10n.customTitleColorLabel,
+                      style: const TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w700,
+                        color: Color(0xFF8A7A72),
+                      ),
+                    ),
+                    const SizedBox(height: 6),
+                    Wrap(
+                      spacing: 8,
+                      runSpacing: 8,
+                      children: [
+                        for (final entry in customTitleColors.entries)
+                          InkWell(
+                            borderRadius: BorderRadius.circular(999),
+                            onTap: () =>
+                                setSheetState(() => colorId = entry.key),
+                            child: Container(
+                              width: 30,
+                              height: 30,
+                              decoration: BoxDecoration(
+                                color: entry.value,
+                                shape: BoxShape.circle,
+                                border: Border.all(
+                                  color: colorId == entry.key
+                                      ? const Color(0xFF4A3A33)
+                                      : Colors.transparent,
+                                  width: 2.5,
+                                ),
+                              ),
+                            ),
+                          ),
+                      ],
+                    ),
+                    const SizedBox(height: 10),
+                    Text(
+                      l10n.customTitleRule,
+                      style: const TextStyle(
+                        fontSize: 11,
+                        height: 1.35,
+                        color: Color(0xFF9A8E8A),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(ctx),
+                child: Text(l10n.commonCancel),
+              ),
+              ElevatedButton(
+                onPressed: text.isEmpty
+                    ? null
+                    : () {
+                        Navigator.pop(ctx);
+                        game.setCustomTitle(text, colorId);
+                      },
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color(0xFFC7E6D0),
+                  foregroundColor: const Color(0xFF2E5A3A),
+                  elevation: 0,
+                ),
+                child: Text(l10n.customTitleSave),
+              ),
+            ],
+          );
+        },
       ),
     );
   }

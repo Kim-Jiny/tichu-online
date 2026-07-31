@@ -265,5 +265,10 @@
   "mighty_not_kill_phase": "Not in the kill-declaration phase",
   "mighty_invalid_kill_target": "Invalid kill target card",
   "mighty_kill_in_own_hand": "Cannot kill a card that is in your own hand",
-  "spectators_not_allowed": "This room does not allow spectators"
+  "spectators_not_allowed": "This room does not allow spectators",
+  "custom_title_empty": "Enter a title",
+  "custom_title_charset": "Letters, Hangul and digits only (no emoji or symbols)",
+  "custom_title_too_long": "Titles can be up to 4 characters",
+  "custom_title_banned": "That title contains a word that is not allowed",
+  "custom_title_color": "That colour is not available"
 }

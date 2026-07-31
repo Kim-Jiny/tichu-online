@@ -220,6 +220,11 @@ async function initDatabase() {
     // tc_user_items (effect_type 'profile_private'); only the owner's choice of
     // how far it reaches lives here.
     await client.query(`ALTER TABLE tc_users ADD COLUMN IF NOT EXISTS profile_private_hide_photo BOOLEAN DEFAULT FALSE`);
+    // Custom title: the entitlement is an ordinary feature item in
+    // tc_user_items; the text and its palette colour are the user's own and
+    // live here so they survive a lapsed pass and come back on re-purchase.
+    await client.query(`ALTER TABLE tc_users ADD COLUMN IF NOT EXISTS custom_title_text VARCHAR(24)`);
+    await client.query(`ALTER TABLE tc_users ADD COLUMN IF NOT EXISTS custom_title_color VARCHAR(16)`);
 
 
     // Device info columns
@@ -704,6 +709,7 @@ async function initDatabase() {
         ('mighty_prev_trick_30d', '마이티 이전 트릭 확인(30일)', '마이티 이전 트릭 확인(30일)', 'Mighty Previous Trick Viewer (30d)', 'Mighty-Vorheriger-Stich-Anzeige (30T)', 'utility', 3000, FALSE, FALSE, 30, TRUE, 'mighty_prev_trick', NULL, '{}'::jsonb),
         ('profile_photo_7d', '프로필 사진(7일)', '프로필 사진(7일)', 'Profile Photo (7d)', 'Profilbild (7T)', 'feature', 1000, FALSE, FALSE, 7, TRUE, 'profile_photo', NULL, '{}'::jsonb),
         ('profile_photo_30d', '프로필 사진(30일)', '프로필 사진(30일)', 'Profile Photo (30d)', 'Profilbild (30T)', 'feature', 3000, FALSE, FALSE, 30, TRUE, 'profile_photo', NULL, '{}'::jsonb),
+        ('custom_title_7d', '커스텀 칭호(7일)', '커스텀 칭호(7일)', 'Custom Title (7d)', 'Eigener Titel (7T)', 'feature', 500, FALSE, FALSE, 7, TRUE, 'custom_title', NULL, '{}'::jsonb),
         ('profile_private_7d', '프로필 비공개(7일)', '프로필 비공개(7일)', 'Private Profile (7d)', 'Privates Profil (7T)', 'feature', 1000, FALSE, FALSE, 7, TRUE, 'profile_private', NULL, '{}'::jsonb),
         ('profile_private_30d', '프로필 비공개(30일)', '프로필 비공개(30일)', 'Private Profile (30d)', 'Privates Profil (30T)', 'feature', 3000, FALSE, FALSE, 30, TRUE, 'profile_private', NULL, '{}'::jsonb),
         ('banner_season_gold', '티츄 시즌 골드 배너', '티츄 시즌 골드 배너', 'Tichu Season Gold Banner', 'Tichu-Saison-Gold-Banner', 'banner', 0, TRUE, FALSE, 30, FALSE, NULL, NULL, '{}'::jsonb),
@@ -763,6 +769,13 @@ async function initDatabase() {
         '기간 동안 내 사진을 프로필로 쓸 수 있습니다. 횟수 제한 없이 언제든 바꾸거나 삭제할 수 있고, 대기실·게임·프로필 어디서나 다른 사람에게 보입니다. (업로드한 사진은 자동 검수를 거칩니다)',
         'Use your own photo as your profile picture for the duration. Change or remove it as often as you like; it is shown to other players in the waiting room, in game and on your profile. (Uploads are screened automatically.)',
         'Nutze für die Laufzeit dein eigenes Foto als Profilbild. Beliebig oft änder- oder löschbar; es wird anderen im Warteraum, im Spiel und im Profil gezeigt. (Uploads werden automatisch geprüft.)',
+      ],
+      [
+        `effect_type = 'custom_title'`,
+        [],
+        '닉네임 위에 붙는 칭호를 직접 씁니다. 한글·영문·숫자 4자까지, 색은 8가지 중에서 고를 수 있습니다. (아이콘 없이 글자만 표시되며, 부적절한 칭호는 신고를 받아 삭제될 수 있습니다)',
+        'Write your own title above your nickname — up to 4 letters or digits, in one of 8 colours. (Text only, no icon; titles reported as inappropriate can be removed.)',
+        'Schreibe deinen eigenen Titel über deinem Nickname — bis zu 4 Zeichen in einer von 8 Farben. (Nur Text, kein Symbol; gemeldete Titel können entfernt werden.)',
       ],
       [
         `effect_type = 'top_card_counter'`,
@@ -1878,6 +1891,7 @@ async function getUserProfile(nickname, locale = 'ko') {
               u.card_view_pref,
               u.profile_photo_key, u.profile_photo_status, u.profile_photo_expires_at,
               u.profile_private_hide_photo,
+              u.custom_title_text, u.custom_title_color,
               e.banner_key, e.theme_key, e.title_key,
               si.${titleCol} AS title_name
        FROM tc_users u
@@ -1932,9 +1946,14 @@ async function getUserProfile(nickname, locale = 'ko') {
       [nickname],
     );
     const hasProfilePrivate = (privateRow.rows[0]?.n || 0) > 0;
+    const hasCustomTitle = await featureActive('custom_title');
     const profilePrivateExpiresAt = hasProfilePrivate
       ? (privateRow.rows[0].expires_at || null)
       : null;
+
+    const wearingCustomTitle = (user.title_key || '').startsWith('custom:');
+    const customTitleActive =
+      wearingCustomTitle && hasCustomTitle && !!user.custom_title_text;
 
     const skWinRate = user.sk_total_games > 0
       ? Math.round((user.sk_wins / user.sk_total_games) * 100)
@@ -1971,8 +1990,12 @@ async function getUserProfile(nickname, locale = 'ko') {
       level: user.level,
       bannerKey: user.banner_key,
       themeKey: user.theme_key,
-      titleKey: user.title_key,
-      titleName: user.title_name || null,
+      titleKey: wearingCustomTitle && !customTitleActive
+          ? null
+          : user.title_key,
+      titleName: customTitleActive
+        ? user.custom_title_text
+        : (user.title_name || null),
       createdAt: user.created_at,
       hasTopCardCounter,
       hasMightyTrumpCounter,
@@ -2008,10 +2031,90 @@ async function getUserProfile(nickname, locale = 'ko') {
       hasProfilePrivate,
       profilePrivateExpiresAt,
       profilePrivateHidePhoto: user.profile_private_hide_photo === true,
+      hasCustomTitle,
+      customTitleText: user.custom_title_text || null,
+      customTitleColor: user.custom_title_color || null,
     };
   } catch (err) {
     console.error('Get user profile error:', err);
     return null;
+  } finally {
+    client.release();
+  }
+}
+
+/**
+ * Store the user's own title text and wear it.
+ *
+ * The text lives on tc_users and the equip slot holds `custom:<colour>` — the
+ * colour rides in the key so every payload that already carries titleKey/
+ * titleName (room state, game state, profile) shows a custom title without a
+ * new field on any of them.
+ *
+ * Ownership is checked here rather than trusted from the client: this is the
+ * only path that writes a title nobody reviewed.
+ */
+async function setCustomTitle(nickname, text, colorId) {
+  const client = await pool.connect();
+  try {
+    const active = await client.query(
+      `SELECT 1 FROM tc_user_items ui
+       JOIN tc_shop_items si ON si.item_key = ui.item_key
+       WHERE ui.nickname = $1 AND si.effect_type = 'custom_title'
+         AND (ui.expires_at IS NULL OR ui.expires_at >= NOW()) LIMIT 1`,
+      [nickname],
+    );
+    if (active.rows.length === 0) {
+      return { success: false, messageKey: 'db_item_not_owned' };
+    }
+    await client.query(
+      `UPDATE tc_users SET custom_title_text = $2, custom_title_color = $3
+       WHERE nickname = $1`,
+      [nickname, text, colorId],
+    );
+    const titleKey = `custom:${colorId}`;
+    await client.query(
+      `INSERT INTO tc_user_equips (nickname, title_key, updated_at)
+       VALUES ($1, $2, NOW())
+       ON CONFLICT (nickname)
+       DO UPDATE SET title_key = EXCLUDED.title_key, updated_at = NOW()`,
+      [nickname, titleKey],
+    );
+    // Catalog titles are mutually exclusive with this one, same as with each
+    // other — the equip slot holds exactly one.
+    await client.query(
+      `UPDATE tc_user_items SET is_active = FALSE
+       WHERE nickname = $1 AND item_key IN (
+         SELECT item_key FROM tc_shop_items WHERE category = 'title'
+       )`,
+      [nickname],
+    );
+    return { success: true, titleKey, titleName: text, color: colorId };
+  } catch (err) {
+    console.error('Set custom title error:', err);
+    return { success: false, messageKey: 'db_update_failed' };
+  } finally {
+    client.release();
+  }
+}
+
+/** Admin/report path: wipe the text and take it off. */
+async function clearCustomTitle(nickname) {
+  const client = await pool.connect();
+  try {
+    await client.query(
+      `UPDATE tc_users SET custom_title_text = NULL WHERE nickname = $1`,
+      [nickname],
+    );
+    await client.query(
+      `UPDATE tc_user_equips SET title_key = NULL, updated_at = NOW()
+       WHERE nickname = $1 AND title_key LIKE 'custom:%'`,
+      [nickname],
+    );
+    return { success: true };
+  } catch (err) {
+    console.error('Clear custom title error:', err);
+    return { success: false, messageKey: 'db_update_failed' };
   } finally {
     client.release();
   }
@@ -2701,7 +2804,7 @@ async function buyItem(nickname, itemKey) {
       return { success: true, profilePhoto: true };
     }
     // Gameplay counters/viewers: extend any active tier of the same feature.
-    const FEATURE_EFFECTS = new Set(['top_card_counter', 'mighty_trump_counter', 'mighty_prev_trick', 'profile_private']);
+    const FEATURE_EFFECTS = new Set(['top_card_counter', 'mighty_trump_counter', 'mighty_prev_trick', 'profile_private', 'custom_title']);
     if (FEATURE_EFFECTS.has(item.effect_type)) {
       const days = item.duration_days || 30;
       const existing = await client.query(
@@ -7936,6 +8039,8 @@ module.exports = {
   getFriends,
   setProfilePrivateHidePhoto,
   unequipCategory,
+  setCustomTitle,
+  clearCustomTitle,
   getPendingFriendRequests,
   acceptFriendRequest,
   rejectFriendRequest,

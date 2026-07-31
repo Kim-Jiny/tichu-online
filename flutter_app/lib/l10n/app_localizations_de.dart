@@ -4467,4 +4467,29 @@ class L10nDe extends L10n {
 
   @override
   String get shopButtonUnequip => 'Ablegen';
+
+  @override
+  String get customTitleEditTitle => 'Eigener Titel';
+
+  @override
+  String get customTitleHint => 'Bis zu 4 Zeichen';
+
+  @override
+  String get customTitleRule =>
+      'Nur Buchstaben, Hangul und Ziffern, max. 4 Zeichen. Keine Emojis, Sonderzeichen oder Leerzeichen.';
+
+  @override
+  String get customTitleColorLabel => 'Farbe';
+
+  @override
+  String get customTitlePreviewLabel => 'Vorschau';
+
+  @override
+  String get customTitleSave => 'Übernehmen';
+
+  @override
+  String get customTitleButton => 'Titel schreiben';
+
+  @override
+  String get customTitleSaved => 'Titel übernommen';
 }

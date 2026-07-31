@@ -1687,6 +1687,17 @@ class GameService extends ChangeNotifier {
         notifyListeners();
         break;
 
+      case 'custom_title_result':
+        customTitleSuccess = data['success'] == true;
+        customTitleMessage = data['message'] as String?;
+        if (data['success'] == true) {
+          equippedTitle = data['titleKey'] as String?;
+        }
+        // The inventory row shows the current text; refetch so it is not stale.
+        requestInventory();
+        notifyListeners();
+        break;
+
       case 'profile_private_result':
         if (data['success'] == true) {
           profilePrivateHidePhoto = data['hidePhoto'] == true;
@@ -3473,6 +3484,19 @@ class GameService extends ChangeNotifier {
 
   void equipItem(String itemKey) {
     _network.send({'type': 'equip_item', 'itemKey': itemKey});
+  }
+
+  /// Result of the last custom-title save: null while none is pending, then the
+  /// server's message (success or the reason it refused).
+  String? customTitleMessage;
+  bool? customTitleSuccess;
+
+  void setCustomTitle(String text, String colorId) {
+    _network.send({
+      'type': 'set_custom_title',
+      'text': text,
+      'color': colorId,
+    });
   }
 
   /// Take off whatever is equipped in this category (banner / title / theme).

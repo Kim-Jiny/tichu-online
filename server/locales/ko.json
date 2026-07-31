@@ -265,5 +265,10 @@
   "mighty_not_kill_phase": "킬 선언 단계가 아닙니다",
   "mighty_invalid_kill_target": "유효하지 않은 킬 대상 카드입니다",
   "mighty_kill_in_own_hand": "자신의 손패에 있는 카드는 킬할 수 없습니다",
-  "spectators_not_allowed": "이 방은 관전을 허용하지 않습니다"
+  "spectators_not_allowed": "이 방은 관전을 허용하지 않습니다",
+  "custom_title_empty": "칭호를 입력해 주세요",
+  "custom_title_charset": "한글·영문·숫자만 사용할 수 있습니다 (이모지·특수문자 불가)",
+  "custom_title_too_long": "칭호는 4글자까지 가능합니다",
+  "custom_title_banned": "사용할 수 없는 단어가 포함되어 있습니다",
+  "custom_title_color": "사용할 수 없는 색상입니다"
 }

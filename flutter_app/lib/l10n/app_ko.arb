@@ -1423,5 +1423,13 @@
   "profilePrivateHidePhotoDesc": "켜면 대기실과 게임 화면에 보이는 프로필 사진까지 친구가 아닌 사람에게 숨겨집니다",
   "shopPreviewLabel": "적용 미리보기",
   "shopPreviewNickname": "닉네임",
-  "shopButtonUnequip": "해제"
+  "shopButtonUnequip": "해제",
+  "customTitleEditTitle": "커스텀 칭호",
+  "customTitleHint": "4글자까지",
+  "customTitleRule": "한글·영문·숫자만, 4글자까지. 이모지·특수문자·공백은 쓸 수 없습니다.",
+  "customTitleColorLabel": "색상",
+  "customTitlePreviewLabel": "미리보기",
+  "customTitleSave": "적용",
+  "customTitleButton": "칭호 만들기",
+  "customTitleSaved": "칭호가 적용되었습니다"
 }

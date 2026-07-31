@@ -21,7 +21,7 @@ const {
   initDatabase, registerUser, loginUser, checkNickname, deleteUser,
   blockUser, unblockUser, getBlockedUsers, reportUser, getReportedNicknames,
   addFriend, getFriends, getPendingFriendRequests, setProfilePrivateHidePhoto,
-  unequipCategory,
+  unequipCategory, setCustomTitle, clearCustomTitle,
   acceptFriendRequest, rejectFriendRequest, removeFriend,
   saveMatchResult, saveMatchResultWithStats, updateUserStats, getUserProfile, getRecentMatches, updateCardViewPref,
   submitInquiry, getUserInquiries, markInquiriesRead, getRankings,
@@ -753,6 +753,7 @@ function getMaintenanceStatus(locale) {
 const sharp = require('sharp');
 const minioClient = require('./storage/minioClient');
 const visionSafeSearch = require('./moderation/visionSafeSearch');
+const { validateCustomTitle } = require('./moderation/customTitle');
 
 // Short-lived, one-time upload tokens. Issued over the authenticated WS
 // (request_upload_token) and consumed by the HTTP POST /upload/profile-photo —
@@ -2967,6 +2968,9 @@ async function handleMessage(ws, data) {
       break;
     case 'unequip_item':
       await handleUnequipItem(ws, data);
+      break;
+    case 'set_custom_title':
+      await handleSetCustomTitle(ws, data);
       break;
     case 'use_item':
       await handleUseItem(ws, data);
@@ -8272,6 +8276,61 @@ async function handleEquipItem(ws, data) {
  * seat the user is already sitting in, and the room broadcast — otherwise the
  * banner stays on the slot until they leave the room.
  */
+/**
+ * Write (or rewrite) the user's own title.
+ *
+ * Validation is server-side and final — the client's field limit is a
+ * convenience, not a guarantee, and this is the one path that puts unreviewed
+ * text next to a nickname on everyone else's screen.
+ */
+async function handleSetCustomTitle(ws, data) {
+  if (!ws.nickname) {
+    sendTo(ws, { type: 'custom_title_result', success: false, message: t(ws.locale, 'login_required') });
+    return;
+  }
+  const check = validateCustomTitle(data?.text, data?.color?.toString() || '');
+  if (!check.ok) {
+    sendTo(ws, {
+      type: 'custom_title_result',
+      success: false,
+      reason: check.reason,
+      message: t(ws.locale, check.reason),
+    });
+    return;
+  }
+  const result = await setCustomTitle(ws.nickname, check.text, check.color);
+  if (!result.success) {
+    sendTo(ws, {
+      type: 'custom_title_result',
+      success: false,
+      message: t(ws.locale, result.messageKey || 'db_update_failed'),
+    });
+    return;
+  }
+  // Same after-effects as equipping a catalog title: the socket's copy, the
+  // seat the user is already in, and the room broadcast.
+  ws.titleKey = result.titleKey;
+  ws.titleName = result.titleName;
+  if (ws.roomId) {
+    const room = lobby.getRoom(ws.roomId);
+    if (room) {
+      const p = room.players.find((p) => p !== null && p.id === ws.playerId);
+      if (p) {
+        p.titleKey = result.titleKey;
+        p.titleName = result.titleName;
+      }
+      broadcastRoomState(ws.roomId);
+    }
+  }
+  sendTo(ws, {
+    type: 'custom_title_result',
+    success: true,
+    titleKey: result.titleKey,
+    titleName: result.titleName,
+    color: result.color,
+  });
+}
+
 async function handleUnequipItem(ws, data) {
   if (!ws.nickname) {
     sendTo(ws, { type: 'equip_result', success: false, message: t(ws.locale, 'login_required') });

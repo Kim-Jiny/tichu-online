@@ -4328,4 +4328,28 @@ class L10nKo extends L10n {
 
   @override
   String get shopButtonUnequip => '해제';
+
+  @override
+  String get customTitleEditTitle => '커스텀 칭호';
+
+  @override
+  String get customTitleHint => '4글자까지';
+
+  @override
+  String get customTitleRule => '한글·영문·숫자만, 4글자까지. 이모지·특수문자·공백은 쓸 수 없습니다.';
+
+  @override
+  String get customTitleColorLabel => '색상';
+
+  @override
+  String get customTitlePreviewLabel => '미리보기';
+
+  @override
+  String get customTitleSave => '적용';
+
+  @override
+  String get customTitleButton => '칭호 만들기';
+
+  @override
+  String get customTitleSaved => '칭호가 적용되었습니다';
 }

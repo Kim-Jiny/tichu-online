@@ -1421,5 +1421,13 @@
   "profilePrivateHidePhotoDesc": "Wenn aktiv, ist dein Profilbild auch im Warteraum und im Spiel für Nicht-Freunde verborgen",
   "shopPreviewLabel": "Vorschau",
   "shopPreviewNickname": "Nickname",
-  "shopButtonUnequip": "Ablegen"
+  "shopButtonUnequip": "Ablegen",
+  "customTitleEditTitle": "Eigener Titel",
+  "customTitleHint": "Bis zu 4 Zeichen",
+  "customTitleRule": "Nur Buchstaben, Hangul und Ziffern, max. 4 Zeichen. Keine Emojis, Sonderzeichen oder Leerzeichen.",
+  "customTitleColorLabel": "Farbe",
+  "customTitlePreviewLabel": "Vorschau",
+  "customTitleSave": "Übernehmen",
+  "customTitleButton": "Titel schreiben",
+  "customTitleSaved": "Titel übernommen"
 }

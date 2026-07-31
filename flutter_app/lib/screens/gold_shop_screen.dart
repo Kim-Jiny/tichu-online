@@ -307,35 +307,22 @@ class _GoldShopScreenState extends State<GoldShopScreen> {
     final pending = busy || pd == null;
 
     // Five identical coin icons said nothing about which tier was which. The
-    // art now steps with the amount (coin → pile → hoard) and the badge grows
-    // and deepens with it, so the ladder is readable before any number is.
+    // art itself steps with the amount (coin → pile → hoard) and grows with it,
+    // so the ladder is readable before any number is. No plate behind it — the
+    // art already reads as gold, and the tinted square only boxed it in.
     final t = count > 1 ? index / (count - 1) : 0.0;
-    final badgeSize = 40 + 10 * t;
-    final badgeGradient = [
-      Color.lerp(const Color(0xFFFFF1CC), const Color(0xFFFFD166), t)!,
-      Color.lerp(const Color(0xFFFFD98A), const Color(0xFFF5A623), t)!,
-    ];
+    final artSize = 34 + 12 * t;
 
     return Container(
       color: isBest ? const Color(0xFFFFFBF2) : null,
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
       child: Row(
         children: [
-          Container(
-            width: badgeSize,
-            height: badgeSize,
-            decoration: BoxDecoration(
-              gradient: LinearGradient(
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-                colors: badgeGradient,
-              ),
-              borderRadius: BorderRadius.circular(12),
-            ),
-            padding: const EdgeInsets.all(5),
-            child: Center(child: GoldIcon(size: badgeSize - 12, amount: total)),
+          SizedBox(
+            width: 52,
+            child: Center(child: GoldIcon(size: artSize, amount: total)),
           ),
-          const SizedBox(width: 12),
+          const SizedBox(width: 10),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,

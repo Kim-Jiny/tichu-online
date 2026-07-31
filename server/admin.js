@@ -1472,7 +1472,7 @@ function parseGoldProductFormBody(body) {
 // ===== Route handler =====
 
 async function handleAdminRoute(req, res, url, pathname, method, lobby, wss, maintenanceFns = {}) {
-  const { getMaintenanceConfig, setMaintenanceConfig, getMaintenanceStatus, sendPushNotification, sendBroadcastPush, runGoogleVoidedPoll, closeRoom, broadcastRoomList } = maintenanceFns;
+  const { getMaintenanceConfig, setMaintenanceConfig, getMaintenanceStatus, sendPushNotification, sendBroadcastPush, runGoogleVoidedPoll, closeRoom, broadcastRoomList, getPhotoScreening, setPhotoScreening, getCustomTitleWords, setCustomTitleWords } = maintenanceFns;
   // Login page (no auth required)
   if (pathname === '/tc-backstage/login') {
     if (method === 'GET') {
@@ -5101,6 +5101,50 @@ async function handleAdminRoute(req, res, url, pathname, method, lobby, wss, mai
           <button type="submit" class="btn btn-primary">저장</button>
         </form>
       </div>
+      ${(() => {
+        const scr = getPhotoScreening ? getPhotoScreening() : null;
+        if (!scr) return '';
+        return `<div class="card">
+        <h3>프로필 사진 자동 검수</h3>
+        <p style="font-size:13px;color:#888;margin-bottom:8px">
+          업로드된 프로필 사진을 Google Cloud Vision SafeSearch로 검사합니다.
+          <b>끄면 검사 없이 그대로 등록됩니다</b> — 개인정보처리방침과 스토어 심사 문서에는
+          "모든 업로드는 자동 검수를 거친다"고 적혀 있으니, 끈 상태로 두지 마세요.
+        </p>
+        ${scr.hasCredentials
+          ? ''
+          : '<div style="color:#e53935;font-weight:600;margin-bottom:8px">Vision 자격증명(VISION_SA_* 또는 GOOGLE_PLAY_SA_*)이 서버에 없습니다. 켜도 동작하지 않습니다.</div>'}
+        <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap">
+          <div>현재 상태:
+            ${scr.enabled
+              ? '<span class="badge" style="background:#e8f5e9;color:#2e7d32">검수 중</span>'
+              : '<span class="badge" style="background:#ffebee;color:#c62828">검수 안 함</span>'}
+          </div>
+          <form method="POST" action="/tc-backstage/settings/photo-screening" style="margin-left:auto">
+            <input type="hidden" name="enabled" value="${scr.enabled ? 'off' : 'on'}">
+            <button type="submit" class="btn ${scr.enabled ? 'btn-secondary' : 'btn-primary'}">
+              ${scr.enabled ? '검수 끄기' : '검수 켜기'}
+            </button>
+          </form>
+        </div>
+      </div>`;
+      })()}
+      ${(() => {
+        if (!getCustomTitleWords) return '';
+        const words = getCustomTitleWords();
+        return `<div class="card">
+        <h3>커스텀 칭호 금지어</h3>
+        <p style="font-size:13px;color:#888;margin-bottom:8px">
+          한 줄에 하나. 칭호 전체를 소문자로 만든 뒤 <b>포함</b> 여부로 검사하므로
+          "gm"은 "gmt"도 막습니다. 비우고 저장하면 기본 목록으로 돌아갑니다.
+          (현재 ${words.length}개)
+        </p>
+        <form method="POST" action="/tc-backstage/settings/custom-title-words">
+          <textarea name="words" rows="10" style="width:100%;font-family:monospace;font-size:13px">${escapeHtml(words.join('\n'))}</textarea>
+          <div style="margin-top:8px"><button type="submit" class="btn btn-primary">저장</button></div>
+        </form>
+      </div>`;
+      })()}
       <div class="card">
         <h3>EULA / 이용약관</h3>
         <p style="font-size:13px;color:#888;margin-bottom:8px">ko/de 사용자는 해당 언어를 받습니다. 그 외 모든 locale은 English 버전을 받습니다.</p>
@@ -5150,6 +5194,18 @@ async function handleAdminRoute(req, res, url, pathname, method, lobby, wss, mai
   if (pathname === '/tc-backstage/settings/latest-version' && method === 'POST') {
     const body = await parseBody(req);
     await updateConfig('latest_version', (body.latest_version || '').trim());
+    return redirect(res, '/tc-backstage/settings?saved=1');
+  }
+
+  if (pathname === '/tc-backstage/settings/photo-screening' && method === 'POST') {
+    const body = await parseBody(req);
+    if (setPhotoScreening) await setPhotoScreening(body.enabled === 'on');
+    return redirect(res, '/tc-backstage/settings?saved=1');
+  }
+
+  if (pathname === '/tc-backstage/settings/custom-title-words' && method === 'POST') {
+    const body = await parseBody(req);
+    if (setCustomTitleWords) await setCustomTitleWords(body.words || '');
     return redirect(res, '/tc-backstage/settings?saved=1');
   }
 

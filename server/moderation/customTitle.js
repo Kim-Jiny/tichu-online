@@ -53,7 +53,7 @@ const INVISIBLE = /[\u0000-\u001f\u00ad\u061c\u115f\u1160\u180e\u200b-\u200f\u20
  * Deliberately short: this is a floor, not a moderation system — reports and an
  * admin who can clear a title are what actually handle the rest.
  */
-const BANNED = [
+const DEFAULT_BANNED = [
   // staff impersonation
   '운영자', '운영진', '관리자', '어드민', '스탭', '스태프', '시스템', '개발자', '지피엠',
   'admin', 'gm', 'staff', 'system', 'mod', 'owner', 'dev', 'support', 'root',
@@ -62,6 +62,24 @@ const BANNED = [
   '한남', '한녀', '틀딱', '급식충', '장애인', '찐따', '죽어라', '자살',
   'fuck', 'fck', 'shit', 'bitch', 'cunt', 'nigg', 'rape', 'sex', 'porn', 'kys',
 ];
+
+/**
+ * The list in force. Starts as DEFAULT_BANNED and is replaced by whatever an
+ * operator has saved in admin — a word list is never finished, and needing a
+ * deploy to add one means the word stays in the game until the next release.
+ */
+let bannedWords = [...DEFAULT_BANNED];
+
+/** @param {string[]|null} words null restores the built-in list. */
+function setBannedWords(words) {
+  bannedWords = Array.isArray(words) && words.length > 0
+    ? words.map((w) => w.trim().toLowerCase()).filter(Boolean)
+    : [...DEFAULT_BANNED];
+}
+
+function getBannedWords() {
+  return [...bannedWords];
+}
 
 /**
  * @param {string} rawText
@@ -87,7 +105,7 @@ function validateCustomTitle(rawText, colorId) {
     return { ok: false, reason: 'custom_title_too_long' };
   }
   const flat = text.toLowerCase();
-  if (BANNED.some((w) => flat.includes(w))) {
+  if (bannedWords.some((w) => flat.includes(w))) {
     return { ok: false, reason: 'custom_title_banned' };
   }
   if (!Object.prototype.hasOwnProperty.call(TITLE_COLORS, colorId)) {
@@ -111,4 +129,7 @@ function graphemeLength(text) {
   return [...text].length;
 }
 
-module.exports = { validateCustomTitle, TITLE_COLORS, MAX_GRAPHEMES };
+module.exports = {
+  validateCustomTitle, TITLE_COLORS, MAX_GRAPHEMES,
+  setBannedWords, getBannedWords, DEFAULT_BANNED,
+};

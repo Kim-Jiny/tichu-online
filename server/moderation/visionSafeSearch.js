@@ -63,10 +63,31 @@ function credentials() {
   return { email, key: raw.replace(/\\n/g, '\n') };
 }
 
-function isEnabled() {
-  if (process.env.VISION_ENABLED !== 'true') return false;
+/**
+ * Admin override, loaded from tc_config at boot. null = never set, so the env
+ * var decides; true/false = an operator decided.
+ *
+ * The switch lives in admin because the state that matters ("are uploads being
+ * screened right now?") has to be checkable and flippable without a deploy —
+ * turning screening off to stop a false-positive storm, or on the moment the
+ * Vision API is enabled in GCP, should not need an SSH session.
+ */
+let adminOverride = null;
+
+function setEnabled(value) {
+  adminOverride = value === null ? null : value === true;
+}
+
+/** Are the credentials there at all? Nothing can screen without them. */
+function hasCredentials() {
   const { email, key } = credentials();
   return !!(email && key);
+}
+
+function isEnabled() {
+  if (!hasCredentials()) return false;
+  if (adminOverride !== null) return adminOverride;
+  return process.env.VISION_ENABLED === 'true';
 }
 
 function base64url(input) {
@@ -193,4 +214,7 @@ async function screen(buffer) {
   }
 }
 
-module.exports = { screen, classify, isEnabled, CATEGORIES, RANK, REJECT_AT, REVIEW_AT };
+module.exports = {
+  screen, classify, isEnabled, setEnabled, hasCredentials,
+  CATEGORIES, RANK, REJECT_AT, REVIEW_AT,
+};

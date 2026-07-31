@@ -706,6 +706,67 @@ function broadcastMaintenanceStatus() {
   }
 }
 
+/**
+ * Photo screening on/off, persisted in tc_config so an operator can flip it
+ * from admin. Unset (null) means the VISION_ENABLED env var still decides, so
+ * nothing changes for a server that has never touched the switch.
+ */
+async function loadPhotoScreeningConfig() {
+  try {
+    const saved = await getConfig('photo_screening');
+    if (saved === 'on' || saved === 'off') {
+      visionSafeSearch.setEnabled(saved === 'on');
+      console.log(`[profile-photo] screening switch from admin: ${saved}`);
+    }
+  } catch (e) {
+    console.error('[profile-photo] failed to load screening config:', e.message);
+  }
+}
+
+/**
+ * Banned-word list for custom titles, from tc_config. Empty/unset leaves the
+ * built-in list in force.
+ */
+async function loadCustomTitleWords() {
+  try {
+    const saved = await getConfig('custom_title_banned');
+    if (saved !== null && saved !== undefined) {
+      const words = saved.split(/[\n,]/).map((w) => w.trim()).filter(Boolean);
+      customTitleWords.setBannedWords(words.length ? words : null);
+      console.log(`[custom-title] banned words from admin: ${words.length}`);
+    }
+  } catch (e) {
+    console.error('[custom-title] failed to load banned words:', e.message);
+  }
+}
+
+function getCustomTitleWords() {
+  return customTitleWords.getBannedWords();
+}
+
+async function setCustomTitleWords(text) {
+  const words = String(text || '').split(/[\n,]/).map((w) => w.trim()).filter(Boolean);
+  customTitleWords.setBannedWords(words.length ? words : null);
+  await updateConfig('custom_title_banned', words.join('\n'));
+  console.log(`[custom-title] banned words updated from admin: ${words.length}`);
+  return getCustomTitleWords();
+}
+
+function getPhotoScreening() {
+  return {
+    enabled: visionSafeSearch.isEnabled(),
+    hasCredentials: visionSafeSearch.hasCredentials(),
+    envDefault: process.env.VISION_ENABLED === 'true',
+  };
+}
+
+async function setPhotoScreening(enabled) {
+  visionSafeSearch.setEnabled(enabled === true);
+  await updateConfig('photo_screening', enabled === true ? 'on' : 'off');
+  console.log(`[profile-photo] screening switched ${enabled === true ? 'ON' : 'OFF'} from admin`);
+  return getPhotoScreening();
+}
+
 async function loadMaintenanceConfig() {
   try {
     const saved = await getConfig('maintenance');
@@ -759,7 +820,8 @@ function getMaintenanceStatus(locale) {
 const sharp = require('sharp');
 const minioClient = require('./storage/minioClient');
 const visionSafeSearch = require('./moderation/visionSafeSearch');
-const { validateCustomTitle } = require('./moderation/customTitle');
+const customTitleWords = require('./moderation/customTitle');
+const { validateCustomTitle } = customTitleWords;
 
 // Short-lived, one-time upload tokens. Issued over the authenticated WS
 // (request_upload_token) and consumed by the HTTP POST /upload/profile-photo —
@@ -948,7 +1010,7 @@ const server = http.createServer(async (req, res) => {
 
   if (pathname.startsWith('/tc-backstage')) {
     try {
-      await handleAdminRoute(req, res, url, pathname, req.method, lobby, wss, { getMaintenanceConfig, setMaintenanceConfig, getMaintenanceStatus, sendPushNotification, sendBroadcastPush, runGoogleVoidedPoll, closeRoom, broadcastRoomList, broadcastRoomState, sendGameStateToAll });
+      await handleAdminRoute(req, res, url, pathname, req.method, lobby, wss, { getMaintenanceConfig, setMaintenanceConfig, getMaintenanceStatus, sendPushNotification, sendBroadcastPush, runGoogleVoidedPoll, closeRoom, broadcastRoomList, broadcastRoomState, sendGameStateToAll, getPhotoScreening, setPhotoScreening, getCustomTitleWords, setCustomTitleWords });
     } catch (err) {
       console.error('Admin route error:', err);
       res.writeHead(500, { 'Content-Type': 'text/plain' });
@@ -1762,6 +1824,8 @@ function localizeTitleName(titleKey, fallbackName, locale) {
   await initDatabase();
   await refreshTitleTranslations();
   await loadMaintenanceConfig();
+  await loadPhotoScreeningConfig();
+  await loadCustomTitleWords();
   await ensureSeasonCycle();
   await cleanupExpiredProfilePhotos();
   setInterval(cleanupExpiredProfilePhotos, 60 * 60 * 1000).unref();

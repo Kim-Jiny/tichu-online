@@ -600,6 +600,12 @@ function clientSupportsProfilePrivate(ws) {
   return compareVersions(ws.appVersion, PROFILE_PRIVATE_MIN_VERSION) >= 0;
 }
 
+// Custom title ships in the same build and needs the same client work (the
+// editor, and a TitleChip that knows `custom:` keys draw no icon).
+function clientSupportsCustomTitle(ws) {
+  return compareVersions(ws.appVersion, PROFILE_PRIVATE_MIN_VERSION) >= 0;
+}
+
 function itemRequiresMightyClient(itemKey) {
   return typeof itemKey === 'string' && itemKey.startsWith('mighty_');
 }
@@ -8121,6 +8127,11 @@ async function handleGetShopItems(ws) {
       // pass they cannot see the state of, or configure.
       result.items = result.items.filter((item) => item.effect_type !== 'profile_private');
     }
+    if (!clientSupportsCustomTitle(ws)) {
+      // An old client has no editor, so the pass would run its 7 days with no
+      // way to write the title it paid for.
+      result.items = result.items.filter((item) => item.effect_type !== 'custom_title');
+    }
   }
   sendTo(ws, { type: 'shop_items_result', ...result });
 }
@@ -8205,6 +8216,16 @@ async function handleBuyItem(ws, data) {
   // client from spending gold on a pass it cannot manage.
   if (typeof itemKey === 'string' && itemKey.startsWith('profile_private')
       && !clientSupportsProfilePrivate(ws)) {
+    sendTo(ws, {
+      type: 'purchase_result',
+      success: false,
+      itemKey,
+      message: t(ws.locale, 'banner_update_required'),
+    });
+    return;
+  }
+  if (typeof itemKey === 'string' && itemKey.startsWith('custom_title')
+      && !clientSupportsCustomTitle(ws)) {
     sendTo(ws, {
       type: 'purchase_result',
       success: false,

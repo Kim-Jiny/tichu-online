@@ -707,11 +707,18 @@ async function initDatabase() {
         ('mighty_trump_counter_30d', '마이티 기루다 카운터(30일)', '마이티 기루다 카운터(30일)', 'Mighty Trump Counter (30d)', 'Mighty-Trumpfzähler (30T)', 'utility', 3000, FALSE, FALSE, 30, TRUE, 'mighty_trump_counter', NULL, '{}'::jsonb),
         ('mighty_prev_trick_7d', '마이티 이전 트릭 확인(7일)', '마이티 이전 트릭 확인(7일)', 'Mighty Previous Trick Viewer (7d)', 'Mighty-Vorheriger-Stich-Anzeige (7T)', 'utility', 1000, FALSE, FALSE, 7, TRUE, 'mighty_prev_trick', NULL, '{}'::jsonb),
         ('mighty_prev_trick_30d', '마이티 이전 트릭 확인(30일)', '마이티 이전 트릭 확인(30일)', 'Mighty Previous Trick Viewer (30d)', 'Mighty-Vorheriger-Stich-Anzeige (30T)', 'utility', 3000, FALSE, FALSE, 30, TRUE, 'mighty_prev_trick', NULL, '{}'::jsonb),
-        ('profile_photo_7d', '프로필 사진(7일)', '프로필 사진(7일)', 'Profile Photo (7d)', 'Profilbild (7T)', 'feature', 1000, FALSE, FALSE, 7, TRUE, 'profile_photo', NULL, '{}'::jsonb),
-        ('profile_photo_30d', '프로필 사진(30일)', '프로필 사진(30일)', 'Profile Photo (30d)', 'Profilbild (30T)', 'feature', 3000, FALSE, FALSE, 30, TRUE, 'profile_photo', NULL, '{}'::jsonb),
-        ('custom_title_7d', '커스텀 칭호(7일)', '커스텀 칭호(7일)', 'Custom Title (7d)', 'Eigener Titel (7T)', 'feature', 500, FALSE, FALSE, 7, TRUE, 'custom_title', NULL, '{}'::jsonb),
-        ('profile_private_7d', '프로필 비공개(7일)', '프로필 비공개(7일)', 'Private Profile (7d)', 'Privates Profil (7T)', 'feature', 1000, FALSE, FALSE, 7, TRUE, 'profile_private', NULL, '{}'::jsonb),
-        ('profile_private_30d', '프로필 비공개(30일)', '프로필 비공개(30일)', 'Private Profile (30d)', 'Privates Profil (30T)', 'feature', 3000, FALSE, FALSE, 30, TRUE, 'profile_private', NULL, '{}'::jsonb),
+        ('profile_photo_7d', '프로필 사진(7일)', '프로필 사진(7일)', 'Profile Photo (7d)', 'Profilbild (7T)', 'feature', 1000, FALSE, FALSE, 7, FALSE, 'profile_photo', NULL, '{}'::jsonb),
+        ('profile_photo_30d', '프로필 사진(30일)', '프로필 사진(30일)', 'Profile Photo (30d)', 'Profilbild (30T)', 'feature', 3000, FALSE, FALSE, 30, FALSE, 'profile_photo', NULL, '{}'::jsonb),
+        -- The five feature items below ship is_purchasable = FALSE on purpose.
+        -- A deploy swaps servers blue/green, so the OLD server serves this new
+        -- catalog for up to 15 minutes with no version gate for these effect
+        -- types, and the app build that can use them is not in the stores on
+        -- deploy day either. Turn them on in admin once the client is live —
+        -- is_purchasable is not in the ON CONFLICT update list below, so the
+        -- switch survives every later boot.
+        ('custom_title_7d', '커스텀 칭호(7일)', '커스텀 칭호(7일)', 'Custom Title (7d)', 'Eigener Titel (7T)', 'feature', 500, FALSE, FALSE, 7, FALSE, 'custom_title', NULL, '{}'::jsonb),
+        ('profile_private_7d', '프로필 비공개(7일)', '프로필 비공개(7일)', 'Private Profile (7d)', 'Privates Profil (7T)', 'feature', 1000, FALSE, FALSE, 7, FALSE, 'profile_private', NULL, '{}'::jsonb),
+        ('profile_private_30d', '프로필 비공개(30일)', '프로필 비공개(30일)', 'Private Profile (30d)', 'Privates Profil (30T)', 'feature', 3000, FALSE, FALSE, 30, FALSE, 'profile_private', NULL, '{}'::jsonb),
         ('banner_season_gold', '티츄 시즌 골드 배너', '티츄 시즌 골드 배너', 'Tichu Season Gold Banner', 'Tichu-Saison-Gold-Banner', 'banner', 0, TRUE, FALSE, 30, FALSE, NULL, NULL, '{}'::jsonb),
         ('banner_season_silver', '티츄 시즌 실버 배너', '티츄 시즌 실버 배너', 'Tichu Season Silver Banner', 'Tichu-Saison-Silber-Banner', 'banner', 0, TRUE, FALSE, 30, FALSE, NULL, NULL, '{}'::jsonb),
         ('banner_season_bronze', '티츄 시즌 브론즈 배너', '티츄 시즌 브론즈 배너', 'Tichu Season Bronze Banner', 'Tichu-Saison-Bronze-Banner', 'banner', 0, TRUE, FALSE, 30, FALSE, NULL, NULL, '{}'::jsonb),

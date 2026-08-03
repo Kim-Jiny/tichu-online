@@ -366,6 +366,34 @@ async function initDatabase() {
       )
     `);
 
+    // Per-season reward tiers. season_id NULL is the default set every season
+    // inherits, so a season that was never configured behaves exactly as the
+    // hard-coded table did before this existed.
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS tc_season_reward_config (
+        id SERIAL PRIMARY KEY,
+        season_id INT,
+        game_type VARCHAR(20) NOT NULL,
+        rank INT NOT NULL,
+        gold INT NOT NULL DEFAULT 0,
+        banner_key VARCHAR(80),
+        banner_days INT DEFAULT 30,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      )
+    `);
+    // NULL season_id can't participate in a plain UNIQUE, so the default set
+    // gets its own partial index.
+    await client.query(`
+      CREATE UNIQUE INDEX IF NOT EXISTS idx_season_reward_cfg
+        ON tc_season_reward_config (season_id, game_type, rank)
+        WHERE season_id IS NOT NULL
+    `);
+    await client.query(`
+      CREATE UNIQUE INDEX IF NOT EXISTS idx_season_reward_cfg_default
+        ON tc_season_reward_config (game_type, rank)
+        WHERE season_id IS NULL
+    `);
+
     await client.query(`
       CREATE TABLE IF NOT EXISTS tc_season_rankings (
         id SERIAL PRIMARY KEY,
@@ -648,6 +676,29 @@ async function initDatabase() {
         ['admin', defaultPassword]
       );
       console.log('Default admin account created (admin / admin1234)');
+    }
+
+    // Seed the default reward tiers — the exact table that used to be written
+    // into grantSeasonRewards, so an untouched install grants what it always
+    // did. Only inserted when the default set is empty: an operator who edits
+    // these must not have them reset on the next boot.
+    const cfgCount = await client.query(
+      'SELECT COUNT(*) FROM tc_season_reward_config WHERE season_id IS NULL',
+    );
+    if (parseInt(cfgCount.rows[0].count, 10) === 0) {
+      await client.query(`
+        INSERT INTO tc_season_reward_config (season_id, game_type, rank, gold, banner_key, banner_days)
+        VALUES
+          (NULL, 'tichu', 1, 1000, 'banner_season_gold', 30),
+          (NULL, 'tichu', 2, 500, 'banner_season_silver', 30),
+          (NULL, 'tichu', 3, 200, 'banner_season_bronze', 30),
+          (NULL, 'skull_king', 1, 1000, 'banner_sk_season_gold', 30),
+          (NULL, 'skull_king', 2, 500, 'banner_sk_season_silver', 30),
+          (NULL, 'skull_king', 3, 200, 'banner_sk_season_bronze', 30),
+          (NULL, 'mighty', 1, 1000, 'banner_mighty_season_gold', 30),
+          (NULL, 'mighty', 2, 500, 'banner_mighty_season_silver', 30),
+          (NULL, 'mighty', 3, 200, 'banner_mighty_season_bronze', 30)
+      `);
     }
 
     // Seed shop items (safe upsert)
@@ -2223,6 +2274,88 @@ async function setFeatureEnabled(nickname, effectType, enabled) {
 }
 
 /** Admin/report path: wipe the text and take it off. */
+/**
+ * Write a title onto an account from the admin console.
+ *
+ * Two things differ from the player path. The entitlement is not required —
+ * an operator title is a label the operator puts on, not something bought — so
+ * one is granted alongside it (source 'admin', no expiry) rather than the write
+ * being refused. And the grant is what makes it show: every display path asks
+ * "is a custom_title pass live?", so without it the text would sit in the row
+ * and appear nowhere.
+ */
+async function setCustomTitleByAdmin(nickname, text, colorId) {
+  const client = await pool.connect();
+  try {
+    await client.query('BEGIN');
+    const exists = await client.query(
+      'SELECT 1 FROM tc_users WHERE nickname = $1', [nickname],
+    );
+    if (exists.rowCount === 0) {
+      await client.query('ROLLBACK');
+      return { success: false, messageKey: 'db_user_not_found' };
+    }
+    await client.query(
+      `UPDATE tc_users SET custom_title_text = $2, custom_title_color = $3
+       WHERE nickname = $1`,
+      [nickname, text, colorId],
+    );
+    // Only when they don't already own one: a player who bought the pass keeps
+    // their own expiry, and re-running this must not quietly extend it.
+    const owned = await client.query(
+      `SELECT 1 FROM tc_user_items ui
+       JOIN tc_shop_items si ON si.item_key = ui.item_key
+       WHERE ui.nickname = $1 AND si.effect_type = 'custom_title'
+         AND (ui.expires_at IS NULL OR ui.expires_at >= NOW()) LIMIT 1`,
+      [nickname],
+    );
+    if (owned.rowCount === 0) {
+      const item = await client.query(
+        `SELECT item_key FROM tc_shop_items
+         WHERE effect_type = 'custom_title' ORDER BY price ASC LIMIT 1`,
+      );
+      const itemKey = item.rows[0]?.item_key;
+      if (!itemKey) {
+        await client.query('ROLLBACK');
+        return { success: false, messageKey: 'db_item_not_found' };
+      }
+      await client.query(
+        `INSERT INTO tc_user_items (nickname, item_key, expires_at, is_active, source)
+         VALUES ($1, $2, NULL, TRUE, 'admin')`,
+        [nickname, itemKey],
+      );
+    }
+    // A switched-off pass would keep the operator title hidden.
+    await client.query(
+      `DELETE FROM tc_user_feature_off WHERE nickname = $1 AND effect_type = 'custom_title'`,
+      [nickname],
+    );
+    const titleKey = `custom:${colorId}`;
+    await client.query(
+      `INSERT INTO tc_user_equips (nickname, title_key, updated_at)
+       VALUES ($1, $2, NOW())
+       ON CONFLICT (nickname)
+       DO UPDATE SET title_key = EXCLUDED.title_key, updated_at = NOW()`,
+      [nickname, titleKey],
+    );
+    await client.query(
+      `UPDATE tc_user_items SET is_active = FALSE
+       WHERE nickname = $1 AND item_key IN (
+         SELECT item_key FROM tc_shop_items WHERE category = 'title'
+       )`,
+      [nickname],
+    );
+    await client.query('COMMIT');
+    return { success: true, titleKey, titleName: text, color: colorId };
+  } catch (err) {
+    await client.query('ROLLBACK').catch(() => {});
+    console.error('Set custom title (admin) error:', err);
+    return { success: false, messageKey: 'db_update_failed' };
+  } finally {
+    client.release();
+  }
+}
+
 async function clearCustomTitle(nickname) {
   const client = await pool.connect();
   try {
@@ -3854,6 +3987,116 @@ async function resetSeasonStats() {
   }
 }
 
+const SEASON_GAME_TYPES = ['tichu', 'skull_king', 'mighty'];
+
+/**
+ * Reward tiers for one season, falling back to the default set.
+ *
+ * A season is either configured or it isn't — there is no per-game-type mixing
+ * of the two, because "이 시즌은 티츄만 다르게" reads as an accident far more
+ * often than as an intent.
+ */
+async function getSeasonRewardConfig(seasonId) {
+  const client = await pool.connect();
+  try {
+    if (seasonId != null) {
+      const own = await client.query(
+        `SELECT game_type, rank, gold, banner_key, banner_days
+         FROM tc_season_reward_config WHERE season_id = $1
+         ORDER BY game_type, rank`,
+        [seasonId],
+      );
+      if (own.rows.length > 0) return { custom: true, rows: own.rows };
+    }
+    const def = await client.query(
+      `SELECT game_type, rank, gold, banner_key, banner_days
+       FROM tc_season_reward_config WHERE season_id IS NULL
+       ORDER BY game_type, rank`,
+    );
+    return { custom: false, rows: def.rows };
+  } catch (err) {
+    console.error('Get season reward config error:', err);
+    return { custom: false, rows: [] };
+  } finally {
+    client.release();
+  }
+}
+
+/**
+ * Replace the tiers for one season (or the default set when seasonId is null).
+ *
+ * Replace, not merge: the editor shows every row it is about to save, so
+ * deleting a rank there has to delete it here.
+ */
+async function saveSeasonRewardConfig(seasonId, rows) {
+  const client = await pool.connect();
+  try {
+    await client.query('BEGIN');
+    if (seasonId == null) {
+      await client.query('DELETE FROM tc_season_reward_config WHERE season_id IS NULL');
+    } else {
+      await client.query('DELETE FROM tc_season_reward_config WHERE season_id = $1', [seasonId]);
+    }
+    for (const r of rows) {
+      const rank = parseInt(r.rank, 10);
+      if (!Number.isFinite(rank) || rank < 1) continue;
+      if (!SEASON_GAME_TYPES.includes(r.game_type)) continue;
+      await client.query(
+        `INSERT INTO tc_season_reward_config
+           (season_id, game_type, rank, gold, banner_key, banner_days, updated_at)
+         VALUES ($1, $2, $3, $4, $5, $6, NOW())`,
+        [
+          seasonId, r.game_type, rank,
+          Math.max(0, parseInt(r.gold, 10) || 0),
+          r.banner_key ? String(r.banner_key).trim() : null,
+          Math.max(1, parseInt(r.banner_days, 10) || 30),
+        ],
+      );
+    }
+    await client.query('COMMIT');
+    return { success: true };
+  } catch (err) {
+    await client.query('ROLLBACK').catch(() => {});
+    console.error('Save season reward config error:', err);
+    return { success: false, messageKey: 'db_update_failed' };
+  } finally {
+    client.release();
+  }
+}
+
+/** Drop a season's own tiers so it goes back to inheriting the defaults. */
+async function clearSeasonRewardConfig(seasonId) {
+  const client = await pool.connect();
+  try {
+    await client.query('DELETE FROM tc_season_reward_config WHERE season_id = $1', [seasonId]);
+    return { success: true };
+  } catch (err) {
+    console.error('Clear season reward config error:', err);
+    return { success: false, messageKey: 'db_update_failed' };
+  } finally {
+    client.release();
+  }
+}
+
+/** What a closed season actually paid out, for the read-only view. */
+async function getSeasonRewardsGranted(seasonId) {
+  const client = await pool.connect();
+  try {
+    const res = await client.query(
+      `SELECT nickname, rank, gold_reward, banner_key, created_at
+       FROM tc_season_rewards WHERE season_id = $1
+       ORDER BY rank ASC, created_at ASC`,
+      [seasonId],
+    );
+    return res.rows;
+  } catch (err) {
+    console.error('Get granted season rewards error:', err);
+    return [];
+  } finally {
+    client.release();
+  }
+}
+
 // Grant season rewards (top3 + banners + gold)
 async function grantSeasonRewards(seasonId) {
   const client = await pool.connect();
@@ -3879,15 +4122,27 @@ async function grantSeasonRewards(seasonId) {
       FROM tc_users
       WHERE season_games > 0 AND is_deleted IS NOT TRUE
       ORDER BY season_rating DESC, season_wins DESC, season_games DESC, nickname ASC
-      LIMIT 3
+      LIMIT 100
       `
     );
     const top = topRes.rows;
-    const rewards = [
-      { rank: 1, gold: 1000, banner: 'banner_season_gold' },
-      { rank: 2, gold: 500, banner: 'banner_season_silver' },
-      { rank: 3, gold: 200, banner: 'banner_season_bronze' },
-    ];
+    // Tiers come from the console now (per season, or the default set). Read
+    // inside the transaction so a mid-close edit can't land halfway.
+    const cfgRes = await client.query(
+      `SELECT game_type, rank, gold, banner_key, banner_days
+       FROM tc_season_reward_config
+       WHERE season_id = $1
+       ORDER BY game_type, rank`,
+      [seasonId],
+    );
+    const cfgRows = cfgRes.rows.length > 0 ? cfgRes.rows : (await client.query(
+      `SELECT game_type, rank, gold, banner_key, banner_days
+       FROM tc_season_reward_config WHERE season_id IS NULL
+       ORDER BY game_type, rank`,
+    )).rows;
+    const tiersFor = (gameType) => cfgRows
+      .filter((r) => r.game_type === gameType)
+      .sort((a, b) => a.rank - b.rank);
 
     const topFullRes = await client.query(
       `
@@ -3961,42 +4216,37 @@ async function grantSeasonRewards(seasonId) {
     // tier (1000/500/200) and a 30-day banner; only the banner item key
     // differs so the winner gets a game-themed badge.
     const rewardSets = [
-      {
-        topRows: top,
-        banners: ['banner_season_gold', 'banner_season_silver', 'banner_season_bronze'],
-      },
-      {
-        topRows: skTopRes.rows.slice(0, 3),
-        banners: ['banner_sk_season_gold', 'banner_sk_season_silver', 'banner_sk_season_bronze'],
-      },
-      {
-        topRows: mightyTopRes.rows.slice(0, 3),
-        banners: ['banner_mighty_season_gold', 'banner_mighty_season_silver', 'banner_mighty_season_bronze'],
-      },
+      { gameType: 'tichu', topRows: top },
+      { gameType: 'skull_king', topRows: skTopRes.rows },
+      { gameType: 'mighty', topRows: mightyTopRes.rows },
     ];
 
     for (const set of rewardSets) {
-      for (let i = 0; i < rewards.length; i++) {
-        const user = set.topRows[i];
+      for (const tier of tiersFor(set.gameType)) {
+        const user = set.topRows[tier.rank - 1];
         if (!user) continue;
-        const banner = set.banners[i];
-        const reward = rewards[i];
 
-        await client.query(
-          `UPDATE tc_users SET gold = gold + $2 WHERE nickname = $1`,
-          [user.nickname, reward.gold]
-        );
+        if (tier.gold > 0) {
+          await client.query(
+            `UPDATE tc_users SET gold = gold + $2 WHERE nickname = $1`,
+            [user.nickname, tier.gold]
+          );
+        }
 
-        await client.query(
-          `INSERT INTO tc_user_items (nickname, item_key, expires_at, is_active, source)
-           VALUES ($1, $2, NOW() + INTERVAL '30 days', FALSE, 'season')`,
-          [user.nickname, banner]
-        );
+        // A tier can be gold-only: an operator who clears the banner key is
+        // saying "no badge for this rank", not "give them an empty item".
+        if (tier.banner_key) {
+          await client.query(
+            `INSERT INTO tc_user_items (nickname, item_key, expires_at, is_active, source)
+             VALUES ($1, $2, NOW() + ($3 || ' days')::INTERVAL, FALSE, 'season')`,
+            [user.nickname, tier.banner_key, String(tier.banner_days || 30)]
+          );
+        }
 
         await client.query(
           `INSERT INTO tc_season_rewards (season_id, nickname, rank, gold_reward, banner_key)
            VALUES ($1, $2, $3, $4, $5)`,
-          [seasonId, user.nickname, reward.rank, reward.gold, banner]
+          [seasonId, user.nickname, tier.rank, tier.gold, tier.banner_key]
         );
       }
     }
@@ -5662,36 +5912,62 @@ async function addShopItem(data) {
 async function updateShopItem(id, data) {
   const client = await pool.connect();
   try {
-    const hasVisualUpdate = Object.prototype.hasOwnProperty.call(data, 'visual');
-    let metadataExpr = 'metadata';
-    const params = [
-      id, data.name_ko || '', data.name_en || '', data.name_de || '',
-      data.description_ko || '', data.description_en || '', data.description_de || '',
-      data.category, data.price || 0,
-      data.is_permanent !== false, data.duration_days || null,
-      data.is_purchasable !== false, data.is_season || false,
-      data.effect_type || null, data.effect_value || null,
-      data.sale_start || null, data.sale_end || null,
-    ];
-    if (hasVisualUpdate) {
+    // Only the keys the caller actually sent are written. What an item IS —
+    // its category, the effect it grants, whether it is permanent or seasonal —
+    // is edited rarely and behind a lock in the console, so an edit that never
+    // mentions those fields must leave them alone. The old version defaulted
+    // every missing field (category fell back to 'banner', effect_type to
+    // NULL), which silently re-filed the profile passes as banners and stripped
+    // the effect that gates them.
+    const sets = [];
+    const params = [id];
+    const put = (col, value) => {
+      params.push(value);
+      sets.push(`${col} = $${params.length}`);
+    };
+    const has = (key) => Object.prototype.hasOwnProperty.call(data, key)
+      && data[key] !== undefined;
+
+    if (has('name_ko')) {
+      put('name', data.name_ko || '');
+      put('name_ko', data.name_ko || '');
+    }
+    if (has('name_en')) put('name_en', data.name_en || '');
+    if (has('name_de')) put('name_de', data.name_de || '');
+    if (has('description_ko')) put('description_ko', data.description_ko || '');
+    if (has('description_en')) put('description_en', data.description_en || '');
+    if (has('description_de')) put('description_de', data.description_de || '');
+    if (has('price')) put('price', data.price || 0);
+    if (has('is_purchasable')) put('is_purchasable', data.is_purchasable !== false);
+    if (has('sale_start')) put('sale_start', data.sale_start || null);
+    if (has('sale_end')) put('sale_end', data.sale_end || null);
+    // Structural — see above.
+    if (has('category')) put('category', data.category);
+    if (has('effect_type')) put('effect_type', data.effect_type || null);
+    if (has('effect_value')) put('effect_value', data.effect_value ?? null);
+    if (has('is_permanent')) put('is_permanent', data.is_permanent !== false);
+    if (has('duration_days')) put('duration_days', data.duration_days || null);
+    if (has('is_season')) put('is_season', data.is_season || false);
+
+    if (Object.prototype.hasOwnProperty.call(data, 'visual')) {
       if (data.visual === null) {
-        metadataExpr = `COALESCE(metadata, '{}'::jsonb) #- '{visual}'`;
+        sets.push(`metadata = COALESCE(metadata, '{}'::jsonb) #- '{visual}'`);
       } else {
-        metadataExpr = `jsonb_set(COALESCE(metadata, '{}'::jsonb), '{visual}', $${params.length + 1}::jsonb, true)`;
         params.push(JSON.stringify(data.visual));
+        sets.push(
+          `metadata = jsonb_set(COALESCE(metadata, '{}'::jsonb), '{visual}', $${params.length}::jsonb, true)`,
+        );
       }
     }
+    if (sets.length === 0) {
+      const current = await client.query('SELECT * FROM tc_shop_items WHERE id = $1', [id]);
+      if (current.rows.length === 0) return { success: false, messageKey: 'db_item_not_found' };
+      return { success: true, item: current.rows[0] };
+    }
+
     const result = await client.query(
-      `UPDATE tc_shop_items
-       SET name = $2, name_ko = $2, name_en = $3, name_de = $4,
-           description_ko = $5, description_en = $6, description_de = $7,
-           category = $8, price = $9, is_permanent = $10,
-           duration_days = $11, is_purchasable = $12, is_season = $13,
-           effect_type = $14, effect_value = $15, sale_start = $16, sale_end = $17,
-           metadata = ${metadataExpr}
-       WHERE id = $1
-       RETURNING *`,
-      params
+      `UPDATE tc_shop_items SET ${sets.join(', ')} WHERE id = $1 RETURNING *`,
+      params,
     );
     if (result.rows.length === 0) {
       return { success: false, messageKey: 'db_item_not_found' };
@@ -8265,6 +8541,7 @@ module.exports = {
   unequipCategory,
   setCustomTitle,
   clearCustomTitle,
+  setCustomTitleByAdmin,
   setFeatureEnabled,
   getPendingFriendRequests,
   acceptFriendRequest,
@@ -8305,6 +8582,11 @@ module.exports = {
   getSeasonRankings,
   resetSeasonStats,
   grantSeasonRewards,
+  getSeasonRewardConfig,
+  saveSeasonRewardConfig,
+  clearSeasonRewardConfig,
+  getSeasonRewardsGranted,
+  SEASON_GAME_TYPES,
   submitInquiry,
   getUserInquiries,
   markInquiriesRead,

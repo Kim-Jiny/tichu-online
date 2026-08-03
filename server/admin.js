@@ -4,7 +4,9 @@ const logBuffer = require('./logBuffer');
 const {
   verifyAdmin, getInquiries, getInquiryById, resolveInquiry,
   getReports, getReportGroup, updateReportGroupStatus,
-  getUsers, getUserDetail, clearCustomTitle, listActiveProfilePhotos, getAdminGoldHistory, getAdminPurchaseHistory, deleteUser, getDashboardStats, getDashboardActivityTopPlayers, getAdminRecentMatches, setChatBan, setAdminMemo, adminClearProfilePhoto, getRecentMatches, adminAdjustGold, adminAdjustExp, setUserAdmin,
+  getUsers, getUserDetail, clearCustomTitle, setCustomTitleByAdmin,
+  getSeasons, getSeasonRewardConfig, saveSeasonRewardConfig,
+  clearSeasonRewardConfig, getSeasonRewardsGranted, SEASON_GAME_TYPES, listActiveProfilePhotos, getAdminGoldHistory, getAdminPurchaseHistory, deleteUser, getDashboardStats, getDashboardActivityTopPlayers, getAdminRecentMatches, setChatBan, setAdminMemo, adminClearProfilePhoto, getRecentMatches, adminAdjustGold, adminAdjustExp, setUserAdmin,
   getAttendanceDashboardStats, listAttendanceLog, getAttendanceBreakdown, getAttendanceForNickname,
   getDetailedAdminStats,
   getAllShopItemsAdmin, addShopItem, updateShopItem, deleteShopItem, getShopItemById,
@@ -18,7 +20,11 @@ const {
 } = require('./db/database');
 const { refundGoogleOrder } = require('./iap/GoogleVerify');
 const minioClient = require('./storage/minioClient');
-const { TITLE_COLORS: CUSTOM_TITLE_HEX } = require('./moderation/customTitle');
+const {
+  TITLE_COLORS: CUSTOM_TITLE_HEX,
+  validateAdminTitle,
+  ADMIN_MAX_LENGTH: TITLE_ADMIN_MAX,
+} = require('./moderation/customTitle');
 const fillerRooms = require('./lobby/fillerRooms');
 const { isPhotoKeyReported } = require('./db/database');
 
@@ -528,6 +534,7 @@ input[type="text"], input[type="password"] { width: 100%; padding: 10px 12px; bo
     <a href="/tc-backstage/users" class="${activePage === 'users' ? 'active' : ''}" onclick="closeSidebar()">유저</a>
     <a href="/tc-backstage/shop" class="${activePage === 'shop' ? 'active' : ''}" onclick="closeSidebar()">상점</a>
     <a href="/tc-backstage/attendance" class="${activePage === 'attendance' ? 'active' : ''}" onclick="closeSidebar()">출석</a>
+    <a href="/tc-backstage/seasons" class="${activePage === 'seasons' ? 'active' : ''}" onclick="closeSidebar()">시즌</a>
   </div>
   <div class="nav-section">
     <div class="nav-section-label">매출</div>
@@ -1271,22 +1278,34 @@ function shopForm(action, values, isEdit = false) {
       <textarea name="description_en" rows="2" style="padding:10px;border:1px solid #ddd;border-radius:8px;font-size:14px;font-family:inherit" placeholder="Item description (optional)">${escapeHtml(v('description_en'))}</textarea>
       <label>설명 (Deutsch)</label>
       <textarea name="description_de" rows="2" style="padding:10px;border:1px solid #ddd;border-radius:8px;font-size:14px;font-family:inherit" placeholder="Artikelbeschreibung (optional)">${escapeHtml(v('description_de'))}</textarea>
-      <label>분류</label>
-      <select name="category" id="shopCategory" style="padding:10px;border:1px solid #ddd;border-radius:8px;font-size:14px">${categoryOptions}</select>
       <label>가격</label>
       <input type="number" name="price" value="${v('price', 0)}" min="0" style="padding:10px;border:1px solid #ddd;border-radius:8px;font-size:14px">
-      <label>영구</label>
-      <input type="checkbox" name="is_permanent" ${checked('is_permanent', true)} style="width:20px;height:20px">
-      <label>기간 (일)</label>
-      <input type="number" name="duration_days" value="${v('duration_days', '')}" min="1" style="padding:10px;border:1px solid #ddd;border-radius:8px;font-size:14px" placeholder="영구 아이템이면 비워두세요">
       <label>구매 가능</label>
       <input type="checkbox" name="is_purchasable" ${checked('is_purchasable', true)} style="width:20px;height:20px">
+      <label style="grid-column:1/-1;margin-top:6px;padding-top:14px;border-top:1px solid #eee;font-weight:700">
+        아이템 구조
+        <span style="font-weight:400;color:#888;font-size:12px">
+          — 분류·효과·기간. 판매를 켜고 끄거나 가격·문구만 고칠 때는 건드릴 필요가 없습니다.
+        </span>
+      </label>
+      ${isEdit ? `<label>구조 수정</label>
+      <div style="display:flex;align-items:center;gap:8px">
+        <input type="checkbox" name="structure" id="structureLock"
+          style="width:20px;height:20px" onchange="toggleStructure(this.checked)">
+        <span style="font-size:12px;color:#888" id="structureHint">잠겨 있습니다. 체크하면 아래 값을 저장에 포함합니다.</span>
+      </div>` : `<input type="hidden" name="structure" value="on">`}
+      <label>분류</label>
+      <select name="category" id="shopCategory" ${isEdit ? 'disabled' : ''} data-structure style="padding:10px;border:1px solid #ddd;border-radius:8px;font-size:14px">${categoryOptions}</select>
+      <label>영구</label>
+      <input type="checkbox" name="is_permanent" ${checked('is_permanent', true)} ${isEdit ? 'disabled' : ''} data-structure style="width:20px;height:20px">
+      <label>기간 (일)</label>
+      <input type="number" name="duration_days" value="${v('duration_days', '')}" min="1" ${isEdit ? 'disabled' : ''} data-structure style="padding:10px;border:1px solid #ddd;border-radius:8px;font-size:14px" placeholder="영구 아이템이면 비워두세요">
       <label>시즌 아이템</label>
-      <input type="checkbox" name="is_season" ${checked('is_season', false)} style="width:20px;height:20px">
+      <input type="checkbox" name="is_season" ${checked('is_season', false)} ${isEdit ? 'disabled' : ''} data-structure style="width:20px;height:20px">
       <label>효과 유형</label>
-      <select name="effect_type" style="padding:10px;border:1px solid #ddd;border-radius:8px;font-size:14px">${effectOptions}</select>
+      <select name="effect_type" ${isEdit ? 'disabled' : ''} data-structure style="padding:10px;border:1px solid #ddd;border-radius:8px;font-size:14px">${effectOptions}</select>
       <label>효과 수치</label>
-      <input type="number" name="effect_value" value="${v('effect_value', '')}" style="padding:10px;border:1px solid #ddd;border-radius:8px;font-size:14px" placeholder="해당 효과의 수치 (예: 카운트 감소량)">
+      <input type="number" name="effect_value" value="${v('effect_value', '')}" ${isEdit ? 'disabled' : ''} data-structure style="padding:10px;border:1px solid #ddd;border-radius:8px;font-size:14px" placeholder="해당 효과의 수치 (예: 카운트 감소량)">
       <label>판매 시작</label>
       <input type="datetime-local" name="sale_start" value="${formatDatetimeLocal(v('sale_start'))}" style="padding:10px;border:1px solid #ddd;border-radius:8px;font-size:14px">
       <label>판매 종료</label>
@@ -1350,6 +1369,21 @@ function shopForm(action, values, isEdit = false) {
 
     <link rel="stylesheet" href="https://fonts.googleapis.com/icon?family=Material+Icons">
     <script>
+      // Structural fields stay disabled until asked for. Disabled inputs are not
+      // submitted, and the server writes only what it receives — so a locked
+      // form physically cannot change what the item is.
+      function toggleStructure(on) {
+        document.querySelectorAll('[data-structure]').forEach(function (el) {
+          el.disabled = !on;
+        });
+        var hint = document.getElementById('structureHint');
+        if (hint) {
+          hint.textContent = on
+            ? '분류·효과·기간이 저장에 포함됩니다. 판매 중인 아이템이면 유저에게 보이는 위치가 바뀔 수 있습니다.'
+            : '잠겨 있습니다. 체크하면 아래 값을 저장에 포함합니다.';
+          hint.style.color = on ? '#c62828' : '#888';
+        }
+      }
       (function() {
         const previewCard  = document.getElementById('visualPreviewCard');
         const previewIcon  = document.getElementById('visualPreviewIcon');
@@ -1405,8 +1439,19 @@ function shopForm(action, values, isEdit = false) {
   </form>`;
 }
 
+/**
+ * Form body → update payload.
+ *
+ * What an item IS (분류/효과/기간/시즌) only travels when the form says it was
+ * unlocked, via the hidden `structure` marker. Everything structural is
+ * otherwise left out of the payload entirely, and updateShopItem writes only
+ * what it is given — so the everyday edit (이름/가격/판매 여부) cannot reshape
+ * the item even if a field fails to render or a browser drops it.
+ *
+ * The create form always sends the marker: a new row has to state what it is.
+ */
 function parseShopFormBody(body) {
-  return {
+  const data = {
     item_key: body.item_key || '',
     name_ko: body.name_ko || '',
     name_en: body.name_en || '',
@@ -1414,18 +1459,21 @@ function parseShopFormBody(body) {
     description_ko: body.description_ko || '',
     description_en: body.description_en || '',
     description_de: body.description_de || '',
-    category: body.category || 'banner',
     price: parseInt(body.price) || 0,
-    is_permanent: body.is_permanent === 'on',
-    duration_days: body.duration_days ? parseInt(body.duration_days) : null,
     is_purchasable: body.is_purchasable === 'on',
-    is_season: body.is_season === 'on',
-    effect_type: body.effect_type || null,
-    effect_value: body.effect_value ? parseInt(body.effect_value) : null,
     sale_start: body.sale_start || null,
     sale_end: body.sale_end || null,
     visual: buildVisualFromBody(body),
   };
+  if (body.structure === 'on') {
+    data.category = body.category || 'banner';
+    data.is_permanent = body.is_permanent === 'on';
+    data.duration_days = body.duration_days ? parseInt(body.duration_days) : null;
+    data.is_season = body.is_season === 'on';
+    data.effect_type = body.effect_type || null;
+    data.effect_value = body.effect_value ? parseInt(body.effect_value) : null;
+  }
+  return data;
 }
 
 const GOLD_PRODUCT_MSG = {
@@ -2056,22 +2104,21 @@ async function handleAdminRoute(req, res, url, pathname, method, lobby, wss, mai
       { key: 'last7', label: '최근 7일' },
       { key: 'last30', label: '최근 30일' },
     ];
+    // Only what the numbers above do NOT already say. A card that restates the
+    // delta badge ("+526% 증가했습니다") is a second copy of the same fact, and
+    // the rail shows it with the previous value attached.
     const warningCards = [];
     if (Number(prevSummary.totalGames || 0) > 0) {
       const deltaGames = ((Number(summary.totalGames || 0) - Number(prevSummary.totalGames || 0)) / Number(prevSummary.totalGames || 1)) * 100;
-      if (deltaGames <= -20) warningCards.push({ tone: 'danger', title: '게임량 급감', desc: `이전 기간 대비 ${deltaGames.toFixed(1)}% 감소했습니다. 최근 매치 흐름을 바로 확인해보세요.` });
-      else if (deltaGames >= 20) warningCards.push({ tone: 'good', title: '게임량 상승', desc: `이전 기간 대비 +${deltaGames.toFixed(1)}% 증가했습니다. 어떤 게임이 올렸는지 보기 좋습니다.` });
+      if (deltaGames <= -20) warningCards.push({ tone: 'danger', title: '게임량 급감', desc: '최근 매치 흐름을 확인해보세요.' });
     }
     if (Number(prevSummary.totalSignups || 0) > 0) {
       const deltaSignups = ((Number(summary.totalSignups || 0) - Number(prevSummary.totalSignups || 0)) / Number(prevSummary.totalSignups || 1)) * 100;
-      if (deltaSignups <= -20) warningCards.push({ tone: 'warning', title: '신규 가입 둔화', desc: `가입 수가 ${deltaSignups.toFixed(1)}% 줄었습니다. 플랫폼별 유입 변화를 함께 확인해보세요.` });
+      if (deltaSignups <= -20) warningCards.push({ tone: 'warning', title: '신규 가입 둔화', desc: '플랫폼별 유입 변화를 함께 확인해보세요.' });
     }
     if (Number(prevSummary.goldSpent || 0) > 0) {
       const deltaGoldSpent = ((Number(summary.goldSpent || 0) - Number(prevSummary.goldSpent || 0)) / Number(prevSummary.goldSpent || 1)) * 100;
-      if (deltaGoldSpent >= 25) warningCards.push({ tone: 'warning', title: '골드 소모 급증', desc: `소모 골드가 +${deltaGoldSpent.toFixed(1)}% 증가했습니다. 상점과 경제 탭을 같이 점검해보세요.` });
-    }
-    if (mightyShare >= 25) {
-      warningCards.push({ tone: 'good', title: '마이티 비중 확대', desc: `현재 전체 게임 중 마이티가 ${mightyShare.toFixed(1)}%를 차지합니다.` });
+      if (deltaGoldSpent >= 25) warningCards.push({ tone: 'warning', title: '골드 소모 급증', desc: '상점과 경제 탭을 같이 점검해보세요.' });
     }
     // (Per-tab KPIs now render via heroKpis/heroRail; the legacy stickyFavorites
     // and global summaryCards strips were removed in the dashboard redesign.)
@@ -2119,12 +2166,27 @@ async function handleAdminRoute(req, res, url, pathname, method, lobby, wss, mai
       ],
     };
 
+    // A column of numbers doesn't show shape. The bar is drawn from the same
+    // number it labels, scaled to the biggest value in that column, so the peak
+    // row is findable without reading every cell.
+    const barCell = (value, max, color = '#0f6c5c', text = null) => {
+      const n = Number(value) || 0;
+      const pctW = max > 0 ? Math.max(2, Math.round((Math.abs(n) / max) * 100)) : 0;
+      return `<td>
+        <div style="font-weight:700">${text !== null ? text : formatNumber(n)}</div>
+        <div style="height:4px;border-radius:999px;background:#ece6dc;margin-top:5px;overflow:hidden">
+          <div style="height:100%;width:${pctW}%;background:${color};border-radius:inherit"></div>
+        </div>
+      </td>`;
+    };
+    const maxOf = (rows, key) => rows.reduce((m, r) => Math.max(m, Math.abs(Number(r[key]) || 0)), 0);
+
     const gameTable = gameSeries.length > 0
       ? `<div class="table-wrap"><table>
           <tr><th>${bucket === 'hour' ? '시간대' : '날짜'}</th><th>전체</th><th>티추</th><th>스컬킹</th><th>러브레터</th><th>마이티</th><th>랭크전</th></tr>
           ${gameSeries.map(row => `<tr>
             <td>${formatDate(row.bucket_time)}</td>
-            <td>${row.total_cnt}</td>
+            ${barCell(row.total_cnt, maxOf(gameSeries, 'total_cnt'))}
             <td>${row.tichu_cnt}</td>
             <td>${row.skull_cnt}</td>
             <td>${row.ll_cnt}</td>
@@ -2139,8 +2201,8 @@ async function handleAdminRoute(req, res, url, pathname, method, lobby, wss, mai
           <tr><th>${bucket === 'hour' ? '시간대' : '날짜'}</th><th>획득</th><th>소모</th><th>순변동</th></tr>
           ${goldSeries.map(row => `<tr>
             <td>${formatDate(row.bucket_time)}</td>
-            <td style="color:#2e7d32;font-weight:600">${row.earned}</td>
-            <td style="color:#c62828;font-weight:600">${row.spent}</td>
+            ${barCell(row.earned, maxOf(goldSeries, 'earned'), '#2e8b57')}
+            ${barCell(row.spent, maxOf(goldSeries, 'spent'), '#c0563f')}
             <td style="font-weight:700">${row.net}</td>
           </tr>`).join('')}
         </table></div>`
@@ -2151,7 +2213,7 @@ async function handleAdminRoute(req, res, url, pathname, method, lobby, wss, mai
           <tr><th>${bucket === 'hour' ? '시간대' : '날짜'}</th><th>판매 수</th><th>구매자</th><th>지출 골드</th></tr>
           ${shopSalesSeries.map(row => `<tr>
             <td>${formatDate(row.bucket_time)}</td>
-            <td style="font-weight:700">${formatNumber(row.purchase_count)}</td>
+            ${barCell(row.purchase_count, maxOf(shopSalesSeries, 'purchase_count'), '#d88c38')}
             <td>${formatNumber(row.buyer_count)}</td>
             <td style="color:#b35b19;font-weight:700">${formatNumber(row.gold_spent)}</td>
           </tr>`).join('')}
@@ -2163,7 +2225,7 @@ async function handleAdminRoute(req, res, url, pathname, method, lobby, wss, mai
           <tr><th>${bucket === 'hour' ? '시간대' : '날짜'}</th><th>전체 가입</th><th>iOS</th><th>AOS</th></tr>
           ${signupSeries.map(row => `<tr>
             <td>${formatDate(row.bucket_time)}</td>
-            <td style="font-weight:700">${formatNumber(row.total_cnt)}</td>
+            ${barCell(row.total_cnt, maxOf(signupSeries, 'total_cnt'), '#5f62d6')}
             <td>${formatNumber(row.ios_cnt)}</td>
             <td>${formatNumber(row.android_cnt)}</td>
           </tr>`).join('')}
@@ -2225,6 +2287,18 @@ async function handleAdminRoute(req, res, url, pathname, method, lobby, wss, mai
     const goldChartNet = goldSeries.map(r => parseInt(r.net) || 0);
     const goldBucketTimes = goldSeries.map(r => r.bucket_time);
 
+    const iapChartLabels = iapSeries.map((r) => formatBucketLabel(r.bucket_time));
+    const iapChartGross = iapSeries.map((r) => Math.round(Number(r.gross) || 0));
+    const iapChartNet = iapSeries.map((r) => Math.round(Number(r.net) || 0));
+    const iapChartRefund = iapSeries.map((r) => Math.round(Number(r.refundAmount) || 0));
+    const iapBucketTimes = iapSeries.map((r) => r.bucket_time);
+
+    const attChartLabels = attSeries.map((r) => formatBucketLabel(r.bucket_time));
+    const attChartUsers = attSeries.map((r) => parseInt(r.unique_claims, 10) || 0);
+    const attChartFinales = attSeries.map((r) => parseInt(r.finales, 10) || 0);
+    const attChartGold = attSeries.map((r) => parseInt(r.gold, 10) || 0);
+    const attBucketTimes = attSeries.map((r) => r.bucket_time);
+
     const shopChartLabels = shopSalesSeries.map((r) => formatBucketLabel(r.bucket_time));
     const shopChartPurchases = shopSalesSeries.map(r => parseInt(r.purchase_count) || 0);
     const shopChartBuyers = shopSalesSeries.map(r => parseInt(r.buyer_count) || 0);
@@ -2233,7 +2307,6 @@ async function handleAdminRoute(req, res, url, pathname, method, lobby, wss, mai
 
     const gamesTabContent = `
       ${summaryStrip([
-        { label: '전체 게임', value: formatNumber(summary.totalGames || 0), meta: `${fromValue} ~ ${toValue} · ${platformLabel}` },
         { label: '랭크 비중', value: formatPercent(rankedShare, 1), meta: `${formatNumber(summary.rankedGames || 0)}판` },
         { label: '주력 게임', value: escapeHtml(dominantGame?.label || '-'), meta: dominantGame ? `${formatNumber(dominantGame.value)}판` : '데이터 없음' },
         { label: '평균 게임량', value: avgGamesPerBucket.toFixed(1), meta: bucket === 'hour' ? '시간대당 평균' : '일자당 평균' },
@@ -2243,7 +2316,6 @@ async function handleAdminRoute(req, res, url, pathname, method, lobby, wss, mai
       <div class="card-actions">
         ${(statActions.games || []).map((action) => `<a href="${action.href}" class="btn btn-secondary">${escapeHtml(action.label)}</a>`).join('')}
       </div>
-      <div class="subtab-copy">게임 탭은 실제 플레이 볼륨과 어떤 게임이 운영을 주도하는지에 집중합니다. 차트를 클릭하면 해당 날짜로 바로 drill-down 됩니다.</div>
       <details class="chart-foldout" open>
         <summary>게임량 추이</summary>
         <div class="card-body"><div style="position:relative;height:300px"><canvas id="gameChart"></canvas></div></div>
@@ -2256,7 +2328,6 @@ async function handleAdminRoute(req, res, url, pathname, method, lobby, wss, mai
 
     const acquisitionTabContent = `
       ${summaryStrip([
-        { label: '전체 가입', value: formatNumber(summary.totalSignups || 0), meta: `${fromValue} ~ ${toValue}` },
         { label: 'iOS 비중', value: formatPercent(iosShare, 1), meta: `${formatNumber(summary.iosSignups || 0)}명` },
         { label: 'AOS 비중', value: formatPercent(aosShare, 1), meta: `${formatNumber(summary.androidSignups || 0)}명` },
         { label: '평균 가입량', value: avgSignupsPerBucket.toFixed(1), meta: bucket === 'hour' ? '시간대당 평균' : '일자당 평균' },
@@ -2266,7 +2337,6 @@ async function handleAdminRoute(req, res, url, pathname, method, lobby, wss, mai
       <div class="card-actions">
         ${(statActions.acquisition || []).map((action) => `<a href="${action.href}" class="btn btn-secondary">${escapeHtml(action.label)}</a>`).join('')}
       </div>
-      <div class="subtab-copy">유입 탭은 가입 추이와 플랫폼 분포, 그리고 게임량 대비 신규 유저 유입 강도를 같이 봅니다. 차트를 클릭하면 해당 날짜로 좁혀볼 수 있습니다.</div>
       <details class="chart-foldout" open>
         <summary>가입 추이</summary>
         <div class="card-body"><div style="position:relative;height:300px"><canvas id="signupChart"></canvas></div></div>
@@ -2279,9 +2349,6 @@ async function handleAdminRoute(req, res, url, pathname, method, lobby, wss, mai
 
     const economyTabContent = `
       ${summaryStrip([
-        { label: '획득 골드', value: formatNumber(summary.goldEarned || 0), valueColor: '#2e8b57' },
-        { label: '소모 골드', value: formatNumber(summary.goldSpent || 0), valueColor: '#c0563f' },
-        { label: '순변동', value: formatNumber(summary.goldNet || 0), valueColor: (summary.goldNet || 0) >= 0 ? '#1f2328' : '#c0563f' },
         { label: '평균 순변동', value: avgNetPerBucket.toFixed(1), meta: bucket === 'hour' ? '시간대당 평균' : '일자당 평균' },
         { label: '흑자 구간', value: formatNumber(positiveNetBuckets), meta: `${Math.max(goldSeries.length, 1)}개 구간 중` },
         { label: '최대 획득 시점', value: peakEarnRow ? formatDate(peakEarnRow.bucket_time) : '-', meta: peakEarnRow ? `${formatNumber(peakEarnRow.earned)} 골드` : '데이터 없음' },
@@ -2289,7 +2356,6 @@ async function handleAdminRoute(req, res, url, pathname, method, lobby, wss, mai
       <div class="card-actions">
         ${(statActions.economy || []).map((action) => `<a href="${action.href}" class="btn btn-secondary">${escapeHtml(action.label)}</a>`).join('')}
       </div>
-      <div class="subtab-copy">경제 탭은 게임 보상, 광고, 상점 소비를 합친 전체 골드 흐름을 읽기 쉽게 보여줍니다. 차트 클릭 시 해당 날짜 기준으로 바로 좁혀집니다.</div>
       <details class="chart-foldout" open>
         <summary>골드 획득 / 소모 추이</summary>
         <div class="card-body"><div style="position:relative;height:300px"><canvas id="goldChart"></canvas></div></div>
@@ -2314,7 +2380,7 @@ async function handleAdminRoute(req, res, url, pathname, method, lobby, wss, mai
           <tr><th>${bucket === 'hour' ? '시간대' : '날짜'}</th><th>출석 인원</th><th>7일차 완주</th><th>지급 골드</th></tr>
           ${attSeries.map(row => `<tr>
             <td>${formatDate(row.bucket_time)}</td>
-            <td style="font-weight:700">${formatNumber(row.unique_claims || 0)}</td>
+            ${barCell(row.unique_claims || 0, maxOf(attSeries, 'unique_claims'), '#2e8b57')}
             <td>${formatNumber(row.finales || 0)}</td>
             <td style="color:#b35b19;font-weight:700">${formatNumber(row.gold || 0)}</td>
           </tr>`).join('')}
@@ -2354,16 +2420,19 @@ async function handleAdminRoute(req, res, url, pathname, method, lobby, wss, mai
 
     const attendanceTabContent = `
       ${summaryStrip([
-        { label: '기간 출석 인원', value: formatNumber(attSum.unique_claims || 0), valueColor: '#2e8b57', meta: `${formatNumber(attSum.total_claims || 0)}회 출석` },
-        { label: '7일차 완주', value: formatNumber(attSum.finales || 0), valueColor: '#e65100' },
-        { label: '지급 골드 합계', value: formatNumber(attSum.gold || 0), valueColor: '#b35b19' },
+        { label: '총 출석 횟수', value: formatNumber(attSum.total_claims || 0), meta: `고유 ${formatNumber(attSum.unique_claims || 0)}명` },
+        { label: '완주율', value: attSum.unique_claims > 0 ? formatPercent((Number(attSum.finales || 0) * 100) / Number(attSum.unique_claims), 1) : '-', meta: '7일차 / 출석 인원' },
         { label: '구간 평균 인원', value: (Number(attSum.unique_claims || 0) / Math.max(attSeries.length, 1)).toFixed(1), meta: bucket === 'hour' ? '시간대당' : '일자당' },
         { label: '최대 출석 시점', value: peakAttendanceRow ? formatDate(peakAttendanceRow.bucket_time) : '-', meta: peakAttendanceRow ? `${formatNumber(peakAttendanceRow.unique_claims)} 명` : '데이터 없음' },
       ])}
       <div class="card-actions">
         ${(statActions.attendance || []).map((action) => `<a href="${action.href}" class="btn btn-secondary">${escapeHtml(action.label)}</a>`).join('')}
       </div>
-      <div class="subtab-copy">출석 분석은 7일 사이클 출석 보상의 흐름을 주간·월간·일자별로 함께 보여줍니다. 1~6일차 50G, 7일차 1,000G. 광고 시청 후 출석되며 KST 자정 단위로 1일 1회만 가능합니다. 주간/월간 "출석 인원"은 KST 기준 고유 유저 수(한 유저는 그 주·달에 1명으로 집계)입니다.</div>
+      <div class="subtab-copy">1~6일차 50G · 7일차 1,000G · 광고 시청 후 KST 자정 기준 1일 1회. 출석 인원은 고유 유저 수입니다.</div>
+      <details class="chart-foldout" open>
+        <summary>출석 추이</summary>
+        <div class="card-body"><div style="position:relative;height:300px"><canvas id="attChart"></canvas></div></div>
+      </details>
       <div class="grid-2col">
         <div class="card">
           <h3>주간 출석</h3>
@@ -2403,8 +2472,7 @@ async function handleAdminRoute(req, res, url, pathname, method, lobby, wss, mai
 
     const shopTabContent = `
       ${summaryStrip([
-        { label: '상점 구매', value: formatNumber(summary.shopPurchases || 0), meta: `구매자 ${formatNumber(summary.shopBuyers || 0)}명` },
-        { label: '상점 지출', value: formatNumber(summary.shopGoldSpent || 0), valueColor: '#b35b19', meta: `판매 아이템 ${formatNumber(summary.shopUniqueItems || 0)}종` },
+        { label: '판매 아이템', value: formatNumber(summary.shopUniqueItems || 0), meta: '기간 내 팔린 종류' },
         { label: '객단가', value: avgPurchaseValue.toFixed(1), meta: '구매 1건당 골드' },
         { label: '구매자당 주문', value: purchasePerBuyer.toFixed(1), meta: '평균 구매 횟수' },
         { label: '최대 판매 구간', value: peakShopRow ? formatDate(peakShopRow.bucket_time) : '-', meta: peakShopRow ? `${formatNumber(peakShopRow.purchase_count)}건` : '데이터 없음' },
@@ -2413,7 +2481,6 @@ async function handleAdminRoute(req, res, url, pathname, method, lobby, wss, mai
       <div class="card-actions">
         ${(statActions.shop || []).map((action) => `<a href="${action.href}" class="btn btn-secondary">${escapeHtml(action.label)}</a>`).join('')}
       </div>
-      <div class="subtab-copy">상점 탭은 판매량뿐 아니라 구매자 밀도와 어떤 상품이 실제 지출을 끌고 가는지에 초점을 둡니다. 차트를 클릭하면 해당 날짜 기준으로 바로 drill-down 됩니다.</div>
       <details class="chart-foldout" open>
         <summary>상점 판매 추이</summary>
         <div class="card-body"><div style="position:relative;height:300px"><canvas id="shopSalesChart"></canvas></div></div>
@@ -2457,7 +2524,7 @@ async function handleAdminRoute(req, res, url, pathname, method, lobby, wss, mai
           ${iapSeries.map(row => `<tr>
             <td>${formatDate(row.bucket_time)}</td>
             <td style="font-weight:700">${formatNumber(row.paidCount || 0)}</td>
-            <td style="color:#2e7d32;font-weight:600">${won(row.gross || 0)}</td>
+            ${barCell(row.gross || 0, maxOf(iapSeries, 'gross'), '#2e8b57', won(row.gross || 0))}
             <td style="color:#c62828">${formatNumber(row.refundCount || 0)}건 · ${won(row.refundAmount || 0)}</td>
             <td style="font-weight:700">${won(row.net || 0)}</td>
           </tr>`).join('')}
@@ -2466,17 +2533,20 @@ async function handleAdminRoute(req, res, url, pathname, method, lobby, wss, mai
 
     const paymentTabContent = `
       ${summaryStrip([
-        { label: '추정 매출', value: won(iapTot.gross || 0), meta: `결제 ${formatNumber(iapTot.count || 0)}건` },
-        { label: '환불', value: won(iapTot.refundAmount || 0), valueColor: '#c0563f', meta: `${formatNumber(iapTot.refundCount || 0)}건` },
-        { label: '순매출(환불차감)', value: won(iapTot.net || 0), valueColor: (iapTot.net || 0) >= 0 ? '#1f2328' : '#c0563f' },
-        { label: '정산추정액', value: won(iapTot.settlement || 0), valueColor: '#1565c0', meta: '수수료 차감 후' },
+        { label: '결제 건수', value: formatNumber(iapTot.count || 0), meta: `환불 ${formatNumber(iapTot.refundCount || 0)}건` },
+        { label: '건당 평균', value: won((iapTot.count || 0) > 0 ? (iapTot.gross || 0) / iapTot.count : 0), meta: '추정 매출 기준' },
         { label: 'iOS 정산추정', value: won(iapIos.settlement || 0), meta: `${formatNumber(iapIos.count || 0)}건 · 수수료 ${pct(iap.feeRates.ios)}` },
         { label: 'Android 정산추정', value: won(iapAos.settlement || 0), meta: `${formatNumber(iapAos.count || 0)}건 · 수수료 ${pct(iap.feeRates.android)}` },
+        { label: '수수료 합계', value: won(iapTot.fee || 0), valueColor: '#c0563f', meta: '순매출에서 차감' },
       ])}
       <div class="card-actions">
         ${(statActions.payment || []).map((action) => `<a href="${action.href}" class="btn btn-secondary">${escapeHtml(action.label)}</a>`).join('')}
       </div>
-      <div class="subtab-copy">결제 탭은 production 인앱결제만 집계합니다. 매출은 서버에 결제금액이 저장되지 않아 <b>원화 정가 기준 추정치</b>이며(스토어 수수료·환율·해외통화·세금 제외), 정산추정액은 플랫폼 수수료(App Store ${pct(iap.feeRates.ios)} / Google Play ${pct(iap.feeRates.android)}, Small Business·감면 프로그램 가정)를 차감한 값입니다. 실제 정산액은 스토어 콘솔이 기준입니다.</div>
+      <div class="subtab-copy">production 결제만 집계. 매출은 <b>원화 정가 기준 추정치</b>(환율·해외통화·세금 제외), 정산추정은 수수료 App Store ${pct(iap.feeRates.ios)} / Google Play ${pct(iap.feeRates.android)} 차감. 실제 정산액은 스토어 콘솔 기준입니다.</div>
+      <details class="chart-foldout" open>
+        <summary>매출 추이 (추정)</summary>
+        <div class="card-body"><div style="position:relative;height:300px"><canvas id="iapChart"></canvas></div></div>
+      </details>
       <div class="grid-2col">
         <div class="card">
           <h3>플랫폼별 매출·정산추정</h3>
@@ -2884,6 +2954,121 @@ async function handleAdminRoute(req, res, url, pathname, method, lobby, wss, mai
           }
         });
           attachDrilldown(shopSalesChart, ${JSON.stringify(shopBucketTimes)}, 'shop');
+        }
+
+        // Payment and attendance had tables only, which is the wrong shape for
+        // two series whose whole point is the trend line.
+        const iapChartEl = document.getElementById('iapChart');
+        if (iapChartEl) {
+          const iapChart = new Chart(iapChartEl, {
+            type: 'bar',
+            data: {
+              labels: ${JSON.stringify(iapChartLabels)},
+              datasets: [
+                {
+                  label: '추정 매출',
+                  data: ${JSON.stringify(iapChartGross)},
+                  backgroundColor: 'rgba(46,139,87,0.75)',
+                  borderRadius: 4,
+                  borderSkipped: false,
+                },
+                {
+                  label: '환불',
+                  data: ${JSON.stringify(iapChartRefund)},
+                  backgroundColor: 'rgba(192,86,63,0.7)',
+                  borderRadius: 4,
+                  borderSkipped: false,
+                },
+                {
+                  label: '순매출',
+                  data: ${JSON.stringify(iapChartNet)},
+                  type: 'line',
+                  borderColor: '#1565c0',
+                  backgroundColor: 'rgba(21,101,192,0.12)',
+                  borderWidth: 2,
+                  pointRadius: 4,
+                  pointBackgroundColor: '#1565c0',
+                  tension: 0.3,
+                },
+              ],
+            },
+            options: {
+              responsive: true,
+              maintainAspectRatio: false,
+              interaction: { mode: 'index', intersect: false },
+              plugins: {
+                tooltip: {
+                  ...tooltipStyle,
+                  callbacks: {
+                    label: (ctx) => ctx.dataset.label + ': ₩' + Number(ctx.parsed.y || 0).toLocaleString(),
+                  },
+                },
+                legend: { position: 'top', labels: { usePointStyle: true, padding: 16 } },
+              },
+              scales: {
+                x: { grid: { display: false } },
+                y: {
+                  beginAtZero: true,
+                  grid: { color: 'rgba(0,0,0,0.05)' },
+                  ticks: { callback: (v) => '₩' + Number(v).toLocaleString() },
+                },
+              },
+            },
+          });
+          attachDrilldown(iapChart, ${JSON.stringify(iapBucketTimes)}, 'payment');
+        }
+
+        const attChartEl = document.getElementById('attChart');
+        if (attChartEl) {
+          const attChart = new Chart(attChartEl, {
+            type: 'bar',
+            data: {
+              labels: ${JSON.stringify(attChartLabels)},
+              datasets: [
+                {
+                  label: '출석 인원',
+                  data: ${JSON.stringify(attChartUsers)},
+                  backgroundColor: 'rgba(46,139,87,0.75)',
+                  borderRadius: 4,
+                  borderSkipped: false,
+                },
+                {
+                  label: '7일차 완주',
+                  data: ${JSON.stringify(attChartFinales)},
+                  backgroundColor: 'rgba(230,81,0,0.75)',
+                  borderRadius: 4,
+                  borderSkipped: false,
+                },
+                {
+                  label: '지급 골드',
+                  data: ${JSON.stringify(attChartGold)},
+                  type: 'line',
+                  borderColor: '#b35b19',
+                  backgroundColor: 'rgba(179,91,25,0.12)',
+                  borderWidth: 2,
+                  pointRadius: 4,
+                  pointBackgroundColor: '#b35b19',
+                  tension: 0.3,
+                  yAxisID: 'y1',
+                },
+              ],
+            },
+            options: {
+              responsive: true,
+              maintainAspectRatio: false,
+              interaction: { mode: 'index', intersect: false },
+              plugins: {
+                tooltip: tooltipStyle,
+                legend: { position: 'top', labels: { usePointStyle: true, padding: 16 } },
+              },
+              scales: {
+                x: { grid: { display: false } },
+                y: { beginAtZero: true, ticks: { precision: 0 }, grid: { color: 'rgba(0,0,0,0.05)' } },
+                y1: { beginAtZero: true, position: 'right', ticks: { precision: 0 }, grid: { drawOnChartArea: false } },
+              },
+            },
+          });
+          attachDrilldown(attChart, ${JSON.stringify(attBucketTimes)}, 'attendance');
         }
 
         // Charts live inside collapsed <details> (display:none), so Chart.js
@@ -3493,6 +3678,20 @@ async function handleAdminRoute(req, res, url, pathname, method, lobby, wss, mai
     ]);
     if (!user) return html(res, layout('찾을 수 없음', '<div class="empty">유저를 찾을 수 없습니다</div>', 'users'), 404);
 
+    // Set-title bounces back here with a reason key when it refuses.
+    const TITLE_ERRORS = {
+      custom_title_empty: '칭호를 입력해 주세요.',
+      custom_title_charset: '보이지 않거나 글자 밖으로 삐져나오는 문자는 쓸 수 없습니다.',
+      custom_title_too_long: `칭호는 ${TITLE_ADMIN_MAX}자까지 저장됩니다.`,
+      custom_title_color: '색상을 다시 선택해 주세요.',
+      db_user_not_found: '유저를 찾을 수 없습니다.',
+      db_update_failed: '저장에 실패했습니다.',
+    };
+    const errKey = url.searchParams.get('err');
+    const errorBanner = errKey
+      ? `<div class="card" style="border-left:4px solid #e53935;color:#c62828">${escapeHtml(TITLE_ERRORS[errKey] || errKey)}</div>`
+      : '';
+
     const winRate = user.total_games > 0 ? Math.round((user.wins / user.total_games) * 100) : 0;
     const purchaseSummary = purchaseHistory?.summary || {
       totalSpent: 0,
@@ -3516,6 +3715,7 @@ async function handleAdminRoute(req, res, url, pathname, method, lobby, wss, mai
 
     const content = `
       ${pageHeader('유저 상세', '플레이 기록, 골드 흐름, 실제 구매 아이템까지 한 페이지에서 확인할 수 있게 구성했습니다.')}
+      ${errorBanner}
       ${summaryStrip([
         { label: '현재 골드', value: formatNumber(user.gold || 0), valueColor: '#d07a16', meta: `레벨 ${formatNumber(user.level || 1)}` },
         { label: '누적 구매', value: formatNumber(purchaseSummary.totalPurchases), meta: `총 ${formatNumber(purchaseSummary.totalSpent)} 골드 사용` },
@@ -3693,10 +3893,15 @@ async function handleAdminRoute(req, res, url, pathname, method, lobby, wss, mai
       ${(() => {
         const text = user.custom_title_text;
         const worn = (user.title_key || '').startsWith('custom:');
-        if (!text && !worn) return '';
+        // Always rendered, even with no title: this is also where an operator
+        // title is written, and there is nothing to click if the card only
+        // appears once one exists.
         const color = (user.title_key || '').startsWith('custom:')
           ? user.title_key.slice('custom:'.length)
-          : (user.custom_title_color || '');
+          : (user.custom_title_color || 'rose');
+        const colorOptions = Object.keys(CUSTOM_TITLE_HEX).map((c) =>
+          `<option value="${c}" ${c === color ? 'selected' : ''}>${c}</option>`
+        ).join('');
         return `<div class="card">
         <h3>커스텀 칭호</h3>
         <div style="display:flex;align-items:center;gap:16px;flex-wrap:wrap">
@@ -3709,11 +3914,23 @@ async function handleAdminRoute(req, res, url, pathname, method, lobby, wss, mai
               : '<span class="badge" style="background:#eee;color:#666">미착용</span>'}</div>
             <div style="margin-top:4px">색상: ${escapeHtml(color || '-')}</div>
           </div>
-          <form method="POST" action="/tc-backstage/users/${encodeURIComponent(user.nickname)}/clear-title" style="margin-left:auto"
+          ${text || worn ? `<form method="POST" action="/tc-backstage/users/${encodeURIComponent(user.nickname)}/clear-title" style="margin-left:auto"
             onsubmit="return confirm('${jsEscape(user.nickname)} 유저의 커스텀 칭호를 삭제하시겠습니까? (남은 이용권은 유지되어 다시 작성 가능)')">
             <button type="submit" class="btn btn-secondary" style="color:#c62828;border-color:#f0c0c0">칭호 삭제</button>
-          </form>
+          </form>` : ''}
         </div>
+        <form method="POST" action="/tc-backstage/users/${encodeURIComponent(user.nickname)}/set-title"
+          style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-top:14px;padding-top:14px;border-top:1px solid #eee">
+          <input type="text" name="title" value="${escapeHtml(text)}" maxlength="${TITLE_ADMIN_MAX}"
+            placeholder="운영자 칭호 (${TITLE_ADMIN_MAX}자까지)" required
+            style="flex:1;min-width:220px;padding:8px 12px;border-radius:8px;border:1px solid #ddd;font-size:14px">
+          <select name="color" style="padding:8px 12px;border-radius:8px;border:1px solid #ddd;font-size:14px">${colorOptions}</select>
+          <button type="submit" class="btn">칭호 지정</button>
+          <div style="flex-basis:100%;font-size:12px;color:#888">
+            운영자가 쓰는 칭호에는 글자 수 제한·허용문자·금지어가 적용되지 않습니다.
+            이용권이 없으면 무기한 이용권을 함께 지급하며, 이미 있으면 기간은 건드리지 않습니다.
+          </div>
+        </form>
       </div>`;
       })()}
 
@@ -3856,6 +4073,42 @@ async function handleAdminRoute(req, res, url, pathname, method, lobby, wss, mai
     return redirect(res, dest);
   }
 
+  // Write a title from the console. Same live repaint as the clear path: the
+  // seats around them are holding the old one.
+  const setTitleMatch = pathname.match(/^\/tc-backstage\/users\/([^/]+)\/set-title$/);
+  if (setTitleMatch && method === 'POST') {
+    const nickname = decodeURIComponent(setTitleMatch[1]);
+    const body = await parseBody(req);
+    const checked = validateAdminTitle(body.title || '', body.color || 'rose');
+    if (!checked.ok) {
+      return redirect(res, `/tc-backstage/users/${encodeURIComponent(nickname)}?err=${encodeURIComponent(checked.reason)}`);
+    }
+    const result = await setCustomTitleByAdmin(nickname, checked.text, checked.color);
+    if (result.success && wss && lobby) {
+      for (const client of wss.clients) {
+        if (client.nickname !== nickname) continue;
+        client.titleKey = result.titleKey;
+        client.titleName = result.titleName;
+        const room = client.roomId ? lobby.getRoom(client.roomId) : null;
+        const seat = room?.players?.find((p) => p && p.id === client.playerId);
+        if (seat) {
+          seat.titleKey = result.titleKey;
+          seat.titleName = result.titleName;
+        }
+        if (room && maintenanceFns.broadcastRoomState) {
+          maintenanceFns.broadcastRoomState(client.roomId);
+          if (room.game && maintenanceFns.sendGameStateToAll) {
+            maintenanceFns.sendGameStateToAll(client.roomId);
+          }
+        }
+      }
+    }
+    const backTo = url.searchParams.get('back');
+    return redirect(res, backTo && backTo.startsWith('/tc-backstage/')
+      ? backTo
+      : `/tc-backstage/users/${encodeURIComponent(nickname)}`);
+  }
+
   // Clear a user-written title. The entitlement is left alone on purpose —
   // this is "that text has to go", not a refund; they can write another one,
   // and repeat offenders are handled by ban/chat-ban like anywhere else.
@@ -3933,64 +4186,295 @@ async function handleAdminRoute(req, res, url, pathname, method, lobby, wss, mai
     const items = await getAllShopItemsAdmin();
     const now = new Date();
 
-    function saleBadge(item) {
-      if (!item.sale_start && !item.sale_end) return '<span class="badge" style="background:#e8f5e9;color:#2e7d32">상시</span>';
+    function saleWindow(item) {
+      if (!item.sale_start && !item.sale_end) return '';
       const start = item.sale_start ? new Date(item.sale_start) : null;
       const end = item.sale_end ? new Date(item.sale_end) : null;
       if (start && start > now) return '<span class="badge" style="background:#e3f2fd;color:#1565c0">예정</span>';
-      if (end && end < now) return '<span class="badge" style="background:#f3e5f5;color:#6a1b9a">종료</span>';
-      return '<span class="badge" style="background:#e8f5e9;color:#2e7d32">판매중</span>';
+      if (end && end < now) return '<span class="badge" style="background:#f3e5f5;color:#6a1b9a">기간 종료</span>';
+      return '<span class="badge" style="background:#e8f5e9;color:#2e7d32">기간 중</span>';
     }
 
-    function shopCategoryBadge(cat) {
-      const colors = { banner: '#e3f2fd;color:#1565c0', title: '#fff3e0;color:#e65100', theme: '#e8eaf6;color:#283593', utility: '#fce4ec;color:#880e4f', card_skin: '#f1f8e9;color:#33691e' };
-      return `<span class="badge" style="background:${colors[cat] || '#f5f5f5;color:#333'}">${escapeHtml(cat)}</span>`;
+    // The everyday question about an item is "is it on sale", so that is the
+    // one thing this page lets you change — one button, no form fields, no way
+    // to reshape the item by accident.
+    function saleButton(item) {
+      const on = item.is_purchasable;
+      return `<form method="POST" action="/tc-backstage/shop/${item.id}/toggle-sale" style="display:inline">
+        <button type="submit" class="btn ${on ? 'btn-secondary' : 'btn-primary'}"
+          style="font-size:12px;padding:5px 12px;${on ? 'color:#2e7d32;border-color:#bfe0c5' : ''}">
+          ${on ? '판매 중 · 끄기' : '판매 꺼짐 · 켜기'}
+        </button>
+      </form>`;
     }
 
-    const activeItems = items.filter(item => {
-      const start = item.sale_start ? new Date(item.sale_start) : null;
-      const end = item.sale_end ? new Date(item.sale_end) : null;
-      return (!start || start <= now) && (!end || end >= now);
-    }).length;
-    const seasonalItems = items.filter(item => item.is_season).length;
-    const purchasableItems = items.filter(item => item.is_purchasable).length;
-    const avgPrice = items.length > 0 ? Math.round(items.reduce((sum, item) => sum + (parseInt(item.price) || 0), 0) / items.length) : 0;
-
-    let tableContent = '';
-    if (items.length > 0) {
-      tableContent = `<div class="table-wrap"><table>
-        <tr><th>ID</th><th>키</th><th>이름</th><th>분류</th><th>가격</th><th>구분</th><th>판매기간</th><th>상태</th><th></th></tr>
-        ${items.map(item => `<tr>
-          <td>${item.id}</td>
-          <td style="font-family:monospace;font-size:12px">${escapeHtml(item.item_key)}</td>
-          <td>${escapeHtml(item.name_ko)}</td>
-          <td>${shopCategoryBadge(item.category)}</td>
-          <td>${item.price}</td>
-          <td>${item.is_permanent ? '영구' : (item.duration_days ? item.duration_days + '일' : '-')}</td>
-          <td style="font-size:12px">${item.sale_start ? formatDate(item.sale_start) : '-'}<br>${item.sale_end ? '~ ' + formatDate(item.sale_end) : ''}</td>
-          <td>${saleBadge(item)}</td>
-          <td><a href="/tc-backstage/shop/${item.id}" class="btn btn-secondary">수정</a></td>
-        </tr>`).join('')}
-      </table></div>`;
-    } else {
-      tableContent = '<div class="empty">상점 아이템 없음</div>';
+    const GROUPS = [
+      { key: 'feature', label: '이용권', hint: '프로필 사진·비공개·커스텀 칭호. 효과 유형이 곧 기능이라 구조를 건드리면 앱에서 사라집니다.' },
+      { key: 'utility', label: '유틸', hint: '카운터, 닉네임 변경, 전적 초기화 등' },
+      { key: 'banner', label: '배너', hint: '' },
+      { key: 'title', label: '칭호', hint: '' },
+      { key: 'theme', label: '테마', hint: '' },
+      { key: 'card_skin', label: '카드 스킨', hint: '' },
+    ];
+    const seen = new Set(GROUPS.map((g) => g.key));
+    for (const item of items) {
+      if (item.category && !seen.has(item.category)) {
+        seen.add(item.category);
+        GROUPS.push({ key: item.category, label: item.category, hint: '' });
+      }
     }
+
+    const row = (item) => `<tr data-search="${escapeHtml(((item.item_key || '') + ' ' + (item.name_ko || '') + ' ' + (item.effect_type || '')).toLowerCase())}">
+      <td>
+        <div style="font-weight:600">${escapeHtml(item.name_ko)}</div>
+        <div style="font-family:monospace;font-size:11px;color:#999">${escapeHtml(item.item_key)}</div>
+      </td>
+      <td style="font-size:12px">${item.effect_type
+        ? `<span class="badge" style="background:#ede7f6;color:#5e35b1">${escapeHtml(item.effect_type)}</span>`
+        : '<span style="color:#bbb">-</span>'}</td>
+      <td style="text-align:right;font-weight:600;color:#d07a16">${formatNumber(item.price || 0)}</td>
+      <td style="font-size:12px">${item.is_permanent ? '영구' : (item.duration_days ? item.duration_days + '일' : '-')}</td>
+      <td style="font-size:12px">${saleWindow(item)}${item.is_season ? ' <span class="badge" style="background:#fff8e1;color:#8d6e00">시즌</span>' : ''}</td>
+      <td>${saleButton(item)}</td>
+      <td><a href="/tc-backstage/shop/${item.id}" class="btn btn-secondary" style="font-size:12px;padding:5px 12px">수정</a></td>
+    </tr>`;
+
+    const groupHtml = GROUPS.map((g) => {
+      const rows = items.filter((i) => (i.category || '') === g.key);
+      if (rows.length === 0) return '';
+      const onSale = rows.filter((i) => i.is_purchasable).length;
+      return `<div class="card">
+        <h3 style="margin-bottom:2px">${escapeHtml(g.label)}
+          <span style="font-weight:400;color:#888;font-size:13px">${rows.length}개 · 판매 중 ${onSale}개</span>
+        </h3>
+        ${g.hint ? `<div style="font-size:12px;color:#999;margin-bottom:10px">${escapeHtml(g.hint)}</div>` : '<div style="height:8px"></div>'}
+        <div class="table-wrap"><table>
+          <tr><th>아이템</th><th>효과</th><th style="text-align:right">가격</th><th>기간</th><th>판매기간</th><th>판매</th><th></th></tr>
+          ${rows.map(row).join('')}
+        </table></div>
+      </div>`;
+    }).join('');
+
+    const purchasableItems = items.filter((item) => item.is_purchasable).length;
+    const seasonalItems = items.filter((item) => item.is_season).length;
+    const featureItems = items.filter((item) => item.category === 'feature').length;
 
     const content = `
       ${pageHeader(
         '상점 아이템',
-        '판매 상태, 시즌 여부, 가격대를 빠르게 훑을 수 있도록 요약을 먼저 배치했습니다.',
+        '판매 여부는 목록에서 바로 켜고 끌 수 있습니다. 분류·효과 같은 구조는 수정 화면에서 잠금을 풀어야 바뀝니다.',
         `<a href="/tc-backstage/shop/add" class="btn btn-primary">+ 아이템 추가</a>`
       )}
       ${summaryStrip([
         { label: '전체 아이템', value: formatNumber(items.length) },
-        { label: '판매 가능', value: formatNumber(purchasableItems), valueColor: '#2e8b57', meta: `현재 판매중 ${formatNumber(activeItems)}개` },
+        { label: '판매 중', value: formatNumber(purchasableItems), valueColor: '#2e8b57' },
+        { label: '이용권', value: formatNumber(featureItems), valueColor: '#5e35b1', meta: '기능을 여는 아이템' },
         { label: '시즌 아이템', value: formatNumber(seasonalItems), valueColor: '#2878b8' },
-        { label: '평균 가격', value: formatNumber(avgPrice), meta: '골드 기준' }
       ])}
-      <div class="card">${tableContent}</div>
+      <div class="card" style="padding-bottom:14px">
+        <input type="text" id="shopSearch" placeholder="이름 · 키 · 효과로 찾기"
+          oninput="filterShop(this.value)"
+          style="width:100%;padding:10px 14px;border:1px solid #ddd;border-radius:10px;font-size:14px">
+      </div>
+      ${items.length ? groupHtml : '<div class="card"><div class="empty">상점 아이템 없음</div></div>'}
+      <script>
+        function filterShop(q) {
+          var needle = (q || '').trim().toLowerCase();
+          document.querySelectorAll('tr[data-search]').forEach(function (tr) {
+            tr.style.display = !needle || tr.dataset.search.indexOf(needle) !== -1 ? '' : 'none';
+          });
+          document.querySelectorAll('.card').forEach(function (card) {
+            var rows = card.querySelectorAll('tr[data-search]');
+            if (!rows.length) return;
+            var any = Array.prototype.some.call(rows, function (tr) { return tr.style.display !== 'none'; });
+            card.style.display = any ? '' : 'none';
+          });
+        }
+      </script>
     `;
     return html(res, layout('상점', content, 'shop'));
+  }
+
+  // ── 시즌 ─────────────────────────────────────────────────────────────
+  const SEASON_GAME_LABELS = { tichu: '티츄', skull_king: '스컬킹', mighty: '마이티' };
+
+  function seasonRewardEditor(action, rows, { title, note, canReset, resetAction }) {
+    const byGame = SEASON_GAME_TYPES.map((gt) => ({
+      gameType: gt,
+      tiers: rows.filter((r) => r.game_type === gt).sort((a, b) => a.rank - b.rank),
+    }));
+    const tierRow = (gt, tier, i) => `<tr>
+      <td><input type="hidden" name="game_type_${gt}_${i}" value="${gt}">
+        <input type="number" name="rank_${gt}_${i}" value="${tier ? tier.rank : ''}" min="1" max="100"
+          style="width:70px;padding:6px 8px;border:1px solid #ddd;border-radius:6px" placeholder="순위"></td>
+      <td><input type="number" name="gold_${gt}_${i}" value="${tier ? tier.gold : ''}" min="0"
+          style="width:110px;padding:6px 8px;border:1px solid #ddd;border-radius:6px" placeholder="0"></td>
+      <td><input type="text" name="banner_${gt}_${i}" value="${escapeHtml(tier?.banner_key || '')}"
+          style="width:220px;padding:6px 8px;border:1px solid #ddd;border-radius:6px;font-family:monospace;font-size:12px"
+          placeholder="배너 없음"></td>
+      <td><input type="number" name="days_${gt}_${i}" value="${tier ? (tier.banner_days || 30) : 30}" min="1"
+          style="width:80px;padding:6px 8px;border:1px solid #ddd;border-radius:6px"></td>
+    </tr>`;
+
+    return `<form method="POST" action="${action}">
+      <div class="card">
+        <h3>${escapeHtml(title)}</h3>
+        ${note ? `<div style="font-size:12px;color:#888;margin-bottom:12px">${note}</div>` : ''}
+        ${byGame.map(({ gameType, tiers }) => `
+          <div style="margin-top:16px">
+            <div style="font-weight:700;margin-bottom:6px">${SEASON_GAME_LABELS[gameType] || gameType}</div>
+            <div class="table-wrap"><table>
+              <tr><th>순위</th><th>골드</th><th>배너 아이템 키</th><th>배너 기간(일)</th></tr>
+              ${Array.from({ length: Math.max(tiers.length + 2, 5) },
+                (_, i) => tierRow(gameType, tiers[i], i)).join('')}
+            </table></div>
+          </div>`).join('')}
+        <div style="display:flex;gap:8px;align-items:center;margin-top:18px">
+          <button type="submit" class="btn btn-primary">저장</button>
+          <span style="font-size:12px;color:#999">순위를 비우면 그 줄은 저장되지 않습니다. 지울 때도 순위를 비우면 됩니다.</span>
+        </div>
+      </div>
+    </form>
+    ${canReset ? `<form method="POST" action="${resetAction}" style="margin-top:12px"
+      onsubmit="return confirm('이 시즌 전용 설정을 지우고 기본 보상을 따르게 할까요?')">
+      <button type="submit" class="btn btn-secondary" style="color:#c62828;border-color:#f0c0c0">기본 보상으로 되돌리기</button>
+    </form>` : ''}`;
+  }
+
+  // Parses the flat rank_/gold_/banner_/days_ field names back into rows.
+  function parseSeasonRewardBody(body) {
+    const rows = [];
+    for (const key of Object.keys(body)) {
+      const m = key.match(/^rank_([a-z_]+)_(\d+)$/);
+      if (!m) continue;
+      const [, gt, i] = m;
+      const rank = parseInt(body[key], 10);
+      if (!Number.isFinite(rank) || rank < 1) continue;
+      rows.push({
+        game_type: gt,
+        rank,
+        gold: parseInt(body[`gold_${gt}_${i}`], 10) || 0,
+        banner_key: (body[`banner_${gt}_${i}`] || '').trim() || null,
+        banner_days: parseInt(body[`days_${gt}_${i}`], 10) || 30,
+      });
+    }
+    // Last one wins if an operator types the same rank twice; the unique index
+    // would otherwise reject the whole save with a constraint error.
+    const seen = new Map();
+    for (const r of rows) seen.set(`${r.game_type}#${r.rank}`, r);
+    return [...seen.values()];
+  }
+
+  if (pathname === '/tc-backstage/seasons' && method === 'GET') {
+    const seasons = (await getSeasons())?.seasons || [];
+    const defaults = await getSeasonRewardConfig(null);
+    const summary = SEASON_GAME_TYPES.map((gt) => {
+      const tiers = defaults.rows.filter((r) => r.game_type === gt);
+      return `${SEASON_GAME_LABELS[gt]} ${tiers.length}단계`;
+    }).join(' · ');
+
+    const rowsHtml = seasons.map((sn) => {
+      const active = sn.status === 'active';
+      return `<tr>
+        <td style="font-weight:600">${escapeHtml(sn.name)}</td>
+        <td style="font-size:12px">${formatDate(sn.start_at)} ~ ${formatDate(sn.end_at)}</td>
+        <td>${active
+          ? '<span class="badge" style="background:#e8f5e9;color:#2e7d32">진행 중</span>'
+          : '<span class="badge" style="background:#f5f5f5;color:#888">종료</span>'}</td>
+        <td><a href="/tc-backstage/seasons/${sn.id}/rewards" class="btn btn-secondary" style="font-size:12px;padding:5px 12px">
+          ${active ? '보상 설정' : '보상 보기'}</a></td>
+      </tr>`;
+    }).join('');
+
+    const content = `
+      ${pageHeader('시즌', '시즌은 매월 자동으로 열리고 닫힙니다. 닫힐 때 지급할 보상을 여기서 정합니다.')}
+      ${summaryStrip([
+        { label: '전체 시즌', value: formatNumber(seasons.length) },
+        { label: '진행 중', value: seasons.some((s) => s.status === 'active') ? '1' : '0', valueColor: '#2e8b57' },
+        { label: '기본 보상', value: summary || '없음', meta: '시즌별 설정이 없으면 이걸 따릅니다' },
+      ])}
+      <div class="card">
+        <h3>시즌 목록</h3>
+        <div class="table-wrap"><table>
+          <tr><th>시즌</th><th>기간</th><th>상태</th><th></th></tr>
+          ${rowsHtml || '<tr><td colspan="4"><div class="empty">시즌 없음</div></td></tr>'}
+        </table></div>
+      </div>
+      ${seasonRewardEditor('/tc-backstage/seasons/default/rewards', defaults.rows, {
+        title: '기본 보상',
+        note: '시즌별로 따로 정하지 않은 모든 시즌이 이 값으로 지급됩니다. 배너 키를 비우면 그 순위는 골드만 받습니다.',
+        canReset: false,
+      })}
+    `;
+    return html(res, layout('시즌', content, 'seasons'));
+  }
+
+  if (pathname === '/tc-backstage/seasons/default/rewards' && method === 'POST') {
+    const body = await parseBody(req);
+    await saveSeasonRewardConfig(null, parseSeasonRewardBody(body));
+    return redirect(res, '/tc-backstage/seasons');
+  }
+
+  const seasonRewardMatch = pathname.match(/^\/tc-backstage\/seasons\/(\d+)\/rewards$/);
+  if (seasonRewardMatch && method === 'GET') {
+    const seasonId = parseInt(seasonRewardMatch[1], 10);
+    const seasons = (await getSeasons())?.seasons || [];
+    const season = seasons.find((s) => s.id === seasonId);
+    if (!season) return html(res, layout('찾을 수 없음', '<div class="empty">시즌을 찾을 수 없습니다</div>', 'seasons'), 404);
+
+    const cfg = await getSeasonRewardConfig(seasonId);
+    const granted = await getSeasonRewardsGranted(seasonId);
+    const closed = season.status !== 'active';
+
+    const grantedHtml = granted.length === 0 ? '' : `<div class="card">
+      <h3>실제 지급 내역</h3>
+      <div class="table-wrap"><table>
+        <tr><th>순위</th><th>닉네임</th><th>골드</th><th>배너</th><th>지급 시각</th></tr>
+        ${granted.map((g) => `<tr>
+          <td>${g.rank}위</td>
+          <td><a href="/tc-backstage/users/${encodeURIComponent(g.nickname)}">${escapeHtml(g.nickname)}</a></td>
+          <td style="color:#d07a16;font-weight:600">${formatNumber(g.gold_reward || 0)}</td>
+          <td style="font-family:monospace;font-size:12px">${escapeHtml(g.banner_key || '-')}</td>
+          <td style="font-size:12px">${formatDate(g.created_at)}</td>
+        </tr>`).join('')}
+      </table></div>
+    </div>`;
+
+    const content = `
+      ${pageHeader(`시즌 보상: ${escapeHtml(season.name)}`,
+        `${formatDate(season.start_at)} ~ ${formatDate(season.end_at)} · ${closed ? '종료된 시즌' : '진행 중'}`,
+        `<a href="/tc-backstage/seasons" class="btn btn-secondary">목록으로</a>`)}
+      <div class="card" style="border-left:4px solid ${cfg.custom ? '#5e35b1' : '#bbb'}">
+        ${cfg.custom
+          ? '이 시즌은 <b>전용 보상</b>을 씁니다.'
+          : '이 시즌은 <b>기본 보상</b>을 따릅니다. 아래에서 저장하면 이 시즌 전용 설정이 만들어집니다.'}
+      </div>
+      ${closed
+        ? '<div class="card" style="color:#888">종료된 시즌이라 설정을 바꿔도 이미 지급된 보상에는 영향이 없습니다.</div>'
+        : ''}
+      ${grantedHtml}
+      ${seasonRewardEditor(`/tc-backstage/seasons/${seasonId}/rewards`, cfg.rows, {
+        title: '이 시즌 보상',
+        note: '배너 키를 비우면 그 순위는 골드만 받습니다.',
+        canReset: cfg.custom,
+        resetAction: `/tc-backstage/seasons/${seasonId}/rewards/reset`,
+      })}
+    `;
+    return html(res, layout(`시즌 보상: ${season.name}`, content, 'seasons'));
+  }
+
+  if (seasonRewardMatch && method === 'POST') {
+    const seasonId = parseInt(seasonRewardMatch[1], 10);
+    const body = await parseBody(req);
+    await saveSeasonRewardConfig(seasonId, parseSeasonRewardBody(body));
+    return redirect(res, `/tc-backstage/seasons/${seasonId}/rewards`);
+  }
+
+  const seasonResetMatch = pathname.match(/^\/tc-backstage\/seasons\/(\d+)\/rewards\/reset$/);
+  if (seasonResetMatch && method === 'POST') {
+    const seasonId = parseInt(seasonResetMatch[1], 10);
+    await clearSeasonRewardConfig(seasonId);
+    return redirect(res, `/tc-backstage/seasons/${seasonId}/rewards`);
   }
 
   // Shop add form
@@ -4063,6 +4547,19 @@ async function handleAdminRoute(req, res, url, pathname, method, lobby, wss, mai
       return html(res, layout('수정', content, 'shop'));
     }
     return redirect(res, '/tc-backstage/shop/' + shopEditMatch[1]);
+  }
+
+  // Flip only the sale flag. Deliberately its own route: the edit form is the
+  // only place that can touch anything else, and this is the button people
+  // actually press.
+  const shopToggleMatch = pathname.match(/^\/tc-backstage\/shop\/(\d+)\/toggle-sale$/);
+  if (shopToggleMatch && method === 'POST') {
+    const id = parseInt(shopToggleMatch[1], 10);
+    const item = await getShopItemById(id);
+    if (item) {
+      await updateShopItem(id, { is_purchasable: !item.is_purchasable });
+    }
+    return redirect(res, '/tc-backstage/shop');
   }
 
   // Shop delete

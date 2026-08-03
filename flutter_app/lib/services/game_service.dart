@@ -201,6 +201,12 @@ class GameService extends ChangeNotifier {
   /// Photo that arrived with a chat line, by sender nickname.
   final Map<String, String> _chatPhotos = {};
 
+  /// Counts only chat lines that arrive live. Replayed history (joining a
+  /// room, reconnecting) does not touch it, so a screen can tell "someone just
+  /// said this" from "this was already on the wall when I walked in" — seat
+  /// bubbles pop for the first and stay quiet for the second.
+  int liveChatSeq = 0;
+
   /// Resolved avatar for whoever sent a chat line, or null.
   ///
   /// The line itself carries the sender's photo, which is the only source that
@@ -1441,6 +1447,7 @@ class GameService extends ChangeNotifier {
               data['timestamp'] ?? DateTime.now().millisecondsSinceEpoch,
         };
         chatMessages.add(msg);
+        liveChatSeq++;
         if (chatMessages.length > 100) {
           chatMessages.removeAt(0);
         }
@@ -2713,6 +2720,7 @@ class GameService extends ChangeNotifier {
     playerId = '';
     playerName = '';
     _chatPhotos.clear();
+    liveChatSeq = 0;
     equippedTheme = null;
     equippedTitle = null;
     equippedTitleName = null;
@@ -3742,6 +3750,7 @@ class GameService extends ChangeNotifier {
   void clearChatMessages() {
     chatMessages.clear();
     _chatPhotos.clear();
+    liveChatSeq = 0;
     notifyListeners();
   }
 

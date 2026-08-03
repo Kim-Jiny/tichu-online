@@ -10,6 +10,7 @@ import '../widgets/connection_overlay.dart';
 import '../widgets/draggable_chat_panel.dart';
 import '../widgets/level_badge.dart';
 import '../widgets/profile_avatar.dart';
+import '../widgets/seat_chat_bubble.dart';
 import '../widgets/bot_avatar.dart';
 import '../widgets/chat_bubble.dart';
 import '../widgets/player_profile_dialog.dart';
@@ -70,6 +71,7 @@ class _LLGameScreenState extends State<LLGameScreen> {
 
   @override
   void dispose() {
+    _seatChat.dispose();
     _cardViewRequestTimer?.cancel();
     _countdownTimer?.cancel();
     _gameEndCountdownTimer?.cancel();
@@ -456,6 +458,28 @@ class _LLGameScreenState extends State<LLGameScreen> {
   /// silhouette, with the level as a corner badge. The level used to be drawn
   /// AS the avatar for photo-less players, which put a number where every other
   /// screen puts a face — and the bot tag went missing with it.
+
+  /// The last thing each player said, over their waiting-room seat.
+  late final SeatChatBubbles _seatChat = SeatChatBubbles(() {
+    if (mounted) setState(() {});
+  });
+
+  /// What [nickname] just said, or null once it has timed out.
+  Widget? _seatChatBubble(String nickname) {
+    final text = _seatChat.textFor(nickname);
+    if (text == null) return null;
+    return Positioned(
+      left: 62,
+      right: 10,
+      top: 6,
+      bottom: 6,
+      child: Align(
+        alignment: Alignment.centerLeft,
+        child: SeatChatBubble(text: text),
+      ),
+    );
+  }
+
   Widget _buildWaitingSlotAvatar(
     GameService game, {
     required String name,
@@ -515,6 +539,7 @@ class _LLGameScreenState extends State<LLGameScreen> {
     Player? player,
     int slotIndex,
   ) {
+    _seatChat.consume(game);
     final bool isBlocked = game.roomBlockedSlots.contains(slotIndex);
     final bool isEmpty = player == null;
 
@@ -645,6 +670,8 @@ class _LLGameScreenState extends State<LLGameScreen> {
               top: -6,
               child: Text('👑', style: TextStyle(fontSize: 18, height: 1.0)),
             ),
+          // What this player just said, for a couple of seconds.
+          ?_seatChatBubble(p.name),
         ],
       ),
     );

@@ -14,6 +14,7 @@ import '../widgets/bot_avatar.dart';
 import '../widgets/host_crown.dart';
 import '../widgets/chat_bubble.dart';
 import '../widgets/player_profile_dialog.dart';
+import '../widgets/seat_chat_bubble.dart';
 import '../widgets/title_chip.dart';
 import '../widgets/spectator_controls.dart';
 
@@ -76,6 +77,11 @@ class _SpectatorScreenState extends State<SpectatorScreen> {
   int _lastChatMessageCount = 0;
   int _readChatCount = 0;
 
+  /// The last thing each player said, shown briefly over their seat.
+  late final SeatChatBubbles _seatChat = SeatChatBubbles(() {
+    if (mounted) setState(() {});
+  });
+
   @override
   void initState() {
     super.initState();
@@ -93,6 +99,7 @@ class _SpectatorScreenState extends State<SpectatorScreen> {
 
   @override
   void dispose() {
+    _seatChat.dispose();
     _chatController.dispose();
     _chatScrollController.dispose();
     super.dispose();
@@ -173,6 +180,7 @@ class _SpectatorScreenState extends State<SpectatorScreen> {
     bool isLandscape,
   ) {
     final players = game.roomPlayers;
+    _seatChat.consume(game);
 
     return Stack(
       children: [
@@ -443,6 +451,22 @@ class _SpectatorScreenState extends State<SpectatorScreen> {
     );
   }
 
+  /// What [nickname] just said, or null once it has timed out.
+  Widget? _seatChatBubble(String nickname) {
+    final text = _seatChat.textFor(nickname);
+    if (text == null) return null;
+    return Positioned(
+      left: 6,
+      right: 6,
+      bottom: 6,
+      child: SeatChatBubble(
+        text: text,
+        fontSize: 11,
+        textAlign: TextAlign.center,
+      ),
+    );
+  }
+
   Widget _buildPlayerSlot(GameService game, Player? player, int slotIndex) {
     final bool isEmpty = player == null;
     final String name = isEmpty ? '' : player.name;
@@ -546,6 +570,10 @@ class _SpectatorScreenState extends State<SpectatorScreen> {
           ),
         if (!isEmpty && player.isHost)
           const Positioned(left: -3, top: -7, child: HostCrown(size: 22)),
+        // What this player just said, for a couple of seconds — the same
+        // treatment the room waiting screen gives it, so a spectator sees the
+        // conversation without opening the panel.
+        if (!isEmpty) ?_seatChatBubble(name),
       ],
     );
 

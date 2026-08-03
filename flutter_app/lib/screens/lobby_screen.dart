@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
@@ -20,6 +21,8 @@ import '../widgets/profile_avatar.dart';
 import '../widgets/bot_avatar.dart';
 import '../widgets/host_crown.dart';
 import '../widgets/chat_bubble.dart';
+import '../widgets/draggable_chat_panel.dart';
+import '../widgets/seat_chat_bubble.dart';
 import '../widgets/player_profile_dialog.dart';
 import '../widgets/title_chip.dart';
 import '../services/ad_service.dart';
@@ -46,6 +49,17 @@ class _LobbyScreenState extends State<LobbyScreen> {
   final TextEditingController _chatController = TextEditingController();
   final ScrollController _chatScrollController = ScrollController();
   int _lastChatMessageCount = 0;
+
+  /// Waiting-room chat now opens from the header, like every in-game chat,
+  /// instead of living in a panel below the seats that had to be scrolled to.
+  bool _roomChatOpen = false;
+  int _roomChatRead = 0;
+
+  /// The last thing each player said, shown briefly over their seat so a
+  /// message is visible without opening the panel at all.
+  late final SeatChatBubbles _seatChat = SeatChatBubbles(() {
+    if (mounted) setState(() {});
+  });
 
   // 배너 광고
   BannerAd? _bannerAd;
@@ -113,6 +127,7 @@ class _LobbyScreenState extends State<LobbyScreen> {
   @override
   void dispose() {
     _inquiryGameRef?.removeListener(_onInquiryUpdate);
+    _seatChat.dispose();
     _chatController.dispose();
     _chatScrollController.dispose();
     _bannerAd?.dispose();
@@ -2481,6 +2496,8 @@ class _LobbyScreenState extends State<LobbyScreen> {
   Widget _buildRoomView(GameService game, {required bool isLandscape}) {
     final isKoreanUser =
         context.read<LocaleService>().effectiveLocale.languageCode == 'ko';
+    _seatChat.consume(game);
+    if (_roomChatOpen) _roomChatRead = game.chatMessages.length;
     return GestureDetector(
       onTap: () {
         FocusScope.of(context).unfocus();
@@ -2501,34 +2518,14 @@ class _LobbyScreenState extends State<LobbyScreen> {
           if (game.errorMessage != null) _buildErrorBanner(game.errorMessage!),
 
           // Scrollable content area
+          // Chat is a header button and an overlay panel now, the same as every
+          // in-game chat — it used to sit under the seats, so reading it meant
+          // scrolling past the whole room first.
           Expanded(
-            child: isLandscape
-                ? Padding(
-                    padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
-                    child: Row(
-                      crossAxisAlignment: CrossAxisAlignment.stretch,
-                      children: [
-                        Expanded(
-                          flex: 5,
-                          child: SingleChildScrollView(
-                            child: _buildRoomPlayersPanel(game),
-                          ),
-                        ),
-                        const SizedBox(width: 12),
-                        Expanded(flex: 4, child: _buildRoomChatContainer(game)),
-                      ],
-                    ),
-                  )
-                : SingleChildScrollView(
-                    padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
-                    child: Column(
-                      children: [
-                        _buildRoomPlayersPanel(game),
-                        const SizedBox(height: 12),
-                        _buildRoomChatContainer(game, height: 280),
-                      ],
-                    ),
-                  ),
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+              child: _buildRoomPlayersPanel(game),
+            ),
           ),
           if (_roomBannerAd != null && _roomBannerLoaded)
             Padding(
@@ -2546,6 +2543,7 @@ class _LobbyScreenState extends State<LobbyScreen> {
             ),
           ],
           ),
+          if (_roomChatOpen) _buildRoomChatPanel(game),
           if (_roomMoreOpen) _buildRoomMoreMenu(game, isKoreanUser),
         ],
       ),
@@ -2666,29 +2664,74 @@ class _LobbyScreenState extends State<LobbyScreen> {
   }
 
   /// Icon-only action in the waiting room header.
+  /// What [nickname] just said, or null once it has timed out.
+  Widget? _seatChatBubble(String nickname) {
+    final text = _seatChat.textFor(nickname);
+    if (text == null) return null;
+    return Positioned(
+      left: 62,
+      right: 10,
+      top: 6,
+      bottom: 6,
+      child: Align(
+        alignment: Alignment.centerLeft,
+        child: SeatChatBubble(text: text),
+      ),
+    );
+  }
+
   Widget _roomIconButton({
     required IconData icon,
     required VoidCallback onTap,
     bool active = false,
+    int badge = 0,
   }) {
     return GestureDetector(
       onTap: onTap,
       behavior: HitTestBehavior.opaque,
-      child: Container(
-        margin: const EdgeInsets.only(left: 4),
-        padding: const EdgeInsets.all(8),
-        decoration: BoxDecoration(
-          color: active ? const Color(0xFF6A5A52) : Colors.white,
-          borderRadius: BorderRadius.circular(10),
-          border: Border.all(
-            color: active ? const Color(0xFF6A5A52) : const Color(0xFFE6DDD8),
+      child: Stack(
+        clipBehavior: Clip.none,
+        children: [
+          Container(
+            margin: const EdgeInsets.only(left: 4),
+            padding: const EdgeInsets.all(8),
+            decoration: BoxDecoration(
+              color: active ? const Color(0xFF6A5A52) : Colors.white,
+              borderRadius: BorderRadius.circular(10),
+              border: Border.all(
+                color: active
+                    ? const Color(0xFF6A5A52)
+                    : const Color(0xFFE6DDD8),
+              ),
+            ),
+            child: Icon(
+              icon,
+              size: 18,
+              color: active ? Colors.white : const Color(0xFF7A6A62),
+            ),
           ),
-        ),
-        child: Icon(
-          icon,
-          size: 18,
-          color: active ? Colors.white : const Color(0xFF7A6A62),
-        ),
+          if (badge > 0)
+            Positioned(
+              right: -4,
+              top: -4,
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFE53935),
+                  borderRadius: BorderRadius.circular(9),
+                  border: Border.all(color: Colors.white, width: 1.2),
+                ),
+                child: Text(
+                  badge > 99 ? '99+' : '$badge',
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 9,
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
+              ),
+            ),
+        ],
       ),
     );
   }
@@ -2949,6 +2992,21 @@ class _LobbyScreenState extends State<LobbyScreen> {
             ),
           ),
           const SizedBox(width: 6),
+          _roomIconButton(
+            icon: Icons.chat_bubble_outline,
+            active: _roomChatOpen,
+            badge: _roomChatOpen
+                ? 0
+                : math.max(0, game.chatMessages.length - _roomChatRead),
+            onTap: () => setState(() {
+              _roomChatOpen = !_roomChatOpen;
+              if (_roomChatOpen) {
+                _roomChatRead = game.chatMessages.length;
+                _roomMoreOpen = false;
+                _scrollChatToBottom();
+              }
+            }),
+          ),
           _roomIconButton(
             icon: Icons.person_add_alt_1,
             onTap: () => _showInviteFriendsDialog(game),
@@ -3255,21 +3313,39 @@ class _LobbyScreenState extends State<LobbyScreen> {
     );
   }
 
-  Widget _buildRoomChatContainer(GameService game, {double? height}) {
-    final chat = Container(
-      decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: 0.72),
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: const Color(0xFFE6DDD8)),
-      ),
-      child: _buildRoomChat(game),
-    );
-
-    if (height != null) {
-      return SizedBox(height: height, child: chat);
+  /// The same draggable panel the game screens use, so chat sits in the same
+  /// place and behaves the same way from the waiting room onwards.
+  Widget _buildRoomChatPanel(GameService game) {
+    if (game.chatMessages.length != _lastChatMessageCount) {
+      _lastChatMessageCount = game.chatMessages.length;
+      _scrollChatToBottom();
     }
-
-    return chat;
+    final accent = _gameAccentColor(game.currentGameType);
+    return DraggableChatPanel(
+      accentColor: accent,
+      sendIconColor: accent,
+      title: L10n.of(context).lobbyChat,
+      hintText: L10n.of(context).lobbyMessageHint,
+      controller: _chatController,
+      scrollController: _chatScrollController,
+      onSend: () => _sendRoomChatMessage(game),
+      onClose: () => setState(() => _roomChatOpen = false),
+      itemCount: game.chatMessages.length,
+      itemBuilder: (context, index) {
+        final msg = game.chatMessages[game.chatMessages.length - 1 - index];
+        final sender = msg['sender'] as String? ?? '';
+        String message = msg['message'] as String? ?? '';
+        if (message == 'chat_banned') {
+          final mins = msg['remainingMinutes'] as int? ?? 0;
+          message = localizeChatBanned(mins, L10n.of(context));
+        }
+        final isMe = sender == game.playerName;
+        if (sender.isNotEmpty && game.isBlocked(sender)) {
+          return const SizedBox.shrink();
+        }
+        return _buildChatMessage(sender, message, isMe, game);
+      },
+    );
   }
 
   /// The colour that game wears everywhere else — the filter chip, the row
@@ -3287,120 +3363,6 @@ class _LobbyScreenState extends State<LobbyScreen> {
       default:
         return const Color(0xFF64B5F6);
     }
-  }
-
-  Widget _buildRoomChat(GameService game) {
-    if (game.chatMessages.length != _lastChatMessageCount) {
-      _lastChatMessageCount = game.chatMessages.length;
-      _scrollChatToBottom();
-    }
-    return Container(
-      decoration: BoxDecoration(
-        color: const Color(0xFFF8F6F4),
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: const Color(0xFFE0D8D4)),
-      ),
-      child: Column(
-        children: [
-          // 채팅 헤더
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-            decoration: const BoxDecoration(
-              color: Color(0xFFE8E0DC),
-              borderRadius: BorderRadius.only(
-                topLeft: Radius.circular(11),
-                topRight: Radius.circular(11),
-              ),
-            ),
-            child: Row(
-              children: [
-                const Icon(
-                  Icons.chat_bubble_outline,
-                  size: 16,
-                  color: Color(0xFF6A5A52),
-                ),
-                const SizedBox(width: 6),
-                Text(
-                  L10n.of(context).lobbyChat,
-                  style: const TextStyle(
-                    fontSize: 13,
-                    fontWeight: FontWeight.bold,
-                    color: Color(0xFF6A5A52),
-                  ),
-                ),
-              ],
-            ),
-          ),
-          // 메시지 목록
-          Expanded(
-            child: ListView.builder(
-              controller: _chatScrollController,
-              reverse: true,
-              padding: const EdgeInsets.all(8),
-              itemCount: game.chatMessages.length,
-              itemBuilder: (context, index) {
-                final msg = game.chatMessages[game.chatMessages.length - 1 - index];
-                final sender = msg['sender'] as String? ?? '';
-                String message = msg['message'] as String? ?? '';
-                if (message == 'chat_banned') {
-                  final mins = msg['remainingMinutes'] as int? ?? 0;
-                  message = localizeChatBanned(mins, L10n.of(context));
-                }
-                final isMe = sender == game.playerName;
-                final isBlockedUser = game.isBlocked(sender);
-
-                if (isBlockedUser) return const SizedBox.shrink();
-
-                return _buildChatMessage(sender, message, isMe, game);
-              },
-            ),
-          ),
-          // 입력창
-          Container(
-            padding: const EdgeInsets.all(8),
-            decoration: const BoxDecoration(
-              border: Border(top: BorderSide(color: Color(0xFFE0D8D4))),
-            ),
-            child: Row(
-              children: [
-                Expanded(
-                  child: TextField(
-                    controller: _chatController,
-                    decoration: InputDecoration(
-                      hintText: L10n.of(context).lobbyMessageHint,
-                      hintStyle: const TextStyle(
-                        fontSize: 13,
-                        color: Color(0xFFAA9A92),
-                      ),
-                      border: InputBorder.none,
-                      contentPadding: EdgeInsets.symmetric(horizontal: 12),
-                      isDense: true,
-                    ),
-                    style: const TextStyle(fontSize: 13),
-                    onSubmitted: (_) => _sendRoomChatMessage(game),
-                  ),
-                ),
-                GestureDetector(
-                  onTap: () => _sendRoomChatMessage(game),
-                  child: Container(
-                    padding: const EdgeInsets.all(8),
-                    decoration: BoxDecoration(
-                      color: _gameAccentColor(game.currentGameType),
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    child: const Icon(
-                      Icons.send,
-                      color: Colors.white,
-                      size: 16,
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
   }
 
   Widget _buildChatMessage(
@@ -4272,6 +4234,9 @@ class _LobbyScreenState extends State<LobbyScreen> {
               top: -7,
               child: HostCrown(size: 22),
             ),
+          // What this player just said, for a couple of seconds. Laid over the
+          // seat so a line of chat is visible without opening the panel.
+          if (player != null) ?_seatChatBubble(player.name),
         ],
       ),
     );

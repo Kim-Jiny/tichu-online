@@ -1268,8 +1268,14 @@ class _LLGameScreenState extends State<LLGameScreen> {
           final centerY = gs.isSpectator
               ? stableLayoutH * 0.50
               : stableLayoutH * 0.45;
-          final seatWidth = gs.isSpectator ? 116.0 : 126.0;
-          final seatHeight = gs.isSpectator ? 104.0 : 114.0;
+          // Seats follow the device, like the Mighty and Skull King boards: a
+          // fixed box meant a 6" phone and a tablet drew the same small photo
+          // with the extra room going to empty felt.
+          final boardScale = math
+              .min(width / 360.0, stableLayoutH / 420.0)
+              .clamp(0.72, 1.30);
+          final seatWidth = (gs.isSpectator ? 116.0 : 126.0) * boardScale;
+          final seatHeight = (gs.isSpectator ? 118.0 : 128.0) * boardScale;
           final maxSeatRadiusX = math.max(0.0, centerX - seatWidth / 2 - 10);
           final seatRadiusX = math.min(
             width * (gs.isSpectator ? 0.41 : 0.39),
@@ -1310,10 +1316,12 @@ class _LLGameScreenState extends State<LLGameScreen> {
             final baseDiscardH = gs.isSpectator
                 ? (isFourSpectatorLayout ? 80.0 : 72.0)
                 : 78.0;
-            final discardCardHeight = (baseDiscardH * cardScale).clamp(
-              62.0,
-              108.0,
-            );
+            // Follows the board, not just the window width. cardScale bottoms
+            // out at 0.88, so on a narrow board the piles stayed full size
+            // while the seats shrank around them and each pile ended up
+            // covering the neighbouring player's photo.
+            final discardCardHeight = (baseDiscardH * cardScale * boardScale)
+                .clamp(52.0, 108.0);
             seatLayouts.add(
               _LLSeatLayout(
                 player: player,
@@ -1659,9 +1667,11 @@ class _LLGameScreenState extends State<LLGameScreen> {
         final horizontalPadding = ultraTight
             ? 4.0
             : (tight ? 5.0 : (compact ? 7.0 : 8.0));
+        // Halved, like the Mighty and Skull King seats: at this photo size the
+        // old padding read as a frame around the seat rather than as the seat.
         final verticalPadding = ultraTight
-            ? 4.0
-            : (tight ? 5.0 : (compact ? 6.0 : 8.0));
+            ? 3.0
+            : (tight ? 3.0 : (compact ? 4.0 : 4.0));
         final nameFontSize = ultraTight
             ? 9.0
             : (tight ? 10.0 : (compact ? 11.0 : 12.0));
@@ -1671,10 +1681,26 @@ class _LLGameScreenState extends State<LLGameScreen> {
         final spacing = ultraTight ? 1.0 : (tight ? 2.0 : 4.0);
         final chipFontSize = ultraTight ? 8.0 : (tight ? 9.0 : 10.0);
         final statusIconSize = ultraTight ? 10.0 : (tight ? 11.0 : 12.0);
-        // Sized from the seat box, like the Mighty and Skull King seats: about
-        // twice what it was, and it follows the device instead of sitting at a
-        // fixed 26px everywhere.
-        final avatarDiameter = (constraints.maxHeight * 0.42).clamp(24.0, 70.0);
+        final labelPadding = ultraTight ? 2.0 : 3.0;
+        // The photo takes whatever height the rest of the label leaves, rather
+        // than a fraction of the box. A fraction did nothing visible: the label
+        // is inside a scaleDown FittedBox, so asking for a bigger photo than
+        // the box could hold just scaled the whole label back down — the photo
+        // stayed ~44dp however large the fraction was.
+        final fixedRows =
+            spacing + // under the photo
+            nameFontSize * 1.35 + // name
+            (player.eliminated || player.timeoutCount > 0
+                ? (ultraTight ? 11.0 : 12.0)
+                : 0.0) + // 탈락 / ⏱ line
+            spacing +
+            math.max(tokenSize, chipFontSize * 1.9) + // hearts + turn chip
+            labelPadding * 2;
+        final avatarDiameter =
+            (constraints.maxHeight - verticalPadding * 2 - fixedRows).clamp(
+              24.0,
+              96.0,
+            );
         // Hugs the photo instead of taking a fixed 70% of the box.
         final contentWidth = math.max(
           avatarDiameter + 6,
@@ -1706,7 +1732,7 @@ class _LLGameScreenState extends State<LLGameScreen> {
                 // the seat rather than as the seat.
                 padding: EdgeInsets.symmetric(
                   horizontal: ultraTight ? 3 : 4,
-                  vertical: ultraTight ? 2 : 3,
+                  vertical: labelPadding,
                 ),
                 decoration: BoxDecoration(
                   color: labelTint,
@@ -1811,35 +1837,32 @@ class _LLGameScreenState extends State<LLGameScreen> {
                           ),
                         ),
                       SizedBox(height: spacing),
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        mainAxisSize: MainAxisSize.min,
-                        children: List.generate(
-                          state.targetTokens,
-                          (i) => Padding(
-                            padding: EdgeInsets.only(right: ultraTight ? 1 : 2),
-                            child: Icon(
-                              Icons.favorite,
-                              color: i < player.tokens
-                                  ? player.eliminated
-                                        ? const Color(0xFFB98B95)
-                                        : const Color(0xFFE91E63)
-                                  : const Color(0xFFE0D8D4),
-                              size: tokenSize,
-                            ),
-                          ),
-                        ),
-                      ),
-                      SizedBox(height: spacing),
+                      // Hearts and the turn countdown share one row. The chip
+                      // used to own a row below them, and that row cost the
+                      // photo the same height whether or not it was that
+                      // player's turn.
                       Row(
                         mainAxisAlignment: MainAxisAlignment.center,
                         mainAxisSize: MainAxisSize.min,
                         children: [
+                          for (int i = 0; i < state.targetTokens; i++)
+                            Padding(
+                              padding: EdgeInsets.only(
+                                right: ultraTight ? 1 : 2,
+                              ),
+                              child: Icon(
+                                Icons.favorite,
+                                color: i < player.tokens
+                                    ? player.eliminated
+                                          ? const Color(0xFFB98B95)
+                                          : const Color(0xFFE91E63)
+                                    : const Color(0xFFE0D8D4),
+                                size: tokenSize,
+                              ),
+                            ),
                           if (isCurrent && _remainingSeconds > 0)
                             Container(
-                              margin: EdgeInsets.only(
-                                right: ultraTight ? 4 : 5,
-                              ),
+                              margin: EdgeInsets.only(left: ultraTight ? 2 : 3),
                               padding: EdgeInsets.symmetric(
                                 horizontal: ultraTight ? 4 : 5,
                                 vertical: ultraTight ? 1 : 2,
@@ -1928,7 +1951,10 @@ class _LLGameScreenState extends State<LLGameScreen> {
     required double boardCenterX,
     required double boardCenterY,
   }) {
-    const previewWidthScale = 1.25;
+    // The pile fans out to a quarter wider than the seat, but only where the
+    // board has the room for it: on a narrow board three fanned piles are wider
+    // than the screen, so they hug their own seat instead.
+    final previewWidthScale = seat.width < 112 ? 1.05 : 1.25;
     final previewWidth = seat.width * previewWidthScale;
     final previewLeft = seat.left - (previewWidth - seat.width) / 2;
     final gap = seat.compact ? -10.0 : -14.0;

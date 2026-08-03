@@ -1131,15 +1131,15 @@ class _SKGameScreenState extends State<SKGameScreen> {
   Widget _buildSpectatorScoreboard(SKGameStateData state, GameService game) {
     final isLandscape =
         MediaQuery.of(context).orientation == Orientation.landscape;
-    const playedCardWidth = 72 * 0.7;
     // 118 wide could not clear the 180-wide trick panel: at 4 opponents the two
     // side seats sit at 172°/368°, i.e. at full X radius and at the panel's own
     // height, and half-seat + half-panel exceeds half the board on a 360dp
     // phone. Narrower box + the avatar moved onto its own row (where it no
     // longer competes with the name for width) buys the clearance and a bigger
     // avatar at the same time.
-    const seatWidth = 98.0;
-    const seatHeight = 106.0;
+    // Sized in the LayoutBuilder below — see boardScale.
+    const seatWidthBase = 98.0;
+    const seatHeightBase = 118.0;
 
     return Padding(
       padding: const EdgeInsets.fromLTRB(8, 6, 8, 8),
@@ -1147,6 +1147,16 @@ class _SKGameScreenState extends State<SKGameScreen> {
         builder: (context, constraints) {
           final width = constraints.maxWidth;
           final height = constraints.maxHeight;
+          final boardScale = math.min(width / 360.0, height / 400.0).clamp(0.78, 1.45);
+          final seatWidth = seatWidthBase * boardScale;
+          final seatHeight = seatHeightBase * boardScale;
+          final playedCardHeight = 72.0 * boardScale;
+          final playedCardW = playedCardHeight * 0.7;
+          // Card centred on the photo: the label is top-aligned in the box, so
+          // the photo's middle sits half an avatar below the top edge.
+          final avatarInSeat = seatHeight * 0.56;
+          final playedCardTopOffset =
+              (4 * boardScale) + avatarInSeat / 2 - playedCardHeight / 2;
           final playerCount = state.players.length;
           final centerX = width / 2;
           final centerY = isLandscape ? height * 0.39 : height * 0.41;
@@ -1233,8 +1243,8 @@ class _SKGameScreenState extends State<SKGameScreen> {
                       seatRadiusY * math.sin(angle) -
                       seatHeight / 2 -
                       seatLift;
-                  final cardLeft = seatLeft + (seatWidth - playedCardWidth) / 2;
-                  final cardTop = seatTop + seatHeight + 2;
+                  final cardLeft = seatLeft + (seatWidth - playedCardW) / 2;
+                  final cardTop = seatTop + playedCardTopOffset;
                   final trickPlay = state.currentTrick
                       .cast<SKTrickPlay?>()
                       .firstWhere(
@@ -1727,15 +1737,15 @@ class _SKGameScreenState extends State<SKGameScreen> {
   Widget _buildScoreboard(SKGameStateData state, GameService game) {
     final isLandscape =
         MediaQuery.of(context).orientation == Orientation.landscape;
-    const playedCardWidth = 72 * 0.7;
     // 118 wide could not clear the 180-wide trick panel: at 4 opponents the two
     // side seats sit at 172°/368°, i.e. at full X radius and at the panel's own
     // height, and half-seat + half-panel exceeds half the board on a 360dp
     // phone. Narrower box + the avatar moved onto its own row (where it no
     // longer competes with the name for width) buys the clearance and a bigger
     // avatar at the same time.
-    const seatWidth = 98.0;
-    const seatHeight = 106.0;
+    // Sized in the LayoutBuilder below — see boardScale.
+    const seatWidthBase = 98.0;
+    const seatHeightBase = 118.0;
     final opponents = state.players
         .where((p) => p.position != 'self')
         .toList(growable: false);
@@ -1758,9 +1768,18 @@ class _SKGameScreenState extends State<SKGameScreen> {
         builder: (context, constraints) {
           final width = constraints.maxWidth;
           final height = constraints.maxHeight;
+          final boardScale = math.min(width / 360.0, height / 400.0).clamp(0.78, 1.45);
+          final seatWidth = seatWidthBase * boardScale;
+          final seatHeight = seatHeightBase * boardScale;
+          final playedCardHeight = 72.0 * boardScale;
+          final playedCardW = playedCardHeight * 0.7;
+          // Card centred on the photo — see the spectator board for the why.
+          final avatarInSeat = seatHeight * 0.56;
+          final playedCardTopOffset =
+              (4 * boardScale) + avatarInSeat / 2 - playedCardHeight / 2;
           final opponentCount = opponents.length;
           final centerX = width / 2;
-          final centerY = isLandscape ? height * 0.39 : height * 0.41;
+          final centerY = isLandscape ? height * 0.42 : height * 0.46;
           final maxSeatRadiusX = math.max(0.0, centerX - seatWidth / 2 - 10);
           final seatRadiusX = math.min(
             width * _seatRadiusXFactor(opponentCount),
@@ -1852,8 +1871,8 @@ class _SKGameScreenState extends State<SKGameScreen> {
                       seatRadiusY * math.sin(angle) -
                       seatHeight / 2 -
                       seatLift;
-                  final cardLeft = seatLeft + (seatWidth - playedCardWidth) / 2;
-                  final cardTop = seatTop + seatHeight + 2;
+                  final cardLeft = seatLeft + (seatWidth - playedCardW) / 2;
+                  final cardTop = seatTop + playedCardTopOffset;
                   final trickPlay = state.currentTrick
                       .cast<SKTrickPlay?>()
                       .firstWhere(
@@ -1877,7 +1896,7 @@ class _SKGameScreenState extends State<SKGameScreen> {
               ],
               if (selfTrickPlay != null)
                 Positioned(
-                  left: centerX - playedCardWidth / 2,
+                  left: centerX - playedCardW / 2,
                   top: selfCardTop,
                   child: _buildPlayedCardBadge(
                     selfTrickPlay,
@@ -2336,10 +2355,21 @@ class _SKGameScreenState extends State<SKGameScreen> {
           final bidHorizontalPadding = compact ? 4.0 : 6.0;
           final bidTopMargin = compact ? 1.0 : 2.0;
           final spacing = compact ? 1.0 : 2.0;
-          final avatarDiameter = isSelf ? 34.0 : (compact ? 28.0 : 32.0);
+          // Sized from the seat box, like Mighty: the box itself scales with
+          // the board, so the photo follows the device instead of sitting at a
+          // fixed 32px on every screen. Roughly twice what it was.
+          final avatarDiameter = (constraints.maxHeight * 0.56).clamp(
+            30.0,
+            84.0,
+          );
+          // Hugs the photo rather than taking a fixed 70% of the box — the
+          // leftover was empty tint either side of the avatar.
           final contentWidth = math.max(
-            24.0,
-            (constraints.maxWidth - horizontalPadding * 2) * 0.7,
+            avatarDiameter + 6,
+            math.min(
+              (constraints.maxWidth - horizontalPadding * 2) * 0.7,
+              avatarDiameter + 20,
+            ),
           );
 
           final labelTint = isSelf
@@ -2359,9 +2389,11 @@ class _SKGameScreenState extends State<SKGameScreen> {
                 fit: BoxFit.scaleDown,
                 alignment: Alignment.topCenter,
                 child: Container(
+                  // Half the old padding: with a photo this size the frame
+                  // read as a box around the seat rather than as the seat.
                   padding: EdgeInsets.symmetric(
-                    horizontal: compact ? 6 : 8,
-                    vertical: compact ? 4 : 5,
+                    horizontal: compact ? 3 : 4,
+                    vertical: compact ? 2 : 3,
                   ),
                   decoration: BoxDecoration(
                     color: labelTint,

@@ -1146,7 +1146,8 @@ function _governmentLead(game, botId, legalCards, suitCards, mightyCard) {
   if (botId === game.declarer
       && hasTrump
       && game.tricks.length === 1
-      && game.friendCard !== 'mighty_joker') {
+      && game.friendCard !== 'mighty_joker'
+      && !_teammateHoldsJoker(game, botId)) {
     const jokerCallCard = game.getJokerCallCard();
     if (jokerCallCard && legalCards.includes(jokerCallCard)) {
       return jokerCallCard;
@@ -2267,6 +2268,27 @@ function _cheapDiscardInsteadOfPoint(game, botId, cardId) {
   return pick === cardId ? null : pick;
 }
 
+/**
+ * 우리 팀 사람이 조커를 들고 있나. 조커콜은 상대 조커를 끌어내려고 쏘는 건데,
+ * 우리 편이 들고 있으면 우리 조커를 우리가 태우는 헛발사가 된다.
+ * 봇은 모든 손패를 보므로 정확히 판정된다.
+ */
+function _teammateHoldsJoker(game, botId) {
+  // A/B 측정용 좌석 게이트. 켜지면 예전(안 보고 쏨) 동작으로 돈다.
+  if (typeof global.__mightyJokerCallLegacy === 'function'
+      && global.__mightyJokerCallLegacy(botId)) {
+    return false;
+  }
+  const botIsGov = isGovernmentSelf(game, botId);
+  for (const pid of game.playerIds) {
+    if (pid === botId) continue;
+    if (game.excludedPlayers && game.excludedPlayers.has(pid)) continue;
+    if (isGovernmentSelf(game, pid) !== botIsGov) continue;
+    if ((game.hands[pid] || []).includes('mighty_joker')) return true;
+  }
+  return false;
+}
+
 /** Get the suit of the friend-declared card */
 function _getFriendCardSuit(game) {
   if (!game.friendCard || game.friendCard === 'no_friend' || game.friendCard === 'first_trick') {
@@ -2405,7 +2427,10 @@ function makePlayAction(cardId, game, botId) {
   // option disabled) — calling it there has no effect.
   if (game.currentTrick.length === 0 && cardId === game.getJokerCallCard()) {
     if (game.trumpSuit && game.trumpSuit !== 'no_trump'
-        && game._currentTrickJokerHasPower()) {
+        && game._currentTrickJokerHasPower()
+        // 우리 편이 조커를 들고 있으면 콜을 켜지 않는다. 그 카드를 리드하는
+        // 것 자체는 정상적인 수일 수 있어서 카드는 그대로 내되, 콜만 끈다.
+        && !_teammateHoldsJoker(game, botId)) {
       action.jokerCall = true;
     }
   }

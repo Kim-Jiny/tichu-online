@@ -814,9 +814,20 @@ function _friendJokerLeadRule(game, botId) {
   if (!trump || trump === 'no_trump') return null;
 
   const opposition = _getOppositionPlayers(game, botId);
-  if (!opposition.some(pid => (game.hands[pid] || []).includes(jokerCallCard))) {
-    return null;
-  }
+  const oppThreat = opposition.some(pid => (game.hands[pid] || []).includes(jokerCallCard));
+  // 주공이 조커콜 카드를 들고 있고 아직 프렌드가 안 드러났으면, 주공은 내가
+  // 조커를 들고 있는 줄 모른다. 사람 주공은 상대 조커를 끌어내려고 그냥 쏘고,
+  // 그러면 우리 조커가 헛되이 타 버린다. 봇 주공은 이제 우리 편 조커를 보고
+  // 안 쏘지만(_teammateHoldsJoker), 사람은 볼 수가 없다.
+  // 그 전에 내 리드로 조커를 값나가게 쓰는 게 낫다.
+  const declarerThreat = !game.friendRevealed
+    && game.declarer !== botId
+    && (game.hands[game.declarer] || []).includes(jokerCallCard)
+    // A/B 측정용 좌석 게이트. 켜지면 예전(상대 위협만 봄) 동작으로 돈다.
+    && !(typeof global.__mightyDeclarerJokerThreatLegacy === 'function'
+      && global.__mightyDeclarerJokerThreatLegacy(botId));
+
+  if (!oppThreat && !declarerThreat) return null;
 
   const legal = game.getLegalCards(botId);
   if (!legal || !legal.includes('mighty_joker')) return null;
@@ -827,7 +838,17 @@ function _friendJokerLeadRule(game, botId) {
     jokerSuit: suit,
   }));
 
-  return _preferActionOverOracle(game, botId, candidateActions);
+  const picked = _preferActionOverOracle(game, botId, candidateActions);
+  if (picked) return picked;
+
+  // 주공이 조커콜 카드를 들고 있어서 생긴 위협이면 롤아웃 승인을 기다리지 않는다.
+  // 롤아웃은 주공을 "손패를 다 아는 봇"으로 놓고 굴리기 때문에 "주공이 모르고
+  // 쏠 수 있다"는 위험 자체를 값으로 못 매긴다(1500라운드에서 11번 감지 중 2번만
+  // 수락했다). 사람 주공이 앉는 실제 판에서 조커가 헛되이 끌려 나가는 걸 막으려면
+  // 여기서는 그냥 쓰는 게 맞다. 무늬만 후보 중 제일 좋은 걸로 고른다.
+  if (!declarerThreat) return null;
+  const forced = _bestPlayAction(game, botId, candidateActions);
+  return forced.action || null;
 }
 
 /**

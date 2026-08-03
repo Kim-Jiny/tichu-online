@@ -282,6 +282,42 @@ check('fix3: friend preserves joker on locked trick',
     got => got !== 'mighty_club_A');
 })();
 
+// ── Fix 8: 조커콜은 NT 금지 · 우리 편 조커에 쏘지 않기 ──
+// 조커콜은 상대 조커를 끌어내려고 쏘는 것이다. 우리 편이 들고 있으면 우리
+// 조커를 우리가 태우는 헛발사고, 노기루다(NT)에서는 조커콜 자체가 없다.
+(() => {
+  const c = (s) => s.split(' ').map(x => `mighty_${x}`);
+  const build = (trumpSuit, jokerHolder) => {
+    const hands = {
+      p0: c('club_3 club_9 heart_5 diamond_6 spade_7'), // 주공 — 조커콜 카드 보유
+      p1: c('club_4 heart_6 diamond_7 spade_8 heart_10'),
+      p2: c('club_5 heart_7 diamond_8 spade_9 heart_J'), // 프렌드
+      p3: c('club_6 heart_8 diamond_9 spade_10 heart_Q'),
+      p4: c('club_7 heart_9 diamond_10 spade_J heart_K'),
+    };
+    hands[jokerHolder] = [...hands[jokerHolder].slice(0, 4), 'mighty_joker'];
+    return position({
+      declarer: 'p0', partner: 'p2', friendRevealed: true,
+      friendCard: 'mighty_spade_A', trumpSuit,
+      tricksLen: 1, currentPlayer: 'p0', currentTrick: [], hands,
+    });
+  };
+  for (const strategy of ['heuristic', 'mixoracle']) {
+    // p2 = 프렌드(우리 편)
+    check(`fix8(${strategy}): 우리 편 조커에 조커콜 안 쏨`,
+      (MightyBot.decideMightyBotAction(build('heart', 'p2'), 'p0', strategy) || {}).jokerCall === true,
+      got => got === false);
+    // NT 에서는 상대가 들고 있어도 콜 자체가 없다
+    check(`fix8(${strategy}): NT 에서 조커콜 안 함`,
+      (MightyBot.decideMightyBotAction(build('no_trump', 'p4'), 'p0', strategy) || {}).jokerCall === true,
+      got => got === false);
+    // 상대가 들고 있으면 정상적으로 쏜다 (수정이 과하게 막지 않았는지 확인)
+    check(`fix8(${strategy}): 야당 조커에는 정상 발사`,
+      (MightyBot.decideMightyBotAction(build('heart', 'p4'), 'p0', strategy) || {}).jokerCall === true,
+      got => got === true);
+  }
+})();
+
 // ── Endgame solver: legal + deterministic on real seeded endgames ──
 // Plays seeded games to their first solvable position and checks the solver
 // returns a legal, deterministic move. (Broad coverage — 4000+ solves with 0

@@ -1159,41 +1159,37 @@ async function initDatabase() {
       ON tc_season_rankings (season_id, game_type, rank)
     `);
 
-    // 같은 달 시즌이 여러 개 생기던 것 정리 + 재발 방지.
+    // 같은 달 시즌이 두 번 만들어지지 않게.
     //
     // createSeason 은 평범한 INSERT 였고 tc_seasons 에는 유니크 제약이 없었다.
-    // ensureSeasonCycle 은 프로세스 안에서만 잠기므로(_seasonCycleRunning),
-    // 부팅과 시간별 타이머가 겹치거나 인스턴스가 둘이면(블루/그린 교체 순간)
-    // 같은 이름의 'active' 시즌이 그대로 여러 줄 쌓인다. 실제로 2026-08 이
-    // 같은 분에 5개 생겼다.
+    // ensureSeasonCycle 은 _seasonCycleRunning 으로 프로세스 안에서만 잠기므로,
+    // 부팅과 시간별 타이머가 겹치거나 배포 교체로 인스턴스가 잠깐 둘이 되면
+    // 같은 이름의 'active' 시즌이 그대로 여러 줄 쌓인다.
     //
-    // 정리 규칙: 이름이 같은 것들 중 데이터(랭킹·지급·전용 보상 설정)를 가진
-    // 것을 남기고, 아무것도 안 달린 나머지만 지운다. 데이터가 붙은 게 여럿이면
-    // 지우지 않고 가장 오래된 것만 남겨 닫는다 — 지워서 될 일이 아니다.
-    await client.query(`
-      WITH ranked AS (
-        SELECT s.id, s.name,
-               (SELECT COUNT(*) FROM tc_season_rankings k WHERE k.season_id = s.id)
-             + (SELECT COUNT(*) FROM tc_season_rewards w WHERE w.season_id = s.id)
-             + (SELECT COUNT(*) FROM tc_season_reward_config c WHERE c.season_id = s.id) AS refs,
-               ROW_NUMBER() OVER (PARTITION BY s.name ORDER BY s.id) AS rn
-        FROM tc_seasons s
-      )
-      DELETE FROM tc_seasons t
-      USING ranked r
-      WHERE t.id = r.id AND r.rn > 1 AND r.refs = 0
-    `);
-    await client.query(`
-      WITH dup AS (
-        SELECT id, ROW_NUMBER() OVER (PARTITION BY name ORDER BY id) AS rn
-        FROM tc_seasons WHERE status = 'active'
-      )
-      UPDATE tc_seasons SET status = 'closed'
-      FROM dup WHERE tc_seasons.id = dup.id AND dup.rn > 1
-    `);
-    await client.query(
-      `CREATE UNIQUE INDEX IF NOT EXISTS tc_seasons_name_idx ON tc_seasons (name)`,
+    // 유니크 인덱스가 본체다. 이미 중복이 있는 DB에서는 인덱스를 만들 수 없어
+    // 부팅이 깨지므로, 그 경우에만 여분을 'closed' 로 내려 인덱스를 만들 수
+    // 있게 한다 — 지우지는 않는다. 어느 줄에 랭킹·지급이 붙어 있을지 여기서
+    // 판단할 일이 아니고, 남은 줄은 관리 화면에서 눈으로 확인하면 된다.
+    const dupSeasons = await client.query(
+      `SELECT name, COUNT(*)::int AS n FROM tc_seasons GROUP BY name HAVING COUNT(*) > 1`,
     );
+    if (dupSeasons.rows.length > 0) {
+      console.warn('[season] 이름이 겹치는 시즌 발견:',
+        dupSeasons.rows.map((r) => `${r.name}×${r.n}`).join(', '),
+        '— 가장 오래된 것만 진행 중으로 두고 나머지는 종료 처리합니다.');
+      await client.query(`
+        WITH dup AS (
+          SELECT id, ROW_NUMBER() OVER (PARTITION BY name ORDER BY id) AS rn
+          FROM tc_seasons WHERE status = 'active'
+        )
+        UPDATE tc_seasons SET status = 'closed'
+        FROM dup WHERE tc_seasons.id = dup.id AND dup.rn > 1
+      `);
+    } else {
+      await client.query(
+        `CREATE UNIQUE INDEX IF NOT EXISTS tc_seasons_name_idx ON tc_seasons (name)`,
+      );
+    }
 
     // Notices table
     await client.query(`

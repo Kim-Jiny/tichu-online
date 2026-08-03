@@ -347,25 +347,26 @@ input[type="text"], input[type="password"] { width: 100%; padding: 10px 12px; bo
 .search-bar { display: flex; gap: 8px; margin-bottom: 16px; }
 .search-bar input { flex: 1; }
 .filter-card {
-  padding: 16px 18px;
-  border-radius: 18px;
-  background: rgba(255,255,255,0.76);
-  border: 1px solid rgba(32,28,22,0.06);
-  box-shadow: 0 12px 28px rgba(34,29,21,0.05);
+  padding: 0 0 18px;
+  border-radius: 0;
+  background: transparent;
+  border: none;
+  border-bottom: 1px solid var(--line);
+  box-shadow: none;
   margin-bottom: 18px;
 }
-.filter-title { font-size: 12px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 10px; }
+.filter-title { font-size: 12px; color: var(--muted); text-transform: none; letter-spacing: 0; margin-bottom: 10px; font-weight: 700; }
 .subtab-bar { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 18px; }
 .subtab-link {
   display: inline-flex;
   align-items: center;
   gap: 8px;
-  padding: 10px 14px;
-  border-radius: 999px;
+  padding: 8px 13px;
+  border-radius: 8px;
   text-decoration: none;
   color: var(--muted);
-  background: rgba(255,255,255,0.72);
-  border: 1px solid rgba(32,28,22,0.08);
+  background: transparent;
+  border: 1px solid var(--line);
   font-size: 13px;
   font-weight: 700;
 }
@@ -395,30 +396,31 @@ input[type="text"], input[type="password"] { width: 100%; padding: 10px 12px; bo
   background: var(--brand);
   border-color: var(--brand);
 }
+/* 붙박이 상자를 없앤다. 스크롤을 따라다니되 배경·그림자 없이 구분선만. */
 .sticky-kpi-rail {
   position: sticky;
-  top: 12px;
+  top: 0;
   z-index: 20;
   margin-bottom: 18px;
-  padding: 16px 18px;
-  border-radius: 18px;
-  background: rgba(255,255,255,0.9);
-  border: 1px solid rgba(32,28,22,0.08);
-  box-shadow: 0 14px 28px rgba(34,29,21,0.08);
-  backdrop-filter: blur(10px);
+  padding: 14px 0;
+  border-radius: 0;
+  background: var(--bg);
+  border: none;
+  border-bottom: 1px solid var(--line);
+  box-shadow: none;
 }
 .sticky-kpi-title { font-size: 12px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 10px; }
 .sticky-kpi-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 10px; }
-.sticky-kpi-item { padding: 12px 14px; border-radius: 14px; background: #f7f3ea; border: 1px solid #ebe4d8; }
-.sticky-kpi-item .k { font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 6px; }
+.sticky-kpi-item { padding: 2px 0; border-radius: 0; background: transparent; border: none; }
+.sticky-kpi-item .k { font-size: 12px; color: var(--muted); text-transform: none; letter-spacing: 0; margin-bottom: 6px; }
 .sticky-kpi-item .v { font-size: 22px; font-weight: 800; color: var(--text); letter-spacing: -0.02em; }
 .sticky-kpi-item .m { margin-top: 6px; font-size: 12px; color: var(--muted); line-height: 1.5; }
-.hero-rail { padding: 18px 20px; }
+.hero-rail { padding: 14px 0; }
 .hero-kpi { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 14px 4px; }
-.hero-item { padding: 2px 18px; min-width: 0; border-left: 1px solid rgba(32,28,22,0.08); }
+.hero-item { padding: 2px 18px; min-width: 0; border-left: 1px solid var(--line); }
 .hero-item:first-child { border-left: none; padding-left: 0; }
 .hk-label { font-size: 12px; color: var(--muted); letter-spacing: 0.02em; margin-bottom: 7px; white-space: nowrap; }
-.hk-value { font-size: 30px; font-weight: 800; color: var(--text); letter-spacing: -0.03em; line-height: 1.05; }
+.hk-value { font-size: 28px; font-weight: 700; color: var(--text); letter-spacing: -0.03em; line-height: 1.05; }
 .hk-delta { margin-top: 9px; }
 .hk-prev { font-size: 11px; color: var(--muted); margin-top: 5px; }
 .delta { display: inline-flex; align-items: center; gap: 3px; font-size: 12px; font-weight: 700; padding: 2px 9px; border-radius: 999px; line-height: 1.5; }
@@ -976,7 +978,13 @@ function deltaPill(current, previous) {
 // fmt?, color?}]. fmt defaults to formatNumber.
 function heroRail(items) {
   if (!items || items.length === 0) return '';
-  const cells = items.map((it) => {
+  // 이번에도 이전에도 0인 지표는 내보내지 않는다. 안 쓰는 모드의 "0 · 이전 0 ·
+  // 비교 없음" 이 제일 좋은 자리를 차지하고 있었다.
+  const shown = items.filter((it) => it.keep
+    || Number(it.cur || 0) !== 0
+    || Number(it.prev || 0) !== 0);
+  if (shown.length === 0) return '';
+  const cells = shown.map((it) => {
     const fmt = it.fmt || ((n) => formatNumber(Number(n) || 0));
     const colorStyle = it.color ? ` style="color:${it.color}"` : '';
     return `<div class="hero-item">
@@ -987,6 +995,20 @@ function heroRail(items) {
     </div>`;
   }).join('');
   return `<div class="sticky-kpi-rail hero-rail"><div class="hero-kpi">${cells}</div></div>`;
+}
+
+/**
+ * 집계 구간 라벨.
+ *
+ * 표와 KPI가 formatDate 를 그대로 써서 일별 집계에도
+ * "2026. 7. 28. 오전 12:00:00" 이 찍혔다. 시간 부분은 항상 자정이라
+ * 아무 정보도 없으면서 칸만 넓게 잡아먹는다.
+ */
+function formatBucket(value, bucket = 'day') {
+  const p = kstParts(new Date(value));
+  if (!p) return '-';
+  if (bucket === 'hour') return `${Number(p.month)}/${Number(p.day)} ${p.hour}시`;
+  return `${p.month}-${p.day}`;
 }
 
 function gameTypeBadge(gameType) {
@@ -2309,18 +2331,36 @@ async function handleAdminRoute(req, res, url, pathname, method, lobby, wss, mai
     // Only what the numbers above do NOT already say. A card that restates the
     // delta badge ("+526% 증가했습니다") is a second copy of the same fact, and
     // the rail shows it with the previous value attached.
+    // 경고에는 수치를 함께 적는다. "골드 소모 급증 / 상점과 경제 탭을 같이
+    // 점검해보세요"만 있으면 얼마나 늘었는지 보려고 결국 다른 탭을 열어야 하고,
+    // 그러면 경고가 일을 하나도 덜어주지 못한다.
     const warningCards = [];
+    const swing = (cur, prev) => ((Number(cur || 0) - Number(prev || 0)) / Number(prev || 1)) * 100;
+    const movedBy = (cur, prev, unit) =>
+      `${formatNumber(Number(prev || 0))}${unit} → ${formatNumber(Number(cur || 0))}${unit}`;
     if (Number(prevSummary.totalGames || 0) > 0) {
-      const deltaGames = ((Number(summary.totalGames || 0) - Number(prevSummary.totalGames || 0)) / Number(prevSummary.totalGames || 1)) * 100;
-      if (deltaGames <= -20) warningCards.push({ tone: 'danger', title: '게임량 급감', desc: '최근 매치 흐름을 확인해보세요.' });
+      const d = swing(summary.totalGames, prevSummary.totalGames);
+      if (d <= -20) warningCards.push({
+        tone: 'danger',
+        title: `게임량 ${Math.abs(Math.round(d))}% 감소`,
+        desc: `${movedBy(summary.totalGames, prevSummary.totalGames, '판')} · 이전 같은 길이의 기간과 비교`,
+      });
     }
     if (Number(prevSummary.totalSignups || 0) > 0) {
-      const deltaSignups = ((Number(summary.totalSignups || 0) - Number(prevSummary.totalSignups || 0)) / Number(prevSummary.totalSignups || 1)) * 100;
-      if (deltaSignups <= -20) warningCards.push({ tone: 'warning', title: '신규 가입 둔화', desc: '플랫폼별 유입 변화를 함께 확인해보세요.' });
+      const d = swing(summary.totalSignups, prevSummary.totalSignups);
+      if (d <= -20) warningCards.push({
+        tone: 'warning',
+        title: `신규 가입 ${Math.abs(Math.round(d))}% 감소`,
+        desc: `${movedBy(summary.totalSignups, prevSummary.totalSignups, '명')} · 유입 분석 탭에서 플랫폼별로 확인`,
+      });
     }
     if (Number(prevSummary.goldSpent || 0) > 0) {
-      const deltaGoldSpent = ((Number(summary.goldSpent || 0) - Number(prevSummary.goldSpent || 0)) / Number(prevSummary.goldSpent || 1)) * 100;
-      if (deltaGoldSpent >= 25) warningCards.push({ tone: 'warning', title: '골드 소모 급증', desc: '상점과 경제 탭을 같이 점검해보세요.' });
+      const d = swing(summary.goldSpent, prevSummary.goldSpent);
+      if (d >= 25) warningCards.push({
+        tone: 'warning',
+        title: `골드 소모 ${Math.round(d)}% 증가`,
+        desc: `${movedBy(summary.goldSpent, prevSummary.goldSpent, 'G')} · 상점 분석 탭에서 무엇이 팔렸는지 확인`,
+      });
     }
     // (Per-tab KPIs now render via heroKpis/heroRail; the legacy stickyFavorites
     // and global summaryCards strips were removed in the dashboard redesign.)
@@ -2387,7 +2427,7 @@ async function handleAdminRoute(req, res, url, pathname, method, lobby, wss, mai
       ? `<div class="table-wrap"><table>
           <tr><th>${bucket === 'hour' ? '시간대' : '날짜'}</th><th>전체</th><th>티추</th><th>스컬킹</th><th>러브레터</th><th>마이티</th><th>랭크전</th></tr>
           ${gameSeries.map(row => `<tr>
-            <td>${formatDate(row.bucket_time)}</td>
+            <td style="white-space:nowrap">${formatBucket(row.bucket_time, bucket)}</td>
             ${barCell(row.total_cnt, maxOf(gameSeries, 'total_cnt'))}
             <td>${row.tichu_cnt}</td>
             <td>${row.skull_cnt}</td>
@@ -2402,7 +2442,7 @@ async function handleAdminRoute(req, res, url, pathname, method, lobby, wss, mai
       ? `<div class="table-wrap"><table>
           <tr><th>${bucket === 'hour' ? '시간대' : '날짜'}</th><th>획득</th><th>소모</th><th>순변동</th></tr>
           ${goldSeries.map(row => `<tr>
-            <td>${formatDate(row.bucket_time)}</td>
+            <td style="white-space:nowrap">${formatBucket(row.bucket_time, bucket)}</td>
             ${barCell(row.earned, maxOf(goldSeries, 'earned'), '#2e8b57')}
             ${barCell(row.spent, maxOf(goldSeries, 'spent'), '#c0563f')}
             <td style="font-weight:700">${row.net}</td>
@@ -2414,7 +2454,7 @@ async function handleAdminRoute(req, res, url, pathname, method, lobby, wss, mai
       ? `<div class="table-wrap"><table>
           <tr><th>${bucket === 'hour' ? '시간대' : '날짜'}</th><th>판매 수</th><th>구매자</th><th>지출 골드</th></tr>
           ${shopSalesSeries.map(row => `<tr>
-            <td>${formatDate(row.bucket_time)}</td>
+            <td style="white-space:nowrap">${formatBucket(row.bucket_time, bucket)}</td>
             ${barCell(row.purchase_count, maxOf(shopSalesSeries, 'purchase_count'), '#d88c38')}
             <td>${formatNumber(row.buyer_count)}</td>
             <td style="color:#b35b19;font-weight:700">${formatNumber(row.gold_spent)}</td>
@@ -2426,7 +2466,7 @@ async function handleAdminRoute(req, res, url, pathname, method, lobby, wss, mai
       ? `<div class="table-wrap"><table>
           <tr><th>${bucket === 'hour' ? '시간대' : '날짜'}</th><th>전체 가입</th><th>iOS</th><th>AOS</th></tr>
           ${signupSeries.map(row => `<tr>
-            <td>${formatDate(row.bucket_time)}</td>
+            <td style="white-space:nowrap">${formatBucket(row.bucket_time, bucket)}</td>
             ${barCell(row.total_cnt, maxOf(signupSeries, 'total_cnt'), '#5f62d6')}
             <td>${formatNumber(row.ios_cnt)}</td>
             <td>${formatNumber(row.android_cnt)}</td>
@@ -2513,7 +2553,7 @@ async function handleAdminRoute(req, res, url, pathname, method, lobby, wss, mai
         { label: '주력 게임', value: escapeHtml(dominantGame?.label || '-'), meta: dominantGame ? `${formatNumber(dominantGame.value)}판` : '데이터 없음' },
         { label: '평균 게임량', value: avgGamesPerBucket.toFixed(1), meta: bucket === 'hour' ? '시간대당 평균' : '일자당 평균' },
         { label: '마이티 비중', value: formatPercent(mightyShare, 1), meta: `${formatNumber(summary.mightyGames || 0)}판` },
-        { label: '피크 구간', value: peakGameRow ? formatDate(peakGameRow.bucket_time) : '-', meta: peakGameRow ? `${formatNumber(peakGameRow.total_cnt)}판` : '데이터 없음' },
+        { label: '피크 구간', value: peakGameRow ? formatBucket(peakGameRow.bucket_time, bucket) : '-', meta: peakGameRow ? `${formatNumber(peakGameRow.total_cnt)}판` : '데이터 없음' },
       ])}
       <div class="card-actions">
         ${(statActions.games || []).map((action) => `<a href="${action.href}" class="btn btn-secondary">${escapeHtml(action.label)}</a>`).join('')}
@@ -2534,7 +2574,7 @@ async function handleAdminRoute(req, res, url, pathname, method, lobby, wss, mai
         { label: 'AOS 비중', value: formatPercent(aosShare, 1), meta: `${formatNumber(summary.androidSignups || 0)}명` },
         { label: '평균 가입량', value: avgSignupsPerBucket.toFixed(1), meta: bucket === 'hour' ? '시간대당 평균' : '일자당 평균' },
         { label: '게임 대비 가입', value: formatPercent(signupPerGame * 100, 1), meta: `게임 100판당 ${signupPerGame.toFixed(2)}명` },
-        { label: '피크 구간', value: peakSignupRow ? formatDate(peakSignupRow.bucket_time) : '-', meta: peakSignupRow ? `${formatNumber(peakSignupRow.total_cnt)}명` : '데이터 없음' },
+        { label: '피크 구간', value: peakSignupRow ? formatBucket(peakSignupRow.bucket_time, bucket) : '-', meta: peakSignupRow ? `${formatNumber(peakSignupRow.total_cnt)}명` : '데이터 없음' },
       ])}
       <div class="card-actions">
         ${(statActions.acquisition || []).map((action) => `<a href="${action.href}" class="btn btn-secondary">${escapeHtml(action.label)}</a>`).join('')}
@@ -2553,7 +2593,7 @@ async function handleAdminRoute(req, res, url, pathname, method, lobby, wss, mai
       ${summaryStrip([
         { label: '평균 순변동', value: avgNetPerBucket.toFixed(1), meta: bucket === 'hour' ? '시간대당 평균' : '일자당 평균' },
         { label: '흑자 구간', value: formatNumber(positiveNetBuckets), meta: `${Math.max(goldSeries.length, 1)}개 구간 중` },
-        { label: '최대 획득 시점', value: peakEarnRow ? formatDate(peakEarnRow.bucket_time) : '-', meta: peakEarnRow ? `${formatNumber(peakEarnRow.earned)} 골드` : '데이터 없음' },
+        { label: '최대 획득 시점', value: peakEarnRow ? formatBucket(peakEarnRow.bucket_time, bucket) : '-', meta: peakEarnRow ? `${formatNumber(peakEarnRow.earned)} 골드` : '데이터 없음' },
       ])}
       <div class="card-actions">
         ${(statActions.economy || []).map((action) => `<a href="${action.href}" class="btn btn-secondary">${escapeHtml(action.label)}</a>`).join('')}
@@ -2565,8 +2605,8 @@ async function handleAdminRoute(req, res, url, pathname, method, lobby, wss, mai
       <div class="card">
         <h3>보조 지표</h3>
         <div class="soft-panel">
-          ${metricLine('최대 획득 구간', peakEarnRow ? `${escapeHtml(formatDate(peakEarnRow.bucket_time))} · ${formatNumber(peakEarnRow.earned)}` : '-')}
-          ${metricLine('최대 소모 구간', peakSpendRow ? `${escapeHtml(formatDate(peakSpendRow.bucket_time))} · ${formatNumber(peakSpendRow.spent)}` : '-')}
+          ${metricLine('최대 획득 구간', peakEarnRow ? `${escapeHtml(formatBucket(peakEarnRow.bucket_time, bucket))} · ${formatNumber(peakEarnRow.earned)}` : '-')}
+          ${metricLine('최대 소모 구간', peakSpendRow ? `${escapeHtml(formatBucket(peakSpendRow.bucket_time, bucket))} · ${formatNumber(peakSpendRow.spent)}` : '-')}
           ${metricLine('구간당 평균 획득', (Number(summary.goldEarned || 0) / Math.max(goldSeries.length, 1)).toFixed(1))}
           ${metricLine('구간당 평균 소모', (Number(summary.goldSpent || 0) / Math.max(goldSeries.length, 1)).toFixed(1))}
         </div>
@@ -2581,7 +2621,7 @@ async function handleAdminRoute(req, res, url, pathname, method, lobby, wss, mai
       ? `<div class="table-wrap"><table>
           <tr><th>${bucket === 'hour' ? '시간대' : '날짜'}</th><th>출석 인원</th><th>7일차 완주</th><th>지급 골드</th></tr>
           ${attSeries.map(row => `<tr>
-            <td>${formatDate(row.bucket_time)}</td>
+            <td style="white-space:nowrap">${formatBucket(row.bucket_time, bucket)}</td>
             ${barCell(row.unique_claims || 0, maxOf(attSeries, 'unique_claims'), '#2e8b57')}
             <td>${formatNumber(row.finales || 0)}</td>
             <td style="color:#b35b19;font-weight:700">${formatNumber(row.gold || 0)}</td>
@@ -2677,7 +2717,7 @@ async function handleAdminRoute(req, res, url, pathname, method, lobby, wss, mai
         { label: '판매 아이템', value: formatNumber(summary.shopUniqueItems || 0), meta: '기간 내 팔린 종류' },
         { label: '객단가', value: avgPurchaseValue.toFixed(1), meta: '구매 1건당 골드' },
         { label: '구매자당 주문', value: purchasePerBuyer.toFixed(1), meta: '평균 구매 횟수' },
-        { label: '최대 판매 구간', value: peakShopRow ? formatDate(peakShopRow.bucket_time) : '-', meta: peakShopRow ? `${formatNumber(peakShopRow.purchase_count)}건` : '데이터 없음' },
+        { label: '최대 판매 구간', value: peakShopRow ? formatBucket(peakShopRow.bucket_time, bucket) : '-', meta: peakShopRow ? `${formatNumber(peakShopRow.purchase_count)}건` : '데이터 없음' },
         { label: '대표 상품', value: topShopItems[0] ? escapeHtml(topShopItems[0].item_name) : '-', meta: topShopItems[0] ? `${formatNumber(topShopItems[0].purchase_count)}건` : '데이터 없음' },
       ])}
       <div class="card-actions">
@@ -2724,7 +2764,7 @@ async function handleAdminRoute(req, res, url, pathname, method, lobby, wss, mai
       ? `<div class="table-wrap"><table>
           <tr><th>${bucket === 'hour' ? '시간대' : '날짜'}</th><th>결제</th><th>추정매출</th><th>환불</th><th>순매출</th></tr>
           ${iapSeries.map(row => `<tr>
-            <td>${formatDate(row.bucket_time)}</td>
+            <td style="white-space:nowrap">${formatBucket(row.bucket_time, bucket)}</td>
             <td style="font-weight:700">${formatNumber(row.paidCount || 0)}</td>
             ${barCell(row.gross || 0, maxOf(iapSeries, 'gross'), '#2e8b57', won(row.gross || 0))}
             <td style="color:#c62828">${formatNumber(row.refundCount || 0)}건 · ${won(row.refundAmount || 0)}</td>
@@ -2913,6 +2953,9 @@ async function handleAdminRoute(req, res, url, pathname, method, lobby, wss, mai
           type: 'bar',
           data: {
             labels: ${JSON.stringify(gameChartLabels)},
+            // 이 기간에 한 판도 없던 모드는 계열에서 뺀다. 0으로 깔린 막대와
+            // 바닥을 기는 선이 범례 자리를 차지하면 실제로 돌아가는 모드를
+            // 읽기가 더 어려워진다.
             datasets: [
               {
                 label: '티츄',
@@ -2954,7 +2997,7 @@ async function handleAdminRoute(req, res, url, pathname, method, lobby, wss, mai
                 tension: 0.3,
                 yAxisID: 'y',
               }
-            ]
+            ].filter((d) => d.data.some((v) => Number(v) > 0))
           },
           options: {
             responsive: true,

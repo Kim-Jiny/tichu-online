@@ -716,17 +716,22 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
   Widget? _boardChatBubble(String nickname) {
     final text = _seatChat.textFor(nickname);
     if (text == null) return null;
+    // Sits on the seat's top edge with its tail pointing into it: seats on a
+    // board are close enough that a bubble floating between two of them could
+    // be read as either one's.
     return Positioned(
       top: -30,
-      left: -30,
-      right: -30,
+      left: -34,
+      right: -34,
       child: Center(
         child: ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: 170),
+          constraints: const BoxConstraints(maxWidth: 178),
           child: SeatChatBubble(
             text: text,
             fontSize: 11,
+            maxLines: 1,
             textAlign: TextAlign.center,
+            tail: true,
           ),
         ),
       ),

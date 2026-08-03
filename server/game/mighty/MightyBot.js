@@ -851,7 +851,12 @@ function getOppLosingDiscard(legalCards, game, botId) {
 
   if (trump && trump !== 'no_trump') {
     const trumps = legalCards.filter(c => !isSpecial(c) && getCardInfo(c).suit === trump);
-    const points = legalCards.filter(c => !isSpecial(c) && getCardInfo(c).point > 0);
+    // 점수 카드를 대신 버려서 기루다를 아끼는 맞바꿈이므로, 그 점수 카드가
+    // 기루다면 아낄 게 없다. 기루다 리드를 따라내는 자리(합법 카드가 전부
+    // 기루다)에서 이 조건이 없으면, ♣9 를 남기려고 ♣Q 를 버리는 꼴이 된다 —
+    // 어차피 기루다 한 장을 내야 하는데 굳이 점수까지 얹어 주는 셈이다.
+    const points = legalCards.filter(c => !isSpecial(c)
+      && getCardInfo(c).point > 0 && getCardInfo(c).suit !== trump);
     if (trumps.length > 0 && points.length > 0) {
       const lowestTrump = getWeakestCard(trumps, game);
       if (_trumpSurvivesOpp(game, botId, lowestTrump)) {
@@ -1651,6 +1656,12 @@ function decideFollowCard(game, botId, legalCards) {
       return 'mighty_joker';
     }
   }
+
+  // 마지막 관문: 상대가 가져갈 트릭에 점수 카드를 얹어 주려 하면 값싼 카드로
+  // 바꾼다. 위 분기가 여러 갈래라 각각을 고치는 대신 여기서 한 번에 막는다.
+  const cheaper = _cheapDiscardInsteadOfPoint(game, botId, pick);
+  if (cheaper) return cheaper;
+
   return pick;
 }
 
@@ -2182,6 +2193,66 @@ function _topOfSuitInsteadOfMighty(game, botId, winningCards) {
   return getWeakestCard(sameSuit.length > 0 ? sameSuit : tops, game);
 }
 
+/**
+ * 못 이기는 자리에서 점수 카드를 버리려 할 때, 대신 낼 값싼 카드를 돌려준다.
+ * 바꿀 이유가 없으면 null.
+ *
+ * 상대가 가져갈 트릭에 10/J/Q/K/A 를 얹어 주는 건 그냥 점수를 헌납하는 것이다.
+ * 어차피 못 이기는 자리면 점수 0짜리를 버리고 점수 카드는 손에 남긴다 —
+ * 나중에 우리 팀이 먹는 트릭에 실으면 되고, 그 사이에 그 카드가 트릭을
+ * 가져올 수도 있다.
+ *
+ * 안 건드리는 경우:
+ *   - 이기려고 내는 카드 (버리는 수가 아니다)
+ *   - 봇이 아는 한 이 트릭이 우리 쪽으로 갈 때 (아군에게 점수를 실어주는 건 정상)
+ *   - 점수 0짜리 대안이 아예 없을 때 (언젠간 내야 한다)
+ * 야당은 프렌드 공개 전까지 "주공 말고는 우리편"으로 보는 정보 게이트를
+ * 그대로 따른다. 봇이 모르는 걸 아는 것처럼 두면 안 되기 때문이다.
+ */
+function _cheapDiscardInsteadOfPoint(game, botId, cardId) {
+  // A/B 측정용 좌석 게이트. 켜지면 예전 동작으로 돈다.
+  if (typeof global.__mightyDonateLegacy === 'function'
+      && global.__mightyDonateLegacy(botId)) {
+    return null;
+  }
+  if (!game.currentTrick || game.currentTrick.length === 0) return null;
+
+  const mightyCard = game.getMightyCard();
+  if (!cardId || cardId === mightyCard || cardId === 'mighty_joker') return null;
+  const info = getCardInfo(cardId);
+  if (!info || !info.point) return null;
+  if (canBeatCurrentWinner(game, cardId)) return null;
+
+  const winner = getCurrentTrickWinner(game);
+  if (!winner) return null;
+  const botIsGov = isGovernmentSelf(game, botId);
+  const believesAlly = botIsGov
+    ? isGovernmentSelf(game, winner)
+    : (game.friendRevealed ? !isGovernment(game, winner) : winner !== game.declarer);
+  if (believesAlly) return null;
+
+  const trump = game.trumpSuit;
+  const trumpActive = trump && trump !== 'no_trump';
+  const legal = game.getLegalCards(botId) || [];
+  const cheap = legal.filter((c) => {
+    if (c === mightyCard || c === 'mighty_joker') return false;
+    const ci = getCardInfo(c);
+    if (!ci || ci.point > 0) return false;
+    // 이길 수 있는 카드는 후보에서 뺀다. 버릴 카드만 바꾸는 것이지
+    // "이길지 말지"까지 뒤집는 규칙이 아니다.
+    if (canBeatCurrentWinner(game, c)) return false;
+    // 아직 살아 있는 기루다(나중에 러프로 트릭을 가져올 수 있는 카드)는
+    // 1점 아끼자고 버릴 게 아니다 — 그 러프 한 번이 점수 카드 하나보다 크다.
+    // 이건 기존 getOppLosingDiscard 의 맞바꿈 기준과 같다.
+    if (trumpActive && ci.suit === trump && _trumpSurvivesOpp(game, botId, c)) return false;
+    return true;
+  });
+  if (cheap.length === 0) return null;
+
+  const pick = getSafeDiscard(cheap, game);
+  return pick === cardId ? null : pick;
+}
+
 /** Get the suit of the friend-declared card */
 function _getFriendCardSuit(game) {
   if (!game.friendCard || game.friendCard === 'no_friend' || game.friendCard === 'first_trick') {
@@ -2493,6 +2564,7 @@ module.exports = {
   isFriend: _isFriend,
   isSafeFriendWinner: _isSafeFriendWinner,
   topOfSuitInsteadOfMighty: _topOfSuitInsteadOfMighty,
+  cheapDiscardInsteadOfPoint: _cheapDiscardInsteadOfPoint,
   isEffectiveTopOfSuit: _isEffectiveTopOfSuit,
   countOpponentTrumps: _countOpponentTrumps,
   suitLedCount: _suitLedCount,

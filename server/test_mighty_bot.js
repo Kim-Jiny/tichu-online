@@ -195,6 +195,38 @@ check('fix3: friend preserves joker on locked trick',
   }
 })();
 
+// ── Fix 6: 상대가 가져갈 트릭에 점수 카드를 얹어 주지 않는다 ──
+// 유저 리포트 형태(자가대국에서 뜬 실제 국면). 야당 p1 이 ♠K 로 이기고 있고
+// (아직 공개 안 된) 프렌드 p0 이 따라내야 한다. ♠Q 는 ♠K 를 못 넘으면서
+// 점수만 넘겨주는 카드고, ♠7 이라는 값싼 대안이 있다.
+(() => {
+  const c = (s) => s.split(' ').map(x => `mighty_${x}`);
+  const build = () => position({
+    declarer: 'p2', partner: null, friendRevealed: false,
+    friendCard: 'mighty_spade_A', trumpSuit: 'heart',
+    tricksLen: 3, currentPlayer: 'p0',
+    currentTrick: [
+      { pid: 'p1', cardId: 'mighty_spade_K' },
+      { pid: 'p2', cardId: 'mighty_diamond_2' },
+      { pid: 'p3', cardId: 'mighty_spade_2' },
+      { pid: 'p4', cardId: 'mighty_spade_4' },
+    ],
+    hands: {
+      p0: c('diamond_5 spade_Q heart_8 spade_7 club_4 diamond_7 spade_A'),
+      p1: c('diamond_K diamond_9 spade_6 spade_8 diamond_3 spade_3'),
+      p2: c('heart_Q heart_A diamond_6 heart_K heart_J diamond_8'),
+      p3: c('spade_5 heart_4 diamond_4 heart_3 club_8 club_6'),
+      p4: c('heart_9 heart_5 heart_2 heart_10 joker club_10'),
+    },
+  });
+  // 이기러 가든(♠A) 값싸게 버리든(♠7) 상관없다. ♠Q 만 아니면 된다.
+  for (const strategy of ['heuristic', 'mixoracle']) {
+    check(`fix6(${strategy}): 상대 트릭에 점수 카드를 안 준다`,
+      (MightyBot.decideMightyBotAction(build(), 'p0', strategy) || {}).cardId,
+      got => got !== 'mighty_spade_Q');
+  }
+})();
+
 // ── Endgame solver: legal + deterministic on real seeded endgames ──
 // Plays seeded games to their first solvable position and checks the solver
 // returns a legal, deterministic move. (Broad coverage — 4000+ solves with 0

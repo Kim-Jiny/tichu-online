@@ -1212,6 +1212,20 @@ function _mightyWasteCensorRule(game, botId, oracleAction) {
   return MightyBotInternals.makePlayAction(alt, game, botId);
 }
 
+/**
+ * 점수 헌납 검열 — 오라클이 "어차피 못 이기는 트릭"에 점수 카드를 버리려 하면
+ * 값싼 카드로 바꾼다. 롤아웃 평가가 1점짜리 차이를 자주 놓치는데, 상대가
+ * 가져갈 트릭에 K 를 얹어 주는 건 사람 눈엔 그냥 점수를 갖다 바치는 장면이다.
+ * 판단 기준은 휴리스틱과 같은 헬퍼를 쓴다.
+ */
+function _pointDonationCensorRule(game, botId, oracleAction) {
+  if (game.state !== 'playing' || game.currentPlayer !== botId) return null;
+  if (!oracleAction || oracleAction.type !== 'play_card') return null;
+  const alt = MightyBotInternals.cheapDiscardInsteadOfPoint(game, botId, oracleAction.cardId);
+  if (!alt) return null;
+  return MightyBotInternals.makePlayAction(alt, game, botId);
+}
+
 function decide(game, botId) {
   const __diagOn = process.env.DIAG !== '0';
   const __diagSlowMs = _diagNumberEnv('DIAG_BOT_SLOW_MS', 100);
@@ -1298,6 +1312,11 @@ function decide(game, botId) {
   if (mightyCensored) {
     __path = 'mightyCensor';
     return __finish(mightyCensored);
+  }
+  const donationCensored = _pointDonationCensorRule(game, botId, oracleAction);
+  if (donationCensored) {
+    __path = 'donationCensor';
+    return __finish(donationCensored);
   }
   __path = 'oracle';
   return __finish(oracleAction);

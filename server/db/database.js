@@ -88,7 +88,28 @@ pool.on('connect', (client) => {
 });
 
 // Initialize database tables (tc_ prefix for tichu)
-async function initDatabase() {
+/**
+ * 마이그레이션은 실패하면 부팅을 멈춘다(아래 initDatabase 참고). 그래서 잠깐의
+ * DB 끊김으로 컨테이너가 크래시 루프에 빠지지 않도록, 여기서 몇 번 다시 해
+ * 본다. 진짜로 깨진 마이그레이션은 몇 번을 해도 같은 곳에서 실패하므로
+ * 결국 부팅이 멈춘다 — 구분은 "다시 해서 되느냐" 하나로 충분하다.
+ */
+async function initDatabase(attempt = 1) {
+  const MAX_ATTEMPTS = 4;
+  try {
+    return await runMigrations();
+  } catch (err) {
+    if (attempt >= MAX_ATTEMPTS) throw err;
+    const waitMs = attempt * 2000;
+    console.error(
+      `[migration] ${attempt}번째 시도 실패 (${err.message}) — ${waitMs / 1000}초 후 재시도`,
+    );
+    await new Promise((r) => setTimeout(r, waitMs));
+    return initDatabase(attempt + 1);
+  }
+}
+
+async function runMigrations() {
   const client = await pool.connect();
   // 배포는 블루/그린이라 새 슬롯이 뜨는 동안 옛 슬롯이 최대 15분 더 산다.
   // 두 인스턴스가 CREATE TABLE/INDEX IF NOT EXISTS 를 동시에 던지면 포스트그레스

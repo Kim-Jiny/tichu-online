@@ -11,6 +11,7 @@ import '../widgets/connection_overlay.dart';
 import '../widgets/level_badge.dart';
 import '../widgets/profile_avatar.dart';
 import '../widgets/bot_avatar.dart';
+import '../widgets/chat_bubble.dart';
 import '../widgets/player_profile_dialog.dart';
 import '../widgets/spectator_controls.dart';
 import '../l10n/app_localizations.dart';
@@ -720,6 +721,60 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
     );
   }
 
+  /// Avatar for a waiting-room seat: photo, bot art, or the default
+  /// silhouette, with the level as a corner badge.
+  Widget _buildWaitingSlotAvatar(GameService game, Player player) {
+    const size = 36.0;
+    final avatar = ProfileAvatar(
+      photoUrl: game.resolvePhotoUrl(player.photoUrl),
+      size: size,
+      blocked: game.blockedUsers.contains(player.name),
+      fallback: player.isBot
+          ? BotAvatar(
+              size: size,
+              name: player.name,
+              showBadge: true,
+              speed: player.botSpeed,
+            )
+          : Container(
+              width: size,
+              height: size,
+              decoration: const BoxDecoration(
+                color: Color(0xFFF0E7E3),
+                shape: BoxShape.circle,
+              ),
+              alignment: Alignment.center,
+              child: const Icon(
+                Icons.person,
+                size: 22,
+                color: Color(0xFF9C8B84),
+              ),
+            ),
+    );
+    if (player.isBot || player.level == null) return avatar;
+    return SizedBox(
+      width: size,
+      height: size,
+      child: Stack(
+        clipBehavior: Clip.none,
+        children: [
+          avatar,
+          Positioned(
+            right: -3,
+            bottom: -3,
+            child: Container(
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                border: Border.all(color: Colors.white, width: 1.2),
+              ),
+              child: LevelBadge(level: player.level, size: 14),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   Widget _buildWaitingSlot(GameService game, Player? player, int slotIndex) {
     final isBlocked = game.roomBlockedSlots.contains(slotIndex);
     if (isBlocked) {
@@ -794,31 +849,12 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
             ),
             child: Row(
               children: [
-                ProfileAvatar(
-                  photoUrl: game.resolvePhotoUrl(player.photoUrl),
-                  size: 36,
-                  blocked: game.blockedUsers.contains(player.name),
-                  // Bots have no level, so this slot used to be a generic
-                  // person icon — the one place in the room where you couldn't
-                  // tell which bot was which at a glance.
-                  fallback: player.isBot
-                      ? BotAvatar(size: 36, name: player.name)
-                      : player.level != null
-                      ? LevelBadge(level: player.level, size: 36)
-                      : Container(
-                          width: 36,
-                          height: 36,
-                          decoration: BoxDecoration(
-                            color: const Color(0xFFE8F5E9),
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          child: const Icon(
-                            Icons.person,
-                            color: Color(0xFF2E7D32),
-                            size: 20,
-                          ),
-                        ),
-                ),
+                // The level used to be drawn AS the avatar when a player had no
+                // photo, which put a number where every other screen puts a
+                // face. It belongs in the corner badge, the way the lobby and
+                // the Tichu spectator room do it — and the bot tag comes back
+                // with it, so you can still tell the bots apart.
+                _buildWaitingSlotAvatar(game, player),
                 const SizedBox(width: 10),
                 Expanded(
                   child: Text(
@@ -1690,73 +1726,45 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
         final isMe = sender == game.playerName;
         final isBlocked = sender.isNotEmpty && game.isBlocked(sender);
         if (isBlocked) return const SizedBox.shrink();
-        return _buildChatBubble(sender, message, isMe);
+        return _buildChatBubble(sender, message, isMe, game);
       },
     );
   }
 
-  Widget _buildChatBubble(String sender, String message, bool isMe) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 8),
-      child: Row(
-        mainAxisAlignment: isMe
-            ? MainAxisAlignment.end
-            : MainAxisAlignment.start,
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          if (!isMe && sender.isNotEmpty) ...[
-            CircleAvatar(
-              radius: 14,
-              backgroundColor: const Color(0xFFE0E0E0),
-              child: Text(
-                sender[0],
-                style: const TextStyle(fontSize: 12, color: Color(0xFF5A4038)),
-              ),
+  /// The shared bubble, like every other screen. Mighty had its own copy that
+  /// drew a grey circle with the first letter of the nickname and swallowed
+  /// taps — so this was the one chat panel with no profile photo and no way to
+  /// open a profile from it.
+  Widget _buildChatBubble(
+    String sender,
+    String message,
+    bool isMe,
+    GameService game,
+  ) {
+    return ChatBubble(
+      sender: sender,
+      message: message,
+      isMe: isMe,
+      game: game,
+      mineColor: const Color(0xFF1565C0),
+      onTap: sender.isEmpty
+          ? null
+          : () => _showPlayerProfileDialog(
+              sender,
+              game,
+              isBot: _isBotNickname(game, sender),
             ),
-            const SizedBox(width: 6),
-          ],
-          Flexible(
-            child: Column(
-              crossAxisAlignment: isMe
-                  ? CrossAxisAlignment.end
-                  : CrossAxisAlignment.start,
-              children: [
-                if (!isMe && sender.isNotEmpty)
-                  Padding(
-                    padding: const EdgeInsets.only(bottom: 2),
-                    child: Text(
-                      sender,
-                      style: const TextStyle(
-                        fontSize: 11,
-                        color: Color(0xFF8A8A8A),
-                      ),
-                    ),
-                  ),
-                Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 12,
-                    vertical: 8,
-                  ),
-                  decoration: BoxDecoration(
-                    color: isMe
-                        ? const Color(0xFF1565C0)
-                        : const Color(0xFFF0F0F0),
-                    borderRadius: BorderRadius.circular(16),
-                  ),
-                  child: Text(
-                    message,
-                    style: TextStyle(
-                      fontSize: 14,
-                      color: isMe ? Colors.white : const Color(0xFF333333),
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
     );
+  }
+
+  /// Bots have no account, so their bubble must open the bot blurb rather than
+  /// a profile lookup that will never resolve.
+  bool _isBotNickname(GameService game, String nickname) {
+    final players = game.mightyGameState?.players ?? const [];
+    for (final p in players) {
+      if (p.name == nickname) return p.id.startsWith('bot_');
+    }
+    return false;
   }
 
   void _showExitConfirmDialog(GameService game) {

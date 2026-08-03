@@ -483,6 +483,59 @@ class _SKGameScreenState extends State<SKGameScreen> {
     );
   }
 
+  /// Avatar for a waiting-room seat: photo, bot art, or the default
+  /// silhouette, with the level as a corner badge. The level used to be drawn
+  /// AS the avatar for photo-less players, which put a number where every other
+  /// screen puts a face — and the bot tag went missing with it.
+  Widget _buildWaitingSlotAvatar(GameService game, {
+    required String name,
+    required String? photoUrl,
+    required bool isBot,
+    required int? level,
+    String? botSpeed,
+  }) {
+    const size = 36.0;
+    final avatar = ProfileAvatar(
+      photoUrl: game.resolvePhotoUrl(photoUrl),
+      size: size,
+      blocked: game.blockedUsers.contains(name),
+      fallback: isBot
+          ? BotAvatar(size: size, name: name, showBadge: true, speed: botSpeed)
+          : Container(
+              width: size,
+              height: size,
+              decoration: const BoxDecoration(
+                color: Color(0xFFF0E7E3),
+                shape: BoxShape.circle,
+              ),
+              alignment: Alignment.center,
+              child: const Icon(Icons.person, size: 22, color: Color(0xFF9C8B84)),
+            ),
+    );
+    if (isBot || level == null) return avatar;
+    return SizedBox(
+      width: size,
+      height: size,
+      child: Stack(
+        clipBehavior: Clip.none,
+        children: [
+          avatar,
+          Positioned(
+            right: -3,
+            bottom: -3,
+            child: Container(
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                border: Border.all(color: Colors.white, width: 1.2),
+              ),
+              child: LevelBadge(level: level, size: 14),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   Widget _buildSpectatorSlot(GameService game, Player? player, int slotIndex) {
     final bool isBlocked = game.roomBlockedSlots.contains(slotIndex);
     final bool isEmpty = player == null;
@@ -563,30 +616,13 @@ class _SKGameScreenState extends State<SKGameScreen> {
             ),
             child: Row(
               children: [
-                ProfileAvatar(
-                  photoUrl: game.resolvePhotoUrl(p.photoUrl),
-                  size: 36,
-                  blocked: game.blockedUsers.contains(p.name),
-                  // Bots have no level, so this slot used to be a generic
-                  // person icon — the one place in the room where you couldn't
-                  // tell which bot was which at a glance.
-                  fallback: p.isBot
-                      ? BotAvatar(size: 36, name: p.name)
-                      : p.level != null
-                      ? LevelBadge(level: p.level, size: 36)
-                      : Container(
-                          width: 36,
-                          height: 36,
-                          decoration: const BoxDecoration(
-                            color: Color(0xFFF2ECE8),
-                            shape: BoxShape.circle,
-                          ),
-                          child: const Icon(
-                            Icons.person,
-                            size: 18,
-                            color: Color(0xFF6A5A52),
-                          ),
-                        ),
+                _buildWaitingSlotAvatar(
+                  game,
+                  name: p.name,
+                  photoUrl: p.photoUrl,
+                  isBot: p.isBot,
+                  level: p.level,
+                  botSpeed: p.botSpeed,
                 ),
                 const SizedBox(width: 10),
                 Expanded(
